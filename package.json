@@ -1,0 +1,9 @@
+{
+  "name": "jarvis",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Monorepo base do sistema JARVIS",
+  "scripts": {
+    "lint": "echo \"No JavaScript or TypeScript packages configured yet.\""
+  }
+}

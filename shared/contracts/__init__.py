@@ -1,0 +1,208 @@
+"""Canonical contracts for JARVIS."""
+
+from dataclasses import dataclass, field
+
+from shared.types import (
+    ArtifactId,
+    ArtifactStatus,
+    ChannelType,
+    CreatedAt,
+    EvolutionDecisionId,
+    EvolutionProposalId,
+    GovernanceCheckId,
+    GovernanceDecisionId,
+    InputType,
+    MemoryClass,
+    MemoryQueryId,
+    MemoryRecordId,
+    MissionId,
+    MissionStatus,
+    OperationId,
+    OperationStatus,
+    PermissionDecision,
+    RecoveryType,
+    RequestId,
+    RiskLevel,
+    SessionId,
+    TimeWindow,
+    Timestamp,
+    UpdatedAt,
+)
+
+
+@dataclass
+class InputContract:
+    request_id: RequestId
+    session_id: SessionId
+    channel: ChannelType
+    input_type: InputType
+    content: str
+    timestamp: Timestamp
+    mission_id: MissionId | None = None
+    user_id: str | None = None
+    metadata: dict[str, object] = field(default_factory=dict)
+    attachments: list[str] = field(default_factory=list)
+    locale: str | None = None
+    priority_hint: str | None = None
+
+
+@dataclass
+class MemoryRecoveryContract:
+    memory_query_id: MemoryQueryId
+    recovery_type: RecoveryType
+    session_id: SessionId
+    requested_scopes: list[MemoryClass]
+    context_window: TimeWindow
+    mission_id: MissionId | None = None
+    user_id: str | None = None
+    domain_hints: list[str] = field(default_factory=list)
+    priority_rules: list[str] = field(default_factory=list)
+    max_items: int | None = None
+    sensitivity_ceiling: RiskLevel | None = None
+
+
+@dataclass
+class MemoryRecordContract:
+    memory_record_id: MemoryRecordId
+    record_type: str
+    source_service: str
+    payload: dict[str, object]
+    timestamp: Timestamp
+    session_id: SessionId | None = None
+    mission_id: MissionId | None = None
+    user_id: str | None = None
+    proposed_memory_class: MemoryClass | None = None
+    sensitivity_hint: RiskLevel | None = None
+    stability_hint: str | None = None
+    domain_hint: str | None = None
+    promotion_candidate: bool = False
+
+
+@dataclass
+class OperationDispatchContract:
+    operation_id: OperationId
+    request_id: RequestId
+    task_type: str
+    task_goal: str
+    task_plan: str
+    constraints: list[str]
+    expected_output: str
+    session_id: SessionId | None = None
+    mission_id: MissionId | None = None
+    risk_hint: RiskLevel | None = None
+    domain_hints: list[str] = field(default_factory=list)
+    tool_hints: list[str] = field(default_factory=list)
+    deadline_hint: str | None = None
+    priority_hint: str | None = None
+    artifact_destination: str | None = None
+
+
+@dataclass
+class OperationResultContract:
+    operation_id: OperationId
+    status: OperationStatus
+    outputs: list[str]
+    timestamp: Timestamp
+    artifacts: list[str] = field(default_factory=list)
+    errors: list[str] = field(default_factory=list)
+    checkpoints: list[str] = field(default_factory=list)
+    next_recommendation: str | None = None
+    governance_flags: list[str] = field(default_factory=list)
+    memory_record_hints: list[str] = field(default_factory=list)
+
+
+@dataclass
+class GovernanceCheckContract:
+    governance_check_id: GovernanceCheckId
+    subject_type: str
+    subject_action: str
+    scope: str
+    context: dict[str, object]
+    sensitivity: str
+    reversibility: str
+    mission_id: MissionId | None = None
+    session_id: SessionId | None = None
+    proposed_effect: str | None = None
+    risk_hint: RiskLevel | None = None
+    policy_hint: str | None = None
+    requested_by_service: str | None = None
+    artifact_refs: list[str] = field(default_factory=list)
+
+
+@dataclass
+class GovernanceDecisionContract:
+    decision_id: GovernanceDecisionId
+    governance_check_id: GovernanceCheckId
+    risk_level: RiskLevel
+    decision: PermissionDecision
+    justification: str
+    timestamp: Timestamp
+    conditions: list[str] = field(default_factory=list)
+    requires_audit: bool = False
+    requires_rollback_plan: bool = False
+    containment_hint: str | None = None
+    policy_refs: list[str] = field(default_factory=list)
+
+
+@dataclass
+class MissionStateContract:
+    mission_id: MissionId
+    mission_goal: str
+    mission_status: MissionStatus
+    checkpoints: list[str]
+    updated_at: UpdatedAt
+    created_at: CreatedAt | None = None
+    session_origin: str | None = None
+    active_tasks: list[str] = field(default_factory=list)
+    related_memories: list[str] = field(default_factory=list)
+    related_artifacts: list[str] = field(default_factory=list)
+    priority_level: str | None = None
+    owner_context: str | None = None
+    completion_criteria: list[str] = field(default_factory=list)
+
+
+@dataclass
+class ArtifactResultContract:
+    artifact_id: ArtifactId
+    artifact_type: str
+    artifact_status: ArtifactStatus
+    produced_by: str
+    timestamp: Timestamp
+    location_ref: str | None = None
+    summary: str | None = None
+    format: str | None = None
+    mission_id: MissionId | None = None
+    request_id: RequestId | None = None
+    quality_flags: list[str] = field(default_factory=list)
+    related_artifacts: list[str] = field(default_factory=list)
+
+
+@dataclass
+class EvolutionProposalContract:
+    evolution_proposal_id: EvolutionProposalId
+    proposal_type: str
+    target_scope: str
+    hypothesis: str
+    expected_gain: str
+    timestamp: Timestamp
+    source_signals: list[str] = field(default_factory=list)
+    baseline_refs: list[str] = field(default_factory=list)
+    risk_hint: str | None = None
+    requires_sandbox: bool = True
+    proposed_tests: list[str] = field(default_factory=list)
+    promotion_constraints: list[str] = field(default_factory=list)
+
+
+@dataclass
+class EvolutionDecisionContract:
+    evolution_decision_id: EvolutionDecisionId
+    evolution_proposal_id: EvolutionProposalId
+    decision: str
+    comparison_summary: str
+    timestamp: Timestamp
+    promoted_to: str | None = None
+    rollback_plan_ref: str | None = None
+    governance_refs: list[str] = field(default_factory=list)
+    stability_score: float | None = None
+    risk_score: float | None = None
+    notes: list[str] = field(default_factory=list)

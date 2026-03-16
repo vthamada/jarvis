@@ -1,0 +1,45 @@
+﻿# Evolution Lab
+
+## 1. Objetivo
+
+Este documento resume o papel do laboratorio evolutivo do JARVIS como ambiente separado de experimentacao e melhoria controlada.
+
+Ele deriva principalmente da camada evolutiva do Documento-Mestre.
+
+---
+
+## 2. Papel do laboratorio
+
+O laboratorio evolutivo existe para:
+
+- observar desempenho;
+- gerar hipoteses de melhoria;
+- testar variacoes em sandbox;
+- comparar baseline e candidata;
+- produzir evidencia antes de qualquer promocao.
+
+---
+
+## 3. O que pode entrar no laboratorio
+
+- melhoria de prompt;
+- melhoria de workflow;
+- melhoria de roteamento;
+- melhoria de avaliacao;
+- melhoria de eficiencia;
+- refinamento de especialistas subordinados.
+
+---
+
+## 4. O que nao deve entrar diretamente em producao
+
+- auto-modificacao livre do nucleo;
+- mudanca direta de identidade;
+- mudanca direta de governanca sem validacao reforcada;
+- promocao evolutiva sem benchmark e rollback.
+
+---
+
+## 5. Regra permanente
+
+O laboratorio evolutivo serve ao sistema, mas nao governa o sistema.

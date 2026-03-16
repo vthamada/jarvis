@@ -4715,7 +4715,7 @@ Cada item é classificado em uma das quatro categorias finais:
 
 #### Adotar
 
-- LangGraph, como principal candidato para orquestração stateful, durable execution e coordenação de fluxos complexos.
+- LangGraph, como base principal de orquestração stateful, durable execution e coordenação de fluxos complexos.
 
 #### Adaptar
 
@@ -4813,7 +4813,7 @@ Cada item é classificado em uma das quatro categorias finais:
 
 #### Adotar
 
-- LangSmith, como principal candidato para observabilidade agentic.
+- LangSmith, como base principal de observabilidade agentic.
 - logs estruturados, métricas e tracing desde a origem.
 
 #### Adaptar
@@ -4903,9 +4903,9 @@ Cada item é classificado em uma das quatro categorias finais:
 
 ---
 
-### 75.9 Decisão estruturante preliminar
+### 75.9 Decisão estruturante consolidada
 
-A decisão preliminar mais consistente, neste estágio, é:
+A decisão estruturante mais consistente, neste estágio, é:
 
 #### Fundação recomendada
 
@@ -4950,7 +4950,7 @@ Com esta matriz final de decisão tecnológica, os próximos passos do Documento
 
 ## 76. Stack técnica candidata por camada
 
-Este capítulo organiza a stack técnica candidata do JARVIS por camada arquitetural. O objetivo é transformar a matriz final de decisão tecnológica em um **desenho por camada**, ainda em nível de arquitetura de referência.
+Este capítulo organiza a stack técnica do JARVIS por camada arquitetural. A nomenclatura histórica de “candidata” é preservada por rastreabilidade editorial, mas as escolhas aqui registradas já servem como base consolidada desta etapa do documento.
 
 Seu papel é dizer **qual tipo de tecnologia sustenta cada camada do sistema**. A consolidação definitiva do posicionamento arquitetural das tecnologias aparece em capítulos posteriores.
 
@@ -5128,9 +5128,9 @@ Seu papel é dizer **qual tipo de tecnologia sustenta cada camada do sistema**. 
 
 ---
 
-### 76.12 Stack candidata consolidada
+### 76.12 Stack consolidada desta etapa
 
-A stack técnica candidata consolidada do JARVIS, neste estágio, pode ser resumida assim:
+A stack consolidada do JARVIS, nesta etapa do documento, pode ser resumida assim:
 
 - Interface própria do JARVIS, com chat e voz como canais prioritários;
 - LangGraph na orquestração;
@@ -5153,7 +5153,7 @@ A partir desta stack por camada, o documento pode avançar para topologia de ser
 
 ## 77. Topologia inicial de serviços e runtimes
 
-Este capítulo define a topologia inicial de serviços e runtimes do JARVIS. Seu objetivo é transformar a stack técnica candidata em uma forma operacional de implantação e coordenação, especificando quais blocos devem existir como serviços, quais devem operar como runtimes separados e como o sistema deve ser dividido sem perder sua unidade.
+Este capítulo define a topologia inicial de serviços e runtimes do JARVIS. Seu objetivo é transformar a stack técnica consolidada desta etapa em uma forma operacional de implantação e coordenação, especificando quais blocos devem existir como serviços, quais devem operar como runtimes separados e como o sistema deve ser dividido sem perder sua unidade.
 
 A topologia inicial deve buscar equilíbrio entre:
 
@@ -7535,9 +7535,9 @@ Este capítulo funciona como um primeiro conjunto de ADRs conceituais do projeto
 
 ---
 
-## 154. ADR-012 — LangGraph será o orquestrador principal candidato
+## 154. ADR-012 — LangGraph será a base principal de orquestração
 
-**Decisão:** A principal base candidata para orquestração stateful do JARVIS é LangGraph.
+**Decisão:** A principal base de orquestração stateful do JARVIS é LangGraph.
 
 **Justificativa:** A necessidade de durable execution, checkpoints, fluxos stateful, human-in-the-loop e tarefas compostas longas se alinha fortemente com a proposta do framework.
 
@@ -7563,7 +7563,7 @@ Este capítulo funciona como um primeiro conjunto de ADRs conceituais do projeto
 
 ## 156. ADR-014 — A memória avançada poderá ser complementada por Zep e/ou Graphiti
 
-**Decisão:** Zep e/ou Graphiti serão tratados como camadas complementares candidatas para memória contextual, temporal e relacional.
+**Decisão:** Zep e/ou Graphiti serão tratados como camadas complementares de memória contextual, temporal e relacional, sujeitas a adoção conforme necessidade prática.
 
 **Justificativa:** O modelo de memória do JARVIS demanda mais do que simples vetores e tabelas. Essas soluções oferecem capacidades úteis como memory layer de mais alto nível e memória temporal em grafo.
 
@@ -7575,7 +7575,7 @@ Este capítulo funciona como um primeiro conjunto de ADRs conceituais do projeto
 
 ## 157. ADR-015 — OpenHands será o principal braço especializado de software
 
-**Decisão:** OpenHands será a principal referência candidata para o braço de engenharia de software do JARVIS.
+**Decisão:** OpenHands será a principal referência de integração para o braço de engenharia de software do JARVIS.
 
 **Justificativa:** A arquitetura do sistema requer um especialista forte em desenvolvimento, capaz de atuar em tarefas de código, repositório, execução, testes e automação técnica.
 
@@ -7586,9 +7586,9 @@ Este capítulo funciona como um primeiro conjunto de ADRs conceituais do projeto
 
 ---
 
-## 158. ADR-016 — A observabilidade agentic terá LangSmith como principal candidato
+## 158. ADR-016 — A observabilidade agentic terá LangSmith como base principal
 
-**Decisão:** LangSmith será o principal candidato para observabilidade agentic do sistema.
+**Decisão:** LangSmith será a base principal de observabilidade agentic do sistema.
 
 **Justificativa:** O JARVIS exige observabilidade de fluxos LLM/agentic, além de avaliação contínua. Uma camada de tracing e avaliação orientada a agentes é especialmente útil para o v1 e para o crescimento futuro.
 
@@ -7688,10 +7688,10 @@ As decisões arquiteturais iniciais do JARVIS passam a ser oficialmente composta
 - autoevolução governada;
 - monorepo modular chamado **jarvis**;
 - base técnica híbrida com núcleo próprio e infraestrutura reaproveitada;
-- LangGraph como principal candidato de orquestração;
+- LangGraph como base principal de orquestração;
 - PostgreSQL + pgvector como backbone de memória;
 - OpenHands como principal braço especializado de software;
-- LangSmith como principal candidato de observabilidade agentic;
+- LangSmith como base principal de observabilidade agentic;
 - roadmap em v1, v2 e v3;
 - MVP arquitetural mínimo, porém correto.
 
@@ -9695,6 +9695,12 @@ Este capítulo não substitui os capítulos de blueprint e estrutura concreta do
 
 Este capítulo transforma o backlog técnico e o blueprint inicial em um roadmap de execução prática do v1. Seu objetivo é organizar a construção do sistema em marcos claros e sprints orientadas por entregáveis verificáveis.
 
+Este bloco deve preservar a estrutura canônica do roadmap do `v1`, enquanto o detalhamento tático e operacional passa a ser aprofundado prioritariamente nos derivados:
+
+- `docs/roadmap/v1-roadmap.md`
+- `docs/implementation/first-milestone-plan.md`
+- `docs/implementation/sprint-1-plan.md`
+
 A lógica deste roadmap é:
 
 - milestones definem **saltos estruturais de capacidade**;
@@ -9733,293 +9739,84 @@ O v1 pode ser organizado em seis milestones principais:
 
 ## 184. M1 — Fundação estrutural
 
-### Objetivo
+Esta milestone define a fundação estrutural do repositório e da base semântica compartilhada.
 
-Criar a base do repositório, contratos compartilhados, estrutura de serviços e elementos constitucionais do sistema.
+Seu foco canônico é:
 
-### Resultado esperado
+- consolidar o monorepo;
+- preparar contratos e estruturas compartilhadas;
+- estabelecer esqueletos iniciais dos serviços centrais.
 
-Ao final da M1, o projeto já deve possuir:
+O detalhamento tático desta milestone passa a ser mantido principalmente em:
 
-- monorepo **jarvis** criado;
-- estrutura principal de diretórios;
-- contratos compartilhados iniciais;
-- identidade e princípios formalizados na base de código;
-- topologia inicial representada em esqueleto;
-- logs básicos estruturados.
-
-### Sprints sugeridas
-
-#### Sprint 1 — Fundação do repositório
-
-Entregas:
-
-- criação do monorepo;
-- diretórios-base;
-- estrutura de apps, services, engines, shared, memory, governance e tests;
-- convenções iniciais do projeto.
-
-#### Sprint 2 — Contratos e constituição
-
-Entregas:
-
-- contratos compartilhados iniciais;
-- schemas iniciais;
-- eventos internos mínimos;
-- base de identidade e princípios do sistema;
-- memória de identidade e normativa em forma inicial.
-
-#### Sprint 3 — Esqueleto de serviços
-
-Entregas:
-
-- orquestrator-service inicial;
-- memory-service inicial;
-- governance-service inicial;
-- operational-service inicial;
-- observability básica conectada aos esqueletos.
+- `docs/implementation/sprint-1-plan.md`
+- `docs/implementation/first-milestone-plan.md`
 
 ---
 
 ## 185. M2 — Núcleo central funcional
 
-### Objetivo
+Esta milestone materializa o núcleo central em sua primeira forma funcional.
 
-Implementar o cérebro coordenador do sistema em sua primeira forma funcional.
+Seu foco canônico é:
 
-### Resultado esperado
-
-Ao final da M2, o JARVIS já deve conseguir:
-
-- receber entrada normalizada;
-- classificar intenção;
-- montar contexto de trabalho;
-- planejar fluxo simples;
-- ativar mentes nucleares;
-- gerar síntese final coerente.
-
-### Sprints sugeridas
-
-#### Sprint 4 — Kernel do núcleo central
-
-Entregas:
-
-- identity-engine inicial;
-- executive-engine inicial;
-- planning-engine inicial;
-- synthesis-engine inicial.
-
-#### Sprint 5 — Interpretação e roteamento
-
-Entregas:
-
-- interpretador de intenção;
-- classificador de tipo de tarefa;
-- roteador cognitivo inicial;
-- integração com contratos de memória e governança.
-
-#### Sprint 6 — Cognição nuclear inicial
-
-Entregas:
-
-- motor de mentes cognitivas;
-- implementação das 12 mentes nucleares do v1;
-- combinador cognitivo inicial;
-- primeira versão de síntese multidimensional.
+- interpretação inicial de entrada;
+- classificação e roteamento;
+- planejamento básico;
+- síntese final coerente;
+- ativação inicial de cognição nuclear.
 
 ---
 
 ## 186. M3 — Memória e continuidade úteis
 
-### Objetivo
+Esta milestone introduz memória útil, continuidade e estado básico de missão.
 
-Entregar continuidade real entre sessões, contexto vivo e sustento básico de missões.
+Seu foco canônico é:
 
-### Resultado esperado
-
-Ao final da M3, o sistema já deve conseguir:
-
-- lembrar preferências úteis do usuário;
-- sustentar contexto entre interações;
-- registrar episódios relevantes;
-- manter estado de missão básica;
-- recuperar memória útil sem excesso de ruído.
-
-### Sprints sugeridas
-
-#### Sprint 7 — Backbone e classes mínimas de memória
-
-Entregas:
-
-- backbone de memória;
-- indexação inicial;
-- orquestrador de memória;
-- classificador de memória.
-
-#### Sprint 8 — Recuperação e gravação úteis
-
-Entregas:
-
-- recuperador de memória;
-- gravação episódica;
-- memória contextual funcional;
-- memória do usuário funcional;
-- memória de projetos e missões inicial.
-
-#### Sprint 9 — Proteção e promoção básicas
-
-Entregas:
-
-- guardião de memória crítica;
-- memória semântica inicial;
-- memória procedural básica;
-- primeira lógica de promoção controlada.
+- backbone inicial de memória;
+- recuperação contextual e gravação episódica;
+- proteção de memória crítica;
+- promoção básica sob critério.
 
 ---
 
 ## 187. M4 — Conhecimento e operação mínima real
 
-### Objetivo
+Esta milestone faz o sistema sair do plano puramente analítico e ganhar operação real de baixo risco.
 
-Fazer o JARVIS sair do plano puramente analítico e ganhar capacidade real de busca, produção e execução de baixo risco.
+Seu foco canônico é:
 
-### Resultado esperado
-
-Ao final da M4, o sistema já deve conseguir:
-
-- consultar conhecimento indexado;
-- usar domínios prioritários com profundidade inicial;
-- pesquisar e sintetizar informação;
-- produzir artefatos úteis;
-- executar algumas ferramentas de baixo risco.
-
-### Sprints sugeridas
-
-#### Sprint 10 — Conhecimento e domínios prioritários
-
-Entregas:
-
-- registro formal dos domínios;
-- roteador de domínios;
-- indexação documental inicial;
-- recuperação híbrida básica;
-- profundidade inicial dos domínios prioritários.
-
-#### Sprint 11 — Serviço operacional básico
-
-Entregas:
-
-- orquestrador operacional;
-- executor de tarefas;
-- estado operacional inicial;
-- adaptadores de browser, arquivos e artefatos.
-
-#### Sprint 12 — Produção e execução de baixo risco
-
-Entregas:
-
-- motor de produção de artefatos;
-- pesquisa e síntese operacional;
-- execução de tarefas simples;
-- registro de artefatos e progresso de missão.
+- conhecimento inicial estruturado;
+- recuperação semântica útil;
+- serviço operacional básico;
+- produção de artefatos e execução simples.
 
 ---
 
 ## 188. M5 — Governança robusta e observabilidade
 
-### Objetivo
+Esta milestone fecha a base de risco, política, auditoria e observabilidade do `v1`.
 
-Fechar a base de segurança, risco, auditoria e estabilidade operacional do v1.
+Seu foco canônico é:
 
-### Resultado esperado
-
-Ao final da M5, o sistema já deve conseguir:
-
-- classificar risco de ações relevantes;
-- validar permissão;
-- bloquear e conter fluxos indevidos;
-- auditar decisões relevantes;
-- registrar fluxo completo de ações e decisões.
-
-### Sprints sugeridas
-
-#### Sprint 13 — Política, risco e validação
-
-Entregas:
-
-- núcleo de política;
-- classificador de risco;
-- validador de permissão;
-- validador pré-ação.
-
-#### Sprint 14 — Contenção, auditoria e proteção crítica
-
-Entregas:
-
-- motor de contenção;
-- auditor de governança;
-- proteção reforçada de memória crítica;
-- registros estruturados de exceção.
-
-#### Sprint 15 — Observabilidade ampla do v1
-
-Entregas:
-
-- tracing de fluxo;
-- dashboards iniciais;
-- métricas operacionais;
-- métricas cognitivas iniciais;
-- correlação entre decisão, ação e memória.
+- classificação de risco;
+- validação de permissão;
+- contenção e proteção crítica;
+- observabilidade ampla e correlação de fluxo.
 
 ---
 
 ## 189. M6 — Consolidação do v1 e preparação para v2
 
-### Objetivo
+Esta milestone consolida o `v1` e prepara a transição para o `v2`.
 
-Estabilizar o sistema, consolidar qualidade, preparar a base para especialistas e evolução mais madura.
+Seu foco canônico é:
 
-### Resultado esperado
-
-Ao final da M6, o JARVIS v1 deve ser um sistema:
-
-- coerente;
-- útil;
-- persistente;
-- observável;
-- governado;
-- operacional em baixo risco;
-- pronto para crescer de forma controlada.
-
-### Sprints sugeridas
-
-#### Sprint 16 — Estabilidade e refinamento do núcleo
-
-Entregas:
-
-- refinamento do núcleo central;
-- refinamento das combinações cognitivas;
-- melhoria de síntese final;
-- redução de falhas recorrentes.
-
-#### Sprint 17 — Sandbox evolutivo inicial
-
-Entregas:
-
-- sandbox separado;
-- memória evolutiva inicial;
-- registro de hipóteses e experimentos;
-- observação de desempenho para aprendizado.
-
-#### Sprint 18 — Fechamento do v1
-
-Entregas:
-
-- validação integrada do v1;
-- testes de ponta a ponta;
-- checklist de prontidão;
-- documentação inicial de operação;
-- decisão formal de transição para v2.
+- estabilidade do núcleo;
+- refinamento de qualidade;
+- sandbox evolutivo inicial;
+- validação integrada e prontidão formal.
 
 ---
 
@@ -11032,7 +10829,7 @@ Estas tecnologias entram como braços especializados convocáveis pelo núcleo c
 - automação de tarefas de desenvolvimento;
 - integração com repositórios e workspaces.
 
-**Forma de uso:** principal candidato para o primeiro especialista robusto do JARVIS.
+**Forma de uso:** principal base de integração para o primeiro especialista robusto do JARVIS.
 
 ---
 
@@ -11883,13 +11680,36 @@ Toda mudança relevante deve:
 
 Documentos derivados podem aprofundar partes específicas, mas não devem contradizer o Documento-Mestre sem revisão formal.
 
+### 235.5 Continuidade editorial e rastreabilidade
+
+Ao longo da evolução deste documento:
+
+- a numeração pode preservar continuidade histórica para evitar perda de rastreabilidade;
+- blocos de **Encaminhamento** e **Próximo passo** devem ser lidos como marcos editoriais do processo de consolidação;
+- a existência de um capítulo de encaminhamento anterior não implica, por si só, que o item continue pendente no estado atual do documento;
+- revisões futuras devem preferir explicitar a continuidade editorial a renumerar grandes trechos sem necessidade real.
+
 ---
 
 ## 236. Checklist de maturidade e continuidade do Documento-Mestre
 
 ### 236.1 Blocos essenciais
 
--
+- identidade, missão e princípios consolidados;
+- mapa cognitivo oficial com mentes, domínios e memórias;
+- arquitetura conceitual, lógica e técnica coerentes entre si;
+- topologia inicial de serviços, runtimes e ambientes;
+- stack oficial por camada e por serviço;
+- posicionamento oficial das tecnologias;
+- definição do v1, v2 e v3;
+- backlog técnico do v1 e roadmap de implementação;
+- blueprint inicial do repositório;
+- decisões arquiteturais iniciais registradas;
+- especificação técnica dos pilares críticos;
+- contratos canônicos, schemas, tipos e estados iniciais;
+- estratégia de validação, evolução e qualidade;
+- estratégia de operação controlada do v1;
+- regras mínimas de versionamento, mudança e prontidão operacional.
 
 ### 236.2 Itens que podem virar documentos derivados
 
@@ -11898,7 +11718,12 @@ Documentos derivados podem aprofundar partes específicas, mas não devem contra
 - roadmap de produto executivo;
 - documento executivo resumido;
 - especificação detalhada de voz;
-- especificação detalhada de especialistas do v2.
+- especificação detalhada de especialistas do v2;
+- estratégia operacional detalhada de produção controlada;
+- estratégia de releases e mudança controlada;
+- plano de readiness e go-live;
+- playbooks de incidentes e contingência;
+- plano técnico detalhado da Sprint 1.
 
 ---
 
@@ -13351,6 +13176,19 @@ Este capítulo transforma a arquitetura, o backlog, os milestones e a stack do J
 
 Este capítulo não substitui o backlog estrutural nem o roadmap de sprints. Ele atua como a **ponte operacional entre arquitetura e engenharia real**.
 
+Com a criação de derivados de implementação, este bloco deve preservar principalmente:
+
+- princípios canônicos de implementação;
+- sequência oficial das fases;
+- critérios de saída e de validação.
+
+O detalhamento tático passa a ser aprofundado prioritariamente em:
+
+- `docs/implementation/implementation-strategy.md`
+- `docs/implementation/sprint-1-plan.md`
+- `docs/implementation/service-breakdown.md`
+- `docs/implementation/first-milestone-plan.md`
+
 ---
 
 ### 286.1 Princípios da implementação do v1
@@ -13387,277 +13225,81 @@ A ideia não é implementar “módulo por módulo” de forma isolada, e sim co
 
 ## 287. Fase 0 — Preparação de execução
 
-Antes da codificação principal, o projeto deve preparar a base mínima para evitar retrabalho precoce.
+Esta fase prepara o repositório, o ambiente e as convenções mínimas do projeto.
 
-### 287.1 Objetivos da Fase 0
+Critério canônico de saída:
 
-- criar o repositório `jarvis`;
-- consolidar a estrutura mínima do monorepo;
-- definir convenções básicas;
-- preparar tooling de qualidade e ambiente local;
-- garantir que documentação e código nasçam juntos.
-
-### 287.2 Entregáveis da Fase 0
-
-- repositório criado;
-- estrutura mínima de diretórios;
-- README inicial;
-- `.env.example`;
-- `.editorconfig`;
-- configuração inicial de Python;
-- configuração inicial de lint, tipagem e testes;
-- pasta `docs/architecture/` preparada.
-
-### 287.3 Critério de saída da Fase 0
-
-A Fase 0 termina quando o projeto pode ser aberto, rodado localmente e evoluído sem ambiguidade estrutural básica.
+- o projeto já pode ser aberto, rodado e evoluído sem ambiguidade estrutural básica.
 
 ---
 
 ## 288. Fase 1 — Fundação semântica compartilhada
 
-Esta fase cria a base semântica que impedirá divergência entre serviços.
+Esta fase estabelece contratos, tipos, enums, estados e eventos compartilhados.
 
-### 288.1 Objetivos da Fase 1
+Critério canônico de saída:
 
-- estabelecer contratos canônicos em forma implementável;
-- definir tipos comuns, enums e estados mínimos;
-- padronizar eventos internos;
-- garantir que todos os serviços nasçam sobre a mesma linguagem semântica.
-
-### 288.2 Blocos a implementar
-
-- `shared/types/ids`
-- `shared/types/enums`
-- `shared/types/state`
-- `shared/contracts`
-- `shared/schemas`
-- `shared/events`
-
-### 288.3 Entregáveis da Fase 1
-
-- InputSchema inicial;
-- MemoryRecoverySchema inicial;
-- MemoryRecordSchema inicial;
-- OperationDispatchSchema inicial;
-- OperationResultSchema inicial;
-- GovernanceCheckSchema inicial;
-- GovernanceDecisionSchema inicial;
-- MissionStateSchema inicial;
-- enums canônicos mínimos;
-- primeiros eventos internos.
-
-### 288.4 Critério de saída da Fase 1
-
-A Fase 1 termina quando serviços diferentes conseguem compartilhar payloads e estados sem criar definições paralelas.
+- serviços diferentes já conseguem compartilhar payloads e estados sem criar definições paralelas.
 
 ---
 
 ## 289. Fase 2 — Núcleo Central mínimo funcional
 
-Esta fase cria a primeira versão realmente viva do cérebro do sistema.
+Esta fase faz o núcleo central responder de forma coerente e unificada.
 
-### 289.1 Objetivos da Fase 2
+Critério canônico de saída:
 
-- receber entrada normalizada;
-- classificar intenção;
-- montar contexto de trabalho básico;
-- acionar primeiros motores internos;
-- produzir síntese final coerente.
-
-### 289.2 Blocos a implementar
-
-- `services/orchestrator-service`
-- `engines/identity-engine`
-- `engines/executive-engine`
-- `engines/planning-engine`
-- `engines/synthesis-engine`
-- integração inicial com `cognitive-engine`
-
-### 289.3 Entregáveis da Fase 2
-
-- fluxo entrada → interpretação → síntese;
-- identity kernel básico;
-- classificador de intenção inicial;
-- planejamento simples;
-- roteamento básico entre análise e resposta;
-- resposta final unificada.
-
-### 289.4 Critério de saída da Fase 2
-
-A Fase 2 termina quando o JARVIS já consegue responder de forma coerente e unificada com base em identidade, intenção e planejamento mínimo.
+- o JARVIS já consegue responder com coerência usando identidade, intenção e planejamento mínimo.
 
 ---
 
 ## 290. Fase 3 — Memória útil e continuidade real
 
-Esta fase impede que o sistema permaneça puramente stateless.
+Esta fase introduz continuidade, episódio, contexto e memória crítica mínima.
 
-### 290.1 Objetivos da Fase 3
+Critério canônico de saída:
 
-- permitir continuidade entre interações;
-- registrar episódios relevantes;
-- sustentar contexto útil de sessão e missão;
-- proteger memória crítica desde o início.
-
-### 290.2 Blocos a implementar
-
-- `services/memory-service`
-- `memory/identity-memory`
-- `memory/normative-memory`
-- `memory/user-memory`
-- `memory/contextual-memory`
-- `memory/episodic-memory`
-- `memory/mission-memory`
-- `memory/semantic-memory` inicial
-
-### 290.3 Entregáveis da Fase 3
-
-- recuperação contextual básica;
-- gravação episódica;
-- memória do usuário funcional;
-- memória de missão básica;
-- guardião de memória crítica inicial;
-- integração do núcleo com memória.
-
-### 290.4 Critério de saída da Fase 3
-
-A Fase 3 termina quando o sistema consegue lembrar contexto útil e sustentar continuidade mínima entre sessões e missões.
+- o sistema já sustenta continuidade útil entre sessões e missões básicas.
 
 ---
 
 ## 291. Fase 4 — Governança mínima robusta
 
-Esta fase transforma o sistema em algo controlável e legítimo.
+Esta fase transforma o sistema em algo controlável por política explícita.
 
-### 291.1 Objetivos da Fase 4
+Critério canônico de saída:
 
-- validar ações relevantes;
-- classificar risco;
-- bloquear o que sair de escopo;
-- proteger memória crítica;
-- registrar decisões de governança.
-
-### 291.2 Blocos a implementar
-
-- `services/governance-service`
-- `governance/policy-core`
-- `governance/risk-engine`
-- `governance/permission-engine`
-- `governance/pre-action-validator`
-- `governance/memory-guard`
-- `governance/containment`
-
-### 291.3 Entregáveis da Fase 4
-
-- classificador de risco inicial;
-- validador de permissão;
-- pré-ação em operações relevantes;
-- bloqueio básico de fluxos indevidos;
-- trilha inicial de auditoria.
-
-### 291.4 Critério de saída da Fase 4
-
-A Fase 4 termina quando o sistema já não depende apenas de “bom comportamento” e passa a operar sob política explícita.
+- o sistema deixa de depender apenas de “bom comportamento” e passa a operar sob governança explícita.
 
 ---
 
 ## 292. Fase 5 — Operação mínima real
 
-Esta fase dá ao JARVIS a capacidade de agir de forma útil no mundo.
+Esta fase dá ao sistema operação real de baixo risco.
 
-### 292.1 Objetivos da Fase 5
+Critério canônico de saída:
 
-- despachar tarefas reais;
-- usar ferramentas de baixo risco;
-- produzir artefatos úteis;
-- manter estado operacional básico.
-
-### 292.2 Blocos a implementar
-
-- `services/operational-service`
-- `adapters/` iniciais
-- `execution/`
-- `artifacts/`
-- `state/`
-
-### 292.3 Entregáveis da Fase 5
-
-- pesquisa e síntese operacional básica;
-- geração de artefatos textuais;
-- execução de tarefas simples;
-- adaptadores de arquivos/browser/artefatos;
-- retorno estruturado ao núcleo.
-
-### 292.4 Critério de saída da Fase 5
-
-A Fase 5 termina quando o JARVIS consegue, sob governança, fazer algo útil além de conversar.
+- o JARVIS já consegue, sob governança, fazer algo útil além de conversar.
 
 ---
 
 ## 293. Fase 6 — Conhecimento e profundidade inicial de domínio
 
-Esta fase impede que o sistema fique restrito a respostas genéricas sem repertório estruturado.
+Esta fase introduz repertório estruturado e retrieval útil.
 
-### 293.1 Objetivos da Fase 6
+Critério canônico de saída:
 
-- ativar a taxonomia de domínios;
-- permitir retrieval útil;
-- aprofundar os domínios prioritários do v1;
-- melhorar a qualidade de raciocínio e síntese.
-
-### 293.2 Blocos a implementar
-
-- `services/knowledge-service`
-- `knowledge/domain-registry`
-- `knowledge/subdomain-registry`
-- `knowledge/concept-index`
-- `knowledge/retrieval-engine`
-
-### 293.3 Entregáveis da Fase 6
-
-- registro dos 30 domínios;
-- roteamento por domínio;
-- retrieval inicial;
-- profundidade maior nos domínios prioritários;
-- integração com memória e núcleo.
-
-### 293.4 Critério de saída da Fase 6
-
-A Fase 6 termina quando o sistema passa a raciocinar com repertório multidomínio mais estruturado e recuperável.
+- o sistema já raciocina com profundidade inicial em domínios prioritários e recuperação estruturada.
 
 ---
 
 ## 294. Fase 7 — Observabilidade e estabilidade operacional
 
-Esta fase dá capacidade real de depuração, medição e confiabilidade.
+Esta fase fortalece medição, rastreamento e estabilidade operacional.
 
-### 294.1 Objetivos da Fase 7
+Critério canônico de saída:
 
-- observar fluxos ponta a ponta;
-- correlacionar entrada, memória, decisão e ação;
-- medir latência, falha e estabilidade;
-- preparar o sistema para evolução segura.
-
-### 294.2 Blocos a implementar
-
-- `services/observability-service`
-- `observability/logging`
-- `observability/tracing`
-- `observability/metrics`
-- `observability/audit-trail`
-
-### 294.3 Entregáveis da Fase 7
-
-- logs estruturados integrados;
-- tracing por fluxo;
-- métricas mínimas do v1;
-- dashboards iniciais;
-- trilha de auditoria mínima.
-
-### 294.4 Critério de saída da Fase 7
-
-A Fase 7 termina quando o sistema pode ser inspecionado, medido e depurado de forma consistente.
+- o sistema já pode ser inspecionado, medido e depurado de forma consistente.
 
 ---
 
@@ -13665,31 +13307,9 @@ A Fase 7 termina quando o sistema pode ser inspecionado, medido e depurado de fo
 
 Esta fase prepara o sistema para melhorar sem perder controle.
 
-### 295.1 Objetivos da Fase 8
+Critério canônico de saída:
 
-- isolar ambiente de experimentação;
-- registrar hipóteses e comparações;
-- criar memória evolutiva inicial;
-- iniciar avaliação de melhorias não nucleares.
-
-### 295.2 Blocos a implementar
-
-- `evolution/performance-observer`
-- `evolution/experiment-runner`
-- `evolution/version-compare`
-- `evolution/evolutionary-sandbox`
-- `memory/evolutionary-memory`
-
-### 295.3 Entregáveis da Fase 8
-
-- sandbox funcional separado;
-- propostas de melhoria registradas;
-- comparação básica entre versões/abordagens;
-- trilha mínima da memória evolutiva.
-
-### 295.4 Critério de saída da Fase 8
-
-A Fase 8 termina quando o sistema já consegue experimentar melhorias sem tocar diretamente a produção de forma insegura.
+- o sistema já consegue experimentar melhorias em sandbox sem tocar produção de modo inseguro.
 
 ---
 
@@ -15041,27 +14661,149 @@ A estratégia oficial de testes e qualidade do JARVIS passa a ser definida como:
 
 A partir deste ponto, os próximos passos mais úteis possíveis são:
 
-1. transformar a **Sprint 1** em tarefas técnicas concretas;
-2. continuar o documento com a **estratégia de operação do v1 em produção controlada**;
-3. produzir um **resumo executivo derivado** a partir do Documento-Mestre;
-4. continuar o documento com a **estratégia de releases, versionamento e mudança controlada**.
+1. iniciar a materialização real da **Sprint 1** no repositório;
+2. revisar o destino do arquivo paralelo `documento_mestre_jarvis.md`;
+3. consolidar o pacote inicial de documentos derivados sem reintroduzir duplicidade;
+4. manter o Documento-Mestre focado em definição canônica, não em operação diária.
 
 ---
 
-## 344. Continuidade do Documento-Mestre
+## 344. Estratégia de operação do v1 em produção controlada
 
-A partir deste ponto, os próximos passos mais úteis possíveis são:
+Este capítulo passa a registrar apenas a definição canônica da operação controlada do `v1`.
 
-1. gerar a **árvore real de arquivos inicial pronta para criação do repositório**;
-2. transformar a **Sprint 1** em tarefas técnicas concretas;
-3. continuar o documento com a **estratégia detalhada de implementação do v1 passo a passo**;
-4. produzir um **resumo executivo derivado** a partir do Documento-Mestre.
+Produção controlada significa:
+
+- uso real em escopo restrito;
+- governança mais forte que conveniência;
+- observabilidade obrigatória;
+- contenção e rollback claros;
+- progressão por evidência, não por impressão subjetiva.
+
+No `v1`, isso implica:
+
+- permitir apenas operações reais de baixo risco, reversíveis e rastreáveis;
+- bloquear automação irreversível, operação silenciosa de alto impacto e promoção evolutiva em produção;
+- ampliar escopo somente quando houver estabilidade, governança funcional e recuperação confiável.
+
+O detalhamento operacional, checklists e rotina prática deste tema passam a ser mantidos no derivado:
+
+- `docs/operations/v1-production-controlled.md`
 
 ---
 
-## 345. Continuidade do Documento-Mestre
+## 345. Estratégia de releases, versionamento e mudança controlada
 
-O JARVIS, em sua concepção oficial, não é apenas um software, um chatbot ou um conjunto de automações. Ele deve ser tratado como uma entidade cognitiva geral aplicada, capaz de integrar conhecimento, raciocínio, memória, operação e evolução em uma única identidade coerente.
+Este capítulo registra a política canônica de mudança controlada do JARVIS.
 
-Este Documento-Mestre constitui a primeira base formal dessa visão.
+Toda mudança relevante deve ser:
+
+- explicitamente versionada;
+- rastreável;
+- validada antes de promoção;
+- reversível quando aplicável;
+- analisada quanto a impacto em contratos, memória e governança.
+
+Mudanças que afetem identidade, memória crítica, governança, autonomia ou evolução não devem ser tratadas como atualizações rotineiras.
+
+O detalhamento operacional de classes de mudança, gates, rollout e rollback passa a ser mantido no derivado:
+
+- `docs/operations/release-and-change-management.md`
+
+---
+
+## 346. Plano de readiness e go-live do v1
+
+Este capítulo registra a regra canônica de prontidão do `v1`.
+
+O `go-live` do `v1` só deve ocorrer quando houver:
+
+- capacidade funcional mínima;
+- memória útil básica;
+- governança mínima robusta;
+- observabilidade suficiente;
+- rollback operacional claro;
+- escopo real de uso explicitamente limitado.
+
+O detalhamento operacional de checklist, smoke checks e regime de lançamento passa a ser mantido no derivado:
+
+- `docs/operations/go-live-readiness.md`
+
+---
+
+## 347. Estratégia de incidentes, contingência e recuperação operacional
+
+Este capítulo registra a política canônica de resposta a incidentes do `v1`.
+
+O sistema deve reconhecer, no mínimo:
+
+- falhas de núcleo, memória, governança, operação, observabilidade e voz/realtime quando aplicável;
+- regressões após mudanças recentes.
+
+Toda resposta a incidente deve priorizar:
+
+- contenção;
+- preservação de evidências;
+- restauração de baseline estável;
+- registro para análise posterior;
+- aprendizado operacional e evolutivo.
+
+O detalhamento operacional de severidade, resposta, registro e postmortem passa a ser mantido no derivado:
+
+- `docs/operations/incident-response.md`
+
+---
+
+## 348. Critérios formais de transição do v1 para o v2
+
+Este capítulo registra a regra canônica de transição do `v1` para o `v2`.
+
+O `v2` só deve começar quando o `v1` demonstrar, de forma estável:
+
+- identidade reconhecível em cenários centrais;
+- memória útil e protegida;
+- operação de baixo risco funcional;
+- governança mínima robusta;
+- observabilidade suficiente;
+- produção controlada operando de modo aceitável.
+
+O projeto não deve carregar para o `v2` dívidas estruturais graves em governança, memória, contratos centrais, rollback e observabilidade.
+
+---
+
+## 349. Critérios formais de transição do v2 para o v3
+
+Este capítulo registra a regra canônica de transição do `v2` para o `v3`.
+
+O `v3` só deve começar quando houver evidência suficiente de:
+
+- especialistas úteis e subordinados ao núcleo;
+- memória avançada mais estável;
+- missões mais longas com previsibilidade aceitável;
+- governança madura para maior amplitude operacional;
+- pipeline evolutivo confiável em sandbox;
+- rollback bem estabelecido;
+- ampliação multimodal sem quebra de identidade.
+
+O projeto não deve entrar no `v3` se ainda houver fragmentação identitária, evolução sem benchmark suficiente, memória avançada perigosa ou baixa previsibilidade operacional em escopo ampliado.
+
+---
+
+## 350. Continuidade do Documento-Mestre
+
+Com a criação do pacote inicial de documentos derivados, o Documento-Mestre passa a concentrar principalmente:
+
+- definições canônicas do sistema;
+- arquitetura oficial;
+- políticas nucleares;
+- critérios de maturidade e transição.
+
+Detalhamentos operacionais, executivos e especializados passam a ser aprofundados prioritariamente nos derivados correspondentes, preservando este documento como artefato constitucional do projeto.
+
+Os próximos passos mais úteis, a partir deste ponto, passam a ser:
+
+1. iniciar a materialização real da **Sprint 1** no repositório;
+2. revisar o destino do arquivo `documento_mestre_jarvis.md`;
+3. reduzir duplicidade residual entre roadmap, backlog, milestones e implementação;
+4. evitar criação de novos documentos sem ganho claro de execução ou clareza.
 

@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "jarvis"
+version = "0.1.0"
+description = "Base estrutural do sistema JARVIS"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3",
+  "ruff>=0.11.0",
+]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.setuptools.packages.find]
+where = [
+  "services/orchestrator-service/src",
+  "services/memory-service/src",
+  "services/governance-service/src",
+  "services/operational-service/src",
+  "services/knowledge-service/src",
+  "services/observability-service/src",
+  "engines/identity-engine/src",
+  "engines/executive-engine/src",
+  "engines/cognitive-engine/src",
+  "engines/planning-engine/src",
+  "engines/synthesis-engine/src",
+]
+
+[tool.pytest.ini_options]
+minversion = "8.0"
+addopts = "-q"
+testpaths = [
+  "tests",
+  "services",
+  "engines",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
