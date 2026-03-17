@@ -2,17 +2,17 @@
 
 ## Metadata
 
-- Atualizado em: 2026-03-16
+- Atualizado em: 2026-03-17
 - Branch: `main`
-- Commit de referencia: `335c3f6`
+- Commit de referencia: `f134cbb`
 - Artefato canonico do projeto: `documento_mestre_jarvis.md`
-- Status do projeto: Sprint 1 materializada e Sprint 2 iniciada com base semantica compartilhada minima
+- Status do projeto: Sprint 1 materializada, Sprint 2 minima consolidada e primeiro fluxo funcional do orquestrador iniciado
 
 ---
 
 ## Meta Atual
 
-Consolidar a **Sprint 2 - Contratos e constituicao** sem abrir escopo prematuro de integracao funcional ampla.
+Sair da fundacao semantica isolada e consolidar o **primeiro fluxo funcional minimo** do JARVIS a partir do `orchestrator-service`.
 
 ---
 
@@ -26,13 +26,14 @@ Hoje o repositorio contem:
 - estrutura real do monorepo criada;
 - arquivos-base da raiz presentes;
 - esqueletos minimos dos servicos centrais e engines centrais ja presentes no codigo;
-- camada compartilhada inicial em `shared/` com:
-  - tipos e enums canonicos;
-  - estados iniciais;
-  - contratos canonicos prioritarios;
-  - schemas declarativos iniciais;
-  - eventos internos iniciais;
-  - base de identidade, missao e principios.
+- camada compartilhada inicial em `shared/` com tipos, enums, estados, contratos, schemas, eventos e identidade/principios;
+- `orchestrator-service` com fluxo minimo funcional para:
+  - receber `InputContract`;
+  - classificar intencao;
+  - gerar checagem de governanca inicial;
+  - aplicar decisao simples de allow/block;
+  - emitir eventos internos prioritarios;
+  - devolver sintese textual basica.
 
 Arquivo paralelo/historico que nao deve ser tratado como fonte principal sem decisao explicita:
 
@@ -50,9 +51,10 @@ Arquivo paralelo/historico que nao deve ser tratado como fonte principal sem dec
 - criacao do pacote inicial de derivados de implementacao, operacao, arquitetura e resumo executivo;
 - materializacao da base real do repositorio da Sprint 1;
 - criacao dos esqueletos minimos dos servicos centrais e engines centrais;
-- preparacao de `shared/contracts`, `shared/schemas`, `shared/types`, `shared/events` e `shared/state`;
 - implementacao inicial da Sprint 2 em `shared/` com contratos, tipos, schemas, eventos e identidade/principios;
-- criacao de testes iniciais de regressao estrutural em `tests/unit/test_shared_layer.py`.
+- criacao de testes iniciais de regressao estrutural em `tests/unit/test_shared_layer.py`;
+- implementacao do primeiro fluxo funcional do `orchestrator-service` com classificacao simples de intencao, governanca inicial, trilha de eventos e sintese basica;
+- ampliacao dos testes do `orchestrator-service` para cobrir fluxo permitido e fluxo bloqueado.
 
 ---
 
@@ -80,9 +82,9 @@ Nao rediscutir sem evidencia forte ou mudanca explicita de direcao:
 Pendencias principais agora:
 
 - instalar as dependencias locais de desenvolvimento, especialmente `pytest` e `ruff`;
-- validar a Sprint 1 e a Sprint 2 com o bootstrap real do ambiente virtual;
-- expandir a camada compartilhada com validacao mais forte e, se fizer sentido, centralizacao futura em biblioteca especifica;
-- iniciar o esqueleto funcional do `orchestrator-service` usando os contratos canonicos de `shared/`;
+- validar a Sprint 1, a Sprint 2 e o fluxo do orquestrador com o bootstrap real do ambiente virtual;
+- ligar o `orchestrator-service` aos servicos reais de memoria, governanca e operacao, hoje ainda representados por logica minima local;
+- decidir se a proxima camada funcional sera `memory-service` ou `governance-service`;
 - decidir formalmente o destino de `documento_mestre_do_jarvis.md`.
 
 ---
@@ -94,17 +96,17 @@ Ordem recomendada:
 1. criar e ativar `.venv`;
 2. instalar `.[dev]`;
 3. rodar `pytest` e `ruff check .`;
-4. ligar o `orchestrator-service` aos contratos e eventos canonicos iniciais;
-5. depois disso iniciar o primeiro fluxo funcional minimo entre entrada, governanca e sintese basica.
+4. extrair a politica de governanca minima do `orchestrator-service` para o `governance-service`;
+5. depois disso ligar o `orchestrator-service` a um backbone minimo de memoria ou contexto.
 
 ---
 
 ## Riscos / Bloqueios
 
 - o ambiente local atual ainda nao tem `pytest` instalado, entao a validacao completa nao foi executada;
-- a camada de voz em `shared/schemas` esta apenas com placeholders canonicos, porque os campos formais ainda nao foram fechados em codigo;
-- existe risco de voltar a expandir documentacao mais rapido do que codigo;
-- `documento_mestre_do_jarvis.md` continua como fonte paralela potencialmente ambigua.
+- a governanca do fluxo atual ainda e simplificada e vive no proprio `orchestrator-service`;
+- a camada de voz em `shared/schemas` continua apenas com placeholders canonicos;
+- existe risco de expandir codigo periférico antes de consolidar integracao entre servicos centrais.
 
 ---
 
@@ -113,17 +115,14 @@ Ordem recomendada:
 - `documento_mestre_jarvis.md`
 - `HANDOFF.md`
 - `CHANGELOG.md`
-- `README.md`
-- `pyproject.toml`
-- `package.json`
 - `shared/types/__init__.py`
 - `shared/contracts/__init__.py`
 - `shared/schemas/__init__.py`
 - `shared/events/__init__.py`
 - `shared/state/__init__.py`
-- `tests/unit/test_shared_layer.py`
 - `services/orchestrator-service/src/orchestrator_service/service.py`
-- `docs/implementation/sprint-1-plan.md`
+- `services/orchestrator-service/tests/test_orchestrator_service.py`
+- `tests/unit/test_shared_layer.py`
 - `docs/implementation/service-breakdown.md`
 - `docs/implementation/implementation-strategy.md`
 
@@ -135,15 +134,14 @@ Leitura minima para qualquer novo agente:
 
 1. `HANDOFF.md`
 2. `documento_mestre_jarvis.md`
-3. `shared/types/__init__.py`
-4. `shared/contracts/__init__.py`
-5. `shared/schemas/__init__.py`
+3. `shared/contracts/__init__.py`
+4. `shared/events/__init__.py`
+5. `services/orchestrator-service/src/orchestrator_service/service.py`
 
 Checagens rapidas recomendadas:
 
-- confirmar que a arvore principal do monorepo existe;
-- validar que `shared/` contem tipos, contratos, schemas, eventos e identidade canonicos;
-- confirmar que os servicos e engines centrais continuam com esqueletos minimos;
+- confirmar que `shared/` contem a camada canonica minima;
+- validar que o `orchestrator-service` aceita `InputContract` e devolve fluxo permitido e bloqueado;
 - instalar dependencias locais e executar `pytest`.
 
 Comandos uteis:
@@ -164,7 +162,7 @@ ruff check .
 - tratar `documento_mestre_jarvis.md` como artefato canonico;
 - usar `HANDOFF.md` como documento operacional de estado;
 - atualizar `CHANGELOG.md` sempre que houver mudanca relevante;
-- priorizar agora codigo integrador, nao novos documentos;
+- priorizar agora integracao funcional entre servicos centrais;
 - reutilizar `shared/` em vez de redefinir contratos localmente nos servicos.
 
 ---
@@ -176,5 +174,5 @@ Este handoff continua util enquanto o projeto estiver saindo da fundacao estrutu
 Ele deve ser reavaliado quando:
 
 - a validacao local com `pytest` e `ruff` estiver estabelecida;
-- o `orchestrator-service` passar a executar um fluxo minimo real com contratos compartilhados;
+- a governanca minima estiver extraida do `orchestrator-service` para um servico proprio;
 - o foco principal do trabalho deixar de ser fundacao e passar a ser iteracao funcional continua.

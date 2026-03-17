@@ -6,6 +6,31 @@ Ele **nao** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalha
 
 ---
 
+## 2026-03-17
+
+### Orchestrator Service
+
+- substituido o esqueleto vazio do `orchestrator-service` por um primeiro fluxo funcional minimo;
+- adicionado suporte a:
+  - recebimento de `InputContract`;
+  - classificacao simples de intencao;
+  - geracao de `GovernanceCheckContract`;
+  - avaliacao inicial de governanca com `allow` e `block`;
+  - emissao de eventos internos prioritarios;
+  - sintese textual basica coerente com a identidade inicial do sistema;
+- ampliados os testes do `orchestrator-service` para cobrir um fluxo de baixo risco e um fluxo sensivel bloqueado.
+
+### HANDOFF
+
+- atualizado para refletir que o projeto saiu do estado de esqueleto puro do orquestrador e entrou no primeiro fluxo funcional minimo.
+
+### Validacao
+
+- validado o fluxo do `orchestrator-service` por execucao Python direta com carga manual de `sys.path`;
+- `pytest` continua pendente por ausencia de dependencia instalada no ambiente local atual.
+
+---
+
 ## 2026-03-16
 
 ### Documento-Mestre
@@ -44,33 +69,10 @@ Ele **nao** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalha
   - `.env.example`
   - `pyproject.toml`
   - `package.json`;
-- criada a arvore principal do repositorio:
-  - `apps/`
-  - `services/`
-  - `engines/`
-  - `memory/`
-  - `knowledge/`
-  - `governance/`
-  - `observability/`
-  - `evolution/`
-  - `shared/`
-  - `infra/`
-  - `tests/`
-  - `tools/`;
+- criada a arvore principal do repositorio;
 - criados os esqueletos minimos dos servicos centrais e das engines centrais;
-- preparada a base compartilhada para a Sprint 2 em:
-  - `shared/contracts`
-  - `shared/schemas`
-  - `shared/types`
-  - `shared/events`
-  - `shared/state`;
-- implementada a primeira camada canonica de `shared/` com:
-  - tipos e enums oficiais;
-  - estados iniciais;
-  - contratos prioritarios;
-  - schemas declarativos iniciais;
-  - eventos internos prioritarios;
-  - identidade, missao e principios do sistema;
+- preparada a base compartilhada para a Sprint 2 em `shared/contracts`, `shared/schemas`, `shared/types`, `shared/events` e `shared/state`;
+- implementada a primeira camada canonica de `shared/` com tipos, contratos, schemas, eventos e identidade/principios;
 - adicionados testes iniciais de regressao estrutural em `tests/unit/test_shared_layer.py`.
 
 ### Validacao
