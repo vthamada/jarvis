@@ -1,5 +1,6 @@
 from governance_service.service import GovernanceAssessment, GovernanceService
-from shared.contracts import InputContract
+
+from shared.contracts import DeliberativePlanContract, InputContract
 from shared.types import (
     ChannelType,
     InputType,
@@ -11,11 +12,26 @@ from shared.types import (
 )
 
 
+def low_risk_plan() -> DeliberativePlanContract:
+    return DeliberativePlanContract(
+        plan_summary="estruturar milestone em etapas reversiveis",
+        goal="Please plan the milestone.",
+        steps=["definir objetivo", "listar etapas", "sugerir proxima acao"],
+        active_domains=["strategy"],
+        active_minds=["mente_executiva"],
+        constraints=["low-risk"],
+        risks=["sem risco material alem do escopo controlado do v1"],
+        recommended_task_type="draft_plan",
+        requires_human_validation=False,
+        rationale="contexto=nenhum; apoio=baseline local",
+    )
+
+
 def test_governance_service_name() -> None:
     assert GovernanceService.name == "governance-service"
 
 
-def test_governance_service_allows_low_risk_requests() -> None:
+def test_governance_service_allows_reversible_analysis_requests() -> None:
     service = GovernanceService()
     result = service.assess_request(
         InputContract(
@@ -23,11 +39,23 @@ def test_governance_service_allows_low_risk_requests() -> None:
             session_id=SessionId("sess-1"),
             channel=ChannelType.CHAT,
             input_type=InputType.TEXT,
-            content="Please plan the milestone.",
+            content="Analyze the milestone.",
             timestamp="2026-03-17T00:00:00Z",
         ),
-        intent="planning",
+        intent="analysis",
         requested_by_service="orchestrator-service",
+        plan=DeliberativePlanContract(
+            plan_summary="comparar trade-offs do milestone",
+            goal="Analyze the milestone.",
+            steps=["consolidar contexto", "comparar trade-offs", "recomendar caminho"],
+            active_domains=["analysis"],
+            active_minds=["mente_analitica"],
+            constraints=["low-risk"],
+            risks=["sem risco material alem do escopo controlado do v1"],
+            recommended_task_type="produce_analysis_brief",
+            requires_human_validation=False,
+            rationale="contexto=nenhum; apoio=baseline local",
+        ),
     )
 
     assert isinstance(result, GovernanceAssessment)
@@ -35,7 +63,7 @@ def test_governance_service_allows_low_risk_requests() -> None:
     assert result.governance_decision.risk_level == RiskLevel.LOW
 
 
-def test_governance_service_conditions_moderate_risk_requests() -> None:
+def test_governance_service_conditions_local_safe_operations() -> None:
     service = GovernanceService()
     result = service.assess_request(
         InputContract(
@@ -48,6 +76,7 @@ def test_governance_service_conditions_moderate_risk_requests() -> None:
         ),
         intent="planning",
         requested_by_service="orchestrator-service",
+        plan=low_risk_plan(),
     )
 
     assert result.governance_decision.decision == PermissionDecision.ALLOW_WITH_CONDITIONS
@@ -55,7 +84,7 @@ def test_governance_service_conditions_moderate_risk_requests() -> None:
     assert result.governance_decision.conditions
 
 
-def test_governance_service_blocks_sensitive_action() -> None:
+def test_governance_service_defers_sensitive_plan_even_without_destructive_keyword() -> None:
     service = GovernanceService()
     result = service.assess_request(
         InputContract(
@@ -63,11 +92,43 @@ def test_governance_service_blocks_sensitive_action() -> None:
             session_id=SessionId("sess-3"),
             channel=ChannelType.CHAT,
             input_type=InputType.TEXT,
+            content="Plan the next release.",
+            timestamp="2026-03-17T00:00:00Z",
+        ),
+        intent="planning",
+        requested_by_service="orchestrator-service",
+        plan=DeliberativePlanContract(
+            plan_summary="preparar mudanca sensivel com impacto operacional",
+            goal="Plan the next release.",
+            steps=["avaliar impacto", "validar rollout", "autorizar mudanca"],
+            active_domains=["strategy"],
+            active_minds=["mente_executiva"],
+            constraints=["revisao humana"],
+            risks=["pedido contem sinais de risco operacional"],
+            recommended_task_type="draft_plan",
+            requires_human_validation=True,
+            rationale="contexto=nenhum; apoio=baseline local",
+        ),
+    )
+
+    assert result.governance_decision.decision == PermissionDecision.DEFER_FOR_VALIDATION
+    assert result.governance_decision.requires_rollback_plan is True
+
+
+def test_governance_service_blocks_sensitive_action() -> None:
+    service = GovernanceService()
+    result = service.assess_request(
+        InputContract(
+            request_id=RequestId("req-4"),
+            session_id=SessionId("sess-4"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
             content="Delete all project files now.",
             timestamp="2026-03-17T00:00:00Z",
         ),
         intent="sensitive_action",
         requested_by_service="orchestrator-service",
+        plan=low_risk_plan(),
     )
 
     assert result.governance_decision.decision == PermissionDecision.BLOCK

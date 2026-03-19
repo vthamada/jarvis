@@ -1,4 +1,4 @@
-# Python
+﻿# Python
 __pycache__/
 *.py[cod]
 .pytest_cache/
@@ -7,6 +7,7 @@ __pycache__/
 .mypy_cache/
 .coverage
 htmlcov/
+*.egg-info/
 .venv/
 venv/
 pytest-cache-files-*/
@@ -26,3 +27,4 @@ npm-debug.log*
 Thumbs.db
 .idea/
 .vscode/
+

@@ -7,6 +7,7 @@ Este documento operacionaliza a estrategia de producao controlada do JARVIS `v1`
 Ele deriva principalmente de:
 
 - `documento_mestre_jarvis.md`, capitulo `344. Estrategia de operacao do v1 em producao controlada`
+- `docs/operations/v1-go-no-go-decision.md`
 
 Seu papel e transformar a politica arquitetural em um guia de operacao pratica para o primeiro uso real do sistema.
 
@@ -62,7 +63,7 @@ O `v1` nao deve operar em producao controlada, neste estagio, em:
 Antes de liberar o `v1` para producao controlada, confirmar:
 
 - nucleo central funcional no escopo do `v1`;
-- memoria util minima funcionando;
+- memoria util minima funcionando com backend operacional definido;
 - governanca minima robusta ativa;
 - logs estruturados e rastreamento de fluxo operando;
 - ambiente separado de sandbox evolutivo;
@@ -71,13 +72,26 @@ Antes de liberar o `v1` para producao controlada, confirmar:
 
 ---
 
-## 6. Checklist de entrada
+## 6. Estado atual do baseline
+
+No baseline atual do repositorio:
+
+- a trilha central `orchestrator -> memory -> governance -> knowledge -> operational -> observability` esta integrada;
+- `PostgreSQL` foi validado por teste de integracao e benchmark como backend operacional recomendado do `v1` local;
+- `sqlite` permanece apenas como fallback local de desenvolvimento;
+- a observabilidade local foi benchmarkada como suficiente para o `v1` controlado;
+- o `evolution-lab` continua `sandbox-only`, com `manual_variants` como estrategia priorizada;
+- a decisao formal atual e `GO CONDICIONAL` para producao controlada, em escopo reduzido e com monitoramento reforcado.
+
+---
+
+## 7. Checklist de entrada
 
 Checklist minimo:
 
 - `governanca`
   - classificacao de risco funcional
-  - permissao e bloqueio basicos ativos
+  - permissao, condicionamento e bloqueio basicos ativos
 - `observabilidade`
   - logs estruturados
   - tracing minimo
@@ -87,6 +101,7 @@ Checklist minimo:
   - falhas sinalizadas corretamente
 - `memoria`
   - recuperacao util
+  - backend operacional validado
   - protecao minima de memoria critica
 - `ambiente`
   - separacao clara entre producao e sandbox
@@ -94,7 +109,7 @@ Checklist minimo:
 
 ---
 
-## 7. Regime de monitoramento
+## 8. Regime de monitoramento
 
 Durante producao controlada, monitorar continuamente:
 
@@ -108,7 +123,7 @@ Durante producao controlada, monitorar continuamente:
 
 ---
 
-## 8. Resposta operacional minima
+## 9. Resposta operacional minima
 
 Toda anomalia relevante deve permitir pelo menos:
 
@@ -121,7 +136,7 @@ Toda anomalia relevante deve permitir pelo menos:
 
 ---
 
-## 9. Criterios de ampliacao de uso
+## 10. Criterios de ampliacao de uso
 
 So ampliar o uso do `v1` se houver:
 
@@ -134,7 +149,7 @@ So ampliar o uso do `v1` se houver:
 
 ---
 
-## 10. Criterios de contencao
+## 11. Criterios de contencao
 
 Nao ampliar, ou reduzir escopo, se houver:
 
@@ -147,7 +162,7 @@ Nao ampliar, ou reduzir escopo, se houver:
 
 ---
 
-## 11. Relacao com o v2
+## 12. Relacao com o v2
 
 A producao controlada do `v1` deve gerar evidencia para:
 

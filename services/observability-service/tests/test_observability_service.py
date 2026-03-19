@@ -3,6 +3,7 @@ from tempfile import gettempdir
 from uuid import uuid4
 
 from observability_service.service import ObservabilityQuery, ObservabilityService
+
 from shared.events import InternalEventEnvelope
 
 
@@ -49,3 +50,28 @@ def test_observability_service_persists_and_filters_events() -> None:
 
     assert len(filtered) == 1
     assert filtered[0].event_name == "input_received"
+
+
+def test_observability_service_exports_trace_view() -> None:
+    temp_dir = runtime_dir("observability-export")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service.ingest_events(
+        [
+            InternalEventEnvelope(
+                event_id="evt-3",
+                event_name="response_synthesized",
+                timestamp="2026-03-18T00:00:02Z",
+                source_service="orchestrator-service",
+                payload={"intent": "planning", "status": "ok"},
+                request_id="req-3",
+                session_id="sess-3",
+                correlation_id="req-3",
+            )
+        ]
+    )
+
+    trace_view = service.export_trace_view(ObservabilityQuery(request_id="req-3"))
+
+    assert len(trace_view) == 1
+    assert trace_view[0]["name"] == "response_synthesized"
+    assert trace_view[0]["payload_keys"] == ["intent", "status"]

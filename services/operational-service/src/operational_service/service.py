@@ -7,7 +7,11 @@ from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
-from shared.contracts import ArtifactResultContract, OperationDispatchContract, OperationResultContract
+from shared.contracts import (
+    ArtifactResultContract,
+    OperationDispatchContract,
+    OperationResultContract,
+)
 from shared.types import ArtifactId, ArtifactStatus, OperationStatus
 
 
@@ -25,7 +29,9 @@ class OperationalService:
     name = "operational-service"
 
     def __init__(self, artifact_dir: str | None = None) -> None:
-        resolved_dir = Path(artifact_dir) if artifact_dir else Path.cwd() / ".jarvis_runtime" / "artifacts"
+        resolved_dir = (
+            Path(artifact_dir) if artifact_dir else Path.cwd() / ".jarvis_runtime" / "artifacts"
+        )
         resolved_dir.mkdir(parents=True, exist_ok=True)
         self.artifact_dir = resolved_dir
 
@@ -46,7 +52,7 @@ class OperationalService:
             content = f"Task type nao suportado: {dispatch.task_type}"
             status = OperationStatus.FAILED
 
-        outputs = [content.splitlines()[0]]
+        outputs = [dispatch.plan_summary or content.splitlines()[0]]
         if status == OperationStatus.COMPLETED:
             artifact_results.append(self._write_artifact(dispatch, content))
         result = OperationResultContract(
@@ -54,12 +60,18 @@ class OperationalService:
             status=status,
             outputs=outputs,
             timestamp=self.now(),
-            artifacts=[artifact.location_ref for artifact in artifact_results if artifact.location_ref],
+            artifacts=[
+                artifact.location_ref for artifact in artifact_results if artifact.location_ref
+            ],
             checkpoints=["operational_execution_started", "operational_execution_finished"],
             next_recommendation=(
                 "continue" if status == OperationStatus.COMPLETED else "review_dispatch"
             ),
-            memory_record_hints=(["artifact_generated"] if artifact_results else ["dispatch_review_required"]),
+            memory_record_hints=(
+                ["artifact_generated", dispatch.plan_summary or "plan_executed"]
+                if artifact_results
+                else ["dispatch_review_required"]
+            ),
         )
         return OperationalExecution(operation_result=result, artifact_results=artifact_results)
 
@@ -69,7 +81,11 @@ class OperationalService:
         content: str,
     ) -> ArtifactResultContract:
         artifact_id = ArtifactId(f"artifact-{uuid4().hex[:8]}")
-        target_dir = Path(dispatch.artifact_destination) if dispatch.artifact_destination else self.artifact_dir
+        target_dir = (
+            Path(dispatch.artifact_destination)
+            if dispatch.artifact_destination
+            else self.artifact_dir
+        )
         target_dir.mkdir(parents=True, exist_ok=True)
         artifact_path = target_dir / f"{artifact_id}.md"
         artifact_path.write_text(content, encoding="utf-8")
@@ -80,42 +96,64 @@ class OperationalService:
             produced_by=self.name,
             timestamp=self.now(),
             location_ref=str(artifact_path),
-            summary=content.splitlines()[0],
+            summary=dispatch.plan_summary or content.splitlines()[0],
             format="text/markdown",
             request_id=dispatch.request_id,
         )
 
     @staticmethod
     def _build_plan_content(dispatch: OperationDispatchContract) -> str:
+        steps = (
+            "\n".join(
+                f"{index}. {step}" for index, step in enumerate(dispatch.planned_steps, start=1)
+            )
+            or "1. Revisar objetivo e confirmar proxima acao segura."
+        )
+        constraints = ", ".join(dispatch.constraints)
+        risks = OperationalService._risk_line(
+            dispatch.plan_risks,
+            "sem risco material relevante",
+        )
         return (
-            f"Plano inicial para: {dispatch.task_goal}\n\n"
-            f"Objetivo esperado: {dispatch.expected_output}\n"
-            f"Plano executivo: {dispatch.task_plan}\n"
-            f"Restricoes: {', '.join(dispatch.constraints)}\n"
-            "1. Clarificar objetivo e criterio de aceite.\n"
-            "2. Executar a menor etapa reversivel disponivel.\n"
-            "3. Validar o resultado antes de expandir escopo.\n"
+            f"Plano deliberativo para: {dispatch.task_goal}\n\n"
+            f"Resumo: {dispatch.plan_summary or dispatch.task_plan}\n"
+            f"Rationale: {dispatch.plan_rationale or 'nao informado'}\n"
+            f"Restricoes: {constraints}\n"
+            f"Riscos: {risks}\n\n"
+            f"Etapas:\n{steps}\n"
         )
 
     @staticmethod
     def _build_analysis_content(dispatch: OperationDispatchContract) -> str:
+        domains = OperationalService._domain_line(dispatch.domain_hints)
+        risks = OperationalService._risk_line(
+            dispatch.plan_risks,
+            "nenhum relevante no escopo local",
+        )
         return (
-            f"Analise inicial estruturada para: {dispatch.task_goal}\n\n"
-            f"Plano de analise: {dispatch.task_plan}\n"
-            f"Dominios sugeridos: {', '.join(dispatch.domain_hints) if dispatch.domain_hints else 'assistencia_geral'}\n"
-            "Observacoes:\n"
-            "- contexto avaliado localmente;\n"
-            "- trade-offs priorizados para baixo risco;\n"
-            "- recomendacao final depende de confirmacao do objetivo.\n"
+            f"Analise deliberativa para: {dispatch.task_goal}\n\n"
+            f"Resumo: {dispatch.plan_summary or dispatch.task_plan}\n"
+            f"Rationale: {dispatch.plan_rationale or 'nao informado'}\n"
+            f"Dominios sugeridos: {domains}\n"
+            f"Riscos mapeados: {risks}\n"
         )
 
     @staticmethod
     def _build_general_content(dispatch: OperationDispatchContract) -> str:
         return (
-            f"Resposta operacional segura preparada para: {dispatch.task_goal}\n\n"
-            f"Plano de apoio: {dispatch.task_plan}\n"
+            f"Resposta deliberativa segura para: {dispatch.task_goal}\n\n"
+            f"Resumo: {dispatch.plan_summary or dispatch.task_plan}\n"
+            f"Orientacao principal: {dispatch.plan_rationale or 'sem rationale adicional'}\n"
             "A saida foi produzida dentro do escopo local e reversivel do v1.\n"
         )
+
+    @staticmethod
+    def _domain_line(domain_hints: list[str]) -> str:
+        return ", ".join(domain_hints) if domain_hints else "assistencia_geral"
+
+    @staticmethod
+    def _risk_line(plan_risks: list[str], fallback: str) -> str:
+        return ", ".join(plan_risks) if plan_risks else fallback
 
     @staticmethod
     def now() -> str:

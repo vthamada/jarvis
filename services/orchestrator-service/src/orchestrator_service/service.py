@@ -7,7 +7,7 @@ from datetime import UTC, datetime
 from uuid import uuid4
 
 from cognitive_engine.engine import CognitiveEngine
-from executive_engine.engine import ExecutiveEngine
+from executive_engine.engine import ExecutiveDirective, ExecutiveEngine
 from governance_service.service import GovernanceService
 from identity_engine.engine import IdentityEngine
 from knowledge_service.service import KnowledgeRetrievalResult, KnowledgeService
@@ -15,8 +15,11 @@ from memory_service.service import MemoryService
 from observability_service.service import ObservabilityService
 from operational_service.service import OperationalService
 from planning_engine.engine import PlanningContext, PlanningEngine
+from synthesis_engine.engine import SynthesisEngine, SynthesisInput
+
 from shared.contracts import (
     ArtifactResultContract,
+    DeliberativePlanContract,
     GovernanceCheckContract,
     GovernanceDecisionContract,
     InputContract,
@@ -27,7 +30,6 @@ from shared.contracts import (
 )
 from shared.events import InternalEventEnvelope
 from shared.types import OperationId, PermissionDecision, RequestId
-from synthesis_engine.engine import SynthesisEngine, SynthesisInput
 
 
 @dataclass
@@ -38,6 +40,8 @@ class OrchestratorResponse:
     session_id: str
     intent: str
     response_text: str
+    directive: ExecutiveDirective
+    deliberative_plan: DeliberativePlanContract
     governance_check: GovernanceCheckContract
     governance_decision: GovernanceDecisionContract
     memory_recovery: MemoryRecoveryContract
@@ -98,7 +102,9 @@ class OrchestratorService:
                 "memory_recovered",
                 contract,
                 {
-                    "memory_query_id": str(memory_recovery_result.recovery_contract.memory_query_id),
+                    "memory_query_id": str(
+                        memory_recovery_result.recovery_contract.memory_query_id
+                    ),
                     "recovery_type": memory_recovery_result.recovery_contract.recovery_type.value,
                 },
             )
@@ -106,6 +112,26 @@ class OrchestratorService:
 
         directive = self.executive_engine.direct(contract)
         events.append(self.make_event("intent_classified", contract, {"intent": directive.intent}))
+        events.append(
+            self.make_event(
+                "directive_composed",
+                contract,
+                {
+                    "intent": directive.intent,
+                    "intent_confidence": directive.intent_confidence,
+                    "requires_clarification": directive.requires_clarification,
+                    "preferred_response_mode": directive.preferred_response_mode,
+                },
+            )
+        )
+        if directive.requires_clarification:
+            events.append(
+                self.make_event(
+                    "clarification_required",
+                    contract,
+                    {"intent": directive.intent, "reason": "insufficient_goal_clarity"},
+                )
+            )
 
         knowledge_result = None
         if directive.should_query_knowledge:
@@ -140,10 +166,36 @@ class OrchestratorService:
             )
         )
 
+        deliberative_plan = self.planning_engine.build_task_plan(
+            PlanningContext(
+                intent=directive.intent,
+                query=contract.content,
+                recovered_context=memory_recovery_result.recovered_items,
+                active_domains=cognitive_snapshot.active_domains,
+                active_minds=cognitive_snapshot.active_minds,
+                knowledge_snippets=knowledge_result.snippets if knowledge_result else [],
+                risk_markers=directive.risk_markers,
+                requires_clarification=directive.requires_clarification,
+                preferred_response_mode=directive.preferred_response_mode,
+            )
+        )
+        events.append(
+            self.make_event(
+                "plan_built",
+                contract,
+                {
+                    "recommended_task_type": deliberative_plan.recommended_task_type,
+                    "requires_human_validation": deliberative_plan.requires_human_validation,
+                    "steps": deliberative_plan.steps,
+                },
+            )
+        )
+
         assessment = self.governance_service.assess_request(
             contract,
             intent=directive.intent,
             requested_by_service=self.name,
+            plan=deliberative_plan,
         )
         governance_check = assessment.governance_check
         governance_decision = assessment.governance_decision
@@ -153,7 +205,20 @@ class OrchestratorService:
                 contract,
                 {
                     "governance_check_id": str(governance_check.governance_check_id),
-                    "risk_hint": governance_check.risk_hint.value if governance_check.risk_hint else None,
+                    "risk_hint": governance_check.risk_hint.value
+                    if governance_check.risk_hint
+                    else None,
+                    "decision": governance_decision.decision.value,
+                },
+            )
+        )
+        events.append(
+            self.make_event(
+                "plan_governed",
+                contract,
+                {
+                    "governance_check_id": str(governance_check.governance_check_id),
+                    "proposed_effect": governance_check.proposed_effect,
                     "decision": governance_decision.decision.value,
                 },
             )
@@ -162,24 +227,17 @@ class OrchestratorService:
         operation_dispatch = None
         operation_result = None
         artifact_results: list[ArtifactResultContract] = []
-        if governance_decision.decision in {
-            PermissionDecision.ALLOW,
-            PermissionDecision.ALLOW_WITH_CONDITIONS,
-        } and directive.should_execute_operation:
-            plan = self.planning_engine.build_task_plan(
-                PlanningContext(
-                    intent=directive.intent,
-                    query=contract.content,
-                    recovered_context=memory_recovery_result.recovered_items,
-                    active_domains=cognitive_snapshot.active_domains,
-                    knowledge_snippets=knowledge_result.snippets if knowledge_result else [],
-                )
-            )
+        if (
+            governance_decision.decision
+            in {
+                PermissionDecision.ALLOW,
+                PermissionDecision.ALLOW_WITH_CONDITIONS,
+            }
+            and directive.should_execute_operation
+        ):
             operation_dispatch = self.build_operation_dispatch(
                 contract,
-                intent=directive.intent,
-                plan=plan,
-                active_domains=cognitive_snapshot.active_domains,
+                plan=deliberative_plan,
             )
             events.append(
                 self.make_event(
@@ -227,7 +285,8 @@ class OrchestratorService:
                 identity_profile=identity_profile,
                 response_style=self.identity_engine.build_response_style(
                     intent=directive.intent,
-                    blocked=governance_decision.decision in {
+                    blocked=governance_decision.decision
+                    in {
                         PermissionDecision.BLOCK,
                         PermissionDecision.DEFER_FOR_VALIDATION,
                     },
@@ -237,15 +296,19 @@ class OrchestratorService:
                 active_minds=cognitive_snapshot.active_minds,
                 active_domains=cognitive_snapshot.active_domains,
                 knowledge_snippets=knowledge_result.snippets if knowledge_result else [],
+                deliberative_plan=deliberative_plan,
                 operation_result=operation_result,
             )
         )
-        events.append(self.make_event("response_synthesized", contract, {"intent": directive.intent}))
+        events.append(
+            self.make_event("response_synthesized", contract, {"intent": directive.intent})
+        )
 
         memory_record_result = self.memory_service.record_turn(
             contract,
             intent=directive.intent,
             response_text=response_text,
+            deliberative_plan=deliberative_plan,
         )
         events.append(
             self.make_event(
@@ -264,6 +327,8 @@ class OrchestratorService:
             session_id=str(contract.session_id),
             intent=directive.intent,
             response_text=response_text,
+            directive=directive,
+            deliberative_plan=deliberative_plan,
             governance_check=governance_check,
             governance_decision=governance_decision,
             memory_recovery=memory_recovery_result.recovery_contract,
@@ -281,29 +346,27 @@ class OrchestratorService:
     def build_operation_dispatch(
         self,
         contract: InputContract,
-        intent: str,
         *,
-        plan: str,
-        active_domains: list[str],
+        plan: DeliberativePlanContract,
     ) -> OperationDispatchContract:
         """Create the operational dispatch for an allowed request."""
 
-        task_type = {
-            "planning": "draft_plan",
-            "analysis": "produce_analysis_brief",
-            "general_assistance": "general_response",
-        }.get(intent, "general_response")
         return OperationDispatchContract(
             operation_id=OperationId(f"op-{uuid4().hex[:8]}"),
             request_id=RequestId(str(contract.request_id)),
-            task_type=task_type,
+            task_type=plan.recommended_task_type,
             task_goal=contract.content,
-            task_plan=plan,
-            constraints=["low-risk", "local-only", "no external side effects"],
+            task_plan=plan.plan_summary,
+            constraints=list(plan.constraints),
             expected_output="text_brief",
+            plan_summary=plan.plan_summary,
+            planned_steps=list(plan.steps),
+            plan_risks=list(plan.risks),
+            plan_rationale=plan.rationale,
+            requires_human_validation=plan.requires_human_validation,
             session_id=contract.session_id,
             mission_id=contract.mission_id,
-            domain_hints=active_domains,
+            domain_hints=list(plan.active_domains),
             priority_hint=contract.priority_hint,
         )
 

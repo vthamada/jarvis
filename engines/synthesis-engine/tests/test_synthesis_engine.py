@@ -1,14 +1,30 @@
 from identity_engine.engine import IdentityEngine
-from shared.contracts import GovernanceDecisionContract
-from shared.types import GovernanceCheckId, GovernanceDecisionId, PermissionDecision, RiskLevel
 from synthesis_engine.engine import SynthesisEngine, SynthesisInput
+
+from shared.contracts import DeliberativePlanContract, GovernanceDecisionContract
+from shared.types import GovernanceCheckId, GovernanceDecisionId, PermissionDecision, RiskLevel
 
 
 def test_synthesis_engine_name() -> None:
     assert SynthesisEngine.name == "synthesis-engine"
 
 
-def test_synthesis_engine_composes_allowed_response() -> None:
+def sample_plan() -> DeliberativePlanContract:
+    return DeliberativePlanContract(
+        plan_summary="decompor objetivo em etapas reversiveis",
+        goal="Plan milestone M3",
+        steps=["definir objetivo", "listar etapas", "recomendar proxima acao"],
+        active_domains=["strategy"],
+        active_minds=["mente_executiva"],
+        constraints=["low-risk"],
+        risks=["sem risco material alem do escopo controlado do v1"],
+        recommended_task_type="draft_plan",
+        requires_human_validation=False,
+        rationale="contexto=context_summary=previous context; apoio=Priorize clareza de objetivo.",
+    )
+
+
+def test_synthesis_engine_composes_deliberative_allowed_response() -> None:
     engine = SynthesisEngine()
     identity = IdentityEngine().get_profile()
     response = engine.compose(
@@ -28,11 +44,14 @@ def test_synthesis_engine_composes_allowed_response() -> None:
             active_minds=["mente_executiva"],
             active_domains=["strategy"],
             knowledge_snippets=["Priorize clareza de objetivo."],
+            deliberative_plan=sample_plan(),
             operation_result=None,
         )
     )
 
-    assert "JARVIS em modo estruturado" in response
+    assert "Leitura do objetivo" in response
+    assert "Linha de raciocinio" in response
+    assert "Plano ou recomendacao" in response
 
 
 def test_synthesis_engine_blocks_when_governance_blocks() -> None:
@@ -55,8 +74,10 @@ def test_synthesis_engine_blocks_when_governance_blocks() -> None:
             active_minds=["mente_etica"],
             active_domains=["governance"],
             knowledge_snippets=[],
+            deliberative_plan=sample_plan(),
             operation_result=None,
         )
     )
 
     assert "nao permite execucao direta" in response
+    assert "Leitura atual" in response

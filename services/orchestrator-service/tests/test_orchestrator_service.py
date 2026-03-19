@@ -7,6 +7,7 @@ from memory_service.service import MemoryService
 from observability_service.service import ObservabilityQuery, ObservabilityService
 from operational_service.service import OperationalService
 from orchestrator_service.service import OrchestratorResponse, OrchestratorService
+
 from shared.contracts import InputContract
 from shared.types import (
     ChannelType,
@@ -31,12 +32,14 @@ def test_orchestrator_service_name() -> None:
     assert OrchestratorService.name == "orchestrator-service"
 
 
-def test_orchestrator_service_handles_low_risk_input_with_knowledge_and_artifacts() -> None:
+def test_orchestrator_service_handles_deliberative_planning_with_artifacts() -> None:
     temp_dir = runtime_dir("orchestrator-low")
     observability = ObservabilityService(database_path=str(temp_dir / "observability.db"))
     service = OrchestratorService(
         governance_service=GovernanceService(),
-        memory_service=MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"),
+        memory_service=MemoryService(
+            database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+        ),
         operational_service=OperationalService(artifact_dir=str(temp_dir / "artifacts")),
         observability_service=observability,
     )
@@ -53,28 +56,69 @@ def test_orchestrator_service_handles_low_risk_input_with_knowledge_and_artifact
 
     assert isinstance(result, OrchestratorResponse)
     assert result.intent == "planning"
-    assert result.governance_decision.decision == PermissionDecision.ALLOW
+    assert result.directive.requires_clarification is False
+    assert result.deliberative_plan.recommended_task_type == "draft_plan"
+    assert result.governance_decision.decision == PermissionDecision.ALLOW_WITH_CONDITIONS
     assert result.operation_result is not None
     assert result.operation_result.status == OperationStatus.COMPLETED
     assert result.knowledge_result is not None
     assert result.artifact_results
     assert result.active_domains == ["strategy", "productivity"]
+    assert "Linha de raciocinio" in result.response_text
     stored_events = observability.list_recent_events(ObservabilityQuery(request_id="req-1"))
-    assert [event.event_name for event in stored_events] == [event.event_name for event in result.events]
+    assert [event.event_name for event in stored_events] == [
+        event.event_name for event in result.events
+    ]
+    assert "plan_built" in [event.event_name for event in result.events]
+    assert "plan_governed" in [event.event_name for event in result.events]
+
+
+def test_orchestrator_service_requests_clarification_without_operation() -> None:
+    temp_dir = runtime_dir("orchestrator-clarify")
+    service = OrchestratorService(
+        governance_service=GovernanceService(),
+        memory_service=MemoryService(
+            database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+        ),
+        operational_service=OperationalService(artifact_dir=str(temp_dir / "artifacts")),
+        observability_service=ObservabilityService(
+            database_path=str(temp_dir / "observability.db")
+        ),
+    )
+    result = service.handle_input(
+        InputContract(
+            request_id=RequestId("req-2"),
+            session_id=SessionId("sess-2"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Plan and analyze the roadmap.",
+            timestamp="2026-03-17T00:00:00Z",
+        )
+    )
+
+    assert result.directive.requires_clarification is True
+    assert result.operation_dispatch is None
+    assert result.operation_result is None
+    assert result.deliberative_plan.recommended_task_type == "general_response"
+    assert "clarification_required" in [event.event_name for event in result.events]
 
 
 def test_orchestrator_service_blocks_sensitive_action() -> None:
     temp_dir = runtime_dir("orchestrator-block")
     service = OrchestratorService(
         governance_service=GovernanceService(),
-        memory_service=MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"),
+        memory_service=MemoryService(
+            database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+        ),
         operational_service=OperationalService(artifact_dir=str(temp_dir / "artifacts")),
-        observability_service=ObservabilityService(database_path=str(temp_dir / "observability.db")),
+        observability_service=ObservabilityService(
+            database_path=str(temp_dir / "observability.db")
+        ),
     )
     result = service.handle_input(
         InputContract(
-            request_id=RequestId("req-2"),
-            session_id=SessionId("sess-2"),
+            request_id=RequestId("req-3"),
+            session_id=SessionId("sess-3"),
             channel=ChannelType.CHAT,
             input_type=InputType.TEXT,
             content="Delete all project files now.",
@@ -90,7 +134,7 @@ def test_orchestrator_service_blocks_sensitive_action() -> None:
     assert "nao permite execucao direta" in result.response_text
 
 
-def test_orchestrator_service_recovers_previous_context_and_mission_across_instances() -> None:
+def test_orchestrator_service_recovers_previous_plan_hints_across_instances() -> None:
     temp_dir = runtime_dir("orchestrator-persist")
     memory_db = f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
     observability_db = str(temp_dir / "observability.db")
@@ -106,8 +150,8 @@ def test_orchestrator_service_recovers_previous_context_and_mission_across_insta
         observability_service=ObservabilityService(database_path=observability_db),
     )
     first_contract = InputContract(
-        request_id=RequestId("req-3"),
-        session_id=SessionId("sess-3"),
+        request_id=RequestId("req-4"),
+        session_id=SessionId("sess-4"),
         mission_id=MissionId("mission-1"),
         channel=ChannelType.CHAT,
         input_type=InputType.TEXT,
@@ -115,8 +159,8 @@ def test_orchestrator_service_recovers_previous_context_and_mission_across_insta
         timestamp="2026-03-17T00:00:00Z",
     )
     second_contract = InputContract(
-        request_id=RequestId("req-4"),
-        session_id=SessionId("sess-3"),
+        request_id=RequestId("req-5"),
+        session_id=SessionId("sess-4"),
         mission_id=MissionId("mission-1"),
         channel=ChannelType.CHAT,
         input_type=InputType.TEXT,
@@ -127,6 +171,7 @@ def test_orchestrator_service_recovers_previous_context_and_mission_across_insta
     first.handle_input(first_contract)
     second_result = second.handle_input(second_contract)
 
-    assert any("Please plan the sprint." in item for item in second_result.recovered_context)
-    assert any("mission_state=" in item for item in second_result.recovered_context)
-    assert second_result.operation_result is not None
+    assert any("prior_plan=" in item for item in second_result.recovered_context)
+    assert any("mission_recommendation=" in item for item in second_result.recovered_context)
+    assert second_result.deliberative_plan.recommended_task_type == "produce_analysis_brief"
+    assert second_result.operation_result is None

@@ -1,4 +1,4 @@
-﻿# Master Summary
+# Master Summary
 
 ## 1. Objetivo
 
@@ -69,18 +69,16 @@ Stack principal atualmente definida:
 
 ## 6. Estado atual
 
-Hoje o projeto esta fortemente consolidado em documentacao arquitetural.
+Hoje o projeto ja nao esta apenas em consolidacao documental.
 
-Ja existem:
+O repositorio possui:
 
-- Documento-Mestre canonicamente definido;
-- handoff operacional;
-- changelog;
-- politica de documentos derivados;
-- plano executavel da Sprint 1;
-- derivados operacionais iniciais.
-
-O proximo salto real do projeto e sair da consolidacao documental para a materializacao da Sprint 1 no repositorio.
+- baseline integrado entre orquestracao, memoria, governanca, conhecimento, observabilidade e operacao;
+- `PostgreSQL` validado como backend operacional recomendado do `v1` local;
+- benchmark dirigido implementado e absorvido no baseline;
+- `manual_variants` priorizado no `evolution-lab`, mantendo `sandbox-only`;
+- suite principal de testes verde no baseline atual;
+- decisao formal atual de `GO CONDICIONAL` para producao controlada.
 
 ---
 
@@ -91,8 +89,8 @@ O principal risco atual nao e falta de visao, e sim excesso de escopo.
 O projeto deve evitar:
 
 - tentar implementar o sistema completo cedo demais;
-- espalhar documentacao operacional dentro do Documento-Mestre;
-- iniciar codigo sem recorte claro do `v1`.
+- reabrir o nucleo arquitetural sem evidencia forte;
+- expandir producao antes de respeitar o escopo reduzido do primeiro uso real.
 
 ---
 
@@ -100,6 +98,6 @@ O projeto deve evitar:
 
 O proximo passo executivo mais racional e:
 
-- iniciar a base real do repositorio conforme `docs/implementation/sprint-1-plan.md`;
-- manter o Documento-Mestre como referencia canonicamente estavel;
-- extrair derivados adicionais apenas quando melhorarem execucao, nao por excesso de organizacao.
+- congelar o escopo do primeiro uso real controlado;
+- executar uma janela pequena de producao controlada com observacao reforcada;
+- registrar ocorrencias e decidir o destino editorial de `documento_mestre_do_jarvis.md`.

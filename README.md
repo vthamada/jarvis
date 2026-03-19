@@ -60,6 +60,9 @@ Para validar o backend operacional de memoria em PostgreSQL:
 ```powershell
 python -m pip install -e ".[dev,postgres]"
 docker compose -f infra/local-postgres.compose.yml up -d
+$env:DATABASE_URL = "postgresql://postgres:postgres@localhost:5433/jarvis"
+python -m tools.benchmarks --postgres-url $env:DATABASE_URL
+pytest services/memory-service/tests/test_memory_postgres_integration.py -q
 ```
 
 Runtime local padrao:

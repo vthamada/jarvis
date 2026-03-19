@@ -24,8 +24,8 @@ from shared.types import (
     RequestId,
     RiskLevel,
     SessionId,
-    TimeWindow,
     Timestamp,
+    TimeWindow,
     UpdatedAt,
 )
 
@@ -79,6 +79,20 @@ class MemoryRecordContract:
 
 
 @dataclass
+class DeliberativePlanContract:
+    plan_summary: str
+    goal: str
+    steps: list[str]
+    active_domains: list[str]
+    active_minds: list[str]
+    constraints: list[str]
+    risks: list[str]
+    recommended_task_type: str
+    requires_human_validation: bool
+    rationale: str
+
+
+@dataclass
 class OperationDispatchContract:
     operation_id: OperationId
     request_id: RequestId
@@ -87,6 +101,11 @@ class OperationDispatchContract:
     task_plan: str
     constraints: list[str]
     expected_output: str
+    plan_summary: str | None = None
+    planned_steps: list[str] = field(default_factory=list)
+    plan_risks: list[str] = field(default_factory=list)
+    plan_rationale: str | None = None
+    requires_human_validation: bool = False
     session_id: SessionId | None = None
     mission_id: MissionId | None = None
     risk_hint: RiskLevel | None = None
@@ -127,6 +146,8 @@ class GovernanceCheckContract:
     policy_hint: str | None = None
     requested_by_service: str | None = None
     artifact_refs: list[str] = field(default_factory=list)
+    declared_risks: list[str] = field(default_factory=list)
+    requires_human_validation: bool = False
 
 
 @dataclass
@@ -156,6 +177,8 @@ class MissionStateContract:
     active_tasks: list[str] = field(default_factory=list)
     related_memories: list[str] = field(default_factory=list)
     related_artifacts: list[str] = field(default_factory=list)
+    recent_plan_steps: list[str] = field(default_factory=list)
+    last_recommendation: str | None = None
     priority_level: str | None = None
     owner_context: str | None = None
     completion_criteria: list[str] = field(default_factory=list)

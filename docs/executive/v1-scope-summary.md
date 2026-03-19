@@ -1,4 +1,4 @@
-﻿# V1 Scope Summary
+# V1 Scope Summary
 
 ## 1. Objetivo
 
@@ -47,7 +47,20 @@ Nao entra como foco principal:
 
 ---
 
-## 5. Criterio de sucesso
+## 5. Estado atual resumido
+
+Hoje o `v1` ja demonstrou internamente:
+
+- baseline integrado entre orquestracao, memoria, governanca, conhecimento, observabilidade e operacao;
+- `PostgreSQL` validado como backend operacional recomendado para memoria;
+- observabilidade suficiente para o escopo atual do `v1`;
+- `manual_variants` priorizado no laboratorio evolutivo, mantendo `sandbox-only`.
+
+O que ainda falta e a decisao formal de fechamento para producao controlada.
+
+---
+
+## 6. Criterio de sucesso
 
 O `v1` e bem-sucedido se o sistema demonstrar:
 

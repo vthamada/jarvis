@@ -1,4 +1,4 @@
-﻿# Evolution Lab
+# Evolution Lab
 
 ## 1. Objetivo
 
@@ -54,7 +54,8 @@ O repositorio ja possui um primeiro corte operacional do laboratorio evolutivo:
 - persistencia local de propostas e decisoes;
 - comparacao entre baseline e candidata por metricas simples;
 - decisao `sandbox-only`, sem promocao automatica;
-- referencia explicita de rollback para o baseline avaliado.
+- referencia explicita de rollback para o baseline avaliado;
+- `manual_variants` priorizado como estrategia de evolucao do `v1` apos benchmark dirigido.
 
 Esse corte existe para iniciar `M6` sem antecipar autoevolucao ampla.
 
@@ -64,7 +65,7 @@ Esse corte existe para iniciar `M6` sem antecipar autoevolucao ampla.
 
 O laboratorio atual ainda nao faz:
 
-- benchmark operacional amplo;
 - promocao automatica;
 - alteracao direta do nucleo em producao;
-- governanca evolutiva completa.
+- governanca evolutiva completa;
+- expansao ampla alem do conjunto congelado do benchmark do `v1`.

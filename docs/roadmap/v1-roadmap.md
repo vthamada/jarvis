@@ -1,8 +1,8 @@
-﻿# V1 Roadmap
+# V1 Roadmap
 
 ## 1. Objetivo
 
-Este documento resume o roadmap de execução do `v1` do JARVIS em nível tático, derivado do Documento-Mestre.
+Este documento resume o roadmap de execucao do `v1` do JARVIS em nivel tatico, derivado do Documento-Mestre.
 
 Ele complementa:
 
@@ -14,14 +14,14 @@ Ele complementa:
 
 ## 2. Estrutura do roadmap
 
-O `v1` é organizado em seis milestones:
+O `v1` e organizado em seis milestones:
 
-1. `M1` — Fundação estrutural
-2. `M2` — Núcleo central funcional
-3. `M3` — Memória e continuidade úteis
-4. `M4` — Conhecimento e operação mínima real
-5. `M5` — Governança robusta e observabilidade
-6. `M6` — Consolidação do v1 e preparação para v2
+1. `M1` - Fundacao estrutural
+2. `M2` - Nucleo central funcional
+3. `M3` - Memoria e continuidade uteis
+4. `M4` - Conhecimento e operacao minima real
+5. `M5` - Governanca robusta e observabilidade
+6. `M6` - Consolidacao do v1 e preparacao para v2
 
 ---
 
@@ -29,13 +29,13 @@ O `v1` é organizado em seis milestones:
 
 As milestones representam saltos estruturais de capacidade.
 
-As sprints representam incrementos verificáveis dentro de cada milestone.
+As sprints representam incrementos verificaveis dentro de cada milestone.
 
 O roadmap existe para:
 
-- reduzir acúmulo caótico de features;
-- manter a sequência correta de construção;
-- impedir expansão antes da base estar estável.
+- reduzir acumulo caotico de features;
+- manter a sequencia correta de construcao;
+- impedir expansao antes da base estar estavel.
 
 ---
 
@@ -43,51 +43,51 @@ O roadmap existe para:
 
 ### 4.1 M1
 
-- fundação do repositório
-- contratos e constituição
-- esqueletos dos serviços centrais
+- fundacao do repositorio
+- contratos e constituicao
+- esqueletos dos servicos centrais
 
 Status atual: concluida.
 
 ### 4.2 M2
 
-- kernel do núcleo central
-- interpretação e roteamento
-- cognição nuclear inicial
+- kernel do nucleo central
+- interpretacao e roteamento
+- cognicao nuclear inicial
 
-Status atual: parcialmente concluida, com engines iniciais e coordenacao central ativa.
+Status atual: substancialmente implementada, com engines iniciais e coordenacao central ativa.
 
 ### 4.3 M3
 
-- backbone de memória
-- recuperação e gravação úteis
-- proteção e promoção básicas
+- backbone de memoria
+- recuperacao e gravacao uteis
+- protecao e promocao basicas
 
-Status atual: substancialmente implementada com persistencia local de sessao e missao.
+Status atual: substancialmente implementada, com persistencia util e PostgreSQL validado como backend operacional do `v1`.
 
 ### 4.4 M4
 
 - conhecimento inicial
-- serviço operacional básico
-- produção e execução de baixo risco
+- servico operacional basico
+- producao e execucao de baixo risco
 
-Status atual: parcialmente implementada com retrieval local e operacao textual estruturada.
+Status atual: parcialmente implementada, com retrieval local deterministico e operacao textual estruturada.
 
 ### 4.5 M5
 
-- política, risco e validação
-- contenção, auditoria e proteção crítica
+- politica, risco e validacao
+- contencao, auditoria e protecao critica
 - observabilidade ampla do v1
 
-Status atual: parcialmente implementada com governanca condicionada e observabilidade local persistente.
+Status atual: substancialmente implementada, com governanca condicionada e observabilidade local benchmarkada como suficiente para o `v1`.
 
 ### 4.6 M6
 
-- estabilidade do núcleo
+- estabilidade do nucleo
 - sandbox evolutivo inicial
 - fechamento do v1
 
-Status atual: iniciada no baseline local com `evolution-lab` sandbox-only.
+Status atual: em consolidacao, com benchmark dirigido implementado, `manual_variants` priorizado no `evolution-lab` e decisao final de fechamento ainda pendente.
 
 ---
 
@@ -95,17 +95,17 @@ Status atual: iniciada no baseline local com `evolution-lab` sandbox-only.
 
 O proximo corte de engenharia deve priorizar:
 
-1. validacao de ambiente limpo com `pytest -q` e `ruff check .`;
-2. elevacao da memoria persistente para `PostgreSQL` operacional;
-3. ampliacao do corpus e retrieval do `knowledge-service`;
-4. baseline de consolidacao de `M6` com benchmark e readiness mais formais.
+1. revisao dos derivados e do material de readiness para refletir o benchmark consolidado;
+2. formalizacao de `PostgreSQL` como backend operacional recomendado do `v1`;
+3. decisao de `go/no-go` para producao controlada;
+4. so depois expansao de corpus, retrieval ou laboratorio evolutivo.
 
 ---
 
 ## 6. Regra principal
 
-Cada milestone só deve avançar quando:
+Cada milestone so deve avancar quando:
 
-- o núcleo anterior estiver estável o suficiente;
-- os critérios mínimos de validação estiverem atendidos;
-- a dívida estrutural crítica estiver sob controle.
+- o nucleo anterior estiver estavel o suficiente;
+- os criterios minimos de validacao estiverem atendidos;
+- a divida estrutural critica estiver sob controle.

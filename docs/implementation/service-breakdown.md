@@ -1,4 +1,4 @@
-﻿# Service Breakdown
+# Service Breakdown
 
 ## 1. Objetivo
 
@@ -47,7 +47,7 @@ Responsavel por:
 Responsavel por:
 
 - classificar risco;
-- permitir, condicionar ou bloquear acao;
+- permitir, condicionar, bloquear ou adiar acao;
 - proteger memoria critica;
 - registrar decisao e auditoria.
 
@@ -80,7 +80,7 @@ Responsavel por:
 
 ## 4. Ordem sugerida de maturacao
 
-Ordem pratica:
+Ordem pratica historica:
 
 1. `orchestrator-service`
 2. `memory-service`
@@ -92,11 +92,11 @@ Ordem pratica:
 Leitura pratica atual:
 
 - `orchestrator-service`: baseline integrado ativo
-- `memory-service`: persistencia local ativa
+- `memory-service`: persistencia util ativa, com `PostgreSQL` validado como backend operacional do `v1` e `sqlite` mantido como fallback local
 - `governance-service`: baseline robusto inicial ativo
 - `operational-service`: operacao de baixo risco ativa
-- `knowledge-service`: retrieval inicial ativo
-- `observability-service`: ingestao e consulta local ativas
+- `knowledge-service`: retrieval inicial ativo, com ranking ponderado ja absorvido ao baseline
+- `observability-service`: ingestao, consulta e exportacao de trace view ativas e benchmarkadas para o `v1`
 
 ---
 

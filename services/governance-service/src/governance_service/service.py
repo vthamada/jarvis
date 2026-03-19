@@ -6,7 +6,12 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import uuid4
 
-from shared.contracts import GovernanceCheckContract, GovernanceDecisionContract, InputContract
+from shared.contracts import (
+    DeliberativePlanContract,
+    GovernanceCheckContract,
+    GovernanceDecisionContract,
+    InputContract,
+)
 from shared.types import (
     GovernanceCheckId,
     GovernanceDecisionId,
@@ -14,7 +19,6 @@ from shared.types import (
     PermissionDecision,
     RiskLevel,
 )
-
 
 HIGH_RISK_KEYWORDS = (
     "delete",
@@ -56,10 +60,13 @@ class GovernanceService:
         contract: InputContract,
         intent: str,
         requested_by_service: str,
+        *,
+        plan: DeliberativePlanContract | None = None,
     ) -> GovernanceAssessment:
         """Build and evaluate a governance check for an incoming request."""
 
         risk_hint = self.classify_risk(contract, intent)
+        proposed_effect = self.proposed_effect(intent=intent, plan=plan)
         governance_check = GovernanceCheckContract(
             governance_check_id=GovernanceCheckId(f"gov-check-{uuid4().hex[:8]}"),
             subject_type="request",
@@ -69,13 +76,18 @@ class GovernanceService:
                 "content": contract.content,
                 "channel": contract.channel.value,
                 "input_type": contract.input_type.value,
+                "recommended_task_type": plan.recommended_task_type if plan else None,
+                "plan_summary": plan.plan_summary if plan else None,
             },
             sensitivity="high" if risk_hint in {RiskLevel.HIGH, RiskLevel.CRITICAL} else "normal",
-            reversibility="low" if risk_hint in {RiskLevel.HIGH, RiskLevel.CRITICAL} else "high",
+            reversibility=("low" if proposed_effect == "external_or_sensitive_change" else "high"),
             mission_id=contract.mission_id,
             session_id=contract.session_id,
+            proposed_effect=proposed_effect,
             risk_hint=risk_hint,
             requested_by_service=requested_by_service,
+            declared_risks=list(plan.risks) if plan else [],
+            requires_human_validation=bool(plan.requires_human_validation) if plan else False,
         )
         governance_decision = self.make_decision(governance_check)
         return GovernanceAssessment(
@@ -103,30 +115,50 @@ class GovernanceService:
 
         risk_level = governance_check.risk_hint or RiskLevel.LOW
         decision = PermissionDecision.ALLOW
-        justification = "No critical signal detected in the current request."
+        justification = "Solicitacao reversivel e compativel com o escopo controlado do v1."
         conditions: list[str] = []
         policy_refs = ["policy://request/default-low-risk"]
         requires_audit = False
         requires_rollback_plan = False
         containment_hint = None
+        proposed_effect = governance_check.proposed_effect or "analysis_or_guidance_only"
 
-        if risk_level == RiskLevel.MODERATE:
-            decision = PermissionDecision.ALLOW_WITH_CONDITIONS
-            justification = "Request contains moderate-risk signals and requires reinforced tracing."
-            conditions = [
-                "Maintain explicit audit trail for the flow.",
-                "Keep execution limited to low-risk local operations.",
-            ]
-            policy_refs = ["policy://request/moderate-risk"]
-            requires_audit = True
-        elif risk_level in {RiskLevel.HIGH, RiskLevel.CRITICAL}:
+        if risk_level in {RiskLevel.HIGH, RiskLevel.CRITICAL}:
             decision = PermissionDecision.BLOCK
-            justification = "Potentially destructive request requires stronger validation."
-            conditions = ["Require explicit validation before execution."]
+            justification = "Potencial destrutivo detectado; a execucao direta foi bloqueada."
+            conditions = ["Exigir validacao forte fora do fluxo normal antes de qualquer acao."]
             policy_refs = ["policy://request/high-risk"]
             requires_audit = True
             requires_rollback_plan = True
             containment_hint = "block_direct_execution"
+        elif (
+            governance_check.requires_human_validation
+            or proposed_effect == "external_or_sensitive_change"
+        ):
+            decision = PermissionDecision.DEFER_FOR_VALIDATION
+            justification = "O plano pretendido exige validacao humana antes de qualquer execucao."
+            conditions = ["Manter apenas analise e rastreabilidade ate revisao explicita."]
+            policy_refs = ["policy://request/defer-sensitive-plan"]
+            requires_audit = True
+            requires_rollback_plan = True
+            containment_hint = "defer_sensitive_plan"
+        elif proposed_effect == "local_safe_operation":
+            decision = PermissionDecision.ALLOW_WITH_CONDITIONS
+            justification = "Operacao local segura permitida com trilha reforcada de auditoria."
+            conditions = [
+                "Manter trilha de eventos completa.",
+                "Restringir a artefatos locais e reversiveis.",
+            ]
+            policy_refs = ["policy://request/local-safe-operation"]
+            requires_audit = True
+        elif risk_level == RiskLevel.MODERATE:
+            decision = PermissionDecision.ALLOW_WITH_CONDITIONS
+            justification = (
+                "Sinais moderados exigem rastreabilidade reforcada, sem bloquear a analise."
+            )
+            conditions = ["Reforcar auditoria e evitar ampliar escopo operacional."]
+            policy_refs = ["policy://request/moderate-risk"]
+            requires_audit = True
 
         return GovernanceDecisionContract(
             decision_id=GovernanceDecisionId(f"gov-decision-{uuid4().hex[:8]}"),
@@ -141,6 +173,18 @@ class GovernanceService:
             containment_hint=containment_hint,
             policy_refs=policy_refs,
         )
+
+    @staticmethod
+    def proposed_effect(intent: str, plan: DeliberativePlanContract | None) -> str:
+        if intent == "sensitive_action":
+            return "external_or_sensitive_change"
+        if plan is None:
+            return "analysis_or_guidance_only"
+        if plan.requires_human_validation:
+            return "external_or_sensitive_change"
+        if plan.recommended_task_type in {"draft_plan", "general_response"}:
+            return "local_safe_operation"
+        return "analysis_or_guidance_only"
 
     def assess_memory_operation(
         self,

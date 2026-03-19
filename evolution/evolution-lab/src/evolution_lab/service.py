@@ -1,3 +1,4 @@
+# ruff: noqa: E501
 """Local evolution lab for sandbox-only comparison workflows."""
 
 from __future__ import annotations
@@ -12,6 +13,13 @@ from evolution_lab.repository import EvolutionLabRepository
 from shared.contracts import EvolutionDecisionContract, EvolutionProposalContract
 from shared.types import EvolutionDecisionId, EvolutionProposalId
 
+DEFAULT_EVOLUTION_STRATEGY = "manual_variants"
+SUPPORTED_EVOLUTION_STRATEGIES = (
+    "manual_variants",
+    "mipro_like_search",
+    "textgrad_like_refinement",
+)
+
 
 @dataclass(frozen=True)
 class ComparisonInput:
@@ -23,6 +31,7 @@ class ComparisonInput:
     candidate_metrics: dict[str, float]
     governance_refs: list[str]
     notes: list[str]
+    strategy_name: str | None = None
 
 
 @dataclass(frozen=True)
@@ -41,7 +50,9 @@ class EvolutionLabService:
 
     def __init__(self, database_path: str | None = None) -> None:
         runtime_path = database_path or getenv("JARVIS_EVOLUTION_DB")
-        resolved = Path(runtime_path) if runtime_path else Path.cwd() / ".jarvis_runtime" / "evolution.db"
+        resolved = (
+            Path(runtime_path) if runtime_path else Path.cwd() / ".jarvis_runtime" / "evolution.db"
+        )
         self.repository = EvolutionLabRepository(resolved)
 
     def create_proposal(
@@ -55,8 +66,15 @@ class EvolutionLabService:
         source_signals: list[str] | None = None,
         risk_hint: str | None = None,
         proposed_tests: list[str] | None = None,
+        strategy_name: str | None = None,
     ) -> EvolutionProposalContract:
         """Register a sandbox proposal for later comparison."""
+
+        chosen_strategy = self.resolve_strategy_name(strategy_name)
+        strategy_signal = f"strategy://{chosen_strategy}"
+        signals = list(source_signals or [])
+        if strategy_signal not in signals:
+            signals.append(strategy_signal)
 
         proposal = EvolutionProposalContract(
             evolution_proposal_id=EvolutionProposalId(f"evo-proposal-{uuid4().hex[:8]}"),
@@ -65,7 +83,7 @@ class EvolutionLabService:
             hypothesis=hypothesis,
             expected_gain=expected_gain,
             timestamp=self.now(),
-            source_signals=source_signals or [],
+            source_signals=signals,
             baseline_refs=baseline_refs,
             risk_hint=risk_hint,
             requires_sandbox=True,
@@ -74,6 +92,7 @@ class EvolutionLabService:
                 "manual_review_required",
                 "no_automatic_promotion",
                 "rollback_plan_mandatory",
+                f"preferred_strategy={chosen_strategy}",
             ],
         )
         self.repository.record_proposal(proposal)
@@ -86,9 +105,11 @@ class EvolutionLabService:
     ) -> EvolutionComparisonResult:
         """Compare a candidate against the baseline and keep the outcome sandbox-only."""
 
+        chosen_strategy = self.resolve_strategy_name(comparison.strategy_name)
         metric_deltas = {
             key: round(
-                comparison.candidate_metrics.get(key, 0.0) - comparison.baseline_metrics.get(key, 0.0),
+                comparison.candidate_metrics.get(key, 0.0)
+                - comparison.baseline_metrics.get(key, 0.0),
                 4,
             )
             for key in sorted(set(comparison.baseline_metrics) | set(comparison.candidate_metrics))
@@ -99,12 +120,13 @@ class EvolutionLabService:
         degraded = sum(1 for value in metric_deltas.values() if value < 0)
         decision_name = (
             "sandbox_candidate"
-            if improved >= degraded and risk_score <= comparison.baseline_metrics.get("risk", risk_score)
+            if improved >= degraded
+            and risk_score <= comparison.baseline_metrics.get("risk", risk_score)
             else "hold_baseline"
         )
         summary = (
             f"baseline={comparison.baseline_label}; candidate={comparison.candidate_label}; "
-            f"improved_metrics={improved}; degraded_metrics={degraded}; "
+            f"strategy={chosen_strategy}; improved_metrics={improved}; degraded_metrics={degraded}; "
             f"stability={stability_score}; risk={risk_score}"
         )
         decision = EvolutionDecisionContract(
@@ -118,7 +140,8 @@ class EvolutionLabService:
             governance_refs=comparison.governance_refs,
             stability_score=stability_score,
             risk_score=risk_score,
-            notes=comparison.notes + [f"metric_deltas={metric_deltas}"],
+            notes=comparison.notes
+            + [f"strategy={chosen_strategy}", f"metric_deltas={metric_deltas}"],
         )
         self.repository.record_decision(decision)
         return EvolutionComparisonResult(
@@ -136,6 +159,23 @@ class EvolutionLabService:
         """Return recent evolution decisions for local review."""
 
         return self.repository.list_decisions(limit=limit)
+
+    def preferred_strategy(self) -> str:
+        """Return the current sandbox-first evolution strategy."""
+
+        return DEFAULT_EVOLUTION_STRATEGY
+
+    def list_supported_strategies(self) -> list[str]:
+        """Expose the supported evolution strategies for local review."""
+
+        return list(SUPPORTED_EVOLUTION_STRATEGIES)
+
+    def resolve_strategy_name(self, strategy_name: str | None) -> str:
+        """Normalize strategy selection to the supported sandbox set."""
+
+        if strategy_name in SUPPORTED_EVOLUTION_STRATEGIES:
+            return str(strategy_name)
+        return self.preferred_strategy()
 
     @staticmethod
     def now() -> str:

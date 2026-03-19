@@ -1,4 +1,4 @@
-"""Deterministic local knowledge service for the v1 core."""
+﻿"""Deterministic local knowledge service for the v1 core."""
 
 from __future__ import annotations
 
@@ -61,17 +61,28 @@ class KnowledgeService:
 
     def _select_domains(self, intent: str, query: str) -> list[str]:
         lowered = query.lower()
-        domains: list[str] = []
+        scores: dict[str, float] = {}
+        for domain_name, entry in self.domains.items():
+            score = self._intent_prior(intent, domain_name)
+            if domain_name in lowered:
+                score += 1.6
+            score += sum(1.25 for keyword in entry.keywords if keyword in lowered)
+            if "audit" in lowered and domain_name == "governance":
+                score += 1.5
+            scores[domain_name] = score
+        ranked = sorted(scores.items(), key=lambda item: (-item[1], item[0]))
+        selected = [name for name, score in ranked if score > 0.0]
+        return selected[:3] or ["productivity"]
+
+    @staticmethod
+    def _intent_prior(intent: str, domain_name: str) -> float:
         if intent == "planning":
-            domains.extend(["strategy", "productivity"])
+            priorities = {"strategy": 2.0, "productivity": 1.0}
         elif intent == "analysis":
-            domains.extend(["analysis", "strategy"])
+            priorities = {"analysis": 2.0, "strategy": 1.5}
         else:
-            domains.append("productivity")
-        for entry in self.domains.values():
-            if any(token in lowered for token in entry.keywords):
-                domains.append(entry.name)
-        return list(dict.fromkeys(domains))
+            priorities = {"productivity": 0.5}
+        return priorities.get(domain_name, 0.0)
 
     @staticmethod
     def _load_domains(corpus_path: Path) -> dict[str, KnowledgeDomain]:
@@ -84,3 +95,4 @@ class KnowledgeService:
             )
             for item in payload.get("domains", [])
         }
+

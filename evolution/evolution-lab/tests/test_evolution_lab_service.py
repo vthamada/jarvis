@@ -1,4 +1,4 @@
-from pathlib import Path
+﻿from pathlib import Path
 from tempfile import gettempdir
 from uuid import uuid4
 
@@ -15,6 +15,16 @@ def runtime_dir(name: str) -> Path:
 
 def test_evolution_lab_service_name() -> None:
     assert EvolutionLabService.name == "evolution-lab"
+
+
+def test_evolution_lab_defaults_to_manual_variants_strategy() -> None:
+    temp_dir = runtime_dir("evolution-lab-default-strategy")
+    service = EvolutionLabService(database_path=str(temp_dir / "evolution.db"))
+
+    assert service.preferred_strategy() == "manual_variants"
+    assert service.resolve_strategy_name(None) == "manual_variants"
+    assert service.resolve_strategy_name("unknown") == "manual_variants"
+    assert "manual_variants" in service.list_supported_strategies()
 
 
 def test_evolution_lab_persists_proposals_and_sandbox_candidate_decision() -> None:
@@ -45,6 +55,9 @@ def test_evolution_lab_persists_proposals_and_sandbox_candidate_decision() -> No
     assert comparison.decision.decision == "sandbox_candidate"
     assert comparison.decision.promoted_to is None
     assert comparison.metric_deltas["stability"] > 0
+    assert "strategy://manual_variants" in proposal.source_signals
+    assert "preferred_strategy=manual_variants" in proposal.promotion_constraints
+    assert "strategy=manual_variants" in comparison.decision.notes
     assert service.list_recent_proposals(limit=1)[0].target_scope == "orchestrator-service"
     assert service.list_recent_decisions(limit=1)[0].decision == "sandbox_candidate"
 
@@ -58,6 +71,7 @@ def test_evolution_lab_holds_baseline_when_risk_increases() -> None:
         hypothesis="A more aggressive style could improve throughput.",
         expected_gain="Faster synthesis.",
         baseline_refs=["baseline://synthesis/current"],
+        strategy_name="textgrad_like_refinement",
     )
 
     comparison = service.compare_candidate(
@@ -69,8 +83,11 @@ def test_evolution_lab_holds_baseline_when_risk_increases() -> None:
             candidate_metrics={"stability": 0.78, "risk": 0.3},
             governance_refs=["policy://sandbox/manual-review"],
             notes=["candidate rejected for higher risk"],
+            strategy_name="textgrad_like_refinement",
         ),
     )
 
     assert comparison.decision.decision == "hold_baseline"
     assert comparison.decision.rollback_plan_ref == "sandbox://rollback/current"
+    assert "strategy://textgrad_like_refinement" in proposal.source_signals
+    assert "strategy=textgrad_like_refinement" in comparison.decision.notes

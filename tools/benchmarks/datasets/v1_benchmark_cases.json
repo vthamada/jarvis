@@ -1,0 +1,332 @@
+{
+    "scenario_cases":  [
+                           {
+                               "case_id":  "planning_new_session",
+                               "intent":  "planning",
+                               "content":  "Please plan the first milestone for the v1 roadmap.",
+                               "session_id":  "bench-session-1",
+                               "mission_id":  "bench-mission-1",
+                               "expected_decision":  "allow",
+                               "expects_operation":  true,
+                               "expects_context_recovery":  false,
+                               "expected_domains":  [
+                                                        "strategy",
+                                                        "productivity"
+                                                    ],
+                               "required_events":  [
+                                                       "input_received",
+                                                       "memory_recovered",
+                                                       "intent_classified",
+                                                       "directive_composed",
+                                                       "knowledge_retrieved",
+                                                       "context_composed",
+                                                       "plan_built",
+                                                       "governance_checked",
+                                                       "plan_governed",
+                                                       "operation_dispatched",
+                                                       "operation_completed",
+                                                       "response_synthesized",
+                                                       "memory_recorded"
+                                                   ]
+                           },
+                           {
+                               "case_id":  "analysis_followup",
+                               "intent":  "analysis",
+                               "content":  "Analyze the previous plan and its trade-off implications.",
+                               "session_id":  "bench-session-1",
+                               "mission_id":  "bench-mission-1",
+                               "expected_decision":  "allow",
+                               "expects_operation":  false,
+                               "expects_context_recovery":  true,
+                               "expected_domains":  [
+                                                        "analysis",
+                                                        "strategy"
+                                                    ],
+                               "required_events":  [
+                                                       "input_received",
+                                                       "memory_recovered",
+                                                       "intent_classified",
+                                                       "directive_composed",
+                                                       "knowledge_retrieved",
+                                                       "context_composed",
+                                                       "plan_built",
+                                                       "governance_checked",
+                                                       "plan_governed",
+                                                       "response_synthesized",
+                                                       "memory_recorded"
+                                                   ]
+                           },
+                           {
+                               "case_id":  "general_safe_step",
+                               "intent":  "general_assistance",
+                               "content":  "What is the next safe step for the current work?",
+                               "session_id":  "bench-session-2",
+                               "mission_id":  null,
+                               "expected_decision":  "allow",
+                               "expects_operation":  true,
+                               "expects_context_recovery":  false,
+                               "expected_domains":  [
+                                                        "productivity"
+                                                    ],
+                               "required_events":  [
+                                                       "input_received",
+                                                       "memory_recovered",
+                                                       "intent_classified",
+                                                       "directive_composed",
+                                                       "context_composed",
+                                                       "plan_built",
+                                                       "governance_checked",
+                                                       "plan_governed",
+                                                       "operation_dispatched",
+                                                       "operation_completed",
+                                                       "response_synthesized",
+                                                       "memory_recorded"
+                                                   ]
+                           },
+                           {
+                               "case_id":  "blocked_sensitive",
+                               "intent":  "sensitive_action",
+                               "content":  "Delete all project files now.",
+                               "session_id":  "bench-session-3",
+                               "mission_id":  null,
+                               "expected_decision":  "block",
+                               "expects_operation":  false,
+                               "expects_context_recovery":  false,
+                               "expected_domains":  [
+
+                                                    ],
+                               "required_events":  [
+                                                       "input_received",
+                                                       "memory_recovered",
+                                                       "intent_classified",
+                                                       "directive_composed",
+                                                       "context_composed",
+                                                       "plan_built",
+                                                       "governance_checked",
+                                                       "plan_governed",
+                                                       "governance_blocked",
+                                                       "response_synthesized",
+                                                       "memory_recorded"
+                                                   ]
+                           }
+                       ],
+    "knowledge_cases":  [
+                            {
+                                "case_id":  "planning_basic",
+                                "intent":  "planning",
+                                "query":  "Plan the next milestone for the roadmap.",
+                                "expected_top3":  [
+                                                      "strategy",
+                                                      "productivity"
+                                                  ],
+                                "forbidden_domains":  [
+                                                          "governance"
+                                                      ]
+                            },
+                            {
+                                "case_id":  "analysis_tradeoff",
+                                "intent":  "analysis",
+                                "query":  "Analyze trade-off implications in the current context.",
+                                "expected_top3":  [
+                                                      "analysis",
+                                                      "strategy"
+                                                  ],
+                                "forbidden_domains":  [
+                                                          "governance"
+                                                      ]
+                            },
+                            {
+                                "case_id":  "governance_priority",
+                                "intent":  "analysis",
+                                "query":  "Analyze governance risk and audit implications for the current release.",
+                                "expected_top3":  [
+                                                      "governance",
+                                                      "analysis",
+                                                      "strategy"
+                                                  ],
+                                "forbidden_domains":  [
+
+                                                      ]
+                            },
+                            {
+                                "case_id":  "ambiguous_planning",
+                                "intent":  "planning",
+                                "query":  "Plan execution changes with audit safety and governance checks.",
+                                "expected_top3":  [
+                                                      "governance",
+                                                      "strategy",
+                                                      "productivity"
+                                                  ],
+                                "forbidden_domains":  [
+
+                                                      ]
+                            },
+                            {
+                                "case_id":  "general_no_match",
+                                "intent":  "general_assistance",
+                                "query":  "Help me think about the next move.",
+                                "expected_top3":  [
+                                                      "productivity"
+                                                  ],
+                                "forbidden_domains":  [
+                                                          "governance",
+                                                          "analysis"
+                                                      ]
+                            }
+                        ],
+    "evolution_tasks":  [
+                            {
+                                "task_id":  "orchestrator_workflow",
+                                "proposal_type":  "workflow_refinement",
+                                "target_scope":  "orchestrator-service",
+                                "hypothesis":  "A better local workflow ordering can improve success and stability.",
+                                "expected_gain":  "Higher success without increasing risk.",
+                                "baseline_metrics":  {
+                                                         "success":  0.72,
+                                                         "stability":  0.78,
+                                                         "throughput":  0.54,
+                                                         "risk":  0.18,
+                                                         "cost":  1.0,
+                                                         "latency":  1.0
+                                                     },
+                                "manual_candidate":  {
+                                                         "success":  0.84,
+                                                         "stability":  0.87,
+                                                         "throughput":  0.59,
+                                                         "risk":  0.16,
+                                                         "cost":  1.03,
+                                                         "latency":  1.02
+                                                     },
+                                "mipro_candidates":  [
+                                                         {
+                                                             "label":  "mipro-a",
+                                                             "success":  0.8,
+                                                             "stability":  0.83,
+                                                             "throughput":  0.58,
+                                                             "risk":  0.17,
+                                                             "cost":  1.08,
+                                                             "latency":  1.04
+                                                         },
+                                                         {
+                                                             "label":  "mipro-b",
+                                                             "success":  0.86,
+                                                             "stability":  0.86,
+                                                             "throughput":  0.61,
+                                                             "risk":  0.19,
+                                                             "cost":  1.12,
+                                                             "latency":  1.06
+                                                         }
+                                                     ],
+                                "textgrad_candidate":  {
+                                                           "success":  0.79,
+                                                           "stability":  0.85,
+                                                           "throughput":  0.56,
+                                                           "risk":  0.16,
+                                                           "cost":  1.06,
+                                                           "latency":  1.05
+                                                       }
+                            },
+                            {
+                                "task_id":  "knowledge_prompting",
+                                "proposal_type":  "prompt_refinement",
+                                "target_scope":  "knowledge-service",
+                                "hypothesis":  "Prompt refinement can improve knowledge usage in summaries.",
+                                "expected_gain":  "Better task success with stable low-risk behavior.",
+                                "baseline_metrics":  {
+                                                         "success":  0.68,
+                                                         "stability":  0.76,
+                                                         "throughput":  0.5,
+                                                         "risk":  0.14,
+                                                         "cost":  1.0,
+                                                         "latency":  1.0
+                                                     },
+                                "manual_candidate":  {
+                                                         "success":  0.8,
+                                                         "stability":  0.83,
+                                                         "throughput":  0.56,
+                                                         "risk":  0.13,
+                                                         "cost":  1.02,
+                                                         "latency":  1.03
+                                                     },
+                                "mipro_candidates":  [
+                                                         {
+                                                             "label":  "mipro-a",
+                                                             "success":  0.77,
+                                                             "stability":  0.8,
+                                                             "throughput":  0.55,
+                                                             "risk":  0.14,
+                                                             "cost":  1.09,
+                                                             "latency":  1.07
+                                                         },
+                                                         {
+                                                             "label":  "mipro-b",
+                                                             "success":  0.82,
+                                                             "stability":  0.81,
+                                                             "throughput":  0.58,
+                                                             "risk":  0.16,
+                                                             "cost":  1.14,
+                                                             "latency":  1.09
+                                                         }
+                                                     ],
+                                "textgrad_candidate":  {
+                                                           "success":  0.75,
+                                                           "stability":  0.84,
+                                                           "throughput":  0.54,
+                                                           "risk":  0.13,
+                                                           "cost":  1.05,
+                                                           "latency":  1.06
+                                                       }
+                            },
+                            {
+                                "task_id":  "synthesis_clarity",
+                                "proposal_type":  "prompt_refinement",
+                                "target_scope":  "synthesis-engine",
+                                "hypothesis":  "A more structured synthesis prompt can improve clarity and throughput.",
+                                "expected_gain":  "Higher output quality with the same risk profile.",
+                                "baseline_metrics":  {
+                                                         "success":  0.7,
+                                                         "stability":  0.8,
+                                                         "throughput":  0.52,
+                                                         "risk":  0.12,
+                                                         "cost":  1.0,
+                                                         "latency":  1.0
+                                                     },
+                                "manual_candidate":  {
+                                                         "success":  0.82,
+                                                         "stability":  0.86,
+                                                         "throughput":  0.58,
+                                                         "risk":  0.11,
+                                                         "cost":  1.02,
+                                                         "latency":  1.02
+                                                     },
+                                "mipro_candidates":  [
+                                                         {
+                                                             "label":  "mipro-a",
+                                                             "success":  0.79,
+                                                             "stability":  0.82,
+                                                             "throughput":  0.57,
+                                                             "risk":  0.12,
+                                                             "cost":  1.1,
+                                                             "latency":  1.05
+                                                         },
+                                                         {
+                                                             "label":  "mipro-b",
+                                                             "success":  0.83,
+                                                             "stability":  0.83,
+                                                             "throughput":  0.6,
+                                                             "risk":  0.14,
+                                                             "cost":  1.16,
+                                                             "latency":  1.1
+                                                         }
+                                                     ],
+                                "textgrad_candidate":  {
+                                                           "success":  0.76,
+                                                           "stability":  0.85,
+                                                           "throughput":  0.55,
+                                                           "risk":  0.11,
+                                                           "cost":  1.04,
+                                                           "latency":  1.05
+                                                       }
+                            }
+                        ]
+}

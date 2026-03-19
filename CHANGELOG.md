@@ -6,7 +6,83 @@ Ele **nao** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalha
 
 ---
 
+## 2026-03-19
+
+### Ciclo deliberativo do nucleo
+
+- introduzido `DeliberativePlanContract` como artefato estruturado do nucleo para resumir objetivo, etapas, riscos, restricoes e recomendacao operacional;
+- ampliado o `executive-engine` para produzir diretiva com confianca, ambiguidade, modo preferido de resposta e controle de execucao;
+- refeito o fluxo do `orchestrator-service` para operar como `entender -> decompor -> arbitrar -> decidir -> registrar -> responder`, incluindo os eventos `directive_composed`, `plan_built`, `plan_governed` e `clarification_required`;
+- expandido o `memory-service` para persistir hints deliberativos de plano e resumo de missao, fortalecendo continuidade entre turnos;
+- ajustado o `governance-service` para decidir com base no plano pretendido, nao apenas na intencao textual;
+- ajustados `operational-service` e `synthesis-engine` para consumir e refletir o plano deliberativo no resultado final;
+- atualizados os testes de engines, memoria, governanca, operacao e orquestracao; a suite `pytest -q` voltou a passar integralmente.
+
+### Matriz de estudo tecnologico
+
+- criado `docs/architecture/technology-study-matrix.md` para consolidar o estudo de tecnologias, frameworks, algoritmos e repositorios citados no Documento-Mestre;
+- organizada a classificacao entre base do `v1`, complementos controlados, laboratorio, inspiracao arquitetural e itens a deferir para `v2`;
+- registrada a ordem recomendada de estudo local de repositorios externos e as regras de seguranca para clonar e analisar tecnologias fora do repositorio principal do JARVIS.
+
+### Benchmark harness e validacao local
+
+- implementado o pacote `tools/benchmarks/` com harness executavel, dataset versionado e artefatos auditaveis em `.jarvis_runtime/benchmarks/`;
+- adicionada exportacao `trace view` no `observability-service` para validar compatibilidade com tracing externo sem trocar o envelope interno;
+- criada `.venv` local e instaladas as dependencias `.[dev]` para validacao do baseline no ambiente do projeto;
+- validado o benchmark local com decisoes preliminares: `knowledge -> weighted_deterministic`, `observability -> adotar no v1`, `evolution -> manual_variants`, `memory -> manter baseline atual ate validar PostgreSQL`;
+- validada a suite completa com `pytest -q` e os arquivos novos com `ruff check`.
+
+### Baseline apos benchmark
+
+- promovido o ranking ponderado deterministico para o `knowledge-service`, absorvendo no baseline a melhoria escolhida pelo benchmark;
+- ajustado o `evolution-lab` para registrar `manual_variants` como estrategia sandbox prioritaria, sem promocao automatica;
+- ampliados os testes de `knowledge-service` e `evolution-lab` para travar o comportamento promovido ao baseline;
+- rerodado o benchmark e validado que `knowledge` agora aparece como `manter baseline atual`, refletindo que a melhoria ja foi incorporada ao sistema.
+
+### Readiness de PostgreSQL e benchmark CLI
+
+- adicionado suporte de CLI ao harness de benchmark com `--output-dir`, `--dataset-path`, `--postgres-url` e `--print-json`;
+- isolado o escopo do benchmark de memoria com identificadores unicos por execucao para evitar colisao entre rodadas;
+- adicionados testes opcionais de integracao PostgreSQL para o `memory-service` e para a trilha de memoria do benchmark, com `skip` quando `DATABASE_URL` ou `psycopg` nao estiverem disponiveis;
+- atualizado o handoff com o fluxo correto de validacao da candidata PostgreSQL.
+
+### Validacao real de PostgreSQL
+
+- instalado o extra `postgres` na `.venv` local para habilitar o backend real com `psycopg`;
+- validado o `memory-service` contra PostgreSQL local com teste de integracao dedicado;
+- ajustado o harness para isolar execucoes por identificadores unicos e medir paridade funcional de forma consistente com o comportamento real da memoria;
+- recalibrados os limites de latencia do benchmark de memoria para comparar `sqlite` com PostgreSQL local sem exigir um teto irreal para um banco operacional;
+- rerodado o benchmark com `DATABASE_URL` real e decisao final `memory -> adotar no v1`;
+- alterado o `docker compose` local do PostgreSQL para publicar em `5433`, evitando conflito com um `postgres.exe` local ativo na maquina.
+
+### Alinhamento dos derivados ao baseline consolidado
+
+- atualizados `docs/implementation/implementation-strategy.md`, `docs/implementation/service-breakdown.md` e `docs/roadmap/v1-roadmap.md` para refletir o baseline benchmarkado do `v1`;
+- atualizados `docs/operations/v1-production-controlled.md` e `docs/operations/go-live-readiness.md` para tratar `PostgreSQL` como backend operacional recomendado e explicitar que a decisao de `go/no-go` ainda esta pendente;
+- atualizado `docs/architecture/evolution-lab.md` para refletir `manual_variants` como estrategia priorizada no sandbox do `v1`;
+- atualizado `docs/executive/v1-scope-summary.md` para registrar o estado atual do `v1` e a pendencia de fechamento para producao controlada.
+
+### Decisao formal de readiness do v1
+
+- criado `docs/operations/v1-go-no-go-decision.md` para registrar a decisao formal de readiness do `v1`;
+- registrada a decisao atual como `GO CONDICIONAL` para producao controlada em escopo reduzido;
+- atualizado `docs/operations/go-live-readiness.md` para refletir que a decisao de `go/no-go` ja foi tomada;
+- atualizado `docs/operations/v1-production-controlled.md` para incorporar o estado formal da decisao;
+- atualizado `docs/executive/master-summary.md`, que ainda estava atrasado em relacao ao estado real do repositorio.
+
+---
+
 ## 2026-03-18
+
+### Benchmark dirigido do v1
+
+- implementado um harness local unico em `tools/benchmarks/` para benchmarkar memoria, knowledge, observabilidade e evolution-lab;
+- congelado um dataset versionado em `tools/benchmarks/datasets/v1_benchmark_cases.json` com cenarios de `planning`, `analysis`, `general_assistance`, bloqueio por governanca e continuidade de sessao;
+- adicionada persistencia de artefatos auditaveis do benchmark em `JSON` e `Markdown`;
+- adicionada exportacao de trace view no `observability-service` para validar compatibilidade com tracing externo sem substituir a trilha interna;
+- adicionados testes do harness de benchmark e cobertura da exportacao de trace view;
+- atualizado o `HANDOFF.md` para refletir o benchmark dirigido como proximo gate do fechamento do `v1`.
+
 
 ### Core v1 baseline
 
@@ -231,3 +307,9 @@ Ele **nao** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalha
 - validada a importacao dos esqueletos de servicos e engines com `python`;
 - validada a importacao da nova camada `shared/` com `python`;
 - a execucao de `python -m pytest` ainda nao foi concluida porque `pytest` nao esta instalado no ambiente local atual.
+
+
+
+
+
+

@@ -1,49 +1,49 @@
-﻿# Implementation Strategy
+# Implementation Strategy
 
 ## 1. Objetivo
 
-Este documento resume a estratégia prática de implementação do `v1` do JARVIS em formato de execução de engenharia.
+Este documento resume a estrategia pratica de implementacao do `v1` do JARVIS em formato de execucao de engenharia.
 
-Ele deriva principalmente do capítulo `286. Estratégia detalhada de implementação do v1 passo a passo`.
+Ele deriva principalmente do capitulo `286. Estrategia detalhada de implementacao do v1 passo a passo`.
 
 ---
 
-## 2. Princípios
+## 2. Principios
 
-A implementação do `v1` deve obedecer a:
+A implementacao do `v1` deve obedecer a:
 
-- fundação antes de feature;
-- contrato antes de integração complexa;
-- identidade antes de automação ampla;
-- governança antes de autonomia expandida;
-- observabilidade desde o início;
-- incrementos úteis e testáveis;
+- fundacao antes de feature;
+- contrato antes de integracao complexa;
+- identidade antes de automacao ampla;
+- governanca antes de autonomia expandida;
+- observabilidade desde o inicio;
+- incrementos uteis e testaveis;
 - estado persistente onde isso for estruturalmente importante.
 
 ---
 
-## 3. Sequência geral
+## 3. Sequencia geral
 
-Sequência recomendada:
+Sequencia recomendada para o `v1`:
 
 1. alinhar baseline tecnico e documental;
-2. consolidar persistencia de memoria e continuidade;
+2. consolidar memoria persistente e continuidade;
 3. estruturar observabilidade minima do fluxo;
 4. fortalecer engines, conhecimento e operacao util;
 5. endurecer governanca para o `v1`;
-6. preparar consolidacao do `v1` e sandbox evolutivo inicial.
+6. consolidar benchmark, readiness e decisao de fechamento para producao controlada.
 
 ---
 
-## 4. Leitura prática das fases
+## 4. Leitura pratica das fases
 
 ### 4.1 Fase 0
 
-Preparar o repositório e o ambiente.
+Preparar o repositorio e o ambiente.
 
 ### 4.2 Fase 1
 
-Criar a base semântica compartilhada.
+Criar a base semantica compartilhada.
 
 ### 4.3 Fase 2
 
@@ -51,19 +51,19 @@ Fazer o nucleo central responder de forma coerente.
 
 ### 4.4 Fase 3
 
-Adicionar memória útil e continuidade.
+Adicionar memoria util e continuidade.
 
 ### 4.5 Fase 4
 
-Ativar governança mínima robusta.
+Ativar governanca minima robusta.
 
 ### 4.6 Fase 5
 
-Adicionar operação real de baixo risco.
+Adicionar operacao real de baixo risco.
 
 ### 4.7 Fase 6
 
-Aprofundar conhecimento e domínios prioritários.
+Aprofundar conhecimento e dominios prioritarios.
 
 ### 4.8 Fase 7
 
@@ -77,27 +77,27 @@ Preparar o sandbox evolutivo inicial.
 
 ## 5. Estado pratico atual
 
-O repositorio ja concluiu a fundacao estrutural e o primeiro fluxo funcional minimo.
+O repositorio ja saiu da fundacao estrutural e possui um baseline integrado do `v1` validado por benchmark dirigido.
 
 Hoje o baseline implementado cobre:
 
 - `orchestrator-service` como coordenador do fluxo;
-- `memory-service` com persistencia local de sessao e missao;
-- `governance-service` com decisao simples e condicionada;
-- `knowledge-service` com retrieval deterministico local e corpus curado externo ao codigo;
+- `memory-service` com persistencia util, `sqlite` como fallback local e `PostgreSQL` validado como backend operacional do `v1` local;
+- `governance-service` com decisao simples, condicionada, bloqueada e adiada para validacao;
+- `knowledge-service` com retrieval deterministico local, corpus curado externo ao codigo e ranking ponderado ja absorvido ao baseline;
 - `operational-service` com artefatos textuais de baixo risco;
-- `observability-service` com trilha de eventos persistida;
-- `evolution-lab` com comparacao sandbox-only entre baseline e candidata;
+- `observability-service` com trilha de eventos persistida e validada para o `v1`;
+- `evolution-lab` com comparacao sandbox-only entre baseline e candidata, priorizando `manual_variants`;
 - `engines/` dedicadas para identidade, executivo, planejamento, cognicao e sintese.
 
 Leitura de milestone:
 
 - `M1` concluida
-- `M2` parcialmente concluida
-- `M3` substancialmente implementada
+- `M2` substancialmente implementada
+- `M3` substancialmente implementada e validada com PostgreSQL
 - `M4` parcialmente implementada
-- `M5` parcialmente implementada
-- `M6` iniciada no baseline local
+- `M5` substancialmente implementada
+- `M6` em consolidacao final
 
 ---
 
@@ -105,20 +105,19 @@ Leitura de milestone:
 
 Sequencia recomendada a partir do estado atual:
 
-1. padronizar ambiente de dev com `pip install -e .[dev]`;
-2. confirmar `pytest -q` e `ruff check .` em ambiente limpo;
-3. elevar a persistencia de memoria para `PostgreSQL` operacional;
-4. ampliar corpus e retrieval do `knowledge-service`;
-5. fortalecer benchmark, readiness e qualidade do `evolution-lab`.
+1. revisar os documentos derivados e o material de readiness para refletir o baseline benchmarkado;
+2. tratar `PostgreSQL` como caminho operacional recomendado do `v1`, mantendo `sqlite` como fallback local;
+3. decidir formalmente se o baseline atual ja permite fechar o `v1` para producao controlada;
+4. so depois reabrir expansao de corpus, retrieval mais forte ou evolucao mais sofisticada.
 
 ---
 
-## 7. Regra de execução
+## 7. Regra de execucao
 
 Nao implementar modulos isolados apenas por completude estrutural.
 
 Implementar ciclos integrados de capacidade, em que cada etapa:
 
-- produz valor verificável;
-- deixa base reaproveitável para a próxima;
+- produz valor verificavel;
+- deixa base reaproveitavel para a proxima;
 - reduz risco de retrabalho.

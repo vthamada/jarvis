@@ -3,6 +3,7 @@ from tempfile import gettempdir
 from uuid import uuid4
 
 from operational_service.service import OperationalExecution, OperationalService
+
 from shared.contracts import OperationDispatchContract
 from shared.types import OperationId, OperationStatus, RequestId, SessionId
 
@@ -32,6 +33,10 @@ def test_operational_service_generates_text_artifact_for_supported_task() -> Non
             task_plan="priorizar memoria persistente",
             constraints=["low-risk"],
             expected_output="text_brief",
+            plan_summary="decompor milestone em etapas reversiveis",
+            planned_steps=["definir objetivo", "listar etapas"],
+            plan_risks=["sem risco material relevante"],
+            plan_rationale="contexto=nenhum; apoio=baseline local",
         )
     )
 
@@ -40,7 +45,7 @@ def test_operational_service_generates_text_artifact_for_supported_task() -> Non
     assert execution.artifact_results
     artifact_path = Path(execution.artifact_results[0].location_ref or "")
     assert artifact_path.exists()
-    assert "Plano inicial para" in artifact_path.read_text(encoding="utf-8")
+    assert "Plano deliberativo para" in artifact_path.read_text(encoding="utf-8")
 
 
 def test_operational_service_fails_for_unsupported_task() -> None:

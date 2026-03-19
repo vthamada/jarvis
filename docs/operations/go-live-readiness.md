@@ -1,116 +1,142 @@
-﻿# Go-Live Readiness
+# Go-Live Readiness
 
 ## 1. Objetivo
 
-Este documento define o regime mínimo de **readiness e go-live** do JARVIS `v1` em produção controlada.
+Este documento define o regime minimo de **readiness e go-live** do JARVIS `v1` em producao controlada.
 
 Ele deriva principalmente de:
 
-- `documento_mestre_jarvis.md`, capítulo `346. Plano de readiness e go-live do v1`
+- `documento_mestre_jarvis.md`, capitulo `346. Plano de readiness e go-live do v1`
 - `docs/operations/v1-production-controlled.md`
+- `docs/operations/v1-go-no-go-decision.md`
 
-Seu papel é transformar a prontidão do `v1` em checklist operacional claro.
+Seu papel e transformar a prontidao do `v1` em checklist operacional claro.
 
 ---
 
-## 2. Princípio geral
+## 2. Principio geral
 
-O `go-live` do `v1` só deve ocorrer quando houver:
+O `go-live` do `v1` so deve ocorrer quando houver:
 
-- capacidade funcional mínima;
-- governança mínima ativa;
+- capacidade funcional minima;
+- governanca minima ativa;
 - observabilidade suficiente;
-- contenção e rollback claros;
+- contencao e rollback claros;
 - escopo real de uso explicitamente limitado.
 
 ---
 
-## 3. Checklist mínimo de readiness
+## 3. Checklist minimo de readiness
 
 Antes de liberar o `v1`, confirmar:
 
 - ambiente operacional identificado;
-- configuração mínima reproduzível;
-- núcleo central funcional no escopo pretendido;
-- memória útil básica operando;
-- governança mínima robusta ativa;
-- observabilidade mínima ativa;
+- configuracao minima reproduzivel;
+- nucleo central funcional no escopo pretendido;
+- memoria util basica operando;
+- governanca minima robusta ativa;
+- observabilidade minima ativa;
 - rollback operacional definido;
-- cenários prioritários aprovados;
+- cenarios prioritarios aprovados;
 - sandbox evolutivo separado e sem promocao automatica.
 
 ---
 
-## 4. Critérios de go
+## 4. Estado atual do baseline
 
-Só autorizar `go-live` se:
+Leitura objetiva do estado atual:
 
-- fluxos prioritários estiverem estáveis;
-- bloqueios e permissões estiverem funcionando;
+- `nucleo central funcional`: atendido;
+- `memoria util basica`: atendido, com `PostgreSQL` validado como backend operacional recomendado e `sqlite` mantido como fallback local;
+- `governanca minima robusta`: atendido no escopo atual do `v1`;
+- `observabilidade minima`: atendido, com benchmark favoravel para o `v1`;
+- `sandbox evolutivo separado`: atendido, mantendo `sandbox-only` e sem promocao automatica;
+- `configuracao minima reproduzivel`: atendido para baseline local;
+- `readiness documental final`: atendido;
+- `decisao formal de go/no-go`: atendido, com `GO CONDICIONAL` registrado em `2026-03-19`.
+
+---
+
+## 5. Criterios de go
+
+So autorizar `go-live` se:
+
+- fluxos prioritarios estiverem estaveis;
+- bloqueios e permissoes estiverem funcionando;
 - logs e tracing estiverem ativos;
 - falhas residuais conhecidas estiverem documentadas;
 - escopo de uso estiver claramente delimitado.
 
 ---
 
-## 5. Critérios de no-go
+## 6. Criterios de no-go
 
 Negar `go-live` se houver:
 
-- falha recorrente de governança;
-- comportamento central imprevisível;
-- memória inconsistente;
-- ausência de rollback claro;
+- falha recorrente de governanca;
+- comportamento central imprevisivel;
+- memoria inconsistente;
+- ausencia de rollback claro;
 - observabilidade insuficiente;
 - estados quebrados frequentes.
 
 ---
 
-## 6. Smoke checks de lançamento
+## 7. Smoke checks de lancamento
 
 Executar antes do `go-live`:
 
-- entrada e síntese básicas;
-- recuperação mínima de memória útil;
-- bloqueio de ação indevida;
-- execução simples de baixo risco;
+- entrada e sintese basicas;
+- recuperacao minima de memoria util;
+- bloqueio de acao indevida;
+- execucao simples de baixo risco;
 - registro de logs e traces;
-- simulação de falha local com recuperação controlada;
+- simulacao de falha local com recuperacao controlada;
 - comparacao sandbox entre baseline e candidata sem promocao.
 
 ---
 
-## 7. Regime de lançamento inicial
+## 8. Pendencias praticas antes do go-live
+
+Antes do primeiro uso real, ainda faltam:
+
+- congelar o escopo operacional inicial do primeiro uso real;
+- registrar a janela de observacao do primeiro rollout controlado;
+- definir quem acompanha e interrompe o fluxo em caso de anomalia.
+
+---
+
+## 9. Regime de lancamento inicial
 
 O primeiro `go-live` deve seguir:
 
 - escopo reduzido;
-- janela de observação conhecida;
-- monitoramento reforçado;
-- facilidade de reversão;
-- registro explícito das primeiras ocorrências.
+- janela de observacao conhecida;
+- monitoramento reforcado;
+- facilidade de reversao;
+- registro explicito das primeiras ocorrencias.
 
 ---
 
-## 8. Resultado esperado do go-live
+## 10. Resultado esperado do go-live
 
-O `go-live` do `v1` não deve provar maturidade total.
+O `go-live` do `v1` nao deve provar maturidade total.
 
 Ele deve provar:
 
 - utilidade controlada;
-- estabilidade mínima;
-- governança funcional;
+- estabilidade minima;
+- governanca funcional;
 - rastreabilidade suficiente;
 - capacidade de conter e corrigir falhas.
 
 ---
 
-## 9. Relação com próximos passos
+## 11. Relacao com proximos passos
 
-Após o `go-live`, o foco deve ir para:
+Apos o `go-live`, o foco deve ir para:
 
-- observação do uso real;
-- correção de falhas estruturais;
+- observacao do uso real;
+- correcao de falhas estruturais;
 - ajuste de escopo operacional;
-- geração de evidência para expansão do `v1` e preparação do `v2`.
+- geracao de evidencia para expansao do `v1` e preparacao do `v2`.

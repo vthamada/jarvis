@@ -2,11 +2,11 @@
 
 ## Metadata
 
-- Atualizado em: 2026-03-18
+- Atualizado em: 2026-03-19
 - Branch: `main`
-- Commit de referencia: `92374f4`
+- Commit de referencia: `3edf609`
 - Artefato canonico do projeto: `documento_mestre_jarvis.md`
-- Status do projeto: base do `v1` integrada com persistencia local, observabilidade estruturada, corpus curado local de conhecimento, engines nucleares ativas e sandbox evolutivo minimo
+- Status do projeto: baseline integrado do `v1` com benchmark local implementado, retrieval ponderado absorvido no baseline, observabilidade validada, evolution-lab com estrategia sandbox priorizada, PostgreSQL validado como backend operacional do v1 local e decisao formal atual de `GO CONDICIONAL` para producao controlada, com ciclo deliberativo do nucleo implementado e validado por testes
 
 ---
 
@@ -34,7 +34,8 @@ Hoje o repositorio contem:
 - `observability-service` persistindo a trilha de eventos internos com campos de correlacao;
 - `evolution-lab` persistindo propostas e decisoes sandbox-only entre baseline e candidata;
 - `engines/` com componentes reais de identidade, executivo, planejamento, cognicao e sintese;
-- suite de testes cobrindo persistencia, governanca, observabilidade, conhecimento, operacao e o fluxo ponta a ponta do orquestrador.
+- suite de testes cobrindo persistencia, governanca, observabilidade, conhecimento, operacao e o fluxo ponta a ponta do orquestrador;
+- ciclo deliberativo implementado no nucleo, com diretiva executiva enriquecida, plano estruturado, governanca sobre plano, memoria com hints deliberativos e sintese mais executiva.
 
 Arquivo paralelo/historico que nao deve ser tratado como fonte principal sem decisao explicita:
 
@@ -78,6 +79,18 @@ Arquivo paralelo/historico que nao deve ser tratado como fonte principal sem dec
 - adicao de `conftest.py` na raiz para que testes isolados fora de `tests/` carreguem o bootstrap correto;
 - reescrita da cobertura de testes para validar comportamento funcional, persistencia entre instancias e trilha ponta a ponta;
 - validacao da suite com `pytest -q` diretamente da raiz do repositorio.
+- implementacao do harness local de benchmark em `tools/benchmarks/`, com dataset versionado e artefatos `JSON` e `Markdown`.
+- adicao de exportacao de trace view no `observability-service` para validacao de compatibilidade com tracing externo.
+- bootstrap de `.venv` local com `.[dev]` instalado para validacao consistente do repositório.
+- execucao e validacao local do benchmark dirigido do `v1`, com decisao preliminar de manter memoria atual ate validar PostgreSQL, incorporar a trilha atual de observabilidade e priorizar `manual_variants` no evolution-lab.
+- promocao do ranking ponderado deterministico para o baseline do `knowledge-service`, absorvendo no servico a melhoria indicada pelo benchmark.
+- traducao do resultado do benchmark do `evolution-lab` para o servico real, registrando `manual_variants` como estrategia sandbox prioritaria e preservando `sandbox-only`.
+- ampliacao do harness de benchmark com CLI util, escopo isolado por execucao e testes especificos para a trilha PostgreSQL.
+- validacao real do `memory-service` contra PostgreSQL local com `psycopg`, teste de integracao dedicado e benchmark rerodado com decisao `adotar no v1`.
+- ajuste do `docker compose` local para publicar PostgreSQL em `5433`, evitando conflito com um `postgres.exe` local ja ativo nesta maquina;
+- criacao de `docs/architecture/technology-study-matrix.md` para consolidar a leitura do Documento-Mestre sobre stack, frameworks, algoritmos e repositorios a estudar;
+- implementacao do ciclo deliberativo do `v1`, com `DeliberativePlanContract`, diretiva executiva enriquecida, plano estruturado no `planning-engine`, memoria persistindo hints de plano, governanca avaliando o plano pretendido, observabilidade expandida e sintese mais deliberativa;
+- atualizacao dos testes de engines e servicos para travar o novo comportamento e validacao da suite completa com `pytest -q`.
 
 ---
 
@@ -104,12 +117,6 @@ Nao rediscutir sem evidencia forte ou mudanca explicita de direcao:
 
 Pendencias principais agora:
 
-- instalar dependencias de desenvolvimento em ambiente limpo e confirmar `ruff check .`;
-- elevar o backend de memoria de `sqlite` local para `PostgreSQL` operacional quando a infraestrutura estiver pronta;
-- validar a infraestrutura local de PostgreSQL com container real quando o ambiente permitir;
-- aprofundar o `knowledge-service` com retrieval mais rico sobre o corpus curado local;
-- fortalecer o `evolution-lab` com benchmark e readiness de comparacao mais formal;
-- revisar os documentos derivados restantes para refletirem o novo baseline do `v1`;
 - decidir formalmente o destino de `documento_mestre_do_jarvis.md`.
 
 ---
@@ -118,22 +125,20 @@ Pendencias principais agora:
 
 Ordem recomendada:
 
-1. criar e ativar `.venv`;
-2. instalar `.[dev]` ou `".[dev,postgres]"` quando for validar PostgreSQL;
-3. rodar `pytest -q` e `ruff check .`;
-4. subir `infra/local-postgres.compose.yml` e validar a memoria contra `DATABASE_URL`;
-5. expandir o `knowledge-service` e o corpus local sem quebrar o fluxo deterministico;
-6. fortalecer o `evolution-lab` com benchmark e readiness de comparacao.
+1. registrar o escopo inicial do primeiro uso real controlado;
+2. executar a primeira janela pequena de producao controlada com observacao reforcada;
+3. decidir formalmente o destino de `documento_mestre_do_jarvis.md`.
 
 ---
 
 ## Riscos / Bloqueios
 
-- `ruff` pode nao estar instalado no shell atual, entao a validacao de lint depende do bootstrap completo;
-- o caminho padrao de persistencia local ainda e `sqlite`, suficiente para baseline local mas nao para o alvo final operacional;
-- o corpus do `knowledge-service` ainda e local e curado manualmente;
+- `sqlite` continua como fallback local, mas o backend operacional recomendado do `v1` agora e `PostgreSQL`;
+- nesta maquina ha um `postgres.exe` local ativo na `5432`, por isso o `docker compose` do JARVIS publica o banco em `5433`;
+- o corpus do `knowledge-service` continua local e curado manualmente, agora com ranking ponderado ja absorvido no baseline;
 - o `operational-service` continua deliberadamente restrito a tarefas seguras e deterministicas, sem adaptadores de alto risco;
-- o `evolution-lab` ainda esta no primeiro corte local e nao substitui benchmark mais maduro.
+- o `evolution-lab` segue sandbox-only e ainda nao traduz automaticamente o resultado do benchmark em mudanca do baseline;
+- o lint com `ruff check` ainda ficou com pendencias de estilo nos arquivos reescritos nesta rodada, embora a suite funcional esteja verde.
 
 ---
 
@@ -144,6 +149,9 @@ Ordem recomendada:
 - `CHANGELOG.md`
 - `shared/types/__init__.py`
 - `shared/contracts/__init__.py`
+- `engines/executive-engine/src/executive_engine/engine.py`
+- `engines/planning-engine/src/planning_engine/engine.py`
+- `engines/synthesis-engine/src/synthesis_engine/engine.py`
 - `shared/schemas/__init__.py`
 - `shared/events/__init__.py`
 - `shared/state/__init__.py`
@@ -165,6 +173,10 @@ Ordem recomendada:
 - `evolution/evolution-lab/src/evolution_lab/service.py`
 - `evolution/evolution-lab/src/evolution_lab/repository.py`
 - `evolution/evolution-lab/tests/test_evolution_lab_service.py`
+- `tools/benchmarks/harness.py`
+- `tools/benchmarks/dataset.py`
+- `tools/benchmarks/datasets/v1_benchmark_cases.json`
+- `tests/benchmark/test_benchmark_harness.py`
 - `services/operational-service/src/operational_service/service.py`
 - `services/operational-service/tests/test_operational_service.py`
 - `engines/identity-engine/src/identity_engine/engine.py`
@@ -174,6 +186,7 @@ Ordem recomendada:
 - `engines/synthesis-engine/src/synthesis_engine/engine.py`
 - `tests/unit/test_shared_layer.py`
 - `docs/implementation/service-breakdown.md`
+- `docs/architecture/technology-study-matrix.md`
 - `docs/implementation/implementation-strategy.md`
 
 ---
@@ -191,6 +204,7 @@ Leitura minima para qualquer novo agente:
 7. `services/observability-service/src/observability_service/service.py`
 8. `evolution/evolution-lab/src/evolution_lab/service.py`
 9. `services/operational-service/src/operational_service/service.py`
+10. `tools/benchmarks/harness.py`
 
 Checagens rapidas recomendadas:
 
@@ -202,7 +216,8 @@ Checagens rapidas recomendadas:
 - validar que o `observability-service` registra a trilha completa de eventos;
 - validar que o `evolution-lab` registra proposta e decisao sandbox-only sem promocao automatica;
 - validar que o `operational-service` executa apenas tarefas seguras e produz artefatos textuais;
-- executar `pytest -q` diretamente da raiz e, em ambiente completo, `ruff check .`.
+- executar `python -m tools.benchmarks` e revisar as decisoes por trilha;
+- executar `pytest -q` diretamente da raiz e `ruff check .` na `.venv` local.
 
 Comandos uteis:
 
@@ -211,8 +226,13 @@ rg --files
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -e .[dev]
-pytest -q
-ruff check .
+.\.venv\Scripts\python.exe -m pytest -q
+.\.venv\Scripts\python.exe -m ruff check .
+.\.venv\Scripts\python.exe -m pip install -e .[dev,postgres]
+docker compose -f infra/local-postgres.compose.yml up -d
+$env:DATABASE_URL = "postgresql://postgres:postgres@localhost:5433/jarvis"
+.\.venv\Scripts\python.exe -m tools.benchmarks --postgres-url $env:DATABASE_URL
+.\.venv\Scripts\python.exe -m pytest services/memory-service/tests/test_memory_postgres_integration.py -q
 ```
 
 ---
@@ -233,6 +253,14 @@ Este handoff continua util enquanto o projeto estiver consolidando o baseline in
 
 Ele deve ser reavaliado quando:
 
-- o backend persistente operacional em `PostgreSQL` estiver ativo;
+- a primeira janela de producao controlada do `v1` tiver sido executada e registrada;
 - o `knowledge-service` sair do corpus local minimo e entrar em retrieval mais robusto;
-- o baseline de `M6` sair do sandbox evolutivo minimo e entrar em benchmark mais formal.
+- o baseline de `M6` sair do sandbox evolutivo minimo e entrar em benchmark mais formal;
+- houver mudanca arquitetural relevante que torne este handoff obsoleto.
+
+
+
+
+
+
+

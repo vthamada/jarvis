@@ -1,3 +1,4 @@
+from json import dumps
 from pathlib import Path
 from tempfile import gettempdir
 from uuid import uuid4
@@ -25,23 +26,45 @@ def test_knowledge_service_returns_domains_and_snippets_for_planning() -> None:
     assert len(result.snippets) == 2
 
 
-def test_knowledge_service_adds_governance_domain_when_query_mentions_risk() -> None:
+def test_knowledge_service_prioritizes_governance_for_risk_analysis() -> None:
     service = KnowledgeService()
-    result = service.retrieve_for_intent(intent="analysis", query="Analyze risk and governance gaps.")
+    result = service.retrieve_for_intent(
+        intent="analysis",
+        query="Analyze governance risk and audit implications for the release.",
+    )
 
-    assert "governance" in result.active_domains
+    assert result.active_domains[:3] == ["governance", "analysis", "strategy"]
+
+
+def test_knowledge_service_prioritizes_governance_in_ambiguous_planning() -> None:
+    service = KnowledgeService()
+    result = service.retrieve_for_intent(
+        intent="planning",
+        query="Plan execution changes with audit safety and governance checks.",
+    )
+
+    assert result.active_domains[:3] == ["governance", "productivity", "strategy"]
 
 
 def test_knowledge_service_loads_curated_domains_from_custom_corpus() -> None:
     temp_dir = runtime_dir("knowledge-corpus")
     corpus_path = temp_dir / "custom_corpus.json"
     corpus_path.write_text(
-        (
-            '{'
-            '"domains": ['
-            '{"name": "architecture", "keywords": ["arch"], "snippets": ["Arquitetura first."]},'
-            '{"name": "productivity", "keywords": ["execute"], "snippets": ["Execute o menor passo."]}'
-            "]}"
+        dumps(
+            {
+                "domains": [
+                    {
+                        "name": "architecture",
+                        "keywords": ["arch"],
+                        "snippets": ["Arquitetura first."],
+                    },
+                    {
+                        "name": "productivity",
+                        "keywords": ["execute"],
+                        "snippets": ["Execute o menor passo."],
+                    },
+                ]
+            }
         ),
         encoding="utf-8",
     )
@@ -50,4 +73,4 @@ def test_knowledge_service_loads_curated_domains_from_custom_corpus() -> None:
 
     assert service.list_domains() == ["architecture", "productivity"]
     result = service.retrieve_for_intent(intent="general_assistance", query="Review arch options.")
-    assert result.active_domains == ["productivity", "architecture"]
+    assert result.active_domains == ["architecture", "productivity"]
