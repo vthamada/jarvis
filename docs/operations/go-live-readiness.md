@@ -36,7 +36,8 @@ Antes de liberar o `v1`, confirmar:
 - governança mínima robusta ativa;
 - observabilidade mínima ativa;
 - rollback operacional definido;
-- cenários prioritários aprovados.
+- cenários prioritários aprovados;
+- sandbox evolutivo separado e sem promocao automatica.
 
 ---
 
@@ -74,7 +75,8 @@ Executar antes do `go-live`:
 - bloqueio de ação indevida;
 - execução simples de baixo risco;
 - registro de logs e traces;
-- simulação de falha local com recuperação controlada.
+- simulação de falha local com recuperação controlada;
+- comparacao sandbox entre baseline e candidata sem promocao.
 
 ---
 

@@ -1,10 +1,10 @@
-"""Shared pytest configuration for the repository."""
+"""Repository-wide pytest bootstrap."""
 
 from pathlib import Path
 import sys
 
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent
 SRC_DIRS = [
     ROOT,
     ROOT / "evolution" / "evolution-lab" / "src",

@@ -9,6 +9,7 @@ INTERNAL_EVENT_NAMES = (
     "input_received",
     "intent_classified",
     "context_composed",
+    "knowledge_retrieved",
     "memory_recovered",
     "memory_recorded",
     "operation_dispatched",
@@ -16,6 +17,7 @@ INTERNAL_EVENT_NAMES = (
     "governance_checked",
     "governance_blocked",
     "mission_updated",
+    "response_synthesized",
     "error_raised",
 )
 

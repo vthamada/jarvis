@@ -15,12 +15,17 @@ dev = [
   "pytest>=8.3",
   "ruff>=0.11.0",
 ]
+postgres = [
+  "psycopg[binary]>=3.2",
+]
 
 [tool.setuptools]
 include-package-data = true
 
 [tool.setuptools.packages.find]
 where = [
+  ".",
+  "evolution/evolution-lab/src",
   "services/orchestrator-service/src",
   "services/memory-service/src",
   "services/governance-service/src",
@@ -36,9 +41,10 @@ where = [
 
 [tool.pytest.ini_options]
 minversion = "8.0"
-addopts = "-q"
+addopts = "-q -p no:cacheprovider"
 testpaths = [
   "tests",
+  "evolution",
   "services",
   "engines",
 ]

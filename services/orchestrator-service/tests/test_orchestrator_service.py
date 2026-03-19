@@ -1,11 +1,17 @@
+from pathlib import Path
+from tempfile import gettempdir
+from uuid import uuid4
+
 from governance_service.service import GovernanceService
 from memory_service.service import MemoryService
+from observability_service.service import ObservabilityQuery, ObservabilityService
 from operational_service.service import OperationalService
 from orchestrator_service.service import OrchestratorResponse, OrchestratorService
 from shared.contracts import InputContract
 from shared.types import (
     ChannelType,
     InputType,
+    MissionId,
     OperationStatus,
     PermissionDecision,
     RequestId,
@@ -13,15 +19,26 @@ from shared.types import (
 )
 
 
+def runtime_dir(name: str) -> Path:
+    base_dir = Path(gettempdir()) / "jarvis-tests"
+    base_dir.mkdir(parents=True, exist_ok=True)
+    target = base_dir / f"{name}-{uuid4().hex[:8]}"
+    target.mkdir(parents=True, exist_ok=True)
+    return target
+
+
 def test_orchestrator_service_name() -> None:
     assert OrchestratorService.name == "orchestrator-service"
 
 
-def test_orchestrator_service_handles_low_risk_input() -> None:
+def test_orchestrator_service_handles_low_risk_input_with_knowledge_and_artifacts() -> None:
+    temp_dir = runtime_dir("orchestrator-low")
+    observability = ObservabilityService(database_path=str(temp_dir / "observability.db"))
     service = OrchestratorService(
         governance_service=GovernanceService(),
-        memory_service=MemoryService(),
-        operational_service=OperationalService(),
+        memory_service=MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"),
+        operational_service=OperationalService(artifact_dir=str(temp_dir / "artifacts")),
+        observability_service=observability,
     )
     result = service.handle_input(
         InputContract(
@@ -37,26 +54,22 @@ def test_orchestrator_service_handles_low_risk_input() -> None:
     assert isinstance(result, OrchestratorResponse)
     assert result.intent == "planning"
     assert result.governance_decision.decision == PermissionDecision.ALLOW
-    assert result.recovered_context == []
     assert result.operation_result is not None
     assert result.operation_result.status == OperationStatus.COMPLETED
-    assert [event.event_name for event in result.events] == [
-        "input_received",
-        "memory_recovered",
-        "intent_classified",
-        "governance_checked",
-        "operation_dispatched",
-        "operation_completed",
-        "memory_recorded",
-    ]
-
+    assert result.knowledge_result is not None
+    assert result.artifact_results
+    assert result.active_domains == ["strategy", "productivity"]
+    stored_events = observability.list_recent_events(ObservabilityQuery(request_id="req-1"))
+    assert [event.event_name for event in stored_events] == [event.event_name for event in result.events]
 
 
 def test_orchestrator_service_blocks_sensitive_action() -> None:
+    temp_dir = runtime_dir("orchestrator-block")
     service = OrchestratorService(
         governance_service=GovernanceService(),
-        memory_service=MemoryService(),
-        operational_service=OperationalService(),
+        memory_service=MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"),
+        operational_service=OperationalService(artifact_dir=str(temp_dir / "artifacts")),
+        observability_service=ObservabilityService(database_path=str(temp_dir / "observability.db")),
     )
     result = service.handle_input(
         InputContract(
@@ -73,21 +86,29 @@ def test_orchestrator_service_blocks_sensitive_action() -> None:
     assert result.governance_decision.decision == PermissionDecision.BLOCK
     assert result.operation_dispatch is None
     assert result.operation_result is None
-    assert result.events[-2].event_name == "governance_blocked"
-    assert result.events[-1].event_name == "memory_recorded"
-    assert "bloqueada" in result.response_text
+    assert "governance_blocked" in [event.event_name for event in result.events]
+    assert "nao permite execucao direta" in result.response_text
 
 
-
-def test_orchestrator_service_recovers_previous_context_for_same_session() -> None:
-    service = OrchestratorService(
-        governance_service=GovernanceService(),
-        memory_service=MemoryService(),
-        operational_service=OperationalService(),
+def test_orchestrator_service_recovers_previous_context_and_mission_across_instances() -> None:
+    temp_dir = runtime_dir("orchestrator-persist")
+    memory_db = f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+    observability_db = str(temp_dir / "observability.db")
+    artifact_dir = str(temp_dir / "artifacts")
+    first = OrchestratorService(
+        memory_service=MemoryService(database_url=memory_db),
+        operational_service=OperationalService(artifact_dir=artifact_dir),
+        observability_service=ObservabilityService(database_path=observability_db),
+    )
+    second = OrchestratorService(
+        memory_service=MemoryService(database_url=memory_db),
+        operational_service=OperationalService(artifact_dir=artifact_dir),
+        observability_service=ObservabilityService(database_path=observability_db),
     )
     first_contract = InputContract(
         request_id=RequestId("req-3"),
         session_id=SessionId("sess-3"),
+        mission_id=MissionId("mission-1"),
         channel=ChannelType.CHAT,
         input_type=InputType.TEXT,
         content="Please plan the sprint.",
@@ -96,15 +117,16 @@ def test_orchestrator_service_recovers_previous_context_for_same_session() -> No
     second_contract = InputContract(
         request_id=RequestId("req-4"),
         session_id=SessionId("sess-3"),
+        mission_id=MissionId("mission-1"),
         channel=ChannelType.CHAT,
         input_type=InputType.TEXT,
         content="Analyze the previous plan.",
         timestamp="2026-03-17T00:01:00Z",
     )
 
-    service.handle_input(first_contract)
-    second_result = service.handle_input(second_contract)
+    first.handle_input(first_contract)
+    second_result = second.handle_input(second_contract)
 
-    assert len(second_result.recovered_context) == 1
-    assert "Please plan the sprint." in second_result.recovered_context[0]
+    assert any("Please plan the sprint." in item for item in second_result.recovered_context)
+    assert any("mission_state=" in item for item in second_result.recovered_context)
     assert second_result.operation_result is not None

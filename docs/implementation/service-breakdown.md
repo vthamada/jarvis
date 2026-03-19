@@ -28,8 +28,7 @@ Os servicos centrais do primeiro corte sao:
 Responsavel por:
 
 - receber entradas normalizadas;
-- classificar intencao;
-- coordenar fluxo entre memoria, cognicao, governanca e operacao;
+- coordenar fluxo entre memoria, cognicao, governanca, conhecimento, observabilidade e operacao;
 - produzir sintese final.
 
 ### 3.2 memory-service
@@ -38,6 +37,8 @@ Responsavel por:
 
 - recuperar contexto util;
 - registrar episodios;
+- persistir continuidade de sessao;
+- manter estado minimo de missao;
 - proteger memoria critica;
 - sustentar continuidade de sessao e missao.
 
@@ -55,8 +56,7 @@ Responsavel por:
 Responsavel por:
 
 - executar tasks autorizadas;
-- orquestrar adaptadores;
-- produzir artefatos;
+- produzir artefatos textuais;
 - devolver resultado estruturado ao nucleo.
 
 ### 3.5 knowledge-service
@@ -64,8 +64,8 @@ Responsavel por:
 Responsavel por:
 
 - registrar dominios;
-- indexar conhecimento;
-- realizar retrieval;
+- manter corpus local inicial;
+- realizar retrieval deterministico;
 - apoiar profundidade semantica do nucleo.
 
 ### 3.6 observability-service
@@ -73,8 +73,7 @@ Responsavel por:
 Responsavel por:
 
 - logs estruturados;
-- traces;
-- metricas;
+- persistencia da trilha de eventos;
 - correlacao entre fluxo, decisao, memoria e operacao.
 
 ---
@@ -89,6 +88,15 @@ Ordem pratica:
 4. `operational-service`
 5. `knowledge-service`
 6. `observability-service`
+
+Leitura pratica atual:
+
+- `orchestrator-service`: baseline integrado ativo
+- `memory-service`: persistencia local ativa
+- `governance-service`: baseline robusto inicial ativo
+- `operational-service`: operacao de baixo risco ativa
+- `knowledge-service`: retrieval inicial ativo
+- `observability-service`: ingestao e consulta local ativas
 
 ---
 

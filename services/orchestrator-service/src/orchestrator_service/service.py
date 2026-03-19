@@ -1,4 +1,4 @@
-"""Minimal orchestrator flow built on top of shared canonical contracts."""
+"""Orchestrator flow integrating engines, persistence, and observability."""
 
 from __future__ import annotations
 
@@ -6,10 +6,17 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from uuid import uuid4
 
+from cognitive_engine.engine import CognitiveEngine
+from executive_engine.engine import ExecutiveEngine
 from governance_service.service import GovernanceService
+from identity_engine.engine import IdentityEngine
+from knowledge_service.service import KnowledgeRetrievalResult, KnowledgeService
 from memory_service.service import MemoryService
+from observability_service.service import ObservabilityService
 from operational_service.service import OperationalService
+from planning_engine.engine import PlanningContext, PlanningEngine
 from shared.contracts import (
+    ArtifactResultContract,
     GovernanceCheckContract,
     GovernanceDecisionContract,
     InputContract,
@@ -19,24 +26,13 @@ from shared.contracts import (
     OperationResultContract,
 )
 from shared.events import InternalEventEnvelope
-from shared.state import SYSTEM_IDENTITY
 from shared.types import OperationId, PermissionDecision, RequestId
-
-
-HIGH_RISK_KEYWORDS = (
-    "delete",
-    "drop",
-    "destroy",
-    "excluir",
-    "apagar",
-    "deletar",
-    "remover",
-)
+from synthesis_engine.engine import SynthesisEngine, SynthesisInput
 
 
 @dataclass
 class OrchestratorResponse:
-    """Structured result of the first functional orchestrator pass."""
+    """Structured result of the orchestrated v1 request flow."""
 
     request_id: str
     session_id: str
@@ -47,13 +43,17 @@ class OrchestratorResponse:
     memory_recovery: MemoryRecoveryContract
     memory_record: MemoryRecordContract
     recovered_context: list[str]
+    knowledge_result: KnowledgeRetrievalResult | None = None
+    artifact_results: list[ArtifactResultContract] = field(default_factory=list)
+    active_minds: list[str] = field(default_factory=list)
+    active_domains: list[str] = field(default_factory=list)
     operation_dispatch: OperationDispatchContract | None = None
     operation_result: OperationResultContract | None = None
     events: list[InternalEventEnvelope] = field(default_factory=list)
 
 
 class OrchestratorService:
-    """Coordinates the first minimal request flow."""
+    """Coordinate the current v1 flow across services and engines."""
 
     name = "orchestrator-service"
 
@@ -62,83 +62,231 @@ class OrchestratorService:
         governance_service: GovernanceService | None = None,
         memory_service: MemoryService | None = None,
         operational_service: OperationalService | None = None,
+        knowledge_service: KnowledgeService | None = None,
+        observability_service: ObservabilityService | None = None,
+        identity_engine: IdentityEngine | None = None,
+        executive_engine: ExecutiveEngine | None = None,
+        planning_engine: PlanningEngine | None = None,
+        cognitive_engine: CognitiveEngine | None = None,
+        synthesis_engine: SynthesisEngine | None = None,
     ) -> None:
         self.governance_service = governance_service or GovernanceService()
         self.memory_service = memory_service or MemoryService()
         self.operational_service = operational_service or OperationalService()
+        self.knowledge_service = knowledge_service or KnowledgeService()
+        self.observability_service = observability_service or ObservabilityService()
+        self.identity_engine = identity_engine or IdentityEngine()
+        self.executive_engine = executive_engine or ExecutiveEngine()
+        self.planning_engine = planning_engine or PlanningEngine()
+        self.cognitive_engine = cognitive_engine or CognitiveEngine()
+        self.synthesis_engine = synthesis_engine or SynthesisEngine()
 
     def handle_input(self, contract: InputContract) -> OrchestratorResponse:
-        """Execute the first orchestrated flow for a normalized input contract."""
+        """Execute the orchestrated flow for a normalized input contract."""
+
+        events = [
+            self.make_event(
+                "input_received",
+                contract,
+                {"content": contract.content, "channel": contract.channel.value},
+            )
+        ]
 
         memory_recovery_result = self.memory_service.recover_for_input(contract)
-        intent = self.classify_intent(contract)
+        events.append(
+            self.make_event(
+                "memory_recovered",
+                contract,
+                {
+                    "memory_query_id": str(memory_recovery_result.recovery_contract.memory_query_id),
+                    "recovery_type": memory_recovery_result.recovery_contract.recovery_type.value,
+                },
+            )
+        )
+
+        directive = self.executive_engine.direct(contract)
+        events.append(self.make_event("intent_classified", contract, {"intent": directive.intent}))
+
+        knowledge_result = None
+        if directive.should_query_knowledge:
+            knowledge_result = self.knowledge_service.retrieve_for_intent(
+                intent=directive.intent,
+                query=contract.content,
+            )
+            events.append(
+                self.make_event(
+                    "knowledge_retrieved",
+                    contract,
+                    {
+                        "domains": knowledge_result.active_domains,
+                        "sources": knowledge_result.sources,
+                    },
+                )
+            )
+
+        cognitive_snapshot = self.cognitive_engine.build_snapshot(
+            intent=directive.intent,
+            risk_markers=directive.risk_markers,
+            retrieved_domains=knowledge_result.active_domains if knowledge_result else [],
+        )
+        events.append(
+            self.make_event(
+                "context_composed",
+                contract,
+                {
+                    "active_minds": cognitive_snapshot.active_minds,
+                    "active_domains": cognitive_snapshot.active_domains,
+                },
+            )
+        )
+
         assessment = self.governance_service.assess_request(
             contract,
-            intent=intent,
+            intent=directive.intent,
             requested_by_service=self.name,
         )
         governance_check = assessment.governance_check
         governance_decision = assessment.governance_decision
+        events.append(
+            self.make_event(
+                "governance_checked",
+                contract,
+                {
+                    "governance_check_id": str(governance_check.governance_check_id),
+                    "risk_hint": governance_check.risk_hint.value if governance_check.risk_hint else None,
+                    "decision": governance_decision.decision.value,
+                },
+            )
+        )
+
         operation_dispatch = None
         operation_result = None
-        if governance_decision.decision == PermissionDecision.ALLOW:
-            operation_dispatch = self.build_operation_dispatch(contract, intent)
+        artifact_results: list[ArtifactResultContract] = []
+        if governance_decision.decision in {
+            PermissionDecision.ALLOW,
+            PermissionDecision.ALLOW_WITH_CONDITIONS,
+        } and directive.should_execute_operation:
+            plan = self.planning_engine.build_task_plan(
+                PlanningContext(
+                    intent=directive.intent,
+                    query=contract.content,
+                    recovered_context=memory_recovery_result.recovered_items,
+                    active_domains=cognitive_snapshot.active_domains,
+                    knowledge_snippets=knowledge_result.snippets if knowledge_result else [],
+                )
+            )
+            operation_dispatch = self.build_operation_dispatch(
+                contract,
+                intent=directive.intent,
+                plan=plan,
+                active_domains=cognitive_snapshot.active_domains,
+            )
+            events.append(
+                self.make_event(
+                    "operation_dispatched",
+                    contract,
+                    {
+                        "operation_id": str(operation_dispatch.operation_id),
+                        "task_type": operation_dispatch.task_type,
+                    },
+                )
+            )
             execution = self.operational_service.execute(operation_dispatch)
             operation_result = execution.operation_result
-        response_text = self.synthesize_response(
-            intent,
-            governance_decision,
-            memory_recovery_result.recovered_items,
-            operation_result,
+            artifact_results = execution.artifact_results
+            events.append(
+                self.make_event(
+                    "operation_completed",
+                    contract,
+                    {
+                        "operation_id": str(operation_result.operation_id),
+                        "status": operation_result.status.value,
+                        "artifacts": operation_result.artifacts,
+                    },
+                )
+            )
+        elif governance_decision.decision in {
+            PermissionDecision.BLOCK,
+            PermissionDecision.DEFER_FOR_VALIDATION,
+        }:
+            events.append(
+                self.make_event(
+                    "governance_blocked",
+                    contract,
+                    {
+                        "decision_id": str(governance_decision.decision_id),
+                        "justification": governance_decision.justification,
+                    },
+                )
+            )
+
+        identity_profile = self.identity_engine.get_profile()
+        response_text = self.synthesis_engine.compose(
+            SynthesisInput(
+                intent=directive.intent,
+                identity_profile=identity_profile,
+                response_style=self.identity_engine.build_response_style(
+                    intent=directive.intent,
+                    blocked=governance_decision.decision in {
+                        PermissionDecision.BLOCK,
+                        PermissionDecision.DEFER_FOR_VALIDATION,
+                    },
+                ),
+                governance_decision=governance_decision,
+                recovered_context=memory_recovery_result.recovered_items,
+                active_minds=cognitive_snapshot.active_minds,
+                active_domains=cognitive_snapshot.active_domains,
+                knowledge_snippets=knowledge_result.snippets if knowledge_result else [],
+                operation_result=operation_result,
+            )
         )
+        events.append(self.make_event("response_synthesized", contract, {"intent": directive.intent}))
+
         memory_record_result = self.memory_service.record_turn(
             contract,
-            intent=intent,
+            intent=directive.intent,
             response_text=response_text,
         )
-        events = self.build_events(
-            contract,
-            intent,
-            memory_recovery_result.recovery_contract,
-            governance_check,
-            governance_decision,
-            memory_record_result.record_contract,
-            operation_dispatch,
-            operation_result,
+        events.append(
+            self.make_event(
+                "memory_recorded",
+                contract,
+                {
+                    "memory_record_id": str(memory_record_result.record_contract.memory_record_id),
+                    "record_type": memory_record_result.record_contract.record_type,
+                },
+            )
         )
+        self.observability_service.ingest_events(events)
+
         return OrchestratorResponse(
             request_id=str(contract.request_id),
             session_id=str(contract.session_id),
-            intent=intent,
+            intent=directive.intent,
             response_text=response_text,
             governance_check=governance_check,
             governance_decision=governance_decision,
             memory_recovery=memory_recovery_result.recovery_contract,
             memory_record=memory_record_result.record_contract,
             recovered_context=memory_recovery_result.recovered_items,
+            knowledge_result=knowledge_result,
+            artifact_results=artifact_results,
+            active_minds=cognitive_snapshot.active_minds,
+            active_domains=cognitive_snapshot.active_domains,
             operation_dispatch=operation_dispatch,
             operation_result=operation_result,
             events=events,
         )
 
-    def classify_intent(self, contract: InputContract) -> str:
-        """Classify the incoming request into a small canonical set."""
-
-        content = contract.content.lower()
-        if any(keyword in content for keyword in HIGH_RISK_KEYWORDS):
-            return "sensitive_action"
-        if "plan" in content or "planej" in content:
-            return "planning"
-        if "analis" in content or "analy" in content:
-            return "analysis"
-        return "general_assistance"
-
     def build_operation_dispatch(
         self,
         contract: InputContract,
         intent: str,
+        *,
+        plan: str,
+        active_domains: list[str],
     ) -> OperationDispatchContract:
-        """Create a minimal operational dispatch for allowed requests."""
+        """Create the operational dispatch for an allowed request."""
 
         task_type = {
             "planning": "draft_plan",
@@ -150,130 +298,13 @@ class OrchestratorService:
             request_id=RequestId(str(contract.request_id)),
             task_type=task_type,
             task_goal=contract.content,
-            task_plan=f"Handle intent '{intent}' with a safe local operation.",
+            task_plan=plan,
             constraints=["low-risk", "local-only", "no external side effects"],
             expected_output="text_brief",
             session_id=contract.session_id,
             mission_id=contract.mission_id,
+            domain_hints=active_domains,
             priority_hint=contract.priority_hint,
-        )
-
-    def build_events(
-        self,
-        contract: InputContract,
-        intent: str,
-        memory_recovery: MemoryRecoveryContract,
-        governance_check: GovernanceCheckContract,
-        governance_decision: GovernanceDecisionContract,
-        memory_record: MemoryRecordContract,
-        operation_dispatch: OperationDispatchContract | None,
-        operation_result: OperationResultContract | None,
-    ) -> list[InternalEventEnvelope]:
-        """Emit a minimal ordered event trail for the request."""
-
-        events = [
-            self.make_event(
-                "input_received",
-                contract,
-                {"content": contract.content, "channel": contract.channel.value},
-            ),
-            self.make_event(
-                "memory_recovered",
-                contract,
-                {
-                    "memory_query_id": str(memory_recovery.memory_query_id),
-                    "recovery_type": memory_recovery.recovery_type.value,
-                },
-            ),
-            self.make_event(
-                "intent_classified",
-                contract,
-                {"intent": intent},
-            ),
-            self.make_event(
-                "governance_checked",
-                contract,
-                {
-                    "governance_check_id": str(governance_check.governance_check_id),
-                    "risk_hint": governance_check.risk_hint.value
-                    if governance_check.risk_hint
-                    else None,
-                },
-            ),
-        ]
-        if governance_decision.decision == PermissionDecision.BLOCK:
-            events.append(
-                self.make_event(
-                    "governance_blocked",
-                    contract,
-                    {
-                        "decision_id": str(governance_decision.decision_id),
-                        "justification": governance_decision.justification,
-                    },
-                )
-            )
-        if operation_dispatch is not None:
-            events.append(
-                self.make_event(
-                    "operation_dispatched",
-                    contract,
-                    {
-                        "operation_id": str(operation_dispatch.operation_id),
-                        "task_type": operation_dispatch.task_type,
-                    },
-                )
-            )
-        if operation_result is not None:
-            events.append(
-                self.make_event(
-                    "operation_completed",
-                    contract,
-                    {
-                        "operation_id": str(operation_result.operation_id),
-                        "status": operation_result.status.value,
-                    },
-                )
-            )
-        events.append(
-            self.make_event(
-                "memory_recorded",
-                contract,
-                {
-                    "memory_record_id": str(memory_record.memory_record_id),
-                    "record_type": memory_record.record_type,
-                },
-            )
-        )
-        return events
-
-    def synthesize_response(
-        self,
-        intent: str,
-        governance_decision: GovernanceDecisionContract,
-        recovered_context: list[str],
-        operation_result: OperationResultContract | None,
-    ) -> str:
-        """Produce a first JARVIS-style textual synthesis."""
-
-        if governance_decision.decision == PermissionDecision.BLOCK:
-            return (
-                "Solicitacao recebida, mas bloqueada pela governanca inicial. "
-                "O fluxo exige validacao explicita antes de qualquer execucao sensivel."
-            )
-        operation_summary = operation_result.outputs[0] if operation_result else ""
-        if recovered_context:
-            return (
-                f"Solicitacao recebida com intencao '{intent}'. "
-                f"Recuperei {len(recovered_context)} item(ns) de contexto recente. "
-                f"Resultado operacional: {operation_summary} "
-                f"O fluxo segue alinhado a {SYSTEM_IDENTITY.core_traits[0]} e {SYSTEM_IDENTITY.core_traits[3]}."
-            )
-        return (
-            f"Solicitacao recebida com intencao '{intent}'. "
-            f"Nao havia contexto previo relevante nesta sessao. "
-            f"Resultado operacional: {operation_summary} "
-            f"O fluxo segue alinhado a {SYSTEM_IDENTITY.core_traits[0]} e "
-            f"{SYSTEM_IDENTITY.core_traits[3]} como postura inicial do JARVIS."
         )
 
     def make_event(

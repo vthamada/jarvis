@@ -1,0 +1,36 @@
+{
+  "domains": [
+    {
+      "name": "strategy",
+      "keywords": ["strategy", "milestone", "roadmap", "prioridade", "sequence"],
+      "snippets": [
+        "Priorize clareza de objetivo, sequenciamento e criterio de sucesso antes de expandir escopo.",
+        "Converta intencao ampla em passos menores, reversiveis e verificaveis."
+      ]
+    },
+    {
+      "name": "productivity",
+      "keywords": ["plan", "task", "execution", "next step", "work"],
+      "snippets": [
+        "Planos executaveis tendem a funcionar melhor quando cada etapa produz valor verificavel.",
+        "Mantenha o proximo passo concreto, curto e validavel no mesmo ciclo de trabalho."
+      ]
+    },
+    {
+      "name": "analysis",
+      "keywords": ["analysis", "analyze", "trade-off", "implication", "context"],
+      "snippets": [
+        "Uma boa analise deve explicitar contexto, trade-offs e implicacoes antes da recomendacao.",
+        "Sintese util depende de separar observacao, interpretacao e recomendacao."
+      ]
+    },
+    {
+      "name": "governance",
+      "keywords": ["risk", "governance", "policy", "segur", "audit"],
+      "snippets": [
+        "Em fluxos sensiveis, registre justificativa, condicoes e rastreabilidade da decisao.",
+        "Autonomia graduada deve crescer com evidencia de seguranca e estabilidade, nao por impulso."
+      ]
+    }
+  ]
+}

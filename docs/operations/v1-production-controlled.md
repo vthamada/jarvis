@@ -2,155 +2,156 @@
 
 ## 1. Objetivo
 
-Este documento operacionaliza a estratégia de **produção controlada do JARVIS v1** a partir do Documento-Mestre.
+Este documento operacionaliza a estrategia de producao controlada do JARVIS `v1` a partir do Documento-Mestre.
 
 Ele deriva principalmente de:
 
-- `documento_mestre_jarvis.md`, capítulo `344. Estratégia de operação do v1 em produção controlada`
+- `documento_mestre_jarvis.md`, capitulo `344. Estrategia de operacao do v1 em producao controlada`
 
-Seu papel é transformar a política arquitetural em um guia de operação prática para o primeiro uso real do sistema.
+Seu papel e transformar a politica arquitetural em um guia de operacao pratica para o primeiro uso real do sistema.
 
 ---
 
-## 2. Definição operacional
+## 2. Definicao operacional
 
-Produção controlada do `v1` significa:
+Producao controlada do `v1` significa:
 
 - uso real em escopo limitado;
-- baixa tolerância a operação sem observabilidade;
+- baixa tolerancia a operacao sem observabilidade;
 - autonomia restrita e graduada;
 - possibilidade clara de bloqueio, pausa e rollback;
-- monitoramento reforçado desde o primeiro uso real.
+- monitoramento reforcado desde o primeiro uso real.
 
-Não significa:
+Nao significa:
 
-- produção ampla;
-- automação irrestrita;
-- operação silenciosa de alto impacto;
-- autoevolução promovida diretamente em produção.
+- producao ampla;
+- automacao irrestrita;
+- operacao silenciosa de alto impacto;
+- autoevolucao promovida diretamente em producao.
 
 ---
 
 ## 3. Escopo permitido
 
-O `v1` pode operar em produção controlada em casos como:
+O `v1` pode operar em producao controlada em casos como:
 
-- análise e síntese de informação;
-- planejamento e estruturação de tarefas;
-- produção de artefatos textuais;
-- continuidade de missão simples;
-- uso de ferramentas de baixo risco e reversíveis;
-- apoio técnico observável em escopo limitado.
+- analise e sintese de informacao;
+- planejamento e estruturacao de tarefas;
+- producao de artefatos textuais;
+- continuidade de missao simples;
+- uso de ferramentas de baixo risco e reversiveis;
+- apoio tecnico observavel em escopo limitado.
 
 ---
 
 ## 4. Escopo proibido
 
-O `v1` não deve operar em produção controlada, neste estágio, em:
+O `v1` nao deve operar em producao controlada, neste estagio, em:
 
-- ações irreversíveis de alto impacto;
-- automações amplas sobre sistemas críticos;
-- operações financeiras, jurídicas ou de segurança de alto risco;
-- alteração livre de memória crítica;
-- promoção evolutiva em ambiente produtivo;
-- operação multiagente ampla sem contenção madura.
+- acoes irreversiveis de alto impacto;
+- automacoes amplas sobre sistemas criticos;
+- operacoes financeiras, juridicas ou de seguranca de alto risco;
+- alteracao livre de memoria critica;
+- promocao evolutiva em ambiente produtivo;
+- operacao multiagente ampla sem contencao madura.
 
 ---
 
-## 5. Pré-condições para entrada em produção
+## 5. Pre-condicoes para entrada em producao
 
-Antes de liberar o `v1` para produção controlada, confirmar:
+Antes de liberar o `v1` para producao controlada, confirmar:
 
-- núcleo central funcional no escopo do `v1`;
-- memória útil mínima funcionando;
-- governança mínima robusta ativa;
+- nucleo central funcional no escopo do `v1`;
+- memoria util minima funcionando;
+- governanca minima robusta ativa;
 - logs estruturados e rastreamento de fluxo operando;
 - ambiente separado de sandbox evolutivo;
-- cenários prioritários já validados;
-- política mínima de rollback definida.
+- cenarios prioritarios ja validados;
+- politica minima de rollback definida.
 
 ---
 
 ## 6. Checklist de entrada
 
-Checklist mínimo:
+Checklist minimo:
 
-- `governança`
-  - classificação de risco funcional
-  - permissão e bloqueio básicos ativos
+- `governanca`
+  - classificacao de risco funcional
+  - permissao e bloqueio basicos ativos
 - `observabilidade`
   - logs estruturados
-  - tracing mínimo
-  - registro de decisão
-- `operação`
+  - tracing minimo
+  - registro de decisao
+- `operacao`
   - fluxos de baixo risco validados
   - falhas sinalizadas corretamente
-- `memória`
-  - recuperação útil
-  - proteção mínima de memória crítica
+- `memoria`
+  - recuperacao util
+  - protecao minima de memoria critica
 - `ambiente`
-  - separação clara entre produção e sandbox
+  - separacao clara entre producao e sandbox
+  - comparacao evolutiva mantida em regime `sandbox-only`
 
 ---
 
 ## 7. Regime de monitoramento
 
-Durante produção controlada, monitorar continuamente:
+Durante producao controlada, monitorar continuamente:
 
-- sucesso dos fluxos prioritários;
+- sucesso dos fluxos prioritarios;
 - taxa de erro por fluxo;
 - falha por adaptador;
-- incidência de falso bloqueio;
-- regressões após mudanças;
+- incidencia de falso bloqueio;
+- regressoes apos mudancas;
 - estados interrompidos;
-- latência e estabilidade.
+- latencia e estabilidade.
 
 ---
 
-## 8. Resposta operacional mínima
+## 8. Resposta operacional minima
 
 Toda anomalia relevante deve permitir pelo menos:
 
 - bloquear o fluxo atual;
 - reduzir temporariamente a autonomia;
-- isolar adaptador ou serviço suspeito;
-- suspender mudança recente;
+- isolar adaptador ou servico suspeito;
+- suspender mudanca recente;
 - reverter para baseline conhecido;
-- encaminhar revisão manual.
+- encaminhar revisao manual.
 
 ---
 
-## 9. Critérios de ampliação de uso
+## 9. Criterios de ampliacao de uso
 
-Só ampliar o uso do `v1` se houver:
+So ampliar o uso do `v1` se houver:
 
 - estabilidade repetida;
-- ausência de falhas graves de governança;
+- ausencia de falhas graves de governanca;
 - rastreabilidade suficiente;
-- recuperação confiável após falhas;
-- baixa incidência de estados quebrados;
-- memória útil sem poluição excessiva.
+- recuperacao confiavel apos falhas;
+- baixa incidencia de estados quebrados;
+- memoria util sem poluicao excessiva.
 
 ---
 
-## 10. Critérios de contenção
+## 10. Criterios de contencao
 
-Não ampliar, ou reduzir escopo, se houver:
+Nao ampliar, ou reduzir escopo, se houver:
 
-- falhas recorrentes de governança;
-- regressão importante após mudança;
-- memória inconsistente;
-- operação sem rastreabilidade;
-- comportamento identitário instável;
-- alto volume de intervenção manual corretiva.
+- falhas recorrentes de governanca;
+- regressao importante apos mudanca;
+- memoria inconsistente;
+- operacao sem rastreabilidade;
+- comportamento identitario instavel;
+- alto volume de intervencao manual corretiva.
 
 ---
 
-## 11. Relação com o v2
+## 11. Relacao com o v2
 
-A produção controlada do `v1` deve gerar evidência para:
+A producao controlada do `v1` deve gerar evidencia para:
 
-- estabilizar o núcleo;
+- estabilizar o nucleo;
 - revelar limites reais do executor;
 - qualificar futuras entradas de especialistas;
 - orientar prioridades do `v2`.

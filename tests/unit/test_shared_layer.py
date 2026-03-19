@@ -44,6 +44,7 @@ def test_governance_decision_uses_canonical_enums() -> None:
 
 def test_internal_event_names_include_governance_blocked() -> None:
     assert "governance_blocked" in INTERNAL_EVENT_NAMES
+    assert "knowledge_retrieved" in INTERNAL_EVENT_NAMES
 
 
 def test_system_identity_has_core_principles() -> None:

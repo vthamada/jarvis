@@ -1,4 +1,4 @@
-"""Minimal governance service backed by shared canonical contracts."""
+"""Governance service with explicit low, moderate, and high-risk policies."""
 
 from __future__ import annotations
 
@@ -7,7 +7,13 @@ from datetime import UTC, datetime
 from uuid import uuid4
 
 from shared.contracts import GovernanceCheckContract, GovernanceDecisionContract, InputContract
-from shared.types import GovernanceCheckId, GovernanceDecisionId, PermissionDecision, RiskLevel
+from shared.types import (
+    GovernanceCheckId,
+    GovernanceDecisionId,
+    MemoryClass,
+    PermissionDecision,
+    RiskLevel,
+)
 
 
 HIGH_RISK_KEYWORDS = (
@@ -20,17 +26,28 @@ HIGH_RISK_KEYWORDS = (
     "remover",
 )
 
+MODERATE_RISK_KEYWORDS = (
+    "deploy",
+    "publish",
+    "release",
+    "migrate",
+    "update",
+    "rewrite",
+    "alter",
+    "change",
+)
+
 
 @dataclass
 class GovernanceAssessment:
-    """Structured governance output for a request assessment."""
+    """Structured governance output for a request or memory assessment."""
 
     governance_check: GovernanceCheckContract
     governance_decision: GovernanceDecisionContract
 
 
 class GovernanceService:
-    """Applies the first explicit policy and risk controls."""
+    """Apply explicit request and memory policies for the v1 flow."""
 
     name = "governance-service"
 
@@ -53,8 +70,8 @@ class GovernanceService:
                 "channel": contract.channel.value,
                 "input_type": contract.input_type.value,
             },
-            sensitivity="high" if risk_hint == RiskLevel.HIGH else "normal",
-            reversibility="low" if risk_hint == RiskLevel.HIGH else "high",
+            sensitivity="high" if risk_hint in {RiskLevel.HIGH, RiskLevel.CRITICAL} else "normal",
+            reversibility="low" if risk_hint in {RiskLevel.HIGH, RiskLevel.CRITICAL} else "high",
             mission_id=contract.mission_id,
             session_id=contract.session_id,
             risk_hint=risk_hint,
@@ -67,40 +84,116 @@ class GovernanceService:
         )
 
     def classify_risk(self, contract: InputContract, intent: str) -> RiskLevel:
-        """Classify the current request using a simple deterministic policy."""
+        """Classify the current request using a deterministic policy matrix."""
 
         content = contract.content.lower()
         if intent == "sensitive_action":
             return RiskLevel.HIGH
         if any(keyword in content for keyword in HIGH_RISK_KEYWORDS):
             return RiskLevel.HIGH
+        if any(keyword in content for keyword in MODERATE_RISK_KEYWORDS):
+            return RiskLevel.MODERATE
         return RiskLevel.LOW
 
     def make_decision(
         self,
         governance_check: GovernanceCheckContract,
     ) -> GovernanceDecisionContract:
-        """Produce the first explicit allow-or-block decision."""
+        """Produce the v1 governance decision for request handling."""
 
-        blocked = governance_check.risk_hint == RiskLevel.HIGH
+        risk_level = governance_check.risk_hint or RiskLevel.LOW
+        decision = PermissionDecision.ALLOW
+        justification = "No critical signal detected in the current request."
+        conditions: list[str] = []
+        policy_refs = ["policy://request/default-low-risk"]
+        requires_audit = False
+        requires_rollback_plan = False
+        containment_hint = None
+
+        if risk_level == RiskLevel.MODERATE:
+            decision = PermissionDecision.ALLOW_WITH_CONDITIONS
+            justification = "Request contains moderate-risk signals and requires reinforced tracing."
+            conditions = [
+                "Maintain explicit audit trail for the flow.",
+                "Keep execution limited to low-risk local operations.",
+            ]
+            policy_refs = ["policy://request/moderate-risk"]
+            requires_audit = True
+        elif risk_level in {RiskLevel.HIGH, RiskLevel.CRITICAL}:
+            decision = PermissionDecision.BLOCK
+            justification = "Potentially destructive request requires stronger validation."
+            conditions = ["Require explicit validation before execution."]
+            policy_refs = ["policy://request/high-risk"]
+            requires_audit = True
+            requires_rollback_plan = True
+            containment_hint = "block_direct_execution"
+
         return GovernanceDecisionContract(
             decision_id=GovernanceDecisionId(f"gov-decision-{uuid4().hex[:8]}"),
             governance_check_id=governance_check.governance_check_id,
-            risk_level=RiskLevel.HIGH if blocked else RiskLevel.LOW,
-            decision=PermissionDecision.BLOCK if blocked else PermissionDecision.ALLOW,
-            justification=(
-                "Potentially destructive request requires stronger validation."
-                if blocked
-                else "No critical signal detected in the current request."
-            ),
+            risk_level=risk_level,
+            decision=decision,
+            justification=justification,
             timestamp=self.now(),
-            requires_audit=blocked,
-            conditions=(
-                ["Require explicit validation before execution."]
-                if blocked
-                else []
-            ),
+            requires_audit=requires_audit,
+            requires_rollback_plan=requires_rollback_plan,
+            conditions=conditions,
+            containment_hint=containment_hint,
+            policy_refs=policy_refs,
         )
+
+    def assess_memory_operation(
+        self,
+        *,
+        memory_class: MemoryClass,
+        action: str,
+        requested_by_service: str,
+    ) -> GovernanceAssessment:
+        """Evaluate access to critical memory classes with explicit policy."""
+
+        is_critical = memory_class in {MemoryClass.IDENTITY, MemoryClass.NORMATIVE}
+        check = GovernanceCheckContract(
+            governance_check_id=GovernanceCheckId(f"gov-check-{uuid4().hex[:8]}"),
+            subject_type="memory",
+            subject_action=action,
+            scope=memory_class.value,
+            context={"memory_class": memory_class.value},
+            sensitivity="critical" if is_critical else "normal",
+            reversibility="low" if action in {"write", "promote", "delete"} else "high",
+            risk_hint=RiskLevel.CRITICAL if is_critical else RiskLevel.LOW,
+            requested_by_service=requested_by_service,
+        )
+        decision = PermissionDecision.ALLOW
+        justification = "Memory action is compatible with the current policy."
+        policy_refs = [f"policy://memory/{memory_class.value}/default"]
+        conditions: list[str] = []
+        requires_audit = False
+        requires_rollback_plan = False
+        containment_hint = None
+
+        if is_critical and action in {"write", "promote", "delete"}:
+            decision = PermissionDecision.DEFER_FOR_VALIDATION
+            justification = "Critical memory mutation requires explicit validation."
+            policy_refs = [f"policy://memory/{memory_class.value}/critical-mutation"]
+            conditions = ["Validate actor and intent before changing critical memory."]
+            requires_audit = True
+            requires_rollback_plan = True
+            containment_hint = "protect_critical_memory"
+
+        governance_decision = GovernanceDecisionContract(
+            decision_id=GovernanceDecisionId(f"gov-decision-{uuid4().hex[:8]}"),
+            governance_check_id=check.governance_check_id,
+            risk_level=check.risk_hint or RiskLevel.LOW,
+            decision=decision,
+            justification=justification,
+            timestamp=self.now(),
+            conditions=conditions,
+            requires_audit=requires_audit,
+            requires_rollback_plan=requires_rollback_plan,
+            containment_hint=containment_hint,
+            policy_refs=policy_refs,
+        )
+        return GovernanceAssessment(governance_check=check, governance_decision=governance_decision)
 
     @staticmethod
     def now() -> str:

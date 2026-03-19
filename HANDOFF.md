@@ -2,17 +2,17 @@
 
 ## Metadata
 
-- Atualizado em: 2026-03-17
+- Atualizado em: 2026-03-18
 - Branch: `main`
-- Commit de referencia: `b61bc42`
+- Commit de referencia: `92374f4`
 - Artefato canonico do projeto: `documento_mestre_jarvis.md`
-- Status do projeto: Sprint 1 materializada, Sprint 2 minima consolidada e fluxo inicial `orchestrator -> governance -> memory -> operational` ativo
+- Status do projeto: base do `v1` integrada com persistencia local, observabilidade estruturada, corpus curado local de conhecimento, engines nucleares ativas e sandbox evolutivo minimo
 
 ---
 
 ## Meta Atual
 
-Consolidar o **primeiro fluxo funcional minimo entre servicos centrais** do JARVIS, saindo de logica local embutida para integracao explicita entre modulos centrais.
+Consolidar o **primeiro baseline integrado do v1** do JARVIS, saindo do fluxo funcional minimo para um nucleo testavel com continuidade, governanca mais robusta, observabilidade local e operacao util.
 
 ---
 
@@ -26,10 +26,15 @@ Hoje o repositorio contem:
 - estrutura real do monorepo criada;
 - arquivos-base da raiz presentes;
 - camada compartilhada inicial em `shared/` com tipos, enums, estados, contratos, schemas, eventos e identidade/principios;
-- `orchestrator-service` com fluxo minimo funcional para receber `InputContract`, classificar intencao, recuperar contexto, acionar governanca, despachar operacao de baixo risco, emitir eventos e registrar o turno atual;
-- `governance-service` com politica minima explicita para gerar `GovernanceCheckContract` e `GovernanceDecisionContract`;
-- `memory-service` com backbone minimo em memoria de processo para recuperacao contextual de sessao e registro episodico simples;
-- `operational-service` com primeira camada de execucao segura e deterministica para tarefas de baixo risco.
+- `orchestrator-service` coordenando o fluxo entre engines, memoria, governanca, conhecimento, observabilidade e operacao;
+- `governance-service` com decisoes `allow`, `allow_with_conditions`, `block` e `defer_for_validation`;
+- `memory-service` com persistencia local por repositorio, contexto de sessao e estado minimo de missao;
+- `operational-service` com geracao de artefatos textuais estruturados e hints de memoria;
+- `knowledge-service` com retrieval deterministico sobre dominios prioritarios do `v1` a partir de corpus curado local;
+- `observability-service` persistindo a trilha de eventos internos com campos de correlacao;
+- `evolution-lab` persistindo propostas e decisoes sandbox-only entre baseline e candidata;
+- `engines/` com componentes reais de identidade, executivo, planejamento, cognicao e sintese;
+- suite de testes cobrindo persistencia, governanca, observabilidade, conhecimento, operacao e o fluxo ponta a ponta do orquestrador.
 
 Arquivo paralelo/historico que nao deve ser tratado como fonte principal sem decisao explicita:
 
@@ -56,6 +61,23 @@ Arquivo paralelo/historico que nao deve ser tratado como fonte principal sem dec
 - implementacao do `operational-service` com execucao segura e deterministica de operacoes de baixo risco;
 - integracao do `orchestrator-service` com o `operational-service`, adicionando `operation_dispatched` e `operation_completed` ao fluxo permitido;
 - ampliacao dos testes do `operational-service` e do `orchestrator-service` para cobrir despacho operacional permitido e bloqueio previo por governanca.
+- substituicao da memoria em processo por repositorio persistente com suporte local por `sqlite` e backend `PostgreSQL` via `DATABASE_URL`;
+- adicao de persistencia de historico episodico por `session_id`, resumo contextual de sessao e estado minimo de missao por `mission_id`;
+- implementacao do `observability-service` como coletor e consulta local de eventos internos;
+- integracao do `orchestrator-service` com o `observability-service`, preservando `InternalEventEnvelope` como backbone comum;
+- implementacao do `knowledge-service` com retrieval local deterministico para dominios prioritarios do `v1`;
+- externalizacao do corpus inicial para `knowledge/curated/v1_corpus.json`;
+- implementacao real das engines de identidade, executivo, planejamento, cognicao e sintese;
+- reducao do `orchestrator-service` ao papel de coordenador de fluxo, removendo heuristicas espalhadas do caminho principal;
+- ampliacao da governanca para cenarios condicionados, bloqueados e adiados para validacao;
+- ampliacao do `operational-service` para produzir artefatos textuais e preencher `artifacts`, `checkpoints` e `memory_record_hints`;
+- implementacao do `evolution-lab` como primeiro corte de comparacao local entre baseline e candidata, sem promocao automatica;
+- declaracao do extra opcional `postgres` no `pyproject.toml` para readiness do backend operacional;
+- adicao de `infra/local-postgres.compose.yml` como infraestrutura local padrao para PostgreSQL;
+- ampliacao da fabrica de memoria para normalizar URLs `postgres://` e `postgresql+psycopg://`;
+- adicao de `conftest.py` na raiz para que testes isolados fora de `tests/` carreguem o bootstrap correto;
+- reescrita da cobertura de testes para validar comportamento funcional, persistencia entre instancias e trilha ponta a ponta;
+- validacao da suite com `pytest -q` diretamente da raiz do repositorio.
 
 ---
 
@@ -82,10 +104,12 @@ Nao rediscutir sem evidencia forte ou mudanca explicita de direcao:
 
 Pendencias principais agora:
 
-- instalar as dependencias locais de desenvolvimento, especialmente `pytest` e `ruff`;
-- validar a Sprint 1, a Sprint 2 e a cadeia `orchestrator -> governance -> memory -> operational` com o bootstrap real do ambiente virtual;
-- decidir se a proxima integracao central sera observabilidade propriamente dita ou persistencia minima real da memoria;
-- sair de memoria apenas em processo para um backbone persistente quando entrar a proxima fase;
+- instalar dependencias de desenvolvimento em ambiente limpo e confirmar `ruff check .`;
+- elevar o backend de memoria de `sqlite` local para `PostgreSQL` operacional quando a infraestrutura estiver pronta;
+- validar a infraestrutura local de PostgreSQL com container real quando o ambiente permitir;
+- aprofundar o `knowledge-service` com retrieval mais rico sobre o corpus curado local;
+- fortalecer o `evolution-lab` com benchmark e readiness de comparacao mais formal;
+- revisar os documentos derivados restantes para refletirem o novo baseline do `v1`;
 - decidir formalmente o destino de `documento_mestre_do_jarvis.md`.
 
 ---
@@ -95,19 +119,21 @@ Pendencias principais agora:
 Ordem recomendada:
 
 1. criar e ativar `.venv`;
-2. instalar `.[dev]`;
-3. rodar `pytest` e `ruff check .`;
-4. escolher a proxima integracao central: observabilidade ou persistencia minima de memoria;
-5. manter o `orchestrator-service` como coordenador, evitando recolocar politica, armazenamento ou execucao estrutural dentro dele.
+2. instalar `.[dev]` ou `".[dev,postgres]"` quando for validar PostgreSQL;
+3. rodar `pytest -q` e `ruff check .`;
+4. subir `infra/local-postgres.compose.yml` e validar a memoria contra `DATABASE_URL`;
+5. expandir o `knowledge-service` e o corpus local sem quebrar o fluxo deterministico;
+6. fortalecer o `evolution-lab` com benchmark e readiness de comparacao.
 
 ---
 
 ## Riscos / Bloqueios
 
-- o ambiente local atual ainda nao tem `pytest` instalado, entao a validacao completa nao foi executada;
-- a memoria atual ainda e apenas de processo e nao persistente entre reinicios;
-- a classificacao de intencao ainda permanece no `orchestrator-service` como heuristica simples;
-- o `operational-service` atual e deliberadamente limitado a tarefas seguras e deterministicas, ainda sem adaptadores reais.
+- `ruff` pode nao estar instalado no shell atual, entao a validacao de lint depende do bootstrap completo;
+- o caminho padrao de persistencia local ainda e `sqlite`, suficiente para baseline local mas nao para o alvo final operacional;
+- o corpus do `knowledge-service` ainda e local e curado manualmente;
+- o `operational-service` continua deliberadamente restrito a tarefas seguras e deterministicas, sem adaptadores de alto risco;
+- o `evolution-lab` ainda esta no primeiro corte local e nao substitui benchmark mais maduro.
 
 ---
 
@@ -121,14 +147,31 @@ Ordem recomendada:
 - `shared/schemas/__init__.py`
 - `shared/events/__init__.py`
 - `shared/state/__init__.py`
+- `services/memory-service/src/memory_service/repository.py`
 - `services/orchestrator-service/src/orchestrator_service/service.py`
 - `services/orchestrator-service/tests/test_orchestrator_service.py`
 - `services/governance-service/src/governance_service/service.py`
 - `services/governance-service/tests/test_governance_service.py`
+- `services/knowledge-service/src/knowledge_service/service.py`
+- `services/knowledge-service/tests/test_knowledge_service.py`
+- `knowledge/curated/v1_corpus.json`
+- `infra/local-postgres.compose.yml`
+- `conftest.py`
 - `services/memory-service/src/memory_service/service.py`
 - `services/memory-service/tests/test_memory_service.py`
+- `services/observability-service/src/observability_service/repository.py`
+- `services/observability-service/src/observability_service/service.py`
+- `services/observability-service/tests/test_observability_service.py`
+- `evolution/evolution-lab/src/evolution_lab/service.py`
+- `evolution/evolution-lab/src/evolution_lab/repository.py`
+- `evolution/evolution-lab/tests/test_evolution_lab_service.py`
 - `services/operational-service/src/operational_service/service.py`
 - `services/operational-service/tests/test_operational_service.py`
+- `engines/identity-engine/src/identity_engine/engine.py`
+- `engines/executive-engine/src/executive_engine/engine.py`
+- `engines/planning-engine/src/planning_engine/engine.py`
+- `engines/cognitive-engine/src/cognitive_engine/engine.py`
+- `engines/synthesis-engine/src/synthesis_engine/engine.py`
 - `tests/unit/test_shared_layer.py`
 - `docs/implementation/service-breakdown.md`
 - `docs/implementation/implementation-strategy.md`
@@ -141,19 +184,25 @@ Leitura minima para qualquer novo agente:
 
 1. `HANDOFF.md`
 2. `documento_mestre_jarvis.md`
-3. `services/memory-service/src/memory_service/service.py`
-4. `services/governance-service/src/governance_service/service.py`
-5. `services/operational-service/src/operational_service/service.py`
-6. `services/orchestrator-service/src/orchestrator_service/service.py`
+3. `services/orchestrator-service/src/orchestrator_service/service.py`
+4. `services/memory-service/src/memory_service/repository.py`
+5. `services/governance-service/src/governance_service/service.py`
+6. `services/knowledge-service/src/knowledge_service/service.py`
+7. `services/observability-service/src/observability_service/service.py`
+8. `evolution/evolution-lab/src/evolution_lab/service.py`
+9. `services/operational-service/src/operational_service/service.py`
 
 Checagens rapidas recomendadas:
 
 - confirmar que `shared/` contem a camada canonica minima;
-- validar que o `memory-service` recupera contexto e grava turnos na mesma sessao;
-- validar que o `governance-service` produz checagem e decisao canonicas;
-- validar que o `operational-service` executa apenas tarefas seguras e deterministicas;
-- validar que o `orchestrator-service` consome memoria, governanca e operacao e emite a trilha correta de eventos;
-- instalar dependencias locais e executar `pytest`.
+- validar que o `memory-service` persiste contexto entre instancias do servico;
+- validar que o `governance-service` produz checagem, decisao e condicoes coerentes;
+- validar que o `knowledge-service` retorna dominios e snippets para `analysis` e `planning`;
+- validar que o `knowledge-service` carrega o corpus curado local esperado;
+- validar que o `observability-service` registra a trilha completa de eventos;
+- validar que o `evolution-lab` registra proposta e decisao sandbox-only sem promocao automatica;
+- validar que o `operational-service` executa apenas tarefas seguras e produz artefatos textuais;
+- executar `pytest -q` diretamente da raiz e, em ambiente completo, `ruff check .`.
 
 Comandos uteis:
 
@@ -162,7 +211,7 @@ rg --files
 python -m venv .venv
 .\.venv\Scripts\Activate.ps1
 python -m pip install -e .[dev]
-pytest
+pytest -q
 ruff check .
 ```
 
@@ -173,17 +222,17 @@ ruff check .
 - tratar `documento_mestre_jarvis.md` como artefato canonico;
 - usar `HANDOFF.md` como documento operacional de estado;
 - atualizar `CHANGELOG.md` sempre que houver mudanca relevante;
-- priorizar agora integracao funcional entre servicos centrais;
+- priorizar agora consolidacao do baseline integrado do `v1`;
 - reutilizar `shared/` em vez de redefinir contratos localmente nos servicos.
 
 ---
 
 ## Criterio de Encerramento Deste Handoff
 
-Este handoff continua util enquanto o projeto estiver saindo da fundacao estrutural e entrando nos primeiros fluxos funcionais.
+Este handoff continua util enquanto o projeto estiver consolidando o baseline integrado do `v1`.
 
 Ele deve ser reavaliado quando:
 
-- a validacao local com `pytest` e `ruff` estiver estabelecida;
-- a proxima integracao central alem de memoria, governanca e operacao estiver ativa;
-- o foco principal do trabalho deixar de ser fundacao e passar a ser iteracao funcional continua.
+- o backend persistente operacional em `PostgreSQL` estiver ativo;
+- o `knowledge-service` sair do corpus local minimo e entrar em retrieval mais robusto;
+- o baseline de `M6` sair do sandbox evolutivo minimo e entrar em benchmark mais formal.

@@ -6,6 +6,68 @@ Ele **nao** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalha
 
 ---
 
+## 2026-03-18
+
+### Core v1 baseline
+
+- implementado o primeiro baseline integrado do `v1`, conectando `orchestrator-service`, `memory-service`, `governance-service`, `knowledge-service`, `observability-service`, `operational-service` e `engines/`;
+- reduzido o `orchestrator-service` ao papel de coordenador de fluxo, movendo classificacao, planejamento, composicao cognitiva e sintese para engines dedicadas;
+- preservado `InternalEventEnvelope` como envelope canonico para observabilidade e rastreabilidade do fluxo ponta a ponta.
+
+### Memory Service
+
+- substituido o armazenamento em `dict` por uma camada de repositorio persistente;
+- adicionado backend local por `sqlite` e suporte a `PostgreSQL` quando `DATABASE_URL` estiver configurada;
+- adicionada persistencia de historico episodico por `session_id`, resumo contextual de sessao e estado minimo de missao por `mission_id`;
+- ampliados os testes para validar continuidade entre instancias do servico e persistencia de estado de missao.
+
+### Observability Service
+
+- implementado o `observability-service` como coletor estruturado de eventos internos;
+- adicionada persistencia local da trilha de eventos e consulta por `request_id`, `session_id`, `mission_id` e `correlation_id`;
+- integrado o orquestrador a essa trilha persistente em vez de depender apenas do retorno em memoria.
+
+### Knowledge e Engines
+
+- implementado o `knowledge-service` com retrieval local deterministico sobre dominios prioritarios do `v1`;
+- externalizado o corpus inicial do `knowledge-service` para `knowledge/curated/v1_corpus.json`;
+- implementadas as engines de identidade, executivo, planejamento, cognicao e sintese;
+- ampliada a cobertura de testes para validar classificacao de intencao, composicao de dominios ativos e sintese final.
+
+### Governance e Operational
+
+- expandido o `governance-service` para suportar `allow`, `allow_with_conditions`, `block` e `defer_for_validation`;
+- adicionadas condicoes, auditoria e protecao de mutacao em memoria critica na decisao de governanca;
+- expandido o `operational-service` para produzir artefatos textuais reais e preencher `artifacts`, `checkpoints` e `memory_record_hints`.
+
+### Evolution Lab
+
+- implementado o `evolution-lab` como primeiro corte de sandbox evolutivo local;
+- adicionada persistencia local de propostas e decisoes de comparacao entre baseline e candidata;
+- estabelecido regime `sandbox-only`, sem promocao automatica, com rollback referenciado ao baseline.
+
+### Bootstrap e validacao
+
+- ajustado `tests/conftest.py` para incluir a raiz do repositorio no `sys.path` durante a execucao dos testes;
+- adicionado `conftest.py` na raiz para que testes isolados de servicos e engines carreguem o bootstrap corretamente;
+- ajustado `pyproject.toml` para incluir `shared` na descoberta de pacotes do projeto;
+- adicionado extra opcional `postgres` em `pyproject.toml` para readiness do backend PostgreSQL;
+- desabilitado o cache nativo do `pytest` em configuracao para evitar warnings recorrentes de permissao no ambiente local atual;
+- validada a suite com `pytest -q` a partir da raiz, sem `PYTHONPATH` manual.
+
+### PostgreSQL readiness
+
+- ampliada a fabrica de memoria para normalizar `postgres://` e `postgresql+psycopg://` antes de instanciar o backend PostgreSQL;
+- adicionados indices basicos nas tabelas de memoria para o caminho local e para o caminho PostgreSQL;
+- criado `infra/local-postgres.compose.yml` como infraestrutura local padrao para validar a memoria persistente contra PostgreSQL;
+- ampliada a cobertura de testes da memoria para selecao de backend e parsing de URL.
+
+### Documentacao operacional
+
+- atualizados `README.md`, `HANDOFF.md`, `docs/implementation/implementation-strategy.md`, `docs/implementation/service-breakdown.md`, `docs/roadmap/v1-roadmap.md`, `docs/architecture/evolution-lab.md` e documentos operacionais para refletir o baseline atual do `v1`.
+
+---
+
 ## 2026-03-17
 
 ### Operational Service

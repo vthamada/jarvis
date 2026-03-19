@@ -2,12 +2,14 @@
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.pytest_tmp/
 .ruff_cache/
 .mypy_cache/
 .coverage
 htmlcov/
 .venv/
 venv/
+pytest-cache-files-*/
 
 # Node
 node_modules/
@@ -16,6 +18,8 @@ npm-debug.log*
 # Environment
 .env
 .env.local
+.jarvis_runtime/
+.test_runtime/
 
 # Editors / OS
 .DS_Store

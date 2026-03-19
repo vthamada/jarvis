@@ -47,11 +47,15 @@ O roadmap existe para:
 - contratos e constituição
 - esqueletos dos serviços centrais
 
+Status atual: concluida.
+
 ### 4.2 M2
 
 - kernel do núcleo central
 - interpretação e roteamento
 - cognição nuclear inicial
+
+Status atual: parcialmente concluida, com engines iniciais e coordenacao central ativa.
 
 ### 4.3 M3
 
@@ -59,11 +63,15 @@ O roadmap existe para:
 - recuperação e gravação úteis
 - proteção e promoção básicas
 
+Status atual: substancialmente implementada com persistencia local de sessao e missao.
+
 ### 4.4 M4
 
 - conhecimento inicial
 - serviço operacional básico
 - produção e execução de baixo risco
+
+Status atual: parcialmente implementada com retrieval local e operacao textual estruturada.
 
 ### 4.5 M5
 
@@ -71,15 +79,30 @@ O roadmap existe para:
 - contenção, auditoria e proteção crítica
 - observabilidade ampla do v1
 
+Status atual: parcialmente implementada com governanca condicionada e observabilidade local persistente.
+
 ### 4.6 M6
 
 - estabilidade do núcleo
 - sandbox evolutivo inicial
 - fechamento do v1
 
+Status atual: iniciada no baseline local com `evolution-lab` sandbox-only.
+
 ---
 
-## 5. Regra principal
+## 5. Prioridade pratica atual
+
+O proximo corte de engenharia deve priorizar:
+
+1. validacao de ambiente limpo com `pytest -q` e `ruff check .`;
+2. elevacao da memoria persistente para `PostgreSQL` operacional;
+3. ampliacao do corpus e retrieval do `knowledge-service`;
+4. baseline de consolidacao de `M6` com benchmark e readiness mais formais.
+
+---
+
+## 6. Regra principal
 
 Cada milestone só deve avançar quando:
 
