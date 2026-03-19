@@ -4,7 +4,6 @@ from dataclasses import dataclass, field
 from enum import StrEnum
 from typing import NewType
 
-
 Timestamp = str
 CreatedAt = str
 UpdatedAt = str

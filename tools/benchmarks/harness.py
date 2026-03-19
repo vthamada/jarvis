@@ -32,6 +32,7 @@ SRC_DIRS = [
     ROOT / "engines" / "cognitive-engine" / "src",
     ROOT / "engines" / "planning-engine" / "src",
     ROOT / "engines" / "synthesis-engine" / "src",
+    ROOT / "engines" / "specialist-engine" / "src",
 ]
 
 for src_dir in SRC_DIRS:

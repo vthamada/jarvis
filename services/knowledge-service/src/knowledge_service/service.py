@@ -77,11 +77,19 @@ class KnowledgeService:
     @staticmethod
     def _intent_prior(intent: str, domain_name: str) -> float:
         if intent == "planning":
-            priorities = {"strategy": 2.0, "productivity": 1.0}
+            priorities = {
+                "strategy": 2.0,
+                "productivity": 1.3,
+                "documentation": 0.9,
+            }
         elif intent == "analysis":
-            priorities = {"analysis": 2.0, "strategy": 1.5}
+            priorities = {
+                "analysis": 2.0,
+                "strategy": 1.5,
+                "decision_risk": 1.2,
+            }
         else:
-            priorities = {"productivity": 0.5}
+            priorities = {"productivity": 0.5, "documentation": 0.4}
         return priorities.get(domain_name, 0.0)
 
     @staticmethod

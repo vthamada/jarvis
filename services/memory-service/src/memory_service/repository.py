@@ -463,7 +463,7 @@ class PostgresMemoryRepository(MemoryRepository):
                 """
                 SELECT mission_id, mission_goal, mission_status, checkpoints, active_tasks,
                        related_memories, related_artifacts, recent_plan_steps,
-                       last_recommendation, updated_at
+                       last_recommendation, semantic_brief, semantic_focus, updated_at
                 FROM mission_states
                 WHERE mission_id = %s
                 """,

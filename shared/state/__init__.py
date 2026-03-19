@@ -2,7 +2,6 @@
 
 from dataclasses import dataclass
 
-
 MISSION_STATEMENT = (
     "Atuar como um sistema de inteligencia geral aplicada que amplifica a capacidade "
     "humana de pensar, decidir, criar, organizar, executar e evoluir."

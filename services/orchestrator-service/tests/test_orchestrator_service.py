@@ -63,7 +63,7 @@ def test_orchestrator_service_handles_deliberative_planning_with_refined_plan() 
     assert result.operation_result.status == OperationStatus.COMPLETED
     assert result.knowledge_result is not None
     assert result.artifact_results
-    assert result.active_domains == ["strategy", "productivity"]
+    assert result.active_domains == ["strategy", "productivity", "documentation"]
     assert result.cognitive_tensions
     assert result.specialist_hints == ["especialista_planejamento_operacional"]
     assert result.specialist_review is not None

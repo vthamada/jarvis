@@ -40,6 +40,19 @@ Antes de liberar o `v1`, confirmar:
 - cenarios prioritarios aprovados;
 - sandbox evolutivo separado e sem promocao automatica.
 
+Checklist executavel associado:
+
+- `python tools/validate_v1.py --profile development`
+- `python tools/go_live_internal_checklist.py --profile development`
+- repetir ambos no perfil `controlled` quando `DATABASE_URL` estiver ativo.
+
+Os scripts executaveis agora fazem preflight explicito do ambiente e devem ser tratados como gate formal de `go/no-go`. No perfil `controlled`, eles falham cedo quando:
+
+- `ruff` nao esta instalado no ambiente oficial;
+- `DATABASE_URL` nao foi definida;
+- o PostgreSQL nao responde;
+- as credenciais de `DATABASE_URL` estao incorretas.
+
 ---
 
 ## 4. Estado atual do baseline
@@ -93,6 +106,15 @@ Executar antes do `go-live`:
 - registro de logs e traces;
 - simulacao de falha local com recuperacao controlada;
 - comparacao sandbox entre baseline e candidata sem promocao.
+
+Execucao recomendada:
+
+```powershell
+docker compose -f infra/local-postgres.compose.yml up -d
+$env:DATABASE_URL="postgresql://postgres:postgres@localhost:5433/jarvis"
+python tools/validate_v1.py --profile controlled
+python tools/go_live_internal_checklist.py --profile controlled
+```
 
 ---
 

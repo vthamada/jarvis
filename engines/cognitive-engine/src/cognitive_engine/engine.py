@@ -4,6 +4,21 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+V1_NUCLEAR_MINDS = [
+    "mente_logica",
+    "mente_analitica",
+    "mente_sistemica",
+    "mente_probabilistica",
+    "mente_estrategica",
+    "mente_tatica",
+    "mente_decisoria",
+    "mente_pragmatica",
+    "mente_executiva",
+    "mente_critica",
+    "mente_comunicacional",
+    "mente_etica",
+]
+
 
 @dataclass(frozen=True)
 class CognitiveSnapshot:
@@ -29,6 +44,7 @@ class CognitiveEngine:
         intent: str,
         risk_markers: list[str],
         retrieved_domains: list[str],
+        mind_hints: list[str] | None = None,
     ) -> CognitiveSnapshot:
         """Return an initial cognitive decomposition for the request."""
 
@@ -37,6 +53,7 @@ class CognitiveEngine:
             intent=intent,
             risk_markers=risk_markers,
             domains=active_domains,
+            mind_hints=mind_hints,
         )
         tensions = self._select_tensions(
             intent=intent,
@@ -74,18 +91,20 @@ class CognitiveEngine:
         intent: str,
         risk_markers: list[str],
         domains: list[str],
+        mind_hints: list[str] | None = None,
     ) -> list[str]:
-        minds = ["mente_executiva", "mente_pragmatica"]
+        minds = [mind for mind in (mind_hints or []) if mind in V1_NUCLEAR_MINDS]
+        minds.extend(["mente_executiva", "mente_pragmatica"])
         if intent == "planning":
             minds.extend(["mente_estrategica", "mente_tatica"])
         elif intent == "analysis":
             minds.extend(["mente_analitica", "mente_critica", "mente_sistemica"])
         elif intent == "sensitive_action":
-            minds.extend(["mente_etica", "mente_cetica"])
+            minds.extend(["mente_etica", "mente_critica"])
         else:
-            minds.extend(["mente_comunicacional", "mente_integradora"])
+            minds.extend(["mente_comunicacional", "mente_decisoria"])
         if len(domains) > 1:
-            minds.append("mente_integradora")
+            minds.append("mente_sistemica")
         if risk_markers:
             minds.append("mente_probabilistica")
         return list(dict.fromkeys(minds))

@@ -160,6 +160,7 @@ class OrchestratorService:
             intent=directive.intent,
             risk_markers=directive.risk_markers,
             retrieved_domains=knowledge_result.active_domains if knowledge_result else [],
+            mind_hints=directive.mind_hints,
         )
         events.append(
             self.make_event(
@@ -457,6 +458,7 @@ class OrchestratorService:
             request_id=str(contract.request_id),
             session_id=str(contract.session_id),
             mission_id=str(contract.mission_id) if contract.mission_id else None,
+            operation_id=str(payload.get("operation_id")) if payload.get("operation_id") else None,
             correlation_id=str(contract.request_id),
         )
 

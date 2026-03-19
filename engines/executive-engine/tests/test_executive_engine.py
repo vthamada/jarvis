@@ -26,6 +26,7 @@ def test_executive_engine_directs_planning_request() -> None:
     assert directive.should_execute_operation is True
     assert directive.preferred_response_mode == "plan_and_operate"
     assert "update" in directive.risk_markers
+    assert "mente_estrategica" in directive.mind_hints
 
 
 def test_executive_engine_marks_hybrid_request_for_clarification() -> None:

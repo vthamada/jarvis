@@ -4,7 +4,6 @@ from dataclasses import dataclass, field
 
 from shared.types import Timestamp
 
-
 INTERNAL_EVENT_NAMES = (
     "input_received",
     "intent_classified",
@@ -33,4 +32,5 @@ class InternalEventEnvelope:
     request_id: str | None = None
     session_id: str | None = None
     mission_id: str | None = None
+    operation_id: str | None = None
     tags: list[str] = field(default_factory=list)

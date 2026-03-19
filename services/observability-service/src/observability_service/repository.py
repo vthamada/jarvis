@@ -2,10 +2,10 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict
 from json import dumps, loads
 from pathlib import Path
-from sqlite3 import Connection, Row, connect as sqlite_connect
+from sqlite3 import Connection, Row
+from sqlite3 import connect as sqlite_connect
 
 from shared.events import InternalEventEnvelope
 
@@ -24,9 +24,9 @@ class ObservabilityRepository:
                 """
                 INSERT INTO internal_events (
                     event_id, event_name, timestamp, source_service, payload,
-                    correlation_id, request_id, session_id, mission_id, tags
+                    correlation_id, request_id, session_id, mission_id, operation_id, tags
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     event.event_id,
@@ -38,6 +38,7 @@ class ObservabilityRepository:
                     event.request_id,
                     event.session_id,
                     event.mission_id,
+                    event.operation_id,
                     dumps(event.tags),
                 ),
             )
@@ -51,6 +52,7 @@ class ObservabilityRepository:
         session_id: str | None = None,
         mission_id: str | None = None,
         correlation_id: str | None = None,
+        operation_id: str | None = None,
     ) -> list[InternalEventEnvelope]:
         clauses = []
         params: list[object] = []
@@ -66,10 +68,13 @@ class ObservabilityRepository:
         if correlation_id:
             clauses.append("correlation_id = ?")
             params.append(correlation_id)
+        if operation_id:
+            clauses.append("operation_id = ?")
+            params.append(operation_id)
         where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
         query = (
             "SELECT event_id, event_name, timestamp, source_service, payload, "
-            "correlation_id, request_id, session_id, mission_id, tags "
+            "correlation_id, request_id, session_id, mission_id, operation_id, tags "
             "FROM internal_events "
             f"{where} "
             "ORDER BY timestamp DESC, rowid DESC "
@@ -99,10 +104,17 @@ class ObservabilityRepository:
                     request_id TEXT,
                     session_id TEXT,
                     mission_id TEXT,
+                    operation_id TEXT,
                     tags TEXT NOT NULL
                 )
                 """
             )
+            columns = {
+                row["name"]
+                for row in connection.execute("PRAGMA table_info(internal_events)").fetchall()
+            }
+            if "operation_id" not in columns:
+                connection.execute("ALTER TABLE internal_events ADD COLUMN operation_id TEXT")
             connection.commit()
 
     @staticmethod
@@ -119,5 +131,6 @@ class ObservabilityRepository:
             request_id=row["request_id"],
             session_id=row["session_id"],
             mission_id=row["mission_id"],
+            operation_id=row["operation_id"],
             tags=tags,
         )

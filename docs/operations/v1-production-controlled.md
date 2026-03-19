@@ -30,6 +30,12 @@ Nao significa:
 - operacao silenciosa de alto impacto;
 - autoevolucao promovida diretamente em producao.
 
+No `v1`, a operacao controlada usa:
+
+- trilha local persistida como observabilidade primaria;
+- espelhamento agentic opcional quando configurado;
+- checklist executavel antes de qualquer ampliacao de escopo.
+
 ---
 
 ## 3. Escopo permitido
@@ -106,6 +112,7 @@ Checklist minimo:
 - `ambiente`
   - separacao clara entre producao e sandbox
   - comparacao evolutiva mantida em regime `sandbox-only`
+  - validacao executada por scripts operacionais canonicos
 
 ---
 
@@ -133,6 +140,11 @@ Toda anomalia relevante deve permitir pelo menos:
 - suspender mudanca recente;
 - reverter para baseline conhecido;
 - encaminhar revisao manual.
+
+Scripts operacionais de apoio:
+
+- `python tools/validate_v1.py --profile development|controlled`
+- `python tools/go_live_internal_checklist.py --profile development|controlled`
 
 ---
 

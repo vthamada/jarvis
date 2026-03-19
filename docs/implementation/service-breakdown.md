@@ -74,7 +74,9 @@ Responsavel por:
 
 - logs estruturados;
 - persistencia da trilha de eventos;
-- correlacao entre fluxo, decisao, memoria e operacao.
+- correlacao entre fluxo, decisao, memoria e operacao;
+- exportacao de trace view;
+- espelhamento agentic opcional.
 
 ---
 
@@ -96,7 +98,7 @@ Leitura pratica atual:
 - `governance-service`: baseline robusto inicial ativo
 - `operational-service`: operacao de baixo risco ativa
 - `knowledge-service`: retrieval inicial ativo, com ranking ponderado ja absorvido ao baseline
-- `observability-service`: ingestao, consulta e exportacao de trace view ativas e benchmarkadas para o `v1`
+- `observability-service`: ingestao, consulta, exportacao de trace view e espelhamento agentic inicial ativos para o `v1`
 
 ---
 

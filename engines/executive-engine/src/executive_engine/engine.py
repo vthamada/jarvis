@@ -67,6 +67,7 @@ class ExecutiveDirective:
     should_execute_operation: bool
     preferred_response_mode: str
     risk_markers: list[str]
+    mind_hints: list[str]
 
 
 class ExecutiveEngine:
@@ -109,6 +110,7 @@ class ExecutiveEngine:
             ),
             preferred_response_mode=preferred_response_mode,
             risk_markers=risk_markers,
+            mind_hints=self.mind_hints_for_intent(intent),
         )
 
     def classify_intent(self, content: str, *, planning_hits: int, analysis_hits: int) -> str:
@@ -188,3 +190,34 @@ class ExecutiveEngine:
         if intent == "analysis":
             return min(0.65 + (analysis_hits * 0.1), 0.95)
         return 0.6
+
+    @staticmethod
+    def mind_hints_for_intent(intent: str) -> list[str]:
+        """Return the preferred v1 nuclear minds for the given intent."""
+
+        return {
+            "planning": [
+                "mente_executiva",
+                "mente_pragmatica",
+                "mente_estrategica",
+                "mente_tatica",
+            ],
+            "analysis": [
+                "mente_analitica",
+                "mente_critica",
+                "mente_logica",
+                "mente_probabilistica",
+            ],
+            "general_assistance": [
+                "mente_comunicacional",
+                "mente_executiva",
+                "mente_pragmatica",
+                "mente_decisoria",
+            ],
+            "sensitive_action": [
+                "mente_etica",
+                "mente_critica",
+                "mente_probabilistica",
+                "mente_decisoria",
+            ],
+        }.get(intent, ["mente_executiva", "mente_pragmatica"])

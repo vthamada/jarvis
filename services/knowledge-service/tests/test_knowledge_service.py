@@ -22,8 +22,8 @@ def test_knowledge_service_returns_domains_and_snippets_for_planning() -> None:
     service = KnowledgeService()
     result = service.retrieve_for_intent(intent="planning", query="Plan the next milestone safely.")
 
-    assert result.active_domains == ["strategy", "productivity"]
-    assert len(result.snippets) == 2
+    assert result.active_domains == ["strategy", "productivity", "documentation"]
+    assert len(result.snippets) == 3
 
 
 def test_knowledge_service_prioritizes_governance_for_risk_analysis() -> None:
@@ -33,7 +33,7 @@ def test_knowledge_service_prioritizes_governance_for_risk_analysis() -> None:
         query="Analyze governance risk and audit implications for the release.",
     )
 
-    assert result.active_domains[:3] == ["governance", "analysis", "strategy"]
+    assert result.active_domains[:3] == ["governance", "analysis", "decision_risk"]
 
 
 def test_knowledge_service_prioritizes_governance_in_ambiguous_planning() -> None:
@@ -43,7 +43,7 @@ def test_knowledge_service_prioritizes_governance_in_ambiguous_planning() -> Non
         query="Plan execution changes with audit safety and governance checks.",
     )
 
-    assert result.active_domains[:3] == ["governance", "productivity", "strategy"]
+    assert result.active_domains[:3] == ["governance", "strategy", "productivity"]
 
 
 def test_knowledge_service_loads_curated_domains_from_custom_corpus() -> None:
@@ -74,3 +74,15 @@ def test_knowledge_service_loads_curated_domains_from_custom_corpus() -> None:
     assert service.list_domains() == ["architecture", "productivity"]
     result = service.retrieve_for_intent(intent="general_assistance", query="Review arch options.")
     assert result.active_domains == ["architecture", "productivity"]
+
+
+def test_knowledge_service_covers_operational_readiness_and_software_domains() -> None:
+    service = KnowledgeService()
+
+    result = service.retrieve_for_intent(
+        intent="analysis",
+        query="Analyze go-live readiness for the Python service API rollout.",
+    )
+
+    assert "operational_readiness" in result.active_domains
+    assert "software_development" in result.active_domains

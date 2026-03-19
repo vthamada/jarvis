@@ -1,10 +1,20 @@
 from pathlib import Path
+from tempfile import gettempdir
+from uuid import uuid4
 
 from tools.benchmarks.harness import main
 
 
-def test_benchmark_cli_accepts_output_dir_override(tmp_path: Path, capsys) -> None:
-    output_dir = tmp_path / "benchmarks"
+def runtime_dir(name: str) -> Path:
+    base_dir = Path(gettempdir()) / "jarvis-tests"
+    base_dir.mkdir(parents=True, exist_ok=True)
+    target = base_dir / f"{name}-{uuid4().hex[:8]}"
+    target.mkdir(parents=True, exist_ok=True)
+    return target
+
+
+def test_benchmark_cli_accepts_output_dir_override(capsys) -> None:
+    output_dir = runtime_dir("benchmark-cli") / "benchmarks"
 
     exit_code = main(["--output-dir", str(output_dir)])
 
