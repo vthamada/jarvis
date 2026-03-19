@@ -175,6 +175,8 @@ MISSION_STATE_SCHEMA = CanonicalSchema(
         "active_tasks",
         "related_memories",
         "related_artifacts",
+        "semantic_brief",
+        "semantic_focus",
         "priority_level",
         "owner_context",
         "completion_criteria",

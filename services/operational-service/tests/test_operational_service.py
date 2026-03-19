@@ -37,6 +37,9 @@ def test_operational_service_generates_text_artifact_for_supported_task() -> Non
             planned_steps=["definir objetivo", "listar etapas"],
             plan_risks=["sem risco material relevante"],
             plan_rationale="contexto=nenhum; apoio=baseline local",
+            specialist_summary="especialista_planejamento_operacional: executar em etapas pequenas",
+            specialist_findings=["priorizar a menor acao segura antes de expandir escopo"],
+            specialist_hints=["especialista_planejamento_operacional"],
         )
     )
 
@@ -45,7 +48,10 @@ def test_operational_service_generates_text_artifact_for_supported_task() -> Non
     assert execution.artifact_results
     artifact_path = Path(execution.artifact_results[0].location_ref or "")
     assert artifact_path.exists()
-    assert "Plano deliberativo para" in artifact_path.read_text(encoding="utf-8")
+    content = artifact_path.read_text(encoding="utf-8")
+    assert "Plano deliberativo para" in content
+    assert "Especializacao subordinada" in content
+    assert "Achados especializados" in content
 
 
 def test_operational_service_fails_for_unsupported_task() -> None:

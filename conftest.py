@@ -1,8 +1,7 @@
 """Repository-wide pytest bootstrap."""
 
-from pathlib import Path
 import sys
-
+from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 SRC_DIRS = [
@@ -19,6 +18,7 @@ SRC_DIRS = [
     ROOT / "engines" / "cognitive-engine" / "src",
     ROOT / "engines" / "planning-engine" / "src",
     ROOT / "engines" / "synthesis-engine" / "src",
+    ROOT / "engines" / "specialist-engine" / "src",
 ]
 
 for src_dir in SRC_DIRS:

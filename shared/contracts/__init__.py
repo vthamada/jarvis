@@ -90,6 +90,18 @@ class DeliberativePlanContract:
     recommended_task_type: str
     requires_human_validation: bool
     rationale: str
+    tensions_considered: list[str] = field(default_factory=list)
+    specialist_hints: list[str] = field(default_factory=list)
+
+
+@dataclass
+class SpecialistContributionContract:
+    specialist_type: str
+    role: str
+    focus: str
+    findings: list[str]
+    recommendation: str
+    confidence: float
 
 
 @dataclass
@@ -105,11 +117,14 @@ class OperationDispatchContract:
     planned_steps: list[str] = field(default_factory=list)
     plan_risks: list[str] = field(default_factory=list)
     plan_rationale: str | None = None
+    specialist_summary: str | None = None
+    specialist_findings: list[str] = field(default_factory=list)
     requires_human_validation: bool = False
     session_id: SessionId | None = None
     mission_id: MissionId | None = None
     risk_hint: RiskLevel | None = None
     domain_hints: list[str] = field(default_factory=list)
+    specialist_hints: list[str] = field(default_factory=list)
     tool_hints: list[str] = field(default_factory=list)
     deadline_hint: str | None = None
     priority_hint: str | None = None
@@ -179,6 +194,8 @@ class MissionStateContract:
     related_artifacts: list[str] = field(default_factory=list)
     recent_plan_steps: list[str] = field(default_factory=list)
     last_recommendation: str | None = None
+    semantic_brief: str | None = None
+    semantic_focus: list[str] = field(default_factory=list)
     priority_level: str | None = None
     owner_context: str | None = None
     completion_criteria: list[str] = field(default_factory=list)

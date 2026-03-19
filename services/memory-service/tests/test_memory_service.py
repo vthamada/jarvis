@@ -11,7 +11,11 @@ from memory_service.repository import (
 )
 from memory_service.service import MemoryRecordResult, MemoryRecoveryResult, MemoryService
 
-from shared.contracts import DeliberativePlanContract, InputContract
+from shared.contracts import (
+    DeliberativePlanContract,
+    InputContract,
+    SpecialistContributionContract,
+)
 from shared.types import ChannelType, InputType, MemoryClass, MissionId, RequestId, SessionId
 
 
@@ -35,7 +39,22 @@ def sample_plan() -> DeliberativePlanContract:
         recommended_task_type="draft_plan",
         requires_human_validation=False,
         rationale="contexto=nenhum; apoio=baseline local",
+        tensions_considered=["equilibrar ambicao estrategica com proxima acao segura"],
+        specialist_hints=["especialista_planejamento_operacional"],
     )
+
+
+def sample_specialist_contributions() -> list[SpecialistContributionContract]:
+    return [
+        SpecialistContributionContract(
+            specialist_type="especialista_planejamento_operacional",
+            role="planejamento_operacional_subordinado",
+            focus="sequenciamento reversivel e checkpoints claros",
+            findings=["priorizar a menor acao segura antes de expandir escopo"],
+            recommendation="executar o plano em etapas pequenas e verificaveis",
+            confidence=0.78,
+        )
+    ]
 
 
 def test_memory_service_name() -> None:
@@ -83,6 +102,7 @@ def test_memory_service_records_and_recovers_session_history_across_instances() 
         intent="planning",
         response_text="Plan created.",
         deliberative_plan=sample_plan(),
+        specialist_contributions=sample_specialist_contributions(),
     )
 
     reader = MemoryService(database_url=database_url)
@@ -90,8 +110,19 @@ def test_memory_service_records_and_recovers_session_history_across_instances() 
 
     assert isinstance(record, MemoryRecordResult)
     assert record.record_contract.record_type == "interaction_turn"
+    assert record.record_contract.payload["tensions_considered"] == [
+        "equilibrar ambicao estrategica com proxima acao segura"
+    ]
+    assert record.record_contract.payload["specialist_hints"] == [
+        "especialista_planejamento_operacional"
+    ]
+    assert record.record_contract.payload["specialist_types"] == [
+        "especialista_planejamento_operacional"
+    ]
+    assert record.record_contract.payload["specialist_summary"] is not None
     assert any("planning" in item for item in recovered.recovered_items)
     assert any("context_summary=" in item for item in recovered.session_context)
+    assert recovered.mission_hints == []
     assert any("prior_plan=" in item for item in recovered.plan_hints)
 
 
@@ -113,6 +144,7 @@ def test_memory_service_persists_mission_state_with_deliberative_hints() -> None
         intent="planning",
         response_text="Milestone plan drafted.",
         deliberative_plan=sample_plan(),
+        specialist_contributions=sample_specialist_contributions(),
     )
     mission_state = service.get_mission_state("mission-1")
 
@@ -121,6 +153,9 @@ def test_memory_service_persists_mission_state_with_deliberative_hints() -> None
     assert mission_state.checkpoints
     assert "planning" in mission_state.active_tasks
     assert mission_state.last_recommendation == "decompor objetivo em etapas reversiveis"
+    assert mission_state.semantic_brief is not None
+    assert "Coordinate milestone M3." in mission_state.semantic_brief
+    assert "strategy" in mission_state.semantic_focus
     assert mission_state.recent_plan_steps
 
 

@@ -4,9 +4,9 @@
 
 - Atualizado em: 2026-03-19
 - Branch: `main`
-- Commit de referencia: `3edf609`
+- Commit de referencia: `f1c209a`
 - Artefato canonico do projeto: `documento_mestre_jarvis.md`
-- Status do projeto: baseline integrado do `v1` com benchmark local implementado, retrieval ponderado absorvido no baseline, observabilidade validada, evolution-lab com estrategia sandbox priorizada, PostgreSQL validado como backend operacional do v1 local e decisao formal atual de `GO CONDICIONAL` para producao controlada, com ciclo deliberativo do nucleo implementado e validado por testes
+- Status do projeto: baseline integrado do `v1` com benchmark local implementado, retrieval ponderado absorvido no baseline, observabilidade validada, evolution-lab com estrategia sandbox priorizada, PostgreSQL validado como backend operacional do v1 local e decisao formal atual de `GO CONDICIONAL` para producao controlada, com ciclo deliberativo do nucleo implementado e validado por testes, agora enriquecido por arbitragem cognitiva explicita, tensoes internas, hints de especializacao subordinada, especialistas internos convocaveis, reconciliacao especialista -> plano antes da governanca e memoria semantica curta de missao reutilizada no planejamento
 
 ---
 
@@ -28,14 +28,14 @@ Hoje o repositorio contem:
 - camada compartilhada inicial em `shared/` com tipos, enums, estados, contratos, schemas, eventos e identidade/principios;
 - `orchestrator-service` coordenando o fluxo entre engines, memoria, governanca, conhecimento, observabilidade e operacao;
 - `governance-service` com decisoes `allow`, `allow_with_conditions`, `block` e `defer_for_validation`;
-- `memory-service` com persistencia local por repositorio, contexto de sessao e estado minimo de missao;
+- `memory-service` com persistencia local por repositorio, contexto de sessao, estado minimo de missao e resumo semantico curto reutilizavel entre turnos;
 - `operational-service` com geracao de artefatos textuais estruturados e hints de memoria;
 - `knowledge-service` com retrieval deterministico sobre dominios prioritarios do `v1` a partir de corpus curado local;
 - `observability-service` persistindo a trilha de eventos internos com campos de correlacao;
 - `evolution-lab` persistindo propostas e decisoes sandbox-only entre baseline e candidata;
 - `engines/` com componentes reais de identidade, executivo, planejamento, cognicao e sintese;
 - suite de testes cobrindo persistencia, governanca, observabilidade, conhecimento, operacao e o fluxo ponta a ponta do orquestrador;
-- ciclo deliberativo implementado no nucleo, com diretiva executiva enriquecida, plano estruturado, governanca sobre plano, memoria com hints deliberativos e sintese mais executiva.
+- ciclo deliberativo implementado no nucleo, com diretiva executiva enriquecida, plano estruturado, governanca sobre plano, memoria com hints deliberativos, resumo semantico de missao e sintese mais executiva.
 
 Arquivo paralelo/historico que nao deve ser tratado como fonte principal sem decisao explicita:
 
@@ -91,6 +91,8 @@ Arquivo paralelo/historico que nao deve ser tratado como fonte principal sem dec
 - criacao de `docs/architecture/technology-study-matrix.md` para consolidar a leitura do Documento-Mestre sobre stack, frameworks, algoritmos e repositorios a estudar;
 - implementacao do ciclo deliberativo do `v1`, com `DeliberativePlanContract`, diretiva executiva enriquecida, plano estruturado no `planning-engine`, memoria persistindo hints de plano, governanca avaliando o plano pretendido, observabilidade expandida e sintese mais deliberativa;
 - atualizacao dos testes de engines e servicos para travar o novo comportamento e validacao da suite completa com `pytest -q`.
+- aprofundamento da memoria de missao para persistir `semantic_brief` e `semantic_focus`, com recuperacao explicita desses sinais no `planning-engine` e continuidade de raciocinio melhor entre turnos da mesma missao;
+- atualizacao dos repositorios `sqlite` e `PostgreSQL` da memoria para suportar os novos campos semanticos e cobertura de testes para persistencia, recuperacao e continuidade entre instancias;
 
 ---
 
@@ -127,7 +129,9 @@ Ordem recomendada:
 
 1. registrar o escopo inicial do primeiro uso real controlado;
 2. executar a primeira janela pequena de producao controlada com observacao reforcada;
-3. decidir formalmente o destino de `documento_mestre_do_jarvis.md`.
+3. decidir formalmente o destino de `documento_mestre_do_jarvis.md`;
+
+4. decidir se a proxima trilha prioriza aprofundar os especialistas subordinados ou abrir uma memoria semantica mais forte entre missoes.
 
 ---
 
@@ -138,7 +142,7 @@ Ordem recomendada:
 - o corpus do `knowledge-service` continua local e curado manualmente, agora com ranking ponderado ja absorvido no baseline;
 - o `operational-service` continua deliberadamente restrito a tarefas seguras e deterministicas, sem adaptadores de alto risco;
 - o `evolution-lab` segue sandbox-only e ainda nao traduz automaticamente o resultado do benchmark em mudanca do baseline;
-- o lint com `ruff check` ainda ficou com pendencias de estilo nos arquivos reescritos nesta rodada, embora a suite funcional esteja verde.
+- a suite completa `pytest -q` e os arquivos tocados por esta rodada passam em `ruff check`; o risco atual esta mais em profundidade cognitiva do que em estabilidade local.
 
 ---
 

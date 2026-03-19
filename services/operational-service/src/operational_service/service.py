@@ -114,12 +114,18 @@ class OperationalService:
             dispatch.plan_risks,
             "sem risco material relevante",
         )
+        specialists = OperationalService._specialist_line(dispatch.specialist_hints)
+        specialist_summary = dispatch.specialist_summary or "sem resumo especializado adicional"
+        findings = OperationalService._specialist_findings(dispatch.specialist_findings)
         return (
             f"Plano deliberativo para: {dispatch.task_goal}\n\n"
             f"Resumo: {dispatch.plan_summary or dispatch.task_plan}\n"
             f"Rationale: {dispatch.plan_rationale or 'nao informado'}\n"
             f"Restricoes: {constraints}\n"
-            f"Riscos: {risks}\n\n"
+            f"Riscos: {risks}\n"
+            f"Especializacao subordinada: {specialists}\n"
+            f"Resumo especializado: {specialist_summary}\n"
+            f"Achados especializados: {findings}\n\n"
             f"Etapas:\n{steps}\n"
         )
 
@@ -130,20 +136,32 @@ class OperationalService:
             dispatch.plan_risks,
             "nenhum relevante no escopo local",
         )
+        specialists = OperationalService._specialist_line(dispatch.specialist_hints)
+        specialist_summary = dispatch.specialist_summary or "sem resumo especializado adicional"
+        findings = OperationalService._specialist_findings(dispatch.specialist_findings)
         return (
             f"Analise deliberativa para: {dispatch.task_goal}\n\n"
             f"Resumo: {dispatch.plan_summary or dispatch.task_plan}\n"
             f"Rationale: {dispatch.plan_rationale or 'nao informado'}\n"
             f"Dominios sugeridos: {domains}\n"
+            f"Especializacao subordinada: {specialists}\n"
+            f"Resumo especializado: {specialist_summary}\n"
+            f"Achados especializados: {findings}\n"
             f"Riscos mapeados: {risks}\n"
         )
 
     @staticmethod
     def _build_general_content(dispatch: OperationDispatchContract) -> str:
+        specialists = OperationalService._specialist_line(dispatch.specialist_hints)
+        specialist_summary = dispatch.specialist_summary or "sem resumo especializado adicional"
+        findings = OperationalService._specialist_findings(dispatch.specialist_findings)
         return (
             f"Resposta deliberativa segura para: {dispatch.task_goal}\n\n"
             f"Resumo: {dispatch.plan_summary or dispatch.task_plan}\n"
             f"Orientacao principal: {dispatch.plan_rationale or 'sem rationale adicional'}\n"
+            f"Especializacao subordinada: {specialists}\n"
+            f"Resumo especializado: {specialist_summary}\n"
+            f"Achados especializados: {findings}\n"
             "A saida foi produzida dentro do escopo local e reversivel do v1.\n"
         )
 
@@ -154,6 +172,18 @@ class OperationalService:
     @staticmethod
     def _risk_line(plan_risks: list[str], fallback: str) -> str:
         return ", ".join(plan_risks) if plan_risks else fallback
+
+    @staticmethod
+    def _specialist_line(specialist_hints: list[str]) -> str:
+        if specialist_hints:
+            return ", ".join(specialist_hints)
+        return "nenhum apoio especializado adicional"
+
+    @staticmethod
+    def _specialist_findings(specialist_findings: list[str]) -> str:
+        if specialist_findings:
+            return "; ".join(specialist_findings[:3])
+        return "nenhum achado especializado adicional"
 
     @staticmethod
     def now() -> str:

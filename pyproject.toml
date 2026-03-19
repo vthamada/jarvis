@@ -37,6 +37,7 @@ where = [
   "engines/cognitive-engine/src",
   "engines/planning-engine/src",
   "engines/synthesis-engine/src",
+  "engines/specialist-engine/src",
 ]
 
 [tool.pytest.ini_options]

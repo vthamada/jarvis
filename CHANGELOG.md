@@ -10,6 +10,14 @@ Ele **nao** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalha
 
 ### Ciclo deliberativo do nucleo
 
+### Memoria semantica curta de missao
+
+- ampliado `MissionStateContract` com `semantic_brief` e `semantic_focus` para representar continuidade de missao em nivel semantico curto, sem criar servico novo;
+- atualizados os repositorios `sqlite` e `PostgreSQL` do `memory-service` para persistir e recuperar os novos campos com migracao incremental de schema;
+- ajustado o `memory-service` para emitir `mission_semantic_brief` e `mission_focus` como hints reutilizaveis no turno seguinte;
+- ajustado o `planning-engine` para usar esses sinais como continuidade semantica explicita no plano e no rationale, sem substituir o contexto episodico;
+- atualizados testes de memoria, planejamento, orquestracao e integracao PostgreSQL; `pytest -q` voltou a passar integralmente e `ruff check` passou nos arquivos alterados.
+
 - introduzido `DeliberativePlanContract` como artefato estruturado do nucleo para resumir objetivo, etapas, riscos, restricoes e recomendacao operacional;
 - ampliado o `executive-engine` para produzir diretiva com confianca, ambiguidade, modo preferido de resposta e controle de execucao;
 - refeito o fluxo do `orchestrator-service` para operar como `entender -> decompor -> arbitrar -> decidir -> registrar -> responder`, incluindo os eventos `directive_composed`, `plan_built`, `plan_governed` e `clarification_required`;

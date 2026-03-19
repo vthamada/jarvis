@@ -40,6 +40,8 @@ def test_memory_service_persists_session_history_in_postgres() -> None:
     assert any(("intent=planning" in item) or ("PostgreSQL validated." in item) for item in recovered.recovered_items)
     assert mission_state is not None
     assert "planning" in mission_state.active_tasks
+    assert mission_state.semantic_brief is not None
+    assert "Plan the PostgreSQL validation flow." in mission_state.semantic_brief
 
 
 def test_memory_benchmark_track_adopts_postgres_when_environment_is_ready(tmp_path) -> None:

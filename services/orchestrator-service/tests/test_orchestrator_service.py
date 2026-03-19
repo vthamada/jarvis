@@ -32,7 +32,7 @@ def test_orchestrator_service_name() -> None:
     assert OrchestratorService.name == "orchestrator-service"
 
 
-def test_orchestrator_service_handles_deliberative_planning_with_artifacts() -> None:
+def test_orchestrator_service_handles_deliberative_planning_with_refined_plan() -> None:
     temp_dir = runtime_dir("orchestrator-low")
     observability = ObservabilityService(database_path=str(temp_dir / "observability.db"))
     service = OrchestratorService(
@@ -64,13 +64,19 @@ def test_orchestrator_service_handles_deliberative_planning_with_artifacts() -> 
     assert result.knowledge_result is not None
     assert result.artifact_results
     assert result.active_domains == ["strategy", "productivity"]
-    assert "Linha de raciocinio" in result.response_text
+    assert result.cognitive_tensions
+    assert result.specialist_hints == ["especialista_planejamento_operacional"]
+    assert result.specialist_review is not None
+    assert result.specialist_review.contributions
+    assert any("checkpoint intermediario" in step for step in result.deliberative_plan.steps)
+    assert "Contribuicoes especialistas" in result.response_text
     stored_events = observability.list_recent_events(ObservabilityQuery(request_id="req-1"))
-    assert [event.event_name for event in stored_events] == [
-        event.event_name for event in result.events
-    ]
-    assert "plan_built" in [event.event_name for event in result.events]
-    assert "plan_governed" in [event.event_name for event in result.events]
+    event_names = [event.event_name for event in stored_events]
+    assert event_names == [event.event_name for event in result.events]
+    assert "plan_built" in event_names
+    assert "specialists_completed" in event_names
+    assert "plan_refined" in event_names
+    assert "plan_governed" in event_names
 
 
 def test_orchestrator_service_requests_clarification_without_operation() -> None:
@@ -173,5 +179,15 @@ def test_orchestrator_service_recovers_previous_plan_hints_across_instances() ->
 
     assert any("prior_plan=" in item for item in second_result.recovered_context)
     assert any("mission_recommendation=" in item for item in second_result.recovered_context)
+    assert any("mission_semantic_brief=" in item for item in second_result.recovered_context)
+    assert any("mission_focus=" in item for item in second_result.recovered_context)
     assert second_result.deliberative_plan.recommended_task_type == "produce_analysis_brief"
     assert second_result.operation_result is None
+    assert "especialista_analise_estruturada" in second_result.specialist_hints
+    assert second_result.specialist_review is not None
+    assert second_result.specialist_review.summary
+    assert "missao=objetivo=Please plan the sprint." in second_result.deliberative_plan.rationale
+    assert any(
+        "criterio de decisao dominante" in step
+        for step in second_result.deliberative_plan.steps
+    )

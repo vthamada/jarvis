@@ -15,6 +15,7 @@ from memory_service.service import MemoryService
 from observability_service.service import ObservabilityService
 from operational_service.service import OperationalService
 from planning_engine.engine import PlanningContext, PlanningEngine
+from specialist_engine.engine import SpecialistEngine, SpecialistReview
 from synthesis_engine.engine import SynthesisEngine, SynthesisInput
 
 from shared.contracts import (
@@ -51,6 +52,9 @@ class OrchestratorResponse:
     artifact_results: list[ArtifactResultContract] = field(default_factory=list)
     active_minds: list[str] = field(default_factory=list)
     active_domains: list[str] = field(default_factory=list)
+    cognitive_tensions: list[str] = field(default_factory=list)
+    specialist_hints: list[str] = field(default_factory=list)
+    specialist_review: SpecialistReview | None = None
     operation_dispatch: OperationDispatchContract | None = None
     operation_result: OperationResultContract | None = None
     events: list[InternalEventEnvelope] = field(default_factory=list)
@@ -72,6 +76,7 @@ class OrchestratorService:
         executive_engine: ExecutiveEngine | None = None,
         planning_engine: PlanningEngine | None = None,
         cognitive_engine: CognitiveEngine | None = None,
+        specialist_engine: SpecialistEngine | None = None,
         synthesis_engine: SynthesisEngine | None = None,
     ) -> None:
         self.governance_service = governance_service or GovernanceService()
@@ -83,6 +88,7 @@ class OrchestratorService:
         self.executive_engine = executive_engine or ExecutiveEngine()
         self.planning_engine = planning_engine or PlanningEngine()
         self.cognitive_engine = cognitive_engine or CognitiveEngine()
+        self.specialist_engine = specialist_engine or SpecialistEngine()
         self.synthesis_engine = synthesis_engine or SynthesisEngine()
 
     def handle_input(self, contract: InputContract) -> OrchestratorResponse:
@@ -162,6 +168,9 @@ class OrchestratorService:
                 {
                     "active_minds": cognitive_snapshot.active_minds,
                     "active_domains": cognitive_snapshot.active_domains,
+                    "primary_mind": cognitive_snapshot.primary_mind,
+                    "tensions": cognitive_snapshot.tensions,
+                    "specialist_hints": cognitive_snapshot.specialist_hints,
                 },
             )
         )
@@ -177,6 +186,9 @@ class OrchestratorService:
                 risk_markers=directive.risk_markers,
                 requires_clarification=directive.requires_clarification,
                 preferred_response_mode=directive.preferred_response_mode,
+                cognitive_rationale=cognitive_snapshot.rationale,
+                tensions=cognitive_snapshot.tensions,
+                specialist_hints=cognitive_snapshot.specialist_hints,
             )
         )
         events.append(
@@ -187,9 +199,56 @@ class OrchestratorService:
                     "recommended_task_type": deliberative_plan.recommended_task_type,
                     "requires_human_validation": deliberative_plan.requires_human_validation,
                     "steps": deliberative_plan.steps,
+                    "tensions": deliberative_plan.tensions_considered,
+                    "specialist_hints": deliberative_plan.specialist_hints,
                 },
             )
         )
+
+        specialist_review = self.specialist_engine.review(
+            intent=directive.intent,
+            plan=deliberative_plan,
+            knowledge_snippets=knowledge_result.snippets if knowledge_result else [],
+        )
+        if specialist_review.specialist_hints:
+            events.append(
+                self.make_event(
+                    "specialists_dispatched",
+                    contract,
+                    {"specialist_hints": specialist_review.specialist_hints},
+                )
+            )
+        if specialist_review.contributions:
+            events.append(
+                self.make_event(
+                    "specialists_completed",
+                    contract,
+                    {
+                        "specialist_types": [
+                            item.specialist_type for item in specialist_review.contributions
+                        ],
+                        "summary": specialist_review.summary,
+                    },
+                )
+            )
+
+        deliberative_plan = self.planning_engine.refine_task_plan(
+            deliberative_plan,
+            specialist_summary=specialist_review.summary,
+            specialist_contributions=specialist_review.contributions,
+        )
+        if specialist_review.contributions:
+            events.append(
+                self.make_event(
+                    "plan_refined",
+                    contract,
+                    {
+                        "recommended_task_type": deliberative_plan.recommended_task_type,
+                        "requires_human_validation": deliberative_plan.requires_human_validation,
+                        "steps": deliberative_plan.steps,
+                    },
+                )
+            )
 
         assessment = self.governance_service.assess_request(
             contract,
@@ -238,6 +297,7 @@ class OrchestratorService:
             operation_dispatch = self.build_operation_dispatch(
                 contract,
                 plan=deliberative_plan,
+                specialist_review=specialist_review,
             )
             events.append(
                 self.make_event(
@@ -246,6 +306,7 @@ class OrchestratorService:
                     {
                         "operation_id": str(operation_dispatch.operation_id),
                         "task_type": operation_dispatch.task_type,
+                        "specialist_hints": operation_dispatch.specialist_hints,
                     },
                 )
             )
@@ -297,6 +358,7 @@ class OrchestratorService:
                 active_domains=cognitive_snapshot.active_domains,
                 knowledge_snippets=knowledge_result.snippets if knowledge_result else [],
                 deliberative_plan=deliberative_plan,
+                specialist_contributions=specialist_review.contributions,
                 operation_result=operation_result,
             )
         )
@@ -309,6 +371,7 @@ class OrchestratorService:
             intent=directive.intent,
             response_text=response_text,
             deliberative_plan=deliberative_plan,
+            specialist_contributions=specialist_review.contributions,
         )
         events.append(
             self.make_event(
@@ -338,6 +401,9 @@ class OrchestratorService:
             artifact_results=artifact_results,
             active_minds=cognitive_snapshot.active_minds,
             active_domains=cognitive_snapshot.active_domains,
+            cognitive_tensions=deliberative_plan.tensions_considered,
+            specialist_hints=deliberative_plan.specialist_hints,
+            specialist_review=specialist_review,
             operation_dispatch=operation_dispatch,
             operation_result=operation_result,
             events=events,
@@ -348,6 +414,7 @@ class OrchestratorService:
         contract: InputContract,
         *,
         plan: DeliberativePlanContract,
+        specialist_review: SpecialistReview,
     ) -> OperationDispatchContract:
         """Create the operational dispatch for an allowed request."""
 
@@ -363,10 +430,13 @@ class OrchestratorService:
             planned_steps=list(plan.steps),
             plan_risks=list(plan.risks),
             plan_rationale=plan.rationale,
+            specialist_summary=specialist_review.summary,
+            specialist_findings=list(specialist_review.findings),
             requires_human_validation=plan.requires_human_validation,
             session_id=contract.session_id,
             mission_id=contract.mission_id,
             domain_hints=list(plan.active_domains),
+            specialist_hints=list(plan.specialist_hints),
             priority_hint=contract.priority_hint,
         )
 
