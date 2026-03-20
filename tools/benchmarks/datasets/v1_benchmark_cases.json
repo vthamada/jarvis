@@ -63,7 +63,7 @@
       "session_id": "bench-session-2",
       "mission_id": null,
       "expected_decision": "allow",
-      "expects_operation": true,
+      "expects_operation": false,
       "expects_context_recovery": false,
       "expected_domains": [
         "productivity"
@@ -73,12 +73,11 @@
         "memory_recovered",
         "intent_classified",
         "directive_composed",
+        "knowledge_retrieved",
         "context_composed",
         "plan_built",
         "governance_checked",
         "plan_governed",
-        "operation_dispatched",
-        "operation_completed",
         "response_synthesized",
         "memory_recorded"
       ]

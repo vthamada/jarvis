@@ -61,6 +61,16 @@ Esse corte existe para iniciar `M6` sem antecipar autoevolucao ampla.
 
 ---
 
+## 6.1 Atualização do laboratório em 2026-03-20
+
+O estado mais recente do laboratório evolutivo é este:
+
+- o laboratório já recebe sinais do `internal pilot` e da comparação de paths;
+- a infraestrutura para transformar esses sinais em proposals sandbox-only já existe;
+- na última rodada saudável do piloto, não surgiu proposal urgente o suficiente para reabrir o baseline do `v1`.
+
+---
+
 ## 7. Limite atual
 
 O laboratório atual ainda não faz:

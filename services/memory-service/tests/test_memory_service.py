@@ -11,11 +11,7 @@ from memory_service.repository import (
 )
 from memory_service.service import MemoryRecordResult, MemoryRecoveryResult, MemoryService
 
-from shared.contracts import (
-    DeliberativePlanContract,
-    InputContract,
-    SpecialistContributionContract,
-)
+from shared.contracts import DeliberativePlanContract, InputContract, SpecialistContributionContract
 from shared.types import ChannelType, InputType, MemoryClass, MissionId, RequestId, SessionId
 
 
@@ -31,7 +27,7 @@ def sample_plan() -> DeliberativePlanContract:
     return DeliberativePlanContract(
         plan_summary="decompor objetivo em etapas reversiveis",
         goal="Please plan the sprint.",
-        steps=["definir objetivo", "listar etapas", "recomendar próxima ação"],
+        steps=["continuar a missao", "listar etapas", "recomendar proxima acao"],
         active_domains=["strategy"],
         active_minds=["mente_executiva"],
         constraints=["low-risk"],
@@ -39,8 +35,13 @@ def sample_plan() -> DeliberativePlanContract:
         recommended_task_type="draft_plan",
         requires_human_validation=False,
         rationale="contexto=nenhum; apoio=baseline local",
-        tensions_considered=["equilibrar ambicao estratégica com próxima ação segura"],
+        tensions_considered=["equilibrar ambicao estrategica com a menor proxima acao segura"],
         specialist_hints=["especialista_planejamento_operacional"],
+        success_criteria=["plano deve indicar a menor proxima acao segura"],
+        dominant_tension="equilibrar ambicao estrategica com a menor proxima acao segura",
+        smallest_safe_next_action="continuar a missao",
+        continuity_action="continuar",
+        open_loops=["fechar checkpoint principal"],
     )
 
 
@@ -50,8 +51,8 @@ def sample_specialist_contributions() -> list[SpecialistContributionContract]:
             specialist_type="especialista_planejamento_operacional",
             role="planejamento_operacional_subordinado",
             focus="sequenciamento reversivel e checkpoints claros",
-            findings=["priorizar a menor ação segura antes de expandir escopo"],
-            recommendation="executar o plano em etapas pequenas e verificaveis",
+            findings=["open_loop: fechar checkpoint principal"],
+            recommendation="encadear o plano em etapas pequenas e verificaveis",
             confidence=0.78,
         )
     ]
@@ -74,7 +75,6 @@ def test_memory_service_recovers_empty_context_for_new_session() -> None:
             timestamp="2026-03-17T00:00:00Z",
         )
     )
-
     assert isinstance(result, MemoryRecoveryResult)
     assert result.recovered_items == []
     assert result.recovery_contract.requested_scopes == [
@@ -95,7 +95,6 @@ def test_memory_service_records_and_recovers_session_history_across_instances() 
         content="Please plan the sprint.",
         timestamp="2026-03-17T00:00:00Z",
     )
-
     writer = MemoryService(database_url=database_url)
     record = writer.record_turn(
         contract,
@@ -104,29 +103,20 @@ def test_memory_service_records_and_recovers_session_history_across_instances() 
         deliberative_plan=sample_plan(),
         specialist_contributions=sample_specialist_contributions(),
     )
-
     reader = MemoryService(database_url=database_url)
     recovered = reader.recover_for_input(contract)
-
     assert isinstance(record, MemoryRecordResult)
     assert record.record_contract.record_type == "interaction_turn"
-    assert record.record_contract.payload["tensions_considered"] == [
-        "equilibrar ambicao estratégica com próxima ação segura"
-    ]
-    assert record.record_contract.payload["specialist_hints"] == [
-        "especialista_planejamento_operacional"
-    ]
-    assert record.record_contract.payload["specialist_types"] == [
-        "especialista_planejamento_operacional"
-    ]
-    assert record.record_contract.payload["specialist_summary"] is not None
+    assert record.record_contract.payload["decision_frame"] == "planning"
+    assert record.record_contract.payload["dominant_goal"] == "Please plan the sprint."
+    assert record.record_contract.payload["open_loops"] == ["fechar checkpoint principal"]
     assert any("planning" in item for item in recovered.recovered_items)
     assert any("context_summary=" in item for item in recovered.session_context)
     assert recovered.mission_hints == []
     assert any("prior_plan=" in item for item in recovered.plan_hints)
 
 
-def test_memory_service_persists_mission_state_with_deliberative_hints() -> None:
+def test_memory_service_persists_mission_state_with_identity_continuity_and_open_loops() -> None:
     temp_dir = runtime_dir("memory-mission")
     service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
     contract = InputContract(
@@ -138,7 +128,6 @@ def test_memory_service_persists_mission_state_with_deliberative_hints() -> None
         content="Coordinate milestone M3.",
         timestamp="2026-03-17T00:00:00Z",
     )
-
     service.record_turn(
         contract,
         intent="planning",
@@ -147,36 +136,35 @@ def test_memory_service_persists_mission_state_with_deliberative_hints() -> None
         specialist_contributions=sample_specialist_contributions(),
     )
     mission_state = service.get_mission_state("mission-1")
-
     assert mission_state is not None
     assert mission_state.mission_goal == "Coordinate milestone M3."
     assert mission_state.checkpoints
     assert "planning" in mission_state.active_tasks
     assert mission_state.last_recommendation == "decompor objetivo em etapas reversiveis"
     assert mission_state.semantic_brief is not None
-    assert "Coordinate milestone M3." in mission_state.semantic_brief
-    assert "strategy" in mission_state.semantic_focus
-    assert mission_state.recent_plan_steps
+    assert mission_state.identity_continuity_brief is not None
+    assert mission_state.open_loops == ["fechar checkpoint principal"]
+    assert mission_state.last_decision_frame == "planning"
 
 
 def test_build_memory_repository_defaults_to_runtime_sqlite() -> None:
     repository = build_memory_repository(None)
-
     assert isinstance(repository, SqliteMemoryRepository)
 
 
 def test_parse_sqlite_database_path_handles_windows_style_urls() -> None:
     database_path = parse_sqlite_database_path("sqlite:///C:/jarvis/runtime/memory.db")
-
     assert database_path == Path("C:/jarvis/runtime/memory.db")
 
 
 def test_normalize_database_url_accepts_postgres_aliases() -> None:
-    assert normalize_database_url("postgres://user:pass@localhost:5432/jarvis") == (
-        "postgresql://user:pass@localhost:5432/jarvis"
+    assert (
+        normalize_database_url("postgres://user:pass@localhost:5432/jarvis")
+        == "postgresql://user:pass@localhost:5432/jarvis"
     )
-    assert normalize_database_url("postgresql+psycopg://user:pass@localhost:5432/jarvis") == (
-        "postgresql://user:pass@localhost:5432/jarvis"
+    assert (
+        normalize_database_url("postgresql+psycopg://user:pass@localhost:5432/jarvis")
+        == "postgresql://user:pass@localhost:5432/jarvis"
     )
 
 
@@ -188,8 +176,6 @@ def test_build_memory_repository_uses_postgres_for_operational_urls(monkeypatch)
             captured["database_url"] = database_url
 
     monkeypatch.setattr(memory_repository, "PostgresMemoryRepository", FakePostgresRepository)
-
     repository = build_memory_repository("postgres://postgres:postgres@localhost:5432/jarvis")
-
     assert isinstance(repository, FakePostgresRepository)
     assert captured["database_url"] == "postgresql://postgres:postgres@localhost:5432/jarvis"

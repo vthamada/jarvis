@@ -30,6 +30,8 @@ class SynthesisInput:
     deliberative_plan: DeliberativePlanContract | None
     specialist_contributions: list[SpecialistContributionContract]
     operation_result: OperationResultContract | None
+    identity_mode: str | None = None
+    arbitration_summary: str | None = None
 
 
 class SynthesisEngine:
@@ -44,50 +46,35 @@ class SynthesisEngine:
             PermissionDecision.BLOCK,
             PermissionDecision.DEFER_FOR_VALIDATION,
         }:
-            return (
-                "Solicitacao recebida, mas a governança atual não permite execução direta. "
-                f"Motivo: {synthesis_input.governance_decision.justification} "
-                f"Leitura atual: {self._goal_line(synthesis_input)}"
-            )
+            return self._compose_governed_response(synthesis_input)
 
         plan = synthesis_input.deliberative_plan
-        context_brief = (
-            synthesis_input.recovered_context[-1]
-            if synthesis_input.recovered_context
-            else "sem continuidade relevante previa"
-        )
-        knowledge_brief = (
-            synthesis_input.knowledge_snippets[0]
-            if synthesis_input.knowledge_snippets
-            else "baseline local sem apoio extra"
-        )
-        operation_brief = (
-            synthesis_input.operation_result.outputs[0]
-            if synthesis_input.operation_result and synthesis_input.operation_result.outputs
-            else "nenhuma operação executada"
-        )
-        steps_brief = self._steps_brief(plan)
-        risks_brief = "; ".join(plan.risks[:2]) if plan else "sem risco material relevante"
-        rationale = plan.rationale if plan else "deliberacao compacta indisponivel"
-        arbitration = self._arbitration_brief(plan)
-        specialists = self._specialist_brief(plan, synthesis_input.specialist_contributions)
-        specialist_findings = self._specialist_findings_brief(
-            synthesis_input.specialist_contributions
+        if not plan:
+            return "Leitura atual: manter a orientacao executiva dentro do escopo controlado do v1."
+
+        parts = [
+            f"Leitura do objetivo: {plan.goal}.",
+            f"Julgamento: {self._judgment_line(synthesis_input)}.",
+            f"Recomendacao: {self._recommendation_line(synthesis_input)}.",
+        ]
+        limitation = self._limitation_line(synthesis_input)
+        if limitation:
+            parts.append(f"Limite atual: {limitation}.")
+        operational_result = self._operational_line(synthesis_input)
+        if operational_result:
+            parts.append(f"Resultado operacional: {operational_result}.")
+        return " ".join(parts)
+
+    def _compose_governed_response(self, synthesis_input: SynthesisInput) -> str:
+        goal_line = self._goal_line(synthesis_input)
+        judgment = (
+            "a governanca atual exige conter a acao "
+            "para preservar coerencia e seguranca"
         )
         return (
-            f"JARVIS em modo {synthesis_input.response_style}. "
-            f"Leitura do objetivo: {self._goal_line(synthesis_input)}. "
-            f"Linha de raciocinio: {rationale}. "
-            f"Arbitragem interna: {arbitration}. "
-            f"Plano ou recomendacao: {steps_brief}. "
-            f"Especializacao subordinada: {specialists}. "
-            f"Contribuições especialistas: {specialist_findings}. "
-            f"Limites e riscos: {risks_brief}. "
-            f"Contexto ativo: {context_brief}. "
-            f"Dominios: {', '.join(synthesis_input.active_domains)}. "
-            f"Mentes: {', '.join(synthesis_input.active_minds)}. "
-            f"Apoio: {knowledge_brief}. "
-            f"Resultado operacional: {operation_brief}"
+            f"Leitura do objetivo: {goal_line}. "
+            f"Julgamento: {judgment}. "
+            f"Recomendacao: {synthesis_input.governance_decision.justification}"
         )
 
     @staticmethod
@@ -96,38 +83,50 @@ class SynthesisEngine:
             return synthesis_input.deliberative_plan.goal
         return synthesis_input.identity_profile.mission_statement
 
-    @staticmethod
-    def _steps_brief(plan: DeliberativePlanContract | None) -> str:
-        if not plan:
-            return "sem plano estruturado adicional"
-        return "; ".join(plan.steps[:3])
+    def _judgment_line(self, synthesis_input: SynthesisInput) -> str:
+        plan = synthesis_input.deliberative_plan
+        arbitration = synthesis_input.arbitration_summary or plan.specialist_resolution_summary
+        if arbitration:
+            return arbitration
+        return plan.rationale.split(";", maxsplit=1)[0]
+
+    def _recommendation_line(self, synthesis_input: SynthesisInput) -> str:
+        plan = synthesis_input.deliberative_plan
+        if plan.smallest_safe_next_action:
+            next_action = plan.smallest_safe_next_action
+        elif plan.steps:
+            next_action = plan.steps[0]
+        else:
+            next_action = "preservar uma proxima acao segura"
+        success = (
+            plan.success_criteria[0]
+            if plan.success_criteria
+            else "manter resposta coerente e reversivel"
+        )
+        recommendation = f"{next_action}; criterio de sucesso: {success}"
+        if plan.specialist_resolution_summary:
+            recommendation = (
+                f"{recommendation}; ajuste interno: {plan.specialist_resolution_summary}"
+            )
+        return recommendation
+
+    def _limitation_line(self, synthesis_input: SynthesisInput) -> str | None:
+        plan = synthesis_input.deliberative_plan
+        limits: list[str] = []
+        if synthesis_input.governance_decision.conditions:
+            limits.append(synthesis_input.governance_decision.conditions[0])
+        if plan.requires_human_validation:
+            limits.append("o plano ainda pede validacao humana antes de ampliar escopo")
+        material_risks = [risk for risk in plan.risks if "sem risco material" not in risk.lower()]
+        if material_risks:
+            limits.append(material_risks[0])
+        return limits[0] if limits else None
 
     @staticmethod
-    def _arbitration_brief(plan: DeliberativePlanContract | None) -> str:
-        if not plan or not plan.tensions_considered:
-            return "sem tensao material alem do baseline atual"
-        return "; ".join(plan.tensions_considered[:2])
-
-    @staticmethod
-    def _specialist_brief(
-        plan: DeliberativePlanContract | None,
-        specialist_contributions: list[SpecialistContributionContract],
-    ) -> str:
-        if specialist_contributions:
-            return ", ".join(item.specialist_type for item in specialist_contributions[:2])
-        if not plan or not plan.specialist_hints:
-            return "nenhum apoio especializado adicional necessario"
-        return ", ".join(plan.specialist_hints[:2])
-
-    @staticmethod
-    def _specialist_findings_brief(
-        specialist_contributions: list[SpecialistContributionContract],
-    ) -> str:
-        if not specialist_contributions:
-            return "nenhuma contribuição especializada adicional"
-        findings = [
-            contribution.findings[0]
-            for contribution in specialist_contributions
-            if contribution.findings
-        ]
-        return "; ".join(findings[:2])
+    def _operational_line(synthesis_input: SynthesisInput) -> str | None:
+        operation_result = synthesis_input.operation_result
+        if not operation_result:
+            return None
+        if operation_result.outputs:
+            return operation_result.outputs[0]
+        return "saida operacional produzida sem resumo adicional"

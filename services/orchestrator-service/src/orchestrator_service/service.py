@@ -11,7 +11,7 @@ from executive_engine.engine import ExecutiveDirective, ExecutiveEngine
 from governance_service.service import GovernanceService
 from identity_engine.engine import IdentityEngine
 from knowledge_service.service import KnowledgeRetrievalResult, KnowledgeService
-from memory_service.service import MemoryService
+from memory_service.service import MemoryRecoveryResult, MemoryService
 from observability_service.service import ObservabilityService
 from operational_service.service import OperationalService
 from planning_engine.engine import PlanningContext, PlanningEngine
@@ -127,6 +127,8 @@ class OrchestratorService:
                     "intent_confidence": directive.intent_confidence,
                     "requires_clarification": directive.requires_clarification,
                     "preferred_response_mode": directive.preferred_response_mode,
+                    "dominant_goal": directive.dominant_goal,
+                    "identity_mode": directive.identity_mode,
                 },
             )
         )
@@ -135,7 +137,10 @@ class OrchestratorService:
                 self.make_event(
                     "clarification_required",
                     contract,
-                    {"intent": directive.intent, "reason": "insufficient_goal_clarity"},
+                    {
+                        "intent": directive.intent,
+                        "reason": directive.ambiguity_reason or "insufficient_goal_clarity",
+                    },
                 )
             )
 
@@ -170,7 +175,8 @@ class OrchestratorService:
                     "active_minds": cognitive_snapshot.active_minds,
                     "active_domains": cognitive_snapshot.active_domains,
                     "primary_mind": cognitive_snapshot.primary_mind,
-                    "tensions": cognitive_snapshot.tensions,
+                    "supporting_minds": cognitive_snapshot.supporting_minds,
+                    "dominant_tension": cognitive_snapshot.dominant_tension,
                     "specialist_hints": cognitive_snapshot.specialist_hints,
                 },
             )
@@ -193,8 +199,9 @@ class OrchestratorService:
                     "recommended_task_type": deliberative_plan.recommended_task_type,
                     "requires_human_validation": deliberative_plan.requires_human_validation,
                     "steps": deliberative_plan.steps,
-                    "tensions": deliberative_plan.tensions_considered,
-                    "specialist_hints": deliberative_plan.specialist_hints,
+                    "dominant_tension": deliberative_plan.dominant_tension,
+                    "smallest_safe_next_action": deliberative_plan.smallest_safe_next_action,
+                    "continuity_action": deliberative_plan.continuity_action,
                 },
             )
         )
@@ -240,6 +247,9 @@ class OrchestratorService:
                         "recommended_task_type": deliberative_plan.recommended_task_type,
                         "requires_human_validation": deliberative_plan.requires_human_validation,
                         "steps": deliberative_plan.steps,
+                        "specialist_resolution_summary": (
+                            deliberative_plan.specialist_resolution_summary
+                        ),
                     },
                 )
             )
@@ -273,6 +283,7 @@ class OrchestratorService:
                     "governance_check_id": str(governance_check.governance_check_id),
                     "proposed_effect": governance_check.proposed_effect,
                     "decision": governance_decision.decision.value,
+                    "decision_frame": governance_check.decision_frame,
                 },
             )
         )
@@ -406,7 +417,7 @@ class OrchestratorService:
             operation_id=OperationId(f"op-{uuid4().hex[:8]}"),
             request_id=RequestId(str(contract.request_id)),
             task_type=plan.recommended_task_type,
-            task_goal=contract.content,
+            task_goal=plan.goal,
             task_plan=plan.plan_summary,
             constraints=list(plan.constraints),
             expected_output="text_brief",
@@ -414,8 +425,10 @@ class OrchestratorService:
             planned_steps=list(plan.steps),
             plan_risks=list(plan.risks),
             plan_rationale=plan.rationale,
-            specialist_summary=specialist_review.summary,
+            specialist_summary=plan.specialist_resolution_summary or specialist_review.summary,
             specialist_findings=list(specialist_review.findings),
+            success_criteria=list(plan.success_criteria),
+            smallest_safe_next_action=plan.smallest_safe_next_action,
             requires_human_validation=plan.requires_human_validation,
             session_id=contract.session_id,
             mission_id=contract.mission_id,
@@ -454,14 +467,15 @@ class OrchestratorService:
         contract: InputContract,
         *,
         directive: ExecutiveDirective,
-        memory_recovery_result,
+        memory_recovery_result: MemoryRecoveryResult,
         cognitive_snapshot,
         knowledge_result: KnowledgeRetrievalResult | None,
     ) -> PlanningContext:
+        recovered = memory_recovery_result.recovered_items
         return PlanningContext(
             intent=directive.intent,
             query=contract.content,
-            recovered_context=memory_recovery_result.recovered_items,
+            recovered_context=recovered,
             active_domains=cognitive_snapshot.active_domains,
             active_minds=cognitive_snapshot.active_minds,
             knowledge_snippets=knowledge_result.snippets if knowledge_result else [],
@@ -471,6 +485,21 @@ class OrchestratorService:
             cognitive_rationale=cognitive_snapshot.rationale,
             tensions=cognitive_snapshot.tensions,
             specialist_hints=cognitive_snapshot.specialist_hints,
+            dominant_goal=directive.dominant_goal,
+            secondary_goals=directive.secondary_goals,
+            ambiguity_reason=directive.ambiguity_reason,
+            identity_mode=directive.identity_mode,
+            primary_mind=cognitive_snapshot.primary_mind,
+            supporting_minds=cognitive_snapshot.supporting_minds,
+            dominant_tension=cognitive_snapshot.dominant_tension,
+            arbitration_summary=cognitive_snapshot.arbitration_summary,
+            identity_continuity_brief=self._extract_context_hint(
+                recovered, "identity_continuity_brief="
+            ),
+            open_loops=self._extract_list_hint(recovered, "open_loops="),
+            mission_semantic_brief=self._extract_context_hint(recovered, "mission_semantic_brief="),
+            mission_focus=self._extract_list_hint(recovered, "mission_focus=", separator=","),
+            last_decision_frame=self._extract_context_hint(recovered, "last_decision_frame="),
         )
 
     def _compose_response_text(
@@ -478,7 +507,7 @@ class OrchestratorService:
         *,
         directive: ExecutiveDirective,
         governance_decision: GovernanceDecisionContract,
-        memory_recovery_result,
+        memory_recovery_result: MemoryRecoveryResult,
         cognitive_snapshot,
         knowledge_result: KnowledgeRetrievalResult | None,
         deliberative_plan: DeliberativePlanContract,
@@ -506,8 +535,30 @@ class OrchestratorService:
                 deliberative_plan=deliberative_plan,
                 specialist_contributions=specialist_review.contributions,
                 operation_result=operation_result,
+                identity_mode=directive.identity_mode,
+                arbitration_summary=cognitive_snapshot.arbitration_summary,
             )
         )
+
+    @staticmethod
+    def _extract_context_hint(recovered_context: list[str], prefix: str) -> str | None:
+        for item in reversed(recovered_context):
+            if item.startswith(prefix):
+                return item.removeprefix(prefix)
+        return None
+
+    @staticmethod
+    def _extract_list_hint(
+        recovered_context: list[str],
+        prefix: str,
+        *,
+        separator: str = ";",
+    ) -> list[str]:
+        for item in reversed(recovered_context):
+            if item.startswith(prefix):
+                raw = item.removeprefix(prefix)
+                return [part.strip() for part in raw.split(separator) if part.strip()]
+        return []
 
     @staticmethod
     def _build_response_from_state(state: dict[str, object]) -> OrchestratorResponse:

@@ -8,6 +8,16 @@ O objetivo não e ampliar escopo. O objetivo e coletar evidência operacional re
 
 ---
 
+## 1.1 Status atual
+
+Este documento continua útil, mas já não descreve uma pendéncia aberta.
+
+- a janela inicial do `internal pilot` já foi executada no baseline atual;
+- o documento deve ser lido agora como plano da janela usada e como referéncia de comparação para futuras execuções controladas;
+- o próximo trabalho não é repetir o piloto por inércia, e sim consolidar sua leitura no fechamento do `v1`.
+
+---
+
 ## 2. Escopo autorizado
 
 Durante o piloto, limitar o uso a:

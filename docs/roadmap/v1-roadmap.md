@@ -7,8 +7,8 @@ Este documento resume o roadmap de execução do `v1` do JARVIS em nivel tatico,
 Ele complementa:
 
 - `documento_mestre_jarvis.md`
-- `docs/implementation/sprint-1-plan.md`
-- `docs/implementation/first-milestone-plan.md`
+- `docs/implementation/implementation-strategy.md`
+- `docs/implementation/service-breakdown.md`
 
 ---
 
@@ -55,7 +55,7 @@ Status atual: concluida.
 - interpretacao e roteamento
 - cognição nuclear inicial
 
-Status atual: substancialmente implementada, com engines iniciais e coordenacao central ativa.
+Status atual: substancialmente implementada, com engines iniciais, coordenacao central ativa e ciclo cognitivo mais unitario no núcleo.
 
 ### 4.3 M3
 
@@ -109,3 +109,4 @@ Cada milestone só deve avancar quando:
 - o núcleo anterior estiver estável o suficiente;
 - os critérios mínimos de validação estiverem atendidos;
 - a divida estrutural crítica estiver sob controle.
+

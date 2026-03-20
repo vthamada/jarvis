@@ -2,40 +2,40 @@
 
 ## 1. Objetivo
 
-Este documento define como o projeto `jarvis` deve extrair documentação derivada a partir do **Documento-Mestre do JARVIS**, preservando o mestre como artefato canônico e evitando duplicidade estrutural descontrolada.
+Este documento define como o projeto `jarvis` deve extrair documentacao derivada a partir do **Documento-Mestre do JARVIS**, preservando o mestre como artefato canonico e evitando duplicidade estrutural descontrolada.
 
-Seu objetivo é responder:
+Seu objetivo e responder:
 
 - o que deve permanecer no Documento-Mestre;
 - o que pode ou deve virar documento derivado;
-- como manter coerência entre artefato canônico, documentos operacionais e documentação técnica auxiliar.
+- como manter coerencia entre artefato canonico, documentos operacionais e documentacao tecnica auxiliar.
 
 ---
 
-## 2. Princípio geral
+## 2. Principio geral
 
-O **Documento-Mestre** continua sendo a referência canônica de:
+O **Documento-Mestre** continua sendo a referencia canonica de:
 
 - identidade do sistema;
-- missão, natureza e princípios;
-- arquitetura conceitual, lógica e técnica;
-- contratos canônicos;
-- governança;
+- missao, natureza e principios;
+- arquitetura conceitual, logica e tecnica;
+- contratos canonicos;
+- governanca;
 - posicionamento oficial de tecnologias;
 - roadmap macro;
-- critérios de maturidade e transição.
+- criterios de maturidade e transicao.
 
 Documentos derivados existem para aprofundar, operacionalizar ou segmentar partes do sistema sem inflar excessivamente o documento principal.
 
 ---
 
-## 3. Regra de precedência
+## 3. Regra de precedencia
 
 Em caso de conflito:
 
 1. o **Documento-Mestre** prevalece;
-2. um **ADR formal** pode alterar o Documento-Mestre quando a mudança for explicitamente promovida;
-3. documentos derivados não devem contradizer o Documento-Mestre sem revisão formal.
+2. um **ADR formal** pode alterar o Documento-Mestre quando a mudanca for explicitamente promovida;
+3. documentos derivados nao devem contradizer o Documento-Mestre sem revisao formal.
 
 ---
 
@@ -43,14 +43,14 @@ Em caso de conflito:
 
 Devem permanecer no Documento-Mestre:
 
-- definições constitucionais do sistema;
+- definicoes constitucionais do sistema;
 - taxonomias centrais;
 - arquitetura oficial;
-- decisões estruturais;
-- políticas de governança e autonomia;
-- critérios formais de validação e maturidade;
-- visão e recorte oficial de `v1`, `v2` e `v3`;
-- contratos e schemas canônicos em nível normativo.
+- decisoes estruturais;
+- politicas de governanca e autonomia;
+- criterios formais de validacao e maturidade;
+- visao e recorte oficial de `v1`, `v2` e `v3`;
+- contratos e schemas canonicos em nivel normativo.
 
 ---
 
@@ -63,11 +63,11 @@ Devem preferencialmente virar documentos derivados:
 - runbooks;
 - playbooks de incidentes;
 - checklists de readiness e go-live;
-- políticas detalhadas de release;
+- politicas detalhadas de release;
 - planos de benchmark e datasets;
-- documentação de implementação por serviço;
-- documentação de ownership e operação de equipe;
-- documentação de interface e integração em nível tático.
+- documentacao de implementacao por servico;
+- documentacao de ownership e operacao de equipe;
+- documentacao de interface e integracao em nivel tatico.
 
 ---
 
@@ -75,46 +75,46 @@ Devem preferencialmente virar documentos derivados:
 
 ### 6.1 Derivados operacionais
 
-Função:
+Funcao:
 
-- orientar operação real, incidentes, readiness, produção controlada e mudanças.
+- orientar operacao real, incidentes, readiness, producao controlada e mudancas.
 
 Exemplos:
 
-- `docs/operations/v1-production-controlled.md`
+- `docs/operations/v1-operational-baseline.md`
 - `docs/operations/release-and-change-management.md`
 - `docs/operations/incident-response.md`
-- `docs/operations/go-live-readiness.md`
 
-### 6.2 Derivados de implementação
+### 6.2 Derivados de implementacao
 
-Função:
+Funcao:
 
-- transformar arquitetura em plano executável de engenharia.
+- transformar arquitetura em plano executavel de engenharia.
 
 Exemplos:
 
-- `docs/implementation/sprint-1-plan.md`
+- `docs/implementation/implementation-strategy.md`
 - `docs/implementation/service-breakdown.md`
-- `docs/implementation/first-milestone-plan.md`
+- `docs/archive/implementation/sprint-1-plan.md`
+- `docs/archive/implementation/first-milestone-plan.md`
 
 ### 6.3 Derivados arquiteturais especializados
 
-Função:
+Funcao:
 
-- aprofundar uma parte específica sem expandir demais o Documento-Mestre.
+- aprofundar uma parte especifica sem expandir demais o Documento-Mestre.
 
 Exemplos:
 
-- `docs/architecture/voice-runtime.md`
-- `docs/architecture/specialists-v2.md`
 - `docs/architecture/evolution-lab.md`
+- `docs/future/architecture/voice-runtime.md`
+- `docs/future/architecture/specialists-v2.md`
 
 ### 6.4 Derivados executivos
 
-Função:
+Funcao:
 
-- resumir o sistema para públicos específicos.
+- resumir o sistema para publicos especificos.
 
 Exemplos:
 
@@ -123,27 +123,27 @@ Exemplos:
 
 ---
 
-## 7. Regra de extração
+## 7. Regra de extracao
 
-Um tema deve ser extraído do Documento-Mestre quando pelo menos uma destas condições for verdadeira:
+Um tema deve ser extraido do Documento-Mestre quando pelo menos uma destas condicoes for verdadeira:
 
 - o detalhamento virou majoritariamente operacional;
-- o tema muda com frequência maior do que a arquitetura central;
-- o conteúdo passou a repetir o que já existe no mestre;
-- o bloco interessa mais à execução diária do que à definição do sistema;
-- a leitura do Documento-Mestre está sendo prejudicada pelo crescimento do tema.
+- o tema muda com frequencia maior do que a arquitetura central;
+- o conteudo passou a repetir o que ja existe no mestre;
+- o bloco interessa mais a execucao diaria do que a definicao do sistema;
+- a leitura do Documento-Mestre esta sendo prejudicada pelo crescimento do tema.
 
 ---
 
-## 8. Regra de sincronização
+## 8. Regra de sincronizacao
 
 Ao criar ou atualizar um derivado:
 
-- registrar claramente de qual seção do Documento-Mestre ele deriva;
-- não redefinir conceitos constitucionais por conta própria;
+- registrar claramente de qual secao do Documento-Mestre ele deriva;
+- nao redefinir conceitos constitucionais por conta propria;
 - apontar para o Documento-Mestre quando o assunto for normativo;
-- atualizar `HANDOFF.md` se a mudança afetar continuidade operacional;
-- registrar no `CHANGELOG.md` quando a mudança for relevante.
+- atualizar `HANDOFF.md` se a mudanca afetar continuidade operacional;
+- registrar no `CHANGELOG.md` quando a mudanca for relevante.
 
 ---
 
@@ -158,32 +158,39 @@ docs/
   operations/
   executive/
   documentation/
+  archive/
+  future/
 ```
 
 ---
 
-## 10. Próximos derivados mais naturais
+## 10. Derivados ativos mais importantes
 
-Os primeiros documentos derivados mais naturais, no estado atual do projeto, são:
+Os derivados ativos mais importantes, no estado atual do projeto, sao:
 
-1. `docs/implementation/sprint-1-plan.md`
-2. `docs/operations/v1-production-controlled.md`
-3. `docs/operations/release-and-change-management.md`
-4. `docs/operations/incident-response.md`
-5. `docs/operations/go-live-readiness.md`
+1. `docs/operations/v1-operational-baseline.md`
+2. `docs/operations/release-and-change-management.md`
+3. `docs/operations/incident-response.md`
+4. `docs/implementation/implementation-strategy.md`
+5. `docs/implementation/service-breakdown.md`
 6. `docs/executive/master-summary.md`
+
+Documentos historicos ou de futuro devem preferencialmente sair do caminho principal:
+
+- historicos em `docs/archive/`
+- temas pos-`v1` em `docs/future/`
 
 ---
 
-## 11. Síntese
+## 11. Sintese
 
-O Documento-Mestre deve permanecer como **constituição do sistema**.
+O Documento-Mestre deve permanecer como **constituicao do sistema**.
 
 Os documentos derivados devem funcionar como:
 
-- extensões operacionais;
+- extensoes operacionais;
 - aprofundamentos especializados;
 - resumos segmentados;
-- instrumentos de execução e continuidade.
+- instrumentos de execucao e continuidade.
 
-Essa separação existe para reduzir duplicidade, preservar clareza e manter rastreabilidade entre visão, arquitetura e execução.
+Essa separacao existe para reduzir duplicidade, preservar clareza e manter rastreabilidade entre visao, arquitetura e execucao.

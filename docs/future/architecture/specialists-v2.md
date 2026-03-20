@@ -1,4 +1,4 @@
-﻿# Specialists V2
+# Specialists V2
 
 ## 1. Objetivo
 

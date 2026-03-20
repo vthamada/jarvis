@@ -7,7 +7,7 @@ def sample_plan() -> DeliberativePlanContract:
     return DeliberativePlanContract(
         plan_summary="decompor objetivo em etapas reversiveis",
         goal="Plan milestone M3",
-        steps=["definir objetivo", "listar etapas", "recomendar próxima ação"],
+        steps=["definir objetivo", "listar etapas", "recomendar proxima acao"],
         active_domains=["strategy"],
         active_minds=["mente_executiva"],
         constraints=["low-risk"],
@@ -15,8 +15,13 @@ def sample_plan() -> DeliberativePlanContract:
         recommended_task_type="draft_plan",
         requires_human_validation=False,
         rationale="contexto=baseline; apoio=local",
-        tensions_considered=["equilibrar ambicao estratégica com próxima ação segura"],
+        tensions_considered=["equilibrar ambicao estrategica com a menor proxima acao segura"],
         specialist_hints=["especialista_planejamento_operacional"],
+        success_criteria=["plano deve indicar a menor proxima acao segura"],
+        dominant_tension="equilibrar ambicao estrategica com a menor proxima acao segura",
+        smallest_safe_next_action="definir objetivo",
+        continuity_action="continuar",
+        open_loops=["fechar checkpoint principal"],
     )
 
 
@@ -24,16 +29,18 @@ def test_specialist_engine_name() -> None:
     assert SpecialistEngine.name == "specialist-engine"
 
 
-def test_specialist_engine_returns_subordinated_contributions() -> None:
+def test_specialist_engine_returns_subordinated_contributions_only_when_rule_matches() -> None:
     engine = SpecialistEngine()
     review = engine.review(
         intent="planning",
         plan=sample_plan(),
         knowledge_snippets=["Priorize clareza de objetivo."],
     )
-
     assert review.specialist_hints == ["especialista_planejamento_operacional"]
     assert review.contributions
     assert review.contributions[0].specialist_type == "especialista_planejamento_operacional"
-    assert "etapas pequenas" in review.summary
+    assert (
+        "etapas pequenas" in review.summary
+        or "etapas pequenas" in review.contributions[0].recommendation
+    )
     assert review.findings

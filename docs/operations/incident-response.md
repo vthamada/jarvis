@@ -1,4 +1,4 @@
-﻿# Incident Response
+# Incident Response
 
 ## 1. Objetivo
 
@@ -7,7 +7,7 @@ Este documento define a resposta operacional mínima a incidentes do JARVIS no c
 Ele deriva principalmente de:
 
 - `documento_mestre_jarvis.md`, capítulo `347. Estratégia de incidentes, contingência e recuperação operacional`
-- `docs/operations/v1-production-controlled.md`
+- `docs/operations/v1-operational-baseline.md`
 
 Seu papel é transformar a política arquitetural de contenção em um guia operacional direto.
 
@@ -141,9 +141,10 @@ Todo incidente relevante deve gerar:
 
 Usar em conjunto com:
 
-- `docs/operations/v1-production-controlled.md`
+- `docs/operations/v1-operational-baseline.md`
 - `docs/operations/release-and-change-management.md`
 - `HANDOFF.md`
 - `CHANGELOG.md`
 
 O Documento-Mestre continua sendo a referência normativa.
+

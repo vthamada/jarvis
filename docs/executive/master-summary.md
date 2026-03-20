@@ -82,6 +82,16 @@ O repositório possui:
 
 ---
 
+## 6.1 Atualização de status em 2026-03-20
+
+Leitura curta do estado atual:
+
+- o núcleo já avançou de baseline integrado para um comportamento mais unitário, com objetivo dominante, arbitragem cognitiva mais explícita, continuidade de missão enriquecida e revisão estrutural do plano por especialistas internos;
+- o `internal pilot` controlado já foi executado com resultado saudável no baseline atual;
+- o próximo passo executivo deixou de ser "rodar o piloto" e passou a ser "consolidar a leitura do piloto, comparar a POC opcional de `LangGraph` e decidir o fechamento do `v1` ou um último incremento cognitivo curto".
+
+---
+
 ## 7. Risco principal
 
 O principal risco atual não e falta de visóo, e sim excesso de escopo.
@@ -98,6 +108,7 @@ O projeto deve evitar:
 
 O próximo passo executivo mais racional e:
 
-- congelar o escopo do primeiro uso real controlado;
-- executar uma janela pequena de produção controlada com observação reforçada;
-- registrar ocorrencias e decidir o destino editorial de `documento_mestre_do_jarvis.md`.
+- consolidar a leitura do `internal pilot` já executado;
+- comparar o baseline atual com a POC opcional de `LangGraph`, sem reabrir o núcleo do `v1`;
+- decidir se o `v1` fecha com disciplina no baseline atual ou se ainda absorve um último incremento cognitivo curto.
+

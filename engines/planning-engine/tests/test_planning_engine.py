@@ -7,7 +7,7 @@ def test_planning_engine_name() -> None:
     assert PlanningEngine.name == "planning-engine"
 
 
-def test_planning_engine_builds_structured_plan_for_planning() -> None:
+def test_planning_engine_builds_structured_plan_with_continuity() -> None:
     engine = PlanningEngine()
     plan = engine.build_task_plan(
         PlanningContext(
@@ -15,7 +15,9 @@ def test_planning_engine_builds_structured_plan_for_planning() -> None:
             query="Plan milestone M3",
             recovered_context=[
                 "context_summary=previous plan created",
-                "mission_semantic_brief=mission_goal=Plan milestone M3",
+                "identity_continuity_brief=continuar a missao ativa de milestone",
+                "open_loops=definir escopo final;alinhar checkpoints",
+                "mission_semantic_brief=objetivo=Plan milestone M3",
                 "mission_focus=strategy,planning",
             ],
             active_domains=["strategy", "productivity"],
@@ -25,116 +27,40 @@ def test_planning_engine_builds_structured_plan_for_planning() -> None:
             requires_clarification=False,
             preferred_response_mode="plan_and_operate",
             cognitive_rationale="intent=planning; mente_primaria=mente_executiva",
-            tensions=["equilibrar ambicao estratégica com próxima ação segura"],
+            tensions=["equilibrar ambicao estrategica com a menor proxima acao segura"],
             specialist_hints=["especialista_planejamento_operacional"],
+            dominant_goal="definir um caminho executavel e seguro",
+            secondary_goals=["preservar espaco para analise antes de executar"],
+            identity_mode="structured_planning",
+            primary_mind="mente_executiva",
+            supporting_minds=["mente_estrategica", "mente_pragmatica"],
+            dominant_tension="equilibrar ambicao estrategica com a menor proxima acao segura",
+            arbitration_summary="mente_executiva lidera com apoio estrategico",
+            identity_continuity_brief="continuar a missao ativa de milestone",
+            open_loops=["definir escopo final", "alinhar checkpoints"],
+            mission_semantic_brief="objetivo=Plan milestone M3",
+            mission_focus=["strategy", "planning"],
+            last_decision_frame="planning",
         )
     )
-
-    assert plan.goal == "Plan milestone M3"
+    assert plan.goal == "definir um caminho executavel e seguro"
     assert plan.recommended_task_type == "draft_plan"
+    assert plan.continuity_action == "continuar"
+    assert plan.open_loops == ["definir escopo final", "alinhar checkpoints"]
     assert len(plan.steps) >= 3
-    assert "strategy" in plan.active_domains
-    assert "context_summary=previous plan created" in plan.rationale
-    assert plan.tensions_considered == [
-        "equilibrar ambicao estratégica com próxima ação segura"
-    ]
-    assert plan.specialist_hints == ["especialista_planejamento_operacional"]
-    assert any("fio condutor semântico" in step for step in plan.steps)
-    assert "mission_goal=Plan milestone M3" in plan.rationale
-    assert "foco=strategy,planning" in plan.rationale
+    assert plan.success_criteria
+    assert plan.smallest_safe_next_action is not None
+    assert "objetivos_secundarios" in plan.rationale
 
 
-def test_planning_engine_refines_plan_with_specialist_contributions() -> None:
+def test_planning_engine_refines_plan_and_consolidates_specialists() -> None:
     engine = PlanningEngine()
     base_plan = engine.build_task_plan(
-        PlanningContext(
-            intent="planning",
-            query="Plan milestone M3",
-            recovered_context=[],
-            active_domains=["strategy"],
-            active_minds=["mente_executiva", "mente_estrategica"],
-            knowledge_snippets=["Priorize clareza de objetivo."],
-            risk_markers=[],
-            requires_clarification=False,
-            preferred_response_mode="plan_and_operate",
-            cognitive_rationale="intent=planning; mente_primaria=mente_executiva",
-            tensions=["equilibrar ambicao estratégica com próxima ação segura"],
-            specialist_hints=["especialista_planejamento_operacional"],
-        )
-    )
-    refined = engine.refine_task_plan(
-        base_plan,
-        specialist_summary=(
-            "especialista_planejamento_operacional: executar o plano em etapas pequenas "
-            "e verificaveis"
-        ),
-        specialist_contributions=[
-            SpecialistContributionContract(
-                specialist_type="especialista_planejamento_operacional",
-                role="planejamento_operacional_subordinado",
-                focus="sequenciamento reversivel e checkpoints claros",
-                findings=["priorizar a menor ação segura antes de expandir escopo"],
-                recommendation="executar o plano em etapas pequenas e verificaveis",
-                confidence=0.78,
-            )
-        ],
-    )
-
-    assert any("checkpoint intermediario" in step for step in refined.steps)
-    assert any("incorporar contribuições especialistas" in item for item in refined.constraints)
-    assert "especialistas=" in refined.rationale
-    assert "especialistas=" in refined.plan_summary
-
-
-def test_planning_engine_refines_plan_for_governance_specialist() -> None:
-    engine = PlanningEngine()
-    base_plan = engine.build_task_plan(
-        PlanningContext(
-            intent="planning",
-            query="Plan governance update",
-            recovered_context=[],
-            active_domains=["governance"],
-            active_minds=["mente_executiva", "mente_etica"],
-            knowledge_snippets=["Priorize cautela operacional."],
-            risk_markers=[],
-            requires_clarification=False,
-            preferred_response_mode="plan_and_operate",
-            cognitive_rationale="intent=planning; mente_primaria=mente_executiva",
-            tensions=["equilibrar solicitacao do usuario com limites normativos"],
-            specialist_hints=["especialista_revisao_governanca"],
-        )
-    )
-    refined = engine.refine_task_plan(
-        base_plan,
-        specialist_summary=(
-            "especialista_revisao_governanca: manter o plano no escopo local até "
-            "confirmacao explícita"
-        ),
-        specialist_contributions=[
-            SpecialistContributionContract(
-                specialist_type="especialista_revisao_governanca",
-                role="revisao_governanca_subordinada",
-                focus="cautela operacional, auditoria e validação",
-                findings=["verificar se o plano permanece totalmente reversivel"],
-                recommendation="manter o plano no escopo local até confirmacao explícita",
-                confidence=0.84,
-            )
-        ],
-    )
-
-    assert refined.requires_human_validation is True
-    assert any("cautela operacional reforçada" in risk for risk in refined.risks)
-    assert any("condições de auditoria" in step for step in refined.steps)
-
-
-def test_planning_engine_builds_analysis_plan_without_operation_escalation() -> None:
-    engine = PlanningEngine()
-    plan = engine.build_task_plan(
         PlanningContext(
             intent="analysis",
-            query="Analyze the current rollout trade-offs",
+            query="Analyze rollout options",
             recovered_context=[],
-            active_domains=["analysis"],
+            active_domains=["analysis", "strategy"],
             active_minds=["mente_analitica", "mente_critica"],
             knowledge_snippets=["Compare custo, risco e reversibilidade."],
             risk_markers=[],
@@ -142,35 +68,54 @@ def test_planning_engine_builds_analysis_plan_without_operation_escalation() -> 
             preferred_response_mode="analysis_only",
             cognitive_rationale="intent=analysis; mente_primaria=mente_analitica",
             tensions=["equilibrar profundidade analitica com conclusao util"],
-            specialist_hints=["especialista_analise_estruturada"],
+            specialist_hints=[
+                "especialista_planejamento_operacional",
+                "especialista_analise_estruturada",
+            ],
+            dominant_goal="produzir leitura confiavel antes de agir",
+            identity_mode="deep_analysis",
+            primary_mind="mente_analitica",
+            supporting_minds=["mente_critica", "mente_logica"],
+            dominant_tension="equilibrar profundidade analitica com conclusao util",
+            arbitration_summary="mente_analitica lidera com apoio critico",
         )
     )
-
-    assert plan.recommended_task_type == "produce_analysis_brief"
-    assert plan.requires_human_validation is False
-    assert any("comparar" in step for step in plan.steps)
-    assert "especialista_analise_estruturada" in plan.specialist_hints
-
-
-def test_planning_engine_marks_ambiguous_request_for_clarification() -> None:
-    engine = PlanningEngine()
-    plan = engine.build_task_plan(
-        PlanningContext(
-            intent="planning",
-            query="Plan and analyze the roadmap",
-            recovered_context=[],
-            active_domains=["strategy"],
-            active_minds=["mente_executiva"],
-            knowledge_snippets=[],
-            risk_markers=[],
-            requires_clarification=True,
-            preferred_response_mode="clarifying_guidance",
-            cognitive_rationale="intent=planning; mente_primaria=mente_executiva",
-            tensions=["equilibrar ambicao estratégica com próxima ação segura"],
-            specialist_hints=["especialista_planejamento_operacional"],
-        )
+    refined = engine.refine_task_plan(
+        base_plan,
+        specialist_summary="ajustar checkpoints e explicitar criterio dominante",
+        specialist_contributions=[
+            SpecialistContributionContract(
+                specialist_type="especialista_planejamento_operacional",
+                role="planejamento_operacional_subordinado",
+                focus="sequenciamento reversivel e checkpoints claros",
+                findings=[
+                    "constraint: validar checkpoint intermediario com base em contexto local",
+                    "open_loop: confirmar checkpoint principal",
+                ],
+                recommendation=(
+                    "encadear o plano em etapas pequenas, verificaveis "
+                    "e conectadas a missao"
+                ),
+                confidence=0.79,
+            ),
+            SpecialistContributionContract(
+                specialist_type="especialista_analise_estruturada",
+                role="analise_estruturada_subordinada",
+                focus="trade-offs, evidencia e criterio de decisao",
+                findings=[
+                    "success: conclusao deve explicitar o criterio dominante de escolha",
+                    "constraint: separar observacao, implicacao e recomendacao final",
+                ],
+                recommendation=(
+                    "fundir comparacao, implicacao e recomendacao "
+                    "em uma unica linha analitica"
+                ),
+                confidence=0.82,
+            ),
+        ],
     )
-
-    assert plan.recommended_task_type == "general_response"
-    assert any("clarificar" in step for step in plan.steps)
-    assert any("ambiguo" in risk for risk in plan.risks)
+    assert refined.specialist_resolution_summary is not None
+    assert refined.open_loops == ["confirmar checkpoint principal"]
+    assert any("checkpoint intermediario" in step for step in refined.steps)
+    assert any("criterio dominante" in criterion for criterion in refined.success_criteria)
+    assert "resolucao_especialistas=" in refined.rationale

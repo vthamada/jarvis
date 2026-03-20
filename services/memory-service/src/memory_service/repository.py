@@ -137,9 +137,10 @@ class SqliteMemoryRepository(MemoryRepository):
                 INSERT INTO mission_states (
                     mission_id, mission_goal, mission_status, checkpoints, active_tasks,
                     related_memories, related_artifacts, recent_plan_steps,
-                    last_recommendation, semantic_brief, semantic_focus, updated_at
+                    last_recommendation, semantic_brief, semantic_focus,
+                    identity_continuity_brief, open_loops, last_decision_frame, updated_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(mission_id) DO UPDATE SET
                     mission_goal = excluded.mission_goal,
                     mission_status = excluded.mission_status,
@@ -151,6 +152,9 @@ class SqliteMemoryRepository(MemoryRepository):
                     last_recommendation = excluded.last_recommendation,
                     semantic_brief = excluded.semantic_brief,
                     semantic_focus = excluded.semantic_focus,
+                    identity_continuity_brief = excluded.identity_continuity_brief,
+                    open_loops = excluded.open_loops,
+                    last_decision_frame = excluded.last_decision_frame,
                     updated_at = excluded.updated_at
                 """,
                 (
@@ -165,6 +169,9 @@ class SqliteMemoryRepository(MemoryRepository):
                     mission_state.last_recommendation,
                     mission_state.semantic_brief,
                     dumps(mission_state.semantic_focus),
+                    mission_state.identity_continuity_brief,
+                    dumps(mission_state.open_loops),
+                    mission_state.last_decision_frame,
                     mission_state.updated_at,
                 ),
             )
@@ -176,7 +183,8 @@ class SqliteMemoryRepository(MemoryRepository):
                 """
                 SELECT mission_id, mission_goal, mission_status, checkpoints, active_tasks,
                        related_memories, related_artifacts, recent_plan_steps,
-                       last_recommendation, semantic_brief, semantic_focus, updated_at
+                       last_recommendation, semantic_brief, semantic_focus,
+                       identity_continuity_brief, open_loops, last_decision_frame, updated_at
                 FROM mission_states
                 WHERE mission_id = ?
                 """,
@@ -228,6 +236,9 @@ class SqliteMemoryRepository(MemoryRepository):
                     last_recommendation TEXT,
                     semantic_brief TEXT,
                     semantic_focus TEXT NOT NULL DEFAULT '[]',
+                    identity_continuity_brief TEXT,
+                    open_loops TEXT NOT NULL DEFAULT '[]',
+                    last_decision_frame TEXT,
                     updated_at TEXT NOT NULL
                 );
                 """
@@ -246,6 +257,11 @@ class SqliteMemoryRepository(MemoryRepository):
             self._ensure_column(
                 connection, "mission_states", "semantic_focus", "TEXT NOT NULL DEFAULT '[]'"
             )
+            self._ensure_column(connection, "mission_states", "identity_continuity_brief", "TEXT")
+            self._ensure_column(
+                connection, "mission_states", "open_loops", "TEXT NOT NULL DEFAULT '[]'"
+            )
+            self._ensure_column(connection, "mission_states", "last_decision_frame", "TEXT")
             connection.commit()
 
     def _ensure_column(
@@ -307,6 +323,9 @@ class SqliteMemoryRepository(MemoryRepository):
             last_recommendation=row["last_recommendation"],
             semantic_brief=row["semantic_brief"],
             semantic_focus=list(loads(row["semantic_focus"] or "[]")),
+            identity_continuity_brief=row["identity_continuity_brief"],
+            open_loops=list(loads(row["open_loops"] or "[]")),
+            last_decision_frame=row["last_decision_frame"],
             updated_at=str(row["updated_at"]),
         )
 
@@ -424,9 +443,10 @@ class PostgresMemoryRepository(MemoryRepository):
                 INSERT INTO mission_states (
                     mission_id, mission_goal, mission_status, checkpoints, active_tasks,
                     related_memories, related_artifacts, recent_plan_steps,
-                    last_recommendation, semantic_brief, semantic_focus, updated_at
+                    last_recommendation, semantic_brief, semantic_focus,
+                    identity_continuity_brief, open_loops, last_decision_frame, updated_at
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (mission_id) DO UPDATE SET
                     mission_goal = EXCLUDED.mission_goal,
                     mission_status = EXCLUDED.mission_status,
@@ -438,6 +458,9 @@ class PostgresMemoryRepository(MemoryRepository):
                     last_recommendation = EXCLUDED.last_recommendation,
                     semantic_brief = EXCLUDED.semantic_brief,
                     semantic_focus = EXCLUDED.semantic_focus,
+                    identity_continuity_brief = EXCLUDED.identity_continuity_brief,
+                    open_loops = EXCLUDED.open_loops,
+                    last_decision_frame = EXCLUDED.last_decision_frame,
                     updated_at = EXCLUDED.updated_at
                 """,
                 (
@@ -452,6 +475,9 @@ class PostgresMemoryRepository(MemoryRepository):
                     mission_state.last_recommendation,
                     mission_state.semantic_brief,
                     dumps(mission_state.semantic_focus),
+                    mission_state.identity_continuity_brief,
+                    dumps(mission_state.open_loops),
+                    mission_state.last_decision_frame,
                     mission_state.updated_at,
                 ),
             )
@@ -463,7 +489,8 @@ class PostgresMemoryRepository(MemoryRepository):
                 """
                 SELECT mission_id, mission_goal, mission_status, checkpoints, active_tasks,
                        related_memories, related_artifacts, recent_plan_steps,
-                       last_recommendation, semantic_brief, semantic_focus, updated_at
+                       last_recommendation, semantic_brief, semantic_focus,
+                       identity_continuity_brief, open_loops, last_decision_frame, updated_at
                 FROM mission_states
                 WHERE mission_id = %s
                 """,
@@ -484,6 +511,9 @@ class PostgresMemoryRepository(MemoryRepository):
             last_recommendation=row["last_recommendation"],
             semantic_brief=row["semantic_brief"],
             semantic_focus=list(loads(row["semantic_focus"] or "[]")),
+            identity_continuity_brief=row["identity_continuity_brief"],
+            open_loops=list(loads(row["open_loops"] or "[]")),
+            last_decision_frame=row["last_decision_frame"],
             updated_at=row["updated_at"],
         )
 
@@ -538,6 +568,9 @@ class PostgresMemoryRepository(MemoryRepository):
                     last_recommendation TEXT,
                     semantic_brief TEXT,
                     semantic_focus TEXT NOT NULL DEFAULT '[]',
+                    identity_continuity_brief TEXT,
+                    open_loops TEXT NOT NULL DEFAULT '[]',
+                    last_decision_frame TEXT,
                     updated_at TEXT NOT NULL
                 )
                 """
@@ -550,16 +583,12 @@ class PostgresMemoryRepository(MemoryRepository):
                 "ALTER TABLE interaction_turns ADD COLUMN IF NOT EXISTS recommended_task_type TEXT"
             )
             cursor.execute(
-                (
-                    "ALTER TABLE mission_states ADD COLUMN IF NOT EXISTS "
-                    "related_artifacts TEXT NOT NULL DEFAULT '[]'"
-                )
+                "ALTER TABLE mission_states ADD COLUMN IF NOT EXISTS "
+                "related_artifacts TEXT NOT NULL DEFAULT '[]'"
             )
             cursor.execute(
-                (
-                    "ALTER TABLE mission_states ADD COLUMN IF NOT EXISTS "
-                    "recent_plan_steps TEXT NOT NULL DEFAULT '[]'"
-                )
+                "ALTER TABLE mission_states ADD COLUMN IF NOT EXISTS "
+                "recent_plan_steps TEXT NOT NULL DEFAULT '[]'"
             )
             cursor.execute(
                 "ALTER TABLE mission_states ADD COLUMN IF NOT EXISTS last_recommendation TEXT"
@@ -568,10 +597,18 @@ class PostgresMemoryRepository(MemoryRepository):
                 "ALTER TABLE mission_states ADD COLUMN IF NOT EXISTS semantic_brief TEXT"
             )
             cursor.execute(
-                (
-                    "ALTER TABLE mission_states ADD COLUMN IF NOT EXISTS "
-                    "semantic_focus TEXT NOT NULL DEFAULT '[]'"
-                )
+                "ALTER TABLE mission_states ADD COLUMN IF NOT EXISTS "
+                "semantic_focus TEXT NOT NULL DEFAULT '[]'"
+            )
+            cursor.execute(
+                "ALTER TABLE mission_states ADD COLUMN IF NOT EXISTS identity_continuity_brief TEXT"
+            )
+            cursor.execute(
+                "ALTER TABLE mission_states ADD COLUMN IF NOT EXISTS "
+                "open_loops TEXT NOT NULL DEFAULT '[]'"
+            )
+            cursor.execute(
+                "ALTER TABLE mission_states ADD COLUMN IF NOT EXISTS last_decision_frame TEXT"
             )
             connection.commit()
 

@@ -80,6 +80,18 @@ Responsavel por:
 
 ---
 
+## 3.7 Atualização do baseline em 2026-03-20
+
+Leitura funcional mais precisa dos serviços no baseline atual:
+
+- `orchestrator-service`: coordena não só o fluxo técnico, mas também a linha central de comportamento percebido;
+- `memory-service`: já sustenta continuidade mais útil entre sessão e missão, incluindo sinais semânticos e deliberativos;
+- `governance-service`: avalia intenção, plano e continuidade, e não só o texto bruto do pedido;
+- `operational-service`: continua restrito a baixo risco, mas agora recebe melhor contexto deliberativo;
+- `observability-service`: além da trilha persistida, já audita requests e resume sinais do piloto.
+
+---
+
 ## 4. Ordem sugerida de maturacao
 
 Ordem prática historica:

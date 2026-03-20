@@ -8,7 +8,7 @@ def test_executive_engine_name() -> None:
     assert ExecutiveEngine.name == "executive-engine"
 
 
-def test_executive_engine_directs_planning_request() -> None:
+def test_executive_engine_directs_planning_request_with_goal_and_identity_mode() -> None:
     engine = ExecutiveEngine()
     directive = engine.direct(
         InputContract(
@@ -20,16 +20,17 @@ def test_executive_engine_directs_planning_request() -> None:
             timestamp="2026-03-18T00:00:00Z",
         )
     )
-
     assert directive.intent == "planning"
     assert directive.should_query_knowledge is True
     assert directive.should_execute_operation is True
     assert directive.preferred_response_mode == "plan_and_operate"
+    assert directive.identity_mode == "structured_planning"
+    assert directive.dominant_goal == "definir um caminho executavel e seguro"
     assert "update" in directive.risk_markers
     assert "mente_estrategica" in directive.mind_hints
 
 
-def test_executive_engine_marks_hybrid_request_for_clarification() -> None:
+def test_executive_engine_marks_hybrid_request_for_clarification_and_secondary_goal() -> None:
     engine = ExecutiveEngine()
     directive = engine.direct(
         InputContract(
@@ -41,11 +42,12 @@ def test_executive_engine_marks_hybrid_request_for_clarification() -> None:
             timestamp="2026-03-18T00:00:00Z",
         )
     )
-
     assert directive.intent == "planning"
     assert directive.requires_clarification is True
     assert directive.should_execute_operation is False
     assert directive.preferred_response_mode == "clarifying_guidance"
+    assert directive.ambiguity_reason is not None
+    assert directive.secondary_goals
 
 
 def test_executive_engine_routes_analysis_without_operation() -> None:
@@ -60,10 +62,11 @@ def test_executive_engine_routes_analysis_without_operation() -> None:
             timestamp="2026-03-18T00:00:00Z",
         )
     )
-
     assert directive.intent == "analysis"
     assert directive.should_execute_operation is False
     assert directive.preferred_response_mode == "analysis_only"
+    assert directive.identity_mode == "deep_analysis"
+    assert directive.dominant_goal == "produzir leitura confiavel antes de agir"
 
 
 def test_executive_engine_blocks_sensitive_action_routing() -> None:
@@ -78,7 +81,7 @@ def test_executive_engine_blocks_sensitive_action_routing() -> None:
             timestamp="2026-03-18T00:00:00Z",
         )
     )
-
     assert directive.intent == "sensitive_action"
     assert directive.should_execute_operation is False
     assert directive.intent_confidence >= 0.9
+    assert directive.identity_mode == "governed_refusal"

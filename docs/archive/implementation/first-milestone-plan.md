@@ -1,4 +1,4 @@
-﻿# First Milestone Plan
+# First Milestone Plan
 
 ## 1. Objetivo
 

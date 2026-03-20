@@ -32,7 +32,7 @@ def test_orchestrator_service_name() -> None:
     assert OrchestratorService.name == "orchestrator-service"
 
 
-def test_orchestrator_service_handles_deliberative_planning_with_refined_plan() -> None:
+def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     temp_dir = runtime_dir("orchestrator-low")
     observability = ObservabilityService(database_path=str(temp_dir / "observability.db"))
     service = OrchestratorService(
@@ -53,9 +53,9 @@ def test_orchestrator_service_handles_deliberative_planning_with_refined_plan() 
             timestamp="2026-03-17T00:00:00Z",
         )
     )
-
     assert isinstance(result, OrchestratorResponse)
     assert result.intent == "planning"
+    assert result.directive.identity_mode == "structured_planning"
     assert result.directive.requires_clarification is False
     assert result.deliberative_plan.recommended_task_type == "draft_plan"
     assert result.governance_decision.decision == PermissionDecision.ALLOW_WITH_CONDITIONS
@@ -65,14 +65,14 @@ def test_orchestrator_service_handles_deliberative_planning_with_refined_plan() 
     assert result.artifact_results
     assert result.active_domains == ["strategy", "productivity", "documentation"]
     assert result.cognitive_tensions
-    assert result.specialist_hints == ["especialista_planejamento_operacional"]
     assert result.specialist_review is not None
     assert result.specialist_review.contributions
-    assert any("checkpoint intermediario" in step for step in result.deliberative_plan.steps)
-    assert "Contribuições especialistas" in result.response_text
+    assert result.deliberative_plan.specialist_resolution_summary is not None
+    assert "Contribuicoes especialistas" not in result.response_text
     stored_events = observability.list_recent_events(ObservabilityQuery(request_id="req-1"))
     event_names = [event.event_name for event in stored_events]
     assert event_names == [event.event_name for event in result.events]
+    assert "directive_composed" in event_names
     assert "plan_built" in event_names
     assert "specialists_completed" in event_names
     assert "plan_refined" in event_names
@@ -101,7 +101,6 @@ def test_orchestrator_service_requests_clarification_without_operation() -> None
             timestamp="2026-03-17T00:00:00Z",
         )
     )
-
     assert result.directive.requires_clarification is True
     assert result.operation_dispatch is None
     assert result.operation_result is None
@@ -131,16 +130,15 @@ def test_orchestrator_service_blocks_sensitive_action() -> None:
             timestamp="2026-03-17T00:00:00Z",
         )
     )
-
     assert result.intent == "sensitive_action"
     assert result.governance_decision.decision == PermissionDecision.BLOCK
     assert result.operation_dispatch is None
     assert result.operation_result is None
     assert "governance_blocked" in [event.event_name for event in result.events]
-    assert "não permite execução direta" in result.response_text
+    assert "a governanca atual exige conter a acao" in result.response_text
 
 
-def test_orchestrator_service_recovers_previous_plan_hints_across_instances() -> None:
+def test_orchestrator_service_recovers_mission_continuity_across_instances() -> None:
     temp_dir = runtime_dir("orchestrator-persist")
     memory_db = f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
     observability_db = str(temp_dir / "observability.db")
@@ -173,21 +171,16 @@ def test_orchestrator_service_recovers_previous_plan_hints_across_instances() ->
         content="Analyze the previous plan.",
         timestamp="2026-03-17T00:01:00Z",
     )
-
     first.handle_input(first_contract)
     second_result = second.handle_input(second_contract)
-
     assert any("prior_plan=" in item for item in second_result.recovered_context)
-    assert any("mission_recommendation=" in item for item in second_result.recovered_context)
+    assert any("identity_continuity_brief=" in item for item in second_result.recovered_context)
+    assert any("open_loops=" in item for item in second_result.recovered_context)
     assert any("mission_semantic_brief=" in item for item in second_result.recovered_context)
-    assert any("mission_focus=" in item for item in second_result.recovered_context)
     assert second_result.deliberative_plan.recommended_task_type == "produce_analysis_brief"
     assert second_result.operation_result is None
-    assert "especialista_analise_estruturada" in second_result.specialist_hints
     assert second_result.specialist_review is not None
-    assert second_result.specialist_review.summary
-    assert "missão=objetivo=Please plan the sprint." in second_result.deliberative_plan.rationale
-    assert any(
-        "critério de decisão dominante" in step
-        for step in second_result.deliberative_plan.steps
-    )
+    assert second_result.deliberative_plan.continuity_action == "continuar"
+    assert second_result.deliberative_plan.open_loops
+    assert "Julgamento" in second_result.response_text
+    assert "Dominios:" not in second_result.response_text

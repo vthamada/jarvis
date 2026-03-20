@@ -49,7 +49,7 @@ class OperationalService:
             content = self._build_general_content(dispatch)
             status = OperationStatus.COMPLETED
         else:
-            content = f"Task type não suportado: {dispatch.task_type}"
+            content = f"Task type nao suportado: {dispatch.task_type}"
             status = OperationStatus.FAILED
 
         outputs = [dispatch.plan_summary or content.splitlines()[0]]
@@ -107,25 +107,27 @@ class OperationalService:
             "\n".join(
                 f"{index}. {step}" for index, step in enumerate(dispatch.planned_steps, start=1)
             )
-            or "1. Revisar objetivo e confirmar próxima ação segura."
+            or "1. Revisar objetivo e confirmar proxima acao segura."
         )
         constraints = ", ".join(dispatch.constraints)
         risks = OperationalService._risk_line(
             dispatch.plan_risks,
             "sem risco material relevante",
         )
-        specialists = OperationalService._specialist_line(dispatch.specialist_hints)
-        specialist_summary = dispatch.specialist_summary or "sem resumo especializado adicional"
-        findings = OperationalService._specialist_findings(dispatch.specialist_findings)
+        success = "; ".join(dispatch.success_criteria[:3]) or (
+            "manter resposta coerente e reversivel"
+        )
+        internal_alignment = dispatch.specialist_summary or "sem ajuste interno adicional"
+        next_action = dispatch.smallest_safe_next_action or "preservar a menor proxima acao segura"
         return (
             f"Plano deliberativo para: {dispatch.task_goal}\n\n"
             f"Resumo: {dispatch.plan_summary or dispatch.task_plan}\n"
-            f"Rationale: {dispatch.plan_rationale or 'não informado'}\n"
-            f"Restrições: {constraints}\n"
+            f"Rationale: {dispatch.plan_rationale or 'nao informado'}\n"
+            f"Criterios de sucesso: {success}\n"
+            f"Proxima acao segura: {next_action}\n"
+            f"Restricoes: {constraints}\n"
             f"Riscos: {risks}\n"
-            f"Especializacao subordinada: {specialists}\n"
-            f"Resumo especializado: {specialist_summary}\n"
-            f"Achados especializados: {findings}\n\n"
+            f"Ajuste interno: {internal_alignment}\n\n"
             f"Etapas:\n{steps}\n"
         )
 
@@ -136,32 +138,26 @@ class OperationalService:
             dispatch.plan_risks,
             "nenhum relevante no escopo local",
         )
-        specialists = OperationalService._specialist_line(dispatch.specialist_hints)
-        specialist_summary = dispatch.specialist_summary or "sem resumo especializado adicional"
-        findings = OperationalService._specialist_findings(dispatch.specialist_findings)
+        success = "; ".join(dispatch.success_criteria[:3]) or ("explicitar a melhor recomendacao")
         return (
-            f"Análise deliberativa para: {dispatch.task_goal}\n\n"
+            f"Analise deliberativa para: {dispatch.task_goal}\n\n"
             f"Resumo: {dispatch.plan_summary or dispatch.task_plan}\n"
-            f"Rationale: {dispatch.plan_rationale or 'não informado'}\n"
+            f"Rationale: {dispatch.plan_rationale or 'nao informado'}\n"
             f"Dominios sugeridos: {domains}\n"
-            f"Especializacao subordinada: {specialists}\n"
-            f"Resumo especializado: {specialist_summary}\n"
-            f"Achados especializados: {findings}\n"
+            f"Criterios de sucesso: {success}\n"
+            f"Ajuste interno: {dispatch.specialist_summary or 'sem ajuste interno adicional'}\n"
             f"Riscos mapeados: {risks}\n"
         )
 
     @staticmethod
     def _build_general_content(dispatch: OperationDispatchContract) -> str:
-        specialists = OperationalService._specialist_line(dispatch.specialist_hints)
-        specialist_summary = dispatch.specialist_summary or "sem resumo especializado adicional"
-        findings = OperationalService._specialist_findings(dispatch.specialist_findings)
         return (
             f"Resposta deliberativa segura para: {dispatch.task_goal}\n\n"
             f"Resumo: {dispatch.plan_summary or dispatch.task_plan}\n"
             f"Orientacao principal: {dispatch.plan_rationale or 'sem rationale adicional'}\n"
-            f"Especializacao subordinada: {specialists}\n"
-            f"Resumo especializado: {specialist_summary}\n"
-            f"Achados especializados: {findings}\n"
+            f"Proxima acao segura: "
+            f"{dispatch.smallest_safe_next_action or 'preservar direcao segura'}\n"
+            f"Ajuste interno: {dispatch.specialist_summary or 'sem ajuste interno adicional'}\n"
             "A saida foi produzida dentro do escopo local e reversivel do v1.\n"
         )
 
@@ -172,18 +168,6 @@ class OperationalService:
     @staticmethod
     def _risk_line(plan_risks: list[str], fallback: str) -> str:
         return ", ".join(plan_risks) if plan_risks else fallback
-
-    @staticmethod
-    def _specialist_line(specialist_hints: list[str]) -> str:
-        if specialist_hints:
-            return ", ".join(specialist_hints)
-        return "nenhum apoio especializado adicional"
-
-    @staticmethod
-    def _specialist_findings(specialist_findings: list[str]) -> str:
-        if specialist_findings:
-            return "; ".join(specialist_findings[:3])
-        return "nenhum achado especializado adicional"
 
     @staticmethod
     def now() -> str:

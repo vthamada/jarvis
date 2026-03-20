@@ -69,3 +69,15 @@ O `v1` e bem-sucedido se o sistema demonstrar:
 - utilidade real;
 - estabilidade mínima;
 - governança suficiente para uso controlado.
+
+
+## 5.1 Atualização de status em 2026-03-20
+
+Atualização do escopo real do `v1`:
+
+- o `v1` já demonstrou internamente o ciclo cognitivo mais unitário, com deliberação estruturada, continuidade de missão mais útil e especialistas internos influenciando o plano;
+- o `internal pilot` controlado já foi executado e validou o baseline em escopo reduzido;
+- o que ainda falta não é fundação técnica ampla, e sim consolidar a leitura do piloto e decidir se o `v1` encerra ou se absorve um último incremento cognitivo curto antes do fechamento formal.
+
+---
+

@@ -92,6 +92,12 @@ class DeliberativePlanContract:
     rationale: str
     tensions_considered: list[str] = field(default_factory=list)
     specialist_hints: list[str] = field(default_factory=list)
+    success_criteria: list[str] = field(default_factory=list)
+    specialist_resolution_summary: str | None = None
+    dominant_tension: str | None = None
+    smallest_safe_next_action: str | None = None
+    continuity_action: str | None = None
+    open_loops: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -119,6 +125,8 @@ class OperationDispatchContract:
     plan_rationale: str | None = None
     specialist_summary: str | None = None
     specialist_findings: list[str] = field(default_factory=list)
+    success_criteria: list[str] = field(default_factory=list)
+    smallest_safe_next_action: str | None = None
     requires_human_validation: bool = False
     session_id: SessionId | None = None
     mission_id: MissionId | None = None
@@ -163,6 +171,9 @@ class GovernanceCheckContract:
     artifact_refs: list[str] = field(default_factory=list)
     declared_risks: list[str] = field(default_factory=list)
     requires_human_validation: bool = False
+    decision_frame: str | None = None
+    mission_continuity_hint: str | None = None
+    open_loops: list[str] = field(default_factory=list)
 
 
 @dataclass
@@ -196,6 +207,9 @@ class MissionStateContract:
     last_recommendation: str | None = None
     semantic_brief: str | None = None
     semantic_focus: list[str] = field(default_factory=list)
+    identity_continuity_brief: str | None = None
+    open_loops: list[str] = field(default_factory=list)
+    last_decision_frame: str | None = None
     priority_level: str | None = None
     owner_context: str | None = None
     completion_criteria: list[str] = field(default_factory=list)

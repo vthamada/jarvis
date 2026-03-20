@@ -121,3 +121,17 @@ Implementar ciclos integrados de capacidade, em que cada etapa:
 - produz valor verificavel;
 - deixa base reaproveitavel para a próxima;
 - reduz risco de retrabalho.
+
+
+## 5.1 Atualização de baseline em 2026-03-20
+
+Além do baseline integrado já descrito, o repositório agora também conta com:
+
+- diretiva executiva mais rica, com objetivo dominante, ambiguidades e `identity_mode`;
+- arbitragem cognitiva mais explícita entre mentes;
+- continuidade de missão enriquecida, com hints deliberativos e resumo semântico mais útil;
+- especialistas internos alterando estruturalmente o plano antes da síntese final;
+- `internal pilot` controlado já executado sobre esse baseline.
+
+---
+

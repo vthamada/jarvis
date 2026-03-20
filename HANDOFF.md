@@ -2,110 +2,109 @@
 
 ## Metadata
 
-- Atualizado em: 2026-03-19
+- Atualizado em: 2026-03-20
 - Branch: `main`
-- Commit de referencia: `bb8d03b`
+- Commit de referencia: `65797b8`
 - Artefato canônico do projeto: `documento_mestre_jarvis.md`
-- Status do projeto: `v1` em `GO CONDICIONAL` para produção controlada, com baseline integrado validado, benchmark local fechado, PostgreSQL validado como backend operacional, observabilidade local persistida, auditoria operacional de request ativa, `internal pilot` executável por script, proposals sandbox-only ligadas ao `evolution-lab` e POC opcional de `LangGraph` aberta no `orchestrator-service` sem quebrar o fluxo principal
-
----
+- Status do projeto: `v1` em `GO CONDICIONAL` para produção controlada, com baseline integrado validado, benchmark local fechado, PostgreSQL validado como backend operacional, observabilidade local persistida, auditoria operacional de request ativa, ciclo cognitivo mais unitário implementado, `internal pilot` controlado já executado com resultado saudável, proposals sandbox-only ligadas ao `evolution-lab` e POC opcional de `LangGraph` aberta no `orchestrator-service` sem quebrar o fluxo principal
 
 ## Meta Atual
 
-Executar o **primeiro ciclo controlado do v1** com observação reforçada, coletar evidência operacional real do `internal pilot`, comparar baseline vs. POC de `LangGraph` e transformar os sinais relevantes em proposals sandbox-only antes da decisão pós-piloto.
-
----
+Consolidar a leitura do `internal pilot` já executado, comparar baseline vs. POC de `LangGraph`, transformar sinais relevantes em proposals sandbox-only e decidir se o `v1` fecha após essa consolidação ou se absorve um último incremento cognitivo curto.
 
 ## Estado do Projeto
+
 
 Hoje o repositório contém:
 
 - Documento-Mestre consolidado como artefato canônico;
 - handoff operacional e changelog ativos;
-- pacote inicial de documentos derivados;
-- estrutura real do monorepo criada;
-- arquivos-base da raiz presentes;
-- camada compartilhada inicial em `shared/` com tipos, enums, estados, contratos, schemas, eventos e identidade/principios;
+ - pacote inicial de documentos derivados;
+ - estrutura real do monorepo criada;
+ - arquivos-base da raiz presentes;
+ - camada compartilhada inicial em `shared/` com tipos, enums, estados, contratos, schemas, eventos e identidade/princípios;
 - `orchestrator-service` coordenando o fluxo entre engines, memória, governança, conhecimento, observabilidade e operação;
 - `governance-service` com decisóes `allow`, `allow_with_conditions`, `block` e `defer_for_validation`;
-- `memory-service` com persistencia local por repositório, contexto de sessão, estado mínimo de missão e resumo semântico curto reutilizavel entre turnos;
-- `operational-service` com geracao de artefatos textuais estruturados e hints de memória;
+ - `memory-service` com persistência local por repositório, contexto de sessão, estado mínimo de missão e resumo semântico curto reutilizável entre turnos;
+ - `operational-service` com geração de artefatos textuais estruturados e hints de memória;
 - `knowledge-service` com retrieval determinístico sobre dominios prioritários do `v1` a partir de corpus curado local;
 - `observability-service` persistindo a trilha de eventos internos com campos de correlação;
 - `observability-service` com espelhamento agentic complementar endurecido para `LangSmith` e para arvore local de traces em `JSONL`;
 - `observability-service` auditando requests recentes com trilha mínima obrigatória, flags automáticas de anomalia e resumo de fluxo;
 - `evolution-lab` persistindo propostas e decisóes sandbox-only entre baseline e candidata;
 - `engines/` com componentes reais de identidade, executivo, planejamento, cognição e síntese;
-- suite de testes cobrindo persistencia, governança, observabilidade, conhecimento, operação e o fluxo ponta a ponta do orquestrador;
+ - suite de testes cobrindo persistência, governança, observabilidade, conhecimento, operação e o fluxo ponta a ponta do orquestrador;
 - ciclo deliberativo implementado no núcleo, com diretiva executiva enriquecida, plano estruturado, governança sobre plano, memória com hints deliberativos, resumo semântico de missão e síntese mais executiva.
 - `tools/internal_pilot_report.py` resumindo requests recentes por `request_id`, decisão de governança, status operacional e eventos ausentes da trilha mínima;
 - `tools/run_internal_pilot.py` executando a janela mínima do piloto com cenários repetíveis;
 - `tools/compare_orchestrator_paths.py` comparando baseline e POC de `LangGraph` nos mesmos cenários;
 - `tools/evolution_from_pilot.py` promovendo sinais do piloto e da comparação para proposals sandbox-only;
-- `docs/operations/internal-pilot-plan.md` definindo a janela mínima do primeiro piloto interno;
+- `docs/archive/operations/internal-pilot-plan.md` definindo a janela mínima do primeiro piloto interno;
 - POC opcional de `LangGraph` aberta no `orchestrator-service` por `handle_input_langgraph_poc()`, preservando `handle_input()` como caminho principal.
 
-Arquivo paralelo/histórico que não deve ser tratado como fonte principal sem decisão explícita:
+Regra importante de leitura documental:
 
-- `documento_mestre_do_jarvis.md`
+- `documento_mestre_jarvis.md` é o único artefato canônico de visão de produto;
+- documentos derivados, `HANDOFF.md` e `CHANGELOG.md` existem para operação, continuidade e rastreabilidade, não para substituir o Documento-Mestre.
 
 ---
 
-## O Que Foi Feito
+- ## O Que Foi Feito
+
 
 - revisão estrutural relevante do Documento-Mestre;
-- consolidacao e enxugamento do Documento-Mestre para reforcar seu papel canônico;
-- criacao do `HANDOFF.md` em formato operacional;
-- criacao do `CHANGELOG.md`;
-- definicao da política de documentos derivados;
-- criacao do pacote inicial de derivados de implementacao, operação, arquitetura e resumo executivo;
-- materializacao da base real do repositório da Sprint 1;
-- criacao dos esqueletos mínimos dos serviços centrais e engines centrais;
-- implementacao inicial da Sprint 2 em `shared/` com contratos, tipos, schemas, eventos e identidade/principios;
-- criacao de testes iniciais de regressao estrutural em `tests/unit/test_shared_layer.py`;
-- implementacao do primeiro fluxo funcional do `orchestrator-service` com classificação simples de intencao, governança inicial, trilha de eventos e síntese básica;
-- extracao da governança mínima para o `governance-service`, que agora gera a checagem e a decisão usadas pelo orquestrador;
-- implementacao do `memory-service` com recuperacao contextual por sessão e registro episódico simples em memória de processo;
-- integração do `orchestrator-service` com o `memory-service`, adicionando recuperacao e gravacao de memória ao fluxo mínimo;
-- implementacao do `operational-service` com execução segura e deterministica de operações de baixo risco;
+- consolidação e enxugamento do Documento-Mestre para reforçar seu papel canônico;
+- criação do `HANDOFF.md` em formato operacional;
+- criação do `CHANGELOG.md`;
+- definição da política de documentos derivados;
+- criação do pacote inicial de derivados de implementação, operação, arquitetura e resumo executivo;
+- materialização da base real do repositório da Sprint 1;
+- criação dos esqueletos mínimos dos serviços centrais e engines centrais;
+- implementação inicial da Sprint 2 em `shared/` com contratos, tipos, schemas, eventos e identidade/princípios;
+- criação de testes iniciais de regressão estrutural em `tests/unit/test_shared_layer.py`;
+- implementação do primeiro fluxo funcional do `orchestrator-service` com classificação simples de intenção, governança inicial, trilha de eventos e síntese básica;
+- extração da governança mínima para o `governance-service`, que agora gera a checagem e a decisão usadas pelo orquestrador;
+- implementação do `memory-service` com recuperação contextual por sessão e registro episódico simples em memória de processo;
+- integração do `orchestrator-service` com o `memory-service`, adicionando recuperação e gravação de memória ao fluxo mínimo;
+- implementação do `operational-service` com execução segura e determinística de operações de baixo risco;
 - integração do `orchestrator-service` com o `operational-service`, adicionando `operation_dispatched` e `operation_completed` ao fluxo permitido;
-- ampliacao dos testes do `operational-service` e do `orchestrator-service` para cobrir despacho operacional permitido e bloqueio previo por governança.
-- substituicao da memória em processo por repositório persistente com suporte local por `sqlite` e backend `PostgreSQL` via `DATABASE_URL`;
-- adicao de persistencia de histórico episódico por `session_id`, resumo contextual de sessão e estado mínimo de missão por `mission_id`;
-- implementacao do `observability-service` como coletor e consulta local de eventos internos;
+- ampliação dos testes do `operational-service` e do `orchestrator-service` para cobrir despacho operacional permitido e bloqueio prévio por governança.
+- substituição da memória em processo por repositório persistente com suporte local por `sqlite` e backend `PostgreSQL` via `DATABASE_URL`;
+- adição de persistência de histórico episódico por `session_id`, resumo contextual de sessão e estado mínimo de missão por `mission_id`;
+- implementação do `observability-service` como coletor e consulta local de eventos internos;
 - integração do `orchestrator-service` com o `observability-service`, preservando `InternalEventEnvelope` como backbone comum;
-- implementacao do `knowledge-service` com retrieval local determinístico para dominios prioritários do `v1`;
-- externalizacao do corpus inicial para `knowledge/curated/v1_corpus.json`;
-- implementacao real das engines de identidade, executivo, planejamento, cognição e síntese;
-- reducao do `orchestrator-service` ao papel de coordenador de fluxo, removendo heuristicas espalhadas do caminho principal;
-- ampliacao da governança para cenarios condicionados, bloqueados e adiados para validação;
-- ampliacao do `operational-service` para produzir artefatos textuais e preencher `artifacts`, `checkpoints` e `memory_record_hints`;
-- implementacao do `evolution-lab` como primeiro corte de comparação local entre baseline e candidata, sem promoção automatica;
-- declaracao do extra opcional `postgres` no `pyproject.toml` para readiness do backend operacional;
-- adicao de `infra/local-postgres.compose.yml` como infraestrutura local padrao para PostgreSQL;
-- ampliacao da fabrica de memória para normalizar URLs `postgres://` e `postgresql+psycopg://`;
-- adicao de `conftest.py` na raiz para que testes isolados fora de `tests/` carreguem o bootstrap correto;
-- reescrita da cobertura de testes para validar comportamento funcional, persistencia entre instancias e trilha ponta a ponta;
+- implementação do `knowledge-service` com retrieval local determinístico para domínios prioritários do `v1`;
+- externalização do corpus inicial para `knowledge/curated/v1_corpus.json`;
+- implementação real das engines de identidade, executivo, planejamento, cognição e síntese;
+- redução do `orchestrator-service` ao papel de coordenador de fluxo, removendo heurísticas espalhadas do caminho principal;
+- ampliação da governança para cenários condicionados, bloqueados e adiados para validação;
+- ampliação do `operational-service` para produzir artefatos textuais e preencher `artifacts`, `checkpoints` e `memory_record_hints`;
+- implementação do `evolution-lab` como primeiro corte de comparação local entre baseline e candidata, sem promoção automática;
+- declaração do extra opcional `postgres` no `pyproject.toml` para readiness do backend operacional;
+- adição de `infra/local-postgres.compose.yml` como infraestrutura local padrão para PostgreSQL;
+- ampliação da fábrica de memória para normalizar URLs `postgres://` e `postgresql+psycopg://`;
+- adição de `conftest.py` na raiz para que testes isolados fora de `tests/` carreguem o bootstrap correto;
+- reescrita da cobertura de testes para validar comportamento funcional, persistência entre instâncias e trilha ponta a ponta;
 - validação da suite com `pytest -q` diretamente da raiz do repositório.
-- implementacao do harness local de benchmark em `tools/benchmarks/`, com dataset versionado e artefatos `JSON` e `Markdown`.
-- adicao de exportacao de trace view no `observability-service` para validação de compatibilidade com tracing externo.
+- implementação do harness local de benchmark em `tools/benchmarks/`, com dataset versionado e artefatos `JSON` e `Markdown`.
+- adição de exportação de trace view no `observability-service` para validação de compatibilidade com tracing externo.
 - bootstrap de `.venv` local com `.[dev]` instalado para validação consistente do repositório.
 - execução e validação local do benchmark dirigido do `v1`, com decisão preliminar de manter memória atual até validar PostgreSQL, incorporar a trilha atual de observabilidade e priorizar `manual_variants` no evolution-lab.
 - promoção do ranking ponderado determinístico para o baseline do `knowledge-service`, absorvendo no serviço a melhoria indicada pelo benchmark.
 - traducao do resultado do benchmark do `evolution-lab` para o serviço real, registrando `manual_variants` como estratégia sandbox prioritária e preservando `sandbox-only`.
 - ampliacao do harness de benchmark com CLI util, escopo isolado por execução e testes específicos para a trilha PostgreSQL.
 - validação real do `memory-service` contra PostgreSQL local com `psycopg`, teste de integração dedicado e benchmark rerodado com decisão `adotar no v1`.
-- ajuste do `docker compose` local para publicar PostgreSQL em `5433`, evitando conflito com um `postgres.exe` local já ativo nesta maquina;
-- criacao de `docs/architecture/technology-study-matrix.md` para consolidar a leitura do Documento-Mestre sobre stack, frameworks, algoritmos e repositórios a estudar;
-- implementacao do ciclo deliberativo do `v1`, com `DeliberativePlanContract`, diretiva executiva enriquecida, plano estruturado no `planning-engine`, memória persistindo hints de plano, governança avaliando o plano pretendido, observabilidade expandida e síntese mais deliberativa;
-- atualizacao dos testes de engines e serviços para travar o novo comportamento e validação da suite completa com `pytest -q`.
-- aprofundamento da memória de missão para persistir `semantic_brief` e `semantic_focus`, com recuperacao explícita desses sinais no `planning-engine` e continuidade de raciocinio melhor entre turnos da mesma missão;
-- atualizacao dos repositórios `sqlite` e `PostgreSQL` da memória para suportar os novos campos semânticos e cobertura de testes para persistencia, recuperacao e continuidade entre instancias;
-- estudo aplicado da stack principal concluido para `LangGraph`, `PostgreSQL + pgvector` e `LangSmith`, com resultado consolidado em `docs/architecture/technology-study-phase1-core-stack.md`;
+- ajuste do `docker compose` local para publicar PostgreSQL em `5433`, evitando conflito com um `postgres.exe` local já ativo nesta máquina;
+- criação de `docs/architecture/technology-study.md` para consolidar a leitura do Documento-Mestre sobre stack, frameworks, algoritmos e repositórios a estudar;
+- implementação do ciclo deliberativo do `v1`, com `DeliberativePlanContract`, diretiva executiva enriquecida, plano estruturado no `planning-engine`, memória persistindo hints de plano, governança avaliando o plano pretendido, observabilidade expandida e síntese mais deliberativa;
+- atualização dos testes de engines e serviços para travar o novo comportamento e validação da suite completa com `pytest -q`.
+- aprofundamento da memória de missão para persistir `semantic_brief` e `semantic_focus`, com recuperação explícita desses sinais no `planning-engine` e continuidade de raciocínio melhor entre turnos da mesma missão;
+- atualização dos repositórios `sqlite` e `PostgreSQL` da memória para suportar os novos campos semânticos e cobertura de testes para persistência, recuperação e continuidade entre instâncias;
+- estudo aplicado da stack principal concluído para `LangGraph`, `PostgreSQL + pgvector` e `LangSmith`, com resultado consolidado em `docs/architecture/technology-study.md`;
 - endurecimento do adaptador `LangSmith` no `observability-service` para emitir `trace tree` por `request_id`, com root trace e child runs coerentes;
-- endurecimento do espelhamento agentic local em `JSONL` para refletir a mesma estrutura de arvore de trace usada pelo checklist de go-live;
-- criacao do `ADR-001` para formalizar a absorção parcial e progressiva de `LangGraph` no núcleo, sem reescrita ampla do baseline atual;
-- criacao de `tools/internal_pilot_report.py` e de `docs/operations/internal-pilot-plan.md` para operacionalizar o primeiro `internal pilot`;
+- endurecimento do espelhamento agentic local em `JSONL` para refletir a mesma estrutura de árvore de trace usada pelo checklist de go-live;
+- criação do `ADR-001` para formalizar a absorção parcial e progressiva de `LangGraph` no núcleo, sem reescrita ampla do baseline atual;
+- criação de `tools/internal_pilot_report.py` e de `docs/archive/operations/internal-pilot-plan.md` para operacionalizar o primeiro `internal pilot`;
 - endurecimento de `tools/go_live_internal_checklist.py` para exigir root trace e child runs no espelhamento agentic local;
 - abertura da POC opcional de `LangGraph` no `orchestrator-service`, com teste dedicado e sem breaking change na API pública principal;
 - validação local de `ruff check`, `pytest -q` e `python tools/go_live_internal_checklist.py --profile development` nesta rodada.
@@ -115,8 +114,12 @@ Arquivo paralelo/histórico que não deve ser tratado como fonte principal sem d
 - ampliação do corpus curado do `knowledge-service` com domínios de observabilidade e operação do piloto.
 
 ---
+- ajuste do núcleo para reforçar sensação de entidade única, com diretiva executiva mais rica, continuidade de missão ampliada, especialistas internos revisando estruturalmente o plano e síntese mais unificada;
+- execução local do gate `controlled` com `validate_v1`, `go_live_internal_checklist`, `run_internal_pilot` e `internal_pilot_report`, todos passando na máquina atual.
+- consolidacao documental de docs/, com fusao dos documentos operacionais do 1 em docs/operations/v1-operational-baseline.md, fusao dos estudos de tecnologia em docs/architecture/technology-study.md, arquivamento de planos historicos em docs/archive/ e deslocamento de temas pos-1 para docs/future/.
 
-## Decisóes Fechadas
+## Decisões Fechadas
+
 
 Não rediscutir sem evidência forte ou mudanca explícita de direção:
 
@@ -125,8 +128,8 @@ Não rediscutir sem evidência forte ou mudanca explícita de direção:
 - a estratégia base e monorepo modular;
 - `Python` e a linguagem principal;
 - `TypeScript` e linguagem secundaria para interface, web e voz quando necessario;
-- `LangGraph` e a base principal de orquestracao stateful;
-- `PostgreSQL + pgvector` e o backbone inicial de memória e persistencia;
+- `LangGraph` e uma direção arquitetural forte, hoje mantida como POC opcional e absorção progressiva, não como caminho principal já migrado do `v1`;
+ - `PostgreSQL + pgvector` e o backbone inicial de memória e persistência;
 - `LangSmith` e a principal camada de observabilidade agentic;
 - a trilha local persistida continua sendo a fonte primaria de debug e auditoria, com `LangSmith` apenas como complemento;
 - `LangGraph` entra por absorção parcial e progressiva, com POC opcional no orquestrador antes de qualquer migracao mais ampla;
@@ -139,29 +142,26 @@ Não rediscutir sem evidência forte ou mudanca explícita de direção:
 
 ## O Que Ainda Falta
 
-Pendencias principais agora:
+Pendências principais agora:
 
-- executar e registrar a primeira janela pequena do `internal pilot` em perfil `controlled` via `tools/run_internal_pilot.py`;
-- coletar e revisar o relatório operacional inicial com `tools/internal_pilot_report.py`;
+- consolidar formalmente a leitura do `internal pilot` já executado;
 - comparar o baseline principal com a POC opcional de `LangGraph` via `tools/compare_orchestrator_paths.py`;
-- transformar sinais reais do piloto em proposals sandbox-only com `tools/evolution_from_pilot.py`;
-- decidir formalmente o destino de `documento_mestre_do_jarvis.md`.
-
----
+- transformar os sinais relevantes em proposals sandbox-only com `tools/evolution_from_pilot.py`;
+- decidir se o `v1` já pode ser encerrado com disciplina ou se ainda absorve um último incremento cognitivo curto;
+- revisar e normalizar documentos com mojibake, sem mexer no papel canônico do Documento-Mestre.
 
 ## Próximos Passos Imediatos
 
 Ordem recomendada:
 
-1. executar `python tools/run_internal_pilot.py --profile controlled`;
-2. extrair o relatório do piloto via `python tools/internal_pilot_report.py --limit 10`;
-3. comparar baseline e POC com `python tools/compare_orchestrator_paths.py --profile controlled`;
-4. gerar proposals sandbox-only com `python tools/evolution_from_pilot.py --limit 10`;
-5. decidir formalmente o destino de `documento_mestre_do_jarvis.md`.
-
----
+1. executar `python tools/compare_orchestrator_paths.py --profile controlled`;
+2. executar `python tools/evolution_from_pilot.py --limit 10`;
+3. consolidar a leitura do piloto e da comparação em decisão curta;
+4. decidir entre encerrar o `v1` ou absorver um último incremento cognitivo curto;
+5. só então abrir o próximo ciclo maior do sistema.
 
 ## Riscos / Bloqueios
+
 
 - `sqlite` continua como fallback local, mas o backend operacional recomendado do `v1` agora e `PostgreSQL`;
 - nesta maquina há um `postgres.exe` local ativo na `5432`, por isso o `docker compose` do JARVIS pública o banco em `5433`;
@@ -175,6 +175,7 @@ Ordem recomendada:
 ---
 
 ## Arquivos Relevantes
+
 
 - `documento_mestre_jarvis.md`
 - `HANDOFF.md`
@@ -224,15 +225,16 @@ Ordem recomendada:
 - `engines/synthesis-engine/src/synthesis_engine/engine.py`
 - `tests/unit/test_shared_layer.py`
 - `docs/implementation/service-breakdown.md`
-- `docs/operations/internal-pilot-plan.md`
+- `docs/archive/operations/internal-pilot-plan.md`
 - `docs/adr/adr-001-absorcao-parcial-de-langgraph-no-nucleo.md`
-- `docs/architecture/technology-study-matrix.md`
-- `docs/architecture/technology-study-phase1-core-stack.md`
+- `docs/architecture/technology-study.md`
+- `docs/architecture/technology-study.md`
 - `docs/implementation/implementation-strategy.md`
 
 ---
 
 ## Como Validar / Retomar
+
 
 Leitura mínima para qualquer novo agente:
 
@@ -247,7 +249,7 @@ Leitura mínima para qualquer novo agente:
 9. `services/operational-service/src/operational_service/service.py`
 10. `tools/benchmarks/harness.py`
 11. `tools/internal_pilot_report.py`
-12. `docs/operations/internal-pilot-plan.md`
+12. `docs/archive/operations/internal-pilot-plan.md`
 
 Checagens rapidas recomendadas:
 
@@ -258,7 +260,7 @@ Checagens rapidas recomendadas:
 - validar que o `knowledge-service` carrega o corpus curado local esperado;
 - validar que o `observability-service` registra a trilha completa de eventos;
 - validar que o espelhamento agentic local gera root trace e child runs;
-- validar que o `evolution-lab` registra proposta e decisão sandbox-only sem promoção automatica;
+- validar que o `evolution-lab` registra proposta e decisão sandbox-only sem promoção automática;
 - validar que o `operational-service` executa apenas tarefas seguras e produz artefatos textuais;
 - executar `python -m tools.benchmarks` e revisar as decisóes por trilha;
 - executar `python tools/internal_pilot_report.py --limit 5` para leitura rapida das trilhas recentes;
@@ -288,24 +290,13 @@ $env:DATABASE_URL = "postgresql://postgres:postgres@localhost:5433/jarvis"
 
 ## Regra Para o Próximo Agente
 
+
 - tratar `documento_mestre_jarvis.md` como artefato canônico;
 - usar `HANDOFF.md` como documento operacional de estado;
 - atualizar `CHANGELOG.md` sempre que houver mudanca relevante;
-- priorizar agora execução observada do `internal pilot` e coleta de evidência operacional real;
+- tratar o `internal pilot` já executado como evidência operacional, não como pendência aberta;
+- priorizar agora a consolidação dessa evidência, a comparação com a POC de `LangGraph` e a decisão disciplinada sobre o fechamento do `v1`;
 - reutilizar `shared/` em vez de redefinir contratos localmente nos serviços.
-
----
-
-## Critério de Encerramento Deste Handoff
-
-Este handoff continua util enquanto o projeto estiver conduzindo o `internal pilot` do `v1` e decidindo a absorção parcial de `LangGraph` no pos-piloto.
-
-Ele deve ser reavaliado quando:
-
-- a primeira janela de produção controlada do `v1` tiver sido executada e registrada;
-- o `knowledge-service` sair do corpus local mínimo e entrar em retrieval mais robusto;
-- o baseline de `M6` sair do sandbox evolutivo mínimo e entrar em benchmark mais formal;
-- houver mudanca arquitetural relevante que torne este handoff obsoleto.
 
 
 

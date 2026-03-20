@@ -98,6 +98,9 @@ GOVERNANCE_CHECK_SCHEMA = CanonicalSchema(
         "policy_hint",
         "requested_by_service",
         "artifact_refs",
+        "decision_frame",
+        "mission_continuity_hint",
+        "open_loops",
     ),
 )
 
@@ -177,6 +180,9 @@ MISSION_STATE_SCHEMA = CanonicalSchema(
         "related_artifacts",
         "semantic_brief",
         "semantic_focus",
+        "identity_continuity_brief",
+        "open_loops",
+        "last_decision_frame",
         "priority_level",
         "owner_context",
         "completion_criteria",

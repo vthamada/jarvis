@@ -30,19 +30,20 @@ def test_operational_service_generates_text_artifact_for_supported_task() -> Non
             session_id=SessionId("sess-1"),
             task_type="draft_plan",
             task_goal="Plan milestone M3",
-            task_plan="priorizar memória persistente",
+            task_plan="priorizar memoria persistente",
             constraints=["low-risk"],
             expected_output="text_brief",
             plan_summary="decompor milestone em etapas reversiveis",
             planned_steps=["definir objetivo", "listar etapas"],
             plan_risks=["sem risco material relevante"],
             plan_rationale="contexto=nenhum; apoio=baseline local",
-            specialist_summary="especialista_planejamento_operacional: executar em etapas pequenas",
-            specialist_findings=["priorizar a menor ação segura antes de expandir escopo"],
+            specialist_summary="encadear o plano em etapas pequenas",
+            specialist_findings=["open_loop: fechar checkpoint principal"],
             specialist_hints=["especialista_planejamento_operacional"],
+            success_criteria=["plano deve indicar a menor proxima acao segura"],
+            smallest_safe_next_action="definir objetivo",
         )
     )
-
     assert isinstance(execution, OperationalExecution)
     assert execution.operation_result.status == OperationStatus.COMPLETED
     assert execution.artifact_results
@@ -50,8 +51,8 @@ def test_operational_service_generates_text_artifact_for_supported_task() -> Non
     assert artifact_path.exists()
     content = artifact_path.read_text(encoding="utf-8")
     assert "Plano deliberativo para" in content
-    assert "Especializacao subordinada" in content
-    assert "Achados especializados" in content
+    assert "Criterios de sucesso" in content
+    assert "Ajuste interno" in content
 
 
 def test_operational_service_fails_for_unsupported_task() -> None:
@@ -69,6 +70,5 @@ def test_operational_service_fails_for_unsupported_task() -> None:
             expected_output="text_brief",
         )
     )
-
     assert execution.operation_result.status == OperationStatus.FAILED
     assert execution.artifact_results == []

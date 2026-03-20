@@ -1,4 +1,4 @@
-"""Single entrypoint for validating the JARVIS v1 baseline."""
+﻿"""Single entrypoint for validating the JARVIS v1 baseline."""
 # ruff: noqa: E402
 
 from __future__ import annotations
@@ -318,6 +318,10 @@ def main() -> None:
         )
     assert ruff_command is not None
     assert database_url is not None
+    run_command(
+        [executable, str(ROOT / "tools" / "check_mojibake.py"), str(ROOT)],
+        label="encoding-check",
+    )
     run_command([executable, "-m", "pytest", "-q"], label="pytest")
     run_command([*ruff_command, "check", "."], label="ruff")
     run_memory_smoke(args.profile, database_url)
@@ -328,3 +332,6 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+
+
+

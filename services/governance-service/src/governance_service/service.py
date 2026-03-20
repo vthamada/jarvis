@@ -67,6 +67,7 @@ class GovernanceService:
 
         risk_hint = self.classify_risk(contract, intent)
         proposed_effect = self.proposed_effect(intent=intent, plan=plan)
+        continuity_hint = self._continuity_hint(plan)
         governance_check = GovernanceCheckContract(
             governance_check_id=GovernanceCheckId(f"gov-check-{uuid4().hex[:8]}"),
             subject_type="request",
@@ -88,6 +89,9 @@ class GovernanceService:
             requested_by_service=requested_by_service,
             declared_risks=list(plan.risks) if plan else [],
             requires_human_validation=bool(plan.requires_human_validation) if plan else False,
+            decision_frame=self._decision_frame(plan),
+            mission_continuity_hint=continuity_hint,
+            open_loops=self._extract_open_loops(plan),
         )
         governance_decision = self.make_decision(governance_check)
         return GovernanceAssessment(
@@ -115,54 +119,60 @@ class GovernanceService:
 
         risk_level = governance_check.risk_hint or RiskLevel.LOW
         decision = PermissionDecision.ALLOW
-        justification = "Solicitacao reversivel e compativel com o escopo controlado do v1."
+        justification = "Solicitacao reversivel e coerente com a missao ativa do v1."
         conditions: list[str] = []
         policy_refs = ["policy://request/default-low-risk"]
         requires_audit = False
         requires_rollback_plan = False
         containment_hint = None
         proposed_effect = governance_check.proposed_effect or "analysis_or_guidance_only"
+        open_loops = list(governance_check.open_loops)
+        continuity_hint = governance_check.mission_continuity_hint or "sem_continuidade"
+        decision_frame = governance_check.decision_frame or "analysis"
 
         if risk_level in {RiskLevel.HIGH, RiskLevel.CRITICAL}:
             decision = PermissionDecision.BLOCK
-            justification = "Potencial destrutivo detectado; a execução direta foi bloqueada."
-            conditions = ["Exigir validação forte fora do fluxo normal antes de qualquer ação."]
+            justification = "Potencial destrutivo detectado; a execucao direta foi bloqueada."
+            conditions = ["Exigir validacao forte fora do fluxo normal antes de qualquer acao."]
             policy_refs = ["policy://request/high-risk"]
             requires_audit = True
             requires_rollback_plan = True
             containment_hint = "block_direct_execution"
-        elif (
-            governance_check.requires_human_validation
-            or proposed_effect == "external_or_sensitive_change"
-        ):
+        elif self._should_defer(governance_check, proposed_effect, open_loops, continuity_hint):
             decision = PermissionDecision.DEFER_FOR_VALIDATION
             justification = (
-                "O plano pretendido exige validação humana antes de qualquer execução."
+                "O plano atual tenta ampliar ou reformular o escopo com loop critico ainda aberto."
             )
             conditions = [
-                "Manter apenas análise e rastreabilidade até revisão explícita."
+                "Manter apenas analise e rastreabilidade ate revisao explicita.",
+                "Nao ampliar objetivo enquanto houver loop aberto relevante.",
             ]
-            policy_refs = ["policy://request/defer-sensitive-plan"]
+            policy_refs = ["policy://request/defer-mission-reframe"]
             requires_audit = True
             requires_rollback_plan = True
-            containment_hint = "defer_sensitive_plan"
-        elif proposed_effect == "local_safe_operation":
+            containment_hint = "defer_open_loop_reframe"
+        elif self._should_allow_with_conditions(
+            proposed_effect=proposed_effect,
+            risk_level=risk_level,
+            decision_frame=decision_frame,
+            open_loops=open_loops,
+        ):
             decision = PermissionDecision.ALLOW_WITH_CONDITIONS
-            justification = "Operação local segura permitida com trilha reforçada de auditoria."
+            justification = "Operacao local segura permitida com rastreabilidade reforcada."
             conditions = [
                 "Manter trilha de eventos completa.",
                 "Restringir a artefatos locais e reversiveis.",
             ]
+            if open_loops:
+                conditions.append(
+                    "Fechar explicitamente o loop principal da missao nesta resposta."
+                )
             policy_refs = ["policy://request/local-safe-operation"]
             requires_audit = True
-        elif risk_level == RiskLevel.MODERATE:
-            decision = PermissionDecision.ALLOW_WITH_CONDITIONS
-            justification = (
-                "Sinais moderados exigem rastreabilidade reforçada, sem bloquear a análise."
-            )
-            conditions = ["Reforcar auditoria e evitar ampliar escopo operacional."]
-            policy_refs = ["policy://request/moderate-risk"]
-            requires_audit = True
+        elif decision_frame == "analysis":
+            decision = PermissionDecision.ALLOW
+            justification = "Analise reversivel permitida com continuidade coerente."
+            policy_refs = ["policy://request/reversible-analysis"]
 
         return GovernanceDecisionContract(
             decision_id=GovernanceDecisionId(f"gov-decision-{uuid4().hex[:8]}"),
@@ -189,6 +199,68 @@ class GovernanceService:
         if plan.recommended_task_type in {"draft_plan", "general_response"}:
             return "local_safe_operation"
         return "analysis_or_guidance_only"
+
+    @staticmethod
+    def _decision_frame(plan: DeliberativePlanContract | None) -> str | None:
+        if not plan:
+            return None
+        if plan.recommended_task_type == "produce_analysis_brief":
+            return "analysis"
+        if plan.recommended_task_type == "draft_plan":
+            return "planning"
+        if plan.recommended_task_type == "general_response" and plan.requires_human_validation:
+            return "clarification"
+        return "execution" if plan.smallest_safe_next_action else "planning"
+
+    @staticmethod
+    def _extract_open_loops(plan: DeliberativePlanContract | None) -> list[str]:
+        if not plan:
+            return []
+        return list(plan.open_loops[:3])
+
+    @staticmethod
+    def _continuity_hint(plan: DeliberativePlanContract | None) -> str | None:
+        if not plan:
+            return None
+        if plan.continuity_action == "reformular":
+            return "reformulacao_de_objetivo"
+        if plan.continuity_action == "continuar":
+            return "continuidade_coerente"
+        if plan.continuity_action == "encerrar":
+            return "fechamento_de_loop"
+        return None
+
+    @staticmethod
+    def _should_defer(
+        governance_check: GovernanceCheckContract,
+        proposed_effect: str,
+        open_loops: list[str],
+        continuity_hint: str,
+    ) -> bool:
+        if governance_check.requires_human_validation:
+            return True
+        if proposed_effect == "external_or_sensitive_change":
+            return True
+        if continuity_hint == "reformulacao_de_objetivo" and bool(open_loops):
+            return True
+        return False
+
+    @staticmethod
+    def _should_allow_with_conditions(
+        *,
+        proposed_effect: str,
+        risk_level: RiskLevel,
+        decision_frame: str,
+        open_loops: list[str],
+    ) -> bool:
+        if proposed_effect == "local_safe_operation" and decision_frame in {
+            "planning",
+            "execution",
+        }:
+            return True
+        if risk_level == RiskLevel.MODERATE:
+            return True
+        return decision_frame == "execution" and bool(open_loops)
 
     def assess_memory_operation(
         self,

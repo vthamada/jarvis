@@ -1,4 +1,4 @@
-﻿# Voice Runtime
+# Voice Runtime
 
 ## 1. Objetivo
 
