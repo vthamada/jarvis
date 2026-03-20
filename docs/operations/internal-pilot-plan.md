@@ -33,6 +33,7 @@ Antes da janela do piloto:
 - `python tools/validate_v1.py --profile controlled`
 - `python tools/go_live_internal_checklist.py --profile controlled`
 - `python tools/internal_pilot_report.py --limit 5`
+- `python tools/run_internal_pilot.py --profile controlled`
 
 O ultimo comando deve produzir relatório vazio ou refletir apenas trilhas esperadas do ambiente atual.
 
@@ -52,7 +53,14 @@ Para cada request observada:
 O relatório base deve ser extraido por:
 
 ```powershell
+python tools/run_internal_pilot.py --profile controlled
 python tools/internal_pilot_report.py --limit 10
+```
+
+Para comparação opcional do orquestrador principal com a POC de `LangGraph`:
+
+```powershell
+python tools/compare_orchestrator_paths.py --profile controlled
 ```
 
 ---
@@ -74,5 +82,6 @@ Considerar a janela inicial aceitavel quando houver:
 Depois da coleta inicial:
 
 1. consolidar o relatório operacional;
-2. comparar o baseline atual com a futura POC de `LangGraph`;
-3. decidir se a POC segue para absorção parcial real no núcleo do pos-`v1`.
+2. comparar o baseline atual com a POC de `LangGraph`;
+3. gerar proposals sandbox-only com `python tools/evolution_from_pilot.py --limit 10`;
+4. decidir se a POC segue para absorção parcial real no núcleo do pos-`v1`.

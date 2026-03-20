@@ -4,15 +4,15 @@
 
 - Atualizado em: 2026-03-19
 - Branch: `main`
-- Commit de referencia: `fa80320`
+- Commit de referencia: `bb8d03b`
 - Artefato canônico do projeto: `documento_mestre_jarvis.md`
-- Status do projeto: `v1` em `GO CONDICIONAL` para produção controlada, com baseline integrado validado, benchmark local fechado, PostgreSQL validado como backend operacional, observabilidade local persistida e espelhamento agentic endurecido, `internal pilot` preparado com plano e relatório executável, e POC opcional de `LangGraph` aberta no `orchestrator-service` sem quebrar o fluxo principal
+- Status do projeto: `v1` em `GO CONDICIONAL` para produção controlada, com baseline integrado validado, benchmark local fechado, PostgreSQL validado como backend operacional, observabilidade local persistida, auditoria operacional de request ativa, `internal pilot` executável por script, proposals sandbox-only ligadas ao `evolution-lab` e POC opcional de `LangGraph` aberta no `orchestrator-service` sem quebrar o fluxo principal
 
 ---
 
 ## Meta Atual
 
-Executar o **primeiro ciclo controlado do v1** com observação reforçada, coletar evidência operacional real do `internal pilot` e preparar a decisão sobre a absorção parcial de `LangGraph` após o piloto.
+Executar o **primeiro ciclo controlado do v1** com observação reforçada, coletar evidência operacional real do `internal pilot`, comparar baseline vs. POC de `LangGraph` e transformar os sinais relevantes em proposals sandbox-only antes da decisão pós-piloto.
 
 ---
 
@@ -33,11 +33,15 @@ Hoje o repositório contém:
 - `knowledge-service` com retrieval determinístico sobre dominios prioritários do `v1` a partir de corpus curado local;
 - `observability-service` persistindo a trilha de eventos internos com campos de correlação;
 - `observability-service` com espelhamento agentic complementar endurecido para `LangSmith` e para arvore local de traces em `JSONL`;
+- `observability-service` auditando requests recentes com trilha mínima obrigatória, flags automáticas de anomalia e resumo de fluxo;
 - `evolution-lab` persistindo propostas e decisóes sandbox-only entre baseline e candidata;
 - `engines/` com componentes reais de identidade, executivo, planejamento, cognição e síntese;
 - suite de testes cobrindo persistencia, governança, observabilidade, conhecimento, operação e o fluxo ponta a ponta do orquestrador;
 - ciclo deliberativo implementado no núcleo, com diretiva executiva enriquecida, plano estruturado, governança sobre plano, memória com hints deliberativos, resumo semântico de missão e síntese mais executiva.
 - `tools/internal_pilot_report.py` resumindo requests recentes por `request_id`, decisão de governança, status operacional e eventos ausentes da trilha mínima;
+- `tools/run_internal_pilot.py` executando a janela mínima do piloto com cenários repetíveis;
+- `tools/compare_orchestrator_paths.py` comparando baseline e POC de `LangGraph` nos mesmos cenários;
+- `tools/evolution_from_pilot.py` promovendo sinais do piloto e da comparação para proposals sandbox-only;
 - `docs/operations/internal-pilot-plan.md` definindo a janela mínima do primeiro piloto interno;
 - POC opcional de `LangGraph` aberta no `orchestrator-service` por `handle_input_langgraph_poc()`, preservando `handle_input()` como caminho principal.
 
@@ -105,6 +109,10 @@ Arquivo paralelo/histórico que não deve ser tratado como fonte principal sem d
 - endurecimento de `tools/go_live_internal_checklist.py` para exigir root trace e child runs no espelhamento agentic local;
 - abertura da POC opcional de `LangGraph` no `orchestrator-service`, com teste dedicado e sem breaking change na API pública principal;
 - validação local de `ruff check`, `pytest -q` e `python tools/go_live_internal_checklist.py --profile development` nesta rodada.
+- adição de auditoria operacional de request ao `observability-service`, com trilha mínima obrigatória e flags automáticas de anomalia;
+- criação de `tools/internal_pilot_support.py`, `tools/run_internal_pilot.py`, `tools/compare_orchestrator_paths.py` e `tools/evolution_from_pilot.py`;
+- ampliação do `evolution-lab` para receber `FlowEvaluationInput` e comparar sinais reais do piloto;
+- ampliação do corpus curado do `knowledge-service` com domínios de observabilidade e operação do piloto.
 
 ---
 
@@ -133,9 +141,10 @@ Não rediscutir sem evidência forte ou mudanca explícita de direção:
 
 Pendencias principais agora:
 
-- executar e registrar a primeira janela pequena do `internal pilot` em perfil `controlled`;
+- executar e registrar a primeira janela pequena do `internal pilot` em perfil `controlled` via `tools/run_internal_pilot.py`;
 - coletar e revisar o relatório operacional inicial com `tools/internal_pilot_report.py`;
-- comparar o baseline principal com a POC opcional de `LangGraph` após evidência real do piloto;
+- comparar o baseline principal com a POC opcional de `LangGraph` via `tools/compare_orchestrator_paths.py`;
+- transformar sinais reais do piloto em proposals sandbox-only com `tools/evolution_from_pilot.py`;
 - decidir formalmente o destino de `documento_mestre_do_jarvis.md`.
 
 ---
@@ -144,10 +153,10 @@ Pendencias principais agora:
 
 Ordem recomendada:
 
-1. registrar o escopo inicial do primeiro uso real controlado;
-2. executar a primeira janela pequena de produção controlada com observação reforçada;
-3. extrair o relatório do piloto via `python tools/internal_pilot_report.py --limit 10`;
-4. comparar o baseline atual com a POC opcional de `LangGraph`;
+1. executar `python tools/run_internal_pilot.py --profile controlled`;
+2. extrair o relatório do piloto via `python tools/internal_pilot_report.py --limit 10`;
+3. comparar baseline e POC com `python tools/compare_orchestrator_paths.py --profile controlled`;
+4. gerar proposals sandbox-only com `python tools/evolution_from_pilot.py --limit 10`;
 5. decidir formalmente o destino de `documento_mestre_do_jarvis.md`.
 
 ---
@@ -297,10 +306,6 @@ Ele deve ser reavaliado quando:
 - o `knowledge-service` sair do corpus local mínimo e entrar em retrieval mais robusto;
 - o baseline de `M6` sair do sandbox evolutivo mínimo e entrar em benchmark mais formal;
 - houver mudanca arquitetural relevante que torne este handoff obsoleto.
-
-
-
-
 
 
 

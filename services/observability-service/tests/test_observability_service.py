@@ -161,6 +161,53 @@ def test_observability_service_summarizes_flow_metrics() -> None:
     assert metrics.duration_seconds == 3.0
 
 
+def test_observability_service_audits_flow_for_missing_events_and_anomalies() -> None:
+    temp_dir = runtime_dir("observability-audit")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service.ingest_events(
+        [
+            InternalEventEnvelope(
+                event_id="evt-a1",
+                event_name="input_received",
+                timestamp="2026-03-18T00:00:00+00:00",
+                source_service="orchestrator-service",
+                payload={"content": "pilot"},
+                request_id="req-audit",
+                session_id="sess-audit",
+                correlation_id="req-audit",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-a2",
+                event_name="governance_checked",
+                timestamp="2026-03-18T00:00:01+00:00",
+                source_service="orchestrator-service",
+                payload={"decision": "allow_with_conditions"},
+                request_id="req-audit",
+                session_id="sess-audit",
+                correlation_id="req-audit",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-a3",
+                event_name="operation_dispatched",
+                timestamp="2026-03-18T00:00:02+00:00",
+                source_service="orchestrator-service",
+                payload={"operation_id": "op-audit"},
+                request_id="req-audit",
+                session_id="sess-audit",
+                correlation_id="req-audit",
+                operation_id="op-audit",
+            ),
+        ]
+    )
+
+    audit = service.audit_flow(ObservabilityQuery(request_id="req-audit"))
+
+    assert audit.request_id == "req-audit"
+    assert "memory_recovered" in audit.missing_required_events
+    assert "operation_missing_completion" in audit.anomaly_flags
+    assert audit.trace_complete is False
+
+
 def test_langsmith_adapter_emits_trace_tree() -> None:
     calls: list[dict[str, object]] = []
 

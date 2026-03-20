@@ -8,6 +8,18 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 
 ## 2026-03-19
 
+### Internal pilot executável, comparação de paths e proposals evolutivas
+
+- adicionada auditoria operacional de fluxo ao `observability-service`, com trilha mínima obrigatória, flags automáticas de anomalia e visão de requests recentes;
+- ampliado `tools/internal_pilot_report.py` para refletir `trace_status`, `anomaly_flags` e `source_services` por request;
+- criado `tools/internal_pilot_support.py` para unificar cenários, bootstrap e coleta estruturada do `internal pilot`;
+- criado `tools/run_internal_pilot.py` para executar a janela mínima do piloto e persistir evidência local em `JSON` e `Markdown`;
+- criado `tools/compare_orchestrator_paths.py` para comparar baseline e POC opcional de `LangGraph` nos mesmos cenários;
+- ampliado o `evolution-lab` com entrada de `FlowEvaluationInput` e helpers para comparar sinais reais do piloto;
+- criado `tools/evolution_from_pilot.py` para transformar trilhas recentes e comparações de paths em proposals sandbox-only;
+- ampliado o corpus curado do `knowledge-service` com domínios de `observability` e `pilot_operations`, mantendo retrieval determinístico;
+- atualizados testes de observabilidade, `internal_pilot_report`, `knowledge-service`, `evolution-lab` e utilitários do piloto.
+
 ### Preparacao do internal pilot e POC de LangGraph
 
 - adicionado `tools/internal_pilot_report.py` para resumir trilhas recentes por `request_id`, status operacional, decisão de governança e eventos obrigatorios ausentes;
@@ -337,7 +349,6 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 - validada a importacao dos esqueletos de serviços e engines com `python`;
 - validada a importacao da nova camada `shared/` com `python`;
 - a execução de `python -m pytest` ainda não foi concluida porque `pytest` não esta instalado no ambiente local atual.
-
 
 
 

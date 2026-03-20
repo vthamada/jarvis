@@ -31,6 +31,12 @@ Os artefatos de saida sóo persistidos em `.jarvis_runtime/benchmarks/` por padr
 
 ## Internal Pilot
 
+Para executar a janela mínima do `internal pilot` e registrar evidência local:
+
+```powershell
+python tools/run_internal_pilot.py --profile development
+```
+
 Para resumir as trilhas recentes do `internal pilot` a partir da observabilidade local:
 
 ```powershell
@@ -41,6 +47,19 @@ Para inspecionar uma execução específica:
 
 ```powershell
 python tools/internal_pilot_report.py --request-id req-123 --format json
+```
+
+Para comparar o baseline atual com a POC opcional de `LangGraph`:
+
+```powershell
+python tools/compare_orchestrator_paths.py --profile development
+```
+
+Para transformar lacunas do piloto em proposals sandbox-only do `evolution-lab`:
+
+```powershell
+python tools/evolution_from_pilot.py --limit 10
+python tools/evolution_from_pilot.py --comparison-json .jarvis_runtime/path_comparison.json
 ```
 
 Os gates executáveis do `v1` continuam sendo:

@@ -2,7 +2,7 @@
 from tempfile import gettempdir
 from uuid import uuid4
 
-from evolution_lab.service import ComparisonInput, EvolutionLabService
+from evolution_lab.service import ComparisonInput, EvolutionLabService, FlowEvaluationInput
 
 
 def runtime_dir(name: str) -> Path:
@@ -91,3 +91,72 @@ def test_evolution_lab_holds_baseline_when_risk_increases() -> None:
     assert comparison.decision.rollback_plan_ref == "sandbox://rollback/current"
     assert "strategy://textgrad_like_refinement" in proposal.source_signals
     assert "strategy=textgrad_like_refinement" in comparison.decision.notes
+
+
+def test_evolution_lab_creates_proposal_from_flow_evaluation() -> None:
+    temp_dir = runtime_dir("evolution-lab-flow-proposal")
+    service = EvolutionLabService(database_path=str(temp_dir / "evolution.db"))
+
+    proposal = service.create_proposal_from_flow_evaluation(
+        FlowEvaluationInput(
+            request_id="req-flow",
+            session_id="sess-flow",
+            mission_id="mission-flow",
+            governance_decision="allow_with_conditions",
+            operation_status="completed",
+            total_events=8,
+            duration_seconds=2.4,
+            missing_required_events=["memory_recovered"],
+            anomaly_flags=["operation_missing_completion"],
+        ),
+        target_scope="orchestrator-service",
+    )
+
+    assert proposal.proposal_type == "flow_evaluation_refinement"
+    assert "observability://request/req-flow" in proposal.source_signals
+    assert proposal.risk_hint == "moderate"
+
+
+def test_evolution_lab_compares_flow_evaluations() -> None:
+    temp_dir = runtime_dir("evolution-lab-flow-comparison")
+    service = EvolutionLabService(database_path=str(temp_dir / "evolution.db"))
+    proposal = service.create_proposal(
+        proposal_type="flow_evaluation_refinement",
+        target_scope="orchestrator-service",
+        hypothesis="Candidate path should improve trace health.",
+        expected_gain="Fewer anomalies.",
+        baseline_refs=["trace://req-a"],
+    )
+
+    comparison = service.compare_flow_evaluations(
+        proposal,
+        baseline_label="baseline",
+        candidate_label="candidate",
+        baseline=FlowEvaluationInput(
+            request_id="req-a",
+            session_id="sess-a",
+            mission_id=None,
+            governance_decision="allow_with_conditions",
+            operation_status="completed",
+            total_events=7,
+            duration_seconds=3.2,
+            missing_required_events=["memory_recovered"],
+            anomaly_flags=["operation_missing_completion"],
+        ),
+        candidate=FlowEvaluationInput(
+            request_id="req-b",
+            session_id="sess-b",
+            mission_id=None,
+            governance_decision="allow_with_conditions",
+            operation_status="completed",
+            total_events=8,
+            duration_seconds=2.1,
+            missing_required_events=[],
+            anomaly_flags=[],
+        ),
+        governance_refs=["policy://sandbox/manual-review"],
+        notes=["pilot comparison"],
+    )
+
+    assert comparison.decision.decision == "sandbox_candidate"
+    assert comparison.metric_deltas["risk"] < 0

@@ -35,6 +35,21 @@ class ComparisonInput:
 
 
 @dataclass(frozen=True)
+class FlowEvaluationInput:
+    """Operational flow evaluation used to seed sandbox proposals and comparisons."""
+
+    request_id: str
+    session_id: str | None
+    mission_id: str | None
+    governance_decision: str | None
+    operation_status: str | None
+    total_events: int
+    duration_seconds: float
+    missing_required_events: list[str]
+    anomaly_flags: list[str]
+
+
+@dataclass(frozen=True)
 class EvolutionComparisonResult:
     """Structured output for a sandbox comparison."""
 
@@ -150,6 +165,72 @@ class EvolutionLabService:
             metric_deltas=metric_deltas,
         )
 
+    def create_proposal_from_flow_evaluation(
+        self,
+        evaluation: FlowEvaluationInput,
+        *,
+        target_scope: str,
+        strategy_name: str | None = None,
+    ) -> EvolutionProposalContract:
+        """Create a sandbox proposal from a pilot or runtime flow evaluation."""
+
+        hypothesis = (
+            "Flow anomalies should be reduced without relaxing governance or traceability."
+            if evaluation.anomaly_flags or evaluation.missing_required_events
+            else "Healthy flows may support a safer candidate path under the same controls."
+        )
+        expected_gain = (
+            "Reduce missing trace events and operational anomalies in the observed flow."
+            if evaluation.anomaly_flags or evaluation.missing_required_events
+            else "Preserve flow health while improving execution quality."
+        )
+        source_signals = [
+            f"observability://request/{evaluation.request_id}",
+            f"governance://decision/{evaluation.governance_decision or 'unknown'}",
+        ]
+        if evaluation.session_id:
+            source_signals.append(f"observability://session/{evaluation.session_id}")
+        if evaluation.mission_id:
+            source_signals.append(f"observability://mission/{evaluation.mission_id}")
+        return self.create_proposal(
+            proposal_type="flow_evaluation_refinement",
+            target_scope=target_scope,
+            hypothesis=hypothesis,
+            expected_gain=expected_gain,
+            baseline_refs=[f"trace://{evaluation.request_id}"],
+            source_signals=source_signals,
+            risk_hint=self._risk_hint_from_flow(evaluation),
+            proposed_tests=["python tools/go_live_internal_checklist.py --profile controlled"],
+            strategy_name=strategy_name,
+        )
+
+    def compare_flow_evaluations(
+        self,
+        proposal: EvolutionProposalContract,
+        *,
+        baseline_label: str,
+        candidate_label: str,
+        baseline: FlowEvaluationInput,
+        candidate: FlowEvaluationInput,
+        governance_refs: list[str],
+        notes: list[str],
+        strategy_name: str | None = None,
+    ) -> EvolutionComparisonResult:
+        """Compare two observed flow evaluations under the sandbox policy."""
+
+        return self.compare_candidate(
+            proposal,
+            ComparisonInput(
+                baseline_label=baseline_label,
+                candidate_label=candidate_label,
+                baseline_metrics=self._metrics_from_flow_evaluation(baseline),
+                candidate_metrics=self._metrics_from_flow_evaluation(candidate),
+                governance_refs=governance_refs,
+                notes=notes,
+                strategy_name=strategy_name,
+            ),
+        )
+
     def list_recent_proposals(self, limit: int = 20) -> list[EvolutionProposalContract]:
         """Return recently registered sandbox proposals."""
 
@@ -176,6 +257,34 @@ class EvolutionLabService:
         if strategy_name in SUPPORTED_EVOLUTION_STRATEGIES:
             return str(strategy_name)
         return self.preferred_strategy()
+
+    @staticmethod
+    def _metrics_from_flow_evaluation(evaluation: FlowEvaluationInput) -> dict[str, float]:
+        missing_penalty = float(len(evaluation.missing_required_events))
+        anomaly_penalty = float(len(evaluation.anomaly_flags))
+        successful_operation = evaluation.operation_status == "completed"
+        healthy_governance = evaluation.governance_decision in {
+            "allow",
+            "allow_with_conditions",
+            "block",
+            "defer_for_validation",
+        }
+        return {
+            "success": 1.0 if successful_operation or healthy_governance else 0.0,
+            "stability": max(0.0, 1.0 - (anomaly_penalty * 0.25)),
+            "trace_completeness": max(0.0, 1.0 - (missing_penalty * 0.15)),
+            "throughput": float(evaluation.total_events),
+            "latency": max(0.0, 1.0 - min(evaluation.duration_seconds / 30.0, 1.0)),
+            "risk": anomaly_penalty + (missing_penalty * 0.5),
+        }
+
+    @staticmethod
+    def _risk_hint_from_flow(evaluation: FlowEvaluationInput) -> str:
+        if evaluation.anomaly_flags:
+            return "moderate"
+        if evaluation.missing_required_events:
+            return "low_to_moderate"
+        return "low"
 
     @staticmethod
     def now() -> str:

@@ -62,6 +62,13 @@ def test_internal_pilot_report_summarizes_recent_request() -> None:
     assert summaries[0].governance_decision == "allow_with_conditions"
     assert summaries[0].operation_status == "completed"
     assert "plan_built" in summaries[0].missing_required_events
+    assert summaries[0].trace_status == "attention_required"
+    assert summaries[0].anomaly_flags == [
+        "operation_completed_without_dispatch",
+        "allowed_flow_missing_response",
+        "allowed_flow_missing_memory_record",
+    ]
+    assert summaries[0].source_services == ["orchestrator-service"]
 
 
 def test_internal_pilot_report_renders_text() -> None:
@@ -77,9 +84,12 @@ def test_internal_pilot_report_renders_text() -> None:
                     "total_events": 3,
                     "event_names": ["input_received"],
                     "missing_required_events": ["plan_built"],
+                    "anomaly_flags": ["operation_missing_completion"],
+                    "trace_status": "attention_required",
                     "governance_decision": "allow",
                     "operation_status": "completed",
                     "duration_seconds": 2.0,
+                    "source_services": ["orchestrator-service"],
                 },
             )()
         ]
@@ -87,3 +97,5 @@ def test_internal_pilot_report_renders_text() -> None:
 
     assert "request_id=req-x" in rendered
     assert "missing_required_events=plan_built" in rendered
+    assert "anomaly_flags=operation_missing_completion" in rendered
+    assert "trace_status=attention_required" in rendered

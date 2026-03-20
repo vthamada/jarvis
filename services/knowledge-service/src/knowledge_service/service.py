@@ -81,15 +81,25 @@ class KnowledgeService:
                 "strategy": 2.0,
                 "productivity": 1.3,
                 "documentation": 0.9,
+                "pilot_operations": 0.8,
+                "operational_readiness": 0.7,
             }
         elif intent == "analysis":
             priorities = {
                 "analysis": 2.0,
                 "strategy": 1.5,
                 "decision_risk": 1.2,
+                "governance": 1.0,
+                "observability": 0.9,
+                "operational_readiness": 0.8,
+                "pilot_operations": 0.7,
             }
         else:
-            priorities = {"productivity": 0.5, "documentation": 0.4}
+            priorities = {
+                "productivity": 0.5,
+                "documentation": 0.4,
+                "pilot_operations": 0.35,
+            }
         return priorities.get(domain_name, 0.0)
 
     @staticmethod

@@ -28,6 +28,39 @@ class FlowMetrics:
     duration_seconds: float
 
 
+DEFAULT_REQUIRED_FLOW_EVENTS = (
+    "input_received",
+    "memory_recovered",
+    "intent_classified",
+    "context_composed",
+    "plan_built",
+    "governance_checked",
+    "response_synthesized",
+    "memory_recorded",
+)
+
+
+@dataclass(frozen=True)
+class FlowAudit:
+    """Operational audit view for a correlated request flow."""
+
+    request_id: str | None
+    session_id: str | None
+    mission_id: str | None
+    total_events: int
+    event_names: list[str]
+    missing_required_events: list[str]
+    anomaly_flags: list[str]
+    governance_decision: str | None
+    operation_status: str | None
+    duration_seconds: float
+    source_services: list[str]
+
+    @property
+    def trace_complete(self) -> bool:
+        return not self.missing_required_events and not self.anomaly_flags
+
+
 @dataclass(frozen=True)
 class ObservabilityQuery:
     """Query filters for recent event inspection."""
@@ -133,6 +166,115 @@ class ObservabilityService:
             error_events=sum(1 for event in events if event.event_name == "error_raised"),
             duration_seconds=duration,
         )
+
+    def audit_flow(
+        self,
+        query: ObservabilityQuery,
+        *,
+        required_events: tuple[str, ...] = DEFAULT_REQUIRED_FLOW_EVENTS,
+    ) -> FlowAudit:
+        """Audit a correlated flow for trace completeness and operational anomalies."""
+
+        events = self.list_recent_events(query)
+        metrics = self.summarize_flow(query)
+        if not events:
+            return FlowAudit(
+                request_id=query.request_id,
+                session_id=query.session_id,
+                mission_id=query.mission_id,
+                total_events=0,
+                event_names=[],
+                missing_required_events=list(required_events),
+                anomaly_flags=["no_events_found"],
+                governance_decision=None,
+                operation_status=None,
+                duration_seconds=0.0,
+                source_services=[],
+            )
+
+        event_names = [event.event_name for event in events]
+        governance_event = self._first_event(events, "governance_checked")
+        operation_event = self._first_event(events, "operation_completed")
+        first_event = events[0]
+        governance_decision = (
+            str(governance_event.payload.get("decision")) if governance_event else None
+        )
+        operation_status = (
+            str(operation_event.payload.get("status")) if operation_event else None
+        )
+        anomaly_flags: list[str] = []
+        missing_required_events = [
+            event_name for event_name in required_events if event_name not in event_names
+        ]
+        if "error_raised" in event_names:
+            anomaly_flags.append("error_raised_present")
+        if governance_event is None:
+            anomaly_flags.append("governance_check_missing")
+        if operation_event and "operation_dispatched" not in event_names:
+            anomaly_flags.append("operation_completed_without_dispatch")
+        if governance_decision in {"allow", "allow_with_conditions"}:
+            if "response_synthesized" not in event_names:
+                anomaly_flags.append("allowed_flow_missing_response")
+            if "memory_recorded" not in event_names:
+                anomaly_flags.append("allowed_flow_missing_memory_record")
+            if (
+                "operation_dispatched" in event_names
+                and "operation_completed" not in event_names
+            ):
+                anomaly_flags.append("operation_missing_completion")
+        if governance_decision in {"block", "defer_for_validation"} and (
+            "governance_blocked" not in event_names
+        ):
+            anomaly_flags.append("blocked_flow_missing_block_event")
+
+        return FlowAudit(
+            request_id=first_event.request_id,
+            session_id=first_event.session_id,
+            mission_id=first_event.mission_id,
+            total_events=len(events),
+            event_names=event_names,
+            missing_required_events=missing_required_events,
+            anomaly_flags=anomaly_flags,
+            governance_decision=governance_decision,
+            operation_status=operation_status,
+            duration_seconds=metrics.duration_seconds,
+            source_services=sorted({event.source_service for event in events}),
+        )
+
+    def summarize_recent_requests(
+        self,
+        *,
+        limit: int = 10,
+        required_events: tuple[str, ...] = DEFAULT_REQUIRED_FLOW_EVENTS,
+    ) -> list[FlowAudit]:
+        """Return audited recent request traces for pilot and rollout review."""
+
+        request_ids = self._recent_request_ids(limit)
+        return [
+            self.audit_flow(
+                ObservabilityQuery(request_id=request_id, limit=100),
+                required_events=required_events,
+            )
+            for request_id in request_ids
+        ]
+
+    def _recent_request_ids(self, limit: int) -> list[str]:
+        events = self.list_recent_events(ObservabilityQuery(limit=max(limit * 20, 20)))
+        request_ids: list[str] = []
+        for event in reversed(events):
+            if event.request_id and event.request_id not in request_ids:
+                request_ids.append(event.request_id)
+        return list(reversed(request_ids[-limit:]))
+
+    @staticmethod
+    def _first_event(
+        events: list[InternalEventEnvelope],
+        event_name: str,
+    ) -> InternalEventEnvelope | None:
+        for event in events:
+            if event.event_name == event_name:
+                return event
+        return None
 
     @staticmethod
     def _build_agentic_adapter() -> AgenticObservabilityAdapter | None:

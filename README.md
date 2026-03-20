@@ -16,9 +16,11 @@ O projeto já saiu da fundação estrutural e possui um fluxo integrado funciona
 - `operational-service` produz artefatos textuais reais e retorna resultados estruturados;
 - `observability-service` grava a trilha de eventos com correlação por `request_id`, `session_id` e `mission_id`;
 - `observability-service` suporta espelhamento agentic inicial sem substituir a trilha local;
+- `observability-service` audita fluxos recentes com trilha mínima obrigatória e flags automáticas de anomalia;
 - `evolution-lab` compara baseline e candidata em sandbox local sem promoção automatica;
 - `engines/` contém os componentes iniciais de identidade, execução, planejamento, cognição e síntese;
 - `tools/validate_v1.py` e `tools/go_live_internal_checklist.py` tornam a validação e o go-live interno executáveis;
+- `tools/run_internal_pilot.py`, `tools/compare_orchestrator_paths.py` e `tools/evolution_from_pilot.py` operacionalizam piloto, comparação e proposals sandbox-only;
 - a suite `pytest -q` passa a partir da raiz do repositório.
 
 Leitura prática de milestone:
@@ -101,6 +103,24 @@ Para resumir as trilhas recentes do `internal pilot`:
 
 ```powershell
 python tools/internal_pilot_report.py --limit 5
+```
+
+Para executar a janela mínima do piloto com evidência local:
+
+```powershell
+python tools/run_internal_pilot.py --profile development
+```
+
+Para comparar o baseline atual com a POC de `LangGraph`:
+
+```powershell
+python tools/compare_orchestrator_paths.py --profile development
+```
+
+Para transformar sinais do piloto em proposals sandbox-only do `evolution-lab`:
+
+```powershell
+python tools/evolution_from_pilot.py --limit 10
 ```
 
 ### Node

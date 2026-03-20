@@ -86,3 +86,15 @@ def test_knowledge_service_covers_operational_readiness_and_software_domains() -
 
     assert "operational_readiness" in result.active_domains
     assert "software_development" in result.active_domains
+
+
+def test_knowledge_service_supports_pilot_and_observability_queries() -> None:
+    service = KnowledgeService()
+
+    result = service.retrieve_for_intent(
+        intent="analysis",
+        query="Analyze pilot telemetry anomalies and trace gaps before the rollout comparison.",
+    )
+
+    assert "observability" in result.active_domains
+    assert "pilot_operations" in result.active_domains
