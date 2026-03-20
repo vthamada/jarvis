@@ -149,7 +149,7 @@ Se o projeto abrir uma pasta separada para pesquisa, a ordem continua sendo:
 1. `langchain-ai/langgraph`
 2. `All-Hands-AI/OpenHands`
 3. `openclaw/openclaw`
-4. Hermes Agent
+4. `NousResearch/hermes-agent`
 5. `getzep/graphiti`
 6. `run-llama/llama_index`
 7. `zou-group/textgrad`
@@ -176,3 +176,24 @@ A leitura consolidada mais segura hoje e:
   ao baseline do `v1`;
 - memoria vetorial, frameworks de autoevolucao mais fortes e referencias de
   runtime externo ficam para ciclos posteriores.
+
+---
+
+## 9. Foco de estudo no inicio do pos-v1
+
+- trilha atual: `continuidade profunda entre missoes`;
+- ordem oficial de estudo:
+  1. `LangGraph`
+  2. `Hermes Agent`
+  3. `Graphiti`
+  4. `Zep`
+- o estudo deve ser paralelo curto e dirigido pela trilha principal;
+- nenhuma dessas opcoes entra automaticamente no nucleo;
+- ficam explicitamente fora do foco imediato deste primeiro ciclo: `OpenHands`, `OpenClaw`, `pgvector`, `DSPy / MIPRO`, `AFlow`, `EvoAgentX`, `SEAL` e `Darwin Godel Machine`.
+
+Leitura correta por eixo:
+
+- `LangGraph`: referencia principal para continuidade stateful, checkpoints e execucao duravel;
+- `Hermes Agent`: referencia secundaria para runtime persistente, continuidade viva e superficie de agente;
+- `Graphiti` e `Zep`: referencias de memoria relacional, temporal ou contextual complementar;
+- `DSPy / MIPRO`, `TextGrad`, `AFlow`, `EvoAgentX`, `SEAL` e `Darwin Godel Machine`: continuam sendo as referencias mais adequadas quando o foco for autoaperfeicoamento.

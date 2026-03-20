@@ -8,6 +8,15 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 
 ## 2026-03-20
 
+### Abertura disciplinada do pos-v1
+
+- encerramento do `v1` seguido de abertura disciplinada do `pos-v1` no proprio `HANDOFF.md`;
+- definida a trilha prioritaria do `pos-v1` como `continuidade profunda entre missoes`;
+- centralizadas as orientacoes operacionais do proximo ciclo no `HANDOFF.md`, sem criar documento novo;
+- autorizado estudo externo curto para `LangGraph`, `Hermes Agent`, `Graphiti` e `Zep`, sempre como apoio dirigido e nao como bloqueio da implementacao principal.
+- explicitado que `Hermes Agent` entra no estudo como referencia de continuidade e runtime persistente, nao como referencia principal de autoaperfeicoamento;
+- explicitado que a trilha de autoaperfeicoamento continua mais associada a `DSPy / MIPRO`, `TextGrad`, `AFlow`, `EvoAgentX`, `SEAL` e `Darwin Godel Machine`, ficando fora do foco imediato do primeiro ciclo pos-`v1`.
+
 ### Pacote final de robustez do `v1` e `jarvis-console`
 
 - implementado `tools/operational_artifacts.py` para gerar `baseline snapshot`, `containment drill` e `incident evidence` em `.jarvis_runtime/operational/`;
@@ -23,6 +32,12 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 ---
 ## 2026-03-20
 
+### Abertura disciplinada do pos-v1
+
+- encerramento do `v1` seguido de abertura disciplinada do `pos-v1` no proprio `HANDOFF.md`;
+- definida a trilha prioritaria do `pos-v1` como `continuidade profunda entre missoes`;
+- centralizadas as orientacoes operacionais do proximo ciclo no `HANDOFF.md`, sem criar documento novo;
+- autorizado estudo externo curto para `LangGraph`, `Hermes Agent`, `Graphiti` e `Zep`, sempre como apoio dirigido e nao como bloqueio da implementacao principal.
 ### Incremento curto de continuidade entre missoes
 
 - criado `docs/implementation/mission-continuity-final-increment.md` como plano executavel do ultimo incremento cognitivo curto antes do fechamento disciplinado do `v1`;
@@ -35,6 +50,12 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 ---
 ## 2026-03-20
 
+### Abertura disciplinada do pos-v1
+
+- encerramento do `v1` seguido de abertura disciplinada do `pos-v1` no proprio `HANDOFF.md`;
+- definida a trilha prioritaria do `pos-v1` como `continuidade profunda entre missoes`;
+- centralizadas as orientacoes operacionais do proximo ciclo no `HANDOFF.md`, sem criar documento novo;
+- autorizado estudo externo curto para `LangGraph`, `Hermes Agent`, `Graphiti` e `Zep`, sempre como apoio dirigido e nao como bloqueio da implementacao principal.
 ### Enxugamento e reorganizacao de `docs/`
 
 - consolidados `docs/operations/go-live-readiness.md`, `docs/operations/v1-go-no-go-decision.md` e `docs/operations/v1-production-controlled.md` em `docs/operations/v1-operational-baseline.md`;
@@ -406,6 +427,13 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 
 
 ## 2026-03-20
+
+### Abertura disciplinada do pos-v1
+
+- encerramento do `v1` seguido de abertura disciplinada do `pos-v1` no proprio `HANDOFF.md`;
+- definida a trilha prioritaria do `pos-v1` como `continuidade profunda entre missoes`;
+- centralizadas as orientacoes operacionais do proximo ciclo no `HANDOFF.md`, sem criar documento novo;
+- autorizado estudo externo curto para `LangGraph`, `Hermes Agent`, `Graphiti` e `Zep`, sempre como apoio dirigido e nao como bloqueio da implementacao principal.
 
 ### Pacote final de robustez e console minimo do v1
 

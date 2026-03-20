@@ -4,16 +4,15 @@
 
 - Atualizado em: 2026-03-20
 - Branch: `main`
- - Commit de referência: `092eb0a`
+ - Commit de referencia: `216a13a`
 - Artefato canônico do projeto: `documento_mestre_jarvis.md`
-- Status do projeto: `v1` em `GO CONDICIONAL` para produção controlada, com baseline integrado validado, benchmark local fechado, PostgreSQL validado como backend operacional, observabilidade local persistida, auditoria operacional de request ativa, ciclo cognitivo mais unitário implementado, `internal pilot` controlado já executado com resultado saudável, proposals sandbox-only ligadas ao `evolution-lab` e POC opcional de `LangGraph` aberta no `orchestrator-service` sem quebrar o fluxo principal
+- Status do projeto: `v1` encerrado para producao controlada, com baseline congelado e `pos-v1` aberto de forma disciplinada, mantendo `LangGraph` como POC opcional, `PostgreSQL` como backend operacional oficial e `jarvis-console` como interface textual minima do baseline
 
 ## Meta Atual
 
-Consolidar a leitura do ultimo incremento cognitivo curto de continuidade entre missoes, decidir se ele basta para o fechamento disciplinado do `v1` e so depois usar comparacao baseline vs. POC de `LangGraph` e proposals sandbox-only como trilha de pos-`v1`.
+Abrir o `pos-v1` com foco total em `continuidade profunda entre missoes`, sem reabrir o baseline do `v1`, usando estudo externo curto apenas como apoio dirigido a essa trilha.
 
 ## Estado do Projeto
-
 
 Hoje o repositório contém:
 
@@ -143,24 +142,21 @@ Não rediscutir sem evidência forte ou mudanca explícita de direção:
 
 ## O Que Ainda Falta
 
-Pendências principais agora:
+Pendencias principais agora:
 
-- consolidar formalmente a leitura do `internal pilot` já executado;
-- comparar o baseline principal com a POC opcional de `LangGraph` via `tools/compare_orchestrator_paths.py`;
-- transformar os sinais relevantes em proposals sandbox-only com `tools/evolution_from_pilot.py`;
-- decidir se o `v1` ja pode ser encerrado com disciplina agora que o ultimo incremento cognitivo curto ja foi absorvido;
-- revisar e normalizar documentos com mojibake, sem mexer no papel canonico do Documento-Mestre.
+- aprofundar a continuidade entre missoes relacionadas acima do nivel ja coberto pelo `v1`;
+- decidir o que vira `v1.5` e o que fica para `v2` a partir dos achados do estudo externo curto;
+- manter o `v1` congelado enquanto o primeiro ciclo do `pos-v1` avanca;
+- registrar no proprio `HANDOFF.md` as decisoes de absorcao ou rejeicao que surgirem do estudo externo.
 
-## Próximos Passos Imediatos
+## Proximos Passos Imediatos
 
 Ordem recomendada:
 
-1. executar `python tools/compare_orchestrator_paths.py --profile controlled`;
-2. executar `python tools/evolution_from_pilot.py --limit 10`;
-3. consolidar a leitura do piloto e da comparação em decisão curta;
-4. decidir entre encerrar o `v1` ou absorver um último incremento cognitivo curto;
-5. só então abrir o próximo ciclo maior do sistema.
-
+1. implementar continuidade profunda entre missoes;
+2. rodar estudo externo curto em paralelo, sem bloquear a implementacao principal;
+3. consolidar achados reutilizaveis e classifica-los como `absorver depois`, `usar como referencia` ou `rejeitar`;
+4. decidir o que entra em `v1.5` e o que fica para `v2`.
 ## Riscos / Bloqueios
 
 
@@ -343,3 +339,93 @@ Leitura operacional oficial a partir desta rodada:
 
 Esta formalizacao substitui apenas a leitura de prioridade imediata.
  Ela não invalida o histórico acima.
+---
+
+## Direcao do Pos-v1
+
+### Estado de partida
+
+- o `v1` permanece encerrado e congelado;
+- o `pos-v1` comeca sem reabrir o baseline do `v1`.
+
+### Trilha prioritaria
+
+- `continuidade profunda entre missoes`
+
+### Objetivo do primeiro ciclo
+
+- fazer o sistema sustentar continuidade acima da missao atual;
+- reforcar a sensacao de entidade unica entre missoes relacionadas;
+- evitar que a resposta pareca apenas reutilizacao de contexto local.
+
+### Sequencia oficial de execucao
+
+1. implementar continuidade profunda entre missoes;
+2. rodar estudo externo curto em paralelo;
+3. consolidar achados reutilizaveis;
+4. decidir o que entra em `v1.5` e o que fica para `v2`.
+
+### O que entra no primeiro ciclo
+
+- aprofundamento da memoria de continuidade;
+- recuperacao entre missoes relacionadas;
+- planejamento com decisao explicita entre continuar, encerrar, reformular ou retomar contexto relacionado;
+- sintese mais coerente com linha de continuidade;
+- ajustes no orquestrador para carregar continuidade relacionada.
+
+### O que nao entra agora
+
+- `LLM adapter` configuravel;
+- interface web;
+- interface de voz;
+- `LangGraph` como runtime principal;
+- memoria vetorial ou semantica profunda;
+- expansao ampla de especialistas subordinados.
+
+### Estudos externos autorizados
+
+- `LangGraph`
+- `Hermes Agent`
+- `Graphiti`
+- `Zep`
+
+### Papel de cada estudo autorizado
+
+- `LangGraph`: estudo de continuidade stateful, durable execution e checkpoints;
+- `Hermes Agent`: estudo de runtime persistente, continuidade viva, memoria operacional e superficie de agente sempre ativo;
+- `Graphiti`: estudo de memoria relacional ou temporal para missoes;
+- `Zep`: estudo de memoria contextual complementar para ciclos posteriores.
+
+### Autoaperfeicoamento nao vem de Hermes neste ciclo
+
+- `Hermes Agent` nao e a referencia principal de autoaperfeicoamento do JARVIS;
+- neste primeiro ciclo ele deve ser lido como referencia de continuidade e runtime, nao como stack central de evolucao;
+- a trilha de autoaperfeicoamento continua separada e mais alinhada a `DSPy / MIPRO`, `TextGrad`, `AFlow`, `EvoAgentX`, `SEAL` e `Darwin Godel Machine`;
+- essa trilha permanece fora do foco imediato do primeiro ciclo pos-`v1`.
+
+### Pergunta que cada estudo deve responder
+
+- `LangGraph`: o que pode ser reaproveitado para continuidade stateful futura sem reabrir o nucleo agora?
+- `Hermes Agent`: quais padroes de continuidade persistente e runtime vivo valem como inspiracao arquitetural?
+- `Graphiti`: ha padrao util para memoria relacional ou temporal de missoes?
+- `Zep`: ha algo util para memoria contextual complementar em ciclos posteriores?
+
+### Metodo de estudo
+
+- clonar fora do repositorio principal;
+- leitura estrutural e read-only;
+- extrair padroes, nao copiar arquitetura;
+- classificar cada achado como `absorver depois`, `usar como referencia` ou `rejeitar`;
+- so promover para implementacao quando houver aderencia clara a trilha principal.
+
+### Criterio de absorcao
+
+- melhora material na continuidade entre missoes;
+- compatibilidade com contratos e identidade do JARVIS;
+- sem terceirizar nucleo, governanca ou memoria canonica;
+- sem reabrir o `v1`.
+
+### Regra de disciplina
+
+- estudo nao bloqueia a implementacao principal;
+- nenhuma tecnologia externa vira dependencia central sem decisao arquitetural formal.
