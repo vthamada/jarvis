@@ -4,7 +4,7 @@
 
 - Atualizado em: 2026-03-20
 - Branch: `main`
-- Commit de referencia: `092eb0a`
+ - Commit de referência: `092eb0a`
 - Artefato canônico do projeto: `documento_mestre_jarvis.md`
 - Status do projeto: `v1` em `GO CONDICIONAL` para produção controlada, com baseline integrado validado, benchmark local fechado, PostgreSQL validado como backend operacional, observabilidade local persistida, auditoria operacional de request ativa, ciclo cognitivo mais unitário implementado, `internal pilot` controlado já executado com resultado saudável, proposals sandbox-only ligadas ao `evolution-lab` e POC opcional de `LangGraph` aberta no `orchestrator-service` sem quebrar o fluxo principal
 
@@ -24,18 +24,18 @@ Hoje o repositório contém:
  - arquivos-base da raiz presentes;
  - camada compartilhada inicial em `shared/` com tipos, enums, estados, contratos, schemas, eventos e identidade/princípios;
 - `orchestrator-service` coordenando o fluxo entre engines, memória, governança, conhecimento, observabilidade e operação;
-- `governance-service` com decisóes `allow`, `allow_with_conditions`, `block` e `defer_for_validation`;
+ - `governance-service` com decisões `allow`, `allow_with_conditions`, `block` e `defer_for_validation`;
  - `memory-service` com persistência local por repositório, contexto de sessão, estado mínimo de missão e resumo semântico curto reutilizável entre turnos;
  - `operational-service` com geração de artefatos textuais estruturados e hints de memória;
 - `knowledge-service` com retrieval determinístico sobre dominios prioritários do `v1` a partir de corpus curado local;
 - `observability-service` persistindo a trilha de eventos internos com campos de correlação;
-- `observability-service` com espelhamento agentic complementar endurecido para `LangSmith` e para arvore local de traces em `JSONL`;
+ - `observability-service` com espelhamento agentic complementar endurecido para `LangSmith` e para árvore local de traces em `JSONL`;
 - `observability-service` auditando requests recentes com trilha mínima obrigatória, flags automáticas de anomalia e resumo de fluxo;
-- `evolution-lab` persistindo propostas e decisóes sandbox-only entre baseline e candidata;
+ - `evolution-lab` persistindo propostas e decisões sandbox-only entre baseline e candidata;
 - `engines/` com componentes reais de identidade, executivo, planejamento, cognição e síntese;
  - suite de testes cobrindo persistência, governança, observabilidade, conhecimento, operação e o fluxo ponta a ponta do orquestrador;
-- ciclo deliberativo implementado no nucleo, com diretiva executiva enriquecida, plano estruturado, governanca sobre plano, memoria com hints deliberativos, resumo semantico de missao e sintese mais executiva.
-- incremento curto de continuidade entre missoes implementado, com conflito explicito entre objetivo atual e missao ativa, precedencia mais forte de loops abertos e resposta final mais aderente a uma entidade unica.
+ - ciclo deliberativo implementado no núcleo, com diretiva executiva enriquecida, plano estruturado, governança sobre o plano, memória com hints deliberativos, resumo semântico de missão e síntese mais executiva.
+ - incremento curto de continuidade entre missões implementado, com conflito explícito entre objetivo atual e missão ativa, precedência mais forte de loops abertos e resposta final mais aderente a uma entidade única.
 - `tools/internal_pilot_report.py` resumindo requests recentes por `request_id`, decisão de governança, status operacional e eventos ausentes da trilha mínima;
 - `tools/run_internal_pilot.py` executando a janela mínima do piloto com cenários repetíveis;
 - `tools/compare_orchestrator_paths.py` comparando baseline e POC de `LangGraph` nos mesmos cenários;
@@ -93,7 +93,7 @@ Regra importante de leitura documental:
 - execução e validação local do benchmark dirigido do `v1`, com decisão preliminar de manter memória atual até validar PostgreSQL, incorporar a trilha atual de observabilidade e priorizar `manual_variants` no evolution-lab.
 - promoção do ranking ponderado determinístico para o baseline do `knowledge-service`, absorvendo no serviço a melhoria indicada pelo benchmark.
 - traducao do resultado do benchmark do `evolution-lab` para o serviço real, registrando `manual_variants` como estratégia sandbox prioritária e preservando `sandbox-only`.
-- ampliacao do harness de benchmark com CLI util, escopo isolado por execução e testes específicos para a trilha PostgreSQL.
+ - ampliação do harness de benchmark com CLI útil, escopo isolado por execução e testes específicos para a trilha PostgreSQL.
 - validação real do `memory-service` contra PostgreSQL local com `psycopg`, teste de integração dedicado e benchmark rerodado com decisão `adotar no v1`.
 - ajuste do `docker compose` local para publicar PostgreSQL em `5433`, evitando conflito com um `postgres.exe` local já ativo nesta máquina;
 - criação de `docs/architecture/technology-study.md` para consolidar a leitura do Documento-Mestre sobre stack, frameworks, algoritmos e repositórios a estudar;
@@ -117,7 +117,7 @@ Regra importante de leitura documental:
 ---
 - ajuste do núcleo para reforçar sensação de entidade única, com diretiva executiva mais rica, continuidade de missão ampliada, especialistas internos revisando estruturalmente o plano e síntese mais unificada;
 - execução local do gate `controlled` com `validate_v1`, `go_live_internal_checklist`, `run_internal_pilot` e `internal_pilot_report`, todos passando na máquina atual.
-- consolidacao documental de docs/, com fusao dos documentos operacionais do 1 em docs/operations/v1-operational-baseline.md, fusao dos estudos de tecnologia em docs/architecture/technology-study.md, arquivamento de planos historicos em docs/archive/ e deslocamento de temas pos-1 para docs/future/.
+- consolidação documental de docs/, com fusão dos documentos operacionais do v1 em docs/operations/v1-operational-baseline.md, fusão dos estudos de tecnologia em docs/architecture/technology-study.md, arquivamento de planos históricos em docs/archive/ e deslocamento de temas pos-v1 para docs/future/.
 
 ## Decisões Fechadas
 
@@ -135,8 +135,8 @@ Não rediscutir sem evidência forte ou mudanca explícita de direção:
 - a trilha local persistida continua sendo a fonte primaria de debug e auditoria, com `LangSmith` apenas como complemento;
 - `LangGraph` entra por absorção parcial e progressiva, com POC opcional no orquestrador antes de qualquer migracao mais ampla;
 - `OpenHands` e o principal especialista subordinado de software;
-- especialistas sóo subordinados ao núcleo, não competidores de identidade;
-- governança e autoevolucao sóo partes nucleares do sistema;
+- especialistas são subordinados ao núcleo, não competidores de identidade;
+- governança e autoevolucao são partes nucleares do sistema;
 - o Documento-Mestre continua sendo o artefato canônico do projeto.
 
 ---
@@ -308,24 +308,24 @@ $env:DATABASE_URL = "postgresql://postgres:postgres@localhost:5433/jarvis"
 
 ## Atualizacao 2026-03-20 - pacote final de robustez do v1
 
-- `tools/validate_v1.py` passou a validar consistencia entre missao, memoria e governanca, gerar `baseline snapshot` e incluir smoke do `jarvis-console`;
-- `tools/go_live_internal_checklist.py` passou a validar conflito de missao com `defer_for_validation`, coerencia de `open_loops`, `containment drill` e evidencia operacional minima;
-- criado `tools/operational_artifacts.py` para consolidar `baseline snapshot`, `containment drill` e `incident evidence` em `.jarvis_runtime/operational/`;
-- `run_internal_pilot.py` agora atualiza tambem `latest_pilot.json` e `latest_pilot.md` em `.jarvis_runtime/pilot/`;
-- `apps/jarvis_console/` implementa o console textual minimo do `v1`, com modos `ask` e `chat` sobre o `orchestrator-service`;
-- `memory-service` foi endurecido para nao sobrescrever silenciosamente o estado de missao aceito quando um turno entra em `block` ou `defer_for_validation`;
+ - `tools/validate_v1.py` passou a validar consistência entre missão, memória e governança, gerar `baseline snapshot` e incluir smoke do `jarvis-console`;
+ - `tools/go_live_internal_checklist.py` passou a validar conflito de missão com `defer_for_validation`, coerência de `open_loops`, `containment drill` e evidência operacional mínima;
+ - criado `tools/operational_artifacts.py` para consolidar `baseline snapshot`, `containment drill` e `incident evidence` em `.jarvis_runtime/operational/`;
+ - `run_internal_pilot.py` agora atualiza também `latest_pilot.json` e `latest_pilot.md` em `.jarvis_runtime/pilot/`;
+ - `apps/jarvis_console/` implementa o console textual mínimo do `v1`, com modos `ask` e `chat` sobre o `orchestrator-service`;
+ - `memory-service` foi endurecido para não sobrescrever silenciosamente o estado de missão aceito quando um turno entra em `block` ou `defer_for_validation`;
 - o pacote de fechamento do `v1` continua sem introduzir `LLM adapter`, web UI, voz/realtime ou `LangGraph` como caminho principal.
 
 ---
 
 ## Atualizacao 2026-03-20 - fechamento operacional e console minimo
 
-- o pacote final de robustez do `v1` foi implementado sem reabrir a arquitetura do nucleo;
-- `tools/validate_v1.py` agora valida coerencia entre missao, memoria e governanca, gera `baseline snapshot` e inclui smoke do `jarvis-console`;
-- `tools/go_live_internal_checklist.py` agora valida conflito de missao com `defer_for_validation`, coerencia de `open_loops`, `containment drill` e evidencia operacional minima;
-- `tools/operational_artifacts.py` consolida `baseline snapshot`, `containment drill` e `incident evidence` em `.jarvis_runtime/operational/`;
-- `apps/jarvis_console/` implementa a interface textual minima do `v1`, com modos `ask` e `chat`, `session_id`, `mission_id` e modo `--debug`;
-- o `memory-service` agora preserva o estado de missao aceito quando um turno posterior entra em `block` ou `defer_for_validation`;
+ - o pacote final de robustez do `v1` foi implementado sem reabrir a arquitetura do núcleo;
+ - `tools/validate_v1.py` agora valida coerência entre missão, memória e governança, gera `baseline snapshot` e inclui smoke do `jarvis-console`;
+ - `tools/go_live_internal_checklist.py` agora valida conflito de missão com `defer_for_validation`, coerência de `open_loops`, `containment drill` e evidência operacional mínima;
+ - `tools/operational_artifacts.py` consolida `baseline snapshot`, `containment drill` e `incident evidence` em `.jarvis_runtime/operational/`;
+ - `apps/jarvis_console/` implementa a interface textual mínima do `v1`, com modos `ask` e `chat`, `session_id`, `mission_id` e modo `--debug`;
+ - `memory-service` agora preserva o estado de missão aceito quando um turno posterior entra em `block` ou `defer_for_validation`;
 - o gate final desta rodada passou em `development` e `controlled`, com `DATABASE_URL=postgresql://postgres:postgres@localhost:5432/jarvis`;
 - o `internal pilot` curto do baseline final passou em `controlled` com status `healthy`;
 - este pacote fecha o `v1` com robustez operacional e interface minima, mantendo fora do escopo: `LLM adapter`, web UI, voz/realtime e `LangGraph` como caminho principal.
@@ -336,10 +336,10 @@ $env:DATABASE_URL = "postgresql://postgres:postgres@localhost:5433/jarvis"
 Leitura operacional oficial a partir desta rodada:
 
 - o `v1` esta formalmente encerrado como baseline de `producao controlada`;
-- o baseline encerrado inclui nucleo unificado, continuidade util, deliberacao convincente em escopo controlado, governanca, observabilidade, memoria persistente e `jarvis-console` minimo;
+ - o baseline encerrado inclui núcleo unificado, continuidade útil, deliberação convincente em escopo controlado, governança, observabilidade, memória persistente e `jarvis-console` mínimo;
 - `PostgreSQL` em `DATABASE_URL` e o backend operacional oficial do baseline controlado;
 - `sqlite` permanece como fallback local de desenvolvimento;
 - qualquer ampliacao relevante daqui para frente deve ser tratada como `pos-v1`, `v1.5` ou `v2`.
 
 Esta formalizacao substitui apenas a leitura de prioridade imediata.
-Ela nao invalida o historico acima.
+ Ela não invalida o histórico acima.
