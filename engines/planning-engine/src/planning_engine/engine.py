@@ -4,7 +4,62 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 
-from shared.contracts import DeliberativePlanContract, SpecialistContributionContract
+from shared.contracts import (
+    DeliberativePlanContract,
+    SpecialistContributionContract,
+)
+
+MISSION_SHIFT_KEYWORDS = (
+    "new",
+    "novo",
+    "nova",
+    "outro",
+    "outra",
+    "different",
+    "instead",
+    "mudar",
+    "mudanca",
+    "trocar",
+    "switch",
+)
+
+MISSION_CLOSE_KEYWORDS = (
+    "finish",
+    "close",
+    "encerrar",
+    "concluir",
+    "fechar",
+)
+
+IGNORED_TOKENS = {
+    "a",
+    "ao",
+    "as",
+    "com",
+    "como",
+    "da",
+    "das",
+    "de",
+    "do",
+    "dos",
+    "e",
+    "em",
+    "for",
+    "na",
+    "nas",
+    "no",
+    "nos",
+    "o",
+    "os",
+    "para",
+    "plan",
+    "planejar",
+    "please",
+    "por",
+    "the",
+    "uma",
+    "um",
+}
 
 
 @dataclass(frozen=True)
@@ -36,6 +91,8 @@ class PlanningContext:
     mission_semantic_brief: str | None = None
     mission_focus: list[str] | None = None
     last_decision_frame: str | None = None
+    mission_goal: str | None = None
+    mission_recommendation: str | None = None
 
 
 class PlanningEngine:
@@ -49,17 +106,45 @@ class PlanningEngine:
         tensions = list(context.tensions or [])
         specialist_hints = list(context.specialist_hints or [])
         dominant_goal = context.dominant_goal or context.query
-        dominant_tension = context.dominant_tension or (
-            tensions[0] if tensions else "manter foco executivo suficiente"
+        mission_goal = context.mission_goal or dominant_goal
+        goal_conflict = self._mission_goal_conflict(context, mission_goal)
+        dominant_tension = self._resolve_dominant_tension(context, goal_conflict)
+        continuity_action = self._continuity_action(
+            context,
+            mission_goal=mission_goal,
+            goal_conflict=goal_conflict,
         )
-        continuity_action = self._continuity_action(context)
         open_loops = list(context.open_loops or [])[:3]
-        steps = self._build_steps(context, continuity_action=continuity_action)
-        smallest_safe_next_action = self._smallest_safe_next_action(context, steps)
-        constraints = self._build_constraints(context)
-        risks = self._build_risks(context)
-        success_criteria = self._build_success_criteria(context, continuity_action)
-        recommended_task_type = self._recommended_task_type(context)
+        steps = self._build_steps(
+            context,
+            continuity_action=continuity_action,
+            mission_goal=mission_goal,
+            goal_conflict=goal_conflict,
+            open_loops=open_loops,
+        )
+        smallest_safe_next_action = self._smallest_safe_next_action(
+            context,
+            steps,
+            continuity_action=continuity_action,
+            open_loops=open_loops,
+            goal_conflict=goal_conflict,
+        )
+        constraints = self._build_constraints(
+            context,
+            continuity_action=continuity_action,
+            open_loops=open_loops,
+            goal_conflict=goal_conflict,
+        )
+        risks = self._build_risks(context, goal_conflict=goal_conflict)
+        success_criteria = self._build_success_criteria(
+            context,
+            continuity_action=continuity_action,
+            open_loops=open_loops,
+        )
+        recommended_task_type = self._recommended_task_type(
+            context,
+            continuity_action=continuity_action,
+        )
         requires_human_validation = self._requires_human_validation(
             context,
             risks=risks,
@@ -69,6 +154,7 @@ class PlanningEngine:
         plan_summary = self._build_summary(
             context,
             dominant_goal=dominant_goal,
+            mission_goal=mission_goal,
             dominant_tension=dominant_tension,
             smallest_safe_next_action=smallest_safe_next_action,
             continuity_action=continuity_action,
@@ -77,8 +163,10 @@ class PlanningEngine:
             context,
             risks=risks,
             dominant_goal=dominant_goal,
+            mission_goal=mission_goal,
             dominant_tension=dominant_tension,
             continuity_action=continuity_action,
+            goal_conflict=goal_conflict,
         )
         return DeliberativePlanContract(
             plan_summary=plan_summary,
@@ -145,7 +233,9 @@ class PlanningEngine:
                 requires_human_validation = True
 
         if open_loop_hints:
-            loop_constraint = f"manter loops abertos sob controle: {', '.join(open_loop_hints[:2])}"
+            loop_constraint = (
+                f"manter loops abertos sob controle: {', '.join(open_loop_hints[:2])}"
+            )
             if loop_constraint not in refined_constraints:
                 refined_constraints.append(loop_constraint)
 
@@ -175,12 +265,27 @@ class PlanningEngine:
             return "confirmar limites normativos e condicoes de auditoria"
         return None
 
-    def _build_steps(self, context: PlanningContext, *, continuity_action: str) -> list[str]:
+    def _build_steps(
+        self,
+        context: PlanningContext,
+        *,
+        continuity_action: str,
+        mission_goal: str,
+        goal_conflict: str | None,
+        open_loops: list[str],
+    ) -> list[str]:
+        loop_focus = self._open_loop_focus(open_loops)
         if context.requires_clarification:
             steps = [
                 "clarificar a leitura atual do pedido",
                 "pedir confirmacao do objetivo ou do resultado esperado",
                 "adiar qualquer operacao ate haver direcao suficiente",
+            ]
+        elif continuity_action == "reformular":
+            steps = [
+                "explicitar o conflito entre o novo pedido e a missao ativa",
+                "decidir se o objetivo atual substitui, adia ou preserva a missao em curso",
+                "manter a resposta em orientacao governavel antes de qualquer operacao",
             ]
         elif context.intent == "analysis":
             steps = [
@@ -199,15 +304,37 @@ class PlanningEngine:
                 "interpretar o objetivo imediato sem ampliar escopo",
                 "fornecer orientacao executiva compacta e coerente",
             ]
+
         if continuity_action == "continuar" and len(steps) < 5:
-            steps.insert(0, "continuar o fio condutor da missao antes de abrir novo escopo")
+            if loop_focus:
+                steps.insert(0, f"retomar o loop principal da missao: {loop_focus}")
+            else:
+                steps.insert(0, "continuar o fio condutor da missao antes de abrir novo escopo")
         elif continuity_action == "encerrar" and len(steps) < 5:
-            steps.insert(0, "fechar explicitamente o loop ativo antes de abrir nova frente")
-        elif continuity_action == "reformular" and len(steps) < 5:
-            steps.insert(0, "reformular a missao atual antes de autorizar qualquer desvio")
+            if loop_focus:
+                steps.insert(0, f"fechar explicitamente o loop principal: {loop_focus}")
+            else:
+                steps.insert(0, "fechar explicitamente o loop ativo antes de abrir nova frente")
+        elif continuity_action == "reformular" and len(steps) < 5 and goal_conflict:
+            steps.insert(
+                0,
+                f"reformular a missao ativa sem perder rastreabilidade: {mission_goal}",
+            )
+
+        if context.mission_recommendation and len(steps) < 5:
+            steps.append(
+                "usar a recomendacao anterior como checkpoint antes da conclusao final"
+            )
         return steps[:5]
 
-    def _build_constraints(self, context: PlanningContext) -> list[str]:
+    def _build_constraints(
+        self,
+        context: PlanningContext,
+        *,
+        continuity_action: str,
+        open_loops: list[str],
+        goal_conflict: str | None,
+    ) -> list[str]:
         constraints = [
             "manter escopo reversivel",
             "preservar rastreabilidade",
@@ -219,9 +346,18 @@ class PlanningEngine:
             constraints.append("fundir apoio cognitivo em uma unica linha de resposta")
         if context.requires_clarification:
             constraints.insert(0, "clarificar objetivo antes de operar")
+        if open_loops:
+            constraints.append("tratar a missao ativa como referencia antes de expandir escopo")
+        if continuity_action == "reformular" and goal_conflict:
+            constraints.append("nao permitir desvio silencioso da missao ativa")
         return constraints
 
-    def _build_risks(self, context: PlanningContext) -> list[str]:
+    def _build_risks(
+        self,
+        context: PlanningContext,
+        *,
+        goal_conflict: str | None,
+    ) -> list[str]:
         risks: list[str] = []
         if context.risk_markers:
             risks.append("pedido contem sinais de risco operacional")
@@ -231,12 +367,18 @@ class PlanningEngine:
             risks.append("sem apoio adicional de conhecimento alem do baseline local")
         if context.open_loops:
             risks.append("existem loops abertos que podem ampliar escopo da missao")
+        if goal_conflict:
+            risks.append(
+                "pedido atual pode deslocar a missao ativa sem reformulacao explicita"
+            )
         return risks or ["sem risco material alem do escopo controlado do v1"]
 
     def _build_success_criteria(
         self,
         context: PlanningContext,
+        *,
         continuity_action: str,
+        open_loops: list[str],
     ) -> list[str]:
         criteria = [
             "resposta deve manter voz unificada e objetivo dominante explicito",
@@ -248,12 +390,25 @@ class PlanningEngine:
             criteria.append("plano deve indicar a menor proxima acao segura")
         if continuity_action == "continuar":
             criteria.append("resposta deve fechar ou avancar o loop principal da missao")
+        elif continuity_action == "encerrar":
+            criteria.append("resposta deve fechar explicitamente o loop principal da missao")
         elif continuity_action == "reformular":
-            criteria.append("mudanca de objetivo deve ficar explicita e governavel")
+            criteria.append(
+                "reformulacao da missao deve declarar o conflito com a meta ativa"
+            )
+        if open_loops and len(criteria) < 4:
+            criteria.append("loop principal deve permanecer rastreavel na resposta final")
         return criteria[:4]
 
-    def _recommended_task_type(self, context: PlanningContext) -> str:
+    def _recommended_task_type(
+        self,
+        context: PlanningContext,
+        *,
+        continuity_action: str,
+    ) -> str:
         if context.requires_clarification:
+            return "general_response"
+        if continuity_action == "reformular":
             return "general_response"
         if context.intent == "analysis" or context.preferred_response_mode == "analysis_only":
             return "produce_analysis_brief"
@@ -269,13 +424,15 @@ class PlanningEngine:
         continuity_action: str,
         open_loops: list[str],
     ) -> bool:
-        if context.intent == "analysis":
+        if context.intent == "analysis" and continuity_action != "reformular":
             return False
         if context.requires_clarification:
             return False
         if any(marker for marker in context.risk_markers):
             return True
-        if continuity_action == "reformular" and bool(open_loops):
+        if continuity_action == "reformular" and bool(
+            open_loops or context.identity_continuity_brief
+        ):
             return True
         return any("risco operacional" in risk for risk in risks)
 
@@ -284,13 +441,14 @@ class PlanningEngine:
         context: PlanningContext,
         *,
         dominant_goal: str,
+        mission_goal: str,
         dominant_tension: str,
         smallest_safe_next_action: str,
         continuity_action: str,
     ) -> str:
         mode = context.identity_mode or context.preferred_response_mode
         return (
-            f"objetivo={dominant_goal}; modo={mode}; "
+            f"objetivo={dominant_goal}; missao_ativa={mission_goal}; modo={mode}; "
             f"continuidade={continuity_action}; tensao={dominant_tension}; "
             f"proxima_acao={smallest_safe_next_action}"
         )
@@ -301,8 +459,10 @@ class PlanningEngine:
         *,
         risks: list[str],
         dominant_goal: str,
+        mission_goal: str,
         dominant_tension: str,
         continuity_action: str,
+        goal_conflict: str | None,
     ) -> str:
         context_hint = self._select_context_hint(context.recovered_context)
         knowledge_hint = (
@@ -315,43 +475,111 @@ class PlanningEngine:
         open_loops = ", ".join((context.open_loops or [])[:3]) or "nenhum"
         secondary = ", ".join((context.secondary_goals or [])[:2]) or "nenhum"
         arbitration = context.arbitration_summary or context.cognitive_rationale
-        risk_text = '; '.join(risks)
+        risk_text = "; ".join(risks)
+        previous_recommendation = context.mission_recommendation or "sem recomendacao previa"
+        conflict_text = goal_conflict or "nenhum"
         return (
-            f"objetivo_dominante={dominant_goal}; objetivos_secundarios={secondary}; "
-            f"continuidade={continuity_hint}; loops_abertos={open_loops}; "
-            f"acao_continuidade={continuity_action}; contexto={context_hint}; "
-            f"apoio={knowledge_hint}; arbitragem={arbitration}; "
-            f"tensao={dominant_tension}; memoria_semantica={semantic_hint}; riscos={risk_text}"
+            f"objetivo_dominante={dominant_goal}; missao_ativa={mission_goal}; "
+            f"objetivos_secundarios={secondary}; continuidade={continuity_hint}; "
+            f"loops_abertos={open_loops}; acao_continuidade={continuity_action}; "
+            f"conflito_missao={conflict_text}; contexto={context_hint}; apoio={knowledge_hint}; "
+            f"arbitragem={arbitration}; tensao={dominant_tension}; "
+            f"memoria_semantica={semantic_hint}; recomendacao_previa={previous_recommendation}; "
+            f"riscos={risk_text}"
         )
 
-    def _continuity_action(self, context: PlanningContext) -> str:
-        open_loops = list(context.open_loops or [])
-        if not open_loops:
-            return "continuar" if context.identity_continuity_brief else "encerrar"
-        lowered_query = context.query.lower()
-        mission_goal = (context.identity_continuity_brief or "").lower()
-        if (
-            mission_goal
-            and mission_goal not in lowered_query
-            and any(
-                word in lowered_query for word in ("new", "novo", "outra", "different", "mudanca")
-            )
-        ):
+    def _continuity_action(
+        self,
+        context: PlanningContext,
+        *,
+        mission_goal: str,
+        goal_conflict: str | None,
+    ) -> str:
+        if goal_conflict:
             return "reformular"
-        if any(
-            word in lowered_query for word in ("finish", "close", "encerrar", "concluir", "fechar")
-        ):
+        lowered_query = context.query.lower()
+        if any(word in lowered_query for word in MISSION_CLOSE_KEYWORDS):
             return "encerrar"
-        return "continuar"
+        if context.open_loops:
+            return "continuar"
+        if context.identity_continuity_brief or mission_goal or context.mission_semantic_brief:
+            return "continuar"
+        return "encerrar"
 
-    def _smallest_safe_next_action(self, context: PlanningContext, steps: list[str]) -> str:
+    def _smallest_safe_next_action(
+        self,
+        context: PlanningContext,
+        steps: list[str],
+        *,
+        continuity_action: str,
+        open_loops: list[str],
+        goal_conflict: str | None,
+    ) -> str:
+        loop_focus = self._open_loop_focus(open_loops)
         if context.requires_clarification:
             return "pedir confirmacao antes de qualquer execucao"
+        if continuity_action == "reformular":
+            if loop_focus:
+                return f"explicitar como o novo pedido afeta {loop_focus}"
+            if goal_conflict:
+                return "explicitar se o novo pedido substitui ou adia a missao ativa"
+        if continuity_action == "encerrar" and loop_focus:
+            return f"fechar {loop_focus} com criterio explicito"
+        if continuity_action == "continuar" and loop_focus:
+            return f"retomar {loop_focus} antes de abrir novo escopo"
         if context.intent == "analysis":
             return "explicitar o trade-off dominante antes de recomendar"
         if steps:
             return steps[0]
         return "avaliar pedido sem ampliar escopo"
+
+    def _resolve_dominant_tension(
+        self,
+        context: PlanningContext,
+        goal_conflict: str | None,
+    ) -> str:
+        if goal_conflict:
+            return "equilibrar continuidade da missao com a pressao por mudanca de objetivo"
+        if context.dominant_tension:
+            return context.dominant_tension
+        tensions = list(context.tensions or [])
+        if tensions:
+            return tensions[0]
+        return "manter foco executivo suficiente"
+
+    def _mission_goal_conflict(
+        self,
+        context: PlanningContext,
+        mission_goal: str,
+    ) -> str | None:
+        if not mission_goal or not (context.open_loops or context.identity_continuity_brief):
+            return None
+        lowered_query = context.query.lower()
+        if any(word in lowered_query for word in MISSION_CLOSE_KEYWORDS):
+            return None
+        mission_tokens = self._meaningful_tokens(mission_goal)
+        query_tokens = self._meaningful_tokens(context.query)
+        if not mission_tokens or not query_tokens:
+            return None
+        overlap = mission_tokens.intersection(query_tokens)
+        scope_shift = any(word in lowered_query for word in MISSION_SHIFT_KEYWORDS)
+        if scope_shift and not overlap:
+            return f"pedido atual desloca o foco da missao ativa '{mission_goal}'"
+        return None
+
+    @staticmethod
+    def _meaningful_tokens(text: str) -> set[str]:
+        return {
+            token
+            for token in "".join(
+                char if char.isalnum() else " " for char in text.lower()
+            ).split()
+            if len(token) > 3 and token not in IGNORED_TOKENS
+        }
+
+    @staticmethod
+    def _open_loop_focus(open_loops: list[str]) -> str | None:
+        return open_loops[0] if open_loops else None
 
     @staticmethod
     def _specialist_resolution_summary(
@@ -369,7 +597,14 @@ class PlanningEngine:
 
     @staticmethod
     def _select_context_hint(recovered_context: list[str]) -> str:
+        skipped_prefixes = (
+            "mission_",
+            "prior_",
+            "identity_continuity_",
+            "open_loops=",
+            "last_decision_frame=",
+        )
         for item in reversed(recovered_context):
-            if not item.startswith(("mission_", "prior_", "identity_continuity_", "open_loops=")):
+            if not item.startswith(skipped_prefixes):
                 return item
         return recovered_context[-1] if recovered_context else "sem continuidade previa relevante"

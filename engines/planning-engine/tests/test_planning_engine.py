@@ -15,7 +15,10 @@ def test_planning_engine_builds_structured_plan_with_continuity() -> None:
             query="Plan milestone M3",
             recovered_context=[
                 "context_summary=previous plan created",
-                "identity_continuity_brief=continuar a missao ativa de milestone",
+                (
+                    "identity_continuity_brief=objetivo=Plan milestone M3; "
+                    "prioridade=definir escopo final"
+                ),
                 "open_loops=definir escopo final;alinhar checkpoints",
                 "mission_semantic_brief=objetivo=Plan milestone M3",
                 "mission_focus=strategy,planning",
@@ -36,21 +39,78 @@ def test_planning_engine_builds_structured_plan_with_continuity() -> None:
             supporting_minds=["mente_estrategica", "mente_pragmatica"],
             dominant_tension="equilibrar ambicao estrategica com a menor proxima acao segura",
             arbitration_summary="mente_executiva lidera com apoio estrategico",
-            identity_continuity_brief="continuar a missao ativa de milestone",
+            identity_continuity_brief=(
+                "objetivo=Plan milestone M3; prioridade=definir escopo final"
+            ),
             open_loops=["definir escopo final", "alinhar checkpoints"],
             mission_semantic_brief="objetivo=Plan milestone M3",
             mission_focus=["strategy", "planning"],
             last_decision_frame="planning",
+            mission_goal="Plan milestone M3",
+            mission_recommendation="retomar o escopo final antes da proxima acao",
         )
     )
     assert plan.goal == "definir um caminho executavel e seguro"
     assert plan.recommended_task_type == "draft_plan"
     assert plan.continuity_action == "continuar"
     assert plan.open_loops == ["definir escopo final", "alinhar checkpoints"]
-    assert len(plan.steps) >= 3
-    assert plan.success_criteria
-    assert plan.smallest_safe_next_action is not None
-    assert "objetivos_secundarios" in plan.rationale
+    assert plan.steps[0] == "retomar o loop principal da missao: definir escopo final"
+    assert any("loop principal da missao" in criterion for criterion in plan.success_criteria)
+    assert (
+        plan.smallest_safe_next_action
+        == "retomar definir escopo final antes de abrir novo escopo"
+    )
+    assert "conflito_missao=nenhum" in plan.rationale
+    assert "recomendacao_previa=retomar o escopo final antes da proxima acao" in plan.rationale
+
+
+def test_planning_engine_reformulates_when_new_request_conflicts_with_active_mission() -> None:
+    engine = PlanningEngine()
+    plan = engine.build_task_plan(
+        PlanningContext(
+            intent="planning",
+            query="Start a new marketing campaign instead.",
+            recovered_context=[
+                (
+                    "identity_continuity_brief=objetivo=Plan milestone M3; "
+                    "prioridade=definir escopo final"
+                ),
+                "open_loops=definir escopo final;alinhar checkpoints",
+                "mission_goal=Plan milestone M3",
+            ],
+            active_domains=["strategy"],
+            active_minds=["mente_executiva"],
+            knowledge_snippets=["Preserve rastreabilidade."],
+            risk_markers=[],
+            requires_clarification=False,
+            preferred_response_mode="plan_and_operate",
+            cognitive_rationale="intent=planning; mente_primaria=mente_executiva",
+            dominant_goal="definir um caminho executavel e seguro",
+            identity_mode="structured_planning",
+            primary_mind="mente_executiva",
+            supporting_minds=["mente_estrategica"],
+            arbitration_summary="mente_executiva lidera com foco em continuidade",
+            identity_continuity_brief=(
+                "objetivo=Plan milestone M3; prioridade=definir escopo final"
+            ),
+            open_loops=["definir escopo final", "alinhar checkpoints"],
+            mission_goal="Plan milestone M3",
+            mission_recommendation="retomar o escopo final antes da proxima acao",
+            last_decision_frame="planning",
+        )
+    )
+    assert plan.continuity_action == "reformular"
+    assert plan.recommended_task_type == "general_response"
+    assert plan.requires_human_validation is True
+    assert (
+        plan.steps[0]
+        == "reformular a missao ativa sem perder rastreabilidade: Plan milestone M3"
+    )
+    assert any("deslocar a missao ativa" in risk for risk in plan.risks)
+    assert (
+        "conflito_missao=pedido atual desloca o foco da missao ativa 'Plan milestone M3'"
+        in plan.rationale
+    )
 
 
 def test_planning_engine_refines_plan_and_consolidates_specialists() -> None:

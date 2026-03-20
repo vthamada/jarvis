@@ -1,4 +1,4 @@
-"""Persistent memory service backed by canonical contracts."""
+﻿"""Persistent memory service backed by canonical contracts."""
 
 from __future__ import annotations
 
@@ -21,6 +21,7 @@ from shared.types import (
     MemoryQueryId,
     MemoryRecordId,
     MissionStatus,
+    PermissionDecision,
     RecoveryType,
     RiskLevel,
     TimeWindow,
@@ -90,6 +91,7 @@ class MemoryService:
         *,
         deliberative_plan: DeliberativePlanContract | None = None,
         specialist_contributions: list[SpecialistContributionContract] | None = None,
+        governance_decision: PermissionDecision | None = None,
     ) -> MemoryRecordResult:
         """Persist a minimal episodic entry and refresh contextual continuity."""
 
@@ -107,6 +109,7 @@ class MemoryService:
                 "response_text": response_text,
                 "dominant_goal": dominant_goal,
                 "decision_frame": decision_frame,
+                "governance_decision": governance_decision.value if governance_decision else None,
                 "open_loops": open_loops,
                 "plan_summary": deliberative_plan.plan_summary if deliberative_plan else None,
                 "plan_steps": deliberative_plan.steps if deliberative_plan else [],
@@ -161,16 +164,17 @@ class MemoryService:
             )
         )
         if contract.mission_id:
-            self.repository.upsert_mission_state(
-                self._build_mission_state(
-                    contract,
-                    record_contract.memory_record_id,
-                    intent,
-                    deliberative_plan,
-                    open_loops=open_loops,
-                    decision_frame=decision_frame,
-                )
+            mission_state = self._build_mission_state(
+                contract,
+                record_contract.memory_record_id,
+                intent,
+                deliberative_plan,
+                open_loops=open_loops,
+                decision_frame=decision_frame,
+                governance_decision=governance_decision,
             )
+            if mission_state is not None:
+                self.repository.upsert_mission_state(mission_state)
         return MemoryRecordResult(record_contract=record_contract)
 
     def get_mission_state(self, mission_id: str) -> MissionStateContract | None:
@@ -203,34 +207,33 @@ class MemoryService:
         if contract.mission_id:
             mission_state = self.repository.fetch_mission_state(str(contract.mission_id))
             if mission_state:
-                mission_hints.append(f"mission_goal={mission_state.mission_goal}")
-                mission_hints.append(
-                    f"mission_state={mission_state.mission_status.value}:{','.join(mission_state.active_tasks[-3:])}"
-                )
                 if mission_state.identity_continuity_brief:
                     mission_hints.append(
                         f"identity_continuity_brief={mission_state.identity_continuity_brief}"
                     )
                 if mission_state.open_loops:
                     mission_hints.append(f"open_loops={';'.join(mission_state.open_loops[:3])}")
-                if mission_state.last_decision_frame:
-                    mission_hints.append(f"last_decision_frame={mission_state.last_decision_frame}")
+                if mission_state.semantic_brief:
+                    mission_hints.append(f"mission_semantic_brief={mission_state.semantic_brief}")
+                mission_hints.append(f"mission_goal={mission_state.mission_goal}")
                 if mission_state.last_recommendation:
                     mission_hints.append(
                         f"mission_recommendation={mission_state.last_recommendation}"
                     )
-                if mission_state.semantic_brief:
-                    mission_hints.append(f"mission_semantic_brief={mission_state.semantic_brief}")
+                if mission_state.last_decision_frame:
+                    mission_hints.append(f"last_decision_frame={mission_state.last_decision_frame}")
                 if mission_state.semantic_focus:
                     mission_hints.append(
                         f"mission_focus={','.join(mission_state.semantic_focus[:3])}"
                     )
+                mission_hints.append(
+                    f"mission_state={mission_state.mission_status.value}:{','.join(mission_state.active_tasks[-3:])}"
+                )
                 if mission_state.recent_plan_steps:
                     mission_hints.append(
                         f"mission_steps={' ; '.join(mission_state.recent_plan_steps[:3])}"
                     )
-        prioritized_mission_hints = mission_hints[:5] + mission_hints[5:]
-        return session_context[-limit:], prioritized_mission_hints[:8], plan_hints[-2:]
+        return session_context[-limit:], mission_hints[:8], plan_hints[-2:]
 
     def _build_mission_state(
         self,
@@ -241,9 +244,17 @@ class MemoryService:
         *,
         open_loops: list[str],
         decision_frame: str,
-    ) -> MissionStateContract:
+        governance_decision: PermissionDecision | None,
+    ) -> MissionStateContract | None:
         mission_id = str(contract.mission_id)
         previous = self.repository.fetch_mission_state(mission_id)
+        accepted = governance_decision not in {
+            PermissionDecision.BLOCK,
+            PermissionDecision.DEFER_FOR_VALIDATION,
+        }
+        if previous is None and not accepted:
+            return None
+
         checkpoints = list(previous.checkpoints) if previous else []
         active_tasks = list(previous.active_tasks) if previous else []
         related_memories = list(previous.related_memories) if previous else []
@@ -251,32 +262,45 @@ class MemoryService:
         recent_plan_steps = list(previous.recent_plan_steps) if previous else []
         semantic_focus = list(previous.semantic_focus) if previous else []
         checkpoints.append(f"request:{contract.request_id}")
-        active_tasks.append(intent)
         related_memories.append(str(memory_record_id))
-        if deliberative_plan:
-            recent_plan_steps = list(deliberative_plan.steps[-3:])
-            for domain in deliberative_plan.active_domains:
-                if domain not in semantic_focus:
-                    semantic_focus.append(domain)
-        if intent not in semantic_focus:
-            semantic_focus.append(intent)
+        if accepted:
+            active_tasks.append(intent)
+            if deliberative_plan:
+                recent_plan_steps = list(deliberative_plan.steps[-3:])
+                for domain in deliberative_plan.active_domains:
+                    if domain not in semantic_focus:
+                        semantic_focus.append(domain)
+            if intent not in semantic_focus:
+                semantic_focus.append(intent)
+
         mission_goal = previous.mission_goal if previous else contract.content
         last_recommendation = (
             deliberative_plan.plan_summary
-            if deliberative_plan
+            if accepted and deliberative_plan
             else (previous.last_recommendation if previous else None)
         )
         semantic_brief = self._build_semantic_brief(
             mission_goal=mission_goal,
             intent=intent,
             semantic_focus=semantic_focus,
-            deliberative_plan=deliberative_plan,
+            deliberative_plan=deliberative_plan if accepted else None,
             previous=previous,
+        )
+        persisted_open_loops = (
+            list(previous.open_loops)
+            if previous and not accepted
+            else open_loops[:3]
+        )
+        persisted_frame = (
+            previous.last_decision_frame
+            if previous and not accepted
+            else decision_frame
         )
         identity_continuity_brief = self._build_identity_continuity_brief(
             mission_goal=mission_goal,
-            open_loops=open_loops,
-            decision_frame=decision_frame,
+            open_loops=persisted_open_loops,
+            decision_frame=persisted_frame or decision_frame,
+            recommendation=last_recommendation,
             previous=previous,
         )
         return MissionStateContract(
@@ -292,8 +316,8 @@ class MemoryService:
             semantic_brief=semantic_brief,
             semantic_focus=semantic_focus[-4:],
             identity_continuity_brief=identity_continuity_brief,
-            open_loops=open_loops[:3],
-            last_decision_frame=decision_frame,
+            open_loops=persisted_open_loops,
+            last_decision_frame=persisted_frame,
             updated_at=self.now(),
         )
 
@@ -323,13 +347,18 @@ class MemoryService:
         mission_goal: str,
         open_loops: list[str],
         decision_frame: str,
+        recommendation: str | None,
         previous: MissionStateContract | None,
     ) -> str:
-        if open_loops:
-            return f"manter {open_loops[0]} alinhado ao objetivo: {mission_goal}"
+        focus = open_loops[0] if open_loops else "consolidar a proxima decisao segura"
+        if recommendation:
+            return (
+                f"objetivo={mission_goal}; prioridade={focus}; "
+                f"frame={decision_frame}; ultimo_ajuste={recommendation}"
+            )
         if previous and previous.identity_continuity_brief:
             return previous.identity_continuity_brief
-        return f"manter a missao {mission_goal} coerente em frame {decision_frame}"
+        return f"objetivo={mission_goal}; prioridade={focus}; frame={decision_frame}"
 
     @staticmethod
     def _extract_open_loops(

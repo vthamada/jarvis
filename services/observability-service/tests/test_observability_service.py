@@ -1,4 +1,4 @@
-from json import loads
+﻿from json import loads
 from pathlib import Path
 from tempfile import gettempdir
 from uuid import uuid4
@@ -294,3 +294,48 @@ def test_langsmith_adapter_groups_events_by_request() -> None:
     assert len(child_runs) == 2
     root_ids = {call["id"] for call in root_runs}
     assert all(call["parent_run_id"] in root_ids for call in child_runs)
+
+def test_observability_service_builds_incident_evidence_for_governed_flow() -> None:
+    temp_dir = runtime_dir("observability-incident")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service.ingest_events(
+        [
+            InternalEventEnvelope(
+                event_id="evt-i1",
+                event_name="input_received",
+                timestamp="2026-03-18T00:00:00+00:00",
+                source_service="orchestrator-service",
+                payload={"content": "delete records"},
+                request_id="req-incident",
+                session_id="sess-incident",
+                correlation_id="req-incident",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-i2",
+                event_name="governance_checked",
+                timestamp="2026-03-18T00:00:01+00:00",
+                source_service="orchestrator-service",
+                payload={"decision": "block"},
+                request_id="req-incident",
+                session_id="sess-incident",
+                correlation_id="req-incident",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-i3",
+                event_name="governance_blocked",
+                timestamp="2026-03-18T00:00:02+00:00",
+                source_service="orchestrator-service",
+                payload={"justification": "blocked"},
+                request_id="req-incident",
+                session_id="sess-incident",
+                correlation_id="req-incident",
+            ),
+        ]
+    )
+
+    evidence = service.build_incident_evidence(ObservabilityQuery(request_id="req-incident"))
+
+    assert evidence.request_id == "req-incident"
+    assert evidence.governance_decision == "block"
+    assert evidence.recommended_operator_action == "keep_contained_and_require_manual_review"
+    assert "memory_recovered" in evidence.missing_required_events

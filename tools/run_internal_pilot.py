@@ -1,4 +1,4 @@
-"""Execute the minimum internal pilot scenario pack for the JARVIS v1."""
+﻿"""Execute the minimum internal pilot scenario pack for the JARVIS v1."""
 # ruff: noqa: E402
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ from time import time
 ROOT = Path(__file__).resolve().parent.parent
 sys_path.insert(0, str(ROOT))
 
-from tools.internal_pilot_support import result_to_dict, run_pilot_scenarios, runtime_dir
+from tools.internal_pilot_support import result_to_dict, run_pilot_scenarios
 
 
 def parse_args() -> Namespace:
@@ -60,18 +60,19 @@ def render_text(payload: dict[str, object]) -> str:
     return "\n".join(lines)
 
 
-def resolve_output_dir(output_dir: str | None) -> Path:
+def resolve_output_dir(output_dir: str | None, run_id: str) -> Path:
     if output_dir is None:
-        return runtime_dir("pilot-run")
+        return ROOT / ".jarvis_runtime" / "pilot" / run_id
     target = Path(output_dir)
     return target if target.is_absolute() else ROOT / target
 
 
 def main() -> None:
     args = parse_args()
-    target_dir = resolve_output_dir(args.output_dir)
-    target_dir.mkdir(parents=True, exist_ok=True)
     started_at = int(time())
+    run_id = f"pilot-{started_at}"
+    target_dir = resolve_output_dir(args.output_dir, run_id)
+    target_dir.mkdir(parents=True, exist_ok=True)
     results = run_pilot_scenarios(profile=args.profile, workdir=target_dir)
     overall_status = (
         "attention_required"
@@ -86,21 +87,25 @@ def main() -> None:
         else "healthy"
     )
     payload = {
-        "run_id": f"pilot-{started_at}",
+        "run_id": run_id,
         "profile": args.profile,
         "overall_status": overall_status,
         "results": [result_to_dict(result) for result in results],
     }
-    (target_dir / "pilot_results.json").write_text(
-        dumps(payload, ensure_ascii=True, indent=2),
-        encoding="utf-8",
-    )
-    (target_dir / "pilot_results.md").write_text(render_text(payload), encoding="utf-8")
+    json_payload = dumps(payload, ensure_ascii=True, indent=2)
+    md_payload = render_text(payload)
+    (target_dir / "pilot_results.json").write_text(json_payload, encoding="utf-8")
+    (target_dir / "pilot_results.md").write_text(md_payload, encoding="utf-8")
+    latest_dir = ROOT / ".jarvis_runtime" / "pilot"
+    latest_dir.mkdir(parents=True, exist_ok=True)
+    (latest_dir / "latest_pilot.json").write_text(json_payload, encoding="utf-8")
+    (latest_dir / "latest_pilot.md").write_text(md_payload, encoding="utf-8")
     if args.format == "json":
-        print(dumps(payload, ensure_ascii=True, indent=2))
+        print(json_payload)
         return
-    print(render_text(payload))
+    print(md_payload)
 
 
 if __name__ == "__main__":
     main()
+

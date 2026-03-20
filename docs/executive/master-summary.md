@@ -112,3 +112,21 @@ O próximo passo executivo mais racional e:
 - comparar o baseline atual com a POC opcional de `LangGraph`, sem reabrir o núcleo do `v1`;
 - decidir se o `v1` fecha com disciplina no baseline atual ou se ainda absorve um último incremento cognitivo curto.
 
+
+---
+
+## 7. Fechamento do v1
+
+O `v1` deve ser lido como encerrado para `producao controlada`.
+
+Isso significa que o projeto ja prova, no recorte correto da versao:
+
+- entidade unificada perceptivel;
+- continuidade util entre turnos e missoes;
+- deliberacao estruturada e governada;
+- operacao segura de baixo risco;
+- observabilidade, memoria persistente e validacao executavel;
+- interface textual minima por console.
+
+Nao significa que a visao completa do JARVIS foi concluida.
+Os proximos avancos relevantes ficam explicitamente em `pos-v1`, `v1.5` ou `v2`.

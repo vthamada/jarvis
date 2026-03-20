@@ -137,3 +137,14 @@ npm run lint
 - `CHANGELOG.md`
 - `docs/implementation/implementation-strategy.md`
 - `docs/roadmap/v1-roadmap.md`
+
+## Console minimo do v1
+
+O baseline agora inclui uma interface textual minima para uso direto do nucleo:
+
+```powershell
+python -m apps.jarvis_console ask "Plan the final validation window."
+python -m apps.jarvis_console chat --session-id demo --mission-id mission-demo
+```
+
+O console e uma casca fina sobre o `orchestrator-service`. Web, voz e configuracao plugavel de LLM permanecem fora do escopo do `v1`.

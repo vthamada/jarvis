@@ -16,7 +16,33 @@ Para validar que nao ha mojibake nem BOM nos arquivos de texto varridos pelo pro
 python tools/check_mojibake.py
 ```
 
-Esses scripts varrem principalmente `*.md` e `*.txt`, ignorando `.git/`, `.venv/`, `node_modules/` e `.jarvis_runtime/`.
+## Gates do v1
+
+Os gates executaveis do `v1` continuam sendo:
+
+```powershell
+python tools/validate_v1.py --profile development
+python tools/go_live_internal_checklist.py --profile development
+python tools/validate_v1.py --profile controlled
+python tools/go_live_internal_checklist.py --profile controlled
+```
+
+A validacao agora tambem gera artefatos operacionais em `.jarvis_runtime/operational/`:
+
+- `*-baseline-snapshot.json|md`
+- `*-containment-drill.json|md`
+- `*-incident-<request_id>.json|md`
+
+## Console minimo
+
+Para usar a interface textual minima do `v1`:
+
+```powershell
+python -m apps.jarvis_console ask "Plan the final validation window."
+python -m apps.jarvis_console chat --session-id demo --mission-id mission-demo
+```
+
+Use `--debug` para expor apenas metadados minimos de request e governanca.
 
 ## Benchmarks
 
@@ -34,17 +60,6 @@ Para validar explicitamente a trilha de memoria com PostgreSQL:
 python -m tools.benchmarks --postgres-url postgresql://postgres:postgres@localhost:5433/jarvis
 ```
 
-Opcoes uteis:
-
-- `--output-dir <path>` para isolar os artefatos de uma rodada;
-- `--dataset-path <path>` para testar um dataset congelado alternativo;
-- `--print-json` para imprimir o relatorio estruturado no stdout.
-
-Os artefatos de saida sao persistidos em `.jarvis_runtime/benchmarks/` por padrao, com:
-
-- relatorio `JSON` para metricas e detalhes por trilha;
-- resumo `Markdown` para decisao humana.
-
 ## Internal Pilot
 
 Para executar a janela minima do `internal pilot` e registrar evidencia local:
@@ -53,16 +68,12 @@ Para executar a janela minima do `internal pilot` e registrar evidencia local:
 python tools/run_internal_pilot.py --profile development
 ```
 
+A ultima rodada do piloto passa a ser persistida tambem em `.jarvis_runtime/pilot/latest_pilot.json`.
+
 Para resumir as trilhas recentes do `internal pilot` a partir da observabilidade local:
 
 ```powershell
 python tools/internal_pilot_report.py --limit 5
-```
-
-Para inspecionar uma execucao especifica:
-
-```powershell
-python tools/internal_pilot_report.py --request-id req-123 --format json
 ```
 
 Para comparar o baseline atual com a POC opcional de `LangGraph`:
@@ -76,11 +87,4 @@ Para transformar lacunas do piloto em proposals sandbox-only do `evolution-lab`:
 ```powershell
 python tools/evolution_from_pilot.py --limit 10
 python tools/evolution_from_pilot.py --comparison-json .jarvis_runtime/path_comparison.json
-```
-
-Os gates executaveis do `v1` continuam sendo:
-
-```powershell
-python tools/validate_v1.py --profile development
-python tools/go_live_internal_checklist.py --profile development
 ```

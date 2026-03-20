@@ -50,7 +50,10 @@ class SynthesisEngine:
 
         plan = synthesis_input.deliberative_plan
         if not plan:
-            return "Leitura atual: manter a orientacao executiva dentro do escopo controlado do v1."
+            return (
+                "Leitura do objetivo: manter a orientacao executiva dentro do "
+                "escopo controlado do v1."
+            )
 
         parts = [
             f"Leitura do objetivo: {plan.goal}.",
@@ -67,10 +70,17 @@ class SynthesisEngine:
 
     def _compose_governed_response(self, synthesis_input: SynthesisInput) -> str:
         goal_line = self._goal_line(synthesis_input)
-        judgment = (
-            "a governanca atual exige conter a acao "
-            "para preservar coerencia e seguranca"
-        )
+        plan = synthesis_input.deliberative_plan
+        if plan and plan.continuity_action == "reformular" and plan.open_loops:
+            judgment = (
+                "o pedido atual tensiona a missao ativa e a governanca exige conter "
+                "o desvio antes de reformular o objetivo"
+            )
+        else:
+            judgment = (
+                "a governanca atual exige conter a acao para preservar coerencia e "
+                "seguranca"
+            )
         return (
             f"Leitura do objetivo: {goal_line}. "
             f"Julgamento: {judgment}. "
@@ -86,33 +96,55 @@ class SynthesisEngine:
     def _judgment_line(self, synthesis_input: SynthesisInput) -> str:
         plan = synthesis_input.deliberative_plan
         arbitration = synthesis_input.arbitration_summary or plan.specialist_resolution_summary
+        if plan.continuity_action == "reformular":
+            return (
+                "o pedido atual tensiona a missao ativa e precisa de reformulacao "
+                "governavel antes de qualquer desvio"
+            )
+        if plan.continuity_action == "encerrar" and plan.open_loops:
+            return (
+                "o pedido atual permite fechar o loop principal da missao: "
+                f"{plan.open_loops[0]}"
+            )
+        if plan.continuity_action == "continuar" and plan.open_loops:
+            base = arbitration or plan.rationale.split(";", maxsplit=1)[0]
+            return f"{base}; a missao ativa segue ancorada em {plan.open_loops[0]}"
         if arbitration:
             return arbitration
         return plan.rationale.split(";", maxsplit=1)[0]
 
     def _recommendation_line(self, synthesis_input: SynthesisInput) -> str:
         plan = synthesis_input.deliberative_plan
-        if plan.smallest_safe_next_action:
-            next_action = plan.smallest_safe_next_action
-        elif plan.steps:
-            next_action = plan.steps[0]
-        else:
-            next_action = "preservar uma proxima acao segura"
         success = (
             plan.success_criteria[0]
             if plan.success_criteria
             else "manter resposta coerente e reversivel"
         )
-        recommendation = f"{next_action}; criterio de sucesso: {success}"
-        if plan.specialist_resolution_summary:
-            recommendation = (
-                f"{recommendation}; ajuste interno: {plan.specialist_resolution_summary}"
-            )
-        return recommendation
+        loop_focus = plan.open_loops[0] if plan.open_loops else None
+        if plan.continuity_action == "reformular":
+            if loop_focus:
+                next_action = f"explicitar como o novo pedido afeta {loop_focus}"
+            else:
+                next_action = "explicitar se o novo pedido substitui ou adia a missao ativa"
+        elif plan.continuity_action == "encerrar" and loop_focus:
+            next_action = f"fechar {loop_focus} com criterio explicito"
+        elif plan.continuity_action == "continuar" and loop_focus:
+            next_action = f"retomar {loop_focus} antes de abrir novo escopo"
+        elif plan.smallest_safe_next_action:
+            next_action = plan.smallest_safe_next_action
+        elif plan.steps:
+            next_action = plan.steps[0]
+        else:
+            next_action = "preservar uma proxima acao segura"
+        return f"{next_action}; criterio de sucesso: {success}"
 
     def _limitation_line(self, synthesis_input: SynthesisInput) -> str | None:
         plan = synthesis_input.deliberative_plan
         limits: list[str] = []
+        if plan.continuity_action == "reformular" and plan.open_loops:
+            limits.append(
+                "a missao ativa ainda tem loop aberto e nao pode ser desviada em silencio"
+            )
         if synthesis_input.governance_decision.conditions:
             limits.append(synthesis_input.governance_decision.conditions[0])
         if plan.requires_human_validation:

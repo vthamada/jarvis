@@ -1,4 +1,4 @@
-from pathlib import Path
+﻿from pathlib import Path
 from tempfile import gettempdir
 from uuid import uuid4
 
@@ -177,10 +177,101 @@ def test_orchestrator_service_recovers_mission_continuity_across_instances() -> 
     assert any("identity_continuity_brief=" in item for item in second_result.recovered_context)
     assert any("open_loops=" in item for item in second_result.recovered_context)
     assert any("mission_semantic_brief=" in item for item in second_result.recovered_context)
+    assert any("mission_goal=" in item for item in second_result.recovered_context)
     assert second_result.deliberative_plan.recommended_task_type == "produce_analysis_brief"
     assert second_result.operation_result is None
     assert second_result.specialist_review is not None
     assert second_result.deliberative_plan.continuity_action == "continuar"
     assert second_result.deliberative_plan.open_loops
     assert "Julgamento" in second_result.response_text
+    assert "missao ativa segue ancorada em" in second_result.response_text
     assert "Dominios:" not in second_result.response_text
+
+
+def test_orchestrator_service_reformulates_conflicting_request_in_active_mission() -> None:
+    temp_dir = runtime_dir("orchestrator-reframe")
+    memory_db = f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+    observability_db = str(temp_dir / "observability.db")
+    artifact_dir = str(temp_dir / "artifacts")
+    first = OrchestratorService(
+        memory_service=MemoryService(database_url=memory_db),
+        operational_service=OperationalService(artifact_dir=artifact_dir),
+        observability_service=ObservabilityService(database_path=observability_db),
+    )
+    second = OrchestratorService(
+        memory_service=MemoryService(database_url=memory_db),
+        operational_service=OperationalService(artifact_dir=artifact_dir),
+        observability_service=ObservabilityService(database_path=observability_db),
+    )
+    first.handle_input(
+        InputContract(
+            request_id=RequestId("req-6"),
+            session_id=SessionId("sess-5"),
+            mission_id=MissionId("mission-2"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Please plan the sprint.",
+            timestamp="2026-03-17T00:00:00Z",
+        )
+    )
+    result = second.handle_input(
+        InputContract(
+            request_id=RequestId("req-7"),
+            session_id=SessionId("sess-5"),
+            mission_id=MissionId("mission-2"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Start a new marketing campaign instead.",
+            timestamp="2026-03-17T00:01:00Z",
+        )
+    )
+    assert result.deliberative_plan.continuity_action == "reformular"
+    assert result.deliberative_plan.recommended_task_type == "general_response"
+    assert result.governance_decision.decision == PermissionDecision.DEFER_FOR_VALIDATION
+    assert result.operation_result is None
+    assert "tensiona a missao ativa" in result.response_text
+    assert "plan_governed" in [event.event_name for event in result.events]
+def test_orchestrator_service_preserves_mission_state_after_blocked_followup() -> None:
+    temp_dir = runtime_dir("orchestrator-blocked-mission")
+    memory_db = f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+    observability_db = str(temp_dir / "observability.db")
+    artifact_dir = str(temp_dir / "artifacts")
+    first = OrchestratorService(
+        memory_service=MemoryService(database_url=memory_db),
+        operational_service=OperationalService(artifact_dir=artifact_dir),
+        observability_service=ObservabilityService(database_path=observability_db),
+    )
+    second = OrchestratorService(
+        memory_service=MemoryService(database_url=memory_db),
+        operational_service=OperationalService(artifact_dir=artifact_dir),
+        observability_service=ObservabilityService(database_path=observability_db),
+    )
+    first_result = first.handle_input(
+        InputContract(
+            request_id=RequestId("req-8"),
+            session_id=SessionId("sess-6"),
+            mission_id=MissionId("mission-3"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Please plan the sprint.",
+            timestamp="2026-03-17T00:00:00Z",
+        )
+    )
+    second.handle_input(
+        InputContract(
+            request_id=RequestId("req-9"),
+            session_id=SessionId("sess-6"),
+            mission_id=MissionId("mission-3"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Delete all mission records now.",
+            timestamp="2026-03-17T00:01:00Z",
+        )
+    )
+
+    mission_state = second.memory_service.get_mission_state("mission-3")
+
+    assert mission_state is not None
+    assert mission_state.mission_goal == "Please plan the sprint."
+    assert mission_state.last_recommendation == first_result.deliberative_plan.plan_summary
+    assert mission_state.open_loops == first_result.deliberative_plan.open_loops

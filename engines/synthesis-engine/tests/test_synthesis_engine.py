@@ -13,7 +13,10 @@ def sample_plan() -> DeliberativePlanContract:
     return DeliberativePlanContract(
         plan_summary="objetivo=Plan milestone M3; modo=structured_planning; continuidade=continuar",
         goal="Plan milestone M3",
-        steps=["continuar a missao atual", "decompor etapas", "indicar proxima acao segura"],
+        steps=[
+            "retomar o loop principal da missao: alinhar checkpoint principal",
+            "decompor etapas",
+        ],
         active_domains=["strategy"],
         active_minds=["mente_executiva"],
         constraints=["low-risk"],
@@ -23,10 +26,10 @@ def sample_plan() -> DeliberativePlanContract:
         rationale="objetivo_dominante=Plan milestone M3; continuidade=ativo",
         tensions_considered=["equilibrar ambicao estrategica com a menor proxima acao segura"],
         specialist_hints=["especialista_planejamento_operacional"],
-        success_criteria=["plano deve indicar a menor proxima acao segura"],
+        success_criteria=["resposta deve fechar ou avancar o loop principal da missao"],
         specialist_resolution_summary="encadear o plano em etapas pequenas",
         dominant_tension="equilibrar ambicao estrategica com a menor proxima acao segura",
-        smallest_safe_next_action="continuar a missao atual",
+        smallest_safe_next_action="retomar alinhar checkpoint principal antes de abrir novo escopo",
         continuity_action="continuar",
         open_loops=["alinhar checkpoint principal"],
     )
@@ -62,9 +65,49 @@ def test_synthesis_engine_composes_unitary_allowed_response() -> None:
     assert "Leitura do objetivo" in response
     assert "Julgamento" in response
     assert "Recomendacao" in response
+    assert "retomar alinhar checkpoint principal" in response
     assert "Contribuicoes especialistas" not in response
     assert "Dominios:" not in response
     assert "Mentes:" not in response
+
+
+def test_synthesis_engine_surfaces_reformulation_without_pipeline_listing() -> None:
+    engine = SynthesisEngine()
+    identity = IdentityEngine().get_profile()
+    reformulation_plan = sample_plan()
+    reformulation_plan.continuity_action = "reformular"
+    reformulation_plan.requires_human_validation = True
+    reformulation_plan.risks = [
+        "pedido atual pode deslocar a missao ativa sem reformulacao explicita"
+    ]
+    response = engine.compose(
+        SynthesisInput(
+            intent="planning",
+            identity_profile=identity,
+            response_style="estruturado",
+            governance_decision=GovernanceDecisionContract(
+                decision_id=GovernanceDecisionId("decision-3"),
+                governance_check_id=GovernanceCheckId("check-3"),
+                risk_level=RiskLevel.MODERATE,
+                decision=PermissionDecision.ALLOW_WITH_CONDITIONS,
+                justification="ok",
+                timestamp="2026-03-18T00:00:00Z",
+                conditions=["manter a resposta rastreavel"],
+            ),
+            recovered_context=["context_summary=previous context"],
+            active_minds=["mente_executiva"],
+            active_domains=["strategy"],
+            knowledge_snippets=["Priorize clareza de objetivo."],
+            deliberative_plan=reformulation_plan,
+            specialist_contributions=[],
+            operation_result=None,
+            identity_mode="structured_planning",
+            arbitration_summary="mente_executiva lidera com foco em continuidade",
+        )
+    )
+    assert "tensiona a missao ativa" in response
+    assert "explicitar como o novo pedido afeta alinhar checkpoint principal" in response
+    assert "Dominios:" not in response
 
 
 def test_synthesis_engine_blocks_when_governance_blocks() -> None:

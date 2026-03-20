@@ -11,12 +11,13 @@ Este documento resume o escopo do `v1` do JARVIS em linguagem curta e acionavel.
 O `v1` deve provar que e possivel construir um JARVIS com:
 
 - identidade unificada;
-- memória util;
-- núcleo executivo funcional;
-- governança mínima robusta;
-- operação limitada, mas real;
+- memoria util;
+- nucleo executivo funcional;
+- governanca minima robusta;
+- operacao limitada, mas real;
 - observabilidade suficiente;
-- base pronta para crescer para `v2`.
+- acesso minimo por console;
+- base pronta para crescer para `v1.5` e `v2`.
 
 ---
 
@@ -24,60 +25,93 @@ O `v1` deve provar que e possivel construir um JARVIS com:
 
 Inclui:
 
-- núcleo central mínimo funcional;
+- nucleo central minimo funcional;
 - 12 mentes nucleares ativas;
-- dominios prioritários do primeiro corte;
-- memórias mínimas robustas;
-- governança básica;
-- operação de baixo risco;
-- validação e produção controlada.
+- dominios prioritarios do primeiro corte;
+- memorias minimas robustas;
+- governanca basica;
+- operacao de baixo risco;
+- validacao e producao controlada;
+- console textual minimo sobre o orquestrador atual.
 
 ---
 
-## 4. O que não entra plenamente no v1
+## 4. O que nao entra plenamente no v1
 
-Não entra como foco principal:
+Nao entra como foco principal:
 
 - cobertura profunda e uniforme dos 30 dominios;
-- especialistas maduros em produção ampla;
-- autoevolucao ampla em produção;
+- especialistas maduros em producao ampla;
+- autoevolucao ampla em producao;
 - multimodalidade plena;
-- operação de alto risco;
-- autonomia extensa em ambientes sensiveis.
+- operacao de alto risco;
+- autonomia extensa em ambientes sensiveis;
+- interface web completa;
+- interface de voz;
+- `LLM adapter` configuravel por provider/modelo.
 
 ---
 
 ## 5. Estado atual resumido
 
-Hoje o `v1` já demonstrou internamente:
+Hoje o `v1` ja demonstrou internamente:
 
-- baseline integrado entre orquestracao, memória, governança, conhecimento, observabilidade e operação;
-- `PostgreSQL` validado como backend operacional recomendado para memória;
+- baseline integrado entre orquestracao, memoria, governanca, conhecimento, observabilidade e operacao;
+- `PostgreSQL` validado como backend operacional recomendado para memoria;
 - observabilidade suficiente para o escopo atual do `v1`;
-- `manual_variants` priorizado no laboratório evolutivo, mantendo `sandbox-only`.
+- `manual_variants` priorizado no laboratorio evolutivo, mantendo `sandbox-only`;
+- ciclo cognitivo mais unitario, com deliberacao estruturada, continuidade de missao e especialistas internos influenciando o plano;
+- console textual minimo para acesso direto ao nucleo sem reabrir a arquitetura.
 
-O que ainda falta e a decisão formal de fechamento para produção controlada.
+O que falta para o fechamento disciplinado do `v1` passa a ser hardening operacional final e consolidacao do baseline, nao nova ampliacao arquitetural ampla.
 
 ---
 
-## 6. Critério de sucesso
+## 6. Criterio de sucesso
 
 O `v1` e bem-sucedido se o sistema demonstrar:
 
 - unidade perceptivel;
-- continuidade básica;
+- continuidade basica;
 - utilidade real;
-- estabilidade mínima;
-- governança suficiente para uso controlado.
-
-
-## 5.1 Atualização de status em 2026-03-20
-
-Atualização do escopo real do `v1`:
-
-- o `v1` já demonstrou internamente o ciclo cognitivo mais unitário, com deliberação estruturada, continuidade de missão mais útil e especialistas internos influenciando o plano;
-- o `internal pilot` controlado já foi executado e validou o baseline em escopo reduzido;
-- o que ainda falta não é fundação técnica ampla, e sim consolidar a leitura do piloto e decidir se o `v1` encerra ou se absorve um último incremento cognitivo curto antes do fechamento formal.
+- estabilidade minima;
+- governanca suficiente para uso controlado;
+- acesso minimo e coerente por interface textual.
 
 ---
 
+## Atualizacao de fechamento do v1
+
+O `v1` passa a incluir tambem:
+
+- interface textual minima via `jarvis-console`;
+- `baseline snapshot`, `containment drill` e `incident evidence` como artefatos operacionais do baseline;
+- validacao verde em `development` e `controlled` para o pacote final do baseline.
+
+Continuam explicitamente fora do `v1`:
+
+- `LLM adapter` configuravel;
+- interface web;
+- interface de voz;
+- `LangGraph` como substrato principal;
+- memoria vetorial ou semantica mais profunda.
+---
+
+## Decisao de fechamento do v1
+
+O `v1` fica congelado com este escopo final:
+
+- nucleo unificado;
+- memoria persistente e continuidade util;
+- governanca e observabilidade suficientes para producao controlada;
+- operacao segura de baixo risco;
+- `jarvis-console` como interface textual minima.
+
+Ficam fora do `v1` por decisao de escopo:
+
+- `LLM adapter` configuravel;
+- interface web;
+- interface de voz;
+- `LangGraph` como caminho principal do runtime;
+- memoria semantica profunda;
+- ampliacao ampla do ecossistema de especialistas.

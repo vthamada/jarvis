@@ -1,4 +1,4 @@
-﻿"""Single entrypoint for validating the JARVIS v1 baseline."""
+"""Single entrypoint for validating the JARVIS v1 baseline."""
 # ruff: noqa: E402
 
 from __future__ import annotations
@@ -37,12 +37,28 @@ for src_dir in SRC_DIRS:
     sys_path.insert(0, str(src_dir))
 
 from evolution_lab.service import ComparisonInput, EvolutionLabService
+from governance_service.service import GovernanceService
 from memory_service.service import MemoryService
 from observability_service.service import ObservabilityQuery, ObservabilityService
+from operational_service.service import OperationalService
+from orchestrator_service.service import OrchestratorService
 
+from apps.jarvis_console.cli import JarvisConsole, render_response
 from shared.contracts import InputContract
 from shared.events import InternalEventEnvelope
-from shared.types import ChannelType, InputType, MissionId, RequestId, SessionId
+from shared.types import (
+    ChannelType,
+    InputType,
+    MissionId,
+    PermissionDecision,
+    RequestId,
+    SessionId,
+)
+from tools.operational_artifacts import (
+    create_baseline_snapshot,
+    resolve_backend_label,
+    write_baseline_snapshot,
+)
 
 
 def parse_args() -> Namespace:
@@ -70,8 +86,6 @@ def ensure_command_available(command: str) -> None:
 
 
 def resolve_ruff_command() -> list[str]:
-    """Return the preferred ruff invocation for the current environment."""
-
     if which("ruff") is not None:
         return ["ruff"]
     if find_spec("ruff") is not None:
@@ -98,37 +112,29 @@ def resolve_database_url(profile: str, target_dir: Path) -> str | None:
 
 
 def ensure_database_ready(database_url: str) -> None:
-    """Validate connectivity for the configured persistence backend."""
-
     if not database_url.startswith("postgresql://"):
         return
     try:
         import psycopg
-    except ImportError as exc:  # pragma: no cover - depends on environment packages.
+    except ImportError as exc:  # pragma: no cover
         raise RuntimeError(
             "psycopg is required for the controlled profile. "
             'Install the dev environment with `python -m pip install -e ".[dev,postgres]"`.'
         ) from exc
     try:
-        with psycopg.connect(
-            database_url,
-            connect_timeout=5,
-        ) as connection, connection.cursor() as cursor:
-            cursor.execute("SELECT 1")
-            cursor.fetchone()
-    except Exception as exc:  # pragma: no cover - depends on runtime infrastructure.
+        with psycopg.connect(database_url, connect_timeout=5) as connection:
+            with connection.cursor() as cursor:
+                cursor.execute("SELECT 1")
+                cursor.fetchone()
+    except Exception as exc:  # pragma: no cover
         raise RuntimeError(
             "Controlled profile cannot use PostgreSQL at DATABASE_URL. "
-            "Verify that the database is running, the credentials are correct, and, for local "
-            "validation, that `docker compose -f infra/local-postgres.compose.yml up -d` "
-            "completed. "
+            "Verify that the database is running and the credentials are correct. "
             f"Original error: {exc}"
         ) from exc
 
 
 def check_profile_prerequisites(profile: str, target_dir: Path) -> str:
-    """Resolve the runtime database and validate profile-specific prerequisites."""
-
     database_url = resolve_database_url(profile, target_dir)
     if database_url is None:
         raise RuntimeError(f"Profile {profile} did not resolve a database URL.")
@@ -136,9 +142,7 @@ def check_profile_prerequisites(profile: str, target_dir: Path) -> str:
     return database_url
 
 
-def collect_preflight(profile: str) -> tuple[list[str], str | None, list[str]]:
-    """Collect preflight issues before the full validation run starts."""
-
+def collect_preflight(profile: str) -> tuple[list[str], list[str] | None, str | None]:
     issues: list[str] = []
     ruff_command: list[str] | None = None
     database_url: str | None = None
@@ -156,16 +160,38 @@ def collect_preflight(profile: str) -> tuple[list[str], str | None, list[str]]:
     return issues, ruff_command, database_url
 
 
+def build_validation_orchestrator(
+    *,
+    profile: str,
+    workdir: Path,
+    database_url: str,
+) -> OrchestratorService:
+    resolved_database_url = database_url
+    if profile != "controlled":
+        sqlite_path = (workdir / "memory.db").as_posix()
+        resolved_database_url = f"sqlite:///{sqlite_path}"
+    observability = ObservabilityService(database_path=str(workdir / "observability.db"))
+    memory = MemoryService(database_url=resolved_database_url)
+    operational = OperationalService(artifact_dir=str(workdir / "artifacts"))
+    return OrchestratorService(
+        governance_service=GovernanceService(),
+        memory_service=memory,
+        operational_service=operational,
+        observability_service=observability,
+    )
+
+
 def run_memory_smoke(profile: str, database_url: str | None = None) -> None:
     smoke_dir = runtime_dir(f"memory-{profile}")
     resolved_database_url = database_url or resolve_database_url(profile, smoke_dir)
     if resolved_database_url is None:
         raise RuntimeError(f"Memory smoke could not resolve a database URL for profile={profile}.")
+    suffix = uuid4().hex[:6]
     service = MemoryService(database_url=resolved_database_url)
     contract = InputContract(
-        request_id=RequestId("req-memory"),
-        session_id=SessionId("sess-memory"),
-        mission_id=MissionId("mission-memory"),
+        request_id=RequestId(f"req-memory-{suffix}"),
+        session_id=SessionId(f"sess-memory-{suffix}"),
+        mission_id=MissionId(f"mission-memory-{suffix}"),
         channel=ChannelType.CHAT,
         input_type=InputType.TEXT,
         content="Validate persistent mission continuity.",
@@ -173,7 +199,7 @@ def run_memory_smoke(profile: str, database_url: str | None = None) -> None:
     )
     service.record_turn(contract, intent="planning", response_text="Mission continuity validated.")
     recovered = service.recover_for_input(contract)
-    mission_state = service.get_mission_state("mission-memory")
+    mission_state = service.get_mission_state(str(contract.mission_id))
     if not recovered.recovered_items:
         raise RuntimeError("Memory smoke failed: recovered_items is empty.")
     if mission_state is None or "planning" not in mission_state.active_tasks:
@@ -214,6 +240,14 @@ def run_observability_smoke() -> None:
     )
     if metrics.total_events != 2 or metrics.completed_operations != 1:
         raise RuntimeError("Observability smoke failed: correlated metrics are inconsistent.")
+    evidence = service.build_incident_evidence(
+        ObservabilityQuery(request_id="req-observe")
+    )
+    expected_action = "contain_request_and_revert_to_last_validated_baseline"
+    if evidence.recommended_operator_action != expected_action:
+        raise RuntimeError(
+            "Observability smoke failed: incident evidence did not reflect anomaly handling."
+        )
 
 
 def run_evolution_smoke() -> None:
@@ -304,6 +338,114 @@ def run_evolution_smoke() -> None:
         )
 
 
+def run_governed_mission_smoke(profile: str, database_url: str) -> None:
+    workdir = runtime_dir(f"governed-mission-{profile}")
+    first = build_validation_orchestrator(
+        profile=profile,
+        workdir=workdir,
+        database_url=database_url,
+    )
+    second = build_validation_orchestrator(
+        profile=profile,
+        workdir=workdir,
+        database_url=database_url,
+    )
+    suffix = uuid4().hex[:6]
+    mission_id = f"mission-validate-{suffix}"
+    session_id = f"sess-validate-{suffix}"
+    accepted_contract = InputContract(
+        request_id=RequestId(f"req-validate-accepted-{suffix}"),
+        session_id=SessionId(session_id),
+        mission_id=MissionId(mission_id),
+        channel=ChannelType.CHAT,
+        input_type=InputType.TEXT,
+        content="Plan the controlled rollout.",
+        timestamp=now(),
+    )
+    deferred_contract = InputContract(
+        request_id=RequestId(f"req-validate-defer-{suffix}"),
+        session_id=SessionId(session_id),
+        mission_id=MissionId(mission_id),
+        channel=ChannelType.CHAT,
+        input_type=InputType.TEXT,
+        content="Start a new marketing campaign instead.",
+        timestamp=now(),
+    )
+    blocked_contract = InputContract(
+        request_id=RequestId(f"req-validate-block-{suffix}"),
+        session_id=SessionId(session_id),
+        mission_id=MissionId(mission_id),
+        channel=ChannelType.CHAT,
+        input_type=InputType.TEXT,
+        content="Delete all mission records now.",
+        timestamp=now(),
+    )
+
+    accepted = first.handle_input(accepted_contract)
+    deferred = second.handle_input(deferred_contract)
+    mission_after_defer = second.memory_service.get_mission_state(mission_id)
+    blocked = second.handle_input(blocked_contract)
+    mission_after_block = second.memory_service.get_mission_state(mission_id)
+
+    if accepted.governance_decision.decision != PermissionDecision.ALLOW_WITH_CONDITIONS:
+        raise RuntimeError("Governed mission smoke failed: accepted flow did not stay controlled.")
+    if deferred.governance_decision.decision != PermissionDecision.DEFER_FOR_VALIDATION:
+        raise RuntimeError("Governed mission smoke failed: conflicting mission was not deferred.")
+    if blocked.governance_decision.decision != PermissionDecision.BLOCK:
+        raise RuntimeError(
+            "Governed mission smoke failed: destructive mission request was not blocked."
+        )
+    if mission_after_defer is None or mission_after_block is None:
+        raise RuntimeError("Governed mission smoke failed: mission continuity was lost.")
+    if mission_after_defer.mission_goal != accepted_contract.content:
+        raise RuntimeError("Governed mission smoke failed: deferred flow rewrote the mission goal.")
+    if mission_after_block.last_recommendation != accepted.deliberative_plan.plan_summary:
+        raise RuntimeError(
+            "Governed mission smoke failed: blocked flow contaminated the accepted recommendation."
+        )
+    if mission_after_block.open_loops != accepted.deliberative_plan.open_loops:
+        raise RuntimeError(
+            "Governed mission smoke failed: blocked flow changed open loops unexpectedly."
+        )
+
+
+def run_console_smoke(profile: str, database_url: str) -> None:
+    workdir = runtime_dir(f"console-{profile}")
+    suffix = uuid4().hex[:6]
+    console = JarvisConsole.build(runtime_dir=workdir, database_url=database_url)
+    first = console.ask(
+        "Plan the final validation window.",
+        session_id=f"console-session-{suffix}",
+        mission_id=f"console-mission-{suffix}",
+    )
+    second = console.ask(
+        "Analyze the previous plan.",
+        session_id=f"console-session-{suffix}",
+        mission_id=f"console-mission-{suffix}",
+    )
+    rendered = render_response(second, debug=True)
+    if not first.response_text or not second.response_text:
+        raise RuntimeError("Console smoke failed: empty response returned.")
+    if "request_id=" not in rendered or "decision=" not in rendered:
+        raise RuntimeError("Console smoke failed: debug render is incomplete.")
+    recovered_continuity = any(
+        item.startswith("prior_plan=") or item.startswith("context_summary=")
+        for item in second.recovered_context
+    )
+    if not recovered_continuity:
+        raise RuntimeError("Console smoke failed: mission continuity was not recovered.")
+
+
+def write_snapshot(profile: str, database_url: str, checks_passed: list[str]) -> None:
+    snapshot = create_baseline_snapshot(
+        profile=profile,
+        backend=resolve_backend_label(database_url),
+        checks_passed=checks_passed,
+        operational_decision="go_conditional_for_controlled_production",
+    )
+    write_baseline_snapshot(snapshot)
+
+
 def now() -> str:
     return datetime.now(UTC).isoformat()
 
@@ -313,9 +455,7 @@ def main() -> None:
     ensure_command_available("python")
     issues, ruff_command, database_url = collect_preflight(args.profile)
     if issues:
-        raise RuntimeError(
-            "Validation preflight failed:\n- " + "\n- ".join(issues)
-        )
+        raise RuntimeError("Validation preflight failed:\n- " + "\n- ".join(issues))
     assert ruff_command is not None
     assert database_url is not None
     run_command(
@@ -327,11 +467,24 @@ def main() -> None:
     run_memory_smoke(args.profile, database_url)
     run_observability_smoke()
     run_evolution_smoke()
+    run_governed_mission_smoke(args.profile, database_url)
+    run_console_smoke(args.profile, database_url)
+    write_snapshot(
+        args.profile,
+        database_url,
+        checks_passed=[
+            "encoding-check",
+            "pytest",
+            "ruff",
+            "memory_smoke",
+            "observability_smoke",
+            "evolution_smoke",
+            "governed_mission_smoke",
+            "console_smoke",
+        ],
+    )
     print(f"JARVIS v1 validation passed for profile={args.profile}.")
 
 
 if __name__ == "__main__":
     main()
-
-
-

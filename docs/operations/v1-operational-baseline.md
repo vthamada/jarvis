@@ -186,3 +186,47 @@ Qualquer novo trabalho de:
 
 deve ser tratado como pos-`v1`, `v1.5` ou `v2`, e nao como requisito para manter
 o baseline atual utilizavel.
+
+---
+
+## 11. Interface minima do baseline
+
+O `v1` passa a incluir uma interface textual minima via `jarvis-console`.
+
+Ela deve ser lida como:
+
+- primeira superficie real de acesso ao nucleo;
+- casca fina sobre o `orchestrator-service`;
+- canal minimo para `ask` e `chat` textual com `session_id` e `mission_id`.
+
+Ela nao muda o escopo operacional do `v1` para:
+
+- web UI completa;
+- voz e realtime;
+- adaptador plugavel de LLM;
+- ecossistema amplo de interfaces.
+
+---
+
+## 12. Fechamento operacional desta rodada
+
+O baseline atual do `v1` foi revalidado com o pacote final de robustez e console minimo.
+
+Entradas novas desta rodada:
+
+- `baseline snapshot` em `.jarvis_runtime/operational/`;
+- `containment drill` em `.jarvis_runtime/operational/`;
+- `incident evidence` para requests anomalas ou governadas;
+- `jarvis-console` como primeira interface textual real do sistema.
+
+Validacao concluida:
+
+- `development` verde;
+- `controlled` verde com `PostgreSQL` local em `localhost:5432/jarvis`;
+- `internal pilot` curto verde com status `healthy`.
+
+Leitura pratica:
+
+- o `v1` agora tem robustez operacional minima auditavel;
+- o `v1` agora tem uma interface textual minima sem introduzir `LLM adapter` ou web UI;
+- o que faltar daqui para frente deve ser tratado como `pos-v1`, `v1.5` ou `v2`.

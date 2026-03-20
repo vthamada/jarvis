@@ -1,4 +1,4 @@
-from pathlib import Path
+﻿from pathlib import Path
 from tempfile import gettempdir
 from uuid import uuid4
 
@@ -12,7 +12,15 @@ from memory_service.repository import (
 from memory_service.service import MemoryRecordResult, MemoryRecoveryResult, MemoryService
 
 from shared.contracts import DeliberativePlanContract, InputContract, SpecialistContributionContract
-from shared.types import ChannelType, InputType, MemoryClass, MissionId, RequestId, SessionId
+from shared.types import (
+    ChannelType,
+    InputType,
+    MemoryClass,
+    MissionId,
+    PermissionDecision,
+    RequestId,
+    SessionId,
+)
 
 
 def runtime_dir(name: str) -> Path:
@@ -143,8 +151,35 @@ def test_memory_service_persists_mission_state_with_identity_continuity_and_open
     assert mission_state.last_recommendation == "decompor objetivo em etapas reversiveis"
     assert mission_state.semantic_brief is not None
     assert mission_state.identity_continuity_brief is not None
+    assert "prioridade=fechar checkpoint principal" in mission_state.identity_continuity_brief
     assert mission_state.open_loops == ["fechar checkpoint principal"]
     assert mission_state.last_decision_frame == "planning"
+
+
+def test_memory_service_recovers_mission_hints_in_continuity_priority_order() -> None:
+    temp_dir = runtime_dir("memory-order")
+    service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
+    contract = InputContract(
+        request_id=RequestId("req-4"),
+        session_id=SessionId("sess-4"),
+        mission_id=MissionId("mission-2"),
+        channel=ChannelType.CHAT,
+        input_type=InputType.TEXT,
+        content="Coordinate milestone M3.",
+        timestamp="2026-03-17T00:00:00Z",
+    )
+    service.record_turn(
+        contract,
+        intent="planning",
+        response_text="Milestone plan drafted.",
+        deliberative_plan=sample_plan(),
+        specialist_contributions=sample_specialist_contributions(),
+    )
+    recovered = service.recover_for_input(contract)
+    assert recovered.mission_hints[0].startswith("identity_continuity_brief=")
+    assert recovered.mission_hints[1].startswith("open_loops=")
+    assert any(item.startswith("mission_goal=") for item in recovered.mission_hints)
+    assert any(item.startswith("mission_recommendation=") for item in recovered.mission_hints)
 
 
 def test_build_memory_repository_defaults_to_runtime_sqlite() -> None:
@@ -179,3 +214,75 @@ def test_build_memory_repository_uses_postgres_for_operational_urls(monkeypatch)
     repository = build_memory_repository("postgres://postgres:postgres@localhost:5432/jarvis")
     assert isinstance(repository, FakePostgresRepository)
     assert captured["database_url"] == "postgresql://postgres:postgres@localhost:5432/jarvis"
+def test_memory_service_preserves_accepted_mission_state_on_defer_and_block() -> None:
+    temp_dir = runtime_dir("memory-governed")
+    service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
+    mission_contract = InputContract(
+        request_id=RequestId("req-accepted"),
+        session_id=SessionId("sess-governed"),
+        mission_id=MissionId("mission-governed"),
+        channel=ChannelType.CHAT,
+        input_type=InputType.TEXT,
+        content="Coordinate milestone M3.",
+        timestamp="2026-03-17T00:00:00Z",
+    )
+    accepted_plan = sample_plan()
+    service.record_turn(
+        mission_contract,
+        intent="planning",
+        response_text="Milestone plan drafted.",
+        deliberative_plan=accepted_plan,
+        specialist_contributions=sample_specialist_contributions(),
+        governance_decision=PermissionDecision.ALLOW_WITH_CONDITIONS,
+    )
+    service.record_turn(
+        InputContract(
+            request_id=RequestId("req-defer"),
+            session_id=SessionId("sess-governed"),
+            mission_id=MissionId("mission-governed"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Start a new marketing campaign instead.",
+            timestamp="2026-03-17T00:01:00Z",
+        ),
+        intent="planning",
+        response_text="Need explicit validation before changing mission.",
+        deliberative_plan=DeliberativePlanContract(
+            plan_summary="reformular objetivo com impacto operacional",
+            goal="Start a new marketing campaign instead.",
+            steps=["explicitar conflito", "pedir validacao"],
+            active_domains=["strategy"],
+            active_minds=["mente_executiva"],
+            constraints=["revisao humana"],
+            risks=["pedido contem sinais de risco operacional"],
+            recommended_task_type="general_response",
+            requires_human_validation=True,
+            rationale="contexto=missao ativa; apoio=baseline local",
+            continuity_action="reformular",
+            open_loops=["fechar checkpoint principal"],
+        ),
+        governance_decision=PermissionDecision.DEFER_FOR_VALIDATION,
+    )
+    service.record_turn(
+        InputContract(
+            request_id=RequestId("req-block"),
+            session_id=SessionId("sess-governed"),
+            mission_id=MissionId("mission-governed"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Delete all mission records now.",
+            timestamp="2026-03-17T00:02:00Z",
+        ),
+        intent="sensitive_action",
+        response_text="Blocked by governance.",
+        deliberative_plan=accepted_plan,
+        governance_decision=PermissionDecision.BLOCK,
+    )
+
+    mission_state = service.get_mission_state("mission-governed")
+
+    assert mission_state is not None
+    assert mission_state.mission_goal == "Coordinate milestone M3."
+    assert mission_state.last_recommendation == accepted_plan.plan_summary
+    assert mission_state.open_loops == ["fechar checkpoint principal"]
+    assert mission_state.last_decision_frame == "planning"

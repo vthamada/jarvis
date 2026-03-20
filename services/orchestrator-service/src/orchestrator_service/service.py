@@ -364,6 +364,7 @@ class OrchestratorService:
             response_text=response_text,
             deliberative_plan=deliberative_plan,
             specialist_contributions=specialist_review.contributions,
+            governance_decision=governance_decision.decision,
         )
         events.append(
             self.make_event(
@@ -500,6 +501,8 @@ class OrchestratorService:
             mission_semantic_brief=self._extract_context_hint(recovered, "mission_semantic_brief="),
             mission_focus=self._extract_list_hint(recovered, "mission_focus=", separator=","),
             last_decision_frame=self._extract_context_hint(recovered, "last_decision_frame="),
+            mission_goal=self._extract_context_hint(recovered, "mission_goal="),
+            mission_recommendation=self._extract_context_hint(recovered, "mission_recommendation="),
         )
 
     def _compose_response_text(
@@ -594,3 +597,4 @@ class OrchestratorService:
             operation_result=state["operation_result"],
             events=state["events"],
         )
+

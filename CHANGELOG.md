@@ -8,6 +8,33 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 
 ## 2026-03-20
 
+### Pacote final de robustez do `v1` e `jarvis-console`
+
+- implementado `tools/operational_artifacts.py` para gerar `baseline snapshot`, `containment drill` e `incident evidence` em `.jarvis_runtime/operational/`;
+- ampliado `tools/validate_v1.py` para validar coerencia entre missao, memoria e governanca, gerar snapshot do baseline e executar smoke do `jarvis-console`;
+- ampliado `tools/go_live_internal_checklist.py` para validar `defer_for_validation` por conflito de missao, coerencia de `open_loops`, evidencia operacional e drill minimo de contencao/rollback;
+- `tools/run_internal_pilot.py` passou a atualizar tambem `latest_pilot.json` e `latest_pilot.md`;
+- criado `apps/jarvis_console/` como interface textual minima do `v1`, com modos `ask` e `chat` sobre o `orchestrator-service`;
+- endurecido o `memory-service` para preservar o estado de missao aceito quando um turno posterior e bloqueado ou adiado para validacao;
+- ampliado o `observability-service` com geracao de `incident evidence` para requests anomalas ou governadas;
+- adicionados testes do console, dos artefatos operacionais, da preservacao de missao no orquestrador e da evidencia operacional;
+- validados `pytest -q`, `ruff check .`, `python tools/check_mojibake.py .`, `python tools/validate_v1.py --profile development`, `python tools/validate_v1.py --profile controlled`, `python tools/go_live_internal_checklist.py --profile development`, `python tools/go_live_internal_checklist.py --profile controlled`, `python tools/run_internal_pilot.py --profile controlled` e `python tools/internal_pilot_report.py --limit 10`.
+
+---
+## 2026-03-20
+
+### Incremento curto de continuidade entre missoes
+
+- criado `docs/implementation/mission-continuity-final-increment.md` como plano executavel do ultimo incremento cognitivo curto antes do fechamento disciplinado do `v1`;
+- ampliado o `planning-engine` para usar `mission_goal` e `mission_recommendation`, explicitar conflito entre o pedido atual e a missao ativa e escolher entre `continuar`, `encerrar` e `reformular` com mais rigor;
+- ajustado o `memory-service` para priorizar hints de continuidade de missao na recuperacao e persistir um `identity_continuity_brief` mais util entre turnos;
+- ajustado o `orchestrator-service` para repassar objetivo de missao e recomendacao anterior ao planejamento;
+- ajustado o `synthesis-engine` para refletir continuidade, fechamento ou reformulacao da missao sem expor o pipeline interno;
+- atualizados os testes de planejamento, sintese, memoria e orquestracao; `pytest -q`, `ruff check` e `python tools/validate_v1.py --profile development` passaram apos a implementacao.
+
+---
+## 2026-03-20
+
 ### Enxugamento e reorganizacao de `docs/`
 
 - consolidados `docs/operations/go-live-readiness.md`, `docs/operations/v1-go-no-go-decision.md` e `docs/operations/v1-production-controlled.md` em `docs/operations/v1-operational-baseline.md`;
@@ -377,3 +404,16 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 
 
 
+
+## 2026-03-20
+
+### Pacote final de robustez e console minimo do v1
+
+- criado `tools/operational_artifacts.py` para gerar `baseline snapshot`, `containment drill` e `incident evidence` do baseline controlado;
+- ampliado `tools/validate_v1.py` com verificacao de consistencia entre missao, memoria e governanca, smoke do `jarvis-console` e geracao de snapshot operacional do baseline;
+- ampliado `tools/go_live_internal_checklist.py` com checagem de `defer_for_validation` em conflito de missao, coerencia de `open_loops`, evidencia operacional minima e drill de contenimento/rollback simples;
+- endurecido o `memory-service` para preservar o estado aceito de missao quando um turno posterior e bloqueado ou diferido pela governanca;
+- ampliado o `observability-service` com `IncidentEvidence` para consolidar request, decisao, flags e acao recomendada ao operador;
+- criado `apps/jarvis_console/` como interface textual minima do `v1`, com modos `ask` e `chat` sobre o fluxo real do orquestrador;
+- `tools/run_internal_pilot.py` passou a publicar a ultima rodada em `.jarvis_runtime/pilot/latest_pilot.json` e `.md`;
+- atualizados testes de memoria, observabilidade, orquestracao, artefatos operacionais e console.

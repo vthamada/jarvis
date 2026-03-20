@@ -62,6 +62,22 @@ class FlowAudit:
 
 
 @dataclass(frozen=True)
+class IncidentEvidence:
+    """Compact operational evidence for anomalous request handling."""
+
+    request_id: str | None
+    session_id: str | None
+    mission_id: str | None
+    governance_decision: str | None
+    operation_status: str | None
+    flow_summary: str
+    anomaly_flags: list[str]
+    missing_required_events: list[str]
+    recommended_operator_action: str
+    source_services: list[str]
+
+
+@dataclass(frozen=True)
 class ObservabilityQuery:
     """Query filters for recent event inspection."""
 
@@ -241,6 +257,34 @@ class ObservabilityService:
             source_services=sorted({event.source_service for event in events}),
         )
 
+    def build_incident_evidence(
+        self,
+        query: ObservabilityQuery,
+        *,
+        required_events: tuple[str, ...] = DEFAULT_REQUIRED_FLOW_EVENTS,
+    ) -> IncidentEvidence:
+        """Build compact operator-facing evidence for anomalous request flows."""
+
+        audit = self.audit_flow(query, required_events=required_events)
+        recommended_operator_action = self._recommended_operator_action(audit)
+        flow_summary = (
+            f"decision={audit.governance_decision or 'unknown'}; "
+            f"events={audit.total_events}; duration_seconds={audit.duration_seconds}; "
+            f"operation_status={audit.operation_status or 'none'}"
+        )
+        return IncidentEvidence(
+            request_id=audit.request_id,
+            session_id=audit.session_id,
+            mission_id=audit.mission_id,
+            governance_decision=audit.governance_decision,
+            operation_status=audit.operation_status,
+            flow_summary=flow_summary,
+            anomaly_flags=list(audit.anomaly_flags),
+            missing_required_events=list(audit.missing_required_events),
+            recommended_operator_action=recommended_operator_action,
+            source_services=list(audit.source_services),
+        )
+
     def summarize_recent_requests(
         self,
         *,
@@ -265,6 +309,16 @@ class ObservabilityService:
             if event.request_id and event.request_id not in request_ids:
                 request_ids.append(event.request_id)
         return list(reversed(request_ids[-limit:]))
+
+    @staticmethod
+    def _recommended_operator_action(audit: FlowAudit) -> str:
+        if "no_events_found" in audit.anomaly_flags:
+            return "pause_controlled_usage_and_investigate_missing_trace"
+        if audit.governance_decision in {"block", "defer_for_validation"}:
+            return "keep_contained_and_require_manual_review"
+        if audit.anomaly_flags or audit.missing_required_events:
+            return "contain_request_and_revert_to_last_validated_baseline"
+        return "no_immediate_incident_action_required"
 
     @staticmethod
     def _first_event(
@@ -300,4 +354,3 @@ class ObservabilityService:
             else Path.cwd() / ".jarvis_runtime" / "agentic_observability.jsonl"
         )
         return JsonlAgenticMirrorAdapter(resolved)
-

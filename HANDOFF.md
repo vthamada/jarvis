@@ -4,13 +4,13 @@
 
 - Atualizado em: 2026-03-20
 - Branch: `main`
-- Commit de referencia: `65797b8`
+- Commit de referencia: `092eb0a`
 - Artefato canônico do projeto: `documento_mestre_jarvis.md`
 - Status do projeto: `v1` em `GO CONDICIONAL` para produção controlada, com baseline integrado validado, benchmark local fechado, PostgreSQL validado como backend operacional, observabilidade local persistida, auditoria operacional de request ativa, ciclo cognitivo mais unitário implementado, `internal pilot` controlado já executado com resultado saudável, proposals sandbox-only ligadas ao `evolution-lab` e POC opcional de `LangGraph` aberta no `orchestrator-service` sem quebrar o fluxo principal
 
 ## Meta Atual
 
-Consolidar a leitura do `internal pilot` já executado, comparar baseline vs. POC de `LangGraph`, transformar sinais relevantes em proposals sandbox-only e decidir se o `v1` fecha após essa consolidação ou se absorve um último incremento cognitivo curto.
+Consolidar a leitura do ultimo incremento cognitivo curto de continuidade entre missoes, decidir se ele basta para o fechamento disciplinado do `v1` e so depois usar comparacao baseline vs. POC de `LangGraph` e proposals sandbox-only como trilha de pos-`v1`.
 
 ## Estado do Projeto
 
@@ -34,7 +34,8 @@ Hoje o repositório contém:
 - `evolution-lab` persistindo propostas e decisóes sandbox-only entre baseline e candidata;
 - `engines/` com componentes reais de identidade, executivo, planejamento, cognição e síntese;
  - suite de testes cobrindo persistência, governança, observabilidade, conhecimento, operação e o fluxo ponta a ponta do orquestrador;
-- ciclo deliberativo implementado no núcleo, com diretiva executiva enriquecida, plano estruturado, governança sobre plano, memória com hints deliberativos, resumo semântico de missão e síntese mais executiva.
+- ciclo deliberativo implementado no nucleo, com diretiva executiva enriquecida, plano estruturado, governanca sobre plano, memoria com hints deliberativos, resumo semantico de missao e sintese mais executiva.
+- incremento curto de continuidade entre missoes implementado, com conflito explicito entre objetivo atual e missao ativa, precedencia mais forte de loops abertos e resposta final mais aderente a uma entidade unica.
 - `tools/internal_pilot_report.py` resumindo requests recentes por `request_id`, decisão de governança, status operacional e eventos ausentes da trilha mínima;
 - `tools/run_internal_pilot.py` executando a janela mínima do piloto com cenários repetíveis;
 - `tools/compare_orchestrator_paths.py` comparando baseline e POC de `LangGraph` nos mesmos cenários;
@@ -147,8 +148,8 @@ Pendências principais agora:
 - consolidar formalmente a leitura do `internal pilot` já executado;
 - comparar o baseline principal com a POC opcional de `LangGraph` via `tools/compare_orchestrator_paths.py`;
 - transformar os sinais relevantes em proposals sandbox-only com `tools/evolution_from_pilot.py`;
-- decidir se o `v1` já pode ser encerrado com disciplina ou se ainda absorve um último incremento cognitivo curto;
-- revisar e normalizar documentos com mojibake, sem mexer no papel canônico do Documento-Mestre.
+- decidir se o `v1` ja pode ser encerrado com disciplina agora que o ultimo incremento cognitivo curto ja foi absorvido;
+- revisar e normalizar documentos com mojibake, sem mexer no papel canonico do Documento-Mestre.
 
 ## Próximos Passos Imediatos
 
@@ -300,3 +301,45 @@ $env:DATABASE_URL = "postgresql://postgres:postgres@localhost:5433/jarvis"
 
 
 
+
+- implementado o plano executavel docs/implementation/mission-continuity-final-increment.md, com foco especifico em continuidade entre missoes.
+
+---
+
+## Atualizacao 2026-03-20 - pacote final de robustez do v1
+
+- `tools/validate_v1.py` passou a validar consistencia entre missao, memoria e governanca, gerar `baseline snapshot` e incluir smoke do `jarvis-console`;
+- `tools/go_live_internal_checklist.py` passou a validar conflito de missao com `defer_for_validation`, coerencia de `open_loops`, `containment drill` e evidencia operacional minima;
+- criado `tools/operational_artifacts.py` para consolidar `baseline snapshot`, `containment drill` e `incident evidence` em `.jarvis_runtime/operational/`;
+- `run_internal_pilot.py` agora atualiza tambem `latest_pilot.json` e `latest_pilot.md` em `.jarvis_runtime/pilot/`;
+- `apps/jarvis_console/` implementa o console textual minimo do `v1`, com modos `ask` e `chat` sobre o `orchestrator-service`;
+- `memory-service` foi endurecido para nao sobrescrever silenciosamente o estado de missao aceito quando um turno entra em `block` ou `defer_for_validation`;
+- o pacote de fechamento do `v1` continua sem introduzir `LLM adapter`, web UI, voz/realtime ou `LangGraph` como caminho principal.
+
+---
+
+## Atualizacao 2026-03-20 - fechamento operacional e console minimo
+
+- o pacote final de robustez do `v1` foi implementado sem reabrir a arquitetura do nucleo;
+- `tools/validate_v1.py` agora valida coerencia entre missao, memoria e governanca, gera `baseline snapshot` e inclui smoke do `jarvis-console`;
+- `tools/go_live_internal_checklist.py` agora valida conflito de missao com `defer_for_validation`, coerencia de `open_loops`, `containment drill` e evidencia operacional minima;
+- `tools/operational_artifacts.py` consolida `baseline snapshot`, `containment drill` e `incident evidence` em `.jarvis_runtime/operational/`;
+- `apps/jarvis_console/` implementa a interface textual minima do `v1`, com modos `ask` e `chat`, `session_id`, `mission_id` e modo `--debug`;
+- o `memory-service` agora preserva o estado de missao aceito quando um turno posterior entra em `block` ou `defer_for_validation`;
+- o gate final desta rodada passou em `development` e `controlled`, com `DATABASE_URL=postgresql://postgres:postgres@localhost:5432/jarvis`;
+- o `internal pilot` curto do baseline final passou em `controlled` com status `healthy`;
+- este pacote fecha o `v1` com robustez operacional e interface minima, mantendo fora do escopo: `LLM adapter`, web UI, voz/realtime e `LangGraph` como caminho principal.
+---
+
+## Formalizacao de encerramento do v1
+
+Leitura operacional oficial a partir desta rodada:
+
+- o `v1` esta formalmente encerrado como baseline de `producao controlada`;
+- o baseline encerrado inclui nucleo unificado, continuidade util, deliberacao convincente em escopo controlado, governanca, observabilidade, memoria persistente e `jarvis-console` minimo;
+- `PostgreSQL` em `DATABASE_URL` e o backend operacional oficial do baseline controlado;
+- `sqlite` permanece como fallback local de desenvolvimento;
+- qualquer ampliacao relevante daqui para frente deve ser tratada como `pos-v1`, `v1.5` ou `v2`.
+
+Esta formalizacao substitui apenas a leitura de prioridade imediata.
+Ela nao invalida o historico acima.
