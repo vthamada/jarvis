@@ -160,7 +160,7 @@ class BenchmarkHarness:
 
         notes = [
             "Baseline fixo: sqlite local do memory-service.",
-            "Paridade funcional e persistencia entre instancias sao obrigatorias para adocao.",
+            "Paridade funcional e persistencia entre instancias sóo obrigatorias para adoção.",
         ]
         if self.postgres_url:
             candidate = self._exercise_memory_backend("postgresql", self.postgres_url)
@@ -177,7 +177,7 @@ class BenchmarkHarness:
                 "average_fetch_latency_ms": None,
                 "operational_simplicity": 0.0,
                 "notes": [
-                    "DATABASE_URL nao configurada; benchmark de PostgreSQL nao executado.",
+                    "DATABASE_URL não configurada; benchmark de PostgreSQL não executado.",
                     "Use infra/local-postgres.compose.yml para validar a candidata operacional do v1.",
                 ],
             }
@@ -200,9 +200,9 @@ class BenchmarkHarness:
             )
             if candidate_is_viable:
                 decision = ADOPT_IN_V1
-                notes.append("PostgreSQL atende a regra de adocao operacional do v1.")
+                notes.append("PostgreSQL atende a regra de adoção operacional do v1.")
             else:
-                notes.append("PostgreSQL ainda nao superou os criterios minimos de adocao do v1.")
+                notes.append("PostgreSQL ainda não superou os critérios mínimos de adoção do v1.")
 
         return TrackReport(
             name="memory",
@@ -240,7 +240,7 @@ class BenchmarkHarness:
         decision = MAINTAIN_BASELINE
         selected_candidate = "baseline_deterministic"
         notes = [
-            "Benchmark local, deterministico e sem servicos externos.",
+            "Benchmark local, determinístico e sem serviços externos.",
             "Vector DB, embeddings online e reranker externo seguem fora do escopo do v1.",
         ]
 
@@ -254,7 +254,7 @@ class BenchmarkHarness:
             decision = ADOPT_IN_V1
             selected_candidate = "weighted_deterministic"
             notes.append(
-                "Ranking deterministico com pesos explicitos melhorou relevancia sem perder previsibilidade."
+                "Ranking determinístico com pesos explícitos melhorou relevancia sem perder previsibilidade."
             )
         elif (
             lexical_gain >= 0.08
@@ -304,7 +304,7 @@ class BenchmarkHarness:
 
         decision = MAINTAIN_BASELINE
         notes = [
-            "A trilha interna continua sendo a fonte canonica de auditoria do v1.",
+            "A trilha interna continua sendo a fonte canônica de auditoria do v1.",
             "Camadas externas de tracing entram apenas como complemento, nunca como dependencia central.",
         ]
         if (
@@ -315,10 +315,10 @@ class BenchmarkHarness:
         ):
             decision = ADOPT_IN_V1
             notes.append(
-                "A trilha observavel atual ja atende os criterios minimos do v1 controlado."
+                "A trilha observável atual já atende os critérios mínimos do v1 controlado."
             )
         else:
-            notes.append("Ainda ha lacunas de cobertura ou reconstrucao na trilha observavel.")
+            notes.append("Ainda há lacunas de cobertura ou reconstrucao na trilha observável.")
 
         return TrackReport(
             name="observability",
@@ -353,8 +353,8 @@ class BenchmarkHarness:
         decision = DEFER_TO_V2
         selected_algorithm = "none"
         notes = [
-            "Todas as candidatas permanecem sandbox-only e sem promocao automatica.",
-            "A saida esperada do v1 e um laboratorio evolutivo mais serio, nao autoevolucao em runtime.",
+            "Todas as candidatas permanecem sandbox-only e sem promoção automatica.",
+            "A saida esperada do v1 e um laboratório evolutivo mais serio, não autoevolucao em runtime.",
         ]
 
         for candidate_name in ("manual_variants", "mipro_like_search", "textgrad_like_refinement"):
@@ -375,7 +375,7 @@ class BenchmarkHarness:
 
         if decision != ADOPT_IN_V1:
             notes.append(
-                "Nenhuma candidata atingiu o corte minimo sem aumentar risco ou custo alem do aceitavel."
+                "Nenhuma candidata atingiu o corte mínimo sem aumentar risco ou custo alem do aceitavel."
             )
 
         return TrackReport(

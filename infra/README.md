@@ -1,10 +1,10 @@
 # Infra
 
-Automacao local, configuracoes de infraestrutura e base para ambientes futuros.
+Automação local, configurações de infraestrutura e base para ambientes futuros.
 
 ## PostgreSQL local
 
-Arquivo principal para o backend operacional de memoria:
+Arquivo principal para o backend operacional de memória:
 
 - `infra/local-postgres.compose.yml`
 

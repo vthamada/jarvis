@@ -1,3 +1,3 @@
 # Evolution
 
-Area reservada para laboratorio evolutivo, benchmarks e comparacao segura.
+Area reservada para laboratório evolutivo, benchmarks e comparação segura.

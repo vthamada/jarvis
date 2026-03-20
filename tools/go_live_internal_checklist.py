@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from argparse import ArgumentParser, Namespace
+from json import loads
 from pathlib import Path
 from sys import path as sys_path
 from tempfile import gettempdir
@@ -169,6 +170,11 @@ def check_agentic_mirror(profile: str) -> None:
     mirrored = (workdir / "agentic.jsonl").read_text(encoding="utf-8").splitlines()
     if not mirrored:
         raise RuntimeError("Go-live check failed: agentic mirror did not capture events.")
+    mirrored_events = [loads(line) for line in mirrored]
+    root_traces = [event for event in mirrored_events if event["name"] == "jarvis_trace"]
+    child_runs = [event for event in mirrored_events if event["name"] != "jarvis_trace"]
+    if not root_traces or not child_runs:
+        raise RuntimeError("Go-live check failed: agentic mirror did not produce trace tree.")
 
 
 def check_evolution_lab() -> None:

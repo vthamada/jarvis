@@ -11,10 +11,10 @@ Este documento resume o escopo do `v1` do JARVIS em linguagem curta e acionavel.
 O `v1` deve provar que e possivel construir um JARVIS com:
 
 - identidade unificada;
-- memoria util;
-- nucleo executivo funcional;
-- governanca minima robusta;
-- operacao limitada, mas real;
+- memória util;
+- núcleo executivo funcional;
+- governança mínima robusta;
+- operação limitada, mas real;
 - observabilidade suficiente;
 - base pronta para crescer para `v2`.
 
@@ -24,48 +24,48 @@ O `v1` deve provar que e possivel construir um JARVIS com:
 
 Inclui:
 
-- nucleo central minimo funcional;
+- núcleo central mínimo funcional;
 - 12 mentes nucleares ativas;
-- dominios prioritarios do primeiro corte;
-- memorias minimas robustas;
-- governanca basica;
-- operacao de baixo risco;
-- validacao e producao controlada.
+- dominios prioritários do primeiro corte;
+- memórias mínimas robustas;
+- governança básica;
+- operação de baixo risco;
+- validação e produção controlada.
 
 ---
 
-## 4. O que nao entra plenamente no v1
+## 4. O que não entra plenamente no v1
 
-Nao entra como foco principal:
+Não entra como foco principal:
 
 - cobertura profunda e uniforme dos 30 dominios;
-- especialistas maduros em producao ampla;
-- autoevolucao ampla em producao;
+- especialistas maduros em produção ampla;
+- autoevolucao ampla em produção;
 - multimodalidade plena;
-- operacao de alto risco;
+- operação de alto risco;
 - autonomia extensa em ambientes sensiveis.
 
 ---
 
 ## 5. Estado atual resumido
 
-Hoje o `v1` ja demonstrou internamente:
+Hoje o `v1` já demonstrou internamente:
 
-- baseline integrado entre orquestracao, memoria, governanca, conhecimento, observabilidade e operacao;
-- `PostgreSQL` validado como backend operacional recomendado para memoria;
+- baseline integrado entre orquestracao, memória, governança, conhecimento, observabilidade e operação;
+- `PostgreSQL` validado como backend operacional recomendado para memória;
 - observabilidade suficiente para o escopo atual do `v1`;
-- `manual_variants` priorizado no laboratorio evolutivo, mantendo `sandbox-only`.
+- `manual_variants` priorizado no laboratório evolutivo, mantendo `sandbox-only`.
 
-O que ainda falta e a decisao formal de fechamento para producao controlada.
+O que ainda falta e a decisão formal de fechamento para produção controlada.
 
 ---
 
-## 6. Criterio de sucesso
+## 6. Critério de sucesso
 
 O `v1` e bem-sucedido se o sistema demonstrar:
 
 - unidade perceptivel;
-- continuidade basica;
+- continuidade básica;
 - utilidade real;
-- estabilidade minima;
-- governanca suficiente para uso controlado.
+- estabilidade mínima;
+- governança suficiente para uso controlado.

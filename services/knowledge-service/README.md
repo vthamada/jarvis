@@ -1,6 +1,6 @@
 # knowledge-service
 
-Servico responsavel por indexacao, retrieval e profundidade semantica.
+Serviço responsável por indexacao, retrieval e profundidade semântica.
 
 Responsabilidades iniciais:
 

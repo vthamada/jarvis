@@ -45,7 +45,7 @@ class SynthesisEngine:
             PermissionDecision.DEFER_FOR_VALIDATION,
         }:
             return (
-                "Solicitacao recebida, mas a governanca atual nao permite execucao direta. "
+                "Solicitacao recebida, mas a governança atual não permite execução direta. "
                 f"Motivo: {synthesis_input.governance_decision.justification} "
                 f"Leitura atual: {self._goal_line(synthesis_input)}"
             )
@@ -64,7 +64,7 @@ class SynthesisEngine:
         operation_brief = (
             synthesis_input.operation_result.outputs[0]
             if synthesis_input.operation_result and synthesis_input.operation_result.outputs
-            else "nenhuma operacao executada"
+            else "nenhuma operação executada"
         )
         steps_brief = self._steps_brief(plan)
         risks_brief = "; ".join(plan.risks[:2]) if plan else "sem risco material relevante"
@@ -81,7 +81,7 @@ class SynthesisEngine:
             f"Arbitragem interna: {arbitration}. "
             f"Plano ou recomendacao: {steps_brief}. "
             f"Especializacao subordinada: {specialists}. "
-            f"Contribuicoes especialistas: {specialist_findings}. "
+            f"Contribuições especialistas: {specialist_findings}. "
             f"Limites e riscos: {risks_brief}. "
             f"Contexto ativo: {context_brief}. "
             f"Dominios: {', '.join(synthesis_input.active_domains)}. "
@@ -124,7 +124,7 @@ class SynthesisEngine:
         specialist_contributions: list[SpecialistContributionContract],
     ) -> str:
         if not specialist_contributions:
-            return "nenhuma contribuicao especializada adicional"
+            return "nenhuma contribuição especializada adicional"
         findings = [
             contribution.findings[0]
             for contribution in specialist_contributions

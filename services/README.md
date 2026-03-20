@@ -1,6 +1,6 @@
 # Services
 
-Servicos centrais do primeiro corte do JARVIS:
+Serviços centrais do primeiro corte do JARVIS:
 
 - `orchestrator-service`
 - `memory-service`

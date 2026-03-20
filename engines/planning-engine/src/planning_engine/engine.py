@@ -43,12 +43,12 @@ class PlanningEngine:
         constraints = [
             "manter escopo reversivel",
             "preservar rastreabilidade",
-            "evitar efeitos externos nao validados",
+            "evitar efeitos externos não validados",
         ]
         if tensions:
             constraints.append("arbitrar tensoes internas antes de operar")
         if specialist_hints:
-            constraints.append("manter especializacao subordinada ao nucleo")
+            constraints.append("manter especializacao subordinada ao núcleo")
         if context.requires_clarification:
             constraints.insert(0, "clarificar objetivo antes de operar")
         risks = self._build_risks(context)
@@ -96,18 +96,17 @@ class PlanningEngine:
         refined_constraints = list(plan.constraints)
         refined_risks = list(plan.risks)
         requires_human_validation = plan.requires_human_validation
+        specialist_constraint = "incorporar contribuições especialistas antes da execução"
 
-        if "incorporar contribuicoes especialistas antes da execucao" not in refined_constraints:
-            refined_constraints.append(
-                "incorporar contribuicoes especialistas antes da execucao"
-            )
+        if specialist_constraint not in refined_constraints:
+            refined_constraints.append(specialist_constraint)
 
         for contribution in specialist_contributions:
             extra_step = self._specialist_step(contribution.specialist_type)
             if extra_step and extra_step not in refined_steps:
                 refined_steps.append(extra_step)
             if contribution.specialist_type == "especialista_revisao_governanca":
-                risk = "especialista recomenda cautela operacional reforcada"
+                risk = "especialista recomenda cautela operacional reforçada"
                 if risk not in refined_risks:
                     refined_risks.append(risk)
                 requires_human_validation = True
@@ -127,11 +126,11 @@ class PlanningEngine:
     @staticmethod
     def _specialist_step(specialist_type: str) -> str | None:
         if specialist_type == "especialista_planejamento_operacional":
-            return "validar checkpoint intermediario apos a primeira etapa"
+            return "validar checkpoint intermediario após a primeira etapa"
         if specialist_type == "especialista_analise_estruturada":
-            return "explicitar criterio de decisao dominante antes da conclusao"
+            return "explicitar critério de decisão dominante antes da conclusao"
         if specialist_type == "especialista_revisao_governanca":
-            return "confirmar limites normativos e condicoes de auditoria"
+            return "confirmar limites normativos e condições de auditoria"
         return None
 
     @staticmethod
@@ -149,19 +148,19 @@ class PlanningEngine:
             steps = [
                 "clarificar a leitura atual do pedido",
                 "pedir confirmacao do objetivo ou do resultado esperado",
-                "adiar qualquer operacao ate haver direcao suficiente",
+                "adiar qualquer operação até haver direção suficiente",
             ]
         elif context.intent == "analysis":
             steps = [
                 "consolidar contexto e sinais relevantes",
-                "comparar trade-offs e implicacoes principais",
+                "comparar trade-offs e implicações principais",
                 "entregar recomendacao argumentada sem executar mudanca",
             ]
         elif context.intent == "planning":
             steps = [
-                "definir objetivo e criterio de aceite",
+                "definir objetivo e critério de aceite",
                 "decompor em etapas reversiveis e priorizadas",
-                "recomendar a menor proxima acao segura",
+                "recomendar a menor próxima ação segura",
             ]
         else:
             steps = [
@@ -169,7 +168,7 @@ class PlanningEngine:
                 "fornecer orientacao executiva compacta",
             ]
         if semantic_brief and len(steps) < 5:
-            continuity_step = "reconectar a resposta ao fio condutor semantico da missao atual"
+            continuity_step = "reconectar a resposta ao fio condutor semântico da missão atual"
             if continuity_step not in steps:
                 steps.insert(1 if len(steps) > 1 else 0, continuity_step)
         if specialist_step and specialist_step not in steps and len(steps) < 5:
@@ -180,9 +179,9 @@ class PlanningEngine:
     def _build_risks(context: PlanningContext) -> list[str]:
         risks = []
         if context.risk_markers:
-            risks.append("pedido contem sinais de risco operacional")
+            risks.append("pedido contém sinais de risco operacional")
         if context.requires_clarification:
-            risks.append("objetivo ainda ambiguo para execucao")
+            risks.append("objetivo ainda ambiguo para execução")
         if not context.knowledge_snippets:
             risks.append("sem apoio adicional de conhecimento alem do baseline local")
         return risks or ["sem risco material alem do escopo controlado do v1"]
@@ -213,7 +212,7 @@ class PlanningEngine:
         )
         return (
             f"objetivo={context.query}; modo={context.preferred_response_mode}; "
-            f"primeira_acao={leading_step}; tensao={tension}; missao={mission_hint}"
+            f"primeira_acao={leading_step}; tensao={tension}; missão={mission_hint}"
         )
 
     @staticmethod
@@ -234,13 +233,13 @@ class PlanningEngine:
         tension_hint = tensions[0] if tensions else "sem arbitragem adicional"
         specialist_hint = specialist_hints[0] if specialist_hints else "sem apoio especializado"
         cognitive_hint = context.cognitive_rationale or "sem rationale cognitivo adicional"
-        mission_hint = semantic_brief or "sem continuidade semantica consolidada"
-        focus_hint = semantic_focus or "sem foco semantico explicito"
+        mission_hint = semantic_brief or "sem continuidade semântica consolidada"
+        focus_hint = semantic_focus or "sem foco semântico explícito"
         return (
             f"contexto={context_hint}; apoio={knowledge_hint}; "
             f"mentes={', '.join(context.active_minds)}; riscos={'; '.join(risks)}; "
             f"arbitragem={tension_hint}; especialista={specialist_hint}; "
-            f"missao={mission_hint}; foco={focus_hint}; cognicao={cognitive_hint}"
+            f"missão={mission_hint}; foco={focus_hint}; cognição={cognitive_hint}"
         )
 
     @staticmethod

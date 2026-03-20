@@ -1,3 +1,3 @@
 # Shared State
 
-Estruturas basicas de estado compartilhado entre camadas.
+Estruturas básicas de estado compartilhado entre camadas.

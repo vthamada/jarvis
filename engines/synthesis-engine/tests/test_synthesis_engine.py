@@ -17,7 +17,7 @@ def sample_plan() -> DeliberativePlanContract:
     return DeliberativePlanContract(
         plan_summary="decompor objetivo em etapas reversiveis",
         goal="Plan milestone M3",
-        steps=["definir objetivo", "listar etapas", "recomendar proxima acao"],
+        steps=["definir objetivo", "listar etapas", "recomendar próxima ação"],
         active_domains=["strategy"],
         active_minds=["mente_executiva"],
         constraints=["low-risk"],
@@ -25,7 +25,7 @@ def sample_plan() -> DeliberativePlanContract:
         recommended_task_type="draft_plan",
         requires_human_validation=False,
         rationale="contexto=context_summary=previous context; apoio=Priorize clareza de objetivo.",
-        tensions_considered=["equilibrar ambicao estrategica com proxima acao segura"],
+        tensions_considered=["equilibrar ambicao estratégica com próxima ação segura"],
         specialist_hints=["especialista_planejamento_operacional"],
     )
 
@@ -37,7 +37,7 @@ def sample_specialist_contributions() -> list[SpecialistContributionContract]:
             role="planejamento_operacional_subordinado",
             focus="sequenciamento reversivel e checkpoints claros",
             findings=[
-                "priorizar a menor acao segura antes de expandir escopo",
+                "priorizar a menor ação segura antes de expandir escopo",
                 "explicitar checkpoints intermediarios para preservar rastreabilidade",
             ],
             recommendation="executar o plano em etapas pequenas e verificaveis",
@@ -77,7 +77,7 @@ def test_synthesis_engine_composes_deliberative_allowed_response() -> None:
     assert "Plano ou recomendacao" in response
     assert "Arbitragem interna" in response
     assert "Especializacao subordinada" in response
-    assert "Contribuicoes especialistas" in response
+    assert "Contribuições especialistas" in response
 
 
 def test_synthesis_engine_blocks_when_governance_blocks() -> None:
@@ -106,5 +106,5 @@ def test_synthesis_engine_blocks_when_governance_blocks() -> None:
         )
     )
 
-    assert "nao permite execucao direta" in response
+    assert "não permite execução direta" in response
     assert "Leitura atual" in response

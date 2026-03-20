@@ -3,7 +3,7 @@ from pathlib import Path
 from tempfile import gettempdir
 from uuid import uuid4
 
-from observability_service.agentic import JsonlAgenticMirrorAdapter
+from observability_service.agentic import JsonlAgenticMirrorAdapter, LangSmithObservabilityAdapter
 from observability_service.service import ObservabilityQuery, ObservabilityService
 
 from shared.events import InternalEventEnvelope
@@ -105,9 +105,12 @@ def test_observability_service_mirrors_events_to_agentic_adapter() -> None:
     )
 
     mirrored_lines = mirror_path.read_text(encoding="utf-8").splitlines()
-    assert len(mirrored_lines) == 1
-    mirrored_event = loads(mirrored_lines[0])
-    assert mirrored_event["event_name"] == "response_synthesized"
+    assert len(mirrored_lines) == 2
+    root_event = loads(mirrored_lines[0])
+    mirrored_event = loads(mirrored_lines[1])
+    assert root_event["name"] == "jarvis_trace"
+    assert root_event["total_events"] == 1
+    assert mirrored_event["name"] == "response_synthesized"
     assert mirrored_event["operation_id"] == "op-4"
 
 
@@ -156,3 +159,91 @@ def test_observability_service_summarizes_flow_metrics() -> None:
     assert metrics.completed_operations == 1
     assert metrics.memory_writes == 1
     assert metrics.duration_seconds == 3.0
+
+
+def test_langsmith_adapter_emits_trace_tree() -> None:
+    calls: list[dict[str, object]] = []
+
+    class FakeClient:
+        def create_run(self, **kwargs) -> None:  # type: ignore[no-untyped-def]
+            calls.append(kwargs)
+
+    adapter = LangSmithObservabilityAdapter(client=FakeClient(), project_name="jarvis-test")
+    adapter.emit(
+        [
+            InternalEventEnvelope(
+                event_id="evt-8",
+                event_name="input_received",
+                timestamp="2026-03-18T00:00:00+00:00",
+                source_service="orchestrator-service",
+                payload={"content": "hello"},
+                request_id="req-8",
+                session_id="sess-8",
+                correlation_id="req-8",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-9",
+                event_name="operation_completed",
+                timestamp="2026-03-18T00:00:02+00:00",
+                source_service="orchestrator-service",
+                payload={"status": "completed"},
+                request_id="req-8",
+                session_id="sess-8",
+                correlation_id="req-8",
+                operation_id="op-8",
+            ),
+        ]
+    )
+
+    assert len(calls) == 3
+    root_run, first_child, second_child = calls
+    assert root_run["name"] == "jarvis_trace"
+    assert root_run["id"] == root_run["trace_id"]
+    assert root_run["outputs"]["total_events"] == 2
+    assert root_run["extra"]["metadata"]["request_id"] == "req-8"
+    assert first_child["parent_run_id"] == root_run["id"]
+    assert first_child["trace_id"] == root_run["trace_id"]
+    assert first_child["extra"]["metadata"]["event_id"] == "evt-8"
+    assert second_child["run_type"] == "tool"
+    assert second_child["extra"]["metadata"]["operation_id"] == "op-8"
+
+
+def test_langsmith_adapter_groups_events_by_request() -> None:
+    calls: list[dict[str, object]] = []
+
+    class FakeClient:
+        def create_run(self, **kwargs) -> None:  # type: ignore[no-untyped-def]
+            calls.append(kwargs)
+
+    adapter = LangSmithObservabilityAdapter(client=FakeClient(), project_name="jarvis-test")
+    adapter.emit(
+        [
+            InternalEventEnvelope(
+                event_id="evt-10",
+                event_name="input_received",
+                timestamp="2026-03-18T00:00:00+00:00",
+                source_service="orchestrator-service",
+                payload={"content": "a"},
+                request_id="req-a",
+                session_id="sess-a",
+                correlation_id="req-a",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-11",
+                event_name="input_received",
+                timestamp="2026-03-18T00:00:01+00:00",
+                source_service="orchestrator-service",
+                payload={"content": "b"},
+                request_id="req-b",
+                session_id="sess-b",
+                correlation_id="req-b",
+            ),
+        ]
+    )
+
+    root_runs = [call for call in calls if call["name"] == "jarvis_trace"]
+    child_runs = [call for call in calls if call["name"] != "jarvis_trace"]
+    assert len(root_runs) == 2
+    assert len(child_runs) == 2
+    root_ids = {call["id"] for call in root_runs}
+    assert all(call["parent_run_id"] in root_ids for call in child_runs)

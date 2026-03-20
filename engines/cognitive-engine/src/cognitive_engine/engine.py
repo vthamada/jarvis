@@ -118,7 +118,7 @@ class CognitiveEngine:
     ) -> list[str]:
         tensions: list[str] = []
         if intent == "planning":
-            tensions.append("equilibrar ambicao estrategica com proxima acao segura")
+            tensions.append("equilibrar ambicao estratégica com próxima ação segura")
         elif intent == "analysis":
             tensions.append("equilibrar profundidade analitica com conclusao util")
         elif intent == "sensitive_action":

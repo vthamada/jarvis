@@ -7,7 +7,7 @@ def sample_plan() -> DeliberativePlanContract:
     return DeliberativePlanContract(
         plan_summary="decompor objetivo em etapas reversiveis",
         goal="Plan milestone M3",
-        steps=["definir objetivo", "listar etapas", "recomendar proxima acao"],
+        steps=["definir objetivo", "listar etapas", "recomendar próxima ação"],
         active_domains=["strategy"],
         active_minds=["mente_executiva"],
         constraints=["low-risk"],
@@ -15,7 +15,7 @@ def sample_plan() -> DeliberativePlanContract:
         recommended_task_type="draft_plan",
         requires_human_validation=False,
         rationale="contexto=baseline; apoio=local",
-        tensions_considered=["equilibrar ambicao estrategica com proxima acao segura"],
+        tensions_considered=["equilibrar ambicao estratégica com próxima ação segura"],
         specialist_hints=["especialista_planejamento_operacional"],
     )
 

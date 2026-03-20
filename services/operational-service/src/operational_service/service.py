@@ -49,7 +49,7 @@ class OperationalService:
             content = self._build_general_content(dispatch)
             status = OperationStatus.COMPLETED
         else:
-            content = f"Task type nao suportado: {dispatch.task_type}"
+            content = f"Task type não suportado: {dispatch.task_type}"
             status = OperationStatus.FAILED
 
         outputs = [dispatch.plan_summary or content.splitlines()[0]]
@@ -107,7 +107,7 @@ class OperationalService:
             "\n".join(
                 f"{index}. {step}" for index, step in enumerate(dispatch.planned_steps, start=1)
             )
-            or "1. Revisar objetivo e confirmar proxima acao segura."
+            or "1. Revisar objetivo e confirmar próxima ação segura."
         )
         constraints = ", ".join(dispatch.constraints)
         risks = OperationalService._risk_line(
@@ -120,8 +120,8 @@ class OperationalService:
         return (
             f"Plano deliberativo para: {dispatch.task_goal}\n\n"
             f"Resumo: {dispatch.plan_summary or dispatch.task_plan}\n"
-            f"Rationale: {dispatch.plan_rationale or 'nao informado'}\n"
-            f"Restricoes: {constraints}\n"
+            f"Rationale: {dispatch.plan_rationale or 'não informado'}\n"
+            f"Restrições: {constraints}\n"
             f"Riscos: {risks}\n"
             f"Especializacao subordinada: {specialists}\n"
             f"Resumo especializado: {specialist_summary}\n"
@@ -140,9 +140,9 @@ class OperationalService:
         specialist_summary = dispatch.specialist_summary or "sem resumo especializado adicional"
         findings = OperationalService._specialist_findings(dispatch.specialist_findings)
         return (
-            f"Analise deliberativa para: {dispatch.task_goal}\n\n"
+            f"Análise deliberativa para: {dispatch.task_goal}\n\n"
             f"Resumo: {dispatch.plan_summary or dispatch.task_plan}\n"
-            f"Rationale: {dispatch.plan_rationale or 'nao informado'}\n"
+            f"Rationale: {dispatch.plan_rationale or 'não informado'}\n"
             f"Dominios sugeridos: {domains}\n"
             f"Especializacao subordinada: {specialists}\n"
             f"Resumo especializado: {specialist_summary}\n"

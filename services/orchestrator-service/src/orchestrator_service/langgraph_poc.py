@@ -1,0 +1,441 @@
+"""Optional LangGraph POC for the orchestrator service."""
+
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, TypedDict
+
+from shared.types import PermissionDecision
+
+if TYPE_CHECKING:
+    from executive_engine.engine import ExecutiveDirective
+    from knowledge_service.service import KnowledgeRetrievalResult
+    from specialist_engine.engine import SpecialistReview
+
+    from orchestrator_service.service import OrchestratorResponse, OrchestratorService
+    from shared.contracts import (
+        DeliberativePlanContract,
+        GovernanceCheckContract,
+        GovernanceDecisionContract,
+        InputContract,
+        OperationDispatchContract,
+        OperationResultContract,
+    )
+    from shared.events import InternalEventEnvelope
+
+
+class OrchestratorFlowState(TypedDict, total=False):
+    contract: InputContract
+    directive: ExecutiveDirective
+    memory_recovery_result: object
+    knowledge_result: KnowledgeRetrievalResult | None
+    cognitive_snapshot: object
+    deliberative_plan: DeliberativePlanContract
+    specialist_review: SpecialistReview
+    governance_check: GovernanceCheckContract
+    governance_decision: GovernanceDecisionContract
+    operation_dispatch: OperationDispatchContract | None
+    operation_result: OperationResultContract | None
+    artifact_results: list[object]
+    memory_record_result: object
+    response_text: str
+    events: list[InternalEventEnvelope]
+
+
+class LangGraphPOCRunner:
+    """Compose the current orchestrator flow as a LangGraph POC."""
+
+    def __init__(self, orchestrator: OrchestratorService) -> None:
+        self.orchestrator = orchestrator
+
+    def run(self, contract: InputContract) -> OrchestratorResponse:
+        state_graph, start_token, end_token = _load_langgraph()
+        graph = state_graph(OrchestratorFlowState)
+        graph.add_node("recover_memory", self._recover_memory)
+        graph.add_node("classify_directive", self._classify_directive)
+        graph.add_node("retrieve_knowledge", self._retrieve_knowledge)
+        graph.add_node("compose_context", self._compose_context)
+        graph.add_node("build_plan", self._build_plan)
+        graph.add_node("review_specialists", self._review_specialists)
+        graph.add_node("govern_plan", self._govern_plan)
+        graph.add_node("execute_operation", self._execute_operation)
+        graph.add_node("synthesize_response", self._synthesize_response)
+        graph.add_node("record_memory", self._record_memory)
+        graph.add_edge(start_token, "recover_memory")
+        graph.add_edge("recover_memory", "classify_directive")
+        graph.add_edge("classify_directive", "retrieve_knowledge")
+        graph.add_edge("retrieve_knowledge", "compose_context")
+        graph.add_edge("compose_context", "build_plan")
+        graph.add_edge("build_plan", "review_specialists")
+        graph.add_edge("review_specialists", "govern_plan")
+        graph.add_edge("govern_plan", "execute_operation")
+        graph.add_edge("execute_operation", "synthesize_response")
+        graph.add_edge("synthesize_response", "record_memory")
+        graph.add_edge("record_memory", end_token)
+        runner = graph.compile()
+        final_state = runner.invoke(
+            {
+                "contract": contract,
+                "events": [
+                    self.orchestrator.make_event(
+                        "input_received",
+                        contract,
+                        {"content": contract.content, "channel": contract.channel.value},
+                    )
+                ],
+            }
+        )
+        self.orchestrator.observability_service.ingest_events(final_state["events"])
+        return self.orchestrator._build_response_from_state(final_state)
+
+    def _recover_memory(self, state: OrchestratorFlowState) -> OrchestratorFlowState:
+        contract = state["contract"]
+        memory_recovery_result = self.orchestrator.memory_service.recover_for_input(contract)
+        events = list(state["events"])
+        events.append(
+            self.orchestrator.make_event(
+                "memory_recovered",
+                contract,
+                {
+                    "memory_query_id": str(
+                        memory_recovery_result.recovery_contract.memory_query_id
+                    ),
+                    "recovery_type": memory_recovery_result.recovery_contract.recovery_type.value,
+                },
+            )
+        )
+        return {"memory_recovery_result": memory_recovery_result, "events": events}
+
+    def _classify_directive(self, state: OrchestratorFlowState) -> OrchestratorFlowState:
+        contract = state["contract"]
+        directive = self.orchestrator.executive_engine.direct(contract)
+        events = list(state["events"])
+        events.append(
+            self.orchestrator.make_event(
+                "intent_classified",
+                contract,
+                {"intent": directive.intent},
+            )
+        )
+        events.append(
+            self.orchestrator.make_event(
+                "directive_composed",
+                contract,
+                {
+                    "intent": directive.intent,
+                    "intent_confidence": directive.intent_confidence,
+                    "requires_clarification": directive.requires_clarification,
+                    "preferred_response_mode": directive.preferred_response_mode,
+                },
+            )
+        )
+        if directive.requires_clarification:
+            events.append(
+                self.orchestrator.make_event(
+                    "clarification_required",
+                    contract,
+                    {"intent": directive.intent, "reason": "insufficient_goal_clarity"},
+                )
+            )
+        return {"directive": directive, "events": events}
+
+    def _retrieve_knowledge(self, state: OrchestratorFlowState) -> OrchestratorFlowState:
+        contract = state["contract"]
+        directive = state["directive"]
+        events = list(state["events"])
+        knowledge_result = None
+        if directive.should_query_knowledge:
+            knowledge_result = self.orchestrator.knowledge_service.retrieve_for_intent(
+                intent=directive.intent,
+                query=contract.content,
+            )
+            events.append(
+                self.orchestrator.make_event(
+                    "knowledge_retrieved",
+                    contract,
+                    {
+                        "domains": knowledge_result.active_domains,
+                        "sources": knowledge_result.sources,
+                    },
+                )
+            )
+        return {"knowledge_result": knowledge_result, "events": events}
+
+    def _compose_context(self, state: OrchestratorFlowState) -> OrchestratorFlowState:
+        contract = state["contract"]
+        directive = state["directive"]
+        knowledge_result = state.get("knowledge_result")
+        cognitive_snapshot = self.orchestrator.cognitive_engine.build_snapshot(
+            intent=directive.intent,
+            risk_markers=directive.risk_markers,
+            retrieved_domains=knowledge_result.active_domains if knowledge_result else [],
+            mind_hints=directive.mind_hints,
+        )
+        events = list(state["events"])
+        events.append(
+            self.orchestrator.make_event(
+                "context_composed",
+                contract,
+                {
+                    "active_minds": cognitive_snapshot.active_minds,
+                    "active_domains": cognitive_snapshot.active_domains,
+                    "primary_mind": cognitive_snapshot.primary_mind,
+                    "tensions": cognitive_snapshot.tensions,
+                    "specialist_hints": cognitive_snapshot.specialist_hints,
+                },
+            )
+        )
+        return {"cognitive_snapshot": cognitive_snapshot, "events": events}
+
+    def _build_plan(self, state: OrchestratorFlowState) -> OrchestratorFlowState:
+        contract = state["contract"]
+        directive = state["directive"]
+        memory_recovery_result = state["memory_recovery_result"]
+        cognitive_snapshot = state["cognitive_snapshot"]
+        knowledge_result = state.get("knowledge_result")
+        deliberative_plan = self.orchestrator.planning_engine.build_task_plan(
+            self.orchestrator._build_planning_context(
+                contract,
+                directive=directive,
+                memory_recovery_result=memory_recovery_result,
+                cognitive_snapshot=cognitive_snapshot,
+                knowledge_result=knowledge_result,
+            )
+        )
+        events = list(state["events"])
+        events.append(
+            self.orchestrator.make_event(
+                "plan_built",
+                contract,
+                {
+                    "recommended_task_type": deliberative_plan.recommended_task_type,
+                    "requires_human_validation": deliberative_plan.requires_human_validation,
+                    "steps": deliberative_plan.steps,
+                    "tensions": deliberative_plan.tensions_considered,
+                    "specialist_hints": deliberative_plan.specialist_hints,
+                },
+            )
+        )
+        return {"deliberative_plan": deliberative_plan, "events": events}
+
+    def _review_specialists(self, state: OrchestratorFlowState) -> OrchestratorFlowState:
+        contract = state["contract"]
+        directive = state["directive"]
+        deliberative_plan = state["deliberative_plan"]
+        knowledge_result = state.get("knowledge_result")
+        specialist_review = self.orchestrator.specialist_engine.review(
+            intent=directive.intent,
+            plan=deliberative_plan,
+            knowledge_snippets=knowledge_result.snippets if knowledge_result else [],
+        )
+        refined_plan = self.orchestrator.planning_engine.refine_task_plan(
+            deliberative_plan,
+            specialist_summary=specialist_review.summary,
+            specialist_contributions=specialist_review.contributions,
+        )
+        events = list(state["events"])
+        if specialist_review.specialist_hints:
+            events.append(
+                self.orchestrator.make_event(
+                    "specialists_dispatched",
+                    contract,
+                    {"specialist_hints": specialist_review.specialist_hints},
+                )
+            )
+        if specialist_review.contributions:
+            events.append(
+                self.orchestrator.make_event(
+                    "specialists_completed",
+                    contract,
+                    {
+                        "specialist_types": [
+                            item.specialist_type for item in specialist_review.contributions
+                        ],
+                        "summary": specialist_review.summary,
+                    },
+                )
+            )
+            events.append(
+                self.orchestrator.make_event(
+                    "plan_refined",
+                    contract,
+                    {
+                        "recommended_task_type": refined_plan.recommended_task_type,
+                        "requires_human_validation": refined_plan.requires_human_validation,
+                        "steps": refined_plan.steps,
+                    },
+                )
+            )
+        return {
+            "specialist_review": specialist_review,
+            "deliberative_plan": refined_plan,
+            "events": events,
+        }
+
+    def _govern_plan(self, state: OrchestratorFlowState) -> OrchestratorFlowState:
+        contract = state["contract"]
+        directive = state["directive"]
+        deliberative_plan = state["deliberative_plan"]
+        assessment = self.orchestrator.governance_service.assess_request(
+            contract,
+            intent=directive.intent,
+            requested_by_service=self.orchestrator.name,
+            plan=deliberative_plan,
+        )
+        governance_check = assessment.governance_check
+        governance_decision = assessment.governance_decision
+        events = list(state["events"])
+        events.append(
+            self.orchestrator.make_event(
+                "governance_checked",
+                contract,
+                {
+                    "governance_check_id": str(governance_check.governance_check_id),
+                    "risk_hint": governance_check.risk_hint.value
+                    if governance_check.risk_hint
+                    else None,
+                    "decision": governance_decision.decision.value,
+                },
+            )
+        )
+        events.append(
+            self.orchestrator.make_event(
+                "plan_governed",
+                contract,
+                {
+                    "governance_check_id": str(governance_check.governance_check_id),
+                    "proposed_effect": governance_check.proposed_effect,
+                    "decision": governance_decision.decision.value,
+                },
+            )
+        )
+        if governance_decision.decision in {
+            PermissionDecision.BLOCK,
+            PermissionDecision.DEFER_FOR_VALIDATION,
+        }:
+            events.append(
+                self.orchestrator.make_event(
+                    "governance_blocked",
+                    contract,
+                    {
+                        "decision_id": str(governance_decision.decision_id),
+                        "justification": governance_decision.justification,
+                    },
+                )
+            )
+        return {
+            "governance_check": governance_check,
+            "governance_decision": governance_decision,
+            "events": events,
+        }
+
+    def _execute_operation(self, state: OrchestratorFlowState) -> OrchestratorFlowState:
+        contract = state["contract"]
+        directive = state["directive"]
+        governance_decision = state["governance_decision"]
+        deliberative_plan = state["deliberative_plan"]
+        specialist_review = state["specialist_review"]
+        events = list(state["events"])
+        operation_dispatch = None
+        operation_result = None
+        artifact_results: list[object] = []
+        if (
+            governance_decision.decision
+            in {
+                PermissionDecision.ALLOW,
+                PermissionDecision.ALLOW_WITH_CONDITIONS,
+            }
+            and directive.should_execute_operation
+        ):
+            operation_dispatch = self.orchestrator.build_operation_dispatch(
+                contract,
+                plan=deliberative_plan,
+                specialist_review=specialist_review,
+            )
+            events.append(
+                self.orchestrator.make_event(
+                    "operation_dispatched",
+                    contract,
+                    {
+                        "operation_id": str(operation_dispatch.operation_id),
+                        "task_type": operation_dispatch.task_type,
+                        "specialist_hints": operation_dispatch.specialist_hints,
+                    },
+                )
+            )
+            execution = self.orchestrator.operational_service.execute(operation_dispatch)
+            operation_result = execution.operation_result
+            artifact_results = execution.artifact_results
+            events.append(
+                self.orchestrator.make_event(
+                    "operation_completed",
+                    contract,
+                    {
+                        "operation_id": str(operation_result.operation_id),
+                        "status": operation_result.status.value,
+                        "artifacts": operation_result.artifacts,
+                    },
+                )
+            )
+        return {
+            "operation_dispatch": operation_dispatch,
+            "operation_result": operation_result,
+            "artifact_results": artifact_results,
+            "events": events,
+        }
+
+    def _synthesize_response(self, state: OrchestratorFlowState) -> OrchestratorFlowState:
+        contract = state["contract"]
+        directive = state["directive"]
+        response_text = self.orchestrator._compose_response_text(
+            directive=directive,
+            governance_decision=state["governance_decision"],
+            memory_recovery_result=state["memory_recovery_result"],
+            cognitive_snapshot=state["cognitive_snapshot"],
+            knowledge_result=state.get("knowledge_result"),
+            deliberative_plan=state["deliberative_plan"],
+            specialist_review=state["specialist_review"],
+            operation_result=state.get("operation_result"),
+        )
+        events = list(state["events"])
+        events.append(
+            self.orchestrator.make_event(
+                "response_synthesized",
+                contract,
+                {"intent": directive.intent},
+            )
+        )
+        return {"response_text": response_text, "events": events}
+
+    def _record_memory(self, state: OrchestratorFlowState) -> OrchestratorFlowState:
+        contract = state["contract"]
+        directive = state["directive"]
+        memory_record_result = self.orchestrator.memory_service.record_turn(
+            contract,
+            intent=directive.intent,
+            response_text=state["response_text"],
+            deliberative_plan=state["deliberative_plan"],
+            specialist_contributions=state["specialist_review"].contributions,
+        )
+        events = list(state["events"])
+        events.append(
+            self.orchestrator.make_event(
+                "memory_recorded",
+                contract,
+                {
+                    "memory_record_id": str(memory_record_result.record_contract.memory_record_id),
+                    "record_type": memory_record_result.record_contract.record_type,
+                },
+            )
+        )
+        return {"memory_record_result": memory_record_result, "events": events}
+
+
+def _load_langgraph():
+    try:
+        from langgraph.graph import END, START, StateGraph
+    except ImportError as exc:  # pragma: no cover - exercised by explicit unit test.
+        raise RuntimeError(
+            'LangGraph is not installed. Use `python -m pip install -e ".[langgraph]"` '
+            "to run the orchestrator POC."
+        ) from exc
+    return StateGraph, START, END

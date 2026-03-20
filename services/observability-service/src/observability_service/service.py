@@ -140,9 +140,15 @@ class ObservabilityService:
         if not tracing_enabled:
             return None
         project_name = getenv("LANGSMITH_PROJECT", "jarvis-v1")
+        endpoint = getenv("LANGSMITH_ENDPOINT")
+        workspace_id = getenv("LANGSMITH_WORKSPACE_ID")
         if getenv("LANGSMITH_API_KEY"):
             try:
-                return LangSmithObservabilityAdapter(project_name=project_name)
+                return LangSmithObservabilityAdapter(
+                    project_name=project_name,
+                    endpoint=endpoint,
+                    workspace_id=workspace_id,
+                )
             except Exception:
                 pass
         mirror_path = getenv("JARVIS_AGENTIC_MIRROR_PATH")

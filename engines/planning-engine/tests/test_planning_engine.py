@@ -25,7 +25,7 @@ def test_planning_engine_builds_structured_plan_for_planning() -> None:
             requires_clarification=False,
             preferred_response_mode="plan_and_operate",
             cognitive_rationale="intent=planning; mente_primaria=mente_executiva",
-            tensions=["equilibrar ambicao estrategica com proxima acao segura"],
+            tensions=["equilibrar ambicao estratégica com próxima ação segura"],
             specialist_hints=["especialista_planejamento_operacional"],
         )
     )
@@ -35,9 +35,11 @@ def test_planning_engine_builds_structured_plan_for_planning() -> None:
     assert len(plan.steps) >= 3
     assert "strategy" in plan.active_domains
     assert "context_summary=previous plan created" in plan.rationale
-    assert plan.tensions_considered == ["equilibrar ambicao estrategica com proxima acao segura"]
+    assert plan.tensions_considered == [
+        "equilibrar ambicao estratégica com próxima ação segura"
+    ]
     assert plan.specialist_hints == ["especialista_planejamento_operacional"]
-    assert any("fio condutor semantico" in step for step in plan.steps)
+    assert any("fio condutor semântico" in step for step in plan.steps)
     assert "mission_goal=Plan milestone M3" in plan.rationale
     assert "foco=strategy,planning" in plan.rationale
 
@@ -56,7 +58,7 @@ def test_planning_engine_refines_plan_with_specialist_contributions() -> None:
             requires_clarification=False,
             preferred_response_mode="plan_and_operate",
             cognitive_rationale="intent=planning; mente_primaria=mente_executiva",
-            tensions=["equilibrar ambicao estrategica com proxima acao segura"],
+            tensions=["equilibrar ambicao estratégica com próxima ação segura"],
             specialist_hints=["especialista_planejamento_operacional"],
         )
     )
@@ -71,7 +73,7 @@ def test_planning_engine_refines_plan_with_specialist_contributions() -> None:
                 specialist_type="especialista_planejamento_operacional",
                 role="planejamento_operacional_subordinado",
                 focus="sequenciamento reversivel e checkpoints claros",
-                findings=["priorizar a menor acao segura antes de expandir escopo"],
+                findings=["priorizar a menor ação segura antes de expandir escopo"],
                 recommendation="executar o plano em etapas pequenas e verificaveis",
                 confidence=0.78,
             )
@@ -79,7 +81,7 @@ def test_planning_engine_refines_plan_with_specialist_contributions() -> None:
     )
 
     assert any("checkpoint intermediario" in step for step in refined.steps)
-    assert any("incorporar contribuicoes especialistas" in item for item in refined.constraints)
+    assert any("incorporar contribuições especialistas" in item for item in refined.constraints)
     assert "especialistas=" in refined.rationale
     assert "especialistas=" in refined.plan_summary
 
@@ -105,24 +107,24 @@ def test_planning_engine_refines_plan_for_governance_specialist() -> None:
     refined = engine.refine_task_plan(
         base_plan,
         specialist_summary=(
-            "especialista_revisao_governanca: manter o plano no escopo local ate "
-            "confirmacao explicita"
+            "especialista_revisao_governanca: manter o plano no escopo local até "
+            "confirmacao explícita"
         ),
         specialist_contributions=[
             SpecialistContributionContract(
                 specialist_type="especialista_revisao_governanca",
                 role="revisao_governanca_subordinada",
-                focus="cautela operacional, auditoria e validacao",
+                focus="cautela operacional, auditoria e validação",
                 findings=["verificar se o plano permanece totalmente reversivel"],
-                recommendation="manter o plano no escopo local ate confirmacao explicita",
+                recommendation="manter o plano no escopo local até confirmacao explícita",
                 confidence=0.84,
             )
         ],
     )
 
     assert refined.requires_human_validation is True
-    assert any("cautela operacional reforcada" in risk for risk in refined.risks)
-    assert any("condicoes de auditoria" in step for step in refined.steps)
+    assert any("cautela operacional reforçada" in risk for risk in refined.risks)
+    assert any("condições de auditoria" in step for step in refined.steps)
 
 
 def test_planning_engine_builds_analysis_plan_without_operation_escalation() -> None:
@@ -164,7 +166,7 @@ def test_planning_engine_marks_ambiguous_request_for_clarification() -> None:
             requires_clarification=True,
             preferred_response_mode="clarifying_guidance",
             cognitive_rationale="intent=planning; mente_primaria=mente_executiva",
-            tensions=["equilibrar ambicao estrategica com proxima acao segura"],
+            tensions=["equilibrar ambicao estratégica com próxima ação segura"],
             specialist_hints=["especialista_planejamento_operacional"],
         )
     )

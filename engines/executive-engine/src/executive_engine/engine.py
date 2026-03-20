@@ -119,7 +119,7 @@ class ExecutiveEngine:
         lowered = content.lower()
         if any(keyword in lowered for keyword in HIGH_RISK_KEYWORDS):
             return "sensitive_action"
-        if analysis_hits > 0 and lowered.startswith(("analyze", "analyse", "analise", "analis")):
+        if analysis_hits > 0 and lowered.startswith(("analyze", "analyse", "análise", "analis")):
             return "analysis"
         if analysis_hits > planning_hits and analysis_hits > 0:
             return "analysis"

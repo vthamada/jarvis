@@ -1,3 +1,3 @@
 # Shared
 
-Area compartilhada para artefatos semanticos e tecnicos reutilizados por todo o sistema.
+Area compartilhada para artefatos semânticos e técnicos reutilizados por todo o sistema.

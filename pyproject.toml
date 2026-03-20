@@ -19,6 +19,9 @@ dev = [
 postgres = [
   "psycopg[binary]>=3.2",
 ]
+langgraph = [
+  "langgraph>=0.4",
+]
 
 [tool.setuptools]
 include-package-data = true

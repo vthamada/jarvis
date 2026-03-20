@@ -177,19 +177,12 @@ class OrchestratorService:
         )
 
         deliberative_plan = self.planning_engine.build_task_plan(
-            PlanningContext(
-                intent=directive.intent,
-                query=contract.content,
-                recovered_context=memory_recovery_result.recovered_items,
-                active_domains=cognitive_snapshot.active_domains,
-                active_minds=cognitive_snapshot.active_minds,
-                knowledge_snippets=knowledge_result.snippets if knowledge_result else [],
-                risk_markers=directive.risk_markers,
-                requires_clarification=directive.requires_clarification,
-                preferred_response_mode=directive.preferred_response_mode,
-                cognitive_rationale=cognitive_snapshot.rationale,
-                tensions=cognitive_snapshot.tensions,
-                specialist_hints=cognitive_snapshot.specialist_hints,
+            self._build_planning_context(
+                contract,
+                directive=directive,
+                memory_recovery_result=memory_recovery_result,
+                cognitive_snapshot=cognitive_snapshot,
+                knowledge_result=knowledge_result,
             )
         )
         events.append(
@@ -340,28 +333,15 @@ class OrchestratorService:
                 )
             )
 
-        identity_profile = self.identity_engine.get_profile()
-        response_text = self.synthesis_engine.compose(
-            SynthesisInput(
-                intent=directive.intent,
-                identity_profile=identity_profile,
-                response_style=self.identity_engine.build_response_style(
-                    intent=directive.intent,
-                    blocked=governance_decision.decision
-                    in {
-                        PermissionDecision.BLOCK,
-                        PermissionDecision.DEFER_FOR_VALIDATION,
-                    },
-                ),
-                governance_decision=governance_decision,
-                recovered_context=memory_recovery_result.recovered_items,
-                active_minds=cognitive_snapshot.active_minds,
-                active_domains=cognitive_snapshot.active_domains,
-                knowledge_snippets=knowledge_result.snippets if knowledge_result else [],
-                deliberative_plan=deliberative_plan,
-                specialist_contributions=specialist_review.contributions,
-                operation_result=operation_result,
-            )
+        response_text = self._compose_response_text(
+            directive=directive,
+            governance_decision=governance_decision,
+            memory_recovery_result=memory_recovery_result,
+            cognitive_snapshot=cognitive_snapshot,
+            knowledge_result=knowledge_result,
+            deliberative_plan=deliberative_plan,
+            specialist_review=specialist_review,
+            operation_result=operation_result,
         )
         events.append(
             self.make_event("response_synthesized", contract, {"intent": directive.intent})
@@ -386,29 +366,32 @@ class OrchestratorService:
         )
         self.observability_service.ingest_events(events)
 
-        return OrchestratorResponse(
-            request_id=str(contract.request_id),
-            session_id=str(contract.session_id),
-            intent=directive.intent,
-            response_text=response_text,
-            directive=directive,
-            deliberative_plan=deliberative_plan,
-            governance_check=governance_check,
-            governance_decision=governance_decision,
-            memory_recovery=memory_recovery_result.recovery_contract,
-            memory_record=memory_record_result.record_contract,
-            recovered_context=memory_recovery_result.recovered_items,
-            knowledge_result=knowledge_result,
-            artifact_results=artifact_results,
-            active_minds=cognitive_snapshot.active_minds,
-            active_domains=cognitive_snapshot.active_domains,
-            cognitive_tensions=deliberative_plan.tensions_considered,
-            specialist_hints=deliberative_plan.specialist_hints,
-            specialist_review=specialist_review,
-            operation_dispatch=operation_dispatch,
-            operation_result=operation_result,
-            events=events,
+        return self._build_response_from_state(
+            {
+                "contract": contract,
+                "directive": directive,
+                "deliberative_plan": deliberative_plan,
+                "governance_check": governance_check,
+                "governance_decision": governance_decision,
+                "memory_recovery_result": memory_recovery_result,
+                "memory_record_result": memory_record_result,
+                "knowledge_result": knowledge_result,
+                "artifact_results": artifact_results,
+                "cognitive_snapshot": cognitive_snapshot,
+                "specialist_review": specialist_review,
+                "operation_dispatch": operation_dispatch,
+                "operation_result": operation_result,
+                "events": events,
+                "response_text": response_text,
+            }
         )
+
+    def handle_input_langgraph_poc(self, contract: InputContract) -> OrchestratorResponse:
+        """Run the optional LangGraph POC without changing the default v1 flow."""
+
+        from orchestrator_service.langgraph_poc import LangGraphPOCRunner
+
+        return LangGraphPOCRunner(self).run(contract)
 
     def build_operation_dispatch(
         self,
@@ -465,3 +448,98 @@ class OrchestratorService:
     @staticmethod
     def now() -> str:
         return datetime.now(UTC).isoformat()
+
+    def _build_planning_context(
+        self,
+        contract: InputContract,
+        *,
+        directive: ExecutiveDirective,
+        memory_recovery_result,
+        cognitive_snapshot,
+        knowledge_result: KnowledgeRetrievalResult | None,
+    ) -> PlanningContext:
+        return PlanningContext(
+            intent=directive.intent,
+            query=contract.content,
+            recovered_context=memory_recovery_result.recovered_items,
+            active_domains=cognitive_snapshot.active_domains,
+            active_minds=cognitive_snapshot.active_minds,
+            knowledge_snippets=knowledge_result.snippets if knowledge_result else [],
+            risk_markers=directive.risk_markers,
+            requires_clarification=directive.requires_clarification,
+            preferred_response_mode=directive.preferred_response_mode,
+            cognitive_rationale=cognitive_snapshot.rationale,
+            tensions=cognitive_snapshot.tensions,
+            specialist_hints=cognitive_snapshot.specialist_hints,
+        )
+
+    def _compose_response_text(
+        self,
+        *,
+        directive: ExecutiveDirective,
+        governance_decision: GovernanceDecisionContract,
+        memory_recovery_result,
+        cognitive_snapshot,
+        knowledge_result: KnowledgeRetrievalResult | None,
+        deliberative_plan: DeliberativePlanContract,
+        specialist_review: SpecialistReview,
+        operation_result: OperationResultContract | None,
+    ) -> str:
+        identity_profile = self.identity_engine.get_profile()
+        return self.synthesis_engine.compose(
+            SynthesisInput(
+                intent=directive.intent,
+                identity_profile=identity_profile,
+                response_style=self.identity_engine.build_response_style(
+                    intent=directive.intent,
+                    blocked=governance_decision.decision
+                    in {
+                        PermissionDecision.BLOCK,
+                        PermissionDecision.DEFER_FOR_VALIDATION,
+                    },
+                ),
+                governance_decision=governance_decision,
+                recovered_context=memory_recovery_result.recovered_items,
+                active_minds=cognitive_snapshot.active_minds,
+                active_domains=cognitive_snapshot.active_domains,
+                knowledge_snippets=knowledge_result.snippets if knowledge_result else [],
+                deliberative_plan=deliberative_plan,
+                specialist_contributions=specialist_review.contributions,
+                operation_result=operation_result,
+            )
+        )
+
+    @staticmethod
+    def _build_response_from_state(state: dict[str, object]) -> OrchestratorResponse:
+        contract = state["contract"]
+        directive = state["directive"]
+        deliberative_plan = state["deliberative_plan"]
+        governance_check = state["governance_check"]
+        governance_decision = state["governance_decision"]
+        memory_recovery_result = state["memory_recovery_result"]
+        memory_record_result = state["memory_record_result"]
+        cognitive_snapshot = state["cognitive_snapshot"]
+        specialist_review = state["specialist_review"]
+        return OrchestratorResponse(
+            request_id=str(contract.request_id),
+            session_id=str(contract.session_id),
+            intent=directive.intent,
+            response_text=state["response_text"],
+            directive=directive,
+            deliberative_plan=deliberative_plan,
+            governance_check=governance_check,
+            governance_decision=governance_decision,
+            memory_recovery=memory_recovery_result.recovery_contract,
+            memory_record=memory_record_result.record_contract,
+            recovered_context=memory_recovery_result.recovered_items,
+            knowledge_result=state["knowledge_result"],
+            artifact_results=state["artifact_results"],
+            active_minds=cognitive_snapshot.active_minds,
+            active_domains=cognitive_snapshot.active_domains,
+            cognitive_tensions=deliberative_plan.tensions_considered,
+            specialist_hints=deliberative_plan.specialist_hints,
+            specialist_review=specialist_review,
+            operation_dispatch=state["operation_dispatch"],
+            operation_result=state["operation_result"],
+            events=state["events"],
+        )

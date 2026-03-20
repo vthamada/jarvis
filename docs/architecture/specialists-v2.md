@@ -2,31 +2,31 @@
 
 ## 1. Objetivo
 
-Este documento resume a estrategia arquitetural de especialistas subordinados do JARVIS para o `v2`.
+Este documento resume a estratégia arquitetural de especialistas subordinados do JARVIS para o `v2`.
 
-Ele deriva principalmente do capitulo `254. Estrategia detalhada dos especialistas do v2`.
+Ele deriva principalmente do capitulo `254. Estratégia detalhada dos especialistas do v2`.
 
 ---
 
 ## 2. Tese central
 
-Especialistas do JARVIS nao devem ser agentes soberanos.
+Especialistas do JARVIS não devem ser agentes soberanos.
 
 Eles devem ser:
 
 - capacidades convocaveis;
-- subordinadas ao nucleo central;
-- integradas a governanca, memoria, observabilidade e evolucao.
+- subordinadas ao núcleo central;
+- integradas a governança, memória, observabilidade e evolução.
 
 ---
 
 ## 3. Quando criar um especialista
 
-Um especialista so deve existir quando houver:
+Um especialista só deve existir quando houver:
 
-- profundidade tecnica recorrente;
+- profundidade técnica recorrente;
 - ganho real de performance;
-- toolchain propria;
+- toolchain própria;
 - estado especializado;
 - beneficio claro sem fragmentacao identitaria.
 
@@ -39,11 +39,11 @@ Ordem mais natural:
 1. especialista de software
 2. especialista de pesquisa profunda
 3. especialista documental
-4. especialista operacional de automacao
-5. especialista de dados e analise
+4. especialista operacional de automação
+5. especialista de dados e análise
 
 ---
 
 ## 5. Regra permanente
 
-O usuario continua interagindo com uma unica entidade: o JARVIS.
+O usuário continua interagindo com uma única entidade: o JARVIS.

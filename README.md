@@ -2,26 +2,26 @@
 
 JARVIS e um sistema agente stateful, governado e orientado a continuidade operacional.
 
-Este repositorio materializa o caminho para o `v1` definido em `documento_mestre_jarvis.md` e nos derivados tecnicos em `docs/`.
+Este repositório materializa o caminho para o `v1` definido em `documento_mestre_jarvis.md` e nos derivados técnicos em `docs/`.
 
 ## Estado atual
 
-O projeto ja saiu da fundacao estrutural e possui um fluxo integrado funcional:
+O projeto já saiu da fundação estrutural e possui um fluxo integrado funcional:
 
-- `orchestrator-service` coordena engines, memoria, governanca, conhecimento, observabilidade e operacao;
-- `memory-service` persiste historico episodico, resumo contextual de sessao e estado minimo de missao;
+- `orchestrator-service` coordena engines, memória, governança, conhecimento, observabilidade e operação;
+- `memory-service` persiste histórico episódico, resumo contextual de sessão e estado mínimo de missão;
 - `governance-service` diferencia fluxos `allow`, `allow_with_conditions`, `block` e `defer_for_validation`;
-- `knowledge-service` executa retrieval local deterministico para intents de `analysis` e `planning`;
+- `knowledge-service` executa retrieval local determinístico para intents de `analysis` e `planning`;
 - `knowledge-service` carrega o corpus curado inicial de `knowledge/curated/v1_corpus.json`;
 - `operational-service` produz artefatos textuais reais e retorna resultados estruturados;
-- `observability-service` grava a trilha de eventos com correlacao por `request_id`, `session_id` e `mission_id`;
+- `observability-service` grava a trilha de eventos com correlação por `request_id`, `session_id` e `mission_id`;
 - `observability-service` suporta espelhamento agentic inicial sem substituir a trilha local;
-- `evolution-lab` compara baseline e candidata em sandbox local sem promocao automatica;
-- `engines/` contem os componentes iniciais de identidade, execucao, planejamento, cognicao e sintese;
-- `tools/validate_v1.py` e `tools/go_live_internal_checklist.py` tornam a validacao e o go-live interno executaveis;
-- a suite `pytest -q` passa a partir da raiz do repositorio.
+- `evolution-lab` compara baseline e candidata em sandbox local sem promoção automatica;
+- `engines/` contém os componentes iniciais de identidade, execução, planejamento, cognição e síntese;
+- `tools/validate_v1.py` e `tools/go_live_internal_checklist.py` tornam a validação e o go-live interno executáveis;
+- a suite `pytest -q` passa a partir da raiz do repositório.
 
-Leitura pratica de milestone:
+Leitura prática de milestone:
 
 - `M1`: concluida
 - `M2`: parcialmente concluida
@@ -33,16 +33,16 @@ Leitura pratica de milestone:
 ## Estrutura principal
 
 - `apps/`: interfaces e superficies de produto
-- `services/`: servicos centrais do sistema
+- `services/`: serviços centrais do sistema
 - `engines/`: engines cognitivas e executivas
-- `memory/`: componentes de memoria
+- `memory/`: componentes de memória
 - `knowledge/`: componentes de conhecimento e retrieval
-- `governance/`: politicas e mecanismos de governanca
-- `observability/`: logs, traces e correlacao
-- `evolution/`: laboratorio evolutivo
+- `governance/`: políticas e mecanismos de governança
+- `observability/`: logs, traces e correlação
+- `evolution/`: laboratório evolutivo
 - `shared/`: contratos, schemas, tipos, eventos e estado
-- `infra/`: infraestrutura e automacao local
-- `tests/`: testes compartilhados do repositorio
+- `infra/`: infraestrutura e automação local
+- `tests/`: testes compartilhados do repositório
 - `tools/`: scripts e utilitarios
 
 ## Bootstrap
@@ -58,7 +58,7 @@ ruff check .
 python tools/validate_v1.py --profile development
 ```
 
-Para validar o backend operacional de memoria em PostgreSQL:
+Para validar o backend operacional de memória em PostgreSQL:
 
 ```powershell
 python -m pip install -e ".[dev,postgres]"
@@ -70,17 +70,38 @@ python tools/validate_v1.py --profile controlled
 python tools/go_live_internal_checklist.py --profile controlled
 ```
 
-Os scripts de `v1` fazem preflight explicito. Se o ambiente nao estiver pronto, eles falham cedo com razoes de `no-go`, incluindo `ruff` ausente e `DATABASE_URL` invalida, inacessivel ou com credenciais incorretas.
+Para preparar a POC opcional de `LangGraph` no orquestrador:
+
+```powershell
+python -m pip install -e ".[dev,langgraph]"
+```
+
+Os scripts de `v1` fazem preflight explícito. Se o ambiente não estiver pronto, eles falham cedo com razões de `no-go`, incluindo `ruff` ausente e `DATABASE_URL` invalida, inacessivel ou com credenciais incorretas.
 
 Runtime local padrao:
 
-- memoria persistente: `.jarvis_runtime/memory.db`
+- memória persistente: `.jarvis_runtime/memory.db`
 - observabilidade local: `.jarvis_runtime/observability.db`
 - evolution lab local: `.jarvis_runtime/evolution.db`
 - espelhamento agentic local: `.jarvis_runtime/agentic_observability.jsonl`
 - PostgreSQL local do compose: `localhost:5433`
 
-Para usar PostgreSQL na memoria persistente, defina `DATABASE_URL`.
+Para usar PostgreSQL na memória persistente, defina `DATABASE_URL`.
+
+Para aprofundar o espelhamento agentic com `LangSmith`, use:
+
+- `LANGSMITH_TRACING=true`
+- `LANGSMITH_API_KEY`
+- `LANGSMITH_PROJECT`
+- opcionalmente `LANGSMITH_ENDPOINT` e `LANGSMITH_WORKSPACE_ID`
+
+O baseline atual preserva a trilha local como fonte primaria e usa `LangSmith` apenas como camada complementar.
+
+Para resumir as trilhas recentes do `internal pilot`:
+
+```powershell
+python tools/internal_pilot_report.py --limit 5
+```
 
 ### Node
 

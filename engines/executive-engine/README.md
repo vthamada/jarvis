@@ -1,3 +1,3 @@
 # executive-engine
 
-Engine responsavel por decisao executiva, priorizacao e sequenciamento de acao.
+Engine responsável por decisão executiva, priorizacao e sequenciamento de ação.

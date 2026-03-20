@@ -1,9 +1,9 @@
 # observability-service
 
-Servico responsavel por logs, traces e metricas do sistema.
+Serviço responsável por logs, traces e métricas do sistema.
 
 Responsabilidades iniciais:
 
 - padronizar logs estruturados;
-- preparar correlacao de fluxo;
-- apoiar analise e auditoria.
+- preparar correlação de fluxo;
+- apoiar análise e auditoria.

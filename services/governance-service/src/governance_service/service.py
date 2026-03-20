@@ -125,8 +125,8 @@ class GovernanceService:
 
         if risk_level in {RiskLevel.HIGH, RiskLevel.CRITICAL}:
             decision = PermissionDecision.BLOCK
-            justification = "Potencial destrutivo detectado; a execucao direta foi bloqueada."
-            conditions = ["Exigir validacao forte fora do fluxo normal antes de qualquer acao."]
+            justification = "Potencial destrutivo detectado; a execução direta foi bloqueada."
+            conditions = ["Exigir validação forte fora do fluxo normal antes de qualquer ação."]
             policy_refs = ["policy://request/high-risk"]
             requires_audit = True
             requires_rollback_plan = True
@@ -136,15 +136,19 @@ class GovernanceService:
             or proposed_effect == "external_or_sensitive_change"
         ):
             decision = PermissionDecision.DEFER_FOR_VALIDATION
-            justification = "O plano pretendido exige validacao humana antes de qualquer execucao."
-            conditions = ["Manter apenas analise e rastreabilidade ate revisao explicita."]
+            justification = (
+                "O plano pretendido exige validação humana antes de qualquer execução."
+            )
+            conditions = [
+                "Manter apenas análise e rastreabilidade até revisão explícita."
+            ]
             policy_refs = ["policy://request/defer-sensitive-plan"]
             requires_audit = True
             requires_rollback_plan = True
             containment_hint = "defer_sensitive_plan"
         elif proposed_effect == "local_safe_operation":
             decision = PermissionDecision.ALLOW_WITH_CONDITIONS
-            justification = "Operacao local segura permitida com trilha reforcada de auditoria."
+            justification = "Operação local segura permitida com trilha reforçada de auditoria."
             conditions = [
                 "Manter trilha de eventos completa.",
                 "Restringir a artefatos locais e reversiveis.",
@@ -154,7 +158,7 @@ class GovernanceService:
         elif risk_level == RiskLevel.MODERATE:
             decision = PermissionDecision.ALLOW_WITH_CONDITIONS
             justification = (
-                "Sinais moderados exigem rastreabilidade reforcada, sem bloquear a analise."
+                "Sinais moderados exigem rastreabilidade reforçada, sem bloquear a análise."
             )
             conditions = ["Reforcar auditoria e evitar ampliar escopo operacional."]
             policy_refs = ["policy://request/moderate-risk"]

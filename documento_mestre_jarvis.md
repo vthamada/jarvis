@@ -3352,7 +3352,7 @@ A partir desta arquitetura conceitual, os próximos níveis do documento devem:
 
 ## 35. Arquitetura lógica de componentes
 
-Este capítulo detalha a arquitetura lógica de componentes do JARVIS. Diferentemente da arquitetura conceitual, que define os grandes módulos e sua função sistêmica, a arquitetura lógica especifica **os blocos internos que compõem esses módulos**, preparando o caminho para serviços, motores, pipelines e contratos.
+Este capítulo detalha a arquitetura lógica de componentes do JARVIS. Diferentemente da arquitetura conceitual, que define os grandes módulos e sua função sistêmica, a arquitetura lógica específica **os blocos internos que compõem esses módulos**, preparando o caminho para serviços, motores, pipelines e contratos.
 
 A arquitetura lógica ainda não define stack ou deploy. Ela define **componentes lógicos, responsabilidades e relações internas**.
 
@@ -12126,7 +12126,7 @@ Representar o estado persistente de uma missão do sistema.
 
 - `mission_status` pode representar planejada, ativa, pausada, bloqueada, concluída, cancelada ou outro estado reconhecido;
 - `checkpoints` representa marcos relevantes e não necessariamente todas as subtarefas;
-- `completion_criteria` explicita quando a missão pode ser considerada encerrada.
+- `completion_criteria` explícita quando a missão pode ser considerada encerrada.
 
 ### 246.5 Regras de validação
 
@@ -14624,7 +14624,7 @@ Toda mudança relevante deve responder a perguntas mínimas:
 
 1. o que esta mudança pretende melhorar?
 2. que contratos ela afeta?
-3. que testes unitários precisam ser atualizados?
+3. que testes unitários precisam ser atualizadosó
 4. que integração pode quebrar?
 5. que fluxo prioritário pode regredir?
 6. há impacto em governança?

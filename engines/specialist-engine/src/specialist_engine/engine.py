@@ -52,7 +52,7 @@ class SpecialistEngine:
                 f"{item.specialist_type}: {item.recommendation}" for item in contributions
             )
         else:
-            summary = "nenhuma contribuicao especializada adicional"
+            summary = "nenhuma contribuição especializada adicional"
         return SpecialistReview(
             specialist_hints=list(plan.specialist_hints),
             contributions=contributions,
@@ -77,7 +77,7 @@ class SpecialistEngine:
                 role="planejamento_operacional_subordinado",
                 focus="sequenciamento reversivel e checkpoints claros",
                 findings=[
-                    "priorizar a menor acao segura antes de expandir escopo",
+                    "priorizar a menor ação segura antes de expandir escopo",
                     "explicitar checkpoints intermediarios para preservar rastreabilidade",
                     f"usar apoio contextual: {knowledge_hint}",
                 ],
@@ -88,9 +88,9 @@ class SpecialistEngine:
             return SpecialistContributionContract(
                 specialist_type=specialist_hint,
                 role="analise_estruturada_subordinada",
-                focus="trade-offs, evidencia e criterio de decisao",
+                focus="trade-offs, evidência e critério de decisão",
                 findings=[
-                    "separar observacao, implicacao e recomendacao final",
+                    "separar observação, implicação e recomendacao final",
                     "explicitar o trade-off dominante antes de concluir",
                     f"apoiar a leitura em: {knowledge_hint}",
                 ],
@@ -101,13 +101,13 @@ class SpecialistEngine:
             return SpecialistContributionContract(
                 specialist_type=specialist_hint,
                 role="revisao_governanca_subordinada",
-                focus="cautela operacional, auditoria e validacao",
+                focus="cautela operacional, auditoria e validação",
                 findings=[
                     "verificar se o plano permanece totalmente reversivel",
-                    "reforcar trilha observavel e condicoes de auditoria",
-                    "elevar para validacao humana se houver mutacao sensivel",
+                    "reforcar trilha observável e condições de auditoria",
+                    "elevar para validação humana se houver mutação sensivel",
                 ],
-                recommendation="manter o plano no escopo local ate confirmacao explicita",
+                recommendation="manter o plano no escopo local até confirmacao explícita",
                 confidence=0.84,
             )
         return None

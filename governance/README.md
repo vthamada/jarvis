@@ -1,3 +1,3 @@
 # Governance
 
-Area reservada para politicas, avaliacao de risco, controles e auditoria.
+Area reservada para políticas, avaliação de risco, controles e auditoria.

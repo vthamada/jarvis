@@ -30,7 +30,7 @@ def test_operational_service_generates_text_artifact_for_supported_task() -> Non
             session_id=SessionId("sess-1"),
             task_type="draft_plan",
             task_goal="Plan milestone M3",
-            task_plan="priorizar memoria persistente",
+            task_plan="priorizar memória persistente",
             constraints=["low-risk"],
             expected_output="text_brief",
             plan_summary="decompor milestone em etapas reversiveis",
@@ -38,7 +38,7 @@ def test_operational_service_generates_text_artifact_for_supported_task() -> Non
             plan_risks=["sem risco material relevante"],
             plan_rationale="contexto=nenhum; apoio=baseline local",
             specialist_summary="especialista_planejamento_operacional: executar em etapas pequenas",
-            specialist_findings=["priorizar a menor acao segura antes de expandir escopo"],
+            specialist_findings=["priorizar a menor ação segura antes de expandir escopo"],
             specialist_hints=["especialista_planejamento_operacional"],
         )
     )

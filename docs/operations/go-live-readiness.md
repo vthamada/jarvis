@@ -2,7 +2,7 @@
 
 ## 1. Objetivo
 
-Este documento define o regime minimo de **readiness e go-live** do JARVIS `v1` em producao controlada.
+Este documento define o regime mínimo de **readiness e go-live** do JARVIS `v1` em produção controlada.
 
 Ele deriva principalmente de:
 
@@ -16,42 +16,44 @@ Seu papel e transformar a prontidao do `v1` em checklist operacional claro.
 
 ## 2. Principio geral
 
-O `go-live` do `v1` so deve ocorrer quando houver:
+O `go-live` do `v1` só deve ocorrer quando houver:
 
-- capacidade funcional minima;
-- governanca minima ativa;
+- capacidade funcional mínima;
+- governança mínima ativa;
 - observabilidade suficiente;
 - contencao e rollback claros;
 - escopo real de uso explicitamente limitado.
 
 ---
 
-## 3. Checklist minimo de readiness
+## 3. Checklist mínimo de readiness
 
 Antes de liberar o `v1`, confirmar:
 
 - ambiente operacional identificado;
-- configuracao minima reproduzivel;
-- nucleo central funcional no escopo pretendido;
-- memoria util basica operando;
-- governanca minima robusta ativa;
-- observabilidade minima ativa;
+- configuração mínima reproduzivel;
+- núcleo central funcional no escopo pretendido;
+- memória util básica operando;
+- governança mínima robusta ativa;
+- observabilidade mínima ativa;
 - rollback operacional definido;
-- cenarios prioritarios aprovados;
-- sandbox evolutivo separado e sem promocao automatica.
+- cenarios prioritários aprovados;
+- sandbox evolutivo separado e sem promoção automatica.
 
-Checklist executavel associado:
+Checklist executável associado:
 
 - `python tools/validate_v1.py --profile development`
 - `python tools/go_live_internal_checklist.py --profile development`
 - repetir ambos no perfil `controlled` quando `DATABASE_URL` estiver ativo.
 
-Os scripts executaveis agora fazem preflight explicito do ambiente e devem ser tratados como gate formal de `go/no-go`. No perfil `controlled`, eles falham cedo quando:
+Os scripts executáveis agora fazem preflight explícito do ambiente e devem ser tratados como gate formal de `go/no-go`. No perfil `controlled`, eles falham cedo quando:
 
-- `ruff` nao esta instalado no ambiente oficial;
-- `DATABASE_URL` nao foi definida;
-- o PostgreSQL nao responde;
-- as credenciais de `DATABASE_URL` estao incorretas.
+- `ruff` não esta instalado no ambiente oficial;
+- `DATABASE_URL` não foi definida;
+- o PostgreSQL não responde;
+- as credenciais de `DATABASE_URL` estão incorretas.
+
+Usar `docs/operations/internal-pilot-plan.md` como plano mínimo da primeira janela operacional após esse gate.
 
 ---
 
@@ -59,22 +61,22 @@ Os scripts executaveis agora fazem preflight explicito do ambiente e devem ser t
 
 Leitura objetiva do estado atual:
 
-- `nucleo central funcional`: atendido;
-- `memoria util basica`: atendido, com `PostgreSQL` validado como backend operacional recomendado e `sqlite` mantido como fallback local;
-- `governanca minima robusta`: atendido no escopo atual do `v1`;
-- `observabilidade minima`: atendido, com benchmark favoravel para o `v1`;
-- `sandbox evolutivo separado`: atendido, mantendo `sandbox-only` e sem promocao automatica;
-- `configuracao minima reproduzivel`: atendido para baseline local;
+- `núcleo central funcional`: atendido;
+- `memória util básica`: atendido, com `PostgreSQL` validado como backend operacional recomendado e `sqlite` mantido como fallback local;
+- `governança mínima robusta`: atendido no escopo atual do `v1`;
+- `observabilidade mínima`: atendido, com benchmark favoravel para o `v1`;
+- `sandbox evolutivo separado`: atendido, mantendo `sandbox-only` e sem promoção automatica;
+- `configuração mínima reproduzivel`: atendido para baseline local;
 - `readiness documental final`: atendido;
-- `decisao formal de go/no-go`: atendido, com `GO CONDICIONAL` registrado em `2026-03-19`.
+- `decisão formal de go/no-go`: atendido, com `GO CONDICIONAL` registrado em `2026-03-19`.
 
 ---
 
-## 5. Criterios de go
+## 5. Critérios de go
 
-So autorizar `go-live` se:
+Só autorizar `go-live` se:
 
-- fluxos prioritarios estiverem estaveis;
+- fluxos prioritários estiverem estáveis;
 - bloqueios e permissoes estiverem funcionando;
 - logs e tracing estiverem ativos;
 - falhas residuais conhecidas estiverem documentadas;
@@ -82,13 +84,13 @@ So autorizar `go-live` se:
 
 ---
 
-## 6. Criterios de no-go
+## 6. Critérios de no-go
 
 Negar `go-live` se houver:
 
-- falha recorrente de governanca;
+- falha recorrente de governança;
 - comportamento central imprevisivel;
-- memoria inconsistente;
+- memória inconsistente;
 - ausencia de rollback claro;
 - observabilidade insuficiente;
 - estados quebrados frequentes.
@@ -99,15 +101,15 @@ Negar `go-live` se houver:
 
 Executar antes do `go-live`:
 
-- entrada e sintese basicas;
-- recuperacao minima de memoria util;
-- bloqueio de acao indevida;
-- execucao simples de baixo risco;
+- entrada e síntese básicas;
+- recuperacao mínima de memória util;
+- bloqueio de ação indevida;
+- execução simples de baixo risco;
 - registro de logs e traces;
 - simulacao de falha local com recuperacao controlada;
-- comparacao sandbox entre baseline e candidata sem promocao.
+- comparação sandbox entre baseline e candidata sem promoção.
 
-Execucao recomendada:
+Execução recomendada:
 
 ```powershell
 docker compose -f infra/local-postgres.compose.yml up -d
@@ -118,12 +120,12 @@ python tools/go_live_internal_checklist.py --profile controlled
 
 ---
 
-## 8. Pendencias praticas antes do go-live
+## 8. Pendencias práticas antes do go-live
 
 Antes do primeiro uso real, ainda faltam:
 
 - congelar o escopo operacional inicial do primeiro uso real;
-- registrar a janela de observacao do primeiro rollout controlado;
+- registrar a janela de observação do primeiro rollout controlado;
 - definir quem acompanha e interrompe o fluxo em caso de anomalia.
 
 ---
@@ -133,32 +135,32 @@ Antes do primeiro uso real, ainda faltam:
 O primeiro `go-live` deve seguir:
 
 - escopo reduzido;
-- janela de observacao conhecida;
-- monitoramento reforcado;
+- janela de observação conhecida;
+- monitoramento reforçado;
 - facilidade de reversao;
-- registro explicito das primeiras ocorrencias.
+- registro explícito das primeiras ocorrencias.
 
 ---
 
 ## 10. Resultado esperado do go-live
 
-O `go-live` do `v1` nao deve provar maturidade total.
+O `go-live` do `v1` não deve provar maturidade total.
 
 Ele deve provar:
 
 - utilidade controlada;
-- estabilidade minima;
-- governanca funcional;
+- estabilidade mínima;
+- governança funcional;
 - rastreabilidade suficiente;
 - capacidade de conter e corrigir falhas.
 
 ---
 
-## 11. Relacao com proximos passos
+## 11. Relação com próximos passos
 
-Apos o `go-live`, o foco deve ir para:
+Após o `go-live`, o foco deve ir para:
 
-- observacao do uso real;
+- observação do uso real;
 - correcao de falhas estruturais;
 - ajuste de escopo operacional;
-- geracao de evidencia para expansao do `v1` e preparacao do `v2`.
+- geracao de evidência para expansao do `v1` e preparacao do `v2`.

@@ -2,9 +2,9 @@
 
 ## 1. Objetivo
 
-Este documento registra a decisao formal de `go/no-go` do JARVIS `v1` para producao controlada.
+Este documento registra a decisão formal de `go/no-go` do JARVIS `v1` para produção controlada.
 
-Data de referencia desta decisao: `2026-03-19`.
+Data de referencia desta decisão: `2026-03-19`.
 
 Ele complementa:
 
@@ -14,29 +14,29 @@ Ele complementa:
 
 ---
 
-## 2. Decisao atual
+## 2. Decisóo atual
 
-**Decisao:** `GO CONDICIONAL` para producao controlada do `v1`.
+**Decisóo:** `GO CONDICIONAL` para produção controlada do `v1`.
 
 Isto significa:
 
 - o baseline atual esta tecnicamente forte o suficiente para primeiro uso real em escopo reduzido;
-- a liberacao nao vale para uso amplo, silencioso ou de alto impacto;
-- toda operacao inicial deve ocorrer com monitoramento reforcado, rollback simples e escopo explicitamente limitado.
+- a liberacao não vale para uso amplo, silencioso ou de alto impacto;
+- toda operação inicial deve ocorrer com monitoramento reforçado, rollback simples e escopo explicitamente limitado.
 
 ---
 
-## 3. Base da decisao
+## 3. Base da decisão
 
-A decisao de `GO CONDICIONAL` se apoia em evidencia objetiva do repositorio atual:
+A decisão de `GO CONDICIONAL` se apoia em evidência objetiva do repositório atual:
 
 - suite principal `pytest -q` passando no baseline atual;
-- benchmark dirigido implementado e executado com decisoes consolidadas;
+- benchmark dirigido implementado e executado com decisóes consolidadas;
 - `memory-service` validado contra `PostgreSQL` local, agora tratado como backend operacional recomendado do `v1`;
-- `observability-service` benchmarkado como suficiente para debugging, auditoria e correlacao do fluxo;
-- `knowledge-service` estabilizado no baseline com retrieval deterministico ponderado ja absorvido;
-- `evolution-lab` mantido em `sandbox-only`, sem promocao automatica;
-- fluxo central integrado entre orquestracao, memoria, governanca, conhecimento, observabilidade e operacao.
+- `observability-service` benchmarkado como suficiente para debugging, auditoria e correlação do fluxo;
+- `knowledge-service` estabilizado no baseline com retrieval determinístico ponderado já absorvido;
+- `evolution-lab` mantido em `sandbox-only`, sem promoção automatica;
+- fluxo central integrado entre orquestracao, memória, governança, conhecimento, observabilidade e operação.
 
 ---
 
@@ -44,28 +44,28 @@ A decisao de `GO CONDICIONAL` se apoia em evidencia objetiva do repositorio atua
 
 O `GO CONDICIONAL` autoriza apenas:
 
-- analise e sintese de informacao;
+- análise e síntese de informação;
 - planejamento e estruturacao de tarefas;
-- producao de artefatos textuais;
-- continuidade de sessao e missao simples;
+- produção de artefatos textuais;
+- continuidade de sessão e missão simples;
 - uso interno ou controlado com operadores conscientes do escopo do `v1`.
 
 ---
 
-## 5. Escopo nao autorizado
+## 5. Escopo não autorizado
 
-Esta decisao nao autoriza:
+Esta decisão não autoriza:
 
-- automacoes irreversiveis de alto impacto;
-- operacoes financeiras, juridicas ou de seguranca de alto risco;
-- alteracao livre de memoria critica;
-- promocao evolutiva em ambiente produtivo;
+- automações irreversiveis de alto impacto;
+- operações financeiras, jurídicas ou de segurança de alto risco;
+- alteracao livre de memória crítica;
+- promoção evolutiva em ambiente produtivo;
 - uso amplo com baixa observabilidade;
 - expansao multiagente ampla sem nova rodada de maturacao.
 
 ---
 
-## 6. Condicoes obrigatorias do primeiro uso real
+## 6. Condições obrigatorias do primeiro uso real
 
 Antes do primeiro uso real, manter obrigatoriamente:
 
@@ -80,22 +80,23 @@ Antes do primeiro uso real, manter obrigatoriamente:
 
 ## 7. Gatilhos automaticos de no-go ou rollback
 
-A decisao deve ser revertida para `NO-GO` ou para rollback imediato se houver:
+A decisão deve ser revertida para `NO-GO` ou para rollback imediato se houver:
 
-- falha recorrente de governanca;
+- falha recorrente de governança;
 - perda de rastreabilidade do fluxo;
-- memoria inconsistente em uso real;
-- regressao central apos mudanca recente;
-- operacao fora do escopo autorizado;
+- memória inconsistente em uso real;
+- regressao central após mudanca recente;
+- operação fora do escopo autorizado;
 - necessidade frequente de intervencao manual corretiva para manter o sistema utilizavel.
 
 ---
 
-## 8. Proximos passos apos esta decisao
+## 8. Próximos passos após esta decisão
 
-Com a decisao formal registrada, os proximos passos corretos sao:
+Com a decisão formal registrada, os próximos passos corretos sóo:
 
 1. congelar o escopo do primeiro uso real controlado;
-2. executar a primeira janela de producao controlada com observacao reforcada;
+2. executar a primeira janela de produção controlada com observação reforçada;
 3. registrar ocorrencias, falhas e sinais de estabilidade;
-4. decidir o destino editorial de `documento_mestre_do_jarvis.md`.
+4. comparar o baseline atual com a POC de `LangGraph` após a coleta do `internal pilot`;
+5. decidir o destino editorial de `documento_mestre_do_jarvis.md`.

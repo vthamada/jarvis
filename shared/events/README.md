@@ -1,3 +1,3 @@
 # Shared Events
 
-Eventos internos e envelopes canonicos do sistema.
+Eventos internos e envelopes canônicos do sistema.

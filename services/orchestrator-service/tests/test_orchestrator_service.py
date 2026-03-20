@@ -69,7 +69,7 @@ def test_orchestrator_service_handles_deliberative_planning_with_refined_plan() 
     assert result.specialist_review is not None
     assert result.specialist_review.contributions
     assert any("checkpoint intermediario" in step for step in result.deliberative_plan.steps)
-    assert "Contribuicoes especialistas" in result.response_text
+    assert "Contribuições especialistas" in result.response_text
     stored_events = observability.list_recent_events(ObservabilityQuery(request_id="req-1"))
     event_names = [event.event_name for event in stored_events]
     assert event_names == [event.event_name for event in result.events]
@@ -137,7 +137,7 @@ def test_orchestrator_service_blocks_sensitive_action() -> None:
     assert result.operation_dispatch is None
     assert result.operation_result is None
     assert "governance_blocked" in [event.event_name for event in result.events]
-    assert "nao permite execucao direta" in result.response_text
+    assert "não permite execução direta" in result.response_text
 
 
 def test_orchestrator_service_recovers_previous_plan_hints_across_instances() -> None:
@@ -186,8 +186,8 @@ def test_orchestrator_service_recovers_previous_plan_hints_across_instances() ->
     assert "especialista_analise_estruturada" in second_result.specialist_hints
     assert second_result.specialist_review is not None
     assert second_result.specialist_review.summary
-    assert "missao=objetivo=Please plan the sprint." in second_result.deliberative_plan.rationale
+    assert "missão=objetivo=Please plan the sprint." in second_result.deliberative_plan.rationale
     assert any(
-        "criterio de decisao dominante" in step
+        "critério de decisão dominante" in step
         for step in second_result.deliberative_plan.steps
     )

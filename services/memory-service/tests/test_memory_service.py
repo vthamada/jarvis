@@ -31,7 +31,7 @@ def sample_plan() -> DeliberativePlanContract:
     return DeliberativePlanContract(
         plan_summary="decompor objetivo em etapas reversiveis",
         goal="Please plan the sprint.",
-        steps=["definir objetivo", "listar etapas", "recomendar proxima acao"],
+        steps=["definir objetivo", "listar etapas", "recomendar próxima ação"],
         active_domains=["strategy"],
         active_minds=["mente_executiva"],
         constraints=["low-risk"],
@@ -39,7 +39,7 @@ def sample_plan() -> DeliberativePlanContract:
         recommended_task_type="draft_plan",
         requires_human_validation=False,
         rationale="contexto=nenhum; apoio=baseline local",
-        tensions_considered=["equilibrar ambicao estrategica com proxima acao segura"],
+        tensions_considered=["equilibrar ambicao estratégica com próxima ação segura"],
         specialist_hints=["especialista_planejamento_operacional"],
     )
 
@@ -50,7 +50,7 @@ def sample_specialist_contributions() -> list[SpecialistContributionContract]:
             specialist_type="especialista_planejamento_operacional",
             role="planejamento_operacional_subordinado",
             focus="sequenciamento reversivel e checkpoints claros",
-            findings=["priorizar a menor acao segura antes de expandir escopo"],
+            findings=["priorizar a menor ação segura antes de expandir escopo"],
             recommendation="executar o plano em etapas pequenas e verificaveis",
             confidence=0.78,
         )
@@ -111,7 +111,7 @@ def test_memory_service_records_and_recovers_session_history_across_instances() 
     assert isinstance(record, MemoryRecordResult)
     assert record.record_contract.record_type == "interaction_turn"
     assert record.record_contract.payload["tensions_considered"] == [
-        "equilibrar ambicao estrategica com proxima acao segura"
+        "equilibrar ambicao estratégica com próxima ação segura"
     ]
     assert record.record_contract.payload["specialist_hints"] == [
         "especialista_planejamento_operacional"

@@ -1,5 +1,5 @@
 # Tests
 
-Testes compartilhados do repositorio.
+Testes compartilhados do repositório.
 
-As suites locais por servico e engine permanecem proximas de seus respectivos modulos.
+As suites locais por serviço e engine permanecem próximas de seus respectivos módulos.

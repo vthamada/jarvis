@@ -1,3 +1,3 @@
 # Shared Contracts
 
-Contratos canonicos compartilhados entre servicos, engines e adaptadores.
+Contratos canônicos compartilhados entre serviços, engines e adaptadores.

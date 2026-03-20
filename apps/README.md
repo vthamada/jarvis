@@ -1,10 +1,10 @@
 # Apps
 
-Esta area concentra interfaces e superficies de produto do JARVIS.
+Esta área concentra interfaces e superficies de produto do JARVIS.
 
 Exemplos futuros:
 
 - app web;
 - runtime de voz;
-- paines operacionais;
+- painéis operacionais;
 - ferramentas internas.

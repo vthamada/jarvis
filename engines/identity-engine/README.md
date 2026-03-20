@@ -1,3 +1,3 @@
 # identity-engine
 
-Engine responsavel por identidade, principios e restricoes constitutivas do sistema.
+Engine responsável por identidade, princípios e restrições constitutivas do sistema.

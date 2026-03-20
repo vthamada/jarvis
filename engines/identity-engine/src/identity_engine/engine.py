@@ -38,7 +38,7 @@ class IdentityEngine:
         if blocked:
             return "claro, firme e governado"
         if intent == "planning":
-            return "estruturado, executivo e orientado a proximos passos"
+            return "estruturado, executivo e orientado a próximos passos"
         if intent == "analysis":
             return "analitico, sintetico e rigoroso"
         return "sereno, util e direto"

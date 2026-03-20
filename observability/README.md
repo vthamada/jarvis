@@ -1,3 +1,3 @@
 # Observability
 
-Area reservada para padroes de logs, traces, metricas e correlacao.
+Area reservada para padroes de logs, traces, métricas e correlação.

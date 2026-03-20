@@ -4,22 +4,22 @@
 
 Este documento deriva principalmente dos capitulos de stack, posicionamento oficial de tecnologias e referencias algoritmicas do `documento_mestre_jarvis.md`.
 
-Seu papel e transformar o inventario tecnologico do Documento-Mestre em uma matriz pratica de estudo, benchmark e reaproveitamento para o JARVIS.
+Seu papel e transformar o inventario tecnologico do Documento-Mestre em uma matriz prática de estudo, benchmark e reaproveitamento para o JARVIS.
 
 Ele responde a quatro perguntas:
 
 - qual tecnologia entra como base real do `v1`;
 - qual tecnologia entra apenas como complemento controlado;
-- qual tecnologia deve ser estudada como referencia arquitetural ou laboratorio;
-- quais estudos ainda faltam antes de qualquer adocao maior.
+- qual tecnologia deve ser estudada como referencia arquitetural ou laboratório;
+- quais estudos ainda faltam antes de qualquer adoção maior.
 
 ---
 
 ## 2. Regra de leitura
 
-Este documento nao redefine a arquitetura do JARVIS.
+Este documento não redefine a arquitetura do JARVIS.
 
-Ele organiza o estudo de tecnologias, frameworks, algoritmos e repositorios segundo o papel arquitetural ja definido pelo Documento-Mestre.
+Ele organiza o estudo de tecnologias, frameworks, algoritmos e repositórios segundo o papel arquitetural já definido pelo Documento-Mestre.
 
 Em caso de conflito:
 
@@ -29,57 +29,57 @@ Em caso de conflito:
 
 ---
 
-## 3. Classes de decisao
+## 3. Classes de decisão
 
 Cada item desta matriz deve cair em uma destas classes:
 
-- `adotar no v1`: entra como parte pratica do baseline do `v1`;
-- `complementar no v1`: pode ser usado de forma controlada, sem substituir o nucleo;
-- `laboratorio`: deve influenciar benchmark e experimentacao, nao o caminho critico;
-- `inspiracao arquitetural`: serve como referencia de desenho, nao como fundacao do sistema;
+- `adotar no v1`: entra como parte prática do baseline do `v1`;
+- `complementar no v1`: pode ser usado de forma controlada, sem substituir o núcleo;
+- `laboratório`: deve influenciar benchmark e experimentação, não o caminho crítico;
+- `inspiracao arquitetural`: serve como referencia de desenho, não como fundação do sistema;
 - `deferir para v2`: relevante, mas fora do centro do `v1`;
-- `nao adotar como nucleo`: pode ser forte, mas nao deve virar fundacao do JARVIS.
+- `não adotar como núcleo`: pode ser forte, mas não deve virar fundação do JARVIS.
 
 ---
 
-## 4. Criterios de estudo
+## 4. Critérios de estudo
 
-Toda tecnologia ou repositorio citado no Documento-Mestre deve ser estudado segundo estes criterios:
+Toda tecnologia ou repositório citado no Documento-Mestre deve ser estudado segundo estes critérios:
 
 - aderencia ao papel arquitetural previsto para o JARVIS;
-- maturidade do repositorio e ritmo de manutencao;
+- maturidade do repositório e ritmo de manutencao;
 - clareza de licenca e possibilidade de uso real no projeto;
 - modelo de persistencia e isolamento;
 - observabilidade nativa ou facilidade de instrumentacao;
 - risco de lock-in;
-- facilidade de uso local e em producao controlada;
-- compatibilidade com identidade unificada, governanca e rastreabilidade;
-- possibilidade de reaproveitamento parcial, sem terceirizar o nucleo.
+- facilidade de uso local e em produção controlada;
+- compatibilidade com identidade unificada, governança e rastreabilidade;
+- possibilidade de reaproveitamento parcial, sem terceirizar o núcleo.
 
 ---
 
 ## 5. Matriz principal
 
-| Tecnologia / Referencia | Papel no JARVIS | Repositorio / fonte principal a estudar | O que estudar primeiro | Decisao atual |
+| Tecnologia / Referencia | Papel no JARVIS | Repositório / fonte principal a estudar | O que estudar primeiro | Decisóo atual |
 | --- | --- | --- | --- | --- |
 | LangGraph | Substrato principal de orquestracao stateful | `langchain-ai/langgraph` e documentacao oficial | durable execution, checkpoints, HITL, replay, composicao de fluxos | `adotar no v1` |
-| PostgreSQL + pgvector | Backbone de memoria e persistencia | `postgres/postgres` e `pgvector/pgvector` | schema, indices, paridade com `sqlite`, operacao local, migracao | `adotar no v1` |
-| LangSmith | Observabilidade agentic principal | documentacao oficial LangSmith | traces, evals, dashboards, correlacao, comparacao com trilha interna | `complementar no v1` |
-| OpenAI Realtime / Voice stack | Camada moderna de voz e realtime | documentacao oficial OpenAI | speech-to-speech, handoffs, latencia, modelo de sessao e seguranca | `complementar no v1` |
-| OpenHands Software Agent SDK | Especialista subordinado de software | `All-Hands-AI/OpenHands` | ACI, tool model, isolamento, integracao como especialista convocavel | `complementar no v1` |
-| OpenHands / Open Operator | Referencia operacional e extensao tecnica | ecossistema OpenHands | operador tecnico, execucao controlada, tarefas tecnicas e ambientes isolados | `deferir para v2` |
-| Zep | Memoria contextual complementar | `getzep/zep` | modelo de memoria, modo de deploy, estado atual do projeto e custo de integracao | `laboratorio` |
-| Graphiti | Memoria temporal e relacional complementar | `getzep/graphiti` | grafo temporal, relacoes, maturidade real, custo operacional | `laboratorio` |
-| LlamaIndex | Ingestao e retrieval complementar | `run-llama/llama_index` | ingestao, parsing, retrieval pipeline, workflows, durabilidade | `laboratorio` |
-| Hermes Agent | Referencia arquitetural forte para memoria viva e runtime persistente | repositorio e site oficial Hermes Agent | skills, memoria, canais, scheduler, persistencia agentic | `inspiracao arquitetural` |
-| Hermes Agent Self-Evolution | Referencia pratica de melhoria por skills e loop evolutivo | ecossistema Hermes | como trata melhoria, limites de autoaplicacao, papel de skill growth | `laboratorio` |
-| OpenClaw | Referencia arquitetural forte para gateway, canais e operacao | `openclaw/openclaw` e docs oficiais | session model, gateway, canais, skills, security model | `inspiracao arquitetural` |
-| TextGrad | Otimizacao textual offline | `zou-group/textgrad` | prompt/program optimization, avaliacao, custo e estabilidade | `laboratorio` |
-| DSPy / MIPROv2 | Otimizacao de programas LM | `stanfordnlp/dspy` e docs oficiais | programas declarativos, tuning de prompt e busca discreta | `laboratorio` |
-| AFlow | Otimizacao automatizada de workflows | `FoundationAgents/AFlow` | search de workflow, avaliacao e integracao com benchmark | `laboratorio` |
-| EvoAgentX | Evolucao automatizada de workflows e agentes | `EvoAgentX/EvoAgentX` | loop de melhoria, comparacao de workflows, utilidade no evolution-lab | `laboratorio` |
-| SEAL | Auto-adaptacao persistente em nivel de modelo | repositorio oficial SEAL | mecanismo de self-edit, dependencia de treino, risco operacional | `deferir para v2` |
-| Darwin Godel Machine | Autoaperfeicoamento empirico com modificacao de codigo | `jennyzzt/dgm` | benchmark, validacao empirica, risco de execucao, isolamento | `deferir para v2` |
+| PostgreSQL + pgvector | Backbone de memória e persistencia | `postgres/postgres` e `pgvector/pgvector` | schema, indices, paridade com `sqlite`, operação local, migracao | `adotar no v1` |
+| LangSmith | Observabilidade agentic principal | documentacao oficial LangSmith | traces, evals, dashboards, correlação, comparação com trilha interna | `complementar no v1` |
+| OpenAI Realtime / Voice stack | Camada moderna de voz e realtime | documentacao oficial OpenAI | speech-to-speech, handoffs, laténcia, modelo de sessão e segurança | `complementar no v1` |
+| OpenHands Software Agent SDK | Especialista subordinado de software | `All-Hands-AI/OpenHands` | ACI, tool model, isolamento, integração como especialista convocavel | `complementar no v1` |
+| OpenHands / Open Operator | Referencia operacional e extensao técnica | ecossistema OpenHands | operador técnico, execução controlada, tarefas técnicas e ambientes isolados | `deferir para v2` |
+| Zep | Memória contextual complementar | `getzep/zep` | modelo de memória, modo de deploy, estado atual do projeto e custo de integração | `laboratório` |
+| Graphiti | Memória temporal e relacional complementar | `getzep/graphiti` | grafo temporal, relações, maturidade real, custo operacional | `laboratório` |
+| LlamaIndex | Ingestao e retrieval complementar | `run-llama/llama_index` | ingestao, parsing, retrieval pipeline, workflows, durabilidade | `laboratório` |
+| Hermes Agent | Referencia arquitetural forte para memória viva e runtime persistente | repositório e site oficial Hermes Agent | skills, memória, canais, scheduler, persistencia agentic | `inspiracao arquitetural` |
+| Hermes Agent Self-Evolution | Referencia prática de melhoria por skills e loop evolutivo | ecossistema Hermes | como trata melhoria, limites de autoaplicacao, papel de skill growth | `laboratório` |
+| OpenClaw | Referencia arquitetural forte para gateway, canais e operação | `openclaw/openclaw` e docs oficiais | session model, gateway, canais, skills, security model | `inspiracao arquitetural` |
+| TextGrad | Otimizacao textual offline | `zou-group/textgrad` | prompt/program optimization, avaliação, custo e estabilidade | `laboratório` |
+| DSPy / MIPROv2 | Otimizacao de programas LM | `stanfordnlp/dspy` e docs oficiais | programas declarativos, tuning de prompt e busca discreta | `laboratório` |
+| AFlow | Otimizacao automatizada de workflows | `FoundationAgents/AFlow` | search de workflow, avaliação e integração com benchmark | `laboratório` |
+| EvoAgentX | Evolução automatizada de workflows e agentes | `EvoAgentX/EvoAgentX` | loop de melhoria, comparação de workflows, utilidade no evolution-lab | `laboratório` |
+| SEAL | Auto-adaptacao persistente em nivel de modelo | repositório oficial SEAL | mecanismo de self-edit, dependencia de treino, risco operacional | `deferir para v2` |
+| Darwin Godel Machine | Autoaperfeicoamento empirico com modificacao de codigo | `jennyzzt/dgm` | benchmark, validação empirica, risco de execução, isolamento | `deferir para v2` |
 
 ---
 
@@ -91,11 +91,11 @@ Itens que devem sustentar o `v1` diretamente:
 
 - `LangGraph`;
 - `PostgreSQL + pgvector`;
-- camada propria do JARVIS para contratos, governanca, memoria e orquestracao.
+- camada própria do JARVIS para contratos, governança, memória e orquestracao.
 
 ### 6.2 Complementos controlados do v1
 
-Itens fortes, mas subordinados ao nucleo:
+Itens fortes, mas subordinados ao núcleo:
 
 - `LangSmith`;
 - `OpenAI Realtime / Voice stack`;
@@ -103,7 +103,7 @@ Itens fortes, mas subordinados ao nucleo:
 
 ### 6.3 Laboratorio e benchmark
 
-Itens que devem alimentar benchmark e experimentacao, nao a fundacao central:
+Itens que devem alimentar benchmark e experimentação, não a fundação central:
 
 - `Zep`;
 - `Graphiti`;
@@ -123,7 +123,7 @@ Itens que devem influenciar o desenho, sem substituir o JARVIS:
 
 ### 6.5 Fora do centro do v1
 
-Itens relevantes, mas que nao devem entrar como nucleo no `v1`:
+Itens relevantes, mas que não devem entrar como núcleo no `v1`:
 
 - `OpenHands / Open Operator` como camada operacional ampla;
 - `SEAL`;
@@ -131,7 +131,7 @@ Itens relevantes, mas que nao devem entrar como nucleo no `v1`:
 
 ---
 
-## 7. Repositorios prioritarios para estudo local
+## 7. Repositórios prioritários para estudo local
 
 Se o projeto abrir uma pasta separada de pesquisa, a ordem recomendada de estudo e esta:
 
@@ -146,11 +146,11 @@ Se o projeto abrir uma pasta separada de pesquisa, a ordem recomendada de estudo
 9. `FoundationAgents/AFlow`
 10. `EvoAgentX/EvoAgentX`
 
-Regra de seguranca para o estudo:
+Regra de segurança para o estudo:
 
-- clonar fora do repositorio principal do JARVIS;
+- clonar fora do repositório principal do JARVIS;
 - preferir `--depth 1`;
-- estudar primeiro `README`, docs, estrutura, runtime, memoria, observabilidade e seguranca;
+- estudar primeiro `README`, docs, estrutura, runtime, memória, observabilidade e segurança;
 - evitar executar installers, marketplaces de skills ou scripts de terceiros sem isolamento;
 - tratar `OpenClaw` em modo especialmente conservador por risco de ecossistema externo.
 
@@ -160,31 +160,31 @@ Regra de seguranca para o estudo:
 
 Ainda falta estudar de forma disciplinada:
 
-- maturidade real, manutencao recente e estabilidade de API de cada repositorio;
-- licencas e restricoes de uso para cada componente externo;
+- maturidade real, manutencao recente e estabilidade de API de cada repositório;
+- licencas e restrições de uso para cada componente externo;
 - facilidade real de isolar cada tecnologia no monorepo do JARVIS;
 - custo de observabilidade, testes e rollback quando cada componente e acoplado ao baseline;
-- possibilidade de reaproveitamento parcial, em vez de adocao integral;
+- possibilidade de reaproveitamento parcial, em vez de adoção integral;
 - risco de confundir referencia arquitetural com dependencia central.
 
 ---
 
-## 9. Proximos derivados naturais
+## 9. Próximos derivados naturais
 
-Os proximos artefatos naturais depois desta matriz sao:
+Os próximos artefatos naturais depois desta matriz sóo:
 
-1. um estudo comparativo operacional por repositorio, fora do repositorio principal do JARVIS;
+1. `docs/architecture/technology-study-phase1-core-stack.md`, com a Fase 1 do estudo aplicado a `LangGraph`, `PostgreSQL + pgvector` e `LangSmith`;
 2. um `ADR` curto sobre o papel de `Hermes Agent` e `OpenClaw` no projeto;
 3. uma matriz separada de benchmark para algoritmos evolutivos alem do baseline atual do `evolution-lab`.
 
 ---
 
-## 10. Sintese
+## 10. Sóntese
 
 A leitura oficial mais segura, no estado atual do projeto, e esta:
 
-- o `v1` deve ser fechado sobre uma base propria e controlada;
+- o `v1` deve ser fechado sobre uma base própria e controlada;
 - tecnologias fortes devem ser reaproveitadas de forma localizada e subordinada;
-- referencias como `Hermes Agent` e `OpenClaw` devem influenciar a arquitetura, nao substitui-la;
-- algoritmos evolutivos e frameworks de autoaperfeicoamento devem permanecer no laboratorio ate prova forte de utilidade e seguranca.
+- referencias como `Hermes Agent` e `OpenClaw` devem influenciar a arquitetura, não substitui-la;
+- algoritmos evolutivos e frameworks de autoaperfeicoamento devem permanecer no laboratório até prova forte de utilidade e segurança.
 

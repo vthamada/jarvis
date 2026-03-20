@@ -4,7 +4,7 @@
 
 Este documento aprofunda a camada de voz do JARVIS em nivel arquitetural especializado, sem substituir o Documento-Mestre.
 
-Ele deriva principalmente do capitulo `253. Especificacao detalhada da camada de voz e interacao em tempo real`.
+Ele deriva principalmente do capitulo `253. Especificacao detalhada da camada de voz e interação em tempo real`.
 
 ---
 
@@ -13,18 +13,18 @@ Ele deriva principalmente do capitulo `253. Especificacao detalhada da camada de
 A camada de voz deve funcionar como fronteira stateful entre:
 
 - interface;
-- sessao realtime;
-- nucleo central;
+- sessão realtime;
+- núcleo central;
 - observabilidade.
 
-Ela nao deve se tornar um segundo nucleo do sistema.
+Ela não deve se tornar um segundo núcleo do sistema.
 
 ---
 
 ## 3. Componentes centrais
 
 - gateway de voz
-- gerenciador de sessao realtime
+- gerenciador de sessão realtime
 - detector de turno e interrupcao
 - orquestrador de resposta falada
 - adaptador de voz do modelo
@@ -38,11 +38,11 @@ Ela nao deve se tornar um segundo nucleo do sistema.
 A voz e expressao da identidade do sistema. Portanto:
 
 - tom, postura e clareza devem ser consistentes;
-- a camada de voz nao pode fragmentar a identidade;
-- latencia e barge-in devem ser tratados como requisitos centrais.
+- a camada de voz não pode fragmentar a identidade;
+- laténcia e barge-in devem ser tratados como requisitos centrais.
 
 ---
 
 ## 5. Estado atual
 
-Esta camada faz sentido como prioridade de arquitetura, mas nao como dependencia para iniciar a base do repositorio.
+Esta camada faz sentido como prioridade de arquitetura, mas não como dependencia para iniciar a base do repositório.

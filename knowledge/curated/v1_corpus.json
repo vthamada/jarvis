@@ -2,66 +2,123 @@
   "domains": [
     {
       "name": "strategy",
-      "keywords": ["strategy", "milestone", "roadmap", "prioridade", "sequence", "plan"],
+      "keywords": [
+        "strategy",
+        "milestone",
+        "roadmap",
+        "prioridade",
+        "sequence",
+        "plan"
+      ],
       "snippets": [
-        "Priorize clareza de objetivo, sequenciamento e criterio de sucesso antes de expandir escopo.",
+        "Priorize clareza de objetivo, sequenciamento e critério de sucesso antes de expandir escopo.",
         "Converta intencao ampla em passos menores, reversiveis e verificaveis."
       ]
     },
     {
       "name": "productivity",
-      "keywords": ["task", "execution", "next step", "work", "deliver", "operational"],
+      "keywords": [
+        "task",
+        "execution",
+        "next step",
+        "work",
+        "deliver",
+        "operational"
+      ],
       "snippets": [
-        "Planos executaveis tendem a funcionar melhor quando cada etapa produz valor verificavel.",
-        "Mantenha o proximo passo concreto, curto e validavel no mesmo ciclo de trabalho."
+        "Planos executáveis tendem a funcionar melhor quando cada etapa produz valor verificavel.",
+        "Mantenha o próximo passo concreto, curto e validavel no mesmo ciclo de trabalho."
       ]
     },
     {
       "name": "analysis",
-      "keywords": ["analysis", "analyze", "trade-off", "implication", "context", "diagnose"],
+      "keywords": [
+        "analysis",
+        "analyze",
+        "trade-off",
+        "implication",
+        "context",
+        "diagnose"
+      ],
       "snippets": [
-        "Uma boa analise deve explicitar contexto, trade-offs e implicacoes antes da recomendacao.",
-        "Sintese util depende de separar observacao, interpretacao e recomendacao."
+        "Uma boa análise deve explicitar contexto, trade-offs e implicações antes da recomendacao.",
+        "Sóntese util depende de separar observação, interpretacao e recomendacao."
       ]
     },
     {
       "name": "governance",
-      "keywords": ["risk", "governance", "policy", "segur", "audit", "validation"],
+      "keywords": [
+        "risk",
+        "governance",
+        "policy",
+        "segur",
+        "audit",
+        "validation"
+      ],
       "snippets": [
-        "Em fluxos sensiveis, registre justificativa, condicoes e rastreabilidade da decisao.",
-        "Autonomia graduada deve crescer com evidencia de seguranca e estabilidade, nao por impulso."
+        "Em fluxos sensiveis, registre justificativa, condições e rastreabilidade da decisão.",
+        "Autonomia graduada deve crescer com evidência de segurança e estabilidade, não por impulso."
       ]
     },
     {
       "name": "software_development",
-      "keywords": ["code", "software", "repo", "service", "api", "implementation", "python"],
+      "keywords": [
+        "code",
+        "software",
+        "repo",
+        "service",
+        "api",
+        "implementation",
+        "python"
+      ],
       "snippets": [
-        "Mude o minimo necessario para ganhar capacidade verificavel sem quebrar contratos centrais.",
-        "Prefira interfaces estaveis, cobertura comportamental e rollback claro a refactors difusos."
+        "Mude o mínimo necessario para ganhar capacidade verificavel sem quebrar contratos centrais.",
+        "Prefira interfaces estáveis, cobertura comportamental e rollback claro a refactors difusos."
       ]
     },
     {
       "name": "documentation",
-      "keywords": ["doc", "document", "runbook", "handoff", "readme", "changelog"],
+      "keywords": [
+        "doc",
+        "document",
+        "runbook",
+        "handoff",
+        "readme",
+        "changelog"
+      ],
       "snippets": [
-        "Documentacao operacional deve reduzir ambiguidade de execucao, nao repetir teoria sem efeito pratico.",
-        "README, HANDOFF e runbooks devem apontar para um unico caminho de operacao e validacao."
+        "Documentacao operacional deve reduzir ambiguidade de execução, não repetir teoria sem efeito prático.",
+        "README, HANDOFF e runbooks devem apontar para um único caminho de operação e validação."
       ]
     },
     {
       "name": "operational_readiness",
-      "keywords": ["readiness", "go-live", "rollback", "smoke", "pilot", "release"],
+      "keywords": [
+        "readiness",
+        "go-live",
+        "rollback",
+        "smoke",
+        "pilot",
+        "release"
+      ],
       "snippets": [
-        "Readiness real exige ambiente reproduzivel, gates explicitos e smoke checks ponta a ponta.",
-        "Producao controlada deve crescer por evidencia, nao por impressao subjetiva de estabilidade."
+        "Readiness real exige ambiente reproduzivel, gates explícitos e smoke checks ponta a ponta.",
+        "Produção controlada deve crescer por evidência, não por impressao subjetiva de estabilidade."
       ]
     },
     {
       "name": "decision_risk",
-      "keywords": ["decision", "uncertainty", "reversible", "impact", "risk", "priority"],
+      "keywords": [
+        "decision",
+        "uncertainty",
+        "reversible",
+        "impact",
+        "risk",
+        "priority"
+      ],
       "snippets": [
-        "Boas decisoes explicitam risco, reversibilidade, impacto e custo antes da execucao.",
-        "Trade-offs ficam mais robustos quando o criterio de bloqueio e o criterio de liberacao sao ambos claros."
+        "Boas decisóes explicitam risco, reversibilidade, impacto e custo antes da execução.",
+        "Trade-offs ficam mais robustos quando o critério de bloqueio e o critério de liberacao sóo ambos claros."
       ]
     }
   ]

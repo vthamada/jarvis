@@ -1,3 +1,3 @@
 # Evolution Lab
 
-Servico local para laboratorio evolutivo, comparacao entre baseline e candidata e decisao de sandbox sem promocao automatica.
+Serviço local para laboratório evolutivo, comparação entre baseline e candidata e decisão de sandbox sem promoção automatica.

@@ -15,9 +15,9 @@ from tools.benchmarks.harness import ADOPT_IN_V1, BenchmarkHarness
 def postgres_url() -> str:
     database_url = getenv("DATABASE_URL")
     if not database_url:
-        pytest.skip("DATABASE_URL nao configurada para a integracao PostgreSQL.")
+        pytest.skip("DATABASE_URL não configurada para a integração PostgreSQL.")
     if importlib.util.find_spec("psycopg") is None:
-        pytest.skip("psycopg nao instalado na .venv local.")
+        pytest.skip("psycopg não instalado na .venv local.")
     return database_url
 
 
