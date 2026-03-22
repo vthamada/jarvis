@@ -7,7 +7,11 @@ from datetime import UTC, datetime
 from os import getenv
 from uuid import uuid4
 
-from memory_service.repository import StoredTurn, build_memory_repository
+from memory_service.repository import (
+    SessionContinuitySnapshot,
+    StoredTurn,
+    build_memory_repository,
+)
 from shared.contracts import (
     DeliberativePlanContract,
     InputContract,
@@ -169,6 +173,13 @@ class MemoryService:
                 ),
             )
         )
+        continuity_snapshot = self._build_session_continuity_snapshot(
+            contract,
+            deliberative_plan=deliberative_plan,
+            governance_decision=governance_decision,
+        )
+        if continuity_snapshot is not None:
+            self.repository.upsert_session_continuity(continuity_snapshot)
         if contract.mission_id:
             mission_state = self._build_mission_state(
                 contract,
@@ -194,6 +205,7 @@ class MemoryService:
         limit: int,
     ) -> tuple[list[str], list[str], list[str], MissionContinuityContextContract | None]:
         session_context: list[str] = []
+        continuity_hints: list[str] = []
         mission_hints: list[str] = []
         plan_hints: list[str] = []
         continuity_context: MissionContinuityContextContract | None = None
@@ -211,6 +223,28 @@ class MemoryService:
                 plan_hints.append(f"prior_plan={turn.plan_summary}")
             if turn.plan_steps:
                 plan_hints.append(f"prior_steps={' ; '.join(turn.plan_steps[:3])}")
+        session_continuity = self.repository.fetch_session_continuity(str(contract.session_id))
+        if session_continuity:
+            continuity_hints.append(
+                f"session_continuity_brief={session_continuity.continuity_brief}"
+            )
+            continuity_hints.append(
+                f"session_continuity_mode={session_continuity.continuity_mode}"
+            )
+            if session_continuity.anchor_mission_id:
+                continuity_hints.append(
+                    f"session_anchor_mission_id={session_continuity.anchor_mission_id}"
+                )
+            if session_continuity.anchor_goal:
+                continuity_hints.append(
+                    f"session_anchor_goal={session_continuity.anchor_goal}"
+                )
+            if session_continuity.related_mission_id:
+                continuity_hints.append(
+                    f"session_related_mission_id={session_continuity.related_mission_id}"
+                )
+            if session_continuity.related_goal:
+                continuity_hints.append(f"session_related_goal={session_continuity.related_goal}")
         if contract.mission_id:
             mission_state = self.repository.fetch_mission_state(str(contract.mission_id))
             if mission_state:
@@ -279,7 +313,66 @@ class MemoryService:
                     mission_hints.append(
                         f"related_continuity_priority={primary.priority_score:.2f}"
                     )
-        return session_context[-limit:], mission_hints[:12], plan_hints[-2:], continuity_context
+        final_session_context = list(session_context[-limit:])
+        if summary and not any(
+            item.startswith("context_summary=") for item in final_session_context
+        ):
+            final_session_context.insert(0, f"context_summary={summary}")
+        for hint in continuity_hints:
+            if hint not in final_session_context:
+                final_session_context.append(hint)
+        return final_session_context, mission_hints[:12], plan_hints[-2:], continuity_context
+
+    def _build_session_continuity_snapshot(
+        self,
+        contract: InputContract,
+        *,
+        deliberative_plan: DeliberativePlanContract | None,
+        governance_decision: PermissionDecision | None,
+    ) -> SessionContinuitySnapshot | None:
+        if deliberative_plan is None:
+            return None
+        previous = self.repository.fetch_session_continuity(str(contract.session_id))
+        continuity_action = deliberative_plan.continuity_action or "continuar"
+        if governance_decision == PermissionDecision.BLOCK and continuity_action not in {
+            "reformular",
+            "retomar",
+            "encerrar",
+        }:
+            return previous
+
+        anchor_mission_id: str | None
+        anchor_goal: str | None
+        if continuity_action == "retomar" and deliberative_plan.continuity_target_mission_id:
+            anchor_mission_id = str(deliberative_plan.continuity_target_mission_id)
+            anchor_goal = deliberative_plan.continuity_target_goal
+        else:
+            anchor_mission_id = str(contract.mission_id) if contract.mission_id else None
+            anchor_goal = deliberative_plan.goal or contract.content
+
+        brief = self._build_session_continuity_brief(
+            continuity_action=continuity_action,
+            plan=deliberative_plan,
+            governance_decision=governance_decision,
+            anchor_goal=anchor_goal or contract.content,
+            previous=previous,
+        )
+        related_mission_id = (
+            str(deliberative_plan.continuity_target_mission_id)
+            if deliberative_plan.continuity_target_mission_id
+            else None
+        )
+        related_goal = deliberative_plan.continuity_target_goal
+        return SessionContinuitySnapshot(
+            session_id=str(contract.session_id),
+            continuity_brief=brief,
+            continuity_mode=continuity_action,
+            anchor_mission_id=anchor_mission_id,
+            anchor_goal=anchor_goal,
+            related_mission_id=related_mission_id,
+            related_goal=related_goal,
+            updated_at=self.now(),
+        )
 
     def _build_mission_state(
         self,
@@ -628,6 +721,46 @@ class MemoryService:
         if previous and previous.identity_continuity_brief:
             return previous.identity_continuity_brief
         return f"objetivo={mission_goal}; prioridade={focus}; frame={decision_frame}"
+
+    @staticmethod
+    def _build_session_continuity_brief(
+        *,
+        continuity_action: str,
+        plan: DeliberativePlanContract,
+        governance_decision: PermissionDecision | None,
+        anchor_goal: str,
+        previous: SessionContinuitySnapshot | None,
+    ) -> str:
+        loop_focus = plan.open_loops[0] if plan.open_loops else None
+        if continuity_action == "retomar" and plan.continuity_target_goal:
+            return (
+                "sessao retoma continuidade relacionada em "
+                f"'{plan.continuity_target_goal}', preservando rastreabilidade do escopo atual"
+            )
+        if continuity_action == "encerrar":
+            if loop_focus:
+                return (
+                    f"sessao entra em fechamento controlado de '{anchor_goal}', "
+                    f"encerrando '{loop_focus}'"
+                )
+            return f"sessao entra em fechamento controlado de '{anchor_goal}'"
+        if continuity_action == "reformular":
+            if governance_decision == PermissionDecision.DEFER_FOR_VALIDATION:
+                return (
+                    f"sessao entrou em reformulacao governada de '{anchor_goal}' "
+                    "e aguarda validacao explicita"
+                )
+            return f"sessao reformula o objetivo ativo '{anchor_goal}' de forma explicita"
+        if continuity_action == "continuar":
+            if loop_focus:
+                return (
+                    f"sessao segue ancorada em '{anchor_goal}', com continuidade ativa em "
+                    f"'{loop_focus}'"
+                )
+            return f"sessao segue ancorada em '{anchor_goal}'"
+        if previous is not None:
+            return previous.continuity_brief
+        return f"sessao preserva continuidade segura em '{anchor_goal}'"
 
     @staticmethod
     def _extract_open_loops(

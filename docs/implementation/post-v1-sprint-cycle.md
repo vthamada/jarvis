@@ -24,7 +24,8 @@ Status desta versao do ciclo:
 - Sprint 1 concluida;
 - Sprint 2 concluida;
 - Sprint 3 concluida;
-- Sprint 4 passa a ser a proxima sprint ativa.
+- Sprint 4 concluida;
+- Sprint 5 passa a ser a proxima sprint ativa.
 
 ---
 
@@ -239,6 +240,10 @@ Resultado registrado nesta rodada:
 
 ## 7. Sprint 4
 
+Status:
+
+- concluida
+
 ### Objetivo
 
 Fazer memoria e sintese soarem como continuidade intencional de uma entidade unica.
@@ -279,6 +284,13 @@ Fazer memoria e sintese soarem como continuidade intencional de uma entidade uni
 ### Risco de desvio arquitetural
 
 - melhorar o tom sem melhorar o raciocinio que sustenta o tom.
+
+Resultado registrado nesta rodada:
+
+- `memory-service` passou a persistir continuidade da sessao acima da missao atual;
+- a recuperacao agora reaproveita um resumo reutilizavel orientado a continuidade;
+- `synthesis-engine` passou a emitir uma linha de continuidade ativa coerente com o estado do nucleo;
+- `orchestrator-service` passou a injetar esses sinais na sintese sem expor pipeline interno.
 
 ---
 

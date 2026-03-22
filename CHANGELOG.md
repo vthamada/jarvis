@@ -18,6 +18,14 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 - `synthesis-engine` passou a refletir a retomada relacionada também no caminho governado, sem esconder a decisão no texto final;
 - removido `POC` da nomenclatura técnica da trilha opcional de `LangGraph`, com rename para `langgraph_flow.py`, `LangGraphFlowRunner` e `handle_input_langgraph_flow()`.
 
+### Execução da Sprint 4 do ciclo pós-v1
+
+- `memory-service` passou a persistir um snapshot de continuidade da sessão acima da missão atual;
+- a recuperação agora reaproveita `session_continuity_brief`, `session_continuity_mode` e âncoras de continuidade como hints estruturais;
+- `synthesis-engine` passou a abrir a resposta com uma linha de continuidade ativa coerente com continuação, encerramento, reformulação ou retomada;
+- `orchestrator-service` passou a injetar esses sinais explicitamente na síntese final;
+- adicionados testes de persistência e de tom de continuidade para memória, síntese e orquestração.
+
 ### Refinamento do fluxo de análise e incorporação tecnológica
 
 - ampliado `docs/architecture/technology-study.md` com perguntas mínimas obrigatórias de estudo, fluxo oficial de incorporação, formas corretas de entrada no sistema e relação explícita com programa, sprint cycle e handoff;

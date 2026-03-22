@@ -23,7 +23,8 @@ Estado do ciclo rolante:
 - Sprint 1 concluída;
 - Sprint 2 concluída;
 - Sprint 3 concluída;
-- Sprint 4 é a próxima frente ativa.
+- Sprint 4 concluída;
+- Sprint 5 é a próxima frente ativa.
 
 ## Decisões fechadas
 
@@ -90,13 +91,14 @@ Principais entregas já consolidadas:
 - Sprint 1 do `pós-v1` concluída, com modelo mínimo de continuidade entre missões relacionadas;
 - Sprint 2 concluída, com ranking determinístico entre missão ativa, loops abertos e missão relacionada;
 - Sprint 3 concluída, com decisão explícita entre continuar, encerrar, reformular ou retomar continuidade relacionada;
+- Sprint 4 concluída, com snapshot persistente de continuidade da sessão e síntese orientada a continuidade acima da missão atual;
 - Documento-Mestre ampliado com referências arquiteturais oficiais por função.
 
 ## O que ainda falta
 
 Pendências principais desta fase:
 
-- executar as Sprints 4 a 6 do ciclo rolante;
+- executar as Sprints 5 e 6 do ciclo rolante;
 - consolidar estudo externo curto sem bloquear a implementação principal;
 - decidir, ao final do ciclo, o que sobe para `v1.5` e o que fica para `v2`.
 
@@ -104,8 +106,8 @@ Pendências principais desta fase:
 
 Ordem recomendada:
 
-1. executar a Sprint 4;
-2. executar a Sprint 5;
+1. executar a Sprint 5;
+2. executar a Sprint 6;
 3. rodar estudo externo curto em paralelo;
 4. classificar cada achado como `absorver depois`, `usar como referência` ou `rejeitar`;
 5. fechar o corte entre `v1.5` e `v2` ao fim do ciclo.

@@ -120,6 +120,8 @@ def test_memory_service_records_and_recovers_session_history_across_instances() 
     assert record.record_contract.payload["open_loops"] == ["fechar checkpoint principal"]
     assert any("planning" in item for item in recovered.recovered_items)
     assert any("context_summary=" in item for item in recovered.session_context)
+    assert any("session_continuity_brief=" in item for item in recovered.session_context)
+    assert any("session_continuity_mode=continuar" in item for item in recovered.session_context)
     assert recovered.mission_hints == []
     assert any("prior_plan=" in item for item in recovered.plan_hints)
 
@@ -239,6 +241,76 @@ def test_memory_service_detects_related_mission_continuity_within_same_session()
     assert any(
         item == "continuity_recommendation=priorizar_loop_ativo"
         for item in recovered.mission_hints
+    )
+
+
+def test_memory_service_persists_session_continuity_for_governed_reformulation() -> None:
+    temp_dir = runtime_dir("memory-session-continuity")
+    service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
+    contract = InputContract(
+        request_id=RequestId("req-session-1"),
+        session_id=SessionId("sess-session"),
+        mission_id=MissionId("mission-session"),
+        channel=ChannelType.CHAT,
+        input_type=InputType.TEXT,
+        content="Please plan the sprint.",
+        timestamp="2026-03-17T00:00:00Z",
+    )
+    service.record_turn(
+        contract,
+        intent="planning",
+        response_text="Plan created.",
+        deliberative_plan=sample_plan(),
+        specialist_contributions=sample_specialist_contributions(),
+        governance_decision=PermissionDecision.ALLOW_WITH_CONDITIONS,
+    )
+    service.record_turn(
+        InputContract(
+            request_id=RequestId("req-session-2"),
+            session_id=SessionId("sess-session"),
+            mission_id=MissionId("mission-session"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Start a new marketing campaign instead.",
+            timestamp="2026-03-17T00:01:00Z",
+        ),
+        intent="planning",
+        response_text="Need explicit validation before changing mission.",
+        deliberative_plan=DeliberativePlanContract(
+            plan_summary="reformular objetivo com impacto operacional",
+            goal="Please plan the sprint.",
+            steps=["explicitar conflito", "pedir validacao"],
+            active_domains=["strategy"],
+            active_minds=["mente_executiva"],
+            constraints=["revisao humana"],
+            risks=["pedido contem sinais de risco operacional"],
+            recommended_task_type="general_response",
+            requires_human_validation=True,
+            rationale="contexto=missao ativa; apoio=baseline local",
+            continuity_action="reformular",
+            continuity_reason="pedido atual desloca o foco da missao ativa",
+            open_loops=["fechar checkpoint principal"],
+        ),
+        governance_decision=PermissionDecision.DEFER_FOR_VALIDATION,
+    )
+
+    recovered = service.recover_for_input(
+        InputContract(
+            request_id=RequestId("req-session-3"),
+            session_id=SessionId("sess-session"),
+            mission_id=MissionId("mission-session"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="How should we proceed?",
+            timestamp="2026-03-17T00:02:00Z",
+        )
+    )
+
+    assert any("session_continuity_mode=reformular" in item for item in recovered.session_context)
+    assert any(
+        "session_continuity_brief=sessao entrou em reformulacao governada"
+        in item
+        for item in recovered.session_context
     )
 
 

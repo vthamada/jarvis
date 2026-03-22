@@ -184,6 +184,10 @@ def test_orchestrator_service_recovers_mission_continuity_across_instances() -> 
     assert second_result.deliberative_plan.continuity_action == "continuar"
     assert second_result.deliberative_plan.continuity_source == "active_mission"
     assert second_result.deliberative_plan.open_loops
+    assert any(
+        item.startswith("session_continuity_brief=") for item in second_result.recovered_context
+    )
+    assert "Continuidade ativa:" in second_result.response_text
     assert "Julgamento" in second_result.response_text
     assert "missao ativa segue ancorada em" in second_result.response_text
     assert "Dominios:" not in second_result.response_text
@@ -230,7 +234,11 @@ def test_orchestrator_service_surfaces_related_mission_candidate_in_same_session
         item == "continuity_recommendation=retomar_missao_relacionada"
         for item in result.recovered_context
     )
+    assert any(
+        item.startswith("session_continuity_mode=") for item in result.recovered_context
+    )
     assert "continuity_decided" in [event.event_name for event in result.events]
+    assert "Continuidade ativa:" in result.response_text
     assert "missao_relacionada=Plan milestone M3 rollout." in result.deliberative_plan.rationale
 
 

@@ -35,6 +35,18 @@ class StoredTurn:
     recommended_task_type: str | None = None
 
 
+@dataclass(frozen=True)
+class SessionContinuitySnapshot:
+    session_id: str
+    continuity_brief: str
+    continuity_mode: str
+    anchor_mission_id: str | None
+    anchor_goal: str | None
+    related_mission_id: str | None
+    related_goal: str | None
+    updated_at: str
+
+
 class MemoryRepository(ABC):
     """Persistence contract for episodic, contextual, and mission memory."""
 
@@ -49,6 +61,20 @@ class MemoryRepository(ABC):
     @abstractmethod
     def fetch_context_summary(self, session_id: str) -> str | None:
         """Load the latest derived context summary for a session."""
+
+    @abstractmethod
+    def upsert_session_continuity(
+        self,
+        snapshot: SessionContinuitySnapshot,
+    ) -> None:
+        """Persist the latest continuity snapshot for a session."""
+
+    @abstractmethod
+    def fetch_session_continuity(
+        self,
+        session_id: str,
+    ) -> SessionContinuitySnapshot | None:
+        """Load the latest continuity snapshot for a session."""
 
     @abstractmethod
     def upsert_mission_state(self, mission_state: MissionStateContract) -> None:
@@ -187,6 +213,61 @@ class SqliteMemoryRepository(MemoryRepository):
             )
             connection.commit()
 
+    def upsert_session_continuity(self, snapshot: SessionContinuitySnapshot) -> None:
+        with self._connect() as connection:
+            connection.execute(
+                """
+                INSERT INTO session_continuity (
+                    session_id, continuity_brief, continuity_mode, anchor_mission_id,
+                    anchor_goal, related_mission_id, related_goal, updated_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(session_id) DO UPDATE SET
+                    continuity_brief = excluded.continuity_brief,
+                    continuity_mode = excluded.continuity_mode,
+                    anchor_mission_id = excluded.anchor_mission_id,
+                    anchor_goal = excluded.anchor_goal,
+                    related_mission_id = excluded.related_mission_id,
+                    related_goal = excluded.related_goal,
+                    updated_at = excluded.updated_at
+                """,
+                (
+                    snapshot.session_id,
+                    snapshot.continuity_brief,
+                    snapshot.continuity_mode,
+                    snapshot.anchor_mission_id,
+                    snapshot.anchor_goal,
+                    snapshot.related_mission_id,
+                    snapshot.related_goal,
+                    snapshot.updated_at,
+                ),
+            )
+            connection.commit()
+
+    def fetch_session_continuity(self, session_id: str) -> SessionContinuitySnapshot | None:
+        with self._connect() as connection:
+            row = connection.execute(
+                """
+                SELECT session_id, continuity_brief, continuity_mode, anchor_mission_id,
+                       anchor_goal, related_mission_id, related_goal, updated_at
+                FROM session_continuity
+                WHERE session_id = ?
+                """,
+                (session_id,),
+            ).fetchone()
+        if row is None:
+            return None
+        return SessionContinuitySnapshot(
+            session_id=str(row["session_id"]),
+            continuity_brief=str(row["continuity_brief"]),
+            continuity_mode=str(row["continuity_mode"]),
+            anchor_mission_id=row["anchor_mission_id"],
+            anchor_goal=row["anchor_goal"],
+            related_mission_id=row["related_mission_id"],
+            related_goal=row["related_goal"],
+            updated_at=str(row["updated_at"]),
+        )
+
     def fetch_mission_state(self, mission_id: str) -> MissionStateContract | None:
         with self._connect() as connection:
             row = connection.execute(
@@ -265,6 +346,17 @@ class SqliteMemoryRepository(MemoryRepository):
                     updated_at TEXT NOT NULL
                 );
 
+                CREATE TABLE IF NOT EXISTS session_continuity (
+                    session_id TEXT PRIMARY KEY,
+                    continuity_brief TEXT NOT NULL,
+                    continuity_mode TEXT NOT NULL,
+                    anchor_mission_id TEXT,
+                    anchor_goal TEXT,
+                    related_mission_id TEXT,
+                    related_goal TEXT,
+                    updated_at TEXT NOT NULL
+                );
+                
                 CREATE TABLE IF NOT EXISTS mission_states (
                     mission_id TEXT PRIMARY KEY,
                     mission_goal TEXT NOT NULL,
@@ -524,6 +616,62 @@ class PostgresMemoryRepository(MemoryRepository):
             )
             connection.commit()
 
+    def upsert_session_continuity(self, snapshot: SessionContinuitySnapshot) -> None:
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO session_continuity (
+                    session_id, continuity_brief, continuity_mode, anchor_mission_id,
+                    anchor_goal, related_mission_id, related_goal, updated_at
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (session_id) DO UPDATE SET
+                    continuity_brief = EXCLUDED.continuity_brief,
+                    continuity_mode = EXCLUDED.continuity_mode,
+                    anchor_mission_id = EXCLUDED.anchor_mission_id,
+                    anchor_goal = EXCLUDED.anchor_goal,
+                    related_mission_id = EXCLUDED.related_mission_id,
+                    related_goal = EXCLUDED.related_goal,
+                    updated_at = EXCLUDED.updated_at
+                """,
+                (
+                    snapshot.session_id,
+                    snapshot.continuity_brief,
+                    snapshot.continuity_mode,
+                    snapshot.anchor_mission_id,
+                    snapshot.anchor_goal,
+                    snapshot.related_mission_id,
+                    snapshot.related_goal,
+                    snapshot.updated_at,
+                ),
+            )
+            connection.commit()
+
+    def fetch_session_continuity(self, session_id: str) -> SessionContinuitySnapshot | None:
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT session_id, continuity_brief, continuity_mode, anchor_mission_id,
+                       anchor_goal, related_mission_id, related_goal, updated_at
+                FROM session_continuity
+                WHERE session_id = %s
+                """,
+                (session_id,),
+            )
+            row = cursor.fetchone()
+        if row is None:
+            return None
+        return SessionContinuitySnapshot(
+            session_id=row["session_id"],
+            continuity_brief=row["continuity_brief"],
+            continuity_mode=row["continuity_mode"],
+            anchor_mission_id=row["anchor_mission_id"],
+            anchor_goal=row["anchor_goal"],
+            related_mission_id=row["related_mission_id"],
+            related_goal=row["related_goal"],
+            updated_at=row["updated_at"],
+        )
+
     def fetch_mission_state(self, mission_id: str) -> MissionStateContract | None:
         with self._connect() as connection, connection.cursor() as cursor:
             cursor.execute(
@@ -623,6 +771,20 @@ class PostgresMemoryRepository(MemoryRepository):
                 CREATE TABLE IF NOT EXISTS session_context (
                     session_id TEXT PRIMARY KEY,
                     recent_summary TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+                """
+            )
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS session_continuity (
+                    session_id TEXT PRIMARY KEY,
+                    continuity_brief TEXT NOT NULL,
+                    continuity_mode TEXT NOT NULL,
+                    anchor_mission_id TEXT,
+                    anchor_goal TEXT,
+                    related_mission_id TEXT,
+                    related_goal TEXT,
                     updated_at TEXT NOT NULL
                 )
                 """

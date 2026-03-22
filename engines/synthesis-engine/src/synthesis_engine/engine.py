@@ -32,6 +32,9 @@ class SynthesisInput:
     operation_result: OperationResultContract | None
     identity_mode: str | None = None
     arbitration_summary: str | None = None
+    session_continuity_brief: str | None = None
+    session_continuity_mode: str | None = None
+    session_anchor_goal: str | None = None
 
 
 class SynthesisEngine:
@@ -55,11 +58,17 @@ class SynthesisEngine:
                 "escopo controlado do v1."
             )
 
-        parts = [
-            f"Leitura do objetivo: {plan.goal}.",
+        parts: list[str] = []
+        continuity_line = self._continuity_line(synthesis_input)
+        if continuity_line:
+            parts.append(f"Continuidade ativa: {continuity_line}.")
+        parts.extend(
+            [
+                f"Leitura do objetivo: {plan.goal}.",
             f"Julgamento: {self._judgment_line(synthesis_input)}.",
             f"Recomendacao: {self._recommendation_line(synthesis_input)}.",
-        ]
+            ]
+        )
         limitation = self._limitation_line(synthesis_input)
         if limitation:
             parts.append(f"Limite atual: {limitation}.")
@@ -92,7 +101,9 @@ class SynthesisEngine:
                 "seguranca"
             )
             recommendation = synthesis_input.governance_decision.justification
+        continuity_line = self._continuity_line(synthesis_input)
         response = (
+            f"{f'Continuidade ativa: {continuity_line}. ' if continuity_line else ''}"
             f"Leitura do objetivo: {goal_line}. "
             f"Julgamento: {judgment}. "
             f"Recomendacao: {recommendation}"
@@ -107,6 +118,38 @@ class SynthesisEngine:
         if synthesis_input.deliberative_plan:
             return synthesis_input.deliberative_plan.goal
         return synthesis_input.identity_profile.mission_statement
+
+    def _continuity_line(self, synthesis_input: SynthesisInput) -> str | None:
+        plan = synthesis_input.deliberative_plan
+        brief = synthesis_input.session_continuity_brief
+        mode = synthesis_input.session_continuity_mode or (plan.continuity_action if plan else None)
+        if brief:
+            return brief
+        if not plan or not mode:
+            return None
+        anchor_goal = synthesis_input.session_anchor_goal or plan.goal
+        loop_focus = plan.open_loops[0] if plan.open_loops else None
+        if mode == "retomar" and plan.continuity_target_goal:
+            return (
+                f"sessao retoma continuidade relacionada em '{plan.continuity_target_goal}'"
+            )
+        if mode == "encerrar":
+            if loop_focus:
+                return (
+                    f"sessao entra em fechamento controlado de '{anchor_goal}', "
+                    f"encerrando '{loop_focus}'"
+                )
+            return f"sessao entra em fechamento controlado de '{anchor_goal}'"
+        if mode == "reformular":
+            return f"sessao reformula o objetivo ativo '{anchor_goal}' de forma governada"
+        if mode == "continuar":
+            if loop_focus:
+                return (
+                    f"sessao segue ancorada em '{anchor_goal}', com continuidade ativa em "
+                    f"'{loop_focus}'"
+                )
+            return f"sessao segue ancorada em '{anchor_goal}'"
+        return None
 
     def _judgment_line(self, synthesis_input: SynthesisInput) -> str:
         plan = synthesis_input.deliberative_plan

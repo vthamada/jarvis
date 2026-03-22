@@ -617,6 +617,15 @@ class OrchestratorService:
                 operation_result=operation_result,
                 identity_mode=directive.identity_mode,
                 arbitration_summary=cognitive_snapshot.arbitration_summary,
+                session_continuity_brief=self._extract_context_hint(
+                    memory_recovery_result.recovered_items, "session_continuity_brief="
+                ),
+                session_continuity_mode=self._extract_context_hint(
+                    memory_recovery_result.recovered_items, "session_continuity_mode="
+                ),
+                session_anchor_goal=self._extract_context_hint(
+                    memory_recovery_result.recovered_items, "session_anchor_goal="
+                ),
             )
         )
 

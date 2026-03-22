@@ -64,8 +64,16 @@ def test_synthesis_engine_composes_unitary_allowed_response() -> None:
             operation_result=None,
             identity_mode="structured_planning",
             arbitration_summary="mente_executiva lidera com apoio estrategico e foco unico",
+            session_continuity_brief=(
+                "sessao segue ancorada em 'Plan milestone M3', com continuidade ativa em "
+                "'alinhar checkpoint principal'"
+            ),
+            session_continuity_mode="continuar",
+            session_anchor_goal="Plan milestone M3",
         )
     )
+    assert "Continuidade ativa" in response
+    assert "sessao segue ancorada em 'Plan milestone M3'" in response
     assert "Leitura do objetivo" in response
     assert "Julgamento" in response
     assert "Recomendacao" in response
@@ -107,8 +115,15 @@ def test_synthesis_engine_surfaces_reformulation_without_pipeline_listing() -> N
             operation_result=None,
             identity_mode="structured_planning",
             arbitration_summary="mente_executiva lidera com foco em continuidade",
+            session_continuity_brief=(
+                "sessao entrou em reformulacao governada de 'Plan milestone M3' "
+                "e aguarda validacao explicita"
+            ),
+            session_continuity_mode="reformular",
+            session_anchor_goal="Plan milestone M3",
         )
     )
+    assert "Continuidade ativa: sessao entrou em reformulacao governada" in response
     assert "tensiona a missao ativa" in response
     assert "explicitar como o novo pedido afeta alinhar checkpoint principal" in response
     assert "Dominios:" not in response
@@ -177,8 +192,15 @@ def test_synthesis_engine_surfaces_related_resumption_cleanly() -> None:
             operation_result=None,
             identity_mode="deep_analysis",
             arbitration_summary="mente_analitica lidera com foco em continuidade relacionada",
+            session_continuity_brief=(
+                "sessao retoma continuidade relacionada em 'Analyze rollout risks.', "
+                "preservando rastreabilidade do escopo atual"
+            ),
+            session_continuity_mode="retomar",
+            session_anchor_goal="Analyze rollout risks.",
         )
     )
+    assert "Continuidade ativa: sessao retoma continuidade relacionada" in response
     assert "retomada explicita de continuidade relacionada" in response
     assert "missao relacionada 'Analyze rollout risks.' deve ser retomada agora" in response
     assert "retomada relacionada precisa justificar por que supera os loops ativos" in response
