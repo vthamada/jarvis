@@ -221,7 +221,7 @@ class SqliteMemoryRepository(MemoryRepository):
                       AND mission_id <> ?
                     GROUP BY mission_id
                 )
-                ORDER BY last_seen DESC
+                ORDER BY last_seen DESC, mission_id ASC
                 LIMIT ?
                 """,
                 (session_id, exclude_mission_id, limit),
@@ -577,7 +577,7 @@ class PostgresMemoryRepository(MemoryRepository):
                       AND mission_id <> %s
                     GROUP BY mission_id
                 ) ranked
-                ORDER BY last_seen DESC
+                ORDER BY last_seen DESC, mission_id ASC
                 LIMIT %s
                 """,
                 (session_id, exclude_mission_id, limit),

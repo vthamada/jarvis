@@ -68,7 +68,7 @@ Capacidades operacionais que emergiram desse caminho:
 - trilha auditável de eventos e decisões;
 - validação executável por scripts canônicos;
 - piloto interno com evidência reaproveitável;
-- comparação controlada entre baseline e POC opcional de `LangGraph`.
+- comparação controlada entre baseline e fluxo opcional de `LangGraph`.
 
 ---
 

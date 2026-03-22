@@ -33,7 +33,7 @@ O programa parte do seguinte estado ja consolidado:
 - observabilidade local persistida e auditavel, com espelhamento agentic complementar;
 - `jarvis-console` como interface textual minima do baseline;
 - `internal pilot` ja executado e tratado como evidencia operacional;
-- `LangGraph` mantido como POC opcional, fora do caminho critico do `v1`.
+- `LangGraph` mantido como fluxo opcional, fora do caminho critico do `v1`.
 
 Conclusao pratica:
 
@@ -125,7 +125,7 @@ Entra nesta fase:
 
 - especialistas subordinados ao nucleo;
 - memoria semantica mais profunda e retrieval mais sofisticado;
-- possivel absorcao mais forte de `LangGraph`, se a POC e a evidencia justificarem;
+- possivel absorcao mais forte de `LangGraph`, se o fluxo experimental e a evidencia justificarem;
 - novas superficies de uso quando houver maturidade do nucleo.
 
 Fica fora desta fase:
@@ -208,7 +208,7 @@ Defaults atuais:
 
 - `PostgreSQL`: absorvido no baseline;
 - `LangSmith`: complementar;
-- `LangGraph`: POC opcional e candidato a absorcao parcial futura;
+- `LangGraph`: fluxo opcional e candidato a absorcao parcial futura;
 - `Hermes Agent`, `Graphiti` e `Zep`: estudo dirigido para o `pos-v1`.
 
 ---

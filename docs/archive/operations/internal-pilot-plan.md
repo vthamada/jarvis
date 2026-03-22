@@ -67,7 +67,7 @@ python tools/run_internal_pilot.py --profile controlled
 python tools/internal_pilot_report.py --limit 10
 ```
 
-Para comparação opcional do orquestrador principal com a POC de `LangGraph`:
+Para comparação opcional do orquestrador principal com o fluxo experimental de `LangGraph`:
 
 ```powershell
 python tools/compare_orchestrator_paths.py --profile controlled
@@ -92,6 +92,6 @@ Considerar a janela inicial aceitavel quando houver:
 Depois da coleta inicial:
 
 1. consolidar o relatório operacional;
-2. comparar o baseline atual com a POC de `LangGraph`;
+2. comparar o baseline atual com o fluxo experimental de `LangGraph`;
 3. gerar proposals sandbox-only com `python tools/evolution_from_pilot.py --limit 10`;
-4. decidir se a POC segue para absorção parcial real no núcleo do pos-`v1`.
+4. decidir se o fluxo experimental segue para absorção parcial real no núcleo do pos-`v1`.

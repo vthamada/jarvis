@@ -178,7 +178,7 @@ Decisão atual:
 
 - aprovado como próximo salto estrutural do núcleo;
 - mantido fora do caminho crítico do `v1`;
-- continua como POC opcional no repositório atual.
+- continua como fluxo opcional no repositório atual.
 
 ### 8.2 PostgreSQL + pgvector
 
@@ -243,7 +243,7 @@ O fluxo oficial é:
    - `absorver depois`
    - `usar como referência`
    - `rejeitar`
-5. se houver potencial de absorção, validar por POC, complemento isolado ou benchmark dirigido;
+5. se houver potencial de absorção, validar por fluxo experimental, complemento isolado ou benchmark dirigido;
 6. só então promover a tecnologia para o baseline de uma fase futura.
 
 Regra central:
@@ -260,7 +260,7 @@ Uma tecnologia pode entrar no sistema de quatro formas:
 1. **como referência arquitetural**
    - orienta desenho de uma camada, mas não vira dependência operacional;
 2. **como complemento controlado**
-   - entra em adaptador, POC ou parte delimitada do sistema sem redefinir o baseline;
+   - entra em adaptador, fluxo experimental ou parte delimitada do sistema sem redefinir o baseline;
 3. **como laboratório**
    - permanece fora do caminho crítico e serve para benchmark, comparação ou experimentação;
 4. **como baseline de fase futura**
@@ -270,7 +270,7 @@ Uma tecnologia pode entrar no sistema de quatro formas:
 
 - `PostgreSQL`: já atravessou o fluxo e foi absorvido no baseline do `v1`.
 - `LangSmith`: entrou como complemento controlado, mantendo a trilha local como fonte primária.
-- `LangGraph`: está em POC opcional e segue como candidato a absorção parcial futura.
+- `LangGraph`: está em fluxo opcional e segue como candidato a absorção parcial futura.
 - `pgvector`: foi aprovado arquiteturalmente, mas continua deferido até existir consumidor semântico canônico.
 - `Hermes Agent`, `Graphiti` e `Zep`: seguem como estudo dirigido do `pós-v1`, sem promoção automática.
 
@@ -303,7 +303,7 @@ Isso significa:
 - o agente não escolhe tecnologia por iniciativa solta;
 - o agente parte da lacuna concreta do núcleo, da sprint ou do programa;
 - o agente produz a análise aplicada e registra a recomendação nos artefatos já existentes;
-- o agente pode implementar POC, adaptador isolado ou benchmark quando houver justificativa clara.
+- o agente pode implementar fluxo experimental, adaptador isolado ou benchmark quando houver justificativa clara.
 
 ### 10.2 Quem decide a classificação final
 
@@ -323,7 +323,7 @@ A promoção só pode ocorrer quando existirem simultaneamente:
 
 - lacuna concreta do sistema;
 - recomendação técnica explícita;
-- evidência produzida por experimento, POC ou benchmark;
+- evidência produzida por experimento, fluxo experimental ou benchmark;
 - decisão coerente com `HANDOFF.md` e com a fase atual do programa.
 
 ---
@@ -404,7 +404,7 @@ O agente:
 
 As formas corretas de entrada são:
 
-1. **POC opcional**
+1. **Fluxo experimental opcional**
    - usada quando o objetivo é comparar comportamento sem reabrir o baseline;
 2. **complemento controlado**
    - usada quando a tecnologia entra em adaptador, observabilidade, tooling ou subfluxo delimitado;
@@ -415,7 +415,7 @@ As formas corretas de entrada são:
 
 ### 12.3 O que o agente deve preservar durante a incorporação
 
-Mesmo em POC ou complemento, o agente deve preservar:
+Mesmo em fluxo experimental ou complemento, o agente deve preservar:
 
 - identidade do JARVIS;
 - contratos canônicos;
@@ -446,7 +446,7 @@ Antes de qualquer promoção de status, o agente precisa produzir evidência suf
 
 Pelo menos um destes formatos deve existir:
 
-- POC executável;
+- fluxo experimental executável;
 - benchmark comparativo;
 - avaliação dirigida por cenário;
 - evidência operacional reaproveitável no piloto;
@@ -482,7 +482,7 @@ Para evitar ambiguidade, toda tecnologia deve estar em um destes estados:
    - influencia desenho, mas não entra no runtime;
 2. **laboratório**
    - está em benchmark, comparação ou estudo aplicado;
-3. **POC opcional**
+3. **Fluxo experimental opcional**
    - existe implementação isolada para comparação;
 4. **complemento controlado**
    - já entrou em parte delimitada do sistema;
@@ -493,7 +493,7 @@ Para evitar ambiguidade, toda tecnologia deve estar em um destes estados:
 
 - `PostgreSQL`: baseline do `v1`;
 - `LangSmith`: complemento controlado;
-- `LangGraph`: POC opcional e candidato a absorção parcial futura;
+- `LangGraph`: fluxo opcional e candidato a absorção parcial futura;
 - `pgvector`: aprovado arquiteturalmente, mas ainda fora do baseline;
 - `Hermes Agent`, `Graphiti` e `Zep`: estudo dirigido e laboratório;
 - `OpenClaw`: referência arquitetural;
@@ -522,7 +522,7 @@ O processo correto, resumido, é:
 2. formular a pergunta de implementação;
 3. analisar a tecnologia pelos dois eixos oficiais;
 4. decidir `absorver depois`, `usar como referência` ou `rejeitar`;
-5. se fizer sentido, criar POC, complemento isolado ou benchmark;
+5. se fizer sentido, criar fluxo experimental, complemento isolado ou benchmark;
 6. produzir evidência;
 7. só então promover a tecnologia para o baseline de uma fase futura.
 

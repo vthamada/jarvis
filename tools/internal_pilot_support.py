@@ -153,7 +153,7 @@ def run_pilot_scenarios(
     workdir: Path,
     scenarios: list[PilotScenario] | None = None,
     path_name: str = "baseline",
-    use_langgraph_poc: bool = False,
+    use_langgraph_flow: bool = False,
 ) -> list[PilotExecutionResult]:
     orchestrator = build_orchestrator(profile, workdir)
     active_scenarios = scenarios or default_pilot_scenarios()
@@ -179,8 +179,8 @@ def run_pilot_scenarios(
             },
         )
         response = (
-            orchestrator.handle_input_langgraph_poc(contract)
-            if use_langgraph_poc
+            orchestrator.handle_input_langgraph_flow(contract)
+            if use_langgraph_flow
             else orchestrator.handle_input(contract)
         )
         audit = orchestrator.observability_service.audit_flow(

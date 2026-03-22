@@ -7,7 +7,7 @@ from governance_service.service import GovernanceService
 from memory_service.service import MemoryService
 from observability_service.service import ObservabilityService
 from operational_service.service import OperationalService
-from orchestrator_service import langgraph_poc
+from orchestrator_service import langgraph_flow
 from orchestrator_service.service import OrchestratorService
 
 from shared.contracts import InputContract
@@ -22,11 +22,23 @@ def runtime_dir(name: str) -> Path:
     return target
 
 
-def test_langgraph_poc_requires_optional_dependency() -> None:
+def test_langgraph_flow_surfaces_optional_dependency_failure(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     service = OrchestratorService()
+    monkeypatch.setattr(
+        langgraph_flow,
+        "_load_langgraph",
+        lambda: (_ for _ in ()).throw(
+            RuntimeError(
+                'LangGraph is not installed. Use `python -m pip install -e ".[langgraph]"` '
+                "to run the experimental orchestrator flow."
+            )
+        ),
+    )
 
     with pytest.raises(RuntimeError, match="LangGraph is not installed"):
-        service.handle_input_langgraph_poc(
+        service.handle_input_langgraph_flow(
             InputContract(
                 request_id=RequestId("req-lg-missing"),
                 session_id=SessionId("sess-lg-missing"),
@@ -38,7 +50,7 @@ def test_langgraph_poc_requires_optional_dependency() -> None:
         )
 
 
-def test_langgraph_poc_replays_orchestrator_flow_with_fake_runtime(
+def test_langgraph_flow_replays_orchestrator_path_with_fake_runtime(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     class FakeCompiledGraph:
@@ -72,12 +84,12 @@ def test_langgraph_poc_replays_orchestrator_flow_with_fake_runtime(
             return FakeCompiledGraph(self.nodes, self.edges)
 
     monkeypatch.setattr(
-        langgraph_poc,
+        langgraph_flow,
         "_load_langgraph",
         lambda: (FakeStateGraph, "__start__", "__end__"),
     )
 
-    temp_dir = runtime_dir("langgraph-poc")
+    temp_dir = runtime_dir("langgraph-flow")
     service = OrchestratorService(
         governance_service=GovernanceService(),
         memory_service=MemoryService(
@@ -89,7 +101,7 @@ def test_langgraph_poc_replays_orchestrator_flow_with_fake_runtime(
         ),
     )
 
-    result = service.handle_input_langgraph_poc(
+    result = service.handle_input_langgraph_flow(
         InputContract(
             request_id=RequestId("req-lg"),
             session_id=SessionId("sess-lg"),

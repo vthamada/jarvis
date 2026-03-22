@@ -214,6 +214,9 @@ class MissionContinuityContextContract:
     active_continuity_brief: str | None = None
     related_candidates: list[MissionContinuityCandidateContract] = field(default_factory=list)
     recommended_action: str | None = None
+    recommended_reason: str | None = None
+    active_priority_score: float | None = None
+    related_priority_score: float | None = None
 
 
 @dataclass

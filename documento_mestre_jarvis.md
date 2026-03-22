@@ -7558,7 +7558,7 @@ Este capítulo funciona como um primeiro conjunto de ADRs conceituais do projeto
 
 - a orquestração inicial deve ser desenhada de forma compatível com grafo de estados;
 - a lógica do núcleo continuará própria, mesmo usando LangGraph como substrato técnico;
-- a absorção pode ocorrer de forma progressiva, guiada por POCs e evidência operacional, sem bloquear o baseline já funcional.
+- a absorção pode ocorrer de forma progressiva, guiada por experimentos controlados e evidência operacional, sem bloquear o baseline já funcional.
 
 ---
 

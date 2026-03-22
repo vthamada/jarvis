@@ -76,7 +76,7 @@ Para resumir as trilhas recentes do `internal pilot` a partir da observabilidade
 python tools/internal_pilot_report.py --limit 5
 ```
 
-Para comparar o baseline atual com a POC opcional de `LangGraph`:
+Para comparar o baseline atual com o fluxo opcional de `LangGraph`:
 
 ```powershell
 python tools/compare_orchestrator_paths.py --profile development

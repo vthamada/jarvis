@@ -99,6 +99,8 @@ class PlanningContext:
     related_continuity_priority: float | None = None
     related_continuity_confidence: float | None = None
     related_open_loops: list[str] | None = None
+    continuity_recommendation: str | None = None
+    continuity_ranking_summary: str | None = None
 
 
 class PlanningEngine:
@@ -503,6 +505,7 @@ class PlanningEngine:
         arbitration = context.arbitration_summary or context.cognitive_rationale
         risk_text = "; ".join(risks)
         previous_recommendation = context.mission_recommendation or "sem recomendacao previa"
+        ranking_summary = context.continuity_ranking_summary or "sem ranking explicito"
         conflict_text = goal_conflict or "nenhum"
         return (
             f"objetivo_dominante={dominant_goal}; missao_ativa={mission_goal}; "
@@ -512,7 +515,7 @@ class PlanningEngine:
             f"arbitragem={arbitration}; tensao={dominant_tension}; "
             f"memoria_semantica={semantic_hint}; recomendacao_previa={previous_recommendation}; "
             f"missao_relacionada={related_goal}; razao_relacionada={related_reason}; "
-            f"prioridade_relacionada={related_priority}; "
+            f"prioridade_relacionada={related_priority}; ranking_continuidade={ranking_summary}; "
             f"riscos={risk_text}"
         )
 
@@ -590,6 +593,18 @@ class PlanningEngine:
         *,
         open_loops: list[str],
     ) -> str:
+        if (
+            context.continuity_recommendation == "retomar_missao_relacionada"
+            and context.related_mission_id
+        ):
+            return "related_mission"
+        if context.continuity_recommendation in {
+            "priorizar_loop_ativo",
+            "priorizar_missao_ativa",
+        }:
+            return "active_mission"
+        if context.continuity_recommendation == "seguir_novo_pedido":
+            return "fresh_request"
         if open_loops or context.identity_continuity_brief or context.mission_goal:
             return "active_mission"
         if context.related_mission_id:

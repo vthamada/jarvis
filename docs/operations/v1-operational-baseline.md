@@ -147,7 +147,7 @@ O baseline tecnico oficial do `v1` e:
 - `PostgreSQL` como backend operacional oficial;
 - trilha local persistida como observabilidade primaria;
 - `LangSmith` apenas como camada complementar quando configurado;
-- `LangGraph` mantido como POC opcional, fora do caminho critico do `v1`;
+- `LangGraph` mantido como fluxo opcional, fora do caminho critico do `v1`;
 - `evolution-lab` mantido em `sandbox-only`;
 - `jarvis-console` como interface textual minima do baseline.
 

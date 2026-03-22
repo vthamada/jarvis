@@ -234,7 +234,110 @@ def test_memory_service_detects_related_mission_continuity_within_same_session()
     assert candidate.mission_id == MissionId("mission-a")
     assert candidate.relation_type == "same_session_related_mission"
     assert candidate.priority_score >= 0.6
+    assert recovered.continuity_context.recommended_action == "priorizar_loop_ativo"
     assert any(item == "related_mission_id=mission-a" for item in recovered.mission_hints)
+    assert any(
+        item == "continuity_recommendation=priorizar_loop_ativo"
+        for item in recovered.mission_hints
+    )
+
+
+def test_memory_service_recommends_related_mission_for_new_request_when_score_is_strong() -> None:
+    temp_dir = runtime_dir("memory-related-new")
+    service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
+    service.record_turn(
+        InputContract(
+            request_id=RequestId("req-related-4"),
+            session_id=SessionId("sess-related-new"),
+            mission_id=MissionId("mission-a"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Plan milestone M3 rollout.",
+            timestamp="2026-03-17T00:00:00Z",
+        ),
+        intent="planning",
+        response_text="Rollout plan drafted.",
+        deliberative_plan=sample_plan(),
+        specialist_contributions=sample_specialist_contributions(),
+    )
+
+    recovered = service.recover_for_input(
+        InputContract(
+            request_id=RequestId("req-related-5"),
+            session_id=SessionId("sess-related-new"),
+            mission_id=MissionId("mission-b"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Analyze milestone M3 rollout risks.",
+            timestamp="2026-03-17T00:03:00Z",
+        )
+    )
+
+    assert recovered.continuity_context is not None
+    assert recovered.continuity_context.recommended_action == "retomar_missao_relacionada"
+    assert recovered.continuity_context.related_priority_score is not None
+    assert recovered.continuity_context.related_priority_score >= 0.7
+    assert any(
+        item == "continuity_recommendation=retomar_missao_relacionada"
+        for item in recovered.mission_hints
+    )
+
+
+def test_memory_service_ranks_related_candidates_deterministically() -> None:
+    temp_dir = runtime_dir("memory-ranked")
+    service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
+    first_plan = sample_plan()
+    second_plan = sample_plan()
+    second_plan.open_loops = []
+    service.record_turn(
+        InputContract(
+            request_id=RequestId("req-rank-a"),
+            session_id=SessionId("sess-ranked"),
+            mission_id=MissionId("mission-a"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Plan milestone M3 rollout.",
+            timestamp="2026-03-17T00:00:00Z",
+        ),
+        intent="planning",
+        response_text="Plan A.",
+        deliberative_plan=first_plan,
+        specialist_contributions=sample_specialist_contributions(),
+    )
+    service.record_turn(
+        InputContract(
+            request_id=RequestId("req-rank-b"),
+            session_id=SessionId("sess-ranked"),
+            mission_id=MissionId("mission-b"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Plan milestone M3 rollout risk controls.",
+            timestamp="2026-03-17T00:01:00Z",
+        ),
+        intent="planning",
+        response_text="Plan B.",
+        deliberative_plan=second_plan,
+        specialist_contributions=[],
+    )
+
+    recovered = service.recover_for_input(
+        InputContract(
+            request_id=RequestId("req-rank-c"),
+            session_id=SessionId("sess-ranked"),
+            mission_id=MissionId("mission-c"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Analyze milestone M3 rollout.",
+            timestamp="2026-03-17T00:02:00Z",
+        )
+    )
+
+    assert recovered.continuity_context is not None
+    candidates = recovered.continuity_context.related_candidates
+    assert [candidate.mission_id for candidate in candidates] == [
+        MissionId("mission-b"),
+        MissionId("mission-a"),
+    ]
 
 
 def test_build_memory_repository_defaults_to_runtime_sqlite() -> None:

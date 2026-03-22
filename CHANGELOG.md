@@ -131,20 +131,20 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 - ampliado `tools/internal_pilot_report.py` para refletir `trace_status`, `anomaly_flags` e `source_services` por request;
 - criado `tools/internal_pilot_support.py` para unificar cenários, bootstrap e coleta estruturada do `internal pilot`;
 - criado `tools/run_internal_pilot.py` para executar a janela mínima do piloto e persistir evidência local em `JSON` e `Markdown`;
-- criado `tools/compare_orchestrator_paths.py` para comparar baseline e POC opcional de `LangGraph` nos mesmos cenários;
+- criado `tools/compare_orchestrator_paths.py` para comparar baseline e fluxo opcional de `LangGraph` nos mesmos cenários;
 - ampliado o `evolution-lab` com entrada de `FlowEvaluationInput` e helpers para comparar sinais reais do piloto;
 - criado `tools/evolution_from_pilot.py` para transformar trilhas recentes e comparações de paths em proposals sandbox-only;
 - ampliado o corpus curado do `knowledge-service` com domínios de `observability` e `pilot_operations`, mantendo retrieval determinístico;
 - atualizados testes de observabilidade, `internal_pilot_report`, `knowledge-service`, `evolution-lab` e utilitários do piloto.
 
-### Preparação do internal pilot e POC de LangGraph
+### Preparação do internal pilot e fluxo experimental de LangGraph
 
 - adicionado `tools/internal_pilot_report.py` para resumir trilhas recentes por `request_id`, status operacional, decisão de governança e eventos obrigatórios ausentes;
 - criado `docs/operations/internal-pilot-plan.md` como plano mínimo da primeira janela controlada após o `GO CONDICIONAL`;
 - endurecido o `JsonlAgenticMirrorAdapter` para espelhar `trace tree` local com root trace e child runs, permitindo validar a estrutura de rastreabilidade mesmo sem credencial externa;
 - endurecido `tools/go_live_internal_checklist.py` para exigir árvore de trace no espelhamento agentic;
-- adicionada POC opcional de `LangGraph` ao `orchestrator-service`, preservando `handle_input()` como caminho principal e expondo `handle_input_langgraph_poc()` como rota experimental sem breaking change;
-- adicionado extra opcional `langgraph` no `pyproject.toml` para permitir a POC do orquestrador sem contaminar o bootstrap padrão do `v1`.
+- adicionada integração experimental opcional de `LangGraph` ao `orchestrator-service`, preservando `handle_input()` como caminho principal e expondo `handle_input_langgraph_flow()` como rota experimental sem breaking change;
+- adicionado extra opcional `langgraph` no `pyproject.toml` para permitir o fluxo experimental do orquestrador sem contaminar o bootstrap padrão do `v1`.
 
 ### LangSmith complementar e ADR de LangGraph
 

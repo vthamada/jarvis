@@ -70,7 +70,7 @@ python tools/validate_v1.py --profile controlled
 python tools/go_live_internal_checklist.py --profile controlled
 ```
 
-Para preparar a POC opcional de `LangGraph` no orquestrador:
+Para preparar o fluxo opcional de `LangGraph` no orquestrador:
 
 ```powershell
 python -m pip install -e ".[dev,langgraph]"
@@ -107,7 +107,7 @@ Para executar a janela mínima do piloto com evidência local:
 python tools/run_internal_pilot.py --profile development
 ```
 
-Para comparar o baseline atual com a POC de `LangGraph`:
+Para comparar o baseline atual com o fluxo experimental de `LangGraph`:
 
 ```powershell
 python tools/compare_orchestrator_paths.py --profile development

@@ -1,4 +1,4 @@
-"""Optional LangGraph POC for the orchestrator service."""
+"""Optional LangGraph flow for the orchestrator service."""
 
 from __future__ import annotations
 
@@ -7,42 +7,32 @@ from typing import TYPE_CHECKING, TypedDict
 from shared.types import PermissionDecision
 
 if TYPE_CHECKING:
-    from executive_engine.engine import ExecutiveDirective
-    from knowledge_service.service import KnowledgeRetrievalResult
-    from specialist_engine.engine import SpecialistReview
-
     from orchestrator_service.service import OrchestratorResponse, OrchestratorService
-    from shared.contracts import (
-        DeliberativePlanContract,
-        GovernanceCheckContract,
-        GovernanceDecisionContract,
-        InputContract,
-        OperationDispatchContract,
-        OperationResultContract,
-    )
-    from shared.events import InternalEventEnvelope
+    from shared.contracts import InputContract
 
 
 class OrchestratorFlowState(TypedDict, total=False):
-    contract: InputContract
-    directive: ExecutiveDirective
+    # Keep the LangGraph flow state runtime-safe even when optional type-only
+    # imports are unavailable during TypedDict introspection.
+    contract: object
+    directive: object
     memory_recovery_result: object
-    knowledge_result: KnowledgeRetrievalResult | None
+    knowledge_result: object | None
     cognitive_snapshot: object
-    deliberative_plan: DeliberativePlanContract
-    specialist_review: SpecialistReview
-    governance_check: GovernanceCheckContract
-    governance_decision: GovernanceDecisionContract
-    operation_dispatch: OperationDispatchContract | None
-    operation_result: OperationResultContract | None
+    deliberative_plan: object
+    specialist_review: object
+    governance_check: object
+    governance_decision: object
+    operation_dispatch: object | None
+    operation_result: object | None
     artifact_results: list[object]
     memory_record_result: object
     response_text: str
-    events: list[InternalEventEnvelope]
+    events: list[object]
 
 
-class LangGraphPOCRunner:
-    """Compose the current orchestrator flow as a LangGraph POC."""
+class LangGraphFlowRunner:
+    """Compose the current orchestrator flow as an experimental LangGraph path."""
 
     def __init__(self, orchestrator: OrchestratorService) -> None:
         self.orchestrator = orchestrator
@@ -436,6 +426,6 @@ def _load_langgraph():
     except ImportError as exc:  # pragma: no cover - exercised by explicit unit test.
         raise RuntimeError(
             'LangGraph is not installed. Use `python -m pip install -e ".[langgraph]"` '
-            "to run the orchestrator POC."
+            "to run the experimental orchestrator flow."
         ) from exc
     return StateGraph, START, END

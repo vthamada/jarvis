@@ -29,7 +29,7 @@ Regra de absorção:
 1. `LangGraph` entra como **substrato técnico de execução stateful**.
 2. A arquitetura do JARVIS continua própria.
 3. `shared/`, contratos, governança, memória e identidade não serão terceirizados ao framework.
-4. A primeira adoção ocorrera por `POC` no fluxo do `orchestrator-service`, não por reescrita total do `v1`.
+4. A primeira adoção ocorrera por fluxo experimental no `orchestrator-service`, não por reescrita total do `v1`.
 
 ## O que deve ser reaproveitado
 
@@ -68,7 +68,7 @@ Regra de absorção:
 
 1. endurecer `LangSmith` e a trilha observável do `internal pilot`;
 2. executar o primeiro uso controlado do `v1`;
-3. abrir `POC` de `LangGraph` no `orchestrator-service`;
+3. abrir fluxo experimental de `LangGraph` no `orchestrator-service`;
 4. medir ganho em:
    - replay;
    - fault tolerance;

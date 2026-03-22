@@ -398,12 +398,12 @@ class OrchestratorService:
             }
         )
 
-    def handle_input_langgraph_poc(self, contract: InputContract) -> OrchestratorResponse:
-        """Run the optional LangGraph POC without changing the default v1 flow."""
+    def handle_input_langgraph_flow(self, contract: InputContract) -> OrchestratorResponse:
+        """Run the optional LangGraph flow without changing the default v1 path."""
 
-        from orchestrator_service.langgraph_poc import LangGraphPOCRunner
+        from orchestrator_service.langgraph_flow import LangGraphFlowRunner
 
-        return LangGraphPOCRunner(self).run(contract)
+        return LangGraphFlowRunner(self).run(contract)
 
     def build_operation_dispatch(
         self,
@@ -550,6 +550,16 @@ class OrchestratorService:
                     and memory_recovery_result.continuity_context.related_candidates
                 )
                 else []
+            ),
+            continuity_recommendation=(
+                memory_recovery_result.continuity_context.recommended_action
+                if memory_recovery_result.continuity_context
+                else None
+            ),
+            continuity_ranking_summary=(
+                memory_recovery_result.continuity_context.recommended_reason
+                if memory_recovery_result.continuity_context
+                else None
             ),
         )
 

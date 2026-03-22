@@ -34,7 +34,7 @@ Não rediscutir sem evidência forte ou mudança explícita de direção:
 - `PostgreSQL` é o backend operacional oficial de memória;
 - `sqlite` continua apenas como fallback local;
 - `LangSmith` continua complementar; a trilha local persistida segue como fonte primária de auditoria;
-- `LangGraph` continua como direção arquitetural forte e POC opcional, não como runtime principal já absorvido;
+- `LangGraph` continua como direção arquitetural forte e fluxo opcional, não como runtime principal já absorvido;
 - referências externas passam a ser avaliadas em dois eixos: posicionamento na stack e função arquitetural por camada;
 - o Documento-Mestre continua sendo o único artefato canônico de visão de produto.
 
@@ -43,7 +43,7 @@ Regra curta de promoção tecnológica nesta fase:
 - nenhuma tecnologia externa atravessa direto para o núcleo;
 - primeiro ela precisa responder a uma lacuna concreta do ciclo ativo;
 - depois precisa ser classificada como `absorver depois`, `usar como referência` ou `rejeitar`;
-- só então pode virar POC, complemento controlado ou candidata a baseline de fase futura.
+- só então pode virar fluxo experimental, complemento controlado ou candidata a baseline de fase futura.
 
 Responsabilidade prática nesta fase:
 
@@ -84,7 +84,7 @@ Principais entregas já consolidadas:
 - fechamento disciplinado do `v1` com baseline operacional e console mínimo;
 - validação local e `controlled` com `PostgreSQL`;
 - `internal pilot` executado e convertido em evidência operacional;
-- POC opcional de `LangGraph` aberta no orquestrador;
+- fluxo opcional de `LangGraph` aberto no orquestrador;
 - Sprint 1 do `pós-v1` concluída, com modelo mínimo de continuidade entre missões relacionadas;
 - Documento-Mestre ampliado com referências arquiteturais oficiais por função.
 
@@ -111,7 +111,7 @@ Ordem recomendada:
 
 - o `pós-v1` não deve reabrir o baseline do `v1` sem necessidade real;
 - `pgvector`, memória semântica profunda, web, voz e especialistas amplos continuam fora do caminho crítico do ciclo atual;
-- a POC de `LangGraph` continua opcional e depende do extra `.[langgraph]`;
+- o fluxo experimental de `LangGraph` continua opcional e depende do extra `.[langgraph]`;
 - o maior risco atual não é estabilidade local; é profundidade cognitiva real de continuidade entre missões.
 
 ## Arquivos relevantes

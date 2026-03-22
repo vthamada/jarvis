@@ -1,4 +1,4 @@
-"""Compare the baseline orchestrator flow with the optional LangGraph POC."""
+"""Compare the baseline orchestrator flow with the optional LangGraph flow."""
 # ruff: noqa: E402
 
 from __future__ import annotations
@@ -22,7 +22,7 @@ from tools.internal_pilot_support import (
 
 @dataclass(frozen=True)
 class PathComparisonResult:
-    """Comparison for a single scenario across baseline and LangGraph POC paths."""
+    """Comparison for a single scenario across baseline and LangGraph flow paths."""
 
     scenario_id: str
     mismatch_fields: list[str]
@@ -158,7 +158,7 @@ def main() -> None:
         profile=args.profile,
         workdir=target_dir / "baseline",
         path_name="baseline",
-        use_langgraph_poc=False,
+        use_langgraph_flow=False,
     )
 
     candidate_results: list[PilotExecutionResult] | None = None
@@ -168,7 +168,7 @@ def main() -> None:
             profile=args.profile,
             workdir=target_dir / "langgraph",
             path_name="langgraph",
-            use_langgraph_poc=True,
+            use_langgraph_flow=True,
         )
     except RuntimeError as exc:
         if "LangGraph is not installed" not in str(exc):

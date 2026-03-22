@@ -86,6 +86,10 @@ def test_planning_engine_marks_related_continuity_source_when_candidate_is_prese
             related_continuity_reason="foco_compartilhado=strategy,planning",
             related_continuity_priority=0.8,
             related_continuity_confidence=0.7,
+            continuity_recommendation="retomar_missao_relacionada",
+            continuity_ranking_summary=(
+                "missao relacionada mission-a venceu o ranking de continuidade com prioridade 0.80"
+            ),
         )
     )
     assert plan.continuity_action == "continuar"
@@ -94,6 +98,7 @@ def test_planning_engine_marks_related_continuity_source_when_candidate_is_prese
     assert plan.continuity_target_goal == "Plan milestone M3 rollout."
     assert "missao_relacionada=Plan milestone M3 rollout." in plan.rationale
     assert "prioridade_relacionada=0.80" in plan.rationale
+    assert "ranking_continuidade=missao relacionada mission-a venceu o ranking" in plan.rationale
 
 
 def test_planning_engine_reformulates_when_new_request_conflicts_with_active_mission() -> None:

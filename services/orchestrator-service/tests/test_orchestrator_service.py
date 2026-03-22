@@ -222,7 +222,12 @@ def test_orchestrator_service_surfaces_related_mission_candidate_in_same_session
         )
     )
 
+    assert result.deliberative_plan.continuity_source == "related_mission"
     assert any(item == "related_mission_id=mission-a" for item in result.recovered_context)
+    assert any(
+        item == "continuity_recommendation=retomar_missao_relacionada"
+        for item in result.recovered_context
+    )
     assert "missao_relacionada=Plan milestone M3 rollout." in result.deliberative_plan.rationale
 
 

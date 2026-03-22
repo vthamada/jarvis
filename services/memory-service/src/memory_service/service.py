@@ -243,6 +243,14 @@ class MemoryService:
                 continuity_context = self._build_continuity_context(contract, mission_state)
                 if continuity_context and continuity_context.related_candidates:
                     primary = continuity_context.related_candidates[0]
+                    if continuity_context.recommended_action:
+                        mission_hints.append(
+                            f"continuity_recommendation={continuity_context.recommended_action}"
+                        )
+                    if continuity_context.recommended_reason:
+                        mission_hints.append(
+                            f"continuity_ranking={continuity_context.recommended_reason}"
+                        )
                     mission_hints.append(f"related_mission_id={primary.mission_id}")
                     mission_hints.append(f"related_mission_goal={primary.mission_goal}")
                     mission_hints.append(
@@ -255,6 +263,14 @@ class MemoryService:
                 continuity_context = self._build_continuity_context_for_new_mission(contract)
                 if continuity_context and continuity_context.related_candidates:
                     primary = continuity_context.related_candidates[0]
+                    if continuity_context.recommended_action:
+                        mission_hints.append(
+                            f"continuity_recommendation={continuity_context.recommended_action}"
+                        )
+                    if continuity_context.recommended_reason:
+                        mission_hints.append(
+                            f"continuity_ranking={continuity_context.recommended_reason}"
+                        )
                     mission_hints.append(f"related_mission_id={primary.mission_id}")
                     mission_hints.append(f"related_mission_goal={primary.mission_goal}")
                     mission_hints.append(
@@ -369,22 +385,23 @@ class MemoryService:
             candidate = self._build_related_candidate(current_mission_state, related_state)
             if candidate is not None:
                 candidates.append(candidate)
-        candidates.sort(
-            key=lambda item: (item.priority_score, item.confidence_score),
-            reverse=True,
+        candidates.sort(key=self._candidate_sort_key, reverse=True)
+        active_priority = self._active_priority_score(current_mission_state)
+        top_related = candidates[0].priority_score if candidates else None
+        recommended_action, recommended_reason = self._resolve_continuity_recommendation(
+            active_priority=active_priority,
+            top_candidate=candidates[0] if candidates else None,
+            has_open_loops=bool(current_mission_state.open_loops),
         )
-        if current_mission_state.open_loops:
-            recommended_action = "priorizar_missao_ativa"
-        elif candidates:
-            recommended_action = "avaliar_continuidade_relacionada"
-        else:
-            recommended_action = "seguir_sem_continuidade_relacionada"
         return MissionContinuityContextContract(
             active_mission_id=contract.mission_id,
             active_mission_goal=current_mission_state.mission_goal,
             active_continuity_brief=current_mission_state.identity_continuity_brief,
             related_candidates=candidates[:2],
             recommended_action=recommended_action,
+            recommended_reason=recommended_reason,
+            active_priority_score=active_priority,
+            related_priority_score=top_related,
         )
 
     def _build_continuity_context_for_new_mission(
@@ -422,18 +439,30 @@ class MemoryService:
                     last_recommendation=related_state.last_recommendation,
                 )
             )
-        candidates.sort(
-            key=lambda item: (item.priority_score, item.confidence_score),
-            reverse=True,
-        )
+        candidates.sort(key=self._candidate_sort_key, reverse=True)
         if not candidates:
             return None
+        top_related = candidates[0].priority_score
+        recommended_action = (
+            "retomar_missao_relacionada"
+            if top_related >= 0.7
+            else "seguir_novo_pedido"
+        )
+        recommended_reason = (
+            f"melhor_missao_relacionada={candidates[0].mission_id}; "
+            f"prioridade={top_related:.2f}"
+            if recommended_action == "retomar_missao_relacionada"
+            else "sem evidencia suficiente para herdar continuidade de missao relacionada"
+        )
         return MissionContinuityContextContract(
             active_mission_id=contract.mission_id,
             active_mission_goal=contract.content,
             active_continuity_brief=None,
             related_candidates=candidates[:2],
-            recommended_action="avaliar_continuidade_relacionada",
+            recommended_action=recommended_action,
+            recommended_reason=recommended_reason,
+            active_priority_score=0.0,
+            related_priority_score=top_related,
         )
 
     def _build_related_candidate(
@@ -486,6 +515,79 @@ class MemoryService:
             open_loops=list(related_state.open_loops[:2]),
             semantic_focus=list(related_state.semantic_focus[:3]),
             last_recommendation=related_state.last_recommendation,
+        )
+
+    @staticmethod
+    def _candidate_sort_key(
+        candidate: MissionContinuityCandidateContract,
+    ) -> tuple[float, float, int, str]:
+        return (
+            candidate.priority_score,
+            candidate.confidence_score,
+            len(candidate.open_loops),
+            str(candidate.mission_id),
+        )
+
+    @staticmethod
+    def _active_priority_score(current_mission_state: MissionStateContract) -> float:
+        if current_mission_state.open_loops:
+            return 0.95
+        if (
+            current_mission_state.identity_continuity_brief
+            or current_mission_state.last_recommendation
+            or current_mission_state.semantic_brief
+        ):
+            return 0.72
+        return 0.0
+
+    @staticmethod
+    def _resolve_continuity_recommendation(
+        *,
+        active_priority: float,
+        top_candidate: MissionContinuityCandidateContract | None,
+        has_open_loops: bool,
+    ) -> tuple[str, str]:
+        if has_open_loops:
+            return (
+                "priorizar_loop_ativo",
+                "existem loops abertos na missao ativa com prioridade superior "
+                "a qualquer continuidade relacionada",
+            )
+        if top_candidate is None:
+            if active_priority > 0:
+                return (
+                    "priorizar_missao_ativa",
+                    "nao ha missao relacionada suficientemente forte; manter a "
+                    "missao ativa como ancora principal",
+                )
+            return (
+                "seguir_novo_pedido",
+                "nao ha missao relacionada suficientemente forte e a ancora ativa esta fraca",
+            )
+
+        if active_priority >= top_candidate.priority_score + 0.05:
+            return (
+                "priorizar_missao_ativa",
+                "missao ativa supera a relacionada "
+                f"{top_candidate.mission_id} no desempate de continuidade",
+            )
+        if top_candidate.priority_score >= max(active_priority, 0.7):
+            return (
+                "retomar_missao_relacionada",
+                "missao relacionada "
+                f"{top_candidate.mission_id} venceu o ranking de continuidade "
+                f"com prioridade {top_candidate.priority_score:.2f}",
+            )
+        if active_priority > 0:
+            return (
+                "priorizar_missao_ativa",
+                "manter a missao ativa como ancora principal por falta de "
+                "evidencia suficiente para migrar continuidade",
+            )
+        return (
+            "seguir_novo_pedido",
+            "seguir o novo pedido porque a continuidade relacionada ainda nao "
+            "venceu o limiar de retomada",
         )
 
     def _build_semantic_brief(
