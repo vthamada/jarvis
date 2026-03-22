@@ -8,6 +8,12 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 
 ## 2026-03-22
 
+### Refinamento do fluxo de análise e incorporação tecnológica
+
+- ampliado `docs/architecture/technology-study.md` com perguntas mínimas obrigatórias de estudo, fluxo oficial de incorporação, formas corretas de entrada no sistema e relação explícita com programa, sprint cycle e handoff;
+- explicitado no `technology-study.md` quem conduz a análise, como o agente deve estudar a tecnologia, como deve incorporar por recorte, quais evidências precisa produzir e quais condições bloqueiam promoção;
+- reforçado `HANDOFF.md` com a regra curta de promoção tecnológica para evitar absorção direta de tecnologia externa no núcleo sem lacuna concreta, classificação e evidência.
+
 ### Revisao documental ampla do repositorio
 
 - revisados e atualizados os documentos centrais e os derivados mais importantes para refletir o estado real do projeto: `v1` encerrado, `pos-v1` aberto e Sprint 2 como frente ativa;

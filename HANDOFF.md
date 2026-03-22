@@ -38,6 +38,19 @@ Não rediscutir sem evidência forte ou mudança explícita de direção:
 - referências externas passam a ser avaliadas em dois eixos: posicionamento na stack e função arquitetural por camada;
 - o Documento-Mestre continua sendo o único artefato canônico de visão de produto.
 
+Regra curta de promoção tecnológica nesta fase:
+
+- nenhuma tecnologia externa atravessa direto para o núcleo;
+- primeiro ela precisa responder a uma lacuna concreta do ciclo ativo;
+- depois precisa ser classificada como `absorver depois`, `usar como referência` ou `rejeitar`;
+- só então pode virar POC, complemento controlado ou candidata a baseline de fase futura.
+
+Responsabilidade prática nesta fase:
+
+- o agente ativo conduz a análise técnica e produz a recomendação;
+- a promoção só vale quando houver evidência e alinhamento com os artefatos oficiais do ciclo;
+- nenhuma promoção tecnológica reabre o baseline do `v1` por conveniência.
+
 ## Estado atual do repositório
 
 Hoje o repositório contém:

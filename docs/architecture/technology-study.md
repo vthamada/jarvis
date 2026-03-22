@@ -70,6 +70,13 @@ Toda tecnologia deve ser avaliada por:
 - risco de lock-in;
 - reaproveitamento parcial sem terceirizar o núcleo.
 
+Perguntas mínimas obrigatórias durante o estudo:
+
+1. que lacuna concreta do JARVIS esta tecnologia ajuda a resolver;
+2. que parte dela pode ser reaproveitada sem terceirizar identidade, memória, governança ou síntese;
+3. se ela deve entrar como baseline, complemento, laboratório ou apenas referência;
+4. como validar ganho real sem quebrar o baseline atual.
+
 ---
 
 ## 5. Referências arquiteturais oficiais por função
@@ -215,3 +222,310 @@ Leitura atual:
 
 - a referência ficou forte o bastante para orientar contratos, tipagem, outputs estruturados e fluxos previsíveis;
 - ainda não deve redefinir os contratos canônicos do JARVIS, mas já justifica papel central na camada de previsibilidade.
+
+---
+
+## 9. Fluxo de incorporação no sistema
+
+Este documento não serve apenas para listar tecnologias. Ele também define o caminho correto pelo qual uma tecnologia pode atravessar para o sistema.
+
+O fluxo oficial é:
+
+1. identificar uma lacuna concreta do núcleo ou de uma sprint ativa;
+2. classificar a tecnologia pelos dois eixos oficiais:
+   - classe de decisão / adoção;
+   - papel de referência arquitetural por função;
+3. produzir leitura aplicada:
+   - o que interessa ao JARVIS;
+   - o que não deve ser terceirizado;
+   - qual o limite de uso;
+4. decidir uma das três saídas:
+   - `absorver depois`
+   - `usar como referência`
+   - `rejeitar`
+5. se houver potencial de absorção, validar por POC, complemento isolado ou benchmark dirigido;
+6. só então promover a tecnologia para o baseline de uma fase futura.
+
+Regra central:
+
+- nenhuma tecnologia entra no núcleo por prestígio, hype ou completude estrutural;
+- primeiro se prova a lacuna;
+- depois se mede o ganho;
+- só então se absorve parte do que realmente melhora o JARVIS.
+
+### 9.1 Formas corretas de incorporação
+
+Uma tecnologia pode entrar no sistema de quatro formas:
+
+1. **como referência arquitetural**
+   - orienta desenho de uma camada, mas não vira dependência operacional;
+2. **como complemento controlado**
+   - entra em adaptador, POC ou parte delimitada do sistema sem redefinir o baseline;
+3. **como laboratório**
+   - permanece fora do caminho crítico e serve para benchmark, comparação ou experimentação;
+4. **como baseline de fase futura**
+   - só após evidência suficiente, consumidor real e delimitação clara do que sobe.
+
+### 9.2 Exemplos atuais do projeto
+
+- `PostgreSQL`: já atravessou o fluxo e foi absorvido no baseline do `v1`.
+- `LangSmith`: entrou como complemento controlado, mantendo a trilha local como fonte primária.
+- `LangGraph`: está em POC opcional e segue como candidato a absorção parcial futura.
+- `pgvector`: foi aprovado arquiteturalmente, mas continua deferido até existir consumidor semântico canônico.
+- `Hermes Agent`, `Graphiti` e `Zep`: seguem como estudo dirigido do `pós-v1`, sem promoção automática.
+
+### 9.3 Relação com o programa e com as sprints
+
+Este documento responde:
+
+- o que a tecnologia é para o JARVIS;
+- que papel arquitetural ela cumpre;
+- qual seu estado de adoção.
+
+Quem responde quando ela pode atravessar para o sistema é:
+
+- `docs/roadmap/programa-ate-v3.md` para a regra de absorção no programa;
+- `docs/implementation/post-v1-sprint-cycle.md` para o uso da tecnologia no ciclo ativo;
+- `HANDOFF.md` para a decisão operacional em vigor.
+
+---
+
+## 10. Governança do processo de análise tecnológica
+
+Para evitar ambiguidade, o processo oficial de análise e incorporação tecnológica do JARVIS passa a obedecer à seguinte distribuição de responsabilidade.
+
+### 10.1 Quem conduz a análise
+
+O estudo técnico é conduzido pelo agente de implementação ativo do ciclo corrente.
+
+Isso significa:
+
+- o agente não escolhe tecnologia por iniciativa solta;
+- o agente parte da lacuna concreta do núcleo, da sprint ou do programa;
+- o agente produz a análise aplicada e registra a recomendação nos artefatos já existentes;
+- o agente pode implementar POC, adaptador isolado ou benchmark quando houver justificativa clara.
+
+### 10.2 Quem decide a classificação final
+
+A decisão arquitetural final continua subordinada ao mantenedor do projeto e ao estado oficial dos artefatos canônicos.
+
+Na prática:
+
+- o agente propõe;
+- os documentos registram;
+- a decisão vigente passa a valer quando refletida em `HANDOFF.md`, no programa, no sprint cycle e, quando necessário, no Documento-Mestre.
+
+### 10.3 Quem pode promover uma tecnologia
+
+Nenhuma tecnologia é promovida diretamente de estudo para baseline.
+
+A promoção só pode ocorrer quando existirem simultaneamente:
+
+- lacuna concreta do sistema;
+- recomendação técnica explícita;
+- evidência produzida por experimento, POC ou benchmark;
+- decisão coerente com `HANDOFF.md` e com a fase atual do programa.
+
+---
+
+## 11. Como o agente deve fazer a análise
+
+O agente deve seguir sempre a mesma sequência disciplinada.
+
+### 11.1 Etapa 1 — Partir da lacuna do sistema
+
+O ponto de partida não é a ferramenta. O ponto de partida é a lacuna.
+
+Exemplos:
+
+- "`LangGraph` melhora checkpoint, replay ou `human-in-the-loop` do orquestrador?"
+- "`Graphiti` melhora a recuperação entre missões relacionadas?"
+- "`PydanticAI` melhora a previsibilidade de contratos e outputs?"
+
+Se a lacuna não estiver clara, o estudo ainda não deve começar.
+
+### 11.2 Etapa 2 — Formular a pergunta de implementação
+
+Toda análise deve produzir uma pergunta objetiva no formato:
+
+**"Esta tecnologia melhora qual parte do JARVIS, em relação a quê, e sob quais limites?"**
+
+Essa pergunta precisa conter:
+
+- a camada afetada;
+- o problema atual;
+- o limite do experimento;
+- o critério de sucesso.
+
+### 11.3 Etapa 3 — Fazer leitura aplicada, não leitura genérica
+
+O agente deve extrair da tecnologia apenas o que é relevante para o JARVIS.
+
+A análise mínima deve responder:
+
+1. que parte do sistema isso ajuda a construir melhor;
+2. o que pode ser reaproveitado;
+3. o que não pode ser terceirizado;
+4. qual o risco de acoplamento;
+5. qual a menor forma segura de testar valor real.
+
+### 11.4 Etapa 4 — Classificar a saída
+
+Ao fim da análise, a tecnologia deve cair em uma destas saídas:
+
+- `absorver depois`
+- `usar como referência`
+- `rejeitar`
+
+Leitura correta:
+
+- `absorver depois`: há valor real, mas a fase atual ainda não justifica incorporar;
+- `usar como referência`: a tecnologia ajuda a orientar desenho, mas não deve virar dependência;
+- `rejeitar`: não resolve a lacuna com ganho suficiente ou traz custo/desvio excessivo.
+
+---
+
+## 12. Como o agente deve fazer a incorporação
+
+Se a análise for positiva, a incorporação deve ser sempre parcial, controlada e reversível.
+
+### 12.1 Regra central
+
+O agente não "adota a ferramenta".
+
+O agente:
+
+- isola o recorte útil;
+- protege o baseline atual;
+- mede o ganho;
+- promove só o que melhora o sistema sem deformar a arquitetura.
+
+### 12.2 Formas válidas de incorporação
+
+As formas corretas de entrada são:
+
+1. **POC opcional**
+   - usada quando o objetivo é comparar comportamento sem reabrir o baseline;
+2. **complemento controlado**
+   - usada quando a tecnologia entra em adaptador, observabilidade, tooling ou subfluxo delimitado;
+3. **benchmark/laboratório**
+   - usada quando o valor ainda está em comparação, não em absorção;
+4. **promoção para baseline de fase futura**
+   - usada apenas quando a evidência já é forte e o encaixe arquitetural está claro.
+
+### 12.3 O que o agente deve preservar durante a incorporação
+
+Mesmo em POC ou complemento, o agente deve preservar:
+
+- identidade do JARVIS;
+- contratos canônicos;
+- política de memória;
+- governança;
+- síntese final;
+- rastreabilidade;
+- rollback simples.
+
+### 12.4 Regra de recorte mínimo
+
+A incorporação deve começar pelo menor recorte útil possível.
+
+Exemplos:
+
+- `LangGraph` entra primeiro em checkpoint, replay ou HITL, não em refactor total do núcleo;
+- `Graphiti` ou `Zep` entram primeiro em experimento de continuidade relacionada, não na memória inteira;
+- `PydanticAI` entra primeiro em contratos ou outputs delimitados, não substituindo toda a camada canônica;
+- `browser-use` entra primeiro como laboratório governado, não como operação ampla soberana.
+
+---
+
+## 13. Evidência obrigatória antes de promover tecnologia
+
+Antes de qualquer promoção de status, o agente precisa produzir evidência suficiente.
+
+### 13.1 Evidência mínima aceita
+
+Pelo menos um destes formatos deve existir:
+
+- POC executável;
+- benchmark comparativo;
+- avaliação dirigida por cenário;
+- evidência operacional reaproveitável no piloto;
+- teste ou trilha observável que prove ganho real.
+
+### 13.2 O que a evidência precisa demonstrar
+
+A evidência precisa demonstrar, no mínimo:
+
+- que havia uma lacuna real;
+- que a tecnologia melhorou essa lacuna;
+- que o ganho supera o custo de acoplamento;
+- que a incorporação não quebrou o baseline atual;
+- que existe limite claro do que entra e do que continua fora.
+
+### 13.3 O que não conta como evidência suficiente
+
+Não contam como promoção válida:
+
+- entusiasmo com framework;
+- maturidade pública isolada;
+- benchmark genérico sem cenário do JARVIS;
+- opinião sem teste;
+- ganho cosmético sem melhora estrutural.
+
+---
+
+## 14. Estados possíveis de uma tecnologia dentro do JARVIS
+
+Para evitar ambiguidade, toda tecnologia deve estar em um destes estados:
+
+1. **somente referência**
+   - influencia desenho, mas não entra no runtime;
+2. **laboratório**
+   - está em benchmark, comparação ou estudo aplicado;
+3. **POC opcional**
+   - existe implementação isolada para comparação;
+4. **complemento controlado**
+   - já entrou em parte delimitada do sistema;
+5. **baseline da fase**
+   - faz parte do núcleo oficial daquela fase.
+
+### 14.1 Exemplos atuais do projeto
+
+- `PostgreSQL`: baseline do `v1`;
+- `LangSmith`: complemento controlado;
+- `LangGraph`: POC opcional e candidato a absorção parcial futura;
+- `pgvector`: aprovado arquiteturalmente, mas ainda fora do baseline;
+- `Hermes Agent`, `Graphiti` e `Zep`: estudo dirigido e laboratório;
+- `OpenClaw`: referência arquitetural;
+- `SEAL`: deferido para fase futura, sem entrada no núcleo atual.
+
+---
+
+## 15. Regras de bloqueio
+
+Uma tecnologia não deve atravessar para o sistema se ocorrer qualquer uma destas condições:
+
+- a lacuna do sistema não está clara;
+- a tecnologia resolve um problema que ainda não é prioritário no programa;
+- a incorporação exige terceirizar identidade, memória, governança ou síntese;
+- o ganho não foi demonstrado em cenário do JARVIS;
+- a fase atual do programa explicitamente mantém essa tecnologia fora do corte;
+- o baseline precisaria ser reaberto sem necessidade real.
+
+---
+
+## 16. Leitura executiva do processo
+
+O processo correto, resumido, é:
+
+1. localizar a lacuna do núcleo;
+2. formular a pergunta de implementação;
+3. analisar a tecnologia pelos dois eixos oficiais;
+4. decidir `absorver depois`, `usar como referência` ou `rejeitar`;
+5. se fizer sentido, criar POC, complemento isolado ou benchmark;
+6. produzir evidência;
+7. só então promover a tecnologia para o baseline de uma fase futura.
+
+Em uma frase:
+
+**o agente analisa por problema e incorpora por recorte, nunca por entusiasmo com framework.**
