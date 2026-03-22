@@ -135,6 +135,8 @@ npm run lint
 - `documento_mestre_jarvis.md`
 - `HANDOFF.md`
 - `CHANGELOG.md`
+- `docs/roadmap/programa-ate-v3.md`
+- `docs/implementation/post-v1-sprint-cycle.md`
 - `docs/implementation/implementation-strategy.md`
 - `docs/roadmap/v1-roadmap.md`
 

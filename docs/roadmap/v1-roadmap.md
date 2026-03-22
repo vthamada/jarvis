@@ -4,6 +4,13 @@
 
 Este documento resume o roadmap de execução do `v1` do JARVIS em nivel tatico, derivado do Documento-Mestre.
 
+Leitura importante no estado atual do repositorio:
+
+- este roadmap permanece como referencia historica do fechamento do `v1`;
+- o planejamento ativo do `pos-v1` em diante agora fica em:
+  - `docs/roadmap/programa-ate-v3.md`
+  - `docs/implementation/post-v1-sprint-cycle.md`
+
 Ele complementa:
 
 - `documento_mestre_jarvis.md`
@@ -109,4 +116,3 @@ Cada milestone só deve avancar quando:
 - o núcleo anterior estiver estável o suficiente;
 - os critérios mínimos de validação estiverem atendidos;
 - a divida estrutural crítica estiver sob controle.
-

@@ -12,6 +12,12 @@
 
 Abrir o `pos-v1` com foco total em `continuidade profunda entre missoes`, sem reabrir o baseline do `v1`, usando estudo externo curto apenas como apoio dirigido a essa trilha.
 
+Sistema oficial de planejamento desta fase:
+
+- `HANDOFF.md` como retomada tatico-operacional;
+- `docs/roadmap/programa-ate-v3.md` como direcao do programa ate `v3`;
+- `docs/implementation/post-v1-sprint-cycle.md` como execucao oficial das proximas `6` sprints.
+
 ## Estado do Projeto
 
 Hoje o repositório contém:
@@ -145,6 +151,7 @@ Não rediscutir sem evidência forte ou mudanca explícita de direção:
 Pendencias principais agora:
 
 - aprofundar a continuidade entre missoes relacionadas acima do nivel ja coberto pelo `v1`;
+- executar o primeiro ciclo rolante de `6` sprints definido em `docs/implementation/post-v1-sprint-cycle.md`;
 - decidir o que vira `v1.5` e o que fica para `v2` a partir dos achados do estudo externo curto;
 - manter o `v1` congelado enquanto o primeiro ciclo do `pos-v1` avanca;
 - registrar no proprio `HANDOFF.md` as decisoes de absorcao ou rejeicao que surgirem do estudo externo.
@@ -153,10 +160,11 @@ Pendencias principais agora:
 
 Ordem recomendada:
 
-1. implementar continuidade profunda entre missoes;
-2. rodar estudo externo curto em paralelo, sem bloquear a implementacao principal;
-3. consolidar achados reutilizaveis e classifica-los como `absorver depois`, `usar como referencia` ou `rejeitar`;
-4. decidir o que entra em `v1.5` e o que fica para `v2`.
+1. executar a Sprint 1 do ciclo rolante, fechando o modelo de continuidade entre missoes e seus contratos internos;
+2. executar a Sprint 2, consolidando recuperacao e ranking de continuidade relacionada;
+3. rodar estudo externo curto em paralelo, sem bloquear a implementacao principal;
+4. consolidar achados reutilizaveis e classifica-los como `absorver depois`, `usar como referencia` ou `rejeitar`;
+5. decidir o que entra em `v1.5` e o que fica para `v2` ao final do primeiro ciclo.
 ## Riscos / Bloqueios
 
 
@@ -177,6 +185,8 @@ Ordem recomendada:
 - `documento_mestre_jarvis.md`
 - `HANDOFF.md`
 - `CHANGELOG.md`
+- `docs/roadmap/programa-ate-v3.md`
+- `docs/implementation/post-v1-sprint-cycle.md`
 - `shared/types/__init__.py`
 - `shared/contracts/__init__.py`
 - `engines/executive-engine/src/executive_engine/engine.py`

@@ -81,6 +81,7 @@ Funcao:
 
 Exemplos:
 
+- `docs/roadmap/programa-ate-v3.md`
 - `docs/operations/v1-operational-baseline.md`
 - `docs/operations/release-and-change-management.md`
 - `docs/operations/incident-response.md`
@@ -93,6 +94,7 @@ Funcao:
 
 Exemplos:
 
+- `docs/implementation/post-v1-sprint-cycle.md`
 - `docs/implementation/implementation-strategy.md`
 - `docs/implementation/service-breakdown.md`
 - `docs/archive/implementation/sprint-1-plan.md`
@@ -169,11 +171,13 @@ docs/
 Os derivados ativos mais importantes, no estado atual do projeto, sao:
 
 1. `docs/operations/v1-operational-baseline.md`
-2. `docs/operations/release-and-change-management.md`
-3. `docs/operations/incident-response.md`
-4. `docs/implementation/implementation-strategy.md`
-5. `docs/implementation/service-breakdown.md`
-6. `docs/executive/master-summary.md`
+2. `docs/roadmap/programa-ate-v3.md`
+3. `docs/implementation/post-v1-sprint-cycle.md`
+4. `docs/operations/release-and-change-management.md`
+5. `docs/operations/incident-response.md`
+6. `docs/implementation/implementation-strategy.md`
+7. `docs/implementation/service-breakdown.md`
+8. `docs/executive/master-summary.md`
 
 Documentos historicos ou de futuro devem preferencialmente sair do caminho principal:
 

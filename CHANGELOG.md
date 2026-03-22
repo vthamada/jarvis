@@ -6,6 +6,17 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 
 ---
 
+## 2026-03-22
+
+### Sistema de planejamento em duas camadas ate `v3`
+
+- criado `docs/roadmap/programa-ate-v3.md` como contrato de direcao do `pos-v1` ate `v3`, separando `pos-v1`, `v1.5`, `v2` e `v3` por objetivos, gates e limites;
+- criado `docs/implementation/post-v1-sprint-cycle.md` como plano rolante oficial das proximas `6` sprints, com foco total em `continuidade profunda entre missoes`;
+- formalizado o sistema documental em tres papeis: `HANDOFF.md` para retomada operacional, `programa-ate-v3.md` para direcao macro e `post-v1-sprint-cycle.md` para execucao imediata;
+- atualizadas as referencias em `HANDOFF.md`, `README.md` e `docs/documentation/estrutura_de_documentos_derivados.md` para tornar o novo sistema de planejamento a leitura oficial do proximo ciclo.
+
+---
+
 ## 2026-03-20
 
 ### Abertura disciplinada do pos-v1
