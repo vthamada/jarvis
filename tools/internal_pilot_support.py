@@ -74,6 +74,11 @@ class PilotExecutionResult:
     intent: str
     governance_decision: str
     operation_status: str | None
+    continuity_action: str | None
+    continuity_source: str | None
+    continuity_trace_status: str
+    missing_continuity_signals: list[str]
+    continuity_anomaly_flags: list[str]
     trace_status: str
     anomaly_flags: list[str]
     missing_required_events: list[str]
@@ -200,6 +205,11 @@ def run_pilot_scenarios(
                     if response.operation_result is not None
                     else None
                 ),
+                continuity_action=audit.continuity_action,
+                continuity_source=audit.continuity_source,
+                continuity_trace_status=audit.continuity_trace_status,
+                missing_continuity_signals=list(audit.missing_continuity_signals),
+                continuity_anomaly_flags=list(audit.continuity_anomaly_flags),
                 trace_status="healthy" if audit.trace_complete else "attention_required",
                 anomaly_flags=list(audit.anomaly_flags),
                 missing_required_events=list(audit.missing_required_events),

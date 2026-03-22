@@ -90,6 +90,16 @@ class LangGraphFlowRunner:
                         memory_recovery_result.recovery_contract.memory_query_id
                     ),
                     "recovery_type": memory_recovery_result.recovery_contract.recovery_type.value,
+                    "continuity_recommendation": (
+                        memory_recovery_result.continuity_context.recommended_action
+                        if memory_recovery_result.continuity_context
+                        else None
+                    ),
+                    "related_candidate_count": (
+                        len(memory_recovery_result.continuity_context.related_candidates)
+                        if memory_recovery_result.continuity_context
+                        else 0
+                    ),
                 },
             )
         )
@@ -411,7 +421,16 @@ class LangGraphFlowRunner:
             self.orchestrator.make_event(
                 "response_synthesized",
                 contract,
-                {"intent": directive.intent},
+                {
+                    "intent": directive.intent,
+                    "continuity_action": state["deliberative_plan"].continuity_action,
+                    "continuity_source": state["deliberative_plan"].continuity_source,
+                    "continuity_target_mission_id": (
+                        str(state["deliberative_plan"].continuity_target_mission_id)
+                        if state["deliberative_plan"].continuity_target_mission_id
+                        else None
+                    ),
+                },
             )
         )
         return {"response_text": response_text, "events": events}
@@ -434,6 +453,13 @@ class LangGraphFlowRunner:
                 {
                     "memory_record_id": str(memory_record_result.record_contract.memory_record_id),
                     "record_type": memory_record_result.record_contract.record_type,
+                    "continuity_mode": state["deliberative_plan"].continuity_action,
+                    "continuity_source": state["deliberative_plan"].continuity_source,
+                    "continuity_target_mission_id": (
+                        str(state["deliberative_plan"].continuity_target_mission_id)
+                        if state["deliberative_plan"].continuity_target_mission_id
+                        else None
+                    ),
                 },
             )
         )

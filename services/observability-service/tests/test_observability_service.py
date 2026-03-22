@@ -204,7 +204,120 @@ def test_observability_service_audits_flow_for_missing_events_and_anomalies() ->
 
     assert audit.request_id == "req-audit"
     assert "memory_recovered" in audit.missing_required_events
+    assert "continuity_decided" in audit.missing_required_events
     assert "operation_missing_completion" in audit.anomaly_flags
+    assert "continuity_decided" in audit.missing_continuity_signals
+    assert audit.trace_complete is False
+
+
+def test_observability_service_audits_continuity_signals() -> None:
+    temp_dir = runtime_dir("observability-continuity")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service.ingest_events(
+        [
+            InternalEventEnvelope(
+                event_id="evt-c1",
+                event_name="input_received",
+                timestamp="2026-03-18T00:00:00+00:00",
+                source_service="orchestrator-service",
+                payload={"content": "pilot"},
+                request_id="req-cont",
+                session_id="sess-cont",
+                correlation_id="req-cont",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-c2",
+                event_name="memory_recovered",
+                timestamp="2026-03-18T00:00:01+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_recommendation": "retomar_missao_relacionada"},
+                request_id="req-cont",
+                session_id="sess-cont",
+                correlation_id="req-cont",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-c3",
+                event_name="intent_classified",
+                timestamp="2026-03-18T00:00:02+00:00",
+                source_service="orchestrator-service",
+                payload={"intent": "analysis"},
+                request_id="req-cont",
+                session_id="sess-cont",
+                correlation_id="req-cont",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-c4",
+                event_name="context_composed",
+                timestamp="2026-03-18T00:00:03+00:00",
+                source_service="orchestrator-service",
+                payload={"active_minds": ["mente_analitica"]},
+                request_id="req-cont",
+                session_id="sess-cont",
+                correlation_id="req-cont",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-c5",
+                event_name="plan_built",
+                timestamp="2026-03-18T00:00:04+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_action": "retomar", "continuity_source": "related_mission"},
+                request_id="req-cont",
+                session_id="sess-cont",
+                correlation_id="req-cont",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-c6",
+                event_name="continuity_decided",
+                timestamp="2026-03-18T00:00:05+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "continuity_action": "retomar",
+                    "continuity_source": "related_mission",
+                },
+                request_id="req-cont",
+                session_id="sess-cont",
+                correlation_id="req-cont",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-c7",
+                event_name="governance_checked",
+                timestamp="2026-03-18T00:00:06+00:00",
+                source_service="orchestrator-service",
+                payload={"decision": "allow_with_conditions"},
+                request_id="req-cont",
+                session_id="sess-cont",
+                correlation_id="req-cont",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-c8",
+                event_name="response_synthesized",
+                timestamp="2026-03-18T00:00:07+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_action": "retomar"},
+                request_id="req-cont",
+                session_id="sess-cont",
+                correlation_id="req-cont",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-c9",
+                event_name="memory_recorded",
+                timestamp="2026-03-18T00:00:08+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_mode": "continuar"},
+                request_id="req-cont",
+                session_id="sess-cont",
+                correlation_id="req-cont",
+            ),
+        ]
+    )
+
+    audit = service.audit_flow(ObservabilityQuery(request_id="req-cont"))
+
+    assert audit.continuity_action == "retomar"
+    assert audit.continuity_source == "related_mission"
+    assert audit.continuity_trace_status == "attention_required"
+    assert "retomar_missing_target_mission" in audit.continuity_anomaly_flags
+    assert "memory_continuity_mismatch" in audit.continuity_anomaly_flags
     assert audit.trace_complete is False
 
 

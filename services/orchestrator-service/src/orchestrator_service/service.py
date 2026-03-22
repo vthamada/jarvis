@@ -112,6 +112,16 @@ class OrchestratorService:
                         memory_recovery_result.recovery_contract.memory_query_id
                     ),
                     "recovery_type": memory_recovery_result.recovery_contract.recovery_type.value,
+                    "continuity_recommendation": (
+                        memory_recovery_result.continuity_context.recommended_action
+                        if memory_recovery_result.continuity_context
+                        else None
+                    ),
+                    "related_candidate_count": (
+                        len(memory_recovery_result.continuity_context.related_candidates)
+                        if memory_recovery_result.continuity_context
+                        else 0
+                    ),
                 },
             )
         )
@@ -374,7 +384,20 @@ class OrchestratorService:
             operation_result=operation_result,
         )
         events.append(
-            self.make_event("response_synthesized", contract, {"intent": directive.intent})
+            self.make_event(
+                "response_synthesized",
+                contract,
+                {
+                    "intent": directive.intent,
+                    "continuity_action": deliberative_plan.continuity_action,
+                    "continuity_source": deliberative_plan.continuity_source,
+                    "continuity_target_mission_id": (
+                        str(deliberative_plan.continuity_target_mission_id)
+                        if deliberative_plan.continuity_target_mission_id
+                        else None
+                    ),
+                },
+            )
         )
 
         memory_record_result = self.memory_service.record_turn(
@@ -392,6 +415,13 @@ class OrchestratorService:
                 {
                     "memory_record_id": str(memory_record_result.record_contract.memory_record_id),
                     "record_type": memory_record_result.record_contract.record_type,
+                    "continuity_mode": deliberative_plan.continuity_action,
+                    "continuity_source": deliberative_plan.continuity_source,
+                    "continuity_target_mission_id": (
+                        str(deliberative_plan.continuity_target_mission_id)
+                        if deliberative_plan.continuity_target_mission_id
+                        else None
+                    ),
                 },
             )
         )

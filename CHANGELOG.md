@@ -8,6 +8,15 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 
 ## 2026-03-22
 
+### Execução da Sprint 5 do ciclo pós-v1
+
+- `observability-service` passou a exigir `continuity_decided` na trilha mínima e a auditar sinais próprios de continuidade, incluindo `continuity_action`, `continuity_source`, lacunas de sinal e anomalias de retomada;
+- `orchestrator-service` e a trilha opcional de `LangGraph` passaram a registrar continuidade também em `memory_recovered`, `response_synthesized` e `memory_recorded`, tornando a decisão comparável ao longo do fluxo;
+- `tools/internal_pilot_report.py` passou a expor status de continuidade, sinais ausentes e anomalias específicas da continuidade;
+- `tools/compare_orchestrator_paths.py` passou a comparar também coerência de continuidade entre baseline e fluxo opcional de `LangGraph`;
+- `evolution-lab` e `tools/evolution_from_pilot.py` passaram a tratar saúde de continuidade como sinal explícito de proposta e comparação sandbox-only;
+- adicionados testes de observabilidade, relatórios do piloto, comparação de paths, laboratório evolutivo e orquestração para travar a Sprint 5.
+
 ### Execução das Sprints 2 e 3 do ciclo pós-v1
 
 - concluída a Sprint 2 com recuperação e ranking determinístico de continuidade relacionada;

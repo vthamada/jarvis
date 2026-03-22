@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from os import getenv
 from pathlib import Path
@@ -47,6 +47,11 @@ class FlowEvaluationInput:
     duration_seconds: float
     missing_required_events: list[str]
     anomaly_flags: list[str]
+    continuity_action: str | None = None
+    continuity_source: str | None = None
+    continuity_trace_status: str | None = None
+    missing_continuity_signals: list[str] = field(default_factory=list)
+    continuity_anomaly_flags: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -192,6 +197,12 @@ class EvolutionLabService:
             source_signals.append(f"observability://session/{evaluation.session_id}")
         if evaluation.mission_id:
             source_signals.append(f"observability://mission/{evaluation.mission_id}")
+        if evaluation.continuity_action:
+            source_signals.append(f"continuity://action/{evaluation.continuity_action}")
+        if evaluation.continuity_trace_status:
+            source_signals.append(
+                f"continuity://trace-status/{evaluation.continuity_trace_status}"
+            )
         return self.create_proposal(
             proposal_type="flow_evaluation_refinement",
             target_scope=target_scope,
@@ -262,6 +273,8 @@ class EvolutionLabService:
     def _metrics_from_flow_evaluation(evaluation: FlowEvaluationInput) -> dict[str, float]:
         missing_penalty = float(len(evaluation.missing_required_events))
         anomaly_penalty = float(len(evaluation.anomaly_flags))
+        continuity_missing_penalty = float(len(evaluation.missing_continuity_signals))
+        continuity_anomaly_penalty = float(len(evaluation.continuity_anomaly_flags))
         successful_operation = evaluation.operation_status == "completed"
         healthy_governance = evaluation.governance_decision in {
             "allow",
@@ -271,18 +284,30 @@ class EvolutionLabService:
         }
         return {
             "success": 1.0 if successful_operation or healthy_governance else 0.0,
-            "stability": max(0.0, 1.0 - (anomaly_penalty * 0.25)),
+            "stability": max(
+                0.0,
+                1.0 - (anomaly_penalty * 0.25) - (continuity_anomaly_penalty * 0.15),
+            ),
             "trace_completeness": max(0.0, 1.0 - (missing_penalty * 0.15)),
+            "continuity_health": max(
+                0.0,
+                1.0
+                - (continuity_missing_penalty * 0.2)
+                - (continuity_anomaly_penalty * 0.25),
+            ),
             "throughput": float(evaluation.total_events),
             "latency": max(0.0, 1.0 - min(evaluation.duration_seconds / 30.0, 1.0)),
-            "risk": anomaly_penalty + (missing_penalty * 0.5),
+            "risk": anomaly_penalty
+            + (missing_penalty * 0.5)
+            + (continuity_missing_penalty * 0.35)
+            + (continuity_anomaly_penalty * 0.5),
         }
 
     @staticmethod
     def _risk_hint_from_flow(evaluation: FlowEvaluationInput) -> str:
-        if evaluation.anomaly_flags:
+        if evaluation.anomaly_flags or evaluation.continuity_anomaly_flags:
             return "moderate"
-        if evaluation.missing_required_events:
+        if evaluation.missing_required_events or evaluation.missing_continuity_signals:
             return "low_to_moderate"
         return "low"
 

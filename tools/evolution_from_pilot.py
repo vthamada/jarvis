@@ -66,6 +66,23 @@ def _evaluation_from_dict(payload: dict[str, object]) -> FlowEvaluationInput:
         duration_seconds=float(payload["duration_seconds"]),
         missing_required_events=list(payload.get("missing_required_events", [])),
         anomaly_flags=list(payload.get("anomaly_flags", [])),
+        continuity_action=(
+            str(payload["continuity_action"])
+            if payload.get("continuity_action") is not None
+            else None
+        ),
+        continuity_source=(
+            str(payload["continuity_source"])
+            if payload.get("continuity_source") is not None
+            else None
+        ),
+        continuity_trace_status=(
+            str(payload["continuity_trace_status"])
+            if payload.get("continuity_trace_status") is not None
+            else None
+        ),
+        missing_continuity_signals=list(payload.get("missing_continuity_signals", [])),
+        continuity_anomaly_flags=list(payload.get("continuity_anomaly_flags", [])),
     )
 
 
@@ -93,6 +110,11 @@ def build_payload(args: Namespace) -> dict[str, object]:
                 duration_seconds=audit.duration_seconds,
                 missing_required_events=audit.missing_required_events,
                 anomaly_flags=audit.anomaly_flags,
+                continuity_action=audit.continuity_action,
+                continuity_source=audit.continuity_source,
+                continuity_trace_status=audit.continuity_trace_status,
+                missing_continuity_signals=audit.missing_continuity_signals,
+                continuity_anomaly_flags=audit.continuity_anomaly_flags,
             ),
             target_scope="orchestrator-service",
         )

@@ -4,7 +4,7 @@
 
 - Atualizado em: 2026-03-22
 - Branch: `main`
-- Commit de referência: `102e365`
+- Commit de referência: `25599b7`
 - Artefato canônico do projeto: `documento_mestre_jarvis.md`
 - Estado do projeto: `v1` encerrado e congelado para uso controlado; `pós-v1` aberto de forma disciplinada
 
@@ -24,7 +24,8 @@ Estado do ciclo rolante:
 - Sprint 2 concluída;
 - Sprint 3 concluída;
 - Sprint 4 concluída;
-- Sprint 5 é a próxima frente ativa.
+- Sprint 5 concluída;
+- Sprint 6 é a próxima frente ativa.
 
 ## Decisões fechadas
 
@@ -92,13 +93,14 @@ Principais entregas já consolidadas:
 - Sprint 2 concluída, com ranking determinístico entre missão ativa, loops abertos e missão relacionada;
 - Sprint 3 concluída, com decisão explícita entre continuar, encerrar, reformular ou retomar continuidade relacionada;
 - Sprint 4 concluída, com snapshot persistente de continuidade da sessão e síntese orientada a continuidade acima da missão atual;
+- Sprint 5 concluída, com auditoria explícita da continuidade, sinais comparáveis no piloto e integração desses sinais ao laboratório sandbox;
 - Documento-Mestre ampliado com referências arquiteturais oficiais por função.
 
 ## O que ainda falta
 
 Pendências principais desta fase:
 
-- executar as Sprints 5 e 6 do ciclo rolante;
+- executar a Sprint 6 do ciclo rolante;
 - consolidar estudo externo curto sem bloquear a implementação principal;
 - decidir, ao final do ciclo, o que sobe para `v1.5` e o que fica para `v2`.
 
@@ -106,8 +108,8 @@ Pendências principais desta fase:
 
 Ordem recomendada:
 
-1. executar a Sprint 5;
-2. executar a Sprint 6;
+1. executar a Sprint 6;
+2. consolidar a evidência das Sprints 1 a 5;
 3. rodar estudo externo curto em paralelo;
 4. classificar cada achado como `absorver depois`, `usar como referência` ou `rejeitar`;
 5. fechar o corte entre `v1.5` e `v2` ao fim do ciclo.

@@ -74,9 +74,20 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     assert event_names == [event.event_name for event in result.events]
     assert "directive_composed" in event_names
     assert "plan_built" in event_names
+    assert "continuity_decided" in event_names
     assert "specialists_completed" in event_names
     assert "plan_refined" in event_names
     assert "plan_governed" in event_names
+    continuity_event = next(
+        event for event in stored_events if event.event_name == "continuity_decided"
+    )
+    response_event = next(
+        event for event in stored_events if event.event_name == "response_synthesized"
+    )
+    memory_event = next(event for event in stored_events if event.event_name == "memory_recorded")
+    assert continuity_event.payload["continuity_action"] == "continuar"
+    assert response_event.payload["continuity_action"] == "continuar"
+    assert memory_event.payload["continuity_mode"] == "continuar"
 
 
 def test_orchestrator_service_requests_clarification_without_operation() -> None:

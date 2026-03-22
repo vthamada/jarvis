@@ -75,6 +75,16 @@ def compare_results(
                 mismatch_fields.append("governance_decision")
             if baseline.operation_status != candidate.operation_status:
                 mismatch_fields.append("operation_status")
+            if baseline.continuity_action != candidate.continuity_action:
+                mismatch_fields.append("continuity_action")
+            if baseline.continuity_source != candidate.continuity_source:
+                mismatch_fields.append("continuity_source")
+            if baseline.continuity_trace_status != candidate.continuity_trace_status:
+                mismatch_fields.append("continuity_trace_status")
+            if baseline.missing_continuity_signals != candidate.missing_continuity_signals:
+                mismatch_fields.append("missing_continuity_signals")
+            if baseline.continuity_anomaly_flags != candidate.continuity_anomaly_flags:
+                mismatch_fields.append("continuity_anomaly_flags")
             if baseline.trace_status != candidate.trace_status:
                 mismatch_fields.append("trace_status")
             if baseline.missing_required_events != candidate.missing_required_events:
@@ -105,6 +115,9 @@ def render_text(payload: dict[str, object]) -> str:
                     f"scenario_id={item['scenario_id']}",
                     f"core_match={item['core_match']}",
                     f"mismatch_fields={','.join(item['mismatch_fields']) or 'none'}",
+                    f"baseline_continuity={item['baseline']['continuity_action'] or 'none'}",
+                    "candidate_continuity="
+                    f"{item['candidate']['continuity_action'] if item['candidate'] else 'n/a'}",
                     f"baseline_decision={item['baseline']['governance_decision']}",
                     "candidate_decision="
                     f"{item['candidate']['governance_decision'] if item['candidate'] else 'n/a'}",

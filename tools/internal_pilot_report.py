@@ -30,6 +30,11 @@ class PilotTraceSummary:
     event_names: list[str]
     missing_required_events: list[str]
     anomaly_flags: list[str]
+    continuity_action: str | None
+    continuity_source: str | None
+    continuity_trace_status: str
+    missing_continuity_signals: list[str]
+    continuity_anomaly_flags: list[str]
     trace_status: str
     governance_decision: str | None
     operation_status: str | None
@@ -81,6 +86,11 @@ def summarize_traces(
             event_names=audit.event_names,
             missing_required_events=audit.missing_required_events,
             anomaly_flags=audit.anomaly_flags,
+            continuity_action=audit.continuity_action,
+            continuity_source=audit.continuity_source,
+            continuity_trace_status=audit.continuity_trace_status,
+            missing_continuity_signals=audit.missing_continuity_signals,
+            continuity_anomaly_flags=audit.continuity_anomaly_flags,
             trace_status=_trace_status(audit),
             governance_decision=audit.governance_decision,
             operation_status=audit.operation_status,
@@ -102,9 +112,9 @@ def service_query(request_id: str):
 
 
 def _trace_status(audit) -> str:
-    if audit.anomaly_flags:
+    if audit.anomaly_flags or audit.continuity_anomaly_flags:
         return "attention_required"
-    if audit.missing_required_events:
+    if audit.missing_required_events or audit.missing_continuity_signals:
         return "incomplete"
     return "healthy"
 
@@ -122,6 +132,13 @@ def render_text(summaries: list[PilotTraceSummary]) -> str:
             f"operation_status={summary.operation_status} "
             f"missing_required_events={','.join(summary.missing_required_events) or 'none'} "
             f"anomaly_flags={','.join(summary.anomaly_flags) or 'none'} "
+            f"continuity_action={summary.continuity_action or 'none'} "
+            f"continuity_source={summary.continuity_source or 'none'} "
+            "missing_continuity_signals="
+            f"{','.join(summary.missing_continuity_signals) or 'none'} "
+            "continuity_anomaly_flags="
+            f"{','.join(summary.continuity_anomaly_flags) or 'none'} "
+            f"continuity_trace_status={summary.continuity_trace_status} "
             f"trace_status={summary.trace_status} "
             f"source_services={','.join(summary.source_services) or 'none'} "
             f"duration_seconds={summary.duration_seconds}"

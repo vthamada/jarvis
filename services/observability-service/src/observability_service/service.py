@@ -34,6 +34,7 @@ DEFAULT_REQUIRED_FLOW_EVENTS = (
     "intent_classified",
     "context_composed",
     "plan_built",
+    "continuity_decided",
     "governance_checked",
     "response_synthesized",
     "memory_recorded",
@@ -51,6 +52,13 @@ class FlowAudit:
     event_names: list[str]
     missing_required_events: list[str]
     anomaly_flags: list[str]
+    continuity_action: str | None
+    continuity_source: str | None
+    continuity_target_mission_id: str | None
+    continuity_target_goal: str | None
+    missing_continuity_signals: list[str]
+    continuity_anomaly_flags: list[str]
+    continuity_trace_status: str
     governance_decision: str | None
     operation_status: str | None
     duration_seconds: float
@@ -58,7 +66,12 @@ class FlowAudit:
 
     @property
     def trace_complete(self) -> bool:
-        return not self.missing_required_events and not self.anomaly_flags
+        return (
+            not self.missing_required_events
+            and not self.anomaly_flags
+            and not self.missing_continuity_signals
+            and not self.continuity_anomaly_flags
+        )
 
 
 @dataclass(frozen=True)
@@ -202,6 +215,13 @@ class ObservabilityService:
                 event_names=[],
                 missing_required_events=list(required_events),
                 anomaly_flags=["no_events_found"],
+                continuity_action=None,
+                continuity_source=None,
+                continuity_target_mission_id=None,
+                continuity_target_goal=None,
+                missing_continuity_signals=[],
+                continuity_anomaly_flags=[],
+                continuity_trace_status="attention_required",
                 governance_decision=None,
                 operation_status=None,
                 duration_seconds=0.0,
@@ -211,6 +231,9 @@ class ObservabilityService:
         event_names = [event.event_name for event in events]
         governance_event = self._first_event(events, "governance_checked")
         operation_event = self._first_event(events, "operation_completed")
+        continuity_event = self._first_event(events, "continuity_decided")
+        response_event = self._first_event(events, "response_synthesized")
+        memory_event = self._first_event(events, "memory_recorded")
         first_event = events[0]
         governance_decision = (
             str(governance_event.payload.get("decision")) if governance_event else None
@@ -218,10 +241,36 @@ class ObservabilityService:
         operation_status = (
             str(operation_event.payload.get("status")) if operation_event else None
         )
+        continuity_action = (
+            str(continuity_event.payload.get("continuity_action"))
+            if continuity_event
+            and continuity_event.payload.get("continuity_action") is not None
+            else None
+        )
+        continuity_source = (
+            str(continuity_event.payload.get("continuity_source"))
+            if continuity_event
+            and continuity_event.payload.get("continuity_source") is not None
+            else None
+        )
+        continuity_target_mission_id = (
+            str(continuity_event.payload.get("continuity_target_mission_id"))
+            if continuity_event
+            and continuity_event.payload.get("continuity_target_mission_id") is not None
+            else None
+        )
+        continuity_target_goal = (
+            str(continuity_event.payload.get("continuity_target_goal"))
+            if continuity_event
+            and continuity_event.payload.get("continuity_target_goal") is not None
+            else None
+        )
         anomaly_flags: list[str] = []
         missing_required_events = [
             event_name for event_name in required_events if event_name not in event_names
         ]
+        missing_continuity_signals: list[str] = []
+        continuity_anomaly_flags: list[str] = []
         if "error_raised" in event_names:
             anomaly_flags.append("error_raised_present")
         if governance_event is None:
@@ -243,6 +292,50 @@ class ObservabilityService:
         ):
             anomaly_flags.append("blocked_flow_missing_block_event")
 
+        if continuity_event is None:
+            missing_continuity_signals.append("continuity_decided")
+        else:
+            if continuity_action is None:
+                missing_continuity_signals.append("continuity_action")
+            if continuity_source is None:
+                missing_continuity_signals.append("continuity_source")
+        if response_event is None or response_event.payload.get("continuity_action") is None:
+            missing_continuity_signals.append("response_continuity_action")
+        if memory_event is None or memory_event.payload.get("continuity_mode") is None:
+            missing_continuity_signals.append("memory_continuity_mode")
+
+        response_continuity_action = (
+            str(response_event.payload.get("continuity_action"))
+            if response_event and response_event.payload.get("continuity_action") is not None
+            else None
+        )
+        memory_continuity_mode = (
+            str(memory_event.payload.get("continuity_mode"))
+            if memory_event and memory_event.payload.get("continuity_mode") is not None
+            else None
+        )
+        if (
+            continuity_action is not None
+            and response_continuity_action is not None
+            and response_continuity_action != continuity_action
+        ):
+            continuity_anomaly_flags.append("response_continuity_mismatch")
+        if (
+            continuity_action is not None
+            and memory_continuity_mode is not None
+            and memory_continuity_mode != continuity_action
+        ):
+            continuity_anomaly_flags.append("memory_continuity_mismatch")
+        if continuity_action == "retomar" and continuity_target_mission_id is None:
+            continuity_anomaly_flags.append("retomar_missing_target_mission")
+        if continuity_source == "related_mission" and continuity_target_mission_id is None:
+            continuity_anomaly_flags.append("related_source_missing_target_mission")
+
+        continuity_trace_status = self._continuity_trace_status(
+            missing_continuity_signals=missing_continuity_signals,
+            continuity_anomaly_flags=continuity_anomaly_flags,
+        )
+
         return FlowAudit(
             request_id=first_event.request_id,
             session_id=first_event.session_id,
@@ -251,6 +344,13 @@ class ObservabilityService:
             event_names=event_names,
             missing_required_events=missing_required_events,
             anomaly_flags=anomaly_flags,
+            continuity_action=continuity_action,
+            continuity_source=continuity_source,
+            continuity_target_mission_id=continuity_target_mission_id,
+            continuity_target_goal=continuity_target_goal,
+            missing_continuity_signals=missing_continuity_signals,
+            continuity_anomaly_flags=continuity_anomaly_flags,
+            continuity_trace_status=continuity_trace_status,
             governance_decision=governance_decision,
             operation_status=operation_status,
             duration_seconds=metrics.duration_seconds,
@@ -270,7 +370,9 @@ class ObservabilityService:
         flow_summary = (
             f"decision={audit.governance_decision or 'unknown'}; "
             f"events={audit.total_events}; duration_seconds={audit.duration_seconds}; "
-            f"operation_status={audit.operation_status or 'none'}"
+            f"operation_status={audit.operation_status or 'none'}; "
+            f"continuity_action={audit.continuity_action or 'none'}; "
+            f"continuity_status={audit.continuity_trace_status}"
         )
         return IncidentEvidence(
             request_id=audit.request_id,
@@ -318,6 +420,8 @@ class ObservabilityService:
             return "keep_contained_and_require_manual_review"
         if audit.anomaly_flags or audit.missing_required_events:
             return "contain_request_and_revert_to_last_validated_baseline"
+        if audit.continuity_anomaly_flags or audit.missing_continuity_signals:
+            return "review_continuity_trace_and_replay_with_last_consistent_context"
         return "no_immediate_incident_action_required"
 
     @staticmethod
@@ -329,6 +433,18 @@ class ObservabilityService:
             if event.event_name == event_name:
                 return event
         return None
+
+    @staticmethod
+    def _continuity_trace_status(
+        *,
+        missing_continuity_signals: list[str],
+        continuity_anomaly_flags: list[str],
+    ) -> str:
+        if continuity_anomaly_flags:
+            return "attention_required"
+        if missing_continuity_signals:
+            return "incomplete"
+        return "healthy"
 
     @staticmethod
     def _build_agentic_adapter() -> AgenticObservabilityAdapter | None:

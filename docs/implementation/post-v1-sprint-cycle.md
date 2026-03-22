@@ -25,7 +25,8 @@ Status desta versao do ciclo:
 - Sprint 2 concluida;
 - Sprint 3 concluida;
 - Sprint 4 concluida;
-- Sprint 5 passa a ser a proxima sprint ativa.
+- Sprint 5 concluida;
+- Sprint 6 passa a ser a proxima sprint ativa.
 
 ---
 
@@ -296,6 +297,10 @@ Resultado registrado nesta rodada:
 
 ## 8. Sprint 5
 
+Status:
+
+- concluida
+
 ### Objetivo
 
 Tornar a continuidade profunda observavel, comparavel e auditavel.
@@ -336,6 +341,13 @@ Tornar a continuidade profunda observavel, comparavel e auditavel.
 ### Risco de desvio arquitetural
 
 - auditar muito pouco ou auditar sem perguntas concretas.
+
+Resultado registrado nesta rodada:
+
+- `observability-service` passou a auditar explicitamente a trilha de continuidade;
+- o fluxo do orquestrador passou a registrar continuidade em recuperacao, sintese e memoria, nao apenas na decisao do plano;
+- `internal_pilot_report` e `compare_orchestrator_paths` passaram a comparar saude de continuidade em cenarios reais;
+- `evolution-lab` passou a usar sinais de continuidade como insumo para proposals e comparacoes `sandbox-only`.
 
 ---
 

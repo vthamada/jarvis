@@ -108,12 +108,18 @@ def test_evolution_lab_creates_proposal_from_flow_evaluation() -> None:
             duration_seconds=2.4,
             missing_required_events=["memory_recovered"],
             anomaly_flags=["operation_missing_completion"],
+            continuity_action="retomar",
+            continuity_source="related_mission",
+            continuity_trace_status="attention_required",
+            missing_continuity_signals=["memory_continuity_mode"],
+            continuity_anomaly_flags=["retomar_missing_target_mission"],
         ),
         target_scope="orchestrator-service",
     )
 
     assert proposal.proposal_type == "flow_evaluation_refinement"
     assert "observability://request/req-flow" in proposal.source_signals
+    assert "continuity://action/retomar" in proposal.source_signals
     assert proposal.risk_hint == "moderate"
 
 
@@ -142,6 +148,11 @@ def test_evolution_lab_compares_flow_evaluations() -> None:
             duration_seconds=3.2,
             missing_required_events=["memory_recovered"],
             anomaly_flags=["operation_missing_completion"],
+            continuity_action="retomar",
+            continuity_source="related_mission",
+            continuity_trace_status="attention_required",
+            missing_continuity_signals=["memory_continuity_mode"],
+            continuity_anomaly_flags=["retomar_missing_target_mission"],
         ),
         candidate=FlowEvaluationInput(
             request_id="req-b",
@@ -153,6 +164,9 @@ def test_evolution_lab_compares_flow_evaluations() -> None:
             duration_seconds=2.1,
             missing_required_events=[],
             anomaly_flags=[],
+            continuity_action="retomar",
+            continuity_source="related_mission",
+            continuity_trace_status="healthy",
         ),
         governance_refs=["policy://sandbox/manual-review"],
         notes=["pilot comparison"],
@@ -160,3 +174,4 @@ def test_evolution_lab_compares_flow_evaluations() -> None:
 
     assert comparison.decision.decision == "sandbox_candidate"
     assert comparison.metric_deltas["risk"] < 0
+    assert comparison.metric_deltas["continuity_health"] > 0

@@ -62,6 +62,9 @@ def test_internal_pilot_report_summarizes_recent_request() -> None:
     assert summaries[0].governance_decision == "allow_with_conditions"
     assert summaries[0].operation_status == "completed"
     assert "plan_built" in summaries[0].missing_required_events
+    assert "continuity_decided" in summaries[0].missing_required_events
+    assert "response_continuity_action" in summaries[0].missing_continuity_signals
+    assert summaries[0].continuity_trace_status == "incomplete"
     assert summaries[0].trace_status == "attention_required"
     assert summaries[0].anomaly_flags == [
         "operation_completed_without_dispatch",
@@ -85,6 +88,11 @@ def test_internal_pilot_report_renders_text() -> None:
                     "event_names": ["input_received"],
                     "missing_required_events": ["plan_built"],
                     "anomaly_flags": ["operation_missing_completion"],
+                    "continuity_action": "retomar",
+                    "continuity_source": "related_mission",
+                    "continuity_trace_status": "attention_required",
+                    "missing_continuity_signals": ["memory_continuity_mode"],
+                    "continuity_anomaly_flags": ["retomar_missing_target_mission"],
                     "trace_status": "attention_required",
                     "governance_decision": "allow",
                     "operation_status": "completed",
@@ -98,4 +106,6 @@ def test_internal_pilot_report_renders_text() -> None:
     assert "request_id=req-x" in rendered
     assert "missing_required_events=plan_built" in rendered
     assert "anomaly_flags=operation_missing_completion" in rendered
+    assert "continuity_action=retomar" in rendered
+    assert "continuity_anomaly_flags=retomar_missing_target_mission" in rendered
     assert "trace_status=attention_required" in rendered
