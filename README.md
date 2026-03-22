@@ -27,8 +27,8 @@ Leitura prática correta deste momento:
 
 - `v1` encerrado e congelado para uso controlado;
 - `pós-v1` aberto com foco total em continuidade profunda entre missões;
-- Sprint 1 concluída;
-- Sprint 2 aberta como próxima frente ativa do ciclo rolante.
+- Sprints 1 a 5 concluídas;
+- Sprint 6 aberta como próxima frente ativa do ciclo rolante.
 
 ## Estrutura principal
 

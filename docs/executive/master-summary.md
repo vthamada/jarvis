@@ -99,8 +99,8 @@ Leitura curta do momento:
 
 - o `v1` está encerrado e congelado para uso controlado;
 - a frente ativa agora é `continuidade profunda entre missões`;
-- Sprint 1 foi concluída;
-- Sprint 2 é a próxima frente ativa.
+- Sprints 1 a 5 já foram concluídas;
+- Sprint 6 é a próxima frente ativa.
 
 ---
 
@@ -120,7 +120,7 @@ O projeto deve evitar:
 
 O próximo passo executivo mais racional é:
 
-- executar a Sprint 2;
-- aprofundar recuperação e ranking de continuidade relacionada;
-- medir esse comportamento com observabilidade e evidência;
-- só depois decidir o que sobe para `v1.5` e o que fica para `v2`.
+- executar a Sprint 6;
+- consolidar a evidência funcional e operacional do primeiro ciclo;
+- decidir formalmente o que sobe para `v1.5` e o que fica para `v2`;
+- preparar a próxima versão do plano rolante sem reabrir o baseline do `v1`.

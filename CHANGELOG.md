@@ -17,6 +17,10 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 - `evolution-lab` e `tools/evolution_from_pilot.py` passaram a tratar saúde de continuidade como sinal explícito de proposta e comparação sandbox-only;
 - adicionados testes de observabilidade, relatórios do piloto, comparação de paths, laboratório evolutivo e orquestração para travar a Sprint 5.
 
+### Sincronização executiva pós-Sprint 5
+
+- atualizados `README.md` e `docs/executive/master-summary.md` para refletir corretamente que as Sprints 1 a 5 já foram concluídas e que a Sprint 6 passa a ser a frente ativa do ciclo.
+
 ### Execução das Sprints 2 e 3 do ciclo pós-v1
 
 - concluída a Sprint 2 com recuperação e ranking determinístico de continuidade relacionada;
