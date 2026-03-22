@@ -87,7 +87,9 @@ class SpecialistEngine:
         )
         if specialist_hint == "especialista_planejamento_operacional":
             open_loop = (
-                plan.goal if plan.continuity_action == "continuar" else "checkpoint_principal"
+                plan.goal
+                if plan.continuity_action in {"continuar", "retomar"}
+                else "checkpoint_principal"
             )
             return SpecialistContributionContract(
                 specialist_type=specialist_hint,

@@ -202,6 +202,25 @@ class OrchestratorService:
                     "dominant_tension": deliberative_plan.dominant_tension,
                     "smallest_safe_next_action": deliberative_plan.smallest_safe_next_action,
                     "continuity_action": deliberative_plan.continuity_action,
+                    "continuity_source": deliberative_plan.continuity_source,
+                    "continuity_reason": deliberative_plan.continuity_reason,
+                },
+            )
+        )
+        events.append(
+            self.make_event(
+                "continuity_decided",
+                contract,
+                {
+                    "continuity_action": deliberative_plan.continuity_action,
+                    "continuity_source": deliberative_plan.continuity_source,
+                    "continuity_target_mission_id": (
+                        str(deliberative_plan.continuity_target_mission_id)
+                        if deliberative_plan.continuity_target_mission_id
+                        else None
+                    ),
+                    "continuity_target_goal": deliberative_plan.continuity_target_goal,
+                    "continuity_reason": deliberative_plan.continuity_reason,
                 },
             )
         )

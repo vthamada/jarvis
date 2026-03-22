@@ -76,16 +76,31 @@ class SynthesisEngine:
                 "o pedido atual tensiona a missao ativa e a governanca exige conter "
                 "o desvio antes de reformular o objetivo"
             )
+            recommendation = synthesis_input.governance_decision.justification
+        elif plan and plan.continuity_action == "retomar" and plan.continuity_target_goal:
+            judgment = (
+                "a retomada explicita de continuidade relacionada exige validacao "
+                "antes de disputar direcao com a missao ativa"
+            )
+            recommendation = (
+                "explicitar por que a missao relacionada "
+                f"'{plan.continuity_target_goal}' deve ser retomada agora"
+            )
         else:
             judgment = (
                 "a governanca atual exige conter a acao para preservar coerencia e "
                 "seguranca"
             )
-        return (
+            recommendation = synthesis_input.governance_decision.justification
+        response = (
             f"Leitura do objetivo: {goal_line}. "
             f"Julgamento: {judgment}. "
-            f"Recomendacao: {synthesis_input.governance_decision.justification}"
+            f"Recomendacao: {recommendation}"
         )
+        limitation = self._limitation_line(synthesis_input)
+        if limitation:
+            response = f"{response}. Limite atual: {limitation}"
+        return response
 
     @staticmethod
     def _goal_line(synthesis_input: SynthesisInput) -> str:
@@ -105,6 +120,11 @@ class SynthesisEngine:
             return (
                 "o pedido atual permite fechar o loop principal da missao: "
                 f"{plan.open_loops[0]}"
+            )
+        if plan.continuity_action == "retomar" and plan.continuity_target_goal:
+            return (
+                "o pedido atual pede retomada explicita de continuidade relacionada em "
+                f"{plan.continuity_target_goal}"
             )
         if plan.continuity_action == "continuar" and plan.open_loops:
             base = arbitration or plan.rationale.split(";", maxsplit=1)[0]
@@ -128,6 +148,11 @@ class SynthesisEngine:
                 next_action = "explicitar se o novo pedido substitui ou adia a missao ativa"
         elif plan.continuity_action == "encerrar" and loop_focus:
             next_action = f"fechar {loop_focus} com criterio explicito"
+        elif plan.continuity_action == "retomar" and plan.continuity_target_goal:
+            next_action = (
+                "explicitar por que a missao relacionada "
+                f"'{plan.continuity_target_goal}' deve ser retomada agora"
+            )
         elif plan.continuity_action == "continuar" and loop_focus:
             next_action = f"retomar {loop_focus} antes de abrir novo escopo"
         elif plan.smallest_safe_next_action:
@@ -144,6 +169,10 @@ class SynthesisEngine:
         if plan.continuity_action == "reformular" and plan.open_loops:
             limits.append(
                 "a missao ativa ainda tem loop aberto e nao pode ser desviada em silencio"
+            )
+        if plan.continuity_action == "retomar" and plan.open_loops:
+            limits.append(
+                "a retomada relacionada precisa justificar por que supera os loops ativos"
             )
         if synthesis_input.governance_decision.conditions:
             limits.append(synthesis_input.governance_decision.conditions[0])

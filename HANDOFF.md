@@ -4,7 +4,7 @@
 
 - Atualizado em: 2026-03-22
 - Branch: `main`
-- Commit de referência: `ac5d4d4`
+- Commit de referência: `102e365`
 - Artefato canônico do projeto: `documento_mestre_jarvis.md`
 - Estado do projeto: `v1` encerrado e congelado para uso controlado; `pós-v1` aberto de forma disciplinada
 
@@ -21,7 +21,9 @@ Sistema oficial de planejamento desta fase:
 Estado do ciclo rolante:
 
 - Sprint 1 concluída;
-- Sprint 2 é a próxima frente ativa.
+- Sprint 2 concluída;
+- Sprint 3 concluída;
+- Sprint 4 é a próxima frente ativa.
 
 ## Decisões fechadas
 
@@ -86,14 +88,15 @@ Principais entregas já consolidadas:
 - `internal pilot` executado e convertido em evidência operacional;
 - fluxo opcional de `LangGraph` aberto no orquestrador;
 - Sprint 1 do `pós-v1` concluída, com modelo mínimo de continuidade entre missões relacionadas;
+- Sprint 2 concluída, com ranking determinístico entre missão ativa, loops abertos e missão relacionada;
+- Sprint 3 concluída, com decisão explícita entre continuar, encerrar, reformular ou retomar continuidade relacionada;
 - Documento-Mestre ampliado com referências arquiteturais oficiais por função.
 
 ## O que ainda falta
 
 Pendências principais desta fase:
 
-- executar a Sprint 2 para recuperar e rankear continuidade relacionada de forma mais previsível;
-- executar as Sprints 3 a 6 do ciclo rolante;
+- executar as Sprints 4 a 6 do ciclo rolante;
 - consolidar estudo externo curto sem bloquear a implementação principal;
 - decidir, ao final do ciclo, o que sobe para `v1.5` e o que fica para `v2`.
 
@@ -101,8 +104,8 @@ Pendências principais desta fase:
 
 Ordem recomendada:
 
-1. executar a Sprint 2;
-2. executar a Sprint 3;
+1. executar a Sprint 4;
+2. executar a Sprint 5;
 3. rodar estudo externo curto em paralelo;
 4. classificar cada achado como `absorver depois`, `usar como referência` ou `rejeitar`;
 5. fechar o corte entre `v1.5` e `v2` ao fim do ciclo.

@@ -223,11 +223,14 @@ def test_orchestrator_service_surfaces_related_mission_candidate_in_same_session
     )
 
     assert result.deliberative_plan.continuity_source == "related_mission"
+    assert result.deliberative_plan.continuity_action == "retomar"
+    assert result.deliberative_plan.continuity_reason is not None
     assert any(item == "related_mission_id=mission-a" for item in result.recovered_context)
     assert any(
         item == "continuity_recommendation=retomar_missao_relacionada"
         for item in result.recovered_context
     )
+    assert "continuity_decided" in [event.event_name for event in result.events]
     assert "missao_relacionada=Plan milestone M3 rollout." in result.deliberative_plan.rationale
 
 
@@ -274,6 +277,49 @@ def test_orchestrator_service_reformulates_conflicting_request_in_active_mission
     assert result.operation_result is None
     assert "tensiona a missao ativa" in result.response_text
     assert "plan_governed" in [event.event_name for event in result.events]
+
+
+def test_orchestrator_service_closes_active_loop_explicitly() -> None:
+    temp_dir = runtime_dir("orchestrator-close")
+    memory_db = f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+    observability_db = str(temp_dir / "observability.db")
+    artifact_dir = str(temp_dir / "artifacts")
+    first = OrchestratorService(
+        memory_service=MemoryService(database_url=memory_db),
+        operational_service=OperationalService(artifact_dir=artifact_dir),
+        observability_service=ObservabilityService(database_path=observability_db),
+    )
+    second = OrchestratorService(
+        memory_service=MemoryService(database_url=memory_db),
+        operational_service=OperationalService(artifact_dir=artifact_dir),
+        observability_service=ObservabilityService(database_path=observability_db),
+    )
+    first.handle_input(
+        InputContract(
+            request_id=RequestId("req-close-1"),
+            session_id=SessionId("sess-close"),
+            mission_id=MissionId("mission-close"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Please plan the sprint.",
+            timestamp="2026-03-17T00:00:00Z",
+        )
+    )
+    result = second.handle_input(
+        InputContract(
+            request_id=RequestId("req-close-2"),
+            session_id=SessionId("sess-close"),
+            mission_id=MissionId("mission-close"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Encerrar checkpoint principal da sprint.",
+            timestamp="2026-03-17T00:01:00Z",
+        )
+    )
+    assert result.deliberative_plan.continuity_action == "encerrar"
+    assert result.deliberative_plan.steps[0].startswith("fechar explicitamente o loop principal")
+    assert "continuity_decided" in [event.event_name for event in result.events]
+    assert "fechar o loop principal da missao" in result.response_text
 def test_orchestrator_service_preserves_mission_state_after_blocked_followup() -> None:
     temp_dir = runtime_dir("orchestrator-blocked-mission")
     memory_db = f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"

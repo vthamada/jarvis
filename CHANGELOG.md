@@ -8,6 +8,16 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 
 ## 2026-03-22
 
+### Execução das Sprints 2 e 3 do ciclo pós-v1
+
+- concluída a Sprint 2 com recuperação e ranking determinístico de continuidade relacionada;
+- `memory-service` passou a decidir de forma reproduzível entre missão ativa, loops abertos e missão relacionada, com recomendação explícita de continuidade;
+- `planning-engine` passou a distinguir explicitamente `continuar`, `encerrar`, `reformular` e `retomar`, incluindo motivo de continuidade no plano deliberativo;
+- `orchestrator-service` passou a registrar o evento `continuity_decided`, tornando a escolha de continuidade observável por `request_id`;
+- `governance-service` passou a deferir retomada relacionada quando ela disputa direção com loops ainda abertos da missão ativa;
+- `synthesis-engine` passou a refletir a retomada relacionada também no caminho governado, sem esconder a decisão no texto final;
+- removido `POC` da nomenclatura técnica da trilha opcional de `LangGraph`, com rename para `langgraph_flow.py`, `LangGraphFlowRunner` e `handle_input_langgraph_flow()`.
+
 ### Refinamento do fluxo de análise e incorporação tecnológica
 
 - ampliado `docs/architecture/technology-study.md` com perguntas mínimas obrigatórias de estudo, fluxo oficial de incorporação, formas corretas de entrada no sistema e relação explícita com programa, sprint cycle e handoff;

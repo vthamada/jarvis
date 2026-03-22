@@ -140,9 +140,16 @@ class GovernanceService:
             containment_hint = "block_direct_execution"
         elif self._should_defer(governance_check, proposed_effect, open_loops, continuity_hint):
             decision = PermissionDecision.DEFER_FOR_VALIDATION
-            justification = (
-                "O plano atual tenta ampliar ou reformular o escopo com loop critico ainda aberto."
-            )
+            if continuity_hint == "retomada_relacionada":
+                justification = (
+                    "A retomada relacionada disputa direcao com loop ainda aberto e exige "
+                    "validacao explicita."
+                )
+            else:
+                justification = (
+                    "O plano atual tenta ampliar ou reformular o escopo com "
+                    "loop critico ainda aberto."
+                )
             conditions = [
                 "Manter apenas analise e rastreabilidade ate revisao explicita.",
                 "Nao ampliar objetivo enquanto houver loop aberto relevante.",
@@ -224,6 +231,8 @@ class GovernanceService:
             return None
         if plan.continuity_action == "reformular":
             return "reformulacao_de_objetivo"
+        if plan.continuity_action == "retomar":
+            return "retomada_relacionada"
         if plan.continuity_action == "continuar":
             return "continuidade_coerente"
         if plan.continuity_action == "encerrar":
@@ -240,6 +249,8 @@ class GovernanceService:
         if governance_check.requires_human_validation:
             return True
         if proposed_effect == "external_or_sensitive_change":
+            return True
+        if continuity_hint == "retomada_relacionada" and bool(open_loops):
             return True
         if continuity_hint == "reformulacao_de_objetivo" and bool(open_loops):
             return True

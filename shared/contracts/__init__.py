@@ -97,6 +97,7 @@ class DeliberativePlanContract:
     dominant_tension: str | None = None
     smallest_safe_next_action: str | None = None
     continuity_action: str | None = None
+    continuity_reason: str | None = None
     open_loops: list[str] = field(default_factory=list)
     continuity_source: str | None = None
     continuity_target_mission_id: MissionId | None = None

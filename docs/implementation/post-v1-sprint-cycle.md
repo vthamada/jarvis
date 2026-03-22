@@ -22,7 +22,9 @@ Fontes de direcao:
 Status desta versao do ciclo:
 
 - Sprint 1 concluida;
-- Sprint 2 passa a ser a proxima sprint ativa.
+- Sprint 2 concluida;
+- Sprint 3 concluida;
+- Sprint 4 passa a ser a proxima sprint ativa.
 
 ---
 
@@ -124,6 +126,10 @@ Resultado registrado nesta rodada:
 
 ## 5. Sprint 2
 
+Status:
+
+- concluida
+
 ### Objetivo
 
 Recuperar e rankear continuidade relacionada de forma previsivel.
@@ -164,9 +170,19 @@ Recuperar e rankear continuidade relacionada de forma previsivel.
 
 - recuperar contexto demais e diluir a intencao da missao atual.
 
+Resultado registrado nesta rodada:
+
+- `memory-service` passou a recuperar candidatas relacionadas com ordenacao deterministica;
+- o ranking de continuidade agora diferencia missao ativa, loops abertos e missao relacionada;
+- `planning-engine` e `orchestrator-service` passaram a receber recomendacao explicita de continuidade a partir da memoria.
+
 ---
 
 ## 6. Sprint 3
+
+Status:
+
+- concluida
 
 ### Objetivo
 
@@ -210,6 +226,14 @@ reformular ou retomar contexto relacionado.
 ### Risco de desvio arquitetural
 
 - esconder a decisao em sintese final sem lastro no planejamento.
+
+Resultado registrado nesta rodada:
+
+- `planning-engine` passou a decidir explicitamente entre `continuar`, `encerrar`, `reformular` e `retomar`;
+- o plano deliberativo agora carrega `continuity_reason` e a decisao de continuidade deixa rastro legivel;
+- `orchestrator-service` passou a emitir `continuity_decided` por `request_id`;
+- `governance-service` endureceu a leitura de retomada relacionada quando ainda ha loop critico aberto;
+- `synthesis-engine` passou a refletir a decisao de continuidade tambem no caminho governado.
 
 ---
 

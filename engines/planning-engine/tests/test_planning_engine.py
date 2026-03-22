@@ -92,12 +92,15 @@ def test_planning_engine_marks_related_continuity_source_when_candidate_is_prese
             ),
         )
     )
-    assert plan.continuity_action == "continuar"
+    assert plan.continuity_action == "retomar"
     assert plan.continuity_source == "related_mission"
     assert plan.continuity_target_mission_id == "mission-a"
     assert plan.continuity_target_goal == "Plan milestone M3 rollout."
+    assert plan.steps[0] == "retomar explicitamente a missao relacionada antes de abrir novo escopo"
+    assert plan.continuity_reason is not None
     assert "missao_relacionada=Plan milestone M3 rollout." in plan.rationale
     assert "prioridade_relacionada=0.80" in plan.rationale
+    assert "motivo_continuidade=missao relacionada mission-a venceu o ranking" in plan.rationale
     assert "ranking_continuidade=missao relacionada mission-a venceu o ranking" in plan.rationale
 
 
@@ -147,6 +150,42 @@ def test_planning_engine_reformulates_when_new_request_conflicts_with_active_mis
     assert (
         "conflito_missao=pedido atual desloca o foco da missao ativa 'Plan milestone M3'"
         in plan.rationale
+    )
+
+
+def test_planning_engine_closes_active_loop_explicitly() -> None:
+    engine = PlanningEngine()
+    plan = engine.build_task_plan(
+        PlanningContext(
+            intent="planning",
+            query="Encerrar checkpoint principal da sprint.",
+            recovered_context=[
+                "identity_continuity_brief=objetivo=Plan milestone M3; prioridade=checkpoint",
+                "open_loops=checkpoint principal;alinhar aprovacao final",
+                "mission_goal=Plan milestone M3",
+            ],
+            active_domains=["strategy"],
+            active_minds=["mente_executiva"],
+            knowledge_snippets=["Feche loops explicitamente antes de abrir nova frente."],
+            risk_markers=[],
+            requires_clarification=False,
+            preferred_response_mode="plan_and_operate",
+            cognitive_rationale="intent=planning; mente_primaria=mente_executiva",
+            dominant_goal="fechar o ciclo atual com clareza",
+            identity_mode="structured_planning",
+            open_loops=["checkpoint principal", "alinhar aprovacao final"],
+            mission_goal="Plan milestone M3",
+        )
+    )
+    assert plan.continuity_action == "encerrar"
+    assert plan.steps[0] == "fechar explicitamente o loop principal: checkpoint principal"
+    assert (
+        plan.continuity_reason
+        == "pedido explicita fechamento do loop principal checkpoint principal"
+    )
+    assert (
+        plan.smallest_safe_next_action
+        == "fechar checkpoint principal com criterio explicito"
     )
 
 

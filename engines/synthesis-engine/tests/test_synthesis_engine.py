@@ -31,6 +31,10 @@ def sample_plan() -> DeliberativePlanContract:
         dominant_tension="equilibrar ambicao estrategica com a menor proxima acao segura",
         smallest_safe_next_action="retomar alinhar checkpoint principal antes de abrir novo escopo",
         continuity_action="continuar",
+        continuity_reason=(
+            "existem loops ativos que mantem a missao atual ancorada em "
+            "alinhar checkpoint principal"
+        ),
         open_loops=["alinhar checkpoint principal"],
     )
 
@@ -138,3 +142,43 @@ def test_synthesis_engine_blocks_when_governance_blocks() -> None:
     )
     assert "Leitura do objetivo" in response
     assert "a governanca atual exige conter a acao" in response
+
+
+def test_synthesis_engine_surfaces_related_resumption_cleanly() -> None:
+    engine = SynthesisEngine()
+    identity = IdentityEngine().get_profile()
+    resumed_plan = sample_plan()
+    resumed_plan.continuity_action = "retomar"
+    resumed_plan.continuity_reason = "missao relacionada venceu o ranking de continuidade"
+    resumed_plan.continuity_source = "related_mission"
+    resumed_plan.continuity_target_mission_id = "mission-a"
+    resumed_plan.continuity_target_goal = "Analyze rollout risks."
+    resumed_plan.open_loops = ["alinhar checkpoint principal"]
+    response = engine.compose(
+        SynthesisInput(
+            intent="analysis",
+            identity_profile=identity,
+            response_style="estruturado",
+            governance_decision=GovernanceDecisionContract(
+                decision_id=GovernanceDecisionId("decision-4"),
+                governance_check_id=GovernanceCheckId("check-4"),
+                risk_level=RiskLevel.MODERATE,
+                decision=PermissionDecision.DEFER_FOR_VALIDATION,
+                justification="validar disputa de direcao antes de retomar",
+                timestamp="2026-03-18T00:00:00Z",
+                conditions=["manter apenas analise e rastreabilidade ate revisao explicita"],
+            ),
+            recovered_context=["context_summary=related continuity available"],
+            active_minds=["mente_analitica"],
+            active_domains=["analysis"],
+            knowledge_snippets=["Retome continuidade relacionada sem parecer deriva arbitraria."],
+            deliberative_plan=resumed_plan,
+            specialist_contributions=[],
+            operation_result=None,
+            identity_mode="deep_analysis",
+            arbitration_summary="mente_analitica lidera com foco em continuidade relacionada",
+        )
+    )
+    assert "retomada explicita de continuidade relacionada" in response
+    assert "missao relacionada 'Analyze rollout risks.' deve ser retomada agora" in response
+    assert "retomada relacionada precisa justificar por que supera os loops ativos" in response

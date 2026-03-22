@@ -129,6 +129,47 @@ def test_governance_service_defers_when_reframing_goal_with_open_loop() -> None:
     assert result.governance_decision.requires_rollback_plan is True
 
 
+def test_governance_service_defers_when_related_resumption_competes_with_open_loop() -> None:
+    service = GovernanceService()
+    plan = DeliberativePlanContract(
+        plan_summary="retomar continuidade relacionada com impacto em missao ativa",
+        goal="Retomar analise relacionada.",
+        steps=["retomar missao relacionada", "comparar impacto com loop ativo"],
+        active_domains=["analysis"],
+        active_minds=["mente_analitica"],
+        constraints=["revisao humana"],
+        risks=["retomada relacionada pode competir com loops ainda abertos da missao ativa"],
+        recommended_task_type="produce_analysis_brief",
+        requires_human_validation=True,
+        rationale="contexto=nenhum; apoio=baseline local",
+        success_criteria=["retomada deve parecer continuidade intencional"],
+        dominant_tension="equilibrar loops ativos com a retomada de uma missao relacionada",
+        smallest_safe_next_action="explicitar por que a missao relacionada deve ser retomada agora",
+        continuity_action="retomar",
+        continuity_reason="missao relacionada venceu o ranking de continuidade",
+        continuity_source="related_mission",
+        continuity_target_mission_id="mission-related",
+        continuity_target_goal="Analyze rollout risks.",
+        open_loops=["release anterior ainda aberta"],
+    )
+    result = service.assess_request(
+        InputContract(
+            request_id=RequestId("req-3b"),
+            session_id=SessionId("sess-3b"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Continue the related risk analysis.",
+            timestamp="2026-03-17T00:00:00Z",
+        ),
+        intent="analysis",
+        requested_by_service="orchestrator-service",
+        plan=plan,
+    )
+    assert result.governance_check.mission_continuity_hint == "retomada_relacionada"
+    assert result.governance_decision.decision == PermissionDecision.DEFER_FOR_VALIDATION
+    assert result.governance_decision.requires_rollback_plan is True
+
+
 def test_governance_service_blocks_sensitive_action() -> None:
     service = GovernanceService()
     result = service.assess_request(
