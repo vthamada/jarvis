@@ -1,9 +1,11 @@
 # orchestrator-service
 
-Serviço central de orquestracao do fluxo do JARVIS.
+Servico central de orquestracao do fluxo do JARVIS.
 
-Responsabilidades iniciais:
+Responsabilidades atuais:
 
 - receber entradas normalizadas;
-- acionar memória, governança e operação;
-- coordenar a síntese final.
+- acionar memoria, governanca, conhecimento, observabilidade e operacao;
+- coordenar a sintese final;
+- sustentar a linha central de comportamento percebido;
+- integrar sinais de continuidade entre missoes sem quebrar a API publica do baseline.

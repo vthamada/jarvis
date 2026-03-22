@@ -2,15 +2,15 @@
 
 ## 1. Objetivo
 
-Este documento organiza a decomposicao inicial dos principais serviços do JARVIS para orientar implementacao.
+Este documento organiza a decomposição dos principais serviços do JARVIS para orientar implementação e leitura técnica.
 
-Ele não redefine a arquitetura. Ele a traduz para um mapa técnico mais executável.
+Ele não redefine a arquitetura. Ele a traduz para um mapa técnico executável e coerente com o estado atual do repositório.
 
 ---
 
-## 2. Serviços centrais do primeiro corte
+## 2. Serviços centrais ativos
 
-Os serviços centrais do primeiro corte sóo:
+Os serviços centrais do baseline atual são:
 
 - `orchestrator-service`
 - `memory-service`
@@ -23,103 +23,100 @@ Os serviços centrais do primeiro corte sóo:
 
 ## 3. Função resumida por serviço
 
-### 3.1 orchestrator-service
+### 3.1 `orchestrator-service`
 
-Responsavel por:
+Responsável por:
 
 - receber entradas normalizadas;
 - coordenar fluxo entre memória, cognição, governança, conhecimento, observabilidade e operação;
-- produzir síntese final.
+- decidir continuidade, incluindo missão ativa e missão relacionada;
+- produzir a síntese final.
 
-### 3.2 memory-service
+### 3.2 `memory-service`
 
-Responsavel por:
+Responsável por:
 
-- recuperar contexto util;
-- registrar episodios;
+- recuperar contexto útil;
+- registrar episódios;
 - persistir continuidade de sessão;
 - manter estado mínimo de missão;
-- proteger memória crítica;
-- sustentar continuidade de sessão e missão.
+- sustentar continuidade relacionada acima da missão atual;
+- proteger memória crítica.
 
-### 3.3 governance-service
+### 3.3 `governance-service`
 
-Responsavel por:
+Responsável por:
 
 - classificar risco;
 - permitir, condicionar, bloquear ou adiar ação;
 - proteger memória crítica;
 - registrar decisão e auditoria.
 
-### 3.4 operational-service
+### 3.4 `operational-service`
 
-Responsavel por:
+Responsável por:
 
-- executar tasks autorizadas;
+- executar tarefas autorizadas;
 - produzir artefatos textuais;
 - devolver resultado estruturado ao núcleo.
 
-### 3.5 knowledge-service
+### 3.5 `knowledge-service`
 
-Responsavel por:
+Responsável por:
 
-- registrar dominios;
-- manter corpus local inicial;
+- registrar domínios;
+- manter corpus curado local;
 - realizar retrieval determinístico;
-- apoiar profundidade semântica do núcleo.
+- apoiar profundidade semântica do núcleo sem reabrir o baseline do `v1`.
 
-### 3.6 observability-service
+### 3.6 `observability-service`
 
-Responsavel por:
+Responsável por:
 
-- logs estruturados;
-- persistencia da trilha de eventos;
-- correlação entre fluxo, decisão, memória e operação;
-- exportacao de trace view;
-- espelhamento agentic opcional.
-
----
-
-## 3.7 Atualização do baseline em 2026-03-20
-
-Leitura funcional mais precisa dos serviços no baseline atual:
-
-- `orchestrator-service`: coordena não só o fluxo técnico, mas também a linha central de comportamento percebido;
-- `memory-service`: já sustenta continuidade mais útil entre sessão e missão, incluindo sinais semânticos e deliberativos;
-- `governance-service`: avalia intenção, plano e continuidade, e não só o texto bruto do pedido;
-- `operational-service`: continua restrito a baixo risco, mas agora recebe melhor contexto deliberativo;
-- `observability-service`: além da trilha persistida, já audita requests e resume sinais do piloto.
+- persistir a trilha de eventos;
+- correlacionar request, sessão, missão e operação;
+- auditar fluxo recente;
+- exportar trace view;
+- espelhar traces para camada agentic complementar quando configurado.
 
 ---
 
-## 4. Ordem sugerida de maturacao
+## 4. Leitura prática do baseline
 
-Ordem prática historica:
-
-1. `orchestrator-service`
-2. `memory-service`
-3. `governance-service`
-4. `operational-service`
-5. `knowledge-service`
-6. `observability-service`
-
-Leitura prática atual:
+Estado funcional atual:
 
 - `orchestrator-service`: baseline integrado ativo
-- `memory-service`: persistencia util ativa, com `PostgreSQL` validado como backend operacional do `v1` e `sqlite` mantido como fallback local
+- `memory-service`: persistência útil ativa, com `PostgreSQL` como backend operacional oficial e `sqlite` como fallback local
 - `governance-service`: baseline robusto inicial ativo
 - `operational-service`: operação de baixo risco ativa
-- `knowledge-service`: retrieval inicial ativo, com ranking ponderado já absorvido ao baseline
-- `observability-service`: ingestao, consulta, exportacao de trace view e espelhamento agentic inicial ativos para o `v1`
+- `knowledge-service`: retrieval inicial ativo, com ranking ponderado absorvido ao baseline
+- `observability-service`: ingestão, consulta, auditoria e espelhamento agentic complementar ativos
 
 ---
 
-## 5. Regra de implementacao
+## 5. Relação com o pós-v1
 
-Nenhum serviço deve nascer como centro soberano do sistema alem do núcleo de orquestracao.
+No ciclo atual do `pós-v1`, os serviços mais sensíveis são:
+
+1. `memory-service`
+2. `orchestrator-service`
+3. `planning-engine`
+4. `observability-service`
+
+Motivo:
+
+- a trilha ativa do ciclo é `continuidade profunda entre missões`;
+- essa trilha exige recuperação, ranking, decisão e evidência, não expansão ampla de superfície.
+
+---
+
+## 6. Regra de implementação
+
+Nenhum serviço deve nascer como centro soberano do sistema além do núcleo de orquestração.
 
 Todos os demais devem:
 
 - expor contratos claros;
 - operar com rastreabilidade;
-- permanecer substituiveis em nivel razoavel.
+- permanecer substituíveis em nível razoável;
+- servir ao núcleo central, não competir com ele.

@@ -4538,7 +4538,7 @@ Seu papel é comparar opções relevantes e identificar candidatas fortes para a
 
 #### Base recomendada
 
-- **LangGraph** — forte candidato para workflow stateful, execução durável, checkpoints e coordenação de fluxos complexos.
+- **LangGraph** — referência central e forte candidato para a evolução do workflow stateful, com execução durável, checkpoints e coordenação de fluxos complexos.
 - **OpenAI Agents SDK** — forte candidato quando a necessidade for handoffs, tracing nativo e fluxo agentic mais enxuto.
 
 #### Opção complementar
@@ -4558,7 +4558,8 @@ Seu papel é comparar opções relevantes e identificar candidatas fortes para a
 
 #### Base recomendada
 
-- **PostgreSQL + pgvector**
+- **PostgreSQL**
+- **pgvector** como extensão vetorial aprovada arquiteturalmente, porém não obrigatória no baseline operacional atual
 - **Zep**
 - **Graphiti**
 
@@ -4641,6 +4642,10 @@ Seu papel é comparar opções relevantes e identificar candidatas fortes para a
 - **Darwin Gödel Machine**
 - **AgentEvolver**
 - **EvoAgent / EvolveR e outros frameworks recentes de self-improving agents**
+- **TextGrad**
+- **DSPy / MIPROv2**
+- **AFlow**
+- **SEAL**
 
 #### Inspiração / laboratório
 
@@ -4689,8 +4694,9 @@ Seu papel é comparar opções relevantes e identificar candidatas fortes para a
 
 A recomendação preliminar mais forte para a fundação do JARVIS, neste estágio, é:
 
-- LangGraph no núcleo de orquestração;
-- PostgreSQL + pgvector como base de memória;
+- LangGraph como principal direção arquitetural para a evolução stateful do núcleo de orquestração;
+- PostgreSQL como base operacional de memória e persistência;
+- pgvector como extensão vetorial aprovada arquiteturalmente, porém deferida em relação ao baseline operacional atual;
 - núcleo próprio do JARVIS para cognição, memória, governança e evolução;
 - OpenHands como principal braço de engenharia;
 - LangSmith como base de observabilidade agentic;
@@ -4715,10 +4721,11 @@ Cada item é classificado em uma das quatro categorias finais:
 
 #### Adotar
 
-- LangGraph, como base principal de orquestração stateful, durable execution e coordenação de fluxos complexos.
+- nenhuma dependência externa deve substituir o núcleo central como base única de orquestração já consolidada do `v1`.
 
 #### Adaptar
 
+- LangGraph, como principal trajetória de absorção progressiva para durable execution, checkpoints, replay e coordenação stateful de fluxos complexos.
 - OpenAI Agents SDK, como camada complementar para handoffs, tools e tracing em partes específicas da arquitetura.
 - Google ADK, como alternativa ou complemento em cenários modulares e híbridos.
 - Microsoft Agent Framework, em cenários enterprise que exijam forte integração corporativa e telemetria.
@@ -4740,10 +4747,10 @@ Cada item é classificado em uma das quatro categorias finais:
 #### Adotar
 
 - PostgreSQL como espinha dorsal transacional e estruturada.
-- pgvector como extensão de busca vetorial no mesmo backbone persistente.
 
 #### Adaptar
 
+- pgvector, como extensão de busca vetorial do mesmo backbone persistente, a ser absorvida quando houver retrieval semântico canônico e benchmark suficiente.
 - Zep, como camada de memória contextual e episódica de alto nível.
 - Graphiti, como camada de memória temporal e relacional orientada a grafo.
 - LlamaIndex, como suporte à ingestão e recuperação de conhecimento documental.
@@ -4849,7 +4856,11 @@ Cada item é classificado em uma das quatro categorias finais:
 - EvoAgentX, como referência para evolução automatizada de workflows.
 - Darwin Gödel Machine, como referência para autoaperfeiçoamento empírico com validação comparativa.
 - AgentEvolver, como referência de self-questioning, self-navigating e self-attributing.
+- TextGrad, como benchmark de otimização textual offline para prompts, critérios e componentes avaliáveis.
+- DSPy / MIPROv2, como benchmark de otimização de programas LM orientada por métrica.
+- AFlow, como benchmark de otimização automatizada de workflows.
 - EvoAgent, EvolveR e demais frameworks recentes de self-improving agents.
+- SEAL, como referência de auto-adaptação persistente mais agressiva, mantida fora do baseline e tratada como laboratório avançado.
 
 #### Descartar por ora
 
@@ -4909,9 +4920,10 @@ A decisão estruturante mais consistente, neste estágio, é:
 
 #### Fundação recomendada
 
-- LangGraph como principal orquestrador stateful;
+- LangGraph como principal direção arquitetural para a evolução stateful da orquestração;
 - núcleo executivo, cognitivo, de governança, memória e evolução do JARVIS construídos de forma própria;
-- PostgreSQL + pgvector como backbone de persistência híbrida;
+- PostgreSQL como backbone operacional de persistência e memória;
+- pgvector como extensão vetorial deferida, aprovada para absorção futura quando houver necessidade canônica;
 - Zep e/ou Graphiti como camadas complementares de memória contextual e temporal;
 - OpenHands como principal braço de engenharia de software;
 - OpenCode como complemento de produtividade de desenvolvimento;
@@ -5017,7 +5029,7 @@ Seu papel é dizer **qual tipo de tecnologia sustenta cada camada do sistema**. 
 #### Recomendação principal
 
 - PostgreSQL como backbone de persistência estruturada;
-- pgvector como extensão vetorial integrada;
+- pgvector como extensão vetorial planejada, porém ainda não obrigatória no baseline operacional;
 - modelo próprio do JARVIS para estratificação das 11 memórias.
 
 #### Alternativas complementares
@@ -5105,7 +5117,8 @@ Seu papel é dizer **qual tipo de tecnologia sustenta cada camada do sistema**. 
 - Hermes Agent e Hermes Agent Self-Evolution;
 - EvoAgentX;
 - Darwin Gödel Machine;
-- AgentEvolver.
+- AgentEvolver;
+- SEAL.
 
 ---
 
@@ -5133,10 +5146,10 @@ Seu papel é dizer **qual tipo de tecnologia sustenta cada camada do sistema**. 
 A stack consolidada do JARVIS, nesta etapa do documento, pode ser resumida assim:
 
 - Interface própria do JARVIS, com chat e voz como canais prioritários;
-- LangGraph na orquestração;
+- camada própria do JARVIS na orquestração, compatível com LangGraph como direção principal de absorção stateful;
 - núcleo próprio na cognição;
 - OpenHands como principal especialista de software;
-- PostgreSQL + pgvector como base de memória;
+- PostgreSQL como base de memória, com pgvector deferido como extensão vetorial posterior;
 - indexação híbrida com apoio possível de LlamaIndex;
 - executor e orquestrador de ferramentas próprios;
 - governança própria;
@@ -7535,29 +7548,31 @@ Este capítulo funciona como um primeiro conjunto de ADRs conceituais do projeto
 
 ---
 
-## 154. ADR-012 — LangGraph será a base principal de orquestração
+## 154. ADR-012 — LangGraph será a principal direção de absorção da orquestração stateful
 
-**Decisão:** A principal base de orquestração stateful do JARVIS é LangGraph.
+**Decisão:** LangGraph é a principal direção arquitetural de absorção para a orquestração stateful do JARVIS, sem implicar que o runtime principal do `v1` já tenha sido integralmente migrado para ele.
 
 **Justificativa:** A necessidade de durable execution, checkpoints, fluxos stateful, human-in-the-loop e tarefas compostas longas se alinha fortemente com a proposta do framework.
 
 **Implicações:**
 
 - a orquestração inicial deve ser desenhada de forma compatível com grafo de estados;
-- a lógica do núcleo continuará própria, mesmo usando LangGraph como substrato técnico.
+- a lógica do núcleo continuará própria, mesmo usando LangGraph como substrato técnico;
+- a absorção pode ocorrer de forma progressiva, guiada por POCs e evidência operacional, sem bloquear o baseline já funcional.
 
 ---
 
-## 155. ADR-013 — PostgreSQL + pgvector será o backbone inicial de memória
+## 155. ADR-013 — PostgreSQL será o backbone inicial de memória, com pgvector como extensão posterior
 
-**Decisão:** O backbone inicial de persistência e memória híbrida será PostgreSQL com pgvector.
+**Decisão:** O backbone inicial de persistência e memória do JARVIS é PostgreSQL. `pgvector` permanece aprovado como extensão posterior do mesmo backbone, a ser absorvida quando houver necessidade semântica canônica e benchmark suficiente.
 
-**Justificativa:** Essa combinação permite unificar persistência estruturada, estados, eventos e recuperação vetorial em uma base madura e flexível.
+**Justificativa:** PostgreSQL já sustenta persistência estruturada, estados e eventos em uma base madura e flexível. `pgvector` continua sendo a evolução natural quando a camada semântica do sistema justificar a incorporação vetorial ao baseline.
 
 **Implicações:**
 
-- o modelo de memória será desenhado sobre essa base;
-- componentes adicionais de memória contextual/temporal poderão ser conectados acima dela.
+- o modelo de memória será desenhado sobre PostgreSQL;
+- a extensão vetorial permanece planejada, mas não obrigatória no baseline operacional atual;
+- componentes adicionais de memória contextual/temporal poderão ser conectados acima dessa base.
 
 ---
 
@@ -7688,8 +7703,8 @@ As decisões arquiteturais iniciais do JARVIS passam a ser oficialmente composta
 - autoevolução governada;
 - monorepo modular chamado **jarvis**;
 - base técnica híbrida com núcleo próprio e infraestrutura reaproveitada;
-- LangGraph como base principal de orquestração;
-- PostgreSQL + pgvector como backbone de memória;
+- LangGraph como principal direção arquitetural de absorção da orquestração stateful;
+- PostgreSQL como backbone operacional de memória, com pgvector deferido como extensão posterior;
 - OpenHands como principal braço especializado de software;
 - LangSmith como base principal de observabilidade agentic;
 - roadmap em v1, v2 e v3;
@@ -7934,7 +7949,7 @@ O Núcleo Central deve poder:
 - despachar tarefa operacional;
 - acompanhar status;
 - receber resultado estruturado;
-- decidir continuar, encerrar ou replanejar fluxo.
+- decidir continuar, encerrar, reformular ou retomar continuidade relacionada quando houver vínculo confiável com missão anterior.
 
 #### 166.5.6 Contrato com Observabilidade
 
@@ -8439,6 +8454,12 @@ Representa o conjunto de memórias atualmente relevantes para a sessão em andam
 
 Representa memórias vinculadas a projetos e objetivos persistentes em execução.
 
+Esse estado deve incluir, quando aplicável:
+
+- a missão atualmente ativa;
+- loops abertos ainda válidos;
+- vínculos de continuidade com missões relacionadas que possam ser retomadas sem diluir o objetivo principal em curso.
+
 #### 167.9.3 Estado de consolidação pendente
 
 Representa eventos, padrões ou conteúdos aguardando decisão sobre promoção ou arquivamento.
@@ -8470,6 +8491,14 @@ Memórias críticas devem ser tratadas com regras reforçadas e versionamento.
 #### 167.10.5 Integrar memória com missão
 
 Sessão sem missão gera curto prazo; memória sem missão gera acúmulo disperso. O serviço deve privilegiar contexto orientado a objetivo.
+
+Essa integração não deve considerar apenas a missão ativa. Quando houver sinais fortes de relação entre missões, o serviço deve conseguir distinguir:
+
+- a missão atual em execução;
+- a continuidade local de curto prazo;
+- a continuidade relacionada com missões anteriores ainda relevantes.
+
+O objetivo é permitir retomada útil sem transformar toda lembrança anterior em contexto indistinto.
 
 ---
 
@@ -10509,7 +10538,7 @@ A linguagem principal recomendada para o v1 do JARVIS é:
 ### 211.2 Serviço de Orquestração / Núcleo Central
 
 - Python
-- LangGraph
+- camada própria do JARVIS, compatível com LangGraph como trajetória de absorção progressiva
 - camada própria do JARVIS para identity/executive/cognitive/planning/synthesis engines
 - OpenAI Agents SDK apenas como complemento pontual quando útil
 
@@ -10517,14 +10546,14 @@ A linguagem principal recomendada para o v1 do JARVIS é:
 
 - Python
 - PostgreSQL
-- pgvector
+- pgvector apenas quando a camada semântica do baseline justificar sua absorção
 - camada própria de política das 11 memórias
 - Zep e/ou Graphiti como complementos opcionais
 
 ### 211.4 Serviço de Conhecimento e Recuperação
 
 - Python
-- indexação e retrieval sobre PostgreSQL + pgvector
+- indexação e retrieval inicialmente sobre corpus curado e PostgreSQL, com extensão vetorial futura quando necessária
 - LlamaIndex apenas como complemento opcional
 
 ### 211.5 Serviço Operacional
@@ -10574,8 +10603,8 @@ A stack final recomendada para o v1 do JARVIS é:
 
 - **Backend principal:** Python
 - **Frontend/interface:** TypeScript
-- **Orquestração:** LangGraph + camada própria do JARVIS
-- **Memória/persistência:** PostgreSQL + pgvector + política própria de memória
+- **Orquestração:** camada própria do JARVIS, compatível com LangGraph como principal direção de absorção stateful
+- **Memória/persistência:** PostgreSQL + política própria de memória, com `pgvector` deferido como extensão posterior
 - **Especialista de software:** OpenHands Software Agent SDK como principal referência de integração
 - **Observabilidade agentic:** LangSmith
 - **Voz em tempo real:** integração com stack realtime moderna compatível com speech-to-speech
@@ -10623,6 +10652,167 @@ Cada tecnologia passa a ser classificada em uma das seguintes classes:
 
 ---
 
+### 217.2 Camada explicita de referencias arquiteturais por funcao
+
+Esta matriz de posicionamento resolve **como** cada tecnologia entra na stack.
+
+Mas o JARVIS tambem precisa de uma segunda camada normativa, ortogonal a essa matriz, para responder **por que** uma referencia externa existe no projeto.
+
+A pergunta oficial passa a ser:
+
+**"Que parte do JARVIS essa arquitetura ou ferramenta nos ajuda a construir melhor?"**
+
+Com isso, toda referencia externa relevante deve ser lida em dois eixos ao mesmo tempo:
+
+1. **eixo de posicionamento na stack**  
+   base do sistema, complemento de producao, especialista subordinado, laboratorio evolutivo / benchmark ou inspiracao arquitetural;
+2. **eixo de funcao arquitetural**  
+   referencia central, referencia secundaria ou benchmark conceitual dentro de uma camada especifica do sistema.
+
+Essa separacao existe para evitar dois erros:
+
+- promover qualquer ferramenta forte a fundacao do sistema sem necessidade;
+- transformar o JARVIS em uma colagem de frameworks sem identidade propria.
+
+---
+
+### 217.3 Regras de uso das referencias externas
+
+As referencias externas devem obedecer as seguintes regras:
+
+1. nenhuma referencia externa substitui a identidade, a memoria canonica, a governanca ou a sintese final do JARVIS;
+2. referencias podem orientar uma camada, sem se tornarem o cerebro do sistema;
+3. especialistas subordinados nunca respondem ao usuario como entidade soberana;
+4. tools, runtimes e frameworks entram por funcao arquitetural clara, nao por moda, hype ou excesso de escopo;
+5. quando houver varias referencias fortes para a mesma camada, uma deve ser tratada como central, outra como secundaria e as demais como benchmark conceitual.
+
+---
+
+### 217.4 Referencias arquiteturais oficiais por funcao
+
+#### 217.4.1 Orquestracao de agentes
+
+- **Referencia central:** `LangGraph`
+- **Referencia secundaria:** `OpenAI Agents SDK`
+- **Benchmark conceitual:** `CrewAI`, `Microsoft Agent Framework`
+
+**Parte do JARVIS que essas referencias ajudam a construir melhor:**
+
+- handoffs internos;
+- coordenacao stateful;
+- checkpoints;
+- retomada de fluxo;
+- tracing de subfluxos;
+- execucao agentic com estado sem terceirizar a direcao do nucleo.
+
+**Regra:** o nucleo central do JARVIS continua sendo a entidade que fala com o usuario, arbitra especialistas e consolida a resposta final.
+
+**Observacao:** `AutoGen` continua relevante como referencia historica e conceitual de multiagentes, mas deixa de ocupar a primeira linha de benchmark moderno desta camada.
+
+---
+
+#### 217.4.2 Agente de software / desenvolvimento
+
+- **Referencia central:** `OpenHands Software Agent SDK`
+- **Referencia secundaria:** `OpenHands / Open Operator`
+- **Benchmark conceitual:** `OpenCode`
+
+**Parte do JARVIS que essas referencias ajudam a construir melhor:**
+
+- especialista subordinado de software;
+- leitura e edicao de repositorios;
+- execucao de testes;
+- automacao tecnica em ambiente controlado;
+- workflows de engenharia mais profundos.
+
+**Regra:** esse braco existe como especialista subordinado do nucleo, nao como identidade paralela ao JARVIS.
+
+---
+
+#### 217.4.3 Computer use / operacao do computador
+
+- **Referencia central:** `browser-use`
+- **Referencia secundaria:** `Open Interpreter`
+- **Benchmark conceitual:** `Claude Computer Use`
+
+**Parte do JARVIS que essas referencias ajudam a construir melhor:**
+
+- operacao de navegador;
+- manipulacao de arquivos e formularios sem API;
+- uso governado de shell, desktop e interfaces humanas;
+- execucao operacional sobre superfices nao estruturadas.
+
+**Regra:** essa camada deve ser governada, auditavel e subordinada ao nucleo, sem abrir autonomia irrestrita.
+
+---
+
+#### 217.4.4 Memoria persistente / estado cognitivo
+
+- **Referencia central:** `Letta / MemGPT`
+- **Referencia secundaria:** `Hermes Agent`
+- **Benchmark conceitual:** `Zep`, `Graphiti`
+
+**Parte do JARVIS que essas referencias ajudam a construir melhor:**
+
+- memoria persistente;
+- estado continuo;
+- recuperacao contextual;
+- preferencias e historico;
+- continuidade entre sessoes, missoes e projetos;
+- memoria relacional, temporal e contextual complementar.
+
+**Regra:** a politica de memoria do JARVIS continua propria. Essas referencias orientam implementacao, nao redefinem a taxonomia oficial de memoria do sistema.
+
+---
+
+#### 217.4.5 Agentes pessoais / operacionais
+
+- **Referencia central:** `OpenClaw`
+- **Referencia secundaria:** nenhuma obrigatoria nesta fase
+- **Benchmark conceitual:** `Manus`
+
+**Parte do JARVIS que essas referencias ajudam a construir melhor:**
+
+- assistente operacional de agenda, tarefas, email e workflows pessoais;
+- gestao de sessoes, skills, canais e automacoes;
+- superficie pratica de assistencia operacional do nucleo.
+
+**Regra:** essa camada nao substitui o nucleo central; ela expande sua capacidade operacional em canais e rotinas.
+
+---
+
+#### 217.4.6 Contratos, tipagem e previsibilidade
+
+- **Referencia central:** `PydanticAI`
+- **Referencia secundaria:** `Qwen-Agent`
+- **Benchmark conceitual:** `smolagents`
+
+**Parte do JARVIS que essas referencias ajudam a construir melhor:**
+
+- contratos entre nucleo e especialistas;
+- outputs estruturados;
+- ferramentas com tipagem previsivel;
+- modularidade leve e composicao segura.
+
+**Regra:** contratos canonicos do JARVIS permanecem proprios; referencias externas servem para melhorar rigor de interface e previsibilidade.
+
+---
+
+### 217.5 Regra de absorcao no nucleo
+
+Nenhuma referencia externa entra no nucleo apenas por ser tecnicamente impressionante.
+
+Para ser absorvida, uma referencia deve passar por quatro perguntas:
+
+1. qual funcao arquitetural ela melhora dentro do JARVIS;
+2. qual parte pode ser reaproveitada sem terceirizar identidade, memoria, governanca ou sintese;
+3. se ela entra como dependencia operacional, complemento controlado ou apenas benchmark;
+4. qual o custo de acoplamento, lock-in e perda de unidade arquitetural.
+
+Se a resposta nao for clara, a referencia permanece como benchmark conceitual ou inspiracao arquitetural.
+
+---
+
 ## 218. Tecnologias base do sistema
 
 Estas são as tecnologias e escolhas que compõem a base recomendada do v1.
@@ -10645,7 +10835,7 @@ Estas são as tecnologias e escolhas que compõem a base recomendada do v1.
 
 ### 218.2 LangGraph
 
-**Classificação:** Base do sistema
+**Classificação:** Complemento de produção
 
 **Camada:** Orquestração central
 
@@ -10657,13 +10847,13 @@ Estas são as tecnologias e escolhas que compõem a base recomendada do v1.
 - retomada de tarefas compostas;
 - suporte à coordenação do núcleo central.
 
-**Forma de uso:** entra como substrato técnico de workflow, não como substituto do cérebro do sistema.
+**Forma de uso:** entra como principal trajetória de absorção progressiva para workflow stateful, não como substituto do cérebro do sistema nem como runtime já integralmente absorvido no baseline atual.
 
 ---
 
 ### 218.3 PostgreSQL + pgvector
 
-**Classificação:** Base do sistema
+**Classificação:** Base do sistema para `PostgreSQL`; complemento de produção para `pgvector`
 
 **Camada:** Memória e persistência
 
@@ -10671,10 +10861,10 @@ Estas são as tecnologias e escolhas que compõem a base recomendada do v1.
 
 - backbone de persistência estruturada;
 - estados de sessão, missão e eventos;
-- busca vetorial integrada;
-- base híbrida para memória e retrieval.
+- busca vetorial integrada como evolução posterior;
+- base híbrida para memória e retrieval quando a camada semântica justificar a extensão.
 
-**Forma de uso:** entra como espinha dorsal da persistência do v1.
+**Forma de uso:** `PostgreSQL` entra como espinha dorsal da persistência do `v1`; `pgvector` permanece aprovado arquiteturalmente, mas deferido em relação ao baseline operacional atual.
 
 ---
 
@@ -10915,6 +11105,8 @@ Estas tecnologias não devem compor o núcleo do v1, mas devem influenciar forte
 - reescrita/evolução de workflows;
 - benchmark para evolução futura.
 
+**Forma de uso:** referência para comparar estratégias de evolução automatizada de workflows e agentes, sempre subordinada a sandbox, benchmark e rollback.
+
 ---
 
 ### 221.4 Darwin Gödel Machine
@@ -10928,6 +11120,8 @@ Estas tecnologias não devem compor o núcleo do v1, mas devem influenciar forte
 - comparação de versões;
 - modificação avaliada por benchmark;
 - referência para promoção de melhorias baseadas em evidência.
+
+**Forma de uso:** benchmark conceitual de autoaperfeiçoamento mais agressivo, útil para o laboratório evolutivo do `v2`, não para absorção direta no baseline do `v1`.
 
 ---
 
@@ -10943,6 +11137,72 @@ Estas tecnologias não devem compor o núcleo do v1, mas devem influenciar forte
 - self-navigating;
 - self-attributing;
 - benchmark de crescimento orientado por feedback.
+
+**Forma de uso:** fonte de padrões de exploração e reflexão iterativa para laboratório, sem entrar como fundação da camada evolutiva própria.
+
+---
+
+### 221.6 TextGrad
+
+**Classificação:** Laboratório evolutivo / benchmark
+
+**Camada:** Otimização textual offline de componentes avaliáveis
+
+**Papel:**
+
+- refinamento de prompts;
+- melhoria de critérios textuais;
+- benchmark de ajuste iterativo sem promover autonomia operacional direta.
+
+**Forma de uso:** benchmark de otimização textual para laboratório controlado, útil quando o objetivo for melhorar componentes avaliáveis do sistema sem alterar diretamente identidade, governança ou política de memória.
+
+---
+
+### 221.7 DSPy / MIPROv2
+
+**Classificação:** Laboratório evolutivo / benchmark
+
+**Camada:** Otimização de programas LM e pipelines avaliáveis
+
+**Papel:**
+
+- otimização de cadeias de raciocínio e programas LM;
+- comparação de variantes orientadas por métrica;
+- benchmark para desenho de pipelines mais disciplinados de melhoria.
+
+**Forma de uso:** referência de laboratório para otimização comparativa de componentes do núcleo e de especialistas, sem substituir contratos, política de decisão ou arquitetura própria do JARVIS.
+
+---
+
+### 221.8 AFlow
+
+**Classificação:** Laboratório evolutivo / benchmark
+
+**Camada:** Otimização automatizada de workflows
+
+**Papel:**
+
+- exploração de variantes de fluxo;
+- benchmark de automação de desenho de workflow;
+- apoio conceitual para evolução posterior do laboratório de comparação.
+
+**Forma de uso:** benchmark para testar se vale a pena automatizar reconfiguração de workflows sob sandbox, sempre com validação comparativa e sem promoção automática.
+
+---
+
+### 221.9 SEAL
+
+**Classificação:** Laboratório evolutivo / benchmark
+
+**Camada:** Auto-adaptação persistente em nível de modelo ou política
+
+**Papel:**
+
+- referência para adaptações persistentes mais agressivas;
+- benchmark de mecanismos de autoajuste contínuo;
+- contraste conceitual com estratégias mais conservadoras baseadas em workflow e benchmark.
+
+**Forma de uso:** permanece explicitamente fora da base principal do `v1` e do `v1.5`, servindo apenas como referência de laboratório avançado para fases futuras, quando houver governança, benchmark e contenção suficientes.
 
 ---
 
@@ -10988,7 +11248,25 @@ Estas tecnologias influenciam a arquitetura do JARVIS, mas não entram como fund
 
 **Papel:**
 
-- referência histórica e conceitual para coordenação entre agentes.
+- referencia historica e conceitual para coordenacao entre agentes.
+
+**Forma de uso:** permanece util como benchmark historico, mas nao como a referencia mais atual do ecossistema Microsoft para esta camada.
+
+---
+
+### 222.4 Microsoft Agent Framework
+
+**Classificação:** Inspiração arquitetural
+
+**Camada influenciada:** Orquestracao, ecossistema Microsoft de agentes e integracao entre componentes agentic
+
+**Papel:**
+
+- benchmark conceitual moderno no ecossistema Microsoft;
+- referencia para comparar padroes de agentes, composicao e operacao;
+- apoio de estudo, sem redefinir o nucleo do JARVIS.
+
+**Forma de uso:** entra como benchmark conceitual complementar a `CrewAI` e `AutoGen`, sem deslocar `LangGraph` do papel central de orquestracao stateful.
 
 ---
 
@@ -11021,8 +11299,8 @@ Não entra como base principal do núcleo.
 ### Base do sistema
 
 - Python
-- LangGraph
-- PostgreSQL + pgvector
+- camada própria do JARVIS compatível com LangGraph como direção principal de absorção stateful
+- PostgreSQL, com pgvector deferido como extensão posterior
 - núcleo próprio do JARVIS
 - memória própria do JARVIS
 - governança própria do JARVIS
@@ -11051,6 +11329,7 @@ Não entra como base principal do núcleo.
 - EvoAgentX
 - Darwin Gödel Machine
 - AgentEvolver
+- SEAL
 
 ### Inspiração arquitetural
 
@@ -11111,8 +11390,8 @@ A decisão estratégica consolidada é:
 - **infraestrutura reaproveitada** onde isso acelerar sem terceirizar a essência do sistema;
 - **Python** como linguagem principal do backend;
 - **TypeScript** como linguagem principal de interface;
-- **LangGraph** como principal substrato de orquestração;
-- **PostgreSQL + pgvector** como backbone inicial de memória e persistência;
+- **LangGraph** como principal direção arquitetural de absorção da orquestração stateful;
+- **PostgreSQL** como backbone inicial de memória e persistência, com **pgvector** deferido como extensão posterior;
 - **OpenHands** como principal referência para especialista de software;
 - **LangSmith** como principal referência de observabilidade agentic;
 - camadas de memória viva, especialistas e evolução inspiradas em tecnologias como Hermes, Zep, Graphiti, OpenCode, OpenAI Agents SDK e outras, sempre subordinadas ao desenho do JARVIS.
@@ -14802,8 +15081,7 @@ Detalhamentos operacionais, executivos e especializados passam a ser aprofundado
 
 Os próximos passos mais úteis, a partir deste ponto, passam a ser:
 
-1. iniciar a materialização real da **Sprint 1** no repositório;
-2. revisar o destino do arquivo `documento_mestre_jarvis.md`;
+1. manter a execução do ciclo `pós-v1` nos derivados ativos, sem transformar este documento em plano tático;
+2. revisar periodicamente a consistência entre este artefato canônico e os derivados operacionais;
 3. reduzir duplicidade residual entre roadmap, backlog, milestones e implementação;
 4. evitar criação de novos documentos sem ganho claro de execução ou clareza.
-

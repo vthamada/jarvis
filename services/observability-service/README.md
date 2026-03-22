@@ -1,9 +1,11 @@
 # observability-service
 
-Serviço responsável por logs, traces e métricas do sistema.
+Servico responsavel por logs, traces, auditoria e evidencia operacional do sistema.
 
-Responsabilidades iniciais:
+Responsabilidades atuais:
 
-- padronizar logs estruturados;
-- preparar correlação de fluxo;
-- apoiar análise e auditoria.
+- padronizar eventos internos;
+- persistir a trilha local primaria;
+- correlacionar `request_id`, `session_id`, `mission_id` e `operation_id`;
+- auditar requests recentes;
+- espelhar traces para camada agentic complementar quando configurado.

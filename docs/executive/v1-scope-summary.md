@@ -2,13 +2,13 @@
 
 ## 1. Objetivo
 
-Este documento resume o escopo do `v1` do JARVIS em linguagem curta e acionavel.
+Este documento resume o escopo final do `v1` do JARVIS em linguagem curta e acionavel.
 
 ---
 
-## 2. O que o v1 precisa provar
+## 2. O que o v1 precisava provar
 
-O `v1` deve provar que e possivel construir um JARVIS com:
+O `v1` precisava provar que era possivel construir um JARVIS com:
 
 - identidade unificada;
 - memoria util;
@@ -21,24 +21,24 @@ O `v1` deve provar que e possivel construir um JARVIS com:
 
 ---
 
-## 3. O que entra no v1
+## 3. O que entrou no v1
 
-Inclui:
+Entrou no corte final:
 
-- nucleo central minimo funcional;
+- nucleo central funcional;
 - 12 mentes nucleares ativas;
 - dominios prioritarios do primeiro corte;
 - memorias minimas robustas;
 - governanca basica;
 - operacao de baixo risco;
-- validacao e producao controlada;
+- validacao e uso controlado;
 - console textual minimo sobre o orquestrador atual.
 
 ---
 
-## 4. O que nao entra plenamente no v1
+## 4. O que ficou fora do v1
 
-Nao entra como foco principal:
+Nao entrou como foco principal:
 
 - cobertura profunda e uniforme dos 30 dominios;
 - especialistas maduros em producao ampla;
@@ -48,58 +48,28 @@ Nao entra como foco principal:
 - autonomia extensa em ambientes sensiveis;
 - interface web completa;
 - interface de voz;
-- `LLM adapter` configuravel por provider/modelo.
+- `LLM adapter` configuravel por provider/modelo;
+- `LangGraph` como runtime principal do nucleo;
+- memoria semantica profunda.
 
 ---
 
-## 5. Estado atual resumido
+## 5. Estado final resumido
 
-Hoje o `v1` ja demonstrou internamente:
+O `v1` demonstrou internamente:
 
 - baseline integrado entre orquestracao, memoria, governanca, conhecimento, observabilidade e operacao;
-- `PostgreSQL` validado como backend operacional recomendado para memoria;
-- observabilidade suficiente para o escopo atual do `v1`;
+- `PostgreSQL` validado como backend operacional oficial para memoria;
+- observabilidade suficiente para o escopo do `v1`;
 - `manual_variants` priorizado no laboratorio evolutivo, mantendo `sandbox-only`;
 - ciclo cognitivo mais unitario, com deliberacao estruturada, continuidade de missao e especialistas internos influenciando o plano;
-- console textual minimo para acesso direto ao nucleo sem reabrir a arquitetura.
-
-O que falta para o fechamento disciplinado do `v1` passa a ser hardening operacional final e consolidacao do baseline, nao nova ampliacao arquitetural ampla.
+- console textual minimo para acesso direto ao nucleo.
 
 ---
 
-## 6. Criterio de sucesso
+## 6. Decisao de fechamento
 
-O `v1` e bem-sucedido se o sistema demonstrar:
-
-- unidade perceptivel;
-- continuidade basica;
-- utilidade real;
-- estabilidade minima;
-- governanca suficiente para uso controlado;
-- acesso minimo e coerente por interface textual.
-
----
-
-## Atualizacao de fechamento do v1
-
-O `v1` passa a incluir tambem:
-
-- interface textual minima via `jarvis-console`;
-- `baseline snapshot`, `containment drill` e `incident evidence` como artefatos operacionais do baseline;
-- validacao verde em `development` e `controlled` para o pacote final do baseline.
-
-Continuam explicitamente fora do `v1`:
-
-- `LLM adapter` configuravel;
-- interface web;
-- interface de voz;
-- `LangGraph` como substrato principal;
-- memoria vetorial ou semantica mais profunda.
----
-
-## Decisao de fechamento do v1
-
-O `v1` fica congelado com este escopo final:
+O `v1` esta encerrado e congelado com este escopo final:
 
 - nucleo unificado;
 - memoria persistente e continuidade util;
@@ -107,11 +77,4 @@ O `v1` fica congelado com este escopo final:
 - operacao segura de baixo risco;
 - `jarvis-console` como interface textual minima.
 
-Ficam fora do `v1` por decisao de escopo:
-
-- `LLM adapter` configuravel;
-- interface web;
-- interface de voz;
-- `LangGraph` como caminho principal do runtime;
-- memoria semantica profunda;
-- ampliacao ampla do ecossistema de especialistas.
+O que vem a seguir deixa de ser parte do `v1` e passa a ser `pos-v1`, `v1.5` ou `v2`.

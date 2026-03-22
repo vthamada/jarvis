@@ -1,9 +1,11 @@
 # memory-service
 
-Serviço responsável por continuidade contextual e registro episódico.
+Servico responsavel por continuidade contextual, registro episodico e estado minimo de missao.
 
-Responsabilidades iniciais:
+Responsabilidades atuais:
 
 - recuperar contexto util;
 - registrar episodios;
-- separar memória operacional e memória crítica.
+- separar memoria operacional e memoria critica;
+- persistir estado minimo de missao;
+- sustentar continuidade relacionada acima da missao atual.

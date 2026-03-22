@@ -2,136 +2,93 @@
 
 ## 1. Objetivo
 
-Este documento resume a estratégia prática de implementacao do `v1` do JARVIS em formato de execução de engenharia.
+Este documento preserva a estratégia prática que levou ao fechamento do `v1` do JARVIS.
 
-Ele deriva principalmente do capitulo `286. Estratégia detalhada de implementacao do v1 passo a passo`.
+Ele continua útil como referência de engenharia, mas não é mais o plano ativo do projeto.
+
+Leitura correta hoje:
+
+- para direção de médio prazo: `docs/roadmap/programa-ate-v3.md`
+- para execução imediata: `docs/implementation/post-v1-sprint-cycle.md`
+- para histórico do `v1`: este documento
 
 ---
 
-## 2. Principios
+## 2. Princípios que estruturaram o v1
 
-A implementacao do `v1` deve obedecer a:
+A implementação do `v1` obedeceu a:
 
 - fundação antes de feature;
 - contrato antes de integração complexa;
 - identidade antes de automação ampla;
 - governança antes de autonomia expandida;
-- observabilidade desde o inicio;
-- incrementos uteis e testaveis;
-- estado persistente onde isso for estruturalmente importante.
+- observabilidade desde o início;
+- incrementos úteis e testáveis;
+- estado persistente onde isso é estruturalmente importante.
 
 ---
 
-## 3. Sequencia geral
+## 3. Sequência histórica do v1
 
-Sequencia recomendada para o `v1`:
+Sequência que estruturou o baseline:
 
 1. alinhar baseline técnico e documental;
 2. consolidar memória persistente e continuidade;
 3. estruturar observabilidade mínima do fluxo;
-4. fortalecer engines, conhecimento e operação util;
+4. fortalecer engines, conhecimento e operação útil;
 5. endurecer governança para o `v1`;
 6. consolidar benchmark, readiness e decisão de fechamento para produção controlada.
 
----
+Leitura mais concreta dessa sequência:
 
-## 4. Leitura prática das fases
-
-### 4.1 Fase 0
-
-Preparar o repositório e o ambiente.
-
-### 4.2 Fase 1
-
-Criar a base semântica compartilhada.
-
-### 4.3 Fase 2
-
-Fazer o núcleo central responder de forma coerente.
-
-### 4.4 Fase 3
-
-Adicionar memória util e continuidade.
-
-### 4.5 Fase 4
-
-Ativar governança mínima robusta.
-
-### 4.6 Fase 5
-
-Adicionar operação real de baixo risco.
-
-### 4.7 Fase 6
-
-Aprofundar conhecimento e dominios prioritários.
-
-### 4.8 Fase 7
-
-Fortalecer observabilidade e estabilidade operacional.
-
-### 4.9 Fase 8
-
-Preparar o sandbox evolutivo inicial.
+- primeiro o repositório e a camada `shared/` foram materializados;
+- depois o orquestrador passou a coordenar memória, governança e operação;
+- em seguida a memória saiu de processo e passou a ser persistente;
+- depois observabilidade, conhecimento, artefatos operacionais e readiness foram endurecidos;
+- por fim, o baseline foi validado em `development`, `controlled` e `internal pilot`, antes de ser congelado.
 
 ---
 
-## 5. Estado prático atual
+## 4. Resultado prático
 
-O repositório já saiu da fundação estrutural e possui um baseline integrado do `v1` validado por benchmark dirigido.
-
-Hoje o baseline implementado cobre:
+O baseline implementado do `v1` cobre:
 
 - `orchestrator-service` como coordenador do fluxo;
-- `memory-service` com persistencia util, `sqlite` como fallback local e `PostgreSQL` validado como backend operacional do `v1` local;
+- `memory-service` com persistência útil, `sqlite` como fallback local e `PostgreSQL` como backend operacional oficial;
 - `governance-service` com decisão simples, condicionada, bloqueada e adiada para validação;
-- `knowledge-service` com retrieval determinístico local, corpus curado externo ao codigo e ranking ponderado já absorvido ao baseline;
+- `knowledge-service` com retrieval determinístico local e corpus curado externo ao código;
 - `operational-service` com artefatos textuais de baixo risco;
-- `observability-service` com trilha de eventos persistida e validada para o `v1`;
-- `evolution-lab` com comparação sandbox-only entre baseline e candidata, priorizando `manual_variants`;
-- `engines/` dedicadas para identidade, executivo, planejamento, cognição e síntese.
+- `observability-service` com trilha de eventos persistida e auditável;
+- `evolution-lab` com comparação `sandbox-only` entre baseline e candidata;
+- `engines/` dedicadas para identidade, executivo, planejamento, cognição e síntese;
+- `jarvis-console` como interface textual mínima.
 
-Leitura de milestone:
+Capacidades operacionais que emergiram desse caminho:
 
-- `M1` concluida
-- `M2` substancialmente implementada
-- `M3` substancialmente implementada e validada com PostgreSQL
-- `M4` parcialmente implementada
-- `M5` substancialmente implementada
-- `M6` em consolidacao final
-
----
-
-## 6. Próxima sequencia de engenharia
-
-Sequencia recomendada a partir do estado atual:
-
-1. revisar os documentos derivados e o material de readiness para refletir o baseline benchmarkado;
-2. tratar `PostgreSQL` como caminho operacional recomendado do `v1`, mantendo `sqlite` como fallback local;
-3. decidir formalmente se o baseline atual já permite fechar o `v1` para produção controlada;
-4. só depois reabrir expansao de corpus, retrieval mais forte ou evolução mais sofisticada.
+- trilha auditável de eventos e decisões;
+- validação executável por scripts canônicos;
+- piloto interno com evidência reaproveitável;
+- comparação controlada entre baseline e POC opcional de `LangGraph`.
 
 ---
 
-## 7. Regra de execução
+## 5. Leitura correta do estado atual
 
-Não implementar módulos isolados apenas por completude estrutural.
+O `v1` está encerrado e congelado para uso controlado.
 
-Implementar ciclos integrados de capacidade, em que cada etapa:
+Portanto, a sequência de engenharia ativa deixou de ser "fechar o `v1`" e passou a ser:
 
-- produz valor verificavel;
-- deixa base reaproveitavel para a próxima;
-- reduz risco de retrabalho.
-
-
-## 5.1 Atualização de baseline em 2026-03-20
-
-Além do baseline integrado já descrito, o repositório agora também conta com:
-
-- diretiva executiva mais rica, com objetivo dominante, ambiguidades e `identity_mode`;
-- arbitragem cognitiva mais explícita entre mentes;
-- continuidade de missão enriquecida, com hints deliberativos e resumo semântico mais útil;
-- especialistas internos alterando estruturalmente o plano antes da síntese final;
-- `internal pilot` controlado já executado sobre esse baseline.
+1. aprofundar continuidade entre missões;
+2. medir essa continuidade com observabilidade e evidência;
+3. decidir o corte entre `v1.5` e `v2`;
+4. só depois absorver componentes externos com evidência suficiente.
 
 ---
 
+## 6. Regra de execução que permanece válida
+
+Mesmo no `pós-v1`, a regra continua sendo:
+
+- não implementar módulos isolados apenas por completude estrutural;
+- implementar ciclos integrados de capacidade;
+- só absorver tecnologia externa quando houver problema real do núcleo, consumidor claro e delimitação do que entra agora.

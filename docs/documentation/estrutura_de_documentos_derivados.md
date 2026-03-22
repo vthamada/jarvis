@@ -22,6 +22,7 @@ O **Documento-Mestre** continua sendo a referencia canonica de:
 - contratos canonicos;
 - governanca;
 - posicionamento oficial de tecnologias;
+- referencias arquiteturais oficiais por funcao;
 - roadmap macro;
 - criterios de maturidade e transicao.
 
@@ -48,6 +49,7 @@ Devem permanecer no Documento-Mestre:
 - arquitetura oficial;
 - decisoes estruturais;
 - politicas de governanca e autonomia;
+- regras oficiais de uso de referencias externas por funcao arquitetural;
 - criterios formais de validacao e maturidade;
 - visao e recorte oficial de `v1`, `v2` e `v3`;
 - contratos e schemas canonicos em nivel normativo.

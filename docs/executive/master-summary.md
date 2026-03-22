@@ -6,21 +6,21 @@ Este documento resume o projeto JARVIS para leitura executiva, preservando alinh
 
 ---
 
-## 2. O que e o JARVIS
+## 2. O que é o JARVIS
 
-O JARVIS e definido como um **Sistema Cognitivo Geral, Unificado, Multidominio, Metacognitivo, Operacional e Autoevolutivo**.
+O JARVIS é definido como um sistema cognitivo unificado, multidomínio, metacognitivo, operacional e governado.
 
 Na prática, ele não deve ser tratado como:
 
 - chatbot simples;
 - automação isolada;
-- colecao desconexa de tools;
+- coleção desconexa de tools;
 - agente único de tarefa estreita.
 
 Ele deve ser tratado como:
 
 - uma entidade cognitiva única;
-- um sistema com memória util;
+- um sistema com memória útil;
 - um núcleo que pensa, planeja e age;
 - uma plataforma governada de operação e evolução.
 
@@ -28,105 +28,99 @@ Ele deve ser tratado como:
 
 ## 3. Objetivo do projeto
 
-O objetivo central do projeto e construir uma base correta para um sistema capaz de:
+O objetivo central é construir uma base correta para um sistema capaz de:
 
-- ampliar capacidade intelectual e operacional do usuario;
+- ampliar capacidade intelectual e operacional do usuário;
 - sustentar memória, continuidade e missão;
 - agir com autonomia graduada e governada;
 - evoluir sem perder identidade.
 
 ---
 
-## 4. Estratégia
+## 4. Estratégia macro
 
-O projeto foi estruturado em tres fases:
+O projeto está organizado em quatro fases:
 
-- `v1` - núcleo funcional unificado;
-- `v2` - expansao operacional e especializacao controlada;
-- `v3` - maturidade geral, persistencia profunda e autoevolucao avancada.
+- `v1` - baseline unificado e utilizável
+- `pós-v1` - continuidade profunda entre missões
+- `v1.5` - primeiro salto cognitivo acima do baseline
+- `v2` e `v3` - especialização, memória mais profunda e maturidade ampliada
 
-A estratégia explícita e:
+Estratégia explícita:
 
 - construir o núcleo primeiro;
-- evitar fragmentacao prematura;
+- evitar fragmentação prematura;
 - usar tecnologia reaproveitada onde faz sentido;
 - manter identidade, memória, governança e síntese como partes próprias do sistema.
 
 ---
 
-## 5. Stack base
+## 5. Stack e referências
 
-Stack principal atualmente definida:
+Stack base do baseline atual:
 
 - `Python` como linguagem principal;
-- `TypeScript` para interfaces e componentes web/voz quando necessario;
-- `LangGraph` para orquestracao stateful;
-- `PostgreSQL + pgvector` para memória e persistencia;
-- `LangSmith` para observabilidade agentic;
-- `OpenHands` como especialista subordinado de software.
+- `TypeScript` para interfaces e componentes web/voz quando necessário;
+- `PostgreSQL` como backend operacional oficial de memória;
+- `LangSmith` como observabilidade agentic complementar;
+- `OpenHands` como referência principal para especialista subordinado de software.
+
+Leitura arquitetural oficial de referências externas:
+
+- `LangGraph` orienta orquestração stateful;
+- `OpenAI Agents SDK` complementa handoffs, tools e voice flows;
+- `OpenHands` orienta o especialista de software;
+- `browser-use`, `Open Interpreter` e `Claude Computer Use` orientam computer use;
+- `Letta / MemGPT`, `Hermes`, `Zep` e `Graphiti` orientam memória persistente e estado cognitivo;
+- `OpenClaw` e `Manus` orientam a camada de assistência operacional;
+- `PydanticAI`, `Qwen-Agent` e `smolagents` orientam contratos, tipagem e previsibilidade.
+
+Regra executiva:
+
+- referências externas orientam a construção do JARVIS;
+- elas não substituem o núcleo nem transformam o projeto em colagem de frameworks.
 
 ---
 
 ## 6. Estado atual
 
-Hoje o projeto já não esta apenas em consolidacao documental.
+Hoje o projeto já não está em consolidação inicial.
 
 O repositório possui:
 
-- baseline integrado entre orquestracao, memória, governança, conhecimento, observabilidade e operação;
-- `PostgreSQL` validado como backend operacional recomendado do `v1` local;
-- benchmark dirigido implementado e absorvido no baseline;
-- `manual_variants` priorizado no `evolution-lab`, mantendo `sandbox-only`;
-- suite principal de testes verde no baseline atual;
-- decisão formal atual de `GO CONDICIONAL` para produção controlada.
+- baseline integrado entre orquestração, memória, governança, conhecimento, observabilidade e operação;
+- `jarvis-console` como interface textual mínima;
+- `PostgreSQL` validado como backend operacional oficial;
+- `internal pilot` executado;
+- `evolution-lab` ativo em `sandbox-only`;
+- ciclo rolante de `pós-v1` em execução.
 
----
+Leitura curta do momento:
 
-## 6.1 Atualização de status em 2026-03-20
-
-Leitura curta do estado atual:
-
-- o núcleo já avançou de baseline integrado para um comportamento mais unitário, com objetivo dominante, arbitragem cognitiva mais explícita, continuidade de missão enriquecida e revisão estrutural do plano por especialistas internos;
-- o `internal pilot` controlado já foi executado com resultado saudável no baseline atual;
-- o próximo passo executivo deixou de ser "rodar o piloto" e passou a ser "consolidar a leitura do piloto, comparar a POC opcional de `LangGraph` e decidir o fechamento do `v1` ou um último incremento cognitivo curto".
+- o `v1` está encerrado e congelado para uso controlado;
+- a frente ativa agora é `continuidade profunda entre missões`;
+- Sprint 1 foi concluída;
+- Sprint 2 é a próxima frente ativa.
 
 ---
 
 ## 7. Risco principal
 
-O principal risco atual não e falta de visóo, e sim excesso de escopo.
+O principal risco atual não é falta de visão. É excesso de escopo.
 
 O projeto deve evitar:
 
-- tentar implementar o sistema completo cedo demais;
-- reabrir o núcleo arquitetural sem evidência forte;
-- expandir produção antes de respeitar o escopo reduzido do primeiro uso real.
+- reabrir o baseline do `v1` sem necessidade real;
+- tentar absorver tecnologia externa antes de provar a lacuna no núcleo;
+- expandir superfícies antes de resolver continuidade entre missões.
 
 ---
 
 ## 8. Próximo passo recomendado
 
-O próximo passo executivo mais racional e:
+O próximo passo executivo mais racional é:
 
-- consolidar a leitura do `internal pilot` já executado;
-- comparar o baseline atual com a POC opcional de `LangGraph`, sem reabrir o núcleo do `v1`;
-- decidir se o `v1` fecha com disciplina no baseline atual ou se ainda absorve um último incremento cognitivo curto.
-
-
----
-
-## 7. Fechamento do v1
-
-O `v1` deve ser lido como encerrado para `producao controlada`.
-
-Isso significa que o projeto ja prova, no recorte correto da versao:
-
-- entidade unificada perceptivel;
-- continuidade util entre turnos e missoes;
-- deliberacao estruturada e governada;
-- operacao segura de baixo risco;
-- observabilidade, memoria persistente e validacao executavel;
-- interface textual minima por console.
-
-Nao significa que a visao completa do JARVIS foi concluida.
-Os proximos avancos relevantes ficam explicitamente em `pos-v1`, `v1.5` ou `v2`.
+- executar a Sprint 2;
+- aprofundar recuperação e ranking de continuidade relacionada;
+- medir esse comportamento com observabilidade e evidência;
+- só depois decidir o que sobe para `v1.5` e o que fica para `v2`.

@@ -2,74 +2,154 @@
 
 ## 1. Objetivo
 
-Este documento consolida o estudo tecnologico do JARVIS em um unico artefato.
+Este documento consolida o estudo tecnológico do JARVIS em um único artefato.
 
-Ele substitui a separacao anterior entre uma matriz geral e um estudo aplicado da
-fase 1. O objetivo aqui e manter uma leitura unica sobre:
+Ele existe para manter uma leitura única sobre:
 
-- o que o `v1` realmente adota;
-- o que entra apenas como complemento controlado;
-- o que e referencia arquitetural;
-- o que deve continuar em laboratorio ou pos-`v1`.
+- o que o `v1` realmente adotou;
+- o que permanece complementar;
+- o que é referência arquitetural;
+- o que deve continuar em laboratório ou pós-`v1`.
 
 Em caso de conflito, `documento_mestre_jarvis.md` continua prevalecendo.
 
 ---
 
-## 2. Classes de decisao
+## 2. Classes de decisão
 
 Cada tecnologia citada deve cair em uma destas classes:
 
 - `adotar no v1`
 - `complementar no v1`
-- `laboratorio`
-- `inspiracao arquitetural`
+- `laboratório`
+- `inspiração arquitetural`
 - `deferir para v2`
-- `nao adotar como nucleo`
+- `não adotar como núcleo`
 
 ---
 
-## 3. Criterios de estudo
+## 3. Dois eixos oficiais de leitura
+
+Desde a revisão do Documento-Mestre em 2026-03-22, este estudo opera em dois eixos simultâneos:
+
+1. **classe de decisão / adoção**
+2. **papel de referência arquitetural por função**
+
+O primeiro eixo responde se algo entra no baseline, fica complementar, vai para laboratório ou permanece fora do núcleo.
+
+O segundo eixo responde à pergunta normativa:
+
+**"Que parte do JARVIS essa arquitetura ou ferramenta nos ajuda a construir melhor?"**
+
+As funções arquiteturais oficiais são:
+
+- orquestração de agentes;
+- agente de software / desenvolvimento;
+- computer use / operação do computador;
+- memória persistente / estado cognitivo;
+- agentes pessoais / operacionais;
+- contratos, tipagem e previsibilidade.
+
+Dentro de cada função, as referências devem ser tratadas como:
+
+- `referência central`
+- `referência secundária`
+- `benchmark conceitual`
+
+---
+
+## 4. Critérios de estudo
 
 Toda tecnologia deve ser avaliada por:
 
-- aderencia ao papel arquitetural do JARVIS;
-- maturidade e manutencao do repositorio;
-- licenca e risco de uso;
-- persistencia e isolamento;
-- observabilidade e depuracao;
+- aderência ao papel arquitetural do JARVIS;
+- maturidade e manutenção do repositório;
+- licença e risco de uso;
+- persistência e isolamento;
+- observabilidade e depuração;
 - risco de lock-in;
-- reaproveitamento parcial sem terceirizar o nucleo.
+- reaproveitamento parcial sem terceirizar o núcleo.
 
 ---
 
-## 4. Matriz consolidada
+## 5. Referências arquiteturais oficiais por função
 
-| Tecnologia | Papel no JARVIS | Decisao atual |
-| --- | --- | --- |
-| LangGraph | runtime stateful e checkpoints para o orquestrador | `complementar no v1` |
-| PostgreSQL | backbone operacional de memoria e persistencia | `adotar no v1` |
-| pgvector | extensao vetorial do backbone relacional | `deferir para pos-v1` |
-| LangSmith | observabilidade agentic complementar | `complementar no v1` |
-| OpenAI Realtime / Voice | camada moderna de voz e realtime | `complementar no v1` |
-| OpenHands | especialista subordinado de software | `complementar no v1` |
-| Zep | memoria contextual complementar | `laboratorio` |
-| Graphiti | memoria temporal e relacional complementar | `laboratorio` |
-| LlamaIndex | ingestao e retrieval complementar | `laboratorio` |
-| Hermes Agent | referencia de runtime persistente e skills | `inspiracao arquitetural` |
-| OpenClaw | referencia de gateway, canais e operacao | `inspiracao arquitetural` |
-| TextGrad | otimizacao textual offline | `laboratorio` |
-| DSPy / MIPROv2 | otimizacao de programas LM | `laboratorio` |
-| AFlow | otimizacao automatizada de workflows | `laboratorio` |
-| EvoAgentX | evolucao automatizada de workflows e agentes | `laboratorio` |
-| SEAL | auto-adaptacao persistente em nivel de modelo | `deferir para v2` |
-| Darwin Godel Machine | autoaperfeicoamento com mudanca de codigo | `deferir para v2` |
+| Função arquitetural | Referência central | Referência secundária | Benchmark conceitual |
+| --- | --- | --- | --- |
+| Orquestração de agentes | LangGraph | OpenAI Agents SDK | CrewAI, Microsoft Agent Framework |
+| Agente de software / desenvolvimento | OpenHands | OpenHands / Open Operator | OpenCode |
+| Computer use / operação do computador | browser-use | Open Interpreter | Claude Computer Use |
+| Memória persistente / estado cognitivo | Letta / MemGPT | Hermes Agent | Zep, Graphiti |
+| Agentes pessoais / operacionais | OpenClaw | nenhuma obrigatória nesta fase | Manus |
+| Contratos, tipagem e previsibilidade | PydanticAI | Qwen-Agent | smolagents |
+
+Leitura correta:
+
+- `referência central` é a melhor âncora para desenhar a camada;
+- `referência secundária` complementa ou oferece um segundo padrão útil;
+- `benchmark conceitual` ajuda a comparar soluções, sem precisar entrar no baseline ou na dependência principal.
+
+Observação importante:
+
+- `AutoGen` continua relevante historicamente e como referência conceitual de multiagentes, mas deixa de ocupar a primeira linha de benchmark moderno desta camada.
 
 ---
 
-## 5. Leitura aplicada da fase 1
+## 6. Estado de confiança atual
 
-### 5.1 LangGraph
+Classificação atual de confiança para o projeto:
+
+- `alta confiança`: `LangGraph`, `OpenAI Agents SDK`, `OpenHands`, `PydanticAI`, `LangSmith`, `PostgreSQL`
+- `média confiança`: `browser-use`, `Letta / MemGPT`, `Hermes Agent`, `OpenClaw`, `Qwen-Agent`
+- `hipótese ainda aberta`: `Graphiti`, `Zep`, `Manus`, `smolagents`, `Open Interpreter`, `Microsoft Agent Framework` como benchmark mais útil do que `AutoGen`
+
+Uso correto dessa classificação:
+
+- `alta confiança` pode guiar desenho imediatamente;
+- `média confiança` já pode orientar a camada, mas ainda pede estudo aplicado;
+- `hipótese ainda aberta` não deve virar decisão estrutural sem experimento ou benchmark dirigido.
+
+---
+
+## 7. Matriz consolidada de adoção
+
+| Tecnologia | Papel no JARVIS | Papel de referência | Decisão atual |
+| --- | --- | --- | --- |
+| LangGraph | runtime stateful e checkpoints para o orquestrador | referência central de orquestração | `complementar no v1` |
+| OpenAI Agents SDK | handoffs, tools e tracing complementar | referência secundária de orquestração | `complementar no v1` |
+| CrewAI | times de agentes e delegação explícita | benchmark conceitual moderno de orquestração | `inspiração arquitetural` |
+| Microsoft Agent Framework | referência atual de ecossistema Microsoft para agentes | benchmark conceitual moderno de orquestração | `inspiração arquitetural` |
+| AutoGen | multiagentes e conversação entre agentes | benchmark histórico de orquestração | `inspiração arquitetural` |
+| PostgreSQL | backbone operacional de memória e persistência | base operacional própria | `adotar no v1` |
+| pgvector | extensão vetorial do backbone relacional | complemento futuro de memória semântica | `deferir para pós-v1` |
+| LangSmith | observabilidade agentic complementar | complemento de tracing e evals | `complementar no v1` |
+| OpenAI Realtime / Voice | camada moderna de voz e realtime | complemento de interface e voz | `complementar no v1` |
+| OpenHands | especialista subordinado de software | referência central de agente de software | `complementar no v1` |
+| browser-use | operação de navegador e computer use | referência central de computer use | `laboratório` |
+| Open Interpreter | shell e operação local governada | referência secundária de computer use | `laboratório` |
+| Claude Computer Use | benchmark de operação do computador | benchmark conceitual de computer use | `inspiração arquitetural` |
+| Letta / MemGPT | memória persistente orientada a agente | referência central de estado cognitivo | `laboratório` |
+| Zep | memória contextual complementar | benchmark conceitual de memória | `laboratório` |
+| Graphiti | memória temporal e relacional complementar | benchmark conceitual de memória | `laboratório` |
+| LlamaIndex | ingestão e retrieval complementar | complemento de conhecimento | `laboratório` |
+| Hermes Agent | runtime persistente e skills | referência secundária de estado cognitivo | `inspiração arquitetural` |
+| OpenClaw | referência de gateway, canais e operação | referência central de assistência operacional | `inspiração arquitetural` |
+| Manus | referência de assistente operacional amplo | benchmark conceitual operacional | `inspiração arquitetural` |
+| PydanticAI | contratos estruturados e outputs previsíveis | referência central de contratos e tipagem | `laboratório` |
+| Qwen-Agent | modularidade leve e estrutura de agentes | referência secundária de contratos e previsibilidade | `laboratório` |
+| smolagents | ferramentas leves e composição modular | benchmark conceitual de contratos e tools | `inspiração arquitetural` |
+| TextGrad | otimização textual offline | benchmark de autoaperfeiçoamento | `laboratório` |
+| DSPy / MIPROv2 | otimização de programas LM | benchmark de autoaperfeiçoamento | `laboratório` |
+| AFlow | otimização automatizada de workflows | benchmark de autoaperfeiçoamento | `laboratório` |
+| EvoAgentX | evolução automatizada de workflows e agentes | benchmark de autoaperfeiçoamento | `laboratório` |
+| SEAL | auto-adaptação persistente em nível de modelo | laboratório evolutivo mais agressivo | `deferir para v2` |
+| Darwin Gödel Machine | autoaperfeiçoamento com mudança de código | laboratório evolutivo mais agressivo | `deferir para v2` |
+
+---
+
+## 8. Leitura aplicada das tecnologias mais importantes
+
+### 8.1 LangGraph
 
 O que interessa ao JARVIS:
 
@@ -79,121 +159,59 @@ O que interessa ao JARVIS:
 - `human-in-the-loop`;
 - subgraphs para partes do fluxo.
 
-O que nao deve ser terceirizado:
+O que não deve ser terceirizado:
 
 - identidade do JARVIS;
-- contratos canonicos;
-- governanca;
-- politica de memoria;
-- arbitragem cognitiva como decisao de produto.
+- contratos canônicos;
+- governança;
+- política de memória;
+- arbitragem cognitiva como decisão de produto.
 
-Decisao atual:
+Decisão atual:
 
-- aprovado como proximo salto estrutural do nucleo;
-- mantido fora do caminho critico do `v1`;
-- continua como POC opcional no repositorio atual.
+- aprovado como próximo salto estrutural do núcleo;
+- mantido fora do caminho crítico do `v1`;
+- continua como POC opcional no repositório atual.
 
-### 5.2 PostgreSQL + pgvector
-
-Leitura atual:
-
-- `PostgreSQL` ja foi validado e entrou como backend operacional recomendado;
-- `pgvector` continua aprovado arquiteturalmente, mas ainda nao tem consumidor
-  canonico suficiente para virar parte obrigatoria do baseline.
-
-Decisao atual:
-
-- `PostgreSQL`: `adotar no v1`;
-- `pgvector`: `deferir para pos-v1`.
-
-### 5.3 LangSmith
+### 8.2 PostgreSQL + pgvector
 
 Leitura atual:
 
-- a trilha local persistida continua sendo a fonte primaria;
+- `PostgreSQL` já foi validado e entrou como backend operacional oficial;
+- `pgvector` continua aprovado arquiteturalmente, mas ainda não tem consumidor canônico suficiente para virar parte obrigatória do baseline.
+
+Decisão atual:
+
+- `PostgreSQL`: `adotar no v1`
+- `pgvector`: `deferir para pós-v1`
+
+### 8.3 LangSmith
+
+Leitura atual:
+
+- a trilha local persistida continua sendo a fonte primária;
 - `LangSmith` agrega valor como espelhamento, dashboards, experiments e evals;
-- nao deve se tornar a unica fonte de auditoria.
+- não deve se tornar a única fonte de auditoria.
 
-Decisao atual:
+Decisão atual:
 
-- `complementar no v1`.
+- `complementar no v1`
 
----
+### 8.4 CrewAI, AutoGen e Microsoft Agent Framework
 
-## 6. Reaproveitamento recomendado
+Leitura atual:
 
-Entrou no baseline do `v1`:
-
-- `PostgreSQL` como backend operacional recomendado.
-
-Permanece complementar no `v1`:
-
-- `LangSmith`;
-- `LangGraph` apenas como POC opcional;
-- stack de voz e realtime;
-- OpenHands como referencia e complemento futuro controlado.
-
-Permanece fora do caminho critico:
-
-- `pgvector`;
-- laboratorios de memoria externa;
-- frameworks de evolucao mais agressivos;
-- referencias arquiteturais como Hermes e OpenClaw.
-
----
-
-## 7. Ordem recomendada de estudo externo
-
-Se o projeto abrir uma pasta separada para pesquisa, a ordem continua sendo:
-
-1. `langchain-ai/langgraph`
-2. `All-Hands-AI/OpenHands`
-3. `openclaw/openclaw`
-4. `NousResearch/hermes-agent`
-5. `getzep/graphiti`
-6. `run-llama/llama_index`
-7. `zou-group/textgrad`
-8. `stanfordnlp/dspy`
-9. `FoundationAgents/AFlow`
-10. `EvoAgentX/EvoAgentX`
+- `CrewAI` merece mais peso como benchmark moderno de orquestração colaborativa;
+- `AutoGen` continua relevante, mas com peso mais histórico e menos central na leitura atual;
+- `Microsoft Agent Framework` entra como benchmark conceitual mais atual no ecossistema Microsoft, mas ainda como hipótese aberta para o JARVIS.
 
 Regra:
 
-- estudar fora do repositorio principal;
-- preferir clone raso;
-- nao executar marketplaces, installers ou scripts de terceiros sem isolamento.
+- nenhuma dessas opções substitui `LangGraph` como referência central de orquestração do JARVIS.
 
----
+### 8.5 PydanticAI
 
-## 8. Sintese executiva
+Leitura atual:
 
-A leitura consolidada mais segura hoje e:
-
-- o `v1` deve fechar sobre uma base propria;
-- `PostgreSQL` foi o reaproveitamento mais forte ja absorvido;
-- `LangSmith` continua sendo complemento util;
-- `LangGraph` continua sendo direcao arquitetural forte, mas nao foi promovido
-  ao baseline do `v1`;
-- memoria vetorial, frameworks de autoevolucao mais fortes e referencias de
-  runtime externo ficam para ciclos posteriores.
-
----
-
-## 9. Foco de estudo no inicio do pos-v1
-
-- trilha atual: `continuidade profunda entre missoes`;
-- ordem oficial de estudo:
-  1. `LangGraph`
-  2. `Hermes Agent`
-  3. `Graphiti`
-  4. `Zep`
-- o estudo deve ser paralelo curto e dirigido pela trilha principal;
-- nenhuma dessas opcoes entra automaticamente no nucleo;
-- ficam explicitamente fora do foco imediato deste primeiro ciclo: `OpenHands`, `OpenClaw`, `pgvector`, `DSPy / MIPRO`, `AFlow`, `EvoAgentX`, `SEAL` e `Darwin Godel Machine`.
-
-Leitura correta por eixo:
-
-- `LangGraph`: referencia principal para continuidade stateful, checkpoints e execucao duravel;
-- `Hermes Agent`: referencia secundaria para runtime persistente, continuidade viva e superficie de agente;
-- `Graphiti` e `Zep`: referencias de memoria relacional, temporal ou contextual complementar;
-- `DSPy / MIPRO`, `TextGrad`, `AFlow`, `EvoAgentX`, `SEAL` e `Darwin Godel Machine`: continuam sendo as referencias mais adequadas quando o foco for autoaperfeicoamento.
+- a referência ficou forte o bastante para orientar contratos, tipagem, outputs estruturados e fluxos previsíveis;
+- ainda não deve redefinir os contratos canônicos do JARVIS, mas já justifica papel central na camada de previsibilidade.

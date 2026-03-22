@@ -2,80 +2,75 @@
 
 ## 1. Objetivo
 
-Este documento resume o papel do laboratório evolutivo do JARVIS como ambiente separado de experimentação e melhoria controlada.
+Este documento resume o papel do laboratorio evolutivo do JARVIS como ambiente separado de experimentacao e melhoria controlada.
 
-Ele deriva principalmente da camada evolutiva do Documento-Mestre.
+Ele deriva da camada evolutiva do Documento-Mestre e do baseline operacional do `v1`.
 
 ---
 
-## 2. Papel do laboratório
+## 2. Papel do laboratorio
 
-O laboratório evolutivo existe para:
+O laboratorio evolutivo existe para:
 
 - observar desempenho;
-- gerar hipóteses de melhoria;
-- testar variações em sandbox;
+- gerar hipoteses de melhoria;
+- testar variacoes em sandbox;
 - comparar baseline e candidata;
-- produzir evidência antes de qualquer promoção.
+- produzir evidencia antes de qualquer promocao.
 
 ---
 
-## 3. O que pode entrar no laboratório
+## 3. O que pode entrar no laboratorio
 
 - melhoria de prompt;
 - melhoria de workflow;
 - melhoria de roteamento;
-- melhoria de avaliação;
+- melhoria de avaliacao;
 - melhoria de eficiencia;
-- refinamento de especialistas subordinados.
+- refinamento de especialistas subordinados;
+- comparacao entre estrategias de continuidade.
 
 ---
 
-## 4. O que não deve entrar diretamente em produção
+## 4. O que nao entra em producao diretamente
 
-- auto-modificacao livre do núcleo;
+- auto-modificacao livre do nucleo;
 - mudanca direta de identidade;
-- mudanca direta de governança sem validação reforçada;
-- promoção evolutiva sem benchmark e rollback.
+- mudanca direta de governanca sem validacao reforcada;
+- promocao evolutiva sem benchmark e rollback.
 
 ---
 
 ## 5. Regra permanente
 
-O laboratório evolutivo serve ao sistema, mas não governa o sistema.
+O laboratorio evolutivo serve ao sistema, mas nao governa o sistema.
 
 ---
 
-## 6. Estado atual no repositório
+## 6. Estado atual no repositorio
 
-O repositório já possui um primeiro corte operacional do laboratório evolutivo:
+O repositorio ja possui um corte operacional do laboratorio evolutivo:
 
-- serviço local `evolution-lab`;
-- persistencia local de propostas e decisóes;
-- comparação entre baseline e candidata por métricas simples;
-- decisão `sandbox-only`, sem promoção automatica;
-- referencia explícita de rollback para o baseline avaliado;
-- `manual_variants` priorizado como estratégia de evolução do `v1` após benchmark dirigido.
-
-Esse corte existe para iniciar `M6` sem antecipar autoevolucao ampla.
-
----
-
-## 6.1 Atualização do laboratório em 2026-03-20
-
-O estado mais recente do laboratório evolutivo é este:
-
-- o laboratório já recebe sinais do `internal pilot` e da comparação de paths;
-- a infraestrutura para transformar esses sinais em proposals sandbox-only já existe;
-- na última rodada saudável do piloto, não surgiu proposal urgente o suficiente para reabrir o baseline do `v1`.
+- servico local `evolution-lab`;
+- persistencia local de proposals e decisoes;
+- comparacao entre baseline e candidata por metricas simples;
+- decisao `sandbox-only`, sem promocao automatica;
+- referencia explicita de rollback para o baseline avaliado;
+- integracao com sinais do `internal pilot` e da comparacao de paths;
+- `manual_variants` priorizado como estrategia inicial do baseline.
 
 ---
 
-## 7. Limite atual
+## 7. Relacao com o pos-v1
 
-O laboratório atual ainda não faz:
+No ciclo atual, o laboratorio deve ser usado para:
 
-- promoção automatica;
-- alteracao direta do núcleo em produção;
-- governança evolutiva completa;
-- expansao ampla alem do conjunto congelado do benchmark do `v1`.
+- avaliar estrategias de continuidade entre missoes;
+- comparar variantes sem reabrir o baseline do `v1`;
+- transformar sinais reais do piloto em proposals controladas.
+
+Ele nao deve ser usado para:
+
+- justificar salto estrutural sem evidencia;
+- promover mudanca automatica;
+- virar fonte soberana de decisao sobre o nucleo.

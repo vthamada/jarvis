@@ -1,17 +1,17 @@
 # Memory
 
-Area reservada para componentes de memória do sistema.
+Area reservada para componentes de memoria do sistema.
 
-Subdominios esperados:
+Subdominios ativos ou previstos:
 
-- memória de sessão;
-- memória episodica;
-- memória crítica;
+- memoria de sessao;
+- memoria episodica;
+- memoria de missao;
+- memoria critica;
 - mecanismos de consolidacao.
 
+Validacao operacional local:
 
-Validação operacional local:
-
-- `sqlite` continua sendo o fallback padrao do `v1`;
-- `PostgreSQL` e a candidata operacional e deve ser validado com `DATABASE_URL` real na porta `5433`;
-- a validação recomendada combina `python -m tools.benchmarks --postgres-url ...` com `pytest services/memory-service/tests/test_memory_postgres_integration.py -q`.
+- `sqlite` continua sendo o fallback local;
+- `PostgreSQL` e o backend operacional oficial e deve ser validado com `DATABASE_URL` real na porta `5433`;
+- a validacao recomendada combina `python -m tools.benchmarks --postgres-url ...` com `pytest services/memory-service/tests/test_memory_postgres_integration.py -q`.

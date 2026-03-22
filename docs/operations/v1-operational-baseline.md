@@ -2,10 +2,9 @@
 
 ## 1. Objetivo
 
-Este documento consolida o baseline operacional do JARVIS `v1` para uso controlado.
+Este documento consolida o baseline operacional encerrado do `v1` do JARVIS para uso controlado.
 
-Ele substitui a leitura fragmentada que antes estava separada entre readiness, `go/no-go`
-e producao controlada.
+Ele substitui a leitura fragmentada que antes estava separada entre readiness, `go/no-go` e producao controlada.
 
 Fontes normativas:
 
@@ -16,19 +15,19 @@ Fontes normativas:
 
 ---
 
-## 2. Estado operacional atual
+## 2. Estado operacional oficial
 
 Leitura oficial do baseline atual:
 
-- decisao vigente: `GO CONDICIONAL` para uso controlado;
-- `internal pilot` ja executado com trilhas saudaveis;
-- backend operacional recomendado: `PostgreSQL`;
+- `v1` encerrado e congelado para uso controlado;
+- `internal pilot` ja executado e tratado como evidencia operacional;
+- backend operacional oficial: `PostgreSQL`;
 - `sqlite` permanece apenas como fallback local de desenvolvimento;
 - observabilidade local persistida e auditavel;
+- `LangSmith` permanece complementar;
 - `evolution-lab` permanece `sandbox-only`, sem promocao automatica.
 
-Em termos praticos, o `v1` esta liberado para uso real controlado em escopo reduzido,
-com monitoramento reforcado e rollback simples.
+Em termos praticos, o `v1` esta liberado para uso real controlado em escopo reduzido, com monitoramento reforcado e rollback simples.
 
 ---
 
@@ -40,7 +39,8 @@ O `v1` deve ser lido como prova de:
 - continuidade util de sessao e missao;
 - deliberacao convincente no escopo atual;
 - operacao segura de baixo risco;
-- governanca e rastreabilidade suficientes para uso controlado.
+- governanca e rastreabilidade suficientes para uso controlado;
+- acesso minimo por console.
 
 O `v1` nao deve ser avaliado como:
 
@@ -94,8 +94,7 @@ python tools/validate_v1.py --profile controlled
 python tools/go_live_internal_checklist.py --profile controlled
 ```
 
-Quando o perfil `controlled` for usado, tratar `DATABASE_URL` com `PostgreSQL` como
-pre-condicao obrigatoria.
+Quando o perfil `controlled` for usado, tratar `DATABASE_URL` com `PostgreSQL` como pre-condicao obrigatoria.
 
 ---
 
@@ -124,10 +123,11 @@ Ver tambem:
 
 ---
 
-## 7. Resultado do gate e do piloto
+## 7. Estado do gate e do piloto
 
-Estado consolidado em `2026-03-20`:
+Estado consolidado nesta revisao:
 
+- o gate `development` esta verde;
 - o gate `controlled` ja foi executado com sucesso;
 - o `internal pilot` ja foi executado;
 - o piloto agora e evidencia operacional, nao pendencia aberta;
@@ -139,94 +139,79 @@ O plano detalhado da primeira janela foi preservado apenas como historico em:
 
 ---
 
-## 8. Criterios de ampliacao ou contencao
-
-So ampliar o uso do `v1` se houver:
-
-- estabilidade repetida;
-- rastreabilidade suficiente;
-- baixa incidencia de falhas de governanca;
-- recuperacao confiavel apos falhas;
-- memoria util sem inconsistencia relevante.
-
-Reduzir escopo, pausar ou aplicar rollback se houver:
-
-- falhas recorrentes de governanca;
-- memoria inconsistente;
-- operacao sem rastreabilidade;
-- regressao importante apos mudanca;
-- alto volume de intervencao manual corretiva.
-
----
-
-## 9. Baseline tecnico oficial
+## 8. Baseline tecnico oficial
 
 O baseline tecnico oficial do `v1` e:
 
 - `orchestrator-service` como coordenador do fluxo principal;
-- `PostgreSQL` como backend operacional recomendado;
+- `PostgreSQL` como backend operacional oficial;
 - trilha local persistida como observabilidade primaria;
 - `LangSmith` apenas como camada complementar quando configurado;
 - `LangGraph` mantido como POC opcional, fora do caminho critico do `v1`;
-- `evolution-lab` mantido em `sandbox-only`.
+- `evolution-lab` mantido em `sandbox-only`;
+- `jarvis-console` como interface textual minima do baseline.
 
 ---
 
-## 10. Relacao com o pos-v1
+## 9. Infraestrutura local oficial
 
-Este documento fecha o baseline operacional do `v1`.
+Defaults operacionais importantes:
 
-Qualquer novo trabalho de:
-
-- `LangGraph` como substrato principal;
-- memoria semantica mais profunda;
-- especialistas mais amplos;
-- voz e multimodalidade;
-- autoevolucao mais forte
-
-deve ser tratado como pos-`v1`, `v1.5` ou `v2`, e nao como requisito para manter
-o baseline atual utilizavel.
+- `docker compose -f infra/local-postgres.compose.yml up -d`
+- `DATABASE_URL=postgresql://postgres:postgres@localhost:5433/jarvis`
+- memoria local fallback: `.jarvis_runtime/memory.db`
+- observabilidade local: `.jarvis_runtime/observability.db`
 
 ---
 
-## 11. Interface minima do baseline
+## 10. Critérios de ampliação ou contenção
 
-O `v1` passa a incluir uma interface textual minima via `jarvis-console`.
+Só ampliar o uso do `v1` se houver:
 
-Ela deve ser lida como:
+- estabilidade repetida;
+- rastreabilidade suficiente;
+- baixa incidência de falhas de governança;
+- recuperação confiável após falhas;
+- memória útil sem inconsistência relevante.
 
-- primeira superficie real de acesso ao nucleo;
-- casca fina sobre o `orchestrator-service`;
-- canal minimo para `ask` e `chat` textual com `session_id` e `mission_id`.
+Reduzir escopo, pausar ou aplicar rollback se houver:
 
-Ela nao muda o escopo operacional do `v1` para:
-
-- web UI completa;
-- voz e realtime;
-- adaptador plugavel de LLM;
-- ecossistema amplo de interfaces.
+- falhas recorrentes de governança;
+- memória inconsistente;
+- operação sem rastreabilidade;
+- regressão importante após mudança;
+- alto volume de intervenção manual corretiva.
 
 ---
 
-## 12. Fechamento operacional desta rodada
+## 11. Artefatos operacionais do baseline
 
-O baseline atual do `v1` foi revalidado com o pacote final de robustez e console minimo.
-
-Entradas novas desta rodada:
+O baseline atual do `v1` já produz ou consome estes artefatos operacionais:
 
 - `baseline snapshot` em `.jarvis_runtime/operational/`;
 - `containment drill` em `.jarvis_runtime/operational/`;
-- `incident evidence` para requests anomalas ou governadas;
-- `jarvis-console` como primeira interface textual real do sistema.
+- `incident evidence` para requests anômalas ou governadas;
+- relatórios do `internal pilot` e comparações de paths;
+- trilha persistida local como fonte primária de auditoria.
 
-Validacao concluida:
+Leitura correta:
 
-- `development` verde;
-- `controlled` verde com `PostgreSQL` local em `localhost:5432/jarvis`;
-- `internal pilot` curto verde com status `healthy`.
+- esses artefatos não reabrem o `v1`;
+- eles existem para sustentar uso controlado, contenção e evidência operacional.
 
-Leitura pratica:
+---
 
-- o `v1` agora tem robustez operacional minima auditavel;
-- o `v1` agora tem uma interface textual minima sem introduzir `LLM adapter` ou web UI;
-- o que faltar daqui para frente deve ser tratado como `pos-v1`, `v1.5` ou `v2`.
+## 12. Relação com o pós-v1
+
+Este documento fecha o baseline operacional do `v1`.
+
+Qualquer trabalho novo de:
+
+- continuidade profunda entre missoes;
+- memoria semantica mais profunda;
+- especialistas mais amplos;
+- voz e multimodalidade;
+- `LangGraph` como substrato principal;
+- autoevolucao mais forte
+
+deve ser tratado como `pos-v1`, `v1.5` ou `v2`, e nao como requisito para manter o baseline atual utilizavel.

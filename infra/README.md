@@ -17,5 +17,5 @@ docker compose -f infra/local-postgres.compose.yml up -d
 URL padrao correspondente:
 
 ```text
-postgresql://postgres:postgres@localhost:5432/jarvis
+postgresql://postgres:postgres@localhost:5433/jarvis
 ```

@@ -8,6 +8,28 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 
 ## 2026-03-22
 
+### Revisao documental ampla do repositorio
+
+- revisados e atualizados os documentos centrais e os derivados mais importantes para refletir o estado real do projeto: `v1` encerrado, `pos-v1` aberto e Sprint 2 como frente ativa;
+- reescrito `HANDOFF.md` para reduzir historico excessivo, atualizar o commit de referencia e consolidar a retomada operacional;
+- reescrito `README.md` para apresentar o baseline atual e a leitura correta da fase do projeto;
+- atualizados documentos operacionais, executivos, de implementacao e de arquitetura para remover contradicoes sobre fechamento do `v1`, `GO CONDICIONAL`, porta local do PostgreSQL e foco do ciclo atual;
+- refinado `docs/architecture/technology-study.md` para refletir melhor o peso atual de `CrewAI`, `AutoGen`, `Microsoft Agent Framework` e da camada de referencias arquiteturais por funcao.
+
+### Restauracao de contexto apos enxugamento excessivo
+
+- reforcado `HANDOFF.md` com um bloco curto de baseline materializado para preservar visibilidade operacional sem voltar ao historico gigante;
+- ampliado `docs/operations/v1-operational-baseline.md` com criterios de ampliacao ou contencao e com a lista dos artefatos operacionais do baseline;
+- ampliado `docs/implementation/implementation-strategy.md` com uma leitura historica mais concreta da sequencia que fechou o `v1` e das capacidades operacionais que emergiram desse caminho.
+
+### Referencias arquiteturais por funcao formalizadas no Documento-Mestre
+
+- complementado `documento_mestre_jarvis.md` com uma camada explicita de referencias arquiteturais por funcao, separando o eixo de posicionamento na stack do eixo de papel arquitetural;
+- formalizada a leitura por `referencia central`, `referencia secundaria` e `benchmark conceitual` para orquestracao, agente de software, computer use, memoria persistente, assistencia operacional e contratos;
+- atualizado `docs/architecture/technology-study.md` para refletir os dois eixos de decisao e ampliar a matriz de referencias externas;
+- atualizado `docs/documentation/estrutura_de_documentos_derivados.md` para explicitar que o Documento-Mestre guarda tanto o posicionamento oficial de tecnologias quanto as referencias arquiteturais oficiais por funcao;
+- atualizado `docs/executive/master-summary.md` e `HANDOFF.md` para refletir a nova regra documental e arquitetural.
+
 ### Execucao da Sprint 1 do ciclo rolante
 
 - concluido o modelo interno minimo de continuidade entre missoes relacionadas;
