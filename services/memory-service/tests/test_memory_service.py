@@ -182,6 +182,61 @@ def test_memory_service_recovers_mission_hints_in_continuity_priority_order() ->
     assert any(item.startswith("mission_recommendation=") for item in recovered.mission_hints)
 
 
+def test_memory_service_detects_related_mission_continuity_within_same_session() -> None:
+    temp_dir = runtime_dir("memory-related")
+    service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
+    service.record_turn(
+        InputContract(
+            request_id=RequestId("req-related-1"),
+            session_id=SessionId("sess-related"),
+            mission_id=MissionId("mission-a"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Plan milestone M3 rollout.",
+            timestamp="2026-03-17T00:00:00Z",
+        ),
+        intent="planning",
+        response_text="Rollout plan drafted.",
+        deliberative_plan=sample_plan(),
+        specialist_contributions=sample_specialist_contributions(),
+    )
+    service.record_turn(
+        InputContract(
+            request_id=RequestId("req-related-2"),
+            session_id=SessionId("sess-related"),
+            mission_id=MissionId("mission-b"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Analyze milestone M3 rollout risks.",
+            timestamp="2026-03-17T00:01:00Z",
+        ),
+        intent="analysis",
+        response_text="Risk analysis drafted.",
+        deliberative_plan=sample_plan(),
+        specialist_contributions=sample_specialist_contributions(),
+    )
+
+    recovered = service.recover_for_input(
+        InputContract(
+            request_id=RequestId("req-related-3"),
+            session_id=SessionId("sess-related"),
+            mission_id=MissionId("mission-b"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Continue the risk analysis.",
+            timestamp="2026-03-17T00:02:00Z",
+        )
+    )
+
+    assert recovered.continuity_context is not None
+    assert recovered.continuity_context.related_candidates
+    candidate = recovered.continuity_context.related_candidates[0]
+    assert candidate.mission_id == MissionId("mission-a")
+    assert candidate.relation_type == "same_session_related_mission"
+    assert candidate.priority_score >= 0.6
+    assert any(item == "related_mission_id=mission-a" for item in recovered.mission_hints)
+
+
 def test_build_memory_repository_defaults_to_runtime_sqlite() -> None:
     repository = build_memory_repository(None)
     assert isinstance(repository, SqliteMemoryRepository)

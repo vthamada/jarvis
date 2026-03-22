@@ -13,6 +13,8 @@ from shared.contracts import (
     InputContract,
     MemoryRecordContract,
     MemoryRecoveryContract,
+    MissionContinuityCandidateContract,
+    MissionContinuityContextContract,
     MissionStateContract,
     SpecialistContributionContract,
 )
@@ -36,6 +38,7 @@ class MemoryRecoveryResult:
     session_context: list[str]
     mission_hints: list[str]
     plan_hints: list[str]
+    continuity_context: MissionContinuityContextContract | None = None
 
     @property
     def recovered_items(self) -> list[str]:
@@ -72,15 +75,18 @@ class MemoryService:
             max_items=4,
             sensitivity_ceiling=RiskLevel.MODERATE,
         )
-        session_context, mission_hints, plan_hints = self._compose_recovered_items(
-            contract,
-            recovery_contract.max_items or 4,
-        )
+        (
+            session_context,
+            mission_hints,
+            plan_hints,
+            continuity_context,
+        ) = self._compose_recovered_items(contract, recovery_contract.max_items or 4)
         return MemoryRecoveryResult(
             recovery_contract=recovery_contract,
             session_context=session_context,
             mission_hints=mission_hints,
             plan_hints=plan_hints,
+            continuity_context=continuity_context,
         )
 
     def record_turn(
@@ -186,10 +192,11 @@ class MemoryService:
         self,
         contract: InputContract,
         limit: int,
-    ) -> tuple[list[str], list[str], list[str]]:
+    ) -> tuple[list[str], list[str], list[str], MissionContinuityContextContract | None]:
         session_context: list[str] = []
         mission_hints: list[str] = []
         plan_hints: list[str] = []
+        continuity_context: MissionContinuityContextContract | None = None
         summary = self.repository.fetch_context_summary(str(contract.session_id))
         if summary:
             session_context.append(f"context_summary={summary}")
@@ -233,7 +240,30 @@ class MemoryService:
                     mission_hints.append(
                         f"mission_steps={' ; '.join(mission_state.recent_plan_steps[:3])}"
                     )
-        return session_context[-limit:], mission_hints[:8], plan_hints[-2:]
+                continuity_context = self._build_continuity_context(contract, mission_state)
+                if continuity_context and continuity_context.related_candidates:
+                    primary = continuity_context.related_candidates[0]
+                    mission_hints.append(f"related_mission_id={primary.mission_id}")
+                    mission_hints.append(f"related_mission_goal={primary.mission_goal}")
+                    mission_hints.append(
+                        f"related_continuity_reason={primary.continuity_reason}"
+                    )
+                    mission_hints.append(
+                        f"related_continuity_priority={primary.priority_score:.2f}"
+                    )
+            else:
+                continuity_context = self._build_continuity_context_for_new_mission(contract)
+                if continuity_context and continuity_context.related_candidates:
+                    primary = continuity_context.related_candidates[0]
+                    mission_hints.append(f"related_mission_id={primary.mission_id}")
+                    mission_hints.append(f"related_mission_goal={primary.mission_goal}")
+                    mission_hints.append(
+                        f"related_continuity_reason={primary.continuity_reason}"
+                    )
+                    mission_hints.append(
+                        f"related_continuity_priority={primary.priority_score:.2f}"
+                    )
+        return session_context[-limit:], mission_hints[:12], plan_hints[-2:], continuity_context
 
     def _build_mission_state(
         self,
@@ -308,6 +338,8 @@ class MemoryService:
             mission_goal=mission_goal,
             mission_status=MissionStatus.ACTIVE,
             checkpoints=checkpoints[-5:],
+            created_at=previous.created_at if previous else self.now(),
+            session_origin=str(contract.session_id),
             active_tasks=active_tasks[-5:],
             related_memories=related_memories[-5:],
             related_artifacts=related_artifacts[-5:],
@@ -318,7 +350,142 @@ class MemoryService:
             identity_continuity_brief=identity_continuity_brief,
             open_loops=persisted_open_loops,
             last_decision_frame=persisted_frame,
+            owner_context=contract.user_id or str(contract.session_id),
             updated_at=self.now(),
+        )
+
+    def _build_continuity_context(
+        self,
+        contract: InputContract,
+        current_mission_state: MissionStateContract,
+    ) -> MissionContinuityContextContract | None:
+        related_states = self.repository.list_related_mission_states(
+            session_id=str(contract.session_id),
+            exclude_mission_id=str(contract.mission_id),
+            limit=3,
+        )
+        candidates: list[MissionContinuityCandidateContract] = []
+        for related_state in related_states:
+            candidate = self._build_related_candidate(current_mission_state, related_state)
+            if candidate is not None:
+                candidates.append(candidate)
+        candidates.sort(
+            key=lambda item: (item.priority_score, item.confidence_score),
+            reverse=True,
+        )
+        if current_mission_state.open_loops:
+            recommended_action = "priorizar_missao_ativa"
+        elif candidates:
+            recommended_action = "avaliar_continuidade_relacionada"
+        else:
+            recommended_action = "seguir_sem_continuidade_relacionada"
+        return MissionContinuityContextContract(
+            active_mission_id=contract.mission_id,
+            active_mission_goal=current_mission_state.mission_goal,
+            active_continuity_brief=current_mission_state.identity_continuity_brief,
+            related_candidates=candidates[:2],
+            recommended_action=recommended_action,
+        )
+
+    def _build_continuity_context_for_new_mission(
+        self,
+        contract: InputContract,
+    ) -> MissionContinuityContextContract | None:
+        related_states = self.repository.list_related_mission_states(
+            session_id=str(contract.session_id),
+            exclude_mission_id=str(contract.mission_id),
+            limit=3,
+        )
+        current_tokens = self._meaningful_tokens(contract.content)
+        candidates: list[MissionContinuityCandidateContract] = []
+        for related_state in related_states:
+            token_overlap = sorted(
+                current_tokens.intersection(self._meaningful_tokens(related_state.mission_goal))
+            )
+            if not token_overlap:
+                continue
+            priority = 0.55 + (0.15 if related_state.open_loops else 0.0)
+            confidence = 0.55 + (0.15 if len(token_overlap) > 1 else 0.0)
+            reasons = [f"objetivo_relacionado={','.join(token_overlap[:2])}"]
+            if related_state.open_loops:
+                reasons.append(f"loop_relacionado={related_state.open_loops[0]}")
+            candidates.append(
+                MissionContinuityCandidateContract(
+                    mission_id=related_state.mission_id,
+                    relation_type="same_session_related_mission",
+                    mission_goal=related_state.mission_goal,
+                    continuity_reason="; ".join(reasons),
+                    priority_score=min(priority, 1.0),
+                    confidence_score=min(confidence, 1.0),
+                    open_loops=list(related_state.open_loops[:2]),
+                    semantic_focus=list(related_state.semantic_focus[:3]),
+                    last_recommendation=related_state.last_recommendation,
+                )
+            )
+        candidates.sort(
+            key=lambda item: (item.priority_score, item.confidence_score),
+            reverse=True,
+        )
+        if not candidates:
+            return None
+        return MissionContinuityContextContract(
+            active_mission_id=contract.mission_id,
+            active_mission_goal=contract.content,
+            active_continuity_brief=None,
+            related_candidates=candidates[:2],
+            recommended_action="avaliar_continuidade_relacionada",
+        )
+
+    def _build_related_candidate(
+        self,
+        current_mission_state: MissionStateContract,
+        related_state: MissionStateContract,
+    ) -> MissionContinuityCandidateContract | None:
+        current_focus = set(current_mission_state.semantic_focus)
+        related_focus = set(related_state.semantic_focus)
+        shared_focus = sorted(current_focus.intersection(related_focus))
+        token_overlap = sorted(
+            self._meaningful_tokens(current_mission_state.mission_goal).intersection(
+                self._meaningful_tokens(related_state.mission_goal)
+            )
+        )
+        if not shared_focus and not token_overlap and not related_state.open_loops:
+            return None
+
+        priority = 0.35
+        confidence = 0.4
+        reasons: list[str] = []
+        if shared_focus:
+            priority += 0.25
+            confidence += 0.2
+            reasons.append(f"foco_compartilhado={','.join(shared_focus[:2])}")
+        if token_overlap:
+            priority += 0.2
+            confidence += 0.2
+            reasons.append(f"objetivo_relacionado={','.join(token_overlap[:2])}")
+        if related_state.open_loops:
+            priority += 0.15
+            confidence += 0.1
+            reasons.append(f"loop_relacionado={related_state.open_loops[0]}")
+        if (
+            current_mission_state.last_decision_frame
+            and current_mission_state.last_decision_frame == related_state.last_decision_frame
+        ):
+            priority += 0.05
+            reasons.append(
+                f"frame_compartilhado={current_mission_state.last_decision_frame}"
+            )
+
+        return MissionContinuityCandidateContract(
+            mission_id=related_state.mission_id,
+            relation_type="same_session_related_mission",
+            mission_goal=related_state.mission_goal,
+            continuity_reason="; ".join(reasons[:3]) or "continuidade_relacionada_detectada",
+            priority_score=min(priority, 1.0),
+            confidence_score=min(confidence, 1.0),
+            open_loops=list(related_state.open_loops[:2]),
+            semantic_focus=list(related_state.semantic_focus[:3]),
+            last_recommendation=related_state.last_recommendation,
         )
 
     def _build_semantic_brief(
@@ -377,6 +544,16 @@ class MemoryService:
         if not loops and deliberative_plan and deliberative_plan.continuity_action == "continuar":
             loops.append(deliberative_plan.goal)
         return loops[:3]
+
+    @staticmethod
+    def _meaningful_tokens(text: str) -> set[str]:
+        return {
+            token
+            for token in "".join(
+                char if char.isalnum() else " " for char in text.lower()
+            ).split()
+            if len(token) > 3
+        }
 
     @staticmethod
     def _decision_frame(deliberative_plan: DeliberativePlanContract | None) -> str:

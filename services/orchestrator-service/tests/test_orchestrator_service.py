@@ -182,10 +182,48 @@ def test_orchestrator_service_recovers_mission_continuity_across_instances() -> 
     assert second_result.operation_result is None
     assert second_result.specialist_review is not None
     assert second_result.deliberative_plan.continuity_action == "continuar"
+    assert second_result.deliberative_plan.continuity_source == "active_mission"
     assert second_result.deliberative_plan.open_loops
     assert "Julgamento" in second_result.response_text
     assert "missao ativa segue ancorada em" in second_result.response_text
     assert "Dominios:" not in second_result.response_text
+
+
+def test_orchestrator_service_surfaces_related_mission_candidate_in_same_session() -> None:
+    temp_dir = runtime_dir("orchestrator-related")
+    memory_db = f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+    observability_db = str(temp_dir / "observability.db")
+    artifact_dir = str(temp_dir / "artifacts")
+    service = OrchestratorService(
+        memory_service=MemoryService(database_url=memory_db),
+        operational_service=OperationalService(artifact_dir=artifact_dir),
+        observability_service=ObservabilityService(database_path=observability_db),
+    )
+    service.handle_input(
+        InputContract(
+            request_id=RequestId("req-related-a"),
+            session_id=SessionId("sess-related"),
+            mission_id=MissionId("mission-a"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Plan milestone M3 rollout.",
+            timestamp="2026-03-17T00:00:00Z",
+        )
+    )
+    result = service.handle_input(
+        InputContract(
+            request_id=RequestId("req-related-b"),
+            session_id=SessionId("sess-related"),
+            mission_id=MissionId("mission-b"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Analyze milestone M3 rollout risks.",
+            timestamp="2026-03-17T00:01:00Z",
+        )
+    )
+
+    assert any(item == "related_mission_id=mission-a" for item in result.recovered_context)
+    assert "missao_relacionada=Plan milestone M3 rollout." in result.deliberative_plan.rationale
 
 
 def test_orchestrator_service_reformulates_conflicting_request_in_active_mission() -> None:

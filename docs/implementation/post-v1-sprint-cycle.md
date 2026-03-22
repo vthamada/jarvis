@@ -19,6 +19,11 @@ Fontes de direcao:
 - `docs/roadmap/programa-ate-v3.md`
 - `docs/architecture/technology-study.md`
 
+Status desta versao do ciclo:
+
+- Sprint 1 concluida;
+- Sprint 2 passa a ser a proxima sprint ativa.
+
 ---
 
 ## 2. Regra de leitura
@@ -54,6 +59,10 @@ Ele existe para deixar fechados:
 ---
 
 ## 4. Sprint 1
+
+Status:
+
+- concluida
 
 ### Objetivo
 
@@ -103,6 +112,13 @@ baseline do `v1`.
 ### Risco de desvio arquitetural
 
 - transformar continuidade em mais um canal de contexto indistinto.
+
+Resultado registrado nesta rodada:
+
+- modelo explicito de continuidade relacionada adicionado ao nucleo;
+- memoria passou a recuperar candidatas de missao relacionada dentro da mesma sessao;
+- orquestrador e planejamento passaram a receber esse sinal sem breaking change na API publica do `v1`;
+- o plano deliberativo agora explicita a fonte da continuidade (`active_mission`, `related_mission` ou `fresh_request`).
 
 ---
 

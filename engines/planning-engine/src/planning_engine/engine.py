@@ -93,6 +93,12 @@ class PlanningContext:
     last_decision_frame: str | None = None
     mission_goal: str | None = None
     mission_recommendation: str | None = None
+    related_mission_id: str | None = None
+    related_mission_goal: str | None = None
+    related_continuity_reason: str | None = None
+    related_continuity_priority: float | None = None
+    related_continuity_confidence: float | None = None
+    related_open_loops: list[str] | None = None
 
 
 class PlanningEngine:
@@ -115,6 +121,7 @@ class PlanningEngine:
             goal_conflict=goal_conflict,
         )
         open_loops = list(context.open_loops or [])[:3]
+        continuity_source = self._continuity_source(context, open_loops=open_loops)
         steps = self._build_steps(
             context,
             continuity_action=continuity_action,
@@ -158,6 +165,7 @@ class PlanningEngine:
             dominant_tension=dominant_tension,
             smallest_safe_next_action=smallest_safe_next_action,
             continuity_action=continuity_action,
+            continuity_source=continuity_source,
         )
         rationale = self._build_rationale(
             context,
@@ -187,6 +195,15 @@ class PlanningEngine:
             smallest_safe_next_action=smallest_safe_next_action,
             continuity_action=continuity_action,
             open_loops=open_loops,
+            continuity_source=continuity_source,
+            continuity_target_mission_id=(
+                context.related_mission_id if continuity_source == "related_mission" else None
+            ),
+            continuity_target_goal=(
+                context.related_mission_goal
+                if continuity_source == "related_mission"
+                else mission_goal
+            ),
         )
 
     def refine_task_plan(
@@ -445,11 +462,13 @@ class PlanningEngine:
         dominant_tension: str,
         smallest_safe_next_action: str,
         continuity_action: str,
+        continuity_source: str,
     ) -> str:
         mode = context.identity_mode or context.preferred_response_mode
         return (
             f"objetivo={dominant_goal}; missao_ativa={mission_goal}; modo={mode}; "
-            f"continuidade={continuity_action}; tensao={dominant_tension}; "
+            f"continuidade={continuity_action}; fonte_continuidade={continuity_source}; "
+            f"tensao={dominant_tension}; "
             f"proxima_acao={smallest_safe_next_action}"
         )
 
@@ -473,6 +492,13 @@ class PlanningEngine:
         continuity_hint = context.identity_continuity_brief or "sem fio de continuidade consolidado"
         semantic_hint = context.mission_semantic_brief or "sem memoria semantica de missao"
         open_loops = ", ".join((context.open_loops or [])[:3]) or "nenhum"
+        related_goal = context.related_mission_goal or "nenhuma"
+        related_reason = context.related_continuity_reason or "nenhuma"
+        related_priority = (
+            f"{context.related_continuity_priority:.2f}"
+            if context.related_continuity_priority is not None
+            else "0.00"
+        )
         secondary = ", ".join((context.secondary_goals or [])[:2]) or "nenhum"
         arbitration = context.arbitration_summary or context.cognitive_rationale
         risk_text = "; ".join(risks)
@@ -485,6 +511,8 @@ class PlanningEngine:
             f"conflito_missao={conflict_text}; contexto={context_hint}; apoio={knowledge_hint}; "
             f"arbitragem={arbitration}; tensao={dominant_tension}; "
             f"memoria_semantica={semantic_hint}; recomendacao_previa={previous_recommendation}; "
+            f"missao_relacionada={related_goal}; razao_relacionada={related_reason}; "
+            f"prioridade_relacionada={related_priority}; "
             f"riscos={risk_text}"
         )
 
@@ -527,6 +555,13 @@ class PlanningEngine:
             return f"fechar {loop_focus} com criterio explicito"
         if continuity_action == "continuar" and loop_focus:
             return f"retomar {loop_focus} antes de abrir novo escopo"
+        if (
+            continuity_action == "continuar"
+            and context.related_mission_id
+            and context.related_continuity_priority
+            and context.related_continuity_priority >= 0.6
+        ):
+            return "explicitar se a nova missao deve herdar continuidade de uma missao relacionada"
         if context.intent == "analysis":
             return "explicitar o trade-off dominante antes de recomendar"
         if steps:
@@ -545,7 +580,21 @@ class PlanningEngine:
         tensions = list(context.tensions or [])
         if tensions:
             return tensions[0]
+        if context.related_mission_id:
+            return "equilibrar a missao ativa com sinais de continuidade relacionada"
         return "manter foco executivo suficiente"
+
+    @staticmethod
+    def _continuity_source(
+        context: PlanningContext,
+        *,
+        open_loops: list[str],
+    ) -> str:
+        if open_loops or context.identity_continuity_brief or context.mission_goal:
+            return "active_mission"
+        if context.related_mission_id:
+            return "related_mission"
+        return "fresh_request"
 
     def _mission_goal_conflict(
         self,

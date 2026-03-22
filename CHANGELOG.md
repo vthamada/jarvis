@@ -8,6 +8,15 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 
 ## 2026-03-22
 
+### Execucao da Sprint 1 do ciclo rolante
+
+- concluido o modelo interno minimo de continuidade entre missoes relacionadas;
+- adicionados contratos compartilhados minimos para candidatas e contexto de continuidade relacionada;
+- `memory-service` passou a recuperar candidatas de missao relacionada dentro da mesma sessao, inclusive no primeiro turno de uma nova missao;
+- `orchestrator-service` passou a repassar a melhor candidata relacionada para o `planning-engine`;
+- `planning-engine` passou a registrar a fonte da continuidade no plano deliberativo e a explicitar alvo e razao da continuidade relacionada na racionalizacao;
+- adicionados testes de memoria, planejamento e orquestracao para travar a leitura de missao relacionada sem quebrar a API publica do `v1`.
+
 ### Sistema de planejamento em duas camadas ate `v3`
 
 - criado `docs/roadmap/programa-ate-v3.md` como contrato de direcao do `pos-v1` ate `v3`, separando `pos-v1`, `v1.5`, `v2` e `v3` por objetivos, gates e limites;

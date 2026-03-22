@@ -98,6 +98,9 @@ class DeliberativePlanContract:
     smallest_safe_next_action: str | None = None
     continuity_action: str | None = None
     open_loops: list[str] = field(default_factory=list)
+    continuity_source: str | None = None
+    continuity_target_mission_id: MissionId | None = None
+    continuity_target_goal: str | None = None
 
 
 @dataclass
@@ -189,6 +192,28 @@ class GovernanceDecisionContract:
     requires_rollback_plan: bool = False
     containment_hint: str | None = None
     policy_refs: list[str] = field(default_factory=list)
+
+
+@dataclass
+class MissionContinuityCandidateContract:
+    mission_id: MissionId
+    relation_type: str
+    mission_goal: str
+    continuity_reason: str
+    priority_score: float
+    confidence_score: float
+    open_loops: list[str] = field(default_factory=list)
+    semantic_focus: list[str] = field(default_factory=list)
+    last_recommendation: str | None = None
+
+
+@dataclass
+class MissionContinuityContextContract:
+    active_mission_id: MissionId | None
+    active_mission_goal: str | None = None
+    active_continuity_brief: str | None = None
+    related_candidates: list[MissionContinuityCandidateContract] = field(default_factory=list)
+    recommended_action: str | None = None
 
 
 @dataclass

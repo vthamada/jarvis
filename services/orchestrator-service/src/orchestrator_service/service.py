@@ -503,6 +503,54 @@ class OrchestratorService:
             last_decision_frame=self._extract_context_hint(recovered, "last_decision_frame="),
             mission_goal=self._extract_context_hint(recovered, "mission_goal="),
             mission_recommendation=self._extract_context_hint(recovered, "mission_recommendation="),
+            related_mission_id=(
+                str(memory_recovery_result.continuity_context.related_candidates[0].mission_id)
+                if (
+                    memory_recovery_result.continuity_context
+                    and memory_recovery_result.continuity_context.related_candidates
+                )
+                else None
+            ),
+            related_mission_goal=(
+                memory_recovery_result.continuity_context.related_candidates[0].mission_goal
+                if (
+                    memory_recovery_result.continuity_context
+                    and memory_recovery_result.continuity_context.related_candidates
+                )
+                else None
+            ),
+            related_continuity_reason=(
+                memory_recovery_result.continuity_context.related_candidates[0].continuity_reason
+                if (
+                    memory_recovery_result.continuity_context
+                    and memory_recovery_result.continuity_context.related_candidates
+                )
+                else None
+            ),
+            related_continuity_priority=(
+                memory_recovery_result.continuity_context.related_candidates[0].priority_score
+                if (
+                    memory_recovery_result.continuity_context
+                    and memory_recovery_result.continuity_context.related_candidates
+                )
+                else None
+            ),
+            related_continuity_confidence=(
+                memory_recovery_result.continuity_context.related_candidates[0].confidence_score
+                if (
+                    memory_recovery_result.continuity_context
+                    and memory_recovery_result.continuity_context.related_candidates
+                )
+                else None
+            ),
+            related_open_loops=(
+                list(memory_recovery_result.continuity_context.related_candidates[0].open_loops)
+                if (
+                    memory_recovery_result.continuity_context
+                    and memory_recovery_result.continuity_context.related_candidates
+                )
+                else []
+            ),
         )
 
     def _compose_response_text(
@@ -597,4 +645,3 @@ class OrchestratorService:
             operation_result=state["operation_result"],
             events=state["events"],
         )
-

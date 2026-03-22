@@ -18,6 +18,11 @@ Sistema oficial de planejamento desta fase:
 - `docs/roadmap/programa-ate-v3.md` como direcao do programa ate `v3`;
 - `docs/implementation/post-v1-sprint-cycle.md` como execucao oficial das proximas `6` sprints.
 
+Estado de execucao do ciclo rolante:
+
+- Sprint 1 concluida;
+- Sprint 2 passa a ser a proxima frente ativa.
+
 ## Estado do Projeto
 
 Hoje o repositório contém:
@@ -160,8 +165,8 @@ Pendencias principais agora:
 
 Ordem recomendada:
 
-1. executar a Sprint 1 do ciclo rolante, fechando o modelo de continuidade entre missoes e seus contratos internos;
-2. executar a Sprint 2, consolidando recuperacao e ranking de continuidade relacionada;
+1. executar a Sprint 2, consolidando recuperacao e ranking de continuidade relacionada;
+2. executar a Sprint 3, levando a decisao explicita de continuidade para planejamento e orquestracao;
 3. rodar estudo externo curto em paralelo, sem bloquear a implementacao principal;
 4. consolidar achados reutilizaveis e classifica-los como `absorver depois`, `usar como referencia` ou `rejeitar`;
 5. decidir o que entra em `v1.5` e o que fica para `v2` ao final do primeiro ciclo.

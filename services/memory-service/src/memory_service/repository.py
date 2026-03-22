@@ -58,6 +58,16 @@ class MemoryRepository(ABC):
     def fetch_mission_state(self, mission_id: str) -> MissionStateContract | None:
         """Load a persisted mission state, if any."""
 
+    @abstractmethod
+    def list_related_mission_states(
+        self,
+        *,
+        session_id: str,
+        exclude_mission_id: str,
+        limit: int,
+    ) -> list[MissionStateContract]:
+        """Load other mission states observed in the same session."""
+
 
 class SqliteMemoryRepository(MemoryRepository):
     """SQLite-backed implementation used for local persistence and tests."""
@@ -191,6 +201,37 @@ class SqliteMemoryRepository(MemoryRepository):
                 (mission_id,),
             ).fetchone()
         return None if row is None else self._row_to_mission_state(row)
+
+    def list_related_mission_states(
+        self,
+        *,
+        session_id: str,
+        exclude_mission_id: str,
+        limit: int,
+    ) -> list[MissionStateContract]:
+        with self._connect() as connection:
+            rows = connection.execute(
+                """
+                SELECT mission_id
+                FROM (
+                    SELECT mission_id, MAX(timestamp) AS last_seen
+                    FROM interaction_turns
+                    WHERE session_id = ?
+                      AND mission_id IS NOT NULL
+                      AND mission_id <> ?
+                    GROUP BY mission_id
+                )
+                ORDER BY last_seen DESC
+                LIMIT ?
+                """,
+                (session_id, exclude_mission_id, limit),
+            ).fetchall()
+        states: list[MissionStateContract] = []
+        for row in rows:
+            mission_state = self.fetch_mission_state(str(row["mission_id"]))
+            if mission_state is not None:
+                states.append(mission_state)
+        return states
 
     def _connect(self) -> Connection:
         connection = sqlite_connect(self.database_path)
@@ -516,6 +557,38 @@ class PostgresMemoryRepository(MemoryRepository):
             last_decision_frame=row["last_decision_frame"],
             updated_at=row["updated_at"],
         )
+
+    def list_related_mission_states(
+        self,
+        *,
+        session_id: str,
+        exclude_mission_id: str,
+        limit: int,
+    ) -> list[MissionStateContract]:
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT mission_id
+                FROM (
+                    SELECT mission_id, MAX(timestamp) AS last_seen
+                    FROM interaction_turns
+                    WHERE session_id = %s
+                      AND mission_id IS NOT NULL
+                      AND mission_id <> %s
+                    GROUP BY mission_id
+                ) ranked
+                ORDER BY last_seen DESC
+                LIMIT %s
+                """,
+                (session_id, exclude_mission_id, limit),
+            )
+            rows = cursor.fetchall()
+        states: list[MissionStateContract] = []
+        for row in rows:
+            mission_state = self.fetch_mission_state(str(row["mission_id"]))
+            if mission_state is not None:
+                states.append(mission_state)
+        return states
 
     def _connect(self):
         return psycopg.connect(self.database_url, row_factory=dict_row)

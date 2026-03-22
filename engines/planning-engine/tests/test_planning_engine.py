@@ -62,6 +62,38 @@ def test_planning_engine_builds_structured_plan_with_continuity() -> None:
     )
     assert "conflito_missao=nenhum" in plan.rationale
     assert "recomendacao_previa=retomar o escopo final antes da proxima acao" in plan.rationale
+    assert plan.continuity_source == "active_mission"
+
+
+def test_planning_engine_marks_related_continuity_source_when_candidate_is_present() -> None:
+    engine = PlanningEngine()
+    plan = engine.build_task_plan(
+        PlanningContext(
+            intent="analysis",
+            query="Continue the risk analysis.",
+            recovered_context=["context_summary=milestone M3 teve dois fluxos proximos"],
+            active_domains=["analysis", "strategy"],
+            active_minds=["mente_analitica", "mente_executiva"],
+            knowledge_snippets=["Preserve continuidade entre missoes relacionadas."],
+            risk_markers=[],
+            requires_clarification=False,
+            preferred_response_mode="analysis_only",
+            cognitive_rationale="intent=analysis; mente_primaria=mente_analitica",
+            dominant_goal="dar continuidade analitica segura",
+            identity_mode="deep_analysis",
+            related_mission_id="mission-a",
+            related_mission_goal="Plan milestone M3 rollout.",
+            related_continuity_reason="foco_compartilhado=strategy,planning",
+            related_continuity_priority=0.8,
+            related_continuity_confidence=0.7,
+        )
+    )
+    assert plan.continuity_action == "continuar"
+    assert plan.continuity_source == "related_mission"
+    assert plan.continuity_target_mission_id == "mission-a"
+    assert plan.continuity_target_goal == "Plan milestone M3 rollout."
+    assert "missao_relacionada=Plan milestone M3 rollout." in plan.rationale
+    assert "prioridade_relacionada=0.80" in plan.rationale
 
 
 def test_planning_engine_reformulates_when_new_request_conflicts_with_active_mission() -> None:
