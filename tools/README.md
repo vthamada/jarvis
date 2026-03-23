@@ -88,3 +88,16 @@ Para transformar lacunas do piloto em proposals sandbox-only do `evolution-lab`:
 python tools/evolution_from_pilot.py --limit 10
 python tools/evolution_from_pilot.py --comparison-json .jarvis_runtime/path_comparison.json
 ```
+
+## Fechamento de ciclo
+
+Para consolidar o primeiro ciclo do `pós-v1` e emitir o corte formal entre `v1.5` e `v2`:
+
+```powershell
+python tools/close_post_v1_cycle.py --limit 20
+```
+
+Esse script gera artefatos em `.jarvis_runtime/post_v1_cycle/`:
+
+- `cycle_closure.json`
+- `cycle_closure.md`

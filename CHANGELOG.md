@@ -8,6 +8,18 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 
 ## 2026-03-22
 
+### Regra de estudo externo explicitada para o v1.5
+
+- `docs/implementation/v1-5-sprint-cycle.md` passou a explicitar quais estudos externos entram no `v1.5` e quais ficam fora do corte imediato;
+- `HANDOFF.md` passou a resumir essa regra para retomada operacional curta, destacando `LangGraph` e `Hermes Agent` como referências mais diretamente ligadas ao ciclo.
+
+### Execução da Sprint 6 do ciclo pós-v1
+
+- criado `tools/close_post_v1_cycle.py` para consolidar evidência operacional do primeiro ciclo e emitir o corte formal entre `v1.5` e `v2`;
+- criado `docs/implementation/post-v1-cycle-closure.md` como fechamento oficial do primeiro ciclo do `pós-v1`;
+- criado `docs/implementation/v1-5-sprint-cycle.md` como novo plano rolante ativo da fase seguinte;
+- atualizado `post-v1-sprint-cycle`, `HANDOFF`, `README`, `master-summary`, `tools/README.md` e a estrutura documental para refletir a promoção formal para `v1.5`.
+
 ### Execução da Sprint 5 do ciclo pós-v1
 
 - `observability-service` passou a exigir `continuity_decided` na trilha mínima e a auditar sinais próprios de continuidade, incluindo `continuity_action`, `continuity_source`, lacunas de sinal e anomalias de retomada;

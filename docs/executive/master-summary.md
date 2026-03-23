@@ -98,9 +98,10 @@ O repositório possui:
 Leitura curta do momento:
 
 - o `v1` está encerrado e congelado para uso controlado;
-- a frente ativa agora é `continuidade profunda entre missões`;
-- Sprints 1 a 5 já foram concluídas;
-- Sprint 6 é a próxima frente ativa.
+- o primeiro ciclo do `pós-v1` foi encerrado;
+- a frente ativa agora é `runtime stateful governado para continuidade profunda`;
+- o programa subiu formalmente para `v1.5`;
+- Sprint 1 do `v1.5` é a próxima frente ativa.
 
 ---
 
@@ -120,7 +121,7 @@ O projeto deve evitar:
 
 O próximo passo executivo mais racional é:
 
-- executar a Sprint 6;
-- consolidar a evidência funcional e operacional do primeiro ciclo;
-- decidir formalmente o que sobe para `v1.5` e o que fica para `v2`;
-- preparar a próxima versão do plano rolante sem reabrir o baseline do `v1`.
+- executar a Sprint 1 do `v1.5`;
+- materializar checkpoints e estado recuperável da continuidade;
+- validar replay e pausa governada sem reabrir o baseline do `v1`;
+- manter `v2` explicitamente fora do corte imediato.

@@ -26,7 +26,8 @@ Status desta versao do ciclo:
 - Sprint 3 concluida;
 - Sprint 4 concluida;
 - Sprint 5 concluida;
-- Sprint 6 passa a ser a proxima sprint ativa.
+- Sprint 6 concluida;
+- este ciclo esta formalmente fechado e foi sucedido por `docs/implementation/v1-5-sprint-cycle.md`.
 
 ---
 
@@ -353,6 +354,10 @@ Resultado registrado nesta rodada:
 
 ## 9. Sprint 6
 
+Status:
+
+- concluida
+
 ### Objetivo
 
 Consolidar o primeiro ciclo e decidir formalmente o corte entre `v1.5` e `v2`.
@@ -394,6 +399,13 @@ Consolidar o primeiro ciclo e decidir formalmente o corte entre `v1.5` e `v2`.
 ### Risco de desvio arquitetural
 
 - empurrar decisoes de corte para frente e manter o `pos-v1` indefinido.
+
+Resultado registrado nesta rodada:
+
+- o primeiro ciclo do `pos-v1` foi formalmente encerrado;
+- o corte entre `v1.5` e `v2` foi declarado em `docs/implementation/post-v1-cycle-closure.md`;
+- `tools/close_post_v1_cycle.py` passou a gerar artefatos executaveis de fechamento do ciclo;
+- `docs/implementation/v1-5-sprint-cycle.md` passou a ser o plano rolante ativo da fase seguinte.
 
 ---
 

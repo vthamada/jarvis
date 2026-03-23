@@ -4,28 +4,24 @@
 
 - Atualizado em: 2026-03-22
 - Branch: `main`
-- Commit de referência: `25599b7`
+- Commit de referência: `93d6278`
 - Artefato canônico do projeto: `documento_mestre_jarvis.md`
-- Estado do projeto: `v1` encerrado e congelado para uso controlado; `pós-v1` aberto de forma disciplinada
+- Estado do projeto: `v1` encerrado e congelado para uso controlado; primeiro ciclo do `pós-v1` encerrado; `v1.5` aberto de forma disciplinada
 
 ## Meta atual
 
-Abrir o `pós-v1` com foco total em `continuidade profunda entre missões`, sem reabrir o baseline do `v1`, usando estudo externo curto apenas como apoio dirigido a essa trilha.
+Abrir o `v1.5` com foco total em `runtime stateful governado para continuidade profunda`, sem reabrir o baseline do `v1` e sem antecipar a especialização ampla de `v2`.
 
 Sistema oficial de planejamento desta fase:
 
 - `HANDOFF.md` como retomada tático-operacional;
 - `docs/roadmap/programa-ate-v3.md` como direção do programa até `v3`;
-- `docs/implementation/post-v1-sprint-cycle.md` como execução oficial das próximas `6` sprints.
+- `docs/implementation/v1-5-sprint-cycle.md` como execução oficial das próximas `6` sprints.
 
 Estado do ciclo rolante:
 
-- Sprint 1 concluída;
-- Sprint 2 concluída;
-- Sprint 3 concluída;
-- Sprint 4 concluída;
-- Sprint 5 concluída;
-- Sprint 6 é a próxima frente ativa.
+- primeiro ciclo do `pós-v1` concluído;
+- Sprint 1 do `v1.5` é a próxima frente ativa.
 
 ## Decisões fechadas
 
@@ -94,25 +90,33 @@ Principais entregas já consolidadas:
 - Sprint 3 concluída, com decisão explícita entre continuar, encerrar, reformular ou retomar continuidade relacionada;
 - Sprint 4 concluída, com snapshot persistente de continuidade da sessão e síntese orientada a continuidade acima da missão atual;
 - Sprint 5 concluída, com auditoria explícita da continuidade, sinais comparáveis no piloto e integração desses sinais ao laboratório sandbox;
+- Sprint 6 concluída, com fechamento formal do primeiro ciclo do `pós-v1` e decisão explícita de promoção para `v1.5`;
 - Documento-Mestre ampliado com referências arquiteturais oficiais por função.
 
 ## O que ainda falta
 
 Pendências principais desta fase:
 
-- executar a Sprint 6 do ciclo rolante;
+- executar a Sprint 1 do ciclo `v1.5`;
 - consolidar estudo externo curto sem bloquear a implementação principal;
-- decidir, ao final do ciclo, o que sobe para `v1.5` e o que fica para `v2`.
+- validar checkpoint, replay e pausa governada como primeiro salto estrutural acima do baseline.
+
+Regra de estudo externo no `v1.5`:
+
+- entra apenas o estudo que ajude diretamente checkpoint, replay, pausa `HITL` ou runtime stateful da continuidade;
+- `LangGraph` e `Hermes Agent` são as referências mais diretamente ligadas ao corte atual;
+- `Graphiti` e `Zep` entram apenas como apoio dirigido ao problema de continuidade;
+- especialistas amplos, `computer use`, voz oficial, memória profunda com `pgvector` e assistente operacional amplo continuam fora do foco imediato do ciclo.
 
 ## Próximos passos imediatos
 
 Ordem recomendada:
 
-1. executar a Sprint 6;
-2. consolidar a evidência das Sprints 1 a 5;
+1. executar a Sprint 1 do `v1.5`;
+2. materializar checkpoints e estado recuperável da continuidade;
 3. rodar estudo externo curto em paralelo;
 4. classificar cada achado como `absorver depois`, `usar como referência` ou `rejeitar`;
-5. fechar o corte entre `v1.5` e `v2` ao fim do ciclo.
+5. preservar o corte já definido entre `v1.5` e `v2`.
 
 ## Riscos e bloqueios
 
@@ -128,7 +132,8 @@ Ordem recomendada:
 - `HANDOFF.md`
 - `CHANGELOG.md`
 - `docs/roadmap/programa-ate-v3.md`
-- `docs/implementation/post-v1-sprint-cycle.md`
+- `docs/implementation/post-v1-cycle-closure.md`
+- `docs/implementation/v1-5-sprint-cycle.md`
 - `docs/architecture/technology-study.md`
 - `docs/operations/v1-operational-baseline.md`
 - `services/orchestrator-service/src/orchestrator_service/service.py`
@@ -147,5 +152,6 @@ Leitura mínima para qualquer novo agente:
 1. `HANDOFF.md`
 2. `documento_mestre_jarvis.md`
 3. `docs/roadmap/programa-ate-v3.md`
-4. `docs/implementation/post-v1-sprint-cycle.md`
-5. `docs/architecture/technology-study.md`
+4. `docs/implementation/post-v1-cycle-closure.md`
+5. `docs/implementation/v1-5-sprint-cycle.md`
+6. `docs/architecture/technology-study.md`

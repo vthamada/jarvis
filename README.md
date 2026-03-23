@@ -26,9 +26,9 @@ O projeto já fechou o `v1` para uso controlado e opera hoje com um baseline int
 Leitura prática correta deste momento:
 
 - `v1` encerrado e congelado para uso controlado;
-- `pós-v1` aberto com foco total em continuidade profunda entre missões;
-- Sprints 1 a 5 concluídas;
-- Sprint 6 aberta como próxima frente ativa do ciclo rolante.
+- primeiro ciclo do `pós-v1` encerrado com continuidade profunda demonstrada;
+- `v1.5` aberto com foco em runtime stateful governado para continuidade;
+- Sprint 1 do `v1.5` aberta como próxima frente ativa do ciclo rolante.
 
 ## Estrutura principal
 
