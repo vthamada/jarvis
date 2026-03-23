@@ -292,6 +292,7 @@ class OrchestratorService:
             contract,
             directive=directive,
             deliberative_plan=deliberative_plan,
+            memory_recovery_result=memory_recovery_result,
             knowledge_result=knowledge_result,
             events=events,
         )
@@ -496,13 +497,21 @@ class OrchestratorService:
         *,
         directive: ExecutiveDirective,
         deliberative_plan: DeliberativePlanContract,
+        memory_recovery_result: MemoryRecoveryResult,
         knowledge_result: KnowledgeRetrievalResult | None,
         events: list[InternalEventEnvelope],
     ) -> tuple[SpecialistHandoffPlan, list[InternalEventEnvelope]]:
+        shared_memory_contexts = self.memory_service.prepare_specialist_shared_memory(
+            session_id=str(contract.session_id),
+            specialist_hints=list(deliberative_plan.specialist_hints),
+            mission_id=str(contract.mission_id) if contract.mission_id else None,
+            continuity_context=memory_recovery_result.continuity_context,
+        )
         handoff_plan = self.specialist_engine.plan_handoffs(
             intent=directive.intent,
             plan=deliberative_plan,
             knowledge_snippets=knowledge_result.snippets if knowledge_result else [],
+            shared_memory_contexts=shared_memory_contexts,
             session_id=str(contract.session_id),
             mission_id=str(contract.mission_id) if contract.mission_id else None,
             requested_by_service=self.name,
@@ -537,6 +546,31 @@ class OrchestratorService:
         if handoff_plan.invocations:
             updated_events.append(
                 self.make_event(
+                    "specialist_shared_memory_linked",
+                    contract,
+                    {
+                        "specialist_hints": handoff_plan.specialist_hints,
+                        "sharing_modes": {
+                            item.specialist_type: (
+                                item.shared_memory_context.sharing_mode
+                                if item.shared_memory_context
+                                else None
+                            )
+                            for item in handoff_plan.invocations
+                        },
+                        "related_mission_counts": {
+                            item.specialist_type: len(
+                                item.shared_memory_context.related_mission_ids
+                            )
+                            if item.shared_memory_context
+                            else 0
+                            for item in handoff_plan.invocations
+                        },
+                    },
+                )
+            )
+            updated_events.append(
+                self.make_event(
                     "specialist_contracts_composed",
                     contract,
                     {
@@ -547,6 +581,10 @@ class OrchestratorService:
                         "boundary_summary": handoff_plan.boundary_summary,
                         "response_channel": handoff_plan.invocations[0].boundary.response_channel,
                         "tool_access_mode": handoff_plan.invocations[0].boundary.tool_access_mode,
+                        "shared_memory_attached": all(
+                            item.shared_memory_context is not None
+                            for item in handoff_plan.invocations
+                        ),
                     },
                 )
             )

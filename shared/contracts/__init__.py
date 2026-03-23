@@ -121,6 +121,22 @@ class SpecialistBoundaryContract:
 
 
 @dataclass
+class SpecialistSharedMemoryContextContract:
+    specialist_type: str
+    sharing_mode: str
+    continuity_mode: str
+    shared_memory_brief: str
+    write_policy: str
+    source_mission_id: MissionId | None = None
+    source_mission_goal: str | None = None
+    related_mission_ids: list[MissionId] = field(default_factory=list)
+    memory_refs: list[str] = field(default_factory=list)
+    semantic_focus: list[str] = field(default_factory=list)
+    open_loops: list[str] = field(default_factory=list)
+    last_recommendation: str | None = None
+
+
+@dataclass
 class SpecialistInvocationContract:
     invocation_id: str
     specialist_type: str
@@ -133,6 +149,7 @@ class SpecialistInvocationContract:
     boundary: SpecialistBoundaryContract
     session_id: SessionId | None = None
     mission_id: MissionId | None = None
+    shared_memory_context: SpecialistSharedMemoryContextContract | None = None
 
 
 @dataclass

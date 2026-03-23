@@ -71,13 +71,16 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     assert result.specialist_boundary_summary is not None
     assert result.deliberative_plan.specialist_resolution_summary is not None
     assert "Contribuicoes especialistas" not in result.response_text
-    stored_events = observability.list_recent_events(ObservabilityQuery(request_id="req-1"))
+    stored_events = observability.list_recent_events(
+        ObservabilityQuery(request_id="req-1", limit=50)
+    )
     event_names = [event.event_name for event in stored_events]
     assert event_names == [event.event_name for event in result.events]
     assert "directive_composed" in event_names
     assert "plan_built" in event_names
     assert "continuity_decided" in event_names
     assert "specialist_selection_decided" in event_names
+    assert "specialist_shared_memory_linked" in event_names
     assert "specialist_contracts_composed" in event_names
     assert "specialist_handoff_governed" in event_names
     assert "specialists_completed" in event_names
@@ -91,7 +94,14 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     )
     assert specialist_contract_event.payload["response_channel"] == "through_core"
     assert specialist_contract_event.payload["tool_access_mode"] == "none"
+    assert specialist_contract_event.payload["shared_memory_attached"] is True
     assert specialist_contract_event.payload["invocation_ids"]
+    shared_memory_event = next(
+        event for event in stored_events if event.event_name == "specialist_shared_memory_linked"
+    )
+    assert shared_memory_event.payload["sharing_modes"][
+        "especialista_planejamento_operacional"
+    ] == "core_mediated_read_only"
     specialists_completed_event = next(
         event for event in stored_events if event.event_name == "specialists_completed"
     )
@@ -106,6 +116,10 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     assert specialist_handoff_event.payload["decision"] == PermissionDecision.ALLOW.value
     assert all(
         invocation.boundary.user_visibility == "hidden_from_user"
+        for invocation in result.specialist_invocations
+    )
+    assert all(
+        invocation.shared_memory_context is not None
         for invocation in result.specialist_invocations
     )
     continuity_event = next(

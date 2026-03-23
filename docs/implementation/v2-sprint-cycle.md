@@ -24,7 +24,8 @@ Status desta versão do ciclo:
 
 - Sprint 1 concluída;
 - Sprint 2 concluída;
-- Sprint 3 é a próxima sprint ativa.
+- Sprint 3 concluída;
+- Sprint 4 é a próxima sprint ativa.
 
 ---
 
@@ -170,9 +171,9 @@ Resultado registrado nesta rodada:
 
 Status:
 
-- próxima sprint ativa
+- concluída
 - eixo principal do mestre: `memórias`
-- lacuna dominante a atacar: sair de continuidade ampliada para memória relacional compartilhada auditável
+- lacuna dominante fechada: sair de continuidade ampliada para memória relacional compartilhada auditável
 - continua fora de cobertura: registry canônico de `domínios` e composição formal de `mentes`
 
 ### Objetivo
@@ -210,13 +211,21 @@ Criar memória relacional compartilhada entre núcleo e especialistas, como avan
 
 - criar memória especializada fragmentada e sem governo do núcleo.
 
+Resultado registrado nesta rodada:
+
+- `shared/contracts` passou a expor `SpecialistSharedMemoryContextContract` como contrato canônico de contexto compartilhado mediado pelo núcleo;
+- `memory-service` passou a preparar e persistir contexto relacional compartilhado por especialista, com `sharing_mode=core_mediated_read_only` e `write_policy=through_core_only`;
+- `specialist-engine` passou a compor handoffs com `shared_memory_context`, sem permitir escrita direta do especialista fora do núcleo;
+- `orchestrator-service` e o fluxo opcional de `LangGraph` passaram a registrar `specialist_shared_memory_linked`, anexando memória compartilhada auditável antes do handoff;
+- a Sprint 3 fechou o recorte de `memórias` do `v2` sem quebrar a continuidade do `v1.5` e deixou a Sprint 4 pronta para abrir o registry de `domínios`.
+
 ---
 
 ## 7. Sprint 4
 
 Status:
 
-- planejada
+- próxima sprint ativa
 - eixo principal do mestre: `domínios`
 - lacuna dominante a atacar: ausência de registry canônico e de vínculo explícito entre domínio e especialista
 - continua fora de cobertura: composição formal de `mentes` e superfícies amplas

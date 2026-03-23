@@ -10,6 +10,7 @@ from shared.contracts import (
     SpecialistContributionContract,
     SpecialistInvocationContract,
     SpecialistSelectionContract,
+    SpecialistSharedMemoryContextContract,
 )
 
 
@@ -74,6 +75,7 @@ class SpecialistEngine:
         intent: str,
         plan: DeliberativePlanContract,
         knowledge_snippets: list[str],
+        shared_memory_contexts: dict[str, SpecialistSharedMemoryContextContract] | None = None,
         session_id: str | None = None,
         mission_id: str | None = None,
         requested_by_service: str | None = None,
@@ -90,6 +92,9 @@ class SpecialistEngine:
                 specialist_hint=selection.specialist_type,
                 plan=plan,
                 knowledge_snippets=knowledge_snippets,
+                shared_memory_context=(
+                    shared_memory_contexts or {}
+                ).get(selection.specialist_type),
                 session_id=session_id,
                 mission_id=mission_id,
                 requested_by_service=requested_by_service or "orchestrator-service",
@@ -316,6 +321,7 @@ class SpecialistEngine:
         specialist_hint: str,
         plan: DeliberativePlanContract,
         knowledge_snippets: list[str],
+        shared_memory_context: SpecialistSharedMemoryContextContract | None,
         session_id: str | None,
         mission_id: str | None,
         requested_by_service: str,
@@ -334,6 +340,23 @@ class SpecialistEngine:
             f"smallest_safe_next_action={plan.smallest_safe_next_action or 'none'}",
             f"knowledge_hint={knowledge_hint}",
         ]
+        if shared_memory_context is not None:
+            handoff_inputs.extend(
+                [
+                    f"shared_memory_brief={shared_memory_context.shared_memory_brief}",
+                    f"shared_memory_mode={shared_memory_context.sharing_mode}",
+                    f"memory_write_policy={shared_memory_context.write_policy}",
+                ]
+            )
+            if shared_memory_context.source_mission_goal:
+                handoff_inputs.append(
+                    f"source_mission_goal={shared_memory_context.source_mission_goal}"
+                )
+            if shared_memory_context.related_mission_ids:
+                handoff_inputs.append(
+                    "related_mission_ids="
+                    + ",".join(str(item) for item in shared_memory_context.related_mission_ids)
+                )
         expected_outputs = [
             "structured_findings",
             "subordinated_recommendation",
@@ -352,6 +375,7 @@ class SpecialistEngine:
             boundary=boundary,
             session_id=session_id,
             mission_id=mission_id,
+            shared_memory_context=shared_memory_context,
         )
 
     @staticmethod

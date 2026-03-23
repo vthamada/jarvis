@@ -11,6 +11,7 @@ from memory_service.repository import (
     SessionContinuitySnapshot,
     StoredContinuityCheckpoint,
     StoredContinuityPauseResolution,
+    StoredSpecialistSharedMemory,
     StoredTurn,
     build_memory_repository,
     continuity_checkpoint_to_contract,
@@ -27,6 +28,7 @@ from shared.contracts import (
     MissionContinuityContextContract,
     MissionStateContract,
     SpecialistContributionContract,
+    SpecialistSharedMemoryContextContract,
 )
 from shared.types import (
     MemoryClass,
@@ -310,6 +312,76 @@ class MemoryService:
             return None
         return self._build_continuity_pause(replay=replay, resolution=resolution)
 
+    def prepare_specialist_shared_memory(
+        self,
+        *,
+        session_id: str,
+        specialist_hints: list[str],
+        mission_id: str | None = None,
+        continuity_context: MissionContinuityContextContract | None = None,
+    ) -> dict[str, SpecialistSharedMemoryContextContract]:
+        """Build and persist the current core-mediated shared memory for specialists."""
+
+        if not specialist_hints:
+            return {}
+        mission_state = self.repository.fetch_mission_state(mission_id) if mission_id else None
+        continuity_snapshot = self.repository.fetch_session_continuity(session_id)
+        related_states = self._resolve_related_states(
+            session_id=session_id,
+            mission_id=mission_id,
+            continuity_context=continuity_context,
+        )
+        continuity_mode = (
+            continuity_snapshot.continuity_mode
+            if continuity_snapshot
+            else (continuity_context.recommended_action or "continuar")
+            if continuity_context
+            else "continuar"
+        )
+        contexts: dict[str, SpecialistSharedMemoryContextContract] = {}
+        for specialist_hint in specialist_hints:
+            context = self._build_specialist_shared_memory_context(
+                specialist_type=specialist_hint,
+                continuity_mode=continuity_mode,
+                mission_state=mission_state,
+                related_states=related_states,
+            )
+            contexts[specialist_hint] = context
+            self.repository.upsert_specialist_shared_memory(
+                StoredSpecialistSharedMemory(
+                    session_id=session_id,
+                    specialist_type=specialist_hint,
+                    sharing_mode=context.sharing_mode,
+                    continuity_mode=context.continuity_mode,
+                    shared_memory_brief=context.shared_memory_brief,
+                    write_policy=context.write_policy,
+                    source_mission_id=str(context.source_mission_id)
+                    if context.source_mission_id
+                    else None,
+                    source_mission_goal=context.source_mission_goal,
+                    related_mission_ids=[str(item) for item in context.related_mission_ids],
+                    memory_refs=list(context.memory_refs),
+                    semantic_focus=list(context.semantic_focus),
+                    open_loops=list(context.open_loops),
+                    last_recommendation=context.last_recommendation,
+                    updated_at=self.now(),
+                )
+            )
+        return contexts
+
+    def get_specialist_shared_memory(
+        self,
+        *,
+        session_id: str,
+        specialist_type: str,
+    ) -> SpecialistSharedMemoryContextContract | None:
+        """Expose persisted specialist-facing shared memory for validation and handoff."""
+
+        return self.repository.fetch_specialist_shared_memory(
+            session_id=session_id,
+            specialist_type=specialist_type,
+        )
+
     def _compose_recovered_items(
         self,
         contract: InputContract,
@@ -476,6 +548,89 @@ class MemoryService:
             if hint not in final_session_context:
                 final_session_context.append(hint)
         return final_session_context, mission_hints[:12], plan_hints[-2:], continuity_context
+
+    def _resolve_related_states(
+        self,
+        *,
+        session_id: str,
+        mission_id: str | None,
+        continuity_context: MissionContinuityContextContract | None,
+    ) -> list[MissionStateContract]:
+        states: list[MissionStateContract] = []
+        seen: set[str] = set()
+        if continuity_context:
+            for candidate in continuity_context.related_candidates[:2]:
+                state = self.repository.fetch_mission_state(str(candidate.mission_id))
+                if state is not None and str(state.mission_id) not in seen:
+                    states.append(state)
+                    seen.add(str(state.mission_id))
+        if mission_id:
+            for state in self.repository.list_related_mission_states(
+                session_id=session_id,
+                exclude_mission_id=mission_id,
+                limit=2,
+            ):
+                if str(state.mission_id) not in seen:
+                    states.append(state)
+                    seen.add(str(state.mission_id))
+        return states[:2]
+
+    def _build_specialist_shared_memory_context(
+        self,
+        *,
+        specialist_type: str,
+        continuity_mode: str,
+        mission_state: MissionStateContract | None,
+        related_states: list[MissionStateContract],
+    ) -> SpecialistSharedMemoryContextContract:
+        related_mission_ids = [state.mission_id for state in related_states[:2]]
+        memory_refs: list[str] = []
+        semantic_focus: list[str] = []
+        open_loops: list[str] = []
+
+        def append_unique(items: list[str], target: list[str], limit: int) -> None:
+            for item in items:
+                if item and item not in target:
+                    target.append(item)
+                if len(target) >= limit:
+                    break
+
+        if mission_state is not None:
+            append_unique(mission_state.related_memories[-3:], memory_refs, 5)
+            append_unique(mission_state.semantic_focus, semantic_focus, 5)
+            append_unique(mission_state.open_loops, open_loops, 4)
+        for state in related_states:
+            append_unique(state.related_memories[-2:], memory_refs, 5)
+            append_unique(state.semantic_focus, semantic_focus, 5)
+            append_unique(state.open_loops, open_loops, 4)
+
+        source_goal = mission_state.mission_goal if mission_state else None
+        source_mission_id = mission_state.mission_id if mission_state else None
+        related_summary = (
+            ", ".join(str(item.mission_id) for item in related_states[:2]) or "nenhuma"
+        )
+        source_focus = ", ".join(semantic_focus[:3]) or "sem foco consolidado"
+        open_loop_summary = "; ".join(open_loops[:2]) or "sem loop aberto dominante"
+        shared_memory_brief = (
+            f"specialist={specialist_type} continuidade={continuity_mode} "
+            f"fonte={source_goal or 'sessao sem missao ancorada'} "
+            f"relacoes={related_summary} foco={source_focus} "
+            f"open_loops={open_loop_summary}"
+        )
+        return SpecialistSharedMemoryContextContract(
+            specialist_type=specialist_type,
+            sharing_mode="core_mediated_read_only",
+            continuity_mode=continuity_mode,
+            shared_memory_brief=shared_memory_brief,
+            write_policy="through_core_only",
+            source_mission_id=source_mission_id,
+            source_mission_goal=source_goal,
+            related_mission_ids=related_mission_ids,
+            memory_refs=memory_refs,
+            semantic_focus=semantic_focus,
+            open_loops=open_loops,
+            last_recommendation=mission_state.last_recommendation if mission_state else None,
+        )
 
     def _build_session_continuity_snapshot(
         self,

@@ -10,7 +10,11 @@ from sqlite3 import Connection, OperationalError, Row
 from sqlite3 import connect as sqlite_connect
 from urllib.parse import urlparse
 
-from shared.contracts import ContinuityCheckpointContract, MissionStateContract
+from shared.contracts import (
+    ContinuityCheckpointContract,
+    MissionStateContract,
+    SpecialistSharedMemoryContextContract,
+)
 from shared.types import MissionStatus
 
 try:
@@ -73,6 +77,24 @@ class StoredContinuityPauseResolution:
     resolution_note: str | None = None
 
 
+@dataclass(frozen=True)
+class StoredSpecialistSharedMemory:
+    session_id: str
+    specialist_type: str
+    sharing_mode: str
+    continuity_mode: str
+    shared_memory_brief: str
+    write_policy: str
+    updated_at: str
+    source_mission_id: str | None = None
+    source_mission_goal: str | None = None
+    related_mission_ids: list[str] = field(default_factory=list)
+    memory_refs: list[str] = field(default_factory=list)
+    semantic_focus: list[str] = field(default_factory=list)
+    open_loops: list[str] = field(default_factory=list)
+    last_recommendation: str | None = None
+
+
 class MemoryRepository(ABC):
     """Persistence contract for episodic, contextual, and mission memory."""
 
@@ -129,6 +151,22 @@ class MemoryRepository(ABC):
         session_id: str,
     ) -> StoredContinuityPauseResolution | None:
         """Load the latest manual resolution attached to a continuity pause."""
+
+    @abstractmethod
+    def upsert_specialist_shared_memory(
+        self,
+        snapshot: StoredSpecialistSharedMemory,
+    ) -> None:
+        """Persist the latest specialist-facing shared memory snapshot for a session."""
+
+    @abstractmethod
+    def fetch_specialist_shared_memory(
+        self,
+        *,
+        session_id: str,
+        specialist_type: str,
+    ) -> SpecialistSharedMemoryContextContract | None:
+        """Load the latest specialist-facing shared memory snapshot for a session."""
 
     @abstractmethod
     def upsert_mission_state(self, mission_state: MissionStateContract) -> None:
@@ -452,6 +490,74 @@ class SqliteMemoryRepository(MemoryRepository):
             resolved_at=str(row["resolved_at"]),
         )
 
+    def upsert_specialist_shared_memory(
+        self,
+        snapshot: StoredSpecialistSharedMemory,
+    ) -> None:
+        with self._connect() as connection:
+            connection.execute(
+                """
+                INSERT INTO specialist_shared_memory (
+                    session_id, specialist_type, sharing_mode, continuity_mode,
+                    shared_memory_brief, write_policy, source_mission_id,
+                    source_mission_goal, related_mission_ids, memory_refs,
+                    semantic_focus, open_loops, last_recommendation, updated_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(session_id, specialist_type) DO UPDATE SET
+                    sharing_mode = excluded.sharing_mode,
+                    continuity_mode = excluded.continuity_mode,
+                    shared_memory_brief = excluded.shared_memory_brief,
+                    write_policy = excluded.write_policy,
+                    source_mission_id = excluded.source_mission_id,
+                    source_mission_goal = excluded.source_mission_goal,
+                    related_mission_ids = excluded.related_mission_ids,
+                    memory_refs = excluded.memory_refs,
+                    semantic_focus = excluded.semantic_focus,
+                    open_loops = excluded.open_loops,
+                    last_recommendation = excluded.last_recommendation,
+                    updated_at = excluded.updated_at
+                """,
+                (
+                    snapshot.session_id,
+                    snapshot.specialist_type,
+                    snapshot.sharing_mode,
+                    snapshot.continuity_mode,
+                    snapshot.shared_memory_brief,
+                    snapshot.write_policy,
+                    snapshot.source_mission_id,
+                    snapshot.source_mission_goal,
+                    dumps(snapshot.related_mission_ids),
+                    dumps(snapshot.memory_refs),
+                    dumps(snapshot.semantic_focus),
+                    dumps(snapshot.open_loops),
+                    snapshot.last_recommendation,
+                    snapshot.updated_at,
+                ),
+            )
+            connection.commit()
+
+    def fetch_specialist_shared_memory(
+        self,
+        *,
+        session_id: str,
+        specialist_type: str,
+    ) -> SpecialistSharedMemoryContextContract | None:
+        with self._connect() as connection:
+            row = connection.execute(
+                """
+                SELECT session_id, specialist_type, sharing_mode, continuity_mode,
+                       shared_memory_brief, write_policy, source_mission_id,
+                       source_mission_goal, related_mission_ids, memory_refs,
+                       semantic_focus, open_loops, last_recommendation
+                FROM specialist_shared_memory
+                WHERE session_id = ?
+                  AND specialist_type = ?
+                """,
+                (session_id, specialist_type),
+            ).fetchone()
+        return None if row is None else self._row_to_specialist_shared_memory(row)
+
     def fetch_mission_state(self, mission_id: str) -> MissionStateContract | None:
         with self._connect() as connection:
             row = connection.execute(
@@ -573,7 +679,25 @@ class SqliteMemoryRepository(MemoryRepository):
                     resolution_note TEXT,
                     resolved_at TEXT NOT NULL
                 );
-                
+
+                CREATE TABLE IF NOT EXISTS specialist_shared_memory (
+                    session_id TEXT NOT NULL,
+                    specialist_type TEXT NOT NULL,
+                    sharing_mode TEXT NOT NULL,
+                    continuity_mode TEXT NOT NULL,
+                    shared_memory_brief TEXT NOT NULL,
+                    write_policy TEXT NOT NULL,
+                    source_mission_id TEXT,
+                    source_mission_goal TEXT,
+                    related_mission_ids TEXT NOT NULL DEFAULT '[]',
+                    memory_refs TEXT NOT NULL DEFAULT '[]',
+                    semantic_focus TEXT NOT NULL DEFAULT '[]',
+                    open_loops TEXT NOT NULL DEFAULT '[]',
+                    last_recommendation TEXT,
+                    updated_at TEXT NOT NULL,
+                    PRIMARY KEY (session_id, specialist_type)
+                );
+
                 CREATE TABLE IF NOT EXISTS mission_states (
                     mission_id TEXT PRIMARY KEY,
                     mission_goal TEXT NOT NULL,
@@ -677,6 +801,23 @@ class SqliteMemoryRepository(MemoryRepository):
             open_loops=list(loads(row["open_loops"] or "[]")),
             last_decision_frame=row["last_decision_frame"],
             updated_at=str(row["updated_at"]),
+        )
+
+    @staticmethod
+    def _row_to_specialist_shared_memory(row: Row) -> SpecialistSharedMemoryContextContract:
+        return SpecialistSharedMemoryContextContract(
+            specialist_type=str(row["specialist_type"]),
+            sharing_mode=str(row["sharing_mode"]),
+            continuity_mode=str(row["continuity_mode"]),
+            shared_memory_brief=str(row["shared_memory_brief"]),
+            write_policy=str(row["write_policy"]),
+            source_mission_id=row["source_mission_id"],
+            source_mission_goal=row["source_mission_goal"],
+            related_mission_ids=list(loads(row["related_mission_ids"] or "[]")),
+            memory_refs=list(loads(row["memory_refs"] or "[]")),
+            semantic_focus=list(loads(row["semantic_focus"] or "[]")),
+            open_loops=list(loads(row["open_loops"] or "[]")),
+            last_recommendation=row["last_recommendation"],
         )
 
 
@@ -1021,6 +1162,90 @@ class PostgresMemoryRepository(MemoryRepository):
             resolved_at=row["resolved_at"],
         )
 
+    def upsert_specialist_shared_memory(
+        self,
+        snapshot: StoredSpecialistSharedMemory,
+    ) -> None:
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO specialist_shared_memory (
+                    session_id, specialist_type, sharing_mode, continuity_mode,
+                    shared_memory_brief, write_policy, source_mission_id,
+                    source_mission_goal, related_mission_ids, memory_refs,
+                    semantic_focus, open_loops, last_recommendation, updated_at
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (session_id, specialist_type) DO UPDATE SET
+                    sharing_mode = EXCLUDED.sharing_mode,
+                    continuity_mode = EXCLUDED.continuity_mode,
+                    shared_memory_brief = EXCLUDED.shared_memory_brief,
+                    write_policy = EXCLUDED.write_policy,
+                    source_mission_id = EXCLUDED.source_mission_id,
+                    source_mission_goal = EXCLUDED.source_mission_goal,
+                    related_mission_ids = EXCLUDED.related_mission_ids,
+                    memory_refs = EXCLUDED.memory_refs,
+                    semantic_focus = EXCLUDED.semantic_focus,
+                    open_loops = EXCLUDED.open_loops,
+                    last_recommendation = EXCLUDED.last_recommendation,
+                    updated_at = EXCLUDED.updated_at
+                """,
+                (
+                    snapshot.session_id,
+                    snapshot.specialist_type,
+                    snapshot.sharing_mode,
+                    snapshot.continuity_mode,
+                    snapshot.shared_memory_brief,
+                    snapshot.write_policy,
+                    snapshot.source_mission_id,
+                    snapshot.source_mission_goal,
+                    dumps(snapshot.related_mission_ids),
+                    dumps(snapshot.memory_refs),
+                    dumps(snapshot.semantic_focus),
+                    dumps(snapshot.open_loops),
+                    snapshot.last_recommendation,
+                    snapshot.updated_at,
+                ),
+            )
+            connection.commit()
+
+    def fetch_specialist_shared_memory(
+        self,
+        *,
+        session_id: str,
+        specialist_type: str,
+    ) -> SpecialistSharedMemoryContextContract | None:
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT session_id, specialist_type, sharing_mode, continuity_mode,
+                       shared_memory_brief, write_policy, source_mission_id,
+                       source_mission_goal, related_mission_ids, memory_refs,
+                       semantic_focus, open_loops, last_recommendation
+                FROM specialist_shared_memory
+                WHERE session_id = %s
+                  AND specialist_type = %s
+                """,
+                (session_id, specialist_type),
+            )
+            row = cursor.fetchone()
+        if row is None:
+            return None
+        return SpecialistSharedMemoryContextContract(
+            specialist_type=row["specialist_type"],
+            sharing_mode=row["sharing_mode"],
+            continuity_mode=row["continuity_mode"],
+            shared_memory_brief=row["shared_memory_brief"],
+            write_policy=row["write_policy"],
+            source_mission_id=row["source_mission_id"],
+            source_mission_goal=row["source_mission_goal"],
+            related_mission_ids=list(loads(row["related_mission_ids"] or "[]")),
+            memory_refs=list(loads(row["memory_refs"] or "[]")),
+            semantic_focus=list(loads(row["semantic_focus"] or "[]")),
+            open_loops=list(loads(row["open_loops"] or "[]")),
+            last_recommendation=row["last_recommendation"],
+        )
+
     def fetch_mission_state(self, mission_id: str) -> MissionStateContract | None:
         with self._connect() as connection, connection.cursor() as cursor:
             cursor.execute(
@@ -1153,6 +1378,27 @@ class PostgresMemoryRepository(MemoryRepository):
                     origin_request_id TEXT,
                     replay_summary TEXT,
                     updated_at TEXT NOT NULL
+                )
+                """
+            )
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS specialist_shared_memory (
+                    session_id TEXT NOT NULL,
+                    specialist_type TEXT NOT NULL,
+                    sharing_mode TEXT NOT NULL,
+                    continuity_mode TEXT NOT NULL,
+                    shared_memory_brief TEXT NOT NULL,
+                    write_policy TEXT NOT NULL,
+                    source_mission_id TEXT,
+                    source_mission_goal TEXT,
+                    related_mission_ids TEXT NOT NULL DEFAULT '[]',
+                    memory_refs TEXT NOT NULL DEFAULT '[]',
+                    semantic_focus TEXT NOT NULL DEFAULT '[]',
+                    open_loops TEXT NOT NULL DEFAULT '[]',
+                    last_recommendation TEXT,
+                    updated_at TEXT NOT NULL,
+                    PRIMARY KEY (session_id, specialist_type)
                 )
                 """
             )

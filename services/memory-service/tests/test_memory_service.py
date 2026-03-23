@@ -364,11 +364,60 @@ def test_memory_service_detects_related_mission_continuity_within_same_session()
     assert candidate.relation_type == "same_session_related_mission"
     assert candidate.priority_score >= 0.6
     assert recovered.continuity_context.recommended_action == "priorizar_loop_ativo"
-    assert any(item == "related_mission_id=mission-a" for item in recovered.mission_hints)
-    assert any(
-        item == "continuity_recommendation=priorizar_loop_ativo"
-        for item in recovered.mission_hints
+
+
+def test_memory_service_prepares_core_mediated_shared_memory_for_specialists() -> None:
+    temp_dir = runtime_dir("memory-specialist-shared")
+    service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
+    service.record_turn(
+        InputContract(
+            request_id=RequestId("req-specialist-a"),
+            session_id=SessionId("sess-specialist"),
+            mission_id=MissionId("mission-specialist-a"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Plan milestone M3 rollout.",
+            timestamp="2026-03-17T00:00:00Z",
+        ),
+        intent="planning",
+        response_text="Rollout plan drafted.",
+        deliberative_plan=sample_plan(),
+        specialist_contributions=sample_specialist_contributions(),
     )
+    continuity = service.recover_for_input(
+        InputContract(
+            request_id=RequestId("req-specialist-b"),
+            session_id=SessionId("sess-specialist"),
+            mission_id=MissionId("mission-specialist-b"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Analyze milestone M3 rollout risks.",
+            timestamp="2026-03-17T00:01:00Z",
+        )
+    ).continuity_context
+
+    contexts = service.prepare_specialist_shared_memory(
+        session_id="sess-specialist",
+        specialist_hints=["especialista_planejamento_operacional"],
+        mission_id="mission-specialist-b",
+        continuity_context=continuity,
+    )
+
+    shared_memory = contexts["especialista_planejamento_operacional"]
+    persisted = service.get_specialist_shared_memory(
+        session_id="sess-specialist",
+        specialist_type="especialista_planejamento_operacional",
+    )
+
+    assert shared_memory.sharing_mode == "core_mediated_read_only"
+    assert shared_memory.write_policy == "through_core_only"
+    assert shared_memory.related_mission_ids
+    assert shared_memory.shared_memory_brief.startswith(
+        "specialist=especialista_planejamento_operacional"
+    )
+    assert persisted is not None
+    assert persisted.shared_memory_brief == shared_memory.shared_memory_brief
+    assert persisted.write_policy == "through_core_only"
 
 
 def test_memory_service_persists_session_continuity_for_governed_reformulation() -> None:

@@ -10,6 +10,15 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 
 ## 2026-03-23
 
+### Execução da Sprint 3 do ciclo v2
+
+- `shared/contracts` passou a expor `SpecialistSharedMemoryContextContract` e `SpecialistInvocationContract` passou a carregar `shared_memory_context`;
+- `memory-service` e seus repositórios passaram a persistir contexto compartilhado por especialista em regime `core_mediated_read_only`, com política explícita de escrita `through_core_only`;
+- `specialist-engine` passou a compor handoffs com memória compartilhada relacional resumida, sem entregar escrita direta ao especialista;
+- `orchestrator-service` e o fluxo opcional de `LangGraph` passaram a preparar, anexar e auditar `specialist_shared_memory_linked` antes do handoff;
+- `tools/benchmarks/harness.py` foi ajustado para ampliar o limite de consulta da trilha observável e evitar truncamento após o novo evento de memória compartilhada;
+- `HANDOFF`, `README`, `master-summary`, `v2-sprint-cycle` e `matriz-de-aderencia-mestre` passaram a tratar a Sprint 3 do `v2` como concluída e a Sprint 4 como próxima frente ativa.
+
 ### Correção estrutural do Documento-Mestre
 
 - `documento_mestre_jarvis.md` passou a abrir com um mapa editorial rápido para leitura por blocos;

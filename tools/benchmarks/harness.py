@@ -613,13 +613,14 @@ class BenchmarkHarness:
             start = perf_counter()
             response = service.handle_input(contract)
             latencies.append((perf_counter() - start) * 1000)
+            trace_limit = max(50, len(response.events) + 5)
 
             if null_observability is not None:
                 continue
 
             assert isinstance(observability, ObservabilityService)
             request_events = observability.list_recent_events(
-                ObservabilityQuery(request_id=request_id)
+                ObservabilityQuery(request_id=request_id, limit=trace_limit)
             )
             present_event_names = [event.event_name for event in request_events]
             required = scenario.required_events
@@ -637,29 +638,35 @@ class BenchmarkHarness:
             )
 
             query_hits = [
-                len(observability.list_recent_events(ObservabilityQuery(request_id=request_id)))
-                > 0,
                 len(
                     observability.list_recent_events(
-                        ObservabilityQuery(session_id=scenario.session_id)
+                        ObservabilityQuery(request_id=request_id, limit=trace_limit)
                     )
                 )
                 > 0,
-                len(observability.list_recent_events(ObservabilityQuery(correlation_id=request_id)))
+                len(observability.list_recent_events(ObservabilityQuery(session_id=scenario.session_id, limit=trace_limit)))
+                > 0,
+                len(
+                    observability.list_recent_events(
+                        ObservabilityQuery(correlation_id=request_id, limit=trace_limit)
+                    )
+                )
                 > 0,
             ]
             if scenario.mission_id:
                 query_hits.append(
                     len(
                         observability.list_recent_events(
-                            ObservabilityQuery(mission_id=scenario.mission_id)
+                            ObservabilityQuery(mission_id=scenario.mission_id, limit=trace_limit)
                         )
                     )
                     > 0
                 )
             query_scores.append(sum(1 for hit in query_hits if hit) / len(query_hits))
 
-            trace_view = observability.export_trace_view(ObservabilityQuery(request_id=request_id))
+            trace_view = observability.export_trace_view(
+                ObservabilityQuery(request_id=request_id, limit=trace_limit)
+            )
             export_scores.append(
                 1.0 if len(trace_view) == len(request_events) and trace_view else 0.0
             )
@@ -918,4 +925,3 @@ def main(argv: list[str] | None = None) -> int:
     if args.print_json:
         print(dumps(report.as_dict(), indent=2))
     return 0
-

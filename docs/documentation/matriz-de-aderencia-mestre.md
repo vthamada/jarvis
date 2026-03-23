@@ -94,7 +94,7 @@ Ordem usada nesta auditoria:
 | `núcleo central e fluxo principal` | `9`, `27` a `30`, `35` a `38`, `49` | `runtime parcial` | `corrigir agora` | `orchestrator-service`, `planning-engine`, `cognitive-engine`, `langgraph_flow` | o fluxo central existe, mas a leitura do mestre ainda não governa explicitamente todos os recortes do backlog | manter o núcleo como eixo de cobrança e revisar cada sprint pela ótica do fluxo principal | `v2` contínuo |
 | `mentes` | `10`, `19`, `21`, `38`, `50` | `runtime parcial` | `corrigir agora` | `engines/cognitive-engine`, `planning-engine` | falta registry canônico, maturidade por mente e modelagem mais profunda de composição e arbitragem | abrir registry de mentes e explicitar relações preferenciais entre elas | `v2`, após avanço de `domínios` e `memórias` |
 | `domínios` | `11`, `12`, `13`, `22`, `39`, `52`, `232` | `runtime parcial` | `corrigir agora` | `knowledge-service`, `knowledge/curated/v1_corpus.json`, `cognitive-engine` | a taxonomia oficial de 30 domínios ainda não virou registry nem runtime guiado pelo mestre | criar registry canônico de domínios e alinhar o corpus ao mapa oficial | `v2`, prioridade mais alta |
-| `memórias` | `14`, `23`, `40`, `51`, `83`, `232` | `runtime parcial` | `corrigir agora` | `shared/types`, `memory-service`, `governance-service`, `orchestrator-service` | as 11 classes existem formalmente, mas poucas operam como políticas distintas | abrir registry de memórias e materializar memória relacional e de domínio de forma auditável | `v2`, Sprint 3 em diante |
+| `memórias` | `14`, `23`, `40`, `51`, `83`, `232` | `runtime parcial` | `corrigir agora` | `shared/types`, `memory-service`, `governance-service`, `orchestrator-service`, `specialist-engine` | as 11 classes existem formalmente, mas poucas operam como políticas distintas | consolidar registry de memórias e ligar a memória compartilhada do `v2` ao registry inicial de domínios | `v2`, Sprint 4 em diante |
 | `governança, segurança e autonomia` | `24`, `42`, `54`, `230` | `runtime parcial` | `corrigir agora` | `governance-service`, `observability-service`, `shared/contracts` | a governança é forte no recorte atual, mas ainda não cobre toda a amplitude formal do mestre | expandir a auditoria por tipo de decisão e por nível de autonomia | `v2`, transversal |
 | `especialistas subordinados` | `64`, `76.4`, `254` a `263` | `runtime parcial` | `corrigir agora` | `specialist-engine`, `governance-service`, `orchestrator-service`, `shared/contracts` | há handoff e fronteira, mas ainda não há especialistas realmente orientados por domínio com memória compartilhada mais rica | consolidar memória relacional e amarrar especialista a domínio e contratos canônicos | `v2`, Sprints 3 e 4 |
 | `tool layer e operação computacional` | `15`, `41`, `53`, `65` | `runtime parcial` | `manter deferido` | `operational-service`, `tools/`, artefatos textuais do baseline | o mestre descreve uma camada operacional mais ampla do que o recorte atual implementa | manter a operação textual segura e só expandir quando o `v2` pedir | `v2` tardio ou `v3` |
@@ -266,8 +266,10 @@ relação com identidade, domínios, autoevolução e contexto operacional.
 - `MemoryClass` já tipa as 11 classes;
 - `memory-service` opera contextual, episódica, missão, checkpoint, replay, pausa e
   continuidade relacionada;
+- `memory-service` passou a persistir contexto relacional compartilhado por especialista,
+  mediado pelo núcleo e recuperável por missão;
 - `governance-service` protege memória crítica;
-- o `v2` já aponta para memória relacional compartilhada.
+- `specialist-engine` e `orchestrator-service` já consomem esse contexto no handoff do `v2`.
 
 ### Julgamento
 
@@ -275,7 +277,7 @@ relação com identidade, domínios, autoevolução e contexto operacional.
 | --- | --- | --- |
 | taxonomia das 11 memórias | `tipado/documentado` | enum canônica já existe |
 | memória contextual, episódica e de missão | `runtime parcial` | opera no baseline e no `v1.5` |
-| memória relacional | `runtime parcial` | existe como semente forte do `v2` |
+| memória relacional | `runtime parcial` | já opera como contexto compartilhado mediado pelo núcleo no `v2` |
 | memória de domínio, evolutiva e semântica rica | `canônico apenas` ou `tipado/documentado` | ainda sem política plena |
 | promoção e arquivamento formais | `canônico apenas` | ainda não operam como sistema vivo |
 
@@ -289,7 +291,7 @@ Risco de desvio:
 
 Próximo passo obrigatório:
 
-- tratar a Sprint 3 do `v2` como avanço explícito do eixo de memórias e não apenas como melhoria local de contexto.
+- consolidar a memória compartilhada do `v2` como política por classe e vinculá-la ao registry inicial de `domínios`.
 
 ## 5.6 Governança, segurança e autonomia
 
@@ -606,8 +608,8 @@ Justificativa:
 
 A partir desta auditoria, o `v2` deve ser lido assim:
 
-- Sprint 3 é avanço prioritário do eixo `memórias`, com impacto indireto em `domínios`;
-- Sprint 4 só deve abrir especialista em `shadow mode` se houver vínculo explícito com domínio e memória compartilhada;
+- Sprint 3 fechou o primeiro avanço prioritário do eixo `memórias`, com contexto compartilhado mediado pelo núcleo;
+- Sprint 4 agora deve abrir o registry de `domínios` e só ligar especialista em `shadow mode` com vínculo explícito a domínio e memória compartilhada;
 - Sprint 5 deve medir aderência do recorte de especialistas aos eixos do mestre, não apenas performance local;
 - Sprint 6 deve fechar o primeiro corte do `v2` dizendo explicitamente o que ficou:
   - `corrigido agora`;

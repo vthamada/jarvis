@@ -1,6 +1,6 @@
 from specialist_engine.engine import SpecialistEngine
 
-from shared.contracts import DeliberativePlanContract
+from shared.contracts import DeliberativePlanContract, SpecialistSharedMemoryContextContract
 
 
 def sample_plan() -> DeliberativePlanContract:
@@ -31,13 +31,42 @@ def test_specialist_engine_name() -> None:
 
 def test_specialist_engine_returns_subordinated_contributions_only_when_rule_matches() -> None:
     engine = SpecialistEngine()
-    review = engine.review(
+    handoff_plan = engine.plan_handoffs(
         intent="planning",
         plan=sample_plan(),
         knowledge_snippets=["Priorize clareza de objetivo."],
+        shared_memory_contexts={
+            "especialista_planejamento_operacional": SpecialistSharedMemoryContextContract(
+                specialist_type="especialista_planejamento_operacional",
+                sharing_mode="core_mediated_read_only",
+                continuity_mode="continuar",
+                shared_memory_brief=(
+                    "specialist=especialista_planejamento_operacional "
+                    "continuidade=continuar"
+                ),
+                write_policy="through_core_only",
+                related_mission_ids=["mission-related"],
+                memory_refs=["mem-record-1"],
+                semantic_focus=["strategy"],
+                open_loops=["fechar checkpoint principal"],
+                source_mission_goal="Plan milestone M3",
+            )
+        },
         session_id="sess-specialist",
         mission_id="mission-specialist",
         requested_by_service="orchestrator-service",
+    )
+    review = engine.review_handoffs(
+        intent="planning",
+        plan=sample_plan(),
+        knowledge_snippets=["Priorize clareza de objetivo."],
+        handoff_plan=handoff_plan,
+    )
+    assert handoff_plan.invocations[0].shared_memory_context is not None
+    assert handoff_plan.invocations[0].shared_memory_context.write_policy == "through_core_only"
+    assert any(
+        item.startswith("shared_memory_brief=")
+        for item in handoff_plan.invocations[0].handoff_inputs
     )
     assert review.specialist_hints == ["especialista_planejamento_operacional"]
     assert review.invocations

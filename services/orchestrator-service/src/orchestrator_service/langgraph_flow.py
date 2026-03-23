@@ -241,6 +241,7 @@ class LangGraphFlowRunner:
             contract,
             directive=directive,
             deliberative_plan=deliberative_plan,
+            memory_recovery_result=state["memory_recovery_result"],
             knowledge_result=knowledge_result,
             events=list(state["events"]),
         )
