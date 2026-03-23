@@ -31,7 +31,9 @@ Leitura prática correta deste momento:
 - Sprint 1 do `v1.5` concluída;
 - Sprint 2 do `v1.5` concluída;
 - Sprint 3 do `v1.5` concluída;
-- Sprint 4 do `v1.5` aberta como próxima frente ativa do ciclo rolante.
+- Sprint 4 do `v1.5` concluída;
+- Sprint 5 do `v1.5` concluída;
+- Sprint 6 do `v1.5` aberta como próxima frente ativa do ciclo rolante.
 
 ## Estrutura principal
 

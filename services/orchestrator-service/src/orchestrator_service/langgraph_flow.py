@@ -29,10 +29,19 @@ class OrchestratorFlowState(TypedDict, total=False):
     memory_record_result: object
     response_text: str
     events: list[object]
+    continuity_replay: object | None
+
+
+class ContinuityFlowState(TypedDict, total=False):
+    contract: object
+    events: list[object]
+    resolved_pause: object | None
+    memory_recovery_result: object
+    continuity_replay: object | None
 
 
 class LangGraphFlowRunner:
-    """Compose the current orchestrator flow as an experimental LangGraph path."""
+    """Compose the current orchestrator flow as an optional LangGraph path."""
 
     def __init__(self, orchestrator: OrchestratorService) -> None:
         self.orchestrator = orchestrator
@@ -40,7 +49,7 @@ class LangGraphFlowRunner:
     def run(self, contract: InputContract) -> OrchestratorResponse:
         state_graph, start_token, end_token = _load_langgraph()
         graph = state_graph(OrchestratorFlowState)
-        graph.add_node("recover_memory", self._recover_memory)
+        graph.add_node("run_continuity_subflow", self._run_continuity_subflow)
         graph.add_node("classify_directive", self._classify_directive)
         graph.add_node("retrieve_knowledge", self._retrieve_knowledge)
         graph.add_node("compose_context", self._compose_context)
@@ -50,8 +59,8 @@ class LangGraphFlowRunner:
         graph.add_node("execute_operation", self._execute_operation)
         graph.add_node("synthesize_response", self._synthesize_response)
         graph.add_node("record_memory", self._record_memory)
-        graph.add_edge(start_token, "recover_memory")
-        graph.add_edge("recover_memory", "classify_directive")
+        graph.add_edge(start_token, "run_continuity_subflow")
+        graph.add_edge("run_continuity_subflow", "classify_directive")
         graph.add_edge("classify_directive", "retrieve_knowledge")
         graph.add_edge("retrieve_knowledge", "compose_context")
         graph.add_edge("compose_context", "build_plan")
@@ -77,81 +86,17 @@ class LangGraphFlowRunner:
         self.orchestrator.observability_service.ingest_events(final_state["events"])
         return self.orchestrator._build_response_from_state(final_state)
 
-    def _recover_memory(self, state: OrchestratorFlowState) -> OrchestratorFlowState:
-        contract = state["contract"]
-        resolved_pause = self.orchestrator._maybe_resolve_continuity_pause(contract)
-        memory_recovery_result = self.orchestrator.memory_service.recover_for_input(contract)
-        continuity_replay = self.orchestrator.memory_service.get_session_continuity_replay(
-            str(contract.session_id)
+    def _run_continuity_subflow(self, state: OrchestratorFlowState) -> OrchestratorFlowState:
+        subflow = LangGraphContinuityFlowRunner(self.orchestrator)
+        continuity_state = subflow.run(
+            contract=state["contract"],
+            events=list(state["events"]),
         )
-        events = list(state["events"])
-        if resolved_pause is not None:
-            events.append(
-                self.orchestrator.make_event(
-                    "continuity_pause_resolved",
-                    contract,
-                    {
-                        "checkpoint_id": resolved_pause.checkpoint_id,
-                        "pause_status": resolved_pause.pause_status,
-                        "resolution_status": resolved_pause.resolution_status,
-                        "resolved_by": resolved_pause.resolved_by,
-                    },
-                )
-            )
-        events.append(
-            self.orchestrator.make_event(
-                "memory_recovered",
-                contract,
-                {
-                    "memory_query_id": str(
-                        memory_recovery_result.recovery_contract.memory_query_id
-                    ),
-                    "recovery_type": memory_recovery_result.recovery_contract.recovery_type.value,
-                    "continuity_recommendation": (
-                        memory_recovery_result.continuity_context.recommended_action
-                        if memory_recovery_result.continuity_context
-                        else None
-                    ),
-                    "related_candidate_count": (
-                        len(memory_recovery_result.continuity_context.related_candidates)
-                        if memory_recovery_result.continuity_context
-                        else 0
-                    ),
-                    "continuity_replay_status": (
-                        continuity_replay.replay_status if continuity_replay else None
-                    ),
-                },
-            )
-        )
-        if continuity_replay is not None:
-            events.append(
-                self.orchestrator.make_event(
-                    "continuity_replay_loaded",
-                    contract,
-                    {
-                        "checkpoint_id": continuity_replay.checkpoint_id,
-                        "replay_status": continuity_replay.replay_status,
-                        "recovery_mode": continuity_replay.recovery_mode,
-                        "resume_point": continuity_replay.resume_point,
-                        "checkpoint_status": continuity_replay.checkpoint_status,
-                        "requires_manual_resume": continuity_replay.requires_manual_resume,
-                    },
-                )
-            )
-            if continuity_replay.requires_manual_resume:
-                events.append(
-                    self.orchestrator.make_event(
-                        "continuity_recovery_governed",
-                        contract,
-                        {
-                            "checkpoint_id": continuity_replay.checkpoint_id,
-                            "replay_status": continuity_replay.replay_status,
-                            "recovery_mode": continuity_replay.recovery_mode,
-                            "resume_point": continuity_replay.resume_point,
-                        },
-                    )
-                )
-        return {"memory_recovery_result": memory_recovery_result, "events": events}
+        return {
+            "memory_recovery_result": continuity_state["memory_recovery_result"],
+            "continuity_replay": continuity_state.get("continuity_replay"),
+            "events": continuity_state["events"],
+        }
 
     def _classify_directive(self, state: OrchestratorFlowState) -> OrchestratorFlowState:
         contract = state["contract"]
@@ -513,6 +458,158 @@ class LangGraphFlowRunner:
             )
         )
         return {"memory_record_result": memory_record_result, "events": events}
+
+
+class LangGraphContinuityFlowRunner:
+    """Run only the continuity recovery path as a dedicated LangGraph subflow."""
+
+    def __init__(self, orchestrator: OrchestratorService) -> None:
+        self.orchestrator = orchestrator
+
+    def run(
+        self,
+        *,
+        contract: InputContract,
+        events: list[object],
+    ) -> ContinuityFlowState:
+        state_graph, start_token, end_token = _load_langgraph()
+        graph = state_graph(ContinuityFlowState)
+        graph.add_node("resolve_pause", self._resolve_pause)
+        graph.add_node("recover_memory", self._recover_memory)
+        graph.add_node("load_replay", self._load_replay)
+        graph.add_node("seal_subflow", self._seal_subflow)
+        graph.add_edge(start_token, "resolve_pause")
+        graph.add_edge("resolve_pause", "recover_memory")
+        graph.add_edge("recover_memory", "load_replay")
+        graph.add_edge("load_replay", "seal_subflow")
+        graph.add_edge("seal_subflow", end_token)
+        runner = graph.compile()
+        return runner.invoke({"contract": contract, "events": events})
+
+    def _resolve_pause(self, state: ContinuityFlowState) -> ContinuityFlowState:
+        contract = state["contract"]
+        resolved_pause = self.orchestrator._maybe_resolve_continuity_pause(contract)
+        events = list(state["events"])
+        if resolved_pause is not None:
+            events.append(
+                self.orchestrator.make_event(
+                    "continuity_pause_resolved",
+                    contract,
+                    {
+                        "checkpoint_id": resolved_pause.checkpoint_id,
+                        "pause_status": resolved_pause.pause_status,
+                        "resolution_status": resolved_pause.resolution_status,
+                        "resolved_by": resolved_pause.resolved_by,
+                    },
+                )
+            )
+        return {"resolved_pause": resolved_pause, "events": events}
+
+    def _recover_memory(self, state: ContinuityFlowState) -> ContinuityFlowState:
+        contract = state["contract"]
+        memory_recovery_result = self.orchestrator.memory_service.recover_for_input(contract)
+        events = list(state["events"])
+        events.append(
+            self.orchestrator.make_event(
+                "memory_recovered",
+                contract,
+                {
+                    "memory_query_id": str(
+                        memory_recovery_result.recovery_contract.memory_query_id
+                    ),
+                    "recovery_type": memory_recovery_result.recovery_contract.recovery_type.value,
+                    "continuity_recommendation": (
+                        memory_recovery_result.continuity_context.recommended_action
+                        if memory_recovery_result.continuity_context
+                        else None
+                    ),
+                    "related_candidate_count": (
+                        len(memory_recovery_result.continuity_context.related_candidates)
+                        if memory_recovery_result.continuity_context
+                        else 0
+                    ),
+                },
+            )
+        )
+        return {
+            "memory_recovery_result": memory_recovery_result,
+            "events": events,
+        }
+
+    def _load_replay(self, state: ContinuityFlowState) -> ContinuityFlowState:
+        contract = state["contract"]
+        continuity_replay = self.orchestrator.memory_service.get_session_continuity_replay(
+            str(contract.session_id)
+        )
+        events = list(state["events"])
+        if continuity_replay is None:
+            return {"continuity_replay": None, "events": events}
+        memory_event = next(
+            (
+                event
+                for event in reversed(events)
+                if event.event_name == "memory_recovered"
+            ),
+            None,
+        )
+        if memory_event is not None:
+            memory_event.payload["continuity_replay_status"] = continuity_replay.replay_status
+        events.append(
+            self.orchestrator.make_event(
+                "continuity_replay_loaded",
+                contract,
+                {
+                    "checkpoint_id": continuity_replay.checkpoint_id,
+                    "replay_status": continuity_replay.replay_status,
+                    "recovery_mode": continuity_replay.recovery_mode,
+                    "resume_point": continuity_replay.resume_point,
+                    "checkpoint_status": continuity_replay.checkpoint_status,
+                    "requires_manual_resume": continuity_replay.requires_manual_resume,
+                },
+            )
+        )
+        if continuity_replay.requires_manual_resume:
+            events.append(
+                self.orchestrator.make_event(
+                    "continuity_recovery_governed",
+                    contract,
+                    {
+                        "checkpoint_id": continuity_replay.checkpoint_id,
+                        "replay_status": continuity_replay.replay_status,
+                        "recovery_mode": continuity_replay.recovery_mode,
+                        "resume_point": continuity_replay.resume_point,
+                    },
+                )
+            )
+        return {"continuity_replay": continuity_replay, "events": events}
+
+    def _seal_subflow(self, state: ContinuityFlowState) -> ContinuityFlowState:
+        contract = state["contract"]
+        continuity_replay = state.get("continuity_replay")
+        events = list(state["events"])
+        events.append(
+            self.orchestrator.make_event(
+                "continuity_subflow_completed",
+                contract,
+                {
+                    "runtime_mode": "langgraph_subflow",
+                    "subflow_name": "continuity_stateful",
+                    "checkpoint_id": (
+                        continuity_replay.checkpoint_id if continuity_replay else None
+                    ),
+                    "replay_status": (
+                        continuity_replay.replay_status if continuity_replay else None
+                    ),
+                    "recovery_mode": (
+                        continuity_replay.recovery_mode if continuity_replay else None
+                    ),
+                    "requires_manual_resume": (
+                        continuity_replay.requires_manual_resume if continuity_replay else False
+                    ),
+                },
+            )
+        )
+        return {"events": events}
 
 
 def _load_langgraph():

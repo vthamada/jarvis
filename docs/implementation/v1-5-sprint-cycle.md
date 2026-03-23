@@ -23,7 +23,9 @@ Status desta versão do ciclo:
 - Sprint 1 concluída;
 - Sprint 2 concluída;
 - Sprint 3 concluída;
-- Sprint 4 é a próxima sprint ativa.
+- Sprint 4 concluída;
+- Sprint 5 concluída;
+- Sprint 6 é a próxima sprint ativa.
 
 ---
 
@@ -145,6 +147,10 @@ Resultado registrado nesta rodada:
 
 ## 7. Sprint 4
 
+Status:
+
+- concluída
+
 ### Objetivo
 
 Absorver `LangGraph` parcialmente no subfluxo stateful de continuidade.
@@ -160,9 +166,20 @@ Absorver `LangGraph` parcialmente no subfluxo stateful de continuidade.
 - `LangGraph` entra por recorte;
 - o núcleo soberano do JARVIS continua próprio.
 
+Resultado registrado nesta rodada:
+
+- o fluxo opcional de `LangGraph` passou a isolar a continuidade em um subfluxo stateful próprio, sem arrastar todo o orquestrador para o runtime externo;
+- checkpoint, replay e pausa governada passaram a ser executados dentro desse subfluxo dedicado antes do restante do caminho deliberativo;
+- o fluxo passou a emitir `continuity_subflow_completed` com `runtime_mode=langgraph_subflow`, tornando a absorção parcial observável e comparável;
+- `observability-service`, `internal_pilot_report` e `compare_orchestrator_paths` passaram a expor `continuity_runtime_mode`, preservando comparação com o baseline linear anterior.
+
 ---
 
 ## 8. Sprint 5
+
+Status:
+
+- concluída
 
 ### Objetivo
 
@@ -173,6 +190,14 @@ Transformar o runtime de continuidade em comportamento avaliável e comparável.
 - evals do runtime de continuidade;
 - comparação entre baseline e subfluxo absorvido;
 - decisão baseada em evidência, não em preferência tecnológica.
+
+Resultado registrado nesta rodada:
+
+- o piloto passou a incluir cenários explícitos de conflito de continuidade e retomada manual após pausa governada;
+- `internal_pilot_support` passou a medir aderência a expectativas de decisão, operação e continuidade por cenário;
+- `compare_orchestrator_paths` passou a emitir `baseline_expectation_score`, `candidate_expectation_score`, `candidate_runtime_coverage` e decisão explícita de comparação;
+- a rodada local de comparação fechou com `overall_verdict=equivalent`, `matched_scenarios=6/6` e `comparison_decision=candidate_ready_for_eval_gate`;
+- `evolution_from_pilot` e `evolution-lab` passaram a carregar `continuity_runtime_mode`, permitindo proposals e comparações sandbox-only com o runtime absorvido.
 
 ---
 

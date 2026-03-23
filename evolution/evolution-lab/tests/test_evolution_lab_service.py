@@ -110,6 +110,7 @@ def test_evolution_lab_creates_proposal_from_flow_evaluation() -> None:
             anomaly_flags=["operation_missing_completion"],
             continuity_action="retomar",
             continuity_source="related_mission",
+            continuity_runtime_mode="langgraph_subflow",
             continuity_trace_status="attention_required",
             missing_continuity_signals=["memory_continuity_mode"],
             continuity_anomaly_flags=["retomar_missing_target_mission"],
@@ -120,6 +121,7 @@ def test_evolution_lab_creates_proposal_from_flow_evaluation() -> None:
     assert proposal.proposal_type == "flow_evaluation_refinement"
     assert "observability://request/req-flow" in proposal.source_signals
     assert "continuity://action/retomar" in proposal.source_signals
+    assert "continuity://runtime/langgraph_subflow" in proposal.source_signals
     assert proposal.risk_hint == "moderate"
 
 
@@ -150,6 +152,7 @@ def test_evolution_lab_compares_flow_evaluations() -> None:
             anomaly_flags=["operation_missing_completion"],
             continuity_action="retomar",
             continuity_source="related_mission",
+            continuity_runtime_mode="baseline_linear",
             continuity_trace_status="attention_required",
             missing_continuity_signals=["memory_continuity_mode"],
             continuity_anomaly_flags=["retomar_missing_target_mission"],
@@ -166,6 +169,7 @@ def test_evolution_lab_compares_flow_evaluations() -> None:
             anomaly_flags=[],
             continuity_action="retomar",
             continuity_source="related_mission",
+            continuity_runtime_mode="langgraph_subflow",
             continuity_trace_status="healthy",
         ),
         governance_refs=["policy://sandbox/manual-review"],
@@ -175,3 +179,4 @@ def test_evolution_lab_compares_flow_evaluations() -> None:
     assert comparison.decision.decision == "sandbox_candidate"
     assert comparison.metric_deltas["risk"] < 0
     assert comparison.metric_deltas["continuity_health"] > 0
+    assert comparison.metric_deltas["runtime_statefulness"] > 0

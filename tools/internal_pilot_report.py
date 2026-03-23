@@ -32,6 +32,8 @@ class PilotTraceSummary:
     anomaly_flags: list[str]
     continuity_action: str | None
     continuity_source: str | None
+    continuity_runtime_mode: str | None
+    expectation_status: str
     continuity_trace_status: str
     missing_continuity_signals: list[str]
     continuity_anomaly_flags: list[str]
@@ -88,6 +90,12 @@ def summarize_traces(
             anomaly_flags=audit.anomaly_flags,
             continuity_action=audit.continuity_action,
             continuity_source=audit.continuity_source,
+            continuity_runtime_mode=audit.continuity_runtime_mode,
+            expectation_status=_expectation_status(
+                governance_decision=audit.governance_decision,
+                operation_status=audit.operation_status,
+                continuity_action=audit.continuity_action,
+            ),
             continuity_trace_status=audit.continuity_trace_status,
             missing_continuity_signals=audit.missing_continuity_signals,
             continuity_anomaly_flags=audit.continuity_anomaly_flags,
@@ -119,6 +127,23 @@ def _trace_status(audit) -> str:
     return "healthy"
 
 
+def _expectation_status(
+    *,
+    governance_decision: str | None,
+    operation_status: str | None,
+    continuity_action: str | None,
+) -> str:
+    if governance_decision == "block":
+        return "guardrail_expected"
+    if governance_decision == "defer_for_validation":
+        return "manual_validation_expected"
+    if continuity_action in {"continuar", "retomar"} and operation_status in {None, "completed"}:
+        return "continuity_progressing"
+    if operation_status == "completed":
+        return "operation_completed"
+    return "review_required"
+
+
 def render_text(summaries: list[PilotTraceSummary]) -> str:
     if not summaries:
         return "No internal pilot traces found."
@@ -134,6 +159,8 @@ def render_text(summaries: list[PilotTraceSummary]) -> str:
             f"anomaly_flags={','.join(summary.anomaly_flags) or 'none'} "
             f"continuity_action={summary.continuity_action or 'none'} "
             f"continuity_source={summary.continuity_source or 'none'} "
+            f"continuity_runtime_mode={summary.continuity_runtime_mode or 'none'} "
+            f"expectation_status={summary.expectation_status} "
             "missing_continuity_signals="
             f"{','.join(summary.missing_continuity_signals) or 'none'} "
             "continuity_anomaly_flags="

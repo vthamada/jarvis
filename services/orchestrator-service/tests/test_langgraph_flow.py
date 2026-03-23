@@ -116,3 +116,8 @@ def test_langgraph_flow_replays_orchestrator_path_with_fake_runtime(
     assert result.governance_decision.decision == PermissionDecision.ALLOW_WITH_CONDITIONS
     assert result.operation_result is not None
     assert any(event.event_name == "plan_built" for event in result.events)
+    continuity_event = next(
+        event for event in result.events if event.event_name == "continuity_subflow_completed"
+    )
+    assert continuity_event.payload["runtime_mode"] == "langgraph_subflow"
+    assert continuity_event.payload["subflow_name"] == "continuity_stateful"

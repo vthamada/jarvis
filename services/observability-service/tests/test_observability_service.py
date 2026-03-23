@@ -267,6 +267,19 @@ def test_observability_service_audits_continuity_signals() -> None:
             ),
             InternalEventEnvelope(
                 event_id="evt-c6",
+                event_name="continuity_subflow_completed",
+                timestamp="2026-03-18T00:00:04.500000+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "runtime_mode": "langgraph_subflow",
+                    "subflow_name": "continuity_stateful",
+                },
+                request_id="req-cont",
+                session_id="sess-cont",
+                correlation_id="req-cont",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-c6b",
                 event_name="continuity_decided",
                 timestamp="2026-03-18T00:00:05+00:00",
                 source_service="orchestrator-service",
@@ -315,6 +328,7 @@ def test_observability_service_audits_continuity_signals() -> None:
 
     assert audit.continuity_action == "retomar"
     assert audit.continuity_source == "related_mission"
+    assert audit.continuity_runtime_mode == "langgraph_subflow"
     assert audit.continuity_trace_status == "attention_required"
     assert "retomar_missing_target_mission" in audit.continuity_anomaly_flags
     assert "memory_continuity_mismatch" in audit.continuity_anomaly_flags

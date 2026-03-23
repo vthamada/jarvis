@@ -24,7 +24,9 @@ Estado do ciclo rolante:
 - Sprint 1 do `v1.5` concluída;
 - Sprint 2 do `v1.5` concluída;
 - Sprint 3 do `v1.5` concluída;
-- Sprint 4 do `v1.5` é a próxima frente ativa.
+- Sprint 4 do `v1.5` concluída;
+- Sprint 5 do `v1.5` concluída;
+- Sprint 6 do `v1.5` é a próxima frente ativa.
 
 ## Decisões fechadas
 
@@ -97,15 +99,17 @@ Principais entregas já consolidadas:
 - Sprint 1 do `v1.5` concluída, com checkpoint explícito de continuidade e estado recuperável por sessão;
 - Sprint 2 do `v1.5` concluída, com replay explícito, retomada governada e ponto de recuperação rastreável por sessão;
 - Sprint 3 do `v1.5` concluída, com pausa `HITL` persistente, resolução manual rastreável e retomada segura acima do checkpoint governado;
+- Sprint 4 do `v1.5` concluída, com subfluxo stateful de continuidade absorvido parcialmente em `LangGraph` e sinal explícito de runtime no fluxo comparativo;
+- Sprint 5 do `v1.5` concluída, com evals do runtime de continuidade, cenários de conflito e retomada manual no piloto e decisão `candidate_ready_for_eval_gate` para o recorte absorvido;
 - Documento-Mestre ampliado com referências arquiteturais oficiais por função.
 
 ## O que ainda falta
 
 Pendências principais desta fase:
 
-- executar a Sprint 4 do ciclo `v1.5`;
+- executar a Sprint 6 do ciclo `v1.5`;
 - consolidar estudo externo curto sem bloquear a implementação principal;
-- validar absorção parcial de `LangGraph` no subfluxo stateful como próximo salto do runtime.
+- consolidar o corte formal do `v1.5` e a decisão do que sobe para preparação de `v2`.
 
 Regra de estudo externo no `v1.5`:
 
@@ -118,8 +122,8 @@ Regra de estudo externo no `v1.5`:
 
 Ordem recomendada:
 
-1. executar a Sprint 4 do `v1.5`;
-2. absorver `LangGraph` parcialmente no subfluxo stateful de continuidade;
+1. executar a Sprint 6 do `v1.5`;
+2. consolidar evidência, backlog classificado e decisão formal do corte;
 3. rodar estudo externo curto em paralelo;
 4. classificar cada achado como `absorver depois`, `usar como referência` ou `rejeitar`;
 5. preservar o corte já definido entre `v1.5` e `v2`.

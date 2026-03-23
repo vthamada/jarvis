@@ -49,6 +49,7 @@ class FlowEvaluationInput:
     anomaly_flags: list[str]
     continuity_action: str | None = None
     continuity_source: str | None = None
+    continuity_runtime_mode: str | None = None
     continuity_trace_status: str | None = None
     missing_continuity_signals: list[str] = field(default_factory=list)
     continuity_anomaly_flags: list[str] = field(default_factory=list)
@@ -199,6 +200,10 @@ class EvolutionLabService:
             source_signals.append(f"observability://mission/{evaluation.mission_id}")
         if evaluation.continuity_action:
             source_signals.append(f"continuity://action/{evaluation.continuity_action}")
+        if evaluation.continuity_runtime_mode:
+            source_signals.append(
+                f"continuity://runtime/{evaluation.continuity_runtime_mode}"
+            )
         if evaluation.continuity_trace_status:
             source_signals.append(
                 f"continuity://trace-status/{evaluation.continuity_trace_status}"
@@ -294,6 +299,9 @@ class EvolutionLabService:
                 1.0
                 - (continuity_missing_penalty * 0.2)
                 - (continuity_anomaly_penalty * 0.25),
+            ),
+            "runtime_statefulness": (
+                1.0 if evaluation.continuity_runtime_mode == "langgraph_subflow" else 0.5
             ),
             "throughput": float(evaluation.total_events),
             "latency": max(0.0, 1.0 - min(evaluation.duration_seconds / 30.0, 1.0)),

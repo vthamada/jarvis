@@ -9,6 +9,8 @@ def test_default_pilot_scenarios_cover_allowed_and_blocked_paths() -> None:
     assert any(item.expected_operation for item in scenarios)
     assert any(item.expected_decision == "block" for item in scenarios)
     assert any(item.mission_key for item in scenarios)
+    assert any(item.expected_decision == "defer_for_validation" for item in scenarios)
+    assert any("continuity_resume" in item.metadata for item in scenarios)
 
 
 def test_run_pilot_scenarios_returns_structured_results() -> None:
@@ -23,4 +25,6 @@ def test_run_pilot_scenarios_returns_structured_results() -> None:
     assert len(results) == 1
     assert results[0].scenario_id == "controlled_plan"
     assert results[0].governance_decision == "allow_with_conditions"
+    assert results[0].decision_matches_expectation is True
     assert results[0].operation_status == "completed"
+    assert results[0].operation_matches_expectation is True

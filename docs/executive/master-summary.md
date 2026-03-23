@@ -104,7 +104,9 @@ Leitura curta do momento:
 - Sprint 1 do `v1.5` foi concluída.
 - Sprint 2 do `v1.5` foi concluída.
 - Sprint 3 do `v1.5` foi concluída.
-- Sprint 4 do `v1.5` é a próxima frente ativa.
+- Sprint 4 do `v1.5` foi concluída.
+- Sprint 5 do `v1.5` foi concluída.
+- Sprint 6 do `v1.5` é a próxima frente ativa.
 
 ---
 
@@ -124,7 +126,7 @@ O projeto deve evitar:
 
 O próximo passo executivo mais racional é:
 
-- executar a Sprint 4 do `v1.5`;
-- absorver `LangGraph` parcialmente no subfluxo stateful de continuidade;
-- validar checkpoint, replay e continuidade sobre esse recorte sem reabrir o baseline do `v1`;
+- executar a Sprint 6 do `v1.5`;
+- consolidar o corte formal do ciclo com backlog classificado e decisão explícita de promoção;
+- preservar o recorte absorvido de `LangGraph` como evidência, sem reabrir o `v1`;
 - manter `v2` explicitamente fora do corte imediato.

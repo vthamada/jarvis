@@ -34,6 +34,80 @@ class PathComparisonResult:
         return not self.mismatch_fields and self.candidate is not None
 
 
+def expectation_score(result: PilotExecutionResult) -> float:
+    checks = [
+        result.decision_matches_expectation,
+        result.operation_matches_expectation,
+    ]
+    if result.continuity_matches_expectation is not None:
+        checks.append(result.continuity_matches_expectation)
+    return round(sum(1 for item in checks if item) / len(checks), 4)
+
+
+def summarize_comparisons(
+    comparisons: list[PathComparisonResult],
+    *,
+    langgraph_status: str,
+) -> dict[str, object]:
+    total = len(comparisons)
+    if total == 0:
+        return {
+            "scenario_count": 0,
+            "matched_scenarios": 0,
+            "divergent_scenarios": 0,
+            "baseline_expectation_score": 0.0,
+            "candidate_expectation_score": 0.0,
+            "candidate_runtime_coverage": 0.0,
+            "decision": "no_scenarios",
+        }
+    matched = sum(1 for item in comparisons if item.core_match)
+    divergent = total - matched
+    baseline_score = round(
+        sum(expectation_score(item.baseline) for item in comparisons) / total,
+        4,
+    )
+    available_candidates = [item.candidate for item in comparisons if item.candidate is not None]
+    candidate_score = round(
+        (
+            sum(expectation_score(item) for item in available_candidates)
+            / len(available_candidates)
+        )
+        if available_candidates
+        else 0.0,
+        4,
+    )
+    runtime_coverage = round(
+        (
+            sum(
+                1
+                for item in available_candidates
+                if item.continuity_runtime_mode == "langgraph_subflow"
+            )
+            / len(available_candidates)
+        )
+        if available_candidates
+        else 0.0,
+        4,
+    )
+    if langgraph_status != "available":
+        decision = "candidate_unavailable"
+    elif divergent == 0 and candidate_score >= baseline_score and runtime_coverage > 0.0:
+        decision = "candidate_ready_for_eval_gate"
+    elif candidate_score < baseline_score:
+        decision = "keep_baseline"
+    else:
+        decision = "candidate_requires_iteration"
+    return {
+        "scenario_count": total,
+        "matched_scenarios": matched,
+        "divergent_scenarios": divergent,
+        "baseline_expectation_score": baseline_score,
+        "candidate_expectation_score": candidate_score,
+        "candidate_runtime_coverage": runtime_coverage,
+        "decision": decision,
+    }
+
+
 def parse_args() -> Namespace:
     parser = ArgumentParser(description="Compare baseline and LangGraph orchestrator paths.")
     parser.add_argument(
@@ -118,12 +192,40 @@ def render_text(payload: dict[str, object]) -> str:
                     f"baseline_continuity={item['baseline']['continuity_action'] or 'none'}",
                     "candidate_continuity="
                     f"{item['candidate']['continuity_action'] if item['candidate'] else 'n/a'}",
+                    f"baseline_runtime={item['baseline']['continuity_runtime_mode'] or 'none'}",
+                    (
+                        "candidate_runtime="
+                        f"{item['candidate']['continuity_runtime_mode']}"
+                        if item["candidate"]
+                        else "candidate_runtime=n/a"
+                    ),
+                    f"baseline_expectation_score={item['baseline_expectation_score']}",
+                    (
+                        "candidate_expectation_score="
+                        f"{item['candidate_expectation_score']}"
+                        if item["candidate_expectation_score"] is not None
+                        else "candidate_expectation_score=n/a"
+                    ),
                     f"baseline_decision={item['baseline']['governance_decision']}",
                     "candidate_decision="
                     f"{item['candidate']['governance_decision'] if item['candidate'] else 'n/a'}",
                 ]
             )
         )
+    summary = payload["comparison_summary"]
+    lines.append(
+        " ".join(
+            [
+                f"comparison_decision={summary['decision']}",
+                f"scenario_count={summary['scenario_count']}",
+                f"matched_scenarios={summary['matched_scenarios']}",
+                f"divergent_scenarios={summary['divergent_scenarios']}",
+                f"baseline_expectation_score={summary['baseline_expectation_score']}",
+                f"candidate_expectation_score={summary['candidate_expectation_score']}",
+                f"candidate_runtime_coverage={summary['candidate_runtime_coverage']}",
+            ]
+        )
+    )
     return "\n".join(lines)
 
 
@@ -145,15 +247,24 @@ def serialize_comparisons(
         if langgraph_status != "available"
         else ("equivalent" if all(item.core_match for item in comparisons) else "divergent")
     )
+    comparison_summary = summarize_comparisons(
+        comparisons,
+        langgraph_status=langgraph_status,
+    )
     return {
         "profile": profile,
         "langgraph_status": langgraph_status,
         "overall_verdict": overall_verdict,
+        "comparison_summary": comparison_summary,
         "scenario_results": [
             {
                 "scenario_id": item.scenario_id,
                 "core_match": item.core_match,
                 "mismatch_fields": item.mismatch_fields,
+                "baseline_expectation_score": expectation_score(item.baseline),
+                "candidate_expectation_score": (
+                    expectation_score(item.candidate) if item.candidate else None
+                ),
                 "baseline": result_to_dict(item.baseline),
                 "candidate": result_to_dict(item.candidate) if item.candidate else None,
             }

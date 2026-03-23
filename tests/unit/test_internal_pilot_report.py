@@ -61,6 +61,7 @@ def test_internal_pilot_report_summarizes_recent_request() -> None:
     assert summaries[0].request_id == "req-pilot"
     assert summaries[0].governance_decision == "allow_with_conditions"
     assert summaries[0].operation_status == "completed"
+    assert summaries[0].expectation_status == "operation_completed"
     assert "plan_built" in summaries[0].missing_required_events
     assert "continuity_decided" in summaries[0].missing_required_events
     assert "response_continuity_action" in summaries[0].missing_continuity_signals
@@ -90,6 +91,8 @@ def test_internal_pilot_report_renders_text() -> None:
                     "anomaly_flags": ["operation_missing_completion"],
                     "continuity_action": "retomar",
                     "continuity_source": "related_mission",
+                    "continuity_runtime_mode": "langgraph_subflow",
+                    "expectation_status": "continuity_progressing",
                     "continuity_trace_status": "attention_required",
                     "missing_continuity_signals": ["memory_continuity_mode"],
                     "continuity_anomaly_flags": ["retomar_missing_target_mission"],
@@ -107,5 +110,7 @@ def test_internal_pilot_report_renders_text() -> None:
     assert "missing_required_events=plan_built" in rendered
     assert "anomaly_flags=operation_missing_completion" in rendered
     assert "continuity_action=retomar" in rendered
+    assert "continuity_runtime_mode=langgraph_subflow" in rendered
+    assert "expectation_status=continuity_progressing" in rendered
     assert "continuity_anomaly_flags=retomar_missing_target_mission" in rendered
     assert "trace_status=attention_required" in rendered

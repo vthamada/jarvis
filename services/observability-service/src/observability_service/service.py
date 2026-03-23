@@ -56,6 +56,7 @@ class FlowAudit:
     continuity_source: str | None
     continuity_target_mission_id: str | None
     continuity_target_goal: str | None
+    continuity_runtime_mode: str | None
     missing_continuity_signals: list[str]
     continuity_anomaly_flags: list[str]
     continuity_trace_status: str
@@ -219,6 +220,7 @@ class ObservabilityService:
                 continuity_source=None,
                 continuity_target_mission_id=None,
                 continuity_target_goal=None,
+                continuity_runtime_mode=None,
                 missing_continuity_signals=[],
                 continuity_anomaly_flags=[],
                 continuity_trace_status="attention_required",
@@ -232,6 +234,7 @@ class ObservabilityService:
         governance_event = self._first_event(events, "governance_checked")
         operation_event = self._first_event(events, "operation_completed")
         continuity_event = self._first_event(events, "continuity_decided")
+        continuity_runtime_event = self._first_event(events, "continuity_subflow_completed")
         response_event = self._first_event(events, "response_synthesized")
         memory_event = self._first_event(events, "memory_recorded")
         first_event = events[0]
@@ -264,6 +267,12 @@ class ObservabilityService:
             if continuity_event
             and continuity_event.payload.get("continuity_target_goal") is not None
             else None
+        )
+        continuity_runtime_mode = (
+            str(continuity_runtime_event.payload.get("runtime_mode"))
+            if continuity_runtime_event
+            and continuity_runtime_event.payload.get("runtime_mode") is not None
+            else "baseline_linear"
         )
         anomaly_flags: list[str] = []
         missing_required_events = [
@@ -348,6 +357,7 @@ class ObservabilityService:
             continuity_source=continuity_source,
             continuity_target_mission_id=continuity_target_mission_id,
             continuity_target_goal=continuity_target_goal,
+            continuity_runtime_mode=continuity_runtime_mode,
             missing_continuity_signals=missing_continuity_signals,
             continuity_anomaly_flags=continuity_anomaly_flags,
             continuity_trace_status=continuity_trace_status,

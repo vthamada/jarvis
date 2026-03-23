@@ -8,6 +8,24 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 
 ## 2026-03-22
 
+### Execução da Sprint 5 do ciclo v1.5
+
+- o piloto passou a incluir cenários explícitos de conflito de continuidade e retomada manual após pausa governada;
+- `internal_pilot_support` passou a registrar aderência a expectativas de decisão, operação e continuidade por cenário;
+- `compare_orchestrator_paths` passou a emitir `baseline_expectation_score`, `candidate_expectation_score`, `candidate_runtime_coverage` e decisão explícita de comparação;
+- a rodada local de comparação do `v1.5` fechou com `overall_verdict=equivalent`, `matched_scenarios=6/6` e `comparison_decision=candidate_ready_for_eval_gate`;
+- `internal_pilot_report` passou a resumir também `expectation_status` para leitura operacional rápida do runtime;
+- `evolution_from_pilot` e `evolution-lab` passaram a carregar `continuity_runtime_mode`, preservando proposals e comparações sandbox-only sobre o recorte absorvido.
+
+### Execução da Sprint 4 do ciclo v1.5
+
+- o fluxo opcional de `LangGraph` passou a isolar a continuidade em um subfluxo stateful próprio, sem reescrever o restante do orquestrador;
+- checkpoint, replay e pausa governada passaram a ser executados dentro desse recorte dedicado antes do restante do caminho deliberativo;
+- o fluxo passou a emitir `continuity_subflow_completed` com `runtime_mode=langgraph_subflow`, tornando a absorção parcial observável no trilho local;
+- `observability-service` passou a auditar `continuity_runtime_mode`, diferenciando baseline linear e recorte absorvido em `LangGraph`;
+- `internal_pilot_report` e `compare_orchestrator_paths` passaram a carregar `continuity_runtime_mode` para sustentar a Sprint 5 de evals e comparação;
+- adicionados testes do fluxo `LangGraph`, da auditoria de observabilidade e das ferramentas de relatório e comparação.
+
 ### Execução da Sprint 3 do ciclo v1.5
 
 - adicionado `ContinuityPauseContract` como contrato interno de pausa governada e retomada manual da continuidade;

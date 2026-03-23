@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from sys import path as sys_path
 from tempfile import gettempdir
@@ -60,6 +60,8 @@ class PilotScenario:
     expected_operation: bool
     session_key: str
     mission_key: str | None = None
+    expected_continuity_action: str | None = None
+    metadata: dict[str, object] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -73,9 +75,16 @@ class PilotExecutionResult:
     mission_id: str | None
     intent: str
     governance_decision: str
+    expected_decision: str
+    decision_matches_expectation: bool
     operation_status: str | None
+    expected_operation: bool
+    operation_matches_expectation: bool
     continuity_action: str | None
     continuity_source: str | None
+    continuity_runtime_mode: str | None
+    expected_continuity_action: str | None
+    continuity_matches_expectation: bool | None
     continuity_trace_status: str
     missing_continuity_signals: list[str]
     continuity_anomaly_flags: list[str]
@@ -107,6 +116,7 @@ def default_pilot_scenarios() -> list[PilotScenario]:
             expected_operation=True,
             session_key="pilot-main",
             mission_key="mission-pilot-v1",
+            expected_continuity_action="continuar",
         ),
         PilotScenario(
             scenario_id="controlled_summary",
@@ -115,6 +125,7 @@ def default_pilot_scenarios() -> list[PilotScenario]:
             expected_decision=PermissionDecision.ALLOW_WITH_CONDITIONS.value,
             expected_operation=True,
             session_key="pilot-summary",
+            expected_continuity_action="continuar",
         ),
         PilotScenario(
             scenario_id="analysis_followup",
@@ -124,6 +135,34 @@ def default_pilot_scenarios() -> list[PilotScenario]:
             expected_operation=False,
             session_key="pilot-main",
             mission_key="mission-pilot-v1",
+            expected_continuity_action="continuar",
+        ),
+        PilotScenario(
+            scenario_id="continuity_conflict",
+            content="Start a new marketing campaign instead.",
+            expectation="Contain the conflicting direction and require explicit validation.",
+            expected_decision=PermissionDecision.DEFER_FOR_VALIDATION.value,
+            expected_operation=False,
+            session_key="pilot-main",
+            mission_key="mission-pilot-v1",
+            expected_continuity_action="reformular",
+        ),
+        PilotScenario(
+            scenario_id="continuity_resume",
+            content="Continue the sprint plan.",
+            expectation="Resume the active continuity only after explicit manual approval.",
+            expected_decision=PermissionDecision.ALLOW_WITH_CONDITIONS.value,
+            expected_operation=False,
+            session_key="pilot-main",
+            mission_key="mission-pilot-v1",
+            expected_continuity_action="continuar",
+            metadata={
+                "continuity_resume": {
+                    "approved": True,
+                    "resolved_by": "pilot_operator",
+                    "resolution_note": "retomada aprovada para avaliacao do runtime",
+                }
+            },
         ),
         PilotScenario(
             scenario_id="guardrail_block",
@@ -181,6 +220,7 @@ def run_pilot_scenarios(
                 "pilot_scenario_id": scenario.scenario_id,
                 "pilot_expectation": scenario.expectation,
                 "pilot_path": path_name,
+                **scenario.metadata,
             },
         )
         response = (
@@ -191,6 +231,12 @@ def run_pilot_scenarios(
         audit = orchestrator.observability_service.audit_flow(
             ObservabilityQuery(request_id=request_id, limit=100)
         )
+        operation_completed = response.operation_result is not None
+        continuity_matches_expectation = (
+            audit.continuity_action == scenario.expected_continuity_action
+            if scenario.expected_continuity_action is not None
+            else None
+        )
         results.append(
             PilotExecutionResult(
                 scenario_id=scenario.scenario_id,
@@ -200,13 +246,24 @@ def run_pilot_scenarios(
                 mission_id=scenario.mission_key,
                 intent=response.intent,
                 governance_decision=response.governance_decision.decision.value,
+                expected_decision=scenario.expected_decision,
+                decision_matches_expectation=(
+                    response.governance_decision.decision.value == scenario.expected_decision
+                ),
                 operation_status=(
                     response.operation_result.status.value
                     if response.operation_result is not None
                     else None
                 ),
+                expected_operation=scenario.expected_operation,
+                operation_matches_expectation=(
+                    operation_completed == scenario.expected_operation
+                ),
                 continuity_action=audit.continuity_action,
                 continuity_source=audit.continuity_source,
+                continuity_runtime_mode=audit.continuity_runtime_mode,
+                expected_continuity_action=scenario.expected_continuity_action,
+                continuity_matches_expectation=continuity_matches_expectation,
                 continuity_trace_status=audit.continuity_trace_status,
                 missing_continuity_signals=list(audit.missing_continuity_signals),
                 continuity_anomaly_flags=list(audit.continuity_anomaly_flags),

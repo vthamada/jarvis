@@ -10,7 +10,14 @@ from pathlib import Path
 from sys import path as sys_path
 
 ROOT = Path(__file__).resolve().parent.parent
-sys_path.insert(0, str(ROOT))
+SRC_DIRS = [
+    ROOT,
+    ROOT / "evolution" / "evolution-lab" / "src",
+    ROOT / "services" / "observability-service" / "src",
+]
+
+for src_dir in SRC_DIRS:
+    sys_path.insert(0, str(src_dir))
 
 from evolution_lab.service import EvolutionLabService, FlowEvaluationInput
 from observability_service.service import ObservabilityService
@@ -76,6 +83,11 @@ def _evaluation_from_dict(payload: dict[str, object]) -> FlowEvaluationInput:
             if payload.get("continuity_source") is not None
             else None
         ),
+        continuity_runtime_mode=(
+            str(payload["continuity_runtime_mode"])
+            if payload.get("continuity_runtime_mode") is not None
+            else None
+        ),
         continuity_trace_status=(
             str(payload["continuity_trace_status"])
             if payload.get("continuity_trace_status") is not None
@@ -112,6 +124,7 @@ def build_payload(args: Namespace) -> dict[str, object]:
                 anomaly_flags=audit.anomaly_flags,
                 continuity_action=audit.continuity_action,
                 continuity_source=audit.continuity_source,
+                continuity_runtime_mode=audit.continuity_runtime_mode,
                 continuity_trace_status=audit.continuity_trace_status,
                 missing_continuity_signals=audit.missing_continuity_signals,
                 continuity_anomaly_flags=audit.continuity_anomaly_flags,
