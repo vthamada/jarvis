@@ -20,20 +20,16 @@ O projeto já fechou o `v1` para uso controlado e opera hoje com um baseline int
 - `evolution-lab` compara baseline e candidata em sandbox local sem promoção automática;
 - `engines/` contém os componentes ativos de identidade, execução, planejamento, cognição e síntese;
 - `jarvis-console` fornece a interface textual mínima do baseline;
-- `tools/validate_v1.py`, `tools/go_live_internal_checklist.py`, `tools/run_internal_pilot.py`, `tools/compare_orchestrator_paths.py` e `tools/evolution_from_pilot.py` tornam validação, piloto, comparação e proposals `sandbox-only` executáveis;
+- `tools/validate_v1.py`, `tools/go_live_internal_checklist.py`, `tools/run_internal_pilot.py`, `tools/compare_orchestrator_paths.py`, `tools/evolution_from_pilot.py` e `tools/close_v1_5_cycle.py` tornam validação, piloto, comparação, fechamento de ciclo e proposals `sandbox-only` executáveis;
 - a suíte `pytest -q` passa a partir da raiz do repositório.
 
 Leitura prática correta deste momento:
 
 - `v1` encerrado e congelado para uso controlado;
 - primeiro ciclo do `pós-v1` encerrado com continuidade profunda demonstrada;
-- `v1.5` aberto com foco em runtime stateful governado para continuidade;
-- Sprint 1 do `v1.5` concluída;
-- Sprint 2 do `v1.5` concluída;
-- Sprint 3 do `v1.5` concluída;
-- Sprint 4 do `v1.5` concluída;
-- Sprint 5 do `v1.5` concluída;
-- Sprint 6 do `v1.5` aberta como próxima frente ativa do ciclo rolante.
+- primeiro ciclo do `v1.5` encerrado com runtime stateful governado para continuidade;
+- `v2` aberto com foco em especialização controlada subordinada ao núcleo e memória relacional mais rica;
+- Sprint 1 do `v2` aberta como próxima frente ativa do ciclo rolante.
 
 ## Estrutura principal
 
@@ -144,7 +140,8 @@ Arquivos principais:
 - `HANDOFF.md`
 - `CHANGELOG.md`
 - `docs/roadmap/programa-ate-v3.md`
-- `docs/implementation/post-v1-sprint-cycle.md`
+- `docs/implementation/v1-5-cycle-closure.md`
+- `docs/implementation/v2-sprint-cycle.md`
 - `docs/architecture/technology-study.md`
 - `docs/implementation/implementation-strategy.md`
 - `docs/roadmap/v1-roadmap.md`
@@ -154,8 +151,9 @@ Leitura recomendada do estado atual:
 1. `HANDOFF.md`
 2. `documento_mestre_jarvis.md`
 3. `docs/roadmap/programa-ate-v3.md`
-4. `docs/implementation/post-v1-sprint-cycle.md`
-5. `docs/architecture/technology-study.md`
+4. `docs/implementation/v1-5-cycle-closure.md`
+5. `docs/implementation/v2-sprint-cycle.md`
+6. `docs/architecture/technology-study.md`
 
 ## Console mínimo do baseline
 

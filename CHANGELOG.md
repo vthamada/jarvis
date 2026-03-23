@@ -8,6 +8,14 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 
 ## 2026-03-22
 
+### Execução da Sprint 6 do ciclo v1.5
+
+- criado `tools/close_v1_5_cycle.py` para consolidar evidência operacional e comparativa do primeiro ciclo do `v1.5` e emitir o corte formal para `v2`;
+- criado `docs/implementation/v1-5-cycle-closure.md` como fechamento oficial do primeiro ciclo do `v1.5`;
+- criado `docs/implementation/v2-sprint-cycle.md` como novo plano rolante ativo da fase seguinte;
+- atualizado `v1-5-sprint-cycle`, `HANDOFF`, `README`, `master-summary`, `tools/README.md` e a estrutura documental para refletir a promoção formal para `v2`;
+- o corte do `v2` ficou explicitamente centrado em especialistas subordinados, memória relacional e handoffs governados, mantendo fora do recorte imediato voz oficial, `computer use` amplo, `pgvector` como base canônica e assistente operacional amplo.
+
 ### Execução da Sprint 5 do ciclo v1.5
 
 - o piloto passou a incluir cenários explícitos de conflito de continuidade e retomada manual após pausa governada;

@@ -4,29 +4,25 @@
 
 - Atualizado em: 2026-03-22
 - Branch: `main`
-- Commit de referência: `93d6278`
+- Commit de referência: `9df79da`
 - Artefato canônico do projeto: `documento_mestre_jarvis.md`
-- Estado do projeto: `v1` encerrado e congelado para uso controlado; primeiro ciclo do `pós-v1` encerrado; `v1.5` aberto de forma disciplinada
+- Estado do projeto: `v1` encerrado e congelado para uso controlado; primeiro ciclo do `pós-v1` encerrado; primeiro ciclo do `v1.5` encerrado; `v2` aberto de forma disciplinada
 
 ## Meta atual
 
-Abrir o `v1.5` com foco total em `runtime stateful governado para continuidade profunda`, sem reabrir o baseline do `v1` e sem antecipar a especialização ampla de `v2`.
+Abrir o `v2` com foco total em `especialização controlada subordinada ao núcleo com memória relacional mais rica`, preservando o runtime stateful do `v1.5` sem ampliar superfícies cedo demais.
 
 Sistema oficial de planejamento desta fase:
 
 - `HANDOFF.md` como retomada tático-operacional;
 - `docs/roadmap/programa-ate-v3.md` como direção do programa até `v3`;
-- `docs/implementation/v1-5-sprint-cycle.md` como execução oficial das próximas `6` sprints.
+- `docs/implementation/v2-sprint-cycle.md` como execução oficial das próximas `6` sprints.
 
 Estado do ciclo rolante:
 
 - primeiro ciclo do `pós-v1` concluído;
-- Sprint 1 do `v1.5` concluída;
-- Sprint 2 do `v1.5` concluída;
-- Sprint 3 do `v1.5` concluída;
-- Sprint 4 do `v1.5` concluída;
-- Sprint 5 do `v1.5` concluída;
-- Sprint 6 do `v1.5` é a próxima frente ativa.
+- primeiro ciclo do `v1.5` concluído;
+- Sprint 1 do `v2` é a próxima frente ativa.
 
 ## Decisões fechadas
 
@@ -39,7 +35,7 @@ Não rediscutir sem evidência forte ou mudança explícita de direção:
 - `PostgreSQL` é o backend operacional oficial de memória;
 - `sqlite` continua apenas como fallback local;
 - `LangSmith` continua complementar; a trilha local persistida segue como fonte primária de auditoria;
-- `LangGraph` continua como direção arquitetural forte e fluxo opcional, não como runtime principal já absorvido;
+- `LangGraph` continua como direção arquitetural forte; o subfluxo stateful de continuidade já foi absorvido parcialmente, sem transformar o runtime inteiro no runtime principal do sistema;
 - referências externas passam a ser avaliadas em dois eixos: posicionamento na stack e função arquitetural por camada;
 - o Documento-Mestre continua sendo o único artefato canônico de visão de produto.
 
@@ -65,7 +61,7 @@ Hoje o repositório contém:
 - `memory-service` com histórico episódico, resumo contextual, estado mínimo de missão e continuidade relacionada inicial;
 - `observability-service` com trilha persistida, auditoria de fluxo e espelhamento agentic complementar;
 - `evolution-lab` persistindo proposals e decisões `sandbox-only`;
-- `tools/validate_v1.py`, `tools/go_live_internal_checklist.py`, `tools/run_internal_pilot.py`, `tools/compare_orchestrator_paths.py` e `tools/evolution_from_pilot.py` operacionais;
+- `tools/validate_v1.py`, `tools/go_live_internal_checklist.py`, `tools/run_internal_pilot.py`, `tools/compare_orchestrator_paths.py`, `tools/evolution_from_pilot.py` e `tools/close_v1_5_cycle.py` operacionais;
 - estudo tecnológico consolidado em `docs/architecture/technology-study.md`;
 - sistema documental em duas camadas ativas para programa e sprint cycle.
 
@@ -101,39 +97,40 @@ Principais entregas já consolidadas:
 - Sprint 3 do `v1.5` concluída, com pausa `HITL` persistente, resolução manual rastreável e retomada segura acima do checkpoint governado;
 - Sprint 4 do `v1.5` concluída, com subfluxo stateful de continuidade absorvido parcialmente em `LangGraph` e sinal explícito de runtime no fluxo comparativo;
 - Sprint 5 do `v1.5` concluída, com evals do runtime de continuidade, cenários de conflito e retomada manual no piloto e decisão `candidate_ready_for_eval_gate` para o recorte absorvido;
+- Sprint 6 do `v1.5` concluída, com fechamento formal do ciclo, classificação do backlog e decisão explícita de promoção para `v2`;
 - Documento-Mestre ampliado com referências arquiteturais oficiais por função.
 
 ## O que ainda falta
 
 Pendências principais desta fase:
 
-- executar a Sprint 6 do ciclo `v1.5`;
-- consolidar estudo externo curto sem bloquear a implementação principal;
-- consolidar o corte formal do `v1.5` e a decisão do que sobe para preparação de `v2`.
+- executar a Sprint 1 do ciclo `v2`;
+- abrir contratos e fronteiras de convocação de especialistas subordinados;
+- consolidar estudo externo curto sem bloquear a implementação principal.
 
-Regra de estudo externo no `v1.5`:
+Regra de estudo externo no `v2`:
 
-- entra apenas o estudo que ajude diretamente checkpoint, replay, pausa `HITL` ou runtime stateful da continuidade;
-- `LangGraph` e `Hermes Agent` são as referências mais diretamente ligadas ao corte atual;
-- `Graphiti` e `Zep` entram apenas como apoio dirigido ao problema de continuidade;
-- especialistas amplos, `computer use`, voz oficial, memória profunda com `pgvector` e assistente operacional amplo continuam fora do foco imediato do ciclo.
+- entra apenas o estudo que ajude diretamente contratos de especialistas, handoffs internos, memória relacional ou convocação governada;
+- `OpenHands` e `PydanticAI` são as referências mais diretamente ligadas ao corte imediato;
+- `Hermes Agent`, `Graphiti`, `Zep`, `LangGraph` e `OpenAI Agents SDK` entram apenas como apoio dirigido ao problema do ciclo;
+- `computer use` amplo, voz oficial, memória profunda com `pgvector` como base canônica e assistente operacional amplo continuam fora do foco imediato.
 
 ## Próximos passos imediatos
 
 Ordem recomendada:
 
-1. executar a Sprint 6 do `v1.5`;
-2. consolidar evidência, backlog classificado e decisão formal do corte;
+1. executar a Sprint 1 do `v2`;
+2. abrir contratos e fronteiras de convocação de especialistas subordinados;
 3. rodar estudo externo curto em paralelo;
 4. classificar cada achado como `absorver depois`, `usar como referência` ou `rejeitar`;
-5. preservar o corte já definido entre `v1.5` e `v2`.
+5. preservar o corte já definido do primeiro ciclo do `v2`.
 
 ## Riscos e bloqueios
 
 - o `pós-v1` não deve reabrir o baseline do `v1` sem necessidade real;
 - `pgvector`, memória semântica profunda, web, voz e especialistas amplos continuam fora do caminho crítico do ciclo atual;
-- o fluxo experimental de `LangGraph` continua opcional e depende do extra `.[langgraph]`;
-- o maior risco atual não é estabilidade local; é profundidade cognitiva real de continuidade entre missões.
+- o fluxo opcional de `LangGraph` continua dependente do extra `.[langgraph]`, mesmo após a absorção parcial do subfluxo stateful;
+- o maior risco atual não é estabilidade local; é abrir especialistas cedo demais sem contratos, memória relacional e governança suficientes.
 
 ## Arquivos relevantes
 
@@ -143,7 +140,8 @@ Ordem recomendada:
 - `CHANGELOG.md`
 - `docs/roadmap/programa-ate-v3.md`
 - `docs/implementation/post-v1-cycle-closure.md`
-- `docs/implementation/v1-5-sprint-cycle.md`
+- `docs/implementation/v1-5-cycle-closure.md`
+- `docs/implementation/v2-sprint-cycle.md`
 - `docs/architecture/technology-study.md`
 - `docs/operations/v1-operational-baseline.md`
 - `services/orchestrator-service/src/orchestrator_service/service.py`
@@ -162,6 +160,6 @@ Leitura mínima para qualquer novo agente:
 1. `HANDOFF.md`
 2. `documento_mestre_jarvis.md`
 3. `docs/roadmap/programa-ate-v3.md`
-4. `docs/implementation/post-v1-cycle-closure.md`
-5. `docs/implementation/v1-5-sprint-cycle.md`
+4. `docs/implementation/v1-5-cycle-closure.md`
+5. `docs/implementation/v2-sprint-cycle.md`
 6. `docs/architecture/technology-study.md`

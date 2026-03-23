@@ -25,7 +25,8 @@ Status desta versão do ciclo:
 - Sprint 3 concluída;
 - Sprint 4 concluída;
 - Sprint 5 concluída;
-- Sprint 6 é a próxima sprint ativa.
+- Sprint 6 concluída;
+- este ciclo está formalmente fechado e foi sucedido por `docs/implementation/v2-sprint-cycle.md`.
 
 ---
 
@@ -203,6 +204,10 @@ Resultado registrado nesta rodada:
 
 ## 9. Sprint 6
 
+Status:
+
+- concluída
+
 ### Objetivo
 
 Consolidar `v1.5` e decidir o que segue para preparação de `v2`.
@@ -212,6 +217,13 @@ Consolidar `v1.5` e decidir o que segue para preparação de `v2`.
 - fechamento do ciclo;
 - backlog classificado;
 - decisão formal sobre o que permanece em `v1.5` e o que amadurece para `v2`.
+
+Resultado registrado nesta rodada:
+
+- o primeiro ciclo do `v1.5` foi formalmente encerrado;
+- `tools/close_v1_5_cycle.py` passou a gerar artefatos executáveis de fechamento do ciclo com evidência observável e comparativa do runtime;
+- `docs/implementation/v1-5-cycle-closure.md` passou a registrar o corte formal para `v2`;
+- `docs/implementation/v2-sprint-cycle.md` passou a ser o novo plano rolante ativo da fase seguinte.
 
 ---
 

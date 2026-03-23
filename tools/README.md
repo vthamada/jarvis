@@ -101,3 +101,14 @@ Esse script gera artefatos em `.jarvis_runtime/post_v1_cycle/`:
 
 - `cycle_closure.json`
 - `cycle_closure.md`
+
+Para consolidar o primeiro ciclo do `v1.5` e emitir o corte formal para `v2`:
+
+```powershell
+python tools/close_v1_5_cycle.py --limit 20
+```
+
+Esse script gera artefatos em `.jarvis_runtime/v1_5_cycle/`:
+
+- `cycle_closure.json`
+- `cycle_closure.md`

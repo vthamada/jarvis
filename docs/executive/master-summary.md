@@ -93,20 +93,16 @@ O repositório possui:
 - `PostgreSQL` validado como backend operacional oficial;
 - `internal pilot` executado;
 - `evolution-lab` ativo em `sandbox-only`;
-- ciclo rolante de `pós-v1` em execução.
+- ciclos formais de `pós-v1` e `v1.5` já executados, com `v2` aberto como frente ativa.
 
 Leitura curta do momento:
 
 - o `v1` está encerrado e congelado para uso controlado;
 - o primeiro ciclo do `pós-v1` foi encerrado;
-- a frente ativa agora é `runtime stateful governado para continuidade profunda`;
-- o programa subiu formalmente para `v1.5`;
-- Sprint 1 do `v1.5` foi concluída.
-- Sprint 2 do `v1.5` foi concluída.
-- Sprint 3 do `v1.5` foi concluída.
-- Sprint 4 do `v1.5` foi concluída.
-- Sprint 5 do `v1.5` foi concluída.
-- Sprint 6 do `v1.5` é a próxima frente ativa.
+- o primeiro ciclo do `v1.5` foi encerrado formalmente;
+- o programa subiu para `v2`;
+- a frente ativa agora é `especialização controlada subordinada ao núcleo com memória relacional mais rica`;
+- Sprint 1 do `v2` é a próxima frente ativa.
 
 ---
 
@@ -118,7 +114,7 @@ O projeto deve evitar:
 
 - reabrir o baseline do `v1` sem necessidade real;
 - tentar absorver tecnologia externa antes de provar a lacuna no núcleo;
-- expandir superfícies antes de resolver continuidade entre missões.
+- expandir superfícies antes de consolidar especialistas subordinados e memória relacional.
 
 ---
 
@@ -126,7 +122,7 @@ O projeto deve evitar:
 
 O próximo passo executivo mais racional é:
 
-- executar a Sprint 6 do `v1.5`;
-- consolidar o corte formal do ciclo com backlog classificado e decisão explícita de promoção;
-- preservar o recorte absorvido de `LangGraph` como evidência, sem reabrir o `v1`;
-- manter `v2` explicitamente fora do corte imediato.
+- executar a Sprint 1 do `v2`;
+- abrir contratos e fronteiras de convocação de especialistas subordinados;
+- preservar o recorte absorvido de `LangGraph` como evidência, sem transformar o sistema em colagem de runtimes;
+- manter fora do corte imediato voz oficial, `computer use` amplo, `pgvector` como base canônica e assistente operacional amplo.
