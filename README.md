@@ -4,6 +4,15 @@ JARVIS é um sistema cognitivo unificado, stateful, governado e orientado à con
 
 Este repositório materializa o baseline encerrado do `v1` e a abertura disciplinada do `pós-v1`, sempre guiado por `documento_mestre_jarvis.md` e pelos derivados técnicos em `docs/`.
 
+Ponte operacional entre visão e implementação:
+
+- `docs/documentation/matriz-de-aderencia-mestre.md`
+
+Leitura correta dessa ponte:
+
+- a matriz agora registra a auditoria completa dos eixos canônicos do mestre;
+- ela é a referência prática para dizer o que está implementado, deferido por fase ou em descompasso.
+
 ## Estado atual
 
 O projeto já fechou o `v1` para uso controlado e opera hoje com um baseline integrado funcional:
@@ -29,7 +38,10 @@ Leitura prática correta deste momento:
 - primeiro ciclo do `pós-v1` encerrado com continuidade profunda demonstrada;
 - primeiro ciclo do `v1.5` encerrado com runtime stateful governado para continuidade;
 - `v2` aberto com foco em especialização controlada subordinada ao núcleo e memória relacional mais rica;
-- Sprint 1 do `v2` aberta como próxima frente ativa do ciclo rolante.
+- Sprint 1 do `v2` concluída com contratos e fronteiras mínimas de convocação de especialistas;
+- Sprint 2 do `v2` concluída com seleção governada e handoff interno observável;
+- Sprint 3 do `v2` aberta como próxima frente ativa do ciclo rolante;
+- a auditoria completa do Documento-Mestre passou a orientar o backlog real por eixo.
 
 ## Estrutura principal
 
@@ -139,6 +151,7 @@ Arquivos principais:
 - `documento_mestre_jarvis.md`
 - `HANDOFF.md`
 - `CHANGELOG.md`
+- `docs/documentation/matriz-de-aderencia-mestre.md`
 - `docs/roadmap/programa-ate-v3.md`
 - `docs/implementation/v1-5-cycle-closure.md`
 - `docs/implementation/v2-sprint-cycle.md`

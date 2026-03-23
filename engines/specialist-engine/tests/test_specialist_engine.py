@@ -35,12 +35,23 @@ def test_specialist_engine_returns_subordinated_contributions_only_when_rule_mat
         intent="planning",
         plan=sample_plan(),
         knowledge_snippets=["Priorize clareza de objetivo."],
+        session_id="sess-specialist",
+        mission_id="mission-specialist",
+        requested_by_service="orchestrator-service",
     )
     assert review.specialist_hints == ["especialista_planejamento_operacional"]
+    assert review.invocations
+    assert review.invocations[0].specialist_type == "especialista_planejamento_operacional"
+    assert review.invocations[0].boundary.response_channel == "through_core"
+    assert review.invocations[0].boundary.tool_access_mode == "none"
+    assert review.invocations[0].boundary.memory_write_mode == "through_core_only"
     assert review.contributions
     assert review.contributions[0].specialist_type == "especialista_planejamento_operacional"
+    assert review.contributions[0].invocation_id == review.invocations[0].invocation_id
+    assert "through_core_only" in review.contributions[0].output_hints
     assert (
         "etapas pequenas" in review.summary
         or "etapas pequenas" in review.contributions[0].recommendation
     )
     assert review.findings
+    assert "sem resposta direta ao usuario" in review.boundary_summary

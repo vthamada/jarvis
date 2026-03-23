@@ -1,6 +1,33 @@
 # Documento-Mestre do JARVIS
 
-## Versão 0.1 — Especificação Conceitual Fundacional
+## Versão canônica viva — Especificação Fundacional, Arquitetural e de Transição
+
+Este documento nasceu como especificação conceitual fundacional e evoluiu para o artefato canônico vivo do projeto. O rótulo atual reflete essa função ampliada, sem alterar a natureza constitucional do conteúdo.
+
+### Mapa editorial rápido
+
+Este Documento-Mestre deve ser lido em blocos, não como backlog linear. A navegação recomendada é:
+
+- `1–20`: finalidade, definição oficial, missão, natureza, princípios e composição macro;
+- `21–26`: detalhamento canônico de mentes, domínios, memórias, governança, evolução e filosofia;
+- `27–60`: arquitetura conceitual, lógica e técnica do sistema;
+- `61–76`: inventário, reaproveitamento, posicionamento e referências tecnológicas;
+- `77–95`: topologia inicial, fases e recortes de construção;
+- `96–153`: roadmap estrutural, backlog, blueprint e organização do repositório;
+- `154–181`: ADRs iniciais, especificações dos pilares e contratos de base;
+- `182–237`: roadmap, árvore de repositório, stack, posicionamento tecnológico, escopo e maturidade;
+- `238–285`: contratos, voz, especialistas, schemas e tipos;
+- `286–350`: implementação, validação, evolução, qualidade, operação, readiness e continuidade do próprio documento.
+
+Leitura prática:
+
+- usar este documento como fonte canônica de visão, arquitetura e políticas nucleares;
+- usar os derivados ativos para sprint, operação, handoff e backlog executável;
+- usar a matriz de aderência como ponte entre o mestre e a implementação real.
+
+Observação editorial:
+
+- parte da numeração histórica foi preservada para manter rastreabilidade do documento ao longo da evolução do projeto.
 
 ## 1. Finalidade do documento
 
@@ -578,17 +605,9 @@ O Mapa Cognitivo Mestre do JARVIS é oficialmente composto por:
 
 ---
 
-## 20. Encaminhamento
+## 20. Fechamento editorial do bloco fundacional inicial
 
-Este documento deve servir como base para os próximos artefatos do projeto. A partir dele, deverão ser derivados, em ordem lógica:
-
-1. o detalhamento oficial de cada mente cognitiva;
-2. a taxonomia de subdomínios;
-3. o modelo formal de memória;
-4. o modelo formal de autoevolução;
-5. o modelo de governança e segurança;
-6. a filosofia arquitetural;
-7. a arquitetura técnica do sistema.
+Este bloco fecha a fundação conceitual inicial do JARVIS e prepara a leitura dos capítulos seguintes, onde a visão passa a ser detalhada em mentes, domínios, memória, governança, evolução, filosofia e arquitetura técnica.
 
 ---
 
@@ -4513,14 +4532,9 @@ A diretriz central é reaproveitar o que é infraestrutura e capacidade genéric
 
 ---
 
-## 73. Encaminhamento
+## 73. Fechamento editorial do inventário técnico
 
-A partir deste inventário, o documento pode avançar para:
-
-- matriz preliminar de tecnologias candidatas;
-- matriz final de decisão tecnológica;
-- stack por camada;
-- posicionamento oficial das tecnologias.
+Este bloco fecha o inventário técnico e prepara a transição para o posicionamento arquitetural das tecnologias consideradas relevantes para a stack do JARVIS.
 
 ---
 
@@ -4949,14 +4963,9 @@ Independentemente das tecnologias reaproveitadas, os seguintes elementos devem s
 
 ---
 
-### 75.11 Próximo passo arquitetural
+### 75.11 Fechamento editorial da decisão tecnológica
 
-Com esta matriz final de decisão tecnológica, os próximos passos do Documento-Mestre passam a ser:
-
-1. definição da stack técnica candidata por camada;
-2. definição da topologia inicial de serviços e runtimes;
-3. definição do roadmap de construção por fases;
-4. definição do que entra no JARVIS v1, v2 e v3.
+Com esta matriz final de decisão tecnológica, o documento consolida a transição entre critérios de escolha, stack por camada, topologia inicial e roadmap por fases.
 
 ---
 
@@ -5158,9 +5167,9 @@ A stack consolidada do JARVIS, nesta etapa do documento, pode ser resumida assim
 
 ---
 
-### 76.13 Encaminhamento
+### 76.13 Fechamento editorial da stack por camada
 
-A partir desta stack por camada, o documento pode avançar para topologia de serviços, blueprint de repositório, posição oficial das tecnologias e estratégia detalhada dos especialistas.
+Este bloco fecha a stack por camada desta etapa do mestre e prepara a leitura da topologia inicial, do posicionamento oficial das tecnologias e da estratégia de especialistas.
 
 ---
 
@@ -5610,14 +5619,9 @@ A topologia inicial oficial do JARVIS passa a ser definida como:
 
 ---
 
-## 88. Próximo passo
+## 88. Fechamento editorial da topologia inicial
 
-Com a topologia inicial definida, o próximo passo natural do Documento-Mestre é estabelecer o **roadmap de construção por fases**, determinando:
-
-1. o que entra no JARVIS v1;
-2. o que fica para o JARVIS v2;
-3. o que compõe o JARVIS v3;
-4. quais dependências precisam ser resolvidas em cada fase.
+Com a topologia inicial definida, o próximo bloco passa a registrar o roadmap de construção por fases e a separação entre `v1`, `v2` e `v3`.
 
 ---
 
@@ -5904,1454 +5908,438 @@ Cada fase deve ser tratada como aumento de capacidade estrutural e não apenas a
 
 ---
 
-## 97. Encaminhamento
+## 97. Fechamento editorial do roadmap de construção
 
-A execução detalhada de milestones, sprints, backlog técnico e ordem de implementação pertence a capítulos posteriores, mais operacionais, deste mesmo documento.
-
----
-
-## 98. Especificação do JARVIS v1 inicial e MVP arquitetural
-
-Este capítulo define, com precisão, o que deve entrar no primeiro recorte real de construção do JARVIS. Seu objetivo é impedir que o projeto tente nascer completo demais e, ao mesmo tempo, evitar um MVP tão reduzido que não represente a visão do sistema.
-
-A regra central desta seção é:
-
-**o v1 inicial deve ser pequeno o suficiente para ser construído com consistência e grande o suficiente para já ser reconhecido como JARVIS.**
+Este bloco encerra a leitura macro do roadmap e prepara a entrada nos capítulos mais próximos do backlog estrutural, do blueprint e da implementação.
 
 ---
 
-### 98.1 Diferença entre visão completa, v1 e MVP arquitetural
+## 98. Recorte canônico do v1 inicial
 
-#### Visão completa
+Este bloco preserva apenas a definição estrutural do primeiro corte do JARVIS.
 
-É o JARVIS em sua plenitude conceitual: geral, persistente, multimodal, autoevolutivo, altamente operacional e amplamente multidomínio.
+Regra central:
 
-#### JARVIS v1
+- o `v1` inicial deve ser pequeno o suficiente para ser construído com consistência;
+- e correto o suficiente para já ser reconhecido como JARVIS.
 
-É a primeira versão funcional robusta que já carrega a identidade do sistema e a base correta de arquitetura.
-
-#### MVP arquitetural
-
-É o menor conjunto de componentes capaz de sustentar o v1 sem deformar a visão.
-
-**Regra:** o MVP não é um protótipo descartável; ele é o primeiro núcleo real do sistema.
-
----
-
-### 98.2 Objetivo do v1 inicial
-
-O v1 inicial deve provar que é possível construir um JARVIS com:
+O `v1` inicial deve preservar:
 
 - identidade unificada;
-- memória real e útil;
-- raciocínio coordenado;
-- múltiplos domínios centrais;
+- memória útil;
+- núcleo executivo funcional;
+- 12 mentes nucleares ativas;
+- profundidade inicial em domínios prioritários;
+- operação real de baixo risco;
 - governança mínima robusta;
-- execução limitada, porém real;
-- observabilidade;
-- base pronta para crescimento futuro.
+- observabilidade suficiente para uso controlado.
+
+O detalhamento operacional e histórico desse recorte deve ser lido prioritariamente nos derivados de roadmap, handoff e implementação.
 
 ---
 
-### 98.3 Capacidades obrigatórias do v1 inicial
+## 99. Limites do primeiro corte
 
-O v1 inicial deve conter obrigatoriamente os seguintes blocos.
+O primeiro corte não precisa incluir:
 
-#### 98.3.1 Identidade e coerência
-
-- missão e princípios ativos no sistema;
-- postura comportamental consistente;
-- síntese final unificada;
-- preservação de identidade em todo o fluxo.
-
-#### 98.3.2 Orquestração central
-
-- classificação de intenção;
-- roteamento de contexto;
-- planejamento básico de tarefas compostas;
-- coordenação entre memória, cognição e operação.
-
-#### 98.3.3 Cognição inicial
-
-As 24 mentes cognitivas podem já existir conceitualmente, mas o v1 inicial deve implementar de forma funcional pelo menos um subconjunto nuclear com regras de composição.
-
-**Mentes mínimas do v1 inicial:**
-
-- mente lógica;
-- mente analítica;
-- mente científica;
-- mente sistêmica;
-- mente estratégica;
-- mente pragmática;
-- mente executiva;
-- mente ética;
-- mente investigativa;
-- mente crítica;
-- mente comunicacional;
-- mente integradora.
-
-#### 98.3.4 Domínios iniciais prioritários
-
-Os 30 domínios devem existir como taxonomia oficial, mas o v1 inicial deve priorizar implementação funcional mais profunda em alguns domínios centrais.
-
-**Domínios prioritários do v1 inicial:**
-
-- computação e desenvolvimento;
-- dados, estatística e inteligência analítica;
-- psicologia e comportamento humano;
-- comunicação, linguagem e argumentação;
-- filosofia, ética e epistemologia;
-- negócios, gestão e organizações;
-- estratégia e pensamento sistêmico;
-- tomada de decisão complexa;
-- produtividade, execução e coordenação.
-
-**Domínios secundários já presentes, mas com menor profundidade inicial:**
-
-- economia;
-- finanças;
-- educação;
-- criatividade, design, arte e inovação;
-- política, geopolítica e governança pública.
-
-#### 98.3.5 Memória mínima robusta
-
-No v1 inicial, as 11 memórias já devem existir conceitualmente, mas algumas precisam ter prioridade funcional plena.
-
-**Memórias obrigatórias do v1 inicial:**
-
-- memória de identidade;
-- memória normativa;
-- memória do usuário;
-- memória contextual;
-- memória episódica;
-- memória procedural básica;
-- memória de projetos e missões;
-- memória semântica inicial.
-
-**Memórias que podem entrar em profundidade menor no primeiro corte:**
-
-- memória social e relacional;
-- memória de domínio madura;
-- memória evolutiva avançada.
-
-#### 98.3.6 Operação mínima real
-
-O v1 inicial já deve ser capaz de agir de forma limitada, não apenas conversar.
-
-**Capacidades operacionais mínimas:**
-
-- pesquisa e síntese de informação;
-- produção de artefatos textuais estruturados;
-- organização de tarefas e missões;
-- execução de ferramentas de baixo risco;
-- apoio a desenvolvimento de software;
-- consulta a memória e continuidade de projetos.
-
-#### 98.3.7 Governança mínima robusta
-
-O v1 inicial deve incluir obrigatoriamente:
-
-- classificação de risco;
-- política de permissão;
-- validação pré-ação;
-- logs estruturados;
-- proteção da memória crítica;
-- contenção básica;
-- separação entre produção e sandbox.
-
-#### 98.3.8 Observabilidade mínima
-
-O v1 inicial deve incluir:
-
-- logs estruturados;
-- rastreamento de fluxo;
-- registro de ações;
-- registro de decisões relevantes;
-- métricas básicas de operação e memória.
-
----
-
-## 99. O que não precisa entrar no primeiro corte
-
-Para preservar foco, o v1 inicial não precisa incluir imediatamente:
-
-- cobertura profunda dos 30 domínios em equivalência;
+- cobertura profunda e equilibrada dos 30 domínios;
 - ecossistema completo de especialistas;
-- voz cinematográfica final em todos os canais;
+- voz final madura em todos os canais;
 - multimodalidade plena em produção;
 - autoevolução ampla em produção;
-- monitoramento persistente avançado de múltiplos ambientes;
-- políticas refinadíssimas de domínio para todas as áreas;
-- experiências de interface extremamente sofisticadas.
+- assistente operacional amplo;
+- expansão excessiva de superfície antes da consolidação do núcleo.
 
-Esses elementos pertencem principalmente ao v2 e ao v3.
+Esses elementos pertencem principalmente às fases posteriores.
 
 ---
 
 ## 100. MVP arquitetural do JARVIS
 
-O MVP arquitetural do JARVIS deve ser composto pelo menor conjunto de serviços e runtimes capazes de sustentar o v1 inicial sem deformar o sistema.
+O MVP arquitetural do JARVIS deve ser composto apenas do que for necessário para sustentar o `v1` inicial sem deformar o sistema.
 
-### 100.1 Serviços mínimos do MVP
+Componentes mínimos:
 
-1. serviço de interface;
-2. serviço de núcleo central;
-3. serviço de memória;
-4. serviço de conhecimento e recuperação;
-5. serviço operacional;
-6. serviço de governança;
-7. serviço de observabilidade.
+- interface ou canal mínimo de entrada;
+- núcleo central;
+- memória;
+- conhecimento e recuperação;
+- operação;
+- governança;
+- observabilidade;
+- sandbox evolutivo isolado quando aplicável.
 
-### 100.2 Runtimes mínimos do MVP
+Regra:
 
-1. runtime cognitivo central;
-2. runtime operacional seguro;
-3. sandbox separado para experimentos e evolução não promovida.
-
-### 100.3 Persistência mínima do MVP
-
-- backbone estruturado para memória e estado;
-- indexação vetorial básica;
-- registros de eventos, ações, decisões e missões.
-
-### 100.4 Regra do MVP
-
-Se um componente não for necessário para que o sistema tenha identidade, memória, coordenação, governança e alguma capacidade operacional real, ele não precisa estar no primeiro corte.
+- se um componente não for necessário para identidade, memória, coordenação, governança ou capacidade operacional real, ele não entra no primeiro corte.
 
 ---
 
-## 101. Sequência técnica recomendada de implementação
+## 101. Sequência canônica do primeiro corte
 
-A construção do v1 inicial deve seguir uma ordem disciplinada.
+A implementação do primeiro corte deve obedecer a esta sequência estrutural:
 
-### Fase A — Constituição do sistema
+1. constituição semântica do sistema;
+2. núcleo central funcional;
+3. memória útil;
+4. conhecimento e domínio inicial;
+5. operação de baixo risco;
+6. governança mínima robusta;
+7. observabilidade e estabilidade.
 
-Implementar:
-
-- identidade;
-- princípios;
-- memória de identidade;
-- memória normativa;
-- topologia mínima;
-- estrutura de logs.
-
-### Fase B — Cérebro central
-
-Implementar:
-
-- orquestrador central;
-- classificador de intenção;
-- planejador inicial;
-- composição das mentes nucleares;
-- síntese final.
-
-### Fase C — Memória útil
-
-Implementar:
-
-- memória contextual;
-- memória do usuário;
-- memória episódica;
-- memória de projetos e missões;
-- recuperação básica.
-
-### Fase D — Conhecimento e domínio
-
-Implementar:
-
-- taxonomia inicial de domínios;
-- indexação;
-- recuperação documental;
-- primeiros domínios com profundidade funcional.
-
-### Fase E — Operação real
-
-Implementar:
-
-- pesquisa e síntese;
-- produção de artefatos;
-- tarefas e missões;
-- executor de ferramentas de baixo risco;
-- apoio a software.
-
-### Fase F — Governança mínima completa
-
-Implementar:
-
-- classificação de risco;
-- permissão;
-- validação pré-ação;
-- contenção;
-- auditoria mínima.
-
-### Fase G — Observabilidade e refinamento
-
-Implementar:
-
-- métricas;
-- rastreamento;
-- dashboards;
-- análise de fluxo;
-- melhoria de estabilidade.
+Essa ordem existe para evitar retrabalho estrutural, não para impedir paralelização controlada.
 
 ---
 
 ## 102. Critérios de prontidão do v1 inicial
 
-O v1 inicial só deve ser considerado pronto quando atender simultaneamente aos seguintes critérios:
+O `v1` inicial só deve ser considerado pronto quando houver, ao mesmo tempo:
 
-### 102.1 Critérios identitários
-
-- resposta coerente com missão e princípios;
-- unidade perceptível do sistema;
-- estabilidade de tom e postura.
-
-### 102.2 Critérios cognitivos
-
-- boa capacidade de análise e síntese em domínios centrais;
-- coordenação funcional das mentes nucleares;
-- planejamento básico confiável.
-
-### 102.3 Critérios de memória
-
-- continuidade útil entre sessões;
-- capacidade de lembrar preferências e contexto;
-- capacidade de sustentar projetos simples e missões básicas.
-
-### 102.4 Critérios operacionais
-
-- capacidade real de executar ações de baixo risco;
-- produção útil de artefatos;
-- pesquisa e síntese confiáveis.
-
-### 102.5 Critérios de governança
-
-- risco classificado;
-- ações controladas;
-- logs disponíveis;
-- contenção mínima funcional.
-
-### 102.6 Critérios de estabilidade
-
-- funcionamento previsível;
-- baixa degradação entre ciclos;
-- consistência de fluxo;
-- capacidade de recuperação de falha razoável.
+- coerência identitária;
+- coordenação cognitiva suficiente;
+- continuidade útil de memória;
+- operação controlada de baixo risco;
+- governança funcional;
+- observabilidade mínima;
+- estabilidade aceitável em uso controlado.
 
 ---
 
 ## 103. Relação entre MVP e v2
 
-O v1 inicial deve ser construído de modo que o v2 possa crescer por adição de:
+O `v1` inicial deve ser construído como embrião correto do sistema, e não como atalho descartável.
+
+Isso significa que o `v2` deve crescer por adição controlada de:
 
 - especialistas subordinados;
-- novos domínios mais profundos;
-- monitoramento mais persistente;
-- memória de domínio mais rica;
-- voz e multimodalidade mais maduras;
-- pipeline evolutivo mais ativo.
-
-Isso significa que o MVP não deve ser um atalho descartável, e sim um embrião correto do sistema final.
+- maior profundidade de domínio;
+- memória mais rica;
+- continuidade mais longa;
+- novas superfícies e capacidades.
 
 ---
 
 ## 104. Síntese oficial do v1 inicial
 
-O v1 inicial do JARVIS passa a ser definido como:
-
-- uma primeira implementação unificada do sistema;
-- com identidade real e governada;
-- com memória útil e persistente;
-- com núcleo executivo funcional;
-- com 12 mentes nucleares ativas;
-- com profundidade maior em domínios centrais selecionados;
-- com execução limitada, porém real;
-- com governança mínima robusta;
-- com observabilidade suficiente para operação e crescimento.
-
-O MVP arquitetural correspondente deve conter os serviços e runtimes mínimos necessários para sustentar essa versão sem deformar a visão do JARVIS.
+O `v1` inicial do JARVIS passa a ser definido como a primeira implementação unificada do sistema com identidade real, memória útil, núcleo funcional, governança mínima robusta e operação controlada suficiente para uso real em escopo restrito.
 
 ---
 
-## 105. Próximo passo
+## 105. Fechamento editorial do v1 inicial
 
-A partir daqui, o próximo passo mais natural é transformar o v1 inicial em um **backlog técnico estruturado**, separando:
-
-1. épicos;
-2. módulos;
-3. componentes;
-4. dependências;
-5. ordem de implementação.
+Este bloco fecha a definição do `v1` inicial e prepara sua tradução em backlog técnico estruturado.
 
 ---
 
 ## 106. Backlog técnico estruturado do JARVIS v1
 
-Este capítulo transforma a especificação do v1 inicial em um backlog técnico estruturado. Seu objetivo é converter a visão arquitetural em uma sequência de construção acionável, organizada em épicos, módulos, componentes, dependências e ordem recomendada de implementação.
+Este capítulo preserva apenas a macroestrutura do backlog do `v1`. O mestre não deve funcionar como quadro detalhado de épicos, módulos e tarefas; esse nível pertence aos derivados de implementação e roadmap.
 
-A lógica deste backlog é arquitetural, não apenas funcional. Isso significa que os itens foram organizados segundo o papel que cumprem na constituição do sistema, e não apenas por conveniência de interface ou lista de features.
+Regra central:
 
-**Importante:** este backlog representa a estrutura macro da engenharia do v1. O detalhamento em milestones, sprints e tarefas concretas aparece em capítulos posteriores e não deve ser confundido com este nível de organização.
-
----
-
-### 106.1 Estrutura do backlog
-
-O backlog do JARVIS v1 deve ser organizado em cinco níveis:
-
-1. **épico** — grande frente de construção;
-2. **módulo** — agrupamento funcional interno ao épico;
-3. **componente** — unidade lógica de implementação;
-4. **dependência** — pré-requisito técnico ou arquitetural;
-5. **ordem recomendada** — posição lógica na sequência de construção.
+- o backlog do `v1` deve ser lido como decomposição arquitetural mínima do primeiro corte;
+- e não como lista exaustiva de engenharia.
 
 ---
 
-## 107. Épico A — Constituição do sistema
+### 106.1 Frentes canônicas do backlog do v1
 
-Este épico estabelece a base identitária, normativa e estrutural sem a qual o restante do sistema perderia coerência.
+O backlog estrutural do `v1` deve ser organizado nas seguintes frentes:
 
-### 107.1 Módulo A1 — Identidade do sistema
+1. constituição do sistema;
+2. núcleo central;
+3. cognição inicial;
+4. memória;
+5. conhecimento e domínio;
+6. operação real;
+7. governança e segurança;
+8. observabilidade e continuidade;
+9. evolução inicial em sandbox.
 
-**Componentes:**
-
-- definição operacional da missão;
-- definição técnica dos princípios nucleares;
-- definição do perfil comportamental do JARVIS;
-- definição de tom, coerência e síntese final.
-
-**Dependências:** nenhuma.
-
-**Ordem recomendada:** primeira.
-
-### 107.2 Módulo A2 — Constituição normativa
-
-**Componentes:**
-
-- políticas nucleares do sistema;
-- estrutura inicial de permissões;
-- classificação inicial de risco;
-- critérios de ação permitida, condicionada e proibida.
-
-**Dependências:** módulo A1.
-
-**Ordem recomendada:** primeira.
-
-### 107.3 Módulo A3 — Estrutura mínima de projeto
-
-**Componentes:**
-
-- organização inicial dos serviços;
-- separação de ambientes;
-- base de configuração;
-- estrutura inicial de runtime.
-
-**Dependências:** módulos A1 e A2.
-
-**Ordem recomendada:** primeira.
+Essas frentes definem cobertura obrigatória do primeiro corte, sem congelar a forma exata de implementação.
 
 ---
 
-## 108. Épico B — Núcleo central do JARVIS
+## 107. Constituição do sistema
 
-Este épico materializa o cérebro coordenador do sistema.
+Esta frente cobre:
 
-### 108.1 Módulo B1 — Orquestrador central
+- missão, identidade e princípios;
+- constituição normativa;
+- permissões e risco em nível fundacional;
+- estrutura mínima de projeto e runtime.
 
-**Componentes:**
-
-- serviço de núcleo central;
-- controlador do fluxo principal;
-- representação do ciclo entrada → cognição → saída.
-
-**Dependências:** épico A.
-
-**Ordem recomendada:** segunda.
-
-### 108.2 Módulo B2 — Classificação e roteamento
-
-**Componentes:**
-
-- classificador de intenção;
-- classificador de tipo de tarefa;
-- roteador de componentes;
-- seletor inicial de domínios.
-
-**Dependências:** módulo B1.
-
-**Ordem recomendada:** segunda.
-
-### 108.3 Módulo B3 — Planejamento
-
-**Componentes:**
-
-- planejador central;
-- estrutura de etapas e checkpoints;
-- representação de planos simples e compostos.
-
-**Dependências:** módulos B1 e B2.
-
-**Ordem recomendada:** segunda.
-
-### 108.4 Módulo B4 — Síntese final unificada
-
-**Componentes:**
-
-- consolidador de resposta;
-- verificação de coerência com identidade;
-- normalização da saída final.
-
-**Dependências:** módulos A1, B1 e B2.
-
-**Ordem recomendada:** segunda.
+Ela deve ser atacada antes das demais por sustentar coerência do restante do sistema.
 
 ---
 
-## 109. Épico C — Cognição inicial
+## 108. Núcleo central do JARVIS
 
-Este épico implementa o primeiro conjunto de mentes cognitivas ativas.
+Esta frente cobre:
 
-### 109.1 Módulo C1 — Motor de mentes cognitivas
+- orquestração central;
+- interpretação de intenção;
+- planejamento inicial;
+- síntese final unificada;
+- coordenação entre memória, cognição, operação e governança.
 
-**Componentes:**
-
-- estrutura de ativação de mentes;
-- composição inicial de mentes;
-- pesos de ativação por contexto.
-
-**Dependências:** épico B.
-
-**Ordem recomendada:** terceira.
-
-### 109.2 Módulo C2 — Mentes nucleares do v1
-
-**Componentes:**
-
-- mente lógica;
-- mente analítica;
-- mente científica;
-- mente sistêmica;
-- mente estratégica;
-- mente pragmática;
-- mente executiva;
-- mente ética;
-- mente investigativa;
-- mente crítica;
-- mente comunicacional;
-- mente integradora.
-
-**Dependências:** módulo C1.
-
-**Ordem recomendada:** terceira.
-
-### 109.3 Módulo C3 — Combinador cognitivo
-
-**Componentes:**
-
-- combinador de perspectivas;
-- resolução de conflito entre mentes;
-- síntese cognitiva intermediária.
-
-**Dependências:** módulos C1 e C2.
-
-**Ordem recomendada:** terceira.
+Ela representa o primeiro grande eixo técnico do `v1`.
 
 ---
 
-## 110. Épico D — Memória do sistema
+## 109. Cognição inicial
 
-Este épico implementa a infraestrutura mínima de continuidade, contexto e personalização.
+Esta frente cobre:
 
-### 110.1 Módulo D1 — Backbone de memória
+- ativação inicial de mentes;
+- 12 mentes nucleares do primeiro corte;
+- composição e arbitragem cognitiva suficientes para o `v1`.
 
-**Componentes:**
-
-- persistência estruturada principal;
-- suporte a indexação vetorial;
-- esquema inicial de armazenamento por classe de memória.
-
-**Dependências:** épico A.
-
-**Ordem recomendada:** paralela à segunda.
-
-### 110.2 Módulo D2 — Orquestrador de memória
-
-**Componentes:**
-
-- classificador de memória;
-- recuperador de memória;
-- promotor de memória;
-- arquivador e redutor.
-
-**Dependências:** módulo D1 e épico B.
-
-**Ordem recomendada:** quarta.
-
-### 110.3 Módulo D3 — Memórias críticas
-
-**Componentes:**
-
-- memória de identidade;
-- memória normativa;
-- guardião da memória crítica.
-
-**Dependências:** módulos A1, A2 e D1.
-
-**Ordem recomendada:** quarta.
-
-### 110.4 Módulo D4 — Memórias do v1 inicial
-
-**Componentes:**
-
-- memória do usuário;
-- memória contextual;
-- memória episódica;
-- memória procedural básica;
-- memória de projetos e missões;
-- memória semântica inicial.
-
-**Dependências:** módulos D1, D2 e B1.
-
-**Ordem recomendada:** quarta.
+O detalhamento fino das mentes continua sendo normativo em capítulos próprios, não neste backlog.
 
 ---
 
-## 111. Épico E — Conhecimento e domínio
+## 110. Memória do sistema
 
-Este épico implementa a primeira versão funcional do plano de conhecimento do JARVIS.
+Esta frente cobre:
 
-### 111.1 Módulo E1 — Taxonomia de domínios
+- backbone de persistência;
+- orquestração de memória;
+- proteção de memórias críticas;
+- suporte inicial às classes de memória necessárias para continuidade útil do `v1`.
 
-**Componentes:**
-
-- registro formal dos 30 domínios;
-- estrutura inicial de subdomínios;
-- relações entre domínios.
-
-**Dependências:** épico A.
-
-**Ordem recomendada:** paralela à terceira.
-
-### 111.2 Módulo E2 — Roteador de domínios
-
-**Componentes:**
-
-- seletor de domínios principais;
-- ativação de domínios secundários;
-- integração com o núcleo central.
-
-**Dependências:** módulos E1 e B2.
-
-**Ordem recomendada:** quarta.
-
-### 111.3 Módulo E3 — Recuperação de conhecimento
-
-**Componentes:**
-
-- indexação documental;
-- recuperação híbrida;
-- consulta semântica;
-- integração com memória e planejamento.
-
-**Dependências:** módulo D1, módulo E1 e camada de stack de recuperação.
-
-**Ordem recomendada:** quinta.
-
-### 111.4 Módulo E4 — Profundidade inicial de domínios prioritários
-
-**Componentes:**
-
-- modelagem mais profunda dos domínios prioritários do v1;
-- primeiros repositórios de repertório por domínio;
-- padrões conceituais e terminológicos por área.
-
-**Dependências:** módulos E1, E2 e E3.
-
-**Ordem recomendada:** quinta.
+Ela deve preparar a expansão posterior para a estrutura completa de 11 classes.
 
 ---
 
-## 112. Épico F — Operação real do sistema
+## 111. Conhecimento e domínio
 
-Este épico dá ao JARVIS sua primeira capacidade de agir de forma útil no mundo.
+Esta frente cobre:
 
-### 112.1 Módulo F1 — Serviço operacional
+- taxonomia canônica de domínios;
+- roteamento inicial de domínios;
+- recuperação de conhecimento;
+- profundidade inicial em domínios prioritários.
 
-**Componentes:**
-
-- serviço operacional do JARVIS;
-- runtime operacional separado;
-- barramento inicial de execução.
-
-**Dependências:** épicos A e B.
-
-**Ordem recomendada:** quinta.
-
-### 112.2 Módulo F2 — Orquestrador de ferramentas
-
-**Componentes:**
-
-- registro de ferramentas;
-- adaptadores de ferramentas;
-- política de invocação;
-- rastreio operacional.
-
-**Dependências:** módulo F1 e serviço de governança.
-
-**Ordem recomendada:** sexta.
-
-### 112.3 Módulo F3 — Capacidades operacionais mínimas
-
-**Componentes:**
-
-- pesquisa e síntese;
-- produção de artefatos textuais;
-- gestão simples de tarefas e missões;
-- execução de ferramentas de baixo risco;
-- apoio a desenvolvimento de software.
-
-**Dependências:** módulos F1, F2, B3 e E3.
-
-**Ordem recomendada:** sexta.
+Ela não exige materialização plena e equilibrada dos 30 domínios já no primeiro corte.
 
 ---
 
-## 113. Épico G — Governança e segurança mínimas robustas
+## 112. Operação real do sistema
 
-Este épico protege o sistema desde o primeiro corte útil.
+Esta frente cobre:
 
-### 113.1 Módulo G1 — Serviço de governança
+- serviço operacional;
+- orquestração de ferramentas;
+- produção de artefatos;
+- execução limitada e governada de tarefas de baixo risco.
 
-**Componentes:**
-
-- serviço de política e permissão;
-- integração transversal com núcleo, memória e operação.
-
-**Dependências:** épico A.
-
-**Ordem recomendada:** paralela à segunda.
-
-### 113.2 Módulo G2 — Classificação de risco e permissão
-
-**Componentes:**
-
-- classificador de risco;
-- validador de permissão;
-- regras por classe de ação.
-
-**Dependências:** módulos A2 e G1.
-
-**Ordem recomendada:** quarta.
-
-### 113.3 Módulo G3 — Validação pré-ação e contenção
-
-**Componentes:**
-
-- checkpoint pré-ação;
-- bloqueio de ação fora de escopo;
-- redução a modo seguro;
-- contenção básica.
-
-**Dependências:** módulos G1, G2 e F1.
-
-**Ordem recomendada:** sexta.
-
-### 113.4 Módulo G4 — Proteção de memória crítica
-
-**Componentes:**
-
-- proteção de memória de identidade e normativa;
-- trilha de alteração;
-- restrições de mutação.
-
-**Dependências:** módulos D3 e G1.
-
-**Ordem recomendada:** quarta.
+Ela marca a passagem do sistema analítico para o sistema operacional.
 
 ---
 
-## 114. Épico H — Observabilidade e continuidade
+## 113. Governança e segurança mínimas robustas
 
-Este épico torna o sistema rastreável, depurável e capaz de crescer com base em evidência.
+Esta frente cobre:
 
-### 114.1 Módulo H1 — Logs estruturados
+- serviço de governança;
+- classificação de risco;
+- validação pré-ação;
+- contenção básica;
+- proteção de identidade e memória crítica.
 
-**Componentes:**
-
-- logs por serviço;
-- logs por missão;
-- logs por ação e decisão.
-
-**Dependências:** épicos A e B.
-
-**Ordem recomendada:** desde o início.
-
-### 114.2 Módulo H2 — Rastreamento de fluxo
-
-**Componentes:**
-
-- traces de tarefas;
-- correlação entre entrada, raciocínio, decisão e ação.
-
-**Dependências:** módulo H1 e serviços centrais.
-
-**Ordem recomendada:** sexta.
-
-### 114.3 Módulo H3 — Métricas operacionais e cognitivas iniciais
-
-**Componentes:**
-
-- métricas de latência;
-- métricas de custo;
-- métricas de erro;
-- métricas de estabilidade de missão.
-
-**Dependências:** módulo H1.
-
-**Ordem recomendada:** sexta.
-
-### 114.4 Módulo H4 — Estado persistente de sessão e missão
-
-**Componentes:**
-
-- estado de sessão;
-- estado de missão;
-- retomada de fluxo básico.
-
-**Dependências:** módulos D4, B1 e B3.
-
-**Ordem recomendada:** quinta.
+Ela não deve ser adiada para depois da operação.
 
 ---
 
-## 115. Épico I — Evolução inicial e sandbox
+## 114. Observabilidade e continuidade
 
-Este épico não implementa autoevolução plena em produção, mas prepara o sistema para aprender com segurança.
+Esta frente cobre:
 
-### 115.1 Módulo I1 — Sandbox evolutivo
+- logs estruturados;
+- rastreamento de fluxo;
+- métricas iniciais;
+- estado persistente de sessão e missão.
 
-**Componentes:**
+Seu papel é tornar o `v1` auditável e evoluível desde cedo.
 
-- ambiente separado de experimentação;
-- isolamento do runtime de produção.
+---
 
-**Dependências:** épico A e topologia inicial.
+## 115. Evolução inicial e sandbox
 
-**Ordem recomendada:** sétima.
+Esta frente cobre:
 
-### 115.2 Módulo I2 — Observação de desempenho
+- sandbox evolutivo isolado;
+- observação de desempenho;
+- memória evolutiva inicial;
+- pipeline mínimo de proposta, teste, comparação e rejeição ou promoção controlada.
 
-**Componentes:**
-
-- coleta de dados sobre uso;
-- captura de acertos, falhas e padrões recorrentes.
-
-**Dependências:** épicos H e F.
-
-**Ordem recomendada:** sétima.
-
-### 115.3 Módulo I3 — Memória evolutiva inicial
-
-**Componentes:**
-
-- registro de hipótese de melhoria;
-- registro de experimento;
-- registro de comparação de versões.
-
-**Dependências:** módulos D1, D2 e I2.
-
-**Ordem recomendada:** sétima.
-
-### 115.4 Módulo I4 — Pipeline evolutivo inicial
-
-**Componentes:**
-
-- proposta de melhoria;
-- teste controlado;
-- comparação;
-- rejeição ou arquivamento.
-
-**Dependências:** módulos I1, I2, I3 e G1.
-
-**Ordem recomendada:** oitava.
+Ela prepara o caminho da autoevolução sem transformar o `v1` em plataforma evolutiva ampla.
 
 ---
 
 ## 116. Ordem macro de implementação
 
-A sequência macro recomendada é:
+A ordem macro recomendada permanece:
 
-1. Épico A — Constituição do sistema
-2. Épico B — Núcleo central do JARVIS
-3. Épico D — Memória do sistema
-4. Épico C — Cognição inicial
-5. Épico E — Conhecimento e domínio
-6. Épico G — Governança e segurança mínimas robustas
-7. Épico F — Operação real do sistema
-8. Épico H — Observabilidade e continuidade
-9. Épico I — Evolução inicial e sandbox
+1. constituição do sistema;
+2. núcleo central;
+3. memória;
+4. cognição inicial;
+5. conhecimento e domínio;
+6. governança e segurança;
+7. operação real;
+8. observabilidade e continuidade;
+9. evolução inicial em sandbox.
 
-**Observação:** alguns módulos desses épicos podem caminhar em paralelo, mas a ordem acima define a prioridade estrutural.
+Paralelização controlada é aceitável, desde que essa prioridade estrutural seja preservada.
 
 ---
 
 ## 117. Dependências críticas do backlog
 
-Dependências que bloqueiam múltiplas frentes e, portanto, devem receber atenção prioritária:
+As dependências críticas do `v1` são:
 
 - identidade e constituição normativa;
-- orquestrador central;
+- núcleo central funcional;
 - backbone de memória;
-- serviço de governança;
-- serviço operacional básico;
-- logs estruturados;
+- governança mínima robusta;
+- observabilidade inicial;
 - estrutura mínima de domínio e recuperação.
+
+Sem essas bases, o restante do backlog tende a gerar expansão frágil.
 
 ---
 
 ## 118. Entregáveis mínimos esperados do backlog do v1
 
-Ao final da primeira grande iteração do backlog do v1, o JARVIS deve ser capaz de:
+Ao final da primeira grande iteração do `v1`, o sistema deve demonstrar:
 
-- conversar de forma coerente e unificada;
-- manter continuidade básica entre interações e missões;
-- raciocinar com mentes nucleares combinadas;
-- operar com profundidade útil em domínios centrais;
-- planejar e organizar tarefas simples e compostas;
-- produzir artefatos úteis;
-- executar ações de baixo risco sob governança;
-- registrar seus fluxos, decisões e ações;
-- operar com base correta para expansão futura.
+- unidade perceptível;
+- memória útil;
+- cognição inicial funcional;
+- operação de baixo risco;
+- governança mínima;
+- observabilidade suficiente;
+- base correta para expansão posterior.
 
 ---
 
 ## 119. Síntese oficial do backlog técnico do v1
 
-O backlog técnico oficial do JARVIS v1 passa a ser composto por nove épicos:
-
-- Épico A — Constituição do sistema
-- Épico B — Núcleo central do JARVIS
-- Épico C — Cognição inicial
-- Épico D — Memória do sistema
-- Épico E — Conhecimento e domínio
-- Épico F — Operação real do sistema
-- Épico G — Governança e segurança mínimas robustas
-- Épico H — Observabilidade e continuidade
-- Épico I — Evolução inicial e sandbox
-
-Esse backlog define a macroestrutura da construção do v1. O detalhamento temporal por milestones, sprints e tarefas aparece em capítulos posteriores.
+O backlog técnico do `v1` passa a ser definido apenas como a macrodecomposição arquitetural do primeiro corte em nove frentes estruturais. Seu detalhamento temporal, operacional e por serviço deve ser mantido nos derivados vivos.
 
 ---
 
-## 120. Encaminhamento
+## 120. Fechamento editorial do backlog estrutural
 
-A partir deste backlog estrutural, o documento pode descer para níveis mais operacionais de execução, como milestones, sprints, contratos, blueprint de repositório e implementação inicial.
+Este bloco fecha a decomposição macro do `v1` e transfere o detalhamento executivo para documentos derivados de implementação, roadmap e handoff.
 
 ---
 
 ## 121. Blueprint inicial de repositórios e estrutura de código-fonte
 
-Este capítulo define o blueprint inicial de repositórios e a estrutura de código-fonte recomendada para o JARVIS. Seu objetivo é transformar a arquitetura, a topologia e o backlog em uma organização concreta de base de código, favorecendo clareza, escalabilidade, governança e evolução.
+Este capítulo preserva apenas a política canônica de organização da base de código. Ele não deve funcionar como árvore normativa detalhada de cada subpasta histórica do monorepo.
 
-A regra central deste blueprint é:
+Regra central:
 
-**separar o suficiente para garantir clareza e isolamento, sem fragmentar cedo demais o sistema em excesso de repositórios.**
+- separar o suficiente para garantir clareza, isolamento e governança;
+- sem fragmentar cedo demais o sistema em múltiplos repositórios ou microestruturas artificiais.
 
 ---
 
 ### 121.1 Princípios do blueprint
 
-A estrutura inicial do código-fonte do JARVIS deve obedecer aos seguintes princípios:
+O blueprint inicial deve obedecer a estes princípios:
 
-- **núcleo central claramente identificado**;
-- **separação entre planos cognitivo, operacional e evolutivo**;
-- **isolamento de capacidades sensíveis**;
-- **memória e persistência tratadas como infraestrutura crítica**;
-- **governança transversal e não periférica**;
-- **observabilidade desde o início**;
-- **capacidade de crescer de monorepo modular para multirepo controlado, se necessário**.
-
----
-
-### 121.2 Estratégia inicial de repositórios
-
-A recomendação inicial é começar com uma estratégia de **monorepo modular**, com fronteiras internas fortes, usando um repositório principal chamado **jarvis**.
-
-**Justificativa:**
-
-- acelera a construção do v1;
-- reduz fricção entre núcleo, memória, governança e operação;
-- facilita evolução coordenada da arquitetura;
-- evita fragmentação prematura;
-- mantém consistência entre contratos internos.
-
-A migração para múltiplos repositórios deve acontecer apenas quando houver ganho real de escala, autonomia de times ou isolamento operacional.
-
----
-
-### 121.3 Repositório principal recomendado
-
-Nome oficial recomendado:
-
-**jarvis**
-
-Este monorepo deve conter todos os módulos centrais do v1, organizados por diretórios com fronteiras explícitas.
-
-**Justificativa do nome:**
-
-- é simples;
-- é forte como identidade de projeto;
-- funciona melhor para branding e eventual abertura open-source;
-- evita reduzir o sistema a “agent”, “bot” ou “assistant”;
-- preserva a ideia de que o repositório principal representa o sistema como um todo, e não apenas um subsistema técnico.
+- núcleo central claramente identificável;
+- separação entre cognição, memória, operação, governança, observabilidade e evolução;
+- isolamento de capacidades sensíveis;
+- contratos compartilhados explícitos;
+- documentação e testes nascendo junto da base;
+- possibilidade de extração controlada para multirepo apenas quando houver ganho real.
 
 ---
 
 ## 122. Estrutura de alto nível do monorepo
 
-A estrutura inicial recomendada é:
+O monorepo principal `jarvis` deve preservar, em nível alto, as seguintes camadas:
 
-```text
-jarvis/
-├── apps/
-├── services/
-├── engines/
-├── memory/
-├── knowledge/
-├── governance/
-├── observability/
-├── evolution/
-├── shared/
-├── infra/
-├── docs/
-├── tests/
-└── tools/
-```
+- `apps`
+- `services`
+- `engines`
+- `memory`
+- `knowledge`
+- `governance`
+- `observability`
+- `evolution`
+- `shared`
+- `infra`
+- `docs`
+- `tests`
+- `tools`
 
----
-
-## 123. Camada apps/
-
-Esta camada contém aplicações de entrada e superfícies de uso.
-
-### Estrutura sugerida
-
-```text
-apps/
-├── jarvis-web/
-├── jarvis-api/
-├── jarvis-console/
-└── jarvis-voice/
-```
-
-### Responsabilidade
-
-- interface do usuário;
-- API pública/controlada;
-- console administrativo ou operacional;
-- camada de voz em tempo real.
-
-### Regra
-
-Nenhuma lógica cognitiva central deve ficar acoplada diretamente aos apps.
+Esse nível já é suficiente no mestre; árvores detalhadas e layouts concretos pertencem ao estado real do repositório e aos derivados operacionais.
 
 ---
 
-## 124. Camada services/
+## 123. Regra canônica das camadas do monorepo
 
-Esta camada contém os serviços centrais que implementam a topologia inicial.
+Cada camada do monorepo deve cumprir uma função clara:
 
-### Estrutura sugerida
+- `apps`: superfícies de uso e entrada;
+- `services`: fronteiras principais de serviço;
+- `engines`: motores cognitivos e executivos próprios;
+- `memory`, `knowledge`, `governance`, `observability`, `evolution`: infraestruturas especializadas do sistema;
+- `shared`: contratos, schemas, eventos, tipos e utilidades transversais;
+- `infra`: ambientes e entrega;
+- `docs`, `tests`, `tools`: documentação, validação e apoio operacional.
 
-```text
-services/
-├── orchestrator-service/
-├── memory-service/
-├── knowledge-service/
-├── operational-service/
-├── governance-service/
-├── observability-service/
-└── evolution-service/
-```
-
-### Responsabilidade
-
-Representar os serviços principais definidos na topologia do sistema.
-
-### Regra
-
-Cada serviço deve possuir fronteira clara, contrato interno e responsabilidade definida.
+Nenhuma dessas camadas deve absorver responsabilidade estrutural de outra por conveniência local.
 
 ---
 
-## 125. Camada engines/
+## 124. Monorepo primeiro, multirepo depois
 
-Esta camada contém motores internos de raciocínio, composição e coordenação.
+O padrão inicial permanece sendo monorepo modular.
 
-### Estrutura sugerida
+Extração para repositórios complementares só deve ocorrer quando houver, de forma comprovada:
 
-```text
-engines/
-├── identity-engine/
-├── executive-engine/
-├── cognitive-engine/
-├── planning-engine/
-├── synthesis-engine/
-├── task-engine/
-└── domain-router-engine/
-```
-
-### Responsabilidade
-
-- identidade e coerência;
-- orquestração cognitiva;
-- ativação de mentes;
-- planejamento;
-- síntese final;
-- roteamento de domínios e tarefas.
-
-### Regra
-
-Esses motores compõem o núcleo intelectual do JARVIS e devem permanecer próprios.
+- ganho real de escala;
+- isolamento operacional necessário;
+- autonomia de time;
+- ou ciclo de evolução independente que justifique a separação.
 
 ---
 
-## 126. Camada memory/
+## 125. Estrutura mínima recomendada do primeiro corte
 
-Esta camada contém tudo o que diz respeito à memória do sistema.
+No primeiro recorte real, o monorepo deve conter ao menos:
 
-### Estrutura sugerida
+- serviços centrais de orquestração, memória, conhecimento, operação, governança e observabilidade;
+- motores nucleares de identidade, cognição, planejamento e síntese;
+- base compartilhada de contratos, schemas e tipos;
+- documentação, testes e ferramentas desde o início.
 
-```text
-memory/
-├── memory-core/
-├── identity-memory/
-├── normative-memory/
-├── user-memory/
-├── relational-memory/
-├── contextual-memory/
-├── episodic-memory/
-├── semantic-memory/
-├── procedural-memory/
-├── mission-memory/
-├── domain-memory/
-└── evolutionary-memory/
-```
-
-### Responsabilidade
-
-Implementar as 11 classes de memória e o orquestrador de memória.
-
-### Regra
-
-A memória deve ser separada internamente por classe, mesmo que parte da persistência use o mesmo backbone técnico.
+Esse mínimo vale mais do que qualquer arranjo de subpastas excessivamente detalhado.
 
 ---
 
-## 127. Camada knowledge/
+## 126. Ordem recomendada de criação da base de código
 
-Esta camada contém a taxonomia, os domínios, os subdomínios, a indexação e os mecanismos de recuperação.
-
-### Estrutura sugerida
-
-```text
-knowledge/
-├── domain-registry/
-├── subdomain-registry/
-├── concept-index/
-├── retrieval-engine/
-├── rag-pipeline/
-└── domain-assets/
-```
-
-### Responsabilidade
-
-- registro dos 30 domínios;
-- estrutura de subdomínios;
-- indexação conceitual e documental;
-- pipelines de recuperação.
-
----
-
-## 128. Camada governance/
-
-Esta camada contém os mecanismos de política, risco, permissão e contenção.
-
-### Estrutura sugerida
-
-```text
-governance/
-├── policy-core/
-├── risk-engine/
-├── permission-engine/
-├── pre-action-validator/
-├── memory-guard/
-├── containment/
-└── rollback/
-```
-
-### Responsabilidade
-
-- aplicar governança do sistema;
-- classificar risco;
-- validar permissões;
-- proteger memória crítica;
-- conter comportamentos indevidos;
-- suportar rollback.
-
-### Regra
-
-Governança deve estar centralizada conceitualmente, mesmo que integrada a múltiplos serviços.
-
----
-
-## 129. Camada observability/
-
-Esta camada contém logs, métricas, tracing e trilhas de auditoria.
-
-### Estrutura sugerida
-
-```text
-observability/
-├── logging/
-├── tracing/
-├── metrics/
-├── dashboards/
-├── audit-trail/
-└── evaluation/
-```
-
-### Responsabilidade
-
-- logs estruturados;
-- rastreamento de fluxo;
-- métricas operacionais e cognitivas;
-- trilha de auditoria;
-- avaliação de qualidade.
-
----
-
-## 130. Camada evolution/
-
-Esta camada contém o pipeline de autoevolução governada.
-
-### Estrutura sugerida
-
-```text
-evolution/
-├── performance-observer/
-├── reflector/
-├── improvement-generator/
-├── experiment-runner/
-├── version-compare/
-├── promotion-engine/
-└── evolutionary-sandbox/
-```
-
-### Responsabilidade
-
-- observar desempenho;
-- refletir;
-- propor melhoria;
-- testar;
-- comparar versões;
-- promover ou rejeitar mudanças.
-
-### Regra
-
-Esta camada deve poder operar isoladamente do runtime de produção.
-
----
-
-## 131. Camada shared/
-
-Esta camada contém contratos, tipos comuns, eventos e utilidades transversais.
-
-### Estrutura sugerida
-
-```text
-shared/
-├── contracts/
-├── schemas/
-├── events/
-├── types/
-├── utils/
-└── constants/
-```
-
-### Responsabilidade
-
-- contratos internos entre serviços;
-- eventos padronizados;
-- tipos e esquemas compartilhados;
-- utilidades comuns.
-
-### Regra
-
-Nada em shared/ deve conter lógica de negócio central; apenas bases transversais reutilizáveis.
-
----
-
-## 132. Camada infra/
-
-Esta camada contém a definição de ambientes, provisionamento, deploy e recursos de execução.
-
-### Estrutura sugerida
-
-```text
-infra/
-├── docker/
-├── compose/
-├── k8s/
-├── databases/
-├── queues/
-├── environments/
-└── ci-cd/
-```
-
-### Responsabilidade
-
-- ambientes;
-- contêineres;
-- orquestração;
-- bancos;
-- filas;
-- pipelines de entrega.
-
----
-
-## 133. Camada docs/
-
-Esta camada contém documentação técnica, arquitetural e operacional.
-
-### Estrutura sugerida
-
-```text
-docs/
-├── architecture/
-├── cognition/
-├── memory/
-├── governance/
-├── evolution/
-├── api/
-└── operations/
-```
-
-### Responsabilidade
-
-Manter documentação viva e sincronizada com o sistema.
-
----
-
-## 134. Camada tests/
-
-Esta camada contém a estratégia de testes do sistema.
-
-### Estrutura sugerida
-
-```text
-tests/
-├── unit/
-├── integration/
-├── workflow/
-├── governance/
-├── memory/
-├── evolution/
-└── benchmarks/
-```
-
-### Responsabilidade
-
-- testes unitários;
-- testes de integração;
-- testes de workflow;
-- testes de governança;
-- testes de memória;
-- testes evolutivos;
-- benchmarks comparativos.
-
----
-
-## 135. Camada tools/
-
-Esta camada contém scripts, automações de desenvolvimento e ferramentas auxiliares.
-
-### Estrutura sugerida
-
-```text
-tools/
-├── dev/
-├── migration/
-├── maintenance/
-├── data/
-└── diagnostics/
-```
-
----
-
-## 136. Blueprint inicial de repositórios complementares
-
-Embora a recomendação seja começar em monorepo modular, alguns repositórios complementares podem surgir mais tarde com boa justificativa.
-
-### Repositórios potenciais futuros
-
-- **jarvis-specialists** — quando a camada de especialistas crescer o suficiente para justificar ciclo próprio;
-- **jarvis-clients** — quando apps e clientes precisarem de evolução independente;
-- **jarvis-model-lab** — quando o laboratório evolutivo e experimental justificar isolamento forte;
-- **jarvis-infra** — quando a infraestrutura merecer ciclo próprio e equipe separada.
-
-### Regra
-
-Nenhum desses repositórios deve ser criado cedo demais sem necessidade real.
-
----
-
-## 137. Estrutura mínima recomendada de serviços no v1
-
-No primeiro recorte real, a estrutura mínima recomendada dentro do monorepo deve incluir, pelo menos:
-
-```text
-services/
-├── orchestrator-service/
-├── memory-service/
-├── knowledge-service/
-├── operational-service/
-├── governance-service/
-└── observability-service/
-```
-
-E, como motores principais:
-
-```text
-engines/
-├── identity-engine/
-├── executive-engine/
-├── cognitive-engine/
-├── planning-engine/
-└── synthesis-engine/
-```
-
----
-
-## 138. Ordem recomendada de criação da base de código
-
-A base de código deve nascer nesta ordem:
+A ordem canônica de criação da base é:
 
 1. estrutura do monorepo;
-2. shared/ e contracts/;
-3. engines/ centrais;
-4. services/ centrais;
-5. memory/;
-6. governance/;
-7. observability/;
-8. knowledge/;
-9. operational/;
-10. evolution/ em sandbox separado.
+2. base compartilhada;
+3. motores centrais;
+4. serviços centrais;
+5. memória, governança e observabilidade;
+6. conhecimento e operação;
+7. evolução em sandbox isolado.
 
 ---
 
-## 139. Regra de crescimento da base
+## 127. Regra de crescimento da base
 
 A base do JARVIS deve crescer por:
 
@@ -7359,32 +6347,24 @@ A base do JARVIS deve crescer por:
 - contratos estáveis;
 - testes desde cedo;
 - documentação sincronizada;
-- extração de repositórios apenas quando houver ganho real de escala ou isolamento.
+- extração de repositórios apenas quando houver ganho comprovado.
 
 ---
 
-## 140. Síntese oficial do blueprint inicial
+## 128. Síntese oficial do blueprint inicial
 
-O blueprint inicial oficial do JARVIS passa a ser definido como:
+O blueprint inicial do JARVIS passa a ser definido como:
 
-- um **monorepo modular** chamado conceitualmente de **jarvis**;
-- organizado em **apps, services, engines, memory, knowledge, governance, observability, evolution, shared, infra, docs, tests e tools**;
-- com núcleo central claramente identificado;
-- com separação forte entre cognição, memória, operação, governança, observabilidade e evolução;
-- com possibilidade futura de extração controlada para multirepo.
-
-Esse blueprint deve servir como base para o início real da engenharia do sistema.
+- um monorepo modular chamado `jarvis`;
+- com camadas arquiteturais explícitas e funções não intercambiáveis;
+- com crescimento controlado a partir do núcleo, e não por proliferação estrutural;
+- e com possibilidade futura de extração seletiva para multirepo sob justificativa real.
 
 ---
 
-## 141. Próximo passo
+## 129. Fechamento editorial do blueprint inicial
 
-A partir daqui, o próximo passo mais útil é transformar esse blueprint em um destes formatos:
-
-1. estrutura concreta de pastas e contratos do repositório;
-2. backlog técnico por diretório e serviço;
-3. roadmap de milestones de implementação;
-4. documento de decisões arquiteturais iniciais.
+Este bloco fecha a política canônica de organização do código-fonte. O estado concreto do repositório deve ser lido prioritariamente na árvore real do monorepo e nos derivados de implementação.
 
 ---
 
@@ -7712,14 +6692,9 @@ As decisões arquiteturais iniciais do JARVIS passam a ser oficialmente composta
 
 ---
 
-## 165. Próximo passo
+## 165. Fechamento editorial das decisões arquiteturais iniciais
 
-A partir deste ponto, o próximo passo mais útil é escolher um dos seguintes caminhos:
-
-1. transformar as decisões em **milestones e sprints de implementação**;
-2. transformar o blueprint em **estrutura concreta de diretórios e contratos iniciais**;
-3. gerar um **documento executivo resumido** do projeto;
-4. iniciar a **especificação técnica detalhada do primeiro serviço: o núcleo central**.
+Este bloco fecha as decisões arquiteturais iniciais e prepara a transição para as especificações técnicas dos pilares centrais do sistema.
 
 ---
 
@@ -8141,14 +7116,9 @@ O Núcleo Central do JARVIS passa a ser oficialmente definido como:
 
 ---
 
-### 166.15 Próximo passo
+### 166.15 Fechamento editorial do Núcleo Central
 
-A partir deste ponto, os próximos passos mais úteis possíveis são:
-
-1. especificar tecnicamente o **serviço de memória**;
-2. especificar tecnicamente o **serviço operacional**;
-3. especificar tecnicamente o **serviço de governança**;
-4. transformar o Núcleo Central em **contratos, diretórios e interfaces iniciais de código**.
+Este bloco fecha a especificação técnica do Núcleo Central como referência canônica. Sua tradução em contratos, código e backlog deve ser lida prioritariamente nos derivados de implementação e nos registries vivos do repositório.
 
 ---
 
@@ -8570,14 +7540,9 @@ O Serviço de Memória do JARVIS passa a ser oficialmente definido como:
 
 ---
 
-### 167.16 Próximo passo
+### 167.16 Fechamento editorial do Serviço de Memória
 
-A partir deste ponto, os próximos passos mais úteis possíveis são:
-
-1. especificar tecnicamente o **serviço operacional**;
-2. especificar tecnicamente o **serviço de governança**;
-3. transformar Núcleo Central + Memória em **contratos, interfaces e diretórios iniciais de código**;
-4. montar o **roadmap de milestones e sprints do v1**.
+Este bloco fecha a especificação técnica do Serviço de Memória como referência canônica. Sua materialização operacional deve permanecer nos derivados vivos e no estado real do serviço.
 
 ---
 
@@ -8984,14 +7949,9 @@ O Serviço Operacional do JARVIS passa a ser oficialmente definido como:
 
 ---
 
-### 168.15 Próximo passo
+### 168.15 Fechamento editorial do Serviço Operacional
 
-A partir deste ponto, os próximos passos mais úteis possíveis são:
-
-1. especificar tecnicamente o **serviço de governança**;
-2. transformar Núcleo Central + Memória + Operação em **contratos, interfaces e diretórios iniciais de código**;
-3. montar o **roadmap de milestones e sprints do v1**;
-4. gerar um **backlog técnico por serviço**.
+Este bloco fecha a especificação técnica do Serviço Operacional como referência canônica. O detalhamento de execução, tool layer e rollout deve permanecer nos derivados de implementação e operação.
 
 ---
 
@@ -9402,14 +8362,9 @@ O Serviço de Governança do JARVIS passa a ser oficialmente definido como:
 
 ---
 
-### 169.15 Próximo passo
+### 169.15 Fechamento editorial do Serviço de Governança
 
-A partir deste ponto, os próximos passos mais úteis possíveis são:
-
-1. transformar Núcleo Central + Memória + Operação + Governança em **contratos, interfaces e diretórios iniciais de código**;
-2. montar o **roadmap de milestones e sprints do v1**;
-3. gerar o **backlog técnico por serviço**;
-4. especificar a **camada inicial de voz e interação em tempo real**.
+Este bloco fecha a especificação técnica do Serviço de Governança como referência canônica. Sua aplicação prática deve continuar sendo lida nos contratos, serviços e derivados vivos do sistema.
 
 ---
 
@@ -9703,14 +8658,9 @@ A base inicial implementável do repositório **jarvis** passa a ser oficialment
 
 ---
 
-## 177. Próximo passo
+## 177. Fechamento editorial das especificações iniciais dos quatro pilares
 
-A partir deste ponto, os próximos passos mais úteis possíveis são:
-
-1. montar o **roadmap de milestones e sprints do v1**;
-2. gerar a **estrutura concreta inicial de diretórios e arquivos-base**;
-3. escrever o **primeiro conjunto de contratos compartilhados**;
-4. definir a **linguagem e o stack final por serviço**.
+Este bloco fecha a especificação inicial dos quatro pilares e prepara a conexão com roadmap, estrutura concreta, contratos compartilhados e stack por serviço.
 
 ---
 
@@ -9727,8 +8677,8 @@ Este capítulo transforma o backlog técnico e o blueprint inicial em um roadmap
 Este bloco deve preservar a estrutura canônica do roadmap do `v1`, enquanto o detalhamento tático e operacional passa a ser aprofundado prioritariamente nos derivados:
 
 - `docs/roadmap/v1-roadmap.md`
-- `docs/implementation/first-milestone-plan.md`
-- `docs/implementation/sprint-1-plan.md`
+- `docs/implementation/implementation-strategy.md`
+- `docs/implementation/service-breakdown.md`
 
 A lógica deste roadmap é:
 
@@ -9778,8 +8728,8 @@ Seu foco canônico é:
 
 O detalhamento tático desta milestone passa a ser mantido principalmente em:
 
-- `docs/implementation/sprint-1-plan.md`
-- `docs/implementation/first-milestone-plan.md`
+- `docs/implementation/implementation-strategy.md`
+- `docs/implementation/service-breakdown.md`
 
 ---
 
@@ -9943,14 +8893,9 @@ Esse roadmap deve servir como ponte direta entre o Documento-Mestre e o plano de
 
 ---
 
-## 195. Próximo passo
+## 195. Fechamento editorial do roadmap técnico do v1
 
-A partir deste ponto, os próximos passos mais úteis possíveis são:
-
-1. gerar a **estrutura concreta inicial de diretórios e arquivos-base**;
-2. escrever o **primeiro conjunto de contratos compartilhados**;
-3. definir a **linguagem e o stack final por serviço**;
-4. transformar o roadmap em **milestones de produto e engenharia**.
+Este bloco fecha o roadmap técnico inicial do `v1` e prepara a passagem para a estrutura concreta de repositório, contratos compartilhados e stack por serviço.
 
 ---
 
@@ -9975,205 +8920,55 @@ A estrutura concreta inicial do repositório **jarvis** deve obedecer aos seguin
 
 ---
 
-## 197. Árvore inicial recomendada do repositório jarvis
+## 197. Arvore inicial recomendada do repositorio jarvis
 
 ```text
 jarvis/
-├── README.md
-├── LICENSE
-├── .gitignore
-├── .editorconfig
-├── .env.example
-├── pyproject.toml
-├── package.json
-├── docs/
-│   ├── architecture/
-│   │   ├── document-master.md
-│   │   ├── adrs/
-│   │   │   ├── adr-001-system-unified.md
-│   │   │   ├── adr-002-single-entity.md
-│   │   │   ├── adr-003-strong-core.md
-│   │   │   └── ...
-│   ├── services/
-│   ├── memory/
-│   ├── governance/
-│   ├── operations/
-│   └── roadmap/
-├── apps/
-│   ├── jarvis-api/
-│   │   ├── README.md
-│   │   └── src/
-│   ├── jarvis-web/
-│   │   ├── README.md
-│   │   └── src/
-│   ├── jarvis-console/
-│   │   ├── README.md
-│   │   └── src/
-│   └── jarvis-voice/
-│       ├── README.md
-│       └── src/
-├── services/
-│   ├── orchestrator-service/
-│   │   ├── README.md
-│   │   ├── src/
-│   │   │   ├── app/
-│   │   │   ├── contracts/
-│   │   │   ├── flows/
-│   │   │   ├── handlers/
-│   │   │   ├── state/
-│   │   │   └── bootstrap/
-│   │   └── tests/
-│   ├── memory-service/
-│   │   ├── README.md
-│   │   ├── src/
-│   │   │   ├── app/
-│   │   │   ├── contracts/
-│   │   │   ├── retrieval/
-│   │   │   ├── promotion/
-│   │   │   ├── archival/
-│   │   │   ├── guards/
-│   │   │   └── bootstrap/
-│   │   └── tests/
-│   ├── operational-service/
-│   │   ├── README.md
-│   │   ├── src/
-│   │   │   ├── app/
-│   │   │   ├── contracts/
-│   │   │   ├── adapters/
-│   │   │   ├── execution/
-│   │   │   ├── artifacts/
-│   │   │   ├── state/
-│   │   │   └── bootstrap/
-│   │   └── tests/
-│   ├── governance-service/
-│   │   ├── README.md
-│   │   ├── src/
-│   │   │   ├── app/
-│   │   │   ├── contracts/
-│   │   │   ├── policy/
-│   │   │   ├── risk/
-│   │   │   ├── validation/
-│   │   │   ├── containment/
-│   │   │   ├── rollback/
-│   │   │   └── bootstrap/
-│   │   └── tests/
-│   ├── knowledge-service/
-│   │   ├── README.md
-│   │   ├── src/
-│   │   │   ├── app/
-│   │   │   ├── contracts/
-│   │   │   ├── registry/
-│   │   │   ├── retrieval/
-│   │   │   ├── indexing/
-│   │   │   └── bootstrap/
-│   │   └── tests/
-│   └── observability-service/
-│       ├── README.md
-│       ├── src/
-│       │   ├── app/
-│       │   ├── logging/
-│       │   ├── tracing/
-│       │   ├── metrics/
-│       │   └── bootstrap/
-│       └── tests/
-├── engines/
-│   ├── identity-engine/
-│   │   ├── README.md
-│   │   └── src/
-│   ├── executive-engine/
-│   │   ├── README.md
-│   │   └── src/
-│   ├── cognitive-engine/
-│   │   ├── README.md
-│   │   └── src/
-│   ├── planning-engine/
-│   │   ├── README.md
-│   │   └── src/
-│   ├── synthesis-engine/
-│   │   ├── README.md
-│   │   └── src/
-│   └── domain-router-engine/
-│       ├── README.md
-│       └── src/
-├── memory/
-│   ├── memory-core/
-│   ├── identity-memory/
-│   ├── normative-memory/
-│   ├── user-memory/
-│   ├── relational-memory/
-│   ├── contextual-memory/
-│   ├── episodic-memory/
-│   ├── semantic-memory/
-│   ├── procedural-memory/
-│   ├── mission-memory/
-│   ├── domain-memory/
-│   └── evolutionary-memory/
-├── knowledge/
-│   ├── domain-registry/
-│   ├── subdomain-registry/
-│   ├── concept-index/
-│   ├── retrieval-engine/
-│   ├── rag-pipeline/
-│   └── domain-assets/
-├── governance/
-│   ├── policy-core/
-│   ├── risk-engine/
-│   ├── permission-engine/
-│   ├── pre-action-validator/
-│   ├── memory-guard/
-│   ├── containment/
-│   └── rollback/
-├── observability/
-│   ├── logging/
-│   ├── tracing/
-│   ├── metrics/
-│   ├── dashboards/
-│   ├── audit-trail/
-│   └── evaluation/
-├── evolution/
-│   ├── performance-observer/
-│   ├── reflector/
-│   ├── improvement-generator/
-│   ├── experiment-runner/
-│   ├── version-compare/
-│   ├── promotion-engine/
-│   └── evolutionary-sandbox/
-├── shared/
-│   ├── contracts/
-│   │   ├── input-contracts/
-│   │   ├── memory-contracts/
-│   │   ├── operation-contracts/
-│   │   ├── governance-contracts/
-│   │   ├── mission-contracts/
-│   │   └── domain-contracts/
-│   ├── schemas/
-│   ├── events/
-│   ├── types/
-│   ├── constants/
-│   └── utils/
-├── infra/
-│   ├── docker/
-│   ├── compose/
-│   ├── k8s/
-│   ├── databases/
-│   ├── queues/
-│   ├── environments/
-│   └── ci-cd/
-├── tests/
-│   ├── unit/
-│   ├── integration/
-│   ├── workflow/
-│   ├── governance/
-│   ├── memory/
-│   ├── evolution/
-│   └── benchmarks/
-└── tools/
-    ├── dev/
-    ├── migration/
-    ├── maintenance/
-    ├── data/
-    └── diagnostics/
+|- documento_mestre_jarvis.md
+|- README.md
+|- CHANGELOG.md
+|- HANDOFF.md
+|- pyproject.toml
+|- package.json
+|- docs/
+|  |- adr/
+|  |- architecture/
+|  |- documentation/
+|  |- executive/
+|  |- implementation/
+|  |- operations/
+|  `- roadmap/
+|- apps/
+|- services/
+|  |- orchestrator-service/
+|  |- memory-service/
+|  |- knowledge-service/
+|  |- operational-service/
+|  |- governance-service/
+|  `- observability-service/
+|- engines/
+|  |- identity-engine/
+|  |- executive-engine/
+|  |- cognitive-engine/
+|  |- planning-engine/
+|  |- synthesis-engine/
+|  `- specialist-engine/
+|- memory/
+|- knowledge/
+|- governance/
+|- observability/
+|- evolution/
+|- shared/
+|  |- contracts/
+|  |- schemas/
+|  |- types/
+|  `- events/
+|- infra/
+|- tests/
+`- tools/
 ```
+
+Esta arvore deve ser lida como **estrutura inicial de referencia**, nao como congelamento literal de cada subpasta interna.
 
 ---
 
@@ -10384,23 +9179,24 @@ A pasta `docs/` deve nascer viva, não como apêndice tardio.
 
 ```text
 docs/
+├── adr/
 ├── architecture/
-│   ├── document-master.md
-│   └── adrs/
-├── services/
-├── memory/
-├── governance/
+├── documentation/
+├── executive/
+├── implementation/
+├── operations/
 └── roadmap/
 ```
 
 ### Arquivos prioritários
 
-- `docs/architecture/document-master.md`
+- `documento_mestre_jarvis.md`
 - `docs/roadmap/v1-roadmap.md`
-- `docs/services/orchestrator-service.md`
-- `docs/services/memory-service.md`
-- `docs/services/operational-service.md`
-- `docs/services/governance-service.md`
+- `docs/implementation/service-breakdown.md`
+- `services/orchestrator-service/README.md`
+- `services/memory-service/README.md`
+- `services/operational-service/README.md`
+- `services/governance-service/README.md`
 
 ---
 
@@ -10493,14 +9289,9 @@ A estrutura concreta inicial do repositório **jarvis** passa a ser oficialmente
 
 ---
 
-## 209. Próximo passo
+## 209. Fechamento editorial da árvore inicial do repositório
 
-A partir deste ponto, os próximos passos mais úteis possíveis são:
-
-1. definir a **linguagem e o stack final por serviço**;
-2. escrever o **primeiro conjunto real de contratos compartilhados**;
-3. montar o **roadmap técnico de implementação da Sprint 1**;
-4. gerar uma **árvore real de arquivos inicial pronta para criação do repositório**.
+Este bloco fecha a árvore inicial do repositório e prepara a sequência de stack por serviço, contratos compartilhados e materialização técnica do ciclo inicial.
 
 ---
 
@@ -10621,12 +9412,6 @@ Ficam fora da base principal do v1:
 - dependência total de um framework externo para identidade, memória ou governança;
 - autoevolução livre sem sandbox e sem comparação de versões;
 - excesso de frameworks concorrentes exercendo o mesmo papel central.
-
----
-
-## 214. Encaminhamento
-
-A partir desta definição de linguagem e stack por serviço, o capítulo seguinte pode consolidar o **papel arquitetural oficial de cada tecnologia** na stack do JARVIS.
 
 ---
 
@@ -11353,52 +10138,23 @@ Essa matriz deve orientar decisões de adoção prática sem confundir força te
 
 ---
 
-## 226. Próximo passo
+## 226. Fechamento editorial da matriz de posicionamento tecnológico
 
-A partir deste ponto, os próximos passos mais úteis possíveis são:
-
-1. gerar uma **árvore real de arquivos inicial pronta para criação do repositório**;
-2. escrever o **primeiro conjunto real de contratos compartilhados**;
-3. transformar a **Sprint 1** em tarefas técnicas concretas;
-4. produzir um **resumo executivo final** de todo o Documento-Mestre.
+Este bloco fecha a matriz de posicionamento tecnológico e prepara a leitura do escopo, dos limites e da função editorial do próprio Documento-Mestre.
 
 ---
 
 ## 227. Resumo executivo consolidado
 
-O JARVIS é definido neste documento como um **Sistema Cognitivo Geral, Unificado, Multidomínio, Metacognitivo, Operacional e Autoevolutivo**, concebido para atuar como uma entidade persistente capaz de compreender, raciocinar, planejar, decidir, executar, monitorar, aprender e evoluir.
+Este capítulo existe apenas para leitura rápida dentro do próprio Documento-Mestre.
 
-A visão central do projeto não é a construção de um simples chatbot, nem de um agente isolado de tarefa única, mas de uma arquitetura completa de inteligência aplicada com identidade própria, memória estratificada, múltiplos modos de raciocínio, múltiplas áreas de conhecimento, governança nuclear e capacidade progressiva de ação real.
+Leitura curta:
 
-Este Documento-Mestre estabelece:
-
-- a identidade, missão e princípios do sistema;
-- o mapa cognitivo oficial com 30 domínios, 24 mentes e 11 memórias;
-- a filosofia arquitetural;
-- a arquitetura conceitual, lógica e técnica;
-- a topologia inicial de serviços e runtimes;
-- a stack tecnológica candidata e o posicionamento oficial das tecnologias;
-- o roadmap v1, v2 e v3;
-- o backlog técnico do v1;
-- o blueprint do repositório **jarvis**;
-- as decisões arquiteturais iniciais;
-- a especificação técnica dos pilares críticos do sistema.
-
-A decisão estratégica consolidada é:
-
-- **um núcleo próprio forte** para identidade, memória, governança, operação coordenada e evolução;
-- **infraestrutura reaproveitada** onde isso acelerar sem terceirizar a essência do sistema;
-- **Python** como linguagem principal do backend;
-- **TypeScript** como linguagem principal de interface;
-- **LangGraph** como principal direção arquitetural de absorção da orquestração stateful;
-- **PostgreSQL** como backbone inicial de memória e persistência, com **pgvector** deferido como extensão posterior;
-- **OpenHands** como principal referência para especialista de software;
-- **LangSmith** como principal referência de observabilidade agentic;
-- camadas de memória viva, especialistas e evolução inspiradas em tecnologias como Hermes, Zep, Graphiti, OpenCode, OpenAI Agents SDK e outras, sempre subordinadas ao desenho do JARVIS.
-
-O v1 do JARVIS é definido como a primeira implementação funcional robusta do sistema, com identidade unificada, memória útil, núcleo executivo funcional, 12 mentes nucleares ativas, profundidade inicial em domínios prioritários, execução limitada porém real, governança mínima robusta e observabilidade suficiente para operação e crescimento.
-
-Este documento deve orientar o desenvolvimento do início ao fim do projeto, servindo como constituição arquitetural, cognitiva, técnica e evolutiva do sistema.
+- o JARVIS é uma entidade cognitiva unificada, não um chatbot simples nem uma coleção de agentes independentes;
+- o núcleo soberano continua sendo responsável por identidade, memória, governança, síntese e coordenação de especialistas subordinados;
+- a visão canônica mantém 24 mentes, 30 domínios, 11 memórias, governança forte, operação real e evolução controlada;
+- a estratégia técnica continua sendo construir o núcleo próprio e reaproveitar infraestrutura sem terceirizar a essência do sistema;
+- a execução viva do projeto deve ser acompanhada prioritariamente pelos derivados ativos e pelo master-summary.
 
 ---
 
@@ -11420,7 +10176,7 @@ Este documento define oficialmente:
 - a estrutura do repositório principal;
 - a stack recomendada por camada;
 - o roadmap por fases;
-- o backlog técnico do v1;
+- o recorte estruturante e histórico do v1;
 - as decisões arquiteturais já consolidadas.
 
 ### 228.2 O que este documento ainda não define de forma final
@@ -11458,7 +10214,42 @@ A função deste documento é servir como:
 - referência de priorização do roadmap;
 - ponto de alinhamento entre produto, arquitetura e engenharia.
 
-### 228.5 Regra de uso
+### 228.5 Camadas editoriais do Documento-Mestre
+
+Para reduzir ambiguidades de leitura, este documento deve ser interpretado em quatro camadas editoriais:
+
+1. **Constituição fundacional (`1–60`)**  
+   Define identidade, missão, princípios, arquitetura cognitiva, arquitetura conceitual, arquitetura lógica e arquitetura técnica de referência.
+2. **Arquitetura de referência e posicionamento (`61–237`)**  
+   Define reaproveitamento, topologia, roadmap, backlog estrutural, blueprint, stack, posicionamento tecnológico, escopo, glossário, autonomia e maturidade do próprio documento.
+3. **Interfaces canônicas e frentes de expansão (`238–285`)**  
+   Define contratos, voz, especialistas, schemas e tipos.
+4. **Políticas canônicas de transição e operação (`286–350`)**  
+   Define regras oficiais de implementação, validação, evolução, qualidade, operação, readiness, incidentes e transição entre fases.
+
+### 228.6 O que este documento não deve virar
+
+Este documento não deve ser tratado como:
+
+- plano tático diário de sprint;
+- runbook operacional de rotina;
+- checklist vivo de implantação;
+- changelog de execução;
+- substituto de handoff, backlog ou documentação de serviço.
+
+### 228.7 Regra de derivação
+
+Quando um bloco deste documento começar a exigir:
+
+- passo a passo operacional;
+- checklists mutáveis;
+- evidência de execução;
+- acompanhamento de sprint;
+- ou decisão dependente do estado atual do repositório,
+
+o aprofundamento deve migrar para os derivados vivos correspondentes.
+
+### 228.8 Regra de uso
 
 Quando houver conflito entre decisões locais de implementação e diretrizes estruturais deste documento, a implementação deve ser revista ou o Documento-Mestre deve ser atualizado formalmente, mas nunca ignorado silenciosamente.
 
@@ -13052,12 +11843,6 @@ A estratégia oficial de especialistas do JARVIS passa a ser definida como:
 
 ---
 
-## 263. Encaminhamento
-
-A partir desta estratégia, o documento pode avançar para camadas implementáveis, como schemas, tipos, contratos de runtime, backlog de especialistas e estratégias de evolução modular.
-
----
-
 ## 265. Schemas e tipos iniciais do repositório jarvis
 
 Este capítulo converte os contratos canônicos do sistema em uma forma inicial de schemas e tipos arquiteturais para o repositório **jarvis**. O objetivo é aproximar o Documento-Mestre da implementação real, sem ainda prender o projeto a uma única biblioteca de validação ou serialização.
@@ -13170,7 +11955,7 @@ Devem existir tipos canônicos para:
 
 ## 268. Enums canônicos iniciais
 
-A camada `shared/types/enums/` deve nascer com enums canônicos mínimos.
+A camada `shared/types` deve nascer com enums canônicos mínimos.
 
 ### 268.1 ChannelType
 
@@ -13327,7 +12112,7 @@ Cada schema canônico deve corresponder diretamente a um contrato canônico form
 
 ## 270. Tipos de estado iniciais
 
-A camada `shared/types/state/` deve conter tipos canônicos de estado.
+A camada `shared/types` deve conter tipos canônicos de estado.
 
 ### 270.1 SessionState
 
@@ -13439,19 +12224,11 @@ Essa definição já é suficiente para iniciar a formalização implementável 
 
 ---
 
-## 274. Próximo passo
-
-A partir deste ponto, os próximos passos mais úteis possíveis são:
-
-1. transformar a **Sprint 1** em tarefas técnicas concretas;
-2. continuar o documento com a **estratégia detalhada de implementação do v1 passo a passo**;
-3. produzir um **resumo executivo derivado** a partir do Documento-Mestre.
-
----
-
 ## 286. Estratégia detalhada de implementação do v1 passo a passo
 
 Este capítulo transforma a arquitetura, o backlog, os milestones e a stack do JARVIS v1 em uma estratégia prática de implementação. Seu objetivo é definir **como começar, em que ordem construir, o que validar em cada etapa e como evitar que o projeto perca coerência ao longo da execução**.
+
+Este bloco deve ser lido como **política canônica de transição entre arquitetura e implementação**, e não como backlog tático diário.
 
 Este capítulo não substitui o backlog estrutural nem o roadmap de sprints. Ele atua como a **ponte operacional entre arquitetura e engenharia real**.
 
@@ -13464,9 +12241,10 @@ Com a criação de derivados de implementação, este bloco deve preservar princ
 O detalhamento tático passa a ser aprofundado prioritariamente em:
 
 - `docs/implementation/implementation-strategy.md`
-- `docs/implementation/sprint-1-plan.md`
 - `docs/implementation/service-breakdown.md`
-- `docs/implementation/first-milestone-plan.md`
+- `docs/implementation/post-v1-sprint-cycle.md`
+- `docs/implementation/v1-5-sprint-cycle.md`
+- `docs/implementation/v2-sprint-cycle.md`
 
 ---
 
@@ -13502,203 +12280,70 @@ A ideia não é implementar “módulo por módulo” de forma isolada, e sim co
 
 ---
 
-## 287. Fase 0 — Preparação de execução
+## 287. Sequência canônica das fases do v1
 
-Esta fase prepara o repositório, o ambiente e as convenções mínimas do projeto.
+A implementação do `v1` deve preservar esta progressão:
 
-Critério canônico de saída:
+1. preparação de execução;
+2. fundação semântica compartilhada;
+3. núcleo central mínimo funcional;
+4. memória útil e continuidade real;
+5. governança mínima robusta;
+6. operação mínima real;
+7. conhecimento e profundidade inicial de domínio;
+8. observabilidade e estabilidade operacional;
+9. sandbox evolutivo inicial.
 
-- o projeto já pode ser aberto, rodado e evoluído sem ambiguidade estrutural básica.
-
----
-
-## 288. Fase 1 — Fundação semântica compartilhada
-
-Esta fase estabelece contratos, tipos, enums, estados e eventos compartilhados.
-
-Critério canônico de saída:
-
-- serviços diferentes já conseguem compartilhar payloads e estados sem criar definições paralelas.
+Essa ordem define prioridade estrutural. Paralelização é aceitável, desde que não inverta dependências fundacionais.
 
 ---
 
-## 289. Fase 2 — Núcleo Central mínimo funcional
+## 288. Critérios canônicos de saída por fase
 
-Esta fase faz o núcleo central responder de forma coerente e unificada.
+Cada fase só deve ser considerada concluída quando entregar, no mínimo:
 
-Critério canônico de saída:
-
-- o JARVIS já consegue responder com coerência usando identidade, intenção e planejamento mínimo.
-
----
-
-## 290. Fase 3 — Memória útil e continuidade real
-
-Esta fase introduz continuidade, episódio, contexto e memória crítica mínima.
-
-Critério canônico de saída:
-
-- o sistema já sustenta continuidade útil entre sessões e missões básicas.
+- base executável sem ambiguidade estrutural;
+- contratos compartilhados sem duplicação ad hoc;
+- núcleo coerente e funcional;
+- memória útil entre sessões e missões;
+- governança explícita e bloqueio funcional;
+- operação real de baixo risco;
+- profundidade inicial em domínios prioritários;
+- observabilidade suficiente para inspeção;
+- experimentação evolutiva isolada de produção.
 
 ---
 
-## 291. Fase 4 — Governança mínima robusta
+## 289. Erros estruturais de implementação a evitar
 
-Esta fase transforma o sistema em algo controlável por política explícita.
+Ao implementar o `v1`, o projeto deve evitar:
 
-Critério canônico de saída:
-
-- o sistema deixa de depender apenas de “bom comportamento” e passa a operar sob governança explícita.
-
----
-
-## 292. Fase 5 — Operação mínima real
-
-Esta fase dá ao sistema operação real de baixo risco.
-
-Critério canônico de saída:
-
-- o JARVIS já consegue, sob governança, fazer algo útil além de conversar.
-
----
-
-## 293. Fase 6 — Conhecimento e profundidade inicial de domínio
-
-Esta fase introduz repertório estruturado e retrieval útil.
-
-Critério canônico de saída:
-
-- o sistema já raciocina com profundidade inicial em domínios prioritários e recuperação estruturada.
-
----
-
-## 294. Fase 7 — Observabilidade e estabilidade operacional
-
-Esta fase fortalece medição, rastreamento e estabilidade operacional.
-
-Critério canônico de saída:
-
-- o sistema já pode ser inspecionado, medido e depurado de forma consistente.
-
----
-
-## 295. Fase 8 — Sandbox evolutivo inicial
-
-Esta fase prepara o sistema para melhorar sem perder controle.
-
-Critério canônico de saída:
-
-- o sistema já consegue experimentar melhorias em sandbox sem tocar produção de modo inseguro.
-
----
-
-## 296. Ordem prática recomendada de implementação
-
-A ordem prática recomendada é:
-
-1. Fase 0 — Preparação de execução
-2. Fase 1 — Fundação semântica compartilhada
-3. Fase 2 — Núcleo Central mínimo funcional
-4. Fase 3 — Memória útil e continuidade real
-5. Fase 4 — Governança mínima robusta
-6. Fase 5 — Operação mínima real
-7. Fase 6 — Conhecimento e profundidade inicial de domínio
-8. Fase 7 — Observabilidade e estabilidade operacional
-9. Fase 8 — Sandbox evolutivo inicial
-
-Essa ordem não impede paralelização, mas define a sequência principal para evitar retrabalho estrutural.
-
----
-
-## 297. O que validar em cada etapa
-
-Cada fase deve ser encerrada apenas quando houver validação mínima correspondente.
-
-### 297.1 Validação da Fase 1
-
-- contratos compartilhados consistentes;
-- tipos comuns reaproveitáveis;
-- ausência de payloads ad hoc em serviços iniciais.
-
-### 297.2 Validação da Fase 2
-
-- coerência da resposta final;
-- identidade reconhecível;
-- fluxo básico ponta a ponta operando.
-
-### 297.3 Validação da Fase 3
-
-- recuperação útil de contexto;
-- gravação consistente de episódio;
-- continuidade básica entre interações.
-
-### 297.4 Validação da Fase 4
-
-- risco classificado;
-- permissão validada;
-- bloqueio funcional em caso indevido.
-
-### 297.5 Validação da Fase 5
-
-- operação simples executada com sucesso;
-- artefato gerado e retornado ao núcleo;
-- estado operacional registrado.
-
-### 297.6 Validação da Fase 6
-
-- domínio ativado corretamente;
-- retrieval útil;
-- melhoria perceptível de profundidade em áreas prioritárias.
-
-### 297.7 Validação da Fase 7
-
-- tracing ponta a ponta;
-- logs úteis;
-- métricas básicas funcionando.
-
-### 297.8 Validação da Fase 8
-
-- experimento executado em sandbox;
-- comparação registrada;
-- nenhuma mutação indevida em produção.
-
----
-
-## 298. Erros de implementação que devem ser evitados
-
-Ao implementar o v1, o projeto deve evitar:
-
-- começar pela interface antes da fundação semântica;
+- começar por superfície antes da fundação semântica;
 - acoplar serviços sem contratos compartilhados;
-- deixar governança para o fim;
-- implementar automação demais antes de observabilidade;
-- criar especialistas cedo demais;
-- confundir melhoria experimental com promoção direta à produção;
-- espalhar a lógica do sistema em múltiplos lugares sem centro claro.
+- adiar governança para depois da operação;
+- ampliar automação sem observabilidade suficiente;
+- introduzir especialistas cedo demais;
+- promover melhoria experimental direto para produção;
+- espalhar a lógica nuclear sem centro claro.
 
 ---
 
-## 299. Síntese oficial da estratégia detalhada de implementação do v1
+## 290. Síntese oficial da estratégia de implementação do v1
 
-A estratégia detalhada de implementação do v1 do JARVIS passa a ser oficialmente definida como:
+A estratégia de implementação do `v1` passa a ser definida como:
 
 - construção em fases progressivas e cumulativas;
-- priorização de semântica compartilhada antes de integração complexa;
+- semântica compartilhada antes de integração complexa;
 - núcleo, memória e governança antes de automação mais ampla;
 - conhecimento e operação como expansão controlada;
-- observabilidade e sandbox evolutivo como fechamento estrutural do v1;
+- observabilidade e sandbox evolutivo como fechamento estrutural;
 - validação mínima obrigatória em cada etapa.
 
 ---
 
-## 300. Próximo passo
+## 291. Fechamento editorial da estratégia de implementação do v1
 
-A partir deste ponto, os próximos passos mais úteis possíveis são:
-
-1. transformar a **Sprint 1** em tarefas técnicas concretas;
-2. produzir um **resumo executivo derivado** a partir do Documento-Mestre;
-3. continuar o documento com o **plano detalhado de validação do v1 em ambiente real**;
-4. continuar o documento com a **estratégia detalhada da camada evolutiva**.
+Este bloco fecha a política canônica de implementação do `v1`. O sequenciamento tático, os cortes de sprint e o detalhamento por serviço devem permanecer nos derivados ativos.
 
 ---
 
@@ -13741,449 +12386,174 @@ A validação do v1 deve demonstrar que o JARVIS consegue:
 
 ## 302. Camadas de ambiente de validação
 
-A validação do v1 deve ocorrer em camadas de ambiente com realismo crescente.
+A validação do `v1` deve progredir por quatro camadas:
 
-### 302.1 Camada V0 — Validação local controlada
+1. validação local controlada;
+2. validação integrada de laboratório;
+3. validação de uso controlado real;
+4. validação de prontidão para uso ampliado.
 
-Ambiente de desenvolvimento local, com dados artificiais e cenários previsíveis.
-
-**Objetivo:** validar contratos, fluxos básicos, estados e integração mínima entre serviços.
-
-### 302.2 Camada V1 — Validação integrada de laboratório
-
-Ambiente de teste integrado, com múltiplos serviços conectados, persistência real e cenários simulados mais ricos.
-
-**Objetivo:** validar fluxos ponta a ponta, memória persistente, governança e operação básica em regime controlado.
-
-### 302.3 Camada V2 — Validação de uso controlado real
-
-Ambiente em que o sistema já interage em casos de uso reais, porém com baixo risco, escopo limitado e observação intensa.
-
-**Objetivo:** validar utilidade, estabilidade, memória, governança e comportamento em condições reais.
-
-### 302.4 Camada V3 — Validação de prontidão para uso ampliado
-
-Ambiente de transição entre uso controlado e adoção mais frequente, ainda dentro do escopo do v1.
-
-**Objetivo:** confirmar que o sistema pode operar repetidamente sem degradação relevante e com mecanismos de recuperação adequados.
+Cada camada aumenta realismo, escopo e exigência de estabilidade.
 
 ---
 
 ## 303. Eixos de validação do v1
 
-A validação do v1 deve cobrir pelo menos oito eixos.
+A validação do `v1` deve cobrir, no mínimo:
 
-### 303.1 Eixo identitário
+- identidade;
+- cognição;
+- memória;
+- operação;
+- governança;
+- observabilidade;
+- estabilidade;
+- experiência de uso.
 
-Verifica se o sistema mantém:
-
-- unidade de voz e postura;
-- coerência com missão e princípios;
-- estabilidade comportamental entre sessões e casos.
-
-### 303.2 Eixo cognitivo
-
-Verifica se o sistema mantém:
-
-- interpretação razoável de intenção;
-- seleção adequada de domínios;
-- combinação útil de mentes cognitivas;
-- qualidade de síntese e planejamento.
-
-### 303.3 Eixo de memória
-
-Verifica se o sistema mantém:
-
-- recuperação útil;
-- baixa poluição contextual;
-- retenção de preferências e contexto relevantes;
-- proteção de memória crítica;
-- continuidade de sessão e missão.
-
-### 303.4 Eixo operacional
-
-Verifica se o sistema mantém:
-
-- execução de tarefas simples sob controle;
-- produção útil de artefatos;
-- retornos estruturados ao núcleo;
-- rastreabilidade de ação.
-
-### 303.5 Eixo de governança
-
-Verifica se o sistema mantém:
-
-- classificação de risco coerente;
-- bloqueio de ações indevidas;
-- proteção de memória crítica;
-- auditoria mínima funcional;
-- contenção básica confiável.
-
-### 303.6 Eixo de observabilidade
-
-Verifica se o sistema mantém:
-
-- logs estruturados úteis;
-- tracing ponta a ponta;
-- capacidade de inspecionar falhas;
-- correlação entre eventos, missões, memória e decisão.
-
-### 303.7 Eixo de estabilidade
-
-Verifica se o sistema mantém:
-
-- comportamento previsível em repetição;
-- baixa degradação entre ciclos;
-- retomada após falha local;
-- tolerância a casos imperfeitos ou ambíguos.
-
-### 303.8 Eixo de experiência de uso
-
-Verifica se o sistema transmite:
-
-- clareza;
-- utilidade;
-- continuidade;
-- confiança;
-- sensação de unidade.
+Quando a camada de voz estiver ativa, ela entra como eixo adicional de validação específica.
 
 ---
 
 ## 304. Cenários mínimos de validação do v1
 
-A validação real do v1 deve incluir um conjunto mínimo de cenários representativos.
+A validação real do `v1` deve manter um conjunto mínimo de cenários representativos por eixo, cobrindo:
 
-### 304.1 Cenários identitários
-
-- conversa analítica simples;
-- conversa executiva curta;
-- mudança de tema com preservação de identidade;
-- reentrada em contexto anterior com continuidade coerente.
-
-### 304.2 Cenários de memória
-
-- lembrar preferência do usuário em nova sessão;
-- lembrar missão em andamento;
-- recuperar episódio recente útil;
-- bloquear alteração indevida em memória crítica.
-
-### 304.3 Cenários cognitivos
-
-- analisar problema multidomínio simples;
-- estruturar plano com etapas claras;
-- explicar trade-offs;
-- sintetizar resposta complexa com unidade.
-
-### 304.4 Cenários operacionais
-
-- pesquisar e sintetizar informação;
-- gerar artefato textual estruturado;
-- executar tarefa simples de baixo risco;
-- registrar resultado da ação em memória e observabilidade.
-
-### 304.5 Cenários de governança
-
-- bloquear ação fora de escopo;
-- condicionar ação sensível;
-- permitir ação legítima de baixo risco;
-- registrar trilha de decisão.
-
-### 304.6 Cenários de falha e exceção
-
-- falha de ferramenta;
-- falha parcial de recuperação de memória;
-- entrada ambígua;
-- interrupção de fluxo no meio de missão;
-- tentativa de operação em escopo inadequado.
-
-### 304.7 Cenários de voz, quando a camada estiver habilitada
-
-- sessão falada simples;
-- interrupção do sistema pelo usuário;
-- continuidade multi-turn;
-- uso de tool durante sessão falada;
-- recuperação após truncamento de resposta.
+- continuidade identitária entre mudanças de contexto;
+- recuperação útil de memória e proteção de memória crítica;
+- planejamento e síntese em problemas multidomínio simples;
+- operação de baixo risco com registro de resultado;
+- bloqueio, condicionamento e permissão por governança;
+- falha, interrupção e retomada;
+- voz em tempo real, quando a camada estiver habilitada.
 
 ---
 
 ## 305. Estratégia de progressão da validação
 
-A validação do v1 deve seguir progressão deliberada.
+A validação do `v1` deve seguir progressão deliberada:
 
-### 305.1 Etapa 1 — Validação técnica fechada
+1. validação técnica fechada;
+2. validação funcional guiada;
+3. validação de uso controlado;
+4. validação de prontidão.
 
-Executada pela própria engenharia e arquitetura.
-
-**Objetivo:** verificar se o sistema é tecnicamente coerente antes de qualquer uso controlado real.
-
-### 305.2 Etapa 2 — Validação funcional guiada
-
-Executada com cenários previamente definidos e observação ativa.
-
-**Objetivo:** verificar se as capacidades centrais do v1 realmente existem fora do papel.
-
-### 305.3 Etapa 3 — Validação de uso controlado
-
-Executada com casos reais, usuários controlados ou missões reais de baixo risco.
-
-**Objetivo:** verificar utilidade, robustez e comportamento sob uso real.
-
-### 305.4 Etapa 4 — Validação de prontidão
-
-Executada como ensaio final de uso ampliado do v1.
-
-**Objetivo:** decidir se o sistema está pronto para operar de forma mais estável e recorrente dentro do escopo do v1.
+O objetivo é sair de coerência técnica para utilidade real sob controle, sem pular etapas.
 
 ---
 
 ## 306. Métricas mínimas de validação do v1
 
-A validação do v1 deve registrar métricas mínimas por eixo.
+A validação do `v1` deve registrar métricas mínimas por eixo, incluindo:
 
-### 306.1 Métricas identitárias
-
-- taxa de coerência percebida;
-- taxa de inconsistência de postura;
-- incidência de deriva comportamental.
-
-### 306.2 Métricas cognitivas
-
-- taxa de interpretação correta de intenção;
-- qualidade do planejamento;
-- taxa de síntese satisfatória;
-- taxa de escolha adequada de domínio.
-
-### 306.3 Métricas de memória
-
-- precisão percebida da recuperação;
-- taxa de poluição contextual;
-- retenção útil de preferência;
-- retenção útil de missão.
-
-### 306.4 Métricas operacionais
-
-- taxa de sucesso de tarefa;
-- taxa de retorno estruturado válido;
-- qualidade percebida dos artefatos;
-- taxa de falha por adaptador.
-
-### 306.5 Métricas de governança
-
-- taxa de bloqueio correto;
-- taxa de falso bloqueio;
-- taxa de permissão indevida;
-- taxa de proteção correta de memória crítica.
-
-### 306.6 Métricas de estabilidade
-
-- taxa de falha por fluxo;
-- taxa de retomada bem-sucedida;
-- incidência de estados inconsistentes;
-- degradação após repetição de ciclos.
-
-### 306.7 Métricas de voz, quando aplicável
-
-- latência de início de resposta;
-- taxa de interrupção tratada corretamente;
-- estabilidade da sessão realtime;
-- coerência de multi-turn em voz.
+- coerência identitária;
+- qualidade cognitiva de interpretação, planejamento e síntese;
+- recuperação e poluição de memória;
+- sucesso operacional e qualidade de artefatos;
+- bloqueio correto e falso bloqueio em governança;
+- falha, retomada e consistência de estado;
+- voz e realtime, quando aplicável.
 
 ---
 
 ## 307. Critérios formais de aceite do v1 em ambiente real
 
-O v1 só deve ser considerado aceito em ambiente real controlado quando atender simultaneamente aos seguintes critérios.
+O `v1` só deve ser considerado aceito em ambiente real controlado quando demonstrar, ao mesmo tempo:
 
-### 307.1 Critérios identitários
-
-- o sistema mantém unidade perceptível;
-- não há deriva relevante de identidade nos cenários centrais;
-- a postura do JARVIS permanece coerente em múltiplos contextos.
-
-### 307.2 Critérios cognitivos
-
-- interpreta corretamente a maior parte dos cenários prioritários;
-- produz planos úteis;
-- sintetiza respostas com qualidade aceitável.
-
-### 307.3 Critérios de memória
-
-- lembra contexto útil;
-- sustenta missões básicas;
-- evita poluição excessiva;
-- protege memória crítica.
-
-### 307.4 Critérios operacionais
-
-- executa tarefas de baixo risco com sucesso aceitável;
-- gera artefatos úteis;
-- registra estados e resultados corretamente.
-
-### 307.5 Critérios de governança
-
-- classifica risco de modo funcional;
-- bloqueia o indevido;
-- não libera fluxos críticos sem validação;
-- mantém auditoria mínima confiável.
-
-### 307.6 Critérios de estabilidade
-
-- não entra frequentemente em estados quebrados;
-- consegue retomar parte dos fluxos interrompidos;
-- mantém comportamento previsível em repetição.
+- unidade perceptível e ausência de deriva identitária relevante;
+- interpretação, planejamento e síntese com qualidade aceitável;
+- memória útil sem poluição excessiva e com proteção de memória crítica;
+- operação de baixo risco funcional com registro correto de estados e resultados;
+- governança capaz de classificar risco, bloquear o indevido e manter auditoria mínima confiável;
+- comportamento estável, previsível e recuperável em repetição e interrupção.
 
 ---
 
 ## 308. Condições que impedem promoção do v1
 
-O v1 não deve ser promovido para uso ampliado se houver:
+O `v1` não deve ser promovido se houver:
 
 - deriva identitária relevante;
 - memória inconsistente ou perigosa;
 - falhas recorrentes de governança;
 - execução operacional sem rastreabilidade;
-- instabilidade frequente entre sessões;
+- instabilidade frequente;
 - baixa previsibilidade em cenários prioritários;
-- ausência de observabilidade suficiente para depuração.
+- ou observabilidade insuficiente para depuração e contenção.
 
 ---
 
 ## 309. Estratégia de registro e rastreabilidade da validação
 
-Toda validação do v1 deve gerar registro estruturado.
-
-### 309.1 Cada execução de cenário deve registrar
-
-- cenário executado;
-- ambiente de validação;
-- versão do sistema;
-- resultado observado;
-- falhas encontradas;
-- métricas capturadas;
-- decisão de aprovação, reprovação ou ajuste.
-
-### 309.2 Resultado da validação
-
-Os resultados devem alimentar:
-
-- backlog de correções;
-- backlog de refinamentos;
-- memória evolutiva;
-- revisão de governança;
-- critérios de prontidão do v2.
+Toda validação do `v1` deve gerar registro estruturado de cenário, ambiente, versão, resultado, falhas, métricas e decisão. Esses resultados devem alimentar backlog, memória evolutiva, revisão de governança e critérios de prontidão de fase posterior.
 
 ---
 
 ## 310. Relação entre validação e evolução
 
-A validação do v1 não é apenas etapa de QA. Ela também deve funcionar como base de aprendizagem do sistema.
-
-Ela deve:
-
-- alimentar memória evolutiva;
-- revelar gargalos reais;
-- orientar melhorias futuras;
-- distinguir falha estrutural de falha local;
-- criar base para benchmarks do v2.
+A validação do `v1` também deve funcionar como base de aprendizagem do sistema, alimentando memória evolutiva, revelando gargalos reais e mantendo baseline comparável para melhorias futuras.
 
 ---
 
 ## 311. Síntese oficial do plano de validação do v1 em ambiente real
 
-O plano oficial de validação do v1 do JARVIS passa a ser definido como:
+O plano de validação do `v1` passa a ser definido como:
 
-- validação em camadas de ambiente com realismo crescente;
-- cobertura dos eixos identitário, cognitivo, de memória, operacional, de governança, de observabilidade, de estabilidade e de experiência;
-- cenários mínimos representativos;
-- progressão por etapas;
-- métricas mínimas por eixo;
-- critérios formais de aceite;
-- bloqueios claros de promoção;
-- rastreabilidade obrigatória dos resultados.
+- progressão por camadas de realismo;
+- cobertura mínima dos eixos estruturais do sistema;
+- cenários e métricas suficientes para aceite ou bloqueio;
+- rastreabilidade obrigatória;
+- conexão explícita com governança, backlog e evolução.
 
 ---
 
-## 312. Próximo passo
+## 312. Fechamento editorial do plano de validação do v1
 
-A partir deste ponto, os próximos passos mais úteis possíveis são:
-
-1. transformar a **Sprint 1** em tarefas técnicas concretas;
-2. continuar o documento com a **estratégia detalhada da camada evolutiva**;
-3. produzir um **resumo executivo derivado** a partir do Documento-Mestre;
-4. continuar o documento com a **estratégia de testes e qualidade por serviço**.
+Este bloco fecha a política canônica de validação do `v1`. O detalhamento operacional e os artefatos executáveis de validação devem permanecer nos derivados ativos.
 
 ---
 
 ## 313. Estratégia detalhada da camada evolutiva
 
-Este capítulo formaliza a camada evolutiva do JARVIS em nível operacional, arquitetural e procedimental. Seu objetivo é definir **como o sistema observa a si mesmo, gera hipóteses de melhoria, testa mudanças, compara versões, decide promoções e evita regressões**, sempre sob governança explícita.
+A camada evolutiva define como o JARVIS pode melhorar de forma progressiva, comparativa e reversível sem abrir mão de identidade, governança e estabilidade.
 
-A camada evolutiva não é um acessório experimental. Ela é o mecanismo que permitirá ao JARVIS melhorar de forma progressiva sem depender apenas de reprogramação manual constante. Ao mesmo tempo, ela não pode operar como mutação livre. Sua essência é: **evolução governada, comparativa e reversível**.
+A essência desta camada é:
 
----
-
-### 313.1 Princípios da camada evolutiva
-
-A camada evolutiva do JARVIS deve obedecer aos seguintes princípios:
-
-- **governança acima da mutação**;
-- **comparação antes de promoção**;
-- **sandbox antes de produção**;
-- **rastreabilidade antes de confiança**;
-- **melhoria por evidência, não por intuição isolada**;
-- **preservação de identidade e segurança como restrição permanente**;
-- **capacidade de rollback sempre que a mudança for relevante**.
-
----
-
-### 313.2 Objetivo da camada evolutiva
-
-A camada evolutiva deve permitir que o JARVIS:
-
-- observe padrões de desempenho, falha, latência, qualidade e recorrência;
-- gere propostas de melhoria em skills, heurísticas, fluxos, prompts, configurações ou procedimentos;
-- teste propostas em sandbox controlado;
-- compare versões candidatas com baseline;
-- promova melhorias quando houver ganho real e risco aceitável;
-- rejeite ou reverta mudanças quando houver regressão, instabilidade ou conflito com identidade/governança.
+- evolução governada;
+- comparação antes de promoção;
+- sandbox antes de produção;
+- rastreabilidade antes de confiança;
+- rollback sempre que a mudança for relevante.
 
 ---
 
 ## 314. Escopo da evolução permitida
 
-A camada evolutiva do JARVIS não deve tratar todo o sistema como igualmente mutável.
+A camada evolutiva não deve tratar todo o sistema como igualmente mutável.
 
-### 314.1 Áreas potencialmente evoluíveis
-
-A evolução pode incidir, sob critérios, sobre:
+Áreas potencialmente evoluíveis:
 
 - heurísticas de roteamento;
-- skills e workflows operacionais;
+- skills e workflows;
 - estratégias de recuperação de memória não crítica;
 - procedimentos internos de síntese;
-- descrições de ferramentas e prompts operacionais;
-- políticas de ordenação e priorização local de contexto;
-- mecanismos não nucleares de eficiência, robustez e utilidade.
+- prompts e descrições operacionais;
+- mecanismos locais de eficiência, robustez e utilidade.
 
-### 314.2 Áreas de evolução restrita
-
-A evolução só pode tocar com governança reforçada:
+Áreas de evolução restrita:
 
 - políticas de governança não nucleares;
 - memória procedural consolidada;
-- mecanismos de avaliação que influenciem promoção;
-- contratos que tenham impacto sistêmico indireto.
+- mecanismos de avaliação com impacto sistêmico indireto;
+- contratos com efeito transversal relevante.
 
-### 314.3 Áreas protegidas
+Áreas protegidas:
 
-A camada evolutiva **não deve alterar livremente**:
-
-- missão central do sistema;
+- missão central;
 - princípios nucleares;
 - memória de identidade;
 - memória normativa;
-- regras de segurança raiz;
-- modelo de autorização nuclear;
+- regras raiz de segurança;
+- modelo nuclear de autorização;
 - limites constitucionais do sistema.
 
 ---
@@ -14208,156 +12578,45 @@ O fluxo evolutivo oficial do JARVIS deve seguir a seguinte sequência:
 
 ## 316. Componentes da camada evolutiva
 
-### 316.1 Observador de desempenho
+Os componentes mínimos da camada evolutiva passam a ser:
 
-**Função:** coletar sinais úteis sobre o comportamento do sistema.
+- observador de desempenho;
+- gerador de hipótese;
+- registrador de proposta evolutiva;
+- executor de experimentos;
+- comparador de versões;
+- decisor evolutivo;
+- promotor governado;
+- gestor de rollback evolutivo;
+- memória evolutiva.
 
-**Responsabilidades:**
-
-- detectar falhas recorrentes;
-- detectar gargalos;
-- detectar padrões de baixa qualidade;
-- detectar oportunidades de ganho.
-
-### 316.2 Gerador de hipótese
-
-**Função:** transformar sinais e padrões em hipóteses de melhoria.
-
-**Responsabilidades:**
-
-- formular problema;
-- sugerir intervenção plausível;
-- explicitar ganho esperado;
-- delimitar escopo afetado.
-
-### 316.3 Registrador de proposta evolutiva
-
-**Função:** formalizar a proposta em formato rastreável.
-
-**Responsabilidades:**
-
-- gerar EvolutionProposal;
-- vincular baseline;
-- registrar contexto de origem;
-- acionar governança quando aplicável.
-
-### 316.4 Executor de experimentos
-
-**Função:** aplicar a candidata em ambiente de sandbox controlado.
-
-**Responsabilidades:**
-
-- montar experimento;
-- aplicar variante;
-- executar cenários e casos de comparação;
-- registrar sinais da candidata.
-
-### 316.5 Comparador de versões
-
-**Função:** comparar baseline e candidata em critérios relevantes.
-
-**Responsabilidades:**
-
-- medir qualidade;
-- medir estabilidade;
-- medir custo;
-- medir regressão;
-- sintetizar trade-offs.
-
-### 316.6 Decisor evolutivo
-
-**Função:** estruturar a decisão preliminar de promoção ou rejeição.
-
-**Responsabilidades:**
-
-- interpretar resultados comparativos;
-- classificar ganho líquido;
-- estimar risco residual;
-- sugerir promoção, rejeição ou novos testes.
-
-### 316.7 Promotor governado
-
-**Função:** efetivar promoção apenas quando autorizada.
-
-**Responsabilidades:**
-
-- aplicar mudança permitida;
-- registrar versão promovida;
-- acoplar rollback quando necessário.
-
-### 316.8 Gestor de rollback evolutivo
-
-**Função:** reverter promoções problemáticas.
-
-**Responsabilidades:**
-
-- restaurar baseline válido;
-- registrar regressão;
-- preservar histórico da tentativa.
-
-### 316.9 Memória evolutiva
-
-**Função:** armazenar a trajetória de aprendizado do sistema.
-
-**Responsabilidades:**
-
-- registrar hipóteses;
-- registrar experimentos;
-- registrar comparações;
-- registrar promoções e rejeições;
-- permitir metaanálise evolutiva posterior.
+Esses componentes existem para observar, formular, experimentar, comparar, decidir, promover ou reverter mudanças com rastreabilidade completa.
 
 ---
 
 ## 317. Tipos de melhoria evolutiva
 
-A camada evolutiva deve classificar propostas segundo tipo de melhoria.
+A camada evolutiva deve classificar propostas pelo menos em:
 
-### 317.1 Melhoria de skill
-
-Refina uma habilidade operacional ou cognitiva específica.
-
-### 317.2 Melhoria de workflow
-
-Refina a sequência de etapas de uma tarefa ou fluxo.
-
-### 317.3 Melhoria de roteamento
-
-Refina como o sistema escolhe domínios, mentes, memória ou especialistas.
-
-### 317.4 Melhoria de prompt/configuração
-
-Refina instruções, parâmetros, descrições de tools ou configurações locais.
-
-### 317.5 Melhoria de avaliação
-
-Refina como o sistema mede qualidade e detecta regressão.
-
-### 317.6 Melhoria de eficiência
-
-Refina latência, custo, uso de contexto, recuperação ou desempenho operacional.
+- melhoria de skill;
+- melhoria de workflow;
+- melhoria de roteamento;
+- melhoria de prompt ou configuração;
+- melhoria de avaliação;
+- melhoria de eficiência.
 
 ---
 
 ## 318. Regimes de teste evolutivo
 
-Nem toda melhoria precisa do mesmo regime de teste.
+Nem toda melhoria exige o mesmo regime de teste. Os regimes oficiais passam a ser:
 
-### 318.1 Regime E1 — Teste local simples
+- `E1`: teste local simples;
+- `E2`: teste comparativo estruturado;
+- `E3`: teste governado reforçado;
+- `E4`: teste prolongado em sandbox.
 
-Aplicável a mudanças pequenas, reversíveis e de baixo impacto.
-
-### 318.2 Regime E2 — Teste comparativo estruturado
-
-Aplicável a mudanças que afetam qualidade de resposta, workflow ou recuperação.
-
-### 318.3 Regime E3 — Teste governado reforçado
-
-Aplicável a mudanças que tocam áreas restritas ou que têm maior risco sistêmico.
-
-### 318.4 Regime E4 — Teste prolongado em sandbox
-
-Aplicável a mudanças persistentes, multi-turn ou de impacto comportamental mais amplo.
+A escolha do regime deve seguir impacto, reversibilidade, persistência e risco sistêmico da mudança.
 
 ---
 
@@ -14376,9 +12635,7 @@ A comparação de versões deve considerar pelo menos:
 - impacto em memória;
 - risco de regressão.
 
-### 319.1 Regra de decisão
-
-Nenhuma candidata deve ser promovida apenas porque melhorou um indicador local, se piorar significativamente estabilidade, identidade, governança ou segurança.
+A candidata nunca deve ser promovida só porque melhora um indicador local se piorar estabilidade, identidade, governança ou segurança.
 
 ---
 
@@ -14386,43 +12643,32 @@ Nenhuma candidata deve ser promovida apenas porque melhorou um indicador local, 
 
 A camada evolutiva deve operar permanentemente subordinada ao Serviço de Governança.
 
-### 320.1 Governança da proposta
+Regras mínimas:
 
-Toda proposta deve ser classificada quanto a escopo, risco e mutabilidade permitida.
-
-### 320.2 Governança da promoção
-
-Mudanças em áreas livres podem seguir fluxo mais leve. Mudanças em áreas restritas exigem governança reforçada. Áreas protegidas não são livremente mutáveis.
-
-### 320.3 Governança da reversão
-
-Toda promoção relevante deve possuir caminho claro de reversão.
+- toda proposta deve ser classificada quanto a escopo, risco e mutabilidade;
+- mudanças em áreas restritas exigem governança reforçada;
+- áreas protegidas não são livremente mutáveis;
+- toda promoção relevante deve possuir caminho claro de reversão.
 
 ---
 
 ## 321. Relação entre evolução e memória
 
-A camada evolutiva deve interagir profundamente com o sistema de memória.
+A camada evolutiva deve consumir e produzir memória.
 
-### 321.1 Consumir memória
-
-Ela deve consumir:
+Ela deve consumir pelo menos:
 
 - memória evolutiva;
 - memória procedural;
 - memória de missão;
 - histórico de falhas e sucessos.
 
-### 321.2 Produzir memória
-
-Ela deve produzir:
+Ela deve produzir pelo menos:
 
 - propostas registradas;
 - resultados de experimento;
 - decisões evolutivas;
-- knowledge of what works and what fails.
-
-### 321.3 Promoção para procedural
+- conhecimento sobre o que funciona e o que falha.
 
 Melhorias aprovadas podem alimentar memória procedural, desde que a política de promoção seja respeitada.
 
@@ -14436,39 +12682,21 @@ A camada evolutiva deve ser capaz de melhorar também componentes especialistas,
 - a mudança preserve contratos de retorno ao núcleo;
 - a governança autorize a promoção.
 
-### 322.1 Áreas candidatas em especialistas
-
-- workflows internos;
-- skill prompts;
-- descrições de tools;
-- estratégias locais de decomposição;
-- critérios de ordenação de contexto especializado.
+Áreas candidatas em especialistas incluem workflows internos, prompts, descrições de tools, decomposição local e ordenação de contexto especializado.
 
 ---
 
 ## 323. Benchmarks mínimos da evolução
 
-A camada evolutiva deve manter benchmarks mínimos para evitar promoção arbitrária.
+A camada evolutiva deve manter benchmarks mínimos de:
 
-### 323.1 Benchmark de qualidade
+- qualidade;
+- estabilidade;
+- custo;
+- governança;
+- regressão.
 
-Mede melhora real de resultado.
-
-### 323.2 Benchmark de estabilidade
-
-Mede consistência em repetição.
-
-### 323.3 Benchmark de custo
-
-Mede custo computacional e de contexto.
-
-### 323.4 Benchmark de governança
-
-Mede se a candidata preserva limites e políticas.
-
-### 323.5 Benchmark de regressão
-
-Mede se a candidata piora casos previamente bem resolvidos.
+Esses benchmarks existem para impedir promoção arbitrária e sustentar comparação reprodutível.
 
 ---
 
@@ -14506,9 +12734,7 @@ O primeiro corte implementável da camada evolutiva deve conter pelo menos:
 - memória evolutiva inicial;
 - decisão de promover/rejeitar com apoio de governança.
 
-### 325.1 O que pode ficar para fase posterior
-
-Pode ficar para etapas posteriores:
+Podem ficar para fase posterior:
 
 - evolução multiobjetivo sofisticada;
 - pipelines automáticos muito mais amplos;
@@ -14534,7 +12760,7 @@ Os principais riscos a evitar são:
 
 ## 327. Síntese oficial da camada evolutiva
 
-A camada evolutiva do JARVIS passa a ser oficialmente definida como:
+A camada evolutiva do JARVIS fica definida como:
 
 - um mecanismo governado de melhoria contínua;
 - baseado em observação, hipótese, experimento, comparação, decisão e promoção;
@@ -14544,28 +12770,21 @@ A camada evolutiva do JARVIS passa a ser oficialmente definida como:
 
 ---
 
-## 328. Próximo passo
+## 328. Fechamento editorial da camada evolutiva
 
-A partir deste ponto, os próximos passos mais úteis possíveis são:
-
-1. transformar a **Sprint 1** em tarefas técnicas concretas;
-2. continuar o documento com a **estratégia de testes e qualidade por serviço**;
-3. produzir um **resumo executivo derivado** a partir do Documento-Mestre;
-4. continuar o documento com a **estratégia de operação do v1 em produção controlada**.
+Este bloco fecha a camada evolutiva e prepara a leitura da estratégia de testes, qualidade e operação do `v1`.
 
 ---
 
 ## 329. Estratégia de testes e qualidade por serviço
 
-Este capítulo formaliza a estratégia de testes e qualidade do JARVIS por serviço e por camada arquitetural. Seu objetivo é definir **como cada parte do sistema deve ser validada continuamente**, quais tipos de teste devem existir, como esses testes se relacionam com contratos, governança, memória, operação e evolução, e como a qualidade deve ser tratada como parte da arquitetura, não como etapa posterior.
-
-Este capítulo complementa o plano de validação do v1 em ambiente real. Enquanto aquele capítulo define como validar o sistema em condições progressivamente mais próximas do uso real, este capítulo define **como sustentar qualidade técnica e funcional contínua dentro da engenharia do projeto**.
+A política canônica de qualidade por serviço e por camada arquitetural complementa o plano de validação em ambiente real ao definir como contratos, serviços, integrações, workflows, governança, memória, operação e evolução devem ser testados de forma contínua.
 
 ---
 
 ### 329.1 Princípios da estratégia de testes e qualidade
 
-A estratégia de testes e qualidade do JARVIS deve obedecer aos seguintes princípios:
+A estratégia de testes e qualidade do JARVIS deve obedecer aos seguintes princípios mínimos:
 
 - **qualidade como propriedade arquitetural**;
 - **testes próximos dos contratos e dos fluxos reais**;
@@ -14593,292 +12812,76 @@ A qualidade do JARVIS deve ser organizada em sete camadas complementares:
 
 ## 330. Tipos oficiais de teste do sistema
 
-### 330.1 Testes de contrato
+Os tipos oficiais de teste do sistema passam a ser:
 
-Validam payloads, estados, enums, schemas e compatibilidade entre serviços.
+- testes de contrato;
+- testes unitários;
+- testes de integração;
+- testes de workflow;
+- testes de governança;
+- testes de regressão;
+- testes evolutivos;
+- testes de voz, quando a camada estiver habilitada.
 
-### 330.2 Testes unitários
-
-Validam componentes isolados, funções centrais, regras, classificadores e transformações locais.
-
-### 330.3 Testes de integração
-
-Validam a cooperação entre dois ou mais serviços reais ou semi-reais.
-
-### 330.4 Testes de workflow
-
-Validam fluxos ponta a ponta, incluindo entrada, memória, governança, operação e síntese.
-
-### 330.5 Testes de governança
-
-Validam bloqueio, permissão, contenção, rollback e proteção de memória crítica.
-
-### 330.6 Testes de regressão
-
-Validam que comportamentos previamente corretos não foram degradados por novas mudanças.
-
-### 330.7 Testes evolutivos
-
-Validam propostas de melhoria, baseline vs candidata, promoção e reversão.
-
-### 330.8 Testes de voz
-
-Validam sessão falada, interrupção, latência, multi-turn e tools em contexto de voz, quando essa camada estiver habilitada.
+Cada tipo existe para validar uma camada diferente de risco e não deve substituir os demais.
 
 ---
 
 ## 331. Estratégia de qualidade do Núcleo Central
 
-O Núcleo Central deve ser tratado como o componente de maior criticidade semântica do sistema.
-
-### 331.1 O que deve ser testado
-
-- interpretação de intenção;
-- composição de contexto;
-- roteamento entre memória, domínio, governança e operação;
-- planejamento básico;
-- síntese final;
-- preservação de identidade.
-
-### 331.2 Tipos de teste prioritários
-
-- unitários para classificadores e motores locais;
-- integração com memória e governança;
-- workflow ponta a ponta de entrada → síntese;
-- regressão da coerência identitária.
-
-### 331.3 Critérios mínimos de qualidade
-
-- saída coerente com a intenção;
-- unidade de voz do sistema;
-- baixa incidência de roteamento inadequado;
-- ausência de síntese contraditória em cenários prioritários.
+O Núcleo Central deve ser tratado como o componente de maior criticidade semântica do sistema. Sua qualidade depende de interpretação de intenção, composição de contexto, roteamento, planejamento, síntese e preservação de identidade sob testes unitários, integração, workflow e regressão.
 
 ---
 
 ## 332. Estratégia de qualidade do Serviço de Memória
 
-O Serviço de Memória deve ser tratado como componente crítico de continuidade e segurança cognitiva.
-
-### 332.1 O que deve ser testado
-
-- classificação de memória;
-- recuperação útil por contexto;
-- gravação episódica;
-- retenção de missão;
-- proteção de memória crítica;
-- promoção e arquivamento controlados.
-
-### 332.2 Tipos de teste prioritários
-
-- unitários para classificação e promoção;
-- integração entre núcleo e memória;
-- testes de regressão de recuperação;
-- testes de proteção de memória crítica;
-- testes de ruído/poluição contextual.
-
-### 332.3 Critérios mínimos de qualidade
-
-- recuperação relevante;
-- baixa poluição contextual;
-- memória de missão funcional;
-- memória crítica protegida;
-- promoção semântica sob critério claro.
+O Serviço de Memória deve ser tratado como componente crítico de continuidade e segurança cognitiva. Sua qualidade depende de classificação, recuperação, gravação episódica, retenção de missão, proteção de memória crítica e promoção controlada sob testes unitários, integração e regressão.
 
 ---
 
 ## 333. Estratégia de qualidade do Serviço Operacional
 
-O Serviço Operacional deve ser tratado como componente crítico de ação real e risco controlado.
-
-### 333.1 O que deve ser testado
-
-- despacho de tarefa;
-- execução simples;
-- uso de adaptadores;
-- retorno estruturado;
-- produção de artefatos;
-- gestão de estado operacional;
-- recuperação de falha local.
-
-### 333.2 Tipos de teste prioritários
-
-- unitários em adaptadores e estado operacional;
-- integração com núcleo e governança;
-- workflow ponta a ponta com tarefa de baixo risco;
-- regressão de produção de artefatos.
-
-### 333.3 Critérios mínimos de qualidade
-
-- resultado estruturado correto;
-- estado operacional rastreável;
-- falha bem sinalizada;
-- artefato útil e reconhecível;
-- ausência de ação fora de escopo permitido.
+O Serviço Operacional deve ser tratado como componente crítico de ação real e risco controlado. Sua qualidade depende de despacho, execução, adaptadores, retorno estruturado, produção de artefatos, estado operacional e recuperação de falha local sob testes unitários, integração, workflow e regressão.
 
 ---
 
 ## 334. Estratégia de qualidade do Serviço de Governança
 
-O Serviço de Governança deve ser tratado como componente crítico de legitimidade e contenção.
-
-### 334.1 O que deve ser testado
-
-- classificação de risco;
-- decisão de permissão;
-- pré-ação;
-- proteção de memória crítica;
-- contenção;
-- rollback;
-- auditoria.
-
-### 334.2 Tipos de teste prioritários
-
-- unitários em política, risco e permissão;
-- integração com memória e operação;
-- testes de bloqueio correto;
-- testes de falso bloqueio;
-- testes de rastreabilidade de decisão.
-
-### 334.3 Critérios mínimos de qualidade
-
-- bloqueio correto do indevido;
-- permissão correta do legítimo;
-- baixa taxa de falso bloqueio;
-- proteção consistente de memória crítica;
-- trilha de auditoria suficiente.
+O Serviço de Governança deve ser tratado como componente crítico de legitimidade e contenção. Sua qualidade depende de risco, permissão, pré-ação, proteção de memória crítica, contenção, rollback e auditoria sob testes unitários, integração e cenários de bloqueio correto e falso bloqueio.
 
 ---
 
 ## 335. Estratégia de qualidade do Serviço de Conhecimento
 
-O Serviço de Conhecimento deve ser tratado como componente de profundidade e relevância semântica.
-
-### 335.1 O que deve ser testado
-
-- roteamento por domínio;
-- ativação de domínios;
-- retrieval inicial;
-- organização de repertório por domínio;
-- integração com memória e núcleo.
-
-### 335.2 Tipos de teste prioritários
-
-- unitários em registro e roteamento de domínio;
-- integração com memória e núcleo;
-- testes de relevância do retrieval;
-- regressão da profundidade dos domínios prioritários.
-
-### 335.3 Critérios mínimos de qualidade
-
-- ativação de domínio coerente;
-- melhora real de repertório em áreas prioritárias;
-- retrieval útil;
-- pouca redundância ou ruído na recuperação.
+O Serviço de Conhecimento deve ser tratado como componente de profundidade e relevância semântica. Sua qualidade depende de roteamento por domínio, ativação de domínios, retrieval inicial, repertório por domínio e integração com memória e núcleo.
 
 ---
 
 ## 336. Estratégia de qualidade da camada de voz
 
-Quando a camada de voz estiver habilitada, ela deve possuir regime próprio de qualidade.
-
-### 336.1 O que deve ser testado
-
-- início e encerramento de sessão;
-- fluxo multi-turn;
-- interrupção/barge-in;
-- latência de início de resposta;
-- retorno de tool em contexto de voz;
-- integridade do estado da sessão falada.
-
-### 336.2 Tipos de teste prioritários
-
-- testes de sessão realtime;
-- testes de voz sintética controlada;
-- testes de interrupção;
-- testes de estabilidade de multi-turn;
-- testes de regressão de latência e truncamento.
-
-### 336.3 Critérios mínimos de qualidade
-
-- sessão estável;
-- resposta falada iniciando com latência aceitável;
-- interrupção tratada corretamente;
-- preservação de contexto falado;
-- identidade vocal consistente.
+Quando a camada de voz estiver habilitada, ela deve possuir regime próprio de qualidade cobrindo sessão, multi-turn, interrupção, latência, retorno de tool e integridade de estado em contexto realtime.
 
 ---
 
 ## 337. Estratégia de qualidade da camada evolutiva
 
-A camada evolutiva deve ser tratada como componente crítico de estabilidade futura do sistema.
-
-### 337.1 O que deve ser testado
-
-- registro de proposta evolutiva;
-- execução de experimento em sandbox;
-- comparação baseline vs candidata;
-- decisão de promoção;
-- rollback evolutivo;
-- preservação da identidade e governança após candidata.
-
-### 337.2 Tipos de teste prioritários
-
-- testes comparativos;
-- testes de regressão;
-- testes de governança da promoção;
-- testes de reversão;
-- testes de memória evolutiva.
-
-### 337.3 Critérios mínimos de qualidade
-
-- comparação confiável;
-- promoção não arbitrária;
-- rollback funcional;
-- registro completo da trajetória de experimentação;
-- ausência de mutação indevida em áreas protegidas.
+A camada evolutiva deve ser tratada como componente crítico de estabilidade futura do sistema. Sua qualidade depende de proposta, experimento em sandbox, comparação baseline vs candidata, decisão de promoção, rollback e preservação de identidade e governança após mudança.
 
 ---
 
 ## 338. Estratégia de testes por estágio do projeto
 
-A natureza dos testes deve variar conforme a maturidade do sistema.
+A natureza dos testes deve variar conforme a maturidade do sistema:
 
-### 338.1 Estágio inicial
-
-Priorizar:
-
-- contratos;
-- unitários centrais;
-- integração mínima;
-- logs e rastreabilidade.
-
-### 338.2 Estágio intermediário
-
-Priorizar:
-
-- workflows ponta a ponta;
-- governança integrada;
-- memória funcional;
-- regressão dos fluxos prioritários.
-
-### 338.3 Estágio de prontidão do v1
-
-Priorizar:
-
-- cenários reais controlados;
-- estabilidade multi-sessão;
-- operação de baixo risco;
-- observabilidade completa;
-- validação real em ambiente controlado.
+- estágio inicial: contratos, unitários centrais, integração mínima e rastreabilidade;
+- estágio intermediário: workflows ponta a ponta, governança integrada, memória funcional e regressão;
+- prontidão do `v1`: cenários reais controlados, estabilidade multi-sessão, operação de baixo risco e observabilidade completa.
 
 ---
 
 ## 339. Artefatos mínimos de qualidade
 
-A engenharia do JARVIS deve manter artefatos mínimos de qualidade.
-
-### 339.1 Artefatos obrigatórios
+A engenharia do JARVIS deve manter, no mínimo:
 
 - suíte de contratos;
 - suíte unitária mínima por serviço;
@@ -14888,68 +12891,50 @@ A engenharia do JARVIS deve manter artefatos mínimos de qualidade.
 - suíte de regressão;
 - registro de benchmarks mínimos.
 
-### 339.2 Artefatos desejáveis
-
-- painéis de qualidade por serviço;
-- relatórios de regressão por release;
-- datasets de validação controlada;
-- casos de teste de memória e voz mais ricos.
+Artefatos desejáveis incluem painéis por serviço, relatórios de regressão, datasets controlados e casos mais ricos de memória e voz.
 
 ---
 
 ## 340. Critérios de qualidade por mudança
 
-Toda mudança relevante deve responder a perguntas mínimas:
+Toda mudança relevante deve responder, no mínimo:
 
-1. o que esta mudança pretende melhorar?
-2. que contratos ela afeta?
-3. que testes unitários precisam ser atualizadosó
-4. que integração pode quebrar?
-5. que fluxo prioritário pode regredir?
-6. há impacto em governança?
-7. há impacto em memória?
-8. há rollback claro, se necessário?
+1. o que pretende melhorar;
+2. que contratos afeta;
+3. que testes precisam mudar;
+4. que integração ou fluxo pode regredir;
+5. se há impacto em governança ou memória;
+6. se existe rollback claro, quando aplicável.
 
 ---
 
 ## 341. Relação entre qualidade, observabilidade e evolução
 
-A estratégia de qualidade do JARVIS deve operar em conjunto com:
-
-- observabilidade, para detectar o que realmente acontece;
-- memória, para registrar padrões e regressões;
-- evolução, para transformar achados em melhorias governadas;
-- backlog, para converter falhas recorrentes em trabalho estruturado.
+A estratégia de qualidade do JARVIS deve operar em conjunto com observabilidade, memória, evolução e backlog, para transformar falhas recorrentes em aprendizado e trabalho estruturado.
 
 ---
 
 ## 342. Síntese oficial da estratégia de testes e qualidade por serviço
 
-A estratégia oficial de testes e qualidade do JARVIS passa a ser definida como:
+A estratégia oficial de testes e qualidade do JARVIS fica definida como:
 
 - validação contínua por contratos, serviços, integrações e workflows;
-- governança tratada como requisito testável;
-- memória tratada como comportamento validável;
+- governança e memória tratadas como comportamentos testáveis;
 - evolução tratada como processo comparativo e reversível;
 - observabilidade usada como infraestrutura de qualidade;
 - critérios mínimos explícitos por serviço e por estágio do projeto.
 
 ---
 
-## 343. Próximo passo
+## 343. Fechamento editorial da estratégia de testes e qualidade
 
-A partir deste ponto, os próximos passos mais úteis possíveis são:
-
-1. iniciar a materialização real da **Sprint 1** no repositório;
-2. revisar o destino do arquivo paralelo `documento_mestre_jarvis.md`;
-3. consolidar o pacote inicial de documentos derivados sem reintroduzir duplicidade;
-4. manter o Documento-Mestre focado em definição canônica, não em operação diária.
+Este bloco fecha a política canônica de testes e qualidade. Suites, relatórios, dashboards e critérios executáveis devem permanecer nos derivados e no estado real do repositório.
 
 ---
 
 ## 344. Estratégia de operação do v1 em produção controlada
 
-Este capítulo passa a registrar apenas a definição canônica da operação controlada do `v1`.
+Este bloco registra a **política canônica de operação e readiness** do `v1`, e não um runbook operacional cotidiano.
 
 Produção controlada significa:
 
@@ -14965,15 +12950,15 @@ No `v1`, isso implica:
 - bloquear automação irreversível, operação silenciosa de alto impacto e promoção evolutiva em produção;
 - ampliar escopo somente quando houver estabilidade, governança funcional e recuperação confiável.
 
-O detalhamento operacional, checklists e rotina prática deste tema passam a ser mantidos no derivado:
+Checklists, rotina prática e detalhamento operacional deste tema devem permanecer no derivado operacional ativo:
 
-- `docs/operations/v1-production-controlled.md`
+- `docs/operations/v1-operational-baseline.md`
 
 ---
 
 ## 345. Estratégia de releases, versionamento e mudança controlada
 
-Este capítulo registra a política canônica de mudança controlada do JARVIS.
+Este bloco registra a política canônica de mudança controlada do JARVIS.
 
 Toda mudança relevante deve ser:
 
@@ -14985,7 +12970,7 @@ Toda mudança relevante deve ser:
 
 Mudanças que afetem identidade, memória crítica, governança, autonomia ou evolução não devem ser tratadas como atualizações rotineiras.
 
-O detalhamento operacional de classes de mudança, gates, rollout e rollback passa a ser mantido no derivado:
+Classes de mudança, gates, rollout e rollback devem permanecer no derivado operacional:
 
 - `docs/operations/release-and-change-management.md`
 
@@ -14993,7 +12978,7 @@ O detalhamento operacional de classes de mudança, gates, rollout e rollback pas
 
 ## 346. Plano de readiness e go-live do v1
 
-Este capítulo registra a regra canônica de prontidão do `v1`.
+Este bloco registra a regra canônica de prontidão do `v1`.
 
 O `go-live` do `v1` só deve ocorrer quando houver:
 
@@ -15004,15 +12989,15 @@ O `go-live` do `v1` só deve ocorrer quando houver:
 - rollback operacional claro;
 - escopo real de uso explicitamente limitado.
 
-O detalhamento operacional de checklist, smoke checks e regime de lançamento passa a ser mantido no derivado:
+Checklist, smoke checks e regime de lançamento devem permanecer no derivado operacional ativo:
 
-- `docs/operations/go-live-readiness.md`
+- `docs/operations/v1-operational-baseline.md`
 
 ---
 
 ## 347. Estratégia de incidentes, contingência e recuperação operacional
 
-Este capítulo registra a política canônica de resposta a incidentes do `v1`.
+Este bloco registra a política canônica de resposta a incidentes do `v1`.
 
 O sistema deve reconhecer, no mínimo:
 
@@ -15027,7 +13012,7 @@ Toda resposta a incidente deve priorizar:
 - registro para análise posterior;
 - aprendizado operacional e evolutivo.
 
-O detalhamento operacional de severidade, resposta, registro e postmortem passa a ser mantido no derivado:
+Severidade, resposta, registro e postmortem devem permanecer no derivado operacional:
 
 - `docs/operations/incident-response.md`
 
@@ -15035,7 +13020,7 @@ O detalhamento operacional de severidade, resposta, registro e postmortem passa 
 
 ## 348. Critérios formais de transição do v1 para o v2
 
-Este capítulo registra a regra canônica de transição do `v1` para o `v2`.
+Este bloco registra a regra canônica de transição do `v1` para o `v2`.
 
 O `v2` só deve começar quando o `v1` demonstrar, de forma estável:
 
@@ -15046,13 +13031,13 @@ O `v2` só deve começar quando o `v1` demonstrar, de forma estável:
 - observabilidade suficiente;
 - produção controlada operando de modo aceitável.
 
-O projeto não deve carregar para o `v2` dívidas estruturais graves em governança, memória, contratos centrais, rollback e observabilidade.
+O projeto não deve carregar para o `v2` dívidas estruturais graves em governança, memória, contratos centrais, rollback ou observabilidade.
 
 ---
 
 ## 349. Critérios formais de transição do v2 para o v3
 
-Este capítulo registra a regra canônica de transição do `v2` para o `v3`.
+Este bloco registra a regra canônica de transição do `v2` para o `v3`.
 
 O `v3` só deve começar quando houver evidência suficiente de:
 
@@ -15079,9 +13064,15 @@ Com a criação do pacote inicial de documentos derivados, o Documento-Mestre pa
 
 Detalhamentos operacionais, executivos e especializados passam a ser aprofundados prioritariamente nos derivados correspondentes, preservando este documento como artefato constitucional do projeto.
 
-Os próximos passos mais úteis, a partir deste ponto, passam a ser:
+Para manter a aderência entre visão e implementação, a leitura deste documento deve continuar sendo mediada por:
 
-1. manter a execução do ciclo `pós-v1` nos derivados ativos, sem transformar este documento em plano tático;
-2. revisar periodicamente a consistência entre este artefato canônico e os derivados operacionais;
-3. reduzir duplicidade residual entre roadmap, backlog, milestones e implementação;
-4. evitar criação de novos documentos sem ganho claro de execução ou clareza.
+- a matriz de aderência do mestre;
+- os derivados ativos de sprint, operação e handoff;
+- revisões periódicas de consistência entre visão canônica e runtime real.
+
+Regra de continuidade:
+
+- manter a execução dos ciclos ativos nos derivados apropriados, sem transformar este documento em plano tático;
+- revisar periodicamente a consistência entre artefato canônico, código e documentos vivos;
+- reduzir duplicidade residual sempre que ela surgir;
+- evitar novos documentos sem ganho claro de execução ou clareza.

@@ -2,7 +2,7 @@
 
 ## Metadata
 
-- Atualizado em: 2026-03-22
+- Atualizado em: 2026-03-23
 - Branch: `main`
 - Commit de referência: `9df79da`
 - Artefato canônico do projeto: `documento_mestre_jarvis.md`
@@ -16,13 +16,22 @@ Sistema oficial de planejamento desta fase:
 
 - `HANDOFF.md` como retomada tático-operacional;
 - `docs/roadmap/programa-ate-v3.md` como direção do programa até `v3`;
-- `docs/implementation/v2-sprint-cycle.md` como execução oficial das próximas `6` sprints.
+- `docs/implementation/v2-sprint-cycle.md` como execução oficial das próximas `6` sprints;
+- `docs/documentation/matriz-de-aderencia-mestre.md` como ponte entre visão canônica e backlog real.
+
+Leitura prioritária de aderência neste momento:
+
+- eixo crítico mais distante do mestre: `domínios`;
+- eixo operacional mais urgente do ciclo: `memórias`;
+- eixo estrutural seguinte: `mentes`.
 
 Estado do ciclo rolante:
 
 - primeiro ciclo do `pós-v1` concluído;
 - primeiro ciclo do `v1.5` concluído;
-- Sprint 1 do `v2` é a próxima frente ativa.
+- Sprint 1 do `v2` concluída;
+- Sprint 2 do `v2` concluída;
+- Sprint 3 do `v2` é a próxima frente ativa.
 
 ## Decisões fechadas
 
@@ -98,15 +107,20 @@ Principais entregas já consolidadas:
 - Sprint 4 do `v1.5` concluída, com subfluxo stateful de continuidade absorvido parcialmente em `LangGraph` e sinal explícito de runtime no fluxo comparativo;
 - Sprint 5 do `v1.5` concluída, com evals do runtime de continuidade, cenários de conflito e retomada manual no piloto e decisão `candidate_ready_for_eval_gate` para o recorte absorvido;
 - Sprint 6 do `v1.5` concluída, com fechamento formal do ciclo, classificação do backlog e decisão explícita de promoção para `v2`;
+- Sprint 1 do `v2` concluída, com contratos mínimos de convocação de especialistas, fronteiras explícitas de runtime e integração mínima no núcleo;
+- Sprint 2 do `v2` concluída, com seleção governada de especialistas, handoff interno observável e contenção explícita quando a convocação viola fronteiras;
 - Documento-Mestre ampliado com referências arquiteturais oficiais por função.
 
 ## O que ainda falta
 
 Pendências principais desta fase:
 
-- executar a Sprint 1 do ciclo `v2`;
-- abrir contratos e fronteiras de convocação de especialistas subordinados;
-- consolidar estudo externo curto sem bloquear a implementação principal.
+- executar a Sprint 3 do ciclo `v2`;
+- abrir memória relacional compartilhada entre núcleo e especialistas;
+- usar a Sprint 3 como avanço explícito do eixo `memórias`, com impacto indireto em `domínios`;
+- consolidar o registry canônico de `domínios` como principal lacuna estrutural do `v2`;
+- consolidar estudo externo curto sem bloquear a implementação principal;
+- usar a matriz de aderência como critério explícito de priorização para todos os eixos auditados.
 
 Regra de estudo externo no `v2`:
 
@@ -119,11 +133,12 @@ Regra de estudo externo no `v2`:
 
 Ordem recomendada:
 
-1. executar a Sprint 1 do `v2`;
-2. abrir contratos e fronteiras de convocação de especialistas subordinados;
-3. rodar estudo externo curto em paralelo;
-4. classificar cada achado como `absorver depois`, `usar como referência` ou `rejeitar`;
-5. preservar o corte já definido do primeiro ciclo do `v2`.
+1. executar a Sprint 3 do `v2`;
+2. abrir memória relacional compartilhada entre núcleo e especialistas;
+3. preparar a abertura do registry de `domínios` antes da Sprint 4;
+4. usar a matriz para priorizar `domínios`, `memórias` e `mentes` nessa ordem;
+5. rodar estudo externo curto em paralelo;
+6. classificar cada achado como `absorver depois`, `usar como referência` ou `rejeitar`;
 
 ## Riscos e bloqueios
 
@@ -143,6 +158,7 @@ Ordem recomendada:
 - `docs/implementation/v1-5-cycle-closure.md`
 - `docs/implementation/v2-sprint-cycle.md`
 - `docs/architecture/technology-study.md`
+- `docs/documentation/matriz-de-aderencia-mestre.md`
 - `docs/operations/v1-operational-baseline.md`
 - `services/orchestrator-service/src/orchestrator_service/service.py`
 - `services/memory-service/src/memory_service/service.py`

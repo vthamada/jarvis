@@ -108,6 +108,44 @@ class DeliberativePlanContract:
 
 
 @dataclass
+class SpecialistBoundaryContract:
+    specialist_type: str
+    runtime_scope: str
+    user_visibility: str
+    response_channel: str
+    tool_access_mode: str
+    memory_write_mode: str
+    operation_mode: str
+    allowed_tool_classes: list[str] = field(default_factory=list)
+    blocked_tool_classes: list[str] = field(default_factory=list)
+
+
+@dataclass
+class SpecialistInvocationContract:
+    invocation_id: str
+    specialist_type: str
+    requested_by_service: str
+    role: str
+    task_focus: str
+    entry_summary: str
+    handoff_inputs: list[str]
+    expected_outputs: list[str]
+    boundary: SpecialistBoundaryContract
+    session_id: SessionId | None = None
+    mission_id: MissionId | None = None
+
+
+@dataclass
+class SpecialistSelectionContract:
+    specialist_type: str
+    selection_status: str
+    selection_score: float
+    rationale: str
+    requires_governance_review: bool = False
+    invocation_id: str | None = None
+
+
+@dataclass
 class SpecialistContributionContract:
     specialist_type: str
     role: str
@@ -115,6 +153,9 @@ class SpecialistContributionContract:
     findings: list[str]
     recommendation: str
     confidence: float
+    invocation_id: str | None = None
+    output_hints: list[str] = field(default_factory=list)
+    handoff_channel: str | None = None
 
 
 @dataclass

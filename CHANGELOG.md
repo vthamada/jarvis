@@ -8,6 +8,83 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 
 ## 2026-03-22
 
+## 2026-03-23
+
+### Correção estrutural do Documento-Mestre
+
+- `documento_mestre_jarvis.md` passou a abrir com um mapa editorial rápido para leitura por blocos;
+- os blocos residuais de `Próximo passo` e `Encaminhamento` foram convertidos em fechamentos editoriais estáveis, reduzindo a voz de elaboração dentro do mestre;
+- as lacunas numéricas `179–181`, `215–216`, `264` e `275–285` passaram a ter notas editoriais explícitas para preservar a numeração histórica sem buraco silencioso;
+- as referências quebradas para `docs/operations/v1-production-controlled.md` e `docs/operations/go-live-readiness.md` foram substituídas pelo derivado operacional ativo `docs/operations/v1-operational-baseline.md`;
+- foi corrigido o erro tipográfico na seção de critérios de qualidade por mudança.
+- o capítulo de escopo do mestre passou a explicitar camadas editoriais, o que o documento não deve virar e a regra de derivação para documentos vivos;
+- os blocos de implementação, operação e continuidade passaram a declarar mais claramente seu papel como política canônica, e não como backlog tático ou runbook diário.
+- o rótulo do documento deixou de tratá-lo como mera versão `0.1` fundacional e passou a reconhecê-lo como artefato canônico vivo;
+- a seção de árvore inicial do repositório foi compactada e realinhada ao estado real do monorepo;
+- referências restantes a arquivos inexistentes de implementação, documentação de serviço e subpastas antigas de `shared/types` foram substituídas por caminhos vivos do repositório;
+- a checagem final do mestre passou a fechar sem caminhos ausentes apontados em blocos documentais.
+- o resumo executivo interno do mestre foi compactado para evitar duplicação desnecessária com `docs/executive/master-summary.md`;
+- o capítulo de escopo passou a distinguir melhor o que o mestre guarda como visão canônica e o que ele preserva como recorte estruturante histórico do `v1`.
+- o bloco de backlog estrutural do `v1` foi reescrito para preservar apenas frentes canônicas, dependências e ordem macro, removendo detalhamento excessivo de épicos e módulos do corpo do mestre;
+- o bloco de blueprint inicial foi consolidado para registrar só a política canônica de organização do monorepo, com nota editorial explícita para a consolidação das antigas seções `130–141`;
+- as especificações dos quatro pilares deixaram de terminar em tom de plano imediato e passaram a encerrar com fechamentos editoriais estáveis, reduzindo deriva de backlog dentro do mestre.
+- a seção `197` teve a árvore inicial do repositório limpa e reescrita sem `mojibake`, com estrutura textual legível e estável;
+- foram removidas do mestre as seções editoriais vazias `214–216`, `263–264` e `274–285`, que não carregavam norma nem valor canônico e só aumentavam fragmentação artificial da numeração.
+- os blocos editoriais residuais `179–181` também foram removidos, e os headings `75.11` e `76.13` deixaram de soar como plano imediato e passaram a funcionar como fechamentos editoriais consistentes;
+- foi mantida a numeração histórica restante do mestre, sem renumeração global, para preservar estabilidade de referências cruzadas já usadas na auditoria, na matriz de aderência e nos documentos vivos.
+- o capítulo de qualidade por serviço passou a abrir com formulação mais curta e canônica, reduzindo redundância entre política de qualidade e plano de validação.
+- o bloco da camada evolutiva (`313–327`) foi consolidado para preservar escopo, fluxo, critérios, benchmarks e riscos sem carregar detalhamento operacional excessivo no corpo do mestre.
+- o bloco final de operação, readiness, incidentes e transições de fase (`344–349`) foi ajustado para tom mais seco e canônico, reduzindo repetição editorial e reforçando que o detalhamento executável pertence aos derivados operacionais.
+- as aberturas e sínteses dos blocos evolutivo e de qualidade foram limpas de fórmulas repetitivas, reduzindo eco editorial sem alterar o conteúdo normativo.
+
+### Reescrita da auditoria primária do Documento-Mestre
+
+- `auditoria_documento_mestre_jarvis.md` foi reescrito como auditoria primária baseada em leitura completa do mestre e validação local, substituindo o relatório anterior que misturava achados corretos, exagerados e factualmente incorretos;
+- a nova auditoria separa problemas reais do Documento-Mestre, exageros da auditoria anterior, leitura mestre x implementação e plano de correção sem reescrita integral;
+- ficou formalizado que a correção do mestre deve partir de evidência confirmada no próprio repositório e continuar usando `docs/documentation/matriz-de-aderencia-mestre.md` como ponte entre visão canônica e backlog.
+
+### Auditoria completa do Documento-Mestre
+
+- `docs/documentation/matriz-de-aderencia-mestre.md` deixou de cobrir só `mentes`, `domínios` e `memórias` e passou a registrar a auditoria completa dos blocos canônicos do mestre;
+- a matriz agora classifica todos os eixos em `runtime maduro`, `runtime parcial`, `tipado/documentado`, `canônico apenas`, `deferido por fase` ou `contradição real`;
+- a auditoria passou a produzir também classe final de priorização entre `corrigir agora`, `manter deferido` e `apenas preservar como visão`;
+- `HANDOFF`, `README`, `master-summary` e `v2-sprint-cycle` passaram a tratar a matriz como ponte oficial entre visão canônica e backlog executável;
+- o `v2` foi recalibrado para declarar por sprint o eixo do mestre movimentado, a lacuna dominante atacada e o que permanece conscientemente fora de cobertura.
+
+### Execução da Sprint 1 do ciclo v2
+
+- `shared/contracts` passou a expor contratos explícitos de convocação e fronteira para especialistas subordinados;
+- `specialist-engine` passou a materializar invocações internas com limites de runtime, memória, tool layer e canal de resposta;
+- `orchestrator-service` e o fluxo opcional de `LangGraph` passaram a emitir `specialist_contracts_composed`, distinguindo convocação de especialista de operação comum do núcleo;
+- a resposta final continua sendo consolidada apenas pelo núcleo, e os especialistas permanecem escondidos do usuário final, sem resposta direta, sem tools próprias e sem escrita de memória fora do núcleo.
+
+### Execução da Sprint 2 do ciclo v2
+
+- `specialist-engine` passou a separar seleção, composição de contrato e execução do handoff interno;
+- `governance-service` passou a avaliar handoffs internos de especialistas antes da execução, com decisão explícita e rastreável;
+- `orchestrator-service` e o fluxo opcional de `LangGraph` passaram a emitir `specialist_selection_decided`, `specialist_handoff_governed` e `specialist_handoff_blocked` quando necessário;
+- a convocação de especialistas agora pode ser auditada sem inferência a partir do texto final, preservando o núcleo como única superfície de resposta ao usuário.
+
+### Regra de refatoração do Documento-Mestre e ponte de execução
+
+- `docs/documentation/estrutura_de_documentos_derivados.md` passou a explicitar quando o Documento-Mestre deve ser reorganizado, sem reescrita integral;
+- o sistema documental passou a reconhecer artefatos de aderência e tradução entre visão canônica e implementação incremental;
+- ficou formalizado que ciclos de sprint devem declarar qual lacuna do mestre fecham e quais eixos permanecem fora de cobertura no ciclo atual.
+
+### Matriz de aderência do mestre
+
+- criado `docs/documentation/matriz-de-aderencia-mestre.md` como ponte explícita entre visão canônica e backlog executável;
+- a matriz passou a registrar, por eixo, o estado real de `mentes`, `domínios` e `memórias`, com níveis de maturidade e próximos passos;
+- `README`, `HANDOFF`, `master-summary` e `v2-sprint-cycle` passaram a apontar para essa matriz como critério de recalibração do ciclo ativo.
+
+### Leitura operacional por eixo
+
+- a matriz passou a explicitar, para `mentes`, `domínios` e `memórias`, a lacuna dominante, a pergunta de implementação, a prioridade no `v2` e o critério de avanço esperado;
+- ficou formalizado que a ordem de correção do descompasso é `domínios`, `memórias` e `mentes`;
+- a Sprint 3 do `v2` passou a ser lida explicitamente como avanço prioritário do eixo de memórias, com impacto indireto em domínios.
+
+## 2026-03-22
+
 ### Execução da Sprint 6 do ciclo v1.5
 
 - criado `tools/close_v1_5_cycle.py` para consolidar evidência operacional e comparativa do primeiro ciclo do `v1.5` e emitir o corte formal para `v2`;

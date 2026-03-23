@@ -18,10 +18,13 @@ Fontes de direção:
 - `docs/roadmap/programa-ate-v3.md`
 - `docs/implementation/v1-5-cycle-closure.md`
 - `docs/architecture/technology-study.md`
+- `docs/documentation/matriz-de-aderencia-mestre.md`
 
 Status desta versão do ciclo:
 
-- Sprint 1 é a próxima sprint ativa.
+- Sprint 1 concluída;
+- Sprint 2 concluída;
+- Sprint 3 é a próxima sprint ativa.
 
 ---
 
@@ -35,6 +38,14 @@ Ele não substitui:
 - o programa até `v3` como direção macro;
 - o `HANDOFF.md` como retomada operacional.
 
+Ele deve ser lido junto da matriz de aderência para responder:
+
+- qual lacuna do Documento-Mestre a sprint atual fecha;
+- quais eixos do mestre continuam fora de cobertura no ciclo ativo.
+- qual é o eixo principal movido pela sprint;
+- qual lacuna dominante do eixo está sendo atacada;
+- qual parte do mestre permanece conscientemente fora de cobertura após a entrega.
+
 ---
 
 ## 3. Sequência oficial das sprints
@@ -42,13 +53,20 @@ Ele não substitui:
 1. Sprint 1 - contratos e fronteiras de convocação de especialistas subordinados
 2. Sprint 2 - seleção governada de especialistas e handoff interno
 3. Sprint 3 - memória relacional compartilhada entre núcleo e especialistas
-4. Sprint 4 - primeiro especialista subordinado em `shadow mode`
+4. Sprint 4 - registry inicial de domínios e primeiro especialista subordinado em `shadow mode`
 5. Sprint 5 - evals, observabilidade e governança de convocação
 6. Sprint 6 - consolidação do primeiro corte do `v2`
 
 ---
 
 ## 4. Sprint 1
+
+Status:
+
+- concluída
+- eixo principal do mestre: `especialistas subordinados`
+- lacuna dominante fechada: fronteira formal entre núcleo, especialista e tool layer
+- continua fora de cobertura: `domínios`, `memórias` compartilhadas e `mentes` com registry canônico
 
 ### Objetivo
 
@@ -86,9 +104,23 @@ nem quebrar governança, memória e observabilidade.
 
 - transformar especialistas em segunda identidade do sistema.
 
+Resultado registrado nesta rodada:
+
+- `shared/contracts` passou a expor contratos explícitos de fronteira e convocação de especialistas subordinados;
+- `specialist-engine` passou a materializar invocações internas com limites de runtime, memória, tool layer e canal de resposta;
+- `orchestrator-service` e o fluxo opcional de `LangGraph` passaram a registrar `specialist_contracts_composed`, distinguindo tecnicamente convocação de especialista de operação comum do núcleo;
+- a resposta final continua consolidada apenas pelo núcleo, com especialista sempre escondido do usuário final e sem acesso direto a tools ou escrita de memória.
+
 ---
 
 ## 5. Sprint 2
+
+Status:
+
+- concluída
+- eixo principal do mestre: `especialistas subordinados`
+- lacuna dominante fechada: elegibilidade e handoff governado de especialistas
+- continua fora de cobertura: `domínios`, `memórias` compartilhadas e cobertura canônica de `observabilidade`
 
 ### Objetivo
 
@@ -125,13 +157,27 @@ Executar seleção governada de especialistas e handoff interno observável.
 
 - handoffs opacos ou convocações por heurística solta.
 
+Resultado registrado nesta rodada:
+
+- `specialist-engine` passou a separar `plan_handoffs` de `review_handoffs`, tornando elegibilidade, contrato e execução fases distintas;
+- `governance-service` passou a avaliar handoffs internos de especialistas antes da execução, com decisão explícita entre permitir, condicionar ou bloquear a convocação;
+- `orchestrator-service` e o fluxo opcional de `LangGraph` passaram a registrar `specialist_selection_decided`, `specialist_handoff_governed` e `specialist_handoff_blocked` quando aplicável;
+- a resposta final continua pertencendo ao núcleo, mas agora a trilha explica por que um especialista foi chamado, condicionado ou contido, sem inferência a partir do texto final.
+
 ---
 
 ## 6. Sprint 3
 
+Status:
+
+- próxima sprint ativa
+- eixo principal do mestre: `memórias`
+- lacuna dominante a atacar: sair de continuidade ampliada para memória relacional compartilhada auditável
+- continua fora de cobertura: registry canônico de `domínios` e composição formal de `mentes`
+
 ### Objetivo
 
-Criar memória relacional compartilhada entre núcleo e especialistas.
+Criar memória relacional compartilhada entre núcleo e especialistas, como avanço explícito do eixo de `memórias` e preparação indireta do eixo de `domínios`.
 
 ### Entregas obrigatórias
 
@@ -168,36 +214,48 @@ Criar memória relacional compartilhada entre núcleo e especialistas.
 
 ## 7. Sprint 4
 
+Status:
+
+- planejada
+- eixo principal do mestre: `domínios`
+- lacuna dominante a atacar: ausência de registry canônico e de vínculo explícito entre domínio e especialista
+- continua fora de cobertura: composição formal de `mentes` e superfícies amplas
+
 ### Objetivo
 
-Ligar o primeiro especialista subordinado em `shadow mode`, sem torná-lo superfície soberana.
+Abrir o registry inicial de domínios do `v2` e ligar o primeiro especialista subordinado em `shadow mode`, sem torná-lo superfície soberana.
 
 ### Entregas obrigatórias
 
+- registry inicial dos domínios ativos do `v2`;
 - primeiro especialista convocável em regime controlado;
+- vínculo explícito entre domínio, memória compartilhada e especialista;
 - resposta final ainda consolidada pelo núcleo;
 - caminho de comparação entre fluxo com e sem especialista.
 
 ### Ordem de implementação
 
-1. especialista inicial;
-2. shadow mode;
-3. comparação controlada.
+1. registry inicial de domínios;
+2. especialista inicial vinculado a domínio;
+3. shadow mode;
+4. comparação controlada.
 
 ### Testes obrigatórios
 
+- domínio ativo do especialista resolvido pelo registry, não por heurística solta;
 - especialista opera como extensão do núcleo;
 - sombra comparativa sem regressão do caminho principal;
 - saída estruturada compatível com síntese final do núcleo.
 
 ### Evidência esperada
 
+- correspondência explícita entre domínio ativo, memória compartilhada e especialista convocado;
 - cenários em que o especialista agrega valor real;
 - cenários em que o núcleo corretamente não o convoca.
 
 ### Definição de pronto
 
-- o primeiro especialista existe como capacidade útil e subordinada, não como agente paralelo.
+- o primeiro especialista existe como capacidade útil, subordinada e ancorada em domínio explícito.
 
 ### Risco de desvio arquitetural
 
@@ -207,14 +265,22 @@ Ligar o primeiro especialista subordinado em `shadow mode`, sem torná-lo superf
 
 ## 8. Sprint 5
 
+Status:
+
+- planejada
+- eixo principal do mestre: `observabilidade, validação e evals`
+- lacuna dominante a atacar: ausência de medição explícita da aderência dos especialistas aos eixos do mestre
+- continua fora de cobertura: expansão de `mentes`, voz oficial e tool layer ampla
+
 ### Objetivo
 
-Transformar convocação de especialistas em comportamento avaliável, comparável e governável.
+Transformar convocação de especialistas em comportamento avaliável, comparável e governável, medindo também aderência a `domínios`, `memórias` e soberania do núcleo.
 
 ### Entregas obrigatórias
 
 - evals da convocação;
 - observabilidade de handoff e retorno;
+- sinalização explícita de aderência aos eixos do mestre;
 - critérios explícitos para manter, ajustar ou recuar.
 
 ### Ordem de implementação
@@ -232,6 +298,7 @@ Transformar convocação de especialistas em comportamento avaliável, comparáv
 ### Evidência esperada
 
 - decisão baseada em evidência sobre utilidade do especialista;
+- leitura explícita do que o recorte do `v2` aproximou ou não do Documento-Mestre;
 - sinais suficientes para promoção ou contenção.
 
 ### Definição de pronto
@@ -246,6 +313,13 @@ Transformar convocação de especialistas em comportamento avaliável, comparáv
 
 ## 9. Sprint 6
 
+Status:
+
+- planejada
+- eixo principal do mestre: `implementação, operação, release e incidentes`
+- lacuna dominante a atacar: fechamento do ciclo sem classificar o que foi corrigido, deferido ou mantido apenas como visão
+- continua fora de cobertura: tudo o que permanecer corretamente deferido por fase
+
 ### Objetivo
 
 Consolidar o primeiro corte do `v2` e decidir o que segue para o ciclo seguinte.
@@ -254,7 +328,8 @@ Consolidar o primeiro corte do `v2` e decidir o que segue para o ciclo seguinte.
 
 - fechamento do ciclo com backlog classificado;
 - decisão formal do que permanece no corte do `v2`;
-- explicitação do que continua fora do foco imediato.
+- explicitação do que continua fora do foco imediato;
+- classificação final dos eixos em `corrigir agora`, `manter deferido` ou `apenas preservar como visão`.
 
 ---
 
@@ -264,7 +339,9 @@ O primeiro ciclo do `v2` será considerado pronto quando:
 
 - especialistas subordinados operarem sem quebrar a unidade do núcleo;
 - houver memória relacional mínima útil acima da continuidade do `v1.5`;
+- houver vínculo explícito entre pelo menos um especialista inicial e o registry dos domínios ativos do ciclo;
 - a convocação de especialistas estiver observável, comparável e governada;
+- a matriz de aderência permitir dizer quais eixos do mestre avançaram de fato no `v2`;
 - o sistema tiver dado o primeiro salto real rumo à especialização controlada sem ampliar superfícies prematuramente.
 
 ---

@@ -15,7 +15,7 @@ from memory_service.service import MemoryRecoveryResult, MemoryService
 from observability_service.service import ObservabilityService
 from operational_service.service import OperationalService
 from planning_engine.engine import PlanningContext, PlanningEngine
-from specialist_engine.engine import SpecialistEngine, SpecialistReview
+from specialist_engine.engine import SpecialistEngine, SpecialistHandoffPlan, SpecialistReview
 from synthesis_engine.engine import SynthesisEngine, SynthesisInput
 
 from shared.contracts import (
@@ -28,6 +28,7 @@ from shared.contracts import (
     MemoryRecoveryContract,
     OperationDispatchContract,
     OperationResultContract,
+    SpecialistInvocationContract,
 )
 from shared.events import InternalEventEnvelope
 from shared.types import OperationId, PermissionDecision, RequestId
@@ -54,6 +55,10 @@ class OrchestratorResponse:
     active_domains: list[str] = field(default_factory=list)
     cognitive_tensions: list[str] = field(default_factory=list)
     specialist_hints: list[str] = field(default_factory=list)
+    specialist_invocations: list[SpecialistInvocationContract] = field(default_factory=list)
+    specialist_boundary_summary: str | None = None
+    specialist_handoff_check: GovernanceCheckContract | None = None
+    specialist_handoff_decision: GovernanceDecisionContract | None = None
     specialist_review: SpecialistReview | None = None
     operation_dispatch: OperationDispatchContract | None = None
     operation_result: OperationResultContract | None = None
@@ -283,53 +288,30 @@ class OrchestratorService:
             )
         )
 
-        specialist_review = self.specialist_engine.review(
-            intent=directive.intent,
-            plan=deliberative_plan,
-            knowledge_snippets=knowledge_result.snippets if knowledge_result else [],
+        specialist_handoff_plan, events = self._plan_specialist_handoffs(
+            contract,
+            directive=directive,
+            deliberative_plan=deliberative_plan,
+            knowledge_result=knowledge_result,
+            events=events,
         )
-        if specialist_review.specialist_hints:
-            events.append(
-                self.make_event(
-                    "specialists_dispatched",
-                    contract,
-                    {"specialist_hints": specialist_review.specialist_hints},
-                )
-            )
-        if specialist_review.contributions:
-            events.append(
-                self.make_event(
-                    "specialists_completed",
-                    contract,
-                    {
-                        "specialist_types": [
-                            item.specialist_type for item in specialist_review.contributions
-                        ],
-                        "summary": specialist_review.summary,
-                    },
-                )
-            )
-
-        deliberative_plan = self.planning_engine.refine_task_plan(
-            deliberative_plan,
-            specialist_summary=specialist_review.summary,
-            specialist_contributions=specialist_review.contributions,
+        specialist_handoff_assessment, events = self._govern_specialist_handoffs(
+            contract,
+            deliberative_plan=deliberative_plan,
+            handoff_plan=specialist_handoff_plan,
+            events=events,
         )
-        if specialist_review.contributions:
-            events.append(
-                self.make_event(
-                    "plan_refined",
-                    contract,
-                    {
-                        "recommended_task_type": deliberative_plan.recommended_task_type,
-                        "requires_human_validation": deliberative_plan.requires_human_validation,
-                        "steps": deliberative_plan.steps,
-                        "specialist_resolution_summary": (
-                            deliberative_plan.specialist_resolution_summary
-                        ),
-                    },
-                )
-            )
+        specialist_review, deliberative_plan, events = self._execute_specialist_handoffs(
+            contract,
+            directive=directive,
+            deliberative_plan=deliberative_plan,
+            knowledge_result=knowledge_result,
+            handoff_plan=specialist_handoff_plan,
+            handoff_governance=(
+                specialist_handoff_assessment.governance_decision
+            ),
+            events=events,
+        )
 
         assessment = self.governance_service.assess_request(
             contract,
@@ -488,6 +470,12 @@ class OrchestratorService:
                 "artifact_results": artifact_results,
                 "cognitive_snapshot": cognitive_snapshot,
                 "specialist_review": specialist_review,
+                "specialist_handoff_check": (
+                    specialist_handoff_assessment.governance_check
+                ),
+                "specialist_handoff_decision": (
+                    specialist_handoff_assessment.governance_decision
+                ),
                 "operation_dispatch": operation_dispatch,
                 "operation_result": operation_result,
                 "events": events,
@@ -501,6 +489,204 @@ class OrchestratorService:
         from orchestrator_service.langgraph_flow import LangGraphFlowRunner
 
         return LangGraphFlowRunner(self).run(contract)
+
+    def _plan_specialist_handoffs(
+        self,
+        contract: InputContract,
+        *,
+        directive: ExecutiveDirective,
+        deliberative_plan: DeliberativePlanContract,
+        knowledge_result: KnowledgeRetrievalResult | None,
+        events: list[InternalEventEnvelope],
+    ) -> tuple[SpecialistHandoffPlan, list[InternalEventEnvelope]]:
+        handoff_plan = self.specialist_engine.plan_handoffs(
+            intent=directive.intent,
+            plan=deliberative_plan,
+            knowledge_snippets=knowledge_result.snippets if knowledge_result else [],
+            session_id=str(contract.session_id),
+            mission_id=str(contract.mission_id) if contract.mission_id else None,
+            requested_by_service=self.name,
+        )
+        updated_events = list(events)
+        updated_events.append(
+            self.make_event(
+                "specialist_selection_decided",
+                contract,
+                {
+                    "selected_specialists": [
+                        item.specialist_type
+                        for item in handoff_plan.selections
+                        if item.selection_status == "selected"
+                    ],
+                    "selection_statuses": {
+                        item.specialist_type: item.selection_status
+                        for item in handoff_plan.selections
+                    },
+                    "requires_governance_review": [
+                        item.specialist_type
+                        for item in handoff_plan.selections
+                        if item.requires_governance_review
+                    ],
+                    "selection_rationales": {
+                        item.specialist_type: item.rationale
+                        for item in handoff_plan.selections
+                    },
+                },
+            )
+        )
+        if handoff_plan.invocations:
+            updated_events.append(
+                self.make_event(
+                    "specialist_contracts_composed",
+                    contract,
+                    {
+                        "invocation_ids": [
+                            item.invocation_id for item in handoff_plan.invocations
+                        ],
+                        "specialist_hints": handoff_plan.specialist_hints,
+                        "boundary_summary": handoff_plan.boundary_summary,
+                        "response_channel": handoff_plan.invocations[0].boundary.response_channel,
+                        "tool_access_mode": handoff_plan.invocations[0].boundary.tool_access_mode,
+                    },
+                )
+            )
+        return handoff_plan, updated_events
+
+    def _govern_specialist_handoffs(
+        self,
+        contract: InputContract,
+        *,
+        deliberative_plan: DeliberativePlanContract,
+        handoff_plan: SpecialistHandoffPlan,
+        events: list[InternalEventEnvelope],
+    ):
+        assessment = self.governance_service.assess_specialist_handoff(
+            contract=contract,
+            plan=deliberative_plan,
+            selections=handoff_plan.selections,
+            invocations=handoff_plan.invocations,
+            requested_by_service=self.name,
+        )
+        updated_events = list(events)
+        updated_events.append(
+            self.make_event(
+                "specialist_handoff_governed",
+                contract,
+                {
+                    "governance_check_id": str(assessment.governance_check.governance_check_id),
+                    "decision": assessment.governance_decision.decision.value,
+                    "selected_specialists": [
+                        item.specialist_type
+                        for item in handoff_plan.selections
+                        if item.selection_status == "selected"
+                    ],
+                    "invocation_ids": [item.invocation_id for item in handoff_plan.invocations],
+                    "requires_audit": assessment.governance_decision.requires_audit,
+                    "conditions": list(assessment.governance_decision.conditions),
+                },
+            )
+        )
+        return assessment, updated_events
+
+    def _execute_specialist_handoffs(
+        self,
+        contract: InputContract,
+        *,
+        directive: ExecutiveDirective,
+        deliberative_plan: DeliberativePlanContract,
+        knowledge_result: KnowledgeRetrievalResult | None,
+        handoff_plan: SpecialistHandoffPlan,
+        handoff_governance: GovernanceDecisionContract,
+        events: list[InternalEventEnvelope],
+    ) -> tuple[SpecialistReview, DeliberativePlanContract, list[InternalEventEnvelope]]:
+        executable_plan = handoff_plan
+        updated_events = list(events)
+        if handoff_governance.decision in {
+            PermissionDecision.BLOCK,
+            PermissionDecision.DEFER_FOR_VALIDATION,
+        }:
+            executable_plan = SpecialistHandoffPlan(
+                specialist_hints=[],
+                selections=handoff_plan.selections,
+                invocations=handoff_plan.invocations,
+                boundary_summary=handoff_plan.boundary_summary,
+            )
+            if handoff_plan.invocations:
+                updated_events.append(
+                    self.make_event(
+                        "specialist_handoff_blocked",
+                        contract,
+                        {
+                            "decision_id": str(handoff_governance.decision_id),
+                            "invocation_ids": [
+                                item.invocation_id for item in handoff_plan.invocations
+                            ],
+                            "justification": handoff_governance.justification,
+                        },
+                    )
+                )
+        specialist_review = self.specialist_engine.review_handoffs(
+            intent=directive.intent,
+            plan=deliberative_plan,
+            knowledge_snippets=knowledge_result.snippets if knowledge_result else [],
+            handoff_plan=executable_plan,
+        )
+        if specialist_review.specialist_hints:
+            updated_events.append(
+                self.make_event(
+                    "specialists_dispatched",
+                    contract,
+                    {
+                        "specialist_hints": specialist_review.specialist_hints,
+                        "invocation_ids": [
+                            item.invocation_id for item in specialist_review.invocations
+                        ],
+                        "boundary_summary": specialist_review.boundary_summary,
+                    },
+                )
+            )
+        if specialist_review.contributions:
+            updated_events.append(
+                self.make_event(
+                    "specialists_completed",
+                    contract,
+                    {
+                        "specialist_types": [
+                            item.specialist_type for item in specialist_review.contributions
+                        ],
+                        "invocation_ids": [
+                            item.invocation_id for item in specialist_review.contributions
+                        ],
+                        "output_hints": [
+                            output_hint
+                            for item in specialist_review.contributions
+                            for output_hint in item.output_hints
+                        ],
+                        "summary": specialist_review.summary,
+                    },
+                )
+            )
+            refined_plan = self.planning_engine.refine_task_plan(
+                deliberative_plan,
+                specialist_summary=specialist_review.summary,
+                specialist_contributions=specialist_review.contributions,
+            )
+            updated_events.append(
+                self.make_event(
+                    "plan_refined",
+                    contract,
+                    {
+                        "recommended_task_type": refined_plan.recommended_task_type,
+                        "requires_human_validation": refined_plan.requires_human_validation,
+                        "steps": refined_plan.steps,
+                        "specialist_resolution_summary": (
+                            refined_plan.specialist_resolution_summary
+                        ),
+                    },
+                )
+            )
+            return specialist_review, refined_plan, updated_events
+        return specialist_review, deliberative_plan, updated_events
 
     def build_operation_dispatch(
         self,
@@ -791,6 +977,10 @@ class OrchestratorService:
             active_domains=cognitive_snapshot.active_domains,
             cognitive_tensions=deliberative_plan.tensions_considered,
             specialist_hints=deliberative_plan.specialist_hints,
+            specialist_invocations=specialist_review.invocations,
+            specialist_boundary_summary=specialist_review.boundary_summary,
+            specialist_handoff_check=state.get("specialist_handoff_check"),
+            specialist_handoff_decision=state.get("specialist_handoff_decision"),
             specialist_review=specialist_review,
             operation_dispatch=state["operation_dispatch"],
             operation_result=state["operation_result"],

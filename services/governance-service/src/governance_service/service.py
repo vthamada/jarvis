@@ -11,6 +11,8 @@ from shared.contracts import (
     GovernanceCheckContract,
     GovernanceDecisionContract,
     InputContract,
+    SpecialistInvocationContract,
+    SpecialistSelectionContract,
 )
 from shared.types import (
     GovernanceCheckId,
@@ -103,6 +105,117 @@ class GovernanceService:
             open_loops=self._extract_open_loops(plan),
         )
         governance_decision = self.make_decision(governance_check)
+        return GovernanceAssessment(
+            governance_check=governance_check,
+            governance_decision=governance_decision,
+        )
+
+    def assess_specialist_handoff(
+        self,
+        *,
+        contract: InputContract,
+        plan: DeliberativePlanContract,
+        selections: list[SpecialistSelectionContract],
+        invocations: list[SpecialistInvocationContract],
+        requested_by_service: str,
+    ) -> GovernanceAssessment:
+        """Evaluate internal specialist handoffs before executing them."""
+
+        selected = [item for item in selections if item.selection_status == "selected"]
+        invalid_boundary = any(
+            invocation.boundary.response_channel != "through_core"
+            or invocation.boundary.tool_access_mode != "none"
+            or invocation.boundary.memory_write_mode != "through_core_only"
+            for invocation in invocations
+        )
+        requires_review = any(item.requires_governance_review for item in selected)
+        governance_check = GovernanceCheckContract(
+            governance_check_id=GovernanceCheckId(f"gov-check-{uuid4().hex[:8]}"),
+            subject_type="specialist_handoff",
+            subject_action="dispatch",
+            scope="session",
+            context={
+                "selected_specialists": [item.specialist_type for item in selected],
+                "selection_statuses": {
+                    item.specialist_type: item.selection_status for item in selections
+                },
+                "selected_invocation_ids": [item.invocation_id for item in selected],
+                "response_channels": [
+                    invocation.boundary.response_channel for invocation in invocations
+                ],
+                "tool_access_modes": [
+                    invocation.boundary.tool_access_mode for invocation in invocations
+                ],
+            },
+            sensitivity="normal",
+            reversibility="high",
+            mission_id=contract.mission_id,
+            session_id=contract.session_id,
+            proposed_effect="internal_specialist_handoff",
+            risk_hint=RiskLevel.MODERATE if selected else RiskLevel.LOW,
+            requested_by_service=requested_by_service,
+            declared_risks=list(plan.risks),
+            requires_human_validation=False,
+            decision_frame="specialist_handoff",
+            mission_continuity_hint=self._continuity_hint(plan),
+            open_loops=self._extract_open_loops(plan),
+        )
+
+        decision = PermissionDecision.ALLOW
+        justification = "Convocacao interna de especialista permanece subordinada e rastreavel."
+        conditions: list[str] = []
+        requires_audit = False
+        requires_rollback_plan = False
+        containment_hint = None
+        policy_refs = ["policy://specialist-handoff/default"]
+
+        if invalid_boundary:
+            decision = PermissionDecision.BLOCK
+            justification = (
+                "A convocacao proposta viola a fronteira interna permitida para especialistas."
+            )
+            conditions = [
+                "Especialista deve responder apenas pelo nucleo.",
+                "Especialista nao pode acessar tools ou memoria fora das fronteiras internas.",
+            ]
+            requires_audit = True
+            requires_rollback_plan = True
+            containment_hint = "block_invalid_specialist_boundary"
+            policy_refs = ["policy://specialist-handoff/boundary-block"]
+        elif selected and (
+            requires_review
+            or plan.continuity_recovery_mode in {"governed_review", "contained_recovery"}
+            or plan.requires_human_validation
+        ):
+            decision = PermissionDecision.ALLOW_WITH_CONDITIONS
+            justification = (
+                "Convocacao interna permitida com trilha reforcada e limites explicitos "
+                "de handoff subordinado."
+            )
+            conditions = [
+                "Especialista nao responde diretamente ao usuario.",
+                "Toda saida deve retornar ao nucleo por canal interno estruturado.",
+                "Nao executar tools nem escrita direta de memoria no especialista.",
+            ]
+            requires_audit = True
+            policy_refs = ["policy://specialist-handoff/allow-with-conditions"]
+        elif not selected:
+            justification = "Nenhum especialista ficou elegivel para convocacao nesta rodada."
+            policy_refs = ["policy://specialist-handoff/no-selection"]
+
+        governance_decision = GovernanceDecisionContract(
+            decision_id=GovernanceDecisionId(f"gov-decision-{uuid4().hex[:8]}"),
+            governance_check_id=governance_check.governance_check_id,
+            risk_level=governance_check.risk_hint or RiskLevel.LOW,
+            decision=decision,
+            justification=justification,
+            timestamp=self.now(),
+            conditions=conditions,
+            requires_audit=requires_audit,
+            requires_rollback_plan=requires_rollback_plan,
+            containment_hint=containment_hint,
+            policy_refs=policy_refs,
+        )
         return GovernanceAssessment(
             governance_check=governance_check,
             governance_decision=governance_decision,

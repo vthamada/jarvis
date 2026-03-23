@@ -67,6 +67,8 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     assert result.cognitive_tensions
     assert result.specialist_review is not None
     assert result.specialist_review.contributions
+    assert result.specialist_invocations
+    assert result.specialist_boundary_summary is not None
     assert result.deliberative_plan.specialist_resolution_summary is not None
     assert "Contribuicoes especialistas" not in result.response_text
     stored_events = observability.list_recent_events(ObservabilityQuery(request_id="req-1"))
@@ -75,9 +77,37 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     assert "directive_composed" in event_names
     assert "plan_built" in event_names
     assert "continuity_decided" in event_names
+    assert "specialist_selection_decided" in event_names
+    assert "specialist_contracts_composed" in event_names
+    assert "specialist_handoff_governed" in event_names
     assert "specialists_completed" in event_names
     assert "plan_refined" in event_names
     assert "plan_governed" in event_names
+    assert result.specialist_handoff_check is not None
+    assert result.specialist_handoff_decision is not None
+    assert result.specialist_handoff_decision.decision == PermissionDecision.ALLOW
+    specialist_contract_event = next(
+        event for event in stored_events if event.event_name == "specialist_contracts_composed"
+    )
+    assert specialist_contract_event.payload["response_channel"] == "through_core"
+    assert specialist_contract_event.payload["tool_access_mode"] == "none"
+    assert specialist_contract_event.payload["invocation_ids"]
+    specialists_completed_event = next(
+        event for event in stored_events if event.event_name == "specialists_completed"
+    )
+    assert specialists_completed_event.payload["output_hints"]
+    specialist_selection_event = next(
+        event for event in stored_events if event.event_name == "specialist_selection_decided"
+    )
+    assert specialist_selection_event.payload["selected_specialists"]
+    specialist_handoff_event = next(
+        event for event in stored_events if event.event_name == "specialist_handoff_governed"
+    )
+    assert specialist_handoff_event.payload["decision"] == PermissionDecision.ALLOW.value
+    assert all(
+        invocation.boundary.user_visibility == "hidden_from_user"
+        for invocation in result.specialist_invocations
+    )
     continuity_event = next(
         event for event in stored_events if event.event_name == "continuity_decided"
     )
@@ -351,6 +381,49 @@ def test_orchestrator_service_closes_active_loop_explicitly() -> None:
     assert result.deliberative_plan.steps[0].startswith("fechar explicitamente o loop principal")
     assert "continuity_decided" in [event.event_name for event in result.events]
     assert "fechar o loop principal da missao" in result.response_text
+
+
+def test_orchestrator_service_blocks_invalid_specialist_handoff_and_continues_without_contribution(
+    monkeypatch,
+) -> None:
+    temp_dir = runtime_dir("orchestrator-specialist-block")
+    observability = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service = OrchestratorService(
+        governance_service=GovernanceService(),
+        memory_service=MemoryService(
+            database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+        ),
+        operational_service=OperationalService(artifact_dir=str(temp_dir / "artifacts")),
+        observability_service=observability,
+    )
+    original_plan_handoffs = service.specialist_engine.plan_handoffs
+
+    def invalid_boundary_plan(**kwargs):  # type: ignore[no-untyped-def]
+        handoff_plan = original_plan_handoffs(**kwargs)
+        if handoff_plan.invocations:
+            handoff_plan.invocations[0].boundary.response_channel = "direct_to_user"
+        return handoff_plan
+
+    monkeypatch.setattr(service.specialist_engine, "plan_handoffs", invalid_boundary_plan)
+
+    result = service.handle_input(
+        InputContract(
+            request_id=RequestId("req-specialist-block"),
+            session_id=SessionId("sess-specialist-block"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Please plan the first milestone.",
+            timestamp="2026-03-23T00:00:00Z",
+        )
+    )
+
+    assert result.specialist_handoff_decision is not None
+    assert result.specialist_handoff_decision.decision == PermissionDecision.BLOCK
+    assert result.specialist_review is not None
+    assert result.specialist_review.contributions == []
+    assert result.deliberative_plan.specialist_resolution_summary is None
+    assert "specialist_handoff_blocked" in [event.event_name for event in result.events]
+    assert result.governance_decision.decision == PermissionDecision.ALLOW_WITH_CONDITIONS
 def test_orchestrator_service_preserves_mission_state_after_blocked_followup() -> None:
     temp_dir = runtime_dir("orchestrator-blocked-mission")
     memory_db = f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"

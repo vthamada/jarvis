@@ -102,13 +102,26 @@ Leitura curta do momento:
 - o primeiro ciclo do `v1.5` foi encerrado formalmente;
 - o programa subiu para `v2`;
 - a frente ativa agora é `especialização controlada subordinada ao núcleo com memória relacional mais rica`;
-- Sprint 1 do `v2` é a próxima frente ativa.
+- Sprint 1 do `v2` foi concluída;
+- Sprint 2 do `v2` foi concluída;
+- Sprint 3 do `v2` é a próxima frente ativa;
+- a auditoria completa do Documento-Mestre passou a orientar o backlog por eixo canônico.
 
 ---
 
 ## 7. Risco principal
 
 O principal risco atual não é falta de visão. É excesso de escopo.
+
+O risco estrutural complementar é outro:
+
+- implementar com eficiência local, mas sem fechar lacunas explícitas do Documento-Mestre em `mentes`, `domínios` e `memórias`.
+
+Leitura executiva atual desse risco:
+
+- `domínios` é hoje o maior descompasso estrutural;
+- `memórias` é o eixo operacional mais urgente do `v2`;
+- `mentes` precisa sair do estado implícito e ganhar registry canônico.
 
 O projeto deve evitar:
 
@@ -122,7 +135,8 @@ O projeto deve evitar:
 
 O próximo passo executivo mais racional é:
 
-- executar a Sprint 1 do `v2`;
-- abrir contratos e fronteiras de convocação de especialistas subordinados;
+- executar a Sprint 3 do `v2`;
+- abrir memória relacional compartilhada entre núcleo e especialistas;
+- usar `docs/documentation/matriz-de-aderencia-mestre.md` como auditoria completa para recalibrar backlog e cobertura do mestre;
 - preservar o recorte absorvido de `LangGraph` como evidência, sem transformar o sistema em colagem de runtimes;
 - manter fora do corte imediato voz oficial, `computer use` amplo, `pgvector` como base canônica e assistente operacional amplo.

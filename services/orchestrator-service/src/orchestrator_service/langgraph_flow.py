@@ -21,6 +21,8 @@ class OrchestratorFlowState(TypedDict, total=False):
     cognitive_snapshot: object
     deliberative_plan: object
     specialist_review: object
+    specialist_handoff_check: object | None
+    specialist_handoff_decision: object | None
     governance_check: object
     governance_decision: object
     operation_dispatch: object | None
@@ -235,51 +237,34 @@ class LangGraphFlowRunner:
         directive = state["directive"]
         deliberative_plan = state["deliberative_plan"]
         knowledge_result = state.get("knowledge_result")
-        specialist_review = self.orchestrator.specialist_engine.review(
-            intent=directive.intent,
-            plan=deliberative_plan,
-            knowledge_snippets=knowledge_result.snippets if knowledge_result else [],
+        handoff_plan, events = self.orchestrator._plan_specialist_handoffs(
+            contract,
+            directive=directive,
+            deliberative_plan=deliberative_plan,
+            knowledge_result=knowledge_result,
+            events=list(state["events"]),
         )
-        refined_plan = self.orchestrator.planning_engine.refine_task_plan(
-            deliberative_plan,
-            specialist_summary=specialist_review.summary,
-            specialist_contributions=specialist_review.contributions,
+        handoff_assessment, events = self.orchestrator._govern_specialist_handoffs(
+            contract,
+            deliberative_plan=deliberative_plan,
+            handoff_plan=handoff_plan,
+            events=events,
         )
-        events = list(state["events"])
-        if specialist_review.specialist_hints:
-            events.append(
-                self.orchestrator.make_event(
-                    "specialists_dispatched",
-                    contract,
-                    {"specialist_hints": specialist_review.specialist_hints},
-                )
+        specialist_review, refined_plan, events = (
+            self.orchestrator._execute_specialist_handoffs(
+                contract,
+                directive=directive,
+                deliberative_plan=deliberative_plan,
+                knowledge_result=knowledge_result,
+                handoff_plan=handoff_plan,
+                handoff_governance=handoff_assessment.governance_decision,
+                events=events,
             )
-        if specialist_review.contributions:
-            events.append(
-                self.orchestrator.make_event(
-                    "specialists_completed",
-                    contract,
-                    {
-                        "specialist_types": [
-                            item.specialist_type for item in specialist_review.contributions
-                        ],
-                        "summary": specialist_review.summary,
-                    },
-                )
-            )
-            events.append(
-                self.orchestrator.make_event(
-                    "plan_refined",
-                    contract,
-                    {
-                        "recommended_task_type": refined_plan.recommended_task_type,
-                        "requires_human_validation": refined_plan.requires_human_validation,
-                        "steps": refined_plan.steps,
-                    },
-                )
-            )
+        )
         return {
             "specialist_review": specialist_review,
+            "specialist_handoff_check": handoff_assessment.governance_check,
+            "specialist_handoff_decision": handoff_assessment.governance_decision,
             "deliberative_plan": refined_plan,
             "events": events,
         }

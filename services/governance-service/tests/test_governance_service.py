@@ -1,6 +1,12 @@
 from governance_service.service import GovernanceAssessment, GovernanceService
 
-from shared.contracts import DeliberativePlanContract, InputContract
+from shared.contracts import (
+    DeliberativePlanContract,
+    InputContract,
+    SpecialistBoundaryContract,
+    SpecialistInvocationContract,
+    SpecialistSelectionContract,
+)
 from shared.types import (
     ChannelType,
     InputType,
@@ -29,6 +35,38 @@ def low_risk_plan() -> DeliberativePlanContract:
         smallest_safe_next_action="definir objetivo",
         continuity_action="continuar",
         open_loops=["alinhar checkpoint principal"],
+    )
+
+
+def specialist_boundary(
+    *,
+    response_channel: str = "through_core",
+    tool_access_mode: str = "none",
+    memory_write_mode: str = "through_core_only",
+) -> SpecialistBoundaryContract:
+    return SpecialistBoundaryContract(
+        specialist_type="especialista_planejamento_operacional",
+        runtime_scope="subordinated_internal",
+        user_visibility="hidden_from_user",
+        response_channel=response_channel,
+        tool_access_mode=tool_access_mode,
+        memory_write_mode=memory_write_mode,
+        operation_mode="advisory_only",
+    )
+
+
+def specialist_invocation(*, boundary: SpecialistBoundaryContract) -> SpecialistInvocationContract:
+    return SpecialistInvocationContract(
+        invocation_id="invoc-1",
+        specialist_type="especialista_planejamento_operacional",
+        requested_by_service="orchestrator-service",
+        role="planejamento_operacional_subordinado",
+        task_focus="sequenciar etapas pequenas",
+        entry_summary="estruturar milestone em etapas reversiveis",
+        handoff_inputs=["goal=Please plan the milestone."],
+        expected_outputs=["structured_findings", "through_core_only"],
+        boundary=boundary,
+        session_id=SessionId("sess-specialist"),
     )
 
 
@@ -234,3 +272,94 @@ def test_governance_service_defers_governed_replay_recovery() -> None:
     assert result.governance_check.mission_continuity_hint == "checkpoint_aguarda_validacao"
     assert result.governance_decision.decision == PermissionDecision.DEFER_FOR_VALIDATION
     assert "nao pode ser retomado automaticamente" in result.governance_decision.justification
+
+
+def test_governance_service_allows_internal_specialist_handoff() -> None:
+    service = GovernanceService()
+    contract = InputContract(
+        request_id=RequestId("req-specialist-1"),
+        session_id=SessionId("sess-specialist-1"),
+        channel=ChannelType.CHAT,
+        input_type=InputType.TEXT,
+        content="Please plan the milestone.",
+        timestamp="2026-03-23T00:00:00Z",
+    )
+    result = service.assess_specialist_handoff(
+        contract=contract,
+        plan=low_risk_plan(),
+        selections=[
+            SpecialistSelectionContract(
+                specialist_type="especialista_planejamento_operacional",
+                selection_status="selected",
+                selection_score=0.84,
+                rationale="o plano exige decomposicao e checkpoints",
+            )
+        ],
+        invocations=[specialist_invocation(boundary=specialist_boundary())],
+        requested_by_service="orchestrator-service",
+    )
+    assert result.governance_check.subject_type == "specialist_handoff"
+    assert result.governance_decision.decision == PermissionDecision.ALLOW
+    assert result.governance_decision.requires_audit is False
+
+
+def test_governance_service_conditions_specialist_handoff_when_review_is_required() -> None:
+    service = GovernanceService()
+    contract = InputContract(
+        request_id=RequestId("req-specialist-2"),
+        session_id=SessionId("sess-specialist-2"),
+        channel=ChannelType.CHAT,
+        input_type=InputType.TEXT,
+        content="Please plan the milestone.",
+        timestamp="2026-03-23T00:00:00Z",
+    )
+    result = service.assess_specialist_handoff(
+        contract=contract,
+        plan=low_risk_plan(),
+        selections=[
+            SpecialistSelectionContract(
+                specialist_type="especialista_revisao_governanca",
+                selection_status="selected",
+                selection_score=0.87,
+                rationale="o plano exige cautela normativa",
+                requires_governance_review=True,
+            )
+        ],
+        invocations=[specialist_invocation(boundary=specialist_boundary())],
+        requested_by_service="orchestrator-service",
+    )
+    assert result.governance_decision.decision == PermissionDecision.ALLOW_WITH_CONDITIONS
+    assert result.governance_decision.requires_audit is True
+    assert result.governance_decision.conditions
+
+
+def test_governance_service_blocks_specialist_handoff_with_invalid_boundary() -> None:
+    service = GovernanceService()
+    contract = InputContract(
+        request_id=RequestId("req-specialist-3"),
+        session_id=SessionId("sess-specialist-3"),
+        channel=ChannelType.CHAT,
+        input_type=InputType.TEXT,
+        content="Please plan the milestone.",
+        timestamp="2026-03-23T00:00:00Z",
+    )
+    result = service.assess_specialist_handoff(
+        contract=contract,
+        plan=low_risk_plan(),
+        selections=[
+            SpecialistSelectionContract(
+                specialist_type="especialista_planejamento_operacional",
+                selection_status="selected",
+                selection_score=0.84,
+                rationale="o plano exige decomposicao e checkpoints",
+            )
+        ],
+        invocations=[
+            specialist_invocation(
+                boundary=specialist_boundary(response_channel="direct_to_user")
+            )
+        ],
+        requested_by_service="orchestrator-service",
+    )
+    assert result.governance_decision.decision == PermissionDecision.BLOCK
+    assert result.governance_decision.requires_rollback_plan is True
