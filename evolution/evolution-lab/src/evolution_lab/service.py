@@ -50,6 +50,11 @@ class FlowEvaluationInput:
     continuity_action: str | None = None
     continuity_source: str | None = None
     continuity_runtime_mode: str | None = None
+    registry_domains: list[str] = field(default_factory=list)
+    shadow_specialists: list[str] = field(default_factory=list)
+    domain_alignment_status: str | None = None
+    memory_alignment_status: str | None = None
+    specialist_sovereignty_status: str | None = None
     continuity_trace_status: str | None = None
     missing_continuity_signals: list[str] = field(default_factory=list)
     continuity_anomaly_flags: list[str] = field(default_factory=list)
@@ -204,6 +209,10 @@ class EvolutionLabService:
             source_signals.append(
                 f"continuity://runtime/{evaluation.continuity_runtime_mode}"
             )
+        for domain in evaluation.registry_domains:
+            source_signals.append(f"domain://registry/{domain}")
+        for specialist in evaluation.shadow_specialists:
+            source_signals.append(f"specialist://shadow/{specialist}")
         if evaluation.continuity_trace_status:
             source_signals.append(
                 f"continuity://trace-status/{evaluation.continuity_trace_status}"
@@ -300,6 +309,16 @@ class EvolutionLabService:
                 - (continuity_missing_penalty * 0.2)
                 - (continuity_anomaly_penalty * 0.25),
             ),
+            "domain_alignment": EvolutionLabService._status_score(
+                evaluation.domain_alignment_status
+            ),
+            "memory_alignment": EvolutionLabService._status_score(
+                evaluation.memory_alignment_status
+            ),
+            "specialist_sovereignty": EvolutionLabService._status_score(
+                evaluation.specialist_sovereignty_status
+            ),
+            "shadow_coverage": 1.0 if evaluation.shadow_specialists else 0.0,
             "runtime_statefulness": (
                 1.0 if evaluation.continuity_runtime_mode == "langgraph_subflow" else 0.5
             ),
@@ -310,6 +329,16 @@ class EvolutionLabService:
             + (continuity_missing_penalty * 0.35)
             + (continuity_anomaly_penalty * 0.5),
         }
+
+    @staticmethod
+    def _status_score(status: str | None) -> float:
+        weights = {
+            "healthy": 1.0,
+            "partial": 0.6,
+            "incomplete": 0.2,
+            "attention_required": 0.0,
+        }
+        return weights.get(status, 0.0)
 
     @staticmethod
     def _risk_hint_from_flow(evaluation: FlowEvaluationInput) -> str:

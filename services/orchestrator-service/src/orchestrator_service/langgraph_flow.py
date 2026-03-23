@@ -149,7 +149,31 @@ class LangGraphFlowRunner:
                     contract,
                     {
                         "domains": knowledge_result.active_domains,
+                        "registry_domains": knowledge_result.registry_domains,
+                        "routed_specialists": [
+                            {
+                                "domain_name": route.domain_name,
+                                "specialist_type": route.specialist_type,
+                                "specialist_mode": route.specialist_mode,
+                            }
+                            for route in knowledge_result.specialist_routes
+                        ],
                         "sources": knowledge_result.sources,
+                    },
+                )
+            )
+            events.append(
+                self.orchestrator.make_event(
+                    "domain_registry_resolved",
+                    contract,
+                    {
+                        "active_domains": knowledge_result.active_domains,
+                        "registry_domains": knowledge_result.registry_domains,
+                        "shadow_domains": [
+                            route.domain_name
+                            for route in knowledge_result.specialist_routes
+                            if route.specialist_mode == "shadow"
+                        ],
                     },
                 )
             )
@@ -163,6 +187,9 @@ class LangGraphFlowRunner:
             intent=directive.intent,
             risk_markers=directive.risk_markers,
             retrieved_domains=knowledge_result.active_domains if knowledge_result else [],
+            domain_specialist_routes=(
+                knowledge_result.specialist_routes if knowledge_result else []
+            ),
             mind_hints=directive.mind_hints,
         )
         events = list(state["events"])

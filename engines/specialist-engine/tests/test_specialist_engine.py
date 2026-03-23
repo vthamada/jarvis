@@ -1,6 +1,10 @@
 from specialist_engine.engine import SpecialistEngine
 
-from shared.contracts import DeliberativePlanContract, SpecialistSharedMemoryContextContract
+from shared.contracts import (
+    DeliberativePlanContract,
+    DomainSpecialistRouteContract,
+    SpecialistSharedMemoryContextContract,
+)
 
 
 def sample_plan() -> DeliberativePlanContract:
@@ -84,3 +88,56 @@ def test_specialist_engine_returns_subordinated_contributions_only_when_rule_mat
     )
     assert review.findings
     assert "sem resposta direta ao usuario" in review.boundary_summary
+
+
+def test_specialist_engine_links_domain_shadow_specialist_explicitly() -> None:
+    engine = SpecialistEngine()
+    software_plan = DeliberativePlanContract(
+        plan_summary="avaliar ajuste em serviço Python com impacto controlado",
+        goal="Review Python service rollout",
+        steps=["mapear contratos", "comparar mudança", "recomendar próximo passo"],
+        active_domains=["software_development", "analysis"],
+        active_minds=["mente_analitica"],
+        constraints=["through_core_only"],
+        risks=["sem risco material alem do escopo controlado do v1"],
+        recommended_task_type="produce_analysis_brief",
+        requires_human_validation=False,
+        rationale="contexto=software; apoio=local",
+        tensions_considered=["equilibrar profundidade analitica com conclusao util"],
+        specialist_hints=["especialista_software_subordinado"],
+        success_criteria=["comparacao deve preservar contratos e rollback"],
+        dominant_tension="equilibrar profundidade analitica com conclusao util",
+        smallest_safe_next_action="mapear contratos ativos",
+        continuity_action="continuar",
+        open_loops=["comparar mudança no serviço"],
+    )
+
+    handoff_plan = engine.plan_handoffs(
+        intent="analysis",
+        plan=software_plan,
+        knowledge_snippets=["Prefira interfaces estáveis."],
+        domain_specialist_routes=[
+            DomainSpecialistRouteContract(
+                domain_name="software_development",
+                specialist_type="especialista_software_subordinado",
+                specialist_mode="shadow",
+                routing_reason="rota canônica de software em shadow mode",
+            )
+        ],
+        session_id="sess-software",
+        mission_id="mission-software",
+        requested_by_service="orchestrator-service",
+    )
+    review = engine.review_handoffs(
+        intent="analysis",
+        plan=software_plan,
+        knowledge_snippets=["Prefira interfaces estáveis."],
+        handoff_plan=handoff_plan,
+    )
+
+    assert handoff_plan.selections[0].linked_domain == "software_development"
+    assert handoff_plan.selections[0].selection_mode == "shadow"
+    assert handoff_plan.invocations[0].linked_domain == "software_development"
+    assert handoff_plan.invocations[0].selection_mode == "shadow"
+    assert review.contributions[0].specialist_type == "especialista_software_subordinado"
+    assert "domain_shadow_specialist" in review.contributions[0].output_hints

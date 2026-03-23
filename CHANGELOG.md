@@ -10,6 +10,24 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 
 ## 2026-03-23
 
+### Execução da Sprint 5 do ciclo v2
+
+- `observability-service` passou a auditar `domain_alignment_status`, `memory_alignment_status` e `specialist_sovereignty_status` no fluxo de especialistas;
+- `internal_pilot_support` passou a cobrir `software_shadow_review`, preservando comparação entre núcleo puro, especialista estrutural e especialista em `shadow mode`;
+- `compare_orchestrator_paths` passou a emitir `baseline_axis_adherence_score`, `candidate_axis_adherence_score` e a comparar explicitamente aderência por eixo;
+- a rodada local de comparação do `v2` fechou com `overall_verdict=equivalent`, `matched_scenarios=7/7` e `comparison_decision=candidate_ready_for_eval_gate`;
+- `evolution_from_pilot` e `evolution-lab` passaram a carregar sinais de domínio, `shadow mode` e aderência aos eixos do mestre para proposals sandbox-only;
+- `README`, `HANDOFF`, `master-summary`, `v2-sprint-cycle` e `matriz-de-aderencia-mestre` passaram a tratar a Sprint 5 do `v2` como concluída e a Sprint 6 como próxima frente ativa.
+
+### Execução da Sprint 4 do ciclo v2
+
+- `knowledge-service` passou a carregar `knowledge/curated/v2_domain_registry.json` como registry inicial dos domínios ativos do ciclo;
+- `KnowledgeRetrievalResult` passou a expor `registry_domains` e `specialist_routes`, tornando explícita a ponte entre domínio ativo e rota de especialista;
+- `cognitive-engine` passou a priorizar hints vindos do registry e `software_development` abriu a primeira rota canônica `domínio -> especialista` do `v2`;
+- `specialist-engine` passou a materializar `linked_domain` e `selection_mode`, incluindo `especialista_software_subordinado` em `shadow mode`;
+- `orchestrator-service` e o fluxo opcional de `LangGraph` passaram a registrar `domain_registry_resolved` e `specialist_shadow_mode_completed`;
+- `README`, `HANDOFF`, `master-summary`, `v2-sprint-cycle` e `matriz-de-aderencia-mestre` passaram a tratar a Sprint 4 do `v2` como concluída e a Sprint 5 como próxima frente ativa.
+
 ### Execução da Sprint 3 do ciclo v2
 
 - `shared/contracts` passou a expor `SpecialistSharedMemoryContextContract` e `SpecialistInvocationContract` passou a carregar `shared_memory_context`;

@@ -105,7 +105,9 @@ Leitura curta do momento:
 - Sprint 1 do `v2` foi concluída;
 - Sprint 2 do `v2` foi concluída;
 - Sprint 3 do `v2` foi concluída com memória relacional compartilhada mediada pelo núcleo e contexto persistido por especialista;
-- Sprint 4 do `v2` é a próxima frente ativa;
+- Sprint 4 do `v2` foi concluída com registry inicial de domínios e primeiro especialista subordinado em `shadow mode`;
+- Sprint 5 do `v2` foi concluída com evals de aderência do recorte de especialistas;
+- Sprint 6 do `v2` é a próxima frente ativa;
 - a auditoria completa do Documento-Mestre passou a orientar o backlog por eixo canônico.
 
 ---
@@ -136,8 +138,8 @@ O projeto deve evitar:
 
 O próximo passo executivo mais racional é:
 
-- executar a Sprint 4 do `v2`;
-- abrir o registry inicial de domínios e ligar o primeiro especialista subordinado em `shadow mode`;
+- executar a Sprint 6 do `v2`;
+- medir de forma comparável o recorte atual entre núcleo puro, especialista estrutural e especialista em `shadow mode`;
 - preservar a memória compartilhada do `v2` como contexto mediado pelo núcleo, sem escrita direta do especialista;
 - usar `docs/documentation/matriz-de-aderencia-mestre.md` como auditoria completa para recalibrar backlog e cobertura do mestre;
 - preservar o recorte absorvido de `LangGraph` como evidência, sem transformar o sistema em colagem de runtimes;

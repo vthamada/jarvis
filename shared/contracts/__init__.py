@@ -108,6 +108,25 @@ class DeliberativePlanContract:
 
 
 @dataclass
+class DomainRegistryEntryContract:
+    domain_name: str
+    activation_stage: str
+    maturity: str
+    canonical_family: str | None = None
+    linked_specialist_type: str | None = None
+    specialist_mode: str | None = None
+    summary: str | None = None
+
+
+@dataclass
+class DomainSpecialistRouteContract:
+    domain_name: str
+    specialist_type: str
+    specialist_mode: str
+    routing_reason: str
+
+
+@dataclass
 class SpecialistBoundaryContract:
     specialist_type: str
     runtime_scope: str
@@ -150,6 +169,8 @@ class SpecialistInvocationContract:
     session_id: SessionId | None = None
     mission_id: MissionId | None = None
     shared_memory_context: SpecialistSharedMemoryContextContract | None = None
+    linked_domain: str | None = None
+    selection_mode: str = "standard"
 
 
 @dataclass
@@ -160,6 +181,8 @@ class SpecialistSelectionContract:
     rationale: str
     requires_governance_review: bool = False
     invocation_id: str | None = None
+    linked_domain: str | None = None
+    selection_mode: str = "standard"
 
 
 @dataclass

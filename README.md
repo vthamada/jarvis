@@ -41,7 +41,9 @@ Leitura prática correta deste momento:
 - Sprint 1 do `v2` concluída com contratos e fronteiras mínimas de convocação de especialistas;
 - Sprint 2 do `v2` concluída com seleção governada e handoff interno observável;
 - Sprint 3 do `v2` concluída com memória relacional compartilhada mediada pelo núcleo e contexto persistido por especialista;
-- Sprint 4 do `v2` aberta como próxima frente ativa do ciclo rolante;
+- Sprint 4 do `v2` concluída com registry inicial de domínios e primeiro especialista subordinado em `shadow mode`;
+- Sprint 5 do `v2` concluída com evals de aderência do recorte de especialistas aos eixos do mestre;
+- Sprint 6 do `v2` aberta como próxima frente ativa do ciclo rolante;
 - a auditoria completa do Documento-Mestre passou a orientar o backlog real por eixo.
 
 ## Estrutura principal

@@ -1,0 +1,76 @@
+{
+  "domains": [
+    {
+      "domain_name": "strategy",
+      "activation_stage": "v2",
+      "maturity": "active_registry",
+      "canonical_family": "planejamento_e_direcao",
+      "summary": "Domínio ativo do v2 para sequenciamento, direção e framing estratégico."
+    },
+    {
+      "domain_name": "analysis",
+      "activation_stage": "v2",
+      "maturity": "active_registry",
+      "canonical_family": "analise_e_julgamento",
+      "summary": "Domínio ativo do v2 para comparação estruturada, trade-offs e implicações."
+    },
+    {
+      "domain_name": "governance",
+      "activation_stage": "v2",
+      "maturity": "active_registry",
+      "canonical_family": "governanca_e_segurança",
+      "summary": "Domínio ativo do v2 para contenção normativa, risco e auditoria."
+    },
+    {
+      "domain_name": "software_development",
+      "activation_stage": "v2",
+      "maturity": "shadow_specialist",
+      "canonical_family": "engenharia_de_software",
+      "linked_specialist_type": "especialista_software_subordinado",
+      "specialist_mode": "shadow",
+      "summary": "Primeira rota canônica domínio->especialista do v2, em shadow mode e sempre subordinada ao núcleo."
+    },
+    {
+      "domain_name": "operational_readiness",
+      "activation_stage": "v2",
+      "maturity": "active_registry",
+      "canonical_family": "operacao_e_release",
+      "summary": "Domínio ativo do v2 para readiness, rollback, smoke e critérios de go-live."
+    },
+    {
+      "domain_name": "observability",
+      "activation_stage": "v2",
+      "maturity": "active_registry",
+      "canonical_family": "telemetria_e_validacao",
+      "summary": "Domínio ativo do v2 para trilha, anomalias, correlação e gaps de sinal."
+    },
+    {
+      "domain_name": "documentation",
+      "activation_stage": "v2",
+      "maturity": "active_registry",
+      "canonical_family": "documentacao_e_handoff",
+      "summary": "Domínio ativo do v2 para documentação operacional e alinhamento entre artefatos vivos."
+    },
+    {
+      "domain_name": "decision_risk",
+      "activation_stage": "v2",
+      "maturity": "active_registry",
+      "canonical_family": "decisao_e_risco",
+      "summary": "Domínio ativo do v2 para reversibilidade, impacto, incerteza e gates de decisão."
+    },
+    {
+      "domain_name": "pilot_operations",
+      "activation_stage": "v2",
+      "maturity": "active_registry",
+      "canonical_family": "piloto_e_comparacao",
+      "summary": "Domínio ativo do v2 para piloto interno, comparação de paths e relatórios."
+    },
+    {
+      "domain_name": "productivity",
+      "activation_stage": "v2",
+      "maturity": "active_registry",
+      "canonical_family": "execucao_e_produtividade",
+      "summary": "Domínio ativo do v2 para menor próxima ação segura e execução verificável."
+    }
+  ]
+}

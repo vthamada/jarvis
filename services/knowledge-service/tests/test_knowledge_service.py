@@ -86,6 +86,12 @@ def test_knowledge_service_covers_operational_readiness_and_software_domains() -
 
     assert "operational_readiness" in result.active_domains
     assert "software_development" in result.active_domains
+    assert "software_development" in result.registry_domains
+    assert any(
+        route.specialist_type == "especialista_software_subordinado"
+        and route.specialist_mode == "shadow"
+        for route in result.specialist_routes
+    )
 
 
 def test_knowledge_service_supports_pilot_and_observability_queries() -> None:
@@ -98,3 +104,12 @@ def test_knowledge_service_supports_pilot_and_observability_queries() -> None:
 
     assert "observability" in result.active_domains
     assert "pilot_operations" in result.active_domains
+
+
+def test_knowledge_service_exposes_initial_v2_domain_registry() -> None:
+    service = KnowledgeService()
+
+    registry_domains = service.list_registry_domains()
+
+    assert "strategy" in registry_domains
+    assert "software_development" in registry_domains

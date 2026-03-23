@@ -335,6 +335,169 @@ def test_observability_service_audits_continuity_signals() -> None:
     assert audit.trace_complete is False
 
 
+def test_observability_service_audits_domain_memory_and_sovereignty_alignment() -> None:
+    temp_dir = runtime_dir("observability-specialist-alignment")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service.ingest_events(
+        [
+            InternalEventEnvelope(
+                event_id="evt-s1",
+                event_name="input_received",
+                timestamp="2026-03-18T00:00:00+00:00",
+                source_service="orchestrator-service",
+                payload={"content": "Analyze the Python service rollout."},
+                request_id="req-specialist-align",
+                session_id="sess-specialist-align",
+                correlation_id="req-specialist-align",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-s2",
+                event_name="memory_recovered",
+                timestamp="2026-03-18T00:00:01+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_recommendation": "priorizar_loop_ativo"},
+                request_id="req-specialist-align",
+                session_id="sess-specialist-align",
+                correlation_id="req-specialist-align",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-s3",
+                event_name="intent_classified",
+                timestamp="2026-03-18T00:00:02+00:00",
+                source_service="orchestrator-service",
+                payload={"intent": "analysis"},
+                request_id="req-specialist-align",
+                session_id="sess-specialist-align",
+                correlation_id="req-specialist-align",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-s4",
+                event_name="domain_registry_resolved",
+                timestamp="2026-03-18T00:00:03+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "active_domains": ["software_development", "analysis"],
+                    "registry_domains": ["software_development", "analysis"],
+                    "shadow_domains": ["software_development"],
+                },
+                request_id="req-specialist-align",
+                session_id="sess-specialist-align",
+                correlation_id="req-specialist-align",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-s5",
+                event_name="context_composed",
+                timestamp="2026-03-18T00:00:04+00:00",
+                source_service="orchestrator-service",
+                payload={"active_minds": ["mente_analitica"]},
+                request_id="req-specialist-align",
+                session_id="sess-specialist-align",
+                correlation_id="req-specialist-align",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-s6",
+                event_name="plan_built",
+                timestamp="2026-03-18T00:00:05+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_action": "continuar", "continuity_source": "active_mission"},
+                request_id="req-specialist-align",
+                session_id="sess-specialist-align",
+                correlation_id="req-specialist-align",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-s7",
+                event_name="continuity_decided",
+                timestamp="2026-03-18T00:00:06+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_action": "continuar", "continuity_source": "active_mission"},
+                request_id="req-specialist-align",
+                session_id="sess-specialist-align",
+                correlation_id="req-specialist-align",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-s8",
+                event_name="specialist_shared_memory_linked",
+                timestamp="2026-03-18T00:00:07+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "sharing_modes": {
+                        "especialista_software_subordinado": "core_mediated_read_only"
+                    }
+                },
+                request_id="req-specialist-align",
+                session_id="sess-specialist-align",
+                correlation_id="req-specialist-align",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-s9",
+                event_name="specialist_contracts_composed",
+                timestamp="2026-03-18T00:00:08+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "response_channel": "through_core",
+                    "tool_access_mode": "none",
+                },
+                request_id="req-specialist-align",
+                session_id="sess-specialist-align",
+                correlation_id="req-specialist-align",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-s10",
+                event_name="specialist_shadow_mode_completed",
+                timestamp="2026-03-18T00:00:09+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "specialist_types": ["especialista_software_subordinado"],
+                    "linked_domains": {
+                        "especialista_software_subordinado": "software_development"
+                    },
+                },
+                request_id="req-specialist-align",
+                session_id="sess-specialist-align",
+                correlation_id="req-specialist-align",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-s11",
+                event_name="governance_checked",
+                timestamp="2026-03-18T00:00:10+00:00",
+                source_service="orchestrator-service",
+                payload={"decision": "allow_with_conditions"},
+                request_id="req-specialist-align",
+                session_id="sess-specialist-align",
+                correlation_id="req-specialist-align",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-s12",
+                event_name="response_synthesized",
+                timestamp="2026-03-18T00:00:11+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_action": "continuar"},
+                request_id="req-specialist-align",
+                session_id="sess-specialist-align",
+                correlation_id="req-specialist-align",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-s13",
+                event_name="memory_recorded",
+                timestamp="2026-03-18T00:00:12+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_mode": "continuar"},
+                request_id="req-specialist-align",
+                session_id="sess-specialist-align",
+                correlation_id="req-specialist-align",
+            ),
+        ]
+    )
+
+    audit = service.audit_flow(ObservabilityQuery(request_id="req-specialist-align"))
+
+    assert audit.registry_domains == ["software_development", "analysis"]
+    assert audit.shadow_specialists == ["especialista_software_subordinado"]
+    assert audit.domain_alignment_status == "healthy"
+    assert audit.memory_alignment_status == "healthy"
+    assert audit.specialist_sovereignty_status == "healthy"
+
+
 def test_langsmith_adapter_emits_trace_tree() -> None:
     calls: list[dict[str, object]] = []
 

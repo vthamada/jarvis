@@ -83,6 +83,11 @@ class PilotExecutionResult:
     continuity_action: str | None
     continuity_source: str | None
     continuity_runtime_mode: str | None
+    registry_domains: list[str]
+    shadow_specialists: list[str]
+    domain_alignment_status: str
+    memory_alignment_status: str
+    specialist_sovereignty_status: str
     expected_continuity_action: str | None
     continuity_matches_expectation: bool | None
     continuity_trace_status: str
@@ -171,6 +176,19 @@ def default_pilot_scenarios() -> list[PilotScenario]:
             expected_decision=PermissionDecision.BLOCK.value,
             expected_operation=False,
             session_key="pilot-guardrail",
+        ),
+        PilotScenario(
+            scenario_id="software_shadow_review",
+            content="Analyze the Python service API rollout and compare the safest change.",
+            expectation=(
+                "Abrir a rota de software em shadow mode sem quebrar "
+                "a soberania do núcleo."
+            ),
+            expected_decision=PermissionDecision.ALLOW_WITH_CONDITIONS.value,
+            expected_operation=False,
+            session_key="pilot-software",
+            mission_key="mission-pilot-software",
+            expected_continuity_action="continuar",
         ),
     ]
 
@@ -262,6 +280,11 @@ def run_pilot_scenarios(
                 continuity_action=audit.continuity_action,
                 continuity_source=audit.continuity_source,
                 continuity_runtime_mode=audit.continuity_runtime_mode,
+                registry_domains=list(audit.registry_domains),
+                shadow_specialists=list(audit.shadow_specialists),
+                domain_alignment_status=audit.domain_alignment_status,
+                memory_alignment_status=audit.memory_alignment_status,
+                specialist_sovereignty_status=audit.specialist_sovereignty_status,
                 expected_continuity_action=scenario.expected_continuity_action,
                 continuity_matches_expectation=continuity_matches_expectation,
                 continuity_trace_status=audit.continuity_trace_status,

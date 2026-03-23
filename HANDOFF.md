@@ -32,7 +32,9 @@ Estado do ciclo rolante:
 - Sprint 1 do `v2` concluída;
 - Sprint 2 do `v2` concluída;
 - Sprint 3 do `v2` concluída;
-- Sprint 4 do `v2` é a próxima frente ativa.
+- Sprint 4 do `v2` concluída;
+- Sprint 5 do `v2` concluída.
+- Sprint 6 do `v2` é a próxima frente ativa.
 
 ## Decisões fechadas
 
@@ -111,18 +113,19 @@ Principais entregas já consolidadas:
 - Sprint 1 do `v2` concluída, com contratos mínimos de convocação de especialistas, fronteiras explícitas de runtime e integração mínima no núcleo;
 - Sprint 2 do `v2` concluída, com seleção governada de especialistas, handoff interno observável e contenção explícita quando a convocação viola fronteiras;
 - Sprint 3 do `v2` concluída, com memória relacional compartilhada mediada pelo núcleo, contexto persistido por especialista e handoff enriquecido sem escrita direta fora do núcleo;
+- Sprint 4 do `v2` concluída, com registry inicial de domínios do ciclo, rota canônica `software_development -> especialista_software_subordinado` e execução explícita em `shadow mode`;
 - Documento-Mestre ampliado com referências arquiteturais oficiais por função.
 
 ## O que ainda falta
 
 Pendências principais desta fase:
 
-- executar a Sprint 4 do ciclo `v2`;
-- consolidar o registry canônico de `domínios` como principal lacuna estrutural do `v2`;
-- usar a Sprint 4 para vincular domínios ativos, memória compartilhada e primeiro especialista em `shadow mode`;
+- executar a Sprint 6 do ciclo `v2`;
+- classificar o primeiro corte do `v2` entre `corrigir agora`, `manter deferido` e `apenas preservar como visão`;
+- decidir formalmente o que permanece no recorte inicial de especialistas subordinados;
 - preservar a mediação do núcleo como única política de escrita da memória compartilhada;
-- consolidar estudo externo curto sem bloquear a implementação principal;
-- usar a matriz de aderência como critério explícito de priorização para todos os eixos auditados.
+- usar os sinais de aderência recém-abertos como critério explícito de promoção, ajuste ou contenção;
+- consolidar estudo externo curto sem bloquear a implementação principal.
 
 Regra de estudo externo no `v2`:
 
@@ -135,9 +138,9 @@ Regra de estudo externo no `v2`:
 
 Ordem recomendada:
 
-1. executar a Sprint 4 do `v2`;
-2. abrir o registry inicial dos `domínios` ativos do ciclo;
-3. vincular o primeiro especialista subordinado a domínio explícito, memória compartilhada e `shadow mode`;
+1. executar a Sprint 6 do `v2`;
+2. classificar o recorte atual entre núcleo puro, especialista estrutural e especialista em `shadow mode`;
+3. usar `domain_alignment_status`, `memory_alignment_status` e `specialist_sovereignty_status` como base do fechamento;
 4. usar a matriz para priorizar `domínios`, `memórias` e `mentes` nessa ordem;
 5. rodar estudo externo curto em paralelo;
 6. classificar cada achado como `absorver depois`, `usar como referência` ou `rejeitar`;

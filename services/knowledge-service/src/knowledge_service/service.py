@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from json import loads
 from pathlib import Path
 
+from shared.contracts import DomainRegistryEntryContract, DomainSpecialistRouteContract
+
 
 @dataclass(frozen=True)
 class KnowledgeDomain:
@@ -14,6 +16,7 @@ class KnowledgeDomain:
     name: str
     keywords: list[str]
     snippets: list[str]
+    registry_entry: DomainRegistryEntryContract | None = None
 
 
 @dataclass(frozen=True)
@@ -23,11 +26,14 @@ class KnowledgeRetrievalResult:
     intent: str
     query: str
     active_domains: list[str]
+    registry_domains: list[str]
     snippets: list[str]
     sources: list[str]
+    specialist_routes: list[DomainSpecialistRouteContract]
 
 
 DEFAULT_CORPUS_PATH = Path.cwd() / "knowledge" / "curated" / "v1_corpus.json"
+DEFAULT_DOMAIN_REGISTRY_PATH = Path.cwd() / "knowledge" / "curated" / "v2_domain_registry.json"
 
 
 class KnowledgeService:
@@ -35,29 +41,50 @@ class KnowledgeService:
 
     name = "knowledge-service"
 
-    def __init__(self, corpus_path: str | None = None) -> None:
+    def __init__(
+        self,
+        corpus_path: str | None = None,
+        domain_registry_path: str | None = None,
+    ) -> None:
         resolved_path = Path(corpus_path) if corpus_path else DEFAULT_CORPUS_PATH
         self.corpus_path = resolved_path
+        registry_path = (
+            Path(domain_registry_path)
+            if domain_registry_path
+            else DEFAULT_DOMAIN_REGISTRY_PATH
+        )
+        self.domain_registry = self._load_domain_registry(registry_path)
         self.domains = self._load_domains(resolved_path)
 
     def retrieve_for_intent(self, *, intent: str, query: str) -> KnowledgeRetrievalResult:
         """Return the most relevant domains and snippets for the given intent."""
 
         active_domains = self._select_domains(intent, query)
+        registry_domains = [
+            domain for domain in active_domains if self.domains[domain].registry_entry is not None
+        ]
         snippets = [self.domains[domain].snippets[0] for domain in active_domains]
         sources = [f"local://knowledge/{domain}" for domain in active_domains]
+        specialist_routes = self._resolve_specialist_routes(active_domains)
         return KnowledgeRetrievalResult(
             intent=intent,
             query=query,
             active_domains=active_domains,
+            registry_domains=registry_domains,
             snippets=snippets,
             sources=sources,
+            specialist_routes=specialist_routes,
         )
 
     def list_domains(self) -> list[str]:
         """Expose the curated domains available to deterministic retrieval."""
 
         return list(self.domains.keys())
+
+    def list_registry_domains(self) -> list[str]:
+        """Expose the initial canonical registry domains available to the v2 cycle."""
+
+        return list(self.domain_registry.keys())
 
     def _select_domains(self, intent: str, query: str) -> list[str]:
         lowered = query.lower()
@@ -103,14 +130,52 @@ class KnowledgeService:
         return priorities.get(domain_name, 0.0)
 
     @staticmethod
-    def _load_domains(corpus_path: Path) -> dict[str, KnowledgeDomain]:
+    def _load_domain_registry(corpus_path: Path) -> dict[str, DomainRegistryEntryContract]:
+        if not corpus_path.exists():
+            return {}
+        payload = loads(corpus_path.read_text(encoding="utf-8"))
+        return {
+            item["domain_name"]: DomainRegistryEntryContract(
+                domain_name=item["domain_name"],
+                activation_stage=item["activation_stage"],
+                maturity=item["maturity"],
+                canonical_family=item.get("canonical_family"),
+                linked_specialist_type=item.get("linked_specialist_type"),
+                specialist_mode=item.get("specialist_mode"),
+                summary=item.get("summary"),
+            )
+            for item in payload.get("domains", [])
+        }
+
+    def _load_domains(self, corpus_path: Path) -> dict[str, KnowledgeDomain]:
         payload = loads(corpus_path.read_text(encoding="utf-8"))
         return {
             item["name"]: KnowledgeDomain(
                 name=item["name"],
                 keywords=item.get("keywords", []),
                 snippets=item.get("snippets", []),
+                registry_entry=self.domain_registry.get(item["name"]),
             )
             for item in payload.get("domains", [])
         }
+
+    def _resolve_specialist_routes(
+        self,
+        active_domains: list[str],
+    ) -> list[DomainSpecialistRouteContract]:
+        routes: list[DomainSpecialistRouteContract] = []
+        for domain_name in active_domains:
+            entry = self.domains[domain_name].registry_entry
+            if not entry or not entry.linked_specialist_type or not entry.specialist_mode:
+                continue
+            routes.append(
+                DomainSpecialistRouteContract(
+                    domain_name=domain_name,
+                    specialist_type=entry.linked_specialist_type,
+                    specialist_mode=entry.specialist_mode,
+                    routing_reason=entry.summary
+                    or f"rota canônica ativa para o domínio {domain_name}",
+                )
+            )
+        return routes
 

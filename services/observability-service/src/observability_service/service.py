@@ -57,6 +57,11 @@ class FlowAudit:
     continuity_target_mission_id: str | None
     continuity_target_goal: str | None
     continuity_runtime_mode: str | None
+    registry_domains: list[str]
+    shadow_specialists: list[str]
+    domain_alignment_status: str
+    memory_alignment_status: str
+    specialist_sovereignty_status: str
     missing_continuity_signals: list[str]
     continuity_anomaly_flags: list[str]
     continuity_trace_status: str
@@ -221,6 +226,11 @@ class ObservabilityService:
                 continuity_target_mission_id=None,
                 continuity_target_goal=None,
                 continuity_runtime_mode=None,
+                registry_domains=[],
+                shadow_specialists=[],
+                domain_alignment_status="incomplete",
+                memory_alignment_status="incomplete",
+                specialist_sovereignty_status="incomplete",
                 missing_continuity_signals=[],
                 continuity_anomaly_flags=[],
                 continuity_trace_status="attention_required",
@@ -237,6 +247,10 @@ class ObservabilityService:
         continuity_runtime_event = self._first_event(events, "continuity_subflow_completed")
         response_event = self._first_event(events, "response_synthesized")
         memory_event = self._first_event(events, "memory_recorded")
+        domain_registry_event = self._first_event(events, "domain_registry_resolved")
+        shared_memory_event = self._first_event(events, "specialist_shared_memory_linked")
+        specialist_contract_event = self._first_event(events, "specialist_contracts_composed")
+        specialist_shadow_event = self._first_event(events, "specialist_shadow_mode_completed")
         first_event = events[0]
         governance_decision = (
             str(governance_event.payload.get("decision")) if governance_event else None
@@ -273,6 +287,22 @@ class ObservabilityService:
             if continuity_runtime_event
             and continuity_runtime_event.payload.get("runtime_mode") is not None
             else "baseline_linear"
+        )
+        registry_domains = (
+            [
+                str(item)
+                for item in domain_registry_event.payload.get("registry_domains", [])
+            ]
+            if domain_registry_event
+            else []
+        )
+        shadow_specialists = (
+            [
+                str(item)
+                for item in specialist_shadow_event.payload.get("specialist_types", [])
+            ]
+            if specialist_shadow_event
+            else []
         )
         anomaly_flags: list[str] = []
         missing_required_events = [
@@ -344,6 +374,16 @@ class ObservabilityService:
             missing_continuity_signals=missing_continuity_signals,
             continuity_anomaly_flags=continuity_anomaly_flags,
         )
+        domain_alignment_status = self._domain_alignment_status(
+            domain_registry_event=domain_registry_event,
+            specialist_shadow_event=specialist_shadow_event,
+        )
+        memory_alignment_status = self._memory_alignment_status(
+            shared_memory_event=shared_memory_event,
+        )
+        specialist_sovereignty_status = self._specialist_sovereignty_status(
+            specialist_contract_event=specialist_contract_event,
+        )
 
         return FlowAudit(
             request_id=first_event.request_id,
@@ -358,6 +398,11 @@ class ObservabilityService:
             continuity_target_mission_id=continuity_target_mission_id,
             continuity_target_goal=continuity_target_goal,
             continuity_runtime_mode=continuity_runtime_mode,
+            registry_domains=registry_domains,
+            shadow_specialists=shadow_specialists,
+            domain_alignment_status=domain_alignment_status,
+            memory_alignment_status=memory_alignment_status,
+            specialist_sovereignty_status=specialist_sovereignty_status,
             missing_continuity_signals=missing_continuity_signals,
             continuity_anomaly_flags=continuity_anomaly_flags,
             continuity_trace_status=continuity_trace_status,
@@ -455,6 +500,48 @@ class ObservabilityService:
         if missing_continuity_signals:
             return "incomplete"
         return "healthy"
+
+    @staticmethod
+    def _domain_alignment_status(
+        *,
+        domain_registry_event: InternalEventEnvelope | None,
+        specialist_shadow_event: InternalEventEnvelope | None,
+    ) -> str:
+        if domain_registry_event is None:
+            return "incomplete"
+        registry_domains = domain_registry_event.payload.get("registry_domains", [])
+        if not registry_domains:
+            return "partial"
+        if specialist_shadow_event is None:
+            return "healthy"
+        linked_domains = specialist_shadow_event.payload.get("linked_domains", {})
+        return "healthy" if linked_domains else "attention_required"
+
+    @staticmethod
+    def _memory_alignment_status(
+        *,
+        shared_memory_event: InternalEventEnvelope | None,
+    ) -> str:
+        if shared_memory_event is None:
+            return "incomplete"
+        sharing_modes = shared_memory_event.payload.get("sharing_modes", {})
+        if not sharing_modes:
+            return "partial"
+        all_core_mediated = all(value == "core_mediated_read_only" for value in sharing_modes.values())
+        return "healthy" if all_core_mediated else "attention_required"
+
+    @staticmethod
+    def _specialist_sovereignty_status(
+        *,
+        specialist_contract_event: InternalEventEnvelope | None,
+    ) -> str:
+        if specialist_contract_event is None:
+            return "incomplete"
+        response_channel = specialist_contract_event.payload.get("response_channel")
+        tool_access_mode = specialist_contract_event.payload.get("tool_access_mode")
+        if response_channel == "through_core" and tool_access_mode == "none":
+            return "healthy"
+        return "attention_required"
 
     @staticmethod
     def _build_agentic_adapter() -> AgenticObservabilityAdapter | None:

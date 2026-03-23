@@ -33,6 +33,11 @@ class PilotTraceSummary:
     continuity_action: str | None
     continuity_source: str | None
     continuity_runtime_mode: str | None
+    registry_domains: list[str]
+    shadow_specialists: list[str]
+    domain_alignment_status: str
+    memory_alignment_status: str
+    specialist_sovereignty_status: str
     expectation_status: str
     continuity_trace_status: str
     missing_continuity_signals: list[str]
@@ -91,6 +96,11 @@ def summarize_traces(
             continuity_action=audit.continuity_action,
             continuity_source=audit.continuity_source,
             continuity_runtime_mode=audit.continuity_runtime_mode,
+            registry_domains=list(audit.registry_domains),
+            shadow_specialists=list(audit.shadow_specialists),
+            domain_alignment_status=audit.domain_alignment_status,
+            memory_alignment_status=audit.memory_alignment_status,
+            specialist_sovereignty_status=audit.specialist_sovereignty_status,
             expectation_status=_expectation_status(
                 governance_decision=audit.governance_decision,
                 operation_status=audit.operation_status,
@@ -160,6 +170,16 @@ def render_text(summaries: list[PilotTraceSummary]) -> str:
             f"continuity_action={summary.continuity_action or 'none'} "
             f"continuity_source={summary.continuity_source or 'none'} "
             f"continuity_runtime_mode={summary.continuity_runtime_mode or 'none'} "
+            "registry_domains="
+            f"{','.join(getattr(summary, 'registry_domains', [])) or 'none'} "
+            "shadow_specialists="
+            f"{','.join(getattr(summary, 'shadow_specialists', [])) or 'none'} "
+            "domain_alignment_status="
+            f"{getattr(summary, 'domain_alignment_status', 'incomplete')} "
+            "memory_alignment_status="
+            f"{getattr(summary, 'memory_alignment_status', 'incomplete')} "
+            "specialist_sovereignty_status="
+            f"{getattr(summary, 'specialist_sovereignty_status', 'incomplete')} "
             f"expectation_status={summary.expectation_status} "
             "missing_continuity_signals="
             f"{','.join(summary.missing_continuity_signals) or 'none'} "

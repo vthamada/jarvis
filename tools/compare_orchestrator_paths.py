@@ -44,6 +44,16 @@ def expectation_score(result: PilotExecutionResult) -> float:
     return round(sum(1 for item in checks if item) / len(checks), 4)
 
 
+def axis_adherence_score(result: PilotExecutionResult) -> float:
+    statuses = [
+        result.domain_alignment_status,
+        result.memory_alignment_status,
+        result.specialist_sovereignty_status,
+    ]
+    weights = {"healthy": 1.0, "partial": 0.6, "incomplete": 0.2, "attention_required": 0.0}
+    return round(sum(weights.get(status, 0.0) for status in statuses) / len(statuses), 4)
+
+
 def summarize_comparisons(
     comparisons: list[PathComparisonResult],
     *,
@@ -159,6 +169,15 @@ def compare_results(
                 mismatch_fields.append("missing_continuity_signals")
             if baseline.continuity_anomaly_flags != candidate.continuity_anomaly_flags:
                 mismatch_fields.append("continuity_anomaly_flags")
+            if baseline.domain_alignment_status != candidate.domain_alignment_status:
+                mismatch_fields.append("domain_alignment_status")
+            if baseline.memory_alignment_status != candidate.memory_alignment_status:
+                mismatch_fields.append("memory_alignment_status")
+            if (
+                baseline.specialist_sovereignty_status
+                != candidate.specialist_sovereignty_status
+            ):
+                mismatch_fields.append("specialist_sovereignty_status")
             if baseline.trace_status != candidate.trace_status:
                 mismatch_fields.append("trace_status")
             if baseline.missing_required_events != candidate.missing_required_events:
@@ -199,12 +218,19 @@ def render_text(payload: dict[str, object]) -> str:
                         if item["candidate"]
                         else "candidate_runtime=n/a"
                     ),
-                    f"baseline_expectation_score={item['baseline_expectation_score']}",
+                f"baseline_expectation_score={item['baseline_expectation_score']}",
+                f"baseline_axis_adherence_score={item['baseline_axis_adherence_score']}",
                     (
                         "candidate_expectation_score="
                         f"{item['candidate_expectation_score']}"
                         if item["candidate_expectation_score"] is not None
                         else "candidate_expectation_score=n/a"
+                    ),
+                    (
+                        "candidate_axis_adherence_score="
+                        f"{item['candidate_axis_adherence_score']}"
+                        if item["candidate_axis_adherence_score"] is not None
+                        else "candidate_axis_adherence_score=n/a"
                     ),
                     f"baseline_decision={item['baseline']['governance_decision']}",
                     "candidate_decision="
@@ -262,8 +288,12 @@ def serialize_comparisons(
                 "core_match": item.core_match,
                 "mismatch_fields": item.mismatch_fields,
                 "baseline_expectation_score": expectation_score(item.baseline),
+                "baseline_axis_adherence_score": axis_adherence_score(item.baseline),
                 "candidate_expectation_score": (
                     expectation_score(item.candidate) if item.candidate else None
+                ),
+                "candidate_axis_adherence_score": (
+                    axis_adherence_score(item.candidate) if item.candidate else None
                 ),
                 "baseline": result_to_dict(item.baseline),
                 "candidate": result_to_dict(item.candidate) if item.candidate else None,

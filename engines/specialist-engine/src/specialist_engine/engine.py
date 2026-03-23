@@ -6,6 +6,7 @@ from dataclasses import dataclass
 
 from shared.contracts import (
     DeliberativePlanContract,
+    DomainSpecialistRouteContract,
     SpecialistBoundaryContract,
     SpecialistContributionContract,
     SpecialistInvocationContract,
@@ -75,6 +76,7 @@ class SpecialistEngine:
         intent: str,
         plan: DeliberativePlanContract,
         knowledge_snippets: list[str],
+        domain_specialist_routes: list[DomainSpecialistRouteContract] | None = None,
         shared_memory_contexts: dict[str, SpecialistSharedMemoryContextContract] | None = None,
         session_id: str | None = None,
         mission_id: str | None = None,
@@ -82,14 +84,18 @@ class SpecialistEngine:
     ) -> SpecialistHandoffPlan:
         """Build the explicit selection and boundary plan for specialist handoffs."""
 
-        selections = self._select_handoffs(intent=intent, plan=plan)
+        selections = self._select_handoffs(
+            intent=intent,
+            plan=plan,
+            domain_specialist_routes=domain_specialist_routes or [],
+        )
         invocations: list[SpecialistInvocationContract] = []
         for index, selection in enumerate(
             [item for item in selections if item.selection_status == "selected"],
             start=1,
         ):
             invocation = self._build_invocation(
-                specialist_hint=selection.specialist_type,
+                selection=selection,
                 plan=plan,
                 knowledge_snippets=knowledge_snippets,
                 shared_memory_context=(
@@ -158,8 +164,12 @@ class SpecialistEngine:
         *,
         intent: str,
         plan: DeliberativePlanContract,
+        domain_specialist_routes: list[DomainSpecialistRouteContract],
     ) -> list[SpecialistSelectionContract]:
         selections: list[SpecialistSelectionContract] = []
+        route_map = {
+            route.specialist_type: route for route in domain_specialist_routes
+        }
         has_decomposition = len(plan.steps) >= 3 or bool(plan.continuity_action)
         has_tradeoff = intent == "analysis" or any(
             word in (plan.dominant_tension or "")
@@ -169,6 +179,7 @@ class SpecialistEngine:
             "risco" in risk or "govern" in risk for risk in plan.risks
         )
         for specialist_hint in plan.specialist_hints:
+            route = route_map.get(specialist_hint)
             if specialist_hint == "especialista_planejamento_operacional" and has_decomposition:
                 selections.append(
                     SpecialistSelectionContract(
@@ -179,6 +190,8 @@ class SpecialistEngine:
                             "o plano exige decomposicao, checkpoints "
                             "e menor proxima acao segura"
                         ),
+                        linked_domain=route.domain_name if route else None,
+                        selection_mode=route.specialist_mode if route else "standard",
                     )
                 )
             elif specialist_hint == "especialista_analise_estruturada" and has_tradeoff:
@@ -191,6 +204,8 @@ class SpecialistEngine:
                             "o contexto exige comparacao estruturada "
                             "e criterio explicito de decisao"
                         ),
+                        linked_domain=route.domain_name if route else None,
+                        selection_mode=route.specialist_mode if route else "standard",
                     )
                 )
             elif specialist_hint == "especialista_revisao_governanca" and has_risk:
@@ -201,6 +216,26 @@ class SpecialistEngine:
                         selection_score=0.87,
                         rationale="o plano exige cautela normativa, auditoria e revisao de limites",
                         requires_governance_review=True,
+                        linked_domain=route.domain_name if route else None,
+                        selection_mode=route.specialist_mode if route else "standard",
+                    )
+                )
+            elif (
+                specialist_hint == "especialista_software_subordinado"
+                and route is not None
+                and route.domain_name in plan.active_domains
+            ):
+                selections.append(
+                    SpecialistSelectionContract(
+                        specialist_type=specialist_hint,
+                        selection_status="selected",
+                        selection_score=0.78,
+                        rationale=(
+                            "o domínio de software ativo abriu a primeira rota canônica "
+                            "para especialista subordinado em shadow mode"
+                        ),
+                        linked_domain=route.domain_name,
+                        selection_mode=route.specialist_mode,
                     )
                 )
             else:
@@ -213,6 +248,8 @@ class SpecialistEngine:
                             "o contexto atual nao justifica convocacao "
                             "especializada deste tipo"
                         ),
+                        linked_domain=route.domain_name if route else None,
+                        selection_mode=route.specialist_mode if route else "standard",
                     )
                 )
         return selections[:3]
@@ -306,6 +343,35 @@ class SpecialistEngine:
                 ],
                 handoff_channel=invocation.boundary.response_channel,
             )
+        if specialist_hint == "especialista_software_subordinado":
+            return SpecialistContributionContract(
+                specialist_type=specialist_hint,
+                role="software_subordinado_shadow",
+                focus="contratos, acoplamento e menor mudanca segura",
+                findings=[
+                    "success: qualquer mudanca deve preservar contratos centrais e rollback claro",
+                    (
+                        "constraint: limitar a mudanca ao menor recorte verificavel "
+                        f"com base em {knowledge_hint}"
+                    ),
+                    (
+                        "risk: acoplamento difuso entre servicos exige comparacao "
+                        "controlada antes de promocao"
+                    ),
+                ],
+                recommendation=(
+                    "manter a leitura especializada em shadow mode e comparar o ganho "
+                    "antes de torná-la parte do caminho principal"
+                ),
+                confidence=0.74,
+                invocation_id=invocation.invocation_id,
+                output_hints=[
+                    "structured_findings",
+                    "domain_shadow_specialist",
+                    "through_core_only",
+                ],
+                handoff_channel=invocation.boundary.response_channel,
+            )
         return None
 
     @staticmethod
@@ -318,7 +384,7 @@ class SpecialistEngine:
     def _build_invocation(
         self,
         *,
-        specialist_hint: str,
+        selection: SpecialistSelectionContract,
         plan: DeliberativePlanContract,
         knowledge_snippets: list[str],
         shared_memory_context: SpecialistSharedMemoryContextContract | None,
@@ -327,6 +393,7 @@ class SpecialistEngine:
         requested_by_service: str,
         sequence: int,
     ) -> SpecialistInvocationContract:
+        specialist_hint = selection.specialist_type
         boundary = self._build_boundary(specialist_hint)
         knowledge_hint = (
             knowledge_snippets[0] if knowledge_snippets else "sem apoio extra de conhecimento"
@@ -376,6 +443,8 @@ class SpecialistEngine:
             session_id=session_id,
             mission_id=mission_id,
             shared_memory_context=shared_memory_context,
+            linked_domain=selection.linked_domain,
+            selection_mode=selection.selection_mode,
         )
 
     @staticmethod
@@ -406,6 +475,8 @@ class SpecialistEngine:
             return "analise_estruturada_subordinada"
         if specialist_hint == "especialista_revisao_governanca":
             return "revisao_governanca_subordinada"
+        if specialist_hint == "especialista_software_subordinado":
+            return "software_subordinado_shadow"
         return "especialista_subordinado"
 
     @staticmethod
@@ -416,6 +487,8 @@ class SpecialistEngine:
             return "explicitar trade-offs e criterio de decisao"
         if specialist_hint == "especialista_revisao_governanca":
             return "revisar limites, auditoria e cautela operacional"
+        if specialist_hint == "especialista_software_subordinado":
+            return "avaliar contratos, acoplamento e menor mudanca segura"
         return "apoio especializado subordinado"
 
     @staticmethod

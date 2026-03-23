@@ -4,6 +4,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
+from shared.contracts import DomainSpecialistRouteContract
+
 V1_NUCLEAR_MINDS = [
     "mente_logica",
     "mente_analitica",
@@ -48,6 +50,7 @@ class CognitiveEngine:
         intent: str,
         risk_markers: list[str],
         retrieved_domains: list[str],
+        domain_specialist_routes: list[DomainSpecialistRouteContract] | None = None,
         mind_hints: list[str] | None = None,
     ) -> CognitiveSnapshot:
         """Return an initial cognitive decomposition for the request."""
@@ -73,6 +76,7 @@ class CognitiveEngine:
             domains=active_domains,
             dominant_tension=dominant_tension,
             risk_markers=risk_markers,
+            domain_specialist_routes=domain_specialist_routes or [],
         )
         arbitration_summary = self._build_arbitration_summary(
             primary_mind=primary_mind,
@@ -158,8 +162,11 @@ class CognitiveEngine:
         domains: list[str],
         dominant_tension: str,
         risk_markers: list[str],
+        domain_specialist_routes: list[DomainSpecialistRouteContract],
     ) -> list[str]:
-        hints: list[str] = []
+        hints: list[str] = [
+            route.specialist_type for route in domain_specialist_routes[:2]
+        ]
         if intent == "planning" or "continuidade" in dominant_tension or len(domains) > 1:
             hints.append("especialista_planejamento_operacional")
         if intent == "analysis" or any(domain in domains for domain in ["analysis", "strategy"]):

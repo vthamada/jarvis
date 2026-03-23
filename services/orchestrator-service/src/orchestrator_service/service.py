@@ -219,7 +219,31 @@ class OrchestratorService:
                     contract,
                     {
                         "domains": knowledge_result.active_domains,
+                        "registry_domains": knowledge_result.registry_domains,
+                        "routed_specialists": [
+                            {
+                                "domain_name": route.domain_name,
+                                "specialist_type": route.specialist_type,
+                                "specialist_mode": route.specialist_mode,
+                            }
+                            for route in knowledge_result.specialist_routes
+                        ],
                         "sources": knowledge_result.sources,
+                    },
+                )
+            )
+            events.append(
+                self.make_event(
+                    "domain_registry_resolved",
+                    contract,
+                    {
+                        "active_domains": knowledge_result.active_domains,
+                        "registry_domains": knowledge_result.registry_domains,
+                        "shadow_domains": [
+                            route.domain_name
+                            for route in knowledge_result.specialist_routes
+                            if route.specialist_mode == "shadow"
+                        ],
                     },
                 )
             )
@@ -228,6 +252,9 @@ class OrchestratorService:
             intent=directive.intent,
             risk_markers=directive.risk_markers,
             retrieved_domains=knowledge_result.active_domains if knowledge_result else [],
+            domain_specialist_routes=(
+                knowledge_result.specialist_routes if knowledge_result else []
+            ),
             mind_hints=directive.mind_hints,
         )
         events.append(
@@ -511,6 +538,9 @@ class OrchestratorService:
             intent=directive.intent,
             plan=deliberative_plan,
             knowledge_snippets=knowledge_result.snippets if knowledge_result else [],
+            domain_specialist_routes=(
+                knowledge_result.specialist_routes if knowledge_result else []
+            ),
             shared_memory_contexts=shared_memory_contexts,
             session_id=str(contract.session_id),
             mission_id=str(contract.mission_id) if contract.mission_id else None,
@@ -531,6 +561,17 @@ class OrchestratorService:
                         item.specialist_type: item.selection_status
                         for item in handoff_plan.selections
                     },
+                    "domain_links": {
+                        item.specialist_type: item.linked_domain
+                        for item in handoff_plan.selections
+                        if item.linked_domain
+                    },
+                    "shadow_specialists": [
+                        item.specialist_type
+                        for item in handoff_plan.selections
+                        if item.selection_mode == "shadow"
+                        and item.selection_status == "selected"
+                    ],
                     "requires_governance_review": [
                         item.specialist_type
                         for item in handoff_plan.selections
@@ -566,6 +607,16 @@ class OrchestratorService:
                             else 0
                             for item in handoff_plan.invocations
                         },
+                        "linked_domains": {
+                            item.specialist_type: item.linked_domain
+                            for item in handoff_plan.invocations
+                            if item.linked_domain
+                        },
+                        "shadow_specialists": [
+                            item.specialist_type
+                            for item in handoff_plan.invocations
+                            if item.selection_mode == "shadow"
+                        ],
                     },
                 )
             )
@@ -581,6 +632,11 @@ class OrchestratorService:
                         "boundary_summary": handoff_plan.boundary_summary,
                         "response_channel": handoff_plan.invocations[0].boundary.response_channel,
                         "tool_access_mode": handoff_plan.invocations[0].boundary.tool_access_mode,
+                        "shadow_specialists": [
+                            item.specialist_type
+                            for item in handoff_plan.invocations
+                            if item.selection_mode == "shadow"
+                        ],
                         "shared_memory_attached": all(
                             item.shared_memory_context is not None
                             for item in handoff_plan.invocations
@@ -679,11 +735,31 @@ class OrchestratorService:
                         "invocation_ids": [
                             item.invocation_id for item in specialist_review.invocations
                         ],
+                        "shadow_specialists": [
+                            item.specialist_type
+                            for item in specialist_review.invocations
+                            if item.selection_mode == "shadow"
+                        ],
                         "boundary_summary": specialist_review.boundary_summary,
                     },
                 )
             )
         if specialist_review.contributions:
+            shadow_invocation_ids = {
+                item.invocation_id
+                for item in specialist_review.invocations
+                if item.selection_mode == "shadow"
+            }
+            shadow_contributions = [
+                item
+                for item in specialist_review.contributions
+                if item.invocation_id in shadow_invocation_ids
+            ]
+            live_contributions = [
+                item
+                for item in specialist_review.contributions
+                if item.invocation_id not in shadow_invocation_ids
+            ]
             updated_events.append(
                 self.make_event(
                     "specialists_completed",
@@ -704,26 +780,47 @@ class OrchestratorService:
                     },
                 )
             )
-            refined_plan = self.planning_engine.refine_task_plan(
-                deliberative_plan,
-                specialist_summary=specialist_review.summary,
-                specialist_contributions=specialist_review.contributions,
-            )
-            updated_events.append(
-                self.make_event(
-                    "plan_refined",
-                    contract,
-                    {
-                        "recommended_task_type": refined_plan.recommended_task_type,
-                        "requires_human_validation": refined_plan.requires_human_validation,
-                        "steps": refined_plan.steps,
-                        "specialist_resolution_summary": (
-                            refined_plan.specialist_resolution_summary
-                        ),
-                    },
+            if shadow_contributions:
+                updated_events.append(
+                    self.make_event(
+                        "specialist_shadow_mode_completed",
+                        contract,
+                        {
+                            "specialist_types": [
+                                item.specialist_type for item in shadow_contributions
+                            ],
+                            "invocation_ids": [
+                                item.invocation_id for item in shadow_contributions
+                            ],
+                            "linked_domains": {
+                                invocation.specialist_type: invocation.linked_domain
+                                for invocation in specialist_review.invocations
+                                if invocation.invocation_id in shadow_invocation_ids
+                            },
+                        },
+                    )
                 )
-            )
-            return specialist_review, refined_plan, updated_events
+            if live_contributions:
+                refined_plan = self.planning_engine.refine_task_plan(
+                    deliberative_plan,
+                    specialist_summary=specialist_review.summary,
+                    specialist_contributions=live_contributions,
+                )
+                updated_events.append(
+                    self.make_event(
+                        "plan_refined",
+                        contract,
+                        {
+                            "recommended_task_type": refined_plan.recommended_task_type,
+                            "requires_human_validation": refined_plan.requires_human_validation,
+                            "steps": refined_plan.steps,
+                            "specialist_resolution_summary": (
+                                refined_plan.specialist_resolution_summary
+                            ),
+                        },
+                    )
+                )
+                return specialist_review, refined_plan, updated_events
         return specialist_review, deliberative_plan, updated_events
 
     def build_operation_dispatch(

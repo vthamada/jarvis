@@ -93,12 +93,12 @@ Ordem usada nesta auditoria:
 | `identidade, missão, princípios e filosofia` | `2` a `8`, `26`, `231` | `runtime parcial` | `corrigir agora` | `orchestrator-service`, `planning-engine`, `synthesis-engine`, `governance-service` | a identidade está presente, mas ainda não é auditada como eixo próprio de aderência | transformar princípios identitários em critérios auditáveis de runtime e síntese | `v2`, com revisão transversal em todas as sprints |
 | `núcleo central e fluxo principal` | `9`, `27` a `30`, `35` a `38`, `49` | `runtime parcial` | `corrigir agora` | `orchestrator-service`, `planning-engine`, `cognitive-engine`, `langgraph_flow` | o fluxo central existe, mas a leitura do mestre ainda não governa explicitamente todos os recortes do backlog | manter o núcleo como eixo de cobrança e revisar cada sprint pela ótica do fluxo principal | `v2` contínuo |
 | `mentes` | `10`, `19`, `21`, `38`, `50` | `runtime parcial` | `corrigir agora` | `engines/cognitive-engine`, `planning-engine` | falta registry canônico, maturidade por mente e modelagem mais profunda de composição e arbitragem | abrir registry de mentes e explicitar relações preferenciais entre elas | `v2`, após avanço de `domínios` e `memórias` |
-| `domínios` | `11`, `12`, `13`, `22`, `39`, `52`, `232` | `runtime parcial` | `corrigir agora` | `knowledge-service`, `knowledge/curated/v1_corpus.json`, `cognitive-engine` | a taxonomia oficial de 30 domínios ainda não virou registry nem runtime guiado pelo mestre | criar registry canônico de domínios e alinhar o corpus ao mapa oficial | `v2`, prioridade mais alta |
+| `domínios` | `11`, `12`, `13`, `22`, `39`, `52`, `232` | `runtime parcial` | `corrigir agora` | `knowledge-service`, `knowledge/curated/v1_corpus.json`, `knowledge/curated/v2_domain_registry.json`, `cognitive-engine`, `specialist-engine` | o registry já existe, mas ainda cobre só o corte inicial do `v2` e não o mapa completo de 30 domínios | expandir o registry inicial para cobertura progressiva do mapa canônico e usá-lo como fonte primária de roteamento | `v2`, Sprints 5 e 6 |
 | `memórias` | `14`, `23`, `40`, `51`, `83`, `232` | `runtime parcial` | `corrigir agora` | `shared/types`, `memory-service`, `governance-service`, `orchestrator-service`, `specialist-engine` | as 11 classes existem formalmente, mas poucas operam como políticas distintas | consolidar registry de memórias e ligar a memória compartilhada do `v2` ao registry inicial de domínios | `v2`, Sprint 4 em diante |
 | `governança, segurança e autonomia` | `24`, `42`, `54`, `230` | `runtime parcial` | `corrigir agora` | `governance-service`, `observability-service`, `shared/contracts` | a governança é forte no recorte atual, mas ainda não cobre toda a amplitude formal do mestre | expandir a auditoria por tipo de decisão e por nível de autonomia | `v2`, transversal |
 | `especialistas subordinados` | `64`, `76.4`, `254` a `263` | `runtime parcial` | `corrigir agora` | `specialist-engine`, `governance-service`, `orchestrator-service`, `shared/contracts` | há handoff e fronteira, mas ainda não há especialistas realmente orientados por domínio com memória compartilhada mais rica | consolidar memória relacional e amarrar especialista a domínio e contratos canônicos | `v2`, Sprints 3 e 4 |
 | `tool layer e operação computacional` | `15`, `41`, `53`, `65` | `runtime parcial` | `manter deferido` | `operational-service`, `tools/`, artefatos textuais do baseline | o mestre descreve uma camada operacional mais ampla do que o recorte atual implementa | manter a operação textual segura e só expandir quando o `v2` pedir | `v2` tardio ou `v3` |
-| `observabilidade, validação e evals` | `44`, `55`, `66`, `233`, `301` a `311`, `329` a `342` | `runtime parcial` | `corrigir agora` | `observability-service`, `tools/internal_pilot_report.py`, `tools/compare_orchestrator_paths.py`, `evolution-lab` | a trilha está forte, mas a cobertura ainda não está explicitamente indexada por eixo do mestre | amarrar observabilidade e evals aos eixos canônicos, não só aos fluxos recentes | `v2`, Sprint 5 e fechamento do ciclo |
+| `observabilidade, validação e evals` | `44`, `55`, `66`, `233`, `301` a `311`, `329` a `342` | `runtime parcial` | `corrigir agora` | `observability-service`, `tools/internal_pilot_report.py`, `tools/compare_orchestrator_paths.py`, `evolution-lab` | os sinais de aderência por eixo já existem, mas ainda falta usá-los para fechar o primeiro corte do `v2` | usar `domain_alignment_status`, `memory_alignment_status` e `specialist_sovereignty_status` para decidir manutenção, ajuste ou contenção do recorte atual | `v2`, Sprint 6 |
 | `evolução e autoaperfeiçoamento` | `16`, `25`, `43`, `56`, `67`, `313` a `327` | `runtime parcial` | `manter deferido` | `evolution-lab`, `tools/evolution_from_pilot.py`, proposals sandbox-only | existe laboratório e governança, mas não a camada evolutiva plena descrita pelo mestre | preservar o sandbox e só promover quando houver maturidade de baseline maior | `v2` tardio e `v3` |
 | `voz, realtime e superfícies` | `68`, `76.1`, `126` a `128`, `253` | `deferido por fase` | `manter deferido` | documentação e referência arquitetural; ausência de runtime oficial | a visão está clara, mas o corte atual do projeto ainda não autoriza materialização | manter fora do backlog imediato e preservar a direção canônica | `v3` ou fase específica futura |
 | `contratos, schemas e tipos` | `238` a `273` | `runtime parcial` | `corrigir agora` | `shared/contracts`, `shared/types`, serviços centrais | vários contratos canônicos já existem, mas a cobertura ainda é desigual entre eixos e especialistas | fechar registries e alinhar novos contratos à matriz de aderência | `v2`, transversal |
@@ -106,7 +106,7 @@ Ordem usada nesta auditoria:
 
 Leitura objetiva:
 
-- o eixo mais distante do mestre continua sendo `domínios`;
+- o eixo mais distante do mestre continua sendo `domínios`, agora com registry inicial já materializado;
 - `memórias` é o eixo com maior impacto operacional imediato;
 - `mentes` está melhor encaminhado, mas ainda implícito demais;
 - `voz` e parte da `tool layer` não são falhas; são deferimentos corretos de fase;
@@ -237,9 +237,9 @@ como mapa oficial de conhecimento do sistema.
 
 | Subárea | Estado | Observação |
 | --- | --- | --- |
-| mapa oficial de 30 domínios | `canônico apenas` | ainda não existe registry canônico |
-| domínios ativos no runtime | `runtime parcial` | subset útil do baseline |
-| roteamento pela taxonomia oficial | `runtime parcial` | ainda não guiado pelo mapa completo |
+| mapa oficial de 30 domínios | `runtime parcial` | existe registry inicial, mas ainda abaixo do mapa completo |
+| domínios ativos no runtime | `runtime parcial` | subset útil do baseline já entrou no registry do `v2` |
+| roteamento pela taxonomia oficial | `runtime parcial` | o registry já influencia specialist hints, mas ainda não governa todo o roteamento |
 | maturidade por domínio | `canônico apenas` | ausência de status formal |
 
 Classe final:
@@ -252,7 +252,7 @@ Risco de desvio:
 
 Próximo passo obrigatório:
 
-- abrir registry dos 30 domínios, mapear o corpus atual a ele e priorizar quais domínios entram no `v2`.
+- expandir o registry inicial dos domínios e usá-lo como fonte primária de roteamento e comparação do `v2`.
 
 ## 5.5 Memórias
 
@@ -609,8 +609,8 @@ Justificativa:
 A partir desta auditoria, o `v2` deve ser lido assim:
 
 - Sprint 3 fechou o primeiro avanço prioritário do eixo `memórias`, com contexto compartilhado mediado pelo núcleo;
-- Sprint 4 agora deve abrir o registry de `domínios` e só ligar especialista em `shadow mode` com vínculo explícito a domínio e memória compartilhada;
-- Sprint 5 deve medir aderência do recorte de especialistas aos eixos do mestre, não apenas performance local;
+- Sprint 4 abriu o registry inicial de `domínios` e ligou o primeiro especialista em `shadow mode` com vínculo explícito a domínio e memória compartilhada;
+- Sprint 5 fechou a medição explícita de aderência do recorte de especialistas aos eixos do mestre, não apenas performance local;
 - Sprint 6 deve fechar o primeiro corte do `v2` dizendo explicitamente o que ficou:
   - `corrigido agora`;
   - `mantido deferido`;

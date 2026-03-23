@@ -88,6 +88,23 @@ def _evaluation_from_dict(payload: dict[str, object]) -> FlowEvaluationInput:
             if payload.get("continuity_runtime_mode") is not None
             else None
         ),
+        registry_domains=list(payload.get("registry_domains", [])),
+        shadow_specialists=list(payload.get("shadow_specialists", [])),
+        domain_alignment_status=(
+            str(payload["domain_alignment_status"])
+            if payload.get("domain_alignment_status") is not None
+            else None
+        ),
+        memory_alignment_status=(
+            str(payload["memory_alignment_status"])
+            if payload.get("memory_alignment_status") is not None
+            else None
+        ),
+        specialist_sovereignty_status=(
+            str(payload["specialist_sovereignty_status"])
+            if payload.get("specialist_sovereignty_status") is not None
+            else None
+        ),
         continuity_trace_status=(
             str(payload["continuity_trace_status"])
             if payload.get("continuity_trace_status") is not None
@@ -125,6 +142,11 @@ def build_payload(args: Namespace) -> dict[str, object]:
                 continuity_action=audit.continuity_action,
                 continuity_source=audit.continuity_source,
                 continuity_runtime_mode=audit.continuity_runtime_mode,
+                registry_domains=list(audit.registry_domains),
+                shadow_specialists=list(audit.shadow_specialists),
+                domain_alignment_status=audit.domain_alignment_status,
+                memory_alignment_status=audit.memory_alignment_status,
+                specialist_sovereignty_status=audit.specialist_sovereignty_status,
                 continuity_trace_status=audit.continuity_trace_status,
                 missing_continuity_signals=audit.missing_continuity_signals,
                 continuity_anomaly_flags=audit.continuity_anomaly_flags,

@@ -163,6 +163,57 @@ def test_orchestrator_service_requests_clarification_without_operation() -> None
     assert "clarification_required" in [event.event_name for event in result.events]
 
 
+def test_orchestrator_service_tracks_domain_shadow_specialist_without_breaking_core() -> None:
+    temp_dir = runtime_dir("orchestrator-shadow-domain")
+    observability = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service = OrchestratorService(
+        governance_service=GovernanceService(),
+        memory_service=MemoryService(
+            database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+        ),
+        operational_service=OperationalService(artifact_dir=str(temp_dir / "artifacts")),
+        observability_service=observability,
+    )
+    result = service.handle_input(
+        InputContract(
+            request_id=RequestId("req-shadow"),
+            session_id=SessionId("sess-shadow"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Analyze the Python service API rollout and compare the safest change.",
+            timestamp="2026-03-17T00:00:00Z",
+        )
+    )
+
+    stored_events = observability.list_recent_events(
+        ObservabilityQuery(request_id="req-shadow", limit=60)
+    )
+    event_names = [event.event_name for event in stored_events]
+    assert "domain_registry_resolved" in event_names
+    assert "specialist_shadow_mode_completed" in event_names
+    selection_event = next(
+        event for event in stored_events if event.event_name == "specialist_selection_decided"
+    )
+    assert "especialista_software_subordinado" in selection_event.payload["shadow_specialists"]
+    assert (
+        selection_event.payload["domain_links"]["especialista_software_subordinado"]
+        == "software_development"
+    )
+    shadow_event = next(
+        event for event in stored_events if event.event_name == "specialist_shadow_mode_completed"
+    )
+    assert shadow_event.payload["linked_domains"]["especialista_software_subordinado"] == (
+        "software_development"
+    )
+    assert any(
+        invocation.specialist_type == "especialista_software_subordinado"
+        and invocation.selection_mode == "shadow"
+        and invocation.linked_domain == "software_development"
+        for invocation in result.specialist_invocations
+    )
+    assert result.response_text
+
+
 def test_orchestrator_service_blocks_sensitive_action() -> None:
     temp_dir = runtime_dir("orchestrator-block")
     service = OrchestratorService(

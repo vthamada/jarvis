@@ -25,7 +25,9 @@ Status desta versão do ciclo:
 - Sprint 1 concluída;
 - Sprint 2 concluída;
 - Sprint 3 concluída;
-- Sprint 4 é a próxima sprint ativa.
+- Sprint 4 concluída;
+- Sprint 5 concluída;
+- Sprint 6 é a próxima sprint ativa.
 
 ---
 
@@ -225,9 +227,9 @@ Resultado registrado nesta rodada:
 
 Status:
 
-- próxima sprint ativa
+- concluída
 - eixo principal do mestre: `domínios`
-- lacuna dominante a atacar: ausência de registry canônico e de vínculo explícito entre domínio e especialista
+- lacuna dominante fechada: ausência de registry canônico e de vínculo explícito entre domínio e especialista
 - continua fora de cobertura: composição formal de `mentes` e superfícies amplas
 
 ### Objetivo
@@ -270,15 +272,23 @@ Abrir o registry inicial de domínios do `v2` e ligar o primeiro especialista su
 
 - ampliar especialistas cedo demais sem ganho mensurável.
 
+Resultado registrado nesta rodada:
+
+- `knowledge-service` passou a carregar `v2_domain_registry.json` como registry inicial dos domínios ativos do ciclo;
+- `software_development` passou a abrir a primeira rota canônica `domínio -> especialista` do `v2`, ligando `especialista_software_subordinado` em `shadow mode`;
+- `cognitive-engine` passou a priorizar hints vindos do registry antes de ampliar heurística solta de especialista;
+- `specialist-engine` passou a materializar `linked_domain` e `selection_mode`, deixando explícito quando a convocação é domínio-dirigida e quando ela roda em `shadow`;
+- `orchestrator-service` e o fluxo opcional de `LangGraph` passaram a registrar `domain_registry_resolved` e `specialist_shadow_mode_completed`, tornando o recorte comparável sem quebrar a soberania do núcleo.
+
 ---
 
 ## 8. Sprint 5
 
 Status:
 
-- planejada
+- concluída
 - eixo principal do mestre: `observabilidade, validação e evals`
-- lacuna dominante a atacar: ausência de medição explícita da aderência dos especialistas aos eixos do mestre
+- lacuna dominante fechada: ausência de medição explícita da aderência dos especialistas aos eixos do mestre
 - continua fora de cobertura: expansão de `mentes`, voz oficial e tool layer ampla
 
 ### Objetivo
@@ -318,13 +328,21 @@ Transformar convocação de especialistas em comportamento avaliável, comparáv
 
 - tratar benchmark ou framework externo como validação automática do desenho.
 
+Resultado registrado nesta rodada:
+
+- `observability-service` passou a auditar `domain_alignment_status`, `memory_alignment_status` e `specialist_sovereignty_status` no fluxo de especialistas;
+- `internal_pilot_support` passou a cobrir o cenário `software_shadow_review`, preservando comparação entre núcleo puro, especialista estrutural e especialista em `shadow mode`;
+- `compare_orchestrator_paths` passou a emitir `baseline_axis_adherence_score`, `candidate_axis_adherence_score` e a comparar explicitamente sinais de aderência por eixo;
+- a rodada local de comparação do `v2` fechou com `overall_verdict=equivalent`, `matched_scenarios=7/7` e `comparison_decision=candidate_ready_for_eval_gate`;
+- `evolution_from_pilot` e `evolution-lab` passaram a carregar sinais de domínio, `shadow mode` e aderência aos eixos para proposals sandbox-only.
+
 ---
 
 ## 9. Sprint 6
 
 Status:
 
-- planejada
+- próxima sprint ativa
 - eixo principal do mestre: `implementação, operação, release e incidentes`
 - lacuna dominante a atacar: fechamento do ciclo sem classificar o que foi corrigido, deferido ou mantido apenas como visão
 - continua fora de cobertura: tudo o que permanecer corretamente deferido por fase
