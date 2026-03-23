@@ -204,3 +204,50 @@ def test_synthesis_engine_surfaces_related_resumption_cleanly() -> None:
     assert "retomada explicita de continuidade relacionada" in response
     assert "missao relacionada 'Analyze rollout risks.' deve ser retomada agora" in response
     assert "retomada relacionada precisa justificar por que supera os loops ativos" in response
+
+
+def test_synthesis_engine_surfaces_governed_replay_recovery() -> None:
+    engine = SynthesisEngine()
+    identity = IdentityEngine().get_profile()
+    replay_plan = sample_plan()
+    replay_plan.continuity_replay_status = "awaiting_validation"
+    replay_plan.continuity_recovery_mode = "governed_review"
+    replay_plan.continuity_resume_point = "continuar:alinhar checkpoint principal"
+    replay_plan.requires_human_validation = True
+    replay_plan.risks = ["checkpoint recuperado ainda aguarda validacao explicita"]
+    response = engine.compose(
+        SynthesisInput(
+            intent="planning",
+            identity_profile=identity,
+            response_style="estruturado",
+            governance_decision=GovernanceDecisionContract(
+                decision_id=GovernanceDecisionId("decision-5"),
+                governance_check_id=GovernanceCheckId("check-5"),
+                risk_level=RiskLevel.MODERATE,
+                decision=PermissionDecision.DEFER_FOR_VALIDATION,
+                justification=(
+                    "O checkpoint recuperado ainda aguarda validacao e nao pode "
+                    "ser retomado automaticamente."
+                ),
+                timestamp="2026-03-18T00:00:00Z",
+                conditions=["Manter apenas analise e rastreabilidade ate revisao explicita."],
+            ),
+            recovered_context=["continuity_replay_status=awaiting_validation"],
+            active_minds=["mente_executiva"],
+            active_domains=["strategy"],
+            knowledge_snippets=[],
+            deliberative_plan=replay_plan,
+            specialist_contributions=[],
+            operation_result=None,
+            identity_mode="structured_planning",
+            session_continuity_brief=(
+                "sessao segue ancorada em 'Plan milestone M3', com continuidade ativa em "
+                "'alinhar checkpoint principal'"
+            ),
+            session_continuity_mode="continuar",
+            session_anchor_goal="Plan milestone M3",
+        )
+    )
+    assert "checkpoint recuperado ainda aguarda validacao" in response
+    assert "permanece em modo governado" in response
+    assert "aguarda validacao explicita" in response

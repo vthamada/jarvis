@@ -124,6 +124,8 @@ def test_memory_service_records_and_recovers_session_history_across_instances() 
     assert any("session_continuity_mode=continuar" in item for item in recovered.session_context)
     assert any("continuity_checkpoint_id=" in item for item in recovered.session_context)
     assert any("continuity_checkpoint_status=ready" in item for item in recovered.session_context)
+    assert any("continuity_replay_status=resumable" in item for item in recovered.session_context)
+    assert any("continuity_resume_point=continuar:" in item for item in recovered.session_context)
     assert recovered.mission_hints == []
     assert any("prior_plan=" in item for item in recovered.plan_hints)
 
@@ -159,6 +161,96 @@ def test_memory_service_exposes_recoverable_continuity_checkpoint() -> None:
     assert checkpoint.checkpoint_status == "ready"
     assert "sessao segue ancorada" in checkpoint.checkpoint_summary
     assert checkpoint.replay_summary is not None
+
+
+def test_memory_service_builds_resumable_continuity_replay_state() -> None:
+    temp_dir = runtime_dir("memory-replay")
+    database_url = f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+    contract = InputContract(
+        request_id=RequestId("req-replay"),
+        session_id=SessionId("sess-replay"),
+        mission_id=MissionId("mission-replay"),
+        channel=ChannelType.CHAT,
+        input_type=InputType.TEXT,
+        content="Please plan the sprint.",
+        timestamp="2026-03-17T00:00:00Z",
+    )
+    service = MemoryService(database_url=database_url)
+    service.record_turn(
+        contract,
+        intent="planning",
+        response_text="Plan created.",
+        deliberative_plan=sample_plan(),
+        specialist_contributions=sample_specialist_contributions(),
+    )
+
+    replay = MemoryService(database_url=database_url).get_session_continuity_replay(
+        "sess-replay"
+    )
+
+    assert replay is not None
+    assert replay.session_id == SessionId("sess-replay")
+    assert replay.replay_status == "resumable"
+    assert replay.recovery_mode == "resume_active_mission"
+    assert replay.resume_point.startswith("continuar:")
+    assert replay.requires_manual_resume is False
+
+
+def test_memory_service_resolves_governed_continuity_pause() -> None:
+    temp_dir = runtime_dir("memory-pause")
+    database_url = f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+    service = MemoryService(database_url=database_url)
+    contract = InputContract(
+        request_id=RequestId("req-pause-1"),
+        session_id=SessionId("sess-pause"),
+        mission_id=MissionId("mission-pause"),
+        channel=ChannelType.CHAT,
+        input_type=InputType.TEXT,
+        content="Please plan the sprint.",
+        timestamp="2026-03-17T00:00:00Z",
+    )
+    service.record_turn(
+        contract,
+        intent="planning",
+        response_text="Need explicit validation before changing mission.",
+        deliberative_plan=DeliberativePlanContract(
+            plan_summary="reformular objetivo com impacto operacional",
+            goal="Please plan the sprint.",
+            steps=["explicitar conflito", "pedir validacao"],
+            active_domains=["strategy"],
+            active_minds=["mente_executiva"],
+            constraints=["revisao humana"],
+            risks=["pedido contem sinais de risco operacional"],
+            recommended_task_type="general_response",
+            requires_human_validation=True,
+            rationale="contexto=missao ativa; apoio=baseline local",
+            continuity_action="reformular",
+            continuity_reason="pedido atual desloca o foco da missao ativa",
+            open_loops=["fechar checkpoint principal"],
+        ),
+        governance_decision=PermissionDecision.DEFER_FOR_VALIDATION,
+    )
+
+    pause = service.get_session_continuity_pause("sess-pause")
+
+    assert pause is not None
+    assert pause.pause_status == "awaiting_validation"
+    assert pause.requires_human_input is True
+
+    resolved_pause = service.resolve_session_continuity_pause(
+        "sess-pause",
+        approved=True,
+        resolved_by="operator",
+        resolution_note="validado manualmente para retomar",
+    )
+    replay = service.get_session_continuity_replay("sess-pause")
+
+    assert resolved_pause is not None
+    assert resolved_pause.pause_status == "approved"
+    assert resolved_pause.resolution_status == "approved"
+    assert replay is not None
+    assert replay.replay_status == "resumable"
+    assert replay.requires_manual_resume is False
 
 
 def test_memory_service_persists_mission_state_with_identity_continuity_and_open_loops() -> None:

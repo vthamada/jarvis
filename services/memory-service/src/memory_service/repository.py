@@ -63,6 +63,16 @@ class StoredContinuityCheckpoint:
     replay_summary: str | None = None
 
 
+@dataclass(frozen=True)
+class StoredContinuityPauseResolution:
+    session_id: str
+    checkpoint_id: str
+    resolution_status: str
+    resolved_at: str
+    resolved_by: str | None = None
+    resolution_note: str | None = None
+
+
 class MemoryRepository(ABC):
     """Persistence contract for episodic, contextual, and mission memory."""
 
@@ -105,6 +115,20 @@ class MemoryRepository(ABC):
         session_id: str,
     ) -> StoredContinuityCheckpoint | None:
         """Load the latest recoverable checkpoint for a session."""
+
+    @abstractmethod
+    def upsert_continuity_pause_resolution(
+        self,
+        resolution: StoredContinuityPauseResolution,
+    ) -> None:
+        """Persist the latest manual resolution attached to a continuity pause."""
+
+    @abstractmethod
+    def fetch_continuity_pause_resolution(
+        self,
+        session_id: str,
+    ) -> StoredContinuityPauseResolution | None:
+        """Load the latest manual resolution attached to a continuity pause."""
 
     @abstractmethod
     def upsert_mission_state(self, mission_state: MissionStateContract) -> None:
@@ -373,6 +397,61 @@ class SqliteMemoryRepository(MemoryRepository):
             updated_at=str(row["updated_at"]),
         )
 
+    def upsert_continuity_pause_resolution(
+        self,
+        resolution: StoredContinuityPauseResolution,
+    ) -> None:
+        with self._connect() as connection:
+            connection.execute(
+                """
+                INSERT INTO continuity_pause_resolutions (
+                    session_id, checkpoint_id, resolution_status, resolved_by,
+                    resolution_note, resolved_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?)
+                ON CONFLICT(session_id) DO UPDATE SET
+                    checkpoint_id = excluded.checkpoint_id,
+                    resolution_status = excluded.resolution_status,
+                    resolved_by = excluded.resolved_by,
+                    resolution_note = excluded.resolution_note,
+                    resolved_at = excluded.resolved_at
+                """,
+                (
+                    resolution.session_id,
+                    resolution.checkpoint_id,
+                    resolution.resolution_status,
+                    resolution.resolved_by,
+                    resolution.resolution_note,
+                    resolution.resolved_at,
+                ),
+            )
+            connection.commit()
+
+    def fetch_continuity_pause_resolution(
+        self,
+        session_id: str,
+    ) -> StoredContinuityPauseResolution | None:
+        with self._connect() as connection:
+            row = connection.execute(
+                """
+                SELECT session_id, checkpoint_id, resolution_status, resolved_by,
+                       resolution_note, resolved_at
+                FROM continuity_pause_resolutions
+                WHERE session_id = ?
+                """,
+                (session_id,),
+            ).fetchone()
+        if row is None:
+            return None
+        return StoredContinuityPauseResolution(
+            session_id=str(row["session_id"]),
+            checkpoint_id=str(row["checkpoint_id"]),
+            resolution_status=str(row["resolution_status"]),
+            resolved_by=row["resolved_by"],
+            resolution_note=row["resolution_note"],
+            resolved_at=str(row["resolved_at"]),
+        )
+
     def fetch_mission_state(self, mission_id: str) -> MissionStateContract | None:
         with self._connect() as connection:
             row = connection.execute(
@@ -475,6 +554,24 @@ class SqliteMemoryRepository(MemoryRepository):
                     origin_request_id TEXT,
                     replay_summary TEXT,
                     updated_at TEXT NOT NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS continuity_pause_resolutions (
+                    session_id TEXT PRIMARY KEY,
+                    checkpoint_id TEXT NOT NULL,
+                    resolution_status TEXT NOT NULL,
+                    resolved_by TEXT,
+                    resolution_note TEXT,
+                    resolved_at TEXT NOT NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS continuity_pause_resolutions (
+                    session_id TEXT PRIMARY KEY,
+                    checkpoint_id TEXT NOT NULL,
+                    resolution_status TEXT NOT NULL,
+                    resolved_by TEXT,
+                    resolution_note TEXT,
+                    resolved_at TEXT NOT NULL
                 );
                 
                 CREATE TABLE IF NOT EXISTS mission_states (
@@ -866,6 +963,62 @@ class PostgresMemoryRepository(MemoryRepository):
             origin_request_id=row["origin_request_id"],
             replay_summary=row["replay_summary"],
             updated_at=row["updated_at"],
+        )
+
+    def upsert_continuity_pause_resolution(
+        self,
+        resolution: StoredContinuityPauseResolution,
+    ) -> None:
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO continuity_pause_resolutions (
+                    session_id, checkpoint_id, resolution_status, resolved_by,
+                    resolution_note, resolved_at
+                )
+                VALUES (%s, %s, %s, %s, %s, %s)
+                ON CONFLICT (session_id) DO UPDATE SET
+                    checkpoint_id = EXCLUDED.checkpoint_id,
+                    resolution_status = EXCLUDED.resolution_status,
+                    resolved_by = EXCLUDED.resolved_by,
+                    resolution_note = EXCLUDED.resolution_note,
+                    resolved_at = EXCLUDED.resolved_at
+                """,
+                (
+                    resolution.session_id,
+                    resolution.checkpoint_id,
+                    resolution.resolution_status,
+                    resolution.resolved_by,
+                    resolution.resolution_note,
+                    resolution.resolved_at,
+                ),
+            )
+            connection.commit()
+
+    def fetch_continuity_pause_resolution(
+        self,
+        session_id: str,
+    ) -> StoredContinuityPauseResolution | None:
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT session_id, checkpoint_id, resolution_status, resolved_by,
+                       resolution_note, resolved_at
+                FROM continuity_pause_resolutions
+                WHERE session_id = %s
+                """,
+                (session_id,),
+            )
+            row = cursor.fetchone()
+        if row is None:
+            return None
+        return StoredContinuityPauseResolution(
+            session_id=row["session_id"],
+            checkpoint_id=row["checkpoint_id"],
+            resolution_status=row["resolution_status"],
+            resolved_by=row["resolved_by"],
+            resolution_note=row["resolution_note"],
+            resolved_at=row["resolved_at"],
         )
 
     def fetch_mission_state(self, mission_id: str) -> MissionStateContract | None:

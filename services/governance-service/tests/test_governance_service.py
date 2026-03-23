@@ -196,3 +196,41 @@ def test_governance_service_defers_critical_memory_mutation() -> None:
     )
     assert result.governance_decision.decision == PermissionDecision.DEFER_FOR_VALIDATION
     assert result.governance_decision.requires_rollback_plan is True
+
+
+def test_governance_service_defers_governed_replay_recovery() -> None:
+    service = GovernanceService()
+    plan = DeliberativePlanContract(
+        plan_summary="retomar checkpoint governado da continuidade",
+        goal="Continue the sprint plan.",
+        steps=["revisar ponto de retomada", "pedir validacao antes de continuar"],
+        active_domains=["strategy"],
+        active_minds=["mente_executiva"],
+        constraints=["revisao humana"],
+        risks=["checkpoint recuperado ainda aguarda validacao explicita"],
+        recommended_task_type="general_response",
+        requires_human_validation=True,
+        rationale="contexto=checkpoint; apoio=baseline local",
+        success_criteria=["retomada deve permanecer governada ate validacao"],
+        continuity_action="continuar",
+        continuity_replay_status="awaiting_validation",
+        continuity_recovery_mode="governed_review",
+        continuity_resume_point="continuar:fechar checkpoint principal",
+        open_loops=["fechar checkpoint principal"],
+    )
+    result = service.assess_request(
+        InputContract(
+            request_id=RequestId("req-5"),
+            session_id=SessionId("sess-5"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Continue the sprint plan.",
+            timestamp="2026-03-17T00:00:00Z",
+        ),
+        intent="planning",
+        requested_by_service="orchestrator-service",
+        plan=plan,
+    )
+    assert result.governance_check.mission_continuity_hint == "checkpoint_aguarda_validacao"
+    assert result.governance_decision.decision == PermissionDecision.DEFER_FOR_VALIDATION
+    assert "nao pode ser retomado automaticamente" in result.governance_decision.justification

@@ -189,6 +189,13 @@ def test_orchestrator_service_recovers_mission_continuity_across_instances() -> 
     assert any("open_loops=" in item for item in second_result.recovered_context)
     assert any("mission_semantic_brief=" in item for item in second_result.recovered_context)
     assert any("mission_goal=" in item for item in second_result.recovered_context)
+    assert any(
+        item == "continuity_replay_status=resumable"
+        for item in second_result.recovered_context
+    )
+    assert any(
+        item.startswith("continuity_resume_point=") for item in second_result.recovered_context
+    )
     assert second_result.deliberative_plan.recommended_task_type == "produce_analysis_brief"
     assert second_result.operation_result is None
     assert second_result.specialist_review is not None
@@ -202,6 +209,11 @@ def test_orchestrator_service_recovers_mission_continuity_across_instances() -> 
     assert "Julgamento" in second_result.response_text
     assert "missao ativa segue ancorada em" in second_result.response_text
     assert "Dominios:" not in second_result.response_text
+    replay_event = next(
+        event for event in second_result.events if event.event_name == "continuity_replay_loaded"
+    )
+    assert replay_event.payload["replay_status"] == "resumable"
+    assert replay_event.payload["recovery_mode"] == "resume_active_mission"
 
 
 def test_orchestrator_service_surfaces_related_mission_candidate_in_same_session() -> None:
@@ -383,3 +395,134 @@ def test_orchestrator_service_preserves_mission_state_after_blocked_followup() -
     assert mission_state.mission_goal == "Please plan the sprint."
     assert mission_state.last_recommendation == first_result.deliberative_plan.plan_summary
     assert mission_state.open_loops == first_result.deliberative_plan.open_loops
+
+
+def test_orchestrator_service_governs_replay_when_checkpoint_awaits_validation() -> None:
+    temp_dir = runtime_dir("orchestrator-replay-governed")
+    memory_db = f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+    observability_db = str(temp_dir / "observability.db")
+    artifact_dir = str(temp_dir / "artifacts")
+    first = OrchestratorService(
+        memory_service=MemoryService(database_url=memory_db),
+        operational_service=OperationalService(artifact_dir=artifact_dir),
+        observability_service=ObservabilityService(database_path=observability_db),
+    )
+    second = OrchestratorService(
+        memory_service=MemoryService(database_url=memory_db),
+        operational_service=OperationalService(artifact_dir=artifact_dir),
+        observability_service=ObservabilityService(database_path=observability_db),
+    )
+    first.handle_input(
+        InputContract(
+            request_id=RequestId("req-replay-1"),
+            session_id=SessionId("sess-replay-governed"),
+            mission_id=MissionId("mission-replay-governed"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Please plan the sprint.",
+            timestamp="2026-03-17T00:00:00Z",
+        )
+    )
+    first.handle_input(
+        InputContract(
+            request_id=RequestId("req-replay-2"),
+            session_id=SessionId("sess-replay-governed"),
+            mission_id=MissionId("mission-replay-governed"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Start a new marketing campaign instead.",
+            timestamp="2026-03-17T00:01:00Z",
+        )
+    )
+    result = second.handle_input(
+        InputContract(
+            request_id=RequestId("req-replay-3"),
+            session_id=SessionId("sess-replay-governed"),
+            mission_id=MissionId("mission-replay-governed"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Continue the sprint plan.",
+            timestamp="2026-03-17T00:02:00Z",
+        )
+    )
+
+    assert any(
+        item == "continuity_replay_status=awaiting_validation"
+        for item in result.recovered_context
+    )
+    assert result.deliberative_plan.continuity_recovery_mode == "governed_review"
+    assert result.deliberative_plan.recommended_task_type == "general_response"
+    assert result.governance_decision.decision == PermissionDecision.DEFER_FOR_VALIDATION
+    governed_event = next(
+        event for event in result.events if event.event_name == "continuity_recovery_governed"
+    )
+    assert governed_event.payload["replay_status"] == "awaiting_validation"
+    assert governed_event.payload["recovery_mode"] == "governed_review"
+
+
+def test_orchestrator_service_tracks_manual_resolution_of_continuity_pause() -> None:
+    temp_dir = runtime_dir("orchestrator-replay-resolved")
+    memory_db = f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+    observability_db = str(temp_dir / "observability.db")
+    artifact_dir = str(temp_dir / "artifacts")
+    first = OrchestratorService(
+        memory_service=MemoryService(database_url=memory_db),
+        operational_service=OperationalService(artifact_dir=artifact_dir),
+        observability_service=ObservabilityService(database_path=observability_db),
+    )
+    second = OrchestratorService(
+        memory_service=MemoryService(database_url=memory_db),
+        operational_service=OperationalService(artifact_dir=artifact_dir),
+        observability_service=ObservabilityService(database_path=observability_db),
+    )
+    first.handle_input(
+        InputContract(
+            request_id=RequestId("req-resolve-1"),
+            session_id=SessionId("sess-replay-resolved"),
+            mission_id=MissionId("mission-replay-resolved"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Please plan the sprint.",
+            timestamp="2026-03-17T00:00:00Z",
+        )
+    )
+    first.handle_input(
+        InputContract(
+            request_id=RequestId("req-resolve-2"),
+            session_id=SessionId("sess-replay-resolved"),
+            mission_id=MissionId("mission-replay-resolved"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Start a new marketing campaign instead.",
+            timestamp="2026-03-17T00:01:00Z",
+        )
+    )
+    result = second.handle_input(
+        InputContract(
+            request_id=RequestId("req-resolve-3"),
+            session_id=SessionId("sess-replay-resolved"),
+            mission_id=MissionId("mission-replay-resolved"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Continue the sprint plan.",
+            timestamp="2026-03-17T00:02:00Z",
+            metadata={
+                "continuity_resume": {
+                    "approved": True,
+                    "resolved_by": "operator",
+                    "resolution_note": "retomada aprovada apos revisao",
+                }
+            },
+        )
+    )
+
+    assert any(
+        item == "continuity_replay_status=resumable"
+        for item in result.recovered_context
+    )
+    assert result.governance_decision.decision == PermissionDecision.ALLOW_WITH_CONDITIONS
+    resolved_event = next(
+        event for event in result.events if event.event_name == "continuity_pause_resolved"
+    )
+    assert resolved_event.payload["resolution_status"] == "approved"
+    assert resolved_event.payload["resolved_by"] == "operator"

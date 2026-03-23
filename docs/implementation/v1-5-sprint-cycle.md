@@ -21,7 +21,9 @@ Fontes de direção:
 Status desta versão do ciclo:
 
 - Sprint 1 concluída;
-- Sprint 2 é a próxima sprint ativa.
+- Sprint 2 concluída;
+- Sprint 3 concluída;
+- Sprint 4 é a próxima sprint ativa.
 
 ---
 
@@ -87,6 +89,10 @@ Resultado registrado nesta rodada:
 
 ## 5. Sprint 2
 
+Status:
+
+- concluída
+
 ### Objetivo
 
 Executar replay e recuperação governada do fluxo de continuidade.
@@ -103,9 +109,20 @@ Executar replay e recuperação governada do fluxo de continuidade.
 2. recuperação;
 3. integração com observabilidade.
 
+Resultado registrado nesta rodada:
+
+- `memory-service` passou a expor `ContinuityReplayContract` com `replay_status`, `recovery_mode` e `resume_point` por sessão;
+- a recuperação passou a publicar hints estruturais de replay e retomada segura no contexto recuperado;
+- `orchestrator-service` e a trilha opcional de `LangGraph` passaram a emitir `continuity_replay_loaded` e `continuity_recovery_governed` quando o checkpoint exige retomada governada;
+- `planning-engine`, `governance-service` e `synthesis-engine` passaram a tratar checkpoint contido ou aguardando validação como fluxo de recuperação governada, sem retomada automática.
+
 ---
 
 ## 6. Sprint 3
+
+Status:
+
+- concluída
 
 ### Objetivo
 
@@ -116,6 +133,13 @@ Introduzir pausas `HITL` quando a continuidade disputar direção com o contexto
 - estado de pausa governada;
 - retomada manual rastreável;
 - integração com governança e síntese.
+
+Resultado registrado nesta rodada:
+
+- `memory-service` passou a expor `ContinuityPauseContract` e a persistir resolução manual de pausa governada por sessão;
+- checkpoints em `awaiting_validation` ou `contained` agora geram pausa recuperável, com `pause_status`, `pause_reason`, `resolution_status` e agente responsável pela retomada;
+- `orchestrator-service` e o fluxo opcional de `LangGraph` passaram a emitir `continuity_pause_resolved` quando a retomada manual é registrada via `metadata.continuity_resume`;
+- `planning-engine`, `governance-service` e `synthesis-engine` passaram a respeitar pausa governada como estado explícito do runtime, sem retomada silenciosa acima de checkpoint contido ou aguardando validação.
 
 ---
 

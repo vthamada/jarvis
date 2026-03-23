@@ -22,7 +22,9 @@ Estado do ciclo rolante:
 
 - primeiro ciclo do `pós-v1` concluído;
 - Sprint 1 do `v1.5` concluída;
-- Sprint 2 do `v1.5` é a próxima frente ativa.
+- Sprint 2 do `v1.5` concluída;
+- Sprint 3 do `v1.5` concluída;
+- Sprint 4 do `v1.5` é a próxima frente ativa.
 
 ## Decisões fechadas
 
@@ -93,15 +95,17 @@ Principais entregas já consolidadas:
 - Sprint 5 concluída, com auditoria explícita da continuidade, sinais comparáveis no piloto e integração desses sinais ao laboratório sandbox;
 - Sprint 6 concluída, com fechamento formal do primeiro ciclo do `pós-v1` e decisão explícita de promoção para `v1.5`;
 - Sprint 1 do `v1.5` concluída, com checkpoint explícito de continuidade e estado recuperável por sessão;
+- Sprint 2 do `v1.5` concluída, com replay explícito, retomada governada e ponto de recuperação rastreável por sessão;
+- Sprint 3 do `v1.5` concluída, com pausa `HITL` persistente, resolução manual rastreável e retomada segura acima do checkpoint governado;
 - Documento-Mestre ampliado com referências arquiteturais oficiais por função.
 
 ## O que ainda falta
 
 Pendências principais desta fase:
 
-- executar a Sprint 2 do ciclo `v1.5`;
+- executar a Sprint 4 do ciclo `v1.5`;
 - consolidar estudo externo curto sem bloquear a implementação principal;
-- validar replay e recuperação governada como próximo salto do runtime stateful.
+- validar absorção parcial de `LangGraph` no subfluxo stateful como próximo salto do runtime.
 
 Regra de estudo externo no `v1.5`:
 
@@ -114,8 +118,8 @@ Regra de estudo externo no `v1.5`:
 
 Ordem recomendada:
 
-1. executar a Sprint 2 do `v1.5`;
-2. materializar replay e recuperação governada da continuidade;
+1. executar a Sprint 4 do `v1.5`;
+2. absorver `LangGraph` parcialmente no subfluxo stateful de continuidade;
 3. rodar estudo externo curto em paralelo;
 4. classificar cada achado como `absorver depois`, `usar como referência` ou `rejeitar`;
 5. preservar o corte já definido entre `v1.5` e `v2`.

@@ -101,6 +101,10 @@ class PlanningContext:
     related_open_loops: list[str] | None = None
     continuity_recommendation: str | None = None
     continuity_ranking_summary: str | None = None
+    continuity_replay_status: str | None = None
+    continuity_recovery_mode: str | None = None
+    continuity_resume_point: str | None = None
+    continuity_requires_manual_resume: bool = False
 
 
 class PlanningEngine:
@@ -219,6 +223,9 @@ class PlanningEngine:
                 if continuity_source == "related_mission"
                 else mission_goal
             ),
+            continuity_replay_status=context.continuity_replay_status,
+            continuity_recovery_mode=context.continuity_recovery_mode,
+            continuity_resume_point=context.continuity_resume_point,
         )
 
     def refine_task_plan(
@@ -307,7 +314,14 @@ class PlanningEngine:
         open_loops: list[str],
     ) -> list[str]:
         loop_focus = self._open_loop_focus(open_loops)
-        if context.requires_clarification:
+        if context.continuity_requires_manual_resume:
+            resume_point = context.continuity_resume_point or "ultimo checkpoint consistente"
+            steps = [
+                f"revisar o ponto de retomada antes de continuar: {resume_point}",
+                "conter a continuidade em modo governado ate validacao explicita",
+                "retomar o fluxo apenas depois de confirmar a direcao segura",
+            ]
+        elif context.requires_clarification:
             steps = [
                 "clarificar a leitura atual do pedido",
                 "pedir confirmacao do objetivo ou do resultado esperado",
@@ -344,7 +358,11 @@ class PlanningEngine:
                 "fornecer orientacao executiva compacta e coerente",
             ]
 
-        if continuity_action == "continuar" and len(steps) < 5:
+        if (
+            continuity_action == "continuar"
+            and len(steps) < 5
+            and not context.continuity_requires_manual_resume
+        ):
             if loop_focus:
                 steps.insert(0, f"retomar o loop principal da missao: {loop_focus}")
             else:
@@ -390,6 +408,11 @@ class PlanningEngine:
             constraints.append("fundir apoio cognitivo em uma unica linha de resposta")
         if context.requires_clarification:
             constraints.insert(0, "clarificar objetivo antes de operar")
+        if context.continuity_requires_manual_resume:
+            constraints.insert(
+                0,
+                "nao retomar automaticamente a partir de checkpoint governado ou contido",
+            )
         if open_loops:
             constraints.append("tratar a missao ativa como referencia antes de expandir escopo")
         if continuity_action == "retomar":
@@ -412,6 +435,10 @@ class PlanningEngine:
             risks.append("pedido contem sinais de risco operacional")
         if context.requires_clarification:
             risks.append("objetivo ainda ambiguo para execucao")
+        if context.continuity_recovery_mode == "governed_review":
+            risks.append("checkpoint recuperado ainda aguarda validacao explicita")
+        if context.continuity_recovery_mode == "contained_recovery":
+            risks.append("checkpoint recuperado partiu de uma contencao governada")
         if not context.knowledge_snippets:
             risks.append("sem apoio adicional de conhecimento alem do baseline local")
         if context.open_loops:
@@ -465,6 +492,8 @@ class PlanningEngine:
     ) -> str:
         if context.requires_clarification:
             return "general_response"
+        if context.continuity_requires_manual_resume:
+            return "general_response"
         if continuity_action == "reformular":
             return "general_response"
         if context.intent == "analysis" or context.preferred_response_mode == "analysis_only":
@@ -485,6 +514,8 @@ class PlanningEngine:
             return False
         if context.requires_clarification:
             return False
+        if context.continuity_requires_manual_resume:
+            return True
         if any(marker for marker in context.risk_markers):
             return True
         if continuity_action == "retomar" and bool(open_loops):
@@ -511,6 +542,8 @@ class PlanningEngine:
         return (
             f"objetivo={dominant_goal}; missao_ativa={mission_goal}; modo={mode}; "
             f"continuidade={continuity_action}; fonte_continuidade={continuity_source}; "
+            f"replay_status={context.continuity_replay_status or 'none'}; "
+            f"recovery_mode={context.continuity_recovery_mode or 'none'}; "
             f"motivo_continuidade={continuity_reason}; "
             f"tensao={dominant_tension}; "
             f"proxima_acao={smallest_safe_next_action}"
@@ -550,10 +583,15 @@ class PlanningEngine:
         previous_recommendation = context.mission_recommendation or "sem recomendacao previa"
         ranking_summary = context.continuity_ranking_summary or "sem ranking explicito"
         conflict_text = goal_conflict or "nenhum"
+        replay_status = context.continuity_replay_status or "none"
+        recovery_mode = context.continuity_recovery_mode or "none"
+        resume_point = context.continuity_resume_point or "nenhum"
         return (
             f"objetivo_dominante={dominant_goal}; missao_ativa={mission_goal}; "
             f"objetivos_secundarios={secondary}; continuidade={continuity_hint}; "
             f"loops_abertos={open_loops}; acao_continuidade={continuity_action}; "
+            f"replay_status={replay_status}; recovery_mode={recovery_mode}; "
+            f"resume_point={resume_point}; "
             f"motivo_continuidade={continuity_reason}; "
             f"conflito_missao={conflict_text}; contexto={context_hint}; apoio={knowledge_hint}; "
             f"arbitragem={arbitration}; tensao={dominant_tension}; "
@@ -603,6 +641,13 @@ class PlanningEngine:
                 return f"explicitar como o novo pedido afeta {loop_focus}"
             if goal_conflict:
                 return "explicitar se o novo pedido substitui ou adia a missao ativa"
+        if context.continuity_requires_manual_resume:
+            if context.continuity_resume_point:
+                return (
+                    "explicitar o ponto de retomada e pedir validacao antes de "
+                    f"continuar: {context.continuity_resume_point}"
+                )
+            return "pedir validacao antes de retomar qualquer continuidade"
         if continuity_action == "retomar":
             if context.related_mission_goal:
                 return (
@@ -634,6 +679,8 @@ class PlanningEngine:
     ) -> str:
         if goal_conflict:
             return "equilibrar continuidade da missao com a pressao por mudanca de objetivo"
+        if context.continuity_requires_manual_resume:
+            return "equilibrar retomada segura com validacao governada do checkpoint"
         if context.continuity_recommendation == "retomar_missao_relacionada" and context.open_loops:
             return "equilibrar loops ativos com a retomada de uma missao relacionada"
         if context.dominant_tension:
@@ -680,6 +727,11 @@ class PlanningEngine:
         loop_focus = self._open_loop_focus(list(context.open_loops or []))
         if continuity_action == "reformular":
             return goal_conflict or "pedido atual exige reformulacao explicita da missao"
+        if context.continuity_requires_manual_resume and context.continuity_resume_point:
+            return (
+                "checkpoint recuperado exige retomada governada a partir de "
+                f"{context.continuity_resume_point}"
+            )
         if continuity_action == "encerrar":
             if loop_focus:
                 return f"pedido explicita fechamento do loop principal {loop_focus}"

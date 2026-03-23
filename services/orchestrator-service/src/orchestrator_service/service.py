@@ -101,8 +101,25 @@ class OrchestratorService:
                 {"content": contract.content, "channel": contract.channel.value},
             )
         ]
+        resolved_pause = self._maybe_resolve_continuity_pause(contract)
+        if resolved_pause is not None:
+            events.append(
+                self.make_event(
+                    "continuity_pause_resolved",
+                    contract,
+                    {
+                        "checkpoint_id": resolved_pause.checkpoint_id,
+                        "pause_status": resolved_pause.pause_status,
+                        "resolution_status": resolved_pause.resolution_status,
+                        "resolved_by": resolved_pause.resolved_by,
+                    },
+                )
+            )
 
         memory_recovery_result = self.memory_service.recover_for_input(contract)
+        continuity_replay = self.memory_service.get_session_continuity_replay(
+            str(contract.session_id)
+        )
         events.append(
             self.make_event(
                 "memory_recovered",
@@ -122,9 +139,40 @@ class OrchestratorService:
                         if memory_recovery_result.continuity_context
                         else 0
                     ),
+                    "continuity_replay_status": (
+                        continuity_replay.replay_status if continuity_replay else None
+                    ),
                 },
             )
         )
+        if continuity_replay is not None:
+            events.append(
+                self.make_event(
+                    "continuity_replay_loaded",
+                    contract,
+                    {
+                        "checkpoint_id": continuity_replay.checkpoint_id,
+                        "replay_status": continuity_replay.replay_status,
+                        "recovery_mode": continuity_replay.recovery_mode,
+                        "resume_point": continuity_replay.resume_point,
+                        "checkpoint_status": continuity_replay.checkpoint_status,
+                        "requires_manual_resume": continuity_replay.requires_manual_resume,
+                    },
+                )
+            )
+            if continuity_replay.requires_manual_resume:
+                events.append(
+                    self.make_event(
+                        "continuity_recovery_governed",
+                        contract,
+                        {
+                            "checkpoint_id": continuity_replay.checkpoint_id,
+                            "replay_status": continuity_replay.replay_status,
+                            "recovery_mode": continuity_replay.recovery_mode,
+                            "resume_point": continuity_replay.resume_point,
+                        },
+                    )
+                )
 
         directive = self.executive_engine.direct(contract)
         events.append(self.make_event("intent_classified", contract, {"intent": directive.intent}))
@@ -610,6 +658,19 @@ class OrchestratorService:
                 if memory_recovery_result.continuity_context
                 else None
             ),
+            continuity_replay_status=self._extract_context_hint(
+                recovered, "continuity_replay_status="
+            ),
+            continuity_recovery_mode=self._extract_context_hint(
+                recovered, "continuity_recovery_mode="
+            ),
+            continuity_resume_point=self._extract_context_hint(
+                recovered, "continuity_resume_point="
+            ),
+            continuity_requires_manual_resume=(
+                self._extract_context_hint(recovered, "continuity_replay_status=")
+                in {"awaiting_validation", "contained"}
+            ),
         )
 
     def _compose_response_text(
@@ -657,6 +718,28 @@ class OrchestratorService:
                     memory_recovery_result.recovered_items, "session_anchor_goal="
                 ),
             )
+        )
+
+    def _maybe_resolve_continuity_pause(self, contract: InputContract):
+        resume_request = contract.metadata.get("continuity_resume")
+        if not isinstance(resume_request, dict):
+            return None
+        approved = bool(resume_request.get("approved"))
+        resolved_by = str(resume_request.get("resolved_by") or contract.user_id or "operator")
+        resolution_note = str(
+            resume_request.get("resolution_note") or "manual continuity resolution"
+        )
+        checkpoint_id = (
+            str(resume_request["checkpoint_id"])
+            if resume_request.get("checkpoint_id") is not None
+            else None
+        )
+        return self.memory_service.resolve_session_continuity_pause(
+            str(contract.session_id),
+            approved=approved,
+            resolved_by=resolved_by,
+            resolution_note=resolution_note,
+            checkpoint_id=checkpoint_id,
         )
 
     @staticmethod

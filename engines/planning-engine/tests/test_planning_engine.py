@@ -255,3 +255,38 @@ def test_planning_engine_refines_plan_and_consolidates_specialists() -> None:
     assert any("checkpoint intermediario" in step for step in refined.steps)
     assert any("criterio dominante" in criterion for criterion in refined.success_criteria)
     assert "resolucao_especialistas=" in refined.rationale
+
+
+def test_planning_engine_routes_governed_replay_to_safe_recovery() -> None:
+    engine = PlanningEngine()
+    plan = engine.build_task_plan(
+        PlanningContext(
+            intent="planning",
+            query="Continue the sprint plan.",
+            recovered_context=[
+                "continuity_replay_status=awaiting_validation",
+                "continuity_recovery_mode=governed_review",
+                "continuity_resume_point=continuar:fechar checkpoint principal",
+            ],
+            active_domains=["strategy"],
+            active_minds=["mente_executiva"],
+            knowledge_snippets=["Retome com revisao explicita quando houver checkpoint governado."],
+            risk_markers=[],
+            requires_clarification=False,
+            preferred_response_mode="plan_and_operate",
+            mission_goal="Plan milestone M3",
+            open_loops=["fechar checkpoint principal"],
+            continuity_replay_status="awaiting_validation",
+            continuity_recovery_mode="governed_review",
+            continuity_resume_point="continuar:fechar checkpoint principal",
+            continuity_requires_manual_resume=True,
+        )
+    )
+    assert plan.recommended_task_type == "general_response"
+    assert plan.requires_human_validation is True
+    assert plan.steps[0].startswith("revisar o ponto de retomada antes de continuar")
+    assert any("checkpoint governado" in constraint for constraint in plan.constraints)
+    assert any("aguarda validacao" in risk for risk in plan.risks)
+    assert plan.continuity_replay_status == "awaiting_validation"
+    assert plan.continuity_recovery_mode == "governed_review"
+    assert plan.continuity_resume_point == "continuar:fechar checkpoint principal"

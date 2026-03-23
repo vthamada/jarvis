@@ -79,8 +79,25 @@ class LangGraphFlowRunner:
 
     def _recover_memory(self, state: OrchestratorFlowState) -> OrchestratorFlowState:
         contract = state["contract"]
+        resolved_pause = self.orchestrator._maybe_resolve_continuity_pause(contract)
         memory_recovery_result = self.orchestrator.memory_service.recover_for_input(contract)
+        continuity_replay = self.orchestrator.memory_service.get_session_continuity_replay(
+            str(contract.session_id)
+        )
         events = list(state["events"])
+        if resolved_pause is not None:
+            events.append(
+                self.orchestrator.make_event(
+                    "continuity_pause_resolved",
+                    contract,
+                    {
+                        "checkpoint_id": resolved_pause.checkpoint_id,
+                        "pause_status": resolved_pause.pause_status,
+                        "resolution_status": resolved_pause.resolution_status,
+                        "resolved_by": resolved_pause.resolved_by,
+                    },
+                )
+            )
         events.append(
             self.orchestrator.make_event(
                 "memory_recovered",
@@ -100,9 +117,40 @@ class LangGraphFlowRunner:
                         if memory_recovery_result.continuity_context
                         else 0
                     ),
+                    "continuity_replay_status": (
+                        continuity_replay.replay_status if continuity_replay else None
+                    ),
                 },
             )
         )
+        if continuity_replay is not None:
+            events.append(
+                self.orchestrator.make_event(
+                    "continuity_replay_loaded",
+                    contract,
+                    {
+                        "checkpoint_id": continuity_replay.checkpoint_id,
+                        "replay_status": continuity_replay.replay_status,
+                        "recovery_mode": continuity_replay.recovery_mode,
+                        "resume_point": continuity_replay.resume_point,
+                        "checkpoint_status": continuity_replay.checkpoint_status,
+                        "requires_manual_resume": continuity_replay.requires_manual_resume,
+                    },
+                )
+            )
+            if continuity_replay.requires_manual_resume:
+                events.append(
+                    self.orchestrator.make_event(
+                        "continuity_recovery_governed",
+                        contract,
+                        {
+                            "checkpoint_id": continuity_replay.checkpoint_id,
+                            "replay_status": continuity_replay.replay_status,
+                            "recovery_mode": continuity_replay.recovery_mode,
+                            "resume_point": continuity_replay.resume_point,
+                        },
+                    )
+                )
         return {"memory_recovery_result": memory_recovery_result, "events": events}
 
     def _classify_directive(self, state: OrchestratorFlowState) -> OrchestratorFlowState:
@@ -444,6 +492,7 @@ class LangGraphFlowRunner:
             response_text=state["response_text"],
             deliberative_plan=state["deliberative_plan"],
             specialist_contributions=state["specialist_review"].contributions,
+            governance_decision=state["governance_decision"].decision,
         )
         events = list(state["events"])
         events.append(

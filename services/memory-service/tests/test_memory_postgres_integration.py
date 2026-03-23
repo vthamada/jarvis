@@ -49,6 +49,9 @@ def test_memory_service_persists_session_history_in_postgres() -> None:
     checkpoint = MemoryService(database_url=postgres_url()).get_session_continuity_checkpoint(
         "postgres-sess-1"
     )
+    replay = MemoryService(database_url=postgres_url()).get_session_continuity_replay(
+        "postgres-sess-1"
+    )
 
     assert any("PostgreSQL validated." in item for item in recovered.recovered_items)
     assert any(
@@ -57,7 +60,9 @@ def test_memory_service_persists_session_history_in_postgres() -> None:
     )
     assert mission_state is not None
     assert checkpoint is not None
+    assert replay is not None
     assert checkpoint.checkpoint_status in {"ready", "closed", "awaiting_validation", "contained"}
+    assert replay.replay_status in {"resumable", "closed", "awaiting_validation", "contained"}
     assert "planning" in mission_state.active_tasks
     assert mission_state.semantic_brief is not None
     assert "Plan the PostgreSQL validation flow." in mission_state.semantic_brief

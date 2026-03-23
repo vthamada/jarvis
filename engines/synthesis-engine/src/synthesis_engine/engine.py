@@ -86,6 +86,18 @@ class SynthesisEngine:
                 "o desvio antes de reformular o objetivo"
             )
             recommendation = synthesis_input.governance_decision.justification
+        elif plan and plan.continuity_recovery_mode == "contained_recovery":
+            judgment = (
+                "a continuidade recuperada partiu de checkpoint contido e precisa "
+                "de revisao explicita antes de qualquer retomada"
+            )
+            recommendation = synthesis_input.governance_decision.justification
+        elif plan and plan.continuity_recovery_mode == "governed_review":
+            judgment = (
+                "o checkpoint recuperado ainda aguarda validacao e a retomada "
+                "permanece em modo governado"
+            )
+            recommendation = synthesis_input.governance_decision.justification
         elif plan and plan.continuity_action == "retomar" and plan.continuity_target_goal:
             judgment = (
                 "a retomada explicita de continuidade relacionada exige validacao "
@@ -213,6 +225,10 @@ class SynthesisEngine:
             limits.append(
                 "a missao ativa ainda tem loop aberto e nao pode ser desviada em silencio"
             )
+        if plan.continuity_recovery_mode == "contained_recovery":
+            limits.append("o checkpoint anterior ficou contido e exige revisao manual")
+        if plan.continuity_recovery_mode == "governed_review":
+            limits.append("o checkpoint recuperado ainda aguarda validacao explicita")
         if plan.continuity_action == "retomar" and plan.open_loops:
             limits.append(
                 "a retomada relacionada precisa justificar por que supera os loops ativos"

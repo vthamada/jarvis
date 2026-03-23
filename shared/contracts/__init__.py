@@ -102,6 +102,9 @@ class DeliberativePlanContract:
     continuity_source: str | None = None
     continuity_target_mission_id: MissionId | None = None
     continuity_target_goal: str | None = None
+    continuity_replay_status: str | None = None
+    continuity_recovery_mode: str | None = None
+    continuity_resume_point: str | None = None
 
 
 @dataclass
@@ -234,6 +237,41 @@ class ContinuityCheckpointContract:
     target_goal: str | None = None
     origin_request_id: RequestId | None = None
     replay_summary: str | None = None
+
+
+@dataclass
+class ContinuityReplayContract:
+    checkpoint_id: str
+    session_id: SessionId
+    replay_status: str
+    recovery_mode: str
+    resume_point: str
+    checkpoint_status: str
+    continuity_action: str
+    updated_at: UpdatedAt
+    mission_id: MissionId | None = None
+    target_mission_id: MissionId | None = None
+    target_goal: str | None = None
+    origin_request_id: RequestId | None = None
+    replay_summary: str | None = None
+    requires_manual_resume: bool = False
+
+
+@dataclass
+class ContinuityPauseContract:
+    pause_id: str
+    session_id: SessionId
+    checkpoint_id: str
+    pause_status: str
+    recovery_mode: str
+    resume_point: str
+    pause_reason: str
+    issued_at: UpdatedAt
+    resolved_at: UpdatedAt | None = None
+    resolution_status: str | None = None
+    resolved_by: str | None = None
+    resolution_note: str | None = None
+    requires_human_input: bool = True
 
 
 @dataclass

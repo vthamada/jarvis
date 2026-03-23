@@ -8,6 +8,24 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 
 ## 2026-03-22
 
+### Execução da Sprint 3 do ciclo v1.5
+
+- adicionado `ContinuityPauseContract` como contrato interno de pausa governada e retomada manual da continuidade;
+- `memory-service` passou a expor `get_session_continuity_pause()` e `resolve_session_continuity_pause()`, persistindo resolução manual rastreável por sessão;
+- checkpoints em `awaiting_validation` ou `contained` agora geram pausa recuperável com `pause_status`, `pause_reason`, `resolution_status` e vínculo com o `checkpoint_id`;
+- `orchestrator-service` e o fluxo opcional de `LangGraph` passaram a aceitar `metadata.continuity_resume` e a emitir `continuity_pause_resolved` quando a pausa é resolvida manualmente;
+- `planning-engine`, `governance-service` e `synthesis-engine` passaram a tratar pausa governada como estado explícito do runtime, sem retomada silenciosa acima de checkpoint contido ou aguardando validação;
+- adicionados testes de pausa governada, resolução manual e recuperação segura em memória e orquestração.
+
+### Execução da Sprint 2 do ciclo v1.5
+
+- adicionado `ContinuityReplayContract` como contrato interno de replay e recuperação governada da continuidade;
+- `memory-service` passou a expor `get_session_continuity_replay()` com `replay_status`, `recovery_mode`, `resume_point` e exigência de retomada manual quando aplicável;
+- a recuperação passou a incluir `continuity_replay_status`, `continuity_recovery_mode` e `continuity_resume_point` como hints estruturais;
+- `orchestrator-service` e o fluxo opcional de `LangGraph` passaram a emitir `continuity_replay_loaded` e `continuity_recovery_governed`;
+- `planning-engine`, `governance-service` e `synthesis-engine` passaram a tratar checkpoints contidos ou aguardando validação como retomada governada, sem continuidade automática;
+- adicionados testes de replay em memória, orquestração, planejamento, governança, síntese e PostgreSQL.
+
 ### Execução da Sprint 1 do ciclo v1.5
 
 - adicionado `ContinuityCheckpointContract` como contrato interno mínimo para checkpoint recuperável da continuidade;

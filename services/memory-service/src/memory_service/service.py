@@ -10,12 +10,15 @@ from uuid import uuid4
 from memory_service.repository import (
     SessionContinuitySnapshot,
     StoredContinuityCheckpoint,
+    StoredContinuityPauseResolution,
     StoredTurn,
     build_memory_repository,
     continuity_checkpoint_to_contract,
 )
 from shared.contracts import (
     ContinuityCheckpointContract,
+    ContinuityPauseContract,
+    ContinuityReplayContract,
     DeliberativePlanContract,
     InputContract,
     MemoryRecordContract,
@@ -29,10 +32,13 @@ from shared.types import (
     MemoryClass,
     MemoryQueryId,
     MemoryRecordId,
+    MissionId,
     MissionStatus,
     PermissionDecision,
     RecoveryType,
+    RequestId,
     RiskLevel,
+    SessionId,
     TimeWindow,
 )
 
@@ -221,6 +227,89 @@ class MemoryService:
             return None
         return continuity_checkpoint_to_contract(checkpoint)
 
+    def get_session_continuity_replay(
+        self,
+        session_id: str,
+    ) -> ContinuityReplayContract | None:
+        """Build the latest replay-ready continuity state for a session."""
+
+        checkpoint = self.repository.fetch_continuity_checkpoint(session_id)
+        if checkpoint is None:
+            return None
+        continuity_snapshot = self.repository.fetch_session_continuity(session_id)
+        mission_id = checkpoint.mission_id or (
+            continuity_snapshot.anchor_mission_id if continuity_snapshot else None
+        )
+        mission_state = self.repository.fetch_mission_state(mission_id) if mission_id else None
+        return self._build_continuity_replay(
+            checkpoint=checkpoint,
+            continuity_snapshot=continuity_snapshot,
+            mission_state=mission_state,
+        )
+
+    def get_session_continuity_pause(
+        self,
+        session_id: str,
+    ) -> ContinuityPauseContract | None:
+        """Expose the active governed pause for a session, when one exists."""
+
+        replay = self.get_session_continuity_replay(session_id)
+        if replay is None or not replay.requires_manual_resume:
+            return None
+        resolution = self.repository.fetch_continuity_pause_resolution(session_id)
+        return self._build_continuity_pause(
+            replay=replay,
+            resolution=resolution,
+        )
+
+    def resolve_session_continuity_pause(
+        self,
+        session_id: str,
+        *,
+        approved: bool,
+        resolved_by: str,
+        resolution_note: str,
+        checkpoint_id: str | None = None,
+    ) -> ContinuityPauseContract | None:
+        """Resolve a governed continuity pause and persist the manual decision."""
+
+        checkpoint = self.repository.fetch_continuity_checkpoint(session_id)
+        if checkpoint is None:
+            return None
+        if checkpoint_id is not None and checkpoint.checkpoint_id != checkpoint_id:
+            return None
+        resolution = StoredContinuityPauseResolution(
+            session_id=session_id,
+            checkpoint_id=checkpoint.checkpoint_id,
+            resolution_status="approved" if approved else "rejected",
+            resolved_by=resolved_by,
+            resolution_note=resolution_note,
+            resolved_at=self.now(),
+        )
+        self.repository.upsert_continuity_pause_resolution(resolution)
+        updated_checkpoint = StoredContinuityCheckpoint(
+            checkpoint_id=checkpoint.checkpoint_id,
+            session_id=checkpoint.session_id,
+            continuity_action=checkpoint.continuity_action,
+            checkpoint_status="ready" if approved else "closed",
+            checkpoint_summary=checkpoint.checkpoint_summary,
+            updated_at=self.now(),
+            mission_id=checkpoint.mission_id,
+            continuity_source=checkpoint.continuity_source,
+            target_mission_id=checkpoint.target_mission_id,
+            target_goal=checkpoint.target_goal,
+            origin_request_id=checkpoint.origin_request_id,
+            replay_summary=self._append_pause_resolution_summary(
+                checkpoint.replay_summary,
+                resolution,
+            ),
+        )
+        self.repository.upsert_continuity_checkpoint(updated_checkpoint)
+        replay = self.get_session_continuity_replay(session_id)
+        if replay is None:
+            return None
+        return self._build_continuity_pause(replay=replay, resolution=resolution)
+
     def _compose_recovered_items(
         self,
         contract: InputContract,
@@ -291,6 +380,25 @@ class MemoryService:
                 continuity_hints.append(
                     f"continuity_replay_summary={continuity_checkpoint.replay_summary}"
                 )
+        continuity_replay = self.get_session_continuity_replay(str(contract.session_id))
+        if continuity_replay:
+            continuity_hints.append(
+                f"continuity_replay_status={continuity_replay.replay_status}"
+            )
+            continuity_hints.append(
+                f"continuity_recovery_mode={continuity_replay.recovery_mode}"
+            )
+            continuity_hints.append(
+                f"continuity_resume_point={continuity_replay.resume_point}"
+            )
+        continuity_pause = self.get_session_continuity_pause(str(contract.session_id))
+        if continuity_pause:
+            continuity_hints.append(
+                f"continuity_pause_status={continuity_pause.pause_status}"
+            )
+            continuity_hints.append(
+                f"continuity_pause_reason={continuity_pause.pause_reason}"
+            )
         if contract.mission_id:
             mission_state = self.repository.fetch_mission_state(str(contract.mission_id))
             if mission_state:
@@ -544,6 +652,74 @@ class MemoryService:
                 checkpoint_status=checkpoint_status,
             ),
             updated_at=self.now(),
+        )
+
+    def _build_continuity_replay(
+        self,
+        *,
+        checkpoint: StoredContinuityCheckpoint,
+        continuity_snapshot: SessionContinuitySnapshot | None,
+        mission_state: MissionStateContract | None,
+    ) -> ContinuityReplayContract:
+        replay_status = self._continuity_replay_status(checkpoint.checkpoint_status)
+        recovery_mode = self._continuity_recovery_mode(
+            continuity_action=checkpoint.continuity_action,
+            target_mission_id=checkpoint.target_mission_id,
+            checkpoint_status=checkpoint.checkpoint_status,
+        )
+        resume_point = self._continuity_resume_point(
+            checkpoint=checkpoint,
+            continuity_snapshot=continuity_snapshot,
+            mission_state=mission_state,
+        )
+        return ContinuityReplayContract(
+            checkpoint_id=checkpoint.checkpoint_id,
+            session_id=SessionId(checkpoint.session_id),
+            replay_status=replay_status,
+            recovery_mode=recovery_mode,
+            resume_point=resume_point,
+            checkpoint_status=checkpoint.checkpoint_status,
+            continuity_action=checkpoint.continuity_action,
+            updated_at=checkpoint.updated_at,
+            mission_id=MissionId(checkpoint.mission_id) if checkpoint.mission_id else None,
+            target_mission_id=(
+                MissionId(checkpoint.target_mission_id)
+                if checkpoint.target_mission_id
+                else None
+            ),
+            target_goal=checkpoint.target_goal,
+            origin_request_id=self._request_id_or_none(checkpoint.origin_request_id),
+            replay_summary=checkpoint.replay_summary,
+            requires_manual_resume=replay_status != "resumable",
+        )
+
+    def _build_continuity_pause(
+        self,
+        *,
+        replay: ContinuityReplayContract,
+        resolution: StoredContinuityPauseResolution | None,
+    ) -> ContinuityPauseContract:
+        pause_status = "pending"
+        if resolution is not None:
+            pause_status = "approved" if resolution.resolution_status == "approved" else "rejected"
+        elif replay.replay_status == "contained":
+            pause_status = "contained"
+        elif replay.replay_status == "awaiting_validation":
+            pause_status = "awaiting_validation"
+        return ContinuityPauseContract(
+            pause_id=f"cpause-{replay.checkpoint_id}",
+            session_id=replay.session_id,
+            checkpoint_id=replay.checkpoint_id,
+            pause_status=pause_status,
+            recovery_mode=replay.recovery_mode,
+            resume_point=replay.resume_point,
+            pause_reason=replay.replay_summary or replay.resume_point,
+            issued_at=replay.updated_at,
+            resolved_at=resolution.resolved_at if resolution else None,
+            resolution_status=resolution.resolution_status if resolution else None,
+            resolved_by=resolution.resolved_by if resolution else None,
+            resolution_note=resolution.resolution_note if resolution else None,
+            requires_human_input=replay.requires_manual_resume and resolution is None,
         )
 
     def _build_continuity_context(
@@ -874,6 +1050,76 @@ class MemoryService:
             f"acao={plan.continuity_action or 'continuar'}; "
             f"fonte={source}; alvo={target_goal}"
         )
+
+    @staticmethod
+    def _continuity_replay_status(checkpoint_status: str) -> str:
+        if checkpoint_status == "ready":
+            return "resumable"
+        if checkpoint_status == "awaiting_validation":
+            return "awaiting_validation"
+        if checkpoint_status == "contained":
+            return "contained"
+        return "closed"
+
+    @staticmethod
+    def _continuity_recovery_mode(
+        *,
+        continuity_action: str,
+        target_mission_id: str | None,
+        checkpoint_status: str,
+    ) -> str:
+        if checkpoint_status == "awaiting_validation":
+            return "governed_review"
+        if checkpoint_status == "contained":
+            return "contained_recovery"
+        if continuity_action == "retomar" and target_mission_id:
+            return "resume_related_mission"
+        if continuity_action == "reformular":
+            return "resume_reformulation"
+        if continuity_action == "encerrar":
+            return "resume_closeout"
+        return "resume_active_mission"
+
+    @staticmethod
+    def _continuity_resume_point(
+        *,
+        checkpoint: StoredContinuityCheckpoint,
+        continuity_snapshot: SessionContinuitySnapshot | None,
+        mission_state: MissionStateContract | None,
+    ) -> str:
+        if checkpoint.continuity_action == "retomar" and checkpoint.target_goal:
+            return f"retomar:{checkpoint.target_goal}"
+        if checkpoint.continuity_action == "reformular":
+            goal = checkpoint.target_goal or (
+                continuity_snapshot.anchor_goal if continuity_snapshot else None
+            )
+            return f"reformular:{goal or 'revisar_direcao_ativa'}"
+        if checkpoint.continuity_action == "encerrar":
+            goal = checkpoint.target_goal or (
+                continuity_snapshot.anchor_goal if continuity_snapshot else None
+            )
+            return f"encerrar:{goal or 'fechar_continuidade_ativa'}"
+        if mission_state and mission_state.open_loops:
+            return f"continuar:{mission_state.open_loops[0]}"
+        anchor_goal = (
+            continuity_snapshot.anchor_goal if continuity_snapshot else checkpoint.target_goal
+        )
+        return f"continuar:{anchor_goal or checkpoint.checkpoint_summary}"
+
+    @staticmethod
+    def _append_pause_resolution_summary(
+        replay_summary: str | None,
+        resolution: StoredContinuityPauseResolution,
+    ) -> str:
+        summary = replay_summary or "checkpoint_sem_resumo"
+        return (
+            f"{summary}; resolucao={resolution.resolution_status}; "
+            f"ator={resolution.resolved_by or 'unknown'}; nota={resolution.resolution_note}"
+        )
+
+    @staticmethod
+    def _request_id_or_none(value: str | None) -> RequestId | None:
+        return RequestId(value) if value else None
 
     @staticmethod
     def _extract_open_loops(

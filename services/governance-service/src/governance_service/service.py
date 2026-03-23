@@ -79,6 +79,15 @@ class GovernanceService:
                 "input_type": contract.input_type.value,
                 "recommended_task_type": plan.recommended_task_type if plan else None,
                 "plan_summary": plan.plan_summary if plan else None,
+                "continuity_replay_status": (
+                    plan.continuity_replay_status if plan else None
+                ),
+                "continuity_recovery_mode": (
+                    plan.continuity_recovery_mode if plan else None
+                ),
+                "continuity_resume_point": (
+                    plan.continuity_resume_point if plan else None
+                ),
             },
             sensitivity="high" if risk_hint in {RiskLevel.HIGH, RiskLevel.CRITICAL} else "normal",
             reversibility=("low" if proposed_effect == "external_or_sensitive_change" else "high"),
@@ -140,7 +149,17 @@ class GovernanceService:
             containment_hint = "block_direct_execution"
         elif self._should_defer(governance_check, proposed_effect, open_loops, continuity_hint):
             decision = PermissionDecision.DEFER_FOR_VALIDATION
-            if continuity_hint == "retomada_relacionada":
+            if continuity_hint == "checkpoint_contido":
+                justification = (
+                    "A retomada parte de checkpoint contido e exige revisao explicita "
+                    "antes de qualquer continuidade."
+                )
+            elif continuity_hint == "checkpoint_aguarda_validacao":
+                justification = (
+                    "O checkpoint recuperado ainda aguarda validacao e nao pode ser "
+                    "retomado automaticamente."
+                )
+            elif continuity_hint == "retomada_relacionada":
                 justification = (
                     "A retomada relacionada disputa direcao com loop ainda aberto e exige "
                     "validacao explicita."
@@ -229,6 +248,10 @@ class GovernanceService:
     def _continuity_hint(plan: DeliberativePlanContract | None) -> str | None:
         if not plan:
             return None
+        if plan.continuity_recovery_mode == "governed_review":
+            return "checkpoint_aguarda_validacao"
+        if plan.continuity_recovery_mode == "contained_recovery":
+            return "checkpoint_contido"
         if plan.continuity_action == "reformular":
             return "reformulacao_de_objetivo"
         if plan.continuity_action == "retomar":
@@ -249,6 +272,8 @@ class GovernanceService:
         if governance_check.requires_human_validation:
             return True
         if proposed_effect == "external_or_sensitive_change":
+            return True
+        if continuity_hint in {"checkpoint_aguarda_validacao", "checkpoint_contido"}:
             return True
         if continuity_hint == "retomada_relacionada" and bool(open_loops):
             return True
