@@ -20,7 +20,8 @@ Fontes de direção:
 
 Status desta versão do ciclo:
 
-- Sprint 1 é a próxima sprint ativa.
+- Sprint 1 concluída;
+- Sprint 2 é a próxima sprint ativa.
 
 ---
 
@@ -49,6 +50,10 @@ Ele não substitui:
 
 ## 4. Sprint 1
 
+Status:
+
+- concluída
+
 ### Objetivo
 
 Definir como a continuidade profunda vira estado recuperável, e não apenas decisão
@@ -71,6 +76,12 @@ deliberativa ou memória resumida.
 - checkpoint persistido entre instâncias;
 - recuperação do estado correto após reinício;
 - ausência de regressão no baseline atual.
+
+Resultado registrado nesta rodada:
+
+- `memory-service` passou a persistir checkpoints explícitos da continuidade por sessão;
+- a recuperação agora expõe `continuity_checkpoint_id`, `continuity_checkpoint_status`, resumo e replay mínimo como hints estruturais;
+- a API de inspeção `get_session_continuity_checkpoint()` passou a expor o estado recuperável mais recente sem quebrar o baseline atual.
 
 ---
 

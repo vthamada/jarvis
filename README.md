@@ -28,7 +28,8 @@ Leitura prática correta deste momento:
 - `v1` encerrado e congelado para uso controlado;
 - primeiro ciclo do `pós-v1` encerrado com continuidade profunda demonstrada;
 - `v1.5` aberto com foco em runtime stateful governado para continuidade;
-- Sprint 1 do `v1.5` aberta como próxima frente ativa do ciclo rolante.
+- Sprint 1 do `v1.5` concluída;
+- Sprint 2 do `v1.5` aberta como próxima frente ativa do ciclo rolante.
 
 ## Estrutura principal
 

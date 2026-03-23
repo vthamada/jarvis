@@ -101,7 +101,8 @@ Leitura curta do momento:
 - o primeiro ciclo do `pós-v1` foi encerrado;
 - a frente ativa agora é `runtime stateful governado para continuidade profunda`;
 - o programa subiu formalmente para `v1.5`;
-- Sprint 1 do `v1.5` é a próxima frente ativa.
+- Sprint 1 do `v1.5` foi concluída.
+- Sprint 2 do `v1.5` é a próxima frente ativa.
 
 ---
 
@@ -121,7 +122,7 @@ O projeto deve evitar:
 
 O próximo passo executivo mais racional é:
 
-- executar a Sprint 1 do `v1.5`;
-- materializar checkpoints e estado recuperável da continuidade;
-- validar replay e pausa governada sem reabrir o baseline do `v1`;
+- executar a Sprint 2 do `v1.5`;
+- materializar replay e recuperação governada da continuidade;
+- validar replay e retomada segura sem reabrir o baseline do `v1`;
 - manter `v2` explicitamente fora do corte imediato.

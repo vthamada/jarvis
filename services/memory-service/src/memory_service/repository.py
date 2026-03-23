@@ -10,7 +10,7 @@ from sqlite3 import Connection, OperationalError, Row
 from sqlite3 import connect as sqlite_connect
 from urllib.parse import urlparse
 
-from shared.contracts import MissionStateContract
+from shared.contracts import ContinuityCheckpointContract, MissionStateContract
 from shared.types import MissionStatus
 
 try:
@@ -47,6 +47,22 @@ class SessionContinuitySnapshot:
     updated_at: str
 
 
+@dataclass(frozen=True)
+class StoredContinuityCheckpoint:
+    checkpoint_id: str
+    session_id: str
+    continuity_action: str
+    checkpoint_status: str
+    checkpoint_summary: str
+    updated_at: str
+    mission_id: str | None = None
+    continuity_source: str | None = None
+    target_mission_id: str | None = None
+    target_goal: str | None = None
+    origin_request_id: str | None = None
+    replay_summary: str | None = None
+
+
 class MemoryRepository(ABC):
     """Persistence contract for episodic, contextual, and mission memory."""
 
@@ -75,6 +91,20 @@ class MemoryRepository(ABC):
         session_id: str,
     ) -> SessionContinuitySnapshot | None:
         """Load the latest continuity snapshot for a session."""
+
+    @abstractmethod
+    def upsert_continuity_checkpoint(
+        self,
+        checkpoint: StoredContinuityCheckpoint,
+    ) -> None:
+        """Persist the latest recoverable checkpoint for a session."""
+
+    @abstractmethod
+    def fetch_continuity_checkpoint(
+        self,
+        session_id: str,
+    ) -> StoredContinuityCheckpoint | None:
+        """Load the latest recoverable checkpoint for a session."""
 
     @abstractmethod
     def upsert_mission_state(self, mission_state: MissionStateContract) -> None:
@@ -268,6 +298,81 @@ class SqliteMemoryRepository(MemoryRepository):
             updated_at=str(row["updated_at"]),
         )
 
+    def upsert_continuity_checkpoint(
+        self,
+        checkpoint: StoredContinuityCheckpoint,
+    ) -> None:
+        with self._connect() as connection:
+            connection.execute(
+                """
+                INSERT INTO continuity_checkpoints (
+                    session_id, checkpoint_id, continuity_action, checkpoint_status,
+                    checkpoint_summary, mission_id, continuity_source, target_mission_id,
+                    target_goal, origin_request_id, replay_summary, updated_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(session_id) DO UPDATE SET
+                    checkpoint_id = excluded.checkpoint_id,
+                    continuity_action = excluded.continuity_action,
+                    checkpoint_status = excluded.checkpoint_status,
+                    checkpoint_summary = excluded.checkpoint_summary,
+                    mission_id = excluded.mission_id,
+                    continuity_source = excluded.continuity_source,
+                    target_mission_id = excluded.target_mission_id,
+                    target_goal = excluded.target_goal,
+                    origin_request_id = excluded.origin_request_id,
+                    replay_summary = excluded.replay_summary,
+                    updated_at = excluded.updated_at
+                """,
+                (
+                    checkpoint.session_id,
+                    checkpoint.checkpoint_id,
+                    checkpoint.continuity_action,
+                    checkpoint.checkpoint_status,
+                    checkpoint.checkpoint_summary,
+                    checkpoint.mission_id,
+                    checkpoint.continuity_source,
+                    checkpoint.target_mission_id,
+                    checkpoint.target_goal,
+                    checkpoint.origin_request_id,
+                    checkpoint.replay_summary,
+                    checkpoint.updated_at,
+                ),
+            )
+            connection.commit()
+
+    def fetch_continuity_checkpoint(
+        self,
+        session_id: str,
+    ) -> StoredContinuityCheckpoint | None:
+        with self._connect() as connection:
+            row = connection.execute(
+                """
+                SELECT session_id, checkpoint_id, continuity_action, checkpoint_status,
+                       checkpoint_summary, mission_id, continuity_source, target_mission_id,
+                       target_goal, origin_request_id, replay_summary, updated_at
+                FROM continuity_checkpoints
+                WHERE session_id = ?
+                """,
+                (session_id,),
+            ).fetchone()
+        if row is None:
+            return None
+        return StoredContinuityCheckpoint(
+            checkpoint_id=str(row["checkpoint_id"]),
+            session_id=str(row["session_id"]),
+            continuity_action=str(row["continuity_action"]),
+            checkpoint_status=str(row["checkpoint_status"]),
+            checkpoint_summary=str(row["checkpoint_summary"]),
+            mission_id=row["mission_id"],
+            continuity_source=row["continuity_source"],
+            target_mission_id=row["target_mission_id"],
+            target_goal=row["target_goal"],
+            origin_request_id=row["origin_request_id"],
+            replay_summary=row["replay_summary"],
+            updated_at=str(row["updated_at"]),
+        )
+
     def fetch_mission_state(self, mission_id: str) -> MissionStateContract | None:
         with self._connect() as connection:
             row = connection.execute(
@@ -354,6 +459,21 @@ class SqliteMemoryRepository(MemoryRepository):
                     anchor_goal TEXT,
                     related_mission_id TEXT,
                     related_goal TEXT,
+                    updated_at TEXT NOT NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS continuity_checkpoints (
+                    session_id TEXT PRIMARY KEY,
+                    checkpoint_id TEXT NOT NULL,
+                    continuity_action TEXT NOT NULL,
+                    checkpoint_status TEXT NOT NULL,
+                    checkpoint_summary TEXT NOT NULL,
+                    mission_id TEXT,
+                    continuity_source TEXT,
+                    target_mission_id TEXT,
+                    target_goal TEXT,
+                    origin_request_id TEXT,
+                    replay_summary TEXT,
                     updated_at TEXT NOT NULL
                 );
                 
@@ -647,6 +767,49 @@ class PostgresMemoryRepository(MemoryRepository):
             )
             connection.commit()
 
+    def upsert_continuity_checkpoint(
+        self,
+        checkpoint: StoredContinuityCheckpoint,
+    ) -> None:
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO continuity_checkpoints (
+                    session_id, checkpoint_id, continuity_action, checkpoint_status,
+                    checkpoint_summary, mission_id, continuity_source, target_mission_id,
+                    target_goal, origin_request_id, replay_summary, updated_at
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (session_id) DO UPDATE SET
+                    checkpoint_id = EXCLUDED.checkpoint_id,
+                    continuity_action = EXCLUDED.continuity_action,
+                    checkpoint_status = EXCLUDED.checkpoint_status,
+                    checkpoint_summary = EXCLUDED.checkpoint_summary,
+                    mission_id = EXCLUDED.mission_id,
+                    continuity_source = EXCLUDED.continuity_source,
+                    target_mission_id = EXCLUDED.target_mission_id,
+                    target_goal = EXCLUDED.target_goal,
+                    origin_request_id = EXCLUDED.origin_request_id,
+                    replay_summary = EXCLUDED.replay_summary,
+                    updated_at = EXCLUDED.updated_at
+                """,
+                (
+                    checkpoint.session_id,
+                    checkpoint.checkpoint_id,
+                    checkpoint.continuity_action,
+                    checkpoint.checkpoint_status,
+                    checkpoint.checkpoint_summary,
+                    checkpoint.mission_id,
+                    checkpoint.continuity_source,
+                    checkpoint.target_mission_id,
+                    checkpoint.target_goal,
+                    checkpoint.origin_request_id,
+                    checkpoint.replay_summary,
+                    checkpoint.updated_at,
+                ),
+            )
+            connection.commit()
+
     def fetch_session_continuity(self, session_id: str) -> SessionContinuitySnapshot | None:
         with self._connect() as connection, connection.cursor() as cursor:
             cursor.execute(
@@ -669,6 +832,39 @@ class PostgresMemoryRepository(MemoryRepository):
             anchor_goal=row["anchor_goal"],
             related_mission_id=row["related_mission_id"],
             related_goal=row["related_goal"],
+            updated_at=row["updated_at"],
+        )
+
+    def fetch_continuity_checkpoint(
+        self,
+        session_id: str,
+    ) -> StoredContinuityCheckpoint | None:
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT session_id, checkpoint_id, continuity_action, checkpoint_status,
+                       checkpoint_summary, mission_id, continuity_source, target_mission_id,
+                       target_goal, origin_request_id, replay_summary, updated_at
+                FROM continuity_checkpoints
+                WHERE session_id = %s
+                """,
+                (session_id,),
+            )
+            row = cursor.fetchone()
+        if row is None:
+            return None
+        return StoredContinuityCheckpoint(
+            checkpoint_id=row["checkpoint_id"],
+            session_id=row["session_id"],
+            continuity_action=row["continuity_action"],
+            checkpoint_status=row["checkpoint_status"],
+            checkpoint_summary=row["checkpoint_summary"],
+            mission_id=row["mission_id"],
+            continuity_source=row["continuity_source"],
+            target_mission_id=row["target_mission_id"],
+            target_goal=row["target_goal"],
+            origin_request_id=row["origin_request_id"],
+            replay_summary=row["replay_summary"],
             updated_at=row["updated_at"],
         )
 
@@ -791,6 +987,24 @@ class PostgresMemoryRepository(MemoryRepository):
             )
             cursor.execute(
                 """
+                CREATE TABLE IF NOT EXISTS continuity_checkpoints (
+                    session_id TEXT PRIMARY KEY,
+                    checkpoint_id TEXT NOT NULL,
+                    continuity_action TEXT NOT NULL,
+                    checkpoint_status TEXT NOT NULL,
+                    checkpoint_summary TEXT NOT NULL,
+                    mission_id TEXT,
+                    continuity_source TEXT,
+                    target_mission_id TEXT,
+                    target_goal TEXT,
+                    origin_request_id TEXT,
+                    replay_summary TEXT,
+                    updated_at TEXT NOT NULL
+                )
+                """
+            )
+            cursor.execute(
+                """
                 CREATE TABLE IF NOT EXISTS mission_states (
                     mission_id TEXT PRIMARY KEY,
                     mission_goal TEXT NOT NULL,
@@ -886,3 +1100,22 @@ def parse_sqlite_database_path(database_url: str) -> Path:
     if parsed.path.startswith("/") and len(parsed.path) > 2 and parsed.path[2] == ":":
         return Path(parsed.path.lstrip("/"))
     return database_path
+
+
+def continuity_checkpoint_to_contract(
+    checkpoint: StoredContinuityCheckpoint,
+) -> ContinuityCheckpointContract:
+    return ContinuityCheckpointContract(
+        checkpoint_id=checkpoint.checkpoint_id,
+        session_id=checkpoint.session_id,
+        mission_id=checkpoint.mission_id,
+        continuity_action=checkpoint.continuity_action,
+        continuity_source=checkpoint.continuity_source,
+        target_mission_id=checkpoint.target_mission_id,
+        target_goal=checkpoint.target_goal,
+        checkpoint_status=checkpoint.checkpoint_status,
+        checkpoint_summary=checkpoint.checkpoint_summary,
+        origin_request_id=checkpoint.origin_request_id,
+        replay_summary=checkpoint.replay_summary,
+        updated_at=checkpoint.updated_at,
+    )

@@ -21,7 +21,8 @@ Sistema oficial de planejamento desta fase:
 Estado do ciclo rolante:
 
 - primeiro ciclo do `pós-v1` concluído;
-- Sprint 1 do `v1.5` é a próxima frente ativa.
+- Sprint 1 do `v1.5` concluída;
+- Sprint 2 do `v1.5` é a próxima frente ativa.
 
 ## Decisões fechadas
 
@@ -91,15 +92,16 @@ Principais entregas já consolidadas:
 - Sprint 4 concluída, com snapshot persistente de continuidade da sessão e síntese orientada a continuidade acima da missão atual;
 - Sprint 5 concluída, com auditoria explícita da continuidade, sinais comparáveis no piloto e integração desses sinais ao laboratório sandbox;
 - Sprint 6 concluída, com fechamento formal do primeiro ciclo do `pós-v1` e decisão explícita de promoção para `v1.5`;
+- Sprint 1 do `v1.5` concluída, com checkpoint explícito de continuidade e estado recuperável por sessão;
 - Documento-Mestre ampliado com referências arquiteturais oficiais por função.
 
 ## O que ainda falta
 
 Pendências principais desta fase:
 
-- executar a Sprint 1 do ciclo `v1.5`;
+- executar a Sprint 2 do ciclo `v1.5`;
 - consolidar estudo externo curto sem bloquear a implementação principal;
-- validar checkpoint, replay e pausa governada como primeiro salto estrutural acima do baseline.
+- validar replay e recuperação governada como próximo salto do runtime stateful.
 
 Regra de estudo externo no `v1.5`:
 
@@ -112,8 +114,8 @@ Regra de estudo externo no `v1.5`:
 
 Ordem recomendada:
 
-1. executar a Sprint 1 do `v1.5`;
-2. materializar checkpoints e estado recuperável da continuidade;
+1. executar a Sprint 2 do `v1.5`;
+2. materializar replay e recuperação governada da continuidade;
 3. rodar estudo externo curto em paralelo;
 4. classificar cada achado como `absorver depois`, `usar como referência` ou `rejeitar`;
 5. preservar o corte já definido entre `v1.5` e `v2`.

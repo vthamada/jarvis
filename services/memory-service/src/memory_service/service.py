@@ -9,10 +9,13 @@ from uuid import uuid4
 
 from memory_service.repository import (
     SessionContinuitySnapshot,
+    StoredContinuityCheckpoint,
     StoredTurn,
     build_memory_repository,
+    continuity_checkpoint_to_contract,
 )
 from shared.contracts import (
+    ContinuityCheckpointContract,
     DeliberativePlanContract,
     InputContract,
     MemoryRecordContract,
@@ -180,6 +183,14 @@ class MemoryService:
         )
         if continuity_snapshot is not None:
             self.repository.upsert_session_continuity(continuity_snapshot)
+            self.repository.upsert_continuity_checkpoint(
+                self._build_continuity_checkpoint(
+                    contract,
+                    deliberative_plan=deliberative_plan,
+                    governance_decision=governance_decision,
+                    continuity_snapshot=continuity_snapshot,
+                )
+            )
         if contract.mission_id:
             mission_state = self._build_mission_state(
                 contract,
@@ -198,6 +209,17 @@ class MemoryService:
         """Expose the latest mission snapshot for validation and orchestration."""
 
         return self.repository.fetch_mission_state(mission_id)
+
+    def get_session_continuity_checkpoint(
+        self,
+        session_id: str,
+    ) -> ContinuityCheckpointContract | None:
+        """Expose the latest recoverable continuity checkpoint for a session."""
+
+        checkpoint = self.repository.fetch_continuity_checkpoint(session_id)
+        if checkpoint is None:
+            return None
+        return continuity_checkpoint_to_contract(checkpoint)
 
     def _compose_recovered_items(
         self,
@@ -245,6 +267,30 @@ class MemoryService:
                 )
             if session_continuity.related_goal:
                 continuity_hints.append(f"session_related_goal={session_continuity.related_goal}")
+        continuity_checkpoint = self.repository.fetch_continuity_checkpoint(
+            str(contract.session_id)
+        )
+        if continuity_checkpoint:
+            continuity_hints.append(
+                f"continuity_checkpoint_id={continuity_checkpoint.checkpoint_id}"
+            )
+            continuity_hints.append(
+                f"continuity_checkpoint_status={continuity_checkpoint.checkpoint_status}"
+            )
+            continuity_hints.append(
+                f"continuity_checkpoint_action={continuity_checkpoint.continuity_action}"
+            )
+            continuity_hints.append(
+                f"continuity_checkpoint_summary={continuity_checkpoint.checkpoint_summary}"
+            )
+            if continuity_checkpoint.origin_request_id:
+                continuity_hints.append(
+                    f"continuity_checkpoint_origin={continuity_checkpoint.origin_request_id}"
+                )
+            if continuity_checkpoint.replay_summary:
+                continuity_hints.append(
+                    f"continuity_replay_summary={continuity_checkpoint.replay_summary}"
+                )
         if contract.mission_id:
             mission_state = self.repository.fetch_mission_state(str(contract.mission_id))
             if mission_state:
@@ -460,6 +506,43 @@ class MemoryService:
             open_loops=persisted_open_loops,
             last_decision_frame=persisted_frame,
             owner_context=contract.user_id or str(contract.session_id),
+            updated_at=self.now(),
+        )
+
+    def _build_continuity_checkpoint(
+        self,
+        contract: InputContract,
+        *,
+        deliberative_plan: DeliberativePlanContract,
+        governance_decision: PermissionDecision | None,
+        continuity_snapshot: SessionContinuitySnapshot,
+    ) -> StoredContinuityCheckpoint:
+        continuity_action = deliberative_plan.continuity_action or "continuar"
+        checkpoint_status = self._continuity_checkpoint_status(
+            continuity_action=continuity_action,
+            governance_decision=governance_decision,
+        )
+        return StoredContinuityCheckpoint(
+            checkpoint_id=f"cck-{uuid4().hex[:8]}",
+            session_id=str(contract.session_id),
+            mission_id=str(contract.mission_id) if contract.mission_id else None,
+            continuity_action=continuity_action,
+            continuity_source=deliberative_plan.continuity_source,
+            target_mission_id=(
+                str(deliberative_plan.continuity_target_mission_id)
+                if deliberative_plan.continuity_target_mission_id
+                else None
+            ),
+            target_goal=deliberative_plan.continuity_target_goal,
+            checkpoint_status=checkpoint_status,
+            checkpoint_summary=continuity_snapshot.continuity_brief,
+            origin_request_id=str(contract.request_id),
+            replay_summary=self._continuity_replay_summary(
+                contract=contract,
+                plan=deliberative_plan,
+                continuity_snapshot=continuity_snapshot,
+                checkpoint_status=checkpoint_status,
+            ),
             updated_at=self.now(),
         )
 
@@ -761,6 +844,36 @@ class MemoryService:
         if previous is not None:
             return previous.continuity_brief
         return f"sessao preserva continuidade segura em '{anchor_goal}'"
+
+    @staticmethod
+    def _continuity_checkpoint_status(
+        *,
+        continuity_action: str,
+        governance_decision: PermissionDecision | None,
+    ) -> str:
+        if continuity_action == "encerrar":
+            return "closed"
+        if governance_decision == PermissionDecision.DEFER_FOR_VALIDATION:
+            return "awaiting_validation"
+        if governance_decision == PermissionDecision.BLOCK:
+            return "contained"
+        return "ready"
+
+    @staticmethod
+    def _continuity_replay_summary(
+        *,
+        contract: InputContract,
+        plan: DeliberativePlanContract,
+        continuity_snapshot: SessionContinuitySnapshot,
+        checkpoint_status: str,
+    ) -> str:
+        target_goal = plan.continuity_target_goal or continuity_snapshot.anchor_goal or plan.goal
+        source = plan.continuity_source or "active_mission"
+        return (
+            f"request={contract.request_id}; status={checkpoint_status}; "
+            f"acao={plan.continuity_action or 'continuar'}; "
+            f"fonte={source}; alvo={target_goal}"
+        )
 
     @staticmethod
     def _extract_open_loops(

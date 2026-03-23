@@ -221,6 +221,22 @@ class MissionContinuityContextContract:
 
 
 @dataclass
+class ContinuityCheckpointContract:
+    checkpoint_id: str
+    session_id: SessionId
+    continuity_action: str
+    checkpoint_status: str
+    checkpoint_summary: str
+    updated_at: UpdatedAt
+    mission_id: MissionId | None = None
+    continuity_source: str | None = None
+    target_mission_id: MissionId | None = None
+    target_goal: str | None = None
+    origin_request_id: RequestId | None = None
+    replay_summary: str | None = None
+
+
+@dataclass
 class MissionStateContract:
     mission_id: MissionId
     mission_goal: str

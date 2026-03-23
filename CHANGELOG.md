@@ -8,6 +8,13 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 
 ## 2026-03-22
 
+### Execução da Sprint 1 do ciclo v1.5
+
+- adicionado `ContinuityCheckpointContract` como contrato interno mínimo para checkpoint recuperável da continuidade;
+- `memory-service` passou a persistir checkpoints explícitos por sessão, com status, resumo e replay mínimo;
+- a recuperação passou a expor esses checkpoints como hints estruturais e a API `get_session_continuity_checkpoint()` passou a permitir inspeção direta do estado recuperável;
+- adicionados testes de persistência entre instâncias e integração com PostgreSQL para o novo estado de checkpoint.
+
 ### Regra de estudo externo explicitada para o v1.5
 
 - `docs/implementation/v1-5-sprint-cycle.md` passou a explicitar quais estudos externos entram no `v1.5` e quais ficam fora do corte imediato;

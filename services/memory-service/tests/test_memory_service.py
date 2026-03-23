@@ -122,8 +122,43 @@ def test_memory_service_records_and_recovers_session_history_across_instances() 
     assert any("context_summary=" in item for item in recovered.session_context)
     assert any("session_continuity_brief=" in item for item in recovered.session_context)
     assert any("session_continuity_mode=continuar" in item for item in recovered.session_context)
+    assert any("continuity_checkpoint_id=" in item for item in recovered.session_context)
+    assert any("continuity_checkpoint_status=ready" in item for item in recovered.session_context)
     assert recovered.mission_hints == []
     assert any("prior_plan=" in item for item in recovered.plan_hints)
+
+
+def test_memory_service_exposes_recoverable_continuity_checkpoint() -> None:
+    temp_dir = runtime_dir("memory-checkpoint")
+    database_url = f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+    contract = InputContract(
+        request_id=RequestId("req-checkpoint"),
+        session_id=SessionId("sess-checkpoint"),
+        mission_id=MissionId("mission-checkpoint"),
+        channel=ChannelType.CHAT,
+        input_type=InputType.TEXT,
+        content="Please plan the sprint.",
+        timestamp="2026-03-17T00:00:00Z",
+    )
+    service = MemoryService(database_url=database_url)
+    service.record_turn(
+        contract,
+        intent="planning",
+        response_text="Plan created.",
+        deliberative_plan=sample_plan(),
+        specialist_contributions=sample_specialist_contributions(),
+    )
+
+    checkpoint = MemoryService(database_url=database_url).get_session_continuity_checkpoint(
+        "sess-checkpoint"
+    )
+
+    assert checkpoint is not None
+    assert checkpoint.session_id == SessionId("sess-checkpoint")
+    assert checkpoint.continuity_action == "continuar"
+    assert checkpoint.checkpoint_status == "ready"
+    assert "sessao segue ancorada" in checkpoint.checkpoint_summary
+    assert checkpoint.replay_summary is not None
 
 
 def test_memory_service_persists_mission_state_with_identity_continuity_and_open_loops() -> None:
