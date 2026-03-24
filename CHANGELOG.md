@@ -46,6 +46,14 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 - `evolution_from_pilot` e `evolution-lab` passaram a carregar sinais de domínio, `shadow mode` e aderência aos eixos do mestre para proposals sandbox-only;
 - `README`, `HANDOFF`, `master-summary`, `v2-sprint-cycle` e `matriz-de-aderencia-mestre` passaram a tratar a Sprint 5 do `v2` como concluída e a Sprint 6 como próxima frente ativa.
 
+### Fechamento da Sprint 6 e do primeiro corte do v2
+
+- `tools/close_specialization_cycle.py` passou a gerar o artefato formal de fechamento do primeiro corte do `v2`, usando evidência de observabilidade, comparação e aderência por eixo;
+- `docs/implementation/v2-cycle-closure.md` passou a registrar a decisão formal de encerramento do primeiro corte do `v2`;
+- `docs/implementation/v2-alignment-cycle.md` passou a abrir o próximo ciclo do programa, com foco explícito em `domínios`, `memórias`, `mentes`, identidade auditável e gates por eixo;
+- `docs/implementation/v2-alignment-cycle.md` passou a registrar uma matriz explícita conectando todas as tecnologias estudadas aos eixos `domínios`, `mentes` e `memórias`, com regra clara de absorção para cada uma;
+- `README`, `HANDOFF`, `master-summary`, `tools/README` e `v2-sprint-cycle` passaram a refletir que a Sprint 6 foi concluída e que o próximo ciclo ativo já não é mais expansão de especialistas por si só, e sim alinhamento do runtime ao Documento-Mestre.
+
 ### Execução da Sprint 4 do ciclo v2
 
 - `knowledge-service` passou a carregar `knowledge/curated/domain_registry.json` como registry inicial dos domínios ativos do ciclo;

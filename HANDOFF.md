@@ -4,19 +4,20 @@
 
 - Atualizado em: 2026-03-23
 - Branch: `main`
-- Commit de referência: `9df79da`
+- Commit de referência: `5ec3744`
 - Artefato canônico do projeto: `documento_mestre_jarvis.md`
-- Estado do projeto: `v1` encerrado e congelado para uso controlado; primeiro ciclo do `pós-v1` encerrado; primeiro ciclo do `v1.5` encerrado; `v2` aberto de forma disciplinada
+- Estado do projeto: `v1` encerrado e congelado para uso controlado; primeiro ciclo do `pós-v1` encerrado; primeiro ciclo do `v1.5` encerrado; primeiro corte do `v2` encerrado; ciclo de alinhamento do `v2` aberto
 
 ## Meta atual
 
-Abrir o `v2` com foco total em `especialização controlada subordinada ao núcleo com memória relacional mais rica`, preservando o runtime stateful do `v1.5` sem ampliar superfícies cedo demais.
+Fechar o primeiro corte do `v2` e abrir o ciclo de alinhamento do runtime ao Documento-Mestre, com foco em `domínios`, `memórias`, `mentes`, identidade auditável e gates por eixo.
 
 Sistema oficial de planejamento desta fase:
 
 - `HANDOFF.md` como retomada tático-operacional;
 - `docs/roadmap/programa-ate-v3.md` como direção do programa até `v3`;
-- `docs/implementation/v2-sprint-cycle.md` como execução oficial das próximas `6` sprints;
+- `docs/implementation/v2-cycle-closure.md` como fechamento formal do primeiro corte do `v2`;
+- `docs/implementation/v2-alignment-cycle.md` como execução oficial do próximo ciclo;
 - `docs/documentation/matriz-de-aderencia-mestre.md` como ponte entre visão canônica e backlog real.
 
 Leitura prioritária de aderência neste momento:
@@ -33,8 +34,10 @@ Estado do ciclo rolante:
 - Sprint 2 do `v2` concluída;
 - Sprint 3 do `v2` concluída;
 - Sprint 4 do `v2` concluída;
-- Sprint 5 do `v2` concluída.
-- Sprint 6 do `v2` é a próxima frente ativa.
+- Sprint 5 do `v2` concluída;
+- Sprint 6 do `v2` concluída;
+- o primeiro corte do `v2` está formalmente encerrado;
+- Sprint 1 do `v2-alignment-cycle` é a próxima frente ativa.
 
 ## Decisões fechadas
 
@@ -134,9 +137,10 @@ Principais entregas já consolidadas:
 
 Pendências principais desta fase:
 
-- executar a Sprint 6 do ciclo `v2`;
-- classificar o primeiro corte do `v2` entre `corrigir agora`, `manter deferido` e `apenas preservar como visão`;
-- decidir formalmente o que permanece no recorte inicial de especialistas subordinados;
+- executar a Sprint 1 do `v2-alignment-cycle`;
+- transformar o registry de `domínios` em fonte soberana de roteamento do runtime;
+- promover o registry de `memórias` para política operacional por classe;
+- tornar a arbitragem entre `mentes` menos implícita e mais soberana;
 - preservar a mediação do núcleo como única política de escrita da memória compartilhada;
 - usar os sinais de aderência recém-abertos como critério explícito de promoção, ajuste ou contenção;
 - consolidar estudo externo curto sem bloquear a implementação principal.
@@ -152,9 +156,9 @@ Regra de estudo externo no `v2`:
 
 Ordem recomendada:
 
-1. executar a Sprint 6 do `v2`;
-2. classificar o recorte atual entre núcleo puro, especialista estrutural e especialista em `shadow mode`;
-3. usar `domain_alignment_status`, `memory_alignment_status` e `specialist_sovereignty_status` como base do fechamento;
+1. executar a Sprint 1 do `v2-alignment-cycle`;
+2. tornar `domain_registry.json` a fonte primária de roteamento e ativação;
+3. usar `domain_alignment_status`, `memory_alignment_status` e `specialist_sovereignty_status` como gates da próxima rodada;
 4. usar a matriz para priorizar `domínios`, `memórias` e `mentes` nessa ordem;
 5. rodar estudo externo curto em paralelo;
 6. classificar cada achado como `absorver depois`, `usar como referência` ou `rejeitar`;
@@ -175,7 +179,8 @@ Ordem recomendada:
 - `docs/roadmap/programa-ate-v3.md`
 - `docs/implementation/post-v1-cycle-closure.md`
 - `docs/implementation/v1-5-cycle-closure.md`
-- `docs/implementation/v2-sprint-cycle.md`
+- `docs/implementation/v2-cycle-closure.md`
+- `docs/implementation/v2-alignment-cycle.md`
 - `docs/architecture/technology-study.md`
 - `docs/documentation/matriz-de-aderencia-mestre.md`
 - `docs/operations/v1-operational-baseline.md`
@@ -196,5 +201,6 @@ Leitura mínima para qualquer novo agente:
 2. `documento_mestre_jarvis.md`
 3. `docs/roadmap/programa-ate-v3.md`
 4. `docs/implementation/v1-5-cycle-closure.md`
-5. `docs/implementation/v2-sprint-cycle.md`
-6. `docs/architecture/technology-study.md`
+5. `docs/implementation/v2-cycle-closure.md`
+6. `docs/implementation/v2-alignment-cycle.md`
+7. `docs/architecture/technology-study.md`

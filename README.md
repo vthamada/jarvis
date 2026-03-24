@@ -44,8 +44,9 @@ Leitura prática correta deste momento:
 - Sprint 3 do `v2` concluída com memória relacional compartilhada mediada pelo núcleo e contexto persistido por especialista;
 - Sprint 4 do `v2` concluída com registry inicial de domínios e primeiro especialista subordinado em `shadow mode`;
 - Sprint 5 do `v2` concluída com evals de aderência do recorte de especialistas aos eixos do mestre;
+- Sprint 6 do `v2` concluída com fechamento formal do primeiro corte do ciclo;
 - `shared/memory_registry.py` e `shared/mind_registry.py` passaram a registrar, respectivamente, as 11 memórias e as 24 mentes do mestre como base formal do runtime progressivo;
-- Sprint 6 do `v2` aberta como próxima frente ativa do ciclo rolante;
+- o próximo ciclo ativo do programa passou a ser o `v2-alignment-cycle`, focado em `domínios`, `memórias`, `mentes`, identidade auditável e gates por eixo;
 - a auditoria completa do Documento-Mestre passou a orientar o backlog real por eixo.
 
 ## Estrutura principal

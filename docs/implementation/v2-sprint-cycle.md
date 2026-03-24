@@ -27,7 +27,8 @@ Status desta versão do ciclo:
 - Sprint 3 concluída;
 - Sprint 4 concluída;
 - Sprint 5 concluída;
-- Sprint 6 é a próxima sprint ativa.
+- Sprint 6 concluída;
+- este documento passa a ser lido como histórico do primeiro corte do `v2`.
 
 ---
 
@@ -342,7 +343,7 @@ Resultado registrado nesta rodada:
 
 Status:
 
-- próxima sprint ativa
+- concluída
 - eixo principal do mestre: `implementação, operação, release e incidentes`
 - lacuna dominante a atacar: fechamento do ciclo sem classificar o que foi corrigido, deferido ou mantido apenas como visão
 - continua fora de cobertura: tudo o que permanecer corretamente deferido por fase
@@ -363,6 +364,13 @@ Critérios explícitos desta consolidação:
 - `domain_registry.json` deve ser tratado como mapa canônico soberano, enquanto o subset runtime continua deliberadamente menor;
 - `shared/memory_registry.py` deve ser lido como registry formal das 11 classes, e a Sprint 6 deve decidir quais classes sobem de `tipado/documentado` para `runtime parcial` no próximo ciclo;
 - `shared/mind_registry.py` deve ser tratado como registry oficial das 24 mentes, e a Sprint 6 deve decidir quanto da composição entre mentes sai do nível implícito para regras soberanas de runtime.
+
+Resultado registrado nesta rodada:
+
+- o primeiro corte do `v2` foi fechado com classificação explícita entre `corrigir agora`, `manter deferido` e `preservar como visão`;
+- `tools/close_specialization_cycle.py` passou a gerar o artefato formal de fechamento orientado pelos eixos do Documento-Mestre;
+- `docs/implementation/v2-cycle-closure.md` passou a registrar a decisão formal do corte;
+- o próximo artefato de execução passou a ser `docs/implementation/v2-alignment-cycle.md`, com foco em `domínios`, `memórias`, `mentes`, identidade auditável e gates por eixo.
 
 ---
 

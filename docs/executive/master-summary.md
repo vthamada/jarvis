@@ -107,7 +107,8 @@ Leitura curta do momento:
 - Sprint 3 do `v2` foi concluída com memória relacional compartilhada mediada pelo núcleo e contexto persistido por especialista;
 - Sprint 4 do `v2` foi concluída com registry inicial de domínios e primeiro especialista subordinado em `shadow mode`;
 - Sprint 5 do `v2` foi concluída com evals de aderência do recorte de especialistas;
-- Sprint 6 do `v2` é a próxima frente ativa;
+- Sprint 6 do `v2` foi concluída com fechamento formal do primeiro corte do ciclo;
+- o próximo ciclo ativo do programa é o `v2-alignment-cycle`, focado em `domínios`, `memórias`, `mentes`, identidade auditável e gates por eixo;
 - a auditoria completa do Documento-Mestre passou a orientar o backlog por eixo canônico.
 
 ---

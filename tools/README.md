@@ -112,3 +112,15 @@ Esse script gera artefatos em `.jarvis_runtime/v1_5_cycle/`:
 
 - `cycle_closure.json`
 - `cycle_closure.md`
+
+Para consolidar o primeiro corte de especializacao subordinada do `v2` e emitir
+o fechamento orientado pelos eixos do Documento-Mestre:
+
+```powershell
+python tools/close_specialization_cycle.py --limit 20
+```
+
+Esse script gera artefatos em `.jarvis_runtime/specialization_cycle/`:
+
+- `cycle_closure.json`
+- `cycle_closure.md`
