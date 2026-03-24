@@ -10,6 +10,16 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 
 ## 2026-03-23
 
+## 2026-03-24
+
+### Execução da Sprint 1 do ciclo v2-alignment-cycle
+
+- `shared/domain_registry.py` foi criado como módulo soberano do registry de domínios, expondo `CANONICAL_DOMAIN_REGISTRY`, `RUNTIME_ROUTE_REGISTRY`, `RUNTIME_ELIGIBLE_ROUTES`, `SHADOW_SPECIALIST_ROUTES`, `FALLBACK_RUNTIME_ROUTE` e funções utilitárias `is_shadow_route`, `resolve_route` e `canonical_scopes_for_route`;
+- `knowledge-service` passou a derivar o prior de intenção de `domain_scope` dos `canonical_refs` de cada rota, eliminando o dicionário hardcoded de pesos; domínios com `maturity=canonical_only` são excluídos do runtime; o fallback é derivado do registry;
+- `specialist-engine` passou a verificar `is_shadow_route()` antes de acionar `especialista_software_subordinado`, eliminando a heurística residual de shadow mode;
+- `cognitive-engine` passou a usar `FALLBACK_RUNTIME_ROUTE` em vez de string hardcoded;
+- `HANDOFF`, `v2-alignment-cycle` e `CHANGELOG` passaram a tratar a Sprint 1 do `v2-alignment-cycle` como concluída e a Sprint 2 como próxima frente ativa.
+
 ### Política de nomenclatura técnica
 
 - o Documento-Mestre passou a registrar explicitamente a regra de que arquivos,

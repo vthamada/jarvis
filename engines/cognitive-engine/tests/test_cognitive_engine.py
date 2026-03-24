@@ -1,6 +1,7 @@
 from cognitive_engine.engine import CognitiveEngine
 
 from shared.contracts import DomainSpecialistRouteContract
+from shared.domain_registry import FALLBACK_RUNTIME_ROUTE
 
 
 def test_cognitive_engine_name() -> None:
@@ -43,3 +44,14 @@ def test_cognitive_engine_prioritizes_domain_linked_shadow_specialist_hint() -> 
 
     assert snapshot.active_domains == ["software_development", "analysis"]
     assert snapshot.specialist_hints[0] == "especialista_software_subordinado"
+
+
+def test_cognitive_engine_fallback_uses_registry_domain() -> None:
+    engine = CognitiveEngine()
+    snapshot = engine.build_snapshot(
+        intent="general_assistance",
+        risk_markers=[],
+        retrieved_domains=[],
+    )
+
+    assert snapshot.active_domains == [FALLBACK_RUNTIME_ROUTE]

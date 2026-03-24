@@ -141,3 +141,49 @@ def test_specialist_engine_links_domain_shadow_specialist_explicitly() -> None:
     assert handoff_plan.invocations[0].selection_mode == "shadow"
     assert review.contributions[0].specialist_type == "especialista_software_subordinado"
     assert "domain_shadow_specialist" in review.contributions[0].output_hints
+
+
+def test_specialist_engine_rejects_software_specialist_if_not_shadow_route() -> None:
+    engine = SpecialistEngine()
+    non_shadow_plan = DeliberativePlanContract(
+        plan_summary="avaliar estrategia sem especialista de software",
+        goal="Review strategy options",
+        steps=["mapear opcoes", "comparar", "recomendar"],
+        active_domains=["strategy"],
+        active_minds=["mente_analitica"],
+        constraints=["through_core_only"],
+        risks=[],
+        recommended_task_type="produce_analysis_brief",
+        requires_human_validation=False,
+        rationale="contexto=strategy",
+        tensions_considered=[],
+        specialist_hints=["especialista_software_subordinado"],
+        success_criteria=["recomendacao clara"],
+        dominant_tension="equilibrar profundidade analitica com conclusao util",
+        smallest_safe_next_action="mapear opcoes",
+        continuity_action=None,
+        open_loops=[],
+    )
+
+    handoff_plan = engine.plan_handoffs(
+        intent="analysis",
+        plan=non_shadow_plan,
+        knowledge_snippets=["Priorize clareza de objetivo."],
+        domain_specialist_routes=[
+            DomainSpecialistRouteContract(
+                domain_name="strategy",
+                specialist_type="especialista_software_subordinado",
+                specialist_mode="standard",
+                routing_reason="rota nao-shadow — deve ser rejeitada pelo registry",
+            )
+        ],
+        session_id="sess-non-shadow",
+        mission_id="mission-non-shadow",
+        requested_by_service="orchestrator-service",
+    )
+
+    # "strategy" is not a shadow_specialist route in the registry,
+    # so the software specialist must be rejected regardless of specialist_mode in the route.
+    assert handoff_plan.selections[0].specialist_type == "especialista_software_subordinado"
+    assert handoff_plan.selections[0].selection_status == "not_eligible"
+    assert not handoff_plan.invocations

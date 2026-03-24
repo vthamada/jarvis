@@ -7,6 +7,7 @@ from json import loads
 from pathlib import Path
 
 from shared.contracts import DomainRegistryEntryContract, DomainSpecialistRouteContract
+from shared.domain_registry import FALLBACK_RUNTIME_ROUTE
 
 
 @dataclass(frozen=True)
@@ -64,8 +65,16 @@ class KnowledgeService:
 
         active_domains = self._select_domains(intent, query)
         registry_domains = self._resolve_canonical_domains(active_domains)
-        snippets = [self.domains[domain].snippets[0] for domain in active_domains]
-        sources = [f"local://knowledge/{domain}" for domain in active_domains]
+        snippets = [
+            self.domains[domain].snippets[0]
+            for domain in active_domains
+            if domain in self.domains
+        ]
+        sources = [
+            f"local://knowledge/{domain}"
+            for domain in active_domains
+            if domain in self.domains
+        ]
         specialist_routes = self._resolve_specialist_routes(active_domains)
         return KnowledgeRetrievalResult(
             intent=intent,
@@ -92,48 +101,54 @@ class KnowledgeService:
 
         return list(self.domain_routes.keys())
 
+    _DOMAIN_NAME_MATCH_WEIGHT: float = 1.6
+    _KEYWORD_MATCH_WEIGHT: float = 1.25
+
     def _select_domains(self, intent: str, query: str) -> list[str]:
         lowered = query.lower()
         scores: dict[str, float] = {}
         for domain_name, entry in self.domains.items():
+            route_entry = self.domain_routes.get(domain_name)
+            # Domains with a registry entry that are not runtime-eligible are excluded.
+            if route_entry is not None and route_entry.maturity == "canonical_only":
+                scores[domain_name] = 0.0
+                continue
             score = self._intent_prior(intent, domain_name)
             if domain_name in lowered:
-                score += 1.6
-            score += sum(1.25 for keyword in entry.keywords if keyword in lowered)
-            if "audit" in lowered and domain_name == "governance":
-                score += 1.5
+                score += self._DOMAIN_NAME_MATCH_WEIGHT
+            score += sum(
+                self._KEYWORD_MATCH_WEIGHT for keyword in entry.keywords if keyword in lowered
+            )
             scores[domain_name] = score
         ranked = sorted(scores.items(), key=lambda item: (-item[1], item[0]))
         selected = [name for name, score in ranked if score > 0.0]
-        return selected[:3] or ["productivity"]
+        return selected[:3] or [FALLBACK_RUNTIME_ROUTE]
 
-    @staticmethod
-    def _intent_prior(intent: str, domain_name: str) -> float:
+    def _intent_prior(self, intent: str, domain_name: str) -> float:
+        route_entry = self.domain_routes.get(domain_name)
+        if route_entry is None:
+            return 0.0
+        scopes = frozenset(
+            self.canonical_domain_registry[ref].domain_scope
+            for ref in route_entry.canonical_refs
+            if ref in self.canonical_domain_registry
+        )
+        maturity = route_entry.maturity
         if intent == "planning":
-            priorities = {
-                "strategy": 2.0,
-                "productivity": 1.3,
-                "documentation": 0.9,
-                "pilot_operations": 0.8,
-                "operational_readiness": 0.7,
-            }
-        elif intent == "analysis":
-            priorities = {
-                "analysis": 2.0,
-                "strategy": 1.5,
-                "decision_risk": 1.2,
-                "governance": 1.0,
-                "observability": 0.9,
-                "operational_readiness": 0.8,
-                "pilot_operations": 0.7,
-            }
-        else:
-            priorities = {
-                "productivity": 0.5,
-                "documentation": 0.4,
-                "pilot_operations": 0.35,
-            }
-        return priorities.get(domain_name, 0.0)
+            if "operational" in scopes:
+                return 1.8
+            if "primary" in scopes:
+                return 1.4
+            return 0.4
+        if intent == "analysis":
+            if maturity == "shadow_specialist":
+                return 1.6
+            if "primary" in scopes:
+                return 1.3
+            if "operational" in scopes:
+                return 0.8
+            return 0.5
+        return 0.4
 
     @staticmethod
     def _load_domain_registry(
@@ -189,6 +204,8 @@ class KnowledgeService:
     def _resolve_canonical_domains(self, active_domains: list[str]) -> list[str]:
         canonical_domains: list[str] = []
         for domain_name in active_domains:
+            if domain_name not in self.domains:
+                continue
             entry = self.domains[domain_name].registry_entry
             if entry is None:
                 continue
@@ -203,6 +220,8 @@ class KnowledgeService:
     ) -> list[DomainSpecialistRouteContract]:
         routes: list[DomainSpecialistRouteContract] = []
         for domain_name in active_domains:
+            if domain_name not in self.domains:
+                continue
             entry = self.domains[domain_name].registry_entry
             if not entry or not entry.linked_specialist_type or not entry.specialist_mode:
                 continue

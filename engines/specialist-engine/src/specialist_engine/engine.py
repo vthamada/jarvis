@@ -13,6 +13,7 @@ from shared.contracts import (
     SpecialistSelectionContract,
     SpecialistSharedMemoryContextContract,
 )
+from shared.domain_registry import is_shadow_route
 
 
 @dataclass(frozen=True)
@@ -224,6 +225,7 @@ class SpecialistEngine:
                 specialist_hint == "especialista_software_subordinado"
                 and route is not None
                 and route.domain_name in plan.active_domains
+                and is_shadow_route(route.domain_name)
             ):
                 selections.append(
                     SpecialistSelectionContract(

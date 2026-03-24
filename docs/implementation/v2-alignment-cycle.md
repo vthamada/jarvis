@@ -20,7 +20,8 @@ Fontes de direcao:
 
 Status desta versao do ciclo:
 
-- Sprint 1 e a proxima sprint ativa.
+- Sprint 1 concluida;
+- Sprint 2 e a proxima sprint ativa.
 
 ---
 
@@ -110,9 +111,9 @@ Leitura correta dos eixos:
 
 Status:
 
-- proxima sprint ativa
+- concluida
 - eixo principal do mestre: `dominios`
-- lacuna dominante a atacar: registry existente sem soberania plena sobre roteamento e ativacao
+- lacuna dominante fechada: registry existente sem soberania plena sobre roteamento e ativacao
 - continua fora de cobertura: mapeamento total de todas as maturidades de dominio ao mesmo tempo
 
 ### Objetivo
@@ -126,6 +127,14 @@ subset ativo do corpus e da relacao `dominio -> especialista`.
 - separacao explicita entre `dominio principal`, `dominio operacional` e `dominio meta`;
 - ativacao do subset runtime sempre derivada do registry;
 - shadow specialist ligado a dominio canonico sem heuristica solta residual.
+
+### Resultado registrado nesta rodada
+
+- `shared/domain_registry.py` foi criado como modulo soberano do registry de dominios, analogo a `memory_registry.py` e `mind_registry.py`, expondo `CANONICAL_DOMAIN_REGISTRY`, `RUNTIME_ROUTE_REGISTRY`, `RUNTIME_ELIGIBLE_ROUTES`, `SHADOW_SPECIALIST_ROUTES`, `FALLBACK_RUNTIME_ROUTE` e funcoes utilitarias `is_shadow_route`, `resolve_route` e `canonical_scopes_for_route`;
+- `knowledge-service` passou a derivar o prior de intencao de `domain_scope` dos canonical_refs de cada rota, removendo o dicionario hardcoded de pesos; dominios com `maturity=canonical_only` sao excluidos do runtime; o fallback e derivado do registry (`FALLBACK_RUNTIME_ROUTE`); os pesos de matching foram nomeados como constantes do modulo;
+- `specialist-engine` passou a verificar `is_shadow_route()` antes de acionar `especialista_software_subordinado`, eliminando a heuristica residual de shadow mode;
+- `cognitive-engine` passou a usar `FALLBACK_RUNTIME_ROUTE` em vez de string hardcoded no fallback de dominios ativos;
+- todos os testes dos tres modulos passam sem regressao; dois testes de terceiros (`orchestrator-service` e benchmark de knowledge) foram recalibrados para refletir o novo comportamento soberano do registry.
 
 ---
 

@@ -63,7 +63,7 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     assert result.operation_result.status == OperationStatus.COMPLETED
     assert result.knowledge_result is not None
     assert result.artifact_results
-    assert result.active_domains == ["strategy", "productivity", "documentation"]
+    assert result.active_domains == ["strategy", "documentation", "observability"]
     assert result.cognitive_tensions
     assert result.specialist_review is not None
     assert result.specialist_review.contributions

@@ -2,7 +2,7 @@
 
 ## Metadata
 
-- Atualizado em: 2026-03-23
+- Atualizado em: 2026-03-24
 - Branch: `main`
 - Commit de referência: `5ec3744`
 - Artefato canônico do projeto: `documento_mestre_jarvis.md`
@@ -22,9 +22,9 @@ Sistema oficial de planejamento desta fase:
 
 Leitura prioritária de aderência neste momento:
 
-- eixo crítico mais distante do mestre: `domínios`, porque o mapa canônico já existe no registry, mas ainda não governa todo o runtime;
-- eixo operacional mais urgente do ciclo: `memórias`, porque o registry formal já existe, mas ainda não virou política completa por classe;
-- eixo estrutural seguinte: `mentes`, agora com registry canônico aberto, mas ainda pouco soberano na arbitragem.
+- eixo concluído na Sprint 1: `domínios`, com registry soberano sobre roteamento, maturity gate, shadow specialist sem heurística residual e fallback derivado;
+- eixo crítico agora: `memórias`, porque o registry formal já existe, mas ainda não virou política completa por classe;
+- eixo estrutural seguinte: `mentes`, com registry canônico aberto, mas ainda pouco soberano na arbitragem.
 
 Estado do ciclo rolante:
 
@@ -37,7 +37,8 @@ Estado do ciclo rolante:
 - Sprint 5 do `v2` concluída;
 - Sprint 6 do `v2` concluída;
 - o primeiro corte do `v2` está formalmente encerrado;
-- Sprint 1 do `v2-alignment-cycle` é a próxima frente ativa.
+- Sprint 1 do `v2-alignment-cycle` concluída;
+- Sprint 2 do `v2-alignment-cycle` é a próxima frente ativa.
 
 ## Decisões fechadas
 
@@ -56,14 +57,10 @@ Não rediscutir sem evidência forte ou mudança explícita de direção:
 
 Regra curta de nomenclatura técnica:
 
-- a regra de nomes do sistema deve privilegiar nomes profissionais, limpos,
-  robustos e duráveis;
-- artefatos permanentes do sistema não devem carregar `v1`, `v2`, `poc`,
-  `draft`, `temp` ou rótulos equivalentes no nome técnico principal;
-- fase, maturidade e modo de execução devem ficar em metadata, docs vivos ou
-  no conteúdo do artefato;
-- quando um artefato transitório virar parte estável do sistema, ele deve ser
-  renomeado para forma neutra na próxima intervenção útil.
+- a regra de nomes do sistema deve privilegiar nomes profissionais, limpos, robustos e duráveis;
+- artefatos permanentes do sistema não devem carregar `v1`, `v2`, `poc`, `draft`, `temp` ou rótulos equivalentes no nome técnico principal;
+- fase, maturidade e modo de execução devem ficar em metadata, docs vivos ou no conteúdo do artefato;
+- quando um artefato transitório virar parte estável do sistema, ele deve ser renomeado para forma neutra na próxima intervenção útil.
 
 Regra curta de promoção tecnológica nesta fase:
 

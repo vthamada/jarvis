@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from shared.contracts import DomainSpecialistRouteContract
+from shared.domain_registry import FALLBACK_RUNTIME_ROUTE
 from shared.mind_registry import ACTIVE_MIND_REGISTRY, preferred_support_for
 
 
@@ -41,7 +42,7 @@ class CognitiveEngine:
     ) -> CognitiveSnapshot:
         """Return an initial cognitive decomposition for the request."""
 
-        active_domains = retrieved_domains or ["assistencia_pessoal_e_operacional"]
+        active_domains = retrieved_domains or [FALLBACK_RUNTIME_ROUTE]
         minds = self._select_minds(
             intent=intent,
             risk_markers=risk_markers,
