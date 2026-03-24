@@ -88,9 +88,9 @@ Antes de qualquer ampliacao de uso, confirmar:
 Scripts canonicos:
 
 ```powershell
-python tools/validate_v1.py --profile development
+python tools/validate_baseline.py --profile development
 python tools/go_live_internal_checklist.py --profile development
-python tools/validate_v1.py --profile controlled
+python tools/validate_baseline.py --profile controlled
 python tools/go_live_internal_checklist.py --profile controlled
 ```
 

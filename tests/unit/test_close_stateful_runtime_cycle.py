@@ -6,7 +6,7 @@ from uuid import uuid4
 from observability_service.service import ObservabilityService
 
 from shared.events import InternalEventEnvelope
-from tools.close_v1_5_cycle import build_payload, render_markdown
+from tools.close_stateful_runtime_cycle import build_payload, render_markdown
 
 
 def runtime_dir(name: str) -> Path:
@@ -17,7 +17,7 @@ def runtime_dir(name: str) -> Path:
     return target
 
 
-def test_close_v1_5_cycle_builds_v2_cut() -> None:
+def test_close_stateful_runtime_cycle_builds_v2_cut() -> None:
     temp_dir = runtime_dir("v1-5-cycle-closure")
     observability_db = temp_dir / "observability.db"
     evolution_db = temp_dir / "evolution.db"
@@ -163,7 +163,7 @@ def test_close_v1_5_cycle_builds_v2_cut() -> None:
     assert payload["deferred_scope"][0]["item_id"] == "later-computer-use-wide"
 
 
-def test_close_v1_5_cycle_renders_markdown() -> None:
+def test_close_stateful_runtime_cycle_renders_markdown() -> None:
     payload = {
         "cycle_id": "v1-5-cycle-1",
         "decision": "promote_to_v2",

@@ -1,4 +1,4 @@
-"""Single entrypoint for validating the JARVIS v1 baseline."""
+"""Single entrypoint for validating the JARVIS baseline."""
 # ruff: noqa: E402
 
 from __future__ import annotations
@@ -62,7 +62,7 @@ from tools.operational_artifacts import (
 
 
 def parse_args() -> Namespace:
-    parser = ArgumentParser(description="Validate the JARVIS v1 baseline.")
+    parser = ArgumentParser(description="Validate the JARVIS baseline.")
     parser.add_argument(
         "--profile",
         choices=["development", "controlled"],
@@ -215,7 +215,7 @@ def run_observability_smoke() -> None:
                 event_id="evt-validate-1",
                 event_name="input_received",
                 timestamp=now(),
-                source_service="validate-v1",
+                source_service="validate-baseline",
                 payload={"content": "observability smoke"},
                 request_id="req-observe",
                 session_id="sess-observe",
@@ -226,7 +226,7 @@ def run_observability_smoke() -> None:
                 event_id="evt-validate-2",
                 event_name="operation_completed",
                 timestamp=now(),
-                source_service="validate-v1",
+                source_service="validate-baseline",
                 payload={"status": "completed"},
                 request_id="req-observe",
                 session_id="sess-observe",
@@ -259,7 +259,7 @@ def run_evolution_smoke() -> None:
                 event_id="evt-evolution-1",
                 event_name="input_received",
                 timestamp="2026-03-19T00:00:00+00:00",
-                source_service="validate-v1",
+                source_service="validate-baseline",
                 payload={"content": "baseline"},
                 request_id="req-baseline",
                 session_id="sess-baseline",
@@ -269,7 +269,7 @@ def run_evolution_smoke() -> None:
                 event_id="evt-evolution-2",
                 event_name="operation_completed",
                 timestamp="2026-03-19T00:00:02+00:00",
-                source_service="validate-v1",
+                source_service="validate-baseline",
                 payload={"status": "completed"},
                 request_id="req-baseline",
                 session_id="sess-baseline",
@@ -280,7 +280,7 @@ def run_evolution_smoke() -> None:
                 event_id="evt-evolution-3",
                 event_name="input_received",
                 timestamp="2026-03-19T00:00:03+00:00",
-                source_service="validate-v1",
+                source_service="validate-baseline",
                 payload={"content": "candidate"},
                 request_id="req-candidate",
                 session_id="sess-candidate",
@@ -290,7 +290,7 @@ def run_evolution_smoke() -> None:
                 event_id="evt-evolution-4",
                 event_name="operation_completed",
                 timestamp="2026-03-19T00:00:04+00:00",
-                source_service="validate-v1",
+                source_service="validate-baseline",
                 payload={"status": "completed"},
                 request_id="req-candidate",
                 session_id="sess-candidate",
@@ -304,12 +304,12 @@ def run_evolution_smoke() -> None:
     candidate_metrics = observability.summarize_flow(ObservabilityQuery(request_id="req-candidate"))
     proposal = service.create_proposal(
         proposal_type="observability-driven-comparison",
-        target_scope="validate-v1",
+        target_scope="validate-baseline",
         hypothesis="Candidate should remain sandbox-only until manual review.",
         expected_gain="Faster validated flow.",
         baseline_refs=["trace://req-baseline"],
         source_signals=["trace://req-baseline", "trace://req-candidate"],
-        proposed_tests=["python tools/validate_v1.py --profile development"],
+        proposed_tests=["python tools/validate_baseline.py --profile development"],
     )
     comparison = service.compare_candidate(
         proposal,
@@ -329,7 +329,7 @@ def run_evolution_smoke() -> None:
                 "risk": float(candidate_metrics.blocked_events + candidate_metrics.error_events),
             },
             governance_refs=["policy://sandbox/manual-review"],
-            notes=["validate_v1 smoke"],
+            notes=["validate_baseline smoke"],
         ),
     )
     if comparison.decision.promoted_to is not None:

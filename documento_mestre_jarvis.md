@@ -6663,11 +6663,40 @@ Embora o Documento-Mestre já tenha fechado muitas decisões estruturais, alguma
 
 ### 163.2 Decisões em aberto de refinamento
 
-- convenções de nomenclatura de componentes;
 - padrões de eventos internos;
 - formato definitivo dos contratos entre serviços;
 - formato de versionamento de memória evolutiva;
 - política de benchmarks do pipeline evolutivo.
+
+### 163.3 Política canônica de nomenclatura técnica
+
+Para preservar um sistema profissional, limpo, robusto e sustentável ao longo
+do tempo, a nomenclatura técnica do JARVIS deve seguir uma regra rigorosa:
+
+- nomes de arquivos, módulos, classes, contratos e registries devem refletir
+  a função estrutural do artefato, e não o momento circunstancial em que ele
+  foi criado;
+- nomes técnicos permanentes não devem carregar marcadores transitórios como
+  `v1`, `v2`, `v3`, `poc`, `draft`, `temp`, `experimental` ou equivalentes,
+  salvo quando a versão fizer parte do contrato público do artefato ou quando
+  a referência histórica externa exigir preservação literal;
+- fase, maturidade, estágio de ativação, regime de execução e caráter
+  experimental devem ser registrados no conteúdo do artefato, na documentação
+  viva e nos campos de metadata, não no nome técnico principal;
+- quando um artefato temporário evoluir para parte estável do sistema, ele deve
+  ser renomeado para forma neutra e canônica na próxima intervenção útil;
+- a preferência é sempre por nomes estáveis, funcionais e sóbrios, como
+  `domain_registry`, `mind_registry`, `memory_registry`, `langgraph_flow`,
+  `specialist_selection` e `shared_memory_context`, em vez de nomes presos a
+  sprint, versão ou rótulo de
+  experimentação.
+
+Exceções legítimas:
+
+- datasets, snapshots, fixtures, migrações ou cortes históricos cujo valor
+  dependa da identificação explícita da versão;
+- contratos públicos versionados de forma deliberada;
+- referências externas cujo nome oficial já nasce versionado.
 
 ---
 

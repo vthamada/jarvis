@@ -112,7 +112,10 @@ class DomainRegistryEntryContract:
     domain_name: str
     activation_stage: str
     maturity: str
+    display_name: str | None = None
+    domain_scope: str | None = None
     canonical_family: str | None = None
+    canonical_refs: list[str] = field(default_factory=list)
     linked_specialist_type: str | None = None
     specialist_mode: str | None = None
     summary: str | None = None
@@ -124,6 +127,7 @@ class DomainSpecialistRouteContract:
     specialist_type: str
     specialist_mode: str
     routing_reason: str
+    canonical_domain_refs: list[str] = field(default_factory=list)
 
 
 @dataclass

@@ -1,4 +1,4 @@
-"""Executable go-live checklist for the JARVIS v1 internal rollout."""
+"""Executable go-live checklist for the JARVIS baseline internal rollout."""
 # ruff: noqa: E402
 
 from __future__ import annotations
@@ -58,11 +58,11 @@ from tools.operational_artifacts import (
     write_containment_drill,
     write_incident_evidence,
 )
-from tools.validate_v1 import check_profile_prerequisites, resolve_database_url
+from tools.validate_baseline import check_profile_prerequisites, resolve_database_url
 
 
 def parse_args() -> Namespace:
-    parser = ArgumentParser(description="Run the JARVIS v1 executable go-live checklist.")
+    parser = ArgumentParser(description="Run the JARVIS baseline executable go-live checklist.")
     parser.add_argument(
         "--profile",
         choices=["development", "controlled"],

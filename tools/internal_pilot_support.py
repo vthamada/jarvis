@@ -46,7 +46,7 @@ from shared.types import (
     RequestId,
     SessionId,
 )
-from tools.validate_v1 import check_profile_prerequisites
+from tools.validate_baseline import check_profile_prerequisites
 
 
 @dataclass(frozen=True)

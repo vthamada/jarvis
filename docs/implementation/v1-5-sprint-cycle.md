@@ -221,7 +221,7 @@ Consolidar `v1.5` e decidir o que segue para preparação de `v2`.
 Resultado registrado nesta rodada:
 
 - o primeiro ciclo do `v1.5` foi formalmente encerrado;
-- `tools/close_v1_5_cycle.py` passou a gerar artefatos executáveis de fechamento do ciclo com evidência observável e comparativa do runtime;
+- `tools/close_stateful_runtime_cycle.py` passou a gerar artefatos executáveis de fechamento do ciclo com evidência observável e comparativa do runtime;
 - `docs/implementation/v1-5-cycle-closure.md` passou a registrar o corte formal para `v2`;
 - `docs/implementation/v2-sprint-cycle.md` passou a ser o novo plano rolante ativo da fase seguinte.
 

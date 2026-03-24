@@ -5,21 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from shared.contracts import DomainSpecialistRouteContract
-
-V1_NUCLEAR_MINDS = [
-    "mente_logica",
-    "mente_analitica",
-    "mente_sistemica",
-    "mente_probabilistica",
-    "mente_estrategica",
-    "mente_tatica",
-    "mente_decisoria",
-    "mente_pragmatica",
-    "mente_executiva",
-    "mente_critica",
-    "mente_comunicacional",
-    "mente_etica",
-]
+from shared.mind_registry import ACTIVE_MIND_REGISTRY, preferred_support_for
 
 
 @dataclass(frozen=True)
@@ -55,7 +41,7 @@ class CognitiveEngine:
     ) -> CognitiveSnapshot:
         """Return an initial cognitive decomposition for the request."""
 
-        active_domains = retrieved_domains or ["assistencia_geral"]
+        active_domains = retrieved_domains or ["assistencia_pessoal_e_operacional"]
         minds = self._select_minds(
             intent=intent,
             risk_markers=risk_markers,
@@ -118,7 +104,7 @@ class CognitiveEngine:
         domains: list[str],
         mind_hints: list[str] | None = None,
     ) -> list[str]:
-        minds = [mind for mind in (mind_hints or []) if mind in V1_NUCLEAR_MINDS]
+        minds = [mind for mind in (mind_hints or []) if mind in ACTIVE_MIND_REGISTRY]
         if intent == "planning":
             minds.extend(["mente_executiva", "mente_estrategica", "mente_pragmatica"])
         elif intent == "analysis":
@@ -131,7 +117,14 @@ class CognitiveEngine:
             minds.append("mente_sistemica")
         if risk_markers:
             minds.append("mente_probabilistica")
-        return list(dict.fromkeys(minds))
+        ordered = list(dict.fromkeys(minds))
+        if not ordered:
+            ordered = ["mente_executiva", "mente_pragmatica"]
+        primary_mind = ordered[0]
+        for supporting_mind in preferred_support_for(primary_mind):
+            if supporting_mind in ACTIVE_MIND_REGISTRY and supporting_mind not in ordered:
+                ordered.append(supporting_mind)
+        return ordered
 
     @staticmethod
     def _select_tensions(

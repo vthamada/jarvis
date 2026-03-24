@@ -225,6 +225,7 @@ class OrchestratorService:
                                 "domain_name": route.domain_name,
                                 "specialist_type": route.specialist_type,
                                 "specialist_mode": route.specialist_mode,
+                                "canonical_domain_refs": route.canonical_domain_refs,
                             }
                             for route in knowledge_result.specialist_routes
                         ],
@@ -239,6 +240,7 @@ class OrchestratorService:
                     {
                         "active_domains": knowledge_result.active_domains,
                         "registry_domains": knowledge_result.registry_domains,
+                        "route_domains": knowledge_result.active_domains,
                         "shadow_domains": [
                             route.domain_name
                             for route in knowledge_result.specialist_routes
@@ -531,6 +533,7 @@ class OrchestratorService:
         shared_memory_contexts = self.memory_service.prepare_specialist_shared_memory(
             session_id=str(contract.session_id),
             specialist_hints=list(deliberative_plan.specialist_hints),
+            active_domains=list(deliberative_plan.active_domains),
             mission_id=str(contract.mission_id) if contract.mission_id else None,
             continuity_context=memory_recovery_result.continuity_context,
         )

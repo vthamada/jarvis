@@ -32,7 +32,7 @@ def test_operational_artifacts_write_containment_drill() -> None:
     snapshot = create_baseline_snapshot(
         profile="controlled",
         backend="postgresql",
-        checks_passed=["validate_v1", "go_live_internal_checklist"],
+        checks_passed=["validate_baseline", "go_live_internal_checklist"],
         operational_decision="go_conditional_for_controlled_production",
         pilot_status="healthy",
     )

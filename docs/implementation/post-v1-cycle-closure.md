@@ -36,7 +36,7 @@ Artefatos operacionais e técnicos que sustentam o fechamento:
 - `tools/internal_pilot_report.py`
 - `tools/compare_orchestrator_paths.py`
 - `tools/evolution_from_pilot.py`
-- `tools/close_post_v1_cycle.py`
+- `tools/close_continuity_cycle.py`
 - `.jarvis_runtime/pilot/`
 - `.jarvis_runtime/post_v1_cycle/`
 

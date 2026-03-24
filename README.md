@@ -22,6 +22,7 @@ O projeto já fechou o `v1` para uso controlado e opera hoje com um baseline int
 - `governance-service` diferencia fluxos `allow`, `allow_with_conditions`, `block` e `defer_for_validation`;
 - `knowledge-service` executa retrieval local determinístico para intents de `analysis` e `planning`;
 - `knowledge-service` carrega o corpus curado inicial de `knowledge/curated/v1_corpus.json`;
+- `knowledge-service` separa o mapa canônico de domínios em `knowledge/curated/domain_registry.json` das rotas runtime ativas do ciclo;
 - `operational-service` produz artefatos textuais reais e retorna resultados estruturados;
 - `observability-service` grava a trilha de eventos com correlação por `request_id`, `session_id` e `mission_id`;
 - `observability-service` suporta espelhamento agentic complementar sem substituir a trilha local;
@@ -29,7 +30,7 @@ O projeto já fechou o `v1` para uso controlado e opera hoje com um baseline int
 - `evolution-lab` compara baseline e candidata em sandbox local sem promoção automática;
 - `engines/` contém os componentes ativos de identidade, execução, planejamento, cognição e síntese;
 - `jarvis-console` fornece a interface textual mínima do baseline;
-- `tools/validate_v1.py`, `tools/go_live_internal_checklist.py`, `tools/run_internal_pilot.py`, `tools/compare_orchestrator_paths.py`, `tools/evolution_from_pilot.py` e `tools/close_v1_5_cycle.py` tornam validação, piloto, comparação, fechamento de ciclo e proposals `sandbox-only` executáveis;
+- `tools/validate_baseline.py`, `tools/go_live_internal_checklist.py`, `tools/run_internal_pilot.py`, `tools/compare_orchestrator_paths.py`, `tools/evolution_from_pilot.py` e `tools/close_stateful_runtime_cycle.py` tornam validação, piloto, comparação, fechamento de ciclo e proposals `sandbox-only` executáveis;
 - a suíte `pytest -q` passa a partir da raiz do repositório.
 
 Leitura prática correta deste momento:
@@ -43,6 +44,7 @@ Leitura prática correta deste momento:
 - Sprint 3 do `v2` concluída com memória relacional compartilhada mediada pelo núcleo e contexto persistido por especialista;
 - Sprint 4 do `v2` concluída com registry inicial de domínios e primeiro especialista subordinado em `shadow mode`;
 - Sprint 5 do `v2` concluída com evals de aderência do recorte de especialistas aos eixos do mestre;
+- `shared/memory_registry.py` e `shared/mind_registry.py` passaram a registrar, respectivamente, as 11 memórias e as 24 mentes do mestre como base formal do runtime progressivo;
 - Sprint 6 do `v2` aberta como próxima frente ativa do ciclo rolante;
 - a auditoria completa do Documento-Mestre passou a orientar o backlog real por eixo.
 
@@ -71,7 +73,7 @@ python -m venv .venv
 python -m pip install -e .[dev]
 pytest -q
 ruff check .
-python tools/validate_v1.py --profile development
+python tools/validate_baseline.py --profile development
 ```
 
 Para validar o backend operacional de memória em PostgreSQL:
@@ -82,7 +84,7 @@ docker compose -f infra/local-postgres.compose.yml up -d
 $env:DATABASE_URL = "postgresql://postgres:postgres@localhost:5433/jarvis"
 python -m tools.benchmarks --postgres-url $env:DATABASE_URL
 pytest services/memory-service/tests/test_memory_postgres_integration.py -q
-python tools/validate_v1.py --profile controlled
+python tools/validate_baseline.py --profile controlled
 python tools/go_live_internal_checklist.py --profile controlled
 ```
 

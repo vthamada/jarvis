@@ -30,6 +30,7 @@ from shared.contracts import (
     SpecialistContributionContract,
     SpecialistSharedMemoryContextContract,
 )
+from shared.memory_registry import DEFAULT_MEMORY_SCOPES, SHARED_MEMORY_CLASSES
 from shared.types import (
     MemoryClass,
     MemoryQueryId,
@@ -83,7 +84,7 @@ class MemoryService:
             memory_query_id=MemoryQueryId(f"mem-query-{uuid4().hex[:8]}"),
             recovery_type=RecoveryType.CONTEXTUAL,
             session_id=contract.session_id,
-            requested_scopes=[MemoryClass.CONTEXTUAL, MemoryClass.EPISODIC, MemoryClass.MISSION],
+            requested_scopes=list(DEFAULT_MEMORY_SCOPES),
             context_window=TimeWindow(label="current-session"),
             mission_id=contract.mission_id,
             user_id=contract.user_id,
@@ -317,6 +318,7 @@ class MemoryService:
         *,
         session_id: str,
         specialist_hints: list[str],
+        active_domains: list[str] | None = None,
         mission_id: str | None = None,
         continuity_context: MissionContinuityContextContract | None = None,
     ) -> dict[str, SpecialistSharedMemoryContextContract]:
@@ -345,6 +347,7 @@ class MemoryService:
                 continuity_mode=continuity_mode,
                 mission_state=mission_state,
                 related_states=related_states,
+                active_domains=active_domains or [],
             )
             contexts[specialist_hint] = context
             self.repository.upsert_specialist_shared_memory(
@@ -582,11 +585,16 @@ class MemoryService:
         continuity_mode: str,
         mission_state: MissionStateContract | None,
         related_states: list[MissionStateContract],
+        active_domains: list[str],
     ) -> SpecialistSharedMemoryContextContract:
         related_mission_ids = [state.mission_id for state in related_states[:2]]
         memory_refs: list[str] = []
         semantic_focus: list[str] = []
         open_loops: list[str] = []
+        canonical_memory_refs = [
+            f"memory://{memory_class.value}" for memory_class in SHARED_MEMORY_CLASSES
+        ]
+        dynamic_memory_refs: list[str] = []
 
         def append_unique(items: list[str], target: list[str], limit: int) -> None:
             for item in items:
@@ -596,13 +604,20 @@ class MemoryService:
                     break
 
         if mission_state is not None:
-            append_unique(mission_state.related_memories[-3:], memory_refs, 5)
+            append_unique(mission_state.related_memories[-3:], dynamic_memory_refs, 2)
             append_unique(mission_state.semantic_focus, semantic_focus, 5)
             append_unique(mission_state.open_loops, open_loops, 4)
         for state in related_states:
-            append_unique(state.related_memories[-2:], memory_refs, 5)
+            append_unique(state.related_memories[-2:], dynamic_memory_refs, 2)
             append_unique(state.semantic_focus, semantic_focus, 5)
             append_unique(state.open_loops, open_loops, 4)
+        for domain_name in active_domains:
+            domain_ref = f"memory://{MemoryClass.DOMAIN.value}/{domain_name}"
+            if domain_ref not in dynamic_memory_refs and len(dynamic_memory_refs) < 2:
+                dynamic_memory_refs.append(domain_ref)
+            if domain_name not in semantic_focus and len(semantic_focus) < 5:
+                semantic_focus.append(domain_name)
+        memory_refs = [*canonical_memory_refs, *dynamic_memory_refs]
 
         source_goal = mission_state.mission_goal if mission_state else None
         source_mission_id = mission_state.mission_id if mission_state else None

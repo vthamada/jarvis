@@ -155,6 +155,7 @@ class LangGraphFlowRunner:
                                 "domain_name": route.domain_name,
                                 "specialist_type": route.specialist_type,
                                 "specialist_mode": route.specialist_mode,
+                                "canonical_domain_refs": route.canonical_domain_refs,
                             }
                             for route in knowledge_result.specialist_routes
                         ],
@@ -169,6 +170,7 @@ class LangGraphFlowRunner:
                     {
                         "active_domains": knowledge_result.active_domains,
                         "registry_domains": knowledge_result.registry_domains,
+                        "route_domains": knowledge_result.active_domains,
                         "shadow_domains": [
                             route.domain_name
                             for route in knowledge_result.specialist_routes

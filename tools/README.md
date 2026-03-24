@@ -16,14 +16,14 @@ Para validar que nao ha mojibake nem BOM nos arquivos de texto varridos pelo pro
 python tools/check_mojibake.py
 ```
 
-## Gates do v1
+## Gates do baseline
 
 Os gates executaveis do `v1` continuam sendo:
 
 ```powershell
-python tools/validate_v1.py --profile development
+python tools/validate_baseline.py --profile development
 python tools/go_live_internal_checklist.py --profile development
-python tools/validate_v1.py --profile controlled
+python tools/validate_baseline.py --profile controlled
 python tools/go_live_internal_checklist.py --profile controlled
 ```
 
@@ -89,12 +89,12 @@ python tools/evolution_from_pilot.py --limit 10
 python tools/evolution_from_pilot.py --comparison-json .jarvis_runtime/path_comparison.json
 ```
 
-## Fechamento de ciclo
+## Fechamento de ciclo histórico
 
-Para consolidar o primeiro ciclo do `pós-v1` e emitir o corte formal entre `v1.5` e `v2`:
+Para consolidar o primeiro ciclo de continuidade profunda e emitir o corte formal entre `v1.5` e `v2`:
 
 ```powershell
-python tools/close_post_v1_cycle.py --limit 20
+python tools/close_continuity_cycle.py --limit 20
 ```
 
 Esse script gera artefatos em `.jarvis_runtime/post_v1_cycle/`:
@@ -102,10 +102,10 @@ Esse script gera artefatos em `.jarvis_runtime/post_v1_cycle/`:
 - `cycle_closure.json`
 - `cycle_closure.md`
 
-Para consolidar o primeiro ciclo do `v1.5` e emitir o corte formal para `v2`:
+Para consolidar o primeiro ciclo de runtime stateful e emitir o corte formal para `v2`:
 
 ```powershell
-python tools/close_v1_5_cycle.py --limit 20
+python tools/close_stateful_runtime_cycle.py --limit 20
 ```
 
 Esse script gera artefatos em `.jarvis_runtime/v1_5_cycle/`:

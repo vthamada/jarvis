@@ -5,7 +5,7 @@ from uuid import uuid4
 from observability_service.service import ObservabilityService
 
 from shared.events import InternalEventEnvelope
-from tools.close_post_v1_cycle import build_payload, render_markdown
+from tools.close_continuity_cycle import build_payload, render_markdown
 
 
 def runtime_dir(name: str) -> Path:
@@ -16,7 +16,7 @@ def runtime_dir(name: str) -> Path:
     return target
 
 
-def test_close_post_v1_cycle_builds_v1_5_cut() -> None:
+def test_close_continuity_cycle_builds_v1_5_cut() -> None:
     temp_dir = runtime_dir("cycle-closure")
     observability_db = temp_dir / "observability.db"
     evolution_db = temp_dir / "evolution.db"
@@ -134,7 +134,7 @@ def test_close_post_v1_cycle_builds_v1_5_cut() -> None:
     assert payload["v2_scope"][0]["item_id"] == "v2-specialists"
 
 
-def test_close_post_v1_cycle_renders_markdown() -> None:
+def test_close_continuity_cycle_renders_markdown() -> None:
     payload = {
         "cycle_id": "post-v1-cycle-1",
         "decision": "promote_to_v1_5",

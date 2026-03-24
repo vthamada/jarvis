@@ -10,6 +10,33 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 
 ## 2026-03-23
 
+### Política de nomenclatura técnica
+
+- o Documento-Mestre passou a registrar explicitamente a regra de que arquivos,
+  módulos, classes, contratos e registries permanentes do sistema devem usar
+  nomes estáveis e funcionais, sem marcadores transitórios como `v1`, `v2`,
+  `poc`, `draft` ou `temp` no nome técnico principal;
+- o `HANDOFF.md` passou a resumir essa política como regra operacional curta
+  para as próximas rodadas de implementação.
+- o registry canônico de domínios foi renomeado de
+  `knowledge/curated/v2_domain_registry.json` para
+  `knowledge/curated/domain_registry.json`.
+- os scripts permanentes `tools/validate_v1.py`,
+  `tools/close_post_v1_cycle.py` e `tools/close_v1_5_cycle.py` foram
+  renomeados para `tools/validate_baseline.py`,
+  `tools/close_continuity_cycle.py` e
+  `tools/close_stateful_runtime_cycle.py`.
+
+### Alinhamento estrutural ao Documento-Mestre
+
+- `shared/mind_registry.py` passou a registrar as 24 mentes canônicas do mestre, incluindo o recorte ativo das 12 mentes nucleares e relações iniciais de suporte preferencial;
+- `shared/memory_registry.py` passou a registrar as 11 classes canônicas de memória, com defaults formais de recuperação e elegibilidade para memória compartilhada com especialistas;
+- `knowledge/curated/domain_registry.json` passou a separar o mapa canônico completo de domínios das rotas runtime ativas do ciclo, reduzindo o descompasso entre taxonomia do mestre e roteamento operacional;
+- `knowledge-service`, `cognitive-engine`, `memory-service` e `orchestrator-service` passaram a consumir esses registries como base inicial do runtime progressivo, sem tratar mais o recorte do `v2` como se ele fosse o mapa completo do sistema;
+- `matriz-de-aderencia-mestre`, `HANDOFF`, `README` e `v2-sprint-cycle` foram recalibrados para refletir que os registries canônicos já existem e que a lacuna restante agora está na soberania desses registries sobre o runtime.
+- a política de nomenclatura técnica foi endurecida para deixar explícito que o sistema deve privilegiar nomes profissionais, limpos, robustos e duráveis;
+- os módulos `shared/canonical_minds.py` e `shared/canonical_memories.py` foram renomeados para `shared/mind_registry.py` e `shared/memory_registry.py`, removendo `canonical` do nome técnico principal.
+
 ### Execução da Sprint 5 do ciclo v2
 
 - `observability-service` passou a auditar `domain_alignment_status`, `memory_alignment_status` e `specialist_sovereignty_status` no fluxo de especialistas;
@@ -21,7 +48,7 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 
 ### Execução da Sprint 4 do ciclo v2
 
-- `knowledge-service` passou a carregar `knowledge/curated/v2_domain_registry.json` como registry inicial dos domínios ativos do ciclo;
+- `knowledge-service` passou a carregar `knowledge/curated/domain_registry.json` como registry inicial dos domínios ativos do ciclo;
 - `KnowledgeRetrievalResult` passou a expor `registry_domains` e `specialist_routes`, tornando explícita a ponte entre domínio ativo e rota de especialista;
 - `cognitive-engine` passou a priorizar hints vindos do registry e `software_development` abriu a primeira rota canônica `domínio -> especialista` do `v2`;
 - `specialist-engine` passou a materializar `linked_domain` e `selection_mode`, incluindo `especialista_software_subordinado` em `shadow mode`;

@@ -1,4 +1,4 @@
-"""Close the first post-v1 cycle and emit a formal cut between v1.5 and v2."""
+"""Close the first deep-continuity cycle and emit a formal cut toward v1.5."""
 # ruff: noqa: E402
 
 from __future__ import annotations
@@ -46,7 +46,7 @@ class CycleEvidenceSummary:
 
 
 def parse_args() -> Namespace:
-    parser = ArgumentParser(description="Close the first post-v1 cycle.")
+    parser = ArgumentParser(description="Close the first deep-continuity cycle.")
     parser.add_argument(
         "--observability-db",
         default=str(ROOT / ".jarvis_runtime" / "observability.db"),

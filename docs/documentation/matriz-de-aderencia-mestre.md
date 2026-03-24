@@ -92,9 +92,9 @@ Ordem usada nesta auditoria:
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `identidade, missão, princípios e filosofia` | `2` a `8`, `26`, `231` | `runtime parcial` | `corrigir agora` | `orchestrator-service`, `planning-engine`, `synthesis-engine`, `governance-service` | a identidade está presente, mas ainda não é auditada como eixo próprio de aderência | transformar princípios identitários em critérios auditáveis de runtime e síntese | `v2`, com revisão transversal em todas as sprints |
 | `núcleo central e fluxo principal` | `9`, `27` a `30`, `35` a `38`, `49` | `runtime parcial` | `corrigir agora` | `orchestrator-service`, `planning-engine`, `cognitive-engine`, `langgraph_flow` | o fluxo central existe, mas a leitura do mestre ainda não governa explicitamente todos os recortes do backlog | manter o núcleo como eixo de cobrança e revisar cada sprint pela ótica do fluxo principal | `v2` contínuo |
-| `mentes` | `10`, `19`, `21`, `38`, `50` | `runtime parcial` | `corrigir agora` | `engines/cognitive-engine`, `planning-engine` | falta registry canônico, maturidade por mente e modelagem mais profunda de composição e arbitragem | abrir registry de mentes e explicitar relações preferenciais entre elas | `v2`, após avanço de `domínios` e `memórias` |
-| `domínios` | `11`, `12`, `13`, `22`, `39`, `52`, `232` | `runtime parcial` | `corrigir agora` | `knowledge-service`, `knowledge/curated/v1_corpus.json`, `knowledge/curated/v2_domain_registry.json`, `cognitive-engine`, `specialist-engine` | o registry já existe, mas ainda cobre só o corte inicial do `v2` e não o mapa completo de 30 domínios | expandir o registry inicial para cobertura progressiva do mapa canônico e usá-lo como fonte primária de roteamento | `v2`, Sprints 5 e 6 |
-| `memórias` | `14`, `23`, `40`, `51`, `83`, `232` | `runtime parcial` | `corrigir agora` | `shared/types`, `memory-service`, `governance-service`, `orchestrator-service`, `specialist-engine` | as 11 classes existem formalmente, mas poucas operam como políticas distintas | consolidar registry de memórias e ligar a memória compartilhada do `v2` ao registry inicial de domínios | `v2`, Sprint 4 em diante |
+| `mentes` | `10`, `19`, `21`, `38`, `50` | `runtime parcial` | `corrigir agora` | `shared/mind_registry.py`, `engines/cognitive-engine`, `planning-engine` | o registry canônico existe, mas a arbitragem e a composição ainda não governam o runtime com profundidade suficiente | promover o registry de mentes para fonte soberana de composição, suporte preferencial e maturidade operacional | `v2`, após consolidação de `domínios` e `memórias` |
+| `domínios` | `11`, `12`, `13`, `22`, `39`, `52`, `232` | `runtime parcial` | `corrigir agora` | `knowledge-service`, `knowledge/curated/v1_corpus.json`, `knowledge/curated/domain_registry.json`, `cognitive-engine`, `specialist-engine` | o mapa canônico já está no registry, mas o runtime ainda opera por subset e heurística local em parte do roteamento | tornar o registry a fonte soberana de roteamento, corpus ativo e shadow specialists por domínio | `v2`, Sprints 5 e 6 |
+| `memórias` | `14`, `23`, `40`, `51`, `83`, `232` | `runtime parcial` | `corrigir agora` | `shared/types`, `shared/memory_registry.py`, `memory-service`, `governance-service`, `orchestrator-service`, `specialist-engine` | as 11 classes já têm registry formal, mas poucas operam como políticas distintas de leitura, compartilhamento e promoção | transformar o registry de memórias em política operacional por classe e ampliar o runtime além de continuidade, missão e relacional | `v2`, Sprint 4 em diante |
 | `governança, segurança e autonomia` | `24`, `42`, `54`, `230` | `runtime parcial` | `corrigir agora` | `governance-service`, `observability-service`, `shared/contracts` | a governança é forte no recorte atual, mas ainda não cobre toda a amplitude formal do mestre | expandir a auditoria por tipo de decisão e por nível de autonomia | `v2`, transversal |
 | `especialistas subordinados` | `64`, `76.4`, `254` a `263` | `runtime parcial` | `corrigir agora` | `specialist-engine`, `governance-service`, `orchestrator-service`, `shared/contracts` | há handoff e fronteira, mas ainda não há especialistas realmente orientados por domínio com memória compartilhada mais rica | consolidar memória relacional e amarrar especialista a domínio e contratos canônicos | `v2`, Sprints 3 e 4 |
 | `tool layer e operação computacional` | `15`, `41`, `53`, `65` | `runtime parcial` | `manter deferido` | `operational-service`, `tools/`, artefatos textuais do baseline | o mestre descreve uma camada operacional mais ampla do que o recorte atual implementa | manter a operação textual segura e só expandir quando o `v2` pedir | `v2` tardio ou `v3` |
@@ -102,13 +102,13 @@ Ordem usada nesta auditoria:
 | `evolução e autoaperfeiçoamento` | `16`, `25`, `43`, `56`, `67`, `313` a `327` | `runtime parcial` | `manter deferido` | `evolution-lab`, `tools/evolution_from_pilot.py`, proposals sandbox-only | existe laboratório e governança, mas não a camada evolutiva plena descrita pelo mestre | preservar o sandbox e só promover quando houver maturidade de baseline maior | `v2` tardio e `v3` |
 | `voz, realtime e superfícies` | `68`, `76.1`, `126` a `128`, `253` | `deferido por fase` | `manter deferido` | documentação e referência arquitetural; ausência de runtime oficial | a visão está clara, mas o corte atual do projeto ainda não autoriza materialização | manter fora do backlog imediato e preservar a direção canônica | `v3` ou fase específica futura |
 | `contratos, schemas e tipos` | `238` a `273` | `runtime parcial` | `corrigir agora` | `shared/contracts`, `shared/types`, serviços centrais | vários contratos canônicos já existem, mas a cobertura ainda é desigual entre eixos e especialistas | fechar registries e alinhar novos contratos à matriz de aderência | `v2`, transversal |
-| `implementação, operação, release e incidentes` | `286` a `350` | `runtime parcial` | `corrigir agora` | `docs/implementation`, `docs/operations`, `tools/close_v1_5_cycle.py`, `tools/validate_v1.py` | a operação está madura para o baseline, mas o mestre ainda não é usado como régua contínua de cada ciclo | recalibrar o `v2` para declarar eixo, lacuna e não-cobertura por sprint | `v2`, imediato |
+| `implementação, operação, release e incidentes` | `286` a `350` | `runtime parcial` | `corrigir agora` | `docs/implementation`, `docs/operations`, `tools/close_stateful_runtime_cycle.py`, `tools/validate_baseline.py` | a operação está madura para o baseline, mas o mestre ainda não é usado como régua contínua de cada ciclo | recalibrar o `v2` para declarar eixo, lacuna e não-cobertura por sprint | `v2`, imediato |
 
 Leitura objetiva:
 
-- o eixo mais distante do mestre continua sendo `domínios`, agora com registry inicial já materializado;
-- `memórias` é o eixo com maior impacto operacional imediato;
-- `mentes` está melhor encaminhado, mas ainda implícito demais;
+- o eixo mais distante do mestre continua sendo `domínios`, agora com mapa canônico completo já materializado no registry;
+- `memórias` é o eixo com maior impacto operacional imediato, porque o registry já existe mas ainda não governa o runtime por classe;
+- `mentes` está melhor encaminhado, com registry canônico ativo, mas ainda implícito demais na arbitragem;
 - `voz` e parte da `tool layer` não são falhas; são deferimentos corretos de fase;
 - o maior gargalo transversal segue sendo a falta de registries canônicos e de backlog explicitamente guiado pelo mestre.
 
@@ -195,7 +195,8 @@ O mestre define 24 mentes oficiais, com 12 mentes nucleares ativas no recorte do
 
 ### Evidência atual
 
-- `engines/cognitive-engine` materializa as 12 mentes nucleares;
+- `shared/mind_registry.py` registra as 24 mentes canônicas e marca as 12 mentes nucleares ativas;
+- `engines/cognitive-engine` materializa as 12 mentes nucleares e já consulta o registry para suporte preferencial;
 - `planning-engine` e `synthesis-engine` consomem efeitos desse recorte;
 - já existe seleção de mente primária, apoios e tensão dominante.
 
@@ -203,10 +204,10 @@ O mestre define 24 mentes oficiais, com 12 mentes nucleares ativas no recorte do
 
 | Subárea | Estado | Observação |
 | --- | --- | --- |
-| mapa completo de 24 mentes | `canônico apenas` | ainda não virou registry canônico |
+| mapa completo de 24 mentes | `tipado/documentado` | já existe registry canônico em `shared/mind_registry.py` |
 | núcleo de 12 mentes | `runtime parcial` | já opera de forma útil |
-| composição e arbitragem entre mentes | `runtime parcial` | ainda rasa e mais implícita do que canônica |
-| maturidade por mente | `canônico apenas` | não há status formal por mente |
+| composição e arbitragem entre mentes | `runtime parcial` | já há suporte preferencial inicial, mas a arbitragem ainda é rasa e pouco soberana |
+| maturidade por mente | `tipado/documentado` | o registry já carrega status formal por mente |
 
 Classe final:
 
@@ -218,7 +219,7 @@ Risco de desvio:
 
 Próximo passo obrigatório:
 
-- criar registry canônico de mentes com estado de maturidade e regras iniciais de composição.
+- promover o registry de mentes para fonte soberana da composição, da arbitragem e da maturidade operacional.
 
 ## 5.4 Domínios
 
@@ -229,18 +230,19 @@ como mapa oficial de conhecimento do sistema.
 
 ### Evidência atual
 
-- `knowledge-service` usa corpus curado pequeno e determinístico;
-- o corpus atual cobre apenas subconjunto pragmático;
-- o `cognitive-engine` ainda usa fallback operacional fora da taxonomia canônica.
+- `knowledge/curated/domain_registry.json` já espelha o mapa canônico com domínios principais, operacionais e meta;
+- `knowledge-service` separa o mapa canônico das rotas runtime ativas do ciclo;
+- o corpus atual ainda cobre apenas subconjunto pragmático;
+- o `cognitive-engine` já usa fallback canônico e prioriza hints vindos do registry.
 
 ### Julgamento
 
 | Subárea | Estado | Observação |
 | --- | --- | --- |
-| mapa oficial de 30 domínios | `runtime parcial` | existe registry inicial, mas ainda abaixo do mapa completo |
-| domínios ativos no runtime | `runtime parcial` | subset útil do baseline já entrou no registry do `v2` |
-| roteamento pela taxonomia oficial | `runtime parcial` | o registry já influencia specialist hints, mas ainda não governa todo o roteamento |
-| maturidade por domínio | `canônico apenas` | ausência de status formal |
+| mapa oficial de 30 domínios | `tipado/documentado` | o mapa canônico completo já existe no registry |
+| domínios ativos no runtime | `runtime parcial` | as rotas ativas ainda cobrem subset útil do ciclo |
+| roteamento pela taxonomia oficial | `runtime parcial` | o registry já influencia hints e rotas, mas ainda não governa todo o runtime |
+| maturidade por domínio | `tipado/documentado` | activation stage, maturity e scope já existem no registry |
 
 Classe final:
 
@@ -252,7 +254,7 @@ Risco de desvio:
 
 Próximo passo obrigatório:
 
-- expandir o registry inicial dos domínios e usá-lo como fonte primária de roteamento e comparação do `v2`.
+- tornar o registry soberano para roteamento, corpus ativo, especialistas em shadow mode e comparação do `v2`.
 
 ## 5.5 Memórias
 
@@ -264,10 +266,11 @@ relação com identidade, domínios, autoevolução e contexto operacional.
 ### Evidência atual
 
 - `MemoryClass` já tipa as 11 classes;
+- `shared/memory_registry.py` registra as 11 classes com status, defaults de recuperação e elegibilidade para compartilhamento;
 - `memory-service` opera contextual, episódica, missão, checkpoint, replay, pausa e
   continuidade relacionada;
 - `memory-service` passou a persistir contexto relacional compartilhado por especialista,
-  mediado pelo núcleo e recuperável por missão;
+  mediado pelo núcleo e recuperável por missão, com refs canônicas por classe e por domínio;
 - `governance-service` protege memória crítica;
 - `specialist-engine` e `orchestrator-service` já consomem esse contexto no handoff do `v2`.
 
@@ -275,10 +278,10 @@ relação com identidade, domínios, autoevolução e contexto operacional.
 
 | Subárea | Estado | Observação |
 | --- | --- | --- |
-| taxonomia das 11 memórias | `tipado/documentado` | enum canônica já existe |
+| taxonomia das 11 memórias | `tipado/documentado` | enum e registry canônicos já existem |
 | memória contextual, episódica e de missão | `runtime parcial` | opera no baseline e no `v1.5` |
 | memória relacional | `runtime parcial` | já opera como contexto compartilhado mediado pelo núcleo no `v2` |
-| memória de domínio, evolutiva e semântica rica | `canônico apenas` ou `tipado/documentado` | ainda sem política plena |
+| memória de domínio, evolutiva e semântica rica | `tipado/documentado` | já têm registry formal, mas ainda sem política runtime plena |
 | promoção e arquivamento formais | `canônico apenas` | ainda não operam como sistema vivo |
 
 Classe final:
@@ -291,7 +294,7 @@ Risco de desvio:
 
 Próximo passo obrigatório:
 
-- consolidar a memória compartilhada do `v2` como política por classe e vinculá-la ao registry inicial de `domínios`.
+- promover o registry de memórias para política runtime por classe e ampliar leitura, compartilhamento e promoção além do recorte atual.
 
 ## 5.6 Governança, segurança e autonomia
 

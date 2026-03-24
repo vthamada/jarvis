@@ -21,9 +21,9 @@ Sistema oficial de planejamento desta fase:
 
 Leitura prioritária de aderência neste momento:
 
-- eixo crítico mais distante do mestre: `domínios`;
-- eixo operacional mais urgente do ciclo: `memórias`;
-- eixo estrutural seguinte: `mentes`.
+- eixo crítico mais distante do mestre: `domínios`, porque o mapa canônico já existe no registry, mas ainda não governa todo o runtime;
+- eixo operacional mais urgente do ciclo: `memórias`, porque o registry formal já existe, mas ainda não virou política completa por classe;
+- eixo estrutural seguinte: `mentes`, agora com registry canônico aberto, mas ainda pouco soberano na arbitragem.
 
 Estado do ciclo rolante:
 
@@ -51,6 +51,17 @@ Não rediscutir sem evidência forte ou mudança explícita de direção:
 - referências externas passam a ser avaliadas em dois eixos: posicionamento na stack e função arquitetural por camada;
 - o Documento-Mestre continua sendo o único artefato canônico de visão de produto.
 
+Regra curta de nomenclatura técnica:
+
+- a regra de nomes do sistema deve privilegiar nomes profissionais, limpos,
+  robustos e duráveis;
+- artefatos permanentes do sistema não devem carregar `v1`, `v2`, `poc`,
+  `draft`, `temp` ou rótulos equivalentes no nome técnico principal;
+- fase, maturidade e modo de execução devem ficar em metadata, docs vivos ou
+  no conteúdo do artefato;
+- quando um artefato transitório virar parte estável do sistema, ele deve ser
+  renomeado para forma neutra na próxima intervenção útil.
+
 Regra curta de promoção tecnológica nesta fase:
 
 - nenhuma tecnologia externa atravessa direto para o núcleo;
@@ -71,9 +82,11 @@ Hoje o repositório contém:
 - baseline integrado entre orquestração, memória, governança, conhecimento, observabilidade e operação;
 - `jarvis-console` como interface textual mínima do baseline;
 - `memory-service` com histórico episódico, resumo contextual, estado mínimo de missão e continuidade relacionada inicial;
+- `shared/memory_registry.py` como registry formal das 11 classes de memória, já conectado ao recovery default e ao compartilhamento com especialistas;
+- `shared/mind_registry.py` como registry formal das 24 mentes canônicas, com suporte preferencial inicial no `cognitive-engine`;
 - `observability-service` com trilha persistida, auditoria de fluxo e espelhamento agentic complementar;
 - `evolution-lab` persistindo proposals e decisões `sandbox-only`;
-- `tools/validate_v1.py`, `tools/go_live_internal_checklist.py`, `tools/run_internal_pilot.py`, `tools/compare_orchestrator_paths.py`, `tools/evolution_from_pilot.py` e `tools/close_v1_5_cycle.py` operacionais;
+- `tools/validate_baseline.py`, `tools/go_live_internal_checklist.py`, `tools/run_internal_pilot.py`, `tools/compare_orchestrator_paths.py`, `tools/evolution_from_pilot.py` e `tools/close_stateful_runtime_cycle.py` operacionais;
 - estudo tecnológico consolidado em `docs/architecture/technology-study.md`;
 - sistema documental em duas camadas ativas para programa e sprint cycle.
 
@@ -83,6 +96,7 @@ Capacidades concretas já presentes no repositório:
 
 - `orchestrator-service` coordenando o fluxo ponta a ponta do núcleo;
 - `memory-service` com persistência útil, recuperação contextual e continuidade relacionada inicial;
+- `knowledge/curated/domain_registry.json` com mapa canônico de domínios separado das rotas runtime ativas do ciclo;
 - `governance-service` com decisões `allow`, `allow_with_conditions`, `block` e `defer_for_validation`;
 - `knowledge-service` com corpus curado local e retrieval determinístico;
 - `observability-service` com trilha persistida, auditoria de requests e espelhamento agentic complementar;

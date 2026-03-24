@@ -40,7 +40,7 @@ Ficam fora do piloto:
 
 Antes da janela do piloto:
 
-- `python tools/validate_v1.py --profile controlled`
+- `python tools/validate_baseline.py --profile controlled`
 - `python tools/go_live_internal_checklist.py --profile controlled`
 - `python tools/internal_pilot_report.py --limit 5`
 - `python tools/run_internal_pilot.py --profile controlled`

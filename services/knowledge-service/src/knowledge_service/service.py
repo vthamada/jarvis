@@ -1,4 +1,4 @@
-﻿"""Deterministic local knowledge service for the v1 core."""
+"""Deterministic local knowledge service aligned to the canonical domain map."""
 
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ class KnowledgeRetrievalResult:
 
 
 DEFAULT_CORPUS_PATH = Path.cwd() / "knowledge" / "curated" / "v1_corpus.json"
-DEFAULT_DOMAIN_REGISTRY_PATH = Path.cwd() / "knowledge" / "curated" / "v2_domain_registry.json"
+DEFAULT_DOMAIN_REGISTRY_PATH = Path.cwd() / "knowledge" / "curated" / "domain_registry.json"
 
 
 class KnowledgeService:
@@ -53,16 +53,17 @@ class KnowledgeService:
             if domain_registry_path
             else DEFAULT_DOMAIN_REGISTRY_PATH
         )
-        self.domain_registry = self._load_domain_registry(registry_path)
+        (
+            self.canonical_domain_registry,
+            self.domain_routes,
+        ) = self._load_domain_registry(registry_path)
         self.domains = self._load_domains(resolved_path)
 
     def retrieve_for_intent(self, *, intent: str, query: str) -> KnowledgeRetrievalResult:
         """Return the most relevant domains and snippets for the given intent."""
 
         active_domains = self._select_domains(intent, query)
-        registry_domains = [
-            domain for domain in active_domains if self.domains[domain].registry_entry is not None
-        ]
+        registry_domains = self._resolve_canonical_domains(active_domains)
         snippets = [self.domains[domain].snippets[0] for domain in active_domains]
         sources = [f"local://knowledge/{domain}" for domain in active_domains]
         specialist_routes = self._resolve_specialist_routes(active_domains)
@@ -77,14 +78,19 @@ class KnowledgeService:
         )
 
     def list_domains(self) -> list[str]:
-        """Expose the curated domains available to deterministic retrieval."""
+        """Expose the curated runtime domains available to deterministic retrieval."""
 
         return list(self.domains.keys())
 
     def list_registry_domains(self) -> list[str]:
-        """Expose the initial canonical registry domains available to the v2 cycle."""
+        """Expose the canonical registry domains available to the system."""
 
-        return list(self.domain_registry.keys())
+        return list(self.canonical_domain_registry.keys())
+
+    def list_runtime_route_domains(self) -> list[str]:
+        """Expose runtime route labels currently wired into retrieval."""
+
+        return list(self.domain_routes.keys())
 
     def _select_domains(self, intent: str, query: str) -> list[str]:
         lowered = query.lower()
@@ -130,22 +136,43 @@ class KnowledgeService:
         return priorities.get(domain_name, 0.0)
 
     @staticmethod
-    def _load_domain_registry(corpus_path: Path) -> dict[str, DomainRegistryEntryContract]:
-        if not corpus_path.exists():
-            return {}
-        payload = loads(corpus_path.read_text(encoding="utf-8"))
-        return {
+    def _load_domain_registry(
+        registry_path: Path,
+    ) -> tuple[dict[str, DomainRegistryEntryContract], dict[str, DomainRegistryEntryContract]]:
+        if not registry_path.exists():
+            return {}, {}
+        payload = loads(registry_path.read_text(encoding="utf-8"))
+        canonical_domains = {
             item["domain_name"]: DomainRegistryEntryContract(
                 domain_name=item["domain_name"],
-                activation_stage=item["activation_stage"],
-                maturity=item["maturity"],
+                display_name=item.get("display_name"),
+                domain_scope=item.get("domain_scope"),
+                activation_stage=item.get("activation_stage", "canonical"),
+                maturity=item.get("maturity", "canonical"),
                 canonical_family=item.get("canonical_family"),
+                canonical_refs=list(item.get("canonical_refs", [])),
                 linked_specialist_type=item.get("linked_specialist_type"),
                 specialist_mode=item.get("specialist_mode"),
                 summary=item.get("summary"),
             )
-            for item in payload.get("domains", [])
+            for item in payload.get("canonical_domains", [])
         }
+        runtime_routes = {
+            item["route_name"]: DomainRegistryEntryContract(
+                domain_name=item["route_name"],
+                display_name=item.get("display_name"),
+                domain_scope=item.get("domain_scope", "runtime_route"),
+                activation_stage=item["activation_stage"],
+                maturity=item["maturity"],
+                canonical_family=item.get("canonical_family"),
+                canonical_refs=list(item.get("canonical_refs", [])),
+                linked_specialist_type=item.get("linked_specialist_type"),
+                specialist_mode=item.get("specialist_mode"),
+                summary=item.get("summary"),
+            )
+            for item in payload.get("runtime_routes", [])
+        }
+        return canonical_domains, runtime_routes
 
     def _load_domains(self, corpus_path: Path) -> dict[str, KnowledgeDomain]:
         payload = loads(corpus_path.read_text(encoding="utf-8"))
@@ -154,10 +181,21 @@ class KnowledgeService:
                 name=item["name"],
                 keywords=item.get("keywords", []),
                 snippets=item.get("snippets", []),
-                registry_entry=self.domain_registry.get(item["name"]),
+                registry_entry=self.domain_routes.get(item["name"]),
             )
             for item in payload.get("domains", [])
         }
+
+    def _resolve_canonical_domains(self, active_domains: list[str]) -> list[str]:
+        canonical_domains: list[str] = []
+        for domain_name in active_domains:
+            entry = self.domains[domain_name].registry_entry
+            if entry is None:
+                continue
+            for canonical_ref in entry.canonical_refs:
+                if canonical_ref not in canonical_domains:
+                    canonical_domains.append(canonical_ref)
+        return canonical_domains
 
     def _resolve_specialist_routes(
         self,
@@ -175,7 +213,7 @@ class KnowledgeService:
                     specialist_mode=entry.specialist_mode,
                     routing_reason=entry.summary
                     or f"rota canônica ativa para o domínio {domain_name}",
+                    canonical_domain_refs=list(entry.canonical_refs),
                 )
             )
         return routes
-

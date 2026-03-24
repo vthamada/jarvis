@@ -377,7 +377,11 @@ def test_observability_service_audits_domain_memory_and_sovereignty_alignment() 
                 source_service="orchestrator-service",
                 payload={
                     "active_domains": ["software_development", "analysis"],
-                    "registry_domains": ["software_development", "analysis"],
+                    "registry_domains": [
+                        "computacao_e_desenvolvimento",
+                        "dados_estatistica_e_inteligencia_analitica",
+                        "tomada_de_decisao_complexa",
+                    ],
                     "shadow_domains": ["software_development"],
                 },
                 request_id="req-specialist-align",
@@ -491,7 +495,11 @@ def test_observability_service_audits_domain_memory_and_sovereignty_alignment() 
 
     audit = service.audit_flow(ObservabilityQuery(request_id="req-specialist-align"))
 
-    assert audit.registry_domains == ["software_development", "analysis"]
+    assert audit.registry_domains == [
+        "computacao_e_desenvolvimento",
+        "dados_estatistica_e_inteligencia_analitica",
+        "tomada_de_decisao_complexa",
+    ]
     assert audit.shadow_specialists == ["especialista_software_subordinado"]
     assert audit.domain_alignment_status == "healthy"
     assert audit.memory_alignment_status == "healthy"

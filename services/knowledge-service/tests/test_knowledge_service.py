@@ -86,10 +86,12 @@ def test_knowledge_service_covers_operational_readiness_and_software_domains() -
 
     assert "operational_readiness" in result.active_domains
     assert "software_development" in result.active_domains
-    assert "software_development" in result.registry_domains
+    assert "computacao_e_desenvolvimento" in result.registry_domains
+    assert "planejamento_e_coordenacao" in result.registry_domains
     assert any(
         route.specialist_type == "especialista_software_subordinado"
         and route.specialist_mode == "shadow"
+        and route.canonical_domain_refs == ["computacao_e_desenvolvimento"]
         for route in result.specialist_routes
     )
 
@@ -106,10 +108,19 @@ def test_knowledge_service_supports_pilot_and_observability_queries() -> None:
     assert "pilot_operations" in result.active_domains
 
 
-def test_knowledge_service_exposes_initial_v2_domain_registry() -> None:
+def test_knowledge_service_exposes_domain_registry() -> None:
     service = KnowledgeService()
 
     registry_domains = service.list_registry_domains()
 
-    assert "strategy" in registry_domains
-    assert "software_development" in registry_domains
+    assert "estrategia_e_pensamento_sistemico" in registry_domains
+    assert "computacao_e_desenvolvimento" in registry_domains
+
+
+def test_knowledge_service_exposes_runtime_route_domains() -> None:
+    service = KnowledgeService()
+
+    route_domains = service.list_runtime_route_domains()
+
+    assert "strategy" in route_domains
+    assert "software_development" in route_domains

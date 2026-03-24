@@ -1,0 +1,471 @@
+{
+  "canonical_domains": [
+    {
+      "domain_name": "matematica_e_logica_formal",
+      "display_name": "Matemática e lógica formal",
+      "domain_scope": "primary",
+      "activation_stage": "canonical",
+      "maturity": "canonical_only",
+      "summary": "Estruturas abstratas, relações formais, prova, otimização e consistência lógica."
+    },
+    {
+      "domain_name": "fisica_e_ciencias_naturais",
+      "display_name": "Física e ciências naturais",
+      "domain_scope": "primary",
+      "activation_stage": "canonical",
+      "maturity": "canonical_only",
+      "summary": "Leis, fenômenos e princípios da realidade física e natural."
+    },
+    {
+      "domain_name": "quimica_e_ciencia_dos_materiais",
+      "display_name": "Química e ciência dos materiais",
+      "domain_scope": "primary",
+      "activation_stage": "canonical",
+      "maturity": "canonical_only",
+      "summary": "Composição, transformação e propriedades da matéria e dos materiais."
+    },
+    {
+      "domain_name": "biologia_e_ciencias_da_vida",
+      "display_name": "Biologia e ciências da vida",
+      "domain_scope": "primary",
+      "activation_stage": "canonical",
+      "maturity": "canonical_only",
+      "summary": "Organismos vivos, processos biológicos, evolução e ecossistemas."
+    },
+    {
+      "domain_name": "ciencias_da_terra_ambiente_e_clima",
+      "display_name": "Ciências da Terra, ambiente e clima",
+      "domain_scope": "primary",
+      "activation_stage": "canonical",
+      "maturity": "canonical_only",
+      "summary": "Sistemas terrestres, ambiente, clima e processos geofísicos."
+    },
+    {
+      "domain_name": "engenharia_e_sistemas_fisicos",
+      "display_name": "Engenharia e sistemas físicos",
+      "domain_scope": "primary",
+      "activation_stage": "canonical",
+      "maturity": "canonical_only",
+      "summary": "Projeto, construção, operação e otimização de sistemas materiais."
+    },
+    {
+      "domain_name": "computacao_e_desenvolvimento",
+      "display_name": "Computação e desenvolvimento",
+      "domain_scope": "primary",
+      "activation_stage": "v2",
+      "maturity": "runtime_partial",
+      "summary": "Criação, operação e evolução de sistemas computacionais e software."
+    },
+    {
+      "domain_name": "dados_estatistica_e_inteligencia_analitica",
+      "display_name": "Dados, estatística e inteligência analítica",
+      "domain_scope": "primary",
+      "activation_stage": "v2",
+      "maturity": "runtime_partial",
+      "summary": "Extração de sentido a partir de dados, padrões, métricas e sinais quantitativos."
+    },
+    {
+      "domain_name": "inteligencia_artificial_e_sistemas_autonomos",
+      "display_name": "Inteligência artificial e sistemas autônomos",
+      "domain_scope": "primary",
+      "activation_stage": "canonical",
+      "maturity": "canonical_only",
+      "summary": "Sistemas capazes de inferir, aprender, decidir e agir com autonomia variável."
+    },
+    {
+      "domain_name": "infraestrutura_energia_e_logistica",
+      "display_name": "Infraestrutura, energia e logística",
+      "domain_scope": "primary",
+      "activation_stage": "canonical",
+      "maturity": "canonical_only",
+      "summary": "Redes físicas e operacionais de grande escala, abastecimento e mobilidade."
+    },
+    {
+      "domain_name": "psicologia_e_comportamento_humano",
+      "display_name": "Psicologia e comportamento humano",
+      "domain_scope": "primary",
+      "activation_stage": "canonical",
+      "maturity": "canonical_only",
+      "summary": "Mente humana em sua dimensão subjetiva, comportamental e relacional."
+    },
+    {
+      "domain_name": "cognicao_aprendizado_e_inteligencia",
+      "display_name": "Cognição, aprendizado e inteligência",
+      "domain_scope": "primary",
+      "activation_stage": "canonical",
+      "maturity": "canonical_only",
+      "summary": "Percepção, memória, aprendizagem, raciocínio e desenvolvimento intelectual."
+    },
+    {
+      "domain_name": "comunicacao_linguagem_e_argumentacao",
+      "display_name": "Comunicação, linguagem e argumentação",
+      "domain_scope": "primary",
+      "activation_stage": "v2",
+      "maturity": "runtime_partial",
+      "summary": "Expressão, transmissão, interpretação e estruturação da linguagem."
+    },
+    {
+      "domain_name": "filosofia_etica_e_epistemologia",
+      "display_name": "Filosofia, ética e epistemologia",
+      "domain_scope": "primary",
+      "activation_stage": "canonical",
+      "maturity": "canonical_only",
+      "summary": "Fundamentos do conhecimento, da moral, da verdade e da reflexão sobre a realidade."
+    },
+    {
+      "domain_name": "historia_civilizacoes_e_cultura",
+      "display_name": "História, civilizações e cultura",
+      "domain_scope": "primary",
+      "activation_stage": "canonical",
+      "maturity": "canonical_only",
+      "summary": "Evolução histórica das sociedades, culturas e repertórios humanos."
+    },
+    {
+      "domain_name": "sociologia_e_antropologia",
+      "display_name": "Sociologia e antropologia",
+      "domain_scope": "primary",
+      "activation_stage": "canonical",
+      "maturity": "canonical_only",
+      "summary": "Organização social, instituições, grupos e estruturas culturais humanas."
+    },
+    {
+      "domain_name": "economia",
+      "display_name": "Economia",
+      "domain_scope": "primary",
+      "activation_stage": "canonical",
+      "maturity": "canonical_only",
+      "summary": "Produção, distribuição, incentivos, mercados e sistemas econômicos."
+    },
+    {
+      "domain_name": "financas",
+      "display_name": "Finanças",
+      "domain_scope": "primary",
+      "activation_stage": "canonical",
+      "maturity": "canonical_only",
+      "summary": "Decisão sobre recursos monetários, risco, valor e alocação de capital."
+    },
+    {
+      "domain_name": "direito_e_regulacao",
+      "display_name": "Direito e regulação",
+      "domain_scope": "primary",
+      "activation_stage": "canonical",
+      "maturity": "canonical_only",
+      "summary": "Normas, direitos, deveres, estruturas regulatórias e compliance."
+    },
+    {
+      "domain_name": "politica_geopolitica_e_governanca_publica",
+      "display_name": "Política, geopolítica e governança pública",
+      "domain_scope": "primary",
+      "activation_stage": "canonical",
+      "maturity": "canonical_only",
+      "summary": "Poder institucional, coordenação coletiva, estados e decisão política."
+    },
+    {
+      "domain_name": "negocios_gestao_e_organizacoes",
+      "display_name": "Negócios, gestão e organizações",
+      "domain_scope": "primary",
+      "activation_stage": "canonical",
+      "maturity": "canonical_only",
+      "summary": "Criação, operação e evolução de organizações e sistemas de gestão."
+    },
+    {
+      "domain_name": "estrategia_e_pensamento_sistemico",
+      "display_name": "Estratégia e pensamento sistêmico",
+      "domain_scope": "primary",
+      "activation_stage": "v2",
+      "maturity": "runtime_partial",
+      "summary": "Construção de vantagem, leitura de cenário e desenho de ação em sistemas complexos."
+    },
+    {
+      "domain_name": "tomada_de_decisao_complexa",
+      "display_name": "Tomada de decisão complexa",
+      "domain_scope": "primary",
+      "activation_stage": "v2",
+      "maturity": "runtime_partial",
+      "summary": "Escolhas em contextos com incerteza, múltiplos critérios e trade-offs."
+    },
+    {
+      "domain_name": "produtividade_execucao_e_coordenacao",
+      "display_name": "Produtividade, execução e coordenação",
+      "domain_scope": "primary",
+      "activation_stage": "v2",
+      "maturity": "runtime_partial",
+      "summary": "Organização do trabalho, execução, foco e coordenação de frentes."
+    },
+    {
+      "domain_name": "defesa_seguranca_e_gestao_de_crises",
+      "display_name": "Defesa, segurança e gestão de crises",
+      "domain_scope": "primary",
+      "activation_stage": "v2",
+      "maturity": "runtime_partial",
+      "summary": "Proteção, resiliência, contenção de ameaças e resposta a incidentes."
+    },
+    {
+      "domain_name": "saude_medicina_e_bem_estar",
+      "display_name": "Saúde, medicina e bem-estar",
+      "domain_scope": "primary",
+      "activation_stage": "canonical",
+      "maturity": "canonical_only",
+      "summary": "Cuidado, prevenção, desempenho humano e bem-estar integral."
+    },
+    {
+      "domain_name": "biotecnologia_e_bioengenharia",
+      "display_name": "Biotecnologia e bioengenharia",
+      "domain_scope": "primary",
+      "activation_stage": "canonical",
+      "maturity": "canonical_only",
+      "summary": "Aplicação tecnológica sobre sistemas vivos e processos biomédicos."
+    },
+    {
+      "domain_name": "educacao_ensino_e_desenvolvimento_humano",
+      "display_name": "Educação, ensino e desenvolvimento humano",
+      "domain_scope": "primary",
+      "activation_stage": "canonical",
+      "maturity": "canonical_only",
+      "summary": "Formação humana, aprendizagem, ensino e desenvolvimento de capacidades."
+    },
+    {
+      "domain_name": "criatividade_design_arte_e_inovacao",
+      "display_name": "Criatividade, design, arte e inovação",
+      "domain_scope": "primary",
+      "activation_stage": "canonical",
+      "maturity": "canonical_only",
+      "summary": "Criação de formas, experiências, ideias e soluções novas com valor aplicado."
+    },
+    {
+      "domain_name": "exploracao_espacial_futuro_e_tecnologias_emergentes",
+      "display_name": "Exploração espacial, futuro e tecnologias emergentes",
+      "domain_scope": "primary",
+      "activation_stage": "canonical",
+      "maturity": "canonical_only",
+      "summary": "Horizontes avançados, frontier tech, futuro e exploração espacial."
+    },
+    {
+      "domain_name": "pesquisa_e_inteligencia",
+      "display_name": "Pesquisa e inteligência",
+      "domain_scope": "operational",
+      "activation_stage": "v2",
+      "maturity": "runtime_partial",
+      "summary": "Buscar, verificar, sintetizar e comparar informação."
+    },
+    {
+      "domain_name": "resolucao_de_problemas",
+      "display_name": "Resolução de problemas",
+      "domain_scope": "operational",
+      "activation_stage": "canonical",
+      "maturity": "canonical_only",
+      "summary": "Diagnosticar, decompor e formular soluções."
+    },
+    {
+      "domain_name": "planejamento_e_coordenacao",
+      "display_name": "Planejamento e coordenação",
+      "domain_scope": "operational",
+      "activation_stage": "v2",
+      "maturity": "runtime_partial",
+      "summary": "Estruturar planos, definir etapas e coordenar frentes."
+    },
+    {
+      "domain_name": "automacao_e_orquestracao",
+      "display_name": "Automação e orquestração",
+      "domain_scope": "operational",
+      "activation_stage": "canonical",
+      "maturity": "canonical_only",
+      "summary": "Integrar sistemas, operar ferramentas e automatizar fluxos."
+    },
+    {
+      "domain_name": "producao_de_artefatos",
+      "display_name": "Produção de artefatos",
+      "domain_scope": "operational",
+      "activation_stage": "v2",
+      "maturity": "runtime_partial",
+      "summary": "Gerar documentos, relatórios, apresentações, código e outros artefatos."
+    },
+    {
+      "domain_name": "assistencia_pessoal_e_operacional",
+      "display_name": "Assistência pessoal e operacional",
+      "domain_scope": "operational",
+      "activation_stage": "v2",
+      "maturity": "runtime_partial",
+      "summary": "Agenda, organização, lembretes e suporte contínuo."
+    },
+    {
+      "domain_name": "monitoramento_e_vigilancia_contextual",
+      "display_name": "Monitoramento e vigilância contextual",
+      "domain_scope": "operational",
+      "activation_stage": "v2",
+      "maturity": "runtime_partial",
+      "summary": "Observar mudanças, detectar risco e oportunidade, e alertar."
+    },
+    {
+      "domain_name": "raciocinio_logico",
+      "display_name": "Raciocínio lógico",
+      "domain_scope": "meta",
+      "activation_stage": "canonical",
+      "maturity": "canonical_only",
+      "summary": "Coerência interna, dedução e consistência formal."
+    },
+    {
+      "domain_name": "avaliacao_e_verificacao",
+      "display_name": "Avaliação e verificação",
+      "domain_scope": "meta",
+      "activation_stage": "v2",
+      "maturity": "runtime_partial",
+      "summary": "Validação, checagem de qualidade, detecção de erro e alucinação."
+    },
+    {
+      "domain_name": "aprendizado_do_sistema",
+      "display_name": "Aprendizado do sistema",
+      "domain_scope": "meta",
+      "activation_stage": "canonical",
+      "maturity": "canonical_only",
+      "summary": "Adaptação, retenção útil e refinamento incremental do sistema."
+    },
+    {
+      "domain_name": "governanca_do_sistema",
+      "display_name": "Governança do sistema",
+      "domain_scope": "meta",
+      "activation_stage": "v2",
+      "maturity": "runtime_partial",
+      "summary": "Regras, permissões, limites e integridade operacional."
+    },
+    {
+      "domain_name": "auto_observacao",
+      "display_name": "Auto-observação",
+      "domain_scope": "meta",
+      "activation_stage": "v2",
+      "maturity": "runtime_partial",
+      "summary": "Medição de desempenho, detecção de regressão e inspeção interna."
+    },
+    {
+      "domain_name": "coordenacao_de_identidade",
+      "display_name": "Coordenação de identidade",
+      "domain_scope": "meta",
+      "activation_stage": "canonical",
+      "maturity": "canonical_only",
+      "summary": "Preservação da missão, dos princípios e da coerência comportamental."
+    }
+  ],
+  "runtime_routes": [
+    {
+      "route_name": "strategy",
+      "display_name": "Runtime route: strategy",
+      "domain_scope": "runtime_route",
+      "activation_stage": "v2",
+      "maturity": "active_registry",
+      "canonical_refs": [
+        "estrategia_e_pensamento_sistemico",
+        "tomada_de_decisao_complexa"
+      ],
+      "summary": "Rota ativa do v2 para sequenciamento, direção e framing estratégico."
+    },
+    {
+      "route_name": "analysis",
+      "display_name": "Runtime route: analysis",
+      "domain_scope": "runtime_route",
+      "activation_stage": "v2",
+      "maturity": "active_registry",
+      "canonical_refs": [
+        "dados_estatistica_e_inteligencia_analitica",
+        "tomada_de_decisao_complexa"
+      ],
+      "summary": "Rota ativa do v2 para comparação estruturada, trade-offs e implicações."
+    },
+    {
+      "route_name": "governance",
+      "display_name": "Runtime route: governance",
+      "domain_scope": "runtime_route",
+      "activation_stage": "v2",
+      "maturity": "active_registry",
+      "canonical_refs": [
+        "governanca_do_sistema",
+        "defesa_seguranca_e_gestao_de_crises"
+      ],
+      "summary": "Rota ativa do v2 para contenção normativa, risco, integridade e auditoria."
+    },
+    {
+      "route_name": "software_development",
+      "display_name": "Runtime route: software_development",
+      "domain_scope": "runtime_route",
+      "activation_stage": "v2",
+      "maturity": "shadow_specialist",
+      "canonical_refs": [
+        "computacao_e_desenvolvimento"
+      ],
+      "linked_specialist_type": "especialista_software_subordinado",
+      "specialist_mode": "shadow",
+      "summary": "Primeira rota canônica domínio->especialista do v2, sempre subordinada ao núcleo."
+    },
+    {
+      "route_name": "operational_readiness",
+      "display_name": "Runtime route: operational_readiness",
+      "domain_scope": "runtime_route",
+      "activation_stage": "v2",
+      "maturity": "active_registry",
+      "canonical_refs": [
+        "planejamento_e_coordenacao",
+        "monitoramento_e_vigilancia_contextual"
+      ],
+      "summary": "Rota ativa do v2 para readiness, rollback, smoke e critérios de go-live."
+    },
+    {
+      "route_name": "observability",
+      "display_name": "Runtime route: observability",
+      "domain_scope": "runtime_route",
+      "activation_stage": "v2",
+      "maturity": "active_registry",
+      "canonical_refs": [
+        "auto_observacao",
+        "monitoramento_e_vigilancia_contextual"
+      ],
+      "summary": "Rota ativa do v2 para trilha, anomalias, correlação e gaps de sinal."
+    },
+    {
+      "route_name": "documentation",
+      "display_name": "Runtime route: documentation",
+      "domain_scope": "runtime_route",
+      "activation_stage": "v2",
+      "maturity": "active_registry",
+      "canonical_refs": [
+        "producao_de_artefatos",
+        "comunicacao_linguagem_e_argumentacao"
+      ],
+      "summary": "Rota ativa do v2 para documentação operacional e alinhamento entre artefatos vivos."
+    },
+    {
+      "route_name": "decision_risk",
+      "display_name": "Runtime route: decision_risk",
+      "domain_scope": "runtime_route",
+      "activation_stage": "v2",
+      "maturity": "active_registry",
+      "canonical_refs": [
+        "tomada_de_decisao_complexa",
+        "defesa_seguranca_e_gestao_de_crises"
+      ],
+      "summary": "Rota ativa do v2 para reversibilidade, impacto, incerteza e gates de decisão."
+    },
+    {
+      "route_name": "pilot_operations",
+      "display_name": "Runtime route: pilot_operations",
+      "domain_scope": "runtime_route",
+      "activation_stage": "v2",
+      "maturity": "active_registry",
+      "canonical_refs": [
+        "pesquisa_e_inteligencia",
+        "auto_observacao"
+      ],
+      "summary": "Rota ativa do v2 para piloto interno, comparação de paths e relatórios."
+    },
+    {
+      "route_name": "productivity",
+      "display_name": "Runtime route: productivity",
+      "domain_scope": "runtime_route",
+      "activation_stage": "v2",
+      "maturity": "active_registry",
+      "canonical_refs": [
+        "produtividade_execucao_e_coordenacao",
+        "assistencia_pessoal_e_operacional"
+      ],
+      "summary": "Rota ativa do v2 para menor próxima ação segura, coordenação e execução verificável."
+    }
+  ]
+}

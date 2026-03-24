@@ -163,7 +163,7 @@ class OperationalService:
 
     @staticmethod
     def _domain_line(domain_hints: list[str]) -> str:
-        return ", ".join(domain_hints) if domain_hints else "assistencia_geral"
+        return ", ".join(domain_hints) if domain_hints else "assistencia_pessoal_e_operacional"
 
     @staticmethod
     def _risk_line(plan_risks: list[str], fallback: str) -> str:

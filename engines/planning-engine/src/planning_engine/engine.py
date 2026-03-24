@@ -198,7 +198,7 @@ class PlanningEngine:
             plan_summary=plan_summary,
             goal=dominant_goal,
             steps=steps,
-            active_domains=context.active_domains or ["assistencia_geral"],
+            active_domains=context.active_domains or ["assistencia_pessoal_e_operacional"],
             active_minds=context.active_minds,
             constraints=constraints,
             risks=risks,

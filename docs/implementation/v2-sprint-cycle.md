@@ -274,7 +274,7 @@ Abrir o registry inicial de domínios do `v2` e ligar o primeiro especialista su
 
 Resultado registrado nesta rodada:
 
-- `knowledge-service` passou a carregar `v2_domain_registry.json` como registry inicial dos domínios ativos do ciclo;
+- `knowledge-service` passou a carregar `domain_registry.json` como registry inicial dos domínios ativos do ciclo;
 - `software_development` passou a abrir a primeira rota canônica `domínio -> especialista` do `v2`, ligando `especialista_software_subordinado` em `shadow mode`;
 - `cognitive-engine` passou a priorizar hints vindos do registry antes de ampliar heurística solta de especialista;
 - `specialist-engine` passou a materializar `linked_domain` e `selection_mode`, deixando explícito quando a convocação é domínio-dirigida e quando ela roda em `shadow`;
@@ -349,7 +349,7 @@ Status:
 
 ### Objetivo
 
-Consolidar o primeiro corte do `v2` e decidir o que segue para o ciclo seguinte.
+Consolidar o primeiro corte do `v2` e decidir o que segue para o ciclo seguinte, agora com registries canônicos de `dominios`, `memorias` e `mentes` já abertos no runtime.
 
 ### Entregas obrigatórias
 
@@ -357,6 +357,12 @@ Consolidar o primeiro corte do `v2` e decidir o que segue para o ciclo seguinte.
 - decisão formal do que permanece no corte do `v2`;
 - explicitação do que continua fora do foco imediato;
 - classificação final dos eixos em `corrigir agora`, `manter deferido` ou `apenas preservar como visão`.
+
+Critérios explícitos desta consolidação:
+
+- `domain_registry.json` deve ser tratado como mapa canônico soberano, enquanto o subset runtime continua deliberadamente menor;
+- `shared/memory_registry.py` deve ser lido como registry formal das 11 classes, e a Sprint 6 deve decidir quais classes sobem de `tipado/documentado` para `runtime parcial` no próximo ciclo;
+- `shared/mind_registry.py` deve ser tratado como registry oficial das 24 mentes, e a Sprint 6 deve decidir quanto da composição entre mentes sai do nível implícito para regras soberanas de runtime.
 
 ---
 

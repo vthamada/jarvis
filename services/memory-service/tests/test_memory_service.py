@@ -12,10 +12,10 @@ from memory_service.repository import (
 from memory_service.service import MemoryRecordResult, MemoryRecoveryResult, MemoryService
 
 from shared.contracts import DeliberativePlanContract, InputContract, SpecialistContributionContract
+from shared.memory_registry import DEFAULT_MEMORY_SCOPES
 from shared.types import (
     ChannelType,
     InputType,
-    MemoryClass,
     MissionId,
     PermissionDecision,
     RequestId,
@@ -85,11 +85,7 @@ def test_memory_service_recovers_empty_context_for_new_session() -> None:
     )
     assert isinstance(result, MemoryRecoveryResult)
     assert result.recovered_items == []
-    assert result.recovery_contract.requested_scopes == [
-        MemoryClass.CONTEXTUAL,
-        MemoryClass.EPISODIC,
-        MemoryClass.MISSION,
-    ]
+    assert result.recovery_contract.requested_scopes == DEFAULT_MEMORY_SCOPES
 
 
 def test_memory_service_records_and_recovers_session_history_across_instances() -> None:
@@ -399,6 +395,7 @@ def test_memory_service_prepares_core_mediated_shared_memory_for_specialists() -
     contexts = service.prepare_specialist_shared_memory(
         session_id="sess-specialist",
         specialist_hints=["especialista_planejamento_operacional"],
+        active_domains=["strategy", "productivity"],
         mission_id="mission-specialist-b",
         continuity_context=continuity,
     )
@@ -418,6 +415,8 @@ def test_memory_service_prepares_core_mediated_shared_memory_for_specialists() -
     assert persisted is not None
     assert persisted.shared_memory_brief == shared_memory.shared_memory_brief
     assert persisted.write_policy == "through_core_only"
+    assert "memory://relational" in persisted.memory_refs
+    assert "memory://domain/strategy" in persisted.memory_refs
 
 
 def test_memory_service_persists_session_continuity_for_governed_reformulation() -> None:
