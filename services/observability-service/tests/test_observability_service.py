@@ -1,4 +1,4 @@
-from json import loads
+﻿from json import loads
 from pathlib import Path
 from tempfile import gettempdir
 from uuid import uuid4
@@ -250,7 +250,20 @@ def test_observability_service_audits_continuity_signals() -> None:
                 event_name="context_composed",
                 timestamp="2026-03-18T00:00:03+00:00",
                 source_service="orchestrator-service",
-                payload={"active_minds": ["mente_analitica"]},
+                payload={
+                    "active_minds": ["mente_analitica", "mente_logica", "mente_critica"],
+                    "primary_mind": "mente_analitica",
+                    "supporting_minds": ["mente_logica", "mente_critica"],
+                    "suppressed_minds": ["mente_probabilistica"],
+                    "supporting_mind_limit": 2,
+                    "suppressed_mind_limit": 3,
+                    "dominant_tension": "equilibrar profundidade analitica com conclusao util",
+                    "arbitration_summary": (
+                        "mente_analitica lidera a resposta com apoio de "
+                        "mente_logica, mente_critica"
+                    ),
+                    "arbitration_source": "mind_registry",
+                },
                 request_id="req-cont",
                 session_id="sess-cont",
                 correlation_id="req-cont",
@@ -371,6 +384,20 @@ def test_observability_service_audits_domain_memory_and_sovereignty_alignment() 
                 correlation_id="req-specialist-align",
             ),
             InternalEventEnvelope(
+                event_id="evt-s3b",
+                event_name="directive_composed",
+                timestamp="2026-03-18T00:00:02.500000+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "identity_mode": "deep_analysis",
+                    "identity_signature": "nucleo_soberano_unificado",
+                    "response_style_preview": "analitico, sintetico e rigoroso",
+                },
+                request_id="req-specialist-align",
+                session_id="sess-specialist-align",
+                correlation_id="req-specialist-align",
+            ),
+            InternalEventEnvelope(
                 event_id="evt-s4",
                 event_name="domain_registry_resolved",
                 timestamp="2026-03-18T00:00:03+00:00",
@@ -393,7 +420,20 @@ def test_observability_service_audits_domain_memory_and_sovereignty_alignment() 
                 event_name="context_composed",
                 timestamp="2026-03-18T00:00:04+00:00",
                 source_service="orchestrator-service",
-                payload={"active_minds": ["mente_analitica"]},
+                payload={
+                    "active_minds": ["mente_analitica", "mente_logica", "mente_critica"],
+                    "primary_mind": "mente_analitica",
+                    "supporting_minds": ["mente_logica", "mente_critica"],
+                    "suppressed_minds": ["mente_probabilistica"],
+                    "supporting_mind_limit": 2,
+                    "suppressed_mind_limit": 3,
+                    "dominant_tension": "equilibrar profundidade analitica com conclusao util",
+                    "arbitration_summary": (
+                        "mente_analitica lidera a resposta com apoio de "
+                        "mente_logica, mente_critica"
+                    ),
+                    "arbitration_source": "mind_registry",
+                },
                 request_id="req-specialist-align",
                 session_id="sess-specialist-align",
                 correlation_id="req-specialist-align",
@@ -473,6 +513,22 @@ def test_observability_service_audits_domain_memory_and_sovereignty_alignment() 
                 correlation_id="req-specialist-align",
             ),
             InternalEventEnvelope(
+                event_id="evt-s10b",
+                event_name="plan_governed",
+                timestamp="2026-03-18T00:00:09.500000+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "decision_frame": "analysis",
+                    "identity_mode": "deep_analysis",
+                    "identity_signature": "nucleo_soberano_unificado",
+                    "response_style": "analitico, sintetico e rigoroso",
+                    "identity_guardrail": "preservar rigor analitico antes de concluir",
+                },
+                request_id="req-specialist-align",
+                session_id="sess-specialist-align",
+                correlation_id="req-specialist-align",
+            ),
+            InternalEventEnvelope(
                 event_id="evt-s11",
                 event_name="governance_checked",
                 timestamp="2026-03-18T00:00:10+00:00",
@@ -487,7 +543,12 @@ def test_observability_service_audits_domain_memory_and_sovereignty_alignment() 
                 event_name="response_synthesized",
                 timestamp="2026-03-18T00:00:11+00:00",
                 source_service="orchestrator-service",
-                payload={"continuity_action": "continuar"},
+                payload={
+                    "continuity_action": "continuar",
+                    "identity_mode": "deep_analysis",
+                    "identity_signature": "nucleo_soberano_unificado",
+                    "response_style": "analitico, sintetico e rigoroso",
+                },
                 request_id="req-specialist-align",
                 session_id="sess-specialist-align",
                 correlation_id="req-specialist-align",
@@ -514,10 +575,10 @@ def test_observability_service_audits_domain_memory_and_sovereignty_alignment() 
     ]
     assert audit.shadow_specialists == ["especialista_software_subordinado"]
     assert audit.domain_alignment_status == "healthy"
+    assert audit.mind_alignment_status == "healthy"
+    assert audit.identity_alignment_status == "healthy"
     assert audit.memory_alignment_status == "healthy"
     assert audit.specialist_sovereignty_status == "healthy"
-
-
 def test_langsmith_adapter_emits_trace_tree() -> None:
     calls: list[dict[str, object]] = []
 
@@ -650,3 +711,4 @@ def test_observability_service_builds_incident_evidence_for_governed_flow() -> N
     assert evidence.governance_decision == "block"
     assert evidence.recommended_operator_action == "keep_contained_and_require_manual_review"
     assert "memory_recovered" in evidence.missing_required_events
+

@@ -1,4 +1,4 @@
-# ruff: noqa: E501
+﻿# ruff: noqa: E501
 """Structured local observability service."""
 
 from __future__ import annotations
@@ -60,6 +60,8 @@ class FlowAudit:
     registry_domains: list[str]
     shadow_specialists: list[str]
     domain_alignment_status: str
+    mind_alignment_status: str
+    identity_alignment_status: str
     memory_alignment_status: str
     specialist_sovereignty_status: str
     missing_continuity_signals: list[str]
@@ -229,6 +231,8 @@ class ObservabilityService:
                 registry_domains=[],
                 shadow_specialists=[],
                 domain_alignment_status="incomplete",
+                mind_alignment_status="incomplete",
+                identity_alignment_status="incomplete",
                 memory_alignment_status="incomplete",
                 specialist_sovereignty_status="incomplete",
                 missing_continuity_signals=[],
@@ -245,6 +249,9 @@ class ObservabilityService:
         operation_event = self._first_event(events, "operation_completed")
         continuity_event = self._first_event(events, "continuity_decided")
         continuity_runtime_event = self._first_event(events, "continuity_subflow_completed")
+        directive_event = self._first_event(events, "directive_composed")
+        plan_governed_event = self._first_event(events, "plan_governed")
+        context_event = self._first_event(events, "context_composed")
         response_event = self._first_event(events, "response_synthesized")
         memory_event = self._first_event(events, "memory_recorded")
         domain_registry_event = self._first_event(events, "domain_registry_resolved")
@@ -365,6 +372,14 @@ class ObservabilityService:
             domain_registry_event=domain_registry_event,
             specialist_shadow_event=specialist_shadow_event,
         )
+        mind_alignment_status = self._mind_alignment_status(
+            context_event=context_event,
+        )
+        identity_alignment_status = self._identity_alignment_status(
+            directive_event=directive_event,
+            plan_governed_event=plan_governed_event,
+            response_event=response_event,
+        )
         memory_alignment_status = self._memory_alignment_status(
             shared_memory_event=shared_memory_event,
         )
@@ -388,6 +403,8 @@ class ObservabilityService:
             registry_domains=registry_domains,
             shadow_specialists=shadow_specialists,
             domain_alignment_status=domain_alignment_status,
+            mind_alignment_status=mind_alignment_status,
+            identity_alignment_status=identity_alignment_status,
             memory_alignment_status=memory_alignment_status,
             specialist_sovereignty_status=specialist_sovereignty_status,
             missing_continuity_signals=missing_continuity_signals,
@@ -505,6 +522,83 @@ class ObservabilityService:
         return "healthy" if linked_domains else "attention_required"
 
     @staticmethod
+    def _identity_alignment_status(
+        *,
+        directive_event: InternalEventEnvelope | None,
+        plan_governed_event: InternalEventEnvelope | None,
+        response_event: InternalEventEnvelope | None,
+    ) -> str:
+        if directive_event is None and plan_governed_event is None and response_event is None:
+            return "incomplete"
+        if directive_event is None or response_event is None:
+            return "partial"
+        directive_mode = directive_event.payload.get("identity_mode")
+        response_mode = response_event.payload.get("identity_mode")
+        directive_signature = directive_event.payload.get("identity_signature")
+        response_signature = response_event.payload.get("identity_signature")
+        plan_signature = (
+            plan_governed_event.payload.get("identity_signature")
+            if plan_governed_event is not None
+            else directive_signature
+        )
+        plan_mode = (
+            plan_governed_event.payload.get("identity_mode")
+            if plan_governed_event is not None
+            else directive_mode
+        )
+        response_style = response_event.payload.get("response_style")
+        guardrail = (
+            plan_governed_event.payload.get("identity_guardrail")
+            if plan_governed_event is not None
+            else None
+        )
+        if not directive_signature or not response_signature:
+            return "partial"
+        if directive_signature != response_signature or directive_signature != plan_signature:
+            return "attention_required"
+        if directive_mode != response_mode or directive_mode != plan_mode:
+            return "attention_required"
+        if not response_style or not guardrail:
+            return "partial"
+        return "healthy"
+
+    @staticmethod
+    def _mind_alignment_status(
+        *,
+        context_event: InternalEventEnvelope | None,
+    ) -> str:
+        if context_event is None:
+            return "incomplete"
+        primary_mind = context_event.payload.get("primary_mind")
+        active_minds = context_event.payload.get("active_minds", [])
+        supporting_minds = context_event.payload.get("supporting_minds", [])
+        suppressed_minds = context_event.payload.get("suppressed_minds", [])
+        dominant_tension = context_event.payload.get("dominant_tension")
+        arbitration_summary = context_event.payload.get("arbitration_summary")
+        arbitration_source = context_event.payload.get("arbitration_source")
+        support_limit = context_event.payload.get("supporting_mind_limit")
+        suppressed_limit = context_event.payload.get("suppressed_mind_limit")
+        if not primary_mind or not active_minds or not dominant_tension:
+            return "partial"
+        if arbitration_source != "mind_registry":
+            return "attention_required"
+        if not arbitration_summary:
+            return "attention_required"
+        if not isinstance(supporting_minds, list) or not isinstance(suppressed_minds, list):
+            return "attention_required"
+        if active_minds[0] != primary_mind:
+            return "attention_required"
+        if active_minds[1:] != supporting_minds:
+            return "attention_required"
+        if primary_mind in supporting_minds or primary_mind in suppressed_minds:
+            return "attention_required"
+        if isinstance(support_limit, int) and len(supporting_minds) > support_limit:
+            return "attention_required"
+        if isinstance(suppressed_limit, int) and len(suppressed_minds) > suppressed_limit:
+            return "attention_required"
+        return "healthy"
+
+    @staticmethod
     def _memory_alignment_status(
         *,
         shared_memory_event: InternalEventEnvelope | None,
@@ -571,3 +665,5 @@ class ObservabilityService:
             else Path.cwd() / ".jarvis_runtime" / "agentic_observability.jsonl"
         )
         return JsonlAgenticMirrorAdapter(resolved)
+
+

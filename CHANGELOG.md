@@ -8,6 +8,16 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 
 ## 2026-03-26
 
+### Sprint 3 e Sprint 4 do v2-alignment-cycle
+
+- `shared/mind_registry.py` passou a governar a arbitragem do runtime com prioridade, afinidades por intenção e domínio, limite explícito de apoios e supressões e tensão dominante canônica;
+- `cognitive-engine` passou a usar o registry de mentes como fonte soberana de mente primária, mentes de apoio e mentes suprimidas, emitindo resumo de arbitragem e sinais observáveis do eixo cognitivo;
+- `identity-engine` passou a expor assinatura formal do núcleo, postura, foco de princípios e guardrails de governança, tornando a identidade mais auditável dentro do runtime;
+- `governance-service` passou a receber `identity_mode`, `identity_signature` e `response_style`, registrando `identity_guardrail` no contexto da decisão;
+- `orchestrator-service` passou a propagar sinais explícitos de identidade em `directive_composed`, `plan_governed` e `response_synthesized`;
+- `observability-service` passou a auditar `mind_alignment_status` e `identity_alignment_status`, preparando a Sprint 5 como gate explícito de aderência por eixo;
+- `HANDOFF.md`, `docs/implementation/v2-alignment-cycle.md` e `docs/documentation/matriz-de-aderencia-mestre.md` passaram a refletir a Sprint 4 concluída e a Sprint 5 como próxima frente ativa.
+
 ### Sprint 2 do v2-alignment-cycle e documentação da visão longa
 
 - `shared/memory_registry.py` passou a ser tratado também na documentação como política operacional por classe, e não apenas como catálogo tipado;

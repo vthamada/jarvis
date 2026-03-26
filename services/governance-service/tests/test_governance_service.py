@@ -87,6 +87,9 @@ def test_governance_service_allows_reversible_analysis_requests() -> None:
         ),
         intent="analysis",
         requested_by_service="orchestrator-service",
+        identity_mode="deep_analysis",
+        identity_signature="nucleo_soberano_unificado",
+        response_style="analitico, sintetico e rigoroso",
         plan=DeliberativePlanContract(
             plan_summary="comparar trade-offs do milestone",
             goal="Analyze the milestone.",
@@ -108,6 +111,11 @@ def test_governance_service_allows_reversible_analysis_requests() -> None:
     assert result.governance_decision.decision == PermissionDecision.ALLOW
     assert result.governance_decision.risk_level == RiskLevel.LOW
     assert result.governance_check.decision_frame == "analysis"
+    assert result.governance_check.context["identity_signature"] == "nucleo_soberano_unificado"
+    assert (
+        result.governance_check.context["identity_guardrail"]
+        == "preservar rigor analitico antes de concluir"
+    )
 
 
 def test_governance_service_conditions_local_safe_operations_that_close_loop() -> None:

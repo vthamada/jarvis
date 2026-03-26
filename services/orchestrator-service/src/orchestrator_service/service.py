@@ -1,4 +1,4 @@
-"""Orchestrator flow integrating engines, persistence, and observability."""
+﻿"""Orchestrator flow integrating engines, persistence, and observability."""
 
 from __future__ import annotations
 
@@ -180,6 +180,11 @@ class OrchestratorService:
                 )
 
         directive = self.executive_engine.direct(contract)
+        identity_profile = self.identity_engine.get_profile()
+        identity_style_preview = self.identity_engine.build_response_style(
+            intent=directive.intent,
+            blocked=False,
+        )
         events.append(self.make_event("intent_classified", contract, {"intent": directive.intent}))
         events.append(
             self.make_event(
@@ -192,6 +197,10 @@ class OrchestratorService:
                     "preferred_response_mode": directive.preferred_response_mode,
                     "dominant_goal": directive.dominant_goal,
                     "identity_mode": directive.identity_mode,
+                    "identity_signature": identity_profile.identity_signature,
+                    "identity_posture": identity_profile.posture,
+                    "principle_focus": identity_profile.principle_focus,
+                    "response_style_preview": identity_style_preview,
                 },
             )
         )
@@ -267,8 +276,14 @@ class OrchestratorService:
                     "active_minds": cognitive_snapshot.active_minds,
                     "active_domains": cognitive_snapshot.active_domains,
                     "primary_mind": cognitive_snapshot.primary_mind,
+                    "primary_mind_family": cognitive_snapshot.primary_mind_family,
                     "supporting_minds": cognitive_snapshot.supporting_minds,
+                    "suppressed_minds": cognitive_snapshot.suppressed_minds,
+                    "supporting_mind_limit": cognitive_snapshot.supporting_mind_limit,
+                    "suppressed_mind_limit": cognitive_snapshot.suppressed_mind_limit,
                     "dominant_tension": cognitive_snapshot.dominant_tension,
+                    "arbitration_summary": cognitive_snapshot.arbitration_summary,
+                    "arbitration_source": cognitive_snapshot.arbitration_source,
                     "specialist_hints": cognitive_snapshot.specialist_hints,
                 },
             )
@@ -346,9 +361,20 @@ class OrchestratorService:
             intent=directive.intent,
             requested_by_service=self.name,
             plan=deliberative_plan,
+            identity_mode=directive.identity_mode,
+            identity_signature=identity_profile.identity_signature,
+            response_style=identity_style_preview,
         )
         governance_check = assessment.governance_check
         governance_decision = assessment.governance_decision
+        final_response_style = self.identity_engine.build_response_style(
+            intent=directive.intent,
+            blocked=governance_decision.decision
+            in {
+                PermissionDecision.BLOCK,
+                PermissionDecision.DEFER_FOR_VALIDATION,
+            },
+        )
         events.append(
             self.make_event(
                 "governance_checked",
@@ -371,6 +397,10 @@ class OrchestratorService:
                     "proposed_effect": governance_check.proposed_effect,
                     "decision": governance_decision.decision.value,
                     "decision_frame": governance_check.decision_frame,
+                    "identity_mode": directive.identity_mode,
+                    "identity_signature": identity_profile.identity_signature,
+                    "response_style": final_response_style,
+                    "identity_guardrail": governance_check.context.get("identity_guardrail"),
                 },
             )
         )
@@ -454,6 +484,10 @@ class OrchestratorService:
                         if deliberative_plan.continuity_target_mission_id
                         else None
                     ),
+                    "identity_mode": directive.identity_mode,
+                    "identity_signature": identity_profile.identity_signature,
+                    "response_style": final_response_style,
+                    "identity_guardrail": governance_check.context.get("identity_guardrail"),
                 },
             )
         )
@@ -1126,3 +1160,5 @@ class OrchestratorService:
             operation_result=state["operation_result"],
             events=state["events"],
         )
+
+

@@ -22,7 +22,9 @@ Status desta versão do ciclo:
 
 - Sprint 1 concluída;
 - Sprint 2 concluída;
-- Sprint 3 é a próxima sprint ativa.
+- Sprint 3 concluída;
+- Sprint 4 concluída;
+- Sprint 5 é a próxima sprint ativa.
 
 ---
 
@@ -153,55 +155,71 @@ subset ativo do corpus e da relacao `dominio -> especialista`.
 
 Status:
 
-- pendente
-- eixo principal do mestre: `memorias`
-- lacuna dominante a atacar: registry formal sem politica runtime por classe
-- continua fora de cobertura: plenitude do sistema vivo das 11 memorias
+- concluída
+- eixo principal do mestre: `memórias`
+- lacuna dominante fechada: registry formal promovido a política operacional por classe
+- continua fora de cobertura: plenitude do sistema vivo das 11 memórias
 
 ### Objetivo
 
-Transformar o registry de memorias em politica operacional por classe, indo
-além de continuidade, missao e relacional.
+Transformar o registry de memórias em política operacional por classe, indo
+além de continuidade, missão e relacional.
 
----
+### Resultado registrado nesta rodada
+
+- `shared/memory_registry.py` passou a definir prioridade de recovery, prioridade de compartilhamento, `sharing_mode` e `write_policy` por classe de memória;
+- `memory-service` passou a compor recovery, compartilhamento com especialistas e contexto relacional usando políticas explícitas por classe;
+- `memory-service/repository` passou a persistir políticas por classe no contexto compartilhado com especialistas, em `sqlite` e `PostgreSQL`;
+- `observability-service` passou a exigir coerência por classe para classificar `memory_alignment_status` como `healthy`;
+- `knowledge-service` foi alinhado ao loader compartilhado de domínios, reduzindo duplicação estrutural paralela ao endurecimento do eixo de memória.
 
 ## 7. Sprint 3
 
 Status:
 
-- pendente
+- concluída
 - eixo principal do mestre: `mentes`
-- lacuna dominante a atacar: arbitragem ainda implicita e rasa
+- lacuna dominante fechada: arbitragem antes implícita agora governada pelo registry soberano
 - continua fora de cobertura: ecologia completa das 24 mentes em maturidade plena
 
 ### Objetivo
 
-Promover o registry de mentes para composicao e arbitragem soberanas do
+Promover o registry de mentes para composição e arbitragem soberanas do
 runtime.
 
----
+### Resultado registrado nesta rodada
+
+- `shared/mind_registry.py` passou a governar prioridade, afinidades e limites formais da arbitragem entre mentes;
+- `cognitive-engine` passou a selecionar mente primária, mentes de apoio e mentes suprimidas a partir da política do registry, com tensão dominante e resumo explícito de arbitragem;
+- `orchestrator-service` passou a publicar o contexto cognitivo enriquecido como parte observável do fluxo principal;
+- `observability-service` passou a auditar `mind_alignment_status`, tornando a aderência do eixo de mentes verificável por request.
 
 ## 8. Sprint 4
 
 Status:
 
-- pendente
-- eixo principal do mestre: `identidade, missao, principios e filosofia`
-- lacuna dominante a atacar: identidade presente, mas ainda pouco auditavel
-- continua fora de cobertura: expansao ampla de superficies
+- concluída
+- eixo principal do mestre: `identidade, missão, princípios e filosofia`
+- lacuna dominante fechada: identidade deixou de ser implícita e passou a ser rastreável ao longo do fluxo
+- continua fora de cobertura: expansão ampla de superfícies
 
 ### Objetivo
 
-Transformar identidade e unidade do nucleo em criterio observavel de
-planejamento, governanca e sintese.
+Transformar identidade e unidade do núcleo em critério observável de
+planejamento, governança e síntese.
 
----
+### Resultado registrado nesta rodada
+
+- `identity-engine` passou a expor assinatura do núcleo, postura, foco de princípios e guardrails compatíveis com a governança do sistema;
+- `governance-service` passou a receber `identity_mode`, `identity_signature` e `response_style`, registrando `identity_guardrail` como parte da decisão;
+- `orchestrator-service` passou a propagar sinais explícitos de identidade em `directive_composed`, `plan_governed` e `response_synthesized`;
+- `observability-service` passou a auditar `identity_alignment_status`, preparando a Sprint 5 para usar esse eixo como gate explícito de aderência.
 
 ## 9. Sprint 5
 
 Status:
 
-- pendente
+- ativa
 - eixo principal do mestre: `observabilidade, validacao e evals`
 - lacuna dominante a atacar: gates por eixo ainda insuficientes
 - continua fora de cobertura: laboratorio promotivo amplo

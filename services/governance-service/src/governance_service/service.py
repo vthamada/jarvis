@@ -1,4 +1,4 @@
-"""Governance service with explicit low, moderate, and high-risk policies."""
+﻿"""Governance service with explicit low, moderate, and high-risk policies."""
 
 from __future__ import annotations
 
@@ -64,12 +64,20 @@ class GovernanceService:
         requested_by_service: str,
         *,
         plan: DeliberativePlanContract | None = None,
+        identity_mode: str | None = None,
+        identity_signature: str | None = None,
+        response_style: str | None = None,
     ) -> GovernanceAssessment:
         """Build and evaluate a governance check for an incoming request."""
 
         risk_hint = self.classify_risk(contract, intent)
         proposed_effect = self.proposed_effect(intent=intent, plan=plan)
         continuity_hint = self._continuity_hint(plan)
+        identity_guardrail = self._identity_guardrail(
+            intent=intent,
+            proposed_effect=proposed_effect,
+            identity_mode=identity_mode,
+        )
         governance_check = GovernanceCheckContract(
             governance_check_id=GovernanceCheckId(f"gov-check-{uuid4().hex[:8]}"),
             subject_type="request",
@@ -90,6 +98,10 @@ class GovernanceService:
                 "continuity_resume_point": (
                     plan.continuity_resume_point if plan else None
                 ),
+                "identity_mode": identity_mode,
+                "identity_signature": identity_signature,
+                "response_style": response_style,
+                "identity_guardrail": identity_guardrail,
             },
             sensitivity="high" if risk_hint in {RiskLevel.HIGH, RiskLevel.CRITICAL} else "normal",
             reversibility=("low" if proposed_effect == "external_or_sensitive_change" else "high"),
@@ -376,6 +388,22 @@ class GovernanceService:
         return None
 
     @staticmethod
+    def _identity_guardrail(
+        *,
+        intent: str,
+        proposed_effect: str,
+        identity_mode: str | None,
+    ) -> str:
+        mode = identity_mode or "executive_guidance"
+        if mode == "governed_refusal" or proposed_effect == "external_or_sensitive_change":
+            return "preservar limites do nucleo antes de ampliar acao"
+        if intent == "analysis":
+            return "preservar rigor analitico antes de concluir"
+        if intent == "planning":
+            return "preservar unidade executiva e rastreabilidade do plano"
+        return "preservar coerencia do nucleo e utilidade controlada"
+
+    @staticmethod
     def _should_defer(
         governance_check: GovernanceCheckContract,
         proposed_effect: str,
@@ -467,3 +495,4 @@ class GovernanceService:
     @staticmethod
     def now() -> str:
         return datetime.now(UTC).isoformat()
+

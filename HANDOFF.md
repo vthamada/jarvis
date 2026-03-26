@@ -4,13 +4,13 @@
 
 - Atualizado em: 2026-03-26
 - Branch: `main`
-- Commit de referência: `004fc3e`
+- Commit de referência: `5e8bbf9`
 - Artefato canônico do projeto: `documento_mestre_jarvis.md`
 - Estado do projeto: `v1` encerrado e congelado para uso controlado; primeiro ciclo do `pós-v1` encerrado; primeiro ciclo do `v1.5` encerrado; primeiro corte do `v2` encerrado; ciclo de alinhamento do `v2` aberto
 
 ## Meta atual
 
-Executar o `v2-alignment-cycle` com o eixo de `domínios` já consolidado, `memórias` promovidas a política operacional por classe e `mentes` como próxima frente soberana, preparando o núcleo para absorção tecnológica governada sem perda de identidade.
+Concluir o `v2-alignment-cycle` com `domínios`, `memórias`, `mentes` e `identidade auditável` já materializados no runtime principal, usando a Sprint 5 para transformar aderência por eixo em gate explícito de observabilidade, evals e fechamento formal do ciclo.
 
 Sistema oficial de planejamento desta fase:
 
@@ -23,8 +23,9 @@ Sistema oficial de planejamento desta fase:
 Leitura prioritária de aderência neste momento:
 
 - eixo concluído na Sprint 1: `domínios`, com registry soberano sobre roteamento, maturity gate, shadow specialist sem heurística residual e fallback derivado;
-- eixo crítico agora: `memórias`, porque o registry formal já existe, mas ainda não virou política completa por classe;
-- eixo estrutural seguinte: `mentes`, com registry canônico aberto, mas ainda pouco soberano na arbitragem.
+- eixo concluído na Sprint 2: `memórias`, com políticas operacionais por classe para recovery, compartilhamento mediado e auditoria por classe;
+- eixo concluído na Sprint 3: `mentes`, com arbitragem soberana por registry, mente primária, apoios, supressões e tensão dominante observáveis;
+- eixo concluído na Sprint 4: `identidade`, com assinatura do núcleo, guardrails de governança e resposta auditável ao longo do fluxo.
 
 Estado do ciclo rolante:
 
@@ -38,7 +39,10 @@ Estado do ciclo rolante:
 - Sprint 6 do `v2` concluída;
 - o primeiro corte do `v2` está formalmente encerrado;
 - Sprint 1 do `v2-alignment-cycle` concluída;
-- Sprint 2 do `v2-alignment-cycle` é a próxima frente ativa.
+- Sprint 2 do `v2-alignment-cycle` concluída;
+- Sprint 3 do `v2-alignment-cycle` concluída;
+- Sprint 4 do `v2-alignment-cycle` concluída;
+- Sprint 5 do `v2-alignment-cycle` é a próxima frente ativa.
 
 ## Decisões fechadas
 
@@ -134,16 +138,15 @@ Principais entregas já consolidadas:
 
 Pendências principais desta fase:
 
-- executar a Sprint 3 do `v2-alignment-cycle`;
-- promover o registry de `mentes` de catálogo para política soberana de composição e arbitragem;
-- preservar a mediação do núcleo como única política de escrita da memória compartilhada;
-- usar os sinais de aderência já abertos em `domínios` e `memórias` como critério explícito de promoção, ajuste ou contenção;
-- consolidar estudo externo curto sem bloquear a implementação principal.
+- executar a Sprint 5 do `v2-alignment-cycle`;
+- transformar `domain_alignment_status`, `memory_alignment_status`, `mind_alignment_status`, `identity_alignment_status` e `specialist_sovereignty_status` em gates explícitos de aderência por eixo;
+- consolidar esses sinais em evals, comparação e fechamento formal da Sprint 6;
+- manter o estudo externo curto como apoio, sem bloquear a implementação principal.
 
 Regra de estudo externo no `v2`:
 
-- entra apenas o estudo que ajude diretamente contratos de especialistas, handoffs internos, memória relacional ou convocação governada;
-- `OpenHands` e `PydanticAI` são as referências mais diretamente ligadas ao corte imediato;
+- entra apenas o estudo que ajude diretamente contratos de especialistas, handoffs internos, memória relacional, arbitragem soberana ou gates de aderência do ciclo;
+- `OpenHands` e `PydanticAI` seguem como referências mais diretamente ligadas ao corte imediato;
 - `Hermes Agent`, `Graphiti`, `Zep`, `LangGraph` e `OpenAI Agents SDK` entram apenas como apoio dirigido ao problema do ciclo;
 - `computer use` amplo, voz oficial, memória profunda com `pgvector` como base canônica e assistente operacional amplo continuam fora do foco imediato.
 
@@ -151,12 +154,10 @@ Regra de estudo externo no `v2`:
 
 Ordem recomendada:
 
-1. executar a Sprint 1 do `v2-alignment-cycle`;
-2. tornar `domain_registry.json` a fonte primária de roteamento e ativação;
-3. usar `domain_alignment_status`, `memory_alignment_status` e `specialist_sovereignty_status` como gates da próxima rodada;
-4. usar a matriz para priorizar `domínios`, `memórias` e `mentes` nessa ordem;
-5. rodar estudo externo curto em paralelo;
-6. classificar cada achado como `absorver depois`, `usar como referência` ou `rejeitar`;
+1. executar a Sprint 5 do `v2-alignment-cycle`;
+2. usar `domain_alignment_status`, `memory_alignment_status`, `mind_alignment_status`, `identity_alignment_status` e `specialist_sovereignty_status` como gates explícitos da rodada;
+3. ampliar comparação, observabilidade e fechamento do ciclo usando aderência por eixo, e não só utilidade local;
+4. preparar a Sprint 6 como fechamento formal do `v2-alignment-cycle`, sem abrir novas superfícies cedo demais.
 
 ## Riscos e bloqueios
 

@@ -132,12 +132,32 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     assert all(
         invocation.shared_memory_context is not None for invocation in result.specialist_invocations
     )
+    context_event = next(event for event in stored_events if event.event_name == "context_composed")
+    assert context_event.payload["arbitration_source"] == "mind_registry"
+    assert context_event.payload["primary_mind_family"]
+    assert len(context_event.payload["supporting_minds"]) <= (
+        context_event.payload["supporting_mind_limit"]
+    )
+    assert len(context_event.payload["suppressed_minds"]) <= (
+        context_event.payload["suppressed_mind_limit"]
+    )
+    assert context_event.payload["arbitration_summary"]
+    directive_event = next(
+        event for event in stored_events if event.event_name == "directive_composed"
+    )
+    assert directive_event.payload["identity_signature"] == "nucleo_soberano_unificado"
+    assert directive_event.payload["response_style_preview"]
     continuity_event = next(
         event for event in stored_events if event.event_name == "continuity_decided"
     )
+    governed_event = next(event for event in stored_events if event.event_name == "plan_governed")
+    assert governed_event.payload["identity_signature"] == "nucleo_soberano_unificado"
+    assert governed_event.payload["identity_guardrail"]
     response_event = next(
         event for event in stored_events if event.event_name == "response_synthesized"
     )
+    assert response_event.payload["identity_signature"] == "nucleo_soberano_unificado"
+    assert response_event.payload["response_style"]
     memory_event = next(event for event in stored_events if event.event_name == "memory_recorded")
     assert continuity_event.payload["continuity_action"] == "continuar"
     assert response_event.payload["continuity_action"] == "continuar"
@@ -669,3 +689,4 @@ def test_orchestrator_service_tracks_manual_resolution_of_continuity_pause() -> 
     )
     assert resolved_event.payload["resolution_status"] == "approved"
     assert resolved_event.payload["resolved_by"] == "operator"
+
