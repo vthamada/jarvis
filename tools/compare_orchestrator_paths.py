@@ -47,11 +47,17 @@ def expectation_score(result: PilotExecutionResult) -> float:
 def axis_adherence_score(result: PilotExecutionResult) -> float:
     statuses = [
         result.domain_alignment_status,
+        result.mind_alignment_status,
+        result.identity_alignment_status,
         result.memory_alignment_status,
         result.specialist_sovereignty_status,
     ]
     weights = {"healthy": 1.0, "partial": 0.6, "incomplete": 0.2, "attention_required": 0.0}
     return round(sum(weights.get(status, 0.0) for status in statuses) / len(statuses), 4)
+
+
+def axis_gate_status(result: PilotExecutionResult) -> str:
+    return result.axis_gate_status
 
 
 def summarize_comparisons(
@@ -99,9 +105,27 @@ def summarize_comparisons(
         else 0.0,
         4,
     )
+    baseline_gate_pass_rate = round(
+        sum(1 for item in comparisons if axis_gate_status(item.baseline) == "healthy") / total,
+        4,
+    )
+    candidate_gate_pass_rate = round(
+        (
+            sum(1 for item in available_candidates if axis_gate_status(item) == "healthy")
+            / len(available_candidates)
+        )
+        if available_candidates
+        else 0.0,
+        4,
+    )
     if langgraph_status != "available":
         decision = "candidate_unavailable"
-    elif divergent == 0 and candidate_score >= baseline_score and runtime_coverage > 0.0:
+    elif (
+        divergent == 0
+        and candidate_score >= baseline_score
+        and runtime_coverage > 0.0
+        and candidate_gate_pass_rate == 1.0
+    ):
         decision = "candidate_ready_for_eval_gate"
     elif candidate_score < baseline_score:
         decision = "keep_baseline"
@@ -114,6 +138,8 @@ def summarize_comparisons(
         "baseline_expectation_score": baseline_score,
         "candidate_expectation_score": candidate_score,
         "candidate_runtime_coverage": runtime_coverage,
+        "baseline_axis_gate_pass_rate": baseline_gate_pass_rate,
+        "candidate_axis_gate_pass_rate": candidate_gate_pass_rate,
         "decision": decision,
     }
 
@@ -171,6 +197,10 @@ def compare_results(
                 mismatch_fields.append("continuity_anomaly_flags")
             if baseline.domain_alignment_status != candidate.domain_alignment_status:
                 mismatch_fields.append("domain_alignment_status")
+            if baseline.mind_alignment_status != candidate.mind_alignment_status:
+                mismatch_fields.append("mind_alignment_status")
+            if baseline.identity_alignment_status != candidate.identity_alignment_status:
+                mismatch_fields.append("identity_alignment_status")
             if baseline.memory_alignment_status != candidate.memory_alignment_status:
                 mismatch_fields.append("memory_alignment_status")
             if (
@@ -178,6 +208,8 @@ def compare_results(
                 != candidate.specialist_sovereignty_status
             ):
                 mismatch_fields.append("specialist_sovereignty_status")
+            if baseline.axis_gate_status != candidate.axis_gate_status:
+                mismatch_fields.append("axis_gate_status")
             if baseline.trace_status != candidate.trace_status:
                 mismatch_fields.append("trace_status")
             if baseline.missing_required_events != candidate.missing_required_events:
@@ -218,8 +250,9 @@ def render_text(payload: dict[str, object]) -> str:
                         if item["candidate"]
                         else "candidate_runtime=n/a"
                     ),
-                f"baseline_expectation_score={item['baseline_expectation_score']}",
-                f"baseline_axis_adherence_score={item['baseline_axis_adherence_score']}",
+                    f"baseline_expectation_score={item['baseline_expectation_score']}",
+                    f"baseline_axis_adherence_score={item['baseline_axis_adherence_score']}",
+                    f"baseline_axis_gate_status={item['baseline_axis_gate_status']}",
                     (
                         "candidate_expectation_score="
                         f"{item['candidate_expectation_score']}"
@@ -231,6 +264,12 @@ def render_text(payload: dict[str, object]) -> str:
                         f"{item['candidate_axis_adherence_score']}"
                         if item["candidate_axis_adherence_score"] is not None
                         else "candidate_axis_adherence_score=n/a"
+                    ),
+                    (
+                        "candidate_axis_gate_status="
+                        f"{item['candidate_axis_gate_status']}"
+                        if item["candidate_axis_gate_status"] is not None
+                        else "candidate_axis_gate_status=n/a"
                     ),
                     f"baseline_decision={item['baseline']['governance_decision']}",
                     "candidate_decision="
@@ -249,6 +288,8 @@ def render_text(payload: dict[str, object]) -> str:
                 f"baseline_expectation_score={summary['baseline_expectation_score']}",
                 f"candidate_expectation_score={summary['candidate_expectation_score']}",
                 f"candidate_runtime_coverage={summary['candidate_runtime_coverage']}",
+                f"baseline_axis_gate_pass_rate={summary['baseline_axis_gate_pass_rate']}",
+                f"candidate_axis_gate_pass_rate={summary['candidate_axis_gate_pass_rate']}",
             ]
         )
     )
@@ -289,11 +330,15 @@ def serialize_comparisons(
                 "mismatch_fields": item.mismatch_fields,
                 "baseline_expectation_score": expectation_score(item.baseline),
                 "baseline_axis_adherence_score": axis_adherence_score(item.baseline),
+                "baseline_axis_gate_status": axis_gate_status(item.baseline),
                 "candidate_expectation_score": (
                     expectation_score(item.candidate) if item.candidate else None
                 ),
                 "candidate_axis_adherence_score": (
                     axis_adherence_score(item.candidate) if item.candidate else None
+                ),
+                "candidate_axis_gate_status": (
+                    axis_gate_status(item.candidate) if item.candidate else None
                 ),
                 "baseline": result_to_dict(item.baseline),
                 "candidate": result_to_dict(item.candidate) if item.candidate else None,

@@ -20,6 +20,8 @@ for src_dir in SRC_DIRS:
 
 from observability_service.service import DEFAULT_REQUIRED_FLOW_EVENTS, ObservabilityService
 
+from tools.internal_pilot_support import axis_gate_status_from_statuses
+
 
 @dataclass(frozen=True)
 class PilotTraceSummary:
@@ -36,8 +38,11 @@ class PilotTraceSummary:
     registry_domains: list[str]
     shadow_specialists: list[str]
     domain_alignment_status: str
+    mind_alignment_status: str
+    identity_alignment_status: str
     memory_alignment_status: str
     specialist_sovereignty_status: str
+    axis_gate_status: str
     expectation_status: str
     continuity_trace_status: str
     missing_continuity_signals: list[str]
@@ -99,8 +104,17 @@ def summarize_traces(
             registry_domains=list(audit.registry_domains),
             shadow_specialists=list(audit.shadow_specialists),
             domain_alignment_status=audit.domain_alignment_status,
+            mind_alignment_status=audit.mind_alignment_status,
+            identity_alignment_status=audit.identity_alignment_status,
             memory_alignment_status=audit.memory_alignment_status,
             specialist_sovereignty_status=audit.specialist_sovereignty_status,
+            axis_gate_status=axis_gate_status_from_statuses(
+                audit.domain_alignment_status,
+                audit.mind_alignment_status,
+                audit.identity_alignment_status,
+                audit.memory_alignment_status,
+                audit.specialist_sovereignty_status,
+            ),
             expectation_status=_expectation_status(
                 governance_decision=audit.governance_decision,
                 operation_status=audit.operation_status,
@@ -176,10 +190,16 @@ def render_text(summaries: list[PilotTraceSummary]) -> str:
             f"{','.join(getattr(summary, 'shadow_specialists', [])) or 'none'} "
             "domain_alignment_status="
             f"{getattr(summary, 'domain_alignment_status', 'incomplete')} "
+            "mind_alignment_status="
+            f"{getattr(summary, 'mind_alignment_status', 'incomplete')} "
+            "identity_alignment_status="
+            f"{getattr(summary, 'identity_alignment_status', 'incomplete')} "
             "memory_alignment_status="
             f"{getattr(summary, 'memory_alignment_status', 'incomplete')} "
             "specialist_sovereignty_status="
             f"{getattr(summary, 'specialist_sovereignty_status', 'incomplete')} "
+            "axis_gate_status="
+            f"{getattr(summary, 'axis_gate_status', 'attention_required')} "
             f"expectation_status={summary.expectation_status} "
             "missing_continuity_signals="
             f"{','.join(summary.missing_continuity_signals) or 'none'} "

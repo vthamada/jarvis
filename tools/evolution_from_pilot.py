@@ -95,6 +95,16 @@ def _evaluation_from_dict(payload: dict[str, object]) -> FlowEvaluationInput:
             if payload.get("domain_alignment_status") is not None
             else None
         ),
+        mind_alignment_status=(
+            str(payload["mind_alignment_status"])
+            if payload.get("mind_alignment_status") is not None
+            else None
+        ),
+        identity_alignment_status=(
+            str(payload["identity_alignment_status"])
+            if payload.get("identity_alignment_status") is not None
+            else None
+        ),
         memory_alignment_status=(
             str(payload["memory_alignment_status"])
             if payload.get("memory_alignment_status") is not None
@@ -103,6 +113,11 @@ def _evaluation_from_dict(payload: dict[str, object]) -> FlowEvaluationInput:
         specialist_sovereignty_status=(
             str(payload["specialist_sovereignty_status"])
             if payload.get("specialist_sovereignty_status") is not None
+            else None
+        ),
+        axis_gate_status=(
+            str(payload["axis_gate_status"])
+            if payload.get("axis_gate_status") is not None
             else None
         ),
         continuity_trace_status=(
@@ -126,7 +141,15 @@ def build_payload(args: Namespace) -> dict[str, object]:
     audits = observability.summarize_recent_requests(limit=args.limit)
     proposals = []
     for audit in audits:
-        if not audit.anomaly_flags and not audit.missing_required_events:
+        if (
+            not audit.anomaly_flags
+            and not audit.missing_required_events
+            and audit.domain_alignment_status == "healthy"
+            and audit.mind_alignment_status == "healthy"
+            and audit.identity_alignment_status == "healthy"
+            and audit.memory_alignment_status == "healthy"
+            and audit.specialist_sovereignty_status == "healthy"
+        ):
             continue
         proposal = evolution.create_proposal_from_flow_evaluation(
             FlowEvaluationInput(
@@ -145,8 +168,24 @@ def build_payload(args: Namespace) -> dict[str, object]:
                 registry_domains=list(audit.registry_domains),
                 shadow_specialists=list(audit.shadow_specialists),
                 domain_alignment_status=audit.domain_alignment_status,
+                mind_alignment_status=audit.mind_alignment_status,
+                identity_alignment_status=audit.identity_alignment_status,
                 memory_alignment_status=audit.memory_alignment_status,
                 specialist_sovereignty_status=audit.specialist_sovereignty_status,
+                axis_gate_status=(
+                    "healthy"
+                    if all(
+                        status == "healthy"
+                        for status in [
+                            audit.domain_alignment_status,
+                            audit.mind_alignment_status,
+                            audit.identity_alignment_status,
+                            audit.memory_alignment_status,
+                            audit.specialist_sovereignty_status,
+                        ]
+                    )
+                    else "attention_required"
+                ),
                 continuity_trace_status=audit.continuity_trace_status,
                 missing_continuity_signals=audit.missing_continuity_signals,
                 continuity_anomaly_flags=audit.continuity_anomaly_flags,

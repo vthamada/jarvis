@@ -66,6 +66,7 @@ def test_internal_pilot_report_summarizes_recent_request() -> None:
     assert "continuity_decided" in summaries[0].missing_required_events
     assert "response_continuity_action" in summaries[0].missing_continuity_signals
     assert summaries[0].continuity_trace_status == "incomplete"
+    assert summaries[0].axis_gate_status == "attention_required"
     assert summaries[0].trace_status == "attention_required"
     assert summaries[0].anomaly_flags == [
         "operation_completed_without_dispatch",
@@ -92,6 +93,12 @@ def test_internal_pilot_report_renders_text() -> None:
                     "continuity_action": "retomar",
                     "continuity_source": "related_mission",
                     "continuity_runtime_mode": "langgraph_subflow",
+                    "domain_alignment_status": "healthy",
+                    "mind_alignment_status": "partial",
+                    "identity_alignment_status": "healthy",
+                    "memory_alignment_status": "healthy",
+                    "specialist_sovereignty_status": "healthy",
+                    "axis_gate_status": "partial",
                     "expectation_status": "continuity_progressing",
                     "continuity_trace_status": "attention_required",
                     "missing_continuity_signals": ["memory_continuity_mode"],
@@ -111,6 +118,8 @@ def test_internal_pilot_report_renders_text() -> None:
     assert "anomaly_flags=operation_missing_completion" in rendered
     assert "continuity_action=retomar" in rendered
     assert "continuity_runtime_mode=langgraph_subflow" in rendered
+    assert "mind_alignment_status=partial" in rendered
+    assert "axis_gate_status=partial" in rendered
     assert "expectation_status=continuity_progressing" in rendered
     assert "continuity_anomaly_flags=retomar_missing_target_mission" in rendered
     assert "trace_status=attention_required" in rendered

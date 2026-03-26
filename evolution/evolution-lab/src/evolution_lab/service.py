@@ -53,8 +53,11 @@ class FlowEvaluationInput:
     registry_domains: list[str] = field(default_factory=list)
     shadow_specialists: list[str] = field(default_factory=list)
     domain_alignment_status: str | None = None
+    mind_alignment_status: str | None = None
+    identity_alignment_status: str | None = None
     memory_alignment_status: str | None = None
     specialist_sovereignty_status: str | None = None
+    axis_gate_status: str | None = None
     continuity_trace_status: str | None = None
     missing_continuity_signals: list[str] = field(default_factory=list)
     continuity_anomaly_flags: list[str] = field(default_factory=list)
@@ -213,6 +216,23 @@ class EvolutionLabService:
             source_signals.append(f"domain://registry/{domain}")
         for specialist in evaluation.shadow_specialists:
             source_signals.append(f"specialist://shadow/{specialist}")
+        if evaluation.domain_alignment_status:
+            source_signals.append(f"alignment://domain/{evaluation.domain_alignment_status}")
+        if evaluation.mind_alignment_status:
+            source_signals.append(f"alignment://mind/{evaluation.mind_alignment_status}")
+        if evaluation.identity_alignment_status:
+            source_signals.append(
+                f"alignment://identity/{evaluation.identity_alignment_status}"
+            )
+        if evaluation.memory_alignment_status:
+            source_signals.append(f"alignment://memory/{evaluation.memory_alignment_status}")
+        if evaluation.specialist_sovereignty_status:
+            source_signals.append(
+                "alignment://specialist-sovereignty/"
+                f"{evaluation.specialist_sovereignty_status}"
+            )
+        if evaluation.axis_gate_status:
+            source_signals.append(f"alignment://axis-gate/{evaluation.axis_gate_status}")
         if evaluation.continuity_trace_status:
             source_signals.append(
                 f"continuity://trace-status/{evaluation.continuity_trace_status}"
@@ -312,12 +332,19 @@ class EvolutionLabService:
             "domain_alignment": EvolutionLabService._status_score(
                 evaluation.domain_alignment_status
             ),
+            "mind_alignment": EvolutionLabService._status_score(
+                evaluation.mind_alignment_status
+            ),
+            "identity_alignment": EvolutionLabService._status_score(
+                evaluation.identity_alignment_status
+            ),
             "memory_alignment": EvolutionLabService._status_score(
                 evaluation.memory_alignment_status
             ),
             "specialist_sovereignty": EvolutionLabService._status_score(
                 evaluation.specialist_sovereignty_status
             ),
+            "axis_gate": EvolutionLabService._status_score(evaluation.axis_gate_status),
             "shadow_coverage": 1.0 if evaluation.shadow_specialists else 0.0,
             "runtime_statefulness": (
                 1.0 if evaluation.continuity_runtime_mode == "langgraph_subflow" else 0.5
@@ -344,6 +371,8 @@ class EvolutionLabService:
     def _risk_hint_from_flow(evaluation: FlowEvaluationInput) -> str:
         if evaluation.anomaly_flags or evaluation.continuity_anomaly_flags:
             return "moderate"
+        if evaluation.axis_gate_status not in {None, "healthy"}:
+            return "low_to_moderate"
         if evaluation.missing_required_events or evaluation.missing_continuity_signals:
             return "low_to_moderate"
         return "low"

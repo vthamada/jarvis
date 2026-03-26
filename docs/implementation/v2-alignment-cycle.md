@@ -24,7 +24,8 @@ Status desta versão do ciclo:
 - Sprint 2 concluída;
 - Sprint 3 concluída;
 - Sprint 4 concluída;
-- Sprint 5 é a próxima sprint ativa.
+- Sprint 5 concluída;
+- Sprint 6 é a próxima sprint ativa.
 
 ---
 
@@ -219,15 +220,22 @@ planejamento, governança e síntese.
 
 Status:
 
-- ativa
+- concluída
 - eixo principal do mestre: `observabilidade, validacao e evals`
-- lacuna dominante a atacar: gates por eixo ainda insuficientes
-- continua fora de cobertura: laboratorio promotivo amplo
+- lacuna dominante fechada: aderência por eixo promovida a gate explícito em piloto, comparação e sandbox
+- continua fora de cobertura: fechamento formal do ciclo e decisão final de promoção
 
 ### Objetivo
 
 Usar observabilidade e evals para julgar aderencia do runtime aos eixos do
 mestre, e nao apenas utilidade local.
+
+### Resultado registrado nesta rodada
+
+- `tools/internal_pilot_support.py` passou a carregar `mind_alignment_status`, `identity_alignment_status` e `axis_gate_status` como parte do resultado estruturado de cada cenario;
+- `tools/internal_pilot_report.py` passou a expor os cinco eixos de aderencia e o gate agregado de eixo por request;
+- `tools/compare_orchestrator_paths.py` passou a comparar os cinco eixos, exigir gate saudavel para `candidate_ready_for_eval_gate` e publicar taxa explicita de aprovacao por eixo;
+- `evolution-lab` e `tools/evolution_from_pilot.py` passaram a tratar `mind`, `identity` e `axis_gate` como sinais formais de proposta e comparacao sandbox-only.
 
 ---
 
@@ -235,7 +243,7 @@ mestre, e nao apenas utilidade local.
 
 Status:
 
-- pendente
+- ativa
 - eixo principal do mestre: `implementacao, operacao, release e incidentes`
 - lacuna dominante a atacar: fechar o ciclo de alinhamento com decisao formal de continuidade
 - continua fora de cobertura: tudo o que permanecer corretamente deferido por fase

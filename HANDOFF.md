@@ -10,7 +10,7 @@
 
 ## Meta atual
 
-Concluir o `v2-alignment-cycle` com `domínios`, `memórias`, `mentes` e `identidade auditável` já materializados no runtime principal, usando a Sprint 5 para transformar aderência por eixo em gate explícito de observabilidade, evals e fechamento formal do ciclo.
+Concluir o `v2-alignment-cycle` com `domínios`, `memórias`, `mentes` e `identidade auditável` já materializados no runtime principal, usando a Sprint 6 para fechar formalmente o ciclo com aderência por eixo já endurecida em observabilidade, evals e comparação.
 
 Sistema oficial de planejamento desta fase:
 
@@ -42,7 +42,8 @@ Estado do ciclo rolante:
 - Sprint 2 do `v2-alignment-cycle` concluída;
 - Sprint 3 do `v2-alignment-cycle` concluída;
 - Sprint 4 do `v2-alignment-cycle` concluída;
-- Sprint 5 do `v2-alignment-cycle` é a próxima frente ativa.
+- Sprint 5 do `v2-alignment-cycle` concluída;
+- Sprint 6 do `v2-alignment-cycle` é a próxima frente ativa.
 
 ## Decisões fechadas
 
@@ -132,15 +133,16 @@ Principais entregas já consolidadas:
 - Sprint 2 do `v2` concluída, com seleção governada de especialistas, handoff interno observável e contenção explícita quando a convocação viola fronteiras;
 - Sprint 3 do `v2` concluída, com memória relacional compartilhada mediada pelo núcleo, contexto persistido por especialista e handoff enriquecido sem escrita direta fora do núcleo;
 - Sprint 4 do `v2` concluída, com registry inicial de domínios do ciclo, rota canônica `software_development -> especialista_software_subordinado` e execução explícita em `shadow mode`;
+- Sprint 5 do `v2-alignment-cycle` concluída, com gates explícitos de aderência por eixo em `internal_pilot_report`, `compare_orchestrator_paths` e `evolution_from_pilot`.
 - Documento-Mestre ampliado com referências arquiteturais oficiais por função.
 
 ## O que ainda falta
 
 Pendências principais desta fase:
 
-- executar a Sprint 5 do `v2-alignment-cycle`;
-- transformar `domain_alignment_status`, `memory_alignment_status`, `mind_alignment_status`, `identity_alignment_status` e `specialist_sovereignty_status` em gates explícitos de aderência por eixo;
-- consolidar esses sinais em evals, comparação e fechamento formal da Sprint 6;
+- executar a Sprint 6 do `v2-alignment-cycle`;
+- consolidar `domain_alignment_status`, `memory_alignment_status`, `mind_alignment_status`, `identity_alignment_status` e `specialist_sovereignty_status` como base do fechamento formal do ciclo;
+- usar esses sinais em comparação, piloto e artefatos de fechamento da Sprint 6;
 - manter o estudo externo curto como apoio, sem bloquear a implementação principal.
 
 Regra de estudo externo no `v2`:
@@ -154,10 +156,10 @@ Regra de estudo externo no `v2`:
 
 Ordem recomendada:
 
-1. executar a Sprint 5 do `v2-alignment-cycle`;
-2. usar `domain_alignment_status`, `memory_alignment_status`, `mind_alignment_status`, `identity_alignment_status` e `specialist_sovereignty_status` como gates explícitos da rodada;
-3. ampliar comparação, observabilidade e fechamento do ciclo usando aderência por eixo, e não só utilidade local;
-4. preparar a Sprint 6 como fechamento formal do `v2-alignment-cycle`, sem abrir novas superfícies cedo demais.
+1. executar a Sprint 6 do `v2-alignment-cycle`;
+2. usar `domain_alignment_status`, `memory_alignment_status`, `mind_alignment_status`, `identity_alignment_status` e `specialist_sovereignty_status` como base explícita do fechamento da rodada;
+3. fechar comparação, observabilidade e decisão do ciclo usando aderência por eixo, e não só utilidade local;
+4. preparar o artefato formal de encerramento do `v2-alignment-cycle`, sem abrir novas superfícies cedo demais.
 
 ## Riscos e bloqueios
 

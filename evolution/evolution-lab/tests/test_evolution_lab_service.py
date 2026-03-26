@@ -1,4 +1,4 @@
-﻿from pathlib import Path
+from pathlib import Path
 from tempfile import gettempdir
 from uuid import uuid4
 
@@ -111,6 +111,9 @@ def test_evolution_lab_creates_proposal_from_flow_evaluation() -> None:
             continuity_action="retomar",
             continuity_source="related_mission",
             continuity_runtime_mode="langgraph_subflow",
+            mind_alignment_status="partial",
+            identity_alignment_status="healthy",
+            axis_gate_status="attention_required",
             continuity_trace_status="attention_required",
             missing_continuity_signals=["memory_continuity_mode"],
             continuity_anomaly_flags=["retomar_missing_target_mission"],
@@ -122,6 +125,8 @@ def test_evolution_lab_creates_proposal_from_flow_evaluation() -> None:
     assert "observability://request/req-flow" in proposal.source_signals
     assert "continuity://action/retomar" in proposal.source_signals
     assert "continuity://runtime/langgraph_subflow" in proposal.source_signals
+    assert "alignment://mind/partial" in proposal.source_signals
+    assert "alignment://axis-gate/attention_required" in proposal.source_signals
     assert proposal.risk_hint == "moderate"
 
 
@@ -153,6 +158,9 @@ def test_evolution_lab_compares_flow_evaluations() -> None:
             continuity_action="retomar",
             continuity_source="related_mission",
             continuity_runtime_mode="baseline_linear",
+            mind_alignment_status="partial",
+            identity_alignment_status="healthy",
+            axis_gate_status="attention_required",
             continuity_trace_status="attention_required",
             missing_continuity_signals=["memory_continuity_mode"],
             continuity_anomaly_flags=["retomar_missing_target_mission"],
@@ -170,6 +178,9 @@ def test_evolution_lab_compares_flow_evaluations() -> None:
             continuity_action="retomar",
             continuity_source="related_mission",
             continuity_runtime_mode="langgraph_subflow",
+            mind_alignment_status="healthy",
+            identity_alignment_status="healthy",
+            axis_gate_status="healthy",
             continuity_trace_status="healthy",
         ),
         governance_refs=["policy://sandbox/manual-review"],
@@ -180,3 +191,4 @@ def test_evolution_lab_compares_flow_evaluations() -> None:
     assert comparison.metric_deltas["risk"] < 0
     assert comparison.metric_deltas["continuity_health"] > 0
     assert comparison.metric_deltas["runtime_statefulness"] > 0
+    assert comparison.metric_deltas["axis_gate"] > 0

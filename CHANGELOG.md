@@ -8,6 +8,13 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 
 ## 2026-03-26
 
+### Sprint 5 do v2-alignment-cycle
+
+- `tools/internal_pilot_support.py` passou a carregar `mind_alignment_status`, `identity_alignment_status` e `axis_gate_status` no resultado estruturado do piloto;
+- `tools/internal_pilot_report.py` passou a expor e renderizar os cinco eixos de aderência e o gate agregado de eixo por request;
+- `tools/compare_orchestrator_paths.py` passou a comparar `mind_alignment_status`, `identity_alignment_status` e `axis_gate_status`, além de exigir gate saudável para `candidate_ready_for_eval_gate`;
+- `evolution-lab` e `tools/evolution_from_pilot.py` passaram a usar `mind`, `identity` e `axis_gate` como sinais formais de proposta e comparação sandbox-only;
+- `HANDOFF.md`, `docs/implementation/v2-alignment-cycle.md` e `docs/documentation/matriz-de-aderencia-mestre.md` passaram a tratar a Sprint 5 como concluída e a Sprint 6 como próxima frente ativa.
 ### Sprint 3 e Sprint 4 do v2-alignment-cycle
 
 - `shared/mind_registry.py` passou a governar a arbitragem do runtime com prioridade, afinidades por intenção e domínio, limite explícito de apoios e supressões e tensão dominante canônica;

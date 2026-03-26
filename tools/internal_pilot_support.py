@@ -86,8 +86,11 @@ class PilotExecutionResult:
     registry_domains: list[str]
     shadow_specialists: list[str]
     domain_alignment_status: str
+    mind_alignment_status: str
+    identity_alignment_status: str
     memory_alignment_status: str
     specialist_sovereignty_status: str
+    axis_gate_status: str
     expected_continuity_action: str | None
     continuity_matches_expectation: bool | None
     continuity_trace_status: str
@@ -109,6 +112,15 @@ def runtime_dir(name: str) -> Path:
     target = base_dir / f"{name}-{uuid4().hex[:8]}"
     target.mkdir(parents=True, exist_ok=True)
     return target
+
+
+def axis_gate_status_from_statuses(*statuses: str | None) -> str:
+    normalized = [status or "incomplete" for status in statuses]
+    if all(status == "healthy" for status in normalized):
+        return "healthy"
+    if any(status in {"attention_required", "incomplete"} for status in normalized):
+        return "attention_required"
+    return "partial"
 
 
 def default_pilot_scenarios() -> list[PilotScenario]:
@@ -283,8 +295,17 @@ def run_pilot_scenarios(
                 registry_domains=list(audit.registry_domains),
                 shadow_specialists=list(audit.shadow_specialists),
                 domain_alignment_status=audit.domain_alignment_status,
+                mind_alignment_status=audit.mind_alignment_status,
+                identity_alignment_status=audit.identity_alignment_status,
                 memory_alignment_status=audit.memory_alignment_status,
                 specialist_sovereignty_status=audit.specialist_sovereignty_status,
+                axis_gate_status=axis_gate_status_from_statuses(
+                    audit.domain_alignment_status,
+                    audit.mind_alignment_status,
+                    audit.identity_alignment_status,
+                    audit.memory_alignment_status,
+                    audit.specialist_sovereignty_status,
+                ),
                 expected_continuity_action=scenario.expected_continuity_action,
                 continuity_matches_expectation=continuity_matches_expectation,
                 continuity_trace_status=audit.continuity_trace_status,

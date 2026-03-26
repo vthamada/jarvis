@@ -23,8 +23,11 @@ def make_result(  # type: ignore[no-untyped-def]
     registry_domains: list[str] | None = None,
     shadow_specialists: list[str] | None = None,
     domain_alignment_status: str = "healthy",
+    mind_alignment_status: str = "healthy",
+    identity_alignment_status: str = "healthy",
     memory_alignment_status: str = "healthy",
     specialist_sovereignty_status: str = "healthy",
+    axis_gate_status: str = "healthy",
     expected_continuity_action: str | None = "continuar",
     continuity_matches_expectation: bool | None = True,
     continuity_trace_status: str = "healthy",
@@ -53,8 +56,11 @@ def make_result(  # type: ignore[no-untyped-def]
         registry_domains=registry_domains or ["strategy"],
         shadow_specialists=shadow_specialists or [],
         domain_alignment_status=domain_alignment_status,
+        mind_alignment_status=mind_alignment_status,
+        identity_alignment_status=identity_alignment_status,
         memory_alignment_status=memory_alignment_status,
         specialist_sovereignty_status=specialist_sovereignty_status,
+        axis_gate_status=axis_gate_status,
         expected_continuity_action=expected_continuity_action,
         continuity_matches_expectation=continuity_matches_expectation,
         continuity_trace_status=continuity_trace_status,
@@ -114,13 +120,14 @@ def test_compare_results_flags_axis_alignment_mismatch_fields() -> None:
             scenario_id="x",
             path_name="langgraph",
             domain_alignment_status="partial",
+            axis_gate_status="partial",
             shadow_specialists=["especialista_software_subordinado"],
         )
     ]
 
     comparisons = compare_results(baseline, candidate)
 
-    assert comparisons[0].mismatch_fields == ["domain_alignment_status"]
+    assert comparisons[0].mismatch_fields == ["domain_alignment_status", "axis_gate_status"]
 
 
 def test_serialize_comparisons_reports_equivalent_verdict() -> None:
@@ -135,6 +142,7 @@ def test_serialize_comparisons_reports_equivalent_verdict() -> None:
 
     assert payload["overall_verdict"] == "equivalent"
     assert payload["comparison_summary"]["decision"] == "candidate_requires_iteration"
+    assert payload["comparison_summary"]["candidate_axis_gate_pass_rate"] == 1.0
 
 
 def test_summarize_comparisons_promotes_candidate_ready_gate() -> None:
@@ -153,3 +161,4 @@ def test_summarize_comparisons_promotes_candidate_ready_gate() -> None:
 
     assert summary["decision"] == "candidate_ready_for_eval_gate"
     assert summary["candidate_runtime_coverage"] == 1.0
+    assert summary["candidate_axis_gate_pass_rate"] == 1.0
