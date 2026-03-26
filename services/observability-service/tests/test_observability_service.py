@@ -1,4 +1,4 @@
-﻿from json import loads
+from json import loads
 from pathlib import Path
 from tempfile import gettempdir
 from uuid import uuid4
@@ -426,7 +426,21 @@ def test_observability_service_audits_domain_memory_and_sovereignty_alignment() 
                 payload={
                     "sharing_modes": {
                         "especialista_software_subordinado": "core_mediated_read_only"
-                    }
+                    },
+                    "memory_class_policies": {
+                        "especialista_software_subordinado": {
+                            "mission": {
+                                "specialist_shared": True,
+                                "sharing_mode": "core_mediated_read_only",
+                                "write_policy": "through_core_only",
+                            },
+                            "domain": {
+                                "specialist_shared": True,
+                                "sharing_mode": "core_mediated_read_only",
+                                "write_policy": "through_core_only",
+                            },
+                        }
+                    },
                 },
                 request_id="req-specialist-align",
                 session_id="sess-specialist-align",
@@ -452,9 +466,7 @@ def test_observability_service_audits_domain_memory_and_sovereignty_alignment() 
                 source_service="orchestrator-service",
                 payload={
                     "specialist_types": ["especialista_software_subordinado"],
-                    "linked_domains": {
-                        "especialista_software_subordinado": "software_development"
-                    },
+                    "linked_domains": {"especialista_software_subordinado": "software_development"},
                 },
                 request_id="req-specialist-align",
                 session_id="sess-specialist-align",
@@ -592,6 +604,7 @@ def test_langsmith_adapter_groups_events_by_request() -> None:
     assert len(child_runs) == 2
     root_ids = {call["id"] for call in root_runs}
     assert all(call["parent_run_id"] in root_ids for call in child_runs)
+
 
 def test_observability_service_builds_incident_evidence_for_governed_flow() -> None:
     temp_dir = runtime_dir("observability-incident")

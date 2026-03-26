@@ -154,6 +154,7 @@ class SpecialistSharedMemoryContextContract:
     source_mission_goal: str | None = None
     related_mission_ids: list[MissionId] = field(default_factory=list)
     memory_refs: list[str] = field(default_factory=list)
+    memory_class_policies: dict[str, dict[str, object]] = field(default_factory=dict)
     semantic_focus: list[str] = field(default_factory=list)
     open_loops: list[str] = field(default_factory=list)
     last_recommendation: str | None = None

@@ -1,4 +1,4 @@
-﻿from pathlib import Path
+from pathlib import Path
 from tempfile import gettempdir
 from uuid import uuid4
 
@@ -99,9 +99,20 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     shared_memory_event = next(
         event for event in stored_events if event.event_name == "specialist_shared_memory_linked"
     )
-    assert shared_memory_event.payload["sharing_modes"][
-        "especialista_planejamento_operacional"
-    ] == "core_mediated_read_only"
+    assert (
+        shared_memory_event.payload["sharing_modes"]["especialista_planejamento_operacional"]
+        == "core_mediated_read_only"
+    )
+    assert (
+        shared_memory_event.payload["memory_class_policies"][
+            "especialista_planejamento_operacional"
+        ]["mission"]["write_policy"]
+        == "through_core_only"
+    )
+    assert (
+        shared_memory_event.payload["memory_ref_counts"]["especialista_planejamento_operacional"]
+        >= 1
+    )
     specialists_completed_event = next(
         event for event in stored_events if event.event_name == "specialists_completed"
     )
@@ -119,8 +130,7 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
         for invocation in result.specialist_invocations
     )
     assert all(
-        invocation.shared_memory_context is not None
-        for invocation in result.specialist_invocations
+        invocation.shared_memory_context is not None for invocation in result.specialist_invocations
     )
     continuity_event = next(
         event for event in stored_events if event.event_name == "continuity_decided"
@@ -285,8 +295,7 @@ def test_orchestrator_service_recovers_mission_continuity_across_instances() -> 
     assert any("mission_semantic_brief=" in item for item in second_result.recovered_context)
     assert any("mission_goal=" in item for item in second_result.recovered_context)
     assert any(
-        item == "continuity_replay_status=resumable"
-        for item in second_result.recovered_context
+        item == "continuity_replay_status=resumable" for item in second_result.recovered_context
     )
     assert any(
         item.startswith("continuity_resume_point=") for item in second_result.recovered_context
@@ -352,9 +361,7 @@ def test_orchestrator_service_surfaces_related_mission_candidate_in_same_session
         item == "continuity_recommendation=retomar_missao_relacionada"
         for item in result.recovered_context
     )
-    assert any(
-        item.startswith("session_continuity_mode=") for item in result.recovered_context
-    )
+    assert any(item.startswith("session_continuity_mode=") for item in result.recovered_context)
     assert "continuity_decided" in [event.event_name for event in result.events]
     assert "Continuidade ativa:" in result.response_text
     assert "missao_relacionada=Plan milestone M3 rollout." in result.deliberative_plan.rationale
@@ -489,6 +496,8 @@ def test_orchestrator_service_blocks_invalid_specialist_handoff_and_continues_wi
     assert result.deliberative_plan.specialist_resolution_summary is None
     assert "specialist_handoff_blocked" in [event.event_name for event in result.events]
     assert result.governance_decision.decision == PermissionDecision.ALLOW_WITH_CONDITIONS
+
+
 def test_orchestrator_service_preserves_mission_state_after_blocked_followup() -> None:
     temp_dir = runtime_dir("orchestrator-blocked-mission")
     memory_db = f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
@@ -585,8 +594,7 @@ def test_orchestrator_service_governs_replay_when_checkpoint_awaits_validation()
     )
 
     assert any(
-        item == "continuity_replay_status=awaiting_validation"
-        for item in result.recovered_context
+        item == "continuity_replay_status=awaiting_validation" for item in result.recovered_context
     )
     assert result.deliberative_plan.continuity_recovery_mode == "governed_review"
     assert result.deliberative_plan.recommended_task_type == "general_response"
@@ -654,10 +662,7 @@ def test_orchestrator_service_tracks_manual_resolution_of_continuity_pause() -> 
         )
     )
 
-    assert any(
-        item == "continuity_replay_status=resumable"
-        for item in result.recovered_context
-    )
+    assert any(item == "continuity_replay_status=resumable" for item in result.recovered_context)
     assert result.governance_decision.decision == PermissionDecision.ALLOW_WITH_CONDITIONS
     resolved_event = next(
         event for event in result.events if event.event_name == "continuity_pause_resolved"

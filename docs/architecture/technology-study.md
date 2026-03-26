@@ -290,6 +290,48 @@ Quem responde quando ela pode atravessar para o sistema é:
 
 ---
 
+### 9.4 Visão do ecossistema JARVIS
+
+A visão de longo prazo do JARVIS não é apenas usar tecnologias boas.
+
+Ela é construir um sistema soberano capaz de analisar continuamente o estado da arte e absorver o que realmente melhora sua cognição, sua operação e sua evolução sem perder identidade própria.
+
+Leitura correta:
+
+- o JARVIS deve reaproveitar o melhor do ecossistema quando isso acelerar a construção do sistema;
+- esse reaproveitamento precisa acontecer por função arquitetural clara;
+- nenhuma tecnologia externa pode assumir identidade, memória canônica, governança final ou síntese soberana do sistema.
+
+### 9.5 Fluxo longo de absorção tecnológica
+
+Fluxo disciplinado esperado no longo prazo:
+
+1. radar contínuo do ecossistema;
+2. classificação por função arquitetural;
+3. registro em memória evolutiva;
+4. experimento em sandbox, benchmark ou fluxo isolado;
+5. promoção governada por evidência.
+
+Regras permanentes:
+
+- absorver por problema, e não por hype;
+- traduzir valor para a gramática do JARVIS, e não terceirizar o núcleo;
+- manter toda absorção reversível, auditável e compatível com os registries soberanos do sistema.
+
+### 9.6 Leitura correta por famílias de referência
+
+As famílias de estudo devem ser lidas assim:
+
+- `LangGraph`: referência principal para fluxo stateful, checkpoints, replay e handoffs coordenados;
+- `Hermes Agent`: referência de runtime persistente, memória viva, continuidade operacional e skills;
+- `Graphiti` e `Zep`: referências para memória relacional, temporal e contextual;
+- `DSPy / MIPROv2`, `TextGrad`, `AFlow`, `EvoAgentX`, `SEAL` e `Darwin Gödel Machine`: eixo de autoaperfeiçoamento, otimização e evolução governada.
+
+Regra importante:
+
+- `Hermes Agent` não é a referência principal do eixo de autoaperfeiçoamento;
+- ele pertence antes ao eixo de runtime persistente, memória viva e skills.
+
 ## 10. Governança do processo de análise tecnológica
 
 Para evitar ambiguidade, o processo oficial de análise e incorporação tecnológica do JARVIS passa a obedecer à seguinte distribuição de responsabilidade.
@@ -529,3 +571,21 @@ O processo correto, resumido, é:
 Em uma frase:
 
 **o agente analisa por problema e incorpora por recorte, nunca por entusiasmo com framework.**
+
+
+## 17. Foco de estudo no ciclo atual
+
+Trilha atual: `continuidade profunda entre missões` no pós-`v1`, seguida do alinhamento soberano de `domínios`, `memórias` e `mentes` no `v2-alignment-cycle`.
+
+Ordem oficial de estudo externo neste momento:
+
+1. `LangGraph`
+2. `Hermes Agent`
+3. `Graphiti`
+4. `Zep`
+
+Leitura operacional:
+
+- o estudo é paralelo curto e dirigido;
+- nenhuma dessas tecnologias entra automaticamente no núcleo;
+- o foco imediato continua sendo fortalecer os eixos soberanos do próprio JARVIS antes de qualquer absorção mais ampla.

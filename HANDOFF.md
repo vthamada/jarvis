@@ -2,15 +2,15 @@
 
 ## Metadata
 
-- Atualizado em: 2026-03-24
+- Atualizado em: 2026-03-26
 - Branch: `main`
-- Commit de referência: `5ec3744`
+- Commit de referência: `004fc3e`
 - Artefato canônico do projeto: `documento_mestre_jarvis.md`
 - Estado do projeto: `v1` encerrado e congelado para uso controlado; primeiro ciclo do `pós-v1` encerrado; primeiro ciclo do `v1.5` encerrado; primeiro corte do `v2` encerrado; ciclo de alinhamento do `v2` aberto
 
 ## Meta atual
 
-Fechar o primeiro corte do `v2` e abrir o ciclo de alinhamento do runtime ao Documento-Mestre, com foco em `domínios`, `memórias`, `mentes`, identidade auditável e gates por eixo.
+Executar o `v2-alignment-cycle` com o eixo de `domínios` já consolidado, `memórias` promovidas a política operacional por classe e `mentes` como próxima frente soberana, preparando o núcleo para absorção tecnológica governada sem perda de identidade.
 
 Sistema oficial de planejamento desta fase:
 
@@ -134,12 +134,10 @@ Principais entregas já consolidadas:
 
 Pendências principais desta fase:
 
-- executar a Sprint 1 do `v2-alignment-cycle`;
-- transformar o registry de `domínios` em fonte soberana de roteamento do runtime;
-- promover o registry de `memórias` para política operacional por classe;
-- tornar a arbitragem entre `mentes` menos implícita e mais soberana;
+- executar a Sprint 3 do `v2-alignment-cycle`;
+- promover o registry de `mentes` de catálogo para política soberana de composição e arbitragem;
 - preservar a mediação do núcleo como única política de escrita da memória compartilhada;
-- usar os sinais de aderência recém-abertos como critério explícito de promoção, ajuste ou contenção;
+- usar os sinais de aderência já abertos em `domínios` e `memórias` como critério explícito de promoção, ajuste ou contenção;
 - consolidar estudo externo curto sem bloquear a implementação principal.
 
 Regra de estudo externo no `v2`:
@@ -201,3 +199,33 @@ Leitura mínima para qualquer novo agente:
 5. `docs/implementation/v2-cycle-closure.md`
 6. `docs/implementation/v2-alignment-cycle.md`
 7. `docs/architecture/technology-study.md`
+
+
+## Visão de absorção tecnológica
+
+Leitura de longo prazo desta fase e das próximas:
+
+- o JARVIS deve evoluir como sistema cognitivo soberano capaz de absorver o melhor do ecossistema sem virar uma colagem de frameworks;
+- a absorção tecnológica deve continuar subordinada ao núcleo, à memória canônica, à governança e à síntese própria do sistema;
+- o objetivo não é terceirizar o cérebro do JARVIS, e sim incorporar valor arquitetural por função clara.
+
+Fluxo longo de absorção tecnológica governada:
+
+1. radar contínuo do ecossistema;
+2. classificação arquitetural por eixo do sistema;
+3. registro em memória evolutiva;
+4. sandbox, benchmark ou fluxo experimental;
+5. promoção governada por evidência.
+
+Leitura correta por famílias de referência:
+
+- `LangGraph`: fluxo stateful, checkpoints, replay e handoffs coordenados;
+- `Hermes Agent`: runtime persistente, memória viva, continuidade operacional e skills;
+- `Graphiti` e `Zep`: memória relacional, temporal e contextual;
+- `DSPy / MIPROv2`, `TextGrad`, `AFlow`, `EvoAgentX`, `SEAL` e `Darwin Gödel Machine`: autoaperfeiçoamento, otimização e evolução governada.
+
+Regra de disciplina:
+
+- estudo externo não bloqueia a implementação principal;
+- nenhuma tecnologia externa vira dependência central sem decisão arquitetural formal;
+- toda absorção deve ser reversível, traduzida para os contratos do JARVIS e compatível com a soberania do núcleo.

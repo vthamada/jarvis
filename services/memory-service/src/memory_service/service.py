@@ -1,4 +1,4 @@
-﻿"""Persistent memory service backed by canonical contracts."""
+"""Persistent memory service backed by canonical contracts."""
 
 from __future__ import annotations
 
@@ -30,7 +30,12 @@ from shared.contracts import (
     SpecialistContributionContract,
     SpecialistSharedMemoryContextContract,
 )
-from shared.memory_registry import DEFAULT_MEMORY_SCOPES, SHARED_MEMORY_CLASSES
+from shared.memory_registry import (
+    DEFAULT_MEMORY_SCOPES,
+    SHARED_MEMORY_CLASSES,
+    default_priority_rules,
+    specialist_memory_policy_payload,
+)
 from shared.types import (
     MemoryClass,
     MemoryQueryId,
@@ -85,6 +90,7 @@ class MemoryService:
             recovery_type=RecoveryType.CONTEXTUAL,
             session_id=contract.session_id,
             requested_scopes=list(DEFAULT_MEMORY_SCOPES),
+            priority_rules=default_priority_rules(),
             context_window=TimeWindow(label="current-session"),
             mission_id=contract.mission_id,
             user_id=contract.user_id,
@@ -364,6 +370,7 @@ class MemoryService:
                     source_mission_goal=context.source_mission_goal,
                     related_mission_ids=[str(item) for item in context.related_mission_ids],
                     memory_refs=list(context.memory_refs),
+                    memory_class_policies=dict(context.memory_class_policies),
                     semantic_focus=list(context.semantic_focus),
                     open_loops=list(context.open_loops),
                     last_recommendation=context.last_recommendation,
@@ -414,17 +421,13 @@ class MemoryService:
             continuity_hints.append(
                 f"session_continuity_brief={session_continuity.continuity_brief}"
             )
-            continuity_hints.append(
-                f"session_continuity_mode={session_continuity.continuity_mode}"
-            )
+            continuity_hints.append(f"session_continuity_mode={session_continuity.continuity_mode}")
             if session_continuity.anchor_mission_id:
                 continuity_hints.append(
                     f"session_anchor_mission_id={session_continuity.anchor_mission_id}"
                 )
             if session_continuity.anchor_goal:
-                continuity_hints.append(
-                    f"session_anchor_goal={session_continuity.anchor_goal}"
-                )
+                continuity_hints.append(f"session_anchor_goal={session_continuity.anchor_goal}")
             if session_continuity.related_mission_id:
                 continuity_hints.append(
                     f"session_related_mission_id={session_continuity.related_mission_id}"
@@ -457,23 +460,13 @@ class MemoryService:
                 )
         continuity_replay = self.get_session_continuity_replay(str(contract.session_id))
         if continuity_replay:
-            continuity_hints.append(
-                f"continuity_replay_status={continuity_replay.replay_status}"
-            )
-            continuity_hints.append(
-                f"continuity_recovery_mode={continuity_replay.recovery_mode}"
-            )
-            continuity_hints.append(
-                f"continuity_resume_point={continuity_replay.resume_point}"
-            )
+            continuity_hints.append(f"continuity_replay_status={continuity_replay.replay_status}")
+            continuity_hints.append(f"continuity_recovery_mode={continuity_replay.recovery_mode}")
+            continuity_hints.append(f"continuity_resume_point={continuity_replay.resume_point}")
         continuity_pause = self.get_session_continuity_pause(str(contract.session_id))
         if continuity_pause:
-            continuity_hints.append(
-                f"continuity_pause_status={continuity_pause.pause_status}"
-            )
-            continuity_hints.append(
-                f"continuity_pause_reason={continuity_pause.pause_reason}"
-            )
+            continuity_hints.append(f"continuity_pause_status={continuity_pause.pause_status}")
+            continuity_hints.append(f"continuity_pause_reason={continuity_pause.pause_reason}")
         if contract.mission_id:
             mission_state = self.repository.fetch_mission_state(str(contract.mission_id))
             if mission_state:
@@ -516,9 +509,7 @@ class MemoryService:
                         )
                     mission_hints.append(f"related_mission_id={primary.mission_id}")
                     mission_hints.append(f"related_mission_goal={primary.mission_goal}")
-                    mission_hints.append(
-                        f"related_continuity_reason={primary.continuity_reason}"
-                    )
+                    mission_hints.append(f"related_continuity_reason={primary.continuity_reason}")
                     mission_hints.append(
                         f"related_continuity_priority={primary.priority_score:.2f}"
                     )
@@ -536,9 +527,7 @@ class MemoryService:
                         )
                     mission_hints.append(f"related_mission_id={primary.mission_id}")
                     mission_hints.append(f"related_mission_goal={primary.mission_goal}")
-                    mission_hints.append(
-                        f"related_continuity_reason={primary.continuity_reason}"
-                    )
+                    mission_hints.append(f"related_continuity_reason={primary.continuity_reason}")
                     mission_hints.append(
                         f"related_continuity_priority={primary.priority_score:.2f}"
                     )
@@ -591,8 +580,9 @@ class MemoryService:
         memory_refs: list[str] = []
         semantic_focus: list[str] = []
         open_loops: list[str] = []
+        shared_memory_classes = list(SHARED_MEMORY_CLASSES)
         canonical_memory_refs = [
-            f"memory://{memory_class.value}" for memory_class in SHARED_MEMORY_CLASSES
+            f"memory://{memory_class.value}" for memory_class in shared_memory_classes
         ]
         dynamic_memory_refs: list[str] = []
 
@@ -618,6 +608,7 @@ class MemoryService:
             if domain_name not in semantic_focus and len(semantic_focus) < 5:
                 semantic_focus.append(domain_name)
         memory_refs = [*canonical_memory_refs, *dynamic_memory_refs]
+        memory_class_policies = specialist_memory_policy_payload(shared_memory_classes)
 
         source_goal = mission_state.mission_goal if mission_state else None
         source_mission_id = mission_state.mission_id if mission_state else None
@@ -642,6 +633,7 @@ class MemoryService:
             source_mission_goal=source_goal,
             related_mission_ids=related_mission_ids,
             memory_refs=memory_refs,
+            memory_class_policies=memory_class_policies,
             semantic_focus=semantic_focus,
             open_loops=open_loops,
             last_recommendation=mission_state.last_recommendation if mission_state else None,
@@ -750,14 +742,10 @@ class MemoryService:
             previous=previous,
         )
         persisted_open_loops = (
-            list(previous.open_loops)
-            if previous and not accepted
-            else open_loops[:3]
+            list(previous.open_loops) if previous and not accepted else open_loops[:3]
         )
         persisted_frame = (
-            previous.last_decision_frame
-            if previous and not accepted
-            else decision_frame
+            previous.last_decision_frame if previous and not accepted else decision_frame
         )
         identity_continuity_brief = self._build_identity_continuity_brief(
             mission_goal=mission_goal,
@@ -853,9 +841,7 @@ class MemoryService:
             updated_at=checkpoint.updated_at,
             mission_id=MissionId(checkpoint.mission_id) if checkpoint.mission_id else None,
             target_mission_id=(
-                MissionId(checkpoint.target_mission_id)
-                if checkpoint.target_mission_id
-                else None
+                MissionId(checkpoint.target_mission_id) if checkpoint.target_mission_id else None
             ),
             target_goal=checkpoint.target_goal,
             origin_request_id=self._request_id_or_none(checkpoint.origin_request_id),
@@ -966,13 +952,10 @@ class MemoryService:
             return None
         top_related = candidates[0].priority_score
         recommended_action = (
-            "retomar_missao_relacionada"
-            if top_related >= 0.7
-            else "seguir_novo_pedido"
+            "retomar_missao_relacionada" if top_related >= 0.7 else "seguir_novo_pedido"
         )
         recommended_reason = (
-            f"melhor_missao_relacionada={candidates[0].mission_id}; "
-            f"prioridade={top_related:.2f}"
+            f"melhor_missao_relacionada={candidates[0].mission_id}; prioridade={top_related:.2f}"
             if recommended_action == "retomar_missao_relacionada"
             else "sem evidencia suficiente para herdar continuidade de missao relacionada"
         )
@@ -1023,9 +1006,7 @@ class MemoryService:
             and current_mission_state.last_decision_frame == related_state.last_decision_frame
         ):
             priority += 0.05
-            reasons.append(
-                f"frame_compartilhado={current_mission_state.last_decision_frame}"
-            )
+            reasons.append(f"frame_compartilhado={current_mission_state.last_decision_frame}")
 
         return MissionContinuityCandidateContract(
             mission_id=related_state.mission_id,
@@ -1313,9 +1294,7 @@ class MemoryService:
     def _meaningful_tokens(text: str) -> set[str]:
         return {
             token
-            for token in "".join(
-                char if char.isalnum() else " " for char in text.lower()
-            ).split()
+            for token in "".join(char if char.isalnum() else " " for char in text.lower()).split()
             if len(token) > 3
         }
 

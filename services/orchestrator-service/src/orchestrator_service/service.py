@@ -337,9 +337,7 @@ class OrchestratorService:
             deliberative_plan=deliberative_plan,
             knowledge_result=knowledge_result,
             handoff_plan=specialist_handoff_plan,
-            handoff_governance=(
-                specialist_handoff_assessment.governance_decision
-            ),
+            handoff_governance=(specialist_handoff_assessment.governance_decision),
             events=events,
         )
 
@@ -500,12 +498,8 @@ class OrchestratorService:
                 "artifact_results": artifact_results,
                 "cognitive_snapshot": cognitive_snapshot,
                 "specialist_review": specialist_review,
-                "specialist_handoff_check": (
-                    specialist_handoff_assessment.governance_check
-                ),
-                "specialist_handoff_decision": (
-                    specialist_handoff_assessment.governance_decision
-                ),
+                "specialist_handoff_check": (specialist_handoff_assessment.governance_check),
+                "specialist_handoff_decision": (specialist_handoff_assessment.governance_decision),
                 "operation_dispatch": operation_dispatch,
                 "operation_result": operation_result,
                 "events": events,
@@ -572,8 +566,7 @@ class OrchestratorService:
                     "shadow_specialists": [
                         item.specialist_type
                         for item in handoff_plan.selections
-                        if item.selection_mode == "shadow"
-                        and item.selection_status == "selected"
+                        if item.selection_mode == "shadow" and item.selection_status == "selected"
                     ],
                     "requires_governance_review": [
                         item.specialist_type
@@ -581,8 +574,7 @@ class OrchestratorService:
                         if item.requires_governance_review
                     ],
                     "selection_rationales": {
-                        item.specialist_type: item.rationale
-                        for item in handoff_plan.selections
+                        item.specialist_type: item.rationale for item in handoff_plan.selections
                     },
                 },
             )
@@ -610,6 +602,20 @@ class OrchestratorService:
                             else 0
                             for item in handoff_plan.invocations
                         },
+                        "memory_class_policies": {
+                            item.specialist_type: (
+                                item.shared_memory_context.memory_class_policies
+                                if item.shared_memory_context
+                                else {}
+                            )
+                            for item in handoff_plan.invocations
+                        },
+                        "memory_ref_counts": {
+                            item.specialist_type: len(item.shared_memory_context.memory_refs)
+                            if item.shared_memory_context
+                            else 0
+                            for item in handoff_plan.invocations
+                        },
                         "linked_domains": {
                             item.specialist_type: item.linked_domain
                             for item in handoff_plan.invocations
@@ -628,9 +634,7 @@ class OrchestratorService:
                     "specialist_contracts_composed",
                     contract,
                     {
-                        "invocation_ids": [
-                            item.invocation_id for item in handoff_plan.invocations
-                        ],
+                        "invocation_ids": [item.invocation_id for item in handoff_plan.invocations],
                         "specialist_hints": handoff_plan.specialist_hints,
                         "boundary_summary": handoff_plan.boundary_summary,
                         "response_channel": handoff_plan.invocations[0].boundary.response_channel,
@@ -792,9 +796,7 @@ class OrchestratorService:
                             "specialist_types": [
                                 item.specialist_type for item in shadow_contributions
                             ],
-                            "invocation_ids": [
-                                item.invocation_id for item in shadow_contributions
-                            ],
+                            "invocation_ids": [item.invocation_id for item in shadow_contributions],
                             "linked_domains": {
                                 invocation.specialist_type: invocation.linked_domain
                                 for invocation in specialist_review.invocations

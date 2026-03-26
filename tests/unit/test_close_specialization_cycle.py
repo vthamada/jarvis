@@ -128,9 +128,21 @@ def test_close_specialization_cycle_builds_alignment_cut() -> None:
                     "sharing_modes": {
                         "especialista_software_subordinado": "core_mediated_read_only"
                     },
-                    "linked_domains": {
-                        "especialista_software_subordinado": "software_development"
+                    "memory_class_policies": {
+                        "especialista_software_subordinado": {
+                            "mission": {
+                                "specialist_shared": True,
+                                "sharing_mode": "core_mediated_read_only",
+                                "write_policy": "through_core_only",
+                            },
+                            "domain": {
+                                "specialist_shared": True,
+                                "sharing_mode": "core_mediated_read_only",
+                                "write_policy": "through_core_only",
+                            },
+                        }
                     },
+                    "linked_domains": {"especialista_software_subordinado": "software_development"},
                 },
                 request_id="req-cycle",
                 session_id="sess-cycle",
@@ -158,9 +170,7 @@ def test_close_specialization_cycle_builds_alignment_cut() -> None:
                 source_service="orchestrator-service",
                 payload={
                     "specialist_types": ["especialista_software_subordinado"],
-                    "linked_domains": {
-                        "especialista_software_subordinado": "software_development"
-                    },
+                    "linked_domains": {"especialista_software_subordinado": "software_development"},
                 },
                 request_id="req-cycle",
                 session_id="sess-cycle",

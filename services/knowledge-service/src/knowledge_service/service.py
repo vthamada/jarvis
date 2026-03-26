@@ -7,7 +7,7 @@ from json import loads
 from pathlib import Path
 
 from shared.contracts import DomainRegistryEntryContract, DomainSpecialistRouteContract
-from shared.domain_registry import FALLBACK_RUNTIME_ROUTE
+from shared.domain_registry import FALLBACK_RUNTIME_ROUTE, DomainEntry, load_domain_registries
 
 
 @dataclass(frozen=True)
@@ -50,9 +50,7 @@ class KnowledgeService:
         resolved_path = Path(corpus_path) if corpus_path else DEFAULT_CORPUS_PATH
         self.corpus_path = resolved_path
         registry_path = (
-            Path(domain_registry_path)
-            if domain_registry_path
-            else DEFAULT_DOMAIN_REGISTRY_PATH
+            Path(domain_registry_path) if domain_registry_path else DEFAULT_DOMAIN_REGISTRY_PATH
         )
         (
             self.canonical_domain_registry,
@@ -66,14 +64,10 @@ class KnowledgeService:
         active_domains = self._select_domains(intent, query)
         registry_domains = self._resolve_canonical_domains(active_domains)
         snippets = [
-            self.domains[domain].snippets[0]
-            for domain in active_domains
-            if domain in self.domains
+            self.domains[domain].snippets[0] for domain in active_domains if domain in self.domains
         ]
         sources = [
-            f"local://knowledge/{domain}"
-            for domain in active_domains
-            if domain in self.domains
+            f"local://knowledge/{domain}" for domain in active_domains if domain in self.domains
         ]
         specialist_routes = self._resolve_specialist_routes(active_domains)
         return KnowledgeRetrievalResult(
@@ -151,41 +145,29 @@ class KnowledgeService:
         return 0.4
 
     @staticmethod
+    def _to_registry_contract(entry: DomainEntry) -> DomainRegistryEntryContract:
+        return DomainRegistryEntryContract(
+            domain_name=entry.domain_name,
+            display_name=entry.display_name,
+            domain_scope=entry.domain_scope,
+            activation_stage=entry.activation_stage,
+            maturity=entry.maturity,
+            canonical_refs=list(entry.canonical_refs),
+            linked_specialist_type=entry.linked_specialist_type,
+            specialist_mode=entry.specialist_mode,
+            summary=entry.summary,
+        )
+
     def _load_domain_registry(
+        self,
         registry_path: Path,
     ) -> tuple[dict[str, DomainRegistryEntryContract], dict[str, DomainRegistryEntryContract]]:
-        if not registry_path.exists():
-            return {}, {}
-        payload = loads(registry_path.read_text(encoding="utf-8"))
+        canonical_entries, runtime_entries = load_domain_registries(registry_path)
         canonical_domains = {
-            item["domain_name"]: DomainRegistryEntryContract(
-                domain_name=item["domain_name"],
-                display_name=item.get("display_name"),
-                domain_scope=item.get("domain_scope"),
-                activation_stage=item.get("activation_stage", "canonical"),
-                maturity=item.get("maturity", "canonical"),
-                canonical_family=item.get("canonical_family"),
-                canonical_refs=list(item.get("canonical_refs", [])),
-                linked_specialist_type=item.get("linked_specialist_type"),
-                specialist_mode=item.get("specialist_mode"),
-                summary=item.get("summary"),
-            )
-            for item in payload.get("canonical_domains", [])
+            name: self._to_registry_contract(entry) for name, entry in canonical_entries.items()
         }
         runtime_routes = {
-            item["route_name"]: DomainRegistryEntryContract(
-                domain_name=item["route_name"],
-                display_name=item.get("display_name"),
-                domain_scope=item.get("domain_scope", "runtime_route"),
-                activation_stage=item["activation_stage"],
-                maturity=item["maturity"],
-                canonical_family=item.get("canonical_family"),
-                canonical_refs=list(item.get("canonical_refs", [])),
-                linked_specialist_type=item.get("linked_specialist_type"),
-                specialist_mode=item.get("specialist_mode"),
-                summary=item.get("summary"),
-            )
-            for item in payload.get("runtime_routes", [])
+            name: self._to_registry_contract(entry) for name, entry in runtime_entries.items()
         }
         return canonical_domains, runtime_routes
 

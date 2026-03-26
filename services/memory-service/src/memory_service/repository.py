@@ -90,6 +90,7 @@ class StoredSpecialistSharedMemory:
     source_mission_goal: str | None = None
     related_mission_ids: list[str] = field(default_factory=list)
     memory_refs: list[str] = field(default_factory=list)
+    memory_class_policies: dict[str, dict[str, object]] = field(default_factory=dict)
     semantic_focus: list[str] = field(default_factory=list)
     open_loops: list[str] = field(default_factory=list)
     last_recommendation: str | None = None
@@ -501,9 +502,10 @@ class SqliteMemoryRepository(MemoryRepository):
                     session_id, specialist_type, sharing_mode, continuity_mode,
                     shared_memory_brief, write_policy, source_mission_id,
                     source_mission_goal, related_mission_ids, memory_refs,
-                    semantic_focus, open_loops, last_recommendation, updated_at
+                    memory_class_policies, semantic_focus, open_loops,
+                    last_recommendation, updated_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(session_id, specialist_type) DO UPDATE SET
                     sharing_mode = excluded.sharing_mode,
                     continuity_mode = excluded.continuity_mode,
@@ -513,6 +515,7 @@ class SqliteMemoryRepository(MemoryRepository):
                     source_mission_goal = excluded.source_mission_goal,
                     related_mission_ids = excluded.related_mission_ids,
                     memory_refs = excluded.memory_refs,
+                    memory_class_policies = excluded.memory_class_policies,
                     semantic_focus = excluded.semantic_focus,
                     open_loops = excluded.open_loops,
                     last_recommendation = excluded.last_recommendation,
@@ -529,6 +532,7 @@ class SqliteMemoryRepository(MemoryRepository):
                     snapshot.source_mission_goal,
                     dumps(snapshot.related_mission_ids),
                     dumps(snapshot.memory_refs),
+                    dumps(snapshot.memory_class_policies),
                     dumps(snapshot.semantic_focus),
                     dumps(snapshot.open_loops),
                     snapshot.last_recommendation,
@@ -549,7 +553,8 @@ class SqliteMemoryRepository(MemoryRepository):
                 SELECT session_id, specialist_type, sharing_mode, continuity_mode,
                        shared_memory_brief, write_policy, source_mission_id,
                        source_mission_goal, related_mission_ids, memory_refs,
-                       semantic_focus, open_loops, last_recommendation
+                       memory_class_policies, semantic_focus, open_loops,
+                       last_recommendation
                 FROM specialist_shared_memory
                 WHERE session_id = ?
                   AND specialist_type = ?
@@ -691,6 +696,7 @@ class SqliteMemoryRepository(MemoryRepository):
                     source_mission_goal TEXT,
                     related_mission_ids TEXT NOT NULL DEFAULT '[]',
                     memory_refs TEXT NOT NULL DEFAULT '[]',
+                    memory_class_policies TEXT NOT NULL DEFAULT '{}',
                     semantic_focus TEXT NOT NULL DEFAULT '[]',
                     open_loops TEXT NOT NULL DEFAULT '[]',
                     last_recommendation TEXT,
@@ -736,6 +742,12 @@ class SqliteMemoryRepository(MemoryRepository):
                 connection, "mission_states", "open_loops", "TEXT NOT NULL DEFAULT '[]'"
             )
             self._ensure_column(connection, "mission_states", "last_decision_frame", "TEXT")
+            self._ensure_column(
+                connection,
+                "specialist_shared_memory",
+                "memory_class_policies",
+                "TEXT NOT NULL DEFAULT '{}'",
+            )
             connection.commit()
 
     def _ensure_column(
@@ -815,6 +827,7 @@ class SqliteMemoryRepository(MemoryRepository):
             source_mission_goal=row["source_mission_goal"],
             related_mission_ids=list(loads(row["related_mission_ids"] or "[]")),
             memory_refs=list(loads(row["memory_refs"] or "[]")),
+            memory_class_policies=dict(loads(row["memory_class_policies"] or "{}")),
             semantic_focus=list(loads(row["semantic_focus"] or "[]")),
             open_loops=list(loads(row["open_loops"] or "[]")),
             last_recommendation=row["last_recommendation"],
@@ -1173,9 +1186,10 @@ class PostgresMemoryRepository(MemoryRepository):
                     session_id, specialist_type, sharing_mode, continuity_mode,
                     shared_memory_brief, write_policy, source_mission_id,
                     source_mission_goal, related_mission_ids, memory_refs,
-                    semantic_focus, open_loops, last_recommendation, updated_at
+                    memory_class_policies, semantic_focus, open_loops,
+                    last_recommendation, updated_at
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (session_id, specialist_type) DO UPDATE SET
                     sharing_mode = EXCLUDED.sharing_mode,
                     continuity_mode = EXCLUDED.continuity_mode,
@@ -1185,6 +1199,7 @@ class PostgresMemoryRepository(MemoryRepository):
                     source_mission_goal = EXCLUDED.source_mission_goal,
                     related_mission_ids = EXCLUDED.related_mission_ids,
                     memory_refs = EXCLUDED.memory_refs,
+                    memory_class_policies = EXCLUDED.memory_class_policies,
                     semantic_focus = EXCLUDED.semantic_focus,
                     open_loops = EXCLUDED.open_loops,
                     last_recommendation = EXCLUDED.last_recommendation,
@@ -1201,6 +1216,7 @@ class PostgresMemoryRepository(MemoryRepository):
                     snapshot.source_mission_goal,
                     dumps(snapshot.related_mission_ids),
                     dumps(snapshot.memory_refs),
+                    dumps(snapshot.memory_class_policies),
                     dumps(snapshot.semantic_focus),
                     dumps(snapshot.open_loops),
                     snapshot.last_recommendation,
@@ -1221,7 +1237,8 @@ class PostgresMemoryRepository(MemoryRepository):
                 SELECT session_id, specialist_type, sharing_mode, continuity_mode,
                        shared_memory_brief, write_policy, source_mission_id,
                        source_mission_goal, related_mission_ids, memory_refs,
-                       semantic_focus, open_loops, last_recommendation
+                       memory_class_policies, semantic_focus, open_loops,
+                       last_recommendation
                 FROM specialist_shared_memory
                 WHERE session_id = %s
                   AND specialist_type = %s
@@ -1241,6 +1258,7 @@ class PostgresMemoryRepository(MemoryRepository):
             source_mission_goal=row["source_mission_goal"],
             related_mission_ids=list(loads(row["related_mission_ids"] or "[]")),
             memory_refs=list(loads(row["memory_refs"] or "[]")),
+            memory_class_policies=dict(loads(row["memory_class_policies"] or "{}")),
             semantic_focus=list(loads(row["semantic_focus"] or "[]")),
             open_loops=list(loads(row["open_loops"] or "[]")),
             last_recommendation=row["last_recommendation"],
@@ -1394,6 +1412,7 @@ class PostgresMemoryRepository(MemoryRepository):
                     source_mission_goal TEXT,
                     related_mission_ids TEXT NOT NULL DEFAULT '[]',
                     memory_refs TEXT NOT NULL DEFAULT '[]',
+                    memory_class_policies TEXT NOT NULL DEFAULT '{}',
                     semantic_focus TEXT NOT NULL DEFAULT '[]',
                     open_loops TEXT NOT NULL DEFAULT '[]',
                     last_recommendation TEXT,
@@ -1457,6 +1476,10 @@ class PostgresMemoryRepository(MemoryRepository):
             )
             cursor.execute(
                 "ALTER TABLE mission_states ADD COLUMN IF NOT EXISTS last_decision_frame TEXT"
+            )
+            cursor.execute(
+                "ALTER TABLE specialist_shared_memory ADD COLUMN IF NOT EXISTS "
+                "memory_class_policies TEXT NOT NULL DEFAULT '{}'"
             )
             connection.commit()
 

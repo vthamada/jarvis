@@ -1,4 +1,4 @@
-﻿from pathlib import Path
+from pathlib import Path
 from tempfile import gettempdir
 from uuid import uuid4
 
@@ -86,6 +86,7 @@ def test_memory_service_recovers_empty_context_for_new_session() -> None:
     assert isinstance(result, MemoryRecoveryResult)
     assert result.recovered_items == []
     assert result.recovery_contract.requested_scopes == DEFAULT_MEMORY_SCOPES
+    assert result.recovery_contract.priority_rules[0].startswith("default_recovery_order=")
 
 
 def test_memory_service_records_and_recovers_session_history_across_instances() -> None:
@@ -180,9 +181,7 @@ def test_memory_service_builds_resumable_continuity_replay_state() -> None:
         specialist_contributions=sample_specialist_contributions(),
     )
 
-    replay = MemoryService(database_url=database_url).get_session_continuity_replay(
-        "sess-replay"
-    )
+    replay = MemoryService(database_url=database_url).get_session_continuity_replay("sess-replay")
 
     assert replay is not None
     assert replay.session_id == SessionId("sess-replay")
@@ -417,6 +416,8 @@ def test_memory_service_prepares_core_mediated_shared_memory_for_specialists() -
     assert persisted.write_policy == "through_core_only"
     assert "memory://relational" in persisted.memory_refs
     assert "memory://domain/strategy" in persisted.memory_refs
+    assert persisted.memory_class_policies["mission"]["sharing_mode"] == "core_mediated_read_only"
+    assert persisted.memory_class_policies["domain"]["domain_linked"] is True
 
 
 def test_memory_service_persists_session_continuity_for_governed_reformulation() -> None:
@@ -483,8 +484,7 @@ def test_memory_service_persists_session_continuity_for_governed_reformulation()
 
     assert any("session_continuity_mode=reformular" in item for item in recovered.session_context)
     assert any(
-        "session_continuity_brief=sessao entrou em reformulacao governada"
-        in item
+        "session_continuity_brief=sessao entrou em reformulacao governada" in item
         for item in recovered.session_context
     )
 
@@ -619,6 +619,8 @@ def test_build_memory_repository_uses_postgres_for_operational_urls(monkeypatch)
     repository = build_memory_repository("postgres://postgres:postgres@localhost:5432/jarvis")
     assert isinstance(repository, FakePostgresRepository)
     assert captured["database_url"] == "postgresql://postgres:postgres@localhost:5432/jarvis"
+
+
 def test_memory_service_preserves_accepted_mission_state_on_defer_and_block() -> None:
     temp_dir = runtime_dir("memory-governed")
     service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")

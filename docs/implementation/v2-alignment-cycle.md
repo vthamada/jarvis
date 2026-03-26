@@ -2,14 +2,14 @@
 
 ## 1. Objetivo do ciclo atual
 
-Este documento define o proximo ciclo rolante do `v2`.
+Este documento define o próximo ciclo rolante do `v2`.
 
-Foco unico do ciclo:
+Foco único do ciclo:
 
-- `alinhar o runtime do sistema aos eixos do Documento-Mestre sem ampliar superficies cedo demais`
+- `alinhar o runtime do sistema aos eixos do Documento-Mestre sem ampliar superfícies cedo demais`
 
 Ele sucede o primeiro corte do `v2` e assume que o salto estrutural minimo de
-especialistas subordinados ja foi provado.
+especialistas subordinados já foi provado.
 
 Fontes de direcao:
 
@@ -18,19 +18,20 @@ Fontes de direcao:
 - `docs/documentation/matriz-de-aderencia-mestre.md`
 - `documento_mestre_jarvis.md`
 
-Status desta versao do ciclo:
+Status desta versão do ciclo:
 
-- Sprint 1 concluida;
-- Sprint 2 e a proxima sprint ativa.
+- Sprint 1 concluída;
+- Sprint 2 concluída;
+- Sprint 3 é a próxima sprint ativa.
 
 ---
 
 ## 2. Regra de leitura
 
-Este documento e a fonte oficial do que entra em execucao agora para o proximo
+Este documento é a fonte oficial do que entra em execução agora para o próximo
 recorte do `v2`.
 
-Ele deve ser lido junto da matriz de aderencia para responder:
+Ele deve ser lido junto da matriz de aderência para responder:
 
 - qual eixo do mestre a sprint move;
 - qual lacuna dominante ela fecha;
@@ -89,10 +90,20 @@ Leitura correta dos eixos:
 
 ### 3.2 Regras operacionais de leitura
 
-- tecnologias de `dominios` devem responder como melhoram roteamento, corpus ativo ou especializacao subordinada;
-- tecnologias de `mentes` devem responder como melhoram composicao, arbitragem, contracts ou fluxo stateful;
-- tecnologias de `memorias` devem responder como melhoram classes de memoria, persistencia, recuperacao, compartilhamento ou promocao;
-- se uma tecnologia nao melhora nenhum desses eixos de forma verificavel, ela nao entra no backlog do ciclo.
+- tecnologias de `domínios` devem responder como melhoram roteamento, corpus ativo ou especialização subordinada;
+- tecnologias de `mentes` devem responder como melhoram composição, arbitragem, contracts ou fluxo stateful;
+- tecnologias de `memórias` devem responder como melhoram classes de memória, persistência, recuperação, compartilhamento ou promoção;
+- se uma tecnologia não melhora nenhum desses eixos de forma verificável, ela não entra no backlog do ciclo.
+
+### 3.3 Por que este ciclo vem antes da absorção ampla
+
+Este ciclo existe para fortalecer os eixos soberanos do JARVIS antes de qualquer absorção tecnológica mais agressiva.
+
+Leitura correta:
+
+- primeiro `domínios`, `memórias` e `mentes` precisam governar o runtime com gramática própria;
+- só depois a absorção de frameworks, repositórios, algoritmos ou camadas evolutivas pode acontecer sem dissolver a identidade do sistema;
+- a função do ciclo atual é preparar o núcleo para absorver valor arquitetural do ecossistema sem virar uma colagem de tecnologias externas.
 
 ---
 

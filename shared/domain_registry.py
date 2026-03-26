@@ -61,28 +61,30 @@ def _load_registries(
     return canonical, routes
 
 
-CANONICAL_DOMAIN_REGISTRY, RUNTIME_ROUTE_REGISTRY = _load_registries(_REGISTRY_PATH)
+def load_domain_registries(
+    path: Path | None = None,
+) -> tuple[dict[str, DomainEntry], dict[str, DomainEntry]]:
+    """Load canonical and runtime registries from the given path or the default."""
+
+    return _load_registries(path or _REGISTRY_PATH)
+
+
+CANONICAL_DOMAIN_REGISTRY, RUNTIME_ROUTE_REGISTRY = load_domain_registries()
 
 # Routes eligible for runtime activation (excludes canonical_only entries).
 RUNTIME_ELIGIBLE_ROUTES: frozenset[str] = frozenset(
-    name
-    for name, entry in RUNTIME_ROUTE_REGISTRY.items()
-    if entry.maturity != "canonical_only"
+    name for name, entry in RUNTIME_ROUTE_REGISTRY.items() if entry.maturity != "canonical_only"
 )
 
 # Routes where a shadow specialist is wired to a canonical domain.
 SHADOW_SPECIALIST_ROUTES: frozenset[str] = frozenset(
-    name
-    for name, entry in RUNTIME_ROUTE_REGISTRY.items()
-    if entry.maturity == "shadow_specialist"
+    name for name, entry in RUNTIME_ROUTE_REGISTRY.items() if entry.maturity == "shadow_specialist"
 )
 
 # Fallback route: last runtime route with maturity == "active_registry".
 # By convention, the most general/operational route is listed last in the JSON.
 _active_routes = [
-    name
-    for name, entry in RUNTIME_ROUTE_REGISTRY.items()
-    if entry.maturity == "active_registry"
+    name for name, entry in RUNTIME_ROUTE_REGISTRY.items() if entry.maturity == "active_registry"
 ]
 FALLBACK_RUNTIME_ROUTE: str = _active_routes[-1] if _active_routes else "productivity"
 

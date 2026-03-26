@@ -92,7 +92,7 @@ Ordem usada nesta auditoria:
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `identidade, missão, princípios e filosofia` | `2` a `8`, `26`, `231` | `runtime parcial` | `corrigir agora` | `orchestrator-service`, `planning-engine`, `synthesis-engine`, `governance-service` | a identidade está presente, mas ainda não é auditada como eixo próprio de aderência | transformar princípios identitários em critérios auditáveis de runtime e síntese | `v2`, com revisão transversal em todas as sprints |
 | `núcleo central e fluxo principal` | `9`, `27` a `30`, `35` a `38`, `49` | `runtime parcial` | `corrigir agora` | `orchestrator-service`, `planning-engine`, `cognitive-engine`, `langgraph_flow` | o fluxo central existe, mas a leitura do mestre ainda não governa explicitamente todos os recortes do backlog | manter o núcleo como eixo de cobrança e revisar cada sprint pela ótica do fluxo principal | `v2` contínuo |
-| `mentes` | `10`, `19`, `21`, `38`, `50` | `runtime parcial` | `corrigir agora` | `shared/mind_registry.py`, `engines/cognitive-engine`, `planning-engine` | o registry canônico existe, mas a arbitragem e a composição ainda não governam o runtime com profundidade suficiente | promover o registry de mentes para fonte soberana de composição, suporte preferencial e maturidade operacional | `v2`, após consolidação de `domínios` e `memórias` |
+| `mentes` | `10`, `19`, `21`, `38`, `50` | `runtime parcial` | `corrigir agora` | `shared/mind_registry.py`, `engines/cognitive-engine`, `planning-engine` | o registry canônico existe, mas a arbitragem e a composição ainda não governam o runtime com profundidade suficiente | promover o registry de mentes para fonte soberana de composição, suporte preferencial, arbitragem e maturidade operacional | `v2-alignment-cycle`, Sprint 3 |
 | `domínios` | `11`, `12`, `13`, `22`, `39`, `52`, `232` | `runtime parcial` | `corrigir agora` | `knowledge-service`, `knowledge/curated/v1_corpus.json`, `knowledge/curated/domain_registry.json`, `cognitive-engine`, `specialist-engine` | o mapa canônico já está no registry, mas o runtime ainda opera por subset e heurística local em parte do roteamento | tornar o registry a fonte soberana de roteamento, corpus ativo e shadow specialists por domínio | `v2`, Sprints 5 e 6 |
 | `memórias` | `14`, `23`, `40`, `51`, `83`, `232` | `runtime parcial` | `corrigir agora` | `shared/types`, `shared/memory_registry.py`, `memory-service`, `governance-service`, `orchestrator-service`, `specialist-engine` | as 11 classes já têm registry formal, mas poucas operam como políticas distintas de leitura, compartilhamento e promoção | transformar o registry de memórias em política operacional por classe e ampliar o runtime além de continuidade, missão e relacional | `v2`, Sprint 4 em diante |
 | `governança, segurança e autonomia` | `24`, `42`, `54`, `230` | `runtime parcial` | `corrigir agora` | `governance-service`, `observability-service`, `shared/contracts` | a governança é forte no recorte atual, mas ainda não cobre toda a amplitude formal do mestre | expandir a auditoria por tipo de decisão e por nível de autonomia | `v2`, transversal |
@@ -438,13 +438,15 @@ Próximo passo obrigatório:
 ### Definição canônica
 
 O mestre prevê autoevolução governada, comparativa, com memória evolutiva,
-promoção controlada, rollback e sandbox.
+promoção controlada, rollback, sandbox e capacidade de absorver tecnologias sem
+perder soberania.
 
 ### Evidência atual
 
 - `evolution-lab` já opera proposals e decisões `sandbox-only`;
 - `tools/evolution_from_pilot.py` converte sinais em proposals;
-- há comparação entre baseline e candidata.
+- há comparação entre baseline e candidata;
+- `docs/architecture/technology-study.md` já formaliza a leitura por função arquitetural e o fluxo de absorção tecnológica disciplinada.
 
 ### Julgamento
 
@@ -452,7 +454,8 @@ promoção controlada, rollback e sandbox.
 | --- | --- | --- |
 | sandbox evolutivo | `runtime parcial` | existe e já é útil |
 | promoção governada | `runtime parcial` | existe em nível de laboratório |
-| camada evolutiva plena | `deferido por fase` | o mestre projeta algo mais amplo do que o backlog atual |
+| memória evolutiva formal | `canônico apenas` | ainda não opera como camada explícita do runtime |
+| absorção tecnológica governada | `tipado/documentado` | a visão longa já está documentada, mas ainda não materializada como camada institucional |
 
 Classe final:
 
@@ -460,11 +463,13 @@ Classe final:
 
 Risco de desvio:
 
-- puxar autoevolução mais agressiva antes de consolidar aderência do núcleo ao mestre.
+- puxar autoevolução mais agressiva antes de consolidar aderência do núcleo ao mestre;
+- absorver tecnologia por hype, e não por função arquitetural, sandbox e evidência.
 
 Próximo passo obrigatório:
 
-- manter a evolução como apoio comparativo e não como prioridade principal do `v2`.
+- manter a evolução como apoio comparativo e não como prioridade principal do `v2`;
+- preparar, em fase futura, uma camada explícita de absorção tecnológica governada com radar, classificação arquitetural, memória evolutiva, sandbox e promoção por evidência.
 
 ## 5.11 Voz, realtime e superfícies
 

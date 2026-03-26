@@ -6,9 +6,18 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 
 ---
 
-## 2026-03-22
+## 2026-03-26
 
-## 2026-03-23
+### Sprint 2 do v2-alignment-cycle e documentação da visão longa
+
+- `shared/memory_registry.py` passou a ser tratado também na documentação como política operacional por classe, e não apenas como catálogo tipado;
+- `HANDOFF.md` passou a registrar a Sprint 2 do `v2-alignment-cycle` como concluída e a Sprint 3 como próxima frente ativa;
+- `HANDOFF.md` passou a explicitar a visão longa do JARVIS como sistema cognitivo soberano capaz de absorver o melhor do ecossistema sem terceirizar identidade, memória, governança ou síntese;
+- `HANDOFF.md` passou a distinguir `Hermes Agent` como referência principal de runtime persistente, memória viva e skills, e não como referência central do eixo de autoaperfeiçoamento;
+- `docs/architecture/technology-study.md` passou a explicitar o fluxo longo de absorção tecnológica governada: radar, classificação arquitetural, memória evolutiva, sandbox e promoção por evidência;
+- `docs/architecture/technology-study.md` passou a separar mais claramente as famílias de referência para runtime persistente, memória relacional e autoaperfeiçoamento;
+- `docs/implementation/v2-alignment-cycle.md` passou a registrar formalmente a Sprint 2 como concluída e a conectar o ciclo atual à preparação do núcleo para absorção tecnológica futura sem perda de soberania;
+- `docs/documentation/matriz-de-aderencia-mestre.md` passou a refletir o novo estado do eixo de memórias e a registrar a camada futura de absorção tecnológica governada como parte do horizonte evolutivo do sistema.
 
 ## 2026-03-24
 

@@ -1,4 +1,4 @@
-﻿# ruff: noqa: E501
+# ruff: noqa: E501
 """Structured local observability service."""
 
 from __future__ import annotations
@@ -255,19 +255,15 @@ class ObservabilityService:
         governance_decision = (
             str(governance_event.payload.get("decision")) if governance_event else None
         )
-        operation_status = (
-            str(operation_event.payload.get("status")) if operation_event else None
-        )
+        operation_status = str(operation_event.payload.get("status")) if operation_event else None
         continuity_action = (
             str(continuity_event.payload.get("continuity_action"))
-            if continuity_event
-            and continuity_event.payload.get("continuity_action") is not None
+            if continuity_event and continuity_event.payload.get("continuity_action") is not None
             else None
         )
         continuity_source = (
             str(continuity_event.payload.get("continuity_source"))
-            if continuity_event
-            and continuity_event.payload.get("continuity_source") is not None
+            if continuity_event and continuity_event.payload.get("continuity_source") is not None
             else None
         )
         continuity_target_mission_id = (
@@ -289,18 +285,12 @@ class ObservabilityService:
             else "baseline_linear"
         )
         registry_domains = (
-            [
-                str(item)
-                for item in domain_registry_event.payload.get("registry_domains", [])
-            ]
+            [str(item) for item in domain_registry_event.payload.get("registry_domains", [])]
             if domain_registry_event
             else []
         )
         shadow_specialists = (
-            [
-                str(item)
-                for item in specialist_shadow_event.payload.get("specialist_types", [])
-            ]
+            [str(item) for item in specialist_shadow_event.payload.get("specialist_types", [])]
             if specialist_shadow_event
             else []
         )
@@ -321,10 +311,7 @@ class ObservabilityService:
                 anomaly_flags.append("allowed_flow_missing_response")
             if "memory_recorded" not in event_names:
                 anomaly_flags.append("allowed_flow_missing_memory_record")
-            if (
-                "operation_dispatched" in event_names
-                and "operation_completed" not in event_names
-            ):
+            if "operation_dispatched" in event_names and "operation_completed" not in event_names:
                 anomaly_flags.append("operation_missing_completion")
         if governance_decision in {"block", "defer_for_validation"} and (
             "governance_blocked" not in event_names
@@ -527,8 +514,25 @@ class ObservabilityService:
         sharing_modes = shared_memory_event.payload.get("sharing_modes", {})
         if not sharing_modes:
             return "partial"
-        all_core_mediated = all(value == "core_mediated_read_only" for value in sharing_modes.values())
-        return "healthy" if all_core_mediated else "attention_required"
+        class_policies = shared_memory_event.payload.get("memory_class_policies", {})
+        if not class_policies:
+            return "partial"
+        for specialist_type, sharing_mode in sharing_modes.items():
+            if sharing_mode != "core_mediated_read_only":
+                return "attention_required"
+            policies = class_policies.get(specialist_type, {})
+            if not policies:
+                return "attention_required"
+            for policy in policies.values():
+                if not isinstance(policy, dict):
+                    return "attention_required"
+                if policy.get("specialist_shared") is not True:
+                    return "attention_required"
+                if policy.get("sharing_mode") != "core_mediated_read_only":
+                    return "attention_required"
+                if policy.get("write_policy") != "through_core_only":
+                    return "attention_required"
+        return "healthy"
 
     @staticmethod
     def _specialist_sovereignty_status(

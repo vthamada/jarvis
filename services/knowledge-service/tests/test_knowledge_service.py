@@ -4,6 +4,7 @@ from tempfile import gettempdir
 from uuid import uuid4
 
 from knowledge_service.service import KnowledgeService
+
 from shared.domain_registry import FALLBACK_RUNTIME_ROUTE
 
 
