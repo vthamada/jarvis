@@ -1,5 +1,8 @@
+﻿from pathlib import Path
+
 from tools.compare_orchestrator_paths import (
     compare_results,
+    resolve_output_dir,
     serialize_comparisons,
     summarize_comparisons,
 )
@@ -162,3 +165,9 @@ def test_summarize_comparisons_promotes_candidate_ready_gate() -> None:
     assert summary["decision"] == "candidate_ready_for_eval_gate"
     assert summary["candidate_runtime_coverage"] == 1.0
     assert summary["candidate_axis_gate_pass_rate"] == 1.0
+
+
+def test_resolve_output_dir_defaults_to_stable_alignment_artifact_path() -> None:
+    resolved = resolve_output_dir(None)
+
+    assert str(resolved).endswith(str(Path(".jarvis_runtime") / "path_comparison_v2"))

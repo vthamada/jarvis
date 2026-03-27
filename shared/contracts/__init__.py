@@ -150,8 +150,12 @@ class SpecialistSharedMemoryContextContract:
     continuity_mode: str
     shared_memory_brief: str
     write_policy: str
+    consumer_mode: str = "baseline_shared_context"
     source_mission_id: MissionId | None = None
     source_mission_goal: str | None = None
+    mission_context_brief: str | None = None
+    domain_context_brief: str | None = None
+    continuity_context_brief: str | None = None
     related_mission_ids: list[MissionId] = field(default_factory=list)
     memory_refs: list[str] = field(default_factory=list)
     memory_class_policies: dict[str, dict[str, object]] = field(default_factory=dict)

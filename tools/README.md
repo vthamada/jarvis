@@ -76,11 +76,9 @@ Para resumir as trilhas recentes do `internal pilot` a partir da observabilidade
 python tools/internal_pilot_report.py --limit 5
 ```
 
-Para comparar o baseline atual com o fluxo opcional de `LangGraph`:
+Para comparar o baseline atual com o fluxo opcional de `LangGraph`:`r`n`r`n```powershell`r`npython tools/compare_orchestrator_paths.py --profile development`r`n```
 
-```powershell
-python tools/compare_orchestrator_paths.py --profile development
-```
+O artefato default dessa comparação passa a ser persistido em `.jarvis_runtime/path_comparison_v2/`.
 
 Para transformar lacunas do piloto em proposals sandbox-only do `evolution-lab`:
 
@@ -124,3 +122,47 @@ Esse script gera artefatos em `.jarvis_runtime/specialization_cycle/`:
 
 - `cycle_closure.json`
 - `cycle_closure.md`
+
+
+Para consolidar o `v2-alignment-cycle` e abrir formalmente o próximo corte do `v2`:
+
+```powershell
+python tools/close_alignment_cycle.py --limit 20
+```
+
+Esse script gera artefatos em `.jarvis_runtime/v2_alignment_cycle/`:
+
+- `cycle_closure.json`
+- `cycle_closure.md`
+
+## Gate oficial de engenharia
+
+O gate mínimo oficial do repositório agora é:
+
+```powershell
+python tools/engineering_gate.py --mode standard
+```
+
+Esse gate executa:
+
+- `check_mojibake`
+- `ruff check .`
+- `pytest -q`
+
+Para uma rodada mais curta:
+
+```powershell
+python tools/engineering_gate.py --mode quick
+```
+
+Para uma rodada de liberação local:
+
+```powershell
+python tools/engineering_gate.py --mode release
+```
+
+Quando houver backend controlado disponível:
+
+```powershell
+python tools/engineering_gate.py --mode release --include-controlled
+```

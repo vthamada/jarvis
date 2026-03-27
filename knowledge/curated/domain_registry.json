@@ -351,48 +351,54 @@
       "display_name": "Runtime route: strategy",
       "domain_scope": "runtime_route",
       "activation_stage": "v2",
-      "maturity": "active_registry",
+      "maturity": "active_specialist",
       "canonical_refs": [
         "estrategia_e_pensamento_sistemico",
         "tomada_de_decisao_complexa"
       ],
-      "summary": "Rota ativa do v2 para sequenciamento, direção e framing estratégico."
+      "summary": "Rota can?nica de estrat?gia no v2, sempre subordinada ao n?cleo.",
+      "linked_specialist_type": "especialista_analise_estruturada",
+      "specialist_mode": "guided"
     },
     {
       "route_name": "analysis",
       "display_name": "Runtime route: analysis",
       "domain_scope": "runtime_route",
       "activation_stage": "v2",
-      "maturity": "active_registry",
+      "maturity": "active_specialist",
       "canonical_refs": [
         "dados_estatistica_e_inteligencia_analitica",
         "tomada_de_decisao_complexa"
       ],
-      "summary": "Rota ativa do v2 para comparação estruturada, trade-offs e implicações."
+      "summary": "Rota can?nica de an?lise estruturada no v2, sempre subordinada ao n?cleo.",
+      "linked_specialist_type": "especialista_analise_estruturada",
+      "specialist_mode": "guided"
     },
     {
       "route_name": "governance",
       "display_name": "Runtime route: governance",
       "domain_scope": "runtime_route",
       "activation_stage": "v2",
-      "maturity": "active_registry",
+      "maturity": "active_specialist",
       "canonical_refs": [
         "governanca_do_sistema",
         "defesa_seguranca_e_gestao_de_crises"
       ],
-      "summary": "Rota ativa do v2 para contenção normativa, risco, integridade e auditoria."
+      "summary": "Rota can?nica de governan?a no v2, sempre subordinada ao n?cleo.",
+      "linked_specialist_type": "especialista_revisao_governanca",
+      "specialist_mode": "guided"
     },
     {
       "route_name": "software_development",
       "display_name": "Runtime route: software_development",
       "domain_scope": "runtime_route",
       "activation_stage": "v2",
-      "maturity": "shadow_specialist",
+      "maturity": "active_specialist",
       "canonical_refs": [
         "computacao_e_desenvolvimento"
       ],
       "linked_specialist_type": "especialista_software_subordinado",
-      "specialist_mode": "shadow",
+      "specialist_mode": "guided",
       "summary": "Primeira rota canônica domínio->especialista do v2, sempre subordinada ao núcleo."
     },
     {
@@ -400,12 +406,14 @@
       "display_name": "Runtime route: operational_readiness",
       "domain_scope": "runtime_route",
       "activation_stage": "v2",
-      "maturity": "active_registry",
+      "maturity": "active_specialist",
       "canonical_refs": [
         "planejamento_e_coordenacao",
         "monitoramento_e_vigilancia_contextual"
       ],
-      "summary": "Rota ativa do v2 para readiness, rollback, smoke e critérios de go-live."
+      "summary": "Rota can?nica de readiness operacional no v2, sempre subordinada ao n?cleo.",
+      "linked_specialist_type": "especialista_planejamento_operacional",
+      "specialist_mode": "guided"
     },
     {
       "route_name": "observability",
@@ -436,12 +444,14 @@
       "display_name": "Runtime route: decision_risk",
       "domain_scope": "runtime_route",
       "activation_stage": "v2",
-      "maturity": "active_registry",
+      "maturity": "active_specialist",
       "canonical_refs": [
         "tomada_de_decisao_complexa",
         "defesa_seguranca_e_gestao_de_crises"
       ],
-      "summary": "Rota ativa do v2 para reversibilidade, impacto, incerteza e gates de decisão."
+      "summary": "Rota ativa do v2 para reversibilidade, impacto, incerteza e gates de decisão.",
+      "linked_specialist_type": "especialista_revisao_governanca",
+      "specialist_mode": "guided"
     },
     {
       "route_name": "pilot_operations",

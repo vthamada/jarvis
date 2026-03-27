@@ -193,7 +193,7 @@ def test_orchestrator_service_requests_clarification_without_operation() -> None
     assert "clarification_required" in [event.event_name for event in result.events]
 
 
-def test_orchestrator_service_tracks_domain_shadow_specialist_without_breaking_core() -> None:
+def test_orchestrator_service_tracks_promoted_domain_specialist_without_breaking_core() -> None:
     temp_dir = runtime_dir("orchestrator-shadow-domain")
     observability = ObservabilityService(database_path=str(temp_dir / "observability.db"))
     service = OrchestratorService(
@@ -220,24 +220,38 @@ def test_orchestrator_service_tracks_domain_shadow_specialist_without_breaking_c
     )
     event_names = [event.event_name for event in stored_events]
     assert "domain_registry_resolved" in event_names
-    assert "specialist_shadow_mode_completed" in event_names
+    assert "domain_specialist_completed" in event_names
     selection_event = next(
         event for event in stored_events if event.event_name == "specialist_selection_decided"
     )
-    assert "especialista_software_subordinado" in selection_event.payload["shadow_specialists"]
+    assert "especialista_software_subordinado" in selection_event.payload["domain_specialists"]
+    assert "especialista_software_subordinado" in selection_event.payload["guided_specialists"]
     assert (
         selection_event.payload["domain_links"]["especialista_software_subordinado"]
         == "software_development"
     )
-    shadow_event = next(
-        event for event in stored_events if event.event_name == "specialist_shadow_mode_completed"
+    domain_event = next(
+        event for event in stored_events if event.event_name == "domain_specialist_completed"
     )
-    assert shadow_event.payload["linked_domains"]["especialista_software_subordinado"] == (
+    assert domain_event.payload["linked_domains"]["especialista_software_subordinado"] == (
         "software_development"
     )
+    shared_memory_event = next(
+        event for event in stored_events if event.event_name == "specialist_shared_memory_linked"
+    )
+    assert (
+        shared_memory_event.payload["consumer_modes"]["especialista_software_subordinado"]
+        == "domain_guided_memory_packet"
+    )
+    specialist_briefs = shared_memory_event.payload["context_briefs"][
+        "especialista_software_subordinado"
+    ]
+    assert specialist_briefs["mission"]
+    assert specialist_briefs["domain"]
+    assert specialist_briefs["continuity"]
     assert any(
         invocation.specialist_type == "especialista_software_subordinado"
-        and invocation.selection_mode == "shadow"
+        and invocation.selection_mode == "guided"
         and invocation.linked_domain == "software_development"
         for invocation in result.specialist_invocations
     )
@@ -689,4 +703,250 @@ def test_orchestrator_service_tracks_manual_resolution_of_continuity_pause() -> 
     )
     assert resolved_event.payload["resolution_status"] == "approved"
     assert resolved_event.payload["resolved_by"] == "operator"
+
+
+
+
+def test_orchestrator_service_tracks_guided_analysis_domain_specialist() -> None:
+    temp_dir = runtime_dir("orchestrator-analysis-domain")
+    observability = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service = OrchestratorService(
+        governance_service=GovernanceService(),
+        memory_service=MemoryService(
+            database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+        ),
+        operational_service=OperationalService(artifact_dir=str(temp_dir / "artifacts")),
+        observability_service=observability,
+    )
+    result = service.handle_input(
+        InputContract(
+            request_id=RequestId("req-analysis-domain"),
+            session_id=SessionId("sess-analysis-domain"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Compare the rollout trade-offs and identify the dominant decision criterion.",
+            timestamp="2026-03-27T00:20:00Z",
+        )
+    )
+
+    stored_events = observability.list_recent_events(
+        ObservabilityQuery(request_id="req-analysis-domain", limit=60)
+    )
+    selection_event = next(
+        event for event in stored_events if event.event_name == "specialist_selection_decided"
+    )
+    assert "especialista_analise_estruturada" in selection_event.payload["domain_specialists"]
+    assert "especialista_analise_estruturada" in selection_event.payload["guided_specialists"]
+    assert selection_event.payload["domain_links"]["especialista_analise_estruturada"] == "analysis"
+    shared_memory_event = next(
+        event for event in stored_events if event.event_name == "specialist_shared_memory_linked"
+    )
+    assert (
+        shared_memory_event.payload["consumer_modes"]["especialista_analise_estruturada"]
+        == "domain_guided_memory_packet"
+    )
+    assert any(
+        invocation.specialist_type == "especialista_analise_estruturada"
+        and invocation.selection_mode == "guided"
+        and invocation.linked_domain == "analysis"
+        for invocation in result.specialist_invocations
+    )
+
+
+
+def test_orchestrator_service_tracks_guided_governance_domain_specialist() -> None:
+    temp_dir = runtime_dir("orchestrator-governance-domain")
+    observability = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service = OrchestratorService(
+        governance_service=GovernanceService(),
+        memory_service=MemoryService(
+            database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+        ),
+        operational_service=OperationalService(artifact_dir=str(temp_dir / "artifacts")),
+        observability_service=observability,
+    )
+    result = service.handle_input(
+        InputContract(
+            request_id=RequestId("req-governance-domain"),
+            session_id=SessionId("sess-governance-domain"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Analyze governance limits, audit needs and risk containment for the release.",
+            timestamp="2026-03-27T00:40:00Z",
+        )
+    )
+
+    stored_events = observability.list_recent_events(
+        ObservabilityQuery(request_id="req-governance-domain", limit=60)
+    )
+    selection_event = next(
+        event for event in stored_events if event.event_name == "specialist_selection_decided"
+    )
+    assert "especialista_revisao_governanca" in selection_event.payload["domain_specialists"]
+    assert "especialista_revisao_governanca" in selection_event.payload["guided_specialists"]
+    assert (
+        selection_event.payload["domain_links"]["especialista_revisao_governanca"]
+        == "governance"
+    )
+    shared_memory_event = next(
+        event for event in stored_events if event.event_name == "specialist_shared_memory_linked"
+    )
+    assert (
+        shared_memory_event.payload["consumer_modes"]["especialista_revisao_governanca"]
+        == "domain_guided_memory_packet"
+    )
+    assert any(
+        invocation.specialist_type == "especialista_revisao_governanca"
+        and invocation.selection_mode == "guided"
+        and invocation.linked_domain == "governance"
+        for invocation in result.specialist_invocations
+    )
+
+
+
+def test_orchestrator_service_tracks_guided_operational_readiness_specialist() -> None:
+    temp_dir = runtime_dir("orchestrator-readiness-domain")
+    observability = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service = OrchestratorService(
+        governance_service=GovernanceService(),
+        memory_service=MemoryService(
+            database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+        ),
+        operational_service=OperationalService(artifact_dir=str(temp_dir / "artifacts")),
+        observability_service=observability,
+    )
+    result = service.handle_input(
+        InputContract(
+            request_id=RequestId("req-readiness-domain"),
+            session_id=SessionId("sess-readiness-domain"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Plan the release readiness checks, checkpoints and rollback gates.",
+            timestamp="2026-03-27T01:00:00Z",
+        )
+    )
+
+    stored_events = observability.list_recent_events(
+        ObservabilityQuery(request_id="req-readiness-domain", limit=60)
+    )
+    selection_event = next(
+        event for event in stored_events if event.event_name == "specialist_selection_decided"
+    )
+    assert "especialista_planejamento_operacional" in selection_event.payload["domain_specialists"]
+    assert "especialista_planejamento_operacional" in selection_event.payload["guided_specialists"]
+    assert (
+        selection_event.payload["domain_links"]["especialista_planejamento_operacional"]
+        == "operational_readiness"
+    )
+    shared_memory_event = next(
+        event for event in stored_events if event.event_name == "specialist_shared_memory_linked"
+    )
+    assert (
+        shared_memory_event.payload["consumer_modes"]["especialista_planejamento_operacional"]
+        == "domain_guided_memory_packet"
+    )
+    assert any(
+        invocation.specialist_type == "especialista_planejamento_operacional"
+        and invocation.selection_mode == "guided"
+        and invocation.linked_domain == "operational_readiness"
+        for invocation in result.specialist_invocations
+    )
+
+
+
+def test_orchestrator_service_tracks_guided_strategy_specialist() -> None:
+    temp_dir = runtime_dir("orchestrator-strategy-domain")
+    observability = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service = OrchestratorService(
+        governance_service=GovernanceService(),
+        memory_service=MemoryService(
+            database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+        ),
+        operational_service=OperationalService(artifact_dir=str(temp_dir / "artifacts")),
+        observability_service=observability,
+    )
+    result = service.handle_input(
+        InputContract(
+            request_id=RequestId("req-strategy-domain"),
+            session_id=SessionId("sess-strategy-domain"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content=(
+                "Plan the strategic direction, compare options and define the dominant criterion."
+            ),
+            timestamp="2026-03-27T01:20:00Z",
+        )
+    )
+
+    stored_events = observability.list_recent_events(
+        ObservabilityQuery(request_id="req-strategy-domain", limit=60)
+    )
+    selection_event = next(
+        event for event in stored_events if event.event_name == "specialist_selection_decided"
+    )
+    assert "especialista_analise_estruturada" in selection_event.payload["domain_specialists"]
+    assert "especialista_analise_estruturada" in selection_event.payload["guided_specialists"]
+    assert selection_event.payload["domain_links"]["especialista_analise_estruturada"] == "strategy"
+    shared_memory_event = next(
+        event for event in stored_events if event.event_name == "specialist_shared_memory_linked"
+    )
+    assert (
+        shared_memory_event.payload["consumer_modes"]["especialista_analise_estruturada"]
+        == "domain_guided_memory_packet"
+    )
+    assert any(
+        invocation.specialist_type == "especialista_analise_estruturada"
+        and invocation.selection_mode == "guided"
+        and invocation.linked_domain == "strategy"
+        for invocation in result.specialist_invocations
+    )
+
+
+def test_orchestrator_service_tracks_guided_decision_risk_specialist() -> None:
+    temp_dir = runtime_dir("orchestrator-decision-risk-domain")
+    observability = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service = OrchestratorService(
+        governance_service=GovernanceService(),
+        memory_service=MemoryService(
+            database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+        ),
+        operational_service=OperationalService(artifact_dir=str(temp_dir / "artifacts")),
+        observability_service=observability,
+    )
+    result = service.handle_input(
+        InputContract(
+            request_id=RequestId("req-decision-risk-domain"),
+            session_id=SessionId("sess-decision-risk-domain"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Review decision risk, reversibility and the dominant containment gate.",
+            timestamp="2026-03-27T01:40:00Z",
+        )
+    )
+
+    stored_events = observability.list_recent_events(
+        ObservabilityQuery(request_id="req-decision-risk-domain", limit=60)
+    )
+    selection_event = next(
+        event for event in stored_events if event.event_name == "specialist_selection_decided"
+    )
+    assert "especialista_revisao_governanca" in selection_event.payload["domain_specialists"]
+    assert "especialista_revisao_governanca" in selection_event.payload["guided_specialists"]
+    assert (
+        selection_event.payload["domain_links"]["especialista_revisao_governanca"]
+        == "decision_risk"
+    )
+    shared_memory_event = next(
+        event for event in stored_events if event.event_name == "specialist_shared_memory_linked"
+    )
+    assert (
+        shared_memory_event.payload["consumer_modes"]["especialista_revisao_governanca"]
+        == "domain_guided_memory_packet"
+    )
+    assert any(
+        invocation.specialist_type == "especialista_revisao_governanca"
+        and invocation.selection_mode == "guided"
+        and invocation.linked_domain == "decision_risk"
+        for invocation in result.specialist_invocations
+    )
 

@@ -1,4 +1,4 @@
-﻿from cognitive_engine.engine import CognitiveEngine
+from cognitive_engine.engine import CognitiveEngine
 
 from shared.contracts import DomainSpecialistRouteContract
 from shared.domain_registry import FALLBACK_RUNTIME_ROUTE
@@ -73,3 +73,24 @@ def test_cognitive_engine_fallback_uses_registry_domain() -> None:
 
     assert snapshot.active_domains == [FALLBACK_RUNTIME_ROUTE]
 
+
+
+
+def test_cognitive_engine_deduplicates_guided_analysis_specialist_hint() -> None:
+    engine = CognitiveEngine()
+    snapshot = engine.build_snapshot(
+        intent="analysis",
+        risk_markers=[],
+        retrieved_domains=["analysis", "strategy"],
+        domain_specialist_routes=[
+            DomainSpecialistRouteContract(
+                domain_name="analysis",
+                specialist_type="especialista_analise_estruturada",
+                specialist_mode="guided",
+                routing_reason="rota canonica de analise estruturada em modo guiado",
+            )
+        ],
+    )
+
+    assert snapshot.specialist_hints[0] == "especialista_analise_estruturada"
+    assert snapshot.specialist_hints.count("especialista_analise_estruturada") == 1

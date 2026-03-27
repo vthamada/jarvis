@@ -25,7 +25,7 @@ Status desta versão do ciclo:
 - Sprint 3 concluída;
 - Sprint 4 concluída;
 - Sprint 5 concluída;
-- Sprint 6 é a próxima sprint ativa.
+- Sprint 6 concluída.
 
 ---
 
@@ -243,11 +243,18 @@ mestre, e nao apenas utilidade local.
 
 Status:
 
-- ativa
-- eixo principal do mestre: `implementacao, operacao, release e incidentes`
-- lacuna dominante a atacar: fechar o ciclo de alinhamento com decisao formal de continuidade
-- continua fora de cobertura: tudo o que permanecer corretamente deferido por fase
+- concluída
+- eixo principal do mestre: `implementação, operação, release e incidentes`
+- lacuna dominante fechada: ciclo encerrado com decisão formal de continuidade baseada em aderência por eixo
+- continua fora de cobertura: tudo o que permanece corretamente deferido para o próximo corte do `v2`
 
 ### Objetivo
 
-Fechar o ciclo de alinhamento do `v2` e decidir o que sobe para o proximo corte.
+Fechar o ciclo de alinhamento do `v2`, classificar o backlog imediato e abrir o próximo corte sem reabrir superfícies cedo demais.
+
+### Resultado registrado nesta rodada
+
+- `tools/close_alignment_cycle.py` passou a gerar o artefato formal de encerramento do `v2-alignment-cycle`, usando observabilidade, comparação local e backlog classificado por `next_cut`, `deferred` e `vision`;
+- `tools/compare_orchestrator_paths.py` passou a persistir seu artefato default em `.jarvis_runtime/path_comparison_v2/`, alinhando o fluxo real de comparação ao fechamento do ciclo;
+- o encerramento formal do ciclo passou a abrir explicitamente o próximo corte do `v2` com quatro frentes: especialistas de domínio além do shadow mode, consumidores canônicos de memória mais rica, absorção tecnológica governada em sandbox e promoção sempre subordinada a gates por eixo;
+- `computer use` amplo, voz oficial, `pgvector` como fundação obrigatória e autoevolução promotiva agressiva permanecem formalmente deferidos.

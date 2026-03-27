@@ -254,7 +254,11 @@ class CognitiveEngine:
             hints.append("especialista_analise_estruturada")
         if risk_markers or "governance" in domains or "normativos" in dominant_tension:
             hints.append("especialista_revisao_governanca")
-        return hints[:3]
+        unique_hints: list[str] = []
+        for hint in hints:
+            if hint not in unique_hints:
+                unique_hints.append(hint)
+        return unique_hints[:3]
 
     @staticmethod
     def _build_arbitration_summary(

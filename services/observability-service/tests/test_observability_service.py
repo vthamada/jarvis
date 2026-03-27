@@ -501,12 +501,13 @@ def test_observability_service_audits_domain_memory_and_sovereignty_alignment() 
             ),
             InternalEventEnvelope(
                 event_id="evt-s10",
-                event_name="specialist_shadow_mode_completed",
+                event_name="domain_specialist_completed",
                 timestamp="2026-03-18T00:00:09+00:00",
                 source_service="orchestrator-service",
                 payload={
                     "specialist_types": ["especialista_software_subordinado"],
                     "linked_domains": {"especialista_software_subordinado": "software_development"},
+                    "selection_modes": {"especialista_software_subordinado": "guided"},
                 },
                 request_id="req-specialist-align",
                 session_id="sess-specialist-align",
@@ -573,12 +574,15 @@ def test_observability_service_audits_domain_memory_and_sovereignty_alignment() 
         "dados_estatistica_e_inteligencia_analitica",
         "tomada_de_decisao_complexa",
     ]
-    assert audit.shadow_specialists == ["especialista_software_subordinado"]
+    assert audit.domain_specialists == ["especialista_software_subordinado"]
+    assert audit.shadow_specialists == []
     assert audit.domain_alignment_status == "healthy"
     assert audit.mind_alignment_status == "healthy"
     assert audit.identity_alignment_status == "healthy"
     assert audit.memory_alignment_status == "healthy"
     assert audit.specialist_sovereignty_status == "healthy"
+
+
 def test_langsmith_adapter_emits_trace_tree() -> None:
     calls: list[dict[str, object]] = []
 

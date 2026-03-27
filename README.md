@@ -184,3 +184,28 @@ python -m apps.jarvis_console chat --session-id demo --mission-id mission-demo
 ```
 
 O console é uma casca fina sobre o `orchestrator-service`. Web, voz e configuração plugável de LLM permanecem fora do escopo do `v1` e do primeiro ciclo do `pós-v1`.
+
+## Constituição de engenharia
+
+O repositório passa a ter uma política oficial de robustez e segurança em:
+
+- `docs/documentation/engineering-constitution.md`
+- `AGENTS.md`
+
+Esses arquivos definem o padrão obrigatório para:
+
+- contratos, testes, observabilidade e documentação;
+- promoção de capabilities;
+- comportamento esperado de qualquer agente implementador.
+
+Gate mínimo oficial:
+
+```powershell
+python tools/engineering_gate.py --mode standard
+```
+
+Gate de liberação local:
+
+```powershell
+python tools/engineering_gate.py --mode release
+```

@@ -418,6 +418,72 @@ def test_memory_service_prepares_core_mediated_shared_memory_for_specialists() -
     assert "memory://domain/strategy" in persisted.memory_refs
     assert persisted.memory_class_policies["mission"]["sharing_mode"] == "core_mediated_read_only"
     assert persisted.memory_class_policies["domain"]["domain_linked"] is True
+    assert persisted.consumer_mode == "baseline_shared_context"
+    assert persisted.mission_context_brief is not None
+    assert persisted.domain_context_brief is not None
+    assert persisted.continuity_context_brief is not None
+
+
+def test_memory_service_builds_guided_domain_memory_packet_for_promoted_specialist() -> None:
+    temp_dir = runtime_dir("memory-guided-domain")
+    service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
+    contract = InputContract(
+        request_id=RequestId("req-guided-memory-1"),
+        session_id=SessionId("sess-guided-memory"),
+        mission_id=MissionId("mission-guided-memory"),
+        channel=ChannelType.CHAT,
+        input_type=InputType.TEXT,
+        content="Analyze Python service rollout.",
+        timestamp="2026-03-27T00:00:00Z",
+    )
+    service.record_turn(
+        contract,
+        intent="analysis",
+        response_text="Initial software analysis stored.",
+        deliberative_plan=DeliberativePlanContract(
+            plan_summary="avaliar rollout do servico Python com contratos estaveis",
+            goal="Review Python service rollout",
+            steps=["mapear contratos", "comparar mudanca", "recomendar"],
+            active_domains=["software_development", "analysis"],
+            active_minds=["mente_analitica"],
+            constraints=["through_core_only"],
+            risks=[],
+            recommended_task_type="produce_analysis_brief",
+            requires_human_validation=False,
+            rationale="contexto=software",
+            specialist_hints=["especialista_software_subordinado"],
+            continuity_action="continuar",
+            open_loops=["comparar mudanca no servico"],
+        ),
+        governance_decision=PermissionDecision.ALLOW_WITH_CONDITIONS,
+    )
+
+    contexts = service.prepare_specialist_shared_memory(
+        session_id="sess-guided-memory",
+        specialist_hints=["especialista_software_subordinado"],
+        active_domains=["software_development", "analysis"],
+        mission_id="mission-guided-memory",
+        continuity_context=None,
+    )
+
+    guided = contexts["especialista_software_subordinado"]
+    assert guided.consumer_mode == "domain_guided_memory_packet"
+    assert guided.mission_context_brief is not None
+    assert "goal=Analyze Python service rollout." in guided.mission_context_brief
+    assert guided.domain_context_brief is not None
+    assert "active_domains=software_development,analysis" in guided.domain_context_brief
+    assert guided.continuity_context_brief is not None
+    assert "continuity_mode=continuar" in guided.continuity_context_brief
+
+    persisted = service.get_specialist_shared_memory(
+        session_id="sess-guided-memory",
+        specialist_type="especialista_software_subordinado",
+    )
+    assert persisted is not None
+    assert persisted.consumer_mode == "domain_guided_memory_packet"
+    assert persisted.mission_context_brief == guided.mission_context_brief
+    assert persisted.domain_context_brief == guided.domain_context_brief
+    assert persisted.continuity_context_brief == guided.continuity_context_brief
 
 
 def test_memory_service_persists_session_continuity_for_governed_reformulation() -> None:
@@ -693,3 +759,254 @@ def test_memory_service_preserves_accepted_mission_state_on_defer_and_block() ->
     assert mission_state.last_recommendation == accepted_plan.plan_summary
     assert mission_state.open_loops == ["fechar checkpoint principal"]
     assert mission_state.last_decision_frame == "planning"
+
+
+
+def test_memory_service_builds_guided_domain_memory_packet_for_analysis_specialist() -> None:
+    temp_dir = runtime_dir("memory-guided-analysis")
+    service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
+    contract = InputContract(
+        request_id=RequestId("req-guided-analysis-1"),
+        session_id=SessionId("sess-guided-analysis"),
+        mission_id=MissionId("mission-guided-analysis"),
+        channel=ChannelType.CHAT,
+        input_type=InputType.TEXT,
+        content="Compare evidence for the rollout decision.",
+        timestamp="2026-03-27T00:10:00Z",
+    )
+    service.record_turn(
+        contract,
+        intent="analysis",
+        response_text="Initial structured analysis stored.",
+        deliberative_plan=DeliberativePlanContract(
+            plan_summary="comparar evidencias e trade-offs do rollout",
+            goal="Compare rollout evidence",
+            steps=["coletar evidencias", "comparar trade-offs", "recomendar criterio"],
+            active_domains=["analysis", "decision_risk"],
+            active_minds=["mente_analitica"],
+            constraints=["through_core_only"],
+            risks=[],
+            recommended_task_type="produce_analysis_brief",
+            requires_human_validation=False,
+            rationale="contexto=analysis",
+            specialist_hints=["especialista_analise_estruturada"],
+            continuity_action="continuar",
+            open_loops=["consolidar criterio dominante"],
+        ),
+        governance_decision=PermissionDecision.ALLOW_WITH_CONDITIONS,
+    )
+
+    contexts = service.prepare_specialist_shared_memory(
+        session_id="sess-guided-analysis",
+        specialist_hints=["especialista_analise_estruturada"],
+        active_domains=["analysis", "decision_risk"],
+        mission_id="mission-guided-analysis",
+        continuity_context=None,
+    )
+
+    guided = contexts["especialista_analise_estruturada"]
+    assert guided.consumer_mode == "domain_guided_memory_packet"
+    assert guided.domain_context_brief is not None
+    assert "active_domains=analysis,decision_risk" in guided.domain_context_brief
+    persisted = service.get_specialist_shared_memory(
+        session_id="sess-guided-analysis",
+        specialist_type="especialista_analise_estruturada",
+    )
+    assert persisted is not None
+    assert persisted.consumer_mode == "domain_guided_memory_packet"
+
+
+
+def test_memory_service_builds_guided_domain_memory_packet_for_governance_specialist() -> None:
+    temp_dir = runtime_dir("memory-guided-governance")
+    service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
+    contract = InputContract(
+        request_id=RequestId("req-guided-governance-1"),
+        session_id=SessionId("sess-guided-governance"),
+        mission_id=MissionId("mission-guided-governance"),
+        channel=ChannelType.CHAT,
+        input_type=InputType.TEXT,
+        content="Review governance limits for the rollout.",
+        timestamp="2026-03-27T00:30:00Z",
+    )
+    service.record_turn(
+        contract,
+        intent="analysis",
+        response_text="Initial governance analysis stored.",
+        deliberative_plan=DeliberativePlanContract(
+            plan_summary="avaliar limites de governanca do rollout",
+            goal="Review governance limits",
+            steps=["mapear riscos", "comparar limites", "recomendar conten??o"],
+            active_domains=["governance", "decision_risk"],
+            active_minds=["mente_etica"],
+            constraints=["through_core_only"],
+            risks=["governance_risk"],
+            recommended_task_type="produce_analysis_brief",
+            requires_human_validation=True,
+            rationale="contexto=governance",
+            specialist_hints=["especialista_revisao_governanca"],
+            continuity_action="continuar",
+            open_loops=["validar limite dominante"],
+        ),
+        governance_decision=PermissionDecision.ALLOW_WITH_CONDITIONS,
+    )
+
+    contexts = service.prepare_specialist_shared_memory(
+        session_id="sess-guided-governance",
+        specialist_hints=["especialista_revisao_governanca"],
+        active_domains=["governance", "decision_risk"],
+        mission_id="mission-guided-governance",
+        continuity_context=None,
+    )
+
+    guided = contexts["especialista_revisao_governanca"]
+    assert guided.consumer_mode == "domain_guided_memory_packet"
+    assert guided.domain_context_brief is not None
+    assert "active_domains=governance,decision_risk" in guided.domain_context_brief
+
+
+
+def test_memory_service_builds_guided_packet_for_readiness_specialist() -> None:
+    temp_dir = runtime_dir("memory-guided-readiness")
+    service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
+    contract = InputContract(
+        request_id=RequestId("req-guided-readiness-1"),
+        session_id=SessionId("sess-guided-readiness"),
+        mission_id=MissionId("mission-guided-readiness"),
+        channel=ChannelType.CHAT,
+        input_type=InputType.TEXT,
+        content="Plan readiness checks for the release.",
+        timestamp="2026-03-27T00:50:00Z",
+    )
+    service.record_turn(
+        contract,
+        intent="planning",
+        response_text="Initial readiness planning stored.",
+        deliberative_plan=DeliberativePlanContract(
+            plan_summary="estruturar readiness checks do release",
+            goal="Plan readiness checks",
+            steps=["mapear readiness", "definir checkpoints", "sugerir rollback"],
+            active_domains=["operational_readiness", "observability"],
+            active_minds=["mente_executiva"],
+            constraints=["through_core_only"],
+            risks=[],
+            recommended_task_type="draft_plan",
+            requires_human_validation=False,
+            rationale="contexto=readiness",
+            specialist_hints=["especialista_planejamento_operacional"],
+            continuity_action="continuar",
+            open_loops=["fechar checkpoint de readiness"],
+        ),
+        governance_decision=PermissionDecision.ALLOW_WITH_CONDITIONS,
+    )
+
+    contexts = service.prepare_specialist_shared_memory(
+        session_id="sess-guided-readiness",
+        specialist_hints=["especialista_planejamento_operacional"],
+        active_domains=["operational_readiness", "observability"],
+        mission_id="mission-guided-readiness",
+        continuity_context=None,
+    )
+
+    guided = contexts["especialista_planejamento_operacional"]
+    assert guided.consumer_mode == "domain_guided_memory_packet"
+    assert guided.domain_context_brief is not None
+    assert "active_domains=operational_readiness,observability" in guided.domain_context_brief
+
+
+
+def test_memory_service_builds_guided_packet_for_strategy_specialist() -> None:
+    temp_dir = runtime_dir("memory-guided-strategy")
+    service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
+    contract = InputContract(
+        request_id=RequestId("req-guided-strategy-1"),
+        session_id=SessionId("sess-guided-strategy"),
+        mission_id=MissionId("mission-guided-strategy"),
+        channel=ChannelType.CHAT,
+        input_type=InputType.TEXT,
+        content="Plan strategic options for the next release.",
+        timestamp="2026-03-27T01:10:00Z",
+    )
+    service.record_turn(
+        contract,
+        intent="planning",
+        response_text="Initial strategy planning stored.",
+        deliberative_plan=DeliberativePlanContract(
+            plan_summary="comparar direcoes estrategicas do release",
+            goal="Plan strategic options",
+            steps=["mapear opcoes", "comparar trade-offs", "recomendar criterio"],
+            active_domains=["strategy", "decision_risk"],
+            active_minds=["mente_decisoria"],
+            constraints=["through_core_only"],
+            risks=[],
+            recommended_task_type="draft_plan",
+            requires_human_validation=False,
+            rationale="contexto=strategy",
+            specialist_hints=["especialista_analise_estruturada"],
+            continuity_action="continuar",
+            open_loops=["fechar criterio estrategico dominante"],
+        ),
+        governance_decision=PermissionDecision.ALLOW_WITH_CONDITIONS,
+    )
+
+    contexts = service.prepare_specialist_shared_memory(
+        session_id="sess-guided-strategy",
+        specialist_hints=["especialista_analise_estruturada"],
+        active_domains=["strategy", "decision_risk"],
+        mission_id="mission-guided-strategy",
+        continuity_context=None,
+    )
+
+    guided = contexts["especialista_analise_estruturada"]
+    assert guided.consumer_mode == "domain_guided_memory_packet"
+    assert guided.domain_context_brief is not None
+    assert "active_domains=strategy,decision_risk" in guided.domain_context_brief
+
+
+def test_memory_service_builds_guided_packet_for_decision_risk_specialist() -> None:
+    temp_dir = runtime_dir("memory-guided-decision-risk")
+    service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
+    contract = InputContract(
+        request_id=RequestId("req-guided-decision-risk-1"),
+        session_id=SessionId("sess-guided-decision-risk"),
+        mission_id=MissionId("mission-guided-decision-risk"),
+        channel=ChannelType.CHAT,
+        input_type=InputType.TEXT,
+        content="Review decision risk and containment gates for the release.",
+        timestamp="2026-03-27T01:30:00Z",
+    )
+    service.record_turn(
+        contract,
+        intent="analysis",
+        response_text="Initial decision risk analysis stored.",
+        deliberative_plan=DeliberativePlanContract(
+            plan_summary="avaliar reversibilidade e gate dominante da decisao",
+            goal="Review decision risk",
+            steps=["mapear risco", "comparar reversibilidade", "recomendar gate dominante"],
+            active_domains=["decision_risk", "governance"],
+            active_minds=["mente_etica"],
+            constraints=["through_core_only"],
+            risks=["decision_risk"],
+            recommended_task_type="produce_analysis_brief",
+            requires_human_validation=True,
+            rationale="contexto=decision_risk",
+            specialist_hints=["especialista_revisao_governanca"],
+            continuity_action="continuar",
+            open_loops=["fechar gate dominante de decisao"],
+        ),
+        governance_decision=PermissionDecision.ALLOW_WITH_CONDITIONS,
+    )
+
+    contexts = service.prepare_specialist_shared_memory(
+        session_id="sess-guided-decision-risk",
+        specialist_hints=["especialista_revisao_governanca"],
+        active_domains=["decision_risk", "governance"],
+        mission_id="mission-guided-decision-risk",
+        continuity_context=None,
+    )
+
+    guided = contexts["especialista_revisao_governanca"]
+    assert guided.consumer_mode == "domain_guided_memory_packet"
+    assert guided.domain_context_brief is not None
+    assert "active_domains=decision_risk,governance" in guided.domain_context_brief
+

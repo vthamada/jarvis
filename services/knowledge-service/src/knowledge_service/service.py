@@ -135,8 +135,8 @@ class KnowledgeService:
                 return 1.4
             return 0.4
         if intent == "analysis":
-            if maturity == "shadow_specialist":
-                return 1.6
+            if maturity in {"shadow_specialist", "active_specialist"}:
+                return 1.7 if maturity == "active_specialist" else 1.6
             if "primary" in scopes:
                 return 1.3
             if "operational" in scopes:

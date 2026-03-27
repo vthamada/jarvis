@@ -597,10 +597,21 @@ class OrchestratorService:
                         for item in handoff_plan.selections
                         if item.linked_domain
                     },
+                    "domain_specialists": [
+                        item.specialist_type
+                        for item in handoff_plan.selections
+                        if item.linked_domain and item.selection_status == "selected"
+                    ],
                     "shadow_specialists": [
                         item.specialist_type
                         for item in handoff_plan.selections
                         if item.selection_mode == "shadow" and item.selection_status == "selected"
+                    ],
+                    "guided_specialists": [
+                        item.specialist_type
+                        for item in handoff_plan.selections
+                        if item.selection_mode in {"guided", "active"}
+                        and item.selection_status == "selected"
                     ],
                     "requires_governance_review": [
                         item.specialist_type
@@ -650,15 +661,53 @@ class OrchestratorService:
                             else 0
                             for item in handoff_plan.invocations
                         },
+                        "consumer_modes": {
+                            item.specialist_type: (
+                                item.shared_memory_context.consumer_mode
+                                if item.shared_memory_context
+                                else None
+                            )
+                            for item in handoff_plan.invocations
+                        },
+                        "context_briefs": {
+                            item.specialist_type: {
+                                "mission": (
+                                    item.shared_memory_context.mission_context_brief
+                                    if item.shared_memory_context
+                                    else None
+                                ),
+                                "domain": (
+                                    item.shared_memory_context.domain_context_brief
+                                    if item.shared_memory_context
+                                    else None
+                                ),
+                                "continuity": (
+                                    item.shared_memory_context.continuity_context_brief
+                                    if item.shared_memory_context
+                                    else None
+                                ),
+                            }
+                            for item in handoff_plan.invocations
+                        },
                         "linked_domains": {
                             item.specialist_type: item.linked_domain
                             for item in handoff_plan.invocations
                             if item.linked_domain
                         },
+                        "domain_specialists": [
+                            item.specialist_type
+                            for item in handoff_plan.invocations
+                            if item.linked_domain
+                        ],
                         "shadow_specialists": [
                             item.specialist_type
                             for item in handoff_plan.invocations
                             if item.selection_mode == "shadow"
+                        ],
+                        "guided_specialists": [
+                            item.specialist_type
+                            for item in handoff_plan.invocations
+                            if item.selection_mode in {"guided", "active"}
                         ],
                     },
                 )
@@ -776,16 +825,31 @@ class OrchestratorService:
                         "invocation_ids": [
                             item.invocation_id for item in specialist_review.invocations
                         ],
+                        "domain_specialists": [
+                            item.specialist_type
+                            for item in specialist_review.invocations
+                            if item.linked_domain
+                        ],
                         "shadow_specialists": [
                             item.specialist_type
                             for item in specialist_review.invocations
                             if item.selection_mode == "shadow"
+                        ],
+                        "guided_specialists": [
+                            item.specialist_type
+                            for item in specialist_review.invocations
+                            if item.selection_mode in {"guided", "active"}
                         ],
                         "boundary_summary": specialist_review.boundary_summary,
                     },
                 )
             )
         if specialist_review.contributions:
+            domain_invocation_index = {
+                item.invocation_id: item
+                for item in specialist_review.invocations
+                if item.linked_domain and item.invocation_id is not None
+            }
             shadow_invocation_ids = {
                 item.invocation_id
                 for item in specialist_review.invocations
@@ -795,6 +859,11 @@ class OrchestratorService:
                 item
                 for item in specialist_review.contributions
                 if item.invocation_id in shadow_invocation_ids
+            ]
+            domain_contributions = [
+                item
+                for item in specialist_review.contributions
+                if item.invocation_id in domain_invocation_index
             ]
             live_contributions = [
                 item
@@ -821,6 +890,27 @@ class OrchestratorService:
                     },
                 )
             )
+            if domain_contributions:
+                updated_events.append(
+                    self.make_event(
+                        "domain_specialist_completed",
+                        contract,
+                        {
+                            "specialist_types": [
+                                item.specialist_type for item in domain_contributions
+                            ],
+                            "invocation_ids": [item.invocation_id for item in domain_contributions],
+                            "linked_domains": {
+                                invocation.specialist_type: invocation.linked_domain
+                                for invocation in domain_invocation_index.values()
+                            },
+                            "selection_modes": {
+                                invocation.specialist_type: invocation.selection_mode
+                                for invocation in domain_invocation_index.values()
+                            },
+                        },
+                    )
+                )
             if shadow_contributions:
                 updated_events.append(
                     self.make_event(

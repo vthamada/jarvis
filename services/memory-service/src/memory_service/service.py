@@ -30,6 +30,7 @@ from shared.contracts import (
     SpecialistContributionContract,
     SpecialistSharedMemoryContextContract,
 )
+from shared.domain_registry import resolve_route
 from shared.memory_registry import (
     DEFAULT_MEMORY_SCOPES,
     SHARED_MEMORY_CLASSES,
@@ -368,6 +369,10 @@ class MemoryService:
                     if context.source_mission_id
                     else None,
                     source_mission_goal=context.source_mission_goal,
+                    consumer_mode=context.consumer_mode,
+                    mission_context_brief=context.mission_context_brief,
+                    domain_context_brief=context.domain_context_brief,
+                    continuity_context_brief=context.continuity_context_brief,
                     related_mission_ids=[str(item) for item in context.related_mission_ids],
                     memory_refs=list(context.memory_refs),
                     memory_class_policies=dict(context.memory_class_policies),
@@ -617,11 +622,45 @@ class MemoryService:
         )
         source_focus = ", ".join(semantic_focus[:3]) or "sem foco consolidado"
         open_loop_summary = "; ".join(open_loops[:2]) or "sem loop aberto dominante"
+        dominant_recommendation = (
+            mission_state.last_recommendation
+            if mission_state and mission_state.last_recommendation
+            else "sem recomendacao dominante"
+        )
+        mission_context_brief = (
+            f"goal={source_goal or 'sessao sem missao ancorada'} | "
+            f"related={related_summary} | "
+            f"recommendation={dominant_recommendation}"
+        )
+        domain_context_brief = (
+            f"active_domains={','.join(active_domains[:3]) or 'nenhum'} | "
+            f"semantic_focus={source_focus} | "
+            f"memory_refs={','.join(memory_refs[:4])}"
+        )
+        continuity_context_brief = (
+            f"continuity_mode={continuity_mode} | open_loops={open_loop_summary} | "
+            f"source_mission_id={source_mission_id or 'none'}"
+        )
         shared_memory_brief = (
             f"specialist={specialist_type} continuidade={continuity_mode} "
             f"fonte={source_goal or 'sessao sem missao ancorada'} "
             f"relacoes={related_summary} foco={source_focus} "
             f"open_loops={open_loop_summary}"
+        )
+        promoted_route = next(
+            (
+                route
+                for domain_name in active_domains
+                if (route := resolve_route(domain_name)) is not None
+                and route.linked_specialist_type == specialist_type
+                and route.specialist_mode in {"guided", "active"}
+            ),
+            None,
+        )
+        consumer_mode = (
+            "domain_guided_memory_packet"
+            if promoted_route is not None
+            else "baseline_shared_context"
         )
         return SpecialistSharedMemoryContextContract(
             specialist_type=specialist_type,
@@ -629,8 +668,12 @@ class MemoryService:
             continuity_mode=continuity_mode,
             shared_memory_brief=shared_memory_brief,
             write_policy="through_core_only",
+            consumer_mode=consumer_mode,
             source_mission_id=source_mission_id,
             source_mission_goal=source_goal,
+            mission_context_brief=mission_context_brief,
+            domain_context_brief=domain_context_brief,
+            continuity_context_brief=continuity_context_brief,
             related_mission_ids=related_mission_ids,
             memory_refs=memory_refs,
             memory_class_policies=memory_class_policies,

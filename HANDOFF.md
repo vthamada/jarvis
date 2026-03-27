@@ -2,15 +2,27 @@
 
 ## Metadata
 
-- Atualizado em: 2026-03-26
+- Atualizado em: 2026-03-27
 - Branch: `main`
-- Commit de referência: `5e8bbf9`
+- Commit de referência: `e0e8ac5`
 - Artefato canônico do projeto: `documento_mestre_jarvis.md`
-- Estado do projeto: `v1` encerrado e congelado para uso controlado; primeiro ciclo do `pós-v1` encerrado; primeiro ciclo do `v1.5` encerrado; primeiro corte do `v2` encerrado; ciclo de alinhamento do `v2` aberto
+- Estado do projeto: `v1` encerrado e congelado para uso controlado; primeiro ciclo do `pós-v1` encerrado; primeiro ciclo do `v1.5` encerrado; primeiro corte do `v2` encerrado; `v2-alignment-cycle` encerrado; próximo corte do `v2` aberto
+
+## Atualização do próximo corte do v2
+
+A primeira implementação do próximo corte do `v2` já foi aberta.
+
+Leitura operacional correta desta rodada:
+
+- as rotas `software_development`, `analysis`, `governance`, `operational_readiness`, `strategy` e `decision_risk` já operam em modo `guided`, ainda subordinadas ao núcleo;
+- `specialist-engine` agora aceita rotas canônicas de especialista acima de `shadow`, desde que continuem `through_core_only` e `advisory_only`, e passou a validar se o vínculo domínio->especialista realmente bate com o registry soberano;
+- `memory-service` já gera `domain_guided_memory_packet` de forma genérica para rotas promovidas do registry;
+- `orchestrator-service` passou a emitir `domain_specialist_completed`, além dos sinais legados de `shadow` quando eles existirem;
+- `observability-service` passou a auditar alinhamento de domínio por convocação canônica de especialista, não apenas por `shadow mode`.
 
 ## Meta atual
 
-Concluir o `v2-alignment-cycle` com `domínios`, `memórias`, `mentes` e `identidade auditável` já materializados no runtime principal, usando a Sprint 6 para fechar formalmente o ciclo com aderência por eixo já endurecida em observabilidade, evals e comparação.
+Abrir o próximo corte do `v2` sobre um runtime já alinhado aos eixos do Documento-Mestre, mantendo aderência por eixo como gate fixo de promoção e evitando ampliar superfícies cedo demais.
 
 Sistema oficial de planejamento desta fase:
 
@@ -43,7 +55,8 @@ Estado do ciclo rolante:
 - Sprint 3 do `v2-alignment-cycle` concluída;
 - Sprint 4 do `v2-alignment-cycle` concluída;
 - Sprint 5 do `v2-alignment-cycle` concluída;
-- Sprint 6 do `v2-alignment-cycle` é a próxima frente ativa.
+- Sprint 6 do `v2-alignment-cycle` concluída;
+- o próximo corte do `v2` está formalmente aberto;
 
 ## Decisões fechadas
 
@@ -91,7 +104,7 @@ Hoje o repositório contém:
 - `shared/mind_registry.py` como registry formal das 24 mentes canônicas, com suporte preferencial inicial no `cognitive-engine`;
 - `observability-service` com trilha persistida, auditoria de fluxo e espelhamento agentic complementar;
 - `evolution-lab` persistindo proposals e decisões `sandbox-only`;
-- `tools/validate_baseline.py`, `tools/go_live_internal_checklist.py`, `tools/run_internal_pilot.py`, `tools/compare_orchestrator_paths.py`, `tools/evolution_from_pilot.py` e `tools/close_stateful_runtime_cycle.py` operacionais;
+- `tools/validate_baseline.py`, `tools/go_live_internal_checklist.py`, `tools/run_internal_pilot.py`, `tools/compare_orchestrator_paths.py`, `tools/evolution_from_pilot.py`, `tools/close_stateful_runtime_cycle.py` e `tools/close_alignment_cycle.py` operacionais;
 - estudo tecnológico consolidado em `docs/architecture/technology-study.md`;
 - sistema documental em duas camadas ativas para programa e sprint cycle.
 
@@ -232,3 +245,23 @@ Regra de disciplina:
 - estudo externo não bloqueia a implementação principal;
 - nenhuma tecnologia externa vira dependência central sem decisão arquitetural formal;
 - toda absorção deve ser reversível, traduzida para os contratos do JARVIS e compatível com a soberania do núcleo.
+
+## Política oficial de engenharia
+
+A partir desta rodada, a referência oficial de boas práticas do repositório passa a ser:
+
+- `docs/documentation/engineering-constitution.md`
+- `AGENTS.md`
+- `tools/engineering_gate.py`
+
+Leitura correta:
+
+- robustez, segurança, reversibilidade e auditabilidade deixam de ser só intenção e passam a ser política explícita;
+- toda mudança relevante deve passar por contrato, teste, observabilidade e documentação;
+- qualquer agente implementador deve seguir `AGENTS.md` e rodar o gate adequado antes de tratar a rodada como fechada.
+
+Gate mínimo oficial:
+
+```powershell
+python tools/engineering_gate.py --mode standard
+```

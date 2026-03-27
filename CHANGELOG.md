@@ -6,6 +6,45 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 
 ---
 
+## 2026-03-27
+
+### Próximo corte do v2
+
+- `knowledge/curated/domain_registry.json` passou a promover também a rota `analysis`, agora ligada canonicamente a `especialista_analise_estruturada` em modo `guided`;
+- `knowledge-service` passou a priorizar rotas `active_specialist` também no recorte de `analysis`, tornando a rota promovida visível no retrieval do runtime;
+- `cognitive-engine` passou a deduplicar `specialist_hints` quando uma rota de domínio promovida coincide com a heurística geral do núcleo;
+- `memory-service` passou a gerar `domain_guided_memory_packet` de forma genérica para qualquer rota promovida no registry, e não só para `software_development`;
+- `specialist-engine` e `orchestrator-service` passaram a tratar `especialista_analise_estruturada` como rota guiada de domínio quando `analysis` estiver ativo;
+- novos testes foram adicionados em `knowledge-service`, `cognitive-engine`, `memory-service`, `specialist-engine` e `orchestrator-service` para cobrir a promoção canônica de `analysis`.
+- `knowledge/curated/domain_registry.json` passou a promover também a rota `governance`, agora ligada canonicamente a `especialista_revisao_governanca` em modo `guided`;
+- `specialist-engine` passou a tratar `especialista_revisao_governanca` como contribuição guiada por domínio quando `governance` estiver ativo;
+- novos testes foram adicionados em `knowledge-service`, `memory-service`, `specialist-engine` e `orchestrator-service` para cobrir a promoção canônica de `governance`.
+- `knowledge/curated/domain_registry.json` passou a promover também a rota `operational_readiness`, agora ligada canonicamente a `especialista_planejamento_operacional` em modo `guided`;
+- `specialist-engine` passou a tratar `especialista_planejamento_operacional` como contribuição guiada por domínio quando `operational_readiness` estiver ativo;
+- novos testes foram adicionados em `knowledge-service`, `memory-service`, `specialist-engine` e `orchestrator-service` para cobrir a promoção canônica de `operational_readiness`.
+- `knowledge/curated/domain_registry.json` passou a promover também a rota `strategy`, agora ligada canonicamente a `especialista_analise_estruturada` em modo `guided`;
+- `specialist-engine` passou a tratar `especialista_analise_estruturada` como contribuição guiada por domínio quando `strategy` estiver ativo;
+- `specialist-engine` também endureceu a seleção para aceitar apenas vínculos domínio->especialista que coincidam com o registry soberano, evitando handoffs inconsistentes;
+- novos testes foram adicionados em `knowledge-service`, `memory-service`, `specialist-engine` e `orchestrator-service` para cobrir a promoção canônica de `strategy` e a validação canônica da seleção.
+- `knowledge/curated/domain_registry.json` passou a promover também a rota `decision_risk`, agora ligada canonicamente a `especialista_revisao_governanca` em modo `guided`;
+- `specialist-engine` e `orchestrator-service` passaram a tratar `especialista_revisao_governanca` como rota guiada de domínio também quando `decision_risk` estiver ativo;
+- novos testes foram adicionados em `knowledge-service`, `memory-service`, `specialist-engine` e `orchestrator-service` para cobrir a promoção canônica de `decision_risk`.
+
+### Constituição de engenharia e gate oficial
+
+- criada `docs/documentation/engineering-constitution.md` como política oficial de robustez, segurança, reversibilidade e auditabilidade do repositório;
+- criado `AGENTS.md` no root para fixar o comportamento obrigatório de qualquer agente implementador;
+- criado `tools/engineering_gate.py` como gate oficial do repositório, com modos `quick`, `standard` e `release`;
+- criado `.github/workflows/engineering-gate.yml` para tornar o gate executável também em CI;
+- `README.md`, `HANDOFF.md` e `tools/README.md` passaram a apontar explicitamente para a política de engenharia e para o novo gate oficial.
+
+### Sprint 6 do v2-alignment-cycle
+
+- criado `tools/close_alignment_cycle.py` para fechar formalmente o `v2-alignment-cycle`, consolidando evidência de observabilidade, comparação local e backlog classificado entre `next_cut`, `deferred` e `vision`;
+- `tools/compare_orchestrator_paths.py` passou a persistir o artefato default em `.jarvis_runtime/path_comparison_v2/`, alinhando o caminho real da comparação ao fechamento formal do ciclo;
+- adicionados testes dedicados em `tests/unit/test_close_alignment_cycle.py` e ampliada a cobertura de `tests/unit/test_compare_orchestrator_paths.py` para o caminho estável de artefato;
+- `HANDOFF.md`, `docs/implementation/v2-alignment-cycle.md`, `docs/documentation/matriz-de-aderencia-mestre.md` e `tools/README.md` passaram a tratar a Sprint 6 como concluída e o próximo corte do `v2` como frente ativa.
+
 ## 2026-03-26
 
 ### Sprint 5 do v2-alignment-cycle
@@ -112,7 +151,7 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 
 - `documento_mestre_jarvis.md` passou a abrir com um mapa editorial rápido para leitura por blocos;
 - os blocos residuais de `Próximo passo` e `Encaminhamento` foram convertidos em fechamentos editoriais estáveis, reduzindo a voz de elaboração dentro do mestre;
-- as lacunas numéricas `179–181`, `215–216`, `264` e `275–285` passaram a ter notas editoriais explícitas para preservar a numeração histórica sem buraco silencioso;
+- as lacunas numéricas `179â€“181`, `215â€“216`, `264` e `275â€“285` passaram a ter notas editoriais explícitas para preservar a numeração histórica sem buraco silencioso;
 - as referências quebradas para `docs/operations/v1-production-controlled.md` e `docs/operations/go-live-readiness.md` foram substituídas pelo derivado operacional ativo `docs/operations/v1-operational-baseline.md`;
 - foi corrigido o erro tipográfico na seção de critérios de qualidade por mudança.
 - o capítulo de escopo do mestre passou a explicitar camadas editoriais, o que o documento não deve virar e a regra de derivação para documentos vivos;
@@ -124,15 +163,15 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 - o resumo executivo interno do mestre foi compactado para evitar duplicação desnecessária com `docs/executive/master-summary.md`;
 - o capítulo de escopo passou a distinguir melhor o que o mestre guarda como visão canônica e o que ele preserva como recorte estruturante histórico do `v1`.
 - o bloco de backlog estrutural do `v1` foi reescrito para preservar apenas frentes canônicas, dependências e ordem macro, removendo detalhamento excessivo de épicos e módulos do corpo do mestre;
-- o bloco de blueprint inicial foi consolidado para registrar só a política canônica de organização do monorepo, com nota editorial explícita para a consolidação das antigas seções `130–141`;
+- o bloco de blueprint inicial foi consolidado para registrar só a política canônica de organização do monorepo, com nota editorial explícita para a consolidação das antigas seções `130â€“141`;
 - as especificações dos quatro pilares deixaram de terminar em tom de plano imediato e passaram a encerrar com fechamentos editoriais estáveis, reduzindo deriva de backlog dentro do mestre.
 - a seção `197` teve a árvore inicial do repositório limpa e reescrita sem `mojibake`, com estrutura textual legível e estável;
-- foram removidas do mestre as seções editoriais vazias `214–216`, `263–264` e `274–285`, que não carregavam norma nem valor canônico e só aumentavam fragmentação artificial da numeração.
-- os blocos editoriais residuais `179–181` também foram removidos, e os headings `75.11` e `76.13` deixaram de soar como plano imediato e passaram a funcionar como fechamentos editoriais consistentes;
+- foram removidas do mestre as seções editoriais vazias `214â€“216`, `263â€“264` e `274â€“285`, que não carregavam norma nem valor canônico e só aumentavam fragmentação artificial da numeração.
+- os blocos editoriais residuais `179â€“181` também foram removidos, e os headings `75.11` e `76.13` deixaram de soar como plano imediato e passaram a funcionar como fechamentos editoriais consistentes;
 - foi mantida a numeração histórica restante do mestre, sem renumeração global, para preservar estabilidade de referências cruzadas já usadas na auditoria, na matriz de aderência e nos documentos vivos.
 - o capítulo de qualidade por serviço passou a abrir com formulação mais curta e canônica, reduzindo redundância entre política de qualidade e plano de validação.
-- o bloco da camada evolutiva (`313–327`) foi consolidado para preservar escopo, fluxo, critérios, benchmarks e riscos sem carregar detalhamento operacional excessivo no corpo do mestre.
-- o bloco final de operação, readiness, incidentes e transições de fase (`344–349`) foi ajustado para tom mais seco e canônico, reduzindo repetição editorial e reforçando que o detalhamento executável pertence aos derivados operacionais.
+- o bloco da camada evolutiva (`313â€“327`) foi consolidado para preservar escopo, fluxo, critérios, benchmarks e riscos sem carregar detalhamento operacional excessivo no corpo do mestre.
+- o bloco final de operação, readiness, incidentes e transições de fase (`344â€“349`) foi ajustado para tom mais seco e canônico, reduzindo repetição editorial e reforçando que o detalhamento executável pertence aos derivados operacionais.
 - as aberturas e sínteses dos blocos evolutivo e de qualidade foram limpas de fórmulas repetitivas, reduzindo eco editorial sem alterar o conteúdo normativo.
 
 ### Reescrita da auditoria primária do Documento-Mestre
@@ -762,3 +801,5 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 - criado `apps/jarvis_console/` como interface textual minima do `v1`, com modos `ask` e `chat` sobre o fluxo real do orquestrador;
 - `tools/run_internal_pilot.py` passou a publicar a ultima rodada em `.jarvis_runtime/pilot/latest_pilot.json` e `.md`;
 - atualizados testes de memoria, observabilidade, orquestracao, artefatos operacionais e console.
+
+

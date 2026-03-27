@@ -1,4 +1,4 @@
-"""Compare the baseline orchestrator flow with the optional LangGraph flow."""
+﻿"""Compare the baseline orchestrator flow with the optional LangGraph flow."""
 # ruff: noqa: E402
 
 from __future__ import annotations
@@ -16,7 +16,6 @@ from tools.internal_pilot_support import (
     PilotExecutionResult,
     result_to_dict,
     run_pilot_scenarios,
-    runtime_dir,
 )
 
 
@@ -298,7 +297,7 @@ def render_text(payload: dict[str, object]) -> str:
 
 def resolve_output_dir(output_dir: str | None) -> Path:
     if output_dir is None:
-        return runtime_dir("pilot-compare")
+        return ROOT / ".jarvis_runtime" / "path_comparison_v2"
     target = Path(output_dir)
     return target if target.is_absolute() else ROOT / target
 
@@ -393,3 +392,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

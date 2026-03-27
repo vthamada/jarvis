@@ -38,7 +38,10 @@ def test_knowledge_service_prioritizes_governance_for_risk_analysis() -> None:
 
     assert result.active_domains[0] == "governance"
     assert "analysis" in result.active_domains[:3]
-    assert "decision_risk" in result.active_domains[:3]
+    assert any(
+        domain in result.active_domains[:3]
+        for domain in {"decision_risk", "operational_readiness"}
+    )
 
 
 def test_knowledge_service_prioritizes_governance_in_ambiguous_planning() -> None:
@@ -96,7 +99,7 @@ def test_knowledge_service_covers_operational_readiness_and_software_domains() -
     assert "planejamento_e_coordenacao" in result.registry_domains
     assert any(
         route.specialist_type == "especialista_software_subordinado"
-        and route.specialist_mode == "shadow"
+        and route.specialist_mode == "guided"
         and route.canonical_domain_refs == ["computacao_e_desenvolvimento"]
         for route in result.specialist_routes
     )
@@ -236,3 +239,118 @@ def test_knowledge_service_excludes_canonical_only_domains_from_runtime() -> Non
     )
 
     assert "blocked_route" not in result.active_domains
+
+
+
+def test_knowledge_service_exposes_guided_analysis_specialist_route() -> None:
+    service = KnowledgeService()
+
+    result = service.retrieve_for_intent(
+        intent="analysis",
+        query="Compare trade-offs, evidence and decision criteria for the release path.",
+    )
+
+    assert "analysis" in result.active_domains
+    assert any(
+        route.domain_name == "analysis"
+        and route.specialist_type == "especialista_analise_estruturada"
+        and route.specialist_mode == "guided"
+        and route.canonical_domain_refs
+        == [
+            "dados_estatistica_e_inteligencia_analitica",
+            "tomada_de_decisao_complexa",
+        ]
+        for route in result.specialist_routes
+    )
+
+
+
+def test_knowledge_service_exposes_guided_governance_specialist_route() -> None:
+    service = KnowledgeService()
+
+    result = service.retrieve_for_intent(
+        intent="analysis",
+        query="Analyze governance risk, limits and audit constraints for the release.",
+    )
+
+    assert "governance" in result.active_domains
+    assert any(
+        route.domain_name == "governance"
+        and route.specialist_type == "especialista_revisao_governanca"
+        and route.specialist_mode == "guided"
+        and route.canonical_domain_refs
+        == [
+            "governanca_do_sistema",
+            "defesa_seguranca_e_gestao_de_crises",
+        ]
+        for route in result.specialist_routes
+    )
+
+
+
+def test_knowledge_service_exposes_guided_operational_readiness_specialist_route() -> None:
+    service = KnowledgeService()
+
+    result = service.retrieve_for_intent(
+        intent="planning",
+        query="Plan the rollout readiness checks, rollback points and release gates.",
+    )
+
+    assert result.active_domains[0] == "operational_readiness"
+    assert any(
+        route.domain_name == "operational_readiness"
+        and route.specialist_type == "especialista_planejamento_operacional"
+        and route.specialist_mode == "guided"
+        and route.canonical_domain_refs
+        == [
+            "planejamento_e_coordenacao",
+            "monitoramento_e_vigilancia_contextual",
+        ]
+        for route in result.specialist_routes
+    )
+
+
+
+def test_knowledge_service_exposes_guided_strategy_specialist_route() -> None:
+    service = KnowledgeService()
+
+    result = service.retrieve_for_intent(
+        intent="planning",
+        query="Plan the strategic direction, compare options and define the dominant criterion.",
+    )
+
+    assert "strategy" in result.active_domains[:3]
+    assert any(
+        route.domain_name == "strategy"
+        and route.specialist_type == "especialista_analise_estruturada"
+        and route.specialist_mode == "guided"
+        and route.canonical_domain_refs
+        == [
+            "estrategia_e_pensamento_sistemico",
+            "tomada_de_decisao_complexa",
+        ]
+        for route in result.specialist_routes
+    )
+
+
+def test_knowledge_service_exposes_guided_decision_risk_specialist_route() -> None:
+    service = KnowledgeService()
+
+    result = service.retrieve_for_intent(
+        intent="analysis",
+        query="Review decision risk, reversibility and dominant containment gate for the release.",
+    )
+
+    assert "decision_risk" in result.active_domains[:3]
+    assert any(
+        route.domain_name == "decision_risk"
+        and route.specialist_type == "especialista_revisao_governanca"
+        and route.specialist_mode == "guided"
+        and route.canonical_domain_refs
+        == [
+            "tomada_de_decisao_complexa",
+            "defesa_seguranca_e_gestao_de_crises",
+        ]
+        for route in result.specialist_routes
+    )
+

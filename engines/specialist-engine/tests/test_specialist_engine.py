@@ -90,12 +90,12 @@ def test_specialist_engine_returns_subordinated_contributions_only_when_rule_mat
     assert "sem resposta direta ao usuario" in review.boundary_summary
 
 
-def test_specialist_engine_links_domain_shadow_specialist_explicitly() -> None:
+def test_specialist_engine_links_promoted_domain_specialist_explicitly() -> None:
     engine = SpecialistEngine()
     software_plan = DeliberativePlanContract(
-        plan_summary="avaliar ajuste em serviço Python com impacto controlado",
+        plan_summary="avaliar ajuste em servi?o Python com impacto controlado",
         goal="Review Python service rollout",
-        steps=["mapear contratos", "comparar mudança", "recomendar próximo passo"],
+        steps=["mapear contratos", "comparar mudan?a", "recomendar pr?ximo passo"],
         active_domains=["software_development", "analysis"],
         active_minds=["mente_analitica"],
         constraints=["through_core_only"],
@@ -109,21 +109,52 @@ def test_specialist_engine_links_domain_shadow_specialist_explicitly() -> None:
         dominant_tension="equilibrar profundidade analitica com conclusao util",
         smallest_safe_next_action="mapear contratos ativos",
         continuity_action="continuar",
-        open_loops=["comparar mudança no serviço"],
+        open_loops=["comparar mudan?a no servi?o"],
     )
 
     handoff_plan = engine.plan_handoffs(
         intent="analysis",
         plan=software_plan,
-        knowledge_snippets=["Prefira interfaces estáveis."],
+        knowledge_snippets=["Prefira interfaces est?veis."],
         domain_specialist_routes=[
             DomainSpecialistRouteContract(
                 domain_name="software_development",
                 specialist_type="especialista_software_subordinado",
-                specialist_mode="shadow",
-                routing_reason="rota canônica de software em shadow mode",
+                specialist_mode="guided",
+                routing_reason="rota can?nica de software em modo guiado",
             )
         ],
+        shared_memory_contexts={
+            "especialista_software_subordinado": SpecialistSharedMemoryContextContract(
+                specialist_type="especialista_software_subordinado",
+                sharing_mode="core_mediated_read_only",
+                continuity_mode="continuar",
+                shared_memory_brief=(
+                    "specialist=especialista_software_subordinado continuidade=continuar"
+                ),
+                write_policy="through_core_only",
+                consumer_mode="domain_guided_memory_packet",
+                source_mission_goal="Review Python service rollout",
+                mission_context_brief=(
+                    "goal=Review Python service rollout | related=nenhuma | "
+                    "recommendation=sem recomendacao dominante"
+                ),
+                domain_context_brief=(
+                    "active_domains=software_development,analysis | "
+                    "semantic_focus=software_development, analysis | "
+                    "memory_refs=memory://mission,memory://relational"
+                ),
+                continuity_context_brief=(
+                    "continuity_mode=continuar | "
+                    "open_loops=comparar mudanca no servico | "
+                    "source_mission_id=mission-software"
+                ),
+                related_mission_ids=["mission-software-related"],
+                memory_refs=["memory://mission", "memory://relational"],
+                semantic_focus=["software_development", "analysis"],
+                open_loops=["comparar mudanca no servico"],
+            )
+        },
         session_id="sess-software",
         mission_id="mission-software",
         requested_by_service="orchestrator-service",
@@ -131,16 +162,24 @@ def test_specialist_engine_links_domain_shadow_specialist_explicitly() -> None:
     review = engine.review_handoffs(
         intent="analysis",
         plan=software_plan,
-        knowledge_snippets=["Prefira interfaces estáveis."],
+        knowledge_snippets=["Prefira interfaces est?veis."],
         handoff_plan=handoff_plan,
     )
 
+    specialist_inputs = handoff_plan.invocations[0].handoff_inputs
     assert handoff_plan.selections[0].linked_domain == "software_development"
-    assert handoff_plan.selections[0].selection_mode == "shadow"
+    assert handoff_plan.selections[0].selection_mode == "guided"
     assert handoff_plan.invocations[0].linked_domain == "software_development"
-    assert handoff_plan.invocations[0].selection_mode == "shadow"
+    assert handoff_plan.invocations[0].selection_mode == "guided"
     assert review.contributions[0].specialist_type == "especialista_software_subordinado"
-    assert "domain_shadow_specialist" in review.contributions[0].output_hints
+    assert "domain_guided_specialist" in review.contributions[0].output_hints
+    assert any(
+        item.startswith("consumer_mode=domain_guided_memory_packet")
+        for item in specialist_inputs
+    )
+    assert any(item.startswith("mission_context_brief=") for item in specialist_inputs)
+    assert any(item.startswith("domain_context_brief=") for item in specialist_inputs)
+    assert any(item.startswith("continuity_context_brief=") for item in specialist_inputs)
 
 
 def test_specialist_engine_rejects_software_specialist_if_not_shadow_route() -> None:
@@ -182,8 +221,473 @@ def test_specialist_engine_rejects_software_specialist_if_not_shadow_route() -> 
         requested_by_service="orchestrator-service",
     )
 
-    # "strategy" is not a shadow_specialist route in the registry,
+    # "strategy" is not a software specialist route in the registry,
     # so the software specialist must be rejected regardless of specialist_mode in the route.
     assert handoff_plan.selections[0].specialist_type == "especialista_software_subordinado"
     assert handoff_plan.selections[0].selection_status == "not_eligible"
     assert not handoff_plan.invocations
+
+
+
+def test_specialist_engine_links_guided_analysis_domain_specialist_explicitly() -> None:
+    engine = SpecialistEngine()
+    analysis_plan = DeliberativePlanContract(
+        plan_summary="comparar trade-offs do rollout com criterio explicito",
+        goal="Compare rollout evidence",
+        steps=["observar", "comparar", "recomendar"],
+        active_domains=["analysis", "decision_risk"],
+        active_minds=["mente_analitica"],
+        constraints=["through_core_only"],
+        risks=[],
+        recommended_task_type="produce_analysis_brief",
+        requires_human_validation=False,
+        rationale="contexto=analysis; apoio=local",
+        tensions_considered=["equilibrar profundidade analitica com conclusao util"],
+        specialist_hints=["especialista_analise_estruturada"],
+        success_criteria=["criterio dominante deve ficar explicito"],
+        dominant_tension="equilibrar profundidade analitica com conclusao util",
+        smallest_safe_next_action="comparar trade-offs centrais",
+        continuity_action="continuar",
+        open_loops=["consolidar criterio dominante"],
+    )
+
+    handoff_plan = engine.plan_handoffs(
+        intent="analysis",
+        plan=analysis_plan,
+        knowledge_snippets=["Priorize criterio explicito de decisao."],
+        domain_specialist_routes=[
+            DomainSpecialistRouteContract(
+                domain_name="analysis",
+                specialist_type="especialista_analise_estruturada",
+                specialist_mode="guided",
+                routing_reason="rota canonica de analise estruturada em modo guiado",
+            )
+        ],
+        shared_memory_contexts={
+            "especialista_analise_estruturada": SpecialistSharedMemoryContextContract(
+                specialist_type="especialista_analise_estruturada",
+                sharing_mode="core_mediated_read_only",
+                continuity_mode="continuar",
+                shared_memory_brief=(
+                    "specialist=especialista_analise_estruturada continuidade=continuar"
+                ),
+                write_policy="through_core_only",
+                consumer_mode="domain_guided_memory_packet",
+                source_mission_goal="Compare rollout evidence",
+                mission_context_brief=(
+                    "goal=Compare rollout evidence | related=nenhuma | "
+                    "recommendation=sem recomendacao dominante"
+                ),
+                domain_context_brief=(
+                    "active_domains=analysis,decision_risk | "
+                    "semantic_focus=analysis, decision_risk | "
+                    "memory_refs=memory://mission,memory://relational"
+                ),
+                continuity_context_brief=(
+                    "continuity_mode=continuar | "
+                    "open_loops=consolidar criterio dominante | "
+                    "source_mission_id=mission-analysis"
+                ),
+                related_mission_ids=["mission-analysis-related"],
+                memory_refs=["memory://mission", "memory://relational"],
+                semantic_focus=["analysis", "decision_risk"],
+                open_loops=["consolidar criterio dominante"],
+            )
+        },
+        session_id="sess-analysis",
+        mission_id="mission-analysis",
+        requested_by_service="orchestrator-service",
+    )
+    review = engine.review_handoffs(
+        intent="analysis",
+        plan=analysis_plan,
+        knowledge_snippets=["Priorize criterio explicito de decisao."],
+        handoff_plan=handoff_plan,
+    )
+
+    assert handoff_plan.selections[0].linked_domain == "analysis"
+    assert handoff_plan.selections[0].selection_mode == "guided"
+    assert review.contributions[0].role == "analise_estruturada_guided"
+    assert "domain_guided_specialist" in review.contributions[0].output_hints
+
+
+
+def test_specialist_engine_links_guided_governance_domain_specialist_explicitly() -> None:
+    engine = SpecialistEngine()
+    governance_plan = DeliberativePlanContract(
+        plan_summary="avaliar limites do rollout com governanca explicita",
+        goal="Review governance limits",
+        steps=["mapear risco", "comparar limites", "recomendar conten??o"],
+        active_domains=["governance", "decision_risk"],
+        active_minds=["mente_etica"],
+        constraints=["through_core_only"],
+        risks=["governance_risk"],
+        recommended_task_type="produce_analysis_brief",
+        requires_human_validation=True,
+        rationale="contexto=governance; apoio=local",
+        tensions_considered=["equilibrar solicitacao do usuario com limites normativos"],
+        specialist_hints=["especialista_revisao_governanca"],
+        success_criteria=["limite dominante deve ficar explicito"],
+        dominant_tension="equilibrar solicitacao do usuario com limites normativos",
+        smallest_safe_next_action="explicitar o limite dominante antes de operar",
+        continuity_action="continuar",
+        open_loops=["validar limite dominante"],
+    )
+
+    handoff_plan = engine.plan_handoffs(
+        intent="analysis",
+        plan=governance_plan,
+        knowledge_snippets=["Priorize trilha auditavel."],
+        domain_specialist_routes=[
+            DomainSpecialistRouteContract(
+                domain_name="governance",
+                specialist_type="especialista_revisao_governanca",
+                specialist_mode="guided",
+                routing_reason="rota canonica de governanca em modo guiado",
+            )
+        ],
+        shared_memory_contexts={
+            "especialista_revisao_governanca": SpecialistSharedMemoryContextContract(
+                specialist_type="especialista_revisao_governanca",
+                sharing_mode="core_mediated_read_only",
+                continuity_mode="continuar",
+                shared_memory_brief=(
+                    "specialist=especialista_revisao_governanca continuidade=continuar"
+                ),
+                write_policy="through_core_only",
+                consumer_mode="domain_guided_memory_packet",
+                source_mission_goal="Review governance limits",
+                mission_context_brief=(
+                    "goal=Review governance limits | related=nenhuma | "
+                    "recommendation=sem recomendacao dominante"
+                ),
+                domain_context_brief=(
+                    "active_domains=governance,decision_risk | "
+                    "semantic_focus=governance, decision_risk | "
+                    "memory_refs=memory://mission,memory://relational"
+                ),
+                continuity_context_brief=(
+                    "continuity_mode=continuar | "
+                    "open_loops=validar limite dominante | "
+                    "source_mission_id=mission-governance"
+                ),
+                related_mission_ids=["mission-governance-related"],
+                memory_refs=["memory://mission", "memory://relational"],
+                semantic_focus=["governance", "decision_risk"],
+                open_loops=["validar limite dominante"],
+            )
+        },
+        session_id="sess-governance",
+        mission_id="mission-governance",
+        requested_by_service="orchestrator-service",
+    )
+    review = engine.review_handoffs(
+        intent="analysis",
+        plan=governance_plan,
+        knowledge_snippets=["Priorize trilha auditavel."],
+        handoff_plan=handoff_plan,
+    )
+
+    assert handoff_plan.selections[0].linked_domain == "governance"
+    assert handoff_plan.selections[0].selection_mode == "guided"
+    assert review.contributions[0].role == "revisao_governanca_guided"
+    assert "domain_guided_specialist" in review.contributions[0].output_hints
+
+
+
+def test_specialist_engine_links_guided_operational_readiness_specialist_explicitly() -> None:
+    engine = SpecialistEngine()
+    readiness_plan = DeliberativePlanContract(
+        plan_summary="estruturar readiness checks do release",
+        goal="Plan readiness checks",
+        steps=["mapear readiness", "definir checkpoints", "sugerir rollback"],
+        active_domains=["operational_readiness", "observability"],
+        active_minds=["mente_executiva"],
+        constraints=["through_core_only"],
+        risks=[],
+        recommended_task_type="draft_plan",
+        requires_human_validation=False,
+        rationale="contexto=readiness; apoio=local",
+        tensions_considered=["equilibrar ambicao estrategica com a menor proxima acao segura"],
+        specialist_hints=["especialista_planejamento_operacional"],
+        success_criteria=["checkpoint dominante deve ficar explicito"],
+        dominant_tension="equilibrar ambicao estrategica com a menor proxima acao segura",
+        smallest_safe_next_action="explicitar o checkpoint dominante",
+        continuity_action="continuar",
+        open_loops=["fechar checkpoint de readiness"],
+    )
+
+    handoff_plan = engine.plan_handoffs(
+        intent="planning",
+        plan=readiness_plan,
+        knowledge_snippets=["Priorize checkpoints reversiveis."],
+        domain_specialist_routes=[
+            DomainSpecialistRouteContract(
+                domain_name="operational_readiness",
+                specialist_type="especialista_planejamento_operacional",
+                specialist_mode="guided",
+                routing_reason="rota canonica de readiness operacional em modo guiado",
+            )
+        ],
+        shared_memory_contexts={
+            "especialista_planejamento_operacional": SpecialistSharedMemoryContextContract(
+                specialist_type="especialista_planejamento_operacional",
+                sharing_mode="core_mediated_read_only",
+                continuity_mode="continuar",
+                shared_memory_brief=(
+                    "specialist=especialista_planejamento_operacional continuidade=continuar"
+                ),
+                write_policy="through_core_only",
+                consumer_mode="domain_guided_memory_packet",
+                source_mission_goal="Plan readiness checks",
+                mission_context_brief=(
+                    "goal=Plan readiness checks | related=nenhuma | "
+                    "recommendation=sem recomendacao dominante"
+                ),
+                domain_context_brief=(
+                    "active_domains=operational_readiness,observability | "
+                    "semantic_focus=operational_readiness, observability | "
+                    "memory_refs=memory://mission,memory://relational"
+                ),
+                continuity_context_brief=(
+                    "continuity_mode=continuar | "
+                    "open_loops=fechar checkpoint de readiness | "
+                    "source_mission_id=mission-readiness"
+                ),
+                related_mission_ids=["mission-readiness-related"],
+                memory_refs=["memory://mission", "memory://relational"],
+                semantic_focus=["operational_readiness", "observability"],
+                open_loops=["fechar checkpoint de readiness"],
+            )
+        },
+        session_id="sess-readiness",
+        mission_id="mission-readiness",
+        requested_by_service="orchestrator-service",
+    )
+    review = engine.review_handoffs(
+        intent="planning",
+        plan=readiness_plan,
+        knowledge_snippets=["Priorize checkpoints reversiveis."],
+        handoff_plan=handoff_plan,
+    )
+
+    assert handoff_plan.selections[0].linked_domain == "operational_readiness"
+    assert handoff_plan.selections[0].selection_mode == "guided"
+    assert review.contributions[0].role == "planejamento_operacional_guided"
+    assert "domain_guided_specialist" in review.contributions[0].output_hints
+
+
+
+def test_specialist_engine_links_guided_strategy_specialist_explicitly() -> None:
+    engine = SpecialistEngine()
+    strategy_plan = DeliberativePlanContract(
+        plan_summary="comparar direcoes estrategicas do release",
+        goal="Plan strategic options",
+        steps=["mapear opcoes", "comparar trade-offs", "recomendar criterio"],
+        active_domains=["strategy", "decision_risk"],
+        active_minds=["mente_decisoria"],
+        constraints=["through_core_only"],
+        risks=[],
+        recommended_task_type="draft_plan",
+        requires_human_validation=False,
+        rationale="contexto=strategy; apoio=local",
+        tensions_considered=["equilibrar ambicao estrategica com a menor proxima acao segura"],
+        specialist_hints=["especialista_analise_estruturada"],
+        success_criteria=["criterio estrategico dominante deve ficar explicito"],
+        dominant_tension="equilibrar ambicao estrategica com a menor proxima acao segura",
+        smallest_safe_next_action="comparar trade-offs centrais",
+        continuity_action="continuar",
+        open_loops=["fechar criterio estrategico dominante"],
+    )
+
+    handoff_plan = engine.plan_handoffs(
+        intent="planning",
+        plan=strategy_plan,
+        knowledge_snippets=["Priorize criterio explicito de decisao."],
+        domain_specialist_routes=[
+            DomainSpecialistRouteContract(
+                domain_name="strategy",
+                specialist_type="especialista_analise_estruturada",
+                specialist_mode="guided",
+                routing_reason="rota canonica de estrategia em modo guiado",
+            )
+        ],
+        shared_memory_contexts={
+            "especialista_analise_estruturada": SpecialistSharedMemoryContextContract(
+                specialist_type="especialista_analise_estruturada",
+                sharing_mode="core_mediated_read_only",
+                continuity_mode="continuar",
+                shared_memory_brief=(
+                    "specialist=especialista_analise_estruturada continuidade=continuar"
+                ),
+                write_policy="through_core_only",
+                consumer_mode="domain_guided_memory_packet",
+                source_mission_goal="Plan strategic options",
+                mission_context_brief=(
+                    "goal=Plan strategic options | related=nenhuma | "
+                    "recommendation=sem recomendacao dominante"
+                ),
+                domain_context_brief=(
+                    "active_domains=strategy,decision_risk | "
+                    "semantic_focus=strategy, decision_risk | "
+                    "memory_refs=memory://mission,memory://relational"
+                ),
+                continuity_context_brief=(
+                    "continuity_mode=continuar | "
+                    "open_loops=fechar criterio estrategico dominante | "
+                    "source_mission_id=mission-strategy"
+                ),
+                related_mission_ids=["mission-strategy-related"],
+                memory_refs=["memory://mission", "memory://relational"],
+                semantic_focus=["strategy", "decision_risk"],
+                open_loops=["fechar criterio estrategico dominante"],
+            )
+        },
+        session_id="sess-strategy",
+        mission_id="mission-strategy",
+        requested_by_service="orchestrator-service",
+    )
+    review = engine.review_handoffs(
+        intent="planning",
+        plan=strategy_plan,
+        knowledge_snippets=["Priorize criterio explicito de decisao."],
+        handoff_plan=handoff_plan,
+    )
+
+    assert handoff_plan.selections[0].linked_domain == "strategy"
+    assert handoff_plan.selections[0].selection_mode == "guided"
+    assert review.contributions[0].role == "analise_estruturada_guided"
+    assert "domain_guided_specialist" in review.contributions[0].output_hints
+
+
+def test_specialist_engine_links_guided_decision_risk_specialist_explicitly() -> None:
+    engine = SpecialistEngine()
+    decision_risk_plan = DeliberativePlanContract(
+        plan_summary="avaliar reversibilidade e gate dominante da decisao",
+        goal="Review decision risk",
+        steps=["mapear risco", "comparar reversibilidade", "recomendar gate dominante"],
+        active_domains=["decision_risk", "governance"],
+        active_minds=["mente_etica"],
+        constraints=["through_core_only"],
+        risks=["decision_risk"],
+        recommended_task_type="produce_analysis_brief",
+        requires_human_validation=True,
+        rationale="contexto=decision_risk; apoio=local",
+        tensions_considered=["equilibrar urgencia de decisao com reversibilidade segura"],
+        specialist_hints=["especialista_revisao_governanca"],
+        success_criteria=["gate dominante deve ficar explicito"],
+        dominant_tension="equilibrar urgencia de decisao com reversibilidade segura",
+        smallest_safe_next_action="explicitar o gate dominante antes de operar",
+        continuity_action="continuar",
+        open_loops=["fechar gate dominante de decisao"],
+    )
+
+    handoff_plan = engine.plan_handoffs(
+        intent="analysis",
+        plan=decision_risk_plan,
+        knowledge_snippets=["Priorize reversibilidade explicita."],
+        domain_specialist_routes=[
+            DomainSpecialistRouteContract(
+                domain_name="decision_risk",
+                specialist_type="especialista_revisao_governanca",
+                specialist_mode="guided",
+                routing_reason="rota canonica de decision risk em modo guiado",
+            )
+        ],
+        shared_memory_contexts={
+            "especialista_revisao_governanca": SpecialistSharedMemoryContextContract(
+                specialist_type="especialista_revisao_governanca",
+                sharing_mode="core_mediated_read_only",
+                continuity_mode="continuar",
+                shared_memory_brief=(
+                    "specialist=especialista_revisao_governanca continuidade=continuar"
+                ),
+                write_policy="through_core_only",
+                consumer_mode="domain_guided_memory_packet",
+                source_mission_goal="Review decision risk",
+                mission_context_brief=(
+                    "goal=Review decision risk | related=nenhuma | "
+                    "recommendation=sem recomendacao dominante"
+                ),
+                domain_context_brief=(
+                    "active_domains=decision_risk,governance | "
+                    "semantic_focus=decision_risk, governance | "
+                    "memory_refs=memory://mission,memory://relational"
+                ),
+                continuity_context_brief=(
+                    "continuity_mode=continuar | "
+                    "open_loops=fechar gate dominante de decisao | "
+                    "source_mission_id=mission-decision-risk"
+                ),
+                related_mission_ids=["mission-decision-risk-related"],
+                memory_refs=["memory://mission", "memory://relational"],
+                semantic_focus=["decision_risk", "governance"],
+                open_loops=["fechar gate dominante de decisao"],
+            )
+        },
+        session_id="sess-decision-risk",
+        mission_id="mission-decision-risk",
+        requested_by_service="orchestrator-service",
+    )
+    review = engine.review_handoffs(
+        intent="analysis",
+        plan=decision_risk_plan,
+        knowledge_snippets=["Priorize reversibilidade explicita."],
+        handoff_plan=handoff_plan,
+    )
+
+    assert handoff_plan.selections[0].linked_domain == "decision_risk"
+    assert handoff_plan.selections[0].selection_mode == "guided"
+    assert review.contributions[0].role == "revisao_governanca_guided"
+    assert "domain_guided_specialist" in review.contributions[0].output_hints
+
+
+def test_specialist_engine_prefers_active_domain_order_when_routes_share_specialist() -> None:
+    engine = SpecialistEngine()
+    plan = DeliberativePlanContract(
+        plan_summary="avaliar risco e limite dominante da decisao",
+        goal="Review decision risk",
+        steps=["mapear risco", "comparar reversibilidade", "definir gate"],
+        active_domains=["decision_risk", "governance"],
+        active_minds=["mente_etica"],
+        constraints=["through_core_only"],
+        risks=["decision_risk"],
+        recommended_task_type="produce_analysis_brief",
+        requires_human_validation=True,
+        rationale="contexto=decision_risk; apoio=local",
+        tensions_considered=["equilibrar urgencia com reversibilidade"],
+        specialist_hints=["especialista_revisao_governanca"],
+        success_criteria=["gate dominante deve ficar explicito"],
+        dominant_tension="equilibrar urgencia com reversibilidade",
+        smallest_safe_next_action="comparar gates de contencao",
+        continuity_action="continuar",
+        open_loops=["fechar gate dominante"],
+    )
+
+    handoff_plan = engine.plan_handoffs(
+        intent="analysis",
+        plan=plan,
+        knowledge_snippets=["Priorize reversibilidade explicita."],
+        domain_specialist_routes=[
+            DomainSpecialistRouteContract(
+                domain_name="governance",
+                specialist_type="especialista_revisao_governanca",
+                specialist_mode="guided",
+                routing_reason="rota canonica de governanca em modo guiado",
+            ),
+            DomainSpecialistRouteContract(
+                domain_name="decision_risk",
+                specialist_type="especialista_revisao_governanca",
+                specialist_mode="guided",
+                routing_reason="rota canonica de decision risk em modo guiado",
+            ),
+        ],
+        shared_memory_contexts={},
+        session_id="sess-shared-governance-specialist",
+        mission_id="mission-shared-governance-specialist",
+        requested_by_service="orchestrator-service",
+    )
+
+    assert handoff_plan.selections[0].linked_domain == "decision_risk"
+    assert handoff_plan.selections[0].selection_mode == "guided"
+

@@ -76,9 +76,24 @@ RUNTIME_ELIGIBLE_ROUTES: frozenset[str] = frozenset(
     name for name, entry in RUNTIME_ROUTE_REGISTRY.items() if entry.maturity != "canonical_only"
 )
 
-# Routes where a shadow specialist is wired to a canonical domain.
+# Routes where a domain-linked specialist is wired into the runtime.
+SPECIALIST_ROUTE_MODES: frozenset[str] = frozenset({"shadow", "guided", "active"})
+SPECIALIST_ROUTES: frozenset[str] = frozenset(
+    name
+    for name, entry in RUNTIME_ROUTE_REGISTRY.items()
+    if entry.linked_specialist_type and entry.specialist_mode in SPECIALIST_ROUTE_MODES
+)
+
+# Shadow specialist routes remain observable for backward-compatible comparisons.
 SHADOW_SPECIALIST_ROUTES: frozenset[str] = frozenset(
-    name for name, entry in RUNTIME_ROUTE_REGISTRY.items() if entry.maturity == "shadow_specialist"
+    name for name, entry in RUNTIME_ROUTE_REGISTRY.items() if entry.specialist_mode == "shadow"
+)
+
+# Promoted specialist routes are above shadow mode but still subordinated to the core.
+PROMOTED_SPECIALIST_ROUTES: frozenset[str] = frozenset(
+    name
+    for name, entry in RUNTIME_ROUTE_REGISTRY.items()
+    if entry.specialist_mode in {"guided", "active"}
 )
 
 # Fallback route: last runtime route with maturity == "active_registry".
@@ -92,6 +107,16 @@ FALLBACK_RUNTIME_ROUTE: str = _active_routes[-1] if _active_routes else "product
 def is_shadow_route(route_name: str) -> bool:
     """Return True if the route is a shadow specialist route in the registry."""
     return route_name in SHADOW_SPECIALIST_ROUTES
+
+
+def is_specialist_route(route_name: str) -> bool:
+    """Return True if the route has a domain-linked specialist in the registry."""
+    return route_name in SPECIALIST_ROUTES
+
+
+def is_promoted_specialist_route(route_name: str) -> bool:
+    """Return True if the route is above shadow mode but still core-subordinated."""
+    return route_name in PROMOTED_SPECIALIST_ROUTES
 
 
 def resolve_route(route_name: str) -> DomainEntry | None:

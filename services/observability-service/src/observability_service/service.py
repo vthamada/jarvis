@@ -58,6 +58,7 @@ class FlowAudit:
     continuity_target_goal: str | None
     continuity_runtime_mode: str | None
     registry_domains: list[str]
+    domain_specialists: list[str]
     shadow_specialists: list[str]
     domain_alignment_status: str
     mind_alignment_status: str
@@ -229,6 +230,7 @@ class ObservabilityService:
                 continuity_target_goal=None,
                 continuity_runtime_mode=None,
                 registry_domains=[],
+                domain_specialists=[],
                 shadow_specialists=[],
                 domain_alignment_status="incomplete",
                 mind_alignment_status="incomplete",
@@ -257,6 +259,7 @@ class ObservabilityService:
         domain_registry_event = self._first_event(events, "domain_registry_resolved")
         shared_memory_event = self._first_event(events, "specialist_shared_memory_linked")
         specialist_contract_event = self._first_event(events, "specialist_contracts_composed")
+        specialist_domain_event = self._first_event(events, "domain_specialist_completed")
         specialist_shadow_event = self._first_event(events, "specialist_shadow_mode_completed")
         first_event = events[0]
         governance_decision = (
@@ -294,6 +297,11 @@ class ObservabilityService:
         registry_domains = (
             [str(item) for item in domain_registry_event.payload.get("registry_domains", [])]
             if domain_registry_event
+            else []
+        )
+        domain_specialists = (
+            [str(item) for item in specialist_domain_event.payload.get("specialist_types", [])]
+            if specialist_domain_event
             else []
         )
         shadow_specialists = (
@@ -370,6 +378,7 @@ class ObservabilityService:
         )
         domain_alignment_status = self._domain_alignment_status(
             domain_registry_event=domain_registry_event,
+            specialist_domain_event=specialist_domain_event,
             specialist_shadow_event=specialist_shadow_event,
         )
         mind_alignment_status = self._mind_alignment_status(
@@ -401,6 +410,7 @@ class ObservabilityService:
             continuity_target_goal=continuity_target_goal,
             continuity_runtime_mode=continuity_runtime_mode,
             registry_domains=registry_domains,
+            domain_specialists=domain_specialists,
             shadow_specialists=shadow_specialists,
             domain_alignment_status=domain_alignment_status,
             mind_alignment_status=mind_alignment_status,
@@ -509,6 +519,7 @@ class ObservabilityService:
     def _domain_alignment_status(
         *,
         domain_registry_event: InternalEventEnvelope | None,
+        specialist_domain_event: InternalEventEnvelope | None,
         specialist_shadow_event: InternalEventEnvelope | None,
     ) -> str:
         if domain_registry_event is None:
@@ -516,6 +527,12 @@ class ObservabilityService:
         registry_domains = domain_registry_event.payload.get("registry_domains", [])
         if not registry_domains:
             return "partial"
+        if specialist_domain_event is not None:
+            linked_domains = specialist_domain_event.payload.get("linked_domains", {})
+            selection_modes = specialist_domain_event.payload.get("selection_modes", {})
+            if not linked_domains or not selection_modes:
+                return "attention_required"
+            return "healthy"
         if specialist_shadow_event is None:
             return "healthy"
         linked_domains = specialist_shadow_event.payload.get("linked_domains", {})
