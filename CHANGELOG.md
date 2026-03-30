@@ -26,10 +26,10 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 ### Sprint 2 do V2 domain consumers and workflows cut
 
 - `shared/contracts`, `orchestrator-service`, `operational-service` e `langgraph_flow` passaram a tratar workflows como estado auditavel, com `workflow_state`, `workflow_governance_mode`, `workflow_decision_points`, `workflow_governance_declared`, `workflow_completed_steps` e `workflow_decisions`;
-- `observability-service` passou a auditar `workflow_trace_status`, distinguindo caminhos saud?veis, incompletos, com aten??o requerida ou n?o aplic?veis;
+- `observability-service` passou a auditar `workflow_trace_status`, distinguindo caminhos saudáveis, incompletos, com atenção requerida ou não aplicáveis;
 - `tools/internal_pilot_report.py` passou a expor `workflow_trace_status` nos resumos operacionais do piloto interno;
-- `shared/domain_registry.py` e `knowledge/curated/domain_registry.json` passaram a permitir workflows can?nicos por rota ativa, e o runtime agora propaga `workflow_domain_route` como origem expl?cita da composi??o operacional;
-- todas as rotas de runtime ativas passaram a ter contrato m?nimo de workflow no registry, e `tests/unit/test_domain_registry_workflows.py` passou a impedir regress?o dessa malha;
+- `shared/domain_registry.py` e `knowledge/curated/domain_registry.json` passaram a permitir workflows canônicos por rota ativa, e o runtime agora propaga `workflow_domain_route` como origem explícita da composição operacional;
+- todas as rotas de runtime ativas passaram a ter contrato mínimo de workflow no registry, e `tests/unit/test_domain_registry_workflows.py` passou a impedir regressão dessa malha;
 
 ### Sprint 1 do V2 domain consumers and workflows cut
 
