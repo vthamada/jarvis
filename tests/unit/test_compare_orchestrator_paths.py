@@ -23,6 +23,7 @@ def make_result(  # type: ignore[no-untyped-def]
     continuity_action: str | None = "continuar",
     continuity_source: str | None = "active_mission",
     continuity_runtime_mode: str | None = "baseline_linear",
+    workflow_domain_route: str | None = "strategy",
     registry_domains: list[str] | None = None,
     shadow_specialists: list[str] | None = None,
     domain_alignment_status: str = "healthy",
@@ -31,6 +32,7 @@ def make_result(  # type: ignore[no-untyped-def]
     memory_alignment_status: str = "healthy",
     specialist_sovereignty_status: str = "healthy",
     axis_gate_status: str = "healthy",
+    workflow_trace_status: str = "healthy",
     expected_continuity_action: str | None = "continuar",
     continuity_matches_expectation: bool | None = True,
     continuity_trace_status: str = "healthy",
@@ -56,6 +58,7 @@ def make_result(  # type: ignore[no-untyped-def]
         continuity_action=continuity_action,
         continuity_source=continuity_source,
         continuity_runtime_mode=continuity_runtime_mode,
+        workflow_domain_route=workflow_domain_route,
         registry_domains=registry_domains or ["strategy"],
         shadow_specialists=shadow_specialists or [],
         domain_alignment_status=domain_alignment_status,
@@ -64,6 +67,7 @@ def make_result(  # type: ignore[no-untyped-def]
         memory_alignment_status=memory_alignment_status,
         specialist_sovereignty_status=specialist_sovereignty_status,
         axis_gate_status=axis_gate_status,
+        workflow_trace_status=workflow_trace_status,
         expected_continuity_action=expected_continuity_action,
         continuity_matches_expectation=continuity_matches_expectation,
         continuity_trace_status=continuity_trace_status,
@@ -104,6 +108,8 @@ def test_compare_results_flags_continuity_mismatch_fields() -> None:
             scenario_id="x",
             path_name="langgraph",
             continuity_action="continuar",
+            workflow_domain_route="analysis",
+            workflow_trace_status="attention_required",
             continuity_trace_status="attention_required",
         )
     ]
@@ -112,6 +118,8 @@ def test_compare_results_flags_continuity_mismatch_fields() -> None:
 
     assert comparisons[0].mismatch_fields == [
         "continuity_action",
+        "workflow_domain_route",
+        "workflow_trace_status",
         "continuity_trace_status",
     ]
 

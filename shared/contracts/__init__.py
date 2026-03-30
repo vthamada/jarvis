@@ -240,9 +240,13 @@ class OperationDispatchContract:
     specialist_hints: list[str] = field(default_factory=list)
     tool_hints: list[str] = field(default_factory=list)
     workflow_profile: str | None = None
+    workflow_domain_route: str | None = None
     workflow_objective: str | None = None
+    workflow_state: str | None = None
+    workflow_governance_mode: str | None = None
     workflow_steps: list[str] = field(default_factory=list)
     workflow_checkpoints: list[str] = field(default_factory=list)
+    workflow_decision_points: list[str] = field(default_factory=list)
     deadline_hint: str | None = None
     priority_hint: str | None = None
     artifact_destination: str | None = None
@@ -257,6 +261,10 @@ class OperationResultContract:
     artifacts: list[str] = field(default_factory=list)
     errors: list[str] = field(default_factory=list)
     checkpoints: list[str] = field(default_factory=list)
+    workflow_domain_route: str | None = None
+    workflow_state: str | None = None
+    workflow_completed_steps: list[str] = field(default_factory=list)
+    workflow_decisions: list[str] = field(default_factory=list)
     next_recommendation: str | None = None
     governance_flags: list[str] = field(default_factory=list)
     memory_record_hints: list[str] = field(default_factory=list)

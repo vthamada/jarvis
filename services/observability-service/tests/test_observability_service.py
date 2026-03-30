@@ -206,6 +206,7 @@ def test_observability_service_audits_flow_for_missing_events_and_anomalies() ->
     assert "memory_recovered" in audit.missing_required_events
     assert "continuity_decided" in audit.missing_required_events
     assert "operation_missing_completion" in audit.anomaly_flags
+    assert audit.workflow_trace_status == "not_applicable"
     assert "continuity_decided" in audit.missing_continuity_signals
     assert audit.trace_complete is False
 
@@ -342,6 +343,7 @@ def test_observability_service_audits_continuity_signals() -> None:
     assert audit.continuity_action == "retomar"
     assert audit.continuity_source == "related_mission"
     assert audit.continuity_runtime_mode == "langgraph_subflow"
+    assert audit.workflow_trace_status == "not_applicable"
     assert audit.continuity_trace_status == "attention_required"
     assert "retomar_missing_target_mission" in audit.continuity_anomaly_flags
     assert "memory_continuity_mismatch" in audit.continuity_anomaly_flags
@@ -639,6 +641,7 @@ def test_observability_service_audits_domain_memory_and_sovereignty_alignment() 
     assert audit.domain_specialists == ["software_change_specialist"]
     assert audit.shadow_specialists == []
     assert audit.domain_alignment_status == "healthy"
+    assert audit.workflow_trace_status == "not_applicable"
     assert audit.mind_alignment_status == "healthy"
     assert audit.identity_alignment_status == "healthy"
     assert audit.memory_alignment_status == "healthy"
@@ -778,3 +781,248 @@ def test_observability_service_builds_incident_evidence_for_governed_flow() -> N
     assert evidence.recommended_operator_action == "keep_contained_and_require_manual_review"
     assert "memory_recovered" in evidence.missing_required_events
 
+
+
+def test_observability_service_audits_healthy_workflow_trace() -> None:
+    temp_dir = runtime_dir("observability-workflow")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service.ingest_events(
+        [
+            InternalEventEnvelope(
+                event_id="evt-w1",
+                event_name="input_received",
+                timestamp="2026-03-18T00:00:00+00:00",
+                source_service="orchestrator-service",
+                payload={"content": "Plan rollout checkpoints."},
+                request_id="req-workflow",
+                session_id="sess-workflow",
+                correlation_id="req-workflow",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-w2",
+                event_name="memory_recovered",
+                timestamp="2026-03-18T00:00:01+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_recommendation": "continuar"},
+                request_id="req-workflow",
+                session_id="sess-workflow",
+                correlation_id="req-workflow",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-w3",
+                event_name="intent_classified",
+                timestamp="2026-03-18T00:00:02+00:00",
+                source_service="orchestrator-service",
+                payload={"intent": "planning"},
+                request_id="req-workflow",
+                session_id="sess-workflow",
+                correlation_id="req-workflow",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-w4",
+                event_name="context_composed",
+                timestamp="2026-03-18T00:00:03+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "active_minds": ["mente_planejadora", "mente_logica"],
+                    "primary_mind": "mente_planejadora",
+                    "supporting_minds": ["mente_logica"],
+                    "suppressed_minds": [],
+                    "supporting_mind_limit": 2,
+                    "suppressed_mind_limit": 2,
+                    "dominant_tension": "transformar meta em checkpoints seguros",
+                    "arbitration_summary": "mente_planejadora lidera com apoio logico",
+                    "arbitration_source": "mind_registry",
+                },
+                request_id="req-workflow",
+                session_id="sess-workflow",
+                correlation_id="req-workflow",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-w5",
+                event_name="plan_built",
+                timestamp="2026-03-18T00:00:04+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_action": "continuar", "continuity_source": "active_mission"},
+                request_id="req-workflow",
+                session_id="sess-workflow",
+                correlation_id="req-workflow",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-w6",
+                event_name="continuity_decided",
+                timestamp="2026-03-18T00:00:05+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_action": "continuar", "continuity_source": "active_mission"},
+                request_id="req-workflow",
+                session_id="sess-workflow",
+                correlation_id="req-workflow",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-w7",
+                event_name="governance_checked",
+                timestamp="2026-03-18T00:00:06+00:00",
+                source_service="orchestrator-service",
+                payload={"decision": "allow_with_conditions"},
+                request_id="req-workflow",
+                session_id="sess-workflow",
+                correlation_id="req-workflow",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-w8",
+                event_name="workflow_composed",
+                timestamp="2026-03-18T00:00:07+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "operation_id": "op-workflow",
+                    "workflow_profile": "strategic_direction_workflow",
+                    "workflow_domain_route": "strategy",
+                    "workflow_state": "composed",
+                    "workflow_governance_mode": "core_mediated",
+                    "workflow_decision_points": [
+                        "goal_scope_confirmed",
+                        "step_sequence_validated",
+                        "next_action_governed",
+                    ],
+                },
+                request_id="req-workflow",
+                session_id="sess-workflow",
+                correlation_id="req-workflow",
+                operation_id="op-workflow",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-w9",
+                event_name="workflow_governance_declared",
+                timestamp="2026-03-18T00:00:07.500000+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "operation_id": "op-workflow",
+                    "workflow_profile": "strategic_direction_workflow",
+                    "workflow_domain_route": "strategy",
+                    "workflow_state": "composed",
+                    "workflow_governance_mode": "core_mediated",
+                    "workflow_decision_points": [
+                        "goal_scope_confirmed",
+                        "step_sequence_validated",
+                        "next_action_governed",
+                    ],
+                },
+                request_id="req-workflow",
+                session_id="sess-workflow",
+                correlation_id="req-workflow",
+                operation_id="op-workflow",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-w10",
+                event_name="operation_dispatched",
+                timestamp="2026-03-18T00:00:07.800000+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "operation_id": "op-workflow",
+                    "task_type": "draft_plan",
+                    "workflow_profile": "strategic_direction_workflow",
+                    "workflow_domain_route": "strategy",
+                    "workflow_state": "dispatched",
+                    "workflow_decision_points": [
+                        "goal_scope_confirmed",
+                        "step_sequence_validated",
+                        "next_action_governed",
+                    ],
+                },
+                request_id="req-workflow",
+                session_id="sess-workflow",
+                correlation_id="req-workflow",
+                operation_id="op-workflow",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-w11",
+                event_name="operation_completed",
+                timestamp="2026-03-18T00:00:08+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "operation_id": "op-workflow",
+                    "status": "completed",
+                    "workflow_profile": "strategic_direction_workflow",
+                    "workflow_domain_route": "strategy",
+                    "workflow_state": "completed",
+                    "workflow_completed_steps": [
+                        "structure the goal and success criteria",
+                        "sequence the smallest safe steps",
+                        "emit checkpoints and the next safe action",
+                    ],
+                    "workflow_decisions": [
+                        "goal_scope_confirmed",
+                        "step_sequence_validated",
+                        "next_action_governed",
+                    ],
+                },
+                request_id="req-workflow",
+                session_id="sess-workflow",
+                correlation_id="req-workflow",
+                operation_id="op-workflow",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-w12",
+                event_name="workflow_completed",
+                timestamp="2026-03-18T00:00:08.500000+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "operation_id": "op-workflow",
+                    "workflow_profile": "strategic_direction_workflow",
+                    "workflow_domain_route": "strategy",
+                    "workflow_state": "completed",
+                    "workflow_governance_mode": "core_mediated",
+                    "workflow_decision_points": [
+                        "goal_scope_confirmed",
+                        "step_sequence_validated",
+                        "next_action_governed",
+                    ],
+                    "workflow_decisions": [
+                        "goal_scope_confirmed",
+                        "step_sequence_validated",
+                        "next_action_governed",
+                    ],
+                    "status": "completed",
+                    "checkpoints": [
+                        "workflow_state:composed",
+                        "workflow:goal_structured",
+                        "workflow_state:completed",
+                    ],
+                },
+                request_id="req-workflow",
+                session_id="sess-workflow",
+                correlation_id="req-workflow",
+                operation_id="op-workflow",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-w13",
+                event_name="response_synthesized",
+                timestamp="2026-03-18T00:00:09+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_action": "continuar"},
+                request_id="req-workflow",
+                session_id="sess-workflow",
+                correlation_id="req-workflow",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-w14",
+                event_name="memory_recorded",
+                timestamp="2026-03-18T00:00:10+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_mode": "continuar"},
+                request_id="req-workflow",
+                session_id="sess-workflow",
+                correlation_id="req-workflow",
+            ),
+        ]
+    )
+
+    audit = service.audit_flow(ObservabilityQuery(request_id="req-workflow"))
+
+    assert audit.workflow_domain_route == "strategy"
+    assert audit.workflow_profile == "strategic_direction_workflow"
+    assert audit.workflow_governance_mode == "core_mediated"
+    assert audit.workflow_trace_status == "healthy"
+    assert audit.missing_required_events == []
+    assert audit.anomaly_flags == []
+    assert audit.trace_complete is True

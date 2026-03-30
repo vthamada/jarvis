@@ -35,6 +35,7 @@ class PilotTraceSummary:
     continuity_action: str | None
     continuity_source: str | None
     continuity_runtime_mode: str | None
+    workflow_domain_route: str | None
     registry_domains: list[str]
     shadow_specialists: list[str]
     domain_alignment_status: str
@@ -44,6 +45,7 @@ class PilotTraceSummary:
     specialist_sovereignty_status: str
     axis_gate_status: str
     expectation_status: str
+    workflow_trace_status: str
     continuity_trace_status: str
     missing_continuity_signals: list[str]
     continuity_anomaly_flags: list[str]
@@ -101,6 +103,7 @@ def summarize_traces(
             continuity_action=audit.continuity_action,
             continuity_source=audit.continuity_source,
             continuity_runtime_mode=audit.continuity_runtime_mode,
+            workflow_domain_route=audit.workflow_domain_route,
             registry_domains=list(audit.registry_domains),
             shadow_specialists=list(audit.shadow_specialists),
             domain_alignment_status=audit.domain_alignment_status,
@@ -120,6 +123,7 @@ def summarize_traces(
                 operation_status=audit.operation_status,
                 continuity_action=audit.continuity_action,
             ),
+            workflow_trace_status=audit.workflow_trace_status,
             continuity_trace_status=audit.continuity_trace_status,
             missing_continuity_signals=audit.missing_continuity_signals,
             continuity_anomaly_flags=audit.continuity_anomaly_flags,
@@ -184,6 +188,7 @@ def render_text(summaries: list[PilotTraceSummary]) -> str:
             f"continuity_action={summary.continuity_action or 'none'} "
             f"continuity_source={summary.continuity_source or 'none'} "
             f"continuity_runtime_mode={summary.continuity_runtime_mode or 'none'} "
+            f"workflow_domain_route={getattr(summary, 'workflow_domain_route', None) or 'none'} "
             "registry_domains="
             f"{','.join(getattr(summary, 'registry_domains', [])) or 'none'} "
             "shadow_specialists="
@@ -201,6 +206,7 @@ def render_text(summaries: list[PilotTraceSummary]) -> str:
             "axis_gate_status="
             f"{getattr(summary, 'axis_gate_status', 'attention_required')} "
             f"expectation_status={summary.expectation_status} "
+            f"workflow_trace_status={getattr(summary, 'workflow_trace_status', 'not_applicable')} "
             "missing_continuity_signals="
             f"{','.join(summary.missing_continuity_signals) or 'none'} "
             "continuity_anomaly_flags="

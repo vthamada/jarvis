@@ -30,7 +30,7 @@ from shared.contracts import (
     OperationResultContract,
     SpecialistInvocationContract,
 )
-from shared.domain_registry import canonical_domain_refs_for_name
+from shared.domain_registry import canonical_domain_refs_for_name, resolve_workflow_route
 from shared.events import InternalEventEnvelope
 from shared.types import OperationId, PermissionDecision, RequestId
 
@@ -449,11 +449,29 @@ class OrchestratorService:
                     {
                         "operation_id": str(operation_dispatch.operation_id),
                         "workflow_profile": operation_dispatch.workflow_profile,
+                        "workflow_domain_route": operation_dispatch.workflow_domain_route,
                         "workflow_objective": operation_dispatch.workflow_objective,
+                        "workflow_state": operation_dispatch.workflow_state,
+                        "workflow_governance_mode": operation_dispatch.workflow_governance_mode,
                         "workflow_steps": operation_dispatch.workflow_steps,
                         "workflow_checkpoints": operation_dispatch.workflow_checkpoints,
+                        "workflow_decision_points": operation_dispatch.workflow_decision_points,
                         "task_type": operation_dispatch.task_type,
                         "domain_hints": operation_dispatch.domain_hints,
+                    },
+                )
+            )
+            events.append(
+                self.make_event(
+                    "workflow_governance_declared",
+                    contract,
+                    {
+                        "operation_id": str(operation_dispatch.operation_id),
+                        "workflow_profile": operation_dispatch.workflow_profile,
+                        "workflow_domain_route": operation_dispatch.workflow_domain_route,
+                        "workflow_state": operation_dispatch.workflow_state,
+                        "workflow_governance_mode": operation_dispatch.workflow_governance_mode,
+                        "workflow_decision_points": operation_dispatch.workflow_decision_points,
                     },
                 )
             )
@@ -465,7 +483,10 @@ class OrchestratorService:
                         "operation_id": str(operation_dispatch.operation_id),
                         "task_type": operation_dispatch.task_type,
                         "workflow_profile": operation_dispatch.workflow_profile,
+                        "workflow_domain_route": operation_dispatch.workflow_domain_route,
+                        "workflow_state": "dispatched",
                         "workflow_steps": operation_dispatch.workflow_steps,
+                        "workflow_decision_points": operation_dispatch.workflow_decision_points,
                         "specialist_hints": operation_dispatch.specialist_hints,
                     },
                 )
@@ -482,7 +503,11 @@ class OrchestratorService:
                         "status": operation_result.status.value,
                         "artifacts": operation_result.artifacts,
                         "workflow_profile": operation_dispatch.workflow_profile,
+                        "workflow_domain_route": operation_dispatch.workflow_domain_route,
+                        "workflow_state": operation_result.workflow_state,
                         "workflow_checkpoints": operation_dispatch.workflow_checkpoints,
+                        "workflow_completed_steps": operation_result.workflow_completed_steps,
+                        "workflow_decisions": operation_result.workflow_decisions,
                     },
                 )
             )
@@ -493,6 +518,11 @@ class OrchestratorService:
                     {
                         "operation_id": str(operation_result.operation_id),
                         "workflow_profile": operation_dispatch.workflow_profile,
+                        "workflow_domain_route": operation_dispatch.workflow_domain_route,
+                        "workflow_state": operation_result.workflow_state,
+                        "workflow_governance_mode": operation_dispatch.workflow_governance_mode,
+                        "workflow_decision_points": operation_dispatch.workflow_decision_points,
+                        "workflow_decisions": operation_result.workflow_decisions,
                         "status": operation_result.status.value,
                         "checkpoints": operation_result.checkpoints,
                     },
@@ -1102,7 +1132,13 @@ class OrchestratorService:
     ) -> OperationDispatchContract:
         """Create the operational dispatch for an allowed request."""
 
-        workflow_profile, workflow_steps, workflow_checkpoints = self._build_workflow_profile(plan)
+        (
+            workflow_domain_route,
+            workflow_profile,
+            workflow_steps,
+            workflow_checkpoints,
+            workflow_decision_points,
+        ) = self._build_workflow_profile(plan)
         return OperationDispatchContract(
             operation_id=OperationId(f"op-{uuid4().hex[:8]}"),
             request_id=RequestId(str(contract.request_id)),
@@ -1125,28 +1161,33 @@ class OrchestratorService:
             domain_hints=list(plan.active_domains),
             specialist_hints=list(plan.specialist_hints),
             workflow_profile=workflow_profile,
+            workflow_domain_route=workflow_domain_route,
             workflow_objective=plan.goal,
+            workflow_state="composed",
+            workflow_governance_mode="core_mediated",
             workflow_steps=workflow_steps,
             workflow_checkpoints=workflow_checkpoints,
+            workflow_decision_points=workflow_decision_points,
             priority_hint=contract.priority_hint,
         )
 
     @staticmethod
     def _build_workflow_profile(
         plan: DeliberativePlanContract,
-    ) -> tuple[str, list[str], list[str]]:
-        if "operational_readiness" in plan.active_domains:
+    ) -> tuple[str | None, str, list[str], list[str], list[str]]:
+        route_workflow = resolve_workflow_route(plan.active_domains)
+        if route_workflow is not None:
+            route_name, route_entry = route_workflow
             return (
-                "operational_readiness_workflow",
-                [
-                    "map readiness checkpoints for the active mission",
-                    "confirm blockers, conditions and dependencies",
-                    "recommend the next operational action",
-                ],
-                ["readiness_mapped", "conditions_checked", "next_action_defined"],
+                route_name,
+                route_entry.workflow_profile or "assisted_execution_workflow",
+                list(route_entry.workflow_steps),
+                list(route_entry.workflow_checkpoints),
+                list(route_entry.workflow_decision_points),
             )
         if plan.recommended_task_type == "draft_plan":
             return (
+                None,
                 "deliberative_planning_workflow",
                 [
                     "structure the goal and success criteria",
@@ -1154,9 +1195,15 @@ class OrchestratorService:
                     "emit checkpoints and the next safe action",
                 ],
                 ["goal_structured", "steps_sequenced", "next_action_defined"],
+                [
+                    "goal_scope_confirmed",
+                    "step_sequence_validated",
+                    "next_action_governed",
+                ],
             )
         if plan.recommended_task_type == "produce_analysis_brief":
             return (
+                None,
                 "structured_analysis_workflow",
                 [
                     "frame the question and decision context",
@@ -1164,8 +1211,14 @@ class OrchestratorService:
                     "emit a recommended interpretation",
                 ],
                 ["question_framed", "evidence_compared", "recommendation_emitted"],
+                [
+                    "question_frame_confirmed",
+                    "tradeoff_review_governed",
+                    "recommendation_governed",
+                ],
             )
         return (
+            None,
             "assisted_execution_workflow",
             [
                 "preserve safe local scope",
@@ -1173,6 +1226,11 @@ class OrchestratorService:
                 "return a reversible result",
             ],
             ["scope_preserved", "action_applied", "result_returned"],
+            [
+                "local_scope_confirmed",
+                "bounded_action_selected",
+                "result_reversibility_confirmed",
+            ],
         )
 
     def make_event(

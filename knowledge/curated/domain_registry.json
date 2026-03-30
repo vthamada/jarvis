@@ -370,6 +370,22 @@
         "tradeoff_clarity",
         "decision_trace",
         "domain_alignment"
+      ],
+      "workflow_profile": "strategic_direction_workflow",
+      "workflow_steps": [
+        "frame the strategic scenario and the decision horizon",
+        "compare trade-offs, constraints and leverage points",
+        "recommend a direction with explicit criteria"
+      ],
+      "workflow_checkpoints": [
+        "scenario_framed",
+        "tradeoffs_compared",
+        "direction_recommended"
+      ],
+      "workflow_decision_points": [
+        "scenario_scope_confirmed",
+        "tradeoff_criteria_governed",
+        "direction_governed"
       ]
     },
     {
@@ -396,6 +412,22 @@
         "analysis_depth",
         "evidence_trace",
         "decision_support"
+      ],
+      "workflow_profile": "structured_analysis_workflow",
+      "workflow_steps": [
+        "frame the question and decision context",
+        "compare evidence, risks and trade-offs",
+        "emit a recommended interpretation"
+      ],
+      "workflow_checkpoints": [
+        "question_framed",
+        "evidence_compared",
+        "recommendation_emitted"
+      ],
+      "workflow_decision_points": [
+        "question_frame_confirmed",
+        "tradeoff_review_governed",
+        "recommendation_governed"
       ]
     },
     {
@@ -422,6 +454,22 @@
         "governance_alignment",
         "risk_trace",
         "condition_completeness"
+      ],
+      "workflow_profile": "governance_boundary_workflow",
+      "workflow_steps": [
+        "identify the governing boundaries and conditions",
+        "compare exposure, safeguards and containment options",
+        "recommend the safest governed path"
+      ],
+      "workflow_checkpoints": [
+        "boundaries_identified",
+        "exposure_compared",
+        "governed_path_recommended"
+      ],
+      "workflow_decision_points": [
+        "boundary_scope_confirmed",
+        "containment_gate_governed",
+        "governed_path_locked"
       ]
     },
     {
@@ -447,6 +495,22 @@
         "contract_impact",
         "change_safety",
         "implementation_trace"
+      ],
+      "workflow_profile": "software_change_workflow",
+      "workflow_steps": [
+        "frame the software change and its contract impact",
+        "compare implementation risk, safety and patch direction",
+        "recommend the safest bounded change path"
+      ],
+      "workflow_checkpoints": [
+        "change_scope_framed",
+        "implementation_risk_compared",
+        "patch_direction_recommended"
+      ],
+      "workflow_decision_points": [
+        "change_scope_confirmed",
+        "contract_impact_governed",
+        "patch_direction_governed"
       ]
     },
     {
@@ -473,6 +537,22 @@
         "checkpoint_coverage",
         "execution_readiness",
         "operational_trace"
+      ],
+      "workflow_profile": "operational_readiness_workflow",
+      "workflow_steps": [
+        "map readiness checkpoints for the active mission",
+        "confirm blockers, conditions and dependencies",
+        "recommend the next operational action"
+      ],
+      "workflow_checkpoints": [
+        "readiness_mapped",
+        "conditions_checked",
+        "next_action_defined"
+      ],
+      "workflow_decision_points": [
+        "readiness_scope_confirmed",
+        "blockers_validated",
+        "next_action_governed"
       ]
     },
     {
@@ -485,7 +565,23 @@
         "auto_observacao",
         "monitoramento_e_vigilancia_contextual"
       ],
-      "summary": "Rota ativa do v2 para trilha, anomalias, correlação e lacunas de sinal."
+      "summary": "Rota ativa do v2 para trilha, anomalias, correlação e lacunas de sinal.",
+      "workflow_profile": "observability_review_workflow",
+      "workflow_steps": [
+        "frame the trace, anomaly surface and correlation scope",
+        "compare missing signals, regressions and alignment gaps",
+        "emit the strongest operational reading and next check"
+      ],
+      "workflow_checkpoints": [
+        "trace_scope_framed",
+        "signal_gaps_compared",
+        "operational_reading_emitted"
+      ],
+      "workflow_decision_points": [
+        "trace_scope_confirmed",
+        "signal_gap_gate_governed",
+        "next_check_governed"
+      ]
     },
     {
       "route_name": "documentation",
@@ -497,7 +593,23 @@
         "producao_de_artefatos",
         "comunicacao_linguagem_e_argumentacao"
       ],
-      "summary": "Rota ativa do v2 para documentação operacional e alinhamento entre artefatos vivos."
+      "summary": "Rota ativa do v2 para documentação operacional e alinhamento entre artefatos vivos.",
+      "workflow_profile": "documentation_artifact_workflow",
+      "workflow_steps": [
+        "frame the artifact scope and required audience",
+        "structure sections, evidence and the minimum viable output",
+        "emit a coherent artifact with explicit next use"
+      ],
+      "workflow_checkpoints": [
+        "artifact_scope_framed",
+        "artifact_structure_defined",
+        "artifact_emitted"
+      ],
+      "workflow_decision_points": [
+        "artifact_scope_confirmed",
+        "audience_fit_governed",
+        "artifact_release_governed"
+      ]
     },
     {
       "route_name": "decision_risk",
@@ -523,6 +635,22 @@
         "risk_gate_alignment",
         "uncertainty_trace",
         "reversibility_clarity"
+      ],
+      "workflow_profile": "decision_risk_workflow",
+      "workflow_steps": [
+        "frame the decision gate and reversibility window",
+        "compare uncertainty, impact and containment paths",
+        "recommend the safest gate for progression"
+      ],
+      "workflow_checkpoints": [
+        "risk_gate_framed",
+        "uncertainty_compared",
+        "safe_gate_recommended"
+      ],
+      "workflow_decision_points": [
+        "reversibility_scope_confirmed",
+        "uncertainty_gate_governed",
+        "safe_gate_locked"
       ]
     },
     {
@@ -535,7 +663,23 @@
         "pesquisa_e_inteligencia",
         "auto_observacao"
       ],
-      "summary": "Rota ativa do v2 para piloto interno, comparação de paths e relatórios."
+      "summary": "Rota ativa do v2 para piloto interno, comparação de paths e relatórios.",
+      "workflow_profile": "pilot_operations_workflow",
+      "workflow_steps": [
+        "frame the pilot scenario and comparison target",
+        "compare trace quality, expectations and adherence gates",
+        "emit the safest pilot recommendation for progression"
+      ],
+      "workflow_checkpoints": [
+        "pilot_scope_framed",
+        "paths_compared",
+        "pilot_recommendation_emitted"
+      ],
+      "workflow_decision_points": [
+        "pilot_scope_confirmed",
+        "comparison_gate_governed",
+        "promotion_readiness_governed"
+      ]
     },
     {
       "route_name": "productivity",
@@ -547,7 +691,23 @@
         "produtividade_execucao_e_coordenacao",
         "assistencia_pessoal_e_operacional"
       ],
-      "summary": "Rota ativa do v2 para menor próxima ação segura, coordenação e execução verificável."
+      "summary": "Rota ativa do v2 para menor próxima ação segura, coordenação e execução verificável.",
+      "workflow_profile": "assisted_execution_workflow",
+      "workflow_steps": [
+        "preserve safe local scope",
+        "apply the best bounded next action",
+        "return a reversible result"
+      ],
+      "workflow_checkpoints": [
+        "scope_preserved",
+        "action_applied",
+        "result_returned"
+      ],
+      "workflow_decision_points": [
+        "local_scope_confirmed",
+        "bounded_action_selected",
+        "result_reversibility_confirmed"
+      ]
     }
   ]
 }

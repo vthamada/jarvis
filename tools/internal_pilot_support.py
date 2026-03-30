@@ -83,6 +83,7 @@ class PilotExecutionResult:
     continuity_action: str | None
     continuity_source: str | None
     continuity_runtime_mode: str | None
+    workflow_domain_route: str | None
     registry_domains: list[str]
     shadow_specialists: list[str]
     domain_alignment_status: str
@@ -91,6 +92,7 @@ class PilotExecutionResult:
     memory_alignment_status: str
     specialist_sovereignty_status: str
     axis_gate_status: str
+    workflow_trace_status: str
     expected_continuity_action: str | None
     continuity_matches_expectation: bool | None
     continuity_trace_status: str
@@ -292,6 +294,7 @@ def run_pilot_scenarios(
                 continuity_action=audit.continuity_action,
                 continuity_source=audit.continuity_source,
                 continuity_runtime_mode=audit.continuity_runtime_mode,
+                workflow_domain_route=audit.workflow_domain_route,
                 registry_domains=list(audit.registry_domains),
                 shadow_specialists=list(audit.shadow_specialists),
                 domain_alignment_status=audit.domain_alignment_status,
@@ -306,6 +309,7 @@ def run_pilot_scenarios(
                     audit.memory_alignment_status,
                     audit.specialist_sovereignty_status,
                 ),
+                workflow_trace_status=audit.workflow_trace_status,
                 expected_continuity_action=scenario.expected_continuity_action,
                 continuity_matches_expectation=continuity_matches_expectation,
                 continuity_trace_status=audit.continuity_trace_status,

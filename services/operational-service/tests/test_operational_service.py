@@ -40,14 +40,22 @@ def test_operational_service_generates_text_artifact_for_supported_task() -> Non
             specialist_summary="encadear o plano em etapas pequenas",
             specialist_findings=["open_loop: fechar checkpoint principal"],
             specialist_hints=["operational_planning_specialist"],
-            workflow_profile="deliberative_planning_workflow",
+            workflow_profile="strategic_direction_workflow",
+            workflow_domain_route="strategy",
             workflow_objective="Plan milestone M3",
+            workflow_state="composed",
+            workflow_governance_mode="core_mediated",
             workflow_steps=[
                 "structure the goal and success criteria",
                 "sequence the smallest safe steps",
                 "emit checkpoints and the next safe action",
             ],
             workflow_checkpoints=["goal_structured", "steps_sequenced", "next_action_defined"],
+            workflow_decision_points=[
+                "goal_scope_confirmed",
+                "step_sequence_validated",
+                "next_action_governed",
+            ],
             success_criteria=["plano deve indicar a menor proxima acao segura"],
             smallest_safe_next_action="definir objetivo",
         )
@@ -60,10 +68,27 @@ def test_operational_service_generates_text_artifact_for_supported_task() -> Non
     content = artifact_path.read_text(encoding="utf-8")
     assert "Plano deliberativo para" in content
     assert "Criterios de sucesso" in content
-    assert "Workflow: deliberative_planning_workflow" in content
+    assert "Workflow: strategic_direction_workflow" in content
+    assert "Workflow domain route: strategy" in content
     assert "Workflow steps:" in content
+    assert "Workflow governance: core_mediated" in content
+    assert "Workflow decision points:" in content
     assert "Ajuste interno" in content
+    assert execution.operation_result.workflow_domain_route == "strategy"
+    assert execution.operation_result.workflow_state == "completed"
+    assert execution.operation_result.workflow_completed_steps == [
+        "structure the goal and success criteria",
+        "sequence the smallest safe steps",
+        "emit checkpoints and the next safe action",
+    ]
+    assert execution.operation_result.workflow_decisions == [
+        "goal_scope_confirmed",
+        "step_sequence_validated",
+        "next_action_governed",
+    ]
+    assert "workflow_route:strategy" in execution.operation_result.checkpoints
     assert "workflow:goal_structured" in execution.operation_result.checkpoints
+    assert "workflow_state:completed" in execution.operation_result.checkpoints
 
 
 def test_operational_service_fails_for_unsupported_task() -> None:

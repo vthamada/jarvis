@@ -28,6 +28,10 @@ class DomainEntry:
     consumer_objective: str | None = None
     expected_deliverables: tuple[str, ...] = field(default_factory=tuple)
     telemetry_focus: tuple[str, ...] = field(default_factory=tuple)
+    workflow_profile: str | None = None
+    workflow_steps: tuple[str, ...] = field(default_factory=tuple)
+    workflow_checkpoints: tuple[str, ...] = field(default_factory=tuple)
+    workflow_decision_points: tuple[str, ...] = field(default_factory=tuple)
 
 
 def _load_registries(
@@ -56,6 +60,10 @@ def _load_registries(
             consumer_objective=item.get("consumer_objective"),
             expected_deliverables=tuple(item.get("expected_deliverables", [])),
             telemetry_focus=tuple(item.get("telemetry_focus", [])),
+            workflow_profile=item.get("workflow_profile"),
+            workflow_steps=tuple(item.get("workflow_steps", [])),
+            workflow_checkpoints=tuple(item.get("workflow_checkpoints", [])),
+            workflow_decision_points=tuple(item.get("workflow_decision_points", [])),
         )
         canonical[entry.domain_name] = entry
     routes: dict[str, DomainEntry] = {}
@@ -78,6 +86,10 @@ def _load_registries(
             consumer_objective=item.get("consumer_objective"),
             expected_deliverables=tuple(item.get("expected_deliverables", [])),
             telemetry_focus=tuple(item.get("telemetry_focus", [])),
+            workflow_profile=item.get("workflow_profile"),
+            workflow_steps=tuple(item.get("workflow_steps", [])),
+            workflow_checkpoints=tuple(item.get("workflow_checkpoints", [])),
+            workflow_decision_points=tuple(item.get("workflow_decision_points", [])),
         )
         routes[entry.domain_name] = entry
     return canonical, routes
@@ -151,6 +163,18 @@ def resolve_route(route_name: str) -> DomainEntry | None:
     """Retorna a DomainEntry de uma rota de runtime, ou None se nao existir."""
     return RUNTIME_ROUTE_REGISTRY.get(route_name)
 
+
+
+def resolve_workflow_route(
+    route_names: list[str] | tuple[str, ...],
+) -> tuple[str, DomainEntry] | None:
+    """Return the first active route with an explicit workflow definition."""
+
+    for route_name in route_names:
+        entry = resolve_route(route_name)
+        if entry is not None and entry.workflow_profile:
+            return route_name, entry
+    return None
 
 def route_routing_source(route_name: str) -> str:
     """Retorna a origem que autorizou o identificador atual da rota."""

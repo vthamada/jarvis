@@ -61,6 +61,10 @@ Entregas esperadas:
 
 ### Sprint 2. Operational workflows
 
+Status atual:
+
+- concluida.
+
 Objetivo:
 
 - criar camada inicial de workflows compostos acima do nucleo soberano.
@@ -131,5 +135,9 @@ Ler em conjunto com:
 Atualizacao da Sprint 2:
 
 - camada inicial aberta com `workflow_profile`, `workflow_steps`, `workflow_composed` e `workflow_completed`;
-- o dispatch operacional passa a carregar um workflow composto auditavel sem criar um runtime paralelo;
-- o artefato operacional agora reflete o workflow ativo e seus checkpoints.
+- o dispatch operacional agora tambem carrega `workflow_state`, `workflow_governance_mode` e `workflow_decision_points`;
+- o runtime passou a emitir `workflow_governance_declared`, `workflow_decisions` e `workflow_completed_steps` como trilha auditavel minima;
+- a composicao do workflow agora prioriza a rota de dominio ativa com definicao canonica propria, em vez de depender apenas do `task_type`;
+- `strategy`, `operational_readiness`, `software_development`, `documentation`, `decision_risk` e outras rotas relevantes agora podem definir perfil, checkpoints e pontos de decisao proprios;
+- `observability-service` agora diferencia `workflow_trace_status` entre `healthy`, `incomplete`, `attention_required` e `not_applicable`;
+- o artefato operacional agora reflete o workflow ativo, sua rota de origem, seus checkpoints e seus pontos de decisao governados.

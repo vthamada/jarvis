@@ -188,6 +188,10 @@ def compare_results(
                 mismatch_fields.append("continuity_action")
             if baseline.continuity_source != candidate.continuity_source:
                 mismatch_fields.append("continuity_source")
+            if baseline.workflow_domain_route != candidate.workflow_domain_route:
+                mismatch_fields.append("workflow_domain_route")
+            if baseline.workflow_trace_status != candidate.workflow_trace_status:
+                mismatch_fields.append("workflow_trace_status")
             if baseline.continuity_trace_status != candidate.continuity_trace_status:
                 mismatch_fields.append("continuity_trace_status")
             if baseline.missing_continuity_signals != candidate.missing_continuity_signals:
@@ -244,10 +248,27 @@ def render_text(payload: dict[str, object]) -> str:
                     f"{item['candidate']['continuity_action'] if item['candidate'] else 'n/a'}",
                     f"baseline_runtime={item['baseline']['continuity_runtime_mode'] or 'none'}",
                     (
+                        "baseline_workflow_route="
+                        f"{item['baseline']['workflow_domain_route'] or 'none'}"
+                    ),
+                    f"baseline_workflow_trace={item['baseline']['workflow_trace_status']}",
+                    (
                         "candidate_runtime="
                         f"{item['candidate']['continuity_runtime_mode']}"
                         if item["candidate"]
                         else "candidate_runtime=n/a"
+                    ),
+                    (
+                        "candidate_workflow_route="
+                        f"{item['candidate']['workflow_domain_route'] or 'none'}"
+                        if item["candidate"]
+                        else "candidate_workflow_route=n/a"
+                    ),
+                    (
+                        "candidate_workflow_trace="
+                        f"{item['candidate']['workflow_trace_status']}"
+                        if item["candidate"]
+                        else "candidate_workflow_trace=n/a"
                     ),
                     f"baseline_expectation_score={item['baseline_expectation_score']}",
                     f"baseline_axis_adherence_score={item['baseline_axis_adherence_score']}",

@@ -409,11 +409,49 @@ class LangGraphFlowRunner:
             )
             events.append(
                 self.orchestrator.make_event(
+                    "workflow_composed",
+                    contract,
+                    {
+                        "operation_id": str(operation_dispatch.operation_id),
+                        "workflow_profile": operation_dispatch.workflow_profile,
+                        "workflow_domain_route": operation_dispatch.workflow_domain_route,
+                        "workflow_objective": operation_dispatch.workflow_objective,
+                        "workflow_state": operation_dispatch.workflow_state,
+                        "workflow_governance_mode": operation_dispatch.workflow_governance_mode,
+                        "workflow_steps": operation_dispatch.workflow_steps,
+                        "workflow_checkpoints": operation_dispatch.workflow_checkpoints,
+                        "workflow_decision_points": operation_dispatch.workflow_decision_points,
+                        "task_type": operation_dispatch.task_type,
+                        "domain_hints": operation_dispatch.domain_hints,
+                    },
+                )
+            )
+            events.append(
+                self.orchestrator.make_event(
+                    "workflow_governance_declared",
+                    contract,
+                    {
+                        "operation_id": str(operation_dispatch.operation_id),
+                        "workflow_profile": operation_dispatch.workflow_profile,
+                        "workflow_domain_route": operation_dispatch.workflow_domain_route,
+                        "workflow_state": operation_dispatch.workflow_state,
+                        "workflow_governance_mode": operation_dispatch.workflow_governance_mode,
+                        "workflow_decision_points": operation_dispatch.workflow_decision_points,
+                    },
+                )
+            )
+            events.append(
+                self.orchestrator.make_event(
                     "operation_dispatched",
                     contract,
                     {
                         "operation_id": str(operation_dispatch.operation_id),
                         "task_type": operation_dispatch.task_type,
+                        "workflow_profile": operation_dispatch.workflow_profile,
+                        "workflow_domain_route": operation_dispatch.workflow_domain_route,
+                        "workflow_state": "dispatched",
+                        "workflow_steps": operation_dispatch.workflow_steps,
+                        "workflow_decision_points": operation_dispatch.workflow_decision_points,
                         "specialist_hints": operation_dispatch.specialist_hints,
                     },
                 )
@@ -429,6 +467,29 @@ class LangGraphFlowRunner:
                         "operation_id": str(operation_result.operation_id),
                         "status": operation_result.status.value,
                         "artifacts": operation_result.artifacts,
+                        "workflow_profile": operation_dispatch.workflow_profile,
+                        "workflow_domain_route": operation_dispatch.workflow_domain_route,
+                        "workflow_state": operation_result.workflow_state,
+                        "workflow_checkpoints": operation_dispatch.workflow_checkpoints,
+                        "workflow_completed_steps": operation_result.workflow_completed_steps,
+                        "workflow_decisions": operation_result.workflow_decisions,
+                    },
+                )
+            )
+            events.append(
+                self.orchestrator.make_event(
+                    "workflow_completed",
+                    contract,
+                    {
+                        "operation_id": str(operation_result.operation_id),
+                        "workflow_profile": operation_dispatch.workflow_profile,
+                        "workflow_domain_route": operation_dispatch.workflow_domain_route,
+                        "workflow_state": operation_result.workflow_state,
+                        "workflow_governance_mode": operation_dispatch.workflow_governance_mode,
+                        "workflow_decision_points": operation_dispatch.workflow_decision_points,
+                        "workflow_decisions": operation_result.workflow_decisions,
+                        "status": operation_result.status.value,
+                        "checkpoints": operation_result.checkpoints,
                     },
                 )
             )

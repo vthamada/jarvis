@@ -84,6 +84,7 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     assert "specialist_contracts_composed" in event_names
     assert "specialist_handoff_governed" in event_names
     assert "workflow_composed" in event_names
+    assert "workflow_governance_declared" in event_names
     assert "specialists_completed" in event_names
     assert "plan_refined" in event_names
     assert "plan_governed" in event_names
@@ -93,8 +94,16 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     workflow_event = next(
         event for event in stored_events if event.event_name == "workflow_composed"
     )
-    assert workflow_event.payload["workflow_profile"] == "deliberative_planning_workflow"
+    assert workflow_event.payload["workflow_profile"] == "strategic_direction_workflow"
+    assert workflow_event.payload["workflow_domain_route"] == "strategy"
+    assert workflow_event.payload["workflow_state"] == "composed"
+    assert workflow_event.payload["workflow_governance_mode"] == "core_mediated"
     assert workflow_event.payload["workflow_steps"]
+    assert workflow_event.payload["workflow_decision_points"] == [
+        "scenario_scope_confirmed",
+        "tradeoff_criteria_governed",
+        "direction_governed",
+    ]
     specialist_contract_event = next(
         event for event in stored_events if event.event_name == "specialist_contracts_composed"
     )
@@ -131,6 +140,34 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
         event for event in stored_events if event.event_name == "specialist_handoff_governed"
     )
     assert specialist_handoff_event.payload["decision"] == PermissionDecision.ALLOW.value
+    workflow_governance_event = next(
+        event for event in stored_events if event.event_name == "workflow_governance_declared"
+    )
+    assert workflow_governance_event.payload["workflow_governance_mode"] == "core_mediated"
+    assert workflow_governance_event.payload["workflow_domain_route"] == "strategy"
+    assert workflow_governance_event.payload["workflow_decision_points"] == [
+        "scenario_scope_confirmed",
+        "tradeoff_criteria_governed",
+        "direction_governed",
+    ]
+    workflow_completed_event = next(
+        event for event in stored_events if event.event_name == "workflow_completed"
+    )
+    assert workflow_completed_event.payload["workflow_domain_route"] == "strategy"
+    assert workflow_completed_event.payload["workflow_state"] == "completed"
+    assert workflow_completed_event.payload["workflow_decisions"] == [
+        "scenario_scope_confirmed",
+        "tradeoff_criteria_governed",
+        "direction_governed",
+    ]
+    assert result.operation_result is not None
+    assert result.operation_result.workflow_domain_route == "strategy"
+    assert result.operation_result.workflow_state == "completed"
+    assert result.operation_result.workflow_decisions == [
+        "scenario_scope_confirmed",
+        "tradeoff_criteria_governed",
+        "direction_governed",
+    ]
     assert all(
         invocation.boundary.user_visibility == "hidden_from_user"
         for invocation in result.specialist_invocations

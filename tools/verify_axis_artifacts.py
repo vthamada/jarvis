@@ -11,7 +11,7 @@ REQUIRED_FILES = (
     ROOT / "README.md",
     ROOT / "docs" / "executive" / "master-summary.md",
     ROOT / "docs" / "documentation" / "matriz-de-aderencia-mestre.md",
-    ROOT / "docs" / "implementation" / "v2-sovereign-alignment-cut.md",
+    ROOT / "docs" / "archive" / "implementation" / "v2-sovereign-alignment-cut.md",
     ROOT / "docs" / "implementation" / "v2-sovereign-alignment-cut-closure.md",
     ROOT / "docs" / "implementation" / "v2-domain-consumers-and-workflows-cut.md",
     ROOT / "knowledge" / "curated" / "domain_registry.json",
@@ -37,7 +37,9 @@ def main() -> None:
     handoff = _read(ROOT / "HANDOFF.md")
     readme = _read(ROOT / "README.md")
     master_summary = _read(ROOT / "docs" / "executive" / "master-summary.md")
-    sovereign_cut_doc = _read(ROOT / "docs" / "implementation" / "v2-sovereign-alignment-cut.md")
+    sovereign_cut_doc = _read(
+        ROOT / "docs" / "archive" / "implementation" / "v2-sovereign-alignment-cut.md"
+    )
     closure_doc = _read(
         ROOT / "docs" / "implementation" / "v2-sovereign-alignment-cut-closure.md"
     )

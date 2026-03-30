@@ -287,4 +287,5 @@ python tools/engineering_gate.py --mode standard
 
 - specialist types do runtime agora usam ids canonicos em ingles, com compatibilidade curta para labels legados em portugues;
 - o proximo corte ativo continua sendo `v2-domain-consumers-and-workflows-cut`;
-- Sprint 2 foi aberta com camada inicial de workflows operacionais compostos via `workflow_profile`, `workflow_steps`, `workflow_composed` e `workflow_completed`.
+- Sprint 2 foi conclu?da com workflows compostos audit?veis no runtime;
+- `workflow_state`, `workflow_governance_mode`, `workflow_decision_points`, `workflow_governance_declared`, `workflow_trace_status` e `workflow_domain_route` agora fazem parte do baseline observ?vel do corte ativo.

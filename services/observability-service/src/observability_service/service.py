@@ -49,6 +49,10 @@ class FlowAudit:
     session_id: str | None
     mission_id: str | None
     total_events: int
+    workflow_domain_route: str | None
+    workflow_profile: str | None
+    workflow_governance_mode: str | None
+    workflow_trace_status: str
     event_names: list[str]
     missing_required_events: list[str]
     anomaly_flags: list[str]
@@ -80,6 +84,7 @@ class FlowAudit:
             and not self.anomaly_flags
             and not self.missing_continuity_signals
             and not self.continuity_anomaly_flags
+            and self.workflow_trace_status in {"healthy", "not_applicable"}
         )
 
 
@@ -221,6 +226,10 @@ class ObservabilityService:
                 session_id=query.session_id,
                 mission_id=query.mission_id,
                 total_events=0,
+                workflow_domain_route=None,
+                workflow_profile=None,
+                workflow_governance_mode=None,
+                workflow_trace_status="incomplete",
                 event_names=[],
                 missing_required_events=list(required_events),
                 anomaly_flags=["no_events_found"],
@@ -251,6 +260,9 @@ class ObservabilityService:
         operation_event = self._first_event(events, "operation_completed")
         continuity_event = self._first_event(events, "continuity_decided")
         continuity_runtime_event = self._first_event(events, "continuity_subflow_completed")
+        workflow_composed_event = self._first_event(events, "workflow_composed")
+        workflow_governance_event = self._first_event(events, "workflow_governance_declared")
+        workflow_completed_event = self._first_event(events, "workflow_completed")
         directive_event = self._first_event(events, "directive_composed")
         plan_governed_event = self._first_event(events, "plan_governed")
         context_event = self._first_event(events, "context_composed")
@@ -294,6 +306,47 @@ class ObservabilityService:
             and continuity_runtime_event.payload.get("runtime_mode") is not None
             else "baseline_linear"
         )
+        workflow_domain_route = (
+            str(workflow_composed_event.payload.get("workflow_domain_route"))
+            if workflow_composed_event
+            and workflow_composed_event.payload.get("workflow_domain_route") is not None
+            else (
+                str(workflow_completed_event.payload.get("workflow_domain_route"))
+                if workflow_completed_event
+                and workflow_completed_event.payload.get("workflow_domain_route") is not None
+                else (
+                    str(operation_event.payload.get("workflow_domain_route"))
+                    if operation_event and operation_event.payload.get("workflow_domain_route") is not None
+                    else None
+                )
+            )
+        )
+        workflow_profile = (
+            str(workflow_composed_event.payload.get("workflow_profile"))
+            if workflow_composed_event
+            and workflow_composed_event.payload.get("workflow_profile") is not None
+            else (
+                str(workflow_completed_event.payload.get("workflow_profile"))
+                if workflow_completed_event
+                and workflow_completed_event.payload.get("workflow_profile") is not None
+                else (
+                    str(operation_event.payload.get("workflow_profile"))
+                    if operation_event and operation_event.payload.get("workflow_profile") is not None
+                    else None
+                )
+            )
+        )
+        workflow_governance_mode = (
+            str(workflow_governance_event.payload.get("workflow_governance_mode"))
+            if workflow_governance_event
+            and workflow_governance_event.payload.get("workflow_governance_mode") is not None
+            else (
+                str(workflow_completed_event.payload.get("workflow_governance_mode"))
+                if workflow_completed_event
+                and workflow_completed_event.payload.get("workflow_governance_mode") is not None
+                else None
+            )
+        )
         registry_domains = (
             [str(item) for item in domain_registry_event.payload.get("registry_domains", [])]
             if domain_registry_event
@@ -321,6 +374,12 @@ class ObservabilityService:
             anomaly_flags.append("governance_check_missing")
         if operation_event and "operation_dispatched" not in event_names:
             anomaly_flags.append("operation_completed_without_dispatch")
+        if operation_event is not None and workflow_composed_event is None:
+            anomaly_flags.append("workflow_missing_composition")
+        if operation_event is not None and workflow_governance_event is None:
+            anomaly_flags.append("workflow_missing_governance")
+        if operation_event is not None and workflow_completed_event is None:
+            anomaly_flags.append("workflow_missing_completion")
         if governance_decision in {"allow", "allow_with_conditions"}:
             if "response_synthesized" not in event_names:
                 anomaly_flags.append("allowed_flow_missing_response")
@@ -376,6 +435,12 @@ class ObservabilityService:
             missing_continuity_signals=missing_continuity_signals,
             continuity_anomaly_flags=continuity_anomaly_flags,
         )
+        workflow_trace_status = self._workflow_trace_status(
+            operation_event=operation_event,
+            workflow_composed_event=workflow_composed_event,
+            workflow_governance_event=workflow_governance_event,
+            workflow_completed_event=workflow_completed_event,
+        )
         domain_alignment_status = self._domain_alignment_status(
             domain_registry_event=domain_registry_event,
             specialist_domain_event=specialist_domain_event,
@@ -401,6 +466,10 @@ class ObservabilityService:
             session_id=first_event.session_id,
             mission_id=first_event.mission_id,
             total_events=len(events),
+            workflow_domain_route=workflow_domain_route,
+            workflow_profile=workflow_profile,
+            workflow_governance_mode=workflow_governance_mode,
+            workflow_trace_status=workflow_trace_status,
             event_names=event_names,
             missing_required_events=missing_required_events,
             anomaly_flags=anomaly_flags,
@@ -513,6 +582,37 @@ class ObservabilityService:
             return "attention_required"
         if missing_continuity_signals:
             return "incomplete"
+        return "healthy"
+
+    @staticmethod
+    def _workflow_trace_status(
+        *,
+        operation_event: InternalEventEnvelope | None,
+        workflow_composed_event: InternalEventEnvelope | None,
+        workflow_governance_event: InternalEventEnvelope | None,
+        workflow_completed_event: InternalEventEnvelope | None,
+    ) -> str:
+        if (
+            operation_event is None
+            and workflow_composed_event is None
+            and workflow_governance_event is None
+            and workflow_completed_event is None
+        ):
+            return "not_applicable"
+        if workflow_composed_event is None:
+            return "attention_required"
+        if workflow_governance_event is None or workflow_completed_event is None:
+            return "incomplete"
+        decision_points = workflow_composed_event.payload.get("workflow_decision_points", [])
+        completed_decisions = workflow_completed_event.payload.get("workflow_decisions", [])
+        workflow_state = workflow_completed_event.payload.get("workflow_state")
+        governance_mode = workflow_governance_event.payload.get("workflow_governance_mode")
+        if not decision_points or not completed_decisions:
+            return "attention_required"
+        if workflow_state not in {"completed", "failed"}:
+            return "attention_required"
+        if governance_mode != "core_mediated":
+            return "attention_required"
         return "healthy"
 
     @staticmethod
