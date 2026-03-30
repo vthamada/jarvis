@@ -4,8 +4,13 @@ from __future__ import annotations
 
 from argparse import ArgumentParser, Namespace
 from dataclasses import dataclass
+from pathlib import Path
 from subprocess import run
 from sys import executable
+
+ROOT = Path(__file__).resolve().parent.parent
+PROJECT_PYTHON = ROOT / ".venv" / "Scripts" / "python.exe"
+RUNNER = str(PROJECT_PYTHON) if PROJECT_PYTHON.exists() else executable
 
 
 @dataclass(frozen=True)
@@ -36,11 +41,11 @@ def build_gate_steps(*, mode: str, include_controlled: bool) -> list[GateStep]:
     steps = [
         GateStep(
             label="mojibake check",
-            command=[executable, "tools/check_mojibake.py", "."],
+            command=[RUNNER, "tools/check_mojibake.py", "."],
         ),
         GateStep(
             label="ruff",
-            command=[executable, "-m", "ruff", "check", "."],
+            command=[RUNNER, "-m", "ruff", "check", "."],
         ),
     ]
 
@@ -48,16 +53,22 @@ def build_gate_steps(*, mode: str, include_controlled: bool) -> list[GateStep]:
         steps.append(
             GateStep(
                 label="pytest",
-                command=[executable, "-m", "pytest", "-q"],
+                command=[RUNNER, "-m", "pytest", "-q"],
             )
         )
 
     if mode == "release":
         steps.append(
             GateStep(
+                label="axis artifact verification",
+                command=[RUNNER, "tools/verify_axis_artifacts.py"],
+            )
+        )
+        steps.append(
+            GateStep(
                 label="baseline validation development",
                 command=[
-                    executable,
+                    RUNNER,
                     "tools/validate_baseline.py",
                     "--profile",
                     "development",
@@ -69,7 +80,7 @@ def build_gate_steps(*, mode: str, include_controlled: bool) -> list[GateStep]:
                 GateStep(
                     label="baseline validation controlled",
                     command=[
-                        executable,
+                        RUNNER,
                         "tools/validate_baseline.py",
                         "--profile",
                         "controlled",

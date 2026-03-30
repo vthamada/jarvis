@@ -124,7 +124,7 @@ Esse script gera artefatos em `.jarvis_runtime/specialization_cycle/`:
 - `cycle_closure.md`
 
 
-Para consolidar o `v2-alignment-cycle` e abrir formalmente o próximo corte do `v2`:
+Para fechar o `v2-alignment-cycle` e abrir formalmente o corte ativo seguinte do `v2`:
 
 ```powershell
 python tools/close_alignment_cycle.py --limit 20

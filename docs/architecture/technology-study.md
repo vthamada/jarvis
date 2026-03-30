@@ -575,7 +575,7 @@ Em uma frase:
 
 ## 17. Foco de estudo no ciclo atual
 
-Trilha atual: `continuidade profunda entre missões` no pós-`v1`, seguida do alinhamento soberano de `domínios`, `memórias` e `mentes` no `v2-alignment-cycle`.
+Trilha atual: `continuidade profunda entre missões` no pós-`v1`, seguida do alinhamento soberano de `domínios`, `memórias` e `mentes` no `v2-sovereign-alignment-cut`.
 
 Ordem oficial de estudo externo neste momento:
 

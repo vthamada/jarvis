@@ -30,7 +30,10 @@ MIND_REGISTRY: dict[str, MindDefinition] = {
         preferred_support=("mente_analitica", "mente_cientifica", "mente_critica"),
         arbitration_priority=5,
         intent_affinities=("analysis",),
-        domain_affinities=("analysis", "documentation"),
+        domain_affinities=(
+            "matematica_e_logica_formal",
+            "comunicacao_linguagem_e_argumentacao",
+        ),
         dominant_tension="equilibrar profundidade analitica com conclusao util",
     ),
     "mente_analitica": MindDefinition(
@@ -41,7 +44,10 @@ MIND_REGISTRY: dict[str, MindDefinition] = {
         preferred_support=("mente_logica", "mente_critica", "mente_probabilistica"),
         arbitration_priority=4,
         intent_affinities=("analysis",),
-        domain_affinities=("analysis", "dados_estatistica_e_inteligencia_analitica"),
+        domain_affinities=(
+            "dados_estatistica_e_inteligencia_analitica",
+            "tomada_de_decisao_complexa",
+        ),
         dominant_tension="equilibrar profundidade analitica com conclusao util",
     ),
     "mente_cientifica": MindDefinition(
@@ -52,7 +58,7 @@ MIND_REGISTRY: dict[str, MindDefinition] = {
         preferred_support=("mente_logica", "mente_cetica", "mente_investigativa"),
         arbitration_priority=9,
         intent_affinities=("analysis",),
-        domain_affinities=("analysis", "research"),
+        domain_affinities=("pesquisa_e_inteligencia", "fisica_e_ciencias_naturais"),
         dominant_tension="equilibrar rigor investigativo com conclusao verificavel",
     ),
     "mente_sistemica": MindDefinition(
@@ -63,7 +69,11 @@ MIND_REGISTRY: dict[str, MindDefinition] = {
         preferred_support=("mente_integradora", "mente_estrategica", "mente_inventiva"),
         arbitration_priority=6,
         intent_affinities=("planning", "general_assistance"),
-        domain_affinities=("strategy", "observability", "documentation"),
+        domain_affinities=(
+            "estrategia_e_pensamento_sistemico",
+            "monitoramento_e_vigilancia_contextual",
+            "coordenacao_de_identidade",
+        ),
         dominant_tension="integrar dominios sem diluir o objetivo dominante",
     ),
     "mente_probabilistica": MindDefinition(
@@ -74,7 +84,11 @@ MIND_REGISTRY: dict[str, MindDefinition] = {
         preferred_support=("mente_decisoria", "mente_cetica", "mente_analitica"),
         arbitration_priority=8,
         intent_affinities=("sensitive_action",),
-        domain_affinities=("analysis", "governance", "observability"),
+        domain_affinities=(
+            "dados_estatistica_e_inteligencia_analitica",
+            "governanca_do_sistema",
+            "monitoramento_e_vigilancia_contextual",
+        ),
         dominant_tension="equilibrar velocidade de resposta com cautela operacional",
         risk_bias="operational_caution",
     ),
@@ -86,7 +100,11 @@ MIND_REGISTRY: dict[str, MindDefinition] = {
         preferred_support=("mente_tatica", "mente_decisoria", "mente_integradora"),
         arbitration_priority=2,
         intent_affinities=("planning",),
-        domain_affinities=("strategy", "documentation", "observability"),
+        domain_affinities=(
+            "estrategia_e_pensamento_sistemico",
+            "planejamento_e_coordenacao",
+            "tomada_de_decisao_complexa",
+        ),
         dominant_tension="equilibrar ambicao estrategica com a menor proxima acao segura",
     ),
     "mente_tatica": MindDefinition(
@@ -97,7 +115,11 @@ MIND_REGISTRY: dict[str, MindDefinition] = {
         preferred_support=("mente_estrategica", "mente_executiva", "mente_pragmatica"),
         arbitration_priority=7,
         intent_affinities=("planning",),
-        domain_affinities=("strategy", "software_development", "observability"),
+        domain_affinities=(
+            "planejamento_e_coordenacao",
+            "computacao_e_desenvolvimento",
+            "produtividade_execucao_e_coordenacao",
+        ),
         dominant_tension="equilibrar sequenciamento tatico com progresso verificavel",
     ),
     "mente_decisoria": MindDefinition(
@@ -108,7 +130,11 @@ MIND_REGISTRY: dict[str, MindDefinition] = {
         preferred_support=("mente_probabilistica", "mente_estrategica", "mente_etica"),
         arbitration_priority=3,
         intent_affinities=("planning", "sensitive_action"),
-        domain_affinities=("strategy", "governance", "observability"),
+        domain_affinities=(
+            "tomada_de_decisao_complexa",
+            "governanca_do_sistema",
+            "defesa_seguranca_e_gestao_de_crises",
+        ),
         dominant_tension="equilibrar decisao executavel com exposicao de risco aceitavel",
         risk_bias="decision",
     ),
@@ -120,7 +146,11 @@ MIND_REGISTRY: dict[str, MindDefinition] = {
         preferred_support=("mente_executiva", "mente_analitica", "mente_estrategica"),
         arbitration_priority=10,
         intent_affinities=("planning", "general_assistance"),
-        domain_affinities=("assistencia_pessoal_e_operacional", "software_development"),
+        domain_affinities=(
+            "assistencia_pessoal_e_operacional",
+            "produtividade_execucao_e_coordenacao",
+            "computacao_e_desenvolvimento",
+        ),
         dominant_tension="equilibrar utilidade imediata com rastreabilidade suficiente",
     ),
     "mente_executiva": MindDefinition(
@@ -133,8 +163,8 @@ MIND_REGISTRY: dict[str, MindDefinition] = {
         intent_affinities=("planning", "general_assistance"),
         domain_affinities=(
             "assistencia_pessoal_e_operacional",
-            "documentation",
-            "observability",
+            "planejamento_e_coordenacao",
+            "coordenacao_de_identidade",
         ),
         dominant_tension="equilibrar clareza executiva com a menor proxima acao segura",
     ),
@@ -146,7 +176,7 @@ MIND_REGISTRY: dict[str, MindDefinition] = {
         preferred_support=("mente_inventiva", "mente_inovadora", "mente_integradora"),
         arbitration_priority=13,
         intent_affinities=("general_assistance",),
-        domain_affinities=("documentation",),
+        domain_affinities=("criatividade_design_arte_e_inovacao", "producao_de_artefatos"),
         dominant_tension="equilibrar originalidade com coerencia estrutural",
     ),
     "mente_inventiva": MindDefinition(
@@ -157,7 +187,7 @@ MIND_REGISTRY: dict[str, MindDefinition] = {
         preferred_support=("mente_criativa", "mente_cientifica", "mente_sistemica"),
         arbitration_priority=15,
         intent_affinities=("general_assistance",),
-        domain_affinities=("software_development", "documentation"),
+        domain_affinities=("computacao_e_desenvolvimento", "criatividade_design_arte_e_inovacao"),
         dominant_tension="equilibrar exploracao criativa com viabilidade tecnica",
     ),
     "mente_inovadora": MindDefinition(
@@ -168,7 +198,10 @@ MIND_REGISTRY: dict[str, MindDefinition] = {
         preferred_support=("mente_criativa", "mente_inventiva", "mente_pragmatica"),
         arbitration_priority=16,
         intent_affinities=("general_assistance",),
-        domain_affinities=("strategy", "documentation"),
+        domain_affinities=(
+            "criatividade_design_arte_e_inovacao",
+            "estrategia_e_pensamento_sistemico",
+        ),
         dominant_tension="equilibrar novidade com aderencia ao objetivo central",
     ),
     "mente_integradora": MindDefinition(
@@ -179,7 +212,11 @@ MIND_REGISTRY: dict[str, MindDefinition] = {
         preferred_support=("mente_sistemica", "mente_comunicacional", "mente_estrategica"),
         arbitration_priority=11,
         intent_affinities=("planning", "general_assistance"),
-        domain_affinities=("strategy", "documentation", "analysis"),
+        domain_affinities=(
+            "estrategia_e_pensamento_sistemico",
+            "comunicacao_linguagem_e_argumentacao",
+            "dados_estatistica_e_inteligencia_analitica",
+        ),
         dominant_tension="integrar contribuicoes sem fragmentar a voz do sistema",
     ),
     "mente_etica": MindDefinition(
@@ -190,7 +227,11 @@ MIND_REGISTRY: dict[str, MindDefinition] = {
         preferred_support=("mente_decisoria", "mente_empatica", "mente_critica"),
         arbitration_priority=1,
         intent_affinities=("sensitive_action",),
-        domain_affinities=("governance", "assistencia_pessoal_e_operacional"),
+        domain_affinities=(
+            "governanca_do_sistema",
+            "filosofia_etica_e_epistemologia",
+            "assistencia_pessoal_e_operacional",
+        ),
         dominant_tension="equilibrar solicitacao do usuario com limites normativos",
         risk_bias="governance",
     ),
@@ -202,7 +243,10 @@ MIND_REGISTRY: dict[str, MindDefinition] = {
         preferred_support=("mente_psicologica", "mente_comunicacional", "mente_diplomatica"),
         arbitration_priority=12,
         intent_affinities=("general_assistance",),
-        domain_affinities=("assistencia_pessoal_e_operacional",),
+        domain_affinities=(
+            "psicologia_e_comportamento_humano",
+            "assistencia_pessoal_e_operacional",
+        ),
         dominant_tension="equilibrar acolhimento com utilidade objetiva",
     ),
     "mente_psicologica": MindDefinition(
@@ -213,7 +257,10 @@ MIND_REGISTRY: dict[str, MindDefinition] = {
         preferred_support=("mente_empatica", "mente_comunicacional", "mente_analitica"),
         arbitration_priority=18,
         intent_affinities=("general_assistance",),
-        domain_affinities=("assistencia_pessoal_e_operacional",),
+        domain_affinities=(
+            "psicologia_e_comportamento_humano",
+            "cognicao_aprendizado_e_inteligencia",
+        ),
         dominant_tension="equilibrar leitura humana com estabilidade da resposta",
     ),
     "mente_comunicacional": MindDefinition(
@@ -224,7 +271,11 @@ MIND_REGISTRY: dict[str, MindDefinition] = {
         preferred_support=("mente_logica", "mente_integradora", "mente_empatica"),
         arbitration_priority=9,
         intent_affinities=("general_assistance", "planning"),
-        domain_affinities=("documentation", "assistencia_pessoal_e_operacional"),
+        domain_affinities=(
+            "comunicacao_linguagem_e_argumentacao",
+            "assistencia_pessoal_e_operacional",
+            "producao_de_artefatos",
+        ),
         dominant_tension="equilibrar clareza narrativa com densidade suficiente",
     ),
     "mente_diplomatica": MindDefinition(
@@ -235,7 +286,7 @@ MIND_REGISTRY: dict[str, MindDefinition] = {
         preferred_support=("mente_etica", "mente_comunicacional", "mente_estrategica"),
         arbitration_priority=17,
         intent_affinities=("general_assistance",),
-        domain_affinities=("governance",),
+        domain_affinities=("governanca_do_sistema", "politica_geopolitica_e_governanca_publica"),
         dominant_tension="equilibrar firmeza normativa com tato relacional",
     ),
     "mente_investigativa": MindDefinition(
@@ -246,7 +297,11 @@ MIND_REGISTRY: dict[str, MindDefinition] = {
         preferred_support=("mente_critica", "mente_cetica", "mente_cientifica"),
         arbitration_priority=14,
         intent_affinities=("analysis",),
-        domain_affinities=("analysis", "software_development"),
+        domain_affinities=(
+            "pesquisa_e_inteligencia",
+            "computacao_e_desenvolvimento",
+            "dados_estatistica_e_inteligencia_analitica",
+        ),
         dominant_tension="equilibrar exploracao de evidencia com fechamento pratico",
     ),
     "mente_critica": MindDefinition(
@@ -257,7 +312,11 @@ MIND_REGISTRY: dict[str, MindDefinition] = {
         preferred_support=("mente_cetica", "mente_logica", "mente_cientifica"),
         arbitration_priority=6,
         intent_affinities=("sensitive_action",),
-        domain_affinities=("analysis", "governance", "software_development"),
+        domain_affinities=(
+            "dados_estatistica_e_inteligencia_analitica",
+            "governanca_do_sistema",
+            "computacao_e_desenvolvimento",
+        ),
         dominant_tension="equilibrar escrutinio critico com decisao utilizavel",
         risk_bias="governance",
     ),
@@ -269,7 +328,11 @@ MIND_REGISTRY: dict[str, MindDefinition] = {
         preferred_support=("mente_critica", "mente_probabilistica", "mente_decisoria"),
         arbitration_priority=19,
         intent_affinities=("analysis",),
-        domain_affinities=("analysis", "governance"),
+        domain_affinities=(
+            "avaliacao_e_verificacao",
+            "governanca_do_sistema",
+            "dados_estatistica_e_inteligencia_analitica",
+        ),
         dominant_tension="equilibrar confianca operacional com verificacao adicional",
         risk_bias="operational_caution",
     ),
@@ -281,7 +344,7 @@ MIND_REGISTRY: dict[str, MindDefinition] = {
         preferred_support=("mente_criativa", "mente_investigativa", "mente_evolutiva"),
         arbitration_priority=20,
         intent_affinities=("general_assistance",),
-        domain_affinities=("documentation", "analysis"),
+        domain_affinities=("pesquisa_e_inteligencia", "criatividade_design_arte_e_inovacao"),
         dominant_tension="equilibrar descoberta ampla com foco no problema atual",
     ),
     "mente_evolutiva": MindDefinition(
@@ -292,7 +355,11 @@ MIND_REGISTRY: dict[str, MindDefinition] = {
         preferred_support=("mente_critica", "mente_executiva", "mente_investigativa"),
         arbitration_priority=21,
         intent_affinities=("analysis", "planning"),
-        domain_affinities=("observability", "strategy"),
+        domain_affinities=(
+            "aprendizado_do_sistema",
+            "auto_observacao",
+            "estrategia_e_pensamento_sistemico",
+        ),
         dominant_tension="equilibrar melhoria futura com estabilidade do baseline atual",
     ),
 }
@@ -324,4 +391,3 @@ def arbitration_limits_for(mind_name: str) -> tuple[int, int]:
     if definition is None:
         return (2, 3)
     return (definition.max_supporting_minds, definition.max_suppressed_minds)
-

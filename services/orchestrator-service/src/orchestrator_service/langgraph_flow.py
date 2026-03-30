@@ -156,6 +156,7 @@ class LangGraphFlowRunner:
                                 "specialist_type": route.specialist_type,
                                 "specialist_mode": route.specialist_mode,
                                 "canonical_domain_refs": route.canonical_domain_refs,
+                                "routing_source": route.routing_source,
                             }
                             for route in knowledge_result.specialist_routes
                         ],
@@ -171,6 +172,23 @@ class LangGraphFlowRunner:
                         "active_domains": knowledge_result.active_domains,
                         "registry_domains": knowledge_result.registry_domains,
                         "route_domains": knowledge_result.active_domains,
+                        "canonical_domain_refs_by_route": {
+                            route.domain_name: route.canonical_domain_refs
+                            for route in knowledge_result.specialist_routes
+                        },
+                        "route_modes": {
+                            route.domain_name: route.specialist_mode
+                            for route in knowledge_result.specialist_routes
+                        },
+                        "routing_sources": {
+                            route.domain_name: route.routing_source
+                            for route in knowledge_result.specialist_routes
+                        },
+                        "guided_domains": [
+                            route.domain_name
+                            for route in knowledge_result.specialist_routes
+                            if route.specialist_mode in {"guided", "active"}
+                        ],
                         "shadow_domains": [
                             route.domain_name
                             for route in knowledge_result.specialist_routes
@@ -202,8 +220,18 @@ class LangGraphFlowRunner:
                 {
                     "active_minds": cognitive_snapshot.active_minds,
                     "active_domains": cognitive_snapshot.active_domains,
+                    "canonical_domains": cognitive_snapshot.canonical_domains,
                     "primary_mind": cognitive_snapshot.primary_mind,
+                    "primary_mind_family": cognitive_snapshot.primary_mind_family,
+                    "primary_domain_driver": cognitive_snapshot.primary_domain_driver,
+                    "supporting_minds": cognitive_snapshot.supporting_minds,
+                    "suppressed_minds": cognitive_snapshot.suppressed_minds,
+                    "supporting_mind_limit": cognitive_snapshot.supporting_mind_limit,
+                    "suppressed_mind_limit": cognitive_snapshot.suppressed_mind_limit,
                     "tensions": cognitive_snapshot.tensions,
+                    "dominant_tension": cognitive_snapshot.dominant_tension,
+                    "arbitration_summary": cognitive_snapshot.arbitration_summary,
+                    "arbitration_source": cognitive_snapshot.arbitration_source,
                     "specialist_hints": cognitive_snapshot.specialist_hints,
                 },
             )

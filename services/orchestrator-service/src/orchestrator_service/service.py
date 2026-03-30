@@ -30,6 +30,7 @@ from shared.contracts import (
     OperationResultContract,
     SpecialistInvocationContract,
 )
+from shared.domain_registry import canonical_domain_refs_for_name
 from shared.events import InternalEventEnvelope
 from shared.types import OperationId, PermissionDecision, RequestId
 
@@ -235,6 +236,7 @@ class OrchestratorService:
                                 "specialist_type": route.specialist_type,
                                 "specialist_mode": route.specialist_mode,
                                 "canonical_domain_refs": route.canonical_domain_refs,
+                                "routing_source": route.routing_source,
                             }
                             for route in knowledge_result.specialist_routes
                         ],
@@ -250,6 +252,23 @@ class OrchestratorService:
                         "active_domains": knowledge_result.active_domains,
                         "registry_domains": knowledge_result.registry_domains,
                         "route_domains": knowledge_result.active_domains,
+                        "canonical_domain_refs_by_route": {
+                            route.domain_name: route.canonical_domain_refs
+                            for route in knowledge_result.specialist_routes
+                        },
+                        "route_modes": {
+                            route.domain_name: route.specialist_mode
+                            for route in knowledge_result.specialist_routes
+                        },
+                        "routing_sources": {
+                            route.domain_name: route.routing_source
+                            for route in knowledge_result.specialist_routes
+                        },
+                        "guided_domains": [
+                            route.domain_name
+                            for route in knowledge_result.specialist_routes
+                            if route.specialist_mode in {"guided", "active"}
+                        ],
                         "shadow_domains": [
                             route.domain_name
                             for route in knowledge_result.specialist_routes
@@ -275,8 +294,10 @@ class OrchestratorService:
                 {
                     "active_minds": cognitive_snapshot.active_minds,
                     "active_domains": cognitive_snapshot.active_domains,
+                    "canonical_domains": cognitive_snapshot.canonical_domains,
                     "primary_mind": cognitive_snapshot.primary_mind,
                     "primary_mind_family": cognitive_snapshot.primary_mind_family,
+                    "primary_domain_driver": cognitive_snapshot.primary_domain_driver,
                     "supporting_minds": cognitive_snapshot.supporting_minds,
                     "suppressed_minds": cognitive_snapshot.suppressed_minds,
                     "supporting_mind_limit": cognitive_snapshot.supporting_mind_limit,
@@ -669,6 +690,22 @@ class OrchestratorService:
                             )
                             for item in handoff_plan.invocations
                         },
+                        "consumed_memory_classes": {
+                            item.specialist_type: (
+                                item.shared_memory_context.consumed_memory_classes
+                                if item.shared_memory_context
+                                else []
+                            )
+                            for item in handoff_plan.invocations
+                        },
+                        "memory_write_policies": {
+                            item.specialist_type: (
+                                item.shared_memory_context.memory_write_policies
+                                if item.shared_memory_context
+                                else {}
+                            )
+                            for item in handoff_plan.invocations
+                        },
                         "context_briefs": {
                             item.specialist_type: {
                                 "mission": (
@@ -693,6 +730,15 @@ class OrchestratorService:
                             item.specialist_type: item.linked_domain
                             for item in handoff_plan.invocations
                             if item.linked_domain
+                        },
+                        "domain_mission_link_reasons": {
+                            item.specialist_type: (
+                                item.shared_memory_context.domain_mission_link_reason
+                                if item.shared_memory_context
+                                else None
+                            )
+                            for item in handoff_plan.invocations
+                            if item.shared_memory_context
                         },
                         "domain_specialists": [
                             item.specialist_type
@@ -906,6 +952,14 @@ class OrchestratorService:
                             },
                             "selection_modes": {
                                 invocation.specialist_type: invocation.selection_mode
+                                for invocation in domain_invocation_index.values()
+                            },
+                            "canonical_domain_refs": {
+                                invocation.specialist_type: (
+                                    list(canonical_domain_refs_for_name(invocation.linked_domain))
+                                    if invocation.linked_domain
+                                    else []
+                                )
                                 for invocation in domain_invocation_index.values()
                             },
                         },
@@ -1250,5 +1304,3 @@ class OrchestratorService:
             operation_result=state["operation_result"],
             events=state["events"],
         )
-
-

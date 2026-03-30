@@ -2,9 +2,9 @@
 
 ## Metadata
 
-- Atualizado em: 2026-03-27
+- Atualizado em: 2026-03-28
 - Branch: `main`
-- Commit de referência: `e0e8ac5`
+- Commit de referência: `e165a5c`
 - Artefato canônico do projeto: `documento_mestre_jarvis.md`
 - Estado do projeto: `v1` encerrado e congelado para uso controlado; primeiro ciclo do `pós-v1` encerrado; primeiro ciclo do `v1.5` encerrado; primeiro corte do `v2` encerrado; `v2-alignment-cycle` encerrado; próximo corte do `v2` aberto
 
@@ -29,7 +29,8 @@ Sistema oficial de planejamento desta fase:
 - `HANDOFF.md` como retomada tático-operacional;
 - `docs/roadmap/programa-ate-v3.md` como direção do programa até `v3`;
 - `docs/implementation/v2-cycle-closure.md` como fechamento formal do primeiro corte do `v2`;
-- `docs/implementation/v2-alignment-cycle.md` como execução oficial do próximo ciclo;
+- `docs/implementation/v2-alignment-cycle.md` como histórico fechado do ciclo anterior;
+- `docs/implementation/v2-sovereign-alignment-cut.md` como execução oficial do corte ativo;
 - `docs/documentation/matriz-de-aderencia-mestre.md` como ponte entre visão canônica e backlog real.
 
 Leitura prioritária de aderência neste momento:
@@ -93,6 +94,13 @@ Responsabilidade prática nesta fase:
 - a promoção só vale quando houver evidência e alinhamento com os artefatos oficiais do ciclo;
 - nenhuma promoção tecnológica reabre o baseline do `v1` por conveniência.
 
+Autonomia operacional nesta fase:
+
+- o agente ativo pode executar sozinho sincronização de docs vivos, refactors de nomenclatura, endurecimento de contratos, testes, observabilidade, gates e coerência entre registries e runtime;
+- o agente ativo pode abrir e fechar sprints dentro do corte ativo quando isso não mudar a direção macro já fechada;
+- o operador deve ser acionado apenas para decisões de direção, como mudança de ontologia, promoção de tecnologia externa a baseline central, abertura de nova superfície principal ou alteração da prioridade macro do programa;
+- a regra prática é simples: implementação dentro da direção fechada é autonomia do Codex; mudança de direção continua reservada ao operador.
+
 ## Estado atual do repositório
 
 Hoje o repositório contém:
@@ -153,10 +161,10 @@ Principais entregas já consolidadas:
 
 Pendências principais desta fase:
 
-- executar a Sprint 6 do `v2-alignment-cycle`;
-- consolidar `domain_alignment_status`, `memory_alignment_status`, `mind_alignment_status`, `identity_alignment_status` e `specialist_sovereignty_status` como base do fechamento formal do ciclo;
-- usar esses sinais em comparação, piloto e artefatos de fechamento da Sprint 6;
-- manter o estudo externo curto como apoio, sem bloquear a implementação principal.
+- sincronizar os docs vivos para refletir um único corte ativo;
+- tornar o registry de domínios a fonte soberana de roteamento e refs canônicas;
+- explicitar consumo de memória por classe nas rotas guiadas;
+- convergir `mind_registry` com domínios canônicos e promover os gates por eixo a regra contínua de engenharia.
 
 Regra de estudo externo no `v2`:
 
@@ -169,10 +177,12 @@ Regra de estudo externo no `v2`:
 
 Ordem recomendada:
 
-1. executar a Sprint 6 do `v2-alignment-cycle`;
-2. usar `domain_alignment_status`, `memory_alignment_status`, `mind_alignment_status`, `identity_alignment_status` e `specialist_sovereignty_status` como base explícita do fechamento da rodada;
-3. fechar comparação, observabilidade e decisão do ciclo usando aderência por eixo, e não só utilidade local;
-4. preparar o artefato formal de encerramento do `v2-alignment-cycle`, sem abrir novas superfícies cedo demais.
+1. executar a Sprint 1 do `v2-sovereign-alignment-cut` e fechar o drift documental;
+2. concluir a Sprint 2 com soberania de domínios no runtime e eventos canônicos;
+3. concluir a Sprint 3 com consumo explícito de memória por classe;
+4. concluir a Sprint 4 com arbitragem de mentes baseada em domínios canônicos;
+5. promover `guided` como caminho principal das rotas já abertas;
+6. fechar o corte com gates por eixo em `engineering_gate.py --mode release`.
 
 ## Riscos e bloqueios
 
@@ -192,6 +202,7 @@ Ordem recomendada:
 - `docs/implementation/v1-5-cycle-closure.md`
 - `docs/implementation/v2-cycle-closure.md`
 - `docs/implementation/v2-alignment-cycle.md`
+- `docs/implementation/v2-sovereign-alignment-cut.md`
 - `docs/architecture/technology-study.md`
 - `docs/documentation/matriz-de-aderencia-mestre.md`
 - `docs/operations/v1-operational-baseline.md`
@@ -214,7 +225,8 @@ Leitura mínima para qualquer novo agente:
 4. `docs/implementation/v1-5-cycle-closure.md`
 5. `docs/implementation/v2-cycle-closure.md`
 6. `docs/implementation/v2-alignment-cycle.md`
-7. `docs/architecture/technology-study.md`
+7. `docs/implementation/v2-sovereign-alignment-cut.md`
+8. `docs/architecture/technology-study.md`
 
 
 ## Visão de absorção tecnológica

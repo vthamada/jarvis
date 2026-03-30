@@ -2,7 +2,7 @@
 
 ## 1. Objetivo do ciclo atual
 
-Este documento define o próximo ciclo rolante do `v2`.
+Este documento registra o ciclo de alinhamento do `v2` já encerrado.
 
 Foco único do ciclo:
 
@@ -31,8 +31,7 @@ Status desta versão do ciclo:
 
 ## 2. Regra de leitura
 
-Este documento é a fonte oficial do que entra em execução agora para o próximo
-recorte do `v2`.
+Este documento é histórico e deve ser lido como fechamento do ciclo anterior.
 
 Ele deve ser lido junto da matriz de aderência para responder:
 

@@ -128,6 +128,7 @@ class DomainSpecialistRouteContract:
     specialist_mode: str
     routing_reason: str
     canonical_domain_refs: list[str] = field(default_factory=list)
+    routing_source: str = "domain_registry"
 
 
 @dataclass
@@ -159,9 +160,12 @@ class SpecialistSharedMemoryContextContract:
     related_mission_ids: list[MissionId] = field(default_factory=list)
     memory_refs: list[str] = field(default_factory=list)
     memory_class_policies: dict[str, dict[str, object]] = field(default_factory=dict)
+    consumed_memory_classes: list[str] = field(default_factory=list)
+    memory_write_policies: dict[str, str] = field(default_factory=dict)
     semantic_focus: list[str] = field(default_factory=list)
     open_loops: list[str] = field(default_factory=list)
     last_recommendation: str | None = None
+    domain_mission_link_reason: str | None = None
 
 
 @dataclass

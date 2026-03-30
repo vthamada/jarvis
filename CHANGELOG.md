@@ -6,6 +6,19 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 
 ---
 
+## 2026-03-28
+
+### V2 sovereign alignment cut
+
+- criado `docs/implementation/v2-sovereign-alignment-cut.md` como documento vivo do corte ativo após o fechamento do `v2-alignment-cycle`;
+- `HANDOFF.md`, `README.md`, `docs/executive/master-summary.md`, `docs/documentation/matriz-de-aderencia-mestre.md`, `docs/architecture/technology-study.md` e `tools/README.md` foram sincronizados para tratar esse corte como frente ativa e o `v2-alignment-cycle` como histórico fechado;
+- `shared/domain_registry.py` passou a expor helpers canônicos de resolução de domínio e compatibilidade curta de labels legados;
+- `knowledge-service`, `cognitive-engine`, `specialist-engine`, `orchestrator-service` e `langgraph_flow` passaram a publicar e consumir refs canônicas de domínio com mais rigor, incluindo `routing_source`, `canonical_domain_refs_by_route` e `primary_domain_driver`;
+- `shared/mind_registry.py` passou a usar apenas afinidades de domínio baseadas na taxonomia canônica do Documento-Mestre;
+- `shared/contracts`, `memory-service` e `memory repository` passaram a carregar explicitamente `consumed_memory_classes`, `memory_write_policies` e `domain_mission_link_reason` para memória compartilhada de especialistas;
+- `observability-service` passou a auditar coerência mais rica de domínio, memória e arbitragem cognitiva, mantendo compatibilidade curta com trilhas antigas;
+- criado `tools/verify_axis_artifacts.py` e o `tools/engineering_gate.py --mode release` passou a exigir verificação mínima de artefatos por eixo além da validação de baseline.
+
 ## 2026-03-27
 
 ### Próximo corte do v2
@@ -801,5 +814,4 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 - criado `apps/jarvis_console/` como interface textual minima do `v1`, com modos `ask` e `chat` sobre o fluxo real do orquestrador;
 - `tools/run_internal_pilot.py` passou a publicar a ultima rodada em `.jarvis_runtime/pilot/latest_pilot.json` e `.md`;
 - atualizados testes de memoria, observabilidade, orquestracao, artefatos operacionais e console.
-
 

@@ -95,9 +95,12 @@ class StoredSpecialistSharedMemory:
     related_mission_ids: list[str] = field(default_factory=list)
     memory_refs: list[str] = field(default_factory=list)
     memory_class_policies: dict[str, dict[str, object]] = field(default_factory=dict)
+    consumed_memory_classes: list[str] = field(default_factory=list)
+    memory_write_policies: dict[str, str] = field(default_factory=dict)
     semantic_focus: list[str] = field(default_factory=list)
     open_loops: list[str] = field(default_factory=list)
     last_recommendation: str | None = None
+    domain_mission_link_reason: str | None = None
 
 
 class MemoryRepository(ABC):
@@ -507,10 +510,11 @@ class SqliteMemoryRepository(MemoryRepository):
                     shared_memory_brief, write_policy, consumer_mode, source_mission_id,
                     source_mission_goal, mission_context_brief, domain_context_brief,
                     continuity_context_brief, related_mission_ids, memory_refs,
-                    memory_class_policies, semantic_focus, open_loops,
-                    last_recommendation, updated_at
+                    memory_class_policies, consumed_memory_classes, memory_write_policies,
+                    semantic_focus, open_loops, last_recommendation,
+                    domain_mission_link_reason, updated_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(session_id, specialist_type) DO UPDATE SET
                     sharing_mode = excluded.sharing_mode,
                     continuity_mode = excluded.continuity_mode,
@@ -525,9 +529,12 @@ class SqliteMemoryRepository(MemoryRepository):
                     related_mission_ids = excluded.related_mission_ids,
                     memory_refs = excluded.memory_refs,
                     memory_class_policies = excluded.memory_class_policies,
+                    consumed_memory_classes = excluded.consumed_memory_classes,
+                    memory_write_policies = excluded.memory_write_policies,
                     semantic_focus = excluded.semantic_focus,
                     open_loops = excluded.open_loops,
                     last_recommendation = excluded.last_recommendation,
+                    domain_mission_link_reason = excluded.domain_mission_link_reason,
                     updated_at = excluded.updated_at
                 """,
                 (
@@ -546,9 +553,12 @@ class SqliteMemoryRepository(MemoryRepository):
                     dumps(snapshot.related_mission_ids),
                     dumps(snapshot.memory_refs),
                     dumps(snapshot.memory_class_policies),
+                    dumps(snapshot.consumed_memory_classes),
+                    dumps(snapshot.memory_write_policies),
                     dumps(snapshot.semantic_focus),
                     dumps(snapshot.open_loops),
                     snapshot.last_recommendation,
+                    snapshot.domain_mission_link_reason,
                     snapshot.updated_at,
                 ),
             )
@@ -567,8 +577,9 @@ class SqliteMemoryRepository(MemoryRepository):
                        shared_memory_brief, write_policy, consumer_mode, source_mission_id,
                        source_mission_goal, mission_context_brief, domain_context_brief,
                        continuity_context_brief, related_mission_ids, memory_refs,
-                       memory_class_policies, semantic_focus, open_loops,
-                       last_recommendation
+                       memory_class_policies, consumed_memory_classes, memory_write_policies,
+                       semantic_focus, open_loops, last_recommendation,
+                       domain_mission_link_reason
                 FROM specialist_shared_memory
                 WHERE session_id = ?
                   AND specialist_type = ?
@@ -715,9 +726,12 @@ class SqliteMemoryRepository(MemoryRepository):
                     related_mission_ids TEXT NOT NULL DEFAULT '[]',
                     memory_refs TEXT NOT NULL DEFAULT '[]',
                     memory_class_policies TEXT NOT NULL DEFAULT '{}',
+                    consumed_memory_classes TEXT NOT NULL DEFAULT '[]',
+                    memory_write_policies TEXT NOT NULL DEFAULT '{}',
                     semantic_focus TEXT NOT NULL DEFAULT '[]',
                     open_loops TEXT NOT NULL DEFAULT '[]',
                     last_recommendation TEXT,
+                    domain_mission_link_reason TEXT,
                     updated_at TEXT NOT NULL,
                     PRIMARY KEY (session_id, specialist_type)
                 );
@@ -775,6 +789,18 @@ class SqliteMemoryRepository(MemoryRepository):
             self._ensure_column(
                 connection,
                 "specialist_shared_memory",
+                "consumed_memory_classes",
+                "TEXT NOT NULL DEFAULT '[]'",
+            )
+            self._ensure_column(
+                connection,
+                "specialist_shared_memory",
+                "memory_write_policies",
+                "TEXT NOT NULL DEFAULT '{}'",
+            )
+            self._ensure_column(
+                connection,
+                "specialist_shared_memory",
                 "mission_context_brief",
                 "TEXT",
             )
@@ -788,6 +814,12 @@ class SqliteMemoryRepository(MemoryRepository):
                 connection,
                 "specialist_shared_memory",
                 "continuity_context_brief",
+                "TEXT",
+            )
+            self._ensure_column(
+                connection,
+                "specialist_shared_memory",
+                "domain_mission_link_reason",
                 "TEXT",
             )
             connection.commit()
@@ -874,9 +906,12 @@ class SqliteMemoryRepository(MemoryRepository):
             related_mission_ids=list(loads(row["related_mission_ids"] or "[]")),
             memory_refs=list(loads(row["memory_refs"] or "[]")),
             memory_class_policies=dict(loads(row["memory_class_policies"] or "{}")),
+            consumed_memory_classes=list(loads(row["consumed_memory_classes"] or "[]")),
+            memory_write_policies=dict(loads(row["memory_write_policies"] or "{}")),
             semantic_focus=list(loads(row["semantic_focus"] or "[]")),
             open_loops=list(loads(row["open_loops"] or "[]")),
             last_recommendation=row["last_recommendation"],
+            domain_mission_link_reason=row["domain_mission_link_reason"],
         )
 
 
@@ -1233,10 +1268,14 @@ class PostgresMemoryRepository(MemoryRepository):
                     shared_memory_brief, write_policy, consumer_mode, source_mission_id,
                     source_mission_goal, mission_context_brief, domain_context_brief,
                     continuity_context_brief, related_mission_ids, memory_refs,
-                    memory_class_policies, semantic_focus, open_loops,
-                    last_recommendation, updated_at
+                    memory_class_policies, consumed_memory_classes, memory_write_policies,
+                    semantic_focus, open_loops, last_recommendation,
+                    domain_mission_link_reason, updated_at
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                )
                 ON CONFLICT (session_id, specialist_type) DO UPDATE SET
                     sharing_mode = EXCLUDED.sharing_mode,
                     continuity_mode = EXCLUDED.continuity_mode,
@@ -1251,9 +1290,12 @@ class PostgresMemoryRepository(MemoryRepository):
                     related_mission_ids = EXCLUDED.related_mission_ids,
                     memory_refs = EXCLUDED.memory_refs,
                     memory_class_policies = EXCLUDED.memory_class_policies,
+                    consumed_memory_classes = EXCLUDED.consumed_memory_classes,
+                    memory_write_policies = EXCLUDED.memory_write_policies,
                     semantic_focus = EXCLUDED.semantic_focus,
                     open_loops = EXCLUDED.open_loops,
                     last_recommendation = EXCLUDED.last_recommendation,
+                    domain_mission_link_reason = EXCLUDED.domain_mission_link_reason,
                     updated_at = EXCLUDED.updated_at
                 """,
                 (
@@ -1272,9 +1314,12 @@ class PostgresMemoryRepository(MemoryRepository):
                     dumps(snapshot.related_mission_ids),
                     dumps(snapshot.memory_refs),
                     dumps(snapshot.memory_class_policies),
+                    dumps(snapshot.consumed_memory_classes),
+                    dumps(snapshot.memory_write_policies),
                     dumps(snapshot.semantic_focus),
                     dumps(snapshot.open_loops),
                     snapshot.last_recommendation,
+                    snapshot.domain_mission_link_reason,
                     snapshot.updated_at,
                 ),
             )
@@ -1293,8 +1338,9 @@ class PostgresMemoryRepository(MemoryRepository):
                        shared_memory_brief, write_policy, consumer_mode, source_mission_id,
                        source_mission_goal, mission_context_brief, domain_context_brief,
                        continuity_context_brief, related_mission_ids, memory_refs,
-                       memory_class_policies, semantic_focus, open_loops,
-                       last_recommendation
+                       memory_class_policies, consumed_memory_classes, memory_write_policies,
+                       semantic_focus, open_loops, last_recommendation,
+                       domain_mission_link_reason
                 FROM specialist_shared_memory
                 WHERE session_id = %s
                   AND specialist_type = %s
@@ -1319,9 +1365,12 @@ class PostgresMemoryRepository(MemoryRepository):
             related_mission_ids=list(loads(row["related_mission_ids"] or "[]")),
             memory_refs=list(loads(row["memory_refs"] or "[]")),
             memory_class_policies=dict(loads(row["memory_class_policies"] or "{}")),
+            consumed_memory_classes=list(loads(row["consumed_memory_classes"] or "[]")),
+            memory_write_policies=dict(loads(row["memory_write_policies"] or "{}")),
             semantic_focus=list(loads(row["semantic_focus"] or "[]")),
             open_loops=list(loads(row["open_loops"] or "[]")),
             last_recommendation=row["last_recommendation"],
+            domain_mission_link_reason=row["domain_mission_link_reason"],
         )
 
     def fetch_mission_state(self, mission_id: str) -> MissionStateContract | None:
@@ -1477,9 +1526,12 @@ class PostgresMemoryRepository(MemoryRepository):
                     related_mission_ids TEXT NOT NULL DEFAULT '[]',
                     memory_refs TEXT NOT NULL DEFAULT '[]',
                     memory_class_policies TEXT NOT NULL DEFAULT '{}',
+                    consumed_memory_classes TEXT NOT NULL DEFAULT '[]',
+                    memory_write_policies TEXT NOT NULL DEFAULT '{}',
                     semantic_focus TEXT NOT NULL DEFAULT '[]',
                     open_loops TEXT NOT NULL DEFAULT '[]',
                     last_recommendation TEXT,
+                    domain_mission_link_reason TEXT,
                     updated_at TEXT NOT NULL,
                     PRIMARY KEY (session_id, specialist_type)
                 )
@@ -1551,6 +1603,14 @@ class PostgresMemoryRepository(MemoryRepository):
             )
             cursor.execute(
                 "ALTER TABLE specialist_shared_memory ADD COLUMN IF NOT EXISTS "
+                "consumed_memory_classes TEXT NOT NULL DEFAULT '[]'"
+            )
+            cursor.execute(
+                "ALTER TABLE specialist_shared_memory ADD COLUMN IF NOT EXISTS "
+                "memory_write_policies TEXT NOT NULL DEFAULT '{}'"
+            )
+            cursor.execute(
+                "ALTER TABLE specialist_shared_memory ADD COLUMN IF NOT EXISTS "
                 "mission_context_brief TEXT"
             )
             cursor.execute(
@@ -1560,6 +1620,10 @@ class PostgresMemoryRepository(MemoryRepository):
             cursor.execute(
                 "ALTER TABLE specialist_shared_memory ADD COLUMN IF NOT EXISTS "
                 "continuity_context_brief TEXT"
+            )
+            cursor.execute(
+                "ALTER TABLE specialist_shared_memory ADD COLUMN IF NOT EXISTS "
+                "domain_mission_link_reason TEXT"
             )
             connection.commit()
 

@@ -5,7 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from shared.contracts import DomainSpecialistRouteContract
-from shared.domain_registry import FALLBACK_RUNTIME_ROUTE
+from shared.domain_registry import FALLBACK_RUNTIME_ROUTE, canonical_domain_refs_for_name
 from shared.mind_registry import (
     ACTIVE_MIND_REGISTRY,
     MIND_REGISTRY,
@@ -21,6 +21,7 @@ class CognitiveSnapshot:
 
     active_minds: list[str]
     active_domains: list[str]
+    canonical_domains: list[str]
     rationale: str
     primary_mind: str
     tensions: list[str]
@@ -32,6 +33,7 @@ class CognitiveSnapshot:
     arbitration_summary: str
     arbitration_source: str
     primary_mind_family: str
+    primary_domain_driver: str | None
     supporting_mind_limit: int
     suppressed_mind_limit: int
 
@@ -53,10 +55,11 @@ class CognitiveEngine:
         """Return an initial cognitive decomposition for the request."""
 
         active_domains = retrieved_domains or [FALLBACK_RUNTIME_ROUTE]
+        canonical_domains = self._resolve_canonical_domains(active_domains)
         ordered_minds = self._rank_minds(
             intent=intent,
             risk_markers=risk_markers,
-            domains=active_domains,
+            canonical_domains=canonical_domains,
             mind_hints=mind_hints,
         )
         primary_mind = ordered_minds[0]
@@ -98,12 +101,17 @@ class CognitiveEngine:
             dominant_tension=dominant_tension,
             domains=active_domains,
         )
+        primary_domain_driver = self._primary_domain_driver(
+            primary_mind=primary_mind,
+            canonical_domains=canonical_domains,
+        )
         deliberation_notes = self._build_deliberation_notes(
             intent=intent,
             primary_mind=primary_mind,
             supporting_minds=supporting_minds,
             dominant_tension=dominant_tension,
             specialist_hints=specialist_hints,
+            primary_domain_driver=primary_domain_driver,
         )
         rationale = (
             f"mente_primaria={primary_mind}; familia={primary_family}; "
@@ -111,11 +119,14 @@ class CognitiveEngine:
             f"suprimidas={', '.join(suppressed_minds) or 'nenhuma'}; "
             f"limites={supporting_limit}/{suppressed_limit}; "
             f"tensao_dominante={dominant_tension}; dominios={active_domains}; "
+            f"dominios_canonicos={canonical_domains}; "
+            f"dominio_primario={primary_domain_driver or 'none'}; "
             f"arbitragem={arbitration_summary}"
         )
         return CognitiveSnapshot(
             active_minds=[primary_mind, *supporting_minds],
             active_domains=active_domains,
+            canonical_domains=canonical_domains,
             rationale=rationale,
             primary_mind=primary_mind,
             tensions=tensions,
@@ -127,6 +138,7 @@ class CognitiveEngine:
             arbitration_summary=arbitration_summary,
             arbitration_source="mind_registry",
             primary_mind_family=primary_family,
+            primary_domain_driver=primary_domain_driver,
             supporting_mind_limit=supporting_limit,
             suppressed_mind_limit=suppressed_limit,
         )
@@ -136,7 +148,7 @@ class CognitiveEngine:
         *,
         intent: str,
         risk_markers: list[str],
-        domains: list[str],
+        canonical_domains: list[str],
         mind_hints: list[str] | None = None,
     ) -> list[str]:
         hinted_minds = {
@@ -150,8 +162,10 @@ class CognitiveEngine:
                 score += 50
             if intent in definition.intent_affinities:
                 score += 20
-            score += sum(4 for domain in domains if domain in definition.domain_affinities)
-            if len(domains) > 1 and definition.family in {
+            score += sum(
+                4 for domain in canonical_domains if domain in definition.domain_affinities
+            )
+            if len(canonical_domains) > 1 and definition.family in {
                 "fundamental",
                 "estrategica_decisoria",
             }:
@@ -163,6 +177,8 @@ class CognitiveEngine:
                     score += 6 if intent == "sensitive_action" else 3
                 elif definition.risk_bias == "operational_caution":
                     score += 5 if intent != "analysis" else 0
+            if intent == "sensitive_action" and mind_name == "mente_etica":
+                score += 4
             if definition.runtime_status == "nuclear_active":
                 score += 5
             scored_minds.append((score, definition.arbitration_priority, mind_name))
@@ -245,20 +261,58 @@ class CognitiveEngine:
         risk_markers: list[str],
         domain_specialist_routes: list[DomainSpecialistRouteContract],
     ) -> list[str]:
+        canonical_domains = CognitiveEngine._resolve_canonical_domains(domains)
         hints: list[str] = [
             route.specialist_type for route in domain_specialist_routes[:2]
         ]
         if intent == "planning" or "continuidade" in dominant_tension or len(domains) > 1:
             hints.append("especialista_planejamento_operacional")
-        if intent == "analysis" or any(domain in domains for domain in ["analysis", "strategy"]):
+        if intent == "analysis" or any(
+            domain in canonical_domains
+            for domain in {
+                "dados_estatistica_e_inteligencia_analitica",
+                "tomada_de_decisao_complexa",
+                "estrategia_e_pensamento_sistemico",
+            }
+        ):
             hints.append("especialista_analise_estruturada")
-        if risk_markers or "governance" in domains or "normativos" in dominant_tension:
+        if risk_markers or any(
+            domain in canonical_domains
+            for domain in {
+                "governanca_do_sistema",
+                "defesa_seguranca_e_gestao_de_crises",
+                "direito_e_regulacao",
+            }
+        ) or "normativos" in dominant_tension:
             hints.append("especialista_revisao_governanca")
         unique_hints: list[str] = []
         for hint in hints:
             if hint not in unique_hints:
                 unique_hints.append(hint)
         return unique_hints[:3]
+
+    @staticmethod
+    def _resolve_canonical_domains(domains: list[str]) -> list[str]:
+        canonical_domains: list[str] = []
+        for domain in domains:
+            for canonical_ref in canonical_domain_refs_for_name(domain):
+                if canonical_ref not in canonical_domains:
+                    canonical_domains.append(canonical_ref)
+        return canonical_domains
+
+    @staticmethod
+    def _primary_domain_driver(
+        *,
+        primary_mind: str,
+        canonical_domains: list[str],
+    ) -> str | None:
+        definition = definition_for(primary_mind)
+        if definition is None:
+            return canonical_domains[0] if canonical_domains else None
+        for domain in canonical_domains:
+            if domain in definition.domain_affinities:
+                return domain
+        return canonical_domains[0] if canonical_domains else None
 
     @staticmethod
     def _build_arbitration_summary(
@@ -286,6 +340,7 @@ class CognitiveEngine:
         supporting_minds: list[str],
         dominant_tension: str,
         specialist_hints: list[str],
+        primary_domain_driver: str | None,
     ) -> list[str]:
         notes = [
             f"linha_primaria={primary_mind}",
@@ -293,6 +348,8 @@ class CognitiveEngine:
             f"tensao_central={dominant_tension}",
             "fonte_arbitragem=mind_registry",
         ]
+        if primary_domain_driver:
+            notes.append(f"dominio_primario={primary_domain_driver}")
         if supporting_minds:
             notes.append(f"apoio={', '.join(supporting_minds)}")
         if specialist_hints:

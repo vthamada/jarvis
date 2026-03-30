@@ -527,11 +527,37 @@ class ObservabilityService:
         registry_domains = domain_registry_event.payload.get("registry_domains", [])
         if not registry_domains:
             return "partial"
+        route_domains = domain_registry_event.payload.get("route_domains", [])
+        canonical_refs_by_route = domain_registry_event.payload.get(
+            "canonical_domain_refs_by_route",
+            {},
+        )
+        route_modes = domain_registry_event.payload.get("route_modes", {})
+        routing_sources = domain_registry_event.payload.get("routing_sources", {})
+        if route_domains and canonical_refs_by_route:
+            for route_domain in route_domains:
+                if route_domain not in canonical_refs_by_route:
+                    return "attention_required"
+                if routing_sources and route_domain not in routing_sources:
+                    return "attention_required"
+                if route_domain in route_modes and route_modes[route_domain] not in {
+                    "shadow",
+                    "guided",
+                    "active",
+                    None,
+                }:
+                    return "attention_required"
         if specialist_domain_event is not None:
             linked_domains = specialist_domain_event.payload.get("linked_domains", {})
             selection_modes = specialist_domain_event.payload.get("selection_modes", {})
+            canonical_domain_refs = specialist_domain_event.payload.get("canonical_domain_refs", {})
             if not linked_domains or not selection_modes:
                 return "attention_required"
+            for specialist_type, linked_domain in linked_domains.items():
+                if route_domains and linked_domain not in route_domains:
+                    return "attention_required"
+                if canonical_domain_refs and not canonical_domain_refs.get(specialist_type):
+                    return "attention_required"
             return "healthy"
         if specialist_shadow_event is None:
             return "healthy"
@@ -593,6 +619,8 @@ class ObservabilityService:
         dominant_tension = context_event.payload.get("dominant_tension")
         arbitration_summary = context_event.payload.get("arbitration_summary")
         arbitration_source = context_event.payload.get("arbitration_source")
+        canonical_domains = context_event.payload.get("canonical_domains", [])
+        primary_domain_driver = context_event.payload.get("primary_domain_driver")
         support_limit = context_event.payload.get("supporting_mind_limit")
         suppressed_limit = context_event.payload.get("suppressed_mind_limit")
         if not primary_mind or not active_minds or not dominant_tension:
@@ -600,6 +628,8 @@ class ObservabilityService:
         if arbitration_source != "mind_registry":
             return "attention_required"
         if not arbitration_summary:
+            return "attention_required"
+        if canonical_domains and primary_domain_driver and primary_domain_driver not in canonical_domains:
             return "attention_required"
         if not isinstance(supporting_minds, list) or not isinstance(suppressed_minds, list):
             return "attention_required"
@@ -626,6 +656,12 @@ class ObservabilityService:
         if not sharing_modes:
             return "partial"
         class_policies = shared_memory_event.payload.get("memory_class_policies", {})
+        consumed_memory_classes = shared_memory_event.payload.get("consumed_memory_classes", {})
+        memory_write_policies = shared_memory_event.payload.get("memory_write_policies", {})
+        domain_mission_link_reasons = shared_memory_event.payload.get(
+            "domain_mission_link_reasons",
+            {},
+        )
         if not class_policies:
             return "partial"
         for specialist_type, sharing_mode in sharing_modes.items():
@@ -634,6 +670,14 @@ class ObservabilityService:
             policies = class_policies.get(specialist_type, {})
             if not policies:
                 return "attention_required"
+            consumed = set(consumed_memory_classes.get(specialist_type, []))
+            if not consumed:
+                consumed = set(policies)
+            if not consumed:
+                return "attention_required"
+            if domain_mission_link_reasons and not domain_mission_link_reasons.get(specialist_type):
+                return "attention_required"
+            write_policies = memory_write_policies.get(specialist_type, {})
             for policy in policies.values():
                 if not isinstance(policy, dict):
                     return "attention_required"
@@ -642,6 +686,11 @@ class ObservabilityService:
                 if policy.get("sharing_mode") != "core_mediated_read_only":
                     return "attention_required"
                 if policy.get("write_policy") != "through_core_only":
+                    return "attention_required"
+            if consumed_memory_classes and consumed != set(policies):
+                return "attention_required"
+            for memory_class_name in consumed:
+                if write_policies and write_policies.get(memory_class_name) != "through_core_only":
                     return "attention_required"
         return "healthy"
 
@@ -682,5 +731,3 @@ class ObservabilityService:
             else Path.cwd() / ".jarvis_runtime" / "agentic_observability.jsonl"
         )
         return JsonlAgenticMirrorAdapter(resolved)
-
-

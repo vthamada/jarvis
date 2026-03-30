@@ -7,7 +7,13 @@ from json import loads
 from pathlib import Path
 
 from shared.contracts import DomainRegistryEntryContract, DomainSpecialistRouteContract
-from shared.domain_registry import FALLBACK_RUNTIME_ROUTE, DomainEntry, load_domain_registries
+from shared.domain_registry import (
+    FALLBACK_RUNTIME_ROUTE,
+    DomainEntry,
+    canonical_scopes_for_route,
+    load_domain_registries,
+    route_routing_source,
+)
 
 
 @dataclass(frozen=True)
@@ -122,11 +128,7 @@ class KnowledgeService:
         route_entry = self.domain_routes.get(domain_name)
         if route_entry is None:
             return 0.0
-        scopes = frozenset(
-            self.canonical_domain_registry[ref].domain_scope
-            for ref in route_entry.canonical_refs
-            if ref in self.canonical_domain_registry
-        )
+        scopes = canonical_scopes_for_route(domain_name)
         maturity = route_entry.maturity
         if intent == "planning":
             if "operational" in scopes:
@@ -186,9 +188,7 @@ class KnowledgeService:
     def _resolve_canonical_domains(self, active_domains: list[str]) -> list[str]:
         canonical_domains: list[str] = []
         for domain_name in active_domains:
-            if domain_name not in self.domains:
-                continue
-            entry = self.domains[domain_name].registry_entry
+            entry = self.domain_routes.get(domain_name)
             if entry is None:
                 continue
             for canonical_ref in entry.canonical_refs:
@@ -202,9 +202,7 @@ class KnowledgeService:
     ) -> list[DomainSpecialistRouteContract]:
         routes: list[DomainSpecialistRouteContract] = []
         for domain_name in active_domains:
-            if domain_name not in self.domains:
-                continue
-            entry = self.domains[domain_name].registry_entry
+            entry = self.domain_routes.get(domain_name)
             if not entry or not entry.linked_specialist_type or not entry.specialist_mode:
                 continue
             routes.append(
@@ -215,6 +213,7 @@ class KnowledgeService:
                     routing_reason=entry.summary
                     or f"rota canônica ativa para o domínio {domain_name}",
                     canonical_domain_refs=list(entry.canonical_refs),
+                    routing_source=route_routing_source(domain_name),
                 )
             )
         return routes

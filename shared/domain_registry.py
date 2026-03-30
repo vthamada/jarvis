@@ -71,6 +71,12 @@ def load_domain_registries(
 
 CANONICAL_DOMAIN_REGISTRY, RUNTIME_ROUTE_REGISTRY = load_domain_registries()
 
+# Short-term compatibility map: runtime route labels remain stable identifiers,
+# but canonical domain refs are the only long-term semantic language.
+LEGACY_LABEL_TO_CANONICAL_DOMAINS: dict[str, tuple[str, ...]] = {
+    name: entry.canonical_refs for name, entry in RUNTIME_ROUTE_REGISTRY.items()
+}
+
 # Routes eligible for runtime activation (excludes canonical_only entries).
 RUNTIME_ELIGIBLE_ROUTES: frozenset[str] = frozenset(
     name for name, entry in RUNTIME_ROUTE_REGISTRY.items() if entry.maturity != "canonical_only"
@@ -124,13 +130,37 @@ def resolve_route(route_name: str) -> DomainEntry | None:
     return RUNTIME_ROUTE_REGISTRY.get(route_name)
 
 
+def route_routing_source(route_name: str) -> str:
+    """Return the source that authorized the current route identifier."""
+
+    return "domain_registry" if route_name in RUNTIME_ROUTE_REGISTRY else "legacy_label_adapter"
+
+
+def canonical_domain_refs_for_name(domain_name: str) -> tuple[str, ...]:
+    """Resolve canonical domain refs for a runtime route or canonical domain name."""
+
+    if domain_name in CANONICAL_DOMAIN_REGISTRY:
+        return (domain_name,)
+    route_entry = resolve_route(domain_name)
+    if route_entry is not None:
+        return route_entry.canonical_refs
+    return LEGACY_LABEL_TO_CANONICAL_DOMAINS.get(domain_name, ())
+
+
+def primary_canonical_domain_for_name(domain_name: str) -> str | None:
+    """Return the first canonical domain associated with a route or domain name."""
+
+    refs = canonical_domain_refs_for_name(domain_name)
+    return refs[0] if refs else None
+
+
 def canonical_scopes_for_route(route_name: str) -> frozenset[str]:
     """Return the domain_scope values of all canonical_refs for a runtime route."""
-    entry = RUNTIME_ROUTE_REGISTRY.get(route_name)
-    if entry is None:
+    refs = canonical_domain_refs_for_name(route_name)
+    if not refs:
         return frozenset()
     scopes: set[str] = set()
-    for ref in entry.canonical_refs:
+    for ref in refs:
         canonical_entry = CANONICAL_DOMAIN_REGISTRY.get(ref)
         if canonical_entry is not None:
             scopes.add(canonical_entry.domain_scope)

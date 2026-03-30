@@ -13,7 +13,11 @@ from shared.contracts import (
     SpecialistSelectionContract,
     SpecialistSharedMemoryContextContract,
 )
-from shared.domain_registry import is_specialist_route, resolve_route
+from shared.domain_registry import (
+    canonical_domain_refs_for_name,
+    is_specialist_route,
+    resolve_route,
+)
 
 
 @dataclass(frozen=True)
@@ -95,13 +99,22 @@ class SpecialistEngine:
             [item for item in selections if item.selection_status == "selected"],
             start=1,
         ):
+            shared_memory_context = (shared_memory_contexts or {}).get(selection.specialist_type)
+            coherence_issue = self._validate_route_domain_memory_coherence(
+                selection=selection,
+                plan=plan,
+                shared_memory_context=shared_memory_context,
+            )
+            if coherence_issue is not None:
+                selection.selection_status = "not_eligible"
+                selection.selection_score = 0.21
+                selection.rationale = coherence_issue
+                continue
             invocation = self._build_invocation(
                 selection=selection,
                 plan=plan,
                 knowledge_snippets=knowledge_snippets,
-                shared_memory_context=(
-                    shared_memory_contexts or {}
-                ).get(selection.specialist_type),
+                shared_memory_context=shared_memory_context,
                 session_id=session_id,
                 mission_id=mission_id,
                 requested_by_service=requested_by_service or "orchestrator-service",
@@ -114,7 +127,7 @@ class SpecialistEngine:
             specialist_hints=[
                 item.specialist_type
                 for item in selections
-                if item.selection_status == "selected"
+                if item.selection_status == "selected" and item.invocation_id is not None
             ],
             selections=selections,
             invocations=invocations,
@@ -462,6 +475,61 @@ class SpecialistEngine:
         recommendations = [item.recommendation for item in contributions if item.recommendation]
         return "; ".join(recommendations[:3])
 
+    @staticmethod
+    def _validate_route_domain_memory_coherence(
+        *,
+        selection: SpecialistSelectionContract,
+        plan: DeliberativePlanContract,
+        shared_memory_context: SpecialistSharedMemoryContextContract | None,
+    ) -> str | None:
+        if selection.linked_domain is None:
+            return None
+        if selection.linked_domain not in plan.active_domains:
+            return "coerencia rota->dominio falhou: dominio vinculado nao esta no plano ativo"
+        route = resolve_route(selection.linked_domain)
+        if route is None or route.linked_specialist_type != selection.specialist_type:
+            return "coerencia rota->especialista falhou: registry soberano nao confirma o vinculo"
+        if route.specialist_mode != selection.selection_mode:
+            return "coerencia rota->modo falhou: selection_mode diverge do registry soberano"
+        if shared_memory_context is None:
+            return "coerencia especialista->memoria falhou: contexto compartilhado ausente"
+        if selection.selection_mode in {"guided", "active"} and (
+            shared_memory_context.consumer_mode != "domain_guided_memory_packet"
+        ):
+            return "coerencia especialista->memoria falhou: rota guiada sem packet canônico"
+        consumed_classes = set(shared_memory_context.consumed_memory_classes)
+        if not consumed_classes:
+            consumed_classes = set(shared_memory_context.memory_class_policies)
+        if not consumed_classes:
+            consumed_classes = {
+                ref.removeprefix("memory://").split("/", 1)[0]
+                for ref in shared_memory_context.memory_refs
+                if ref.startswith("memory://")
+            }
+        if not consumed_classes:
+            return "coerencia especialista->memoria falhou: classes consumidas ausentes"
+        if shared_memory_context.consumed_memory_classes and not {
+            "domain",
+            "mission",
+            "contextual",
+        }.issubset(consumed_classes):
+            return "coerencia especialista->memoria falhou: classes minimas nao anexadas"
+        linked_refs = set(canonical_domain_refs_for_name(selection.linked_domain))
+        semantic_focus = set(shared_memory_context.semantic_focus)
+        if linked_refs and not (
+            linked_refs.intersection(semantic_focus) or selection.linked_domain in semantic_focus
+        ):
+            return (
+                "coerencia dominio->memoria falhou: foco semantico nao reflete o dominio canônico"
+            )
+        if not (
+            shared_memory_context.domain_mission_link_reason
+            or shared_memory_context.domain_context_brief
+            or shared_memory_context.mission_context_brief
+        ):
+            return "coerencia dominio->missao falhou: justificativa explicita ausente"
+        return None
+
     def _build_invocation(
         self,
         *,
@@ -495,8 +563,15 @@ class SpecialistEngine:
                     f"shared_memory_mode={shared_memory_context.sharing_mode}",
                     f"memory_write_policy={shared_memory_context.write_policy}",
                     f"consumer_mode={shared_memory_context.consumer_mode}",
+                    "consumed_memory_classes="
+                    + ",".join(shared_memory_context.consumed_memory_classes),
                 ]
             )
+            if shared_memory_context.domain_mission_link_reason:
+                handoff_inputs.append(
+                    "domain_mission_link_reason="
+                    f"{shared_memory_context.domain_mission_link_reason}"
+                )
             if shared_memory_context.source_mission_goal:
                 handoff_inputs.append(
                     f"source_mission_goal={shared_memory_context.source_mission_goal}"

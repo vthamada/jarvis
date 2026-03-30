@@ -46,7 +46,7 @@ Leitura prática correta deste momento:
 - Sprint 5 do `v2` concluída com evals de aderência do recorte de especialistas aos eixos do mestre;
 - Sprint 6 do `v2` concluída com fechamento formal do primeiro corte do ciclo;
 - `shared/memory_registry.py` e `shared/mind_registry.py` passaram a registrar, respectivamente, as 11 memórias e as 24 mentes do mestre como base formal do runtime progressivo;
-- o próximo ciclo ativo do programa passou a ser o `v2-alignment-cycle`, focado em `domínios`, `memórias`, `mentes`, identidade auditável e gates por eixo;
+- o ciclo ativo do programa passou a ser o `v2-sovereign-alignment-cut`, focado em sincronização documental, soberania de domínios, consumo canônico de memória, convergência de mentes e gates contínuos por eixo;
 - a auditoria completa do Documento-Mestre passou a orientar o backlog real por eixo.
 
 ## Estrutura principal
@@ -161,6 +161,7 @@ Arquivos principais:
 - `docs/roadmap/programa-ate-v3.md`
 - `docs/implementation/v1-5-cycle-closure.md`
 - `docs/implementation/v2-sprint-cycle.md`
+- `docs/implementation/v2-sovereign-alignment-cut.md`
 - `docs/architecture/technology-study.md`
 - `docs/implementation/implementation-strategy.md`
 - `docs/roadmap/v1-roadmap.md`
@@ -172,7 +173,8 @@ Leitura recomendada do estado atual:
 3. `docs/roadmap/programa-ate-v3.md`
 4. `docs/implementation/v1-5-cycle-closure.md`
 5. `docs/implementation/v2-sprint-cycle.md`
-6. `docs/architecture/technology-study.md`
+6. `docs/implementation/v2-sovereign-alignment-cut.md`
+7. `docs/architecture/technology-study.md`
 
 ## Console mínimo do baseline
 

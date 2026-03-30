@@ -376,9 +376,12 @@ class MemoryService:
                     related_mission_ids=[str(item) for item in context.related_mission_ids],
                     memory_refs=list(context.memory_refs),
                     memory_class_policies=dict(context.memory_class_policies),
+                    consumed_memory_classes=list(context.consumed_memory_classes),
+                    memory_write_policies=dict(context.memory_write_policies),
                     semantic_focus=list(context.semantic_focus),
                     open_loops=list(context.open_loops),
                     last_recommendation=context.last_recommendation,
+                    domain_mission_link_reason=context.domain_mission_link_reason,
                     updated_at=self.now(),
                 )
             )
@@ -612,8 +615,16 @@ class MemoryService:
                 dynamic_memory_refs.append(domain_ref)
             if domain_name not in semantic_focus and len(semantic_focus) < 5:
                 semantic_focus.append(domain_name)
+            route = resolve_route(domain_name)
+            if route is not None:
+                append_unique(list(route.canonical_refs), semantic_focus, 5)
         memory_refs = [*canonical_memory_refs, *dynamic_memory_refs]
         memory_class_policies = specialist_memory_policy_payload(shared_memory_classes)
+        consumed_memory_classes = [memory_class.value for memory_class in shared_memory_classes]
+        memory_write_policies = {
+            memory_class_name: str(policy.get("write_policy", "through_core_only"))
+            for memory_class_name, policy in memory_class_policies.items()
+        }
 
         source_goal = mission_state.mission_goal if mission_state else None
         source_mission_id = mission_state.mission_id if mission_state else None
@@ -662,6 +673,12 @@ class MemoryService:
             if promoted_route is not None
             else "baseline_shared_context"
         )
+        domain_mission_link_reason = (
+            f"route={promoted_route.domain_name if promoted_route else 'baseline'} "
+            "canonicos="
+            f"{','.join(promoted_route.canonical_refs if promoted_route else ()) or 'none'} "
+            f"missao={source_goal or 'sessao_sem_missao_ancorada'}"
+        )
         return SpecialistSharedMemoryContextContract(
             specialist_type=specialist_type,
             sharing_mode="core_mediated_read_only",
@@ -677,9 +694,12 @@ class MemoryService:
             related_mission_ids=related_mission_ids,
             memory_refs=memory_refs,
             memory_class_policies=memory_class_policies,
+            consumed_memory_classes=consumed_memory_classes,
+            memory_write_policies=memory_write_policies,
             semantic_focus=semantic_focus,
             open_loops=open_loops,
             last_recommendation=mission_state.last_recommendation if mission_state else None,
+            domain_mission_link_reason=domain_mission_link_reason,
         )
 
     def _build_session_continuity_snapshot(
