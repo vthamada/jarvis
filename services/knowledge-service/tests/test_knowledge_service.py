@@ -98,7 +98,7 @@ def test_knowledge_service_covers_operational_readiness_and_software_domains() -
     assert "computacao_e_desenvolvimento" in result.registry_domains
     assert "planejamento_e_coordenacao" in result.registry_domains
     assert any(
-        route.specialist_type == "especialista_software_subordinado"
+        route.specialist_type == "software_change_specialist"
         and route.specialist_mode == "guided"
         and route.canonical_domain_refs == ["computacao_e_desenvolvimento"]
         for route in result.specialist_routes
@@ -253,7 +253,7 @@ def test_knowledge_service_exposes_guided_analysis_specialist_route() -> None:
     assert "analysis" in result.active_domains
     assert any(
         route.domain_name == "analysis"
-        and route.specialist_type == "especialista_analise_estruturada"
+        and route.specialist_type == "structured_analysis_specialist"
         and route.specialist_mode == "guided"
         and route.canonical_domain_refs
         == [
@@ -276,7 +276,7 @@ def test_knowledge_service_exposes_guided_governance_specialist_route() -> None:
     assert "governance" in result.active_domains
     assert any(
         route.domain_name == "governance"
-        and route.specialist_type == "especialista_revisao_governanca"
+        and route.specialist_type == "governance_review_specialist"
         and route.specialist_mode == "guided"
         and route.canonical_domain_refs
         == [
@@ -299,7 +299,7 @@ def test_knowledge_service_exposes_guided_operational_readiness_specialist_route
     assert result.active_domains[0] == "operational_readiness"
     assert any(
         route.domain_name == "operational_readiness"
-        and route.specialist_type == "especialista_planejamento_operacional"
+        and route.specialist_type == "operational_planning_specialist"
         and route.specialist_mode == "guided"
         and route.canonical_domain_refs
         == [
@@ -322,7 +322,7 @@ def test_knowledge_service_exposes_guided_strategy_specialist_route() -> None:
     assert "strategy" in result.active_domains[:3]
     assert any(
         route.domain_name == "strategy"
-        and route.specialist_type == "especialista_analise_estruturada"
+        and route.specialist_type == "structured_analysis_specialist"
         and route.specialist_mode == "guided"
         and route.canonical_domain_refs
         == [
@@ -344,7 +344,7 @@ def test_knowledge_service_exposes_guided_decision_risk_specialist_route() -> No
     assert "decision_risk" in result.active_domains[:3]
     assert any(
         route.domain_name == "decision_risk"
-        and route.specialist_type == "especialista_revisao_governanca"
+        and route.specialist_type == "governance_review_specialist"
         and route.specialist_mode == "guided"
         and route.canonical_domain_refs
         == [

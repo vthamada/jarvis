@@ -112,6 +112,6 @@ O primeiro ciclo do `v1.5` deve ser considerado formalmente fechado quando:
 
 O ciclo seguinte passa a ser executado por:
 
-- `docs/implementation/v2-sprint-cycle.md`
+- `docs/archive/implementation/v2-sprint-cycle.md`
 
 Este documento permanece como fechamento histórico do primeiro ciclo do `v1.5`.

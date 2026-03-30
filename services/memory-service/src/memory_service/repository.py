@@ -92,6 +92,10 @@ class StoredSpecialistSharedMemory:
     mission_context_brief: str | None = None
     domain_context_brief: str | None = None
     continuity_context_brief: str | None = None
+    consumer_profile: str | None = None
+    consumer_objective: str | None = None
+    expected_deliverables: list[str] = field(default_factory=list)
+    telemetry_focus: list[str] = field(default_factory=list)
     related_mission_ids: list[str] = field(default_factory=list)
     memory_refs: list[str] = field(default_factory=list)
     memory_class_policies: dict[str, dict[str, object]] = field(default_factory=dict)
@@ -509,12 +513,16 @@ class SqliteMemoryRepository(MemoryRepository):
                     session_id, specialist_type, sharing_mode, continuity_mode,
                     shared_memory_brief, write_policy, consumer_mode, source_mission_id,
                     source_mission_goal, mission_context_brief, domain_context_brief,
-                    continuity_context_brief, related_mission_ids, memory_refs,
+                    continuity_context_brief, consumer_profile, consumer_objective,
+                    expected_deliverables, telemetry_focus, related_mission_ids, memory_refs,
                     memory_class_policies, consumed_memory_classes, memory_write_policies,
                     semantic_focus, open_loops, last_recommendation,
                     domain_mission_link_reason, updated_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?
+                )
                 ON CONFLICT(session_id, specialist_type) DO UPDATE SET
                     sharing_mode = excluded.sharing_mode,
                     continuity_mode = excluded.continuity_mode,
@@ -526,6 +534,10 @@ class SqliteMemoryRepository(MemoryRepository):
                     mission_context_brief = excluded.mission_context_brief,
                     domain_context_brief = excluded.domain_context_brief,
                     continuity_context_brief = excluded.continuity_context_brief,
+                    consumer_profile = excluded.consumer_profile,
+                    consumer_objective = excluded.consumer_objective,
+                    expected_deliverables = excluded.expected_deliverables,
+                    telemetry_focus = excluded.telemetry_focus,
                     related_mission_ids = excluded.related_mission_ids,
                     memory_refs = excluded.memory_refs,
                     memory_class_policies = excluded.memory_class_policies,
@@ -550,6 +562,10 @@ class SqliteMemoryRepository(MemoryRepository):
                     snapshot.mission_context_brief,
                     snapshot.domain_context_brief,
                     snapshot.continuity_context_brief,
+                    snapshot.consumer_profile,
+                    snapshot.consumer_objective,
+                    dumps(snapshot.expected_deliverables),
+                    dumps(snapshot.telemetry_focus),
                     dumps(snapshot.related_mission_ids),
                     dumps(snapshot.memory_refs),
                     dumps(snapshot.memory_class_policies),
@@ -576,7 +592,8 @@ class SqliteMemoryRepository(MemoryRepository):
                 SELECT session_id, specialist_type, sharing_mode, continuity_mode,
                        shared_memory_brief, write_policy, consumer_mode, source_mission_id,
                        source_mission_goal, mission_context_brief, domain_context_brief,
-                       continuity_context_brief, related_mission_ids, memory_refs,
+                       continuity_context_brief, consumer_profile, consumer_objective,
+                       expected_deliverables, telemetry_focus, related_mission_ids, memory_refs,
                        memory_class_policies, consumed_memory_classes, memory_write_policies,
                        semantic_focus, open_loops, last_recommendation,
                        domain_mission_link_reason
@@ -723,6 +740,10 @@ class SqliteMemoryRepository(MemoryRepository):
                     mission_context_brief TEXT,
                     domain_context_brief TEXT,
                     continuity_context_brief TEXT,
+                    consumer_profile TEXT,
+                    consumer_objective TEXT,
+                    expected_deliverables TEXT NOT NULL DEFAULT '[]',
+                    telemetry_focus TEXT NOT NULL DEFAULT '[]',
                     related_mission_ids TEXT NOT NULL DEFAULT '[]',
                     memory_refs TEXT NOT NULL DEFAULT '[]',
                     memory_class_policies TEXT NOT NULL DEFAULT '{}',
@@ -903,6 +924,10 @@ class SqliteMemoryRepository(MemoryRepository):
             mission_context_brief=row["mission_context_brief"],
             domain_context_brief=row["domain_context_brief"],
             continuity_context_brief=row["continuity_context_brief"],
+            consumer_profile=row["consumer_profile"],
+            consumer_objective=row["consumer_objective"],
+            expected_deliverables=list(loads(row["expected_deliverables"] or "[]")),
+            telemetry_focus=list(loads(row["telemetry_focus"] or "[]")),
             related_mission_ids=list(loads(row["related_mission_ids"] or "[]")),
             memory_refs=list(loads(row["memory_refs"] or "[]")),
             memory_class_policies=dict(loads(row["memory_class_policies"] or "{}")),
@@ -1267,14 +1292,16 @@ class PostgresMemoryRepository(MemoryRepository):
                     session_id, specialist_type, sharing_mode, continuity_mode,
                     shared_memory_brief, write_policy, consumer_mode, source_mission_id,
                     source_mission_goal, mission_context_brief, domain_context_brief,
-                    continuity_context_brief, related_mission_ids, memory_refs,
+                    continuity_context_brief, consumer_profile, consumer_objective,
+                    expected_deliverables, telemetry_focus, related_mission_ids, memory_refs,
                     memory_class_policies, consumed_memory_classes, memory_write_policies,
                     semantic_focus, open_loops, last_recommendation,
                     domain_mission_link_reason, updated_at
                 )
                 VALUES (
                     %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
-                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                    %s, %s, %s, %s
                 )
                 ON CONFLICT (session_id, specialist_type) DO UPDATE SET
                     sharing_mode = EXCLUDED.sharing_mode,
@@ -1287,6 +1314,10 @@ class PostgresMemoryRepository(MemoryRepository):
                     mission_context_brief = EXCLUDED.mission_context_brief,
                     domain_context_brief = EXCLUDED.domain_context_brief,
                     continuity_context_brief = EXCLUDED.continuity_context_brief,
+                    consumer_profile = EXCLUDED.consumer_profile,
+                    consumer_objective = EXCLUDED.consumer_objective,
+                    expected_deliverables = EXCLUDED.expected_deliverables,
+                    telemetry_focus = EXCLUDED.telemetry_focus,
                     related_mission_ids = EXCLUDED.related_mission_ids,
                     memory_refs = EXCLUDED.memory_refs,
                     memory_class_policies = EXCLUDED.memory_class_policies,
@@ -1311,6 +1342,10 @@ class PostgresMemoryRepository(MemoryRepository):
                     snapshot.mission_context_brief,
                     snapshot.domain_context_brief,
                     snapshot.continuity_context_brief,
+                    snapshot.consumer_profile,
+                    snapshot.consumer_objective,
+                    dumps(snapshot.expected_deliverables),
+                    dumps(snapshot.telemetry_focus),
                     dumps(snapshot.related_mission_ids),
                     dumps(snapshot.memory_refs),
                     dumps(snapshot.memory_class_policies),
@@ -1337,7 +1372,8 @@ class PostgresMemoryRepository(MemoryRepository):
                 SELECT session_id, specialist_type, sharing_mode, continuity_mode,
                        shared_memory_brief, write_policy, consumer_mode, source_mission_id,
                        source_mission_goal, mission_context_brief, domain_context_brief,
-                       continuity_context_brief, related_mission_ids, memory_refs,
+                       continuity_context_brief, consumer_profile, consumer_objective,
+                       expected_deliverables, telemetry_focus, related_mission_ids, memory_refs,
                        memory_class_policies, consumed_memory_classes, memory_write_policies,
                        semantic_focus, open_loops, last_recommendation,
                        domain_mission_link_reason
@@ -1362,6 +1398,10 @@ class PostgresMemoryRepository(MemoryRepository):
             mission_context_brief=row["mission_context_brief"],
             domain_context_brief=row["domain_context_brief"],
             continuity_context_brief=row["continuity_context_brief"],
+            consumer_profile=row["consumer_profile"],
+            consumer_objective=row["consumer_objective"],
+            expected_deliverables=list(loads(row["expected_deliverables"] or "[]")),
+            telemetry_focus=list(loads(row["telemetry_focus"] or "[]")),
             related_mission_ids=list(loads(row["related_mission_ids"] or "[]")),
             memory_refs=list(loads(row["memory_refs"] or "[]")),
             memory_class_policies=dict(loads(row["memory_class_policies"] or "{}")),
@@ -1523,6 +1563,10 @@ class PostgresMemoryRepository(MemoryRepository):
                     mission_context_brief TEXT,
                     domain_context_brief TEXT,
                     continuity_context_brief TEXT,
+                    consumer_profile TEXT,
+                    consumer_objective TEXT,
+                    expected_deliverables TEXT NOT NULL DEFAULT '[]',
+                    telemetry_focus TEXT NOT NULL DEFAULT '[]',
                     related_mission_ids TEXT NOT NULL DEFAULT '[]',
                     memory_refs TEXT NOT NULL DEFAULT '[]',
                     memory_class_policies TEXT NOT NULL DEFAULT '{}',
@@ -1620,6 +1664,22 @@ class PostgresMemoryRepository(MemoryRepository):
             cursor.execute(
                 "ALTER TABLE specialist_shared_memory ADD COLUMN IF NOT EXISTS "
                 "continuity_context_brief TEXT"
+            )
+            cursor.execute(
+                "ALTER TABLE specialist_shared_memory ADD COLUMN IF NOT EXISTS "
+                "consumer_profile TEXT"
+            )
+            cursor.execute(
+                "ALTER TABLE specialist_shared_memory ADD COLUMN IF NOT EXISTS "
+                "consumer_objective TEXT"
+            )
+            cursor.execute(
+                "ALTER TABLE specialist_shared_memory ADD COLUMN IF NOT EXISTS "
+                "expected_deliverables TEXT NOT NULL DEFAULT '[]'"
+            )
+            cursor.execute(
+                "ALTER TABLE specialist_shared_memory ADD COLUMN IF NOT EXISTS "
+                "telemetry_focus TEXT NOT NULL DEFAULT '[]'"
             )
             cursor.execute(
                 "ALTER TABLE specialist_shared_memory ADD COLUMN IF NOT EXISTS "

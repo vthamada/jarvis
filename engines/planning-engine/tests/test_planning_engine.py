@@ -31,7 +31,7 @@ def test_planning_engine_builds_structured_plan_with_continuity() -> None:
             preferred_response_mode="plan_and_operate",
             cognitive_rationale="intent=planning; mente_primaria=mente_executiva",
             tensions=["equilibrar ambicao estrategica com a menor proxima acao segura"],
-            specialist_hints=["especialista_planejamento_operacional"],
+            specialist_hints=["operational_planning_specialist"],
             dominant_goal="definir um caminho executavel e seguro",
             secondary_goals=["preservar espaco para analise antes de executar"],
             identity_mode="structured_planning",
@@ -205,8 +205,8 @@ def test_planning_engine_refines_plan_and_consolidates_specialists() -> None:
             cognitive_rationale="intent=analysis; mente_primaria=mente_analitica",
             tensions=["equilibrar profundidade analitica com conclusao util"],
             specialist_hints=[
-                "especialista_planejamento_operacional",
-                "especialista_analise_estruturada",
+                "operational_planning_specialist",
+                "structured_analysis_specialist",
             ],
             dominant_goal="produzir leitura confiavel antes de agir",
             identity_mode="deep_analysis",
@@ -221,7 +221,7 @@ def test_planning_engine_refines_plan_and_consolidates_specialists() -> None:
         specialist_summary="ajustar checkpoints e explicitar criterio dominante",
         specialist_contributions=[
             SpecialistContributionContract(
-                specialist_type="especialista_planejamento_operacional",
+                specialist_type="operational_planning_specialist",
                 role="planejamento_operacional_subordinado",
                 focus="sequenciamento reversivel e checkpoints claros",
                 findings=[
@@ -235,7 +235,7 @@ def test_planning_engine_refines_plan_and_consolidates_specialists() -> None:
                 confidence=0.79,
             ),
             SpecialistContributionContract(
-                specialist_type="especialista_analise_estruturada",
+                specialist_type="structured_analysis_specialist",
                 role="analise_estruturada_subordinada",
                 focus="trade-offs, evidencia e criterio de decisao",
                 findings=[

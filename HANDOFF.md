@@ -2,7 +2,7 @@
 
 ## Metadata
 
-- Atualizado em: 2026-03-28
+- Atualizado em: 2026-03-30
 - Branch: `main`
 - Commit de referência: `e165a5c`
 - Artefato canônico do projeto: `documento_mestre_jarvis.md`
@@ -28,9 +28,10 @@ Sistema oficial de planejamento desta fase:
 
 - `HANDOFF.md` como retomada tático-operacional;
 - `docs/roadmap/programa-ate-v3.md` como direção do programa até `v3`;
-- `docs/implementation/v2-cycle-closure.md` como fechamento formal do primeiro corte do `v2`;
-- `docs/implementation/v2-alignment-cycle.md` como histórico fechado do ciclo anterior;
-- `docs/implementation/v2-sovereign-alignment-cut.md` como execução oficial do corte ativo;
+- `docs/archive/implementation/v2-cycle-closure.md` como fechamento formal do primeiro corte do `v2`;
+- `docs/archive/implementation/v2-alignment-cycle.md` como histórico fechado do ciclo anterior;
+- `docs/implementation/v2-domain-consumers-and-workflows-cut.md` como execução oficial do corte ativo;
+- `docs/archive/implementation/v2-sovereign-alignment-cut.md` como histórico de transição do corte anterior;
 - `docs/documentation/matriz-de-aderencia-mestre.md` como ponte entre visão canônica e backlog real.
 
 Leitura prioritária de aderência neste momento:
@@ -153,7 +154,7 @@ Principais entregas já consolidadas:
 - Sprint 1 do `v2` concluída, com contratos mínimos de convocação de especialistas, fronteiras explícitas de runtime e integração mínima no núcleo;
 - Sprint 2 do `v2` concluída, com seleção governada de especialistas, handoff interno observável e contenção explícita quando a convocação viola fronteiras;
 - Sprint 3 do `v2` concluída, com memória relacional compartilhada mediada pelo núcleo, contexto persistido por especialista e handoff enriquecido sem escrita direta fora do núcleo;
-- Sprint 4 do `v2` concluída, com registry inicial de domínios do ciclo, rota canônica `software_development -> especialista_software_subordinado` e execução explícita em `shadow mode`;
+- Sprint 4 do `v2` concluída, com registry inicial de domínios do ciclo, rota canônica `software_development -> software_change_specialist` e execução explícita em `shadow mode`;
 - Sprint 5 do `v2-alignment-cycle` concluída, com gates explícitos de aderência por eixo em `internal_pilot_report`, `compare_orchestrator_paths` e `evolution_from_pilot`.
 - Documento-Mestre ampliado com referências arquiteturais oficiais por função.
 
@@ -177,12 +178,11 @@ Regra de estudo externo no `v2`:
 
 Ordem recomendada:
 
-1. executar a Sprint 1 do `v2-sovereign-alignment-cut` e fechar o drift documental;
+1. consolidar a Sprint 2 do `v2-domain-consumers-and-workflows-cut` com workflows operacionais auditáveis no runtime;
 2. concluir a Sprint 2 com soberania de domínios no runtime e eventos canônicos;
 3. concluir a Sprint 3 com consumo explícito de memória por classe;
 4. concluir a Sprint 4 com arbitragem de mentes baseada em domínios canônicos;
 5. promover `guided` como caminho principal das rotas já abertas;
-6. fechar o corte com gates por eixo em `engineering_gate.py --mode release`.
 
 ## Riscos e bloqueios
 
@@ -198,13 +198,11 @@ Ordem recomendada:
 - `HANDOFF.md`
 - `CHANGELOG.md`
 - `docs/roadmap/programa-ate-v3.md`
-- `docs/implementation/post-v1-cycle-closure.md`
-- `docs/implementation/v1-5-cycle-closure.md`
-- `docs/implementation/v2-cycle-closure.md`
-- `docs/implementation/v2-alignment-cycle.md`
-- `docs/implementation/v2-sovereign-alignment-cut.md`
-- `docs/architecture/technology-study.md`
+- `docs/implementation/v2-domain-consumers-and-workflows-cut.md`
+- `docs/implementation/v2-sovereign-alignment-cut-closure.md`
 - `docs/documentation/matriz-de-aderencia-mestre.md`
+- `docs/architecture/technology-study.md`
+- `docs/archive/implementation/`
 - `docs/operations/v1-operational-baseline.md`
 - `services/orchestrator-service/src/orchestrator_service/service.py`
 - `services/memory-service/src/memory_service/service.py`
@@ -222,10 +220,10 @@ Leitura mínima para qualquer novo agente:
 1. `HANDOFF.md`
 2. `documento_mestre_jarvis.md`
 3. `docs/roadmap/programa-ate-v3.md`
-4. `docs/implementation/v1-5-cycle-closure.md`
-5. `docs/implementation/v2-cycle-closure.md`
-6. `docs/implementation/v2-alignment-cycle.md`
-7. `docs/implementation/v2-sovereign-alignment-cut.md`
+4. `docs/archive/implementation/v1-5-cycle-closure.md`
+5. `docs/archive/implementation/v2-cycle-closure.md`
+6. `docs/archive/implementation/v2-alignment-cycle.md`
+7. `docs/archive/implementation/v2-sovereign-alignment-cut.md`
 8. `docs/architecture/technology-study.md`
 
 
@@ -277,3 +275,16 @@ Gate mínimo oficial:
 ```powershell
 python tools/engineering_gate.py --mode standard
 ```
+
+## Regra de linguagem
+
+- documentação, visão e texto voltado a operador podem permanecer em português;
+- contratos técnicos, eventos, payloads, status e novos ids de runtime devem convergir para inglês;
+- ontologias canônicas derivadas do Documento-Mestre podem permanecer em português enquanto camada semântica;
+- ids legados em português não devem ser expandidos por conveniência local.
+
+## Atualizacao 2026-03-30
+
+- specialist types do runtime agora usam ids canonicos em ingles, com compatibilidade curta para labels legados em portugues;
+- o proximo corte ativo continua sendo `v2-domain-consumers-and-workflows-cut`;
+- Sprint 2 foi aberta com camada inicial de workflows operacionais compostos via `workflow_profile`, `workflow_steps`, `workflow_composed` e `workflow_completed`.

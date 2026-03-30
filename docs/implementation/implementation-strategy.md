@@ -9,7 +9,7 @@ Ele continua útil como referência de engenharia, mas não é mais o plano ativ
 Leitura correta hoje:
 
 - para direção de médio prazo: `docs/roadmap/programa-ate-v3.md`
-- para execução imediata: `docs/implementation/post-v1-sprint-cycle.md`
+- para execução imediata: `docs/archive/implementation/post-v1-sprint-cycle.md`
 - para histórico do `v1`: este documento
 
 ---

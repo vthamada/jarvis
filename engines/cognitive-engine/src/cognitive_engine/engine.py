@@ -13,6 +13,11 @@ from shared.mind_registry import (
     definition_for,
     preferred_support_for,
 )
+from shared.specialist_registry import (
+    GOVERNANCE_REVIEW_SPECIALIST,
+    OPERATIONAL_PLANNING_SPECIALIST,
+    STRUCTURED_ANALYSIS_SPECIALIST,
+)
 
 
 @dataclass(frozen=True)
@@ -266,7 +271,7 @@ class CognitiveEngine:
             route.specialist_type for route in domain_specialist_routes[:2]
         ]
         if intent == "planning" or "continuidade" in dominant_tension or len(domains) > 1:
-            hints.append("especialista_planejamento_operacional")
+            hints.append(OPERATIONAL_PLANNING_SPECIALIST)
         if intent == "analysis" or any(
             domain in canonical_domains
             for domain in {
@@ -275,7 +280,7 @@ class CognitiveEngine:
                 "estrategia_e_pensamento_sistemico",
             }
         ):
-            hints.append("especialista_analise_estruturada")
+            hints.append(STRUCTURED_ANALYSIS_SPECIALIST)
         if risk_markers or any(
             domain in canonical_domains
             for domain in {
@@ -284,7 +289,7 @@ class CognitiveEngine:
                 "direito_e_regulacao",
             }
         ) or "normativos" in dominant_tension:
-            hints.append("especialista_revisao_governanca")
+            hints.append(GOVERNANCE_REVIEW_SPECIALIST)
         unique_hints: list[str] = []
         for hint in hints:
             if hint not in unique_hints:

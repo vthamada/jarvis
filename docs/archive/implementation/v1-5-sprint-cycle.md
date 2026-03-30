@@ -15,7 +15,7 @@ Fontes de direção:
 
 - `HANDOFF.md`
 - `docs/roadmap/programa-ate-v3.md`
-- `docs/implementation/post-v1-cycle-closure.md`
+- `docs/archive/implementation/post-v1-cycle-closure.md`
 - `docs/architecture/technology-study.md`
 
 Status desta versão do ciclo:
@@ -26,7 +26,7 @@ Status desta versão do ciclo:
 - Sprint 4 concluída;
 - Sprint 5 concluída;
 - Sprint 6 concluída;
-- este ciclo está formalmente fechado e foi sucedido por `docs/implementation/v2-sprint-cycle.md`.
+- este ciclo está formalmente fechado e foi sucedido por `docs/archive/implementation/v2-sprint-cycle.md`.
 
 ---
 
@@ -222,8 +222,8 @@ Resultado registrado nesta rodada:
 
 - o primeiro ciclo do `v1.5` foi formalmente encerrado;
 - `tools/close_stateful_runtime_cycle.py` passou a gerar artefatos executáveis de fechamento do ciclo com evidência observável e comparativa do runtime;
-- `docs/implementation/v1-5-cycle-closure.md` passou a registrar o corte formal para `v2`;
-- `docs/implementation/v2-sprint-cycle.md` passou a ser o novo plano rolante ativo da fase seguinte.
+- `docs/archive/implementation/v1-5-cycle-closure.md` passou a registrar o corte formal para `v2`;
+- `docs/archive/implementation/v2-sprint-cycle.md` passou a ser o novo plano rolante ativo da fase seguinte.
 
 ---
 

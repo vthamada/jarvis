@@ -27,7 +27,7 @@ Status desta versao do ciclo:
 - Sprint 4 concluida;
 - Sprint 5 concluida;
 - Sprint 6 concluida;
-- este ciclo esta formalmente fechado e foi sucedido por `docs/implementation/v1-5-sprint-cycle.md`.
+- este ciclo esta formalmente fechado e foi sucedido por `docs/archive/implementation/v1-5-sprint-cycle.md`.
 
 ---
 
@@ -403,9 +403,9 @@ Consolidar o primeiro ciclo e decidir formalmente o corte entre `v1.5` e `v2`.
 Resultado registrado nesta rodada:
 
 - o primeiro ciclo do `pos-v1` foi formalmente encerrado;
-- o corte entre `v1.5` e `v2` foi declarado em `docs/implementation/post-v1-cycle-closure.md`;
+- o corte entre `v1.5` e `v2` foi declarado em `docs/archive/implementation/post-v1-cycle-closure.md`;
 - `tools/close_continuity_cycle.py` passou a gerar artefatos executaveis de fechamento do ciclo;
-- `docs/implementation/v1-5-sprint-cycle.md` passou a ser o plano rolante ativo da fase seguinte.
+- `docs/archive/implementation/v1-5-sprint-cycle.md` passou a ser o plano rolante ativo da fase seguinte.
 
 ---
 

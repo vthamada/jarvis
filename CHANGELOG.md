@@ -6,11 +6,35 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 
 ---
 
+## 2026-03-30
+
+### Revisão da estrutura documental ativa
+
+- ciclos e cortes encerrados foram movidos para `docs/archive/implementation/`, preservando histórico sem mantê-los como documentos ativos;
+- `docs/archive/executive/v1-scope-summary.md` e `docs/archive/documentation/estrutura_de_documentos_derivados.md` foram arquivados para reduzir ruído no estado atual do sistema;
+- `docs/implementation/mission-continuity-final-increment.md` foi removido por não agregar mais valor operacional nem histórico relevante ao estado atual;
+- `HANDOFF.md`, `README.md`, `docs/executive/master-summary.md`, `docs/roadmap/programa-ate-v3.md` e `docs/architecture/technology-study.md` foram sincronizados para refletir `v2-domain-consumers-and-workflows-cut` como recorte ativo único.
+
+### Fechamento do V2 sovereign alignment cut
+
+- criado `tools/close_sovereign_alignment_cut.py` para gerar o fechamento formal regenerável do `v2-sovereign-alignment-cut` a partir de observabilidade local, comparação por eixo e `evolution-lab`;
+- criado `tests/unit/test_close_sovereign_alignment_cut.py` para validar payload e markdown do fechamento do corte soberano;
+- criado `docs/implementation/v2-sovereign-alignment-cut-closure.md` como documento formal de encerramento do corte;
+- `HANDOFF.md`, `README.md`, `docs/executive/master-summary.md`, `docs/archive/implementation/v2-sovereign-alignment-cut.md` e `tools/README.md` foram sincronizados para refletir o corte soberano como materialmente concluído e com artefato regenerável;
+- criado `docs/implementation/v2-domain-consumers-and-workflows-cut.md` como novo recorte ativo do `v2`, sem reabrir a soberania interna já fechada.
+
+### Sprint 1 do V2 domain consumers and workflows cut
+
+- `knowledge/curated/domain_registry.json` e `shared/domain_registry.py` passaram a carregar metadados canônicos de consumo por rota promovida;
+- `shared/contracts`, `memory-service` e `memory repository` passaram a persistir `consumer_profile`, `consumer_objective`, `expected_deliverables` e `telemetry_focus`;
+- `specialist-engine`, `orchestrator-service` e `observability-service` passaram a usar esse pacote como contrato e telemetria obrigatória do caminho `guided`;
+- novos asserts foram adicionados em `memory-service`, `specialist-engine`, `orchestrator-service` e `observability-service` para cobrir o consumidor canônico de software.
+
 ## 2026-03-28
 
 ### V2 sovereign alignment cut
 
-- criado `docs/implementation/v2-sovereign-alignment-cut.md` como documento vivo do corte ativo após o fechamento do `v2-alignment-cycle`;
+- criado `docs/archive/implementation/v2-sovereign-alignment-cut.md` como documento vivo do corte ativo após o fechamento do `v2-alignment-cycle`;
 - `HANDOFF.md`, `README.md`, `docs/executive/master-summary.md`, `docs/documentation/matriz-de-aderencia-mestre.md`, `docs/architecture/technology-study.md` e `tools/README.md` foram sincronizados para tratar esse corte como frente ativa e o `v2-alignment-cycle` como histórico fechado;
 - `shared/domain_registry.py` passou a expor helpers canônicos de resolução de domínio e compatibilidade curta de labels legados;
 - `knowledge-service`, `cognitive-engine`, `specialist-engine`, `orchestrator-service` e `langgraph_flow` passaram a publicar e consumir refs canônicas de domínio com mais rigor, incluindo `routing_source`, `canonical_domain_refs_by_route` e `primary_domain_driver`;
@@ -23,24 +47,24 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 
 ### Próximo corte do v2
 
-- `knowledge/curated/domain_registry.json` passou a promover também a rota `analysis`, agora ligada canonicamente a `especialista_analise_estruturada` em modo `guided`;
+- `knowledge/curated/domain_registry.json` passou a promover também a rota `analysis`, agora ligada canonicamente a `structured_analysis_specialist` em modo `guided`;
 - `knowledge-service` passou a priorizar rotas `active_specialist` também no recorte de `analysis`, tornando a rota promovida visível no retrieval do runtime;
 - `cognitive-engine` passou a deduplicar `specialist_hints` quando uma rota de domínio promovida coincide com a heurística geral do núcleo;
 - `memory-service` passou a gerar `domain_guided_memory_packet` de forma genérica para qualquer rota promovida no registry, e não só para `software_development`;
-- `specialist-engine` e `orchestrator-service` passaram a tratar `especialista_analise_estruturada` como rota guiada de domínio quando `analysis` estiver ativo;
+- `specialist-engine` e `orchestrator-service` passaram a tratar `structured_analysis_specialist` como rota guiada de domínio quando `analysis` estiver ativo;
 - novos testes foram adicionados em `knowledge-service`, `cognitive-engine`, `memory-service`, `specialist-engine` e `orchestrator-service` para cobrir a promoção canônica de `analysis`.
-- `knowledge/curated/domain_registry.json` passou a promover também a rota `governance`, agora ligada canonicamente a `especialista_revisao_governanca` em modo `guided`;
-- `specialist-engine` passou a tratar `especialista_revisao_governanca` como contribuição guiada por domínio quando `governance` estiver ativo;
+- `knowledge/curated/domain_registry.json` passou a promover também a rota `governance`, agora ligada canonicamente a `governance_review_specialist` em modo `guided`;
+- `specialist-engine` passou a tratar `governance_review_specialist` como contribuição guiada por domínio quando `governance` estiver ativo;
 - novos testes foram adicionados em `knowledge-service`, `memory-service`, `specialist-engine` e `orchestrator-service` para cobrir a promoção canônica de `governance`.
-- `knowledge/curated/domain_registry.json` passou a promover também a rota `operational_readiness`, agora ligada canonicamente a `especialista_planejamento_operacional` em modo `guided`;
-- `specialist-engine` passou a tratar `especialista_planejamento_operacional` como contribuição guiada por domínio quando `operational_readiness` estiver ativo;
+- `knowledge/curated/domain_registry.json` passou a promover também a rota `operational_readiness`, agora ligada canonicamente a `operational_planning_specialist` em modo `guided`;
+- `specialist-engine` passou a tratar `operational_planning_specialist` como contribuição guiada por domínio quando `operational_readiness` estiver ativo;
 - novos testes foram adicionados em `knowledge-service`, `memory-service`, `specialist-engine` e `orchestrator-service` para cobrir a promoção canônica de `operational_readiness`.
-- `knowledge/curated/domain_registry.json` passou a promover também a rota `strategy`, agora ligada canonicamente a `especialista_analise_estruturada` em modo `guided`;
-- `specialist-engine` passou a tratar `especialista_analise_estruturada` como contribuição guiada por domínio quando `strategy` estiver ativo;
+- `knowledge/curated/domain_registry.json` passou a promover também a rota `strategy`, agora ligada canonicamente a `structured_analysis_specialist` em modo `guided`;
+- `specialist-engine` passou a tratar `structured_analysis_specialist` como contribuição guiada por domínio quando `strategy` estiver ativo;
 - `specialist-engine` também endureceu a seleção para aceitar apenas vínculos domínio->especialista que coincidam com o registry soberano, evitando handoffs inconsistentes;
 - novos testes foram adicionados em `knowledge-service`, `memory-service`, `specialist-engine` e `orchestrator-service` para cobrir a promoção canônica de `strategy` e a validação canônica da seleção.
-- `knowledge/curated/domain_registry.json` passou a promover também a rota `decision_risk`, agora ligada canonicamente a `especialista_revisao_governanca` em modo `guided`;
-- `specialist-engine` e `orchestrator-service` passaram a tratar `especialista_revisao_governanca` como rota guiada de domínio também quando `decision_risk` estiver ativo;
+- `knowledge/curated/domain_registry.json` passou a promover também a rota `decision_risk`, agora ligada canonicamente a `governance_review_specialist` em modo `guided`;
+- `specialist-engine` e `orchestrator-service` passaram a tratar `governance_review_specialist` como rota guiada de domínio também quando `decision_risk` estiver ativo;
 - novos testes foram adicionados em `knowledge-service`, `memory-service`, `specialist-engine` e `orchestrator-service` para cobrir a promoção canônica de `decision_risk`.
 
 ### Constituição de engenharia e gate oficial
@@ -56,7 +80,7 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 - criado `tools/close_alignment_cycle.py` para fechar formalmente o `v2-alignment-cycle`, consolidando evidência de observabilidade, comparação local e backlog classificado entre `next_cut`, `deferred` e `vision`;
 - `tools/compare_orchestrator_paths.py` passou a persistir o artefato default em `.jarvis_runtime/path_comparison_v2/`, alinhando o caminho real da comparação ao fechamento formal do ciclo;
 - adicionados testes dedicados em `tests/unit/test_close_alignment_cycle.py` e ampliada a cobertura de `tests/unit/test_compare_orchestrator_paths.py` para o caminho estável de artefato;
-- `HANDOFF.md`, `docs/implementation/v2-alignment-cycle.md`, `docs/documentation/matriz-de-aderencia-mestre.md` e `tools/README.md` passaram a tratar a Sprint 6 como concluída e o próximo corte do `v2` como frente ativa.
+- `HANDOFF.md`, `docs/archive/implementation/v2-alignment-cycle.md`, `docs/documentation/matriz-de-aderencia-mestre.md` e `tools/README.md` passaram a tratar a Sprint 6 como concluída e o próximo corte do `v2` como frente ativa.
 
 ## 2026-03-26
 
@@ -66,7 +90,7 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 - `tools/internal_pilot_report.py` passou a expor e renderizar os cinco eixos de aderência e o gate agregado de eixo por request;
 - `tools/compare_orchestrator_paths.py` passou a comparar `mind_alignment_status`, `identity_alignment_status` e `axis_gate_status`, além de exigir gate saudável para `candidate_ready_for_eval_gate`;
 - `evolution-lab` e `tools/evolution_from_pilot.py` passaram a usar `mind`, `identity` e `axis_gate` como sinais formais de proposta e comparação sandbox-only;
-- `HANDOFF.md`, `docs/implementation/v2-alignment-cycle.md` e `docs/documentation/matriz-de-aderencia-mestre.md` passaram a tratar a Sprint 5 como concluída e a Sprint 6 como próxima frente ativa.
+- `HANDOFF.md`, `docs/archive/implementation/v2-alignment-cycle.md` e `docs/documentation/matriz-de-aderencia-mestre.md` passaram a tratar a Sprint 5 como concluída e a Sprint 6 como próxima frente ativa.
 ### Sprint 3 e Sprint 4 do v2-alignment-cycle
 
 - `shared/mind_registry.py` passou a governar a arbitragem do runtime com prioridade, afinidades por intenção e domínio, limite explícito de apoios e supressões e tensão dominante canônica;
@@ -75,7 +99,7 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 - `governance-service` passou a receber `identity_mode`, `identity_signature` e `response_style`, registrando `identity_guardrail` no contexto da decisão;
 - `orchestrator-service` passou a propagar sinais explícitos de identidade em `directive_composed`, `plan_governed` e `response_synthesized`;
 - `observability-service` passou a auditar `mind_alignment_status` e `identity_alignment_status`, preparando a Sprint 5 como gate explícito de aderência por eixo;
-- `HANDOFF.md`, `docs/implementation/v2-alignment-cycle.md` e `docs/documentation/matriz-de-aderencia-mestre.md` passaram a refletir a Sprint 4 concluída e a Sprint 5 como próxima frente ativa.
+- `HANDOFF.md`, `docs/archive/implementation/v2-alignment-cycle.md` e `docs/documentation/matriz-de-aderencia-mestre.md` passaram a refletir a Sprint 4 concluída e a Sprint 5 como próxima frente ativa.
 
 ### Sprint 2 do v2-alignment-cycle e documentação da visão longa
 
@@ -85,7 +109,7 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 - `HANDOFF.md` passou a distinguir `Hermes Agent` como referência principal de runtime persistente, memória viva e skills, e não como referência central do eixo de autoaperfeiçoamento;
 - `docs/architecture/technology-study.md` passou a explicitar o fluxo longo de absorção tecnológica governada: radar, classificação arquitetural, memória evolutiva, sandbox e promoção por evidência;
 - `docs/architecture/technology-study.md` passou a separar mais claramente as famílias de referência para runtime persistente, memória relacional e autoaperfeiçoamento;
-- `docs/implementation/v2-alignment-cycle.md` passou a registrar formalmente a Sprint 2 como concluída e a conectar o ciclo atual à preparação do núcleo para absorção tecnológica futura sem perda de soberania;
+- `docs/archive/implementation/v2-alignment-cycle.md` passou a registrar formalmente a Sprint 2 como concluída e a conectar o ciclo atual à preparação do núcleo para absorção tecnológica futura sem perda de soberania;
 - `docs/documentation/matriz-de-aderencia-mestre.md` passou a refletir o novo estado do eixo de memórias e a registrar a camada futura de absorção tecnológica governada como parte do horizonte evolutivo do sistema.
 
 ## 2026-03-24
@@ -94,7 +118,7 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 
 - `shared/domain_registry.py` foi criado como módulo soberano do registry de domínios, expondo `CANONICAL_DOMAIN_REGISTRY`, `RUNTIME_ROUTE_REGISTRY`, `RUNTIME_ELIGIBLE_ROUTES`, `SHADOW_SPECIALIST_ROUTES`, `FALLBACK_RUNTIME_ROUTE` e funções utilitárias `is_shadow_route`, `resolve_route` e `canonical_scopes_for_route`;
 - `knowledge-service` passou a derivar o prior de intenção de `domain_scope` dos `canonical_refs` de cada rota, eliminando o dicionário hardcoded de pesos; domínios com `maturity=canonical_only` são excluídos do runtime; o fallback é derivado do registry;
-- `specialist-engine` passou a verificar `is_shadow_route()` antes de acionar `especialista_software_subordinado`, eliminando a heurística residual de shadow mode;
+- `specialist-engine` passou a verificar `is_shadow_route()` antes de acionar `software_change_specialist`, eliminando a heurística residual de shadow mode;
 - `cognitive-engine` passou a usar `FALLBACK_RUNTIME_ROUTE` em vez de string hardcoded;
 - `HANDOFF`, `v2-alignment-cycle` e `CHANGELOG` passaram a tratar a Sprint 1 do `v2-alignment-cycle` como concluída e a Sprint 2 como próxima frente ativa.
 
@@ -137,9 +161,9 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 ### Fechamento da Sprint 6 e do primeiro corte do v2
 
 - `tools/close_specialization_cycle.py` passou a gerar o artefato formal de fechamento do primeiro corte do `v2`, usando evidência de observabilidade, comparação e aderência por eixo;
-- `docs/implementation/v2-cycle-closure.md` passou a registrar a decisão formal de encerramento do primeiro corte do `v2`;
-- `docs/implementation/v2-alignment-cycle.md` passou a abrir o próximo ciclo do programa, com foco explícito em `domínios`, `memórias`, `mentes`, identidade auditável e gates por eixo;
-- `docs/implementation/v2-alignment-cycle.md` passou a registrar uma matriz explícita conectando todas as tecnologias estudadas aos eixos `domínios`, `mentes` e `memórias`, com regra clara de absorção para cada uma;
+- `docs/archive/implementation/v2-cycle-closure.md` passou a registrar a decisão formal de encerramento do primeiro corte do `v2`;
+- `docs/archive/implementation/v2-alignment-cycle.md` passou a abrir o próximo ciclo do programa, com foco explícito em `domínios`, `memórias`, `mentes`, identidade auditável e gates por eixo;
+- `docs/archive/implementation/v2-alignment-cycle.md` passou a registrar uma matriz explícita conectando todas as tecnologias estudadas aos eixos `domínios`, `mentes` e `memórias`, com regra clara de absorção para cada uma;
 - `README`, `HANDOFF`, `master-summary`, `tools/README` e `v2-sprint-cycle` passaram a refletir que a Sprint 6 foi concluída e que o próximo ciclo ativo já não é mais expansão de especialistas por si só, e sim alinhamento do runtime ao Documento-Mestre.
 
 ### Execução da Sprint 4 do ciclo v2
@@ -147,7 +171,7 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 - `knowledge-service` passou a carregar `knowledge/curated/domain_registry.json` como registry inicial dos domínios ativos do ciclo;
 - `KnowledgeRetrievalResult` passou a expor `registry_domains` e `specialist_routes`, tornando explícita a ponte entre domínio ativo e rota de especialista;
 - `cognitive-engine` passou a priorizar hints vindos do registry e `software_development` abriu a primeira rota canônica `domínio -> especialista` do `v2`;
-- `specialist-engine` passou a materializar `linked_domain` e `selection_mode`, incluindo `especialista_software_subordinado` em `shadow mode`;
+- `specialist-engine` passou a materializar `linked_domain` e `selection_mode`, incluindo `software_change_specialist` em `shadow mode`;
 - `orchestrator-service` e o fluxo opcional de `LangGraph` passaram a registrar `domain_registry_resolved` e `specialist_shadow_mode_completed`;
 - `README`, `HANDOFF`, `master-summary`, `v2-sprint-cycle` e `matriz-de-aderencia-mestre` passaram a tratar a Sprint 4 do `v2` como concluída e a Sprint 5 como próxima frente ativa.
 
@@ -217,7 +241,7 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 
 ### Regra de refatoração do Documento-Mestre e ponte de execução
 
-- `docs/documentation/estrutura_de_documentos_derivados.md` passou a explicitar quando o Documento-Mestre deve ser reorganizado, sem reescrita integral;
+- `docs/archive/documentation/estrutura_de_documentos_derivados.md` passou a explicitar quando o Documento-Mestre deve ser reorganizado, sem reescrita integral;
 - o sistema documental passou a reconhecer artefatos de aderência e tradução entre visão canônica e implementação incremental;
 - ficou formalizado que ciclos de sprint devem declarar qual lacuna do mestre fecham e quais eixos permanecem fora de cobertura no ciclo atual.
 
@@ -238,8 +262,8 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 ### Execução da Sprint 6 do ciclo v1.5
 
 - criado `tools/close_v1_5_cycle.py` para consolidar evidência operacional e comparativa do primeiro ciclo do `v1.5` e emitir o corte formal para `v2`;
-- criado `docs/implementation/v1-5-cycle-closure.md` como fechamento oficial do primeiro ciclo do `v1.5`;
-- criado `docs/implementation/v2-sprint-cycle.md` como novo plano rolante ativo da fase seguinte;
+- criado `docs/archive/implementation/v1-5-cycle-closure.md` como fechamento oficial do primeiro ciclo do `v1.5`;
+- criado `docs/archive/implementation/v2-sprint-cycle.md` como novo plano rolante ativo da fase seguinte;
 - atualizado `v1-5-sprint-cycle`, `HANDOFF`, `README`, `master-summary`, `tools/README.md` e a estrutura documental para refletir a promoção formal para `v2`;
 - o corte do `v2` ficou explicitamente centrado em especialistas subordinados, memória relacional e handoffs governados, mantendo fora do recorte imediato voz oficial, `computer use` amplo, `pgvector` como base canônica e assistente operacional amplo.
 
@@ -288,14 +312,14 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 
 ### Regra de estudo externo explicitada para o v1.5
 
-- `docs/implementation/v1-5-sprint-cycle.md` passou a explicitar quais estudos externos entram no `v1.5` e quais ficam fora do corte imediato;
+- `docs/archive/implementation/v1-5-sprint-cycle.md` passou a explicitar quais estudos externos entram no `v1.5` e quais ficam fora do corte imediato;
 - `HANDOFF.md` passou a resumir essa regra para retomada operacional curta, destacando `LangGraph` e `Hermes Agent` como referências mais diretamente ligadas ao ciclo.
 
 ### Execução da Sprint 6 do ciclo pós-v1
 
 - criado `tools/close_post_v1_cycle.py` para consolidar evidência operacional do primeiro ciclo e emitir o corte formal entre `v1.5` e `v2`;
-- criado `docs/implementation/post-v1-cycle-closure.md` como fechamento oficial do primeiro ciclo do `pós-v1`;
-- criado `docs/implementation/v1-5-sprint-cycle.md` como novo plano rolante ativo da fase seguinte;
+- criado `docs/archive/implementation/post-v1-cycle-closure.md` como fechamento oficial do primeiro ciclo do `pós-v1`;
+- criado `docs/archive/implementation/v1-5-sprint-cycle.md` como novo plano rolante ativo da fase seguinte;
 - atualizado `post-v1-sprint-cycle`, `HANDOFF`, `README`, `master-summary`, `tools/README.md` e a estrutura documental para refletir a promoção formal para `v1.5`.
 
 ### Execução da Sprint 5 do ciclo pós-v1
@@ -354,7 +378,7 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 - complementado `documento_mestre_jarvis.md` com uma camada explicita de referencias arquiteturais por funcao, separando o eixo de posicionamento na stack do eixo de papel arquitetural;
 - formalizada a leitura por `referencia central`, `referencia secundaria` e `benchmark conceitual` para orquestracao, agente de software, computer use, memoria persistente, assistencia operacional e contratos;
 - atualizado `docs/architecture/technology-study.md` para refletir os dois eixos de decisao e ampliar a matriz de referencias externas;
-- atualizado `docs/documentation/estrutura_de_documentos_derivados.md` para explicitar que o Documento-Mestre guarda tanto o posicionamento oficial de tecnologias quanto as referencias arquiteturais oficiais por funcao;
+- atualizado `docs/archive/documentation/estrutura_de_documentos_derivados.md` para explicitar que o Documento-Mestre guarda tanto o posicionamento oficial de tecnologias quanto as referencias arquiteturais oficiais por funcao;
 - atualizado `docs/executive/master-summary.md` e `HANDOFF.md` para refletir a nova regra documental e arquitetural.
 
 ### Execucao da Sprint 1 do ciclo rolante
@@ -369,9 +393,9 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 ### Sistema de planejamento em duas camadas ate `v3`
 
 - criado `docs/roadmap/programa-ate-v3.md` como contrato de direcao do `pos-v1` ate `v3`, separando `pos-v1`, `v1.5`, `v2` e `v3` por objetivos, gates e limites;
-- criado `docs/implementation/post-v1-sprint-cycle.md` como plano rolante oficial das proximas `6` sprints, com foco total em `continuidade profunda entre missoes`;
+- criado `docs/archive/implementation/post-v1-sprint-cycle.md` como plano rolante oficial das proximas `6` sprints, com foco total em `continuidade profunda entre missoes`;
 - formalizado o sistema documental em tres papeis: `HANDOFF.md` para retomada operacional, `programa-ate-v3.md` para direcao macro e `post-v1-sprint-cycle.md` para execucao imediata;
-- atualizadas as referencias em `HANDOFF.md`, `README.md` e `docs/documentation/estrutura_de_documentos_derivados.md` para tornar o novo sistema de planejamento a leitura oficial do proximo ciclo.
+- atualizadas as referencias em `HANDOFF.md`, `README.md` e `docs/archive/documentation/estrutura_de_documentos_derivados.md` para tornar o novo sistema de planejamento a leitura oficial do proximo ciclo.
 
 ---
 
@@ -432,7 +456,7 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 - movidos `docs/implementation/sprint-1-plan.md`, `docs/implementation/first-milestone-plan.md` e `docs/operations/internal-pilot-plan.md` para `docs/archive/`;
 - movidos `docs/architecture/specialists-v2.md` e `docs/architecture/voice-runtime.md` para `docs/future/`;
 - removidos o placeholder `docs/adr/README.md` e a revisao transitoria `docs/documentation/revisao_do_conjunto_documental_2026-03-20.md`;
-- atualizadas as referencias vivas em `HANDOFF.md`, `docs/operations/incident-response.md`, `docs/roadmap/v1-roadmap.md` e `docs/documentation/estrutura_de_documentos_derivados.md`.
+- atualizadas as referencias vivas em `HANDOFF.md`, `docs/operations/incident-response.md`, `docs/roadmap/v1-roadmap.md` e `docs/archive/documentation/estrutura_de_documentos_derivados.md`.
 
 ### Sincronização documental com o estado atual do repositório
 
@@ -540,7 +564,7 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 - atualizados `docs/implementation/implementation-strategy.md`, `docs/implementation/service-breakdown.md` e `docs/roadmap/v1-roadmap.md` para refletir o baseline benchmarkado do `v1`;
 - atualizados `docs/operations/v1-production-controlled.md` e `docs/operations/go-live-readiness.md` para tratar `PostgreSQL` como backend operacional recomendado e explicitar que a decisão de `go/no-go` ainda está pendente;
 - atualizado `docs/architecture/evolution-lab.md` para refletir `manual_variants` como estratégia priorizada no sandbox do `v1`;
-- atualizado `docs/executive/v1-scope-summary.md` para registrar o estado atual do `v1` e a pendencia de fechamento para produção controlada.
+- atualizado `docs/archive/executive/v1-scope-summary.md` para registrar o estado atual do `v1` e a pendencia de fechamento para produção controlada.
 
 ### Decisão formal de readiness do v1
 
@@ -763,7 +787,7 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
   - `documento_mestre_jarvis.md` como artefato canônico;
   - `HANDOFF.md` como documento operacional de continuidade;
   - `CHANGELOG.md` como registro de mudanças relevantes;
-- criada a política de desmembramento em `docs/documentation/estrutura_de_documentos_derivados.md`;
+- criada a política de desmembramento em `docs/archive/documentation/estrutura_de_documentos_derivados.md`;
 - criado o pacote inicial de derivados de implementação, operação, arquitetura, executive summary e roadmap.
 
 ### Repositório real
@@ -815,3 +839,9 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 - `tools/run_internal_pilot.py` passou a publicar a ultima rodada em `.jarvis_runtime/pilot/latest_pilot.json` e `.md`;
 - atualizados testes de memoria, observabilidade, orquestracao, artefatos operacionais e console.
 
+
+### Specialist type normalization and initial workflow layer
+
+- `shared/specialist_registry.py` foi criado para normalizar specialist types canonicos em ingles e manter compatibilidade curta com labels legados;
+- `domain_registry`, `cognitive-engine`, `planning-engine`, `specialist-engine` e `memory-service` passaram a emitir e consumir specialist types canonicos;
+- `orchestrator-service` e `operational-service` passaram a compor `workflow_profile`, `workflow_steps`, `workflow_composed` e `workflow_completed` como primeira camada da Sprint 2 do corte ativo.

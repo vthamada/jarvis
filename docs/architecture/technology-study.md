@@ -83,11 +83,11 @@ Perguntas mínimas obrigatórias durante o estudo:
 
 | Função arquitetural | Referência central | Referência secundária | Benchmark conceitual |
 | --- | --- | --- | --- |
-| Orquestração de agentes | LangGraph | OpenAI Agents SDK | CrewAI, Microsoft Agent Framework |
+| Orquestração de agentes | LangGraph | OpenAI Agents SDK | CrewAI, Microsoft Agent Framework, Mastra |
 | Agente de software / desenvolvimento | OpenHands | OpenHands / Open Operator | OpenCode |
 | Computer use / operação do computador | browser-use | Open Interpreter | Claude Computer Use |
-| Memória persistente / estado cognitivo | Letta / MemGPT | Hermes Agent | Zep, Graphiti |
-| Agentes pessoais / operacionais | OpenClaw | nenhuma obrigatória nesta fase | Manus |
+| Memória persistente / estado cognitivo | Letta / MemGPT | Hermes Agent | Zep, Graphiti, Mem0 |
+| Agentes pessoais / operacionais | OpenClaw | AutoGPT Platform | Manus |
 | Contratos, tipagem e previsibilidade | PydanticAI | Qwen-Agent | smolagents |
 
 Leitura correta:
@@ -107,7 +107,7 @@ Observação importante:
 Classificação atual de confiança para o projeto:
 
 - `alta confiança`: `LangGraph`, `OpenAI Agents SDK`, `OpenHands`, `PydanticAI`, `LangSmith`, `PostgreSQL`
-- `média confiança`: `browser-use`, `Letta / MemGPT`, `Hermes Agent`, `OpenClaw`, `Qwen-Agent`
+- `média confiança`: `browser-use`, `Letta / MemGPT`, `Hermes Agent`, `OpenClaw`, `Qwen-Agent`, `AutoGPT Platform`, `Mastra`, `Mem0`
 - `hipótese ainda aberta`: `Graphiti`, `Zep`, `Manus`, `smolagents`, `Open Interpreter`, `Microsoft Agent Framework` como benchmark mais útil do que `AutoGen`
 
 Uso correto dessa classificação:
@@ -140,8 +140,11 @@ Uso correto dessa classificação:
 | Graphiti | memória temporal e relacional complementar | benchmark conceitual de memória | `laboratório` |
 | LlamaIndex | ingestão e retrieval complementar | complemento de conhecimento | `laboratório` |
 | Hermes Agent | runtime persistente e skills | referência secundária de estado cognitivo | `inspiração arquitetural` |
+| AutoGPT Platform | agentes contínuos, blocos, triggers e automações compostas | referência secundária de agentes pessoais / operacionais | `inspiração arquitetural` |
 | OpenClaw | referência de gateway, canais e operação | referência central de assistência operacional | `inspiração arquitetural` |
 | Manus | referência de assistente operacional amplo | benchmark conceitual operacional | `inspiração arquitetural` |
+| Mastra | workflows tipados, `HITL`, snapshots, guardrails e observabilidade | benchmark conceitual moderno de orquestração | `inspiração arquitetural` |
+| Mem0 | memória multicamada com `session`, `user`, `org` e busca persistente | benchmark conceitual prático de memória | `laboratório` |
 | PydanticAI | contratos estruturados e outputs previsíveis | referência central de contratos e tipagem | `laboratório` |
 | Qwen-Agent | modularidade leve e estrutura de agentes | referência secundária de contratos e previsibilidade | `laboratório` |
 | smolagents | ferramentas leves e composição modular | benchmark conceitual de contratos e tools | `inspiração arquitetural` |
@@ -223,6 +226,33 @@ Leitura atual:
 - a referência ficou forte o bastante para orientar contratos, tipagem, outputs estruturados e fluxos previsíveis;
 - ainda não deve redefinir os contratos canônicos do JARVIS, mas já justifica papel central na camada de previsibilidade.
 
+### 8.6 AutoGPT Platform, Mastra e Mem0
+
+Leitura atual:
+
+- `AutoGPT Platform` merece atenção como referência de agentes contínuos, workflows por blocos, triggers, webhooks e automações compostas;
+- `Mastra` merece atenção como benchmark moderno de workflows tipados, `suspend/resume`, `human-in-the-loop`, snapshots, guardrails e observabilidade;
+- `Mem0` merece atenção como benchmark prático de memória multicamada, com separação entre contexto de conversa, sessão, usuário e organização.
+
+O que interessa ao JARVIS:
+
+- do `AutoGPT Platform`: blocos reutilizáveis, automações acionadas por eventos e execução contínua governada;
+- do `Mastra`: padrões de workflow tipado, pausa e retomada, steps reutilizáveis, snapshots e observabilidade de execução;
+- do `Mem0`: organização de memória em camadas operacionais e formas de recuperar contexto persistente sem inflar o prompt bruto.
+
+O que não deve ser terceirizado:
+
+- o núcleo soberano do JARVIS;
+- a ontologia de `domínios`, `memórias` e `mentes`;
+- a governança final;
+- a memória canônica já modelada nos registries do sistema.
+
+Decisão atual:
+
+- `AutoGPT Platform`: `inspiração arquitetural`
+- `Mastra`: `inspiração arquitetural`
+- `Mem0`: `laboratório`
+
 ---
 
 ## 9. Fluxo de incorporação no sistema
@@ -272,7 +302,7 @@ Uma tecnologia pode entrar no sistema de quatro formas:
 - `LangSmith`: entrou como complemento controlado, mantendo a trilha local como fonte primária.
 - `LangGraph`: está em fluxo opcional e segue como candidato a absorção parcial futura.
 - `pgvector`: foi aprovado arquiteturalmente, mas continua deferido até existir consumidor semântico canônico.
-- `Hermes Agent`, `Graphiti` e `Zep`: seguem como estudo dirigido do `pós-v1`, sem promoção automática.
+- `Hermes Agent`, `Graphiti`, `Zep`, `AutoGPT Platform`, `Mastra` e `Mem0`: seguem como estudo dirigido, sem promoção automática.
 
 ### 9.3 Relação com o programa e com as sprints
 
@@ -285,7 +315,7 @@ Este documento responde:
 Quem responde quando ela pode atravessar para o sistema é:
 
 - `docs/roadmap/programa-ate-v3.md` para a regra de absorção no programa;
-- `docs/implementation/post-v1-sprint-cycle.md` para o uso da tecnologia no ciclo ativo;
+- `docs/implementation/v2-domain-consumers-and-workflows-cut.md` para o uso da tecnologia no recorte ativo;
 - `HANDOFF.md` para a decisão operacional em vigor.
 
 ---
@@ -325,6 +355,9 @@ As famílias de estudo devem ser lidas assim:
 - `LangGraph`: referência principal para fluxo stateful, checkpoints, replay e handoffs coordenados;
 - `Hermes Agent`: referência de runtime persistente, memória viva, continuidade operacional e skills;
 - `Graphiti` e `Zep`: referências para memória relacional, temporal e contextual;
+- `AutoGPT Platform`: referência de automações compostas, blocos e agentes contínuos;
+- `Mastra`: referência de workflows tipados, `HITL`, snapshots e guardrails;
+- `Mem0`: referência de memória multicamada operacional;
 - `DSPy / MIPROv2`, `TextGrad`, `AFlow`, `EvoAgentX`, `SEAL` e `Darwin Gödel Machine`: eixo de autoaperfeiçoamento, otimização e evolução governada.
 
 Regra importante:
@@ -383,6 +416,9 @@ Exemplos:
 - "`LangGraph` melhora checkpoint, replay ou `human-in-the-loop` do orquestrador?"
 - "`Graphiti` melhora a recuperação entre missões relacionadas?"
 - "`PydanticAI` melhora a previsibilidade de contratos e outputs?"
+- "`AutoGPT Platform` melhora a futura camada de automação contínua e workflows acionados por eventos?"
+- "`Mastra` melhora pause/resume, steps tipados ou trilhas de observabilidade do fluxo?"
+- "`Mem0` melhora a modelagem multicamada entre conversa, sessão, usuário e organização?"
 
 Se a lacuna não estiver clara, o estudo ainda não deve começar.
 
@@ -476,6 +512,9 @@ Exemplos:
 - `LangGraph` entra primeiro em checkpoint, replay ou HITL, não em refactor total do núcleo;
 - `Graphiti` ou `Zep` entram primeiro em experimento de continuidade relacionada, não na memória inteira;
 - `PydanticAI` entra primeiro em contratos ou outputs delimitados, não substituindo toda a camada canônica;
+- `AutoGPT Platform` entra primeiro como benchmark de blocos, workflows e agentes contínuos, não como runtime soberano;
+- `Mastra` entra primeiro como benchmark de `suspend/resume`, snapshots e guardrails, não como substituto direto do orquestrador;
+- `Mem0` entra primeiro em experimento delimitado de memória multicamada, não como memória canônica total;
 - `browser-use` entra primeiro como laboratório governado, não como operação ampla soberana.
 
 ---
@@ -537,7 +576,7 @@ Para evitar ambiguidade, toda tecnologia deve estar em um destes estados:
 - `LangSmith`: complemento controlado;
 - `LangGraph`: fluxo opcional e candidato a absorção parcial futura;
 - `pgvector`: aprovado arquiteturalmente, mas ainda fora do baseline;
-- `Hermes Agent`, `Graphiti` e `Zep`: estudo dirigido e laboratório;
+- `Hermes Agent`, `Graphiti`, `Zep`, `AutoGPT Platform`, `Mastra` e `Mem0`: estudo dirigido e laboratório;
 - `OpenClaw`: referência arquitetural;
 - `SEAL`: deferido para fase futura, sem entrada no núcleo atual.
 
@@ -584,8 +623,20 @@ Ordem oficial de estudo externo neste momento:
 3. `Graphiti`
 4. `Zep`
 
+Tecnologias que passam a merecer atenção complementar, mas fora do corte imediato:
+
+- `AutoGPT Platform`, para camada futura de blocos, workflows acionados por eventos e agentes contínuos;
+- `Mastra`, para benchmark de workflows tipados, `suspend/resume`, snapshots, guardrails e observabilidade;
+- `Mem0`, para benchmark de memória multicamada com separação entre conversa, sessão, usuário e organização.
+
 Leitura operacional:
 
 - o estudo é paralelo curto e dirigido;
 - nenhuma dessas tecnologias entra automaticamente no núcleo;
 - o foco imediato continua sendo fortalecer os eixos soberanos do próprio JARVIS antes de qualquer absorção mais ampla.
+
+## 17. Nota de linguagem tecnica
+
+- runtime ids novos devem convergir para ingles;
+- labels legados em portugues podem permanecer apenas como compatibilidade curta ou camada semantica;
+- isso agora tambem vale para specialist types e futuros workflow ids do runtime.

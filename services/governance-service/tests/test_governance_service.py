@@ -45,7 +45,7 @@ def specialist_boundary(
     memory_write_mode: str = "through_core_only",
 ) -> SpecialistBoundaryContract:
     return SpecialistBoundaryContract(
-        specialist_type="especialista_planejamento_operacional",
+        specialist_type="operational_planning_specialist",
         runtime_scope="subordinated_internal",
         user_visibility="hidden_from_user",
         response_channel=response_channel,
@@ -58,7 +58,7 @@ def specialist_boundary(
 def specialist_invocation(*, boundary: SpecialistBoundaryContract) -> SpecialistInvocationContract:
     return SpecialistInvocationContract(
         invocation_id="invoc-1",
-        specialist_type="especialista_planejamento_operacional",
+        specialist_type="operational_planning_specialist",
         requested_by_service="orchestrator-service",
         role="planejamento_operacional_subordinado",
         task_focus="sequenciar etapas pequenas",
@@ -297,7 +297,7 @@ def test_governance_service_allows_internal_specialist_handoff() -> None:
         plan=low_risk_plan(),
         selections=[
             SpecialistSelectionContract(
-                specialist_type="especialista_planejamento_operacional",
+                specialist_type="operational_planning_specialist",
                 selection_status="selected",
                 selection_score=0.84,
                 rationale="o plano exige decomposicao e checkpoints",
@@ -326,7 +326,7 @@ def test_governance_service_conditions_specialist_handoff_when_review_is_require
         plan=low_risk_plan(),
         selections=[
             SpecialistSelectionContract(
-                specialist_type="especialista_revisao_governanca",
+                specialist_type="governance_review_specialist",
                 selection_status="selected",
                 selection_score=0.87,
                 rationale="o plano exige cautela normativa",
@@ -356,7 +356,7 @@ def test_governance_service_blocks_specialist_handoff_with_invalid_boundary() ->
         plan=low_risk_plan(),
         selections=[
             SpecialistSelectionContract(
-                specialist_type="especialista_planejamento_operacional",
+                specialist_type="operational_planning_specialist",
                 selection_status="selected",
                 selection_score=0.84,
                 rationale="o plano exige decomposicao e checkpoints",

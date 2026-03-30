@@ -662,6 +662,11 @@ class ObservabilityService:
             "domain_mission_link_reasons",
             {},
         )
+        consumer_modes = shared_memory_event.payload.get("consumer_modes", {})
+        consumer_profiles = shared_memory_event.payload.get("consumer_profiles", {})
+        consumer_objectives = shared_memory_event.payload.get("consumer_objectives", {})
+        expected_deliverables = shared_memory_event.payload.get("expected_deliverables", {})
+        telemetry_focus = shared_memory_event.payload.get("telemetry_focus", {})
         if not class_policies:
             return "partial"
         for specialist_type, sharing_mode in sharing_modes.items():
@@ -678,6 +683,16 @@ class ObservabilityService:
             if domain_mission_link_reasons and not domain_mission_link_reasons.get(specialist_type):
                 return "attention_required"
             write_policies = memory_write_policies.get(specialist_type, {})
+            consumer_mode = consumer_modes.get(specialist_type)
+            if consumer_mode == "domain_guided_memory_packet":
+                if not consumer_profiles.get(specialist_type):
+                    return "attention_required"
+                if not consumer_objectives.get(specialist_type):
+                    return "attention_required"
+                if not expected_deliverables.get(specialist_type):
+                    return "attention_required"
+                if not telemetry_focus.get(specialist_type):
+                    return "attention_required"
             for policy in policies.values():
                 if not isinstance(policy, dict):
                     return "attention_required"

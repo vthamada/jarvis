@@ -16,7 +16,7 @@ Fontes de direção:
 
 - `HANDOFF.md`
 - `docs/roadmap/programa-ate-v3.md`
-- `docs/implementation/v1-5-cycle-closure.md`
+- `docs/archive/implementation/v1-5-cycle-closure.md`
 - `docs/architecture/technology-study.md`
 - `docs/documentation/matriz-de-aderencia-mestre.md`
 
@@ -276,7 +276,7 @@ Abrir o registry inicial de domínios do `v2` e ligar o primeiro especialista su
 Resultado registrado nesta rodada:
 
 - `knowledge-service` passou a carregar `domain_registry.json` como registry inicial dos domínios ativos do ciclo;
-- `software_development` passou a abrir a primeira rota canônica `domínio -> especialista` do `v2`, ligando `especialista_software_subordinado` em `shadow mode`;
+- `software_development` passou a abrir a primeira rota canônica `domínio -> especialista` do `v2`, ligando `software_change_specialist` em `shadow mode`;
 - `cognitive-engine` passou a priorizar hints vindos do registry antes de ampliar heurística solta de especialista;
 - `specialist-engine` passou a materializar `linked_domain` e `selection_mode`, deixando explícito quando a convocação é domínio-dirigida e quando ela roda em `shadow`;
 - `orchestrator-service` e o fluxo opcional de `LangGraph` passaram a registrar `domain_registry_resolved` e `specialist_shadow_mode_completed`, tornando o recorte comparável sem quebrar a soberania do núcleo.
@@ -369,8 +369,8 @@ Resultado registrado nesta rodada:
 
 - o primeiro corte do `v2` foi fechado com classificação explícita entre `corrigir agora`, `manter deferido` e `preservar como visão`;
 - `tools/close_specialization_cycle.py` passou a gerar o artefato formal de fechamento orientado pelos eixos do Documento-Mestre;
-- `docs/implementation/v2-cycle-closure.md` passou a registrar a decisão formal do corte;
-- o próximo artefato de execução passou a ser `docs/implementation/v2-alignment-cycle.md`, com foco em `domínios`, `memórias`, `mentes`, identidade auditável e gates por eixo.
+- `docs/archive/implementation/v2-cycle-closure.md` passou a registrar a decisão formal do corte;
+- o próximo artefato de execução passou a ser `docs/archive/implementation/v2-alignment-cycle.md`, com foco em `domínios`, `memórias`, `mentes`, identidade auditável e gates por eixo.
 
 ---
 

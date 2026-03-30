@@ -25,7 +25,7 @@ def test_cognitive_engine_selects_primary_supporting_and_suppressed_minds() -> N
     assert snapshot.dominant_tension == "equilibrar profundidade analitica com conclusao util"
     assert snapshot.arbitration_summary
     assert snapshot.arbitration_source == "mind_registry"
-    assert "especialista_analise_estruturada" in snapshot.specialist_hints
+    assert "structured_analysis_specialist" in snapshot.specialist_hints
     assert snapshot.deliberation_notes
     assert "fonte_arbitragem=mind_registry" in snapshot.deliberation_notes
 
@@ -52,7 +52,7 @@ def test_cognitive_engine_prioritizes_domain_linked_shadow_specialist_hint() -> 
         domain_specialist_routes=[
             DomainSpecialistRouteContract(
                 domain_name="software_development",
-                specialist_type="especialista_software_subordinado",
+                specialist_type="software_change_specialist",
                 specialist_mode="shadow",
                 routing_reason="rota canonica de software em shadow mode",
             )
@@ -60,7 +60,7 @@ def test_cognitive_engine_prioritizes_domain_linked_shadow_specialist_hint() -> 
     )
 
     assert snapshot.active_domains == ["software_development", "analysis"]
-    assert snapshot.specialist_hints[0] == "especialista_software_subordinado"
+    assert snapshot.specialist_hints[0] == "software_change_specialist"
 
 
 def test_cognitive_engine_fallback_uses_registry_domain() -> None:
@@ -85,12 +85,12 @@ def test_cognitive_engine_deduplicates_guided_analysis_specialist_hint() -> None
         domain_specialist_routes=[
             DomainSpecialistRouteContract(
                 domain_name="analysis",
-                specialist_type="especialista_analise_estruturada",
+                specialist_type="structured_analysis_specialist",
                 specialist_mode="guided",
                 routing_reason="rota canonica de analise estruturada em modo guiado",
             )
         ],
     )
 
-    assert snapshot.specialist_hints[0] == "especialista_analise_estruturada"
-    assert snapshot.specialist_hints.count("especialista_analise_estruturada") == 1
+    assert snapshot.specialist_hints[0] == "structured_analysis_specialist"
+    assert snapshot.specialist_hints.count("structured_analysis_specialist") == 1

@@ -3,7 +3,7 @@
 import argparse
 from pathlib import Path
 
-SUSPICIOUS_TOKENS = ("Ã", "Â", "�")
+SUSPICIOUS_TOKENS = ("\u00c3", "\u00c2", "\ufffd")
 TEXT_EXTENSIONS = {".md", ".txt"}
 SPECIAL_NAMES = {"README", "README.md", "HANDOFF.md", "CHANGELOG.md"}
 SKIP_PARTS = {".git", ".venv", "node_modules", ".jarvis_runtime", "__pycache__"}

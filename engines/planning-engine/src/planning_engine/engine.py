@@ -8,6 +8,11 @@ from shared.contracts import (
     DeliberativePlanContract,
     SpecialistContributionContract,
 )
+from shared.specialist_registry import (
+    GOVERNANCE_REVIEW_SPECIALIST,
+    OPERATIONAL_PLANNING_SPECIALIST,
+    STRUCTURED_ANALYSIS_SPECIALIST,
+)
 
 MISSION_SHIFT_KEYWORDS = (
     "new",
@@ -268,7 +273,7 @@ class PlanningEngine:
                     criterion = finding.removeprefix("success:").strip()
                     if criterion and criterion not in success_criteria:
                         success_criteria.append(criterion)
-            if contribution.specialist_type == "especialista_revisao_governanca":
+            if contribution.specialist_type == GOVERNANCE_REVIEW_SPECIALIST:
                 requires_human_validation = True
 
         if open_loop_hints:
@@ -296,11 +301,11 @@ class PlanningEngine:
 
     @staticmethod
     def _specialist_step(specialist_type: str) -> str | None:
-        if specialist_type == "especialista_planejamento_operacional":
+        if specialist_type == OPERATIONAL_PLANNING_SPECIALIST:
             return "validar checkpoint intermediario apos a primeira etapa"
-        if specialist_type == "especialista_analise_estruturada":
+        if specialist_type == STRUCTURED_ANALYSIS_SPECIALIST:
             return "explicitar criterio dominante antes da conclusao final"
-        if specialist_type == "especialista_revisao_governanca":
+        if specialist_type == GOVERNANCE_REVIEW_SPECIALIST:
             return "confirmar limites normativos e condicoes de auditoria"
         return None
 

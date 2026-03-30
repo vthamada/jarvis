@@ -157,6 +157,10 @@ class SpecialistSharedMemoryContextContract:
     mission_context_brief: str | None = None
     domain_context_brief: str | None = None
     continuity_context_brief: str | None = None
+    consumer_profile: str | None = None
+    consumer_objective: str | None = None
+    expected_deliverables: list[str] = field(default_factory=list)
+    telemetry_focus: list[str] = field(default_factory=list)
     related_mission_ids: list[MissionId] = field(default_factory=list)
     memory_refs: list[str] = field(default_factory=list)
     memory_class_policies: dict[str, dict[str, object]] = field(default_factory=dict)
@@ -235,6 +239,10 @@ class OperationDispatchContract:
     domain_hints: list[str] = field(default_factory=list)
     specialist_hints: list[str] = field(default_factory=list)
     tool_hints: list[str] = field(default_factory=list)
+    workflow_profile: str | None = None
+    workflow_objective: str | None = None
+    workflow_steps: list[str] = field(default_factory=list)
+    workflow_checkpoints: list[str] = field(default_factory=list)
     deadline_hint: str | None = None
     priority_hint: str | None = None
     artifact_destination: str | None = None

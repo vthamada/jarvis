@@ -83,12 +83,18 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     assert "specialist_shared_memory_linked" in event_names
     assert "specialist_contracts_composed" in event_names
     assert "specialist_handoff_governed" in event_names
+    assert "workflow_composed" in event_names
     assert "specialists_completed" in event_names
     assert "plan_refined" in event_names
     assert "plan_governed" in event_names
     assert result.specialist_handoff_check is not None
     assert result.specialist_handoff_decision is not None
     assert result.specialist_handoff_decision.decision == PermissionDecision.ALLOW
+    workflow_event = next(
+        event for event in stored_events if event.event_name == "workflow_composed"
+    )
+    assert workflow_event.payload["workflow_profile"] == "deliberative_planning_workflow"
+    assert workflow_event.payload["workflow_steps"]
     specialist_contract_event = next(
         event for event in stored_events if event.event_name == "specialist_contracts_composed"
     )
@@ -100,17 +106,17 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
         event for event in stored_events if event.event_name == "specialist_shared_memory_linked"
     )
     assert (
-        shared_memory_event.payload["sharing_modes"]["especialista_planejamento_operacional"]
+        shared_memory_event.payload["sharing_modes"]["operational_planning_specialist"]
         == "core_mediated_read_only"
     )
     assert (
         shared_memory_event.payload["memory_class_policies"][
-            "especialista_planejamento_operacional"
+            "operational_planning_specialist"
         ]["mission"]["write_policy"]
         == "through_core_only"
     )
     assert (
-        shared_memory_event.payload["memory_ref_counts"]["especialista_planejamento_operacional"]
+        shared_memory_event.payload["memory_ref_counts"]["operational_planning_specialist"]
         >= 1
     )
     specialists_completed_event = next(
@@ -224,37 +230,59 @@ def test_orchestrator_service_tracks_promoted_domain_specialist_without_breaking
     selection_event = next(
         event for event in stored_events if event.event_name == "specialist_selection_decided"
     )
-    assert "especialista_software_subordinado" in selection_event.payload["domain_specialists"]
-    assert "especialista_software_subordinado" in selection_event.payload["guided_specialists"]
+    assert "software_change_specialist" in selection_event.payload["domain_specialists"]
+    assert "software_change_specialist" in selection_event.payload["guided_specialists"]
     assert (
-        selection_event.payload["domain_links"]["especialista_software_subordinado"]
+        selection_event.payload["domain_links"]["software_change_specialist"]
         == "software_development"
     )
     domain_event = next(
         event for event in stored_events if event.event_name == "domain_specialist_completed"
     )
-    assert domain_event.payload["linked_domains"]["especialista_software_subordinado"] == (
+    assert domain_event.payload["linked_domains"]["software_change_specialist"] == (
         "software_development"
     )
     shared_memory_event = next(
         event for event in stored_events if event.event_name == "specialist_shared_memory_linked"
     )
     assert (
-        shared_memory_event.payload["consumer_modes"]["especialista_software_subordinado"]
+        shared_memory_event.payload["consumer_modes"]["software_change_specialist"]
         == "domain_guided_memory_packet"
     )
+    assert (
+        shared_memory_event.payload["consumer_profiles"]["software_change_specialist"]
+        == "software_change_review"
+    )
+    assert (
+        "recommended_patch_direction"
+        in shared_memory_event.payload["expected_deliverables"][
+            "software_change_specialist"
+        ]
+    )
+    assert (
+        "implementation_trace"
+        in shared_memory_event.payload["telemetry_focus"][
+            "software_change_specialist"
+        ]
+    )
     specialist_briefs = shared_memory_event.payload["context_briefs"][
-        "especialista_software_subordinado"
+        "software_change_specialist"
     ]
     assert specialist_briefs["mission"]
     assert specialist_briefs["domain"]
     assert specialist_briefs["continuity"]
+    assert (
+        domain_event.payload["consumer_profiles"]["software_change_specialist"]
+        == "software_change_review"
+    )
     assert any(
-        invocation.specialist_type == "especialista_software_subordinado"
+        invocation.specialist_type == "software_change_specialist"
         and invocation.selection_mode == "guided"
         and invocation.linked_domain == "software_development"
         for invocation in result.specialist_invocations
     )
+    assert result.operation_dispatch is None
+    assert "workflow_completed" not in event_names
     assert result.response_text
 
 
@@ -735,18 +763,18 @@ def test_orchestrator_service_tracks_guided_analysis_domain_specialist() -> None
     selection_event = next(
         event for event in stored_events if event.event_name == "specialist_selection_decided"
     )
-    assert "especialista_analise_estruturada" in selection_event.payload["domain_specialists"]
-    assert "especialista_analise_estruturada" in selection_event.payload["guided_specialists"]
-    assert selection_event.payload["domain_links"]["especialista_analise_estruturada"] == "analysis"
+    assert "structured_analysis_specialist" in selection_event.payload["domain_specialists"]
+    assert "structured_analysis_specialist" in selection_event.payload["guided_specialists"]
+    assert selection_event.payload["domain_links"]["structured_analysis_specialist"] == "analysis"
     shared_memory_event = next(
         event for event in stored_events if event.event_name == "specialist_shared_memory_linked"
     )
     assert (
-        shared_memory_event.payload["consumer_modes"]["especialista_analise_estruturada"]
+        shared_memory_event.payload["consumer_modes"]["structured_analysis_specialist"]
         == "domain_guided_memory_packet"
     )
     assert any(
-        invocation.specialist_type == "especialista_analise_estruturada"
+        invocation.specialist_type == "structured_analysis_specialist"
         and invocation.selection_mode == "guided"
         and invocation.linked_domain == "analysis"
         for invocation in result.specialist_invocations
@@ -782,21 +810,21 @@ def test_orchestrator_service_tracks_guided_governance_domain_specialist() -> No
     selection_event = next(
         event for event in stored_events if event.event_name == "specialist_selection_decided"
     )
-    assert "especialista_revisao_governanca" in selection_event.payload["domain_specialists"]
-    assert "especialista_revisao_governanca" in selection_event.payload["guided_specialists"]
+    assert "governance_review_specialist" in selection_event.payload["domain_specialists"]
+    assert "governance_review_specialist" in selection_event.payload["guided_specialists"]
     assert (
-        selection_event.payload["domain_links"]["especialista_revisao_governanca"]
+        selection_event.payload["domain_links"]["governance_review_specialist"]
         == "governance"
     )
     shared_memory_event = next(
         event for event in stored_events if event.event_name == "specialist_shared_memory_linked"
     )
     assert (
-        shared_memory_event.payload["consumer_modes"]["especialista_revisao_governanca"]
+        shared_memory_event.payload["consumer_modes"]["governance_review_specialist"]
         == "domain_guided_memory_packet"
     )
     assert any(
-        invocation.specialist_type == "especialista_revisao_governanca"
+        invocation.specialist_type == "governance_review_specialist"
         and invocation.selection_mode == "guided"
         and invocation.linked_domain == "governance"
         for invocation in result.specialist_invocations
@@ -832,21 +860,21 @@ def test_orchestrator_service_tracks_guided_operational_readiness_specialist() -
     selection_event = next(
         event for event in stored_events if event.event_name == "specialist_selection_decided"
     )
-    assert "especialista_planejamento_operacional" in selection_event.payload["domain_specialists"]
-    assert "especialista_planejamento_operacional" in selection_event.payload["guided_specialists"]
+    assert "operational_planning_specialist" in selection_event.payload["domain_specialists"]
+    assert "operational_planning_specialist" in selection_event.payload["guided_specialists"]
     assert (
-        selection_event.payload["domain_links"]["especialista_planejamento_operacional"]
+        selection_event.payload["domain_links"]["operational_planning_specialist"]
         == "operational_readiness"
     )
     shared_memory_event = next(
         event for event in stored_events if event.event_name == "specialist_shared_memory_linked"
     )
     assert (
-        shared_memory_event.payload["consumer_modes"]["especialista_planejamento_operacional"]
+        shared_memory_event.payload["consumer_modes"]["operational_planning_specialist"]
         == "domain_guided_memory_packet"
     )
     assert any(
-        invocation.specialist_type == "especialista_planejamento_operacional"
+        invocation.specialist_type == "operational_planning_specialist"
         and invocation.selection_mode == "guided"
         and invocation.linked_domain == "operational_readiness"
         for invocation in result.specialist_invocations
@@ -884,18 +912,18 @@ def test_orchestrator_service_tracks_guided_strategy_specialist() -> None:
     selection_event = next(
         event for event in stored_events if event.event_name == "specialist_selection_decided"
     )
-    assert "especialista_analise_estruturada" in selection_event.payload["domain_specialists"]
-    assert "especialista_analise_estruturada" in selection_event.payload["guided_specialists"]
-    assert selection_event.payload["domain_links"]["especialista_analise_estruturada"] == "strategy"
+    assert "structured_analysis_specialist" in selection_event.payload["domain_specialists"]
+    assert "structured_analysis_specialist" in selection_event.payload["guided_specialists"]
+    assert selection_event.payload["domain_links"]["structured_analysis_specialist"] == "strategy"
     shared_memory_event = next(
         event for event in stored_events if event.event_name == "specialist_shared_memory_linked"
     )
     assert (
-        shared_memory_event.payload["consumer_modes"]["especialista_analise_estruturada"]
+        shared_memory_event.payload["consumer_modes"]["structured_analysis_specialist"]
         == "domain_guided_memory_packet"
     )
     assert any(
-        invocation.specialist_type == "especialista_analise_estruturada"
+        invocation.specialist_type == "structured_analysis_specialist"
         and invocation.selection_mode == "guided"
         and invocation.linked_domain == "strategy"
         for invocation in result.specialist_invocations
@@ -930,21 +958,21 @@ def test_orchestrator_service_tracks_guided_decision_risk_specialist() -> None:
     selection_event = next(
         event for event in stored_events if event.event_name == "specialist_selection_decided"
     )
-    assert "especialista_revisao_governanca" in selection_event.payload["domain_specialists"]
-    assert "especialista_revisao_governanca" in selection_event.payload["guided_specialists"]
+    assert "governance_review_specialist" in selection_event.payload["domain_specialists"]
+    assert "governance_review_specialist" in selection_event.payload["guided_specialists"]
     assert (
-        selection_event.payload["domain_links"]["especialista_revisao_governanca"]
+        selection_event.payload["domain_links"]["governance_review_specialist"]
         == "decision_risk"
     )
     shared_memory_event = next(
         event for event in stored_events if event.event_name == "specialist_shared_memory_linked"
     )
     assert (
-        shared_memory_event.payload["consumer_modes"]["especialista_revisao_governanca"]
+        shared_memory_event.payload["consumer_modes"]["governance_review_specialist"]
         == "domain_guided_memory_packet"
     )
     assert any(
-        invocation.specialist_type == "especialista_revisao_governanca"
+        invocation.specialist_type == "governance_review_specialist"
         and invocation.selection_mode == "guided"
         and invocation.linked_domain == "decision_risk"
         for invocation in result.specialist_invocations

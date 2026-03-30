@@ -6,7 +6,7 @@ from uuid import uuid4
 from observability_service.service import ObservabilityService
 
 from shared.events import InternalEventEnvelope
-from tools.close_alignment_cycle import build_payload, render_markdown
+from tools.close_sovereign_alignment_cut import build_payload, render_markdown
 
 
 def runtime_dir(name: str) -> Path:
@@ -17,8 +17,8 @@ def runtime_dir(name: str) -> Path:
     return target
 
 
-def test_close_alignment_cycle_builds_next_v2_cut() -> None:
-    temp_dir = runtime_dir("v2-alignment-cycle-closure")
+def test_close_sovereign_alignment_cut_builds_payload() -> None:
+    temp_dir = runtime_dir("v2-sovereign-alignment-cut")
     observability_db = temp_dir / "observability.db"
     evolution_db = temp_dir / "evolution.db"
     comparison_json = temp_dir / "path_comparison.json"
@@ -27,10 +27,10 @@ def test_close_alignment_cycle_builds_next_v2_cut() -> None:
             {
                 "overall_verdict": "equivalent",
                 "comparison_summary": {
-                    "matched_scenarios": 4,
+                    "matched_scenarios": 5,
                     "divergent_scenarios": 0,
-                    "baseline_axis_adherence_score": 0.94,
-                    "candidate_axis_adherence_score": 0.96,
+                    "baseline_axis_adherence_score": 0.95,
+                    "candidate_axis_adherence_score": 0.97,
                     "baseline_axis_gate_pass_rate": 1.0,
                     "candidate_axis_gate_pass_rate": 1.0,
                     "candidate_runtime_coverage": 1.0,
@@ -48,50 +48,50 @@ def test_close_alignment_cycle_builds_next_v2_cut() -> None:
             InternalEventEnvelope(
                 event_id="evt-1",
                 event_name="input_received",
-                timestamp="2026-03-27T00:00:00+00:00",
+                timestamp="2026-03-30T00:00:00+00:00",
                 source_service="orchestrator-service",
-                payload={"content": "review the aligned runtime"},
-                request_id="req-cycle",
-                session_id="sess-cycle",
-                correlation_id="req-cycle",
+                payload={"content": "review sovereign cut"},
+                request_id="req-cut",
+                session_id="sess-cut",
+                correlation_id="req-cut",
             ),
             InternalEventEnvelope(
                 event_id="evt-2",
                 event_name="memory_recovered",
-                timestamp="2026-03-27T00:00:01+00:00",
+                timestamp="2026-03-30T00:00:01+00:00",
                 source_service="orchestrator-service",
                 payload={"continuity_recommendation": "continuar_missao_ativa"},
-                request_id="req-cycle",
-                session_id="sess-cycle",
-                correlation_id="req-cycle",
+                request_id="req-cut",
+                session_id="sess-cut",
+                correlation_id="req-cut",
             ),
             InternalEventEnvelope(
                 event_id="evt-3",
                 event_name="intent_classified",
-                timestamp="2026-03-27T00:00:02+00:00",
+                timestamp="2026-03-30T00:00:02+00:00",
                 source_service="orchestrator-service",
                 payload={"intent": "analysis"},
-                request_id="req-cycle",
-                session_id="sess-cycle",
-                correlation_id="req-cycle",
+                request_id="req-cut",
+                session_id="sess-cut",
+                correlation_id="req-cut",
             ),
             InternalEventEnvelope(
                 event_id="evt-4",
                 event_name="directive_composed",
-                timestamp="2026-03-27T00:00:03+00:00",
+                timestamp="2026-03-30T00:00:03+00:00",
                 source_service="orchestrator-service",
                 payload={
                     "identity_mode": "deep_analysis",
                     "identity_signature": "jarvis-core-v2",
                 },
-                request_id="req-cycle",
-                session_id="sess-cycle",
-                correlation_id="req-cycle",
+                request_id="req-cut",
+                session_id="sess-cut",
+                correlation_id="req-cut",
             ),
             InternalEventEnvelope(
                 event_id="evt-5",
                 event_name="context_composed",
-                timestamp="2026-03-27T00:00:04+00:00",
+                timestamp="2026-03-30T00:00:04+00:00",
                 source_service="orchestrator-service",
                 payload={
                     "primary_mind": "mente_analitica",
@@ -103,111 +103,161 @@ def test_close_alignment_cycle_builds_next_v2_cut() -> None:
                     "arbitration_source": "mind_registry",
                     "supporting_mind_limit": 2,
                     "suppressed_mind_limit": 3,
+                    "canonical_domains": ["dados_estatistica_e_inteligencia_analitica"],
+                    "primary_domain_driver": "dados_estatistica_e_inteligencia_analitica",
                 },
-                request_id="req-cycle",
-                session_id="sess-cycle",
-                correlation_id="req-cycle",
+                request_id="req-cut",
+                session_id="sess-cut",
+                correlation_id="req-cut",
             ),
             InternalEventEnvelope(
                 event_id="evt-6",
                 event_name="plan_built",
-                timestamp="2026-03-27T00:00:05+00:00",
+                timestamp="2026-03-30T00:00:05+00:00",
                 source_service="orchestrator-service",
                 payload={"continuity_action": "continuar", "continuity_source": "active_mission"},
-                request_id="req-cycle",
-                session_id="sess-cycle",
-                correlation_id="req-cycle",
+                request_id="req-cut",
+                session_id="sess-cut",
+                correlation_id="req-cut",
             ),
             InternalEventEnvelope(
                 event_id="evt-7",
                 event_name="continuity_decided",
-                timestamp="2026-03-27T00:00:06+00:00",
+                timestamp="2026-03-30T00:00:06+00:00",
                 source_service="orchestrator-service",
                 payload={"continuity_action": "continuar", "continuity_source": "active_mission"},
-                request_id="req-cycle",
-                session_id="sess-cycle",
-                correlation_id="req-cycle",
+                request_id="req-cut",
+                session_id="sess-cut",
+                correlation_id="req-cut",
             ),
             InternalEventEnvelope(
                 event_id="evt-8",
                 event_name="domain_registry_resolved",
-                timestamp="2026-03-27T00:00:07+00:00",
+                timestamp="2026-03-30T00:00:07+00:00",
                 source_service="orchestrator-service",
                 payload={
-                    "active_domains": ["software_development"],
-                    "registry_domains": ["computacao_e_desenvolvimento"],
-                    "route_domains": ["software_development"],
-                    "shadow_domains": ["software_development"],
+                    "active_domains": ["analysis", "decision_risk"],
+                    "registry_domains": ["dados_estatistica_e_inteligencia_analitica"],
+                    "route_domains": ["analysis", "decision_risk"],
+                    "canonical_domain_refs_by_route": {
+                        "analysis": ["dados_estatistica_e_inteligencia_analitica"],
+                        "decision_risk": ["governanca_do_sistema"],
+                    },
+                    "route_modes": {"analysis": "guided", "decision_risk": "guided"},
+                    "routing_sources": {
+                        "analysis": "domain_registry",
+                        "decision_risk": "domain_registry",
+                    },
                 },
-                request_id="req-cycle",
-                session_id="sess-cycle",
-                correlation_id="req-cycle",
+                request_id="req-cut",
+                session_id="sess-cut",
+                correlation_id="req-cut",
             ),
             InternalEventEnvelope(
                 event_id="evt-9",
                 event_name="specialist_shared_memory_linked",
-                timestamp="2026-03-27T00:00:08+00:00",
+                timestamp="2026-03-30T00:00:08+00:00",
                 source_service="orchestrator-service",
                 payload={
-                    "specialist_hints": ["software_change_specialist"],
                     "sharing_modes": {
-                        "software_change_specialist": "core_mediated_read_only"
+                        "structured_analysis_specialist": "core_mediated_read_only"
                     },
                     "memory_class_policies": {
-                        "software_change_specialist": {
+                        "structured_analysis_specialist": {
+                            "domain": {
+                                "specialist_shared": True,
+                                "sharing_mode": "core_mediated_read_only",
+                                "write_policy": "through_core_only",
+                            },
                             "mission": {
                                 "specialist_shared": True,
                                 "sharing_mode": "core_mediated_read_only",
                                 "write_policy": "through_core_only",
-                            }
+                            },
+                            "contextual": {
+                                "specialist_shared": True,
+                                "sharing_mode": "core_mediated_read_only",
+                                "write_policy": "through_core_only",
+                            },
                         }
                     },
+                    "consumed_memory_classes": {
+                        "structured_analysis_specialist": ["domain", "mission", "contextual"]
+                    },
+                    "memory_write_policies": {
+                        "structured_analysis_specialist": {
+                            "domain": "through_core_only",
+                            "mission": "through_core_only",
+                            "contextual": "through_core_only",
+                        }
+                    },
+                    "domain_mission_link_reasons": {
+                        "structured_analysis_specialist": (
+                            "analysis linked to active mission and canonical domain"
+                        )
+                    },
                 },
-                request_id="req-cycle",
-                session_id="sess-cycle",
-                correlation_id="req-cycle",
+                request_id="req-cut",
+                session_id="sess-cut",
+                correlation_id="req-cut",
             ),
             InternalEventEnvelope(
                 event_id="evt-10",
                 event_name="specialist_contracts_composed",
-                timestamp="2026-03-27T00:00:09+00:00",
+                timestamp="2026-03-30T00:00:09+00:00",
                 source_service="orchestrator-service",
-                payload={
-                    "response_channel": "through_core",
-                    "tool_access_mode": "none",
-                },
-                request_id="req-cycle",
-                session_id="sess-cycle",
-                correlation_id="req-cycle",
+                payload={"response_channel": "through_core", "tool_access_mode": "none"},
+                request_id="req-cut",
+                session_id="sess-cut",
+                correlation_id="req-cut",
             ),
             InternalEventEnvelope(
                 event_id="evt-11",
+                event_name="domain_specialist_completed",
+                timestamp="2026-03-30T00:00:10+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "specialist_types": ["structured_analysis_specialist"],
+                    "linked_domains": {"structured_analysis_specialist": "analysis"},
+                    "selection_modes": {"structured_analysis_specialist": "guided"},
+                    "canonical_domain_refs": {
+                        "structured_analysis_specialist": [
+                            "dados_estatistica_e_inteligencia_analitica"
+                        ]
+                    },
+                },
+                request_id="req-cut",
+                session_id="sess-cut",
+                correlation_id="req-cut",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-12",
                 event_name="plan_governed",
-                timestamp="2026-03-27T00:00:10+00:00",
+                timestamp="2026-03-30T00:00:11+00:00",
                 source_service="orchestrator-service",
                 payload={
                     "identity_mode": "deep_analysis",
                     "identity_signature": "jarvis-core-v2",
                     "identity_guardrail": "preserve_unified_core",
                 },
-                request_id="req-cycle",
-                session_id="sess-cycle",
-                correlation_id="req-cycle",
-            ),
-            InternalEventEnvelope(
-                event_id="evt-12",
-                event_name="governance_checked",
-                timestamp="2026-03-27T00:00:11+00:00",
-                source_service="orchestrator-service",
-                payload={"decision": "allow_with_conditions"},
-                request_id="req-cycle",
-                session_id="sess-cycle",
-                correlation_id="req-cycle",
+                request_id="req-cut",
+                session_id="sess-cut",
+                correlation_id="req-cut",
             ),
             InternalEventEnvelope(
                 event_id="evt-13",
+                event_name="governance_checked",
+                timestamp="2026-03-30T00:00:12+00:00",
+                source_service="orchestrator-service",
+                payload={"decision": "allow_with_conditions"},
+                request_id="req-cut",
+                session_id="sess-cut",
+                correlation_id="req-cut",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-14",
                 event_name="response_synthesized",
-                timestamp="2026-03-27T00:00:12+00:00",
+                timestamp="2026-03-30T00:00:13+00:00",
                 source_service="orchestrator-service",
                 payload={
                     "continuity_action": "continuar",
@@ -215,19 +265,19 @@ def test_close_alignment_cycle_builds_next_v2_cut() -> None:
                     "identity_signature": "jarvis-core-v2",
                     "response_style": "analytical_unified",
                 },
-                request_id="req-cycle",
-                session_id="sess-cycle",
-                correlation_id="req-cycle",
+                request_id="req-cut",
+                session_id="sess-cut",
+                correlation_id="req-cut",
             ),
             InternalEventEnvelope(
-                event_id="evt-14",
+                event_id="evt-15",
                 event_name="memory_recorded",
-                timestamp="2026-03-27T00:00:13+00:00",
+                timestamp="2026-03-30T00:00:14+00:00",
                 source_service="orchestrator-service",
                 payload={"continuity_mode": "continuar"},
-                request_id="req-cycle",
-                session_id="sess-cycle",
-                correlation_id="req-cycle",
+                request_id="req-cut",
+                session_id="sess-cut",
+                correlation_id="req-cut",
             ),
         ]
     )
@@ -239,7 +289,7 @@ def test_close_alignment_cycle_builds_next_v2_cut() -> None:
         limit=10,
     )
 
-    assert payload["decision"] == "close_v2_alignment_cycle_and_open_next_v2_cut"
+    assert payload["decision"] == "complete_v2_sovereign_alignment_cut"
     assert payload["evidence_summary"]["requests_audited"] == 1
     assert payload["evidence_summary"]["domain_alignment_healthy"] == 1
     assert payload["evidence_summary"]["mind_alignment_healthy"] == 1
@@ -247,15 +297,13 @@ def test_close_alignment_cycle_builds_next_v2_cut() -> None:
     assert payload["evidence_summary"]["memory_alignment_healthy"] == 1
     assert payload["evidence_summary"]["sovereignty_healthy"] == 1
     assert payload["evidence_summary"]["axis_gate_healthy"] == 1
-    assert payload["next_cut_scope"][0]["item_id"] == "v2-domain-specialists-beyond-shadow"
-    assert payload["deferred_scope"][0]["item_id"] == "defer-wide-computer-use"
-    assert payload["vision_scope"][0]["item_id"] == "vision-robust-ecosystem"
+    assert payload["next_cut_scope"][0]["item_id"] == "v2-domain-consumers-and-specialists"
 
 
-def test_close_alignment_cycle_renders_markdown() -> None:
+def test_close_sovereign_alignment_cut_renders_markdown() -> None:
     payload = {
-        "cycle_id": "v2-alignment-cycle-1",
-        "decision": "close_v2_alignment_cycle_and_open_next_v2_cut",
+        "cut_id": "v2-sovereign-alignment-cut-1",
+        "decision": "complete_v2_sovereign_alignment_cut",
         "evidence_summary": {
             "requests_audited": 1,
             "healthy_requests": 1,
@@ -287,18 +335,18 @@ def test_close_alignment_cycle_renders_markdown() -> None:
             "recent_evolution_decisions": 0,
             "comparison_overall_verdict": "equivalent",
             "comparison_decision": "candidate_ready_for_eval_gate",
-            "matched_scenarios": 4,
+            "matched_scenarios": 5,
             "divergent_scenarios": 0,
-            "baseline_axis_adherence_score": 0.94,
-            "candidate_axis_adherence_score": 0.96,
+            "baseline_axis_adherence_score": 0.95,
+            "candidate_axis_adherence_score": 0.97,
             "baseline_axis_gate_pass_rate": 1.0,
             "candidate_axis_gate_pass_rate": 1.0,
             "candidate_runtime_coverage": 1.0,
         },
         "next_cut_scope": [
             {
-                "item_id": "v2-domain-specialists-beyond-shadow",
-                "title": "especialistas de dominio acima do shadow mode",
+                "item_id": "v2-domain-consumers-and-specialists",
+                "title": "consumidores canonicos de dominio acima do guided atual",
                 "target_class": "proximo_corte_v2",
                 "rationale": "racional",
                 "dependency": "dependencia",
@@ -315,20 +363,21 @@ def test_close_alignment_cycle_renders_markdown() -> None:
         ],
         "vision_scope": [
             {
-                "item_id": "vision-robust-ecosystem",
-                "title": "ecossistema robusto que absorve o melhor do estado da arte",
+                "item_id": "vision-robust-absorbing-ecosystem",
+                "title": "ecossistema robusto capaz de absorver o melhor do estado da arte",
                 "target_class": "preservar_como_visao",
                 "rationale": "racional",
                 "dependency": "dependencia",
             }
         ],
+        "goals_met": ["goal one"],
         "decision_rationale": "decisao racional",
     }
 
     rendered = render_markdown(payload)
 
-    assert "# Fechamento do V2 Alignment Cycle" in rendered
-    assert "`v2-domain-specialists-beyond-shadow`" in rendered
-    assert "`defer-wide-computer-use`" in rendered
-    assert "`vision-robust-ecosystem`" in rendered
-    assert "candidate_ready_for_eval_gate" in rendered
+    assert "Fechamento do V2 Sovereign Alignment Cut" in rendered
+    assert "complete_v2_sovereign_alignment_cut" in rendered
+    assert "consumidores canonicos de dominio acima do guided atual" in rendered
+    assert "ecossistema robusto capaz de absorver o melhor do estado da arte" in rendered
+

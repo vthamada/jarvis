@@ -55,6 +55,12 @@ class OperationalService:
         outputs = [dispatch.plan_summary or content.splitlines()[0]]
         if status == OperationStatus.COMPLETED:
             artifact_results.append(self._write_artifact(dispatch, content))
+        workflow_checkpoints = [
+            f"workflow:{item}" for item in dispatch.workflow_checkpoints
+        ] or [
+            "workflow:composed",
+            "workflow:executed",
+        ]
         result = OperationResultContract(
             operation_id=dispatch.operation_id,
             status=status,
@@ -63,7 +69,11 @@ class OperationalService:
             artifacts=[
                 artifact.location_ref for artifact in artifact_results if artifact.location_ref
             ],
-            checkpoints=["operational_execution_started", "operational_execution_finished"],
+            checkpoints=[
+                "operational_execution_started",
+                *workflow_checkpoints,
+                "operational_execution_finished",
+            ],
             next_recommendation=(
                 "continue" if status == OperationStatus.COMPLETED else "review_dispatch"
             ),
@@ -119,6 +129,7 @@ class OperationalService:
         )
         internal_alignment = dispatch.specialist_summary or "sem ajuste interno adicional"
         next_action = dispatch.smallest_safe_next_action or "preservar a menor proxima acao segura"
+        workflow_lines = OperationalService._workflow_lines(dispatch)
         return (
             f"Plano deliberativo para: {dispatch.task_goal}\n\n"
             f"Resumo: {dispatch.plan_summary or dispatch.task_plan}\n"
@@ -127,7 +138,8 @@ class OperationalService:
             f"Proxima acao segura: {next_action}\n"
             f"Restricoes: {constraints}\n"
             f"Riscos: {risks}\n"
-            f"Ajuste interno: {internal_alignment}\n\n"
+            f"Ajuste interno: {internal_alignment}\n"
+            f"{workflow_lines}\n"
             f"Etapas:\n{steps}\n"
         )
 
@@ -139,6 +151,7 @@ class OperationalService:
             "nenhum relevante no escopo local",
         )
         success = "; ".join(dispatch.success_criteria[:3]) or ("explicitar a melhor recomendacao")
+        workflow_lines = OperationalService._workflow_lines(dispatch)
         return (
             f"Analise deliberativa para: {dispatch.task_goal}\n\n"
             f"Resumo: {dispatch.plan_summary or dispatch.task_plan}\n"
@@ -147,10 +160,12 @@ class OperationalService:
             f"Criterios de sucesso: {success}\n"
             f"Ajuste interno: {dispatch.specialist_summary or 'sem ajuste interno adicional'}\n"
             f"Riscos mapeados: {risks}\n"
+            f"{workflow_lines}\n"
         )
 
     @staticmethod
     def _build_general_content(dispatch: OperationDispatchContract) -> str:
+        workflow_lines = OperationalService._workflow_lines(dispatch)
         return (
             f"Resposta deliberativa segura para: {dispatch.task_goal}\n\n"
             f"Resumo: {dispatch.plan_summary or dispatch.task_plan}\n"
@@ -158,7 +173,21 @@ class OperationalService:
             f"Proxima acao segura: "
             f"{dispatch.smallest_safe_next_action or 'preservar direcao segura'}\n"
             f"Ajuste interno: {dispatch.specialist_summary or 'sem ajuste interno adicional'}\n"
+            f"{workflow_lines}\n"
             "A saida foi produzida dentro do escopo local e reversivel do v1.\n"
+        )
+
+
+    @staticmethod
+    def _workflow_lines(dispatch: OperationDispatchContract) -> str:
+        if not dispatch.workflow_profile:
+            return "Workflow: not_defined"
+        objective = dispatch.workflow_objective or dispatch.task_goal
+        steps = "; ".join(dispatch.workflow_steps) or "none"
+        return (
+            f"Workflow: {dispatch.workflow_profile}\n"
+            f"Objetivo do workflow: {objective}\n"
+            f"Workflow steps: {steps}"
         )
 
     @staticmethod

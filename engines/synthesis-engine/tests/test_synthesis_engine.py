@@ -25,7 +25,7 @@ def sample_plan() -> DeliberativePlanContract:
         requires_human_validation=False,
         rationale="objetivo_dominante=Plan milestone M3; continuidade=ativo",
         tensions_considered=["equilibrar ambicao estrategica com a menor proxima acao segura"],
-        specialist_hints=["especialista_planejamento_operacional"],
+        specialist_hints=["operational_planning_specialist"],
         success_criteria=["resposta deve fechar ou avancar o loop principal da missao"],
         specialist_resolution_summary="encadear o plano em etapas pequenas",
         dominant_tension="equilibrar ambicao estrategica com a menor proxima acao segura",

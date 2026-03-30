@@ -9,7 +9,7 @@ Leitura importante no estado atual do repositorio:
 - este roadmap permanece como historico do fechamento do `v1`;
 - o planejamento ativo do `pos-v1` em diante fica em:
   - `docs/roadmap/programa-ate-v3.md`
-  - `docs/implementation/post-v1-sprint-cycle.md`
+  - `docs/archive/implementation/post-v1-sprint-cycle.md`
 
 ---
 
@@ -76,4 +76,4 @@ Ele existe para:
 O trabalho novo agora deve seguir:
 
 - `docs/roadmap/programa-ate-v3.md`
-- `docs/implementation/post-v1-sprint-cycle.md`
+- `docs/archive/implementation/post-v1-sprint-cycle.md`

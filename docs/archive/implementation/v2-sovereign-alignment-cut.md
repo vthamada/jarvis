@@ -14,19 +14,25 @@ Foco único:
 Fontes de direção:
 
 - `HANDOFF.md`
-- `docs/implementation/v2-cycle-closure.md`
-- `docs/implementation/v2-alignment-cycle.md`
+- `docs/archive/implementation/v2-cycle-closure.md`
+- `docs/archive/implementation/v2-alignment-cycle.md`
 - `docs/documentation/matriz-de-aderencia-mestre.md`
 - `documento_mestre_jarvis.md`
 
 Status desta versão do corte:
 
-- Sprint 1 aberta: sincronização documental e documento vivo soberano;
-- Sprint 2 aberta: soberania completa do registry de domínios no runtime;
-- Sprint 3 aberta: consumo canônico de memória por classe;
-- Sprint 4 aberta: convergência de mentes com domínios canônicos;
-- Sprint 5 aberta: especialistas guiados acima do shadow;
-- Sprint 6 aberta: gates por eixo e fechamento formal do corte.
+- Sprint 1 concluída: sincronização documental e documento vivo soberano;
+- Sprint 2 concluída: soberania completa do registry de domínios no runtime;
+- Sprint 3 concluída: consumo canônico de memória por classe;
+- Sprint 4 concluída: convergência de mentes com domínios canônicos;
+- Sprint 5 concluída: especialistas guiados acima do shadow;
+- Sprint 6 concluída: gates por eixo e fechamento formal do corte.
+
+Leitura operacional correta neste momento:
+
+- este documento permanece como a referência executiva do corte que acabou de ser concluído;
+- o fechamento formal regenerável do corte passa a estar em `docs/implementation/v2-sovereign-alignment-cut-closure.md`;
+- o próximo recorte do `v2` deve partir deste baseline, e não reabrir as sprints já concluídas aqui.
 
 ---
 
@@ -198,3 +204,4 @@ Heurística operacional:
 - se o problema for `qual direção seguir entre alternativas legítimas`, o operador decide;
 - se a dúvida for `se isso muda a identidade do sistema`, a decisão é do operador;
 - se a dúvida for `se isso melhora consistência, rigor ou aderência sem mudar a direção`, o Codex segue.
+

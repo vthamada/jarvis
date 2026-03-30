@@ -20,7 +20,7 @@ def sample_plan() -> DeliberativePlanContract:
         requires_human_validation=False,
         rationale="contexto=baseline; apoio=local",
         tensions_considered=["equilibrar ambicao estrategica com a menor proxima acao segura"],
-        specialist_hints=["especialista_planejamento_operacional"],
+        specialist_hints=["operational_planning_specialist"],
         success_criteria=["plano deve indicar a menor proxima acao segura"],
         dominant_tension="equilibrar ambicao estrategica com a menor proxima acao segura",
         smallest_safe_next_action="definir objetivo",
@@ -40,12 +40,12 @@ def test_specialist_engine_returns_subordinated_contributions_only_when_rule_mat
         plan=sample_plan(),
         knowledge_snippets=["Priorize clareza de objetivo."],
         shared_memory_contexts={
-            "especialista_planejamento_operacional": SpecialistSharedMemoryContextContract(
-                specialist_type="especialista_planejamento_operacional",
+            "operational_planning_specialist": SpecialistSharedMemoryContextContract(
+                specialist_type="operational_planning_specialist",
                 sharing_mode="core_mediated_read_only",
                 continuity_mode="continuar",
                 shared_memory_brief=(
-                    "specialist=especialista_planejamento_operacional "
+                    "specialist=operational_planning_specialist "
                     "continuidade=continuar"
                 ),
                 write_policy="through_core_only",
@@ -72,14 +72,14 @@ def test_specialist_engine_returns_subordinated_contributions_only_when_rule_mat
         item.startswith("shared_memory_brief=")
         for item in handoff_plan.invocations[0].handoff_inputs
     )
-    assert review.specialist_hints == ["especialista_planejamento_operacional"]
+    assert review.specialist_hints == ["operational_planning_specialist"]
     assert review.invocations
-    assert review.invocations[0].specialist_type == "especialista_planejamento_operacional"
+    assert review.invocations[0].specialist_type == "operational_planning_specialist"
     assert review.invocations[0].boundary.response_channel == "through_core"
     assert review.invocations[0].boundary.tool_access_mode == "none"
     assert review.invocations[0].boundary.memory_write_mode == "through_core_only"
     assert review.contributions
-    assert review.contributions[0].specialist_type == "especialista_planejamento_operacional"
+    assert review.contributions[0].specialist_type == "operational_planning_specialist"
     assert review.contributions[0].invocation_id == review.invocations[0].invocation_id
     assert "through_core_only" in review.contributions[0].output_hints
     assert (
@@ -93,9 +93,9 @@ def test_specialist_engine_returns_subordinated_contributions_only_when_rule_mat
 def test_specialist_engine_links_promoted_domain_specialist_explicitly() -> None:
     engine = SpecialistEngine()
     software_plan = DeliberativePlanContract(
-        plan_summary="avaliar ajuste em servi?o Python com impacto controlado",
+        plan_summary="avaliar ajuste em serviço Python com impacto controlado",
         goal="Review Python service rollout",
-        steps=["mapear contratos", "comparar mudan?a", "recomendar pr?ximo passo"],
+        steps=["mapear contratos", "comparar mudança", "recomendar próximo passo"],
         active_domains=["software_development", "analysis"],
         active_minds=["mente_analitica"],
         constraints=["through_core_only"],
@@ -104,33 +104,33 @@ def test_specialist_engine_links_promoted_domain_specialist_explicitly() -> None
         requires_human_validation=False,
         rationale="contexto=software; apoio=local",
         tensions_considered=["equilibrar profundidade analitica com conclusao util"],
-        specialist_hints=["especialista_software_subordinado"],
+        specialist_hints=["software_change_specialist"],
         success_criteria=["comparacao deve preservar contratos e rollback"],
         dominant_tension="equilibrar profundidade analitica com conclusao util",
         smallest_safe_next_action="mapear contratos ativos",
         continuity_action="continuar",
-        open_loops=["comparar mudan?a no servi?o"],
+        open_loops=["comparar mudança no serviço"],
     )
 
     handoff_plan = engine.plan_handoffs(
         intent="analysis",
         plan=software_plan,
-        knowledge_snippets=["Prefira interfaces est?veis."],
+        knowledge_snippets=["Prefira interfaces estáveis."],
         domain_specialist_routes=[
             DomainSpecialistRouteContract(
                 domain_name="software_development",
-                specialist_type="especialista_software_subordinado",
+                specialist_type="software_change_specialist",
                 specialist_mode="guided",
-                routing_reason="rota can?nica de software em modo guiado",
+                routing_reason="rota canônica de software em modo guiado",
             )
         ],
         shared_memory_contexts={
-            "especialista_software_subordinado": SpecialistSharedMemoryContextContract(
-                specialist_type="especialista_software_subordinado",
+            "software_change_specialist": SpecialistSharedMemoryContextContract(
+                specialist_type="software_change_specialist",
                 sharing_mode="core_mediated_read_only",
                 continuity_mode="continuar",
                 shared_memory_brief=(
-                    "specialist=especialista_software_subordinado continuidade=continuar"
+                    "specialist=software_change_specialist continuidade=continuar"
                 ),
                 write_policy="through_core_only",
                 consumer_mode="domain_guided_memory_packet",
@@ -149,6 +149,21 @@ def test_specialist_engine_links_promoted_domain_specialist_explicitly() -> None
                     "open_loops=comparar mudanca no servico | "
                     "source_mission_id=mission-software"
                 ),
+                consumer_profile="software_change_review",
+                consumer_objective=(
+                    "avaliar segurança da mudança, impacto de implementação "
+                    "e direção de patch recomendada"
+                ),
+                expected_deliverables=[
+                    "implementation_findings",
+                    "change_risk_summary",
+                    "recommended_patch_direction",
+                ],
+                telemetry_focus=[
+                    "contract_impact",
+                    "change_safety",
+                    "implementation_trace",
+                ],
                 related_mission_ids=["mission-software-related"],
                 memory_refs=["memory://mission", "memory://relational"],
                 semantic_focus=["software_development", "analysis"],
@@ -162,7 +177,7 @@ def test_specialist_engine_links_promoted_domain_specialist_explicitly() -> None
     review = engine.review_handoffs(
         intent="analysis",
         plan=software_plan,
-        knowledge_snippets=["Prefira interfaces est?veis."],
+        knowledge_snippets=["Prefira interfaces estáveis."],
         handoff_plan=handoff_plan,
     )
 
@@ -171,7 +186,7 @@ def test_specialist_engine_links_promoted_domain_specialist_explicitly() -> None
     assert handoff_plan.selections[0].selection_mode == "guided"
     assert handoff_plan.invocations[0].linked_domain == "software_development"
     assert handoff_plan.invocations[0].selection_mode == "guided"
-    assert review.contributions[0].specialist_type == "especialista_software_subordinado"
+    assert review.contributions[0].specialist_type == "software_change_specialist"
     assert "domain_guided_specialist" in review.contributions[0].output_hints
     assert any(
         item.startswith("consumer_mode=domain_guided_memory_packet")
@@ -180,6 +195,19 @@ def test_specialist_engine_links_promoted_domain_specialist_explicitly() -> None
     assert any(item.startswith("mission_context_brief=") for item in specialist_inputs)
     assert any(item.startswith("domain_context_brief=") for item in specialist_inputs)
     assert any(item.startswith("continuity_context_brief=") for item in specialist_inputs)
+    assert any(
+        item.startswith("consumer_profile=software_change_review")
+        for item in specialist_inputs
+    )
+    assert any(item.startswith("consumer_objective=") for item in specialist_inputs)
+    assert any(item.startswith("expected_deliverables=") for item in specialist_inputs)
+    assert any(item.startswith("telemetry_focus=") for item in specialist_inputs)
+    assert handoff_plan.invocations[0].expected_outputs == [
+        "implementation_findings",
+        "change_risk_summary",
+        "recommended_patch_direction",
+        "through_core_only",
+    ]
 
 
 def test_specialist_engine_rejects_software_specialist_if_not_shadow_route() -> None:
@@ -196,7 +224,7 @@ def test_specialist_engine_rejects_software_specialist_if_not_shadow_route() -> 
         requires_human_validation=False,
         rationale="contexto=strategy",
         tensions_considered=[],
-        specialist_hints=["especialista_software_subordinado"],
+        specialist_hints=["software_change_specialist"],
         success_criteria=["recomendacao clara"],
         dominant_tension="equilibrar profundidade analitica com conclusao util",
         smallest_safe_next_action="mapear opcoes",
@@ -211,7 +239,7 @@ def test_specialist_engine_rejects_software_specialist_if_not_shadow_route() -> 
         domain_specialist_routes=[
             DomainSpecialistRouteContract(
                 domain_name="strategy",
-                specialist_type="especialista_software_subordinado",
+                specialist_type="software_change_specialist",
                 specialist_mode="standard",
                 routing_reason="rota nao-shadow — deve ser rejeitada pelo registry",
             )
@@ -223,7 +251,7 @@ def test_specialist_engine_rejects_software_specialist_if_not_shadow_route() -> 
 
     # "strategy" is not a software specialist route in the registry,
     # so the software specialist must be rejected regardless of specialist_mode in the route.
-    assert handoff_plan.selections[0].specialist_type == "especialista_software_subordinado"
+    assert handoff_plan.selections[0].specialist_type == "software_change_specialist"
     assert handoff_plan.selections[0].selection_status == "not_eligible"
     assert not handoff_plan.invocations
 
@@ -243,7 +271,7 @@ def test_specialist_engine_links_guided_analysis_domain_specialist_explicitly() 
         requires_human_validation=False,
         rationale="contexto=analysis; apoio=local",
         tensions_considered=["equilibrar profundidade analitica com conclusao util"],
-        specialist_hints=["especialista_analise_estruturada"],
+        specialist_hints=["structured_analysis_specialist"],
         success_criteria=["criterio dominante deve ficar explicito"],
         dominant_tension="equilibrar profundidade analitica com conclusao util",
         smallest_safe_next_action="comparar trade-offs centrais",
@@ -258,18 +286,18 @@ def test_specialist_engine_links_guided_analysis_domain_specialist_explicitly() 
         domain_specialist_routes=[
             DomainSpecialistRouteContract(
                 domain_name="analysis",
-                specialist_type="especialista_analise_estruturada",
+                specialist_type="structured_analysis_specialist",
                 specialist_mode="guided",
                 routing_reason="rota canonica de analise estruturada em modo guiado",
             )
         ],
         shared_memory_contexts={
-            "especialista_analise_estruturada": SpecialistSharedMemoryContextContract(
-                specialist_type="especialista_analise_estruturada",
+            "structured_analysis_specialist": SpecialistSharedMemoryContextContract(
+                specialist_type="structured_analysis_specialist",
                 sharing_mode="core_mediated_read_only",
                 continuity_mode="continuar",
                 shared_memory_brief=(
-                    "specialist=especialista_analise_estruturada continuidade=continuar"
+                    "specialist=structured_analysis_specialist continuidade=continuar"
                 ),
                 write_policy="through_core_only",
                 consumer_mode="domain_guided_memory_packet",
@@ -317,7 +345,7 @@ def test_specialist_engine_links_guided_governance_domain_specialist_explicitly(
     governance_plan = DeliberativePlanContract(
         plan_summary="avaliar limites do rollout com governanca explicita",
         goal="Review governance limits",
-        steps=["mapear risco", "comparar limites", "recomendar conten??o"],
+        steps=["mapear risco", "comparar limites", "recomendar contenção"],
         active_domains=["governance", "decision_risk"],
         active_minds=["mente_etica"],
         constraints=["through_core_only"],
@@ -326,7 +354,7 @@ def test_specialist_engine_links_guided_governance_domain_specialist_explicitly(
         requires_human_validation=True,
         rationale="contexto=governance; apoio=local",
         tensions_considered=["equilibrar solicitacao do usuario com limites normativos"],
-        specialist_hints=["especialista_revisao_governanca"],
+        specialist_hints=["governance_review_specialist"],
         success_criteria=["limite dominante deve ficar explicito"],
         dominant_tension="equilibrar solicitacao do usuario com limites normativos",
         smallest_safe_next_action="explicitar o limite dominante antes de operar",
@@ -341,18 +369,18 @@ def test_specialist_engine_links_guided_governance_domain_specialist_explicitly(
         domain_specialist_routes=[
             DomainSpecialistRouteContract(
                 domain_name="governance",
-                specialist_type="especialista_revisao_governanca",
+                specialist_type="governance_review_specialist",
                 specialist_mode="guided",
                 routing_reason="rota canonica de governanca em modo guiado",
             )
         ],
         shared_memory_contexts={
-            "especialista_revisao_governanca": SpecialistSharedMemoryContextContract(
-                specialist_type="especialista_revisao_governanca",
+            "governance_review_specialist": SpecialistSharedMemoryContextContract(
+                specialist_type="governance_review_specialist",
                 sharing_mode="core_mediated_read_only",
                 continuity_mode="continuar",
                 shared_memory_brief=(
-                    "specialist=especialista_revisao_governanca continuidade=continuar"
+                    "specialist=governance_review_specialist continuidade=continuar"
                 ),
                 write_policy="through_core_only",
                 consumer_mode="domain_guided_memory_packet",
@@ -409,7 +437,7 @@ def test_specialist_engine_links_guided_operational_readiness_specialist_explici
         requires_human_validation=False,
         rationale="contexto=readiness; apoio=local",
         tensions_considered=["equilibrar ambicao estrategica com a menor proxima acao segura"],
-        specialist_hints=["especialista_planejamento_operacional"],
+        specialist_hints=["operational_planning_specialist"],
         success_criteria=["checkpoint dominante deve ficar explicito"],
         dominant_tension="equilibrar ambicao estrategica com a menor proxima acao segura",
         smallest_safe_next_action="explicitar o checkpoint dominante",
@@ -424,18 +452,18 @@ def test_specialist_engine_links_guided_operational_readiness_specialist_explici
         domain_specialist_routes=[
             DomainSpecialistRouteContract(
                 domain_name="operational_readiness",
-                specialist_type="especialista_planejamento_operacional",
+                specialist_type="operational_planning_specialist",
                 specialist_mode="guided",
                 routing_reason="rota canonica de readiness operacional em modo guiado",
             )
         ],
         shared_memory_contexts={
-            "especialista_planejamento_operacional": SpecialistSharedMemoryContextContract(
-                specialist_type="especialista_planejamento_operacional",
+            "operational_planning_specialist": SpecialistSharedMemoryContextContract(
+                specialist_type="operational_planning_specialist",
                 sharing_mode="core_mediated_read_only",
                 continuity_mode="continuar",
                 shared_memory_brief=(
-                    "specialist=especialista_planejamento_operacional continuidade=continuar"
+                    "specialist=operational_planning_specialist continuidade=continuar"
                 ),
                 write_policy="through_core_only",
                 consumer_mode="domain_guided_memory_packet",
@@ -492,7 +520,7 @@ def test_specialist_engine_links_guided_strategy_specialist_explicitly() -> None
         requires_human_validation=False,
         rationale="contexto=strategy; apoio=local",
         tensions_considered=["equilibrar ambicao estrategica com a menor proxima acao segura"],
-        specialist_hints=["especialista_analise_estruturada"],
+        specialist_hints=["structured_analysis_specialist"],
         success_criteria=["criterio estrategico dominante deve ficar explicito"],
         dominant_tension="equilibrar ambicao estrategica com a menor proxima acao segura",
         smallest_safe_next_action="comparar trade-offs centrais",
@@ -507,18 +535,18 @@ def test_specialist_engine_links_guided_strategy_specialist_explicitly() -> None
         domain_specialist_routes=[
             DomainSpecialistRouteContract(
                 domain_name="strategy",
-                specialist_type="especialista_analise_estruturada",
+                specialist_type="structured_analysis_specialist",
                 specialist_mode="guided",
                 routing_reason="rota canonica de estrategia em modo guiado",
             )
         ],
         shared_memory_contexts={
-            "especialista_analise_estruturada": SpecialistSharedMemoryContextContract(
-                specialist_type="especialista_analise_estruturada",
+            "structured_analysis_specialist": SpecialistSharedMemoryContextContract(
+                specialist_type="structured_analysis_specialist",
                 sharing_mode="core_mediated_read_only",
                 continuity_mode="continuar",
                 shared_memory_brief=(
-                    "specialist=especialista_analise_estruturada continuidade=continuar"
+                    "specialist=structured_analysis_specialist continuidade=continuar"
                 ),
                 write_policy="through_core_only",
                 consumer_mode="domain_guided_memory_packet",
@@ -574,7 +602,7 @@ def test_specialist_engine_links_guided_decision_risk_specialist_explicitly() ->
         requires_human_validation=True,
         rationale="contexto=decision_risk; apoio=local",
         tensions_considered=["equilibrar urgencia de decisao com reversibilidade segura"],
-        specialist_hints=["especialista_revisao_governanca"],
+        specialist_hints=["governance_review_specialist"],
         success_criteria=["gate dominante deve ficar explicito"],
         dominant_tension="equilibrar urgencia de decisao com reversibilidade segura",
         smallest_safe_next_action="explicitar o gate dominante antes de operar",
@@ -589,18 +617,18 @@ def test_specialist_engine_links_guided_decision_risk_specialist_explicitly() ->
         domain_specialist_routes=[
             DomainSpecialistRouteContract(
                 domain_name="decision_risk",
-                specialist_type="especialista_revisao_governanca",
+                specialist_type="governance_review_specialist",
                 specialist_mode="guided",
                 routing_reason="rota canonica de decision risk em modo guiado",
             )
         ],
         shared_memory_contexts={
-            "especialista_revisao_governanca": SpecialistSharedMemoryContextContract(
-                specialist_type="especialista_revisao_governanca",
+            "governance_review_specialist": SpecialistSharedMemoryContextContract(
+                specialist_type="governance_review_specialist",
                 sharing_mode="core_mediated_read_only",
                 continuity_mode="continuar",
                 shared_memory_brief=(
-                    "specialist=especialista_revisao_governanca continuidade=continuar"
+                    "specialist=governance_review_specialist continuidade=continuar"
                 ),
                 write_policy="through_core_only",
                 consumer_mode="domain_guided_memory_packet",
@@ -656,7 +684,7 @@ def test_specialist_engine_prefers_active_domain_order_when_routes_share_special
         requires_human_validation=True,
         rationale="contexto=decision_risk; apoio=local",
         tensions_considered=["equilibrar urgencia com reversibilidade"],
-        specialist_hints=["especialista_revisao_governanca"],
+        specialist_hints=["governance_review_specialist"],
         success_criteria=["gate dominante deve ficar explicito"],
         dominant_tension="equilibrar urgencia com reversibilidade",
         smallest_safe_next_action="comparar gates de contencao",
@@ -671,13 +699,13 @@ def test_specialist_engine_prefers_active_domain_order_when_routes_share_special
         domain_specialist_routes=[
             DomainSpecialistRouteContract(
                 domain_name="governance",
-                specialist_type="especialista_revisao_governanca",
+                specialist_type="governance_review_specialist",
                 specialist_mode="guided",
                 routing_reason="rota canonica de governanca em modo guiado",
             ),
             DomainSpecialistRouteContract(
                 domain_name="decision_risk",
-                specialist_type="especialista_revisao_governanca",
+                specialist_type="governance_review_specialist",
                 specialist_mode="guided",
                 routing_reason="rota canonica de decision risk em modo guiado",
             ),

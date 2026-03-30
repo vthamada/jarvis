@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from shared.contracts import (
     DeliberativePlanContract,
@@ -17,6 +17,14 @@ from shared.domain_registry import (
     canonical_domain_refs_for_name,
     is_specialist_route,
     resolve_route,
+)
+from shared.specialist_registry import (
+    GOVERNANCE_REVIEW_SPECIALIST,
+    OPERATIONAL_PLANNING_SPECIALIST,
+    SOFTWARE_CHANGE_SPECIALIST,
+    STRUCTURED_ANALYSIS_SPECIALIST,
+    canonical_specialist_type,
+    normalize_specialist_types,
 )
 
 
@@ -89,20 +97,38 @@ class SpecialistEngine:
     ) -> SpecialistHandoffPlan:
         """Build the explicit selection and boundary plan for specialist handoffs."""
 
+        normalized_plan = replace(
+            plan,
+            specialist_hints=normalize_specialist_types(plan.specialist_hints),
+        )
+        normalized_routes = [
+            replace(
+                route,
+                specialist_type=canonical_specialist_type(route.specialist_type),
+            )
+            for route in (domain_specialist_routes or [])
+        ]
+        normalized_contexts = {
+            canonical_specialist_type(key): replace(
+                value,
+                specialist_type=canonical_specialist_type(value.specialist_type),
+            )
+            for key, value in (shared_memory_contexts or {}).items()
+        }
         selections = self._select_handoffs(
             intent=intent,
-            plan=plan,
-            domain_specialist_routes=domain_specialist_routes or [],
+            plan=normalized_plan,
+            domain_specialist_routes=normalized_routes,
         )
         invocations: list[SpecialistInvocationContract] = []
         for index, selection in enumerate(
             [item for item in selections if item.selection_status == "selected"],
             start=1,
         ):
-            shared_memory_context = (shared_memory_contexts or {}).get(selection.specialist_type)
+            shared_memory_context = normalized_contexts.get(selection.specialist_type)
             coherence_issue = self._validate_route_domain_memory_coherence(
                 selection=selection,
-                plan=plan,
+                plan=normalized_plan,
                 shared_memory_context=shared_memory_context,
             )
             if coherence_issue is not None:
@@ -112,7 +138,7 @@ class SpecialistEngine:
                 continue
             invocation = self._build_invocation(
                 selection=selection,
-                plan=plan,
+                plan=normalized_plan,
                 knowledge_snippets=knowledge_snippets,
                 shared_memory_context=shared_memory_context,
                 session_id=session_id,
@@ -216,7 +242,7 @@ class SpecialistEngine:
         )
         for specialist_hint in plan.specialist_hints:
             route = canonical_route_for(specialist_hint)
-            if specialist_hint == "especialista_planejamento_operacional" and has_decomposition:
+            if specialist_hint == OPERATIONAL_PLANNING_SPECIALIST and has_decomposition:
                 selections.append(
                     SpecialistSelectionContract(
                         specialist_type=specialist_hint,
@@ -230,7 +256,7 @@ class SpecialistEngine:
                         selection_mode=route.specialist_mode if route else "standard",
                     )
                 )
-            elif specialist_hint == "especialista_analise_estruturada" and has_tradeoff:
+            elif specialist_hint == STRUCTURED_ANALYSIS_SPECIALIST and has_tradeoff:
                 selections.append(
                     SpecialistSelectionContract(
                         specialist_type=specialist_hint,
@@ -244,7 +270,7 @@ class SpecialistEngine:
                         selection_mode=route.specialist_mode if route else "standard",
                     )
                 )
-            elif specialist_hint == "especialista_revisao_governanca" and has_risk:
+            elif specialist_hint == GOVERNANCE_REVIEW_SPECIALIST and has_risk:
                 selections.append(
                     SpecialistSelectionContract(
                         specialist_type=specialist_hint,
@@ -257,7 +283,7 @@ class SpecialistEngine:
                     )
                 )
             elif (
-                specialist_hint == "especialista_software_subordinado"
+                specialist_hint == SOFTWARE_CHANGE_SPECIALIST
                 and route is not None
                 and route.domain_name in plan.active_domains
                 and is_specialist_route(route.domain_name)
@@ -311,7 +337,7 @@ class SpecialistEngine:
         knowledge_hint = (
             knowledge_snippets[0] if knowledge_snippets else "sem apoio extra de conhecimento"
         )
-        if specialist_hint == "especialista_planejamento_operacional":
+        if specialist_hint == OPERATIONAL_PLANNING_SPECIALIST:
             open_loop = (
                 plan.goal
                 if plan.continuity_action in {"continuar", "retomar"}
@@ -349,7 +375,7 @@ class SpecialistEngine:
                 ],
                 handoff_channel=invocation.boundary.response_channel,
             )
-        if specialist_hint == "especialista_analise_estruturada":
+        if specialist_hint == STRUCTURED_ANALYSIS_SPECIALIST:
             is_promoted_mode = invocation.selection_mode in {"guided", "active"}
             return SpecialistContributionContract(
                 specialist_type=specialist_hint,
@@ -385,7 +411,7 @@ class SpecialistEngine:
                 ],
                 handoff_channel=invocation.boundary.response_channel,
             )
-        if specialist_hint == "especialista_revisao_governanca":
+        if specialist_hint == GOVERNANCE_REVIEW_SPECIALIST:
             is_promoted_mode = invocation.selection_mode in {"guided", "active"}
             return SpecialistContributionContract(
                 specialist_type=specialist_hint,
@@ -418,7 +444,7 @@ class SpecialistEngine:
                 ],
                 handoff_channel=invocation.boundary.response_channel,
             )
-        if specialist_hint == "especialista_software_subordinado":
+        if specialist_hint == SOFTWARE_CHANGE_SPECIALIST:
             is_promoted_mode = invocation.selection_mode in {"guided", "active"}
             return SpecialistContributionContract(
                 specialist_type=specialist_hint,
@@ -589,6 +615,23 @@ class SpecialistEngine:
                     "continuity_context_brief="
                     f"{shared_memory_context.continuity_context_brief}"
                 )
+            if shared_memory_context.consumer_profile:
+                handoff_inputs.append(
+                    f"consumer_profile={shared_memory_context.consumer_profile}"
+                )
+            if shared_memory_context.consumer_objective:
+                handoff_inputs.append(
+                    f"consumer_objective={shared_memory_context.consumer_objective}"
+                )
+            if shared_memory_context.expected_deliverables:
+                handoff_inputs.append(
+                    "expected_deliverables="
+                    + ",".join(shared_memory_context.expected_deliverables)
+                )
+            if shared_memory_context.telemetry_focus:
+                handoff_inputs.append(
+                    "telemetry_focus=" + ",".join(shared_memory_context.telemetry_focus)
+                )
             if shared_memory_context.semantic_focus:
                 handoff_inputs.append(
                     "semantic_focus=" + ",".join(shared_memory_context.semantic_focus[:4])
@@ -602,12 +645,16 @@ class SpecialistEngine:
                     "related_mission_ids="
                     + ",".join(str(item) for item in shared_memory_context.related_mission_ids)
                 )
-        expected_outputs = [
-            "structured_findings",
-            "subordinated_recommendation",
-            "confidence_score",
-            "through_core_only",
-        ]
+        expected_outputs = (
+            list(shared_memory_context.expected_deliverables)
+            if shared_memory_context and shared_memory_context.expected_deliverables
+            else [
+                "structured_findings",
+                "subordinated_recommendation",
+                "confidence_score",
+            ]
+        )
+        expected_outputs.append("through_core_only")
         return SpecialistInvocationContract(
             invocation_id=invocation_id,
             specialist_type=specialist_hint,
@@ -647,21 +694,21 @@ class SpecialistEngine:
 
     @staticmethod
     def _role_for_specialist(specialist_hint: str, selection_mode: str = "standard") -> str:
-        if specialist_hint == "especialista_planejamento_operacional":
+        if specialist_hint == OPERATIONAL_PLANNING_SPECIALIST:
             return (
                 "planejamento_operacional_guided"
                 if selection_mode in {"guided", "active"}
                 else "planejamento_operacional_subordinado"
             )
-        if specialist_hint == "especialista_analise_estruturada":
+        if specialist_hint == STRUCTURED_ANALYSIS_SPECIALIST:
             return "analise_estruturada_subordinada"
-        if specialist_hint == "especialista_revisao_governanca":
+        if specialist_hint == GOVERNANCE_REVIEW_SPECIALIST:
             return (
                 "revisao_governanca_guided"
                 if selection_mode in {"guided", "active"}
                 else "revisao_governanca_subordinada"
             )
-        if specialist_hint == "especialista_software_subordinado":
+        if specialist_hint == SOFTWARE_CHANGE_SPECIALIST:
             return (
                 "software_subordinado_guided"
                 if selection_mode in {"guided", "active"}
@@ -671,21 +718,21 @@ class SpecialistEngine:
 
     @staticmethod
     def _task_focus_for_specialist(specialist_hint: str, selection_mode: str = "standard") -> str:
-        if specialist_hint == "especialista_planejamento_operacional":
+        if specialist_hint == OPERATIONAL_PLANNING_SPECIALIST:
             return (
                 "sequenciar etapas pequenas e checkpoints guiados por dominio"
                 if selection_mode in {"guided", "active"}
                 else "sequenciar etapas pequenas e checkpoints"
             )
-        if specialist_hint == "especialista_analise_estruturada":
+        if specialist_hint == STRUCTURED_ANALYSIS_SPECIALIST:
             return "explicitar trade-offs e criterio de decisao"
-        if specialist_hint == "especialista_revisao_governanca":
+        if specialist_hint == GOVERNANCE_REVIEW_SPECIALIST:
             return (
                 "revisar limites, auditoria e cautela operacional guiadas por dominio"
                 if selection_mode in {"guided", "active"}
                 else "revisar limites, auditoria e cautela operacional"
             )
-        if specialist_hint == "especialista_software_subordinado":
+        if specialist_hint == SOFTWARE_CHANGE_SPECIALIST:
             return (
                 "avaliar contratos, acoplamento e mudanca segura guiada por dominio"
                 if selection_mode in {"guided", "active"}

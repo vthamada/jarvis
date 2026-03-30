@@ -12271,9 +12271,9 @@ O detalhamento tático passa a ser aprofundado prioritariamente em:
 
 - `docs/implementation/implementation-strategy.md`
 - `docs/implementation/service-breakdown.md`
-- `docs/implementation/post-v1-sprint-cycle.md`
-- `docs/implementation/v1-5-sprint-cycle.md`
-- `docs/implementation/v2-sprint-cycle.md`
+- `docs/archive/implementation/post-v1-sprint-cycle.md`
+- `docs/archive/implementation/v1-5-sprint-cycle.md`
+- `docs/archive/implementation/v2-sprint-cycle.md`
 
 ---
 

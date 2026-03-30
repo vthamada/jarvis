@@ -1,4 +1,4 @@
-"""Domain registry derived from the Documento-Mestre canonical domain map."""
+"""Registry de dominios derivado do mapa canonico do Documento-Mestre."""
 
 from __future__ import annotations
 
@@ -6,12 +6,14 @@ from dataclasses import dataclass, field
 from json import loads
 from pathlib import Path
 
+from shared.specialist_registry import canonical_specialist_type
+
 _REGISTRY_PATH = Path(__file__).parent.parent / "knowledge" / "curated" / "domain_registry.json"
 
 
 @dataclass(frozen=True)
 class DomainEntry:
-    """Single entry from the canonical domain map or runtime route registry."""
+    """Entrada unica do mapa canonico ou do registry de rotas de runtime."""
 
     domain_name: str
     display_name: str
@@ -22,6 +24,10 @@ class DomainEntry:
     canonical_refs: tuple[str, ...] = field(default_factory=tuple)
     linked_specialist_type: str | None = None
     specialist_mode: str | None = None
+    consumer_profile: str | None = None
+    consumer_objective: str | None = None
+    expected_deliverables: tuple[str, ...] = field(default_factory=tuple)
+    telemetry_focus: tuple[str, ...] = field(default_factory=tuple)
 
 
 def _load_registries(
@@ -40,8 +46,16 @@ def _load_registries(
             maturity=item.get("maturity", "canonical_only"),
             summary=item.get("summary", ""),
             canonical_refs=tuple(item.get("canonical_refs", [])),
-            linked_specialist_type=item.get("linked_specialist_type"),
+            linked_specialist_type=(
+                canonical_specialist_type(item["linked_specialist_type"])
+                if item.get("linked_specialist_type")
+                else None
+            ),
             specialist_mode=item.get("specialist_mode"),
+            consumer_profile=item.get("consumer_profile"),
+            consumer_objective=item.get("consumer_objective"),
+            expected_deliverables=tuple(item.get("expected_deliverables", [])),
+            telemetry_focus=tuple(item.get("telemetry_focus", [])),
         )
         canonical[entry.domain_name] = entry
     routes: dict[str, DomainEntry] = {}
@@ -54,8 +68,16 @@ def _load_registries(
             maturity=item.get("maturity", "active_registry"),
             summary=item.get("summary", ""),
             canonical_refs=tuple(item.get("canonical_refs", [])),
-            linked_specialist_type=item.get("linked_specialist_type"),
+            linked_specialist_type=(
+                canonical_specialist_type(item["linked_specialist_type"])
+                if item.get("linked_specialist_type")
+                else None
+            ),
             specialist_mode=item.get("specialist_mode"),
+            consumer_profile=item.get("consumer_profile"),
+            consumer_objective=item.get("consumer_objective"),
+            expected_deliverables=tuple(item.get("expected_deliverables", [])),
+            telemetry_focus=tuple(item.get("telemetry_focus", [])),
         )
         routes[entry.domain_name] = entry
     return canonical, routes
@@ -71,18 +93,18 @@ def load_domain_registries(
 
 CANONICAL_DOMAIN_REGISTRY, RUNTIME_ROUTE_REGISTRY = load_domain_registries()
 
-# Short-term compatibility map: runtime route labels remain stable identifiers,
-# but canonical domain refs are the only long-term semantic language.
+# Mapa curto de compatibilidade: labels de runtime continuam estaveis,
+# mas refs canonicas seguem como linguagem semantica principal do sistema.
 LEGACY_LABEL_TO_CANONICAL_DOMAINS: dict[str, tuple[str, ...]] = {
     name: entry.canonical_refs for name, entry in RUNTIME_ROUTE_REGISTRY.items()
 }
 
-# Routes eligible for runtime activation (excludes canonical_only entries).
+# Rotas elegiveis para ativacao em runtime (exclui entradas canonical_only).
 RUNTIME_ELIGIBLE_ROUTES: frozenset[str] = frozenset(
     name for name, entry in RUNTIME_ROUTE_REGISTRY.items() if entry.maturity != "canonical_only"
 )
 
-# Routes where a domain-linked specialist is wired into the runtime.
+# Rotas em que um especialista ligado ao dominio ja foi conectado ao runtime.
 SPECIALIST_ROUTE_MODES: frozenset[str] = frozenset({"shadow", "guided", "active"})
 SPECIALIST_ROUTES: frozenset[str] = frozenset(
     name
@@ -90,20 +112,20 @@ SPECIALIST_ROUTES: frozenset[str] = frozenset(
     if entry.linked_specialist_type and entry.specialist_mode in SPECIALIST_ROUTE_MODES
 )
 
-# Shadow specialist routes remain observable for backward-compatible comparisons.
+# Rotas em shadow permanecem observaveis para comparacoes e compatibilidade curta.
 SHADOW_SPECIALIST_ROUTES: frozenset[str] = frozenset(
     name for name, entry in RUNTIME_ROUTE_REGISTRY.items() if entry.specialist_mode == "shadow"
 )
 
-# Promoted specialist routes are above shadow mode but still subordinated to the core.
+# Rotas promovidas ficam acima de shadow, mas continuam subordinadas ao nucleo.
 PROMOTED_SPECIALIST_ROUTES: frozenset[str] = frozenset(
     name
     for name, entry in RUNTIME_ROUTE_REGISTRY.items()
     if entry.specialist_mode in {"guided", "active"}
 )
 
-# Fallback route: last runtime route with maturity == "active_registry".
-# By convention, the most general/operational route is listed last in the JSON.
+# Rota de fallback: ultima rota de runtime com maturity == "active_registry".
+# Por convencao, a rota mais geral/operacional fica por ultimo no JSON.
 _active_routes = [
     name for name, entry in RUNTIME_ROUTE_REGISTRY.items() if entry.maturity == "active_registry"
 ]
@@ -111,33 +133,33 @@ FALLBACK_RUNTIME_ROUTE: str = _active_routes[-1] if _active_routes else "product
 
 
 def is_shadow_route(route_name: str) -> bool:
-    """Return True if the route is a shadow specialist route in the registry."""
+    """Retorna True se a rota estiver em modo shadow no registry."""
     return route_name in SHADOW_SPECIALIST_ROUTES
 
 
 def is_specialist_route(route_name: str) -> bool:
-    """Return True if the route has a domain-linked specialist in the registry."""
+    """Retorna True se a rota tiver especialista ligado ao dominio no registry."""
     return route_name in SPECIALIST_ROUTES
 
 
 def is_promoted_specialist_route(route_name: str) -> bool:
-    """Return True if the route is above shadow mode but still core-subordinated."""
+    """Retorna True se a rota estiver acima de shadow, mas ainda subordinada ao nucleo."""
     return route_name in PROMOTED_SPECIALIST_ROUTES
 
 
 def resolve_route(route_name: str) -> DomainEntry | None:
-    """Return the DomainEntry for a runtime route, or None if not found."""
+    """Retorna a DomainEntry de uma rota de runtime, ou None se nao existir."""
     return RUNTIME_ROUTE_REGISTRY.get(route_name)
 
 
 def route_routing_source(route_name: str) -> str:
-    """Return the source that authorized the current route identifier."""
+    """Retorna a origem que autorizou o identificador atual da rota."""
 
     return "domain_registry" if route_name in RUNTIME_ROUTE_REGISTRY else "legacy_label_adapter"
 
 
 def canonical_domain_refs_for_name(domain_name: str) -> tuple[str, ...]:
-    """Resolve canonical domain refs for a runtime route or canonical domain name."""
+    """Resolve refs canonicas para uma rota de runtime ou nome de dominio canonico."""
 
     if domain_name in CANONICAL_DOMAIN_REGISTRY:
         return (domain_name,)
@@ -148,14 +170,14 @@ def canonical_domain_refs_for_name(domain_name: str) -> tuple[str, ...]:
 
 
 def primary_canonical_domain_for_name(domain_name: str) -> str | None:
-    """Return the first canonical domain associated with a route or domain name."""
+    """Retorna o primeiro dominio canonico associado a uma rota ou nome de dominio."""
 
     refs = canonical_domain_refs_for_name(domain_name)
     return refs[0] if refs else None
 
 
 def canonical_scopes_for_route(route_name: str) -> frozenset[str]:
-    """Return the domain_scope values of all canonical_refs for a runtime route."""
+    """Retorna os valores de domain_scope das canonical_refs de uma rota."""
     refs = canonical_domain_refs_for_name(route_name)
     if not refs:
         return frozenset()

@@ -44,7 +44,7 @@ def sample_plan() -> DeliberativePlanContract:
         requires_human_validation=False,
         rationale="contexto=nenhum; apoio=baseline local",
         tensions_considered=["equilibrar ambicao estrategica com a menor proxima acao segura"],
-        specialist_hints=["especialista_planejamento_operacional"],
+        specialist_hints=["operational_planning_specialist"],
         success_criteria=["plano deve indicar a menor proxima acao segura"],
         dominant_tension="equilibrar ambicao estrategica com a menor proxima acao segura",
         smallest_safe_next_action="continuar a missao",
@@ -56,7 +56,7 @@ def sample_plan() -> DeliberativePlanContract:
 def sample_specialist_contributions() -> list[SpecialistContributionContract]:
     return [
         SpecialistContributionContract(
-            specialist_type="especialista_planejamento_operacional",
+            specialist_type="operational_planning_specialist",
             role="planejamento_operacional_subordinado",
             focus="sequenciamento reversivel e checkpoints claros",
             findings=["open_loop: fechar checkpoint principal"],
@@ -393,23 +393,23 @@ def test_memory_service_prepares_core_mediated_shared_memory_for_specialists() -
 
     contexts = service.prepare_specialist_shared_memory(
         session_id="sess-specialist",
-        specialist_hints=["especialista_planejamento_operacional"],
+        specialist_hints=["operational_planning_specialist"],
         active_domains=["strategy", "productivity"],
         mission_id="mission-specialist-b",
         continuity_context=continuity,
     )
 
-    shared_memory = contexts["especialista_planejamento_operacional"]
+    shared_memory = contexts["operational_planning_specialist"]
     persisted = service.get_specialist_shared_memory(
         session_id="sess-specialist",
-        specialist_type="especialista_planejamento_operacional",
+        specialist_type="operational_planning_specialist",
     )
 
     assert shared_memory.sharing_mode == "core_mediated_read_only"
     assert shared_memory.write_policy == "through_core_only"
     assert shared_memory.related_mission_ids
     assert shared_memory.shared_memory_brief.startswith(
-        "specialist=especialista_planejamento_operacional"
+        "specialist=operational_planning_specialist"
     )
     assert persisted is not None
     assert persisted.shared_memory_brief == shared_memory.shared_memory_brief
@@ -451,7 +451,7 @@ def test_memory_service_builds_guided_domain_memory_packet_for_promoted_speciali
             recommended_task_type="produce_analysis_brief",
             requires_human_validation=False,
             rationale="contexto=software",
-            specialist_hints=["especialista_software_subordinado"],
+            specialist_hints=["software_change_specialist"],
             continuity_action="continuar",
             open_loops=["comparar mudanca no servico"],
         ),
@@ -460,13 +460,13 @@ def test_memory_service_builds_guided_domain_memory_packet_for_promoted_speciali
 
     contexts = service.prepare_specialist_shared_memory(
         session_id="sess-guided-memory",
-        specialist_hints=["especialista_software_subordinado"],
+        specialist_hints=["software_change_specialist"],
         active_domains=["software_development", "analysis"],
         mission_id="mission-guided-memory",
         continuity_context=None,
     )
 
-    guided = contexts["especialista_software_subordinado"]
+    guided = contexts["software_change_specialist"]
     assert guided.consumer_mode == "domain_guided_memory_packet"
     assert guided.mission_context_brief is not None
     assert "goal=Analyze Python service rollout." in guided.mission_context_brief
@@ -474,13 +474,30 @@ def test_memory_service_builds_guided_domain_memory_packet_for_promoted_speciali
     assert "active_domains=software_development,analysis" in guided.domain_context_brief
     assert guided.continuity_context_brief is not None
     assert "continuity_mode=continuar" in guided.continuity_context_brief
+    assert guided.consumer_profile == "software_change_review"
+    assert guided.consumer_objective is not None
+    assert "direção de patch recomendada" in guided.consumer_objective
+    assert guided.expected_deliverables == [
+        "implementation_findings",
+        "change_risk_summary",
+        "recommended_patch_direction",
+    ]
+    assert guided.telemetry_focus == [
+        "contract_impact",
+        "change_safety",
+        "implementation_trace",
+    ]
 
     persisted = service.get_specialist_shared_memory(
         session_id="sess-guided-memory",
-        specialist_type="especialista_software_subordinado",
+        specialist_type="software_change_specialist",
     )
     assert persisted is not None
     assert persisted.consumer_mode == "domain_guided_memory_packet"
+    assert persisted.consumer_profile == guided.consumer_profile
+    assert persisted.consumer_objective == guided.consumer_objective
+    assert persisted.expected_deliverables == guided.expected_deliverables
+    assert persisted.telemetry_focus == guided.telemetry_focus
     assert persisted.mission_context_brief == guided.mission_context_brief
     assert persisted.domain_context_brief == guided.domain_context_brief
     assert persisted.continuity_context_brief == guided.continuity_context_brief
@@ -789,7 +806,7 @@ def test_memory_service_builds_guided_domain_memory_packet_for_analysis_speciali
             recommended_task_type="produce_analysis_brief",
             requires_human_validation=False,
             rationale="contexto=analysis",
-            specialist_hints=["especialista_analise_estruturada"],
+            specialist_hints=["structured_analysis_specialist"],
             continuity_action="continuar",
             open_loops=["consolidar criterio dominante"],
         ),
@@ -798,19 +815,19 @@ def test_memory_service_builds_guided_domain_memory_packet_for_analysis_speciali
 
     contexts = service.prepare_specialist_shared_memory(
         session_id="sess-guided-analysis",
-        specialist_hints=["especialista_analise_estruturada"],
+        specialist_hints=["structured_analysis_specialist"],
         active_domains=["analysis", "decision_risk"],
         mission_id="mission-guided-analysis",
         continuity_context=None,
     )
 
-    guided = contexts["especialista_analise_estruturada"]
+    guided = contexts["structured_analysis_specialist"]
     assert guided.consumer_mode == "domain_guided_memory_packet"
     assert guided.domain_context_brief is not None
     assert "active_domains=analysis,decision_risk" in guided.domain_context_brief
     persisted = service.get_specialist_shared_memory(
         session_id="sess-guided-analysis",
-        specialist_type="especialista_analise_estruturada",
+        specialist_type="structured_analysis_specialist",
     )
     assert persisted is not None
     assert persisted.consumer_mode == "domain_guided_memory_packet"
@@ -836,7 +853,7 @@ def test_memory_service_builds_guided_domain_memory_packet_for_governance_specia
         deliberative_plan=DeliberativePlanContract(
             plan_summary="avaliar limites de governanca do rollout",
             goal="Review governance limits",
-            steps=["mapear riscos", "comparar limites", "recomendar conten??o"],
+            steps=["mapear riscos", "comparar limites", "recomendar contenção"],
             active_domains=["governance", "decision_risk"],
             active_minds=["mente_etica"],
             constraints=["through_core_only"],
@@ -844,7 +861,7 @@ def test_memory_service_builds_guided_domain_memory_packet_for_governance_specia
             recommended_task_type="produce_analysis_brief",
             requires_human_validation=True,
             rationale="contexto=governance",
-            specialist_hints=["especialista_revisao_governanca"],
+            specialist_hints=["governance_review_specialist"],
             continuity_action="continuar",
             open_loops=["validar limite dominante"],
         ),
@@ -853,13 +870,13 @@ def test_memory_service_builds_guided_domain_memory_packet_for_governance_specia
 
     contexts = service.prepare_specialist_shared_memory(
         session_id="sess-guided-governance",
-        specialist_hints=["especialista_revisao_governanca"],
+        specialist_hints=["governance_review_specialist"],
         active_domains=["governance", "decision_risk"],
         mission_id="mission-guided-governance",
         continuity_context=None,
     )
 
-    guided = contexts["especialista_revisao_governanca"]
+    guided = contexts["governance_review_specialist"]
     assert guided.consumer_mode == "domain_guided_memory_packet"
     assert guided.domain_context_brief is not None
     assert "active_domains=governance,decision_risk" in guided.domain_context_brief
@@ -893,7 +910,7 @@ def test_memory_service_builds_guided_packet_for_readiness_specialist() -> None:
             recommended_task_type="draft_plan",
             requires_human_validation=False,
             rationale="contexto=readiness",
-            specialist_hints=["especialista_planejamento_operacional"],
+            specialist_hints=["operational_planning_specialist"],
             continuity_action="continuar",
             open_loops=["fechar checkpoint de readiness"],
         ),
@@ -902,13 +919,13 @@ def test_memory_service_builds_guided_packet_for_readiness_specialist() -> None:
 
     contexts = service.prepare_specialist_shared_memory(
         session_id="sess-guided-readiness",
-        specialist_hints=["especialista_planejamento_operacional"],
+        specialist_hints=["operational_planning_specialist"],
         active_domains=["operational_readiness", "observability"],
         mission_id="mission-guided-readiness",
         continuity_context=None,
     )
 
-    guided = contexts["especialista_planejamento_operacional"]
+    guided = contexts["operational_planning_specialist"]
     assert guided.consumer_mode == "domain_guided_memory_packet"
     assert guided.domain_context_brief is not None
     assert "active_domains=operational_readiness,observability" in guided.domain_context_brief
@@ -942,7 +959,7 @@ def test_memory_service_builds_guided_packet_for_strategy_specialist() -> None:
             recommended_task_type="draft_plan",
             requires_human_validation=False,
             rationale="contexto=strategy",
-            specialist_hints=["especialista_analise_estruturada"],
+            specialist_hints=["structured_analysis_specialist"],
             continuity_action="continuar",
             open_loops=["fechar criterio estrategico dominante"],
         ),
@@ -951,13 +968,13 @@ def test_memory_service_builds_guided_packet_for_strategy_specialist() -> None:
 
     contexts = service.prepare_specialist_shared_memory(
         session_id="sess-guided-strategy",
-        specialist_hints=["especialista_analise_estruturada"],
+        specialist_hints=["structured_analysis_specialist"],
         active_domains=["strategy", "decision_risk"],
         mission_id="mission-guided-strategy",
         continuity_context=None,
     )
 
-    guided = contexts["especialista_analise_estruturada"]
+    guided = contexts["structured_analysis_specialist"]
     assert guided.consumer_mode == "domain_guided_memory_packet"
     assert guided.domain_context_brief is not None
     assert "active_domains=strategy,decision_risk" in guided.domain_context_brief
@@ -990,7 +1007,7 @@ def test_memory_service_builds_guided_packet_for_decision_risk_specialist() -> N
             recommended_task_type="produce_analysis_brief",
             requires_human_validation=True,
             rationale="contexto=decision_risk",
-            specialist_hints=["especialista_revisao_governanca"],
+            specialist_hints=["governance_review_specialist"],
             continuity_action="continuar",
             open_loops=["fechar gate dominante de decisao"],
         ),
@@ -999,13 +1016,13 @@ def test_memory_service_builds_guided_packet_for_decision_risk_specialist() -> N
 
     contexts = service.prepare_specialist_shared_memory(
         session_id="sess-guided-decision-risk",
-        specialist_hints=["especialista_revisao_governanca"],
+        specialist_hints=["governance_review_specialist"],
         active_domains=["decision_risk", "governance"],
         mission_id="mission-guided-decision-risk",
         continuity_context=None,
     )
 
-    guided = contexts["especialista_revisao_governanca"]
+    guided = contexts["governance_review_specialist"]
     assert guided.consumer_mode == "domain_guided_memory_packet"
     assert guided.domain_context_brief is not None
     assert "active_domains=decision_risk,governance" in guided.domain_context_brief

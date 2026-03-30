@@ -151,11 +151,11 @@ Funcao:
 
 Exemplos:
 
-- `docs/implementation/post-v1-cycle-closure.md`
-- `docs/implementation/v1-5-cycle-closure.md`
-- `docs/implementation/v2-sprint-cycle.md`
-- `docs/implementation/v1-5-sprint-cycle.md`
-- `docs/implementation/post-v1-sprint-cycle.md`
+- `docs/archive/implementation/post-v1-cycle-closure.md`
+- `docs/archive/implementation/v1-5-cycle-closure.md`
+- `docs/archive/implementation/v2-sprint-cycle.md`
+- `docs/archive/implementation/v1-5-sprint-cycle.md`
+- `docs/archive/implementation/post-v1-sprint-cycle.md`
 - `docs/implementation/implementation-strategy.md`
 - `docs/implementation/service-breakdown.md`
 - `docs/archive/implementation/sprint-1-plan.md`
@@ -182,7 +182,7 @@ Funcao:
 Exemplos:
 
 - `docs/executive/master-summary.md`
-- `docs/executive/v1-scope-summary.md`
+- `docs/archive/executive/v1-scope-summary.md`
 
 ### 6.5 Derivados de aderencia e traducao
 
@@ -282,10 +282,10 @@ Os derivados ativos mais importantes, no estado atual do projeto, sao:
 
 1. `docs/operations/v1-operational-baseline.md`
 2. `docs/roadmap/programa-ate-v3.md`
-3. `docs/implementation/post-v1-sprint-cycle.md`
-4. `docs/implementation/post-v1-cycle-closure.md`
-5. `docs/implementation/v1-5-cycle-closure.md`
-6. `docs/implementation/v2-sprint-cycle.md`
+3. `docs/archive/implementation/post-v1-sprint-cycle.md`
+4. `docs/archive/implementation/post-v1-cycle-closure.md`
+5. `docs/archive/implementation/v1-5-cycle-closure.md`
+6. `docs/archive/implementation/v2-sprint-cycle.md`
 7. `docs/operations/release-and-change-management.md`
 8. `docs/operations/incident-response.md`
 9. `docs/implementation/implementation-strategy.md`

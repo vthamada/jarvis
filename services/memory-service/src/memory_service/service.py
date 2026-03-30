@@ -37,6 +37,11 @@ from shared.memory_registry import (
     default_priority_rules,
     specialist_memory_policy_payload,
 )
+from shared.specialist_registry import (
+    canonical_specialist_type,
+    legacy_specialist_type,
+    normalize_specialist_types,
+)
 from shared.types import (
     MemoryClass,
     MemoryQueryId,
@@ -347,8 +352,9 @@ class MemoryService:
             if continuity_context
             else "continuar"
         )
+        normalized_hints = normalize_specialist_types(specialist_hints)
         contexts: dict[str, SpecialistSharedMemoryContextContract] = {}
-        for specialist_hint in specialist_hints:
+        for specialist_hint in normalized_hints:
             context = self._build_specialist_shared_memory_context(
                 specialist_type=specialist_hint,
                 continuity_mode=continuity_mode,
@@ -360,7 +366,7 @@ class MemoryService:
             self.repository.upsert_specialist_shared_memory(
                 StoredSpecialistSharedMemory(
                     session_id=session_id,
-                    specialist_type=specialist_hint,
+                    specialist_type=context.specialist_type,
                     sharing_mode=context.sharing_mode,
                     continuity_mode=context.continuity_mode,
                     shared_memory_brief=context.shared_memory_brief,
@@ -373,6 +379,10 @@ class MemoryService:
                     mission_context_brief=context.mission_context_brief,
                     domain_context_brief=context.domain_context_brief,
                     continuity_context_brief=context.continuity_context_brief,
+                    consumer_profile=context.consumer_profile,
+                    consumer_objective=context.consumer_objective,
+                    expected_deliverables=list(context.expected_deliverables),
+                    telemetry_focus=list(context.telemetry_focus),
                     related_mission_ids=[str(item) for item in context.related_mission_ids],
                     memory_refs=list(context.memory_refs),
                     memory_class_policies=dict(context.memory_class_policies),
@@ -395,10 +405,21 @@ class MemoryService:
     ) -> SpecialistSharedMemoryContextContract | None:
         """Expose persisted specialist-facing shared memory for validation and handoff."""
 
-        return self.repository.fetch_specialist_shared_memory(
+        canonical = canonical_specialist_type(specialist_type)
+        context = self.repository.fetch_specialist_shared_memory(
             session_id=session_id,
-            specialist_type=specialist_type,
+            specialist_type=canonical,
         )
+        if context is None:
+            legacy = legacy_specialist_type(canonical)
+            if legacy != canonical:
+                context = self.repository.fetch_specialist_shared_memory(
+                    session_id=session_id,
+                    specialist_type=legacy,
+                )
+        if context is not None:
+            context.specialist_type = canonical
+        return context
 
     def _compose_recovered_items(
         self,
@@ -673,6 +694,10 @@ class MemoryService:
             if promoted_route is not None
             else "baseline_shared_context"
         )
+        consumer_profile = promoted_route.consumer_profile if promoted_route else None
+        consumer_objective = promoted_route.consumer_objective if promoted_route else None
+        expected_deliverables = list(promoted_route.expected_deliverables) if promoted_route else []
+        telemetry_focus = list(promoted_route.telemetry_focus) if promoted_route else []
         domain_mission_link_reason = (
             f"route={promoted_route.domain_name if promoted_route else 'baseline'} "
             "canonicos="
@@ -691,6 +716,10 @@ class MemoryService:
             mission_context_brief=mission_context_brief,
             domain_context_brief=domain_context_brief,
             continuity_context_brief=continuity_context_brief,
+            consumer_profile=consumer_profile,
+            consumer_objective=consumer_objective,
+            expected_deliverables=expected_deliverables,
+            telemetry_focus=telemetry_focus,
             related_mission_ids=related_mission_ids,
             memory_refs=memory_refs,
             memory_class_policies=memory_class_policies,

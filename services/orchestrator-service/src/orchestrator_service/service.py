@@ -444,11 +444,28 @@ class OrchestratorService:
             )
             events.append(
                 self.make_event(
+                    "workflow_composed",
+                    contract,
+                    {
+                        "operation_id": str(operation_dispatch.operation_id),
+                        "workflow_profile": operation_dispatch.workflow_profile,
+                        "workflow_objective": operation_dispatch.workflow_objective,
+                        "workflow_steps": operation_dispatch.workflow_steps,
+                        "workflow_checkpoints": operation_dispatch.workflow_checkpoints,
+                        "task_type": operation_dispatch.task_type,
+                        "domain_hints": operation_dispatch.domain_hints,
+                    },
+                )
+            )
+            events.append(
+                self.make_event(
                     "operation_dispatched",
                     contract,
                     {
                         "operation_id": str(operation_dispatch.operation_id),
                         "task_type": operation_dispatch.task_type,
+                        "workflow_profile": operation_dispatch.workflow_profile,
+                        "workflow_steps": operation_dispatch.workflow_steps,
                         "specialist_hints": operation_dispatch.specialist_hints,
                     },
                 )
@@ -464,6 +481,20 @@ class OrchestratorService:
                         "operation_id": str(operation_result.operation_id),
                         "status": operation_result.status.value,
                         "artifacts": operation_result.artifacts,
+                        "workflow_profile": operation_dispatch.workflow_profile,
+                        "workflow_checkpoints": operation_dispatch.workflow_checkpoints,
+                    },
+                )
+            )
+            events.append(
+                self.make_event(
+                    "workflow_completed",
+                    contract,
+                    {
+                        "operation_id": str(operation_result.operation_id),
+                        "workflow_profile": operation_dispatch.workflow_profile,
+                        "status": operation_result.status.value,
+                        "checkpoints": operation_result.checkpoints,
                     },
                 )
             )
@@ -726,6 +757,38 @@ class OrchestratorService:
                             }
                             for item in handoff_plan.invocations
                         },
+                        "consumer_profiles": {
+                            item.specialist_type: (
+                                item.shared_memory_context.consumer_profile
+                                if item.shared_memory_context
+                                else None
+                            )
+                            for item in handoff_plan.invocations
+                        },
+                        "consumer_objectives": {
+                            item.specialist_type: (
+                                item.shared_memory_context.consumer_objective
+                                if item.shared_memory_context
+                                else None
+                            )
+                            for item in handoff_plan.invocations
+                        },
+                        "expected_deliverables": {
+                            item.specialist_type: (
+                                item.shared_memory_context.expected_deliverables
+                                if item.shared_memory_context
+                                else []
+                            )
+                            for item in handoff_plan.invocations
+                        },
+                        "telemetry_focus": {
+                            item.specialist_type: (
+                                item.shared_memory_context.telemetry_focus
+                                if item.shared_memory_context
+                                else []
+                            )
+                            for item in handoff_plan.invocations
+                        },
                         "linked_domains": {
                             item.specialist_type: item.linked_domain
                             for item in handoff_plan.invocations
@@ -962,6 +1025,30 @@ class OrchestratorService:
                                 )
                                 for invocation in domain_invocation_index.values()
                             },
+                            "consumer_profiles": {
+                                invocation.specialist_type: (
+                                    invocation.shared_memory_context.consumer_profile
+                                    if invocation.shared_memory_context
+                                    else None
+                                )
+                                for invocation in domain_invocation_index.values()
+                            },
+                            "expected_deliverables": {
+                                invocation.specialist_type: (
+                                    invocation.shared_memory_context.expected_deliverables
+                                    if invocation.shared_memory_context
+                                    else []
+                                )
+                                for invocation in domain_invocation_index.values()
+                            },
+                            "telemetry_focus": {
+                                invocation.specialist_type: (
+                                    invocation.shared_memory_context.telemetry_focus
+                                    if invocation.shared_memory_context
+                                    else []
+                                )
+                                for invocation in domain_invocation_index.values()
+                            },
                         },
                     )
                 )
@@ -1015,6 +1102,7 @@ class OrchestratorService:
     ) -> OperationDispatchContract:
         """Create the operational dispatch for an allowed request."""
 
+        workflow_profile, workflow_steps, workflow_checkpoints = self._build_workflow_profile(plan)
         return OperationDispatchContract(
             operation_id=OperationId(f"op-{uuid4().hex[:8]}"),
             request_id=RequestId(str(contract.request_id)),
@@ -1036,7 +1124,55 @@ class OrchestratorService:
             mission_id=contract.mission_id,
             domain_hints=list(plan.active_domains),
             specialist_hints=list(plan.specialist_hints),
+            workflow_profile=workflow_profile,
+            workflow_objective=plan.goal,
+            workflow_steps=workflow_steps,
+            workflow_checkpoints=workflow_checkpoints,
             priority_hint=contract.priority_hint,
+        )
+
+    @staticmethod
+    def _build_workflow_profile(
+        plan: DeliberativePlanContract,
+    ) -> tuple[str, list[str], list[str]]:
+        if "operational_readiness" in plan.active_domains:
+            return (
+                "operational_readiness_workflow",
+                [
+                    "map readiness checkpoints for the active mission",
+                    "confirm blockers, conditions and dependencies",
+                    "recommend the next operational action",
+                ],
+                ["readiness_mapped", "conditions_checked", "next_action_defined"],
+            )
+        if plan.recommended_task_type == "draft_plan":
+            return (
+                "deliberative_planning_workflow",
+                [
+                    "structure the goal and success criteria",
+                    "sequence the smallest safe steps",
+                    "emit checkpoints and the next safe action",
+                ],
+                ["goal_structured", "steps_sequenced", "next_action_defined"],
+            )
+        if plan.recommended_task_type == "produce_analysis_brief":
+            return (
+                "structured_analysis_workflow",
+                [
+                    "frame the question and decision context",
+                    "compare evidence, risks and tradeoffs",
+                    "emit a recommended interpretation",
+                ],
+                ["question_framed", "evidence_compared", "recommendation_emitted"],
+            )
+        return (
+            "assisted_execution_workflow",
+            [
+                "preserve safe local scope",
+                "apply the best bounded next action",
+                "return a reversible result",
+            ],
+            ["scope_preserved", "action_applied", "result_returned"],
         )
 
     def make_event(

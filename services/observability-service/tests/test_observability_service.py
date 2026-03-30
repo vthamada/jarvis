@@ -465,10 +465,52 @@ def test_observability_service_audits_domain_memory_and_sovereignty_alignment() 
                 source_service="orchestrator-service",
                 payload={
                     "sharing_modes": {
-                        "especialista_software_subordinado": "core_mediated_read_only"
+                        "software_change_specialist": "core_mediated_read_only"
+                    },
+                    "consumer_modes": {
+                        "software_change_specialist": "domain_guided_memory_packet"
+                    },
+                    "consumer_profiles": {
+                        "software_change_specialist": "software_change_review"
+                    },
+                    "consumer_objectives": {
+                        "software_change_specialist": (
+                            "avaliar segurança da mudança, impacto de implementação e "
+                            "direção de patch recomendada"
+                        )
+                    },
+                    "expected_deliverables": {
+                        "software_change_specialist": [
+                            "implementation_findings",
+                            "change_risk_summary",
+                            "recommended_patch_direction",
+                        ]
+                    },
+                    "telemetry_focus": {
+                        "software_change_specialist": [
+                            "contract_impact",
+                            "change_safety",
+                            "implementation_trace",
+                        ]
+                    },
+                    "consumed_memory_classes": {
+                        "software_change_specialist": ["mission", "domain"]
+                    },
+                    "memory_write_policies": {
+                        "software_change_specialist": {
+                            "mission": "through_core_only",
+                            "domain": "through_core_only",
+                        }
+                    },
+                    "domain_mission_link_reasons": {
+                        "software_change_specialist": (
+                            "route=software_development "
+                            "canonicos=computacao_e_desenvolvimento "
+                            "missao=Review Python service rollout"
+                        )
                     },
                     "memory_class_policies": {
-                        "especialista_software_subordinado": {
+                        "software_change_specialist": {
                             "mission": {
                                 "specialist_shared": True,
                                 "sharing_mode": "core_mediated_read_only",
@@ -505,9 +547,29 @@ def test_observability_service_audits_domain_memory_and_sovereignty_alignment() 
                 timestamp="2026-03-18T00:00:09+00:00",
                 source_service="orchestrator-service",
                 payload={
-                    "specialist_types": ["especialista_software_subordinado"],
-                    "linked_domains": {"especialista_software_subordinado": "software_development"},
-                    "selection_modes": {"especialista_software_subordinado": "guided"},
+                    "specialist_types": ["software_change_specialist"],
+                    "linked_domains": {"software_change_specialist": "software_development"},
+                    "selection_modes": {"software_change_specialist": "guided"},
+                    "canonical_domain_refs": {
+                        "software_change_specialist": ["computacao_e_desenvolvimento"]
+                    },
+                    "consumer_profiles": {
+                        "software_change_specialist": "software_change_review"
+                    },
+                    "expected_deliverables": {
+                        "software_change_specialist": [
+                            "implementation_findings",
+                            "change_risk_summary",
+                            "recommended_patch_direction",
+                        ]
+                    },
+                    "telemetry_focus": {
+                        "software_change_specialist": [
+                            "contract_impact",
+                            "change_safety",
+                            "implementation_trace",
+                        ]
+                    },
                 },
                 request_id="req-specialist-align",
                 session_id="sess-specialist-align",
@@ -574,7 +636,7 @@ def test_observability_service_audits_domain_memory_and_sovereignty_alignment() 
         "dados_estatistica_e_inteligencia_analitica",
         "tomada_de_decisao_complexa",
     ]
-    assert audit.domain_specialists == ["especialista_software_subordinado"]
+    assert audit.domain_specialists == ["software_change_specialist"]
     assert audit.shadow_specialists == []
     assert audit.domain_alignment_status == "healthy"
     assert audit.mind_alignment_status == "healthy"

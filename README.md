@@ -46,8 +46,9 @@ Leitura prática correta deste momento:
 - Sprint 5 do `v2` concluída com evals de aderência do recorte de especialistas aos eixos do mestre;
 - Sprint 6 do `v2` concluída com fechamento formal do primeiro corte do ciclo;
 - `shared/memory_registry.py` e `shared/mind_registry.py` passaram a registrar, respectivamente, as 11 memórias e as 24 mentes do mestre como base formal do runtime progressivo;
-- o ciclo ativo do programa passou a ser o `v2-sovereign-alignment-cut`, focado em sincronização documental, soberania de domínios, consumo canônico de memória, convergência de mentes e gates contínuos por eixo;
-- a auditoria completa do Documento-Mestre passou a orientar o backlog real por eixo.
+- o recorte ativo do programa é `v2-domain-consumers-and-workflows-cut`, focado em consumidores canônicos de domínio, workflows operacionais compostos, benchmarks governados e baseline soberano já fechado;
+- a auditoria completa do Documento-Mestre continua orientando o backlog real por eixo;
+- o fechamento formal do corte soberano permanece regenerável por `tools/close_sovereign_alignment_cut.py` em `docs/implementation/v2-sovereign-alignment-cut-closure.md`.
 
 ## Estrutura principal
 
@@ -159,55 +160,19 @@ Arquivos principais:
 - `CHANGELOG.md`
 - `docs/documentation/matriz-de-aderencia-mestre.md`
 - `docs/roadmap/programa-ate-v3.md`
-- `docs/implementation/v1-5-cycle-closure.md`
-- `docs/implementation/v2-sprint-cycle.md`
-- `docs/implementation/v2-sovereign-alignment-cut.md`
+- `docs/implementation/v2-domain-consumers-and-workflows-cut.md`
+- `docs/implementation/v2-sovereign-alignment-cut-closure.md`
 - `docs/architecture/technology-study.md`
 - `docs/implementation/implementation-strategy.md`
-- `docs/roadmap/v1-roadmap.md`
+- `docs/implementation/service-breakdown.md`
+- `docs/archive/implementation/`
 
 Leitura recomendada do estado atual:
 
 1. `HANDOFF.md`
 2. `documento_mestre_jarvis.md`
 3. `docs/roadmap/programa-ate-v3.md`
-4. `docs/implementation/v1-5-cycle-closure.md`
-5. `docs/implementation/v2-sprint-cycle.md`
-6. `docs/implementation/v2-sovereign-alignment-cut.md`
+4. `docs/implementation/v2-domain-consumers-and-workflows-cut.md`
+5. `docs/implementation/v2-sovereign-alignment-cut-closure.md`
+6. `docs/documentation/matriz-de-aderencia-mestre.md`
 7. `docs/architecture/technology-study.md`
-
-## Console mínimo do baseline
-
-O baseline inclui uma interface textual mínima para uso direto do núcleo:
-
-```powershell
-python -m apps.jarvis_console ask "Plan the next continuity increment."
-python -m apps.jarvis_console chat --session-id demo --mission-id mission-demo
-```
-
-O console é uma casca fina sobre o `orchestrator-service`. Web, voz e configuração plugável de LLM permanecem fora do escopo do `v1` e do primeiro ciclo do `pós-v1`.
-
-## Constituição de engenharia
-
-O repositório passa a ter uma política oficial de robustez e segurança em:
-
-- `docs/documentation/engineering-constitution.md`
-- `AGENTS.md`
-
-Esses arquivos definem o padrão obrigatório para:
-
-- contratos, testes, observabilidade e documentação;
-- promoção de capabilities;
-- comportamento esperado de qualquer agente implementador.
-
-Gate mínimo oficial:
-
-```powershell
-python tools/engineering_gate.py --mode standard
-```
-
-Gate de liberação local:
-
-```powershell
-python tools/engineering_gate.py --mode release
-```

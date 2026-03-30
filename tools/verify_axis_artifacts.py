@@ -12,6 +12,8 @@ REQUIRED_FILES = (
     ROOT / "docs" / "executive" / "master-summary.md",
     ROOT / "docs" / "documentation" / "matriz-de-aderencia-mestre.md",
     ROOT / "docs" / "implementation" / "v2-sovereign-alignment-cut.md",
+    ROOT / "docs" / "implementation" / "v2-sovereign-alignment-cut-closure.md",
+    ROOT / "docs" / "implementation" / "v2-domain-consumers-and-workflows-cut.md",
     ROOT / "knowledge" / "curated" / "domain_registry.json",
     ROOT / "shared" / "mind_registry.py",
     ROOT / "shared" / "memory_registry.py",
@@ -35,27 +37,49 @@ def main() -> None:
     handoff = _read(ROOT / "HANDOFF.md")
     readme = _read(ROOT / "README.md")
     master_summary = _read(ROOT / "docs" / "executive" / "master-summary.md")
-    cut_doc = _read(ROOT / "docs" / "implementation" / "v2-sovereign-alignment-cut.md")
+    sovereign_cut_doc = _read(ROOT / "docs" / "implementation" / "v2-sovereign-alignment-cut.md")
+    closure_doc = _read(
+        ROOT / "docs" / "implementation" / "v2-sovereign-alignment-cut-closure.md"
+    )
+    active_cut_doc = _read(
+        ROOT / "docs" / "implementation" / "v2-domain-consumers-and-workflows-cut.md"
+    )
 
     _ensure(
-        "docs/implementation/v2-sovereign-alignment-cut.md" in handoff,
-        "HANDOFF.md does not point to the active v2 sovereign alignment cut.",
+        "docs/implementation/v2-domain-consumers-and-workflows-cut.md" in handoff,
+        "HANDOFF.md does not point to the active v2 domain consumers/workflows cut.",
     )
     _ensure(
-        "v2-sovereign-alignment-cut" in readme,
-        "README.md does not name the active v2 sovereign alignment cut.",
+        "v2-domain-consumers-and-workflows-cut" in readme,
+        "README.md does not name the active v2 domain consumers/workflows cut.",
     )
     _ensure(
-        "v2-sovereign-alignment-cut" in master_summary,
-        "master-summary.md does not name the active v2 sovereign alignment cut.",
+        "v2-domain-consumers-and-workflows-cut" in master_summary,
+        "master-summary.md does not name the active v2 domain consumers/workflows cut.",
     )
     _ensure(
         "v2-alignment-cycle` como execução oficial" not in handoff,
         "HANDOFF.md still treats v2-alignment-cycle as the active execution document.",
     )
     _ensure(
-        "fonte oficial do que entra em execução agora" in cut_doc,
-        "The active v2 cut document is missing its execution-source declaration.",
+        "v2-sovereign-alignment-cut.md` como execução oficial do corte ativo" not in handoff,
+        "HANDOFF.md still treats the sovereign cut as the active execution document.",
+    )
+    _ensure(
+        "Sprint 6 concluída" in sovereign_cut_doc,
+        "The sovereign cut document does not reflect the completed sprint status.",
+    )
+    _ensure(
+        "tools/close_sovereign_alignment_cut.py" in closure_doc,
+        "The sovereign cut closure document is missing its regenerable closure tool.",
+    )
+    _ensure(
+        "O que este corte assume como baseline obrigatorio:" in active_cut_doc,
+        "The active v2 cut document is missing its baseline declaration.",
+    )
+    _ensure(
+        "tools/engineering_gate.py --mode release" in active_cut_doc,
+        "The active v2 cut document does not anchor release-grade gating.",
     )
 
     print("[verify-axis-artifacts] all minimum axis artifacts are coherent")

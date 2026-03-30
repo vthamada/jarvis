@@ -39,7 +39,15 @@ def test_operational_service_generates_text_artifact_for_supported_task() -> Non
             plan_rationale="contexto=nenhum; apoio=baseline local",
             specialist_summary="encadear o plano em etapas pequenas",
             specialist_findings=["open_loop: fechar checkpoint principal"],
-            specialist_hints=["especialista_planejamento_operacional"],
+            specialist_hints=["operational_planning_specialist"],
+            workflow_profile="deliberative_planning_workflow",
+            workflow_objective="Plan milestone M3",
+            workflow_steps=[
+                "structure the goal and success criteria",
+                "sequence the smallest safe steps",
+                "emit checkpoints and the next safe action",
+            ],
+            workflow_checkpoints=["goal_structured", "steps_sequenced", "next_action_defined"],
             success_criteria=["plano deve indicar a menor proxima acao segura"],
             smallest_safe_next_action="definir objetivo",
         )
@@ -52,7 +60,10 @@ def test_operational_service_generates_text_artifact_for_supported_task() -> Non
     content = artifact_path.read_text(encoding="utf-8")
     assert "Plano deliberativo para" in content
     assert "Criterios de sucesso" in content
+    assert "Workflow: deliberative_planning_workflow" in content
+    assert "Workflow steps:" in content
     assert "Ajuste interno" in content
+    assert "workflow:goal_structured" in execution.operation_result.checkpoints
 
 
 def test_operational_service_fails_for_unsupported_task() -> None:

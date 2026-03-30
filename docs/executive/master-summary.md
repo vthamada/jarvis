@@ -108,8 +108,9 @@ Leitura curta do momento:
 - Sprint 4 do `v2` foi concluída com registry inicial de domínios e primeiro especialista subordinado em `shadow mode`;
 - Sprint 5 do `v2` foi concluída com evals de aderência do recorte de especialistas;
 - Sprint 6 do `v2` foi concluída com fechamento formal do primeiro corte do ciclo;
-- o ciclo ativo do programa é o `v2-sovereign-alignment-cut`, focado em sincronização documental, soberania de domínios, consumo canônico de memória, convergência de mentes e gates contínuos por eixo;
-- a auditoria completa do Documento-Mestre passou a orientar o backlog por eixo canônico.
+- o recorte ativo do programa é `docs/implementation/v2-domain-consumers-and-workflows-cut.md`, focado em consumidores canônicos de domínio, workflows operacionais compostos, benchmarks governados e baseline soberano já fechado;
+- a auditoria completa do Documento-Mestre continua orientando o backlog por eixo canônico;
+- o fechamento formal do corte soberano segue regenerável por `tools/close_sovereign_alignment_cut.py` em `docs/implementation/v2-sovereign-alignment-cut-closure.md`.
 
 ---
 
@@ -139,9 +140,8 @@ O projeto deve evitar:
 
 O próximo passo executivo mais racional é:
 
-- executar a Sprint 6 do `v2`;
-- medir de forma comparável o recorte atual entre núcleo puro, especialista estrutural e especialista em `shadow mode`;
-- preservar a memória compartilhada do `v2` como contexto mediado pelo núcleo, sem escrita direta do especialista;
-- usar `docs/documentation/matriz-de-aderencia-mestre.md` como auditoria completa para recalibrar backlog e cobertura do mestre;
-- preservar o recorte absorvido de `LangGraph` como evidência, sem transformar o sistema em colagem de runtimes;
+- preservar `docs/implementation/v2-domain-consumers-and-workflows-cut.md` como recorte ativo do `v2`;
+- usar `docs/implementation/v2-domain-consumers-and-workflows-cut.md` como recorte ativo do `v2`, preservando `docs/implementation/v2-sovereign-alignment-cut-closure.md` como baseline de transição;
+- manter `guided`, `domain_specialist_completed` e axis gates como baseline obrigatório de qualquer novo recorte;
+- preservar `AutoGPT Platform`, `Mastra` e `Mem0` apenas como benchmarks complementares em sandbox;
 - manter fora do corte imediato voz oficial, `computer use` amplo, `pgvector` como base canônica e assistente operacional amplo.

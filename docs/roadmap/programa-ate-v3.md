@@ -10,8 +10,8 @@ macro e sem misturar direcao de medio prazo com execucao imediata.
 Leitura correta:
 
 - este documento e o contrato de direcao do programa;
-- o detalhamento executavel das proximas `4-6` sprints fica em
-  `docs/implementation/post-v1-sprint-cycle.md`;
+- o detalhamento executável do recorte implementável atual fica em
+  `docs/implementation/v2-domain-consumers-and-workflows-cut.md`;
 - o `HANDOFF.md` continua tatico-operacional.
 
 Fontes normativas:
@@ -257,8 +257,8 @@ Ele define:
 - o que entra e o que fica fora de cada fase;
 - dependencias entre trilhas.
 
-O documento `docs/implementation/post-v1-sprint-cycle.md` deve derivar deste programa e
-traduzir apenas o proximo ciclo curto em execucao.
+O documento `docs/implementation/v2-domain-consumers-and-workflows-cut.md` deve derivar deste programa e
+traduzir apenas o recorte curto atualmente em execução.
 
 ---
 
@@ -268,7 +268,7 @@ O sistema de planejamento oficial do JARVIS passa a ser:
 
 1. `HANDOFF.md` para estado atual, retomada e foco imediato;
 2. `docs/roadmap/programa-ate-v3.md` para direcao de medio e longo prazo;
-3. `docs/implementation/post-v1-sprint-cycle.md` para execucao das proximas sprints.
+3. `docs/implementation/v2-domain-consumers-and-workflows-cut.md` para execução do recorte ativo.
 
 Essa separacao existe para impedir que o `HANDOFF.md` vire roadmap macro e para evitar
 que o programa ate `v3` perca precisao operacional.

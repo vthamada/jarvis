@@ -116,6 +116,6 @@ O primeiro ciclo do `pós-v1` deve ser considerado formalmente fechado quando:
 
 O ciclo seguinte passa a ser executado por:
 
-- `docs/implementation/v1-5-sprint-cycle.md`
+- `docs/archive/implementation/v1-5-sprint-cycle.md`
 
 Este documento permanece como fechamento histórico do primeiro ciclo do `pós-v1`.

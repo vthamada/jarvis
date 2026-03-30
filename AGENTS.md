@@ -40,3 +40,9 @@ python tools/engineering_gate.py --mode release
 - tecnologia externa entra primeiro como referência, experimento ou complemento;
 - nada externo assume o papel de cérebro real do sistema;
 - promoção só com evidência.
+
+## Política de linguagem
+
+- runtime e interfaces técnicas novas devem convergir para inglês;
+- documentação e texto humano podem permanecer em português;
+- ids legados em português não devem ser expandidos por conveniência local.

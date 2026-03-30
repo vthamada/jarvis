@@ -138,6 +138,6 @@ O primeiro corte do `v2` deve ser considerado formalmente fechado quando:
 
 O ciclo seguinte passa a ser executado por:
 
-- `docs/implementation/v2-alignment-cycle.md`
+- `docs/archive/implementation/v2-alignment-cycle.md`
 
 Este documento permanece como fechamento historico do primeiro corte do `v2`.

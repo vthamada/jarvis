@@ -348,7 +348,7 @@
   "runtime_routes": [
     {
       "route_name": "strategy",
-      "display_name": "Runtime route: strategy",
+      "display_name": "Rota de runtime: estratégia",
       "domain_scope": "runtime_route",
       "activation_stage": "v2",
       "maturity": "active_specialist",
@@ -356,13 +356,25 @@
         "estrategia_e_pensamento_sistemico",
         "tomada_de_decisao_complexa"
       ],
-      "summary": "Rota can?nica de estrat?gia no v2, sempre subordinada ao n?cleo.",
-      "linked_specialist_type": "especialista_analise_estruturada",
-      "specialist_mode": "guided"
+      "summary": "Rota canônica de estratégia no v2, sempre subordinada ao núcleo.",
+      "linked_specialist_type": "structured_analysis_specialist",
+      "specialist_mode": "guided",
+      "consumer_profile": "strategy_tradeoff_review",
+      "consumer_objective": "clarificar trade-offs estratégicos, enquadramento de cenário e direção recomendada",
+      "expected_deliverables": [
+        "tradeoff_map",
+        "decision_criteria",
+        "recommended_direction"
+      ],
+      "telemetry_focus": [
+        "tradeoff_clarity",
+        "decision_trace",
+        "domain_alignment"
+      ]
     },
     {
       "route_name": "analysis",
-      "display_name": "Runtime route: analysis",
+      "display_name": "Rota de runtime: análise",
       "domain_scope": "runtime_route",
       "activation_stage": "v2",
       "maturity": "active_specialist",
@@ -370,13 +382,25 @@
         "dados_estatistica_e_inteligencia_analitica",
         "tomada_de_decisao_complexa"
       ],
-      "summary": "Rota can?nica de an?lise estruturada no v2, sempre subordinada ao n?cleo.",
-      "linked_specialist_type": "especialista_analise_estruturada",
-      "specialist_mode": "guided"
+      "summary": "Rota canônica de análise estruturada no v2, sempre subordinada ao núcleo.",
+      "linked_specialist_type": "structured_analysis_specialist",
+      "specialist_mode": "guided",
+      "consumer_profile": "structured_analysis_review",
+      "consumer_objective": "produzir achados estruturados, quadro comparativo e interpretação recomendada",
+      "expected_deliverables": [
+        "structured_findings",
+        "comparison_frame",
+        "recommended_interpretation"
+      ],
+      "telemetry_focus": [
+        "analysis_depth",
+        "evidence_trace",
+        "decision_support"
+      ]
     },
     {
       "route_name": "governance",
-      "display_name": "Runtime route: governance",
+      "display_name": "Rota de runtime: governança",
       "domain_scope": "runtime_route",
       "activation_stage": "v2",
       "maturity": "active_specialist",
@@ -384,26 +408,50 @@
         "governanca_do_sistema",
         "defesa_seguranca_e_gestao_de_crises"
       ],
-      "summary": "Rota can?nica de governan?a no v2, sempre subordinada ao n?cleo.",
-      "linked_specialist_type": "especialista_revisao_governanca",
-      "specialist_mode": "guided"
+      "summary": "Rota canônica de governança no v2, sempre subordinada ao núcleo.",
+      "linked_specialist_type": "governance_review_specialist",
+      "specialist_mode": "guided",
+      "consumer_profile": "governance_boundary_review",
+      "consumer_objective": "explicitar limites de governança, condições e recomendação orientada a risco",
+      "expected_deliverables": [
+        "boundary_findings",
+        "risk_conditions",
+        "governance_recommendation"
+      ],
+      "telemetry_focus": [
+        "governance_alignment",
+        "risk_trace",
+        "condition_completeness"
+      ]
     },
     {
       "route_name": "software_development",
-      "display_name": "Runtime route: software_development",
+      "display_name": "Rota de runtime: desenvolvimento de software",
       "domain_scope": "runtime_route",
       "activation_stage": "v2",
       "maturity": "active_specialist",
       "canonical_refs": [
         "computacao_e_desenvolvimento"
       ],
-      "linked_specialist_type": "especialista_software_subordinado",
+      "linked_specialist_type": "software_change_specialist",
       "specialist_mode": "guided",
-      "summary": "Primeira rota canônica domínio->especialista do v2, sempre subordinada ao núcleo."
+      "summary": "Primeira rota canônica domínio->especialista do v2, sempre subordinada ao núcleo.",
+      "consumer_profile": "software_change_review",
+      "consumer_objective": "avaliar segurança da mudança, impacto de implementação e direção de patch recomendada",
+      "expected_deliverables": [
+        "implementation_findings",
+        "change_risk_summary",
+        "recommended_patch_direction"
+      ],
+      "telemetry_focus": [
+        "contract_impact",
+        "change_safety",
+        "implementation_trace"
+      ]
     },
     {
       "route_name": "operational_readiness",
-      "display_name": "Runtime route: operational_readiness",
+      "display_name": "Rota de runtime: readiness operacional",
       "domain_scope": "runtime_route",
       "activation_stage": "v2",
       "maturity": "active_specialist",
@@ -411,13 +459,25 @@
         "planejamento_e_coordenacao",
         "monitoramento_e_vigilancia_contextual"
       ],
-      "summary": "Rota can?nica de readiness operacional no v2, sempre subordinada ao n?cleo.",
-      "linked_specialist_type": "especialista_planejamento_operacional",
-      "specialist_mode": "guided"
+      "summary": "Rota canônica de readiness operacional no v2, sempre subordinada ao núcleo.",
+      "linked_specialist_type": "operational_planning_specialist",
+      "specialist_mode": "guided",
+      "consumer_profile": "operational_readiness_review",
+      "consumer_objective": "avaliar checkpoints de readiness, lacunas de execução e próxima ação operacional",
+      "expected_deliverables": [
+        "readiness_findings",
+        "checkpoint_plan",
+        "next_operational_action"
+      ],
+      "telemetry_focus": [
+        "checkpoint_coverage",
+        "execution_readiness",
+        "operational_trace"
+      ]
     },
     {
       "route_name": "observability",
-      "display_name": "Runtime route: observability",
+      "display_name": "Rota de runtime: observabilidade",
       "domain_scope": "runtime_route",
       "activation_stage": "v2",
       "maturity": "active_registry",
@@ -425,11 +485,11 @@
         "auto_observacao",
         "monitoramento_e_vigilancia_contextual"
       ],
-      "summary": "Rota ativa do v2 para trilha, anomalias, correlação e gaps de sinal."
+      "summary": "Rota ativa do v2 para trilha, anomalias, correlação e lacunas de sinal."
     },
     {
       "route_name": "documentation",
-      "display_name": "Runtime route: documentation",
+      "display_name": "Rota de runtime: documentação",
       "domain_scope": "runtime_route",
       "activation_stage": "v2",
       "maturity": "active_registry",
@@ -441,7 +501,7 @@
     },
     {
       "route_name": "decision_risk",
-      "display_name": "Runtime route: decision_risk",
+      "display_name": "Rota de runtime: risco de decisão",
       "domain_scope": "runtime_route",
       "activation_stage": "v2",
       "maturity": "active_specialist",
@@ -450,12 +510,24 @@
         "defesa_seguranca_e_gestao_de_crises"
       ],
       "summary": "Rota ativa do v2 para reversibilidade, impacto, incerteza e gates de decisão.",
-      "linked_specialist_type": "especialista_revisao_governanca",
-      "specialist_mode": "guided"
+      "linked_specialist_type": "governance_review_specialist",
+      "specialist_mode": "guided",
+      "consumer_profile": "decision_risk_gate_review",
+      "consumer_objective": "explicitar reversibilidade, incerteza e o gate de decisão mais seguro",
+      "expected_deliverables": [
+        "risk_findings",
+        "reversibility_summary",
+        "recommended_safe_gate"
+      ],
+      "telemetry_focus": [
+        "risk_gate_alignment",
+        "uncertainty_trace",
+        "reversibility_clarity"
+      ]
     },
     {
       "route_name": "pilot_operations",
-      "display_name": "Runtime route: pilot_operations",
+      "display_name": "Rota de runtime: operações de piloto",
       "domain_scope": "runtime_route",
       "activation_stage": "v2",
       "maturity": "active_registry",
@@ -467,7 +539,7 @@
     },
     {
       "route_name": "productivity",
-      "display_name": "Runtime route: productivity",
+      "display_name": "Rota de runtime: produtividade",
       "domain_scope": "runtime_route",
       "activation_stage": "v2",
       "maturity": "active_registry",

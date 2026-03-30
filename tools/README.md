@@ -76,7 +76,11 @@ Para resumir as trilhas recentes do `internal pilot` a partir da observabilidade
 python tools/internal_pilot_report.py --limit 5
 ```
 
-Para comparar o baseline atual com o fluxo opcional de `LangGraph`:`r`n`r`n```powershell`r`npython tools/compare_orchestrator_paths.py --profile development`r`n```
+Para comparar o baseline atual com o fluxo opcional de `LangGraph`:
+
+```powershell
+python tools/compare_orchestrator_paths.py --profile development
+```
 
 O artefato default dessa comparação passa a ser persistido em `.jarvis_runtime/path_comparison_v2/`.
 
@@ -135,6 +139,17 @@ Esse script gera artefatos em `.jarvis_runtime/v2_alignment_cycle/`:
 - `cycle_closure.json`
 - `cycle_closure.md`
 
+Para fechar formalmente o `v2-sovereign-alignment-cut`:
+
+```powershell
+python tools/close_sovereign_alignment_cut.py --limit 20
+```
+
+Esse script gera artefatos em `.jarvis_runtime/v2_sovereign_alignment_cut/`:
+
+- `cut_closure.json`
+- `cut_closure.md`
+
 ## Gate oficial de engenharia
 
 O gate mínimo oficial do repositório agora é:
@@ -166,3 +181,5 @@ Quando houver backend controlado disponível:
 ```powershell
 python tools/engineering_gate.py --mode release --include-controlled
 ```
+
+

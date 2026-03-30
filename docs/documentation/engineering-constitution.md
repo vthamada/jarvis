@@ -171,3 +171,11 @@ Ela deve ser simplificada quando:
 - começar a gerar mais atrito do que redução de risco;
 - deixar o time ou o agente conservador demais;
 - virar documentação decorativa sem efeito real no runtime.
+
+## 9. Política de linguagem
+
+- a linguagem do sistema deve seguir a função da camada, não preferência local;
+- contratos técnicos, nomes de campos, eventos, status, payloads, enums e identificadores novos de runtime devem convergir para inglês;
+- documentação, visão de produto, labels visíveis e texto humano podem permanecer em português;
+- ontologias canônicas derivadas diretamente do Documento-Mestre podem continuar em português enquanto forem tratadas como camada semântica, não como novo padrão para interfaces técnicas;
+- ids legados em português não devem ser expandidos sem necessidade; novas interfaces estáveis devem preferir inglês.

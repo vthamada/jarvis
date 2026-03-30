@@ -75,7 +75,7 @@ def make_result(  # type: ignore[no-untyped-def]
         total_events=8,
         duration_seconds=2.0,
         active_domains=["strategy"],
-        specialist_hints=["especialista_planejamento_operacional"],
+        specialist_hints=["operational_planning_specialist"],
         response_preview="preview",
     )
 
@@ -124,7 +124,7 @@ def test_compare_results_flags_axis_alignment_mismatch_fields() -> None:
             path_name="langgraph",
             domain_alignment_status="partial",
             axis_gate_status="partial",
-            shadow_specialists=["especialista_software_subordinado"],
+            shadow_specialists=["software_change_specialist"],
         )
     ]
 

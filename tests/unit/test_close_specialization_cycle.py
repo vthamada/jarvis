@@ -124,12 +124,12 @@ def test_close_specialization_cycle_builds_alignment_cut() -> None:
                 timestamp="2026-03-23T00:00:07+00:00",
                 source_service="orchestrator-service",
                 payload={
-                    "specialist_hints": ["especialista_software_subordinado"],
+                    "specialist_hints": ["software_change_specialist"],
                     "sharing_modes": {
-                        "especialista_software_subordinado": "core_mediated_read_only"
+                        "software_change_specialist": "core_mediated_read_only"
                     },
                     "memory_class_policies": {
-                        "especialista_software_subordinado": {
+                        "software_change_specialist": {
                             "mission": {
                                 "specialist_shared": True,
                                 "sharing_mode": "core_mediated_read_only",
@@ -142,7 +142,7 @@ def test_close_specialization_cycle_builds_alignment_cut() -> None:
                             },
                         }
                     },
-                    "linked_domains": {"especialista_software_subordinado": "software_development"},
+                    "linked_domains": {"software_change_specialist": "software_development"},
                 },
                 request_id="req-cycle",
                 session_id="sess-cycle",
@@ -156,7 +156,7 @@ def test_close_specialization_cycle_builds_alignment_cut() -> None:
                 payload={
                     "response_channel": "through_core",
                     "tool_access_mode": "none",
-                    "shadow_specialists": ["especialista_software_subordinado"],
+                    "shadow_specialists": ["software_change_specialist"],
                     "shared_memory_attached": True,
                 },
                 request_id="req-cycle",
@@ -169,8 +169,8 @@ def test_close_specialization_cycle_builds_alignment_cut() -> None:
                 timestamp="2026-03-23T00:00:09+00:00",
                 source_service="orchestrator-service",
                 payload={
-                    "specialist_types": ["especialista_software_subordinado"],
-                    "linked_domains": {"especialista_software_subordinado": "software_development"},
+                    "specialist_types": ["software_change_specialist"],
+                    "linked_domains": {"software_change_specialist": "software_development"},
                 },
                 request_id="req-cycle",
                 session_id="sess-cycle",
