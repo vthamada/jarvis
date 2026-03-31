@@ -108,10 +108,11 @@ Leitura curta do momento:
 - Sprint 4 do `v2` foi concluída com registry inicial de domínios e primeiro especialista subordinado em `shadow mode`;
 - Sprint 5 do `v2` foi concluída com evals de aderência do recorte de especialistas;
 - Sprint 6 do `v2` foi concluída com fechamento formal do primeiro corte do ciclo;
-- o recorte ativo do programa é `docs/implementation/v2-domain-consumers-and-workflows-cut.md`, focado em consumidores canônicos de domínio, workflows operacionais compostos, benchmarks governados e baseline soberano já fechado;
+- o recorte ativo do programa agora e `docs/implementation/v2-native-memory-scope-hardening-cut.md`, aberto apos o fechamento formal do `v2-memory-gap-evidence-cut` para endurecer o baseline nativo antes de qualquer reabertura externa;
 - a auditoria completa do Documento-Mestre continua orientando o backlog por eixo canônico;
-- o fechamento formal do corte soberano segue regenerável por `tools/close_sovereign_alignment_cut.py` em `docs/implementation/v2-sovereign-alignment-cut-closure.md`.
-
+- o fechamento formal do corte soberano segue regenerável por `tools/close_sovereign_alignment_cut.py` em `docs/implementation/v2-sovereign-alignment-cut-closure.md`;
+- o fechamento formal do corte de consumers/workflows segue regenerável por `tools/close_domain_consumers_and_workflows_cut.py` em `docs/implementation/v2-domain-consumers-and-workflows-cut-closure.md`.
+- o plano regenerável do corte ativo segue emitido por `tools/render_governed_benchmark_execution_plan.py` em `docs/implementation/v2-governed-benchmark-execution-plan.md`.
 ---
 
 ## 7. Risco principal
@@ -140,8 +141,8 @@ O projeto deve evitar:
 
 O próximo passo executivo mais racional é:
 
-- preservar `docs/implementation/v2-domain-consumers-and-workflows-cut.md` como recorte ativo do `v2`;
-- usar `docs/implementation/v2-domain-consumers-and-workflows-cut.md` como recorte ativo do `v2`, preservando `docs/implementation/v2-sovereign-alignment-cut-closure.md` como baseline de transição;
-- manter `guided`, `domain_specialist_completed` e axis gates como baseline obrigatório de qualquer novo recorte;
-- preservar `AutoGPT Platform`, `Mastra` e `Mem0` apenas como benchmarks complementares em sandbox;
-- manter fora do corte imediato voz oficial, `computer use` amplo, `pgvector` como base canônica e assistente operacional amplo.
+- preservar `docs/implementation/v2-native-memory-scope-hardening-cut.md` como recorte ativo do `v2`;
+- usar `docs/implementation/v2-memory-gap-evidence-cut-closure.md` como fechamento anterior e `docs/implementation/v2-native-memory-scope-hardening-cut.md` como baseline executavel da nova fase de endurecimento nativo;
+- endurecer primeiro user scope e contexto recorrente de especialistas no proprio baseline soberano antes de qualquer futura reabertura para `Mem0`;
+- manter `Mastra` e `AutoGPT Platform` apenas como referencia e `Mem0` como candidata condicional de reabertura futura;
+- manter fora do proximo recorte voz oficial, `computer use` amplo, `pgvector` como base canonica e assistente operacional amplo.

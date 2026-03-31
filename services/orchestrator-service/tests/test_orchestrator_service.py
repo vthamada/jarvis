@@ -1015,3 +1015,54 @@ def test_orchestrator_service_tracks_guided_decision_risk_specialist() -> None:
         for invocation in result.specialist_invocations
     )
 
+
+
+
+def test_orchestrator_service_emits_user_scope_memory_signals() -> None:
+    temp_dir = runtime_dir("orchestrator-user-scope")
+    observability = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service = OrchestratorService(
+        governance_service=GovernanceService(),
+        memory_service=MemoryService(
+            database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+        ),
+        operational_service=OperationalService(artifact_dir=str(temp_dir / "artifacts")),
+        observability_service=observability,
+    )
+    service.handle_input(
+        InputContract(
+            request_id=RequestId("req-user-scope-1"),
+            session_id=SessionId("sess-user-scope-1"),
+            mission_id=MissionId("mission-user-scope-1"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Plan the first milestone.",
+            timestamp="2026-03-31T00:00:00Z",
+            user_id="user-scope-1",
+        )
+    )
+    second = service.handle_input(
+        InputContract(
+            request_id=RequestId("req-user-scope-2"),
+            session_id=SessionId("sess-user-scope-2"),
+            mission_id=MissionId("mission-user-scope-2"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Analyze the milestone trade-offs.",
+            timestamp="2026-03-31T00:01:00Z",
+            user_id="user-scope-1",
+        )
+    )
+
+    memory_recovered_event = next(
+        event for event in second.events if event.event_name == "memory_recovered"
+    )
+    memory_recorded_event = next(
+        event for event in second.events if event.event_name == "memory_recorded"
+    )
+
+    assert memory_recovered_event.payload["user_scope_status"] == "seeded"
+    assert memory_recovered_event.payload["user_scope_interaction_count"] == 1
+    assert memory_recovered_event.payload["user_scope_memory_refs"]
+    assert memory_recorded_event.payload["user_scope_status"] == "recoverable"
+    assert memory_recorded_event.payload["user_scope_interaction_count"] == 2

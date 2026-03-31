@@ -28,6 +28,8 @@ def test_engineering_gate_release_mode_with_controlled() -> None:
         "ruff",
         "pytest",
         "axis artifact verification",
+        "active cut baseline verification",
+        "current cut closure verification",
         "baseline validation development",
         "baseline validation controlled",
     ]

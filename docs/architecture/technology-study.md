@@ -640,3 +640,129 @@ Leitura operacional:
 - runtime ids novos devem convergir para ingles;
 - labels legados em portugues podem permanecer apenas como compatibilidade curta ou camada semantica;
 - isso agora tambem vale para specialist types e futuros workflow ids do runtime.
+
+
+## 18. Governed benchmark envelope of the active v2 cut
+
+O corte ativo `v2-domain-consumers-and-workflows-cut` passou a tratar benchmark como artefato governado, e nao como pesquisa solta.
+
+Artefato regeneravel desta sprint:
+
+- `docs/implementation/v2-governed-benchmark-matrix.md`
+- `tools/render_governed_benchmark_matrix.py`
+- `tools/benchmarks/datasets/v2_governed_benchmark_candidates.json`
+
+### 18.1 Familias que podem entrar neste recorte
+
+As tecnologias elegiveis para este recorte sao lidas por familia de capacidade:
+
+- `workflow_orchestration`: `LangGraph`, `OpenAI Agents SDK`, `Mastra`, `CrewAI`, `Microsoft Agent Framework`;
+- `continuous_operational_agents`: `AutoGPT Platform`, `OpenClaw`, `Hermes Agent`, `Manus`;
+- `multilayer_memory`: `Mem0`, `Letta / MemGPT`, `Zep`, `Graphiti`.
+
+### 18.2 Candidatas em benchmark agora
+
+Nesta sprint, apenas tres tecnologias entram como `benchmark_now`:
+
+- `AutoGPT Platform`
+- `Mastra`
+- `Mem0`
+
+Leitura correta:
+
+- `AutoGPT Platform` entra para comparar blocos, triggers, webhooks e automacoes compostas;
+- `Mastra` entra para comparar workflows tipados, `suspend/resume`, snapshots, guardrails e observabilidade;
+- `Mem0` entra para comparar memoria multicamada por escopo, sem reabrir a memoria canonica do JARVIS.
+
+### 18.3 Tecnologias no envelope comparativo
+
+Estas tecnologias podem entrar na leitura deste recorte, mas ficam em `reference_envelope`:
+
+- `LangGraph`
+- `OpenAI Agents SDK`
+- `CrewAI`
+- `Microsoft Agent Framework`
+- `OpenClaw`
+- `Hermes Agent`
+- `Manus`
+- `Letta / MemGPT`
+- `Zep`
+- `Graphiti`
+
+Regra:
+
+- elas entram para contraste arquitetural e delimitacao de escopo;
+- elas nao entram como benchmark principal desta sprint;
+- nenhuma delas sobe para o nucleo por comparacao conceitual isolada.
+
+### 18.4 Decisao correta dentro deste recorte
+
+A Sprint 3 do corte ativo encerra com a seguinte politica:
+
+- `benchmark_now` nao implica promocao;
+- `reference_envelope` nao implica absorcao;
+- a saida continua restrita a `usar como referencia`, `absorver depois` ou `rejeitar`;
+- qualquer experimento futuro precisa preservar `domain_registry`, `memory_registry`, `mind_registry`, governanca final e sintese soberana.
+
+Decisao formal desta sprint:
+
+- `Mastra`: `usar como referencia`;
+- `AutoGPT Platform`: `usar como referencia`;
+- `Mem0`: `absorver depois`.
+
+Leitura apos o fechamento deste corte:
+
+- `Mastra` permanece como referencia forte de workflow e nao deve subir por conveniencia local;
+- `AutoGPT Platform` permanece como referencia de camada operacional futura e nao como nucleo;
+- `Mem0` fica como unica candidata de reabertura futura, condicionada a lacuna real do baseline de memoria.
+
+### 18.5 Quando `absorver depois` vira candidata a absorcao
+
+Uma tecnologia marcada como `absorver depois` so deve mudar de status quando todos estes sinais aparecerem ao mesmo tempo:
+
+- a lacuna do JARVIS estiver comprovada no corte ativo, e o baseline atual estiver exigindo workaround demais;
+- o benchmark, experimento ou fluxo isolado demonstrar ganho real contra o baseline atual;
+- o ganho vier sem romper `domain_registry`, `memory_registry`, `mind_registry`, governanca final ou sintese soberana;
+- a incorporacao couber no menor recorte util e reversivel, sem refactor total do nucleo;
+- `HANDOFF.md` e o documento do corte ativo passarem a tratar a tecnologia como candidata de absorcao da fase.
+
+Leitura correta:
+
+- `absorver depois` ainda nao e permissao de adotar;
+- ele apenas registra que a tecnologia ja parece promissora o bastante para uma futura janela de entrada;
+- a entrada continua subordinada a recorte, evidencia e coerencia com o baseline do sistema.
+
+### 18.6 Fontes oficiais consultadas nesta rodada
+
+- `AutoGPT Platform`: `https://docs.agpt.co/platform/agent-blocks/`
+- `Mastra`: `https://mastra.ai/en/docs/workflows/suspend-and-resume`
+- `Mem0`: `https://docs.mem0.ai/api-reference/memory/add-memories`
+- `Letta`: `https://docs.letta.com/guides/ade/core-memory`
+- `Zep`: `https://help.getzep.com/docs`
+
+
+### 18.7 Proximo recorte correto
+
+- o recorte ativo de memoria deve primeiro provar a lacuna do baseline atual;
+- `Mem0` nao sobe por conveniencia local nem por analogia com produtos externos;
+- a reabertura de absorcao so fica correta se o proprio JARVIS provar onde sua modelagem atual deixa de ser suficiente.
+
+Leitura apos a Sprint 2 do recorte de memoria:
+
+- conversa, sessao e missao continuam suficientes no baseline atual;
+- `user scope` ficou lido como tipado e rastreado, mas ainda nao runtime-rich;
+- `specialist_shared_memory` ficou lido como handoff forte, mas nao como prova de um escopo mais forte por agente;
+- `organization scope` continua apenas forma futura e ainda nao vira lacuna comprovada;
+- por isso, `Mem0` continua em `absorver depois` e nao em reabertura imediata.
+
+Leitura apos a Sprint 3 do recorte de memoria:
+
+- a decisao formal correta neste momento e `manter_fechado`;
+- `Mem0` continua candidata condicional e nao sobe para recorte proprio de absorcao nesta fase;
+- qualquer futura reabertura depende primeiro de consumidor canonico, custo estrutural comprovado ou nova evidencia local acima do baseline atual.
+
+Leitura apos o fechamento do memory gap evidence cut:
+
+- o proximo passo correto nao e abrir absorcao externa;
+- o proximo passo correto e endurecer nativamente `user scope` e `specialist_shared_memory`;
+- `Mem0` continua candidata condicional e so reabre se o baseline endurecido ainda provar insuficiencia.

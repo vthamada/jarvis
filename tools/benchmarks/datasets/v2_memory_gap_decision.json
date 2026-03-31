@@ -1,0 +1,29 @@
+{
+  "cut_id": "v2-memory-gap-evidence-cut",
+  "sprint_id": "sprint-3-reopen-or-hold-decision",
+  "decision_id": "memory_gap_hold_decision",
+  "final_decision": "manter_fechado",
+  "mem0_status": "absorver_depois",
+  "baseline_read": "o baseline atual prova lacuna parcial em user scope e shared specialist scope, mas ainda nao prova uma falha estrutural que justifique abrir absorcao externa agora.",
+  "decision_rationale": [
+    "conversation, session and mission scopes ja estao operacionais e cobrem a maior parte da continuidade soberana atual.",
+    "user scope ainda e rastreado mais por ids e trilha basica do que por memoria runtime rica, mas isso ainda nao exige camada externa para o recorte atual.",
+    "specialist_shared_memory ainda e um handoff forte mediado pelo nucleo, nao uma prova de escopo persistente mais forte por agente.",
+    "organization scope continua hipotese futura sem consumidor canonico soberano, entao nao deve puxar reabertura por antecipacao."
+  ],
+  "backlog_before_any_absorption": [
+    "provar se existe consumidor canonico que realmente precise de user scope mais rico do que ids, turn history e continuidade atual.",
+    "medir recorrencia de especialistas reentrando em sessoes ou missoes relacionadas antes de promover nocao mais forte de agent scope.",
+    "manter organization scope fora do baseline ate existir consumidor soberano explicito acima de user e session."
+  ],
+  "reopen_signals": [
+    "um consumidor canonico passar a exigir memoria de usuario acima de rastreio e continuidade atuais.",
+    "o custo de recompor specialist_shared_memory ficar estruturalmente maior do que o ganho do baseline atual.",
+    "um recorte futuro provar, com evidencia local, que organization scope deixou de ser hipotese e virou necessidade operacional."
+  ],
+  "blocked_now_by": [
+    "nao substituir memory_registry ou a memoria canonica do nucleo.",
+    "nao abrir dependencia externa sem lacuna soberanamente comprovada.",
+    "nao confundir referencia de mercado com necessidade real do runtime atual."
+  ]
+}

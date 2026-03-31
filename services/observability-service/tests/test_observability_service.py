@@ -1026,3 +1026,117 @@ def test_observability_service_audits_healthy_workflow_trace() -> None:
     assert audit.missing_required_events == []
     assert audit.anomaly_flags == []
     assert audit.trace_complete is True
+
+
+
+def test_observability_service_tracks_user_scope_status() -> None:
+    temp_dir = runtime_dir("observability-user-scope")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service.ingest_events(
+        [
+            InternalEventEnvelope(
+                event_id="evt-us1",
+                event_name="input_received",
+                timestamp="2026-03-31T00:00:00+00:00",
+                source_service="orchestrator-service",
+                payload={"content": "Analyze rollout context."},
+                request_id="req-user-scope",
+                session_id="sess-user-scope",
+                correlation_id="req-user-scope",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-us2",
+                event_name="memory_recovered",
+                timestamp="2026-03-31T00:00:01+00:00",
+                source_service="orchestrator-service",
+                payload={"user_scope_status": "seeded"},
+                request_id="req-user-scope",
+                session_id="sess-user-scope",
+                correlation_id="req-user-scope",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-us3",
+                event_name="intent_classified",
+                timestamp="2026-03-31T00:00:02+00:00",
+                source_service="orchestrator-service",
+                payload={"intent": "analysis"},
+                request_id="req-user-scope",
+                session_id="sess-user-scope",
+                correlation_id="req-user-scope",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-us4",
+                event_name="context_composed",
+                timestamp="2026-03-31T00:00:03+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "active_minds": ["mente_analitica"],
+                    "primary_mind": "mente_analitica",
+                    "supporting_minds": [],
+                    "suppressed_minds": [],
+                    "supporting_mind_limit": 2,
+                    "suppressed_mind_limit": 2,
+                    "dominant_tension": "consolidar contexto do usuario sem perder rigor",
+                    "arbitration_summary": "mente_analitica lidera a leitura do contexto",
+                    "arbitration_source": "mind_registry",
+                },
+                request_id="req-user-scope",
+                session_id="sess-user-scope",
+                correlation_id="req-user-scope",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-us5",
+                event_name="plan_built",
+                timestamp="2026-03-31T00:00:04+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_action": "continuar", "continuity_source": "active_mission"},
+                request_id="req-user-scope",
+                session_id="sess-user-scope",
+                correlation_id="req-user-scope",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-us6",
+                event_name="continuity_decided",
+                timestamp="2026-03-31T00:00:05+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_action": "continuar", "continuity_source": "active_mission"},
+                request_id="req-user-scope",
+                session_id="sess-user-scope",
+                correlation_id="req-user-scope",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-us7",
+                event_name="governance_checked",
+                timestamp="2026-03-31T00:00:06+00:00",
+                source_service="orchestrator-service",
+                payload={"decision": "allow_with_conditions"},
+                request_id="req-user-scope",
+                session_id="sess-user-scope",
+                correlation_id="req-user-scope",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-us8",
+                event_name="response_synthesized",
+                timestamp="2026-03-31T00:00:07+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_action": "continuar"},
+                request_id="req-user-scope",
+                session_id="sess-user-scope",
+                correlation_id="req-user-scope",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-us9",
+                event_name="memory_recorded",
+                timestamp="2026-03-31T00:00:08+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_mode": "continuar", "user_scope_status": "recoverable"},
+                request_id="req-user-scope",
+                session_id="sess-user-scope",
+                correlation_id="req-user-scope",
+            ),
+        ]
+    )
+
+    audit = service.audit_flow(ObservabilityQuery(request_id="req-user-scope"))
+
+    assert audit.user_scope_status == "recoverable"

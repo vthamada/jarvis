@@ -1,0 +1,102 @@
+{
+  "cut_id": "v2-governed-benchmark-execution-cut",
+  "sprint_id": "sprint-2-scenario-specs",
+  "scenarios": [
+    {
+      "technology_id": "mastra",
+      "display_name": "Mastra",
+      "scenario_id": "workflow_pause_resume_trace",
+      "scenario_title": "workflow pause/resume with trace parity",
+      "goal": "comparar pause/resume, checkpoints e trilha observavel com o baseline atual do workflow do JARVIS",
+      "minimal_execution_shape": [
+        "declarar um workflow sandbox com pelo menos tres steps e um ponto de pausa",
+        "simular retomada do workflow sem tocar contratos canonicos do orchestrator",
+        "registrar quais sinais de observabilidade sao nativos e quais precisariam de adaptacao"
+      ],
+      "success_signals": [
+        "pause/resume claro sem reabrir o orchestrator soberano",
+        "checkpoints compreensiveis para leitura humana",
+        "trilha observavel comparavel ao baseline atual"
+      ],
+      "failure_signals": [
+        "necessidade de substituir contratos canonicos do orchestrator",
+        "observabilidade pior ou mais opaca do que o baseline atual",
+        "ganho marginal com custo de acoplamento alto"
+      ],
+      "evidence_required": [
+        "scenario_spec",
+        "sandbox_execution_notes",
+        "comparison_summary"
+      ],
+      "sandbox_boundaries": [
+        "nao trocar o orchestrator principal",
+        "nao redefinir workflow contracts soberanos",
+        "nao alterar axis gates"
+      ]
+    },
+    {
+      "technology_id": "autogpt_platform",
+      "display_name": "AutoGPT Platform",
+      "scenario_id": "blocks_triggers_operational_layer",
+      "scenario_title": "blocks and triggers as future operational layer",
+      "goal": "comparar blocos reutilizaveis, triggers e webhooks como camada futura acima do runtime atual",
+      "minimal_execution_shape": [
+        "mapear um fluxo simples por blocos e gatilhos sem identidade propria",
+        "comparar a composicao de automacao com o baseline atual do operational-service",
+        "registrar o que e diretamente traduzivel para contratos soberanos e o que nao e"
+      ],
+      "success_signals": [
+        "blocos e triggers com valor claro acima do runtime atual",
+        "separacao limpa entre camada operacional futura e nucleo soberano",
+        "baixa necessidade de acoplamento central para experimentacao"
+      ],
+      "failure_signals": [
+        "pressao para assumir identidade, memoria canonica ou governanca final",
+        "benchmark apenas conceitual sem traducao arquitetural real",
+        "camada operacional pouco melhor do que o baseline atual"
+      ],
+      "evidence_required": [
+        "scenario_spec",
+        "sandbox_execution_notes",
+        "translation_limits"
+      ],
+      "sandbox_boundaries": [
+        "nao assumir o papel de cerebro real do sistema",
+        "nao tocar governanca final do nucleo",
+        "nao promover automacao continua para baseline nesta sprint"
+      ]
+    },
+    {
+      "technology_id": "mem0",
+      "display_name": "Mem0",
+      "scenario_id": "multilayer_scope_partitioning",
+      "scenario_title": "multilayer scope partitioning against memory baseline",
+      "goal": "comparar escopo por sessao, usuario e agente contra o pacote multicamada atual do memory-service",
+      "minimal_execution_shape": [
+        "descrever um caso minimo com conversa, sessao, usuario e memoria compartilhada",
+        "comparar a separacao de escopos com o baseline atual do memory-service",
+        "registrar se o ganho e estrutural ou apenas cosmetico"
+      ],
+      "success_signals": [
+        "particionamento de escopo mais claro que o baseline atual",
+        "modelo de memoria multicamada legivel e comparavel",
+        "potencial real de absorcao futura sem substituir o registry soberano"
+      ],
+      "failure_signals": [
+        "necessidade de trocar a memoria canonica inteira",
+        "ganho pequeno com custo alto de acoplamento",
+        "pressao para substituir politicas soberanas de compartilhamento"
+      ],
+      "evidence_required": [
+        "scenario_spec",
+        "sandbox_execution_notes",
+        "scope_mapping_comparison"
+      ],
+      "sandbox_boundaries": [
+        "nao substituir memory_registry ou memoria canonica",
+        "nao alterar contratos compartilhados do memory-service",
+        "nao promover fundacao externa nesta sprint"
+      ]
+    }
+  ]
+}

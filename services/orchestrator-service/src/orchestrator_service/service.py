@@ -148,6 +148,26 @@ class OrchestratorService:
                     "continuity_replay_status": (
                         continuity_replay.replay_status if continuity_replay else None
                     ),
+                    "user_scope_status": (
+                        memory_recovery_result.user_scope_context.context_status
+                        if memory_recovery_result.user_scope_context
+                        else "not_applicable"
+                    ),
+                    "user_scope_interaction_count": (
+                        memory_recovery_result.user_scope_context.interaction_count
+                        if memory_recovery_result.user_scope_context
+                        else 0
+                    ),
+                    "user_context_brief": (
+                        memory_recovery_result.user_scope_context.user_context_brief
+                        if memory_recovery_result.user_scope_context
+                        else None
+                    ),
+                    "user_scope_memory_refs": (
+                        memory_recovery_result.user_scope_context.memory_refs
+                        if memory_recovery_result.user_scope_context
+                        else []
+                    ),
                 },
             )
         )
@@ -594,6 +614,21 @@ class OrchestratorService:
                     "continuity_target_mission_id": (
                         str(deliberative_plan.continuity_target_mission_id)
                         if deliberative_plan.continuity_target_mission_id
+                        else None
+                    ),
+                    "user_scope_status": (
+                        memory_record_result.user_scope_context.context_status
+                        if memory_record_result.user_scope_context
+                        else "not_applicable"
+                    ),
+                    "user_scope_interaction_count": (
+                        memory_record_result.user_scope_context.interaction_count
+                        if memory_record_result.user_scope_context
+                        else 0
+                    ),
+                    "user_context_brief": (
+                        memory_record_result.user_scope_context.user_context_brief
+                        if memory_record_result.user_scope_context
                         else None
                     ),
                 },

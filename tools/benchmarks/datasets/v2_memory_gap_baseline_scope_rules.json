@@ -1,0 +1,230 @@
+{
+  "cut_id": "v2-memory-gap-evidence-cut",
+  "sprint_id": "sprint-2-baseline-evidence-collection",
+  "scopes": [
+    {
+      "scope_id": "conversation_scope",
+      "title": "conversation scope is already operational in the baseline",
+      "status_when_rules_match": "implemented",
+      "gap_read_when_rules_match": "baseline_sufficient_now",
+      "supports_hypotheses": [],
+      "rules": [
+        {
+          "rule_id": "interaction_turns_table",
+          "source": "repository",
+          "snippet": "CREATE TABLE IF NOT EXISTS interaction_turns",
+          "expected_present": true,
+          "reason": "conversation turns are persisted as the lowest baseline memory trace"
+        },
+        {
+          "rule_id": "context_summary_table",
+          "source": "repository",
+          "snippet": "CREATE TABLE IF NOT EXISTS session_context",
+          "expected_present": true,
+          "reason": "conversation scope is compacted into a session summary"
+        },
+        {
+          "rule_id": "record_turn_entrypoint",
+          "source": "service",
+          "snippet": "def record_turn(",
+          "expected_present": true,
+          "reason": "memory-service records conversation turns through a canonical entrypoint"
+        }
+      ],
+      "baseline_read": [
+        "the baseline already persists raw interaction turns and a derived session summary",
+        "this scope is not the current source of a multilayer memory gap"
+      ]
+    },
+    {
+      "scope_id": "session_scope",
+      "title": "session scope is operational and recoverable",
+      "status_when_rules_match": "implemented",
+      "gap_read_when_rules_match": "baseline_sufficient_now",
+      "supports_hypotheses": [],
+      "rules": [
+        {
+          "rule_id": "session_continuity_table",
+          "source": "repository",
+          "snippet": "CREATE TABLE IF NOT EXISTS session_continuity",
+          "expected_present": true,
+          "reason": "session continuity is persisted as its own scope"
+        },
+        {
+          "rule_id": "continuity_checkpoint_table",
+          "source": "repository",
+          "snippet": "CREATE TABLE IF NOT EXISTS continuity_checkpoints",
+          "expected_present": true,
+          "reason": "session replay and governed resume are checkpointed"
+        },
+        {
+          "rule_id": "session_replay_entrypoint",
+          "source": "service",
+          "snippet": "def get_session_continuity_replay(",
+          "expected_present": true,
+          "reason": "the runtime can recover session continuity explicitly"
+        }
+      ],
+      "baseline_read": [
+        "session scope already exceeds plain chat history because it has continuity, replay and pause resolution",
+        "there is no evidence here of a missing multilayer capability for the current cut"
+      ]
+    },
+    {
+      "scope_id": "mission_scope",
+      "title": "mission scope is operational and richer than simple session state",
+      "status_when_rules_match": "implemented",
+      "gap_read_when_rules_match": "baseline_sufficient_now",
+      "supports_hypotheses": [],
+      "rules": [
+        {
+          "rule_id": "mission_state_contract",
+          "source": "contracts",
+          "snippet": "class MissionStateContract:",
+          "expected_present": true,
+          "reason": "mission state has an explicit canonical contract"
+        },
+        {
+          "rule_id": "mission_state_table",
+          "source": "repository",
+          "snippet": "CREATE TABLE IF NOT EXISTS mission_states",
+          "expected_present": true,
+          "reason": "mission state is persisted independently from session context"
+        },
+        {
+          "rule_id": "mission_state_entrypoint",
+          "source": "service",
+          "snippet": "def get_mission_state(",
+          "expected_present": true,
+          "reason": "the runtime exposes mission continuity as a recoverable object"
+        }
+      ],
+      "baseline_read": [
+        "mission scope is already treated as a first-class continuity artifact",
+        "the current gap is not that mission memory is absent, but whether richer cross-scope escalation is needed"
+      ]
+    },
+    {
+      "scope_id": "user_scope",
+      "title": "user scope is typed and tracked, but not yet runtime rich",
+      "status_when_rules_match": "typed_tracking_only",
+      "gap_read_when_rules_match": "partial_gap_supported",
+      "supports_hypotheses": [
+        "user_scope_is_typed_but_not_runtime_rich"
+      ],
+      "rules": [
+        {
+          "rule_id": "input_contract_user_id",
+          "source": "contracts",
+          "snippet": "user_id: str | None = None",
+          "expected_present": true,
+          "reason": "user identity is part of the canonical contracts"
+        },
+        {
+          "rule_id": "interaction_turns_user_id",
+          "source": "repository",
+          "snippet": "user_id TEXT",
+          "expected_present": true,
+          "reason": "user_id is persisted in the low-level interaction history"
+        },
+        {
+          "rule_id": "dedicated_user_memory_contract_absent",
+          "source": "contracts",
+          "snippet": "class UserMemory",
+          "expected_present": false,
+          "reason": "there is still no dedicated user memory contract above ids and turn history"
+        },
+        {
+          "rule_id": "dedicated_user_memory_entrypoint_absent",
+          "source": "service",
+          "snippet": "def get_user_memory(",
+          "expected_present": false,
+          "reason": "memory-service still has no dedicated runtime entrypoint for user memory"
+        }
+      ],
+      "baseline_read": [
+        "the baseline can track who the user is, but it does not yet recover a richer user scope comparable to session or mission continuity",
+        "this supports the hypothesis that user scope is typed but not yet operationally rich"
+      ]
+    },
+    {
+      "scope_id": "specialist_shared_scope",
+      "title": "specialist shared memory covers handoff, but not a stronger agent scope",
+      "status_when_rules_match": "core_mediated_handoff_only",
+      "gap_read_when_rules_match": "partial_gap_supported",
+      "supports_hypotheses": [
+        "shared_memory_does_not_equal_agent_scope"
+      ],
+      "rules": [
+        {
+          "rule_id": "specialist_shared_contract",
+          "source": "contracts",
+          "snippet": "class SpecialistSharedMemoryContextContract:",
+          "expected_present": true,
+          "reason": "specialist-facing shared memory is formally modeled"
+        },
+        {
+          "rule_id": "specialist_shared_table",
+          "source": "repository",
+          "snippet": "CREATE TABLE IF NOT EXISTS specialist_shared_memory",
+          "expected_present": true,
+          "reason": "shared memory is persisted per session and specialist"
+        },
+        {
+          "rule_id": "specialist_shared_entrypoint",
+          "source": "service",
+          "snippet": "def prepare_specialist_shared_memory(",
+          "expected_present": true,
+          "reason": "the runtime can assemble and persist core-mediated specialist memory packets"
+        },
+        {
+          "rule_id": "stronger_agent_scope_absent",
+          "source": "service",
+          "snippet": "agent_scope",
+          "expected_present": false,
+          "reason": "the baseline still does not expose a stronger persistent scope per agent or participant"
+        }
+      ],
+      "baseline_read": [
+        "the current baseline is good at guided handoff, not at proving a richer long-lived agent scope",
+        "this supports the hypothesis that shared specialist memory is not the same thing as a stronger agent scope"
+      ]
+    },
+    {
+      "scope_id": "organization_scope",
+      "title": "organization scope is still only a future shape",
+      "status_when_rules_match": "future_shape_only",
+      "gap_read_when_rules_match": "not_proven_gap",
+      "supports_hypotheses": [
+        "organization_scope_is_still_only_a_future_shape"
+      ],
+      "rules": [
+        {
+          "rule_id": "organization_contract_absent",
+          "source": "contracts",
+          "snippet": "organization_id",
+          "expected_present": false,
+          "reason": "there is no organization-level identifier in the current canonical contracts"
+        },
+        {
+          "rule_id": "organization_memory_class_absent",
+          "source": "registry",
+          "snippet": "ORGANIZATION",
+          "expected_present": false,
+          "reason": "memory registry does not currently expose organization scope as a canonical runtime class"
+        },
+        {
+          "rule_id": "organization_runtime_entrypoint_absent",
+          "source": "service",
+          "snippet": "def get_organization_memory(",
+          "expected_present": false,
+          "reason": "memory-service has no organization memory entrypoint because no canonical consumer depends on it yet"
+        }
+      ],
+      "baseline_read": [
+        "organization scope is absent, but the absence is not yet a proven failure of the runtime",
+        "for the current baseline this remains a future shape, not a reopen-ready gap"
+      ]
+    }
+  ]
+}

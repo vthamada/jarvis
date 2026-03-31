@@ -60,6 +60,72 @@ Para validar explicitamente a trilha de memoria com PostgreSQL:
 python -m tools.benchmarks --postgres-url postgresql://postgres:postgres@localhost:5433/jarvis
 ```
 
+Para regenerar a matriz de benchmark governado do corte ativo:
+
+```powershell
+python tools/render_governed_benchmark_matrix.py
+```
+
+Para regenerar o plano de execucao do corte ativo de benchmark sandbox:
+
+```powershell
+python tools/render_governed_benchmark_execution_plan.py
+```
+
+Para regenerar os scenario specs do corte ativo de benchmark sandbox:
+
+```powershell
+python tools/render_governed_benchmark_scenario_specs.py
+```
+
+Para regenerar o protocolo do corte ativo de evidencia de memoria:
+
+```powershell
+python tools/render_memory_gap_evidence_protocol.py
+```
+
+Para regenerar a evidencia local por escopo do corte ativo de memoria:
+
+```powershell
+python tools/render_memory_gap_baseline_evidence.py
+```
+
+Para regenerar a decisao formal do corte ativo de memoria:
+
+```powershell
+python tools/render_memory_gap_decision.py
+```
+
+Para regenerar as decisoes formais do corte ativo de benchmark sandbox:
+
+```powershell
+python tools/render_governed_benchmark_decisions.py
+```
+
+Para verificar o baseline `release-grade` do corte atual:
+
+```powershell
+python tools/verify_active_cut_baseline.py
+```
+
+Para fechar formalmente o `v2-governed-benchmark-execution-cut`:
+
+```powershell
+python tools/close_governed_benchmark_execution_cut.py
+```
+
+Para fechar formalmente o `v2-domain-consumers-and-workflows-cut`:
+
+```powershell
+python tools/close_domain_consumers_and_workflows_cut.py
+```
+
+Para fechar formalmente o `v2-memory-gap-evidence-cut`:
+
+```powershell
+python tools/close_memory_gap_evidence_cut.py
+```
+
 ## Internal Pilot
 
 Para executar a janela minima do `internal pilot` e registrar evidencia local:
@@ -183,3 +249,9 @@ python tools/engineering_gate.py --mode release --include-controlled
 ```
 
 
+
+Para verificar o baseline `release-grade` do corte ativo:
+
+```powershell
+python tools/verify_active_cut_baseline.py
+```

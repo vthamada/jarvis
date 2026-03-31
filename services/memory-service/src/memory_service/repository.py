@@ -14,6 +14,7 @@ from shared.contracts import (
     ContinuityCheckpointContract,
     MissionStateContract,
     SpecialistSharedMemoryContextContract,
+    UserScopeContextContract,
 )
 from shared.types import MissionStatus
 
@@ -37,6 +38,22 @@ class StoredTurn:
     plan_summary: str | None = None
     plan_steps: list[str] = field(default_factory=list)
     recommended_task_type: str | None = None
+
+
+@dataclass(frozen=True)
+class StoredUserScopeSnapshot:
+    user_id: str
+    context_status: str
+    interaction_count: int
+    updated_at: str
+    user_context_brief: str | None = None
+    recent_intents: list[str] = field(default_factory=list)
+    recent_domain_focus: list[str] = field(default_factory=list)
+    active_mission_ids: list[str] = field(default_factory=list)
+    recent_session_ids: list[str] = field(default_factory=list)
+    last_recommended_task_type: str | None = None
+    continuity_preference: str | None = None
+    memory_refs: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -121,6 +138,14 @@ class MemoryRepository(ABC):
     @abstractmethod
     def fetch_context_summary(self, session_id: str) -> str | None:
         """Load the latest derived context summary for a session."""
+
+    @abstractmethod
+    def upsert_user_scope_snapshot(self, snapshot: StoredUserScopeSnapshot) -> None:
+        """Persist the latest recoverable user-scope snapshot."""
+
+    @abstractmethod
+    def fetch_user_scope_snapshot(self, user_id: str) -> UserScopeContextContract | None:
+        """Load the latest recoverable user-scope snapshot."""
 
     @abstractmethod
     def upsert_session_continuity(
@@ -269,6 +294,62 @@ class SqliteMemoryRepository(MemoryRepository):
                 (session_id,),
             ).fetchone()
         return None if row is None else str(row["recent_summary"])
+
+    def upsert_user_scope_snapshot(self, snapshot: StoredUserScopeSnapshot) -> None:
+        with self._connect() as connection:
+            connection.execute(
+                """
+                INSERT INTO user_scope_snapshots (
+                    user_id, context_status, interaction_count, user_context_brief,
+                    recent_intents, recent_domain_focus, active_mission_ids, recent_session_ids,
+                    last_recommended_task_type, continuity_preference, memory_refs, updated_at
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON CONFLICT(user_id) DO UPDATE SET
+                    context_status = excluded.context_status,
+                    interaction_count = excluded.interaction_count,
+                    user_context_brief = excluded.user_context_brief,
+                    recent_intents = excluded.recent_intents,
+                    recent_domain_focus = excluded.recent_domain_focus,
+                    active_mission_ids = excluded.active_mission_ids,
+                    recent_session_ids = excluded.recent_session_ids,
+                    last_recommended_task_type = excluded.last_recommended_task_type,
+                    continuity_preference = excluded.continuity_preference,
+                    memory_refs = excluded.memory_refs,
+                    updated_at = excluded.updated_at
+                """,
+                (
+                    snapshot.user_id,
+                    snapshot.context_status,
+                    snapshot.interaction_count,
+                    snapshot.user_context_brief,
+                    dumps(snapshot.recent_intents),
+                    dumps(snapshot.recent_domain_focus),
+                    dumps(snapshot.active_mission_ids),
+                    dumps(snapshot.recent_session_ids),
+                    snapshot.last_recommended_task_type,
+                    snapshot.continuity_preference,
+                    dumps(snapshot.memory_refs),
+                    snapshot.updated_at,
+                ),
+            )
+            connection.commit()
+
+    def fetch_user_scope_snapshot(self, user_id: str) -> UserScopeContextContract | None:
+        with self._connect() as connection:
+            row = connection.execute(
+                """
+                SELECT user_id, context_status, interaction_count, user_context_brief,
+                       recent_intents, recent_domain_focus, active_mission_ids, recent_session_ids,
+                       last_recommended_task_type, continuity_preference, memory_refs
+                FROM user_scope_snapshots
+                WHERE user_id = ?
+                """,
+                (user_id,),
+            ).fetchone()
+        if row is None:
+            return None
+        return self._row_to_user_scope_snapshot(row)
 
     def upsert_mission_state(self, mission_state: MissionStateContract) -> None:
         with self._connect() as connection:
@@ -683,6 +764,21 @@ class SqliteMemoryRepository(MemoryRepository):
                     updated_at TEXT NOT NULL
                 );
 
+                CREATE TABLE IF NOT EXISTS user_scope_snapshots (
+                    user_id TEXT PRIMARY KEY,
+                    context_status TEXT NOT NULL,
+                    interaction_count INTEGER NOT NULL,
+                    user_context_brief TEXT,
+                    recent_intents TEXT NOT NULL DEFAULT '[]',
+                    recent_domain_focus TEXT NOT NULL DEFAULT '[]',
+                    active_mission_ids TEXT NOT NULL DEFAULT '[]',
+                    recent_session_ids TEXT NOT NULL DEFAULT '[]',
+                    last_recommended_task_type TEXT,
+                    continuity_preference TEXT,
+                    memory_refs TEXT NOT NULL DEFAULT '[]',
+                    updated_at TEXT NOT NULL
+                );
+
                 CREATE TABLE IF NOT EXISTS session_continuity (
                     session_id TEXT PRIMARY KEY,
                     continuity_brief TEXT NOT NULL,
@@ -891,6 +987,22 @@ class SqliteMemoryRepository(MemoryRepository):
         )
 
     @staticmethod
+    def _row_to_user_scope_snapshot(row: Row) -> UserScopeContextContract:
+        return UserScopeContextContract(
+            user_id=str(row["user_id"]),
+            context_status=str(row["context_status"]),
+            interaction_count=int(row["interaction_count"] or 0),
+            user_context_brief=row["user_context_brief"],
+            recent_intents=list(loads(row["recent_intents"] or "[]")),
+            recent_domain_focus=list(loads(row["recent_domain_focus"] or "[]")),
+            active_mission_ids=list(loads(row["active_mission_ids"] or "[]")),
+            recent_session_ids=list(loads(row["recent_session_ids"] or "[]")),
+            last_recommended_task_type=row["last_recommended_task_type"],
+            continuity_preference=row["continuity_preference"],
+            memory_refs=list(loads(row["memory_refs"] or "[]")),
+        )
+
+    @staticmethod
     def _row_to_mission_state(row: Row) -> MissionStateContract:
         return MissionStateContract(
             mission_id=row["mission_id"],
@@ -1045,6 +1157,75 @@ class PostgresMemoryRepository(MemoryRepository):
             )
             row = cursor.fetchone()
         return None if row is None else str(row["recent_summary"])
+
+    def upsert_user_scope_snapshot(self, snapshot: StoredUserScopeSnapshot) -> None:
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO user_scope_snapshots (
+                    user_id, context_status, interaction_count, user_context_brief,
+                    recent_intents, recent_domain_focus, active_mission_ids, recent_session_ids,
+                    last_recommended_task_type, continuity_preference, memory_refs, updated_at
+                )
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                ON CONFLICT (user_id) DO UPDATE SET
+                    context_status = EXCLUDED.context_status,
+                    interaction_count = EXCLUDED.interaction_count,
+                    user_context_brief = EXCLUDED.user_context_brief,
+                    recent_intents = EXCLUDED.recent_intents,
+                    recent_domain_focus = EXCLUDED.recent_domain_focus,
+                    active_mission_ids = EXCLUDED.active_mission_ids,
+                    recent_session_ids = EXCLUDED.recent_session_ids,
+                    last_recommended_task_type = EXCLUDED.last_recommended_task_type,
+                    continuity_preference = EXCLUDED.continuity_preference,
+                    memory_refs = EXCLUDED.memory_refs,
+                    updated_at = EXCLUDED.updated_at
+                """,
+                (
+                    snapshot.user_id,
+                    snapshot.context_status,
+                    snapshot.interaction_count,
+                    snapshot.user_context_brief,
+                    dumps(snapshot.recent_intents),
+                    dumps(snapshot.recent_domain_focus),
+                    dumps(snapshot.active_mission_ids),
+                    dumps(snapshot.recent_session_ids),
+                    snapshot.last_recommended_task_type,
+                    snapshot.continuity_preference,
+                    dumps(snapshot.memory_refs),
+                    snapshot.updated_at,
+                ),
+            )
+            connection.commit()
+
+    def fetch_user_scope_snapshot(self, user_id: str) -> UserScopeContextContract | None:
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT user_id, context_status, interaction_count, user_context_brief,
+                       recent_intents, recent_domain_focus, active_mission_ids, recent_session_ids,
+                       last_recommended_task_type, continuity_preference, memory_refs
+                FROM user_scope_snapshots
+                WHERE user_id = %s
+                """,
+                (user_id,),
+            )
+            row = cursor.fetchone()
+        if row is None:
+            return None
+        return UserScopeContextContract(
+            user_id=row["user_id"],
+            context_status=row["context_status"],
+            interaction_count=int(row["interaction_count"] or 0),
+            user_context_brief=row["user_context_brief"],
+            recent_intents=list(loads(row["recent_intents"] or "[]")),
+            recent_domain_focus=list(loads(row["recent_domain_focus"] or "[]")),
+            active_mission_ids=list(loads(row["active_mission_ids"] or "[]")),
+            recent_session_ids=list(loads(row["recent_session_ids"] or "[]")),
+            last_recommended_task_type=row["last_recommended_task_type"],
+            continuity_preference=row["continuity_preference"],
+            memory_refs=list(loads(row["memory_refs"] or "[]")),
+        )
 
     def upsert_mission_state(self, mission_state: MissionStateContract) -> None:
         with self._connect() as connection, connection.cursor() as cursor:
@@ -1512,6 +1693,24 @@ class PostgresMemoryRepository(MemoryRepository):
                 CREATE TABLE IF NOT EXISTS session_context (
                     session_id TEXT PRIMARY KEY,
                     recent_summary TEXT NOT NULL,
+                    updated_at TEXT NOT NULL
+                )
+                """
+            )
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS user_scope_snapshots (
+                    user_id TEXT PRIMARY KEY,
+                    context_status TEXT NOT NULL,
+                    interaction_count INTEGER NOT NULL,
+                    user_context_brief TEXT,
+                    recent_intents TEXT NOT NULL DEFAULT '[]',
+                    recent_domain_focus TEXT NOT NULL DEFAULT '[]',
+                    active_mission_ids TEXT NOT NULL DEFAULT '[]',
+                    recent_session_ids TEXT NOT NULL DEFAULT '[]',
+                    last_recommended_task_type TEXT,
+                    continuity_preference TEXT,
+                    memory_refs TEXT NOT NULL DEFAULT '[]',
                     updated_at TEXT NOT NULL
                 )
                 """

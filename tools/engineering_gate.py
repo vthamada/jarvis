@@ -66,6 +66,18 @@ def build_gate_steps(*, mode: str, include_controlled: bool) -> list[GateStep]:
         )
         steps.append(
             GateStep(
+                label="active cut baseline verification",
+                command=[RUNNER, "tools/verify_active_cut_baseline.py"],
+            )
+        )
+        steps.append(
+            GateStep(
+                label="current cut closure verification",
+                command=[RUNNER, "tools/close_memory_gap_evidence_cut.py"],
+            )
+        )
+        steps.append(
+            GateStep(
                 label="baseline validation development",
                 command=[
                     RUNNER,

@@ -1,0 +1,86 @@
+# V2 Governed Benchmark Execution Plan
+
+- cut: `v2-governed-benchmark-execution-cut`
+- source_matrix: `docs/implementation/v2-governed-benchmark-matrix.md`
+- benchmark_now_count: `3`
+
+## Perfis de execucao
+
+### Mastra
+
+- technology_id: `mastra`
+- family_id: `workflow_orchestration`
+- benchmark_goal: comparar workflows tipados, pause/resume, HITL, checkpoints e observabilidade contra o baseline atual do JARVIS
+- jarvis_baseline_surface:
+  - `services/orchestrator-service/src/orchestrator_service/service.py`
+  - `services/orchestrator-service/src/orchestrator_service/langgraph_flow.py`
+  - `services/operational-service/src/operational_service/service.py`
+- evaluation_questions:
+  - Mastra melhora suspend/resume e checkpoints sem reabrir o orchestrator soberano?
+  - Mastra melhora tipagem de steps e auditabilidade acima do workflow baseline atual?
+  - Mastra exige mais acoplamento do que ganho real no recorte atual?
+- expected_artifacts:
+  - `benchmark_scenario_spec`
+  - `sandbox_execution_notes`
+  - `adoption_decision`
+- target_decisions:
+  - `usar_como_referencia`
+  - `absorver_depois`
+  - `rejeitar`
+- blocked_absorption_conditions:
+  - substituir o orchestrator soberano
+  - redefinir contratos canonicos de workflow
+  - romper axis gates ou observabilidade atual
+
+### AutoGPT Platform
+
+- technology_id: `autogpt_platform`
+- family_id: `continuous_operational_agents`
+- benchmark_goal: comparar blocos, triggers, webhooks e automacoes continuas como futura camada operacional acima do nucleo
+- jarvis_baseline_surface:
+  - `services/operational-service/src/operational_service/service.py`
+  - `tools/render_governed_benchmark_matrix.py`
+  - `docs/architecture/technology-study.md`
+- evaluation_questions:
+  - AutoGPT Platform melhora composicao por blocos e triggers acima do runtime atual?
+  - AutoGPT Platform pode entrar sem assumir identidade, memoria canonica ou governanca final?
+  - O valor dele aparece como camada futura de automacao ou so como benchmark conceitual?
+- expected_artifacts:
+  - `benchmark_scenario_spec`
+  - `sandbox_execution_notes`
+  - `adoption_decision`
+- target_decisions:
+  - `usar_como_referencia`
+  - `absorver_depois`
+  - `rejeitar`
+- blocked_absorption_conditions:
+  - assumir o papel de cerebro real do sistema
+  - substituir a governanca final do nucleo
+  - romper contratos soberanos de memoria ou identidade
+
+### Mem0
+
+- technology_id: `mem0`
+- family_id: `multilayer_memory`
+- benchmark_goal: comparar memoria multicamada por sessao, usuario e agente sem substituir a memoria canonica do JARVIS
+- jarvis_baseline_surface:
+  - `services/memory-service/src/memory_service/service.py`
+  - `services/memory-service/src/memory_service/repository.py`
+  - `shared/memory_registry.py`
+- evaluation_questions:
+  - Mem0 melhora escopo multicamada acima do pacote atual do memory-service?
+  - Mem0 ajuda a separar conversa, sessao, usuario e memoria compartilhada sem reabrir o registry soberano?
+  - O ganho de modelagem compensa o custo de acoplamento neste momento?
+- expected_artifacts:
+  - `benchmark_scenario_spec`
+  - `sandbox_execution_notes`
+  - `adoption_decision`
+- target_decisions:
+  - `usar_como_referencia`
+  - `absorver_depois`
+  - `rejeitar`
+- blocked_absorption_conditions:
+  - substituir a memoria canonica do sistema
+  - romper memory_registry ou politicas soberanas de compartilhamento
+  - impor fundacao externa antes de evidencia suficiente
+

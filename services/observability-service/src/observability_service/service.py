@@ -68,6 +68,7 @@ class FlowAudit:
     mind_alignment_status: str
     identity_alignment_status: str
     memory_alignment_status: str
+    user_scope_status: str
     specialist_sovereignty_status: str
     missing_continuity_signals: list[str]
     continuity_anomaly_flags: list[str]
@@ -245,6 +246,7 @@ class ObservabilityService:
                 mind_alignment_status="incomplete",
                 identity_alignment_status="incomplete",
                 memory_alignment_status="incomplete",
+                user_scope_status="incomplete",
                 specialist_sovereignty_status="incomplete",
                 missing_continuity_signals=[],
                 continuity_anomaly_flags=[],
@@ -268,6 +270,7 @@ class ObservabilityService:
         context_event = self._first_event(events, "context_composed")
         response_event = self._first_event(events, "response_synthesized")
         memory_event = self._first_event(events, "memory_recorded")
+        memory_recovered_event = self._first_event(events, "memory_recovered")
         domain_registry_event = self._first_event(events, "domain_registry_resolved")
         shared_memory_event = self._first_event(events, "specialist_shared_memory_linked")
         specialist_contract_event = self._first_event(events, "specialist_contracts_composed")
@@ -457,6 +460,10 @@ class ObservabilityService:
         memory_alignment_status = self._memory_alignment_status(
             shared_memory_event=shared_memory_event,
         )
+        user_scope_status = self._user_scope_status(
+            memory_recovered_event=memory_recovered_event,
+            memory_recorded_event=memory_event,
+        )
         specialist_sovereignty_status = self._specialist_sovereignty_status(
             specialist_contract_event=specialist_contract_event,
         )
@@ -485,6 +492,7 @@ class ObservabilityService:
             mind_alignment_status=mind_alignment_status,
             identity_alignment_status=identity_alignment_status,
             memory_alignment_status=memory_alignment_status,
+            user_scope_status=user_scope_status,
             specialist_sovereignty_status=specialist_sovereignty_status,
             missing_continuity_signals=missing_continuity_signals,
             continuity_anomaly_flags=continuity_anomaly_flags,
@@ -808,6 +816,27 @@ class ObservabilityService:
                 if write_policies and write_policies.get(memory_class_name) != "through_core_only":
                     return "attention_required"
         return "healthy"
+
+    @staticmethod
+    def _user_scope_status(
+        *,
+        memory_recovered_event: InternalEventEnvelope | None,
+        memory_recorded_event: InternalEventEnvelope | None,
+    ) -> str:
+        statuses = [
+            str(event.payload.get("user_scope_status"))
+            for event in (memory_recovered_event, memory_recorded_event)
+            if event is not None and event.payload.get("user_scope_status") is not None
+        ]
+        if not statuses:
+            return "incomplete"
+        if all(status == "not_applicable" for status in statuses):
+            return "not_applicable"
+        if "recoverable" in statuses:
+            return "recoverable"
+        if any(status in {"seeded", "tracked_only"} for status in statuses):
+            return "emerging"
+        return "partial"
 
     @staticmethod
     def _specialist_sovereignty_status(

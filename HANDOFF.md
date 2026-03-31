@@ -2,7 +2,7 @@
 
 ## Metadata
 
-- Atualizado em: 2026-03-30
+- Atualizado em: 2026-03-31
 - Branch: `main`
 - Commit de referência: `e165a5c`
 - Artefato canônico do projeto: `documento_mestre_jarvis.md`
@@ -30,8 +30,9 @@ Sistema oficial de planejamento desta fase:
 - `docs/roadmap/programa-ate-v3.md` como direção do programa até `v3`;
 - `docs/archive/implementation/v2-cycle-closure.md` como fechamento formal do primeiro corte do `v2`;
 - `docs/archive/implementation/v2-alignment-cycle.md` como histórico fechado do ciclo anterior;
-- `docs/implementation/v2-domain-consumers-and-workflows-cut.md` como execução oficial do corte ativo;
+- `docs/implementation/v2-native-memory-scope-hardening-cut.md` como execucao oficial do corte ativo;
 - `docs/archive/implementation/v2-sovereign-alignment-cut.md` como histórico de transição do corte anterior;
+- `docs/implementation/v2-domain-consumers-and-workflows-cut-closure.md` como fechamento formal regenerável do corte anterior imediato;
 - `docs/documentation/matriz-de-aderencia-mestre.md` como ponte entre visão canônica e backlog real.
 
 Leitura prioritária de aderência neste momento:
@@ -177,12 +178,11 @@ Regra de estudo externo no `v2`:
 ## Próximos passos imediatos
 
 Ordem recomendada:
-
-1. consolidar a Sprint 2 do `v2-domain-consumers-and-workflows-cut` com workflows operacionais auditáveis no runtime;
-2. concluir a Sprint 2 com soberania de domínios no runtime e eventos canônicos;
-3. concluir a Sprint 3 com consumo explícito de memória por classe;
-4. concluir a Sprint 4 com arbitragem de mentes baseada em domínios canônicos;
-5. promover `guided` como caminho principal das rotas já abertas;
+1. abrir e fechar a Sprint 2 do `v2-native-memory-scope-hardening-cut` sobre contexto recorrente de especialistas, ainda `through_core_only`;
+2. preservar `axis gates`, baseline release-grade e fechamentos regeneraveis como regra fixa enquanto a lacuna nao estiver comprovada;
+3. manter `Mastra` e `AutoGPT Platform` apenas como referencia e `Mem0` como candidata condicional, sem absorcao oportunista;
+4. usar `docs/implementation/v2-memory-gap-evidence-cut-closure.md` como fechamento anterior e o novo cut como base executavel da fase ativa;
+5. manter qualquer promoção externa fora do núcleo até um novo recorte ser formalmente aberto.
 
 ## Riscos e bloqueios
 
@@ -199,7 +199,12 @@ Ordem recomendada:
 - `CHANGELOG.md`
 - `docs/roadmap/programa-ate-v3.md`
 - `docs/implementation/v2-domain-consumers-and-workflows-cut.md`
-- `docs/implementation/v2-sovereign-alignment-cut-closure.md`
+- `docs/implementation/v2-memory-gap-evidence-cut.md`
+- `docs/implementation/v2-memory-gap-evidence-protocol.md`
+- `docs/implementation/v2-memory-gap-baseline-evidence.md`
+- `docs/implementation/v2-memory-gap-decision.md`
+- `docs/implementation/v2-memory-gap-evidence-cut-closure.md`
+- `docs/implementation/v2-native-memory-scope-hardening-cut.md`
 - `docs/documentation/matriz-de-aderencia-mestre.md`
 - `docs/architecture/technology-study.md`
 - `docs/archive/implementation/`
@@ -283,9 +288,24 @@ python tools/engineering_gate.py --mode standard
 - ontologias canônicas derivadas do Documento-Mestre podem permanecer em português enquanto camada semântica;
 - ids legados em português não devem ser expandidos por conveniência local.
 
-## Atualizacao 2026-03-30
+## Atualizacao 2026-03-31
 
-- specialist types do runtime agora usam ids canonicos em ingles, com compatibilidade curta para labels legados em portugues;
-- o proximo corte ativo continua sendo `v2-domain-consumers-and-workflows-cut`;
-- Sprint 2 foi concluída com workflows compostos auditáveis no runtime;
-- `workflow_state`, `workflow_governance_mode`, `workflow_decision_points`, `workflow_governance_declared`, `workflow_trace_status` e `workflow_domain_route` agora fazem parte do baseline observável do corte ativo.
+- specialist types do runtime seguem usando ids canonicos em ingles, com compatibilidade curta para labels legados em portugues;
+- o corte de prova de lacuna de memoria multicamada foi formalmente encerrado;
+- Sprint 2 permanece concluida com workflows compostos auditaveis no runtime;
+- Sprint 3 foi concluida com benchmark governado por familia e matriz regeneravel em `docs/implementation/v2-governed-benchmark-matrix.md`;
+- `AutoGPT Platform`, `Mastra` e `Mem0` foram formalizadas como candidatas de `benchmark_now`;
+- `LangGraph`, `OpenAI Agents SDK`, `CrewAI`, `Microsoft Agent Framework`, `OpenClaw`, `Hermes Agent`, `Manus`, `Letta / MemGPT`, `Zep` e `Graphiti` passaram a compor o `reference_envelope` do recorte;
+- a Sprint 4 foi concluida com `tools/verify_active_cut_baseline.py` como verificador regeneravel do baseline do corte ativo;
+- `tools/close_domain_consumers_and_workflows_cut.py` passou a fechar o corte em `.jarvis_runtime/v2_domain_consumers_and_workflows_cut/`;
+- a Sprint 1 do novo corte foi concluida com `docs/implementation/v2-memory-gap-evidence-protocol.md` como protocolo regeneravel das hipoteses de lacuna do baseline atual;
+- a Sprint 2 do novo corte foi concluida com `docs/implementation/v2-memory-gap-baseline-evidence.md` como leitura local por escopo do baseline atual;
+- a Sprint 3 do novo corte foi concluida com `docs/implementation/v2-memory-gap-decision.md` como decisao formal de `manter_fechado`, preservando `Mem0` em `absorver_depois`;
+- a Sprint 4 do recorte foi concluida com `docs/implementation/v2-memory-gap-evidence-cut-closure.md` como fechamento formal do corte e recomendacao explicita do proximo recorte nativo;
+- o baseline agora esta lido assim: conversa, sessao e missao permanecem suficientes; usuario e shared specialist memory sustentam lacuna parcial; organization scope continua apenas forma futura;
+- o novo corte ativo passa a ser `v2-native-memory-scope-hardening-cut`, focado em endurecimento nativo de user scope e contexto recorrente de especialistas.
+- a Sprint 1 do `v2-native-memory-scope-hardening-cut` foi concluida com snapshot nativo de `user scope`, recovery default desse escopo quando houver `user_id` e sinais minimos em observabilidade.
+- a Sprint 2 foi concluida com `docs/implementation/v2-governed-benchmark-scenario-specs.md` como artefato regeneravel de scenario specs e fronteiras sandbox;
+- a Sprint 3 foi concluida com `docs/implementation/v2-governed-benchmark-decisions.md` como decisao formal por tecnologia e racional curto contra o baseline do JARVIS;
+- a Sprint 4 do corte anterior foi concluida com `docs/implementation/v2-governed-benchmark-execution-cut-closure.md` como fechamento humano do recorte e `tools/close_governed_benchmark_execution_cut.py` como fechador regeneravel;
+- a proxima frente imediata passa a ser abrir um novo recorte apenas se a lacuna de memoria multicamada for comprovada acima do baseline atual.

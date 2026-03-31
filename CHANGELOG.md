@@ -1,5 +1,85 @@
 # CHANGELOG
 
+## 2026-03-31
+
+### Abertura do V2 governed benchmark execution cut
+
+- criado `docs/implementation/v2-governed-benchmark-execution-cut.md` como novo recorte ativo para benchmark sandbox por familia de capacidade;
+- criado dataset versionado em `tools/benchmarks/datasets/v2_governed_benchmark_execution_profiles.json` para transformar `benchmark_now` em perfis concretos de execucao;
+- criado `tools/render_governed_benchmark_execution_plan.py` e `docs/implementation/v2-governed-benchmark-execution-plan.md` como plano regeneravel de execucao sandbox;
+- criado `tests/unit/test_render_governed_benchmark_execution_plan.py` para cobrir o renderizador do plano;
+- `HANDOFF.md`, `README.md`, `docs/executive/master-summary.md`, `docs/architecture/technology-study.md`, `tools/README.md` e `tools/verify_axis_artifacts.py` foram sincronizados para tratar o novo recorte como frente ativa.
+
+## 2026-03-31
+
+### Sprint 2 do V2 governed benchmark execution cut
+
+- criado dataset versionado em `tools/benchmarks/datasets/v2_governed_benchmark_scenarios.json` para formalizar scenario specs minimos por tecnologia `benchmark_now`;
+- criado `tools/render_governed_benchmark_scenario_specs.py` e `docs/implementation/v2-governed-benchmark-scenario-specs.md` como artefatos regeneraveis de scenario specs e fronteiras sandbox;
+- criado `tests/unit/test_render_governed_benchmark_scenario_specs.py` para cobrir o renderizador dos scenario specs;
+- `docs/implementation/v2-governed-benchmark-execution-cut.md`, `HANDOFF.md`, `README.md`, `docs/executive/master-summary.md`, `docs/architecture/technology-study.md`, `tools/README.md` e `tools/verify_axis_artifacts.py` foram sincronizados para tratar a Sprint 2 como concluida e a Sprint 3 como proxima frente.
+
+### Sprint 3 do V2 governed benchmark execution cut
+
+- criado dataset versionado em `tools/benchmarks/datasets/v2_governed_benchmark_decisions.json` para registrar decisao formal por tecnologia `benchmark_now`;
+- criado `tools/render_governed_benchmark_decisions.py` e `docs/implementation/v2-governed-benchmark-decisions.md` como artefatos regeneraveis de decisao, racional curto e sinais de reabertura;
+- criado `tests/unit/test_render_governed_benchmark_decisions.py` para cobrir o renderizador das decisoes formais;
+- `docs/implementation/v2-governed-benchmark-execution-cut.md`, `HANDOFF.md`, `README.md`, `docs/executive/master-summary.md`, `docs/architecture/technology-study.md`, `tools/README.md` e `tools/verify_axis_artifacts.py` foram sincronizados para tratar a Sprint 3 como concluida e a Sprint 4 como proxima frente.
+
+### Abertura do V2 memory gap evidence cut
+
+- criado `docs/implementation/v2-memory-gap-evidence-cut.md` como novo recorte ativo para provar ou negar a lacuna real de memoria multicamada do baseline atual;
+- criado dataset versionado em `tools/benchmarks/datasets/v2_memory_gap_evidence_hypotheses.json` para formalizar hipoteses, sinais de prova e sinais de nao-lacuna;
+- criado `tools/render_memory_gap_evidence_protocol.py`, `docs/implementation/v2-memory-gap-evidence-protocol.md` e `tests/unit/test_render_memory_gap_evidence_protocol.py` como protocolo regeneravel do recorte;
+- `HANDOFF.md`, `README.md`, `docs/executive/master-summary.md`, `docs/architecture/technology-study.md`, `tools/README.md` e `tools/verify_axis_artifacts.py` foram sincronizados para tratar a Sprint 1 como concluida e a Sprint 2 como proxima frente.
+
+### Sprint 2 do V2 memory gap evidence cut
+
+- criado dataset versionado em `tools/benchmarks/datasets/v2_memory_gap_baseline_scope_rules.json` para formalizar a leitura local por escopo do baseline atual;
+- criado `tools/render_memory_gap_baseline_evidence.py`, `docs/implementation/v2-memory-gap-baseline-evidence.md` e `tests/unit/test_render_memory_gap_baseline_evidence.py` como artefatos regeneraveis da coleta local de evidencia;
+- a leitura da Sprint 2 ficou fechada assim: conversa, sessao e missao permanecem suficientes; `user scope` e `specialist_shared_memory` sustentam lacuna parcial; `organization scope` continua apenas forma futura;
+- `HANDOFF.md`, `README.md`, `docs/executive/master-summary.md`, `docs/architecture/technology-study.md`, `tools/README.md` e `tools/verify_axis_artifacts.py` foram sincronizados para tratar a Sprint 2 como concluida e a Sprint 3 como proxima frente.
+
+### Sprint 3 do V2 memory gap evidence cut
+
+- criado dataset versionado em `tools/benchmarks/datasets/v2_memory_gap_decision.json` para formalizar a decisao de `hold` vs `reopen`;
+- criado `tools/render_memory_gap_decision.py`, `docs/implementation/v2-memory-gap-decision.md` e `tests/unit/test_render_memory_gap_decision.py` como artefatos regeneraveis da decisao formal do recorte;
+- a decisao da Sprint 3 ficou em `manter_fechado`, preservando `Mem0` como `absorver_depois`;
+- `HANDOFF.md`, `README.md`, `docs/executive/master-summary.md`, `docs/architecture/technology-study.md`, `tools/README.md` e `tools/verify_axis_artifacts.py` foram sincronizados para tratar a Sprint 3 como concluida e a Sprint 4 como proxima frente.
+
+### Sprint 4 do V2 memory gap evidence cut
+
+### Sprint 1 do V2 native memory scope hardening cut
+
+- `shared/contracts/__init__.py` passou a expor `UserScopeContextContract` como contrato canonico do escopo de usuario;
+- `shared/memory_registry.py` passou a tratar `user` como recovery scope default quando houver `user_id`;
+- `memory-service` passou a persistir snapshot nativo de `user scope`, com intents recentes, foco de dominio, missoes ativas e preferencia de continuidade;
+- `orchestrator-service` passou a emitir `user_scope_status`, `user_scope_interaction_count` e `user_context_brief` nos eventos `memory_recovered` e `memory_recorded`;
+- `observability-service` passou a resumir esse recorte em `user_scope_status` como sinal minimo do baseline;
+- `docs/implementation/v2-native-memory-scope-hardening-cut.md` e `HANDOFF.md` foram sincronizados para tratar a Sprint 1 como concluida e a Sprint 2 como proxima frente.
+
+- criado `tools/close_memory_gap_evidence_cut.py` para fechar o recorte com leitura formal da lacuna parcial e recomendacao do proximo corte nativo;
+- criado `tests/unit/test_close_memory_gap_evidence_cut.py` para validar payload e markdown do fechamento do recorte;
+- criado `docs/implementation/v2-memory-gap-evidence-cut-closure.md` como documento formal de encerramento do corte;
+- `tools/engineering_gate.py --mode release` passou a verificar o fechamento regeneravel do recorte de memory gap;
+- `HANDOFF.md`, `README.md`, `docs/executive/master-summary.md`, `docs/architecture/technology-study.md`, `tools/README.md` e `tools/verify_axis_artifacts.py` foram sincronizados para tratar o corte como encerrado e `v2-native-memory-scope-hardening-cut` como nova frente ativa.
+
+### Sprint 4 do V2 governed benchmark execution cut
+
+- criado `tools/close_governed_benchmark_execution_cut.py` para fechar o recorte com resumo formal das decisoes e proximo recorte recomendado;
+- criado `tests/unit/test_close_governed_benchmark_execution_cut.py` para validar payload e markdown do fechamento do recorte;
+- criado `docs/implementation/v2-governed-benchmark-execution-cut-closure.md` como documento formal de encerramento do corte;
+- `tools/engineering_gate.py --mode release` passou a verificar o fechamento regeneravel do corte ativo de benchmark em vez do fechamento do corte anterior;
+- `docs/implementation/v2-governed-benchmark-execution-cut.md`, `HANDOFF.md`, `README.md`, `docs/executive/master-summary.md`, `docs/architecture/technology-study.md`, `tools/README.md` e `tools/verify_axis_artifacts.py` foram sincronizados para tratar a Sprint 4 como concluida e o recorte como formalmente encerrado.
+
+### Fechamento da Sprint 4 do V2 domain consumers and workflows cut
+
+- criado `tools/close_domain_consumers_and_workflows_cut.py` para gerar o fechamento formal regenerável do `v2-domain-consumers-and-workflows-cut` a partir do baseline `release-grade` já endurecido;
+- criado `tests/unit/test_close_domain_consumers_and_workflows_cut.py` para validar payload e markdown do fechamento do corte;
+- criado `docs/implementation/v2-domain-consumers-and-workflows-cut-closure.md` como documento formal de encerramento do corte;
+- `tools/engineering_gate.py --mode release` passou a exigir também o fechamento regenerável do corte atual, além do verificador de baseline;
+- `docs/implementation/v2-domain-consumers-and-workflows-cut.md`, `HANDOFF.md`, `README.md`, `docs/executive/master-summary.md` e `tools/README.md` foram sincronizados para tratar a Sprint 4 como concluída e apontar o próximo recorte recomendado.
+
 Este changelog registra mudanças relevantes na documentação canônica, nos artefatos de continuidade e nas decisões estruturais do projeto `jarvis`.
 
 Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalhados. Seu papel é manter rastreabilidade objetiva do que mudou, quando mudou e por que a mudança importa.
@@ -22,6 +102,23 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 - criado `docs/implementation/v2-sovereign-alignment-cut-closure.md` como documento formal de encerramento do corte;
 - `HANDOFF.md`, `README.md`, `docs/executive/master-summary.md`, `docs/archive/implementation/v2-sovereign-alignment-cut.md` e `tools/README.md` foram sincronizados para refletir o corte soberano como materialmente concluído e com artefato regenerável;
 - criado `docs/implementation/v2-domain-consumers-and-workflows-cut.md` como novo recorte ativo do `v2`, sem reabrir a soberania interna já fechada.
+
+### Sprint 4 do V2 domain consumers and workflows cut
+
+- criado `tools/verify_active_cut_baseline.py` para verificar coerencia `release-grade` entre rotas ativas, contratos de consumo, workflows e benchmark governance;
+- criado `tests/unit/test_verify_active_cut_baseline.py` para cobrir o verificador do baseline ativo;
+- `tools/engineering_gate.py --mode release` passou a exigir `tools/verify_active_cut_baseline.py` antes da validacao final do baseline;
+- `docs/implementation/v2-domain-consumers-and-workflows-cut.md`, `HANDOFF.md` e `tools/README.md` foram sincronizados para tratar a Sprint 4 como baseline endurecido em andamento.
+
+### Sprint 3 do V2 domain consumers and workflows cut
+
+- adicionadas regras explícitas para quando `absorver_depois` pode virar candidata real de absorção, tanto em `technology-study.md` quanto na matriz regenerável do corte ativo;
+- criado `tools/render_governed_benchmark_matrix.py` com dataset versionado em `tools/benchmarks/datasets/v2_governed_benchmark_candidates.json` para regenerar a matriz do recorte;
+- criado `docs/implementation/v2-governed-benchmark-matrix.md` como artefato de benchmark governado por familia de capacidade;
+- a Sprint 3 passou a declarar todas as tecnologias que podem entrar neste recorte em `workflow_orchestration`, `continuous_operational_agents` e `multilayer_memory`;
+- `AutoGPT Platform`, `Mastra` e `Mem0` ficaram formalizadas como `benchmark_now` sem promocao direta;
+- `LangGraph`, `OpenAI Agents SDK`, `CrewAI`, `Microsoft Agent Framework`, `OpenClaw`, `Hermes Agent`, `Manus`, `Letta / MemGPT`, `Zep` e `Graphiti` ficaram formalizadas como `reference_envelope` do corte ativo;
+- `docs/implementation/v2-domain-consumers-and-workflows-cut.md`, `docs/architecture/technology-study.md`, `HANDOFF.md`, `README.md` e `docs/executive/master-summary.md` foram sincronizados para tratar a Sprint 3 como concluida e a Sprint 4 como frente imediata.
 
 ### Sprint 2 do V2 domain consumers and workflows cut
 

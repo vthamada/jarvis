@@ -44,7 +44,9 @@ MEMORY_REGISTRY: dict[MemoryClass, MemoryPolicy] = {
         display_name="Memoria do usuario",
         stability="alta",
         sensitivity="elevada",
-        runtime_status="tipado_documentado",
+        runtime_status="runtime_parcial",
+        retrieval_default=True,
+        retrieval_priority=95,
     ),
     MemoryClass.RELATIONAL: MemoryPolicy(
         memory_class=MemoryClass.RELATIONAL,
@@ -180,8 +182,9 @@ def default_priority_rules() -> list[str]:
     ordered = ">".join(memory_class.value for memory_class in default_memory_scopes())
     return [
         f"default_recovery_order={ordered}",
-        "mission_and_relational_memory_before_recent_context",
+        "mission_and_user_memory_before_recent_context",
         "domain_memory_requires_runtime_domain_link",
+        "user_memory_recovers_when_user_id_is_available",
         "identity_and_normative_memory_are_not_default_recovery_scopes",
     ]
 

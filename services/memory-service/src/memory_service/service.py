@@ -13,6 +13,7 @@ from memory_service.repository import (
     StoredContinuityPauseResolution,
     StoredSpecialistSharedMemory,
     StoredTurn,
+    StoredUserScopeSnapshot,
     build_memory_repository,
     continuity_checkpoint_to_contract,
 )
@@ -29,6 +30,7 @@ from shared.contracts import (
     MissionStateContract,
     SpecialistContributionContract,
     SpecialistSharedMemoryContextContract,
+    UserScopeContextContract,
 )
 from shared.domain_registry import resolve_route
 from shared.memory_registry import (
@@ -62,14 +64,16 @@ class MemoryRecoveryResult:
     """Structured result for contextual recovery."""
 
     recovery_contract: MemoryRecoveryContract
+    user_hints: list[str]
     session_context: list[str]
     mission_hints: list[str]
     plan_hints: list[str]
     continuity_context: MissionContinuityContextContract | None = None
+    user_scope_context: UserScopeContextContract | None = None
 
     @property
     def recovered_items(self) -> list[str]:
-        return [*self.session_context, *self.mission_hints, *self.plan_hints]
+        return [*self.user_hints, *self.session_context, *self.mission_hints, *self.plan_hints]
 
 
 @dataclass
@@ -77,6 +81,7 @@ class MemoryRecordResult:
     """Structured result for memory recording."""
 
     record_contract: MemoryRecordContract
+    user_scope_context: UserScopeContextContract | None = None
 
 
 class MemoryService:
@@ -104,17 +109,21 @@ class MemoryService:
             sensitivity_ceiling=RiskLevel.MODERATE,
         )
         (
+            user_hints,
             session_context,
             mission_hints,
             plan_hints,
             continuity_context,
+            user_scope_context,
         ) = self._compose_recovered_items(contract, recovery_contract.max_items or 4)
         return MemoryRecoveryResult(
             recovery_contract=recovery_contract,
+            user_hints=user_hints,
             session_context=session_context,
             mission_hints=mission_hints,
             plan_hints=plan_hints,
             continuity_context=continuity_context,
+            user_scope_context=user_scope_context,
         )
 
     def record_turn(
@@ -224,7 +233,21 @@ class MemoryService:
             )
             if mission_state is not None:
                 self.repository.upsert_mission_state(mission_state)
-        return MemoryRecordResult(record_contract=record_contract)
+        user_scope_context: UserScopeContextContract | None = None
+        if contract.user_id:
+            user_scope_snapshot = self._build_user_scope_snapshot(
+                contract,
+                intent=intent,
+                deliberative_plan=deliberative_plan,
+                governance_decision=governance_decision,
+            )
+            if user_scope_snapshot is not None:
+                self.repository.upsert_user_scope_snapshot(user_scope_snapshot)
+                user_scope_context = self._user_scope_contract_from_snapshot(user_scope_snapshot)
+        return MemoryRecordResult(
+            record_contract=record_contract,
+            user_scope_context=user_scope_context,
+        )
 
     def get_mission_state(self, mission_id: str) -> MissionStateContract | None:
         """Expose the latest mission snapshot for validation and orchestration."""
@@ -425,12 +448,55 @@ class MemoryService:
         self,
         contract: InputContract,
         limit: int,
-    ) -> tuple[list[str], list[str], list[str], MissionContinuityContextContract | None]:
+    ) -> tuple[
+        list[str],
+        list[str],
+        list[str],
+        list[str],
+        MissionContinuityContextContract | None,
+        UserScopeContextContract | None,
+    ]:
+        user_hints: list[str] = []
         session_context: list[str] = []
         continuity_hints: list[str] = []
         mission_hints: list[str] = []
         plan_hints: list[str] = []
         continuity_context: MissionContinuityContextContract | None = None
+        user_scope_context: UserScopeContextContract | None = None
+        if contract.user_id:
+            user_scope_context = self.repository.fetch_user_scope_snapshot(contract.user_id)
+            if user_scope_context is None:
+                user_scope_context = self._tracked_only_user_scope_context(contract.user_id)
+            user_hints.append(f"user_scope_status={user_scope_context.context_status}")
+            user_hints.append(
+                f"user_scope_interaction_count={user_scope_context.interaction_count}"
+            )
+            if user_scope_context.user_context_brief:
+                user_hints.append(
+                    f"user_context_brief={user_scope_context.user_context_brief}"
+                )
+            if user_scope_context.recent_intents:
+                user_hints.append(
+                    f"user_recent_intents={','.join(user_scope_context.recent_intents[:3])}"
+                )
+            if user_scope_context.recent_domain_focus:
+                user_hints.append(
+                    f"user_domain_focus={','.join(user_scope_context.recent_domain_focus[:3])}"
+                )
+            if user_scope_context.active_mission_ids:
+                user_hints.append(
+                    f"user_active_missions={','.join(user_scope_context.active_mission_ids[:3])}"
+                )
+            if user_scope_context.last_recommended_task_type:
+                user_hints.append(
+                    "user_last_recommended_task_type="
+                    f"{user_scope_context.last_recommended_task_type}"
+                )
+            if user_scope_context.continuity_preference:
+                user_hints.append(
+                    "user_continuity_preference="
+                    f"{user_scope_context.continuity_preference}"
+                )
         summary = self.repository.fetch_context_summary(str(contract.session_id))
         if summary:
             session_context.append(f"context_summary={summary}")
@@ -568,7 +634,14 @@ class MemoryService:
         for hint in continuity_hints:
             if hint not in final_session_context:
                 final_session_context.append(hint)
-        return final_session_context, mission_hints[:12], plan_hints[-2:], continuity_context
+        return (
+            user_hints[:limit],
+            final_session_context,
+            mission_hints[:12],
+            plan_hints[-2:],
+            continuity_context,
+            user_scope_context,
+        )
 
     def _resolve_related_states(
         self,
@@ -1401,6 +1474,134 @@ class MemoryService:
         if deliberative_plan.requires_human_validation:
             return "clarification"
         return "execution"
+
+    def _build_user_scope_snapshot(
+        self,
+        contract: InputContract,
+        *,
+        intent: str,
+        deliberative_plan: DeliberativePlanContract | None,
+        governance_decision: PermissionDecision | None,
+    ) -> StoredUserScopeSnapshot | None:
+        if not contract.user_id:
+            return None
+        previous = self.repository.fetch_user_scope_snapshot(contract.user_id)
+        accepted = governance_decision not in {
+            PermissionDecision.BLOCK,
+            PermissionDecision.DEFER_FOR_VALIDATION,
+        }
+        recent_intents = self._merge_recent_values(
+            previous.recent_intents if previous else [],
+            [intent],
+            limit=4,
+        )
+        recent_domain_focus = self._merge_recent_values(
+            previous.recent_domain_focus if previous else [],
+            deliberative_plan.active_domains if accepted and deliberative_plan else [],
+            limit=4,
+        )
+        active_mission_ids = self._merge_recent_values(
+            previous.active_mission_ids if previous else [],
+            [str(contract.mission_id)] if accepted and contract.mission_id else [],
+            limit=3,
+        )
+        recent_session_ids = self._merge_recent_values(
+            previous.recent_session_ids if previous else [],
+            [str(contract.session_id)],
+            limit=3,
+        )
+        interaction_count = (previous.interaction_count if previous else 0) + 1
+        last_recommended_task_type = (
+            deliberative_plan.recommended_task_type
+            if accepted and deliberative_plan
+            else (previous.last_recommended_task_type if previous else None)
+        )
+        continuity_preference = (
+            deliberative_plan.continuity_action
+            if accepted and deliberative_plan and deliberative_plan.continuity_action
+            else (previous.continuity_preference if previous else None)
+        )
+        evidence_signals = sum(
+            1
+            for item in (
+                len(recent_intents) >= 2,
+                bool(recent_domain_focus),
+                bool(active_mission_ids),
+                continuity_preference is not None,
+            )
+            if item
+        )
+        context_status = (
+            "recoverable"
+            if interaction_count >= 2 and evidence_signals >= 2
+            else "seeded"
+        )
+        brief_parts = [f"intents={','.join(recent_intents[:3])}"]
+        if recent_domain_focus:
+            brief_parts.append(f"domains={','.join(recent_domain_focus[:3])}")
+        if active_mission_ids:
+            brief_parts.append(f"missions={','.join(active_mission_ids[:2])}")
+        if continuity_preference:
+            brief_parts.append(f"continuity={continuity_preference}")
+        if last_recommended_task_type:
+            brief_parts.append(f"task_type={last_recommended_task_type}")
+        memory_refs = [f"memory://user/{contract.user_id}"]
+        if active_mission_ids:
+            memory_refs.extend(f"memory://mission/{item}" for item in active_mission_ids[:2])
+        return StoredUserScopeSnapshot(
+            user_id=contract.user_id,
+            context_status=context_status,
+            interaction_count=interaction_count,
+            user_context_brief="; ".join(brief_parts),
+            recent_intents=recent_intents,
+            recent_domain_focus=recent_domain_focus,
+            active_mission_ids=active_mission_ids,
+            recent_session_ids=recent_session_ids,
+            last_recommended_task_type=last_recommended_task_type,
+            continuity_preference=continuity_preference,
+            memory_refs=memory_refs,
+            updated_at=self.now(),
+        )
+
+    @staticmethod
+    def _user_scope_contract_from_snapshot(
+        snapshot: StoredUserScopeSnapshot,
+    ) -> UserScopeContextContract:
+        return UserScopeContextContract(
+            user_id=snapshot.user_id,
+            context_status=snapshot.context_status,
+            interaction_count=snapshot.interaction_count,
+            user_context_brief=snapshot.user_context_brief,
+            recent_intents=list(snapshot.recent_intents),
+            recent_domain_focus=list(snapshot.recent_domain_focus),
+            active_mission_ids=list(snapshot.active_mission_ids),
+            recent_session_ids=list(snapshot.recent_session_ids),
+            last_recommended_task_type=snapshot.last_recommended_task_type,
+            continuity_preference=snapshot.continuity_preference,
+            memory_refs=list(snapshot.memory_refs),
+        )
+
+    @staticmethod
+    def _tracked_only_user_scope_context(user_id: str) -> UserScopeContextContract:
+        return UserScopeContextContract(
+            user_id=user_id,
+            context_status="tracked_only",
+            interaction_count=0,
+            memory_refs=[f"memory://user/{user_id}"],
+        )
+
+    @staticmethod
+    def _merge_recent_values(
+        existing: list[str],
+        incoming: list[str],
+        *,
+        limit: int,
+    ) -> list[str]:
+        merged: list[str] = []
+        for item in [*incoming, *existing]:
+            if item and item not in merged:
+                merged.append(item)
+        return merged[:limit]
 
     @staticmethod
     def now() -> str:

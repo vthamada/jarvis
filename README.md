@@ -46,9 +46,11 @@ Leitura prática correta deste momento:
 - Sprint 5 do `v2` concluída com evals de aderência do recorte de especialistas aos eixos do mestre;
 - Sprint 6 do `v2` concluída com fechamento formal do primeiro corte do ciclo;
 - `shared/memory_registry.py` e `shared/mind_registry.py` passaram a registrar, respectivamente, as 11 memórias e as 24 mentes do mestre como base formal do runtime progressivo;
-- o recorte ativo do programa é `v2-domain-consumers-and-workflows-cut`, focado em consumidores canônicos de domínio, workflows operacionais compostos, benchmarks governados e baseline soberano já fechado;
+- o recorte ativo do programa agora e `v2-native-memory-scope-hardening-cut`, aberto apos o fechamento formal do `v2-memory-gap-evidence-cut` para endurecer user scope e contexto recorrente de especialistas sem absorcao externa;
 - a auditoria completa do Documento-Mestre continua orientando o backlog real por eixo;
-- o fechamento formal do corte soberano permanece regenerável por `tools/close_sovereign_alignment_cut.py` em `docs/implementation/v2-sovereign-alignment-cut-closure.md`.
+- o fechamento formal do corte soberano permanece regenerável por `tools/close_sovereign_alignment_cut.py` em `docs/implementation/v2-sovereign-alignment-cut-closure.md`;
+- o fechamento formal do corte de consumers/workflows passou a ser regenerável por `tools/close_domain_consumers_and_workflows_cut.py` em `docs/implementation/v2-domain-consumers-and-workflows-cut-closure.md`.
+- o plano regenerável do corte ativo passou a ser emitido por `tools/render_governed_benchmark_execution_plan.py` em `docs/implementation/v2-governed-benchmark-execution-plan.md`.
 
 ## Estrutura principal
 
@@ -160,7 +162,12 @@ Arquivos principais:
 - `CHANGELOG.md`
 - `docs/documentation/matriz-de-aderencia-mestre.md`
 - `docs/roadmap/programa-ate-v3.md`
+- `docs/implementation/v2-memory-gap-evidence-cut.md`
+- `docs/implementation/v2-memory-gap-baseline-evidence.md`
+- `docs/implementation/v2-memory-gap-evidence-cut-closure.md`
+- `docs/implementation/v2-native-memory-scope-hardening-cut.md`
 - `docs/implementation/v2-domain-consumers-and-workflows-cut.md`
+- `docs/implementation/v2-governed-benchmark-matrix.md`
 - `docs/implementation/v2-sovereign-alignment-cut-closure.md`
 - `docs/architecture/technology-study.md`
 - `docs/implementation/implementation-strategy.md`
@@ -172,7 +179,9 @@ Leitura recomendada do estado atual:
 1. `HANDOFF.md`
 2. `documento_mestre_jarvis.md`
 3. `docs/roadmap/programa-ate-v3.md`
-4. `docs/implementation/v2-domain-consumers-and-workflows-cut.md`
-5. `docs/implementation/v2-sovereign-alignment-cut-closure.md`
-6. `docs/documentation/matriz-de-aderencia-mestre.md`
-7. `docs/architecture/technology-study.md`
+4. `docs/implementation/v2-memory-gap-evidence-cut-closure.md`
+5. `docs/implementation/v2-native-memory-scope-hardening-cut.md`
+6. `docs/implementation/v2-memory-gap-decision.md`
+7. `docs/implementation/v2-memory-gap-baseline-evidence.md`
+8. `docs/documentation/matriz-de-aderencia-mestre.md`
+9. `docs/architecture/technology-study.md`

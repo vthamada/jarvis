@@ -1027,3 +1027,67 @@ def test_memory_service_builds_guided_packet_for_decision_risk_specialist() -> N
     assert guided.domain_context_brief is not None
     assert "active_domains=decision_risk,governance" in guided.domain_context_brief
 
+
+
+
+def test_memory_service_recovers_recoverable_user_scope_context() -> None:
+    temp_dir = runtime_dir("memory-user-scope")
+    service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
+    user_id = "user-1"
+    service.record_turn(
+        InputContract(
+            request_id=RequestId("req-user-1"),
+            session_id=SessionId("sess-user-1"),
+            mission_id=MissionId("mission-user-1"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Plan the first milestone.",
+            timestamp="2026-03-31T00:00:00Z",
+            user_id=user_id,
+        ),
+        intent="planning",
+        response_text="Initial milestone plan stored.",
+        deliberative_plan=sample_plan(),
+        specialist_contributions=sample_specialist_contributions(),
+        governance_decision=PermissionDecision.ALLOW_WITH_CONDITIONS,
+    )
+    service.record_turn(
+        InputContract(
+            request_id=RequestId("req-user-2"),
+            session_id=SessionId("sess-user-2"),
+            mission_id=MissionId("mission-user-2"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Analyze the milestone trade-offs.",
+            timestamp="2026-03-31T00:01:00Z",
+            user_id=user_id,
+        ),
+        intent="analysis",
+        response_text="Trade-off analysis stored.",
+        deliberative_plan=sample_plan(),
+        specialist_contributions=sample_specialist_contributions(),
+        governance_decision=PermissionDecision.ALLOW_WITH_CONDITIONS,
+    )
+
+    recovered = service.recover_for_input(
+        InputContract(
+            request_id=RequestId("req-user-3"),
+            session_id=SessionId("sess-user-3"),
+            mission_id=MissionId("mission-user-3"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Continue from the user context.",
+            timestamp="2026-03-31T00:02:00Z",
+            user_id=user_id,
+        )
+    )
+
+    assert recovered.user_scope_context is not None
+    assert recovered.user_scope_context.context_status == "recoverable"
+    assert recovered.user_scope_context.interaction_count == 2
+    assert "planning" in recovered.user_scope_context.recent_intents
+    assert "analysis" in recovered.user_scope_context.recent_intents
+    assert recovered.user_scope_context.recent_domain_focus
+    assert any(item == "user_scope_status=recoverable" for item in recovered.user_hints)
+    assert any(item.startswith("user_context_brief=") for item in recovered.user_hints)
+    assert any(str(scope.value) == "user" for scope in recovered.recovery_contract.requested_scopes)

@@ -79,6 +79,21 @@ class MemoryRecordContract:
 
 
 @dataclass
+class UserScopeContextContract:
+    user_id: str
+    context_status: str
+    interaction_count: int = 0
+    user_context_brief: str | None = None
+    recent_intents: list[str] = field(default_factory=list)
+    recent_domain_focus: list[str] = field(default_factory=list)
+    active_mission_ids: list[MissionId] = field(default_factory=list)
+    recent_session_ids: list[SessionId] = field(default_factory=list)
+    last_recommended_task_type: str | None = None
+    continuity_preference: str | None = None
+    memory_refs: list[str] = field(default_factory=list)
+
+
+@dataclass
 class DeliberativePlanContract:
     plan_summary: str
     goal: str

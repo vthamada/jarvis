@@ -53,12 +53,6 @@ Entrega realizada:
 - `specialist-engine` passou a compor handoff e `expected_outputs` a partir do consumidor canonico;
 - `orchestrator-service` e `observability-service` passaram a exigir essa telemetria no caminho `guided`.
 
-Entregas esperadas:
-
-- contratos mais ricos de consumo por dominio;
-- handoffs mais especificos por rota promovida;
-- telemetria que diferencie contribuicao guiada, consumo efetivo e queda para fallback.
-
 ### Sprint 2. Operational workflows
 
 Status atual:
@@ -69,25 +63,36 @@ Objetivo:
 
 - criar camada inicial de workflows compostos acima do nucleo soberano.
 
-Entregas esperadas:
+Entrega realizada:
 
 - workflows auditaveis para planejamento, readiness e execucao assistida;
 - composicao orientada por estado, sem transformar tool runners em cerebro real do sistema;
-- governanca explicita em pontos de decisao e promocao.
+- governanca explicita em pontos de decisao e promocao;
+- `workflow_trace_status` e `workflow_domain_route` passaram a fazer parte do baseline observavel.
 
 ### Sprint 3. Governed benchmarks
+
+Status atual:
+
+- concluida.
 
 Objetivo:
 
 - comparar referencias externas apenas como benchmark governado.
 
-Entregas esperadas:
+Entrega realizada:
 
-- recortes pequenos para `AutoGPT Platform`, `Mastra` e `Mem0`;
-- criterio claro de `usar como referencia`, `absorver depois` ou `rejeitar`;
-- nenhum impacto direto no baseline central sem evidencia.
+- criada a matriz regeneravel `docs/implementation/v2-governed-benchmark-matrix.md` via `tools/render_governed_benchmark_matrix.py`;
+- o recorte passou a declarar todas as tecnologias que podem entrar nesta fase por familia de capacidade, nao apenas `AutoGPT Platform`, `Mastra` e `Mem0`;
+- `AutoGPT Platform`, `Mastra` e `Mem0` foram fixadas como candidatas de `benchmark_now`;
+- `LangGraph`, `OpenAI Agents SDK`, `CrewAI`, `Microsoft Agent Framework`, `OpenClaw`, `Hermes Agent`, `Manus`, `Letta / MemGPT`, `Zep` e `Graphiti` passaram a compor o `reference_envelope` deste corte;
+- a regra de sprint ficou explicita: benchmark governado nao promove tecnologia ao nucleo por si so.
 
 ### Sprint 4. Release-grade baseline
+
+Status atual:
+
+- concluida.
 
 Objetivo:
 
@@ -97,7 +102,8 @@ Entregas esperadas:
 
 - axis gates preservados como criterio de promocao;
 - artefatos regeneraveis coerentes com docs vivas;
-- fechamento do corte com backlog classificado para o proximo recorte.
+- verificacao `release-grade` executavel para rotas, consumidores, workflows e benchmark governance;
+- fechamento formal do corte com backlog classificado para o proximo recorte e artefato regeneravel em `.jarvis_runtime/v2_domain_consumers_and_workflows_cut/`.
 
 ---
 
@@ -129,6 +135,8 @@ Ler em conjunto com:
 
 - `docs/implementation/v2-sovereign-alignment-cut-closure.md`
 - `docs/archive/implementation/v2-sovereign-alignment-cut.md`
+- `docs/implementation/v2-governed-benchmark-matrix.md`
+- `docs/implementation/v2-domain-consumers-and-workflows-cut-closure.md`
 - `docs/architecture/technology-study.md`
 - `docs/documentation/matriz-de-aderencia-mestre.md`
 
@@ -141,3 +149,18 @@ Atualizacao da Sprint 2:
 - `strategy`, `operational_readiness`, `software_development`, `documentation`, `decision_risk` e outras rotas relevantes agora podem definir perfil, checkpoints e pontos de decisao proprios;
 - `observability-service` agora diferencia `workflow_trace_status` entre `healthy`, `incomplete`, `attention_required` e `not_applicable`;
 - o artefato operacional agora reflete o workflow ativo, sua rota de origem, seus checkpoints e seus pontos de decisao governados.
+
+Atualizacao da Sprint 3:
+
+- o corte agora possui uma matriz regeneravel de benchmark governado por familia em `docs/implementation/v2-governed-benchmark-matrix.md`;
+- `AutoGPT Platform`, `Mastra` e `Mem0` ficaram marcadas como `benchmark_now` sem promocao direta;
+- `LangGraph`, `OpenAI Agents SDK`, `CrewAI`, `Microsoft Agent Framework`, `OpenClaw`, `Hermes Agent`, `Manus`, `Letta / MemGPT`, `Zep` e `Graphiti` ficaram formalizadas como envelope comparativo desta fase;
+- a tecnologia so pode subir no futuro como `usar como referencia`, `absorver depois` ou `rejeitar`, nunca por entusiasmo local com framework.
+
+
+Atualizacao da Sprint 4:
+
+- `tools/verify_active_cut_baseline.py` agora gera artefatos regeneraveis do baseline ativo em `.jarvis_runtime/v2_domain_consumers_and_workflows_cut/`;
+- `tools/engineering_gate.py --mode release` passou a exigir essa verificacao antes da validacao final do baseline;
+- `tools/close_domain_consumers_and_workflows_cut.py` passou a consolidar o fechamento do corte em artefatos regeneraveis;
+- a sprint foi concluida com backlog classificado para um proximo recorte proprio de execucao sandbox dos benchmarks governados.
