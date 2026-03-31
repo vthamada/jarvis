@@ -37,7 +37,7 @@ Artefatos operacionais e tecnicos que sustentam o fechamento:
 
 - `tools/compare_orchestrator_paths.py`
 - `tools/evolution_from_pilot.py`
-- `tools/close_specialization_cycle.py`
+- `tools/archive/close_specialization_cycle.py`
 - `.jarvis_runtime/path_comparison_v2/`
 - `.jarvis_runtime/specialization_cycle/`
 

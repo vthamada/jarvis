@@ -1,4 +1,4 @@
-from tools.render_governed_benchmark_matrix import build_payload, render_markdown
+from tools.archive.render_governed_benchmark_matrix import build_payload, render_markdown
 
 
 def test_governed_benchmark_matrix_payload_lists_active_candidates() -> None:

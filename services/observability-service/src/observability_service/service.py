@@ -69,6 +69,8 @@ class FlowAudit:
     identity_alignment_status: str
     memory_alignment_status: str
     user_scope_status: str
+    organization_scope_status: str
+    specialist_recurrence_status: str
     specialist_sovereignty_status: str
     missing_continuity_signals: list[str]
     continuity_anomaly_flags: list[str]
@@ -247,6 +249,8 @@ class ObservabilityService:
                 identity_alignment_status="incomplete",
                 memory_alignment_status="incomplete",
                 user_scope_status="incomplete",
+                organization_scope_status="incomplete",
+                specialist_recurrence_status="incomplete",
                 specialist_sovereignty_status="incomplete",
                 missing_continuity_signals=[],
                 continuity_anomaly_flags=[],
@@ -464,6 +468,13 @@ class ObservabilityService:
             memory_recovered_event=memory_recovered_event,
             memory_recorded_event=memory_event,
         )
+        organization_scope_status = self._organization_scope_status(
+            memory_recovered_event=memory_recovered_event,
+            memory_recorded_event=memory_event,
+        )
+        specialist_recurrence_status = self._specialist_recurrence_status(
+            shared_memory_event=shared_memory_event,
+        )
         specialist_sovereignty_status = self._specialist_sovereignty_status(
             specialist_contract_event=specialist_contract_event,
         )
@@ -493,6 +504,8 @@ class ObservabilityService:
             identity_alignment_status=identity_alignment_status,
             memory_alignment_status=memory_alignment_status,
             user_scope_status=user_scope_status,
+            organization_scope_status=organization_scope_status,
+            specialist_recurrence_status=specialist_recurrence_status,
             specialist_sovereignty_status=specialist_sovereignty_status,
             missing_continuity_signals=missing_continuity_signals,
             continuity_anomaly_flags=continuity_anomaly_flags,
@@ -836,6 +849,55 @@ class ObservabilityService:
             return "recoverable"
         if any(status in {"seeded", "tracked_only"} for status in statuses):
             return "emerging"
+        return "partial"
+
+    @staticmethod
+    def _organization_scope_status(
+        *,
+        memory_recovered_event: InternalEventEnvelope | None,
+        memory_recorded_event: InternalEventEnvelope | None,
+    ) -> str:
+        statuses = [
+            str(event.payload.get("organization_scope_status"))
+            for event in (memory_recovered_event, memory_recorded_event)
+            if event is not None and event.payload.get("organization_scope_status") is not None
+        ]
+        if not statuses:
+            return "incomplete"
+        if any(status == "no_go_without_canonical_consumer" for status in statuses):
+            return "no_go_without_canonical_consumer"
+        if all(status == "not_applicable" for status in statuses):
+            return "not_applicable"
+        return "attention_required"
+
+    @staticmethod
+    def _specialist_recurrence_status(
+        *,
+        shared_memory_event: InternalEventEnvelope | None,
+    ) -> str:
+        if shared_memory_event is None:
+            return "incomplete"
+        guided_specialists = [
+            str(item)
+            for item in shared_memory_event.payload.get("guided_specialists", [])
+            if item
+        ]
+        status_map = shared_memory_event.payload.get("recurrent_context_statuses", {})
+        if not guided_specialists:
+            return "not_applicable"
+        statuses = [
+            str(status_map.get(item))
+            for item in guided_specialists
+            if status_map.get(item) is not None
+        ]
+        if not statuses:
+            return "incomplete"
+        if any(status == "recoverable" for status in statuses):
+            return "recoverable"
+        if any(status == "seeded" for status in statuses):
+            return "emerging"
+        if all(status == "not_applicable" for status in statuses):
+            return "not_applicable"
         return "partial"
 
     @staticmethod

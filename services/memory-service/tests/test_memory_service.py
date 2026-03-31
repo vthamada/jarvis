@@ -1030,6 +1030,43 @@ def test_memory_service_builds_guided_packet_for_decision_risk_specialist() -> N
 
 
 
+def test_memory_service_builds_recoverable_recurrent_specialist_context() -> None:
+    temp_dir = runtime_dir("memory-specialist-recurrence")
+    service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
+
+    first = service.prepare_specialist_shared_memory(
+        session_id="sess-recurrent-1",
+        specialist_hints=["software_change_specialist"],
+        active_domains=["software_development"],
+        mission_id=None,
+        continuity_context=None,
+        user_id="user-recurrent-1",
+    )["software_change_specialist"]
+    second = service.prepare_specialist_shared_memory(
+        session_id="sess-recurrent-2",
+        specialist_hints=["software_change_specialist"],
+        active_domains=["software_development", "analysis"],
+        mission_id=None,
+        continuity_context=None,
+        user_id="user-recurrent-1",
+    )["software_change_specialist"]
+
+    assert first.recurrent_context_status == "seeded"
+    assert first.recurrent_interaction_count == 1
+    assert second.recurrent_context_status == "recoverable"
+    assert second.recurrent_interaction_count == 2
+    assert second.recurrent_context_brief is not None
+    assert "software_development" in second.recurrent_domain_focus
+    assert second.recurrent_continuity_modes == ["continuar"]
+    persisted = service.get_specialist_shared_memory(
+        session_id="sess-recurrent-2",
+        specialist_type="software_change_specialist",
+    )
+    assert persisted is not None
+    assert persisted.recurrent_context_status == "recoverable"
+    assert persisted.recurrent_interaction_count == 2
+
+
 def test_memory_service_recovers_recoverable_user_scope_context() -> None:
     temp_dir = runtime_dir("memory-user-scope")
     service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
@@ -1082,6 +1119,8 @@ def test_memory_service_recovers_recoverable_user_scope_context() -> None:
         )
     )
 
+    assert recovered.organization_scope_status == "no_go_without_canonical_consumer"
+    assert recovered.organization_scope_reopen_signal == "canonical_consumer_required_for_reopen"
     assert recovered.user_scope_context is not None
     assert recovered.user_scope_context.context_status == "recoverable"
     assert recovered.user_scope_context.interaction_count == 2

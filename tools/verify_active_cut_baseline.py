@@ -8,7 +8,7 @@ from json import dumps
 from pathlib import Path
 
 from shared.domain_registry import PROMOTED_SPECIALIST_ROUTES, RUNTIME_ROUTE_REGISTRY
-from tools.render_governed_benchmark_matrix import build_payload as build_benchmark_payload
+from tools.archive.render_governed_benchmark_matrix import build_payload as build_benchmark_payload
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_OUTPUT_DIR = ROOT / ".jarvis_runtime" / "v2_domain_consumers_and_workflows_cut"

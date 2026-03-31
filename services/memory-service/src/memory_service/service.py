@@ -37,6 +37,7 @@ from shared.memory_registry import (
     DEFAULT_MEMORY_SCOPES,
     SHARED_MEMORY_CLASSES,
     default_priority_rules,
+    organization_scope_guard_payload,
     specialist_memory_policy_payload,
 )
 from shared.specialist_registry import (
@@ -68,6 +69,9 @@ class MemoryRecoveryResult:
     session_context: list[str]
     mission_hints: list[str]
     plan_hints: list[str]
+    organization_scope_status: str
+    organization_scope_reason: str
+    organization_scope_reopen_signal: str
     continuity_context: MissionContinuityContextContract | None = None
     user_scope_context: UserScopeContextContract | None = None
 
@@ -81,6 +85,9 @@ class MemoryRecordResult:
     """Structured result for memory recording."""
 
     record_contract: MemoryRecordContract
+    organization_scope_status: str
+    organization_scope_reason: str
+    organization_scope_reopen_signal: str
     user_scope_context: UserScopeContextContract | None = None
 
 
@@ -116,12 +123,16 @@ class MemoryService:
             continuity_context,
             user_scope_context,
         ) = self._compose_recovered_items(contract, recovery_contract.max_items or 4)
+        organization_scope_guard = organization_scope_guard_payload()
         return MemoryRecoveryResult(
             recovery_contract=recovery_contract,
             user_hints=user_hints,
             session_context=session_context,
             mission_hints=mission_hints,
             plan_hints=plan_hints,
+            organization_scope_status=organization_scope_guard["status"],
+            organization_scope_reason=organization_scope_guard["reason"],
+            organization_scope_reopen_signal=organization_scope_guard["reopen_signal"],
             continuity_context=continuity_context,
             user_scope_context=user_scope_context,
         )
@@ -244,8 +255,12 @@ class MemoryService:
             if user_scope_snapshot is not None:
                 self.repository.upsert_user_scope_snapshot(user_scope_snapshot)
                 user_scope_context = self._user_scope_contract_from_snapshot(user_scope_snapshot)
+        organization_scope_guard = organization_scope_guard_payload()
         return MemoryRecordResult(
             record_contract=record_contract,
+            organization_scope_status=organization_scope_guard["status"],
+            organization_scope_reason=organization_scope_guard["reason"],
+            organization_scope_reopen_signal=organization_scope_guard["reopen_signal"],
             user_scope_context=user_scope_context,
         )
 
@@ -356,6 +371,7 @@ class MemoryService:
         active_domains: list[str] | None = None,
         mission_id: str | None = None,
         continuity_context: MissionContinuityContextContract | None = None,
+        user_id: str | None = None,
     ) -> dict[str, SpecialistSharedMemoryContextContract]:
         """Build and persist the current core-mediated shared memory for specialists."""
 
@@ -378,12 +394,23 @@ class MemoryService:
         normalized_hints = normalize_specialist_types(specialist_hints)
         contexts: dict[str, SpecialistSharedMemoryContextContract] = {}
         for specialist_hint in normalized_hints:
+            previous_context = (
+                self.repository.fetch_latest_specialist_shared_memory_for_user(
+                    user_id=user_id,
+                    specialist_type=specialist_hint,
+                    exclude_session_id=session_id,
+                )
+                if user_id
+                else None
+            )
             context = self._build_specialist_shared_memory_context(
                 specialist_type=specialist_hint,
                 continuity_mode=continuity_mode,
                 mission_state=mission_state,
                 related_states=related_states,
                 active_domains=active_domains or [],
+                user_id=user_id,
+                previous_context=previous_context,
             )
             contexts[specialist_hint] = context
             self.repository.upsert_specialist_shared_memory(
@@ -394,6 +421,7 @@ class MemoryService:
                     continuity_mode=context.continuity_mode,
                     shared_memory_brief=context.shared_memory_brief,
                     write_policy=context.write_policy,
+                    user_id=user_id,
                     source_mission_id=str(context.source_mission_id)
                     if context.source_mission_id
                     else None,
@@ -415,6 +443,12 @@ class MemoryService:
                     open_loops=list(context.open_loops),
                     last_recommendation=context.last_recommendation,
                     domain_mission_link_reason=context.domain_mission_link_reason,
+                    recurrent_context_status=context.recurrent_context_status,
+                    recurrent_interaction_count=context.recurrent_interaction_count,
+                    recurrent_context_brief=context.recurrent_context_brief,
+                    recurrent_domain_focus=list(context.recurrent_domain_focus),
+                    recurrent_memory_refs=list(context.recurrent_memory_refs),
+                    recurrent_continuity_modes=list(context.recurrent_continuity_modes),
                     updated_at=self.now(),
                 )
             )
@@ -677,6 +711,8 @@ class MemoryService:
         mission_state: MissionStateContract | None,
         related_states: list[MissionStateContract],
         active_domains: list[str],
+        user_id: str | None,
+        previous_context: SpecialistSharedMemoryContextContract | None,
     ) -> SpecialistSharedMemoryContextContract:
         related_mission_ids = [state.mission_id for state in related_states[:2]]
         memory_refs: list[str] = []
@@ -777,6 +813,17 @@ class MemoryService:
             f"{','.join(promoted_route.canonical_refs if promoted_route else ()) or 'none'} "
             f"missao={source_goal or 'sessao_sem_missao_ancorada'}"
         )
+        recurrent_context = self._build_recurrent_specialist_context(
+            user_id=user_id,
+            specialist_type=specialist_type,
+            promoted_route=promoted_route,
+            previous_context=previous_context,
+            active_domains=active_domains,
+            continuity_mode=continuity_mode,
+            source_goal=source_goal,
+            consumer_objective=consumer_objective,
+            memory_refs=memory_refs,
+        )
         return SpecialistSharedMemoryContextContract(
             specialist_type=specialist_type,
             sharing_mode="core_mediated_read_only",
@@ -802,7 +849,75 @@ class MemoryService:
             open_loops=open_loops,
             last_recommendation=mission_state.last_recommendation if mission_state else None,
             domain_mission_link_reason=domain_mission_link_reason,
+            recurrent_context_status=recurrent_context["status"],
+            recurrent_interaction_count=recurrent_context["interaction_count"],
+            recurrent_context_brief=recurrent_context["brief"],
+            recurrent_domain_focus=recurrent_context["domain_focus"],
+            recurrent_memory_refs=recurrent_context["memory_refs"],
+            recurrent_continuity_modes=recurrent_context["continuity_modes"],
         )
+
+    def _build_recurrent_specialist_context(
+        self,
+        *,
+        user_id: str | None,
+        specialist_type: str,
+        promoted_route: object | None,
+        previous_context: SpecialistSharedMemoryContextContract | None,
+        active_domains: list[str],
+        continuity_mode: str,
+        source_goal: str | None,
+        consumer_objective: str | None,
+        memory_refs: list[str],
+    ) -> dict[str, object]:
+        if user_id is None or promoted_route is None:
+            return {
+                "status": "not_applicable",
+                "interaction_count": 0,
+                "brief": None,
+                "domain_focus": [],
+                "memory_refs": [],
+                "continuity_modes": [],
+            }
+        interaction_count = (
+            previous_context.recurrent_interaction_count if previous_context else 0
+        ) + 1
+        domain_focus = self._merge_recent_values(
+            previous_context.recurrent_domain_focus if previous_context else [],
+            active_domains[:3],
+            limit=4,
+        )
+        recurrent_memory_refs = self._merge_recent_values(
+            previous_context.recurrent_memory_refs if previous_context else [],
+            memory_refs[:4],
+            limit=6,
+        )
+        continuity_modes = self._merge_recent_values(
+            previous_context.recurrent_continuity_modes if previous_context else [],
+            [continuity_mode],
+            limit=3,
+        )
+        status = "recoverable" if interaction_count >= 2 else "seeded"
+        brief_parts = [
+            f"specialist={specialist_type}",
+            f"interactions={interaction_count}",
+        ]
+        if domain_focus:
+            brief_parts.append(f"domains={','.join(domain_focus[:3])}")
+        if continuity_modes:
+            brief_parts.append(f"continuity={','.join(continuity_modes[:2])}")
+        if source_goal:
+            brief_parts.append(f"last_goal={source_goal}")
+        if consumer_objective:
+            brief_parts.append(f"objective={consumer_objective}")
+        return {
+            "status": status,
+            "interaction_count": interaction_count,
+            "brief": " | ".join(brief_parts),
+            "domain_focus": domain_focus,
+            "memory_refs": recurrent_memory_refs,
+            "continuity_modes": continuity_modes,
+        }
 
     def _build_session_continuity_snapshot(
         self,

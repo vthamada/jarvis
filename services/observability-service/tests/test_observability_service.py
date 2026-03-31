@@ -1029,6 +1029,249 @@ def test_observability_service_audits_healthy_workflow_trace() -> None:
 
 
 
+def test_observability_service_tracks_organization_scope_no_go() -> None:
+    temp_dir = runtime_dir("observability-organization-scope")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service.ingest_events(
+        [
+            InternalEventEnvelope(
+                event_id="evt-og1",
+                event_name="input_received",
+                timestamp="2026-03-31T00:00:00+00:00",
+                source_service="orchestrator-service",
+                payload={"content": "Keep organization scope outside baseline."},
+                request_id="req-organization-scope",
+                session_id="sess-organization-scope",
+                correlation_id="req-organization-scope",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-og2",
+                event_name="memory_recovered",
+                timestamp="2026-03-31T00:00:01+00:00",
+                source_service="orchestrator-service",
+                payload={"organization_scope_status": "no_go_without_canonical_consumer"},
+                request_id="req-organization-scope",
+                session_id="sess-organization-scope",
+                correlation_id="req-organization-scope",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-og3",
+                event_name="intent_classified",
+                timestamp="2026-03-31T00:00:02+00:00",
+                source_service="orchestrator-service",
+                payload={"intent": "analysis"},
+                request_id="req-organization-scope",
+                session_id="sess-organization-scope",
+                correlation_id="req-organization-scope",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-og4",
+                event_name="context_composed",
+                timestamp="2026-03-31T00:00:03+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "active_minds": ["mente_analitica"],
+                    "primary_mind": "mente_analitica",
+                    "supporting_minds": [],
+                    "suppressed_minds": [],
+                    "supporting_mind_limit": 2,
+                    "suppressed_mind_limit": 2,
+                    "dominant_tension": "preservar guardrails do baseline",
+                    "arbitration_summary": "mente analitica lidera o fluxo",
+                    "arbitration_source": "mind_registry",
+                },
+                request_id="req-organization-scope",
+                session_id="sess-organization-scope",
+                correlation_id="req-organization-scope",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-og5",
+                event_name="plan_built",
+                timestamp="2026-03-31T00:00:04+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_action": "continuar", "continuity_source": "active_mission"},
+                request_id="req-organization-scope",
+                session_id="sess-organization-scope",
+                correlation_id="req-organization-scope",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-og6",
+                event_name="continuity_decided",
+                timestamp="2026-03-31T00:00:05+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_action": "continuar", "continuity_source": "active_mission"},
+                request_id="req-organization-scope",
+                session_id="sess-organization-scope",
+                correlation_id="req-organization-scope",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-og7",
+                event_name="governance_checked",
+                timestamp="2026-03-31T00:00:06+00:00",
+                source_service="orchestrator-service",
+                payload={"decision": "allow_with_conditions"},
+                request_id="req-organization-scope",
+                session_id="sess-organization-scope",
+                correlation_id="req-organization-scope",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-og8",
+                event_name="response_synthesized",
+                timestamp="2026-03-31T00:00:07+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_action": "continuar"},
+                request_id="req-organization-scope",
+                session_id="sess-organization-scope",
+                correlation_id="req-organization-scope",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-og9",
+                event_name="memory_recorded",
+                timestamp="2026-03-31T00:00:08+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "continuity_mode": "continuar",
+                    "organization_scope_status": "no_go_without_canonical_consumer",
+                },
+                request_id="req-organization-scope",
+                session_id="sess-organization-scope",
+                correlation_id="req-organization-scope",
+            ),
+        ]
+    )
+
+    audit = service.audit_flow(ObservabilityQuery(request_id="req-organization-scope"))
+
+    assert audit.organization_scope_status == "no_go_without_canonical_consumer"
+
+
+def test_observability_service_tracks_specialist_recurrence_status() -> None:
+    temp_dir = runtime_dir("observability-specialist-recurrence")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service.ingest_events(
+        [
+            InternalEventEnvelope(
+                event_id="evt-sr1",
+                event_name="input_received",
+                timestamp="2026-03-31T00:00:00+00:00",
+                source_service="orchestrator-service",
+                payload={"content": "Review software rollout again."},
+                request_id="req-specialist-recurrence",
+                session_id="sess-specialist-recurrence",
+                correlation_id="req-specialist-recurrence",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-sr2",
+                event_name="memory_recovered",
+                timestamp="2026-03-31T00:00:01+00:00",
+                source_service="orchestrator-service",
+                payload={},
+                request_id="req-specialist-recurrence",
+                session_id="sess-specialist-recurrence",
+                correlation_id="req-specialist-recurrence",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-sr3",
+                event_name="intent_classified",
+                timestamp="2026-03-31T00:00:02+00:00",
+                source_service="orchestrator-service",
+                payload={"intent": "analysis"},
+                request_id="req-specialist-recurrence",
+                session_id="sess-specialist-recurrence",
+                correlation_id="req-specialist-recurrence",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-sr4",
+                event_name="context_composed",
+                timestamp="2026-03-31T00:00:03+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "active_minds": ["mente_analitica"],
+                    "primary_mind": "mente_analitica",
+                    "supporting_minds": [],
+                    "suppressed_minds": [],
+                    "supporting_mind_limit": 2,
+                    "suppressed_mind_limit": 2,
+                    "dominant_tension": "aprofundar contexto recorrente",
+                    "arbitration_summary": "mente analitica lidera o fluxo",
+                    "arbitration_source": "mind_registry",
+                },
+                request_id="req-specialist-recurrence",
+                session_id="sess-specialist-recurrence",
+                correlation_id="req-specialist-recurrence",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-sr5",
+                event_name="plan_built",
+                timestamp="2026-03-31T00:00:04+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_action": "continuar", "continuity_source": "active_mission"},
+                request_id="req-specialist-recurrence",
+                session_id="sess-specialist-recurrence",
+                correlation_id="req-specialist-recurrence",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-sr6",
+                event_name="continuity_decided",
+                timestamp="2026-03-31T00:00:05+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_action": "continuar", "continuity_source": "active_mission"},
+                request_id="req-specialist-recurrence",
+                session_id="sess-specialist-recurrence",
+                correlation_id="req-specialist-recurrence",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-sr7",
+                event_name="governance_checked",
+                timestamp="2026-03-31T00:00:06+00:00",
+                source_service="orchestrator-service",
+                payload={"decision": "allow_with_conditions"},
+                request_id="req-specialist-recurrence",
+                session_id="sess-specialist-recurrence",
+                correlation_id="req-specialist-recurrence",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-sr8",
+                event_name="specialist_shared_memory_linked",
+                timestamp="2026-03-31T00:00:07+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "guided_specialists": ["software_change_specialist"],
+                    "recurrent_context_statuses": {"software_change_specialist": "recoverable"},
+                    "recurrent_interaction_counts": {"software_change_specialist": 2},
+                },
+                request_id="req-specialist-recurrence",
+                session_id="sess-specialist-recurrence",
+                correlation_id="req-specialist-recurrence",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-sr9",
+                event_name="response_synthesized",
+                timestamp="2026-03-31T00:00:08+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_action": "continuar"},
+                request_id="req-specialist-recurrence",
+                session_id="sess-specialist-recurrence",
+                correlation_id="req-specialist-recurrence",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-sr10",
+                event_name="memory_recorded",
+                timestamp="2026-03-31T00:00:09+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_mode": "continuar"},
+                request_id="req-specialist-recurrence",
+                session_id="sess-specialist-recurrence",
+                correlation_id="req-specialist-recurrence",
+            ),
+        ]
+    )
+
+    audit = service.audit_flow(ObservabilityQuery(request_id="req-specialist-recurrence"))
+
+    assert audit.specialist_recurrence_status == "recoverable"
+
+
 def test_observability_service_tracks_user_scope_status() -> None:
     temp_dir = runtime_dir("observability-user-scope")
     service = ObservabilityService(database_path=str(temp_dir / "observability.db"))

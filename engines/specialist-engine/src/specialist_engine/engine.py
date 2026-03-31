@@ -615,6 +615,29 @@ class SpecialistEngine:
                     "continuity_context_brief="
                     f"{shared_memory_context.continuity_context_brief}"
                 )
+            handoff_inputs.append(
+                "recurrent_context_status="
+                f"{shared_memory_context.recurrent_context_status}"
+            )
+            handoff_inputs.append(
+                "recurrent_interaction_count="
+                f"{shared_memory_context.recurrent_interaction_count}"
+            )
+            if shared_memory_context.recurrent_context_brief:
+                handoff_inputs.append(
+                    "recurrent_context_brief="
+                    f"{shared_memory_context.recurrent_context_brief}"
+                )
+            if shared_memory_context.recurrent_domain_focus:
+                handoff_inputs.append(
+                    "recurrent_domain_focus="
+                    + ",".join(shared_memory_context.recurrent_domain_focus[:3])
+                )
+            if shared_memory_context.recurrent_continuity_modes:
+                handoff_inputs.append(
+                    "recurrent_continuity_modes="
+                    + ",".join(shared_memory_context.recurrent_continuity_modes[:3])
+                )
             if shared_memory_context.consumer_profile:
                 handoff_inputs.append(
                     f"consumer_profile={shared_memory_context.consumer_profile}"

@@ -185,6 +185,12 @@ class SpecialistSharedMemoryContextContract:
     open_loops: list[str] = field(default_factory=list)
     last_recommendation: str | None = None
     domain_mission_link_reason: str | None = None
+    recurrent_context_status: str = "not_applicable"
+    recurrent_interaction_count: int = 0
+    recurrent_context_brief: str | None = None
+    recurrent_domain_focus: list[str] = field(default_factory=list)
+    recurrent_memory_refs: list[str] = field(default_factory=list)
+    recurrent_continuity_modes: list[str] = field(default_factory=list)
 
 
 @dataclass

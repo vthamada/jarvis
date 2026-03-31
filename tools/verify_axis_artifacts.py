@@ -1,4 +1,4 @@
-"""Verify minimum axis-adherence artifacts for release-grade promotion."""
+﻿"""Verify minimum axis-adherence artifacts for release-grade promotion."""
 
 from __future__ import annotations
 
@@ -12,15 +12,49 @@ REQUIRED_FILES = (
     ROOT / "docs" / "executive" / "master-summary.md",
     ROOT / "docs" / "documentation" / "matriz-de-aderencia-mestre.md",
     ROOT / "docs" / "archive" / "implementation" / "v2-sovereign-alignment-cut.md",
-    ROOT / "docs" / "implementation" / "v2-sovereign-alignment-cut-closure.md",
-    ROOT / "docs" / "implementation" / "v2-domain-consumers-and-workflows-cut-closure.md",
-    ROOT / "docs" / "implementation" / "v2-governed-benchmark-decisions.md",
-    ROOT / "docs" / "implementation" / "v2-governed-benchmark-execution-cut-closure.md",
-    ROOT / "docs" / "implementation" / "v2-memory-gap-evidence-cut-closure.md",
-    ROOT / "docs" / "implementation" / "v2-native-memory-scope-hardening-cut.md",
-    ROOT / "docs" / "implementation" / "v2-memory-gap-evidence-protocol.md",
-    ROOT / "docs" / "implementation" / "v2-memory-gap-baseline-evidence.md",
-    ROOT / "docs" / "implementation" / "v2-memory-gap-decision.md",
+    ROOT / "docs" / "archive" / "implementation" / "v2-sovereign-alignment-cut-closure.md",
+    ROOT
+    / "docs"
+    / "archive"
+    / "implementation"
+    / "v2-domain-consumers-and-workflows-cut-closure.md",
+    ROOT
+    / "docs"
+    / "archive"
+    / "implementation"
+    / "v2-governed-benchmark-decisions.md",
+    ROOT
+    / "docs"
+    / "archive"
+    / "implementation"
+    / "v2-governed-benchmark-execution-cut-closure.md",
+    ROOT
+    / "docs"
+    / "archive"
+    / "implementation"
+    / "v2-memory-gap-evidence-cut-closure.md",
+    ROOT
+    / "docs"
+    / "archive"
+    / "implementation"
+    / "v2-native-memory-scope-hardening-cut.md",
+    ROOT
+    / "docs"
+    / "archive"
+    / "implementation"
+    / "v2-memory-gap-evidence-protocol.md",
+    ROOT
+    / "docs"
+    / "archive"
+    / "implementation"
+    / "v2-memory-gap-baseline-evidence.md",
+    ROOT / "docs" / "archive" / "implementation" / "v2-memory-gap-decision.md",
+    ROOT / "docs" / "implementation" / "v2-native-memory-scope-hardening-cut-closure.md",
+    ROOT / "docs" / "implementation" / "v2-repository-hygiene-and-tools-review-cut.md",
+    ROOT / "docs" / "implementation" / "v2-repository-hygiene-inventory.md",
+    ROOT / "docs" / "implementation" / "v2-repository-hygiene-doc-decisions.md",
+    ROOT / "docs" / "implementation" / "v2-repository-hygiene-tool-decisions.md",
+    ROOT / "docs" / "implementation" / "v2-repository-hygiene-and-tools-review-cut-closure.md",
     ROOT / "knowledge" / "curated" / "domain_registry.json",
     ROOT / "shared" / "mind_registry.py",
     ROOT / "shared" / "memory_registry.py",
@@ -48,76 +82,98 @@ def main() -> None:
         ROOT / "docs" / "archive" / "implementation" / "v2-sovereign-alignment-cut.md"
     )
     sovereign_cut_closure = _read(
-        ROOT / "docs" / "implementation" / "v2-sovereign-alignment-cut-closure.md"
+        ROOT / "docs" / "archive" / "implementation" / "v2-sovereign-alignment-cut-closure.md"
     )
     domain_workflows_closure = _read(
-        ROOT / "docs" / "implementation" / "v2-domain-consumers-and-workflows-cut-closure.md"
+        ROOT
+        / "docs"
+        / "archive"
+        / "implementation"
+        / "v2-domain-consumers-and-workflows-cut-closure.md"
     )
     benchmark_decisions_doc = _read(
-        ROOT / "docs" / "implementation" / "v2-governed-benchmark-decisions.md"
+        ROOT / "docs" / "archive" / "implementation" / "v2-governed-benchmark-decisions.md"
     )
     benchmark_cut_closure = _read(
-        ROOT / "docs" / "implementation" / "v2-governed-benchmark-execution-cut-closure.md"
+        ROOT
+        / "docs"
+        / "archive"
+        / "implementation"
+        / "v2-governed-benchmark-execution-cut-closure.md"
     )
     memory_gap_cut_closure = _read(
-        ROOT / "docs" / "implementation" / "v2-memory-gap-evidence-cut-closure.md"
+        ROOT / "docs" / "archive" / "implementation" / "v2-memory-gap-evidence-cut-closure.md"
     )
-    active_cut_doc = _read(
-        ROOT / "docs" / "implementation" / "v2-native-memory-scope-hardening-cut.md"
+    native_memory_cut_doc = _read(
+        ROOT / "docs" / "archive" / "implementation" / "v2-native-memory-scope-hardening-cut.md"
+    )
+    native_memory_cut_closure = _read(
+        ROOT / "docs" / "implementation" / "v2-native-memory-scope-hardening-cut-closure.md"
+    )
+    repository_hygiene_cut_doc = _read(
+        ROOT / "docs" / "implementation" / "v2-repository-hygiene-and-tools-review-cut.md"
+    )
+    repository_hygiene_inventory_doc = _read(
+        ROOT / "docs" / "implementation" / "v2-repository-hygiene-inventory.md"
+    )
+    repository_hygiene_doc_decisions = _read(
+        ROOT / "docs" / "implementation" / "v2-repository-hygiene-doc-decisions.md"
+    )
+    repository_hygiene_tool_decisions = _read(
+        ROOT / "docs" / "implementation" / "v2-repository-hygiene-tool-decisions.md"
+    )
+    repository_hygiene_cut_closure = _read(
+        ROOT
+        / "docs"
+        / "implementation"
+        / "v2-repository-hygiene-and-tools-review-cut-closure.md"
     )
     protocol_doc = _read(
-        ROOT / "docs" / "implementation" / "v2-memory-gap-evidence-protocol.md"
+        ROOT / "docs" / "archive" / "implementation" / "v2-memory-gap-evidence-protocol.md"
     )
     baseline_evidence_doc = _read(
-        ROOT / "docs" / "implementation" / "v2-memory-gap-baseline-evidence.md"
+        ROOT / "docs" / "archive" / "implementation" / "v2-memory-gap-baseline-evidence.md"
     )
     decision_doc = _read(
-        ROOT / "docs" / "implementation" / "v2-memory-gap-decision.md"
+        ROOT / "docs" / "archive" / "implementation" / "v2-memory-gap-decision.md"
     )
 
     _ensure(
-        "docs/implementation/v2-native-memory-scope-hardening-cut.md" in handoff,
-        "HANDOFF.md does not point to the current native memory scope hardening cut.",
+        "v2-repository-hygiene-and-tools-review-cut" in handoff,
+        "HANDOFF.md does not reference the repository hygiene cut.",
     )
     _ensure(
-        "v2-native-memory-scope-hardening-cut" in readme,
-        "README.md does not name the current native memory scope hardening cut.",
+        "v2-repository-hygiene-and-tools-review-cut-closure.md" in handoff,
+        "HANDOFF.md does not reference the repository hygiene cut closure.",
     )
     _ensure(
-        "v2-native-memory-scope-hardening-cut" in master_summary,
-        "master-summary.md does not name the current native memory scope hardening cut.",
-    )
-    governed_execution_marker = (
-        "docs/implementation/v2-governed-benchmark-execution-cut.md` como execucao oficial "
-        "do corte ativo"
-    )
-    governed_execution_active = governed_execution_marker in handoff
-    _ensure(
-        not governed_execution_active,
-        (
-            "HANDOFF.md still treats the governed benchmark execution cut as the active "
-            "execution document."
-        ),
+        "v2-repository-hygiene-and-tools-review-cut" in readme,
+        "README.md does not name the repository hygiene cut.",
     )
     _ensure(
-        "v2-alignment-cycle` como execucao oficial" not in handoff,
-        "HANDOFF.md still treats v2-alignment-cycle as the active execution document.",
+        "v2-repository-hygiene-and-tools-review-cut-closure.md" in readme,
+        "README.md does not reference the repository hygiene cut closure.",
     )
     _ensure(
-        "v2-sovereign-alignment-cut.md` como execucao oficial do corte ativo" not in handoff,
-        "HANDOFF.md still treats the sovereign cut as the active execution document.",
+        "v2-repository-hygiene-and-tools-review-cut" in master_summary,
+        "master-summary.md does not name the repository hygiene cut.",
+    )
+    _ensure(
+        "v2-repository-hygiene-and-tools-review-cut-closure.md" in master_summary,
+        "master-summary.md does not reference the repository hygiene cut closure.",
     )
     _ensure(
         "Sprint 6 conclu" in sovereign_cut_doc,
         "The sovereign cut document does not reflect the completed sprint status.",
     )
     _ensure(
-        "tools/close_sovereign_alignment_cut.py" in sovereign_cut_closure,
-        "The sovereign cut closure document is missing its regenerable closure tool.",
+        "tools/archive/close_sovereign_alignment_cut.py" in sovereign_cut_closure,
+        "The sovereign cut closure document is missing its archived closure tool reference.",
     )
     _ensure(
-        "tools/close_domain_consumers_and_workflows_cut.py" in domain_workflows_closure,
-        "The domain consumers/workflows closure document is missing its regenerable closure tool.",
+        "tools/archive/close_domain_consumers_and_workflows_cut.py" in domain_workflows_closure,
+        "The domain consumers/workflows closure document is missing its "
+        "archived closure tool reference.",
     )
     _ensure(
         "V2 Governed Benchmark Decisions" in benchmark_decisions_doc,
@@ -143,17 +199,41 @@ def main() -> None:
         "complete_v2_memory_gap_evidence_cut" in memory_gap_cut_closure,
         "The memory gap evidence cut closure is missing its formal completion decision.",
     )
-    _ensure(
-        "tools/engineering_gate.py --mode release" in active_cut_doc,
-        "The current v2 cut document does not anchor release-grade gating.",
-    )
-    sprint_1_open = (
-        "### Sprint 1. User scope hardening" in active_cut_doc
-        and "- aberta." in active_cut_doc
+    native_memory_sprint_4_closed = (
+        "### Sprint 4. Cut closure" in native_memory_cut_doc
+        and "- concluida." in native_memory_cut_doc
     )
     _ensure(
-        sprint_1_open,
-        "The current native memory scope hardening cut does not reflect the opened Sprint 1 state.",
+        native_memory_sprint_4_closed,
+        "The archived native memory cut document does not reflect the concluded Sprint 4 state.",
+    )
+    _ensure(
+        "complete_v2_native_memory_scope_hardening_cut" in native_memory_cut_closure,
+        "The native memory cut closure is missing its formal completion decision.",
+    )
+    repository_hygiene_sprint_4_closed = (
+        "### Sprint 4. Cleanup and closure" in repository_hygiene_cut_doc
+        and "- concluida." in repository_hygiene_cut_doc
+    )
+    _ensure(
+        repository_hygiene_sprint_4_closed,
+        "The repository hygiene cut document does not reflect the concluded Sprint 4 state.",
+    )
+    _ensure(
+        "V2 Repository Hygiene Inventory" in repository_hygiene_inventory_doc,
+        "The repository hygiene inventory document is missing its rendered inventory.",
+    )
+    _ensure(
+        "V2 Repository Hygiene Doc Decisions" in repository_hygiene_doc_decisions,
+        "The repository hygiene doc decisions document is missing its rendered classification.",
+    )
+    _ensure(
+        "V2 Repository Hygiene Tool Decisions" in repository_hygiene_tool_decisions,
+        "The repository hygiene tool decisions document is missing its rendered classification.",
+    )
+    _ensure(
+        "complete_v2_repository_hygiene_and_tools_review_cut" in repository_hygiene_cut_closure,
+        "The repository hygiene cut closure is missing its formal completion decision.",
     )
 
     print("[verify-axis-artifacts] all minimum axis artifacts are coherent")

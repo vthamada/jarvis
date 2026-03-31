@@ -168,6 +168,11 @@ class OrchestratorService:
                         if memory_recovery_result.user_scope_context
                         else []
                     ),
+                    "organization_scope_status": memory_recovery_result.organization_scope_status,
+                    "organization_scope_reason": memory_recovery_result.organization_scope_reason,
+                    "organization_scope_reopen_signal": (
+                        memory_recovery_result.organization_scope_reopen_signal
+                    ),
                 },
             )
         )
@@ -631,6 +636,11 @@ class OrchestratorService:
                         if memory_record_result.user_scope_context
                         else None
                     ),
+                    "organization_scope_status": memory_record_result.organization_scope_status,
+                    "organization_scope_reason": memory_record_result.organization_scope_reason,
+                    "organization_scope_reopen_signal": (
+                        memory_record_result.organization_scope_reopen_signal
+                    ),
                 },
             )
         )
@@ -681,6 +691,7 @@ class OrchestratorService:
             active_domains=list(deliberative_plan.active_domains),
             mission_id=str(contract.mission_id) if contract.mission_id else None,
             continuity_context=memory_recovery_result.continuity_context,
+            user_id=contract.user_id,
         )
         handoff_plan = self.specialist_engine.plan_handoffs(
             intent=directive.intent,
@@ -799,6 +810,30 @@ class OrchestratorService:
                                 item.shared_memory_context.memory_write_policies
                                 if item.shared_memory_context
                                 else {}
+                            )
+                            for item in handoff_plan.invocations
+                        },
+                        "recurrent_context_statuses": {
+                            item.specialist_type: (
+                                item.shared_memory_context.recurrent_context_status
+                                if item.shared_memory_context
+                                else "not_applicable"
+                            )
+                            for item in handoff_plan.invocations
+                        },
+                        "recurrent_interaction_counts": {
+                            item.specialist_type: (
+                                item.shared_memory_context.recurrent_interaction_count
+                                if item.shared_memory_context
+                                else 0
+                            )
+                            for item in handoff_plan.invocations
+                        },
+                        "recurrent_context_briefs": {
+                            item.specialist_type: (
+                                item.shared_memory_context.recurrent_context_brief
+                                if item.shared_memory_context
+                                else None
                             )
                             for item in handoff_plan.invocations
                         },

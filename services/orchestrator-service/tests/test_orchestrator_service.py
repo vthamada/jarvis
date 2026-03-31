@@ -1018,6 +1018,59 @@ def test_orchestrator_service_tracks_guided_decision_risk_specialist() -> None:
 
 
 
+def test_orchestrator_service_emits_recurrent_specialist_memory_signals() -> None:
+    temp_dir = runtime_dir("orchestrator-specialist-recurrence")
+    observability = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service = OrchestratorService(
+        governance_service=GovernanceService(),
+        memory_service=MemoryService(
+            database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+        ),
+        operational_service=OperationalService(artifact_dir=str(temp_dir / "artifacts")),
+        observability_service=observability,
+    )
+    service.handle_input(
+        InputContract(
+            request_id=RequestId("req-specialist-scope-1"),
+            session_id=SessionId("sess-specialist-scope-1"),
+            mission_id=MissionId("mission-specialist-scope-1"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Analyze the Python service API rollout and compare the safest change.",
+            timestamp="2026-03-31T00:00:00Z",
+            user_id="user-specialist-scope-1",
+        )
+    )
+    second = service.handle_input(
+        InputContract(
+            request_id=RequestId("req-specialist-scope-2"),
+            session_id=SessionId("sess-specialist-scope-2"),
+            mission_id=MissionId("mission-specialist-scope-2"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Analyze the Python service API rollout and compare the safest change again.",
+            timestamp="2026-03-31T00:01:00Z",
+            user_id="user-specialist-scope-1",
+        )
+    )
+
+    shared_memory_event = next(
+        event for event in second.events if event.event_name == "specialist_shared_memory_linked"
+    )
+
+    statuses = shared_memory_event.payload["recurrent_context_statuses"]
+    counts = shared_memory_event.payload["recurrent_interaction_counts"]
+    briefs = shared_memory_event.payload["recurrent_context_briefs"]
+
+    assert statuses
+    assert any(status == "recoverable" for status in statuses.values())
+    recoverable_specialists = [
+        specialist for specialist, status in statuses.items() if status == "recoverable"
+    ]
+    assert all(counts[specialist] >= 2 for specialist in recoverable_specialists)
+    assert all(briefs[specialist] for specialist in recoverable_specialists)
+
+
 def test_orchestrator_service_emits_user_scope_memory_signals() -> None:
     temp_dir = runtime_dir("orchestrator-user-scope")
     observability = ObservabilityService(database_path=str(temp_dir / "observability.db"))
@@ -1062,7 +1115,15 @@ def test_orchestrator_service_emits_user_scope_memory_signals() -> None:
     )
 
     assert memory_recovered_event.payload["user_scope_status"] == "seeded"
+    assert (
+        memory_recovered_event.payload["organization_scope_status"]
+        == "no_go_without_canonical_consumer"
+    )
     assert memory_recovered_event.payload["user_scope_interaction_count"] == 1
     assert memory_recovered_event.payload["user_scope_memory_refs"]
+    assert (
+        memory_recorded_event.payload["organization_scope_status"]
+        == "no_go_without_canonical_consumer"
+    )
     assert memory_recorded_event.payload["user_scope_status"] == "recoverable"
     assert memory_recorded_event.payload["user_scope_interaction_count"] == 2

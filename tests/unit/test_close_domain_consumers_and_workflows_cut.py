@@ -1,4 +1,4 @@
-from tools.close_domain_consumers_and_workflows_cut import build_payload, render_markdown
+from tools.archive.close_domain_consumers_and_workflows_cut import build_payload, render_markdown
 
 
 def test_close_domain_consumers_and_workflows_cut_builds_payload() -> None:

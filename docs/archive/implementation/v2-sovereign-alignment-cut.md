@@ -31,7 +31,7 @@ Status desta versão do corte:
 Leitura operacional correta neste momento:
 
 - este documento permanece como a referência executiva do corte que acabou de ser concluído;
-- o fechamento formal regenerável do corte passa a estar em `docs/implementation/v2-sovereign-alignment-cut-closure.md`;
+- o fechamento formal regenerável do corte passa a estar em `docs/archive/implementation/v2-sovereign-alignment-cut-closure.md`;
 - o próximo recorte do `v2` deve partir deste baseline, e não reabrir as sprints já concluídas aqui.
 
 ---

@@ -30,9 +30,15 @@ Sistema oficial de planejamento desta fase:
 - `docs/roadmap/programa-ate-v3.md` como direção do programa até `v3`;
 - `docs/archive/implementation/v2-cycle-closure.md` como fechamento formal do primeiro corte do `v2`;
 - `docs/archive/implementation/v2-alignment-cycle.md` como histórico fechado do ciclo anterior;
-- `docs/implementation/v2-native-memory-scope-hardening-cut.md` como execucao oficial do corte ativo;
+- `docs/archive/implementation/v2-native-memory-scope-hardening-cut.md` como ultimo recorte funcional executado do baseline nativo atual;
+- `docs/implementation/v2-native-memory-scope-hardening-cut-closure.md` como fechamento formal regeneravel do ultimo recorte funcional;
+- `docs/implementation/v2-repository-hygiene-and-tools-review-cut.md` como ultimo recorte estrutural executado;
+- `docs/implementation/v2-repository-hygiene-inventory.md` como inventario regeneravel da revisao estrutural ativa;
+- `docs/implementation/v2-repository-hygiene-doc-decisions.md` como decisao regeneravel de classificacao dos docs ativos;
+- `docs/implementation/v2-repository-hygiene-tool-decisions.md` como decisao regeneravel de classificacao dos entrypoints de `tools/`;
+- `docs/implementation/v2-repository-hygiene-and-tools-review-cut-closure.md` como fechamento formal regeneravel da revisao estrutural mais recente;
 - `docs/archive/implementation/v2-sovereign-alignment-cut.md` como histórico de transição do corte anterior;
-- `docs/implementation/v2-domain-consumers-and-workflows-cut-closure.md` como fechamento formal regenerável do corte anterior imediato;
+- `docs/archive/implementation/v2-domain-consumers-and-workflows-cut-closure.md` como fechamento formal regenerável do corte anterior imediato;
 - `docs/documentation/matriz-de-aderencia-mestre.md` como ponte entre visão canônica e backlog real.
 
 Leitura prioritária de aderência neste momento:
@@ -114,7 +120,7 @@ Hoje o repositório contém:
 - `shared/mind_registry.py` como registry formal das 24 mentes canônicas, com suporte preferencial inicial no `cognitive-engine`;
 - `observability-service` com trilha persistida, auditoria de fluxo e espelhamento agentic complementar;
 - `evolution-lab` persistindo proposals e decisões `sandbox-only`;
-- `tools/validate_baseline.py`, `tools/go_live_internal_checklist.py`, `tools/run_internal_pilot.py`, `tools/compare_orchestrator_paths.py`, `tools/evolution_from_pilot.py`, `tools/close_stateful_runtime_cycle.py` e `tools/close_alignment_cycle.py` operacionais;
+- `tools/validate_baseline.py`, `tools/go_live_internal_checklist.py`, `tools/run_internal_pilot.py`, `tools/compare_orchestrator_paths.py`, `tools/evolution_from_pilot.py`, `tools/archive/close_stateful_runtime_cycle.py` e `tools/archive/close_alignment_cycle.py` operacionais;
 - estudo tecnológico consolidado em `docs/architecture/technology-study.md`;
 - sistema documental em duas camadas ativas para programa e sprint cycle.
 
@@ -178,11 +184,11 @@ Regra de estudo externo no `v2`:
 ## Próximos passos imediatos
 
 Ordem recomendada:
-1. abrir e fechar a Sprint 2 do `v2-native-memory-scope-hardening-cut` sobre contexto recorrente de especialistas, ainda `through_core_only`;
-2. preservar `axis gates`, baseline release-grade e fechamentos regeneraveis como regra fixa enquanto a lacuna nao estiver comprovada;
-3. manter `Mastra` e `AutoGPT Platform` apenas como referencia e `Mem0` como candidata condicional, sem absorcao oportunista;
-4. usar `docs/implementation/v2-memory-gap-evidence-cut-closure.md` como fechamento anterior e o novo cut como base executavel da fase ativa;
-5. manter qualquer promoção externa fora do núcleo até um novo recorte ser formalmente aberto.
+1. usar `docs/implementation/v2-repository-hygiene-and-tools-review-cut-closure.md` como fechamento estrutural mais recente;
+2. selecionar o proximo recorte funcional a partir de `docs/implementation/v2-adherence-snapshot.md` e do backlog vivo;
+3. preservar `axis gates`, baseline release-grade e a superficie ativa enxuta como regra continua;
+4. manter historico regeneravel em `docs/archive/implementation/` e `tools/archive/` sem reexpandir a raiz do repositorio;
+5. manter qualquer delete definitivo dependente de nova checagem formal de referencias.
 
 ## Riscos e bloqueios
 
@@ -198,13 +204,13 @@ Ordem recomendada:
 - `HANDOFF.md`
 - `CHANGELOG.md`
 - `docs/roadmap/programa-ate-v3.md`
-- `docs/implementation/v2-domain-consumers-and-workflows-cut.md`
-- `docs/implementation/v2-memory-gap-evidence-cut.md`
-- `docs/implementation/v2-memory-gap-evidence-protocol.md`
-- `docs/implementation/v2-memory-gap-baseline-evidence.md`
-- `docs/implementation/v2-memory-gap-decision.md`
-- `docs/implementation/v2-memory-gap-evidence-cut-closure.md`
-- `docs/implementation/v2-native-memory-scope-hardening-cut.md`
+- `docs/archive/implementation/v2-domain-consumers-and-workflows-cut.md`
+- `docs/archive/implementation/v2-memory-gap-evidence-cut.md`
+- `docs/archive/implementation/v2-memory-gap-evidence-protocol.md`
+- `docs/archive/implementation/v2-memory-gap-baseline-evidence.md`
+- `docs/archive/implementation/v2-memory-gap-decision.md`
+- `docs/archive/implementation/v2-memory-gap-evidence-cut-closure.md`
+- `docs/archive/implementation/v2-native-memory-scope-hardening-cut.md`
 - `docs/documentation/matriz-de-aderencia-mestre.md`
 - `docs/architecture/technology-study.md`
 - `docs/archive/implementation/`
@@ -293,19 +299,28 @@ python tools/engineering_gate.py --mode standard
 - specialist types do runtime seguem usando ids canonicos em ingles, com compatibilidade curta para labels legados em portugues;
 - o corte de prova de lacuna de memoria multicamada foi formalmente encerrado;
 - Sprint 2 permanece concluida com workflows compostos auditaveis no runtime;
-- Sprint 3 foi concluida com benchmark governado por familia e matriz regeneravel em `docs/implementation/v2-governed-benchmark-matrix.md`;
+- Sprint 3 foi concluida com benchmark governado por familia e matriz regeneravel em `docs/archive/implementation/v2-governed-benchmark-matrix.md`;
 - `AutoGPT Platform`, `Mastra` e `Mem0` foram formalizadas como candidatas de `benchmark_now`;
 - `LangGraph`, `OpenAI Agents SDK`, `CrewAI`, `Microsoft Agent Framework`, `OpenClaw`, `Hermes Agent`, `Manus`, `Letta / MemGPT`, `Zep` e `Graphiti` passaram a compor o `reference_envelope` do recorte;
 - a Sprint 4 foi concluida com `tools/verify_active_cut_baseline.py` como verificador regeneravel do baseline do corte ativo;
-- `tools/close_domain_consumers_and_workflows_cut.py` passou a fechar o corte em `.jarvis_runtime/v2_domain_consumers_and_workflows_cut/`;
-- a Sprint 1 do novo corte foi concluida com `docs/implementation/v2-memory-gap-evidence-protocol.md` como protocolo regeneravel das hipoteses de lacuna do baseline atual;
-- a Sprint 2 do novo corte foi concluida com `docs/implementation/v2-memory-gap-baseline-evidence.md` como leitura local por escopo do baseline atual;
-- a Sprint 3 do novo corte foi concluida com `docs/implementation/v2-memory-gap-decision.md` como decisao formal de `manter_fechado`, preservando `Mem0` em `absorver_depois`;
-- a Sprint 4 do recorte foi concluida com `docs/implementation/v2-memory-gap-evidence-cut-closure.md` como fechamento formal do corte e recomendacao explicita do proximo recorte nativo;
+- `tools/archive/close_domain_consumers_and_workflows_cut.py` passou a fechar o corte em `.jarvis_runtime/v2_domain_consumers_and_workflows_cut/`;
+- a Sprint 1 do novo corte foi concluida com `docs/archive/implementation/v2-memory-gap-evidence-protocol.md` como protocolo regeneravel das hipoteses de lacuna do baseline atual;
+- a Sprint 2 do novo corte foi concluida com `docs/archive/implementation/v2-memory-gap-baseline-evidence.md` como leitura local por escopo do baseline atual;
+- a Sprint 3 do novo corte foi concluida com `docs/archive/implementation/v2-memory-gap-decision.md` como decisao formal de `manter_fechado`, preservando `Mem0` em `absorver_depois`;
+- a Sprint 4 do recorte foi concluida com `docs/archive/implementation/v2-memory-gap-evidence-cut-closure.md` como fechamento formal do corte e recomendacao explicita do proximo recorte nativo;
 - o baseline agora esta lido assim: conversa, sessao e missao permanecem suficientes; usuario e shared specialist memory sustentam lacuna parcial; organization scope continua apenas forma futura;
 - o novo corte ativo passa a ser `v2-native-memory-scope-hardening-cut`, focado em endurecimento nativo de user scope e contexto recorrente de especialistas.
 - a Sprint 1 do `v2-native-memory-scope-hardening-cut` foi concluida com snapshot nativo de `user scope`, recovery default desse escopo quando houver `user_id` e sinais minimos em observabilidade.
-- a Sprint 2 foi concluida com `docs/implementation/v2-governed-benchmark-scenario-specs.md` como artefato regeneravel de scenario specs e fronteiras sandbox;
-- a Sprint 3 foi concluida com `docs/implementation/v2-governed-benchmark-decisions.md` como decisao formal por tecnologia e racional curto contra o baseline do JARVIS;
-- a Sprint 4 do corte anterior foi concluida com `docs/implementation/v2-governed-benchmark-execution-cut-closure.md` como fechamento humano do recorte e `tools/close_governed_benchmark_execution_cut.py` como fechador regeneravel;
-- a proxima frente imediata passa a ser abrir um novo recorte apenas se a lacuna de memoria multicamada for comprovada acima do baseline atual.
+- a Sprint 2 do `v2-native-memory-scope-hardening-cut` foi concluida com contexto recorrente nativo por especialista promovido, ainda `through_core_only`, com telemetria de recorrencia no handoff e na observabilidade.
+- a Sprint 3 do `v2-native-memory-scope-hardening-cut` foi concluida com no-go explicito de `organization scope`, publicado no runtime de memoria e resumido na observabilidade.
+- a Sprint 2 foi concluida com `docs/archive/implementation/v2-governed-benchmark-scenario-specs.md` como artefato regeneravel de scenario specs e fronteiras sandbox;
+- a Sprint 3 foi concluida com `docs/archive/implementation/v2-governed-benchmark-decisions.md` como decisao formal por tecnologia e racional curto contra o baseline do JARVIS;
+- a Sprint 4 do corte anterior foi concluida com `docs/archive/implementation/v2-governed-benchmark-execution-cut-closure.md` como fechamento humano do recorte e `tools/archive/close_governed_benchmark_execution_cut.py` como fechador regeneravel;
+- a Sprint 4 do `v2-native-memory-scope-hardening-cut` foi concluida com fechamento formal regeneravel em `docs/implementation/v2-native-memory-scope-hardening-cut-closure.md`;
+- o recorte estrutural `v2-repository-hygiene-and-tools-review-cut` foi concluido com limpeza segura da superficie ativa de `docs/` e `tools/`;
+- a Sprint 1 desse corte foi concluida com inventario regeneravel em `docs/implementation/v2-repository-hygiene-inventory.md`;
+- a Sprint 2 desse corte foi concluida com decisao regeneravel de classificacao dos docs ativos em `docs/implementation/v2-repository-hygiene-doc-decisions.md`;
+- a Sprint 3 desse corte foi concluida com decisao regeneravel de classificacao dos entrypoints da raiz de `tools/` em `docs/implementation/v2-repository-hygiene-tool-decisions.md`;
+- a Sprint 4 desse corte foi concluida com migracao dos `archive candidates` e fechamento formal em `docs/implementation/v2-repository-hygiene-and-tools-review-cut-closure.md`;
+- a proxima frente imediata passa a ser a selecao disciplinada do proximo recorte funcional, sem reabrir ruido estrutural.
+- a camada de revisao profunda de repositorio para tecnologias externas foi formalizada em `docs/architecture/technology-repository-review-framework.md`, com primeira aplicacao em `docs/architecture/mem0-repository-review.md`; ela apoia decisao arquitetural, mas nao altera a prioridade funcional do backlog.

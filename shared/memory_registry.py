@@ -186,7 +186,18 @@ def default_priority_rules() -> list[str]:
         "domain_memory_requires_runtime_domain_link",
         "user_memory_recovers_when_user_id_is_available",
         "identity_and_normative_memory_are_not_default_recovery_scopes",
+        "organization_scope_blocked_without_canonical_consumer",
     ]
+
+
+def organization_scope_guard_payload() -> dict[str, str]:
+    """Return the baseline guardrail that keeps organization scope out of runtime."""
+
+    return {
+        "status": "no_go_without_canonical_consumer",
+        "reason": "baseline_keeps_organization_scope_out_until_a_sovereign_consumer_exists",
+        "reopen_signal": "canonical_consumer_required_for_reopen",
+    }
 
 
 def specialist_memory_policy_payload(

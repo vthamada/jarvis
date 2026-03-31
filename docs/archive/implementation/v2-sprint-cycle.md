@@ -368,7 +368,7 @@ Critérios explícitos desta consolidação:
 Resultado registrado nesta rodada:
 
 - o primeiro corte do `v2` foi fechado com classificação explícita entre `corrigir agora`, `manter deferido` e `preservar como visão`;
-- `tools/close_specialization_cycle.py` passou a gerar o artefato formal de fechamento orientado pelos eixos do Documento-Mestre;
+- `tools/archive/close_specialization_cycle.py` passou a gerar o artefato formal de fechamento orientado pelos eixos do Documento-Mestre;
 - `docs/archive/implementation/v2-cycle-closure.md` passou a registrar a decisão formal do corte;
 - o próximo artefato de execução passou a ser `docs/archive/implementation/v2-alignment-cycle.md`, com foco em `domínios`, `memórias`, `mentes`, identidade auditável e gates por eixo.
 

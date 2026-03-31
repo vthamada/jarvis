@@ -315,7 +315,7 @@ Este documento responde:
 Quem responde quando ela pode atravessar para o sistema é:
 
 - `docs/roadmap/programa-ate-v3.md` para a regra de absorção no programa;
-- `docs/implementation/v2-domain-consumers-and-workflows-cut.md` para o uso da tecnologia no recorte ativo;
+- `docs/archive/implementation/v2-domain-consumers-and-workflows-cut.md` para o uso da tecnologia no recorte ativo;
 - `HANDOFF.md` para a decisão operacional em vigor.
 
 ---
@@ -648,8 +648,8 @@ O corte ativo `v2-domain-consumers-and-workflows-cut` passou a tratar benchmark 
 
 Artefato regeneravel desta sprint:
 
-- `docs/implementation/v2-governed-benchmark-matrix.md`
-- `tools/render_governed_benchmark_matrix.py`
+- `docs/archive/implementation/v2-governed-benchmark-matrix.md`
+- `tools/archive/render_governed_benchmark_matrix.py`
 - `tools/benchmarks/datasets/v2_governed_benchmark_candidates.json`
 
 ### 18.1 Familias que podem entrar neste recorte
@@ -766,3 +766,25 @@ Leitura apos o fechamento do memory gap evidence cut:
 - o proximo passo correto nao e abrir absorcao externa;
 - o proximo passo correto e endurecer nativamente `user scope` e `specialist_shared_memory`;
 - `Mem0` continua candidata condicional e so reabre se o baseline endurecido ainda provar insuficiencia.
+
+
+### 18.8 Camada de revisao profunda de repositorio
+
+A partir desta rodada, o estudo tecnologico passa a distinguir duas camadas:
+
+- triagem arquitetural e benchmark governado
+- revisao profunda de repositorio para candidatas serias
+
+Essa segunda camada agora foi formalizada em:
+
+- `docs/architecture/technology-repository-review-framework.md`
+
+Primeira aplicacao registrada:
+
+- `docs/architecture/mem0-repository-review.md`
+
+Leitura correta:
+
+- a revisao profunda nao promove tecnologia ao nucleo;
+- ela serve para verificar se uma tecnologia continua fazendo sentido quando saimos das docs e olhamos o repositorio real;
+- o primeiro caso aplicado reforcou `Mem0` como `absorver depois`, mas apenas por absorcao estreita, tardia e reversivel.

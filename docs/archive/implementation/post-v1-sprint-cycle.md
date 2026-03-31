@@ -404,7 +404,7 @@ Resultado registrado nesta rodada:
 
 - o primeiro ciclo do `pos-v1` foi formalmente encerrado;
 - o corte entre `v1.5` e `v2` foi declarado em `docs/archive/implementation/post-v1-cycle-closure.md`;
-- `tools/close_continuity_cycle.py` passou a gerar artefatos executaveis de fechamento do ciclo;
+- `tools/archive/close_continuity_cycle.py` passou a gerar artefatos executaveis de fechamento do ciclo;
 - `docs/archive/implementation/v1-5-sprint-cycle.md` passou a ser o plano rolante ativo da fase seguinte.
 
 ---

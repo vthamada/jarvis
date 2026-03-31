@@ -1,4 +1,4 @@
-"""Official engineering gate for the JARVIS repository."""
+﻿"""Official engineering gate for the JARVIS repository."""
 
 from __future__ import annotations
 
@@ -73,7 +73,7 @@ def build_gate_steps(*, mode: str, include_controlled: bool) -> list[GateStep]:
         steps.append(
             GateStep(
                 label="current cut closure verification",
-                command=[RUNNER, "tools/close_memory_gap_evidence_cut.py"],
+                command=[RUNNER, "tools/close_repository_hygiene_and_tools_review_cut.py"],
             )
         )
         steps.append(

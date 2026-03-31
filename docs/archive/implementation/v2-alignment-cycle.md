@@ -253,7 +253,7 @@ Fechar o ciclo de alinhamento do `v2`, classificar o backlog imediato e abrir o 
 
 ### Resultado registrado nesta rodada
 
-- `tools/close_alignment_cycle.py` passou a gerar o artefato formal de encerramento do `v2-alignment-cycle`, usando observabilidade, comparação local e backlog classificado por `next_cut`, `deferred` e `vision`;
+- `tools/archive/close_alignment_cycle.py` passou a gerar o artefato formal de encerramento do `v2-alignment-cycle`, usando observabilidade, comparação local e backlog classificado por `next_cut`, `deferred` e `vision`;
 - `tools/compare_orchestrator_paths.py` passou a persistir seu artefato default em `.jarvis_runtime/path_comparison_v2/`, alinhando o fluxo real de comparação ao fechamento do ciclo;
 - o encerramento formal do ciclo passou a abrir explicitamente o próximo corte do `v2` com quatro frentes: especialistas de domínio além do shadow mode, consumidores canônicos de memória mais rica, absorção tecnológica governada em sandbox e promoção sempre subordinada a gates por eixo;
 - `computer use` amplo, voz oficial, `pgvector` como fundação obrigatória e autoevolução promotiva agressiva permanecem formalmente deferidos.

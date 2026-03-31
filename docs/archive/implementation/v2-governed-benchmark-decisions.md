@@ -1,0 +1,75 @@
+# V2 Governed Benchmark Decisions
+
+- cut: `v2-governed-benchmark-execution-cut`
+- sprint: `sprint-3-decision-closure`
+- decision_count: `3`
+
+## Mastra
+
+- technology_id: `mastra`
+- family_id: `workflow_orchestration`
+- final_decision: `usar_como_referencia`
+- baseline_read: o baseline atual do JARVIS ja cobre orchestracao soberana, workflow trace e checkpoints suficientes para o recorte atual.
+- decision_rationale:
+  - Mastra agrega valor como comparativo forte de pause/resume, steps tipados e observabilidade de execucao.
+  - O ganho atual e mais util para orientar evolucao de workflow do que para justificar dependencia central nova.
+  - A pressao arquitetural para absorcao agora seria maior do que o ganho real dentro deste recorte.
+- recommended_entry_surface:
+  - `docs/architecture/technology-study.md`
+  - `services/orchestrator-service/src/orchestrator_service/service.py`
+  - `services/operational-service/src/operational_service/service.py`
+- reopen_signals:
+  - quando o baseline do JARVIS exigir suspend/resume e checkpoints mais ricos do que o fluxo atual entrega bem
+  - quando houver consumidor canonico de HITL operacional acima do workflow baseline
+  - quando um sandbox mostrar ganho observavel sem tocar o orchestrator soberano
+- blocked_now_by:
+  - nao substituir o orchestrator soberano
+  - nao redefinir contratos canonicos de workflow
+  - nao introduzir dependencia central nova antes de lacuna comprovada
+
+## AutoGPT Platform
+
+- technology_id: `autogpt_platform`
+- family_id: `continuous_operational_agents`
+- final_decision: `usar_como_referencia`
+- baseline_read: o JARVIS ainda nao abriu uma camada oficial de automacoes continuas acima do nucleo que justifique absorcao agora.
+- decision_rationale:
+  - AutoGPT Platform e forte como referencia de blocos, triggers, webhooks e composicao operacional futura.
+  - O valor atual aparece como envelope arquitetural para futura camada de skills e workflows, nao como dependencia imediata.
+  - A tecnologia perde encaixe se tentar entrar antes de existir uma superficie operacional canonica mais ampla no JARVIS.
+- recommended_entry_surface:
+  - `docs/architecture/technology-study.md`
+  - `services/operational-service/src/operational_service/service.py`
+  - `docs/archive/implementation/v2-governed-benchmark-matrix.md`
+- reopen_signals:
+  - quando o JARVIS abrir um recorte proprio de automacao continua, triggers ou webhooks governados
+  - quando a camada operacional exigir blocos reutilizaveis acima do runtime atual
+  - quando houver traducao limpa para contratos soberanos sem tocar identidade, memoria canonica ou governanca final
+- blocked_now_by:
+  - nao assumir o papel de cerebro real do sistema
+  - nao substituir governanca final do nucleo
+  - nao promover automacao continua para baseline nesta fase
+
+## Mem0
+
+- technology_id: `mem0`
+- family_id: `multilayer_memory`
+- final_decision: `absorver_depois`
+- baseline_read: Mem0 mostrou o melhor potencial de encaixe futuro porque a lacuna de memoria multicamada e a mais traduzivel para o estado atual do memory-service.
+- decision_rationale:
+  - Mem0 oferece uma modelagem de escopo multicamada que conversa diretamente com sessoes, usuarios e memoria compartilhada.
+  - O ganho potencial e real, mas ainda nao justifica substituir registry soberano ou memoria canonica nesta fase.
+  - A entrada correta, se vier, sera como complemento ou adaptador progressivo de escopo e nao como fundacao do nucleo.
+- recommended_entry_surface:
+  - `services/memory-service/src/memory_service/service.py`
+  - `services/memory-service/src/memory_service/repository.py`
+  - `shared/memory_registry.py`
+- reopen_signals:
+  - quando o memory-service passar a exigir separacao mais forte entre conversa, sessao, usuario e memoria compartilhada
+  - quando um experimento isolado provar ganho claro de escopo sem reabrir os registries soberanos
+  - quando o custo de manter a modelagem atual ficar maior do que absorver uma camada complementar de memoria multicamada
+- blocked_now_by:
+  - nao substituir a memoria canonica do sistema
+  - nao romper memory_registry ou politicas soberanas de compartilhamento
+  - nao impor fundacao externa antes de evidencia suficiente
+

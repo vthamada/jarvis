@@ -168,6 +168,14 @@ def test_specialist_engine_links_promoted_domain_specialist_explicitly() -> None
                 memory_refs=["memory://mission", "memory://relational"],
                 semantic_focus=["software_development", "analysis"],
                 open_loops=["comparar mudanca no servico"],
+                recurrent_context_status="recoverable",
+                recurrent_interaction_count=3,
+                recurrent_context_brief=(
+                    "specialist=software_change_specialist | interactions=3 | "
+                    "domains=software_development,analysis"
+                ),
+                recurrent_domain_focus=["software_development", "analysis"],
+                recurrent_continuity_modes=["continuar"],
             )
         },
         session_id="sess-software",
@@ -202,6 +210,12 @@ def test_specialist_engine_links_promoted_domain_specialist_explicitly() -> None
     assert any(item.startswith("consumer_objective=") for item in specialist_inputs)
     assert any(item.startswith("expected_deliverables=") for item in specialist_inputs)
     assert any(item.startswith("telemetry_focus=") for item in specialist_inputs)
+    assert any(
+        item.startswith("recurrent_context_status=recoverable")
+        for item in specialist_inputs
+    )
+    assert any(item.startswith("recurrent_interaction_count=3") for item in specialist_inputs)
+    assert any(item.startswith("recurrent_context_brief=") for item in specialist_inputs)
     assert handoff_plan.invocations[0].expected_outputs == [
         "implementation_findings",
         "change_risk_summary",

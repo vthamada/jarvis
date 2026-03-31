@@ -103,6 +103,7 @@ class StoredSpecialistSharedMemory:
     shared_memory_brief: str
     write_policy: str
     updated_at: str
+    user_id: str | None = None
     consumer_mode: str = "baseline_shared_context"
     source_mission_id: str | None = None
     source_mission_goal: str | None = None
@@ -122,6 +123,12 @@ class StoredSpecialistSharedMemory:
     open_loops: list[str] = field(default_factory=list)
     last_recommendation: str | None = None
     domain_mission_link_reason: str | None = None
+    recurrent_context_status: str = "not_applicable"
+    recurrent_interaction_count: int = 0
+    recurrent_context_brief: str | None = None
+    recurrent_domain_focus: list[str] = field(default_factory=list)
+    recurrent_memory_refs: list[str] = field(default_factory=list)
+    recurrent_continuity_modes: list[str] = field(default_factory=list)
 
 
 class MemoryRepository(ABC):
@@ -204,6 +211,16 @@ class MemoryRepository(ABC):
         specialist_type: str,
     ) -> SpecialistSharedMemoryContextContract | None:
         """Load the latest specialist-facing shared memory snapshot for a session."""
+
+    @abstractmethod
+    def fetch_latest_specialist_shared_memory_for_user(
+        self,
+        *,
+        user_id: str,
+        specialist_type: str,
+        exclude_session_id: str | None = None,
+    ) -> SpecialistSharedMemoryContextContract | None:
+        """Load the latest specialist-facing shared memory snapshot for a user."""
 
     @abstractmethod
     def upsert_mission_state(self, mission_state: MissionStateContract) -> None:
@@ -592,23 +609,27 @@ class SqliteMemoryRepository(MemoryRepository):
                 """
                 INSERT INTO specialist_shared_memory (
                     session_id, specialist_type, sharing_mode, continuity_mode,
-                    shared_memory_brief, write_policy, consumer_mode, source_mission_id,
-                    source_mission_goal, mission_context_brief, domain_context_brief,
-                    continuity_context_brief, consumer_profile, consumer_objective,
-                    expected_deliverables, telemetry_focus, related_mission_ids, memory_refs,
-                    memory_class_policies, consumed_memory_classes, memory_write_policies,
-                    semantic_focus, open_loops, last_recommendation,
-                    domain_mission_link_reason, updated_at
+                    shared_memory_brief, write_policy, user_id, consumer_mode,
+                    source_mission_id, source_mission_goal, mission_context_brief,
+                    domain_context_brief, continuity_context_brief, consumer_profile,
+                    consumer_objective, expected_deliverables, telemetry_focus,
+                    related_mission_ids, memory_refs, memory_class_policies,
+                    consumed_memory_classes, memory_write_policies, semantic_focus,
+                    open_loops, last_recommendation, domain_mission_link_reason,
+                    recurrent_context_status, recurrent_interaction_count,
+                    recurrent_context_brief, recurrent_domain_focus,
+                    recurrent_memory_refs, recurrent_continuity_modes, updated_at
                 )
                 VALUES (
-                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                    ?, ?, ?, ?
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?
                 )
                 ON CONFLICT(session_id, specialist_type) DO UPDATE SET
                     sharing_mode = excluded.sharing_mode,
                     continuity_mode = excluded.continuity_mode,
                     shared_memory_brief = excluded.shared_memory_brief,
                     write_policy = excluded.write_policy,
+                    user_id = excluded.user_id,
                     consumer_mode = excluded.consumer_mode,
                     source_mission_id = excluded.source_mission_id,
                     source_mission_goal = excluded.source_mission_goal,
@@ -628,6 +649,12 @@ class SqliteMemoryRepository(MemoryRepository):
                     open_loops = excluded.open_loops,
                     last_recommendation = excluded.last_recommendation,
                     domain_mission_link_reason = excluded.domain_mission_link_reason,
+                    recurrent_context_status = excluded.recurrent_context_status,
+                    recurrent_interaction_count = excluded.recurrent_interaction_count,
+                    recurrent_context_brief = excluded.recurrent_context_brief,
+                    recurrent_domain_focus = excluded.recurrent_domain_focus,
+                    recurrent_memory_refs = excluded.recurrent_memory_refs,
+                    recurrent_continuity_modes = excluded.recurrent_continuity_modes,
                     updated_at = excluded.updated_at
                 """,
                 (
@@ -637,6 +664,7 @@ class SqliteMemoryRepository(MemoryRepository):
                     snapshot.continuity_mode,
                     snapshot.shared_memory_brief,
                     snapshot.write_policy,
+                    snapshot.user_id,
                     snapshot.consumer_mode,
                     snapshot.source_mission_id,
                     snapshot.source_mission_goal,
@@ -656,6 +684,12 @@ class SqliteMemoryRepository(MemoryRepository):
                     dumps(snapshot.open_loops),
                     snapshot.last_recommendation,
                     snapshot.domain_mission_link_reason,
+                    snapshot.recurrent_context_status,
+                    snapshot.recurrent_interaction_count,
+                    snapshot.recurrent_context_brief,
+                    dumps(snapshot.recurrent_domain_focus),
+                    dumps(snapshot.recurrent_memory_refs),
+                    dumps(snapshot.recurrent_continuity_modes),
                     snapshot.updated_at,
                 ),
             )
@@ -677,13 +711,48 @@ class SqliteMemoryRepository(MemoryRepository):
                        expected_deliverables, telemetry_focus, related_mission_ids, memory_refs,
                        memory_class_policies, consumed_memory_classes, memory_write_policies,
                        semantic_focus, open_loops, last_recommendation,
-                       domain_mission_link_reason
+                       domain_mission_link_reason, recurrent_context_status,
+                       recurrent_interaction_count, recurrent_context_brief,
+                       recurrent_domain_focus, recurrent_memory_refs,
+                       recurrent_continuity_modes
                 FROM specialist_shared_memory
                 WHERE session_id = ?
                   AND specialist_type = ?
                 """,
                 (session_id, specialist_type),
             ).fetchone()
+        return None if row is None else self._row_to_specialist_shared_memory(row)
+
+    def fetch_latest_specialist_shared_memory_for_user(
+        self,
+        *,
+        user_id: str,
+        specialist_type: str,
+        exclude_session_id: str | None = None,
+    ) -> SpecialistSharedMemoryContextContract | None:
+        query = """
+                SELECT session_id, specialist_type, sharing_mode, continuity_mode,
+                       shared_memory_brief, write_policy, consumer_mode, source_mission_id,
+                       source_mission_goal, mission_context_brief, domain_context_brief,
+                       continuity_context_brief, consumer_profile, consumer_objective,
+                       expected_deliverables, telemetry_focus, related_mission_ids, memory_refs,
+                       memory_class_policies, consumed_memory_classes, memory_write_policies,
+                       semantic_focus, open_loops, last_recommendation,
+                       domain_mission_link_reason, recurrent_context_status,
+                       recurrent_interaction_count, recurrent_context_brief,
+                       recurrent_domain_focus, recurrent_memory_refs,
+                       recurrent_continuity_modes
+                FROM specialist_shared_memory
+                WHERE user_id = ?
+                  AND specialist_type = ?
+        """
+        params: list[str] = [user_id, specialist_type]
+        if exclude_session_id is not None:
+            query += "\n                  AND session_id <> ?"
+            params.append(exclude_session_id)
+        query += "\n                ORDER BY updated_at DESC\n                LIMIT 1"
+        with self._connect() as connection:
+            row = connection.execute(query, tuple(params)).fetchone()
         return None if row is None else self._row_to_specialist_shared_memory(row)
 
     def fetch_mission_state(self, mission_id: str) -> MissionStateContract | None:
@@ -830,6 +899,7 @@ class SqliteMemoryRepository(MemoryRepository):
                     continuity_mode TEXT NOT NULL,
                     shared_memory_brief TEXT NOT NULL,
                     write_policy TEXT NOT NULL,
+                    user_id TEXT,
                     consumer_mode TEXT NOT NULL DEFAULT 'baseline_shared_context',
                     source_mission_id TEXT,
                     source_mission_goal TEXT,
@@ -849,6 +919,12 @@ class SqliteMemoryRepository(MemoryRepository):
                     open_loops TEXT NOT NULL DEFAULT '[]',
                     last_recommendation TEXT,
                     domain_mission_link_reason TEXT,
+                    recurrent_context_status TEXT NOT NULL DEFAULT 'not_applicable',
+                    recurrent_interaction_count INTEGER NOT NULL DEFAULT 0,
+                    recurrent_context_brief TEXT,
+                    recurrent_domain_focus TEXT NOT NULL DEFAULT '[]',
+                    recurrent_memory_refs TEXT NOT NULL DEFAULT '[]',
+                    recurrent_continuity_modes TEXT NOT NULL DEFAULT '[]',
                     updated_at TEXT NOT NULL,
                     PRIMARY KEY (session_id, specialist_type)
                 );
@@ -938,6 +1014,43 @@ class SqliteMemoryRepository(MemoryRepository):
                 "specialist_shared_memory",
                 "domain_mission_link_reason",
                 "TEXT",
+            )
+            self._ensure_column(connection, "specialist_shared_memory", "user_id", "TEXT")
+            self._ensure_column(
+                connection,
+                "specialist_shared_memory",
+                "recurrent_context_status",
+                "TEXT NOT NULL DEFAULT 'not_applicable'",
+            )
+            self._ensure_column(
+                connection,
+                "specialist_shared_memory",
+                "recurrent_interaction_count",
+                "INTEGER NOT NULL DEFAULT 0",
+            )
+            self._ensure_column(
+                connection,
+                "specialist_shared_memory",
+                "recurrent_context_brief",
+                "TEXT",
+            )
+            self._ensure_column(
+                connection,
+                "specialist_shared_memory",
+                "recurrent_domain_focus",
+                "TEXT NOT NULL DEFAULT '[]'",
+            )
+            self._ensure_column(
+                connection,
+                "specialist_shared_memory",
+                "recurrent_memory_refs",
+                "TEXT NOT NULL DEFAULT '[]'",
+            )
+            self._ensure_column(
+                connection,
+                "specialist_shared_memory",
+                "recurrent_continuity_modes",
+                "TEXT NOT NULL DEFAULT '[]'",
             )
             connection.commit()
 
@@ -1049,6 +1162,12 @@ class SqliteMemoryRepository(MemoryRepository):
             open_loops=list(loads(row["open_loops"] or "[]")),
             last_recommendation=row["last_recommendation"],
             domain_mission_link_reason=row["domain_mission_link_reason"],
+            recurrent_context_status=str(row["recurrent_context_status"] or "not_applicable"),
+            recurrent_interaction_count=int(row["recurrent_interaction_count"] or 0),
+            recurrent_context_brief=row["recurrent_context_brief"],
+            recurrent_domain_focus=list(loads(row["recurrent_domain_focus"] or "[]")),
+            recurrent_memory_refs=list(loads(row["recurrent_memory_refs"] or "[]")),
+            recurrent_continuity_modes=list(loads(row["recurrent_continuity_modes"] or "[]")),
         )
 
 
@@ -1471,24 +1590,28 @@ class PostgresMemoryRepository(MemoryRepository):
                 """
                 INSERT INTO specialist_shared_memory (
                     session_id, specialist_type, sharing_mode, continuity_mode,
-                    shared_memory_brief, write_policy, consumer_mode, source_mission_id,
-                    source_mission_goal, mission_context_brief, domain_context_brief,
-                    continuity_context_brief, consumer_profile, consumer_objective,
-                    expected_deliverables, telemetry_focus, related_mission_ids, memory_refs,
-                    memory_class_policies, consumed_memory_classes, memory_write_policies,
-                    semantic_focus, open_loops, last_recommendation,
-                    domain_mission_link_reason, updated_at
+                    shared_memory_brief, write_policy, user_id, consumer_mode,
+                    source_mission_id, source_mission_goal, mission_context_brief,
+                    domain_context_brief, continuity_context_brief, consumer_profile,
+                    consumer_objective, expected_deliverables, telemetry_focus,
+                    related_mission_ids, memory_refs, memory_class_policies,
+                    consumed_memory_classes, memory_write_policies, semantic_focus,
+                    open_loops, last_recommendation, domain_mission_link_reason,
+                    recurrent_context_status, recurrent_interaction_count,
+                    recurrent_context_brief, recurrent_domain_focus,
+                    recurrent_memory_refs, recurrent_continuity_modes, updated_at
                 )
                 VALUES (
                     %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
                     %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
-                    %s, %s, %s, %s
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
                 )
                 ON CONFLICT (session_id, specialist_type) DO UPDATE SET
                     sharing_mode = EXCLUDED.sharing_mode,
                     continuity_mode = EXCLUDED.continuity_mode,
                     shared_memory_brief = EXCLUDED.shared_memory_brief,
                     write_policy = EXCLUDED.write_policy,
+                    user_id = EXCLUDED.user_id,
                     consumer_mode = EXCLUDED.consumer_mode,
                     source_mission_id = EXCLUDED.source_mission_id,
                     source_mission_goal = EXCLUDED.source_mission_goal,
@@ -1508,6 +1631,12 @@ class PostgresMemoryRepository(MemoryRepository):
                     open_loops = EXCLUDED.open_loops,
                     last_recommendation = EXCLUDED.last_recommendation,
                     domain_mission_link_reason = EXCLUDED.domain_mission_link_reason,
+                    recurrent_context_status = EXCLUDED.recurrent_context_status,
+                    recurrent_interaction_count = EXCLUDED.recurrent_interaction_count,
+                    recurrent_context_brief = EXCLUDED.recurrent_context_brief,
+                    recurrent_domain_focus = EXCLUDED.recurrent_domain_focus,
+                    recurrent_memory_refs = EXCLUDED.recurrent_memory_refs,
+                    recurrent_continuity_modes = EXCLUDED.recurrent_continuity_modes,
                     updated_at = EXCLUDED.updated_at
                 """,
                 (
@@ -1517,6 +1646,7 @@ class PostgresMemoryRepository(MemoryRepository):
                     snapshot.continuity_mode,
                     snapshot.shared_memory_brief,
                     snapshot.write_policy,
+                    snapshot.user_id,
                     snapshot.consumer_mode,
                     snapshot.source_mission_id,
                     snapshot.source_mission_goal,
@@ -1536,6 +1666,12 @@ class PostgresMemoryRepository(MemoryRepository):
                     dumps(snapshot.open_loops),
                     snapshot.last_recommendation,
                     snapshot.domain_mission_link_reason,
+                    snapshot.recurrent_context_status,
+                    snapshot.recurrent_interaction_count,
+                    snapshot.recurrent_context_brief,
+                    dumps(snapshot.recurrent_domain_focus),
+                    dumps(snapshot.recurrent_memory_refs),
+                    dumps(snapshot.recurrent_continuity_modes),
                     snapshot.updated_at,
                 ),
             )
@@ -1557,7 +1693,10 @@ class PostgresMemoryRepository(MemoryRepository):
                        expected_deliverables, telemetry_focus, related_mission_ids, memory_refs,
                        memory_class_policies, consumed_memory_classes, memory_write_policies,
                        semantic_focus, open_loops, last_recommendation,
-                       domain_mission_link_reason
+                       domain_mission_link_reason, recurrent_context_status,
+                       recurrent_interaction_count, recurrent_context_brief,
+                       recurrent_domain_focus, recurrent_memory_refs,
+                       recurrent_continuity_modes
                 FROM specialist_shared_memory
                 WHERE session_id = %s
                   AND specialist_type = %s
@@ -1592,6 +1731,78 @@ class PostgresMemoryRepository(MemoryRepository):
             open_loops=list(loads(row["open_loops"] or "[]")),
             last_recommendation=row["last_recommendation"],
             domain_mission_link_reason=row["domain_mission_link_reason"],
+            recurrent_context_status=row["recurrent_context_status"] or "not_applicable",
+            recurrent_interaction_count=int(row["recurrent_interaction_count"] or 0),
+            recurrent_context_brief=row["recurrent_context_brief"],
+            recurrent_domain_focus=list(loads(row["recurrent_domain_focus"] or "[]")),
+            recurrent_memory_refs=list(loads(row["recurrent_memory_refs"] or "[]")),
+            recurrent_continuity_modes=list(loads(row["recurrent_continuity_modes"] or "[]")),
+        )
+
+    def fetch_latest_specialist_shared_memory_for_user(
+        self,
+        *,
+        user_id: str,
+        specialist_type: str,
+        exclude_session_id: str | None = None,
+    ) -> SpecialistSharedMemoryContextContract | None:
+        query = """
+                SELECT session_id, specialist_type, sharing_mode, continuity_mode,
+                       shared_memory_brief, write_policy, consumer_mode, source_mission_id,
+                       source_mission_goal, mission_context_brief, domain_context_brief,
+                       continuity_context_brief, consumer_profile, consumer_objective,
+                       expected_deliverables, telemetry_focus, related_mission_ids, memory_refs,
+                       memory_class_policies, consumed_memory_classes, memory_write_policies,
+                       semantic_focus, open_loops, last_recommendation,
+                       domain_mission_link_reason, recurrent_context_status,
+                       recurrent_interaction_count, recurrent_context_brief,
+                       recurrent_domain_focus, recurrent_memory_refs,
+                       recurrent_continuity_modes
+                FROM specialist_shared_memory
+                WHERE user_id = %s
+                  AND specialist_type = %s
+        """
+        params: list[str] = [user_id, specialist_type]
+        if exclude_session_id is not None:
+            query += "\n                  AND session_id <> %s"
+            params.append(exclude_session_id)
+        query += "\n                ORDER BY updated_at DESC\n                LIMIT 1"
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(query, tuple(params))
+            row = cursor.fetchone()
+        if row is None:
+            return None
+        return SpecialistSharedMemoryContextContract(
+            specialist_type=row["specialist_type"],
+            sharing_mode=row["sharing_mode"],
+            continuity_mode=row["continuity_mode"],
+            shared_memory_brief=row["shared_memory_brief"],
+            write_policy=row["write_policy"],
+            consumer_mode=row["consumer_mode"] or "baseline_shared_context",
+            source_mission_id=row["source_mission_id"],
+            source_mission_goal=row["source_mission_goal"],
+            mission_context_brief=row["mission_context_brief"],
+            domain_context_brief=row["domain_context_brief"],
+            continuity_context_brief=row["continuity_context_brief"],
+            consumer_profile=row["consumer_profile"],
+            consumer_objective=row["consumer_objective"],
+            expected_deliverables=list(loads(row["expected_deliverables"] or "[]")),
+            telemetry_focus=list(loads(row["telemetry_focus"] or "[]")),
+            related_mission_ids=list(loads(row["related_mission_ids"] or "[]")),
+            memory_refs=list(loads(row["memory_refs"] or "[]")),
+            memory_class_policies=dict(loads(row["memory_class_policies"] or "{}")),
+            consumed_memory_classes=list(loads(row["consumed_memory_classes"] or "[]")),
+            memory_write_policies=dict(loads(row["memory_write_policies"] or "{}")),
+            semantic_focus=list(loads(row["semantic_focus"] or "[]")),
+            open_loops=list(loads(row["open_loops"] or "[]")),
+            last_recommendation=row["last_recommendation"],
+            domain_mission_link_reason=row["domain_mission_link_reason"],
+            recurrent_context_status=row["recurrent_context_status"] or "not_applicable",
+            recurrent_interaction_count=int(row["recurrent_interaction_count"] or 0),
+            recurrent_context_brief=row["recurrent_context_brief"],
+            recurrent_domain_focus=list(loads(row["recurrent_domain_focus"] or "[]")),
+            recurrent_memory_refs=list(loads(row["recurrent_memory_refs"] or "[]")),
+            recurrent_continuity_modes=list(loads(row["recurrent_continuity_modes"] or "[]")),
         )
 
     def fetch_mission_state(self, mission_id: str) -> MissionStateContract | None:
@@ -1756,6 +1967,7 @@ class PostgresMemoryRepository(MemoryRepository):
                     continuity_mode TEXT NOT NULL,
                     shared_memory_brief TEXT NOT NULL,
                     write_policy TEXT NOT NULL,
+                    user_id TEXT,
                     consumer_mode TEXT NOT NULL DEFAULT 'baseline_shared_context',
                     source_mission_id TEXT,
                     source_mission_goal TEXT,
@@ -1775,6 +1987,12 @@ class PostgresMemoryRepository(MemoryRepository):
                     open_loops TEXT NOT NULL DEFAULT '[]',
                     last_recommendation TEXT,
                     domain_mission_link_reason TEXT,
+                    recurrent_context_status TEXT NOT NULL DEFAULT 'not_applicable',
+                    recurrent_interaction_count INTEGER NOT NULL DEFAULT 0,
+                    recurrent_context_brief TEXT,
+                    recurrent_domain_focus TEXT NOT NULL DEFAULT '[]',
+                    recurrent_memory_refs TEXT NOT NULL DEFAULT '[]',
+                    recurrent_continuity_modes TEXT NOT NULL DEFAULT '[]',
                     updated_at TEXT NOT NULL,
                     PRIMARY KEY (session_id, specialist_type)
                 )
@@ -1883,6 +2101,33 @@ class PostgresMemoryRepository(MemoryRepository):
             cursor.execute(
                 "ALTER TABLE specialist_shared_memory ADD COLUMN IF NOT EXISTS "
                 "domain_mission_link_reason TEXT"
+            )
+            cursor.execute(
+                "ALTER TABLE specialist_shared_memory ADD COLUMN IF NOT EXISTS user_id TEXT"
+            )
+            cursor.execute(
+                "ALTER TABLE specialist_shared_memory ADD COLUMN IF NOT EXISTS "
+                "recurrent_context_status TEXT NOT NULL DEFAULT 'not_applicable'"
+            )
+            cursor.execute(
+                "ALTER TABLE specialist_shared_memory ADD COLUMN IF NOT EXISTS "
+                "recurrent_interaction_count INTEGER NOT NULL DEFAULT 0"
+            )
+            cursor.execute(
+                "ALTER TABLE specialist_shared_memory ADD COLUMN IF NOT EXISTS "
+                "recurrent_context_brief TEXT"
+            )
+            cursor.execute(
+                "ALTER TABLE specialist_shared_memory ADD COLUMN IF NOT EXISTS "
+                "recurrent_domain_focus TEXT NOT NULL DEFAULT '[]'"
+            )
+            cursor.execute(
+                "ALTER TABLE specialist_shared_memory ADD COLUMN IF NOT EXISTS "
+                "recurrent_memory_refs TEXT NOT NULL DEFAULT '[]'"
+            )
+            cursor.execute(
+                "ALTER TABLE specialist_shared_memory ADD COLUMN IF NOT EXISTS "
+                "recurrent_continuity_modes TEXT NOT NULL DEFAULT '[]'"
             )
             connection.commit()
 

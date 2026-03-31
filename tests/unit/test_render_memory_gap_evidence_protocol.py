@@ -1,4 +1,4 @@
-from tools.render_memory_gap_evidence_protocol import build_payload, render_markdown
+from tools.archive.render_memory_gap_evidence_protocol import build_payload, render_markdown
 
 
 def test_render_memory_gap_evidence_protocol_payload() -> None:

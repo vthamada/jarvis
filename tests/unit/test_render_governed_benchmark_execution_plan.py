@@ -1,4 +1,4 @@
-from tools.render_governed_benchmark_execution_plan import build_payload, render_markdown
+from tools.archive.render_governed_benchmark_execution_plan import build_payload, render_markdown
 
 
 def test_render_governed_benchmark_execution_plan_payload() -> None:

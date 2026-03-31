@@ -43,7 +43,7 @@
       "recommended_entry_surface": [
         "docs/architecture/technology-study.md",
         "services/operational-service/src/operational_service/service.py",
-        "docs/implementation/v2-governed-benchmark-matrix.md"
+        "docs/archive/implementation/v2-governed-benchmark-matrix.md"
       ],
       "reopen_signals": [
         "quando o JARVIS abrir um recorte proprio de automacao continua, triggers ou webhooks governados",

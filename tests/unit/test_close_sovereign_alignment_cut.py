@@ -6,7 +6,7 @@ from uuid import uuid4
 from observability_service.service import ObservabilityService
 
 from shared.events import InternalEventEnvelope
-from tools.close_sovereign_alignment_cut import build_payload, render_markdown
+from tools.archive.close_sovereign_alignment_cut import build_payload, render_markdown
 
 
 def runtime_dir(name: str) -> Path:
