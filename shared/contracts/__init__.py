@@ -107,6 +107,12 @@ class DeliberativePlanContract:
     rationale: str
     canonical_domains: list[str] = field(default_factory=list)
     primary_canonical_domain: str | None = None
+    primary_route: str | None = None
+    route_consumer_profile: str | None = None
+    route_consumer_objective: str | None = None
+    route_expected_deliverables: list[str] = field(default_factory=list)
+    route_telemetry_focus: list[str] = field(default_factory=list)
+    route_workflow_profile: str | None = None
     tensions_considered: list[str] = field(default_factory=list)
     specialist_hints: list[str] = field(default_factory=list)
     success_criteria: list[str] = field(default_factory=list)

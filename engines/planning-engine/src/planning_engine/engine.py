@@ -82,6 +82,12 @@ class PlanningContext:
     preferred_response_mode: str
     canonical_domains: list[str] | None = None
     primary_canonical_domain: str | None = None
+    primary_route: str | None = None
+    route_consumer_profile: str | None = None
+    route_consumer_objective: str | None = None
+    route_expected_deliverables: list[str] | None = None
+    route_telemetry_focus: list[str] | None = None
+    route_workflow_profile: str | None = None
     cognitive_rationale: str = ""
     tensions: list[str] | None = None
     specialist_hints: list[str] | None = None
@@ -118,6 +124,12 @@ class PlanningEngine:
     """Build concise operational plans from intent, context, and knowledge."""
 
     name = "planning-engine"
+
+    @staticmethod
+    def _present_contract_label(value: str | None) -> str | None:
+        if not value:
+            return None
+        return value.replace("_", " ")
 
     def build_task_plan(self, context: PlanningContext) -> DeliberativePlanContract:
         """Create a structured plan that is safe to pass into the operational layer."""
@@ -215,6 +227,12 @@ class PlanningEngine:
             constraints=constraints,
             canonical_domains=list(context.canonical_domains or []),
             primary_canonical_domain=context.primary_canonical_domain,
+            primary_route=context.primary_route,
+            route_consumer_profile=context.route_consumer_profile,
+            route_consumer_objective=context.route_consumer_objective,
+            route_expected_deliverables=list(context.route_expected_deliverables or []),
+            route_telemetry_focus=list(context.route_telemetry_focus or []),
+            route_workflow_profile=context.route_workflow_profile,
             risks=risks,
             recommended_task_type=recommended_task_type,
             requires_human_validation=requires_human_validation,
@@ -401,6 +419,20 @@ class PlanningEngine:
             steps.append(
                 "usar a recomendacao anterior como checkpoint antes da conclusao final"
             )
+        deliverable_labels = [
+            label
+            for item in (context.route_expected_deliverables or [])[:2]
+            if (label := self._present_contract_label(item))
+        ]
+        if deliverable_labels and len(steps) < 5:
+            if len(deliverable_labels) == 1:
+                deliverable_hint = deliverable_labels[0]
+            else:
+                deliverable_hint = " e ".join(deliverable_labels)
+            steps.append(f"orientar a saida para {deliverable_hint} da rota ativa")
+        workflow_label = self._present_contract_label(context.route_workflow_profile)
+        if workflow_label and len(steps) < 5:
+            steps.append(f"manter o ritmo do workflow ativo: {workflow_label}")
         return steps[:5]
 
     def _build_constraints(
@@ -429,6 +461,15 @@ class PlanningEngine:
             )
         if open_loops:
             constraints.append("tratar a missao ativa como referencia antes de expandir escopo")
+        if context.route_consumer_profile:
+            constraints.append(
+                f"preservar o contrato guiado da rota ativa: {context.route_consumer_profile}"
+            )
+        telemetry_label = self._present_contract_label(
+            (context.route_telemetry_focus or [None])[0]
+        )
+        if telemetry_label:
+            constraints.append(f"preservar o foco observavel da rota ativa: {telemetry_label}")
         if continuity_action == "retomar":
             constraints.append(
                 "explicitar por que a retomada relacionada vence abrir um escopo novo"
@@ -496,7 +537,14 @@ class PlanningEngine:
             )
         if open_loops and len(criteria) < 4:
             criteria.append("loop principal deve permanecer rastreavel na resposta final")
-        return criteria[:4]
+        if context.route_expected_deliverables and len(criteria) < 5:
+            criteria.append(
+                f"saida deve refletir {context.route_expected_deliverables[0]} da rota ativa"
+            )
+        workflow_label = self._present_contract_label(context.route_workflow_profile)
+        if workflow_label and len(criteria) < 5:
+            criteria.append(f"resposta deve manter o workflow ativo: {workflow_label}")
+        return criteria[:5]
 
     def _recommended_task_type(
         self,
@@ -553,9 +601,13 @@ class PlanningEngine:
         continuity_source: str,
     ) -> str:
         mode = context.identity_mode or context.preferred_response_mode
+        route_profile = context.route_consumer_profile or "none"
+        workflow_profile = context.route_workflow_profile or "none"
         return (
             f"objetivo={dominant_goal}; missao_ativa={mission_goal}; modo={mode}; "
-            f"continuidade={continuity_action}; fonte_continuidade={continuity_source}; "
+            f"rota_primaria={context.primary_route or 'none'}; consumer_profile={route_profile}; "
+            f"workflow_profile={workflow_profile}; continuidade={continuity_action}; "
+            f"fonte_continuidade={continuity_source}; "
             f"replay_status={context.continuity_replay_status or 'none'}; "
             f"recovery_mode={context.continuity_recovery_mode or 'none'}; "
             f"motivo_continuidade={continuity_reason}; "
@@ -600,10 +652,18 @@ class PlanningEngine:
         replay_status = context.continuity_replay_status or "none"
         recovery_mode = context.continuity_recovery_mode or "none"
         resume_point = context.continuity_resume_point or "nenhum"
+        route_profile = context.route_consumer_profile or "none"
+        route_objective = context.route_consumer_objective or "none"
+        route_deliverables = ",".join((context.route_expected_deliverables or [])[:3]) or "none"
+        route_telemetry = ",".join((context.route_telemetry_focus or [])[:3]) or "none"
+        route_workflow = context.route_workflow_profile or "none"
         return (
             f"objetivo_dominante={dominant_goal}; missao_ativa={mission_goal}; "
             f"objetivos_secundarios={secondary}; continuidade={continuity_hint}; "
             f"loops_abertos={open_loops}; acao_continuidade={continuity_action}; "
+            f"rota_primaria={context.primary_route or 'none'}; consumer_profile={route_profile}; "
+            f"consumer_objective={route_objective}; deliverables={route_deliverables}; "
+            f"telemetry_focus={route_telemetry}; workflow_profile={route_workflow}; "
             f"replay_status={replay_status}; recovery_mode={recovery_mode}; "
             f"resume_point={resume_point}; "
             f"motivo_continuidade={continuity_reason}; "

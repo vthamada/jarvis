@@ -36,6 +36,14 @@ def sample_plan() -> DeliberativePlanContract:
             "alinhar checkpoint principal"
         ),
         open_loops=["alinhar checkpoint principal"],
+        primary_route="strategy",
+        route_consumer_profile="strategy_tradeoff_review",
+        route_consumer_objective=(
+            "clarificar trade-offs estrategicos, enquadramento de cenario e direcao recomendada"
+        ),
+        route_expected_deliverables=["tradeoff_map", "decision_criteria"],
+        route_telemetry_focus=["tradeoff_clarity", "decision_trace"],
+        route_workflow_profile="strategic_direction_workflow",
     )
 
 
@@ -78,6 +86,7 @@ def test_synthesis_engine_composes_unitary_allowed_response() -> None:
     assert "Julgamento" in response
     assert "Recomendacao" in response
     assert "retomar alinhar checkpoint principal" in response
+    assert "workflow ativo: strategic direction workflow" in response
     assert "Contribuicoes especialistas" not in response
     assert "Dominios:" not in response
     assert "Mentes:" not in response
@@ -290,4 +299,8 @@ def test_synthesis_engine_uses_guided_semantic_and_procedural_memory_hints() -> 
         )
     )
     assert "memoria guiada reforca foco em estrategia_e_pensamento_sistemico, strategy" in response
+    assert "strategy tradeoff review" in response
+    assert "tradeoff map" in response
+    assert "tradeoff clarity" in response
+    assert "workflow ativo: strategic direction workflow" in response
     assert "apoio procedural: manter o ultimo fio de recomendacao governada" in response

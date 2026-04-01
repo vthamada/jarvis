@@ -40,6 +40,8 @@ Leitura executiva:
   cobertura canonica dos especialistas e formalizacao mais declarativa da arbitragem de mentes;
 - a soberania de dominios avancou mais um passo: rotas promovidas agora ja aparecem como `promoted_route_registry` soberano nos eventos do runtime, reduzindo recomputacao local no orquestrador e melhorando auditoria de elegibilidade.
 - a malha dominio->especialista tambem avancou: packets guiados de memoria agora nascem da rota promovida elegivel do registry e sao validados contra o contrato canonico da rota antes da convocacao especializada.
+- o contrato canonico da rota ativa passou a atravessar tambem o `planning` e a influenciar a `synthesis`, reduzindo a distancia entre memoria guiada disponivel e comportamento final do runtime.
+- esse contrato agora tambem molda passos, restricoes e criterio de saida do plano, e ja aparece na leitura final como objetivo, entrega esperada, foco de leitura e workflow ativo da rota promovida.
 - memoria, identidade, governanca, observabilidade e soberania do nucleo evoluiram de forma consistente;
 - benchmark externo, memory gap e hardening nativo foram tratados corretamente como etapas subordinadas ao baseline,
   nao como desvio de direcao.
@@ -131,6 +133,7 @@ O que esta aderente:
 Gap relevante:
 
 - o registry ja governa retrieval local, planning context, operation dispatch e sinais de observabilidade com `canonical_domains` e `primary_canonical_domain`;
+- o `planning-engine` agora carrega tambem o contrato da rota primaria promovida como parte do plano deliberativo, sem reconstituir esse contrato por heuristica local;
 - ainda resta reduzir heuristica residual em consumidores mais perifericos do runtime;
 - maturidade de dominio ainda pode atuar com mais forca como gate de promocao.
 
@@ -157,6 +160,7 @@ Gap relevante:
 
 - `semantic` e `procedural` agora entram como `runtime_partial` em packets guiados por dominio quando existe evidencia persistida e compatibilidade canonica;
 - a coerencia desses packets ficou mais forte: rotas guiadas agora exigem `consumer_profile`, `consumer_objective` e refs explicitas para memoria `semantic`/`procedural` quando essas classes sao declaradas;
+- o `synthesis-engine` ja comeca a consumir objetivo, entrega esperada e foco de leitura da rota ativa para refletir melhor o contrato guiado na resposta final.
 - promocao e arquivamento automaticos por politica continuam incompletos;
 - a camada multicamada nativa ainda pode crescer antes de qualquer absorcao futura.
 

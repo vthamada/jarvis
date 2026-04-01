@@ -185,17 +185,52 @@ class SynthesisEngine:
                 f"{plan.continuity_target_goal}"
             )
         semantic_focus = ", ".join(synthesis_input.semantic_memory_focus[:2])
+        route_objective = plan.route_consumer_objective
+        route_profile = self._present_contract_label(plan.route_consumer_profile)
+        workflow_profile = self._present_contract_label(plan.route_workflow_profile)
         if plan.continuity_action == "continuar" and plan.open_loops:
             base = arbitration or plan.rationale.split(";", maxsplit=1)[0]
+            if semantic_focus and route_objective:
+                return (
+                    f"{base}; a missao ativa segue ancorada em {plan.open_loops[0]}; "
+                    f"rota {route_profile or 'ativa'} orienta {route_objective}; "
+                    f"memoria guiada reforca foco em {semantic_focus}"
+                )
             if semantic_focus:
                 return (
                     f"{base}; a missao ativa segue ancorada em {plan.open_loops[0]}; "
                     f"memoria guiada reforca foco em {semantic_focus}"
                 )
+            if route_objective:
+                workflow_clause = (
+                    f"; workflow ativo: {workflow_profile}" if workflow_profile else ""
+                )
+                return (
+                    f"{base}; a missao ativa segue ancorada em {plan.open_loops[0]}; "
+                    f"rota {route_profile or 'ativa'} orienta {route_objective}"
+                    f"{workflow_clause}"
+                )
             return f"{base}; a missao ativa segue ancorada em {plan.open_loops[0]}"
         if arbitration:
+            if semantic_focus and route_objective:
+                workflow_clause = (
+                    f"; workflow ativo: {workflow_profile}" if workflow_profile else ""
+                )
+                return (
+                    f"{arbitration}; rota {route_profile or 'ativa'} orienta {route_objective}; "
+                    f"memoria guiada reforca foco em {semantic_focus}"
+                    f"{workflow_clause}"
+                )
             if semantic_focus:
                 return f"{arbitration}; memoria guiada reforca foco em {semantic_focus}"
+            if route_objective:
+                workflow_clause = (
+                    f"; workflow ativo: {workflow_profile}" if workflow_profile else ""
+                )
+                return (
+                    f"{arbitration}; rota {route_profile or 'ativa'} orienta {route_objective}"
+                    f"{workflow_clause}"
+                )
             return arbitration
         return plan.rationale.split(";", maxsplit=1)[0]
 
@@ -227,12 +262,33 @@ class SynthesisEngine:
             next_action = plan.steps[0]
         else:
             next_action = "preservar uma proxima acao segura"
+        deliverable_hint = (
+            plan.route_expected_deliverables[0] if plan.route_expected_deliverables else None
+        )
+        telemetry_hint = (
+            plan.route_telemetry_focus[0] if plan.route_telemetry_focus else None
+        )
         if synthesis_input.procedural_memory_hint:
-            return (
+            recommendation = (
                 f"{next_action}; apoio procedural: {synthesis_input.procedural_memory_hint}; "
                 f"criterio de sucesso: {success}"
             )
-        return f"{next_action}; criterio de sucesso: {success}"
+        else:
+            recommendation = f"{next_action}; criterio de sucesso: {success}"
+        if deliverable_hint:
+            recommendation = (
+                f"{recommendation}; entrega esperada: "
+                f"{self._present_contract_label(deliverable_hint)}"
+            )
+        if telemetry_hint:
+            recommendation = (
+                f"{recommendation}; foco de leitura: "
+                f"{self._present_contract_label(telemetry_hint)}"
+            )
+        workflow_hint = self._present_contract_label(plan.route_workflow_profile)
+        if workflow_hint:
+            recommendation = f"{recommendation}; workflow ativo: {workflow_hint}"
+        return recommendation
 
     def _limitation_line(self, synthesis_input: SynthesisInput) -> str | None:
         plan = synthesis_input.deliberative_plan
@@ -257,6 +313,12 @@ class SynthesisEngine:
         if material_risks:
             limits.append(material_risks[0])
         return limits[0] if limits else None
+
+    @staticmethod
+    def _present_contract_label(value: str | None) -> str | None:
+        if not value:
+            return None
+        return value.replace("_", " ")
 
     @staticmethod
     def _operational_line(synthesis_input: SynthesisInput) -> str | None:

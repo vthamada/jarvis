@@ -25,6 +25,9 @@ Leitura operacional correta desta rodada:
 - `memory-service` passou a materializar `semantic` e `procedural` como memoria `runtime_partial` apenas em packets guiados por dominio com evidencia persistida e compatibilidade canonica.
 - `domain_registry` agora tambem expõe o slice soberano de `promoted_route_registry`, e o `orchestrator-service` passou a reutilizar esse payload nos eventos de selecao e conclusao de especialistas, reduzindo inferência residual na malha dominio->especialista.
 - `memory-service` agora resolve a rota promovida elegivel diretamente pelo registry soberano, e o `specialist-engine` compara `consumer_profile`, `consumer_objective`, `expected_deliverables` e `telemetry_focus` do packet guiado contra o contrato canonico da rota.
+- `planning-engine` passou a carregar o contrato da rota primaria promovida (`consumer_profile`, `consumer_objective`, `expected_deliverables`, `telemetry_focus`, `workflow_profile`) dentro do plano deliberativo.
+- `planning-engine` agora tambem usa esse contrato para moldar passos, restricoes e criterio de saida do plano sem reintroduzir heuristica local.
+- `synthesis-engine` passou a refletir esse contrato da rota ativa na leitura final, usando objetivo, entrega esperada, foco de leitura e workflow ativo como apoio guiado da resposta.
 
 ## Meta atual
 
@@ -33,7 +36,7 @@ Abrir o próximo corte do `v2` sobre um runtime já alinhado aos eixos do Docume
 ### Foco operacional atual
 
 - primeiro: endurecer soberania de dominios no runtime, fazendo o registry governar mais do comportamento real;
-- depois: fechar a malha canonica entre dominios promovidos e especialistas elegiveis;
+- depois: expandir esse consumo can?nico para criterios de saida ainda mais especificos por workflow, sem bypassar governanca;
 - so entao: aprofundar arbitragem declarativa de mentes e memoria semantica/procedural.
 
 Sistema oficial de planejamento desta fase:

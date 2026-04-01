@@ -1436,6 +1436,17 @@ class OrchestratorService:
             if knowledge_result
             else list(cognitive_snapshot.canonical_domains)
         )
+        primary_route = resolve_primary_route(cognitive_snapshot.active_domains)
+        primary_route_name = primary_route[0] if primary_route is not None else None
+        primary_route_payload = (
+            route_metadata_payload(primary_route_name) if primary_route_name is not None else {}
+        )
+        linked_specialist_type = primary_route_payload.get("linked_specialist_type")
+        if primary_route_name is not None and linked_specialist_type is not None:
+            primary_route_payload = specialist_route_payload(
+                primary_route_name,
+                str(linked_specialist_type),
+            )
         primary_canonical_domain = (
             self._resolve_primary_canonical_domain(
                 active_domains=cognitive_snapshot.active_domains,
@@ -1449,6 +1460,26 @@ class OrchestratorService:
             active_domains=cognitive_snapshot.active_domains,
             canonical_domains=canonical_domains,
             primary_canonical_domain=primary_canonical_domain,
+            primary_route=primary_route_name,
+            route_consumer_profile=(
+                str(primary_route_payload.get("consumer_profile"))
+                if primary_route_payload.get("consumer_profile") is not None
+                else None
+            ),
+            route_consumer_objective=(
+                str(primary_route_payload.get("consumer_objective"))
+                if primary_route_payload.get("consumer_objective") is not None
+                else None
+            ),
+            route_expected_deliverables=list(
+                primary_route_payload.get("expected_deliverables", [])
+            ),
+            route_telemetry_focus=list(primary_route_payload.get("telemetry_focus", [])),
+            route_workflow_profile=(
+                str(primary_route_payload.get("workflow_profile"))
+                if primary_route_payload.get("workflow_profile") is not None
+                else None
+            ),
             active_minds=cognitive_snapshot.active_minds,
             knowledge_snippets=knowledge_result.snippets if knowledge_result else [],
             risk_markers=directive.risk_markers,

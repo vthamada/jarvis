@@ -189,6 +189,65 @@ def test_planning_engine_closes_active_loop_explicitly() -> None:
     )
 
 
+def test_planning_engine_carries_primary_route_contract_into_plan() -> None:
+    engine = PlanningEngine()
+    plan = engine.build_task_plan(
+        PlanningContext(
+            intent="planning",
+            query="Plan strategic options for the release.",
+            recovered_context=[],
+            active_domains=["strategy", "analysis"],
+            active_minds=["mente_decisoria"],
+            knowledge_snippets=["Priorize criterio explicito de decisao."],
+            risk_markers=[],
+            requires_clarification=False,
+            preferred_response_mode="plan_and_operate",
+            canonical_domains=[
+                "estrategia_e_pensamento_sistemico",
+                "tomada_de_decisao_complexa",
+            ],
+            primary_canonical_domain="estrategia_e_pensamento_sistemico",
+            primary_route="strategy",
+            route_consumer_profile="strategy_tradeoff_review",
+            route_consumer_objective=(
+                "clarificar trade-offs estrategicos, enquadramento de cenario e direcao recomendada"
+            ),
+            route_expected_deliverables=[
+                "tradeoff_map",
+                "decision_criteria",
+                "recommended_direction",
+            ],
+            route_telemetry_focus=[
+                "tradeoff_clarity",
+                "decision_trace",
+                "domain_alignment",
+            ],
+            route_workflow_profile="strategic_direction_workflow",
+            cognitive_rationale="intent=planning; mente_primaria=mente_decisoria",
+            dominant_goal="comparar direcoes estrategicas do release",
+            identity_mode="structured_planning",
+            primary_mind="mente_decisoria",
+            dominant_tension="equilibrar ambicao estrategica com a menor proxima acao segura",
+        )
+    )
+
+    assert plan.primary_route == "strategy"
+    assert plan.route_consumer_profile == "strategy_tradeoff_review"
+    assert "tradeoff_map" in plan.route_expected_deliverables
+    assert "tradeoff_clarity" in plan.route_telemetry_focus
+    assert plan.route_workflow_profile == "strategic_direction_workflow"
+    assert "consumer_profile=strategy_tradeoff_review" in plan.rationale
+    assert any("tradeoff_map" in criterion for criterion in plan.success_criteria)
+    assert any(
+        "orientar a saida para tradeoff map e decision criteria" in step
+        for step in plan.steps
+    )
+    assert any(
+        "preservar o foco observavel da rota ativa: tradeoff clarity" in constraint
+        for constraint in plan.constraints
+    )
+
+
 def test_planning_engine_refines_plan_and_consolidates_specialists() -> None:
     engine = PlanningEngine()
     base_plan = engine.build_task_plan(

@@ -72,6 +72,11 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     assert result.specialist_review.contributions
     assert result.deliberative_plan.canonical_domains
     assert result.deliberative_plan.primary_canonical_domain == "estrategia_e_pensamento_sistemico"
+    assert result.deliberative_plan.primary_route == "strategy"
+    assert result.deliberative_plan.route_consumer_profile == "strategy_tradeoff_review"
+    assert result.deliberative_plan.route_workflow_profile == "strategic_direction_workflow"
+    assert "tradeoff_map" in result.deliberative_plan.route_expected_deliverables
+    assert "tradeoff_clarity" in result.deliberative_plan.route_telemetry_focus
     assert result.deliberative_plan.open_loops
     assert result.specialist_invocations
     assert result.specialist_boundary_summary is not None

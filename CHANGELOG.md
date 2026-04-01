@@ -11,6 +11,8 @@
 - `memory-service` passou a expor `semantic` e `procedural` como memoria `runtime_partial` em packets guiados por dominio quando ha evidencia persistida suficiente.
 - `domain_registry` passou a publicar um `promoted_route_registry` soberano para rotas promovidas, reutilizado pelo `orchestrator-service` em `specialist_selection_decided` e `domain_specialist_completed`, com auditoria adicional na `observability-service`.
 - `memory-service` passou a usar a rota promovida elegivel do registry para montar packets guiados, e o `specialist-engine` endureceu a coerencia do contrato guiado contra `consumer_profile`, `consumer_objective`, `expected_deliverables` e `telemetry_focus` canonicos.
+- `planning-engine` passou a carregar o contrato da rota primaria promovida dentro do `DeliberativePlanContract`, incluindo `consumer_profile`, `consumer_objective`, `expected_deliverables`, `telemetry_focus` e `workflow_profile`, e agora usa esse contrato para moldar passos, restricoes e criterio de saida do plano.
+- `synthesis-engine` passou a usar o contrato da rota ativa para tornar a resposta final mais alinhada com objetivo, entrega esperada, foco de leitura e workflow ativo da rota promovida.
 
 ## 1. Objetivo
 
