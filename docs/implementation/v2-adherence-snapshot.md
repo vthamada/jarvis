@@ -35,9 +35,9 @@ Estado de referencia desta revisao:
 Leitura executiva:
 
 - nao existe hoje divergencia arquitetural grave entre o sistema e o Documento-Mestre;
-- existe, sim, distancia de materializacao em alguns eixos centrais do `v2`;
-- os maiores gaps continuam em soberania pratica de dominios no runtime,
-  cobertura canonica dos especialistas e formalizacao mais declarativa da arbitragem de mentes;
+- existe, sim, distancia de materializacao em alguns eixos centrais do `v2`, mas os gaps criticos diminuiram;
+- dominios, especialistas promovidos e memoria guiada agora ja operam com contrato soberano ponta a ponta nas rotas promovidas do baseline atual;
+- o que resta como backlog correto passa a ser maturacao declarativa adicional, nao correcao de desvio estrutural do `v2`;
 - a soberania de dominios avancou mais um passo: rotas promovidas agora ja aparecem como `promoted_route_registry` soberano nos eventos do runtime, reduzindo recomputacao local no orquestrador e melhorando auditoria de elegibilidade.
 - a malha dominio->especialista tambem avancou: packets guiados de memoria agora nascem da rota promovida elegivel do registry e sao validados contra o contrato canonico da rota antes da convocacao especializada.
 - o contrato canonico da rota ativa passou a atravessar tambem o `planning` e a influenciar a `synthesis`, reduzindo a distancia entre memoria guiada disponivel e comportamento final do runtime.
@@ -132,10 +132,9 @@ O que esta aderente:
 
 Gap relevante:
 
-- o registry ja governa retrieval local, planning context, operation dispatch e sinais de observabilidade com `canonical_domains` e `primary_canonical_domain`;
-- o `planning-engine` agora carrega tambem o contrato da rota primaria promovida como parte do plano deliberativo, sem reconstituir esse contrato por heuristica local;
-- ainda resta reduzir heuristica residual em consumidores mais perifericos do runtime;
-- maturidade de dominio ainda pode atuar com mais forca como gate de promocao.
+- o `domain_registry` agora governa tambem o contrato soberano da rota primaria em `planning`, `memory`, `specialist`, `orchestrator` e observabilidade;
+- `primary_route`, `primary_canonical_domain`, `consumer_objective`, `expected_deliverables`, `telemetry_focus` e `workflow_profile` ja atravessam o runtime sem recomposicao heuristica relevante fora do registry;
+- o que sobra neste eixo e amadurecimento adicional de gates por `workflow_profile` e eventual expansao futura para novas rotas, nao correcao de baseline.
 
 Leitura:
 
@@ -159,10 +158,9 @@ O que esta aderente:
 Gap relevante:
 
 - `semantic` e `procedural` agora entram como `runtime_partial` em packets guiados por dominio quando existe evidencia persistida e compatibilidade canonica;
-- a coerencia desses packets ficou mais forte: rotas guiadas agora exigem `consumer_profile`, `consumer_objective` e refs explicitas para memoria `semantic`/`procedural` quando essas classes sao declaradas;
-- o `synthesis-engine` ja comeca a consumir objetivo, entrega esperada e foco de leitura da rota ativa para refletir melhor o contrato guiado na resposta final.
-- promocao e arquivamento automaticos por politica continuam incompletos;
-- a camada multicamada nativa ainda pode crescer antes de qualquer absorcao futura.
+- a politica que libera essas classes saiu de decisao espalhada no servi?o e passou a viver mais explicitamente no `memory_registry`;
+- `planning` e `synthesis` ja usam esse apoio sem bypassar governanca, enquanto especialistas continuam presos ao contrato elegivel da rota promovida;
+- a camada multicamada nativa ainda pode crescer antes de qualquer absorcao futura, mas isso ja e maturacao incremental, nao correcao urgente.
 
 Leitura:
 
@@ -192,7 +190,7 @@ Leitura:
 
 ### 3.7 Especialistas subordinados
 
-**Status:** `runtime parcial` - segundo gap funcional principal
+**Status:** `runtime parcial` - malha promovida fechada, expansao futura pendente
 
 O que esta aderente:
 
@@ -203,10 +201,9 @@ O que esta aderente:
 
 Gap relevante:
 
-- hints e selecao de especialistas governados agora dependem de rotas canonicas ativas, com validacao de rota, modo, elegibilidade soberana e memoria coerente;
-- a observabilidade tambem passou a detectar drift mais cedo, ainda em `specialist_selection_decided`, antes da conclusao do especialista;
-- ainda falta fechar totalmente a malha canonica entre todos os especialistas e seus dominios soberanos;
-- a passagem entre shadow, guided e niveis posteriores ainda pode ficar mais formalizada por criterio.
+- hints, selecao, handoff e conclusao de especialistas promovidos agora dependem de rota canonica ativa, `linked_specialist_type`, `specialist_mode`, memoria guiada coerente e alinhamento com `primary_route` e `primary_canonical_domain`;
+- a observabilidade passou a usar esses sinais diretamente para marcar `attention_required` quando houver drift;
+- o que resta neste eixo e ampliar a mesma disciplina para expansoes futuras e formalizar melhor evolucoes alem do nivel promovido atual.
 
 Leitura:
 
@@ -268,10 +265,10 @@ Leitura:
 | Nucleo / Orquestrador | runtime parcial | forte, sem gap material | baixa |
 | Identidade | runtime parcial | operacional e auditavel | baixa |
 | Mentes | runtime parcial | arbitragem ainda hibrida | media |
-| Dominios | runtime parcial | registry governa mais do retrieval, mas ainda nao todo o runtime | alta |
+| Dominios | runtime parcial | contrato soberano ja atravessa o runtime promovido | media |
 | Memorias | runtime parcial | eixo fortalecido e coerente | media |
 | Governanca | runtime parcial | solida | baixa |
-| Especialistas | runtime parcial | cobertura canonica ainda incompleta | alta |
+| Especialistas | runtime parcial | malha promovida fechada e auditavel | media |
 | Observabilidade | runtime parcial | forte | baixa |
 | Evolucao / Benchmark | deferido por fase | corretamente subordinado | nao aplicavel |
 | Voz / Realtime | deferido por fase | corretamente adiado | nao aplicavel |
@@ -280,50 +277,35 @@ Leitura:
 
 ## 5. Proxima sequencia correta de implementacao
 
-Com base no estado atual do repositorio, a sequencia mais coerente e:
+Com base no estado atual do repositorio, a sequencia mais coerente deixou de ser correcao estrutural do `v2` e passou a ser maturacao disciplinada do baseline:
 
-### Passo 1 - dominios soberanos no runtime
-
-Foco:
-
-- fazer o `domain_registry` governar o routing com precedencia real sobre heuristica residual;
-- aproximar knowledge retrieval do dominio canonico ativo em mais consumidores alem do retrieval local;
-- reforcar maturidade de dominio como gate operacional.
-
-Estado:
-
-- o primeiro endurecimento ja entrou no `knowledge-service`.
-
-Por que vem primeiro:
-
-- no Documento-Mestre, dominio e estrutura de orientacao do conhecimento e da ativacao;
-- especialistas e memoria de dominio ficam melhores quando o eixo de dominios esta realmente soberano.
-
-### Passo 2 - especialistas totalmente vinculados a dominios canonicos
+### Passo 1 - consolidar o fechamento operacional do `v2`
 
 Foco:
 
-- fechar o mapa canonico completo entre especialistas promovidos e seus dominios;
-- formalizar melhor criterios de guided e elegibilidade;
-- reduzir ainda mais a inferencia residual fora do registry.
+- manter `HANDOFF.md`, `CHANGELOG.md` e este snapshot como leitura viva do baseline;
+- tratar dominios, especialistas promovidos e memoria guiada como eixos funcionalmente fechados no `v2` atual.
 
-Por que vem depois do passo 1:
-
-- especialista subordinado sem eixo de dominio soberano fica mais fragil do que deveria.
-
-### Passo 3 - arbitragem de mentes mais declarativa
+### Passo 2 - aprofundar criterios por `workflow_profile`
 
 Foco:
 
-- empurrar mais regras de composicao para o registry;
-- tornar a arbitragem mais reproduzivel e menos implicita no engine.
+- tornar criterios de saida e leitura final ainda mais especificos por rota promovida;
+- fazer isso sem espalhar heuristica fora de `domain_registry`, `memory_registry` e `mind_registry`.
 
-### Passo 4 - memoria semantica e procedural mais fortes
+### Passo 3 - amadurecer memoria semantica e procedural
 
 Foco:
 
-- avancar classes ainda tipadas/documentadas para consumo runtime real;
-- so reabrir absorcao externa se surgir nova evidencia acima do baseline nativo.
+- ampliar utilidade de `semantic` e `procedural` como apoio soberano de continuidade e framing;
+- manter `organization_scope` fechado e evitar qualquer bypass de governanca.
+
+### Passo 4 - deixar a relacao mente -> dominio -> especialista ainda mais explicita
+
+Foco:
+
+- reduzir consumo implicito dessa relacao em consumidores posteriores;
+- tratar isso como maturacao cognitiva futura, nao como lacuna critica do baseline.
 
 ---
 
@@ -348,14 +330,14 @@ A leitura correta hoje e:
 - tambem nao esta divergindo da sua direcao macro ja formalizada nos artefatos do projeto;
 - o que existe e um conjunto de gaps de materializacao normais para a fase do `v2`.
 
-A divergencia relevante, neste momento, nao e de identidade do sistema.
-E de completude operacional em tres pontos:
+A divergencia relevante, neste momento, nao e mais de fechamento funcional do `v2`.
+O que resta e maturacao adicional em tres pontos:
 
-- dominios ainda mais fortes como eixo soberano do runtime;
-- especialistas ainda mais explicitamente subordinados ao dominio canonico;
-- arbitragem de mentes ainda mais declarativa.
+- criterios mais especificos por `workflow_profile` no runtime final;
+- uso mais rico de memoria `semantic` e `procedural` sem perder soberania;
+- relacao mente -> dominio -> especialista ainda mais explicita em consumidores posteriores.
 
-Esse e o backlog certo a partir daqui.
+Esse e o backlog certo a partir daqui, mas ele ja nao caracteriza desvio material do `v2`.
 
 ---
 

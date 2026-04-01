@@ -214,9 +214,6 @@ class SpecialistEngine:
             if matched is None:
                 return None
             route_name, entry = matched
-            for route in domain_specialist_routes:
-                if route.domain_name == route_name and route.specialist_type == specialist_type:
-                    return route
             return DomainSpecialistRouteContract(
                 domain_name=route_name,
                 specialist_type=specialist_type,
@@ -536,6 +533,11 @@ class SpecialistEngine:
         )
         if route_payload["eligible"] is not True or route_payload["link_matches"] is not True:
             return "coerencia rota->especialista falhou: registry soberano nao confirma o vinculo"
+        if (
+            selection.selection_mode in {"guided", "active"}
+            and route_payload.get("maturity") != "active_specialist"
+        ):
+            return "coerencia rota->maturidade falhou: rota promovida sem maturity ativa"
         if route_payload["specialist_mode"] != selection.selection_mode:
             return "coerencia rota->modo falhou: selection_mode diverge do registry soberano"
         if shared_memory_context is None:
@@ -604,6 +606,15 @@ class SpecialistEngine:
         ):
             return "coerencia especialista->memoria falhou: procedural sem ref guiado"
         linked_refs = set(canonical_domain_refs_for_name(selection.linked_domain))
+        if (
+            plan.primary_route == selection.linked_domain
+            and plan.primary_canonical_domain is not None
+            and plan.primary_canonical_domain not in linked_refs
+        ):
+            return (
+                "coerencia rota->dominio falhou: rota primaria nao expande "
+                "o dominio canonico do plano"
+            )
         semantic_focus = set(shared_memory_context.semantic_focus)
         if linked_refs and not (
             linked_refs.intersection(semantic_focus) or selection.linked_domain in semantic_focus

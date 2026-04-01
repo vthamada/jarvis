@@ -64,6 +64,10 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     assert result.operation_dispatch is not None
     assert result.operation_dispatch.canonical_domain_hints
     assert result.operation_dispatch.primary_canonical_domain == "estrategia_e_pensamento_sistemico"
+    assert result.operation_dispatch.workflow_objective == (
+        "clarificar trade-offs estratégicos, enquadramento de cenário e direção recomendada"
+    )
+    assert result.operation_dispatch.expected_output == "tradeoff_map"
     assert result.knowledge_result is not None
     assert result.artifact_results
     assert result.active_domains == ["strategy", "documentation", "observability"]
@@ -161,12 +165,24 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
         event for event in stored_events if event.event_name == "specialist_selection_decided"
     )
     assert specialist_selection_event.payload["selected_specialists"]
+    assert specialist_selection_event.payload["primary_route"] == "strategy"
     assert (
-        specialist_selection_event.payload["registry_route_payloads"][selected_specialist]["route_name"]
+        specialist_selection_event.payload["primary_canonical_domain"]
+        == "estrategia_e_pensamento_sistemico"
+    )
+    assert (
+        specialist_selection_event.payload["registry_route_payloads"][selected_specialist][
+            "route_name"
+        ]
         == "strategy"
     )
     assert specialist_selection_event.payload["registry_link_matches"][selected_specialist] is True
     assert specialist_selection_event.payload["registry_mode_matches"][selected_specialist] is True
+    assert specialist_selection_event.payload["primary_route_matches"][selected_specialist] is True
+    assert (
+        specialist_selection_event.payload["primary_canonical_matches"][selected_specialist]
+        is True
+    )
     assert (
         specialist_selection_event.payload["registry_specialist_eligibility"][selected_specialist]
         is True
@@ -178,9 +194,21 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     domain_specialist_event = next(
         event for event in stored_events if event.event_name == "domain_specialist_completed"
     )
+    assert domain_specialist_event.payload["primary_route"] == "strategy"
     assert (
-        domain_specialist_event.payload["registry_route_payloads"][selected_specialist]["route_name"]
+        domain_specialist_event.payload["primary_canonical_domain"]
+        == "estrategia_e_pensamento_sistemico"
+    )
+    assert (
+        domain_specialist_event.payload["registry_route_payloads"][selected_specialist][
+            "route_name"
+        ]
         == "strategy"
+    )
+    assert domain_specialist_event.payload["primary_route_matches"][selected_specialist] is True
+    assert (
+        domain_specialist_event.payload["primary_canonical_matches"][selected_specialist]
+        is True
     )
     workflow_governance_event = next(
         event for event in stored_events if event.event_name == "workflow_governance_declared"

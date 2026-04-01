@@ -13,6 +13,10 @@
 - `memory-service` passou a usar a rota promovida elegivel do registry para montar packets guiados, e o `specialist-engine` endureceu a coerencia do contrato guiado contra `consumer_profile`, `consumer_objective`, `expected_deliverables` e `telemetry_focus` canonicos.
 - `planning-engine` passou a carregar o contrato da rota primaria promovida dentro do `DeliberativePlanContract`, incluindo `consumer_profile`, `consumer_objective`, `expected_deliverables`, `telemetry_focus` e `workflow_profile`, e agora usa esse contrato para moldar passos, restricoes e criterio de saida do plano.
 - `synthesis-engine` passou a usar o contrato da rota ativa para tornar a resposta final mais alinhada com objetivo, entrega esperada, foco de leitura e workflow ativo da rota promovida.
+- `domain_registry` passou a expor o contrato soberano completo da rota primaria, incluindo `consumer_objective`, `expected_deliverables`, `telemetry_focus`, `workflow_steps`, `workflow_checkpoints` e `workflow_decision_points`.
+- `cognitive-engine` passou a ordenar `specialist_hints` apenas pelas rotas canonicas ativas elegiveis do registry, sem recriar sugestao governada por `intent` puro.
+- `memory_registry` passou a centralizar a politica declarativa que libera `semantic` e `procedural` em packets guiados para `planning`, `synthesis` e especialistas elegiveis.
+- `orchestrator-service` passou a emitir `primary_route`, `primary_canonical_domain`, `primary_route_matches` e `primary_canonical_matches` nos eventos de selecao e conclusao de especialistas, e a `observability-service` usa esses sinais para marcar drift de alinhamento mais cedo.
 
 ## 1. Objetivo
 

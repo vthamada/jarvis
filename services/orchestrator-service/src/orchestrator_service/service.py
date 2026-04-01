@@ -32,6 +32,7 @@ from shared.contracts import (
 )
 from shared.domain_registry import (
     primary_canonical_domain_for_name,
+    primary_route_payload,
     promoted_specialist_route_payloads,
     resolve_primary_route,
     resolve_workflow_route,
@@ -727,6 +728,8 @@ class OrchestratorService:
                         item.specialist_type: item.selection_mode
                         for item in handoff_plan.selections
                     },
+                    "primary_route": deliberative_plan.primary_route,
+                    "primary_canonical_domain": deliberative_plan.primary_canonical_domain,
                     "route_maturity": {
                         specialist_type: payload.get("maturity")
                         for specialist_type, payload in selection_registry_payloads.items()
@@ -760,6 +763,22 @@ class OrchestratorService:
                             else False
                         )
                         for item in handoff_plan.selections
+                    },
+                    "primary_route_matches": {
+                        item.specialist_type: (
+                            item.linked_domain == deliberative_plan.primary_route
+                        )
+                        for item in handoff_plan.selections
+                        if item.linked_domain
+                    },
+                    "primary_canonical_matches": {
+                        specialist_type: (
+                            deliberative_plan.primary_canonical_domain
+                            in payload.get("canonical_domain_refs", [])
+                            if deliberative_plan.primary_canonical_domain is not None
+                            else False
+                        )
+                        for specialist_type, payload in selection_registry_payloads.items()
                     },
                     "domain_specialists": [
                         item.specialist_type
@@ -1184,6 +1203,8 @@ class OrchestratorService:
                                 invocation.specialist_type: invocation.selection_mode
                                 for invocation in domain_invocation_index.values()
                             },
+                            "primary_route": deliberative_plan.primary_route,
+                            "primary_canonical_domain": deliberative_plan.primary_canonical_domain,
                             "route_maturity": {
                                 specialist_type: payload.get("maturity")
                                 for specialist_type, payload in completed_registry_payloads.items()
@@ -1206,6 +1227,22 @@ class OrchestratorService:
                             },
                             "registry_specialist_eligibility": {
                                 specialist_type: payload.get("eligible") is True
+                                for specialist_type, payload in completed_registry_payloads.items()
+                            },
+                            "primary_route_matches": {
+                                invocation.specialist_type: (
+                                    invocation.linked_domain == deliberative_plan.primary_route
+                                )
+                                for invocation in domain_invocation_index.values()
+                                if invocation.linked_domain
+                            },
+                            "primary_canonical_matches": {
+                                specialist_type: (
+                                    deliberative_plan.primary_canonical_domain
+                                    in payload.get("canonical_domain_refs", [])
+                                    if deliberative_plan.primary_canonical_domain is not None
+                                    else False
+                                )
                                 for specialist_type, payload in completed_registry_payloads.items()
                             },
                             "canonical_domain_refs": {
@@ -1300,6 +1337,11 @@ class OrchestratorService:
             workflow_checkpoints,
             workflow_decision_points,
         ) = self._build_workflow_profile(plan)
+        expected_output = (
+            plan.route_expected_deliverables[0]
+            if plan.route_expected_deliverables
+            else "text_brief"
+        )
         return OperationDispatchContract(
             operation_id=OperationId(f"op-{uuid4().hex[:8]}"),
             request_id=RequestId(str(contract.request_id)),
@@ -1307,7 +1349,7 @@ class OrchestratorService:
             task_goal=plan.goal,
             task_plan=plan.plan_summary,
             constraints=list(plan.constraints),
-            expected_output="text_brief",
+            expected_output=expected_output,
             plan_summary=plan.plan_summary,
             planned_steps=list(plan.steps),
             plan_risks=list(plan.risks),
@@ -1325,7 +1367,7 @@ class OrchestratorService:
             specialist_hints=list(plan.specialist_hints),
             workflow_profile=workflow_profile,
             workflow_domain_route=workflow_domain_route,
-            workflow_objective=plan.goal,
+            workflow_objective=plan.route_consumer_objective or plan.goal,
             workflow_state="composed",
             workflow_governance_mode="core_mediated",
             workflow_steps=workflow_steps,
@@ -1338,6 +1380,16 @@ class OrchestratorService:
     def _build_workflow_profile(
         plan: DeliberativePlanContract,
     ) -> tuple[str | None, str, list[str], list[str], list[str]]:
+        if plan.primary_route is not None:
+            primary_payload = route_metadata_payload(plan.primary_route)
+            if primary_payload.get("workflow_profile"):
+                return (
+                    plan.primary_route,
+                    str(primary_payload.get("workflow_profile") or "assisted_execution_workflow"),
+                    list(primary_payload.get("workflow_steps", [])),
+                    list(primary_payload.get("workflow_checkpoints", [])),
+                    list(primary_payload.get("workflow_decision_points", [])),
+                )
         route_workflow = resolve_workflow_route(plan.active_domains)
         if route_workflow is not None:
             route_name, route_entry = route_workflow
@@ -1436,17 +1488,13 @@ class OrchestratorService:
             if knowledge_result
             else list(cognitive_snapshot.canonical_domains)
         )
-        primary_route = resolve_primary_route(cognitive_snapshot.active_domains)
-        primary_route_name = primary_route[0] if primary_route is not None else None
-        primary_route_payload = (
-            route_metadata_payload(primary_route_name) if primary_route_name is not None else {}
+        primary_route_contract = primary_route_payload(cognitive_snapshot.active_domains)
+        primary_route_name = (
+            primary_route_contract[0] if primary_route_contract is not None else None
         )
-        linked_specialist_type = primary_route_payload.get("linked_specialist_type")
-        if primary_route_name is not None and linked_specialist_type is not None:
-            primary_route_payload = specialist_route_payload(
-                primary_route_name,
-                str(linked_specialist_type),
-            )
+        primary_route_data = (
+            primary_route_contract[1] if primary_route_contract is not None else {}
+        )
         primary_canonical_domain = (
             self._resolve_primary_canonical_domain(
                 active_domains=cognitive_snapshot.active_domains,
@@ -1462,22 +1510,22 @@ class OrchestratorService:
             primary_canonical_domain=primary_canonical_domain,
             primary_route=primary_route_name,
             route_consumer_profile=(
-                str(primary_route_payload.get("consumer_profile"))
-                if primary_route_payload.get("consumer_profile") is not None
+                str(primary_route_data.get("consumer_profile"))
+                if primary_route_data.get("consumer_profile") is not None
                 else None
             ),
             route_consumer_objective=(
-                str(primary_route_payload.get("consumer_objective"))
-                if primary_route_payload.get("consumer_objective") is not None
+                str(primary_route_data.get("consumer_objective"))
+                if primary_route_data.get("consumer_objective") is not None
                 else None
             ),
             route_expected_deliverables=list(
-                primary_route_payload.get("expected_deliverables", [])
+                primary_route_data.get("expected_deliverables", [])
             ),
-            route_telemetry_focus=list(primary_route_payload.get("telemetry_focus", [])),
+            route_telemetry_focus=list(primary_route_data.get("telemetry_focus", [])),
             route_workflow_profile=(
-                str(primary_route_payload.get("workflow_profile"))
-                if primary_route_payload.get("workflow_profile") is not None
+                str(primary_route_data.get("workflow_profile"))
+                if primary_route_data.get("workflow_profile") is not None
                 else None
             ),
             active_minds=cognitive_snapshot.active_minds,
@@ -1639,6 +1687,21 @@ class OrchestratorService:
                 route_name: metadata["consumer_profile"]
                 for route_name, metadata in route_metadata.items()
                 if metadata["consumer_profile"] is not None
+            },
+            "consumer_objectives": {
+                route_name: metadata["consumer_objective"]
+                for route_name, metadata in route_metadata.items()
+                if metadata["consumer_objective"] is not None
+            },
+            "expected_deliverables": {
+                route_name: metadata["expected_deliverables"]
+                for route_name, metadata in route_metadata.items()
+                if metadata["expected_deliverables"]
+            },
+            "telemetry_focus": {
+                route_name: metadata["telemetry_focus"]
+                for route_name, metadata in route_metadata.items()
+                if metadata["telemetry_focus"]
             },
             "workflow_profiles": {
                 route_name: metadata["workflow_profile"]

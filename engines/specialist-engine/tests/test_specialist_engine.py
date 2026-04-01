@@ -901,6 +901,75 @@ def test_specialist_engine_rejects_guided_memory_when_registry_contract_diverges
     assert not handoff_plan.invocations
 
 
+def test_specialist_engine_rejects_guided_selection_when_primary_domain_diverges() -> None:
+    engine = SpecialistEngine()
+    plan = sample_plan()
+    plan.primary_route = "operational_readiness"
+    plan.primary_canonical_domain = "computacao_e_desenvolvimento"
+    handoff_plan = engine.plan_handoffs(
+        intent="planning",
+        plan=plan,
+        knowledge_snippets=["Priorize clareza de objetivo."],
+        shared_memory_contexts={
+            "operational_planning_specialist": SpecialistSharedMemoryContextContract(
+                specialist_type="operational_planning_specialist",
+                sharing_mode="core_mediated_read_only",
+                continuity_mode="continuar",
+                shared_memory_brief=(
+                    "specialist=operational_planning_specialist continuidade=continuar"
+                ),
+                write_policy="through_core_only",
+                consumer_mode="domain_guided_memory_packet",
+                consumer_profile="operational_readiness_review",
+                consumer_objective=(
+                    "avaliar checkpoints de readiness, lacunas de execucao "
+                    "e proxima acao operacional"
+                ),
+                expected_deliverables=[
+                    "readiness_findings",
+                    "checkpoint_plan",
+                    "next_operational_action",
+                ],
+                telemetry_focus=[
+                    "checkpoint_coverage",
+                    "execution_readiness",
+                    "operational_trace",
+                ],
+                related_mission_ids=["mission-related"],
+                memory_refs=[
+                    "memory://mission",
+                    "memory://domain/operational_readiness",
+                    "memory://contextual",
+                ],
+                consumed_memory_classes=["mission", "domain", "contextual"],
+                semantic_focus=["operational_readiness", "planejamento_e_coordenacao"],
+                open_loops=["fechar checkpoint principal"],
+                domain_mission_link_reason=(
+                    "route=operational_readiness canonicos=planejamento_e_coordenacao"
+                ),
+                mission_context_brief=(
+                    "goal=Plan milestone M3 | related=nenhuma | "
+                    "recommendation=sem recomendacao dominante"
+                ),
+                domain_context_brief=(
+                    "active_domains=operational_readiness | semantic_focus=operational_readiness"
+                ),
+                source_mission_goal="Plan milestone M3",
+            )
+        },
+        session_id="sess-specialist-primary-domain-mismatch",
+        mission_id="mission-specialist-primary-domain-mismatch",
+        requested_by_service="orchestrator-service",
+    )
+
+    assert handoff_plan.selections[0].selection_status == "not_eligible"
+    assert (
+        "rota primaria nao expande o dominio canonico do plano"
+        in handoff_plan.selections[0].rationale
+    )
+    assert not handoff_plan.invocations
+
+
 def test_specialist_engine_rejects_guided_memory_without_semantic_and_procedural_refs() -> None:
     engine = SpecialistEngine()
     handoff_plan = engine.plan_handoffs(

@@ -37,6 +37,8 @@ from shared.memory_registry import (
     DEFAULT_MEMORY_SCOPES,
     SHARED_MEMORY_CLASSES,
     default_priority_rules,
+    guided_optional_memory_classes,
+    guided_specialist_memory_classes,
     organization_scope_guard_payload,
     specialist_memory_policy_payload,
 )
@@ -767,9 +769,12 @@ class MemoryService:
             user_scope_snapshot=user_scope_snapshot,
             previous_context=previous_context,
         )
-        for memory_class in optional_memory_classes:
-            if memory_class not in shared_memory_classes:
-                shared_memory_classes.append(memory_class)
+        if optional_memory_classes:
+            shared_memory_classes = guided_specialist_memory_classes(
+                semantic_evidence=MemoryClass.SEMANTIC in optional_memory_classes,
+                procedural_evidence=MemoryClass.PROCEDURAL in optional_memory_classes,
+                domain_compatible=True,
+            )
         canonical_memory_refs = [
             f"memory://{memory_class.value}" for memory_class in shared_memory_classes
         ]
@@ -951,12 +956,11 @@ class MemoryService:
         ) or (route_name in semantic_sources if route_name else False)
         procedural_evidence = bool(procedural_sources)
 
-        optional_classes: list[MemoryClass] = []
-        if semantic_evidence and domain_compatible:
-            optional_classes.append(MemoryClass.SEMANTIC)
-        if procedural_evidence and domain_compatible:
-            optional_classes.append(MemoryClass.PROCEDURAL)
-        return optional_classes
+        return guided_optional_memory_classes(
+            semantic_evidence=semantic_evidence,
+            procedural_evidence=procedural_evidence,
+            domain_compatible=domain_compatible,
+        )
 
     def _build_recurrent_specialist_context(
         self,

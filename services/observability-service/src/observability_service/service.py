@@ -660,6 +660,10 @@ class ObservabilityService:
         route_maturity = domain_registry_event.payload.get("route_maturity", {})
         linked_specialist_types = domain_registry_event.payload.get("linked_specialist_types", {})
         promoted_route_registry = domain_registry_event.payload.get("promoted_route_registry", {})
+        consumer_profiles = domain_registry_event.payload.get("consumer_profiles", {})
+        consumer_objectives = domain_registry_event.payload.get("consumer_objectives", {})
+        expected_deliverables = domain_registry_event.payload.get("expected_deliverables", {})
+        telemetry_focus = domain_registry_event.payload.get("telemetry_focus", {})
         workflow_profiles = domain_registry_event.payload.get("workflow_profiles", {})
         routing_sources = domain_registry_event.payload.get("routing_sources", {})
         if route_domains and canonical_refs_by_route:
@@ -691,9 +695,19 @@ class ObservabilityService:
                     return "attention_required"
                 if route_payload.get("specialist_mode") not in {"guided", "active"}:
                     return "attention_required"
+                if route_payload.get("maturity") != "active_specialist":
+                    return "attention_required"
                 if route_payload.get("mode_is_governed") is not True:
                     return "attention_required"
                 if route_payload.get("eligible") is not True:
+                    return "attention_required"
+                if not consumer_profiles.get(route_domain):
+                    return "attention_required"
+                if not consumer_objectives.get(route_domain):
+                    return "attention_required"
+                if not expected_deliverables.get(route_domain):
+                    return "attention_required"
+                if not telemetry_focus.get(route_domain):
                     return "attention_required"
         if specialist_selection_event is not None:
             selected_specialists = specialist_selection_event.payload.get(
@@ -724,6 +738,18 @@ class ObservabilityService:
             )
             registry_specialist_eligibility = specialist_selection_event.payload.get(
                 "registry_specialist_eligibility",
+                {},
+            )
+            primary_route = specialist_selection_event.payload.get("primary_route")
+            primary_canonical_domain = specialist_selection_event.payload.get(
+                "primary_canonical_domain"
+            )
+            primary_route_matches = specialist_selection_event.payload.get(
+                "primary_route_matches",
+                {},
+            )
+            primary_canonical_matches = specialist_selection_event.payload.get(
+                "primary_canonical_matches",
                 {},
             )
             for specialist_type in selected_specialists:
@@ -769,6 +795,15 @@ class ObservabilityService:
                     linked_specialist_types.get(linked_domain) != specialist_type
                 ):
                     return "attention_required"
+                if primary_route and linked_domain == primary_route:
+                    if primary_route_matches and primary_route_matches.get(specialist_type) is not True:
+                        return "attention_required"
+                    if (
+                        primary_canonical_domain
+                        and primary_canonical_matches
+                        and primary_canonical_matches.get(specialist_type) is not True
+                    ):
+                        return "attention_required"
         if specialist_domain_event is not None:
             linked_domains = specialist_domain_event.payload.get("linked_domains", {})
             selection_modes = specialist_domain_event.payload.get("selection_modes", {})
@@ -782,6 +817,18 @@ class ObservabilityService:
             registry_mode_matches = specialist_domain_event.payload.get("registry_mode_matches", {})
             registry_specialist_eligibility = specialist_domain_event.payload.get(
                 "registry_specialist_eligibility",
+                {},
+            )
+            primary_route = specialist_domain_event.payload.get("primary_route")
+            primary_canonical_domain = specialist_domain_event.payload.get(
+                "primary_canonical_domain"
+            )
+            primary_route_matches = specialist_domain_event.payload.get(
+                "primary_route_matches",
+                {},
+            )
+            primary_canonical_matches = specialist_domain_event.payload.get(
+                "primary_canonical_matches",
                 {},
             )
             if not linked_domains or not selection_modes:
@@ -821,6 +868,15 @@ class ObservabilityService:
                     return "attention_required"
                 if linked_specialist_types and linked_specialist_types.get(linked_domain) != specialist_type:
                     return "attention_required"
+                if primary_route and linked_domain == primary_route:
+                    if primary_route_matches and primary_route_matches.get(specialist_type) is not True:
+                        return "attention_required"
+                    if (
+                        primary_canonical_domain
+                        and primary_canonical_matches
+                        and primary_canonical_matches.get(specialist_type) is not True
+                    ):
+                        return "attention_required"
             return "healthy"
         if specialist_shadow_event is None:
             return "healthy"

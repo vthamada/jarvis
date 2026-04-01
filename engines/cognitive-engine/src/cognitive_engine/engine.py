@@ -9,6 +9,7 @@ from shared.domain_registry import (
     FALLBACK_RUNTIME_ROUTE,
     canonical_domain_refs_for_name,
     route_is_specialist_eligible,
+    route_linked_specialist_type,
 )
 from shared.mind_registry import (
     arbitration_limits_for,
@@ -97,12 +98,17 @@ class CognitiveEngine:
             supporting_minds=supporting_minds,
         )
         dominant_tension = tensions[0]
+        dominant_domain_driver = resolve_primary_domain_driver(
+            primary_mind=primary_mind,
+            canonical_domains=canonical_domains,
+        )
         specialist_hints = self._select_specialist_hints(
             intent=intent,
             domains=active_domains,
             dominant_tension=dominant_tension,
             risk_markers=risk_markers,
             domain_specialist_routes=domain_specialist_routes or [],
+            primary_domain_driver=dominant_domain_driver,
         )
         arbitration_summary = build_arbitration_summary(
             primary_mind=primary_mind,
@@ -110,10 +116,6 @@ class CognitiveEngine:
             suppressed_minds=suppressed_minds,
             dominant_tension=dominant_tension,
             domains=active_domains,
-        )
-        dominant_domain_driver = resolve_primary_domain_driver(
-            primary_mind=primary_mind,
-            canonical_domains=canonical_domains,
         )
         deliberation_notes = build_deliberation_notes(
             intent=intent,
@@ -161,17 +163,24 @@ class CognitiveEngine:
         dominant_tension: str,
         risk_markers: list[str],
         domain_specialist_routes: list[DomainSpecialistRouteContract],
+        primary_domain_driver: str | None,
     ) -> list[str]:
-        del intent, dominant_tension, risk_markers
+        del (
+            intent,
+            dominant_tension,
+            risk_markers,
+            domain_specialist_routes,
+            primary_domain_driver,
+        )
         hints: list[str] = []
-        active_domain_set = set(domains)
-        for route in domain_specialist_routes:
-            if route.domain_name not in active_domain_set:
+        for route_name in domains:
+            specialist_type = route_linked_specialist_type(route_name)
+            if specialist_type is None:
                 continue
-            if not route_is_specialist_eligible(route.domain_name, route.specialist_type):
+            if not route_is_specialist_eligible(route_name, specialist_type):
                 continue
-            if route.specialist_type not in hints:
-                hints.append(route.specialist_type)
+            if specialist_type not in hints:
+                hints.append(specialist_type)
         return hints[:3]
 
     @staticmethod

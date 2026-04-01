@@ -1,6 +1,5 @@
 from cognitive_engine.engine import CognitiveEngine
 
-from shared.contracts import DomainSpecialistRouteContract
 from shared.domain_registry import FALLBACK_RUNTIME_ROUTE
 
 
@@ -25,7 +24,7 @@ def test_cognitive_engine_selects_primary_supporting_and_suppressed_minds() -> N
     assert snapshot.dominant_tension == "equilibrar profundidade analitica com conclusao util"
     assert snapshot.arbitration_summary
     assert snapshot.arbitration_source == "mind_registry"
-    assert snapshot.specialist_hints == []
+    assert snapshot.specialist_hints == ["structured_analysis_specialist"]
     assert snapshot.deliberation_notes
     assert "fonte_arbitragem=mind_registry" in snapshot.deliberation_notes
 
@@ -49,14 +48,6 @@ def test_cognitive_engine_prioritizes_registry_backed_specialist_hint() -> None:
         intent="analysis",
         risk_markers=[],
         retrieved_domains=["software_development", "analysis"],
-        domain_specialist_routes=[
-            DomainSpecialistRouteContract(
-                domain_name="software_development",
-                specialist_type="software_change_specialist",
-                specialist_mode="guided",
-                routing_reason="rota canonica de software em modo guiado",
-            )
-        ],
     )
 
     assert snapshot.active_domains == ["software_development", "analysis"]
@@ -82,14 +73,6 @@ def test_cognitive_engine_deduplicates_guided_analysis_specialist_hint() -> None
         intent="analysis",
         risk_markers=[],
         retrieved_domains=["analysis", "strategy"],
-        domain_specialist_routes=[
-            DomainSpecialistRouteContract(
-                domain_name="analysis",
-                specialist_type="structured_analysis_specialist",
-                specialist_mode="guided",
-                routing_reason="rota canonica de analise estruturada em modo guiado",
-            )
-        ],
     )
 
     assert snapshot.specialist_hints[0] == "structured_analysis_specialist"

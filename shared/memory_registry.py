@@ -187,6 +187,45 @@ def specialist_shared_memory_classes() -> list[MemoryClass]:
     )
 
 
+def guided_optional_memory_classes(
+    *,
+    semantic_evidence: bool,
+    procedural_evidence: bool,
+    domain_compatible: bool,
+) -> list[MemoryClass]:
+    """Return the optional classes that a guided route may expose."""
+
+    classes: list[MemoryClass] = []
+    if domain_compatible and semantic_evidence:
+        classes.append(MemoryClass.SEMANTIC)
+    if domain_compatible and procedural_evidence:
+        classes.append(MemoryClass.PROCEDURAL)
+    return classes
+
+
+def guided_specialist_memory_classes(
+    *,
+    semantic_evidence: bool,
+    procedural_evidence: bool,
+    domain_compatible: bool,
+) -> list[MemoryClass]:
+    """Return the specialist-visible classes for a guided route packet."""
+
+    classes = [
+        memory_class
+        for memory_class in specialist_shared_memory_classes()
+        if memory_class not in {MemoryClass.SEMANTIC, MemoryClass.PROCEDURAL}
+    ]
+    classes.extend(
+        guided_optional_memory_classes(
+            semantic_evidence=semantic_evidence,
+            procedural_evidence=procedural_evidence,
+            domain_compatible=domain_compatible,
+        )
+    )
+    return classes
+
+
 def default_priority_rules() -> list[str]:
     """Expose the runtime ordering rules implied by the registry."""
 

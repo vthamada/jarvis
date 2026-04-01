@@ -4,7 +4,7 @@
 
 - Atualizado em: 2026-04-01
 - Branch: `main`
-- Commit de referência: `e165a5c`
+- Commit de referência: `909c0d7`
 - Artefato canônico do projeto: `documento_mestre_jarvis.md`
 - Estado do projeto: `v1` encerrado e congelado para uso controlado; primeiro ciclo do `pós-v1` encerrado; primeiro ciclo do `v1.5` encerrado; primeiro corte do `v2` encerrado; `v2-alignment-cycle` encerrado; próximo corte do `v2` aberto
 
@@ -28,16 +28,20 @@ Leitura operacional correta desta rodada:
 - `planning-engine` passou a carregar o contrato da rota primaria promovida (`consumer_profile`, `consumer_objective`, `expected_deliverables`, `telemetry_focus`, `workflow_profile`) dentro do plano deliberativo.
 - `planning-engine` agora tambem usa esse contrato para moldar passos, restricoes e criterio de saida do plano sem reintroduzir heuristica local.
 - `synthesis-engine` passou a refletir esse contrato da rota ativa na leitura final, usando objetivo, entrega esperada, foco de leitura e workflow ativo como apoio guiado da resposta.
+- `domain_registry` agora governa tambem o contrato soberano da rota primaria ponta a ponta, incluindo `consumer_objective`, `expected_deliverables`, `telemetry_focus`, `workflow_steps`, `workflow_checkpoints` e `workflow_decision_points`.
+- `cognitive-engine` passou a gerar `specialist_hints` apenas por rotas ativas elegiveis do registry, preservando a ordem das rotas ativas e sem reintroduzir heuristica por `intent` puro.
+- `memory_registry` passou a centralizar a politica declarativa que libera `semantic` e `procedural` em packets guiados para `planning`, `synthesis` e especialistas elegiveis.
+- `orchestrator-service` agora emite `primary_route`, `primary_canonical_domain`, `primary_route_matches` e `primary_canonical_matches` nos eventos de selecao e conclusao de especialistas, e a `observability-service` usa esses sinais como gate direto de alinhamento.
 
 ## Meta atual
 
-Abrir o próximo corte do `v2` sobre um runtime já alinhado aos eixos do Documento-Mestre, mantendo aderência por eixo como gate fixo de promoção e evitando ampliar superfícies cedo demais.
+Consolidar o fechamento operacional do `v2` sobre um runtime já alinhado aos eixos do Documento-Mestre, registrando como baseline o que virou contrato soberano e deixando o restante como maturação futura, não como gap crítico.
 
 ### Foco operacional atual
 
-- primeiro: endurecer soberania de dominios no runtime, fazendo o registry governar mais do comportamento real;
-- depois: expandir esse consumo can?nico para criterios de saida ainda mais especificos por workflow, sem bypassar governanca;
-- so entao: aprofundar arbitragem declarativa de mentes e memoria semantica/procedural.
+- primeiro: preservar o `domain_registry` como autoridade única do contrato de rota promovida ao longo de `planning`, `memory`, `specialist`, `orchestrator` e observabilidade;
+- depois: aprofundar critérios de saída e leitura final por `workflow_profile` sem reintroduzir heurística espalhada;
+- só então: tratar memória semântica/procedural mais rica e relação `mente -> domínio -> especialista` como maturação futura, não como urgência de baseline.
 
 Sistema oficial de planejamento desta fase:
 
@@ -184,10 +188,10 @@ Principais entregas já consolidadas:
 
 Pendências principais desta fase:
 
-- sincronizar os docs vivos para refletir um único corte ativo;
-- tornar o registry de domínios a fonte soberana de roteamento e refs canônicas;
-- explicitar consumo de memória por classe nas rotas guiadas;
-- convergir `mind_registry` com domínios canônicos e promover os gates por eixo a regra contínua de engenharia.
+- manter os docs vivos refletindo o baseline soberano já absorvido no `v2`;
+- refinar critérios de saída por `workflow_profile` sem abrir nova heurística fora dos registries;
+- aprofundar o uso de `semantic` e `procedural` como maturação de runtime, não como reabertura de arquitetura;
+- continuar tornando a relação `mente -> domínio -> especialista` mais explícita em consumidores posteriores quando isso trouxer ganho real.
 
 Regra de estudo externo no `v2`:
 
@@ -199,11 +203,11 @@ Regra de estudo externo no `v2`:
 ## Próximos passos imediatos
 
 Ordem recomendada:
-1. usar `docs/implementation/v2-repository-hygiene-and-tools-review-cut-closure.md` como fechamento estrutural mais recente;
-2. continuar o hardening de soberania de dominios no runtime a partir de `docs/implementation/v2-adherence-snapshot.md`, expandindo o uso do registry abaixo do retrieval local;
-3. fechar a malha canonica de elegibilidade entre dominios promovidos e especialistas antes de abrir novo salto funcional;
-4. manter historico regeneravel em `docs/archive/implementation/` e `tools/archive/` sem reexpandir a raiz do repositorio;
-5. manter qualquer delete definitivo dependente de nova checagem formal de referencias.
+1. tratar `docs/implementation/v2-adherence-snapshot.md` como leitura oficial do fechamento funcional do `v2`;
+2. manter `HANDOFF.md`, `CHANGELOG.md` e o snapshot como docs vivos do baseline sem abrir outro corte documental por inércia;
+3. se houver continuação ainda dentro do eixo atual, focar em critérios mais específicos por `workflow_profile` e em uso mais maduro de `semantic`/`procedural`;
+4. manter histórico regenerável em `docs/archive/implementation/` e `tools/archive/` sem reexpandir a raiz do repositório;
+5. só abrir uma nova frente funcional quando a priorização macro sair explicitamente do fechamento do `v2`.
 
 ## Riscos e bloqueios
 

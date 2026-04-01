@@ -248,7 +248,7 @@ def route_workflow_profile(route_name: str) -> str | None:
 
 
 def route_metadata_payload(route_name: str) -> dict[str, object]:
-    """Serialize runtime-route metadata used by orchestrator and observability."""
+    """Serialize stable runtime-route metadata used across the runtime."""
 
     entry = resolve_route(route_name)
     if entry is None:
@@ -258,8 +258,15 @@ def route_metadata_payload(route_name: str) -> dict[str, object]:
             "linked_specialist_type": None,
             "specialist_mode": None,
             "consumer_profile": None,
+            "consumer_objective": None,
+            "expected_deliverables": [],
+            "telemetry_focus": [],
             "workflow_profile": None,
+            "workflow_steps": [],
+            "workflow_checkpoints": [],
+            "workflow_decision_points": [],
             "canonical_domain_refs": [],
+            "is_promoted_specialist_route": False,
         }
     return {
         "route_name": route_name,
@@ -267,9 +274,31 @@ def route_metadata_payload(route_name: str) -> dict[str, object]:
         "linked_specialist_type": entry.linked_specialist_type,
         "specialist_mode": entry.specialist_mode,
         "consumer_profile": entry.consumer_profile,
+        "consumer_objective": entry.consumer_objective,
+        "expected_deliverables": list(entry.expected_deliverables),
+        "telemetry_focus": list(entry.telemetry_focus),
         "workflow_profile": entry.workflow_profile,
+        "workflow_steps": list(entry.workflow_steps),
+        "workflow_checkpoints": list(entry.workflow_checkpoints),
+        "workflow_decision_points": list(entry.workflow_decision_points),
         "canonical_domain_refs": list(entry.canonical_refs),
+        "is_promoted_specialist_route": is_promoted_specialist_route(route_name),
     }
+
+
+def primary_route_payload(
+    route_names: list[str] | tuple[str, ...],
+) -> tuple[str, dict[str, object]] | None:
+    """Return the first runtime route payload for the ordered active route list."""
+
+    primary_route = resolve_primary_route(route_names)
+    if primary_route is None:
+        return None
+    route_name, entry = primary_route
+    payload = route_metadata_payload(route_name)
+    if entry.linked_specialist_type is not None:
+        payload = specialist_route_payload(route_name, entry.linked_specialist_type)
+    return route_name, payload
 
 
 def specialist_route_payload(
