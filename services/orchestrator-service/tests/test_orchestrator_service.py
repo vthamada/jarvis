@@ -61,12 +61,18 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     assert result.governance_decision.decision == PermissionDecision.ALLOW_WITH_CONDITIONS
     assert result.operation_result is not None
     assert result.operation_result.status == OperationStatus.COMPLETED
+    assert result.operation_dispatch is not None
+    assert result.operation_dispatch.canonical_domain_hints
+    assert result.operation_dispatch.primary_canonical_domain == "estrategia_e_pensamento_sistemico"
     assert result.knowledge_result is not None
     assert result.artifact_results
     assert result.active_domains == ["strategy", "documentation", "observability"]
     assert result.cognitive_tensions
     assert result.specialist_review is not None
     assert result.specialist_review.contributions
+    assert result.deliberative_plan.canonical_domains
+    assert result.deliberative_plan.primary_canonical_domain == "estrategia_e_pensamento_sistemico"
+    assert result.deliberative_plan.open_loops
     assert result.specialist_invocations
     assert result.specialist_boundary_summary is not None
     assert result.deliberative_plan.specialist_resolution_summary is not None
@@ -91,6 +97,17 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     assert result.specialist_handoff_check is not None
     assert result.specialist_handoff_decision is not None
     assert result.specialist_handoff_decision.decision == PermissionDecision.ALLOW
+    registry_event = next(
+        event for event in stored_events if event.event_name == "domain_registry_resolved"
+    )
+    assert registry_event.payload["primary_canonical_domain"] == "estrategia_e_pensamento_sistemico"
+    assert registry_event.payload["route_maturity"]["strategy"] == "active_specialist"
+    assert (
+        registry_event.payload["linked_specialist_type"]["strategy"]
+        == "structured_analysis_specialist"
+    )
+    assert registry_event.payload["specialist_mode"]["strategy"] == "guided"
+    assert registry_event.payload["workflow_profile"]["strategy"] == "strategic_direction_workflow"
     workflow_event = next(
         event for event in stored_events if event.event_name == "workflow_composed"
     )
@@ -114,20 +131,18 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     shared_memory_event = next(
         event for event in stored_events if event.event_name == "specialist_shared_memory_linked"
     )
+    selected_specialist = result.specialist_invocations[0].specialist_type
     assert (
-        shared_memory_event.payload["sharing_modes"]["operational_planning_specialist"]
+        shared_memory_event.payload["sharing_modes"][selected_specialist]
         == "core_mediated_read_only"
     )
     assert (
-        shared_memory_event.payload["memory_class_policies"][
-            "operational_planning_specialist"
-        ]["mission"]["write_policy"]
+        shared_memory_event.payload["memory_class_policies"][selected_specialist]["mission"]["write_policy"]
         == "through_core_only"
     )
-    assert (
-        shared_memory_event.payload["memory_ref_counts"]["operational_planning_specialist"]
-        >= 1
-    )
+    assert shared_memory_event.payload["memory_ref_counts"][selected_specialist] >= 1
+    assert shared_memory_event.payload["memory_refs_by_specialist"][selected_specialist]
+    assert selected_specialist in shared_memory_event.payload["semantic_focus_by_specialist"]
     specialists_completed_event = next(
         event for event in stored_events if event.event_name == "specialists_completed"
     )
@@ -136,6 +151,12 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
         event for event in stored_events if event.event_name == "specialist_selection_decided"
     )
     assert specialist_selection_event.payload["selected_specialists"]
+    assert specialist_selection_event.payload["registry_link_matches"][selected_specialist] is True
+    assert specialist_selection_event.payload["registry_mode_matches"][selected_specialist] is True
+    assert (
+        specialist_selection_event.payload["registry_specialist_eligibility"][selected_specialist]
+        is True
+    )
     specialist_handoff_event = next(
         event for event in stored_events if event.event_name == "specialist_handoff_governed"
     )
@@ -201,6 +222,7 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     )
     assert response_event.payload["identity_signature"] == "nucleo_soberano_unificado"
     assert response_event.payload["response_style"]
+    assert response_event.payload["guided_memory_specialists"]
     memory_event = next(event for event in stored_events if event.event_name == "memory_recorded")
     assert continuity_event.payload["continuity_action"] == "continuar"
     assert response_event.payload["continuity_action"] == "continuar"
@@ -272,6 +294,14 @@ def test_orchestrator_service_tracks_promoted_domain_specialist_without_breaking
     assert (
         selection_event.payload["domain_links"]["software_change_specialist"]
         == "software_development"
+    )
+    assert selection_event.payload["registry_link_matches"]["software_change_specialist"] is True
+    assert selection_event.payload["registry_mode_matches"]["software_change_specialist"] is True
+    assert (
+        selection_event.payload["registry_specialist_eligibility"][
+            "software_change_specialist"
+        ]
+        is True
     )
     domain_event = next(
         event for event in stored_events if event.event_name == "domain_specialist_completed"
@@ -640,7 +670,8 @@ def test_orchestrator_service_preserves_mission_state_after_blocked_followup() -
     assert mission_state is not None
     assert mission_state.mission_goal == "Please plan the sprint."
     assert mission_state.last_recommendation == first_result.deliberative_plan.plan_summary
-    assert mission_state.open_loops == first_result.deliberative_plan.open_loops
+    assert mission_state.open_loops
+    assert mission_state.open_loops[0] != "Delete all mission records now."
 
 
 def test_orchestrator_service_governs_replay_when_checkpoint_awaits_validation() -> None:

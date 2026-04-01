@@ -30,7 +30,14 @@ from shared.contracts import (
     OperationResultContract,
     SpecialistInvocationContract,
 )
-from shared.domain_registry import canonical_domain_refs_for_name, resolve_workflow_route
+from shared.domain_registry import (
+    canonical_domain_refs_for_name,
+    primary_canonical_domain_for_name,
+    resolve_primary_route,
+    resolve_workflow_route,
+    route_metadata_payload,
+    specialist_route_payload,
+)
 from shared.events import InternalEventEnvelope
 from shared.types import OperationId, PermissionDecision, RequestId
 
@@ -273,33 +280,7 @@ class OrchestratorService:
                 self.make_event(
                     "domain_registry_resolved",
                     contract,
-                    {
-                        "active_domains": knowledge_result.active_domains,
-                        "registry_domains": knowledge_result.registry_domains,
-                        "route_domains": knowledge_result.active_domains,
-                        "canonical_domain_refs_by_route": {
-                            route.domain_name: route.canonical_domain_refs
-                            for route in knowledge_result.specialist_routes
-                        },
-                        "route_modes": {
-                            route.domain_name: route.specialist_mode
-                            for route in knowledge_result.specialist_routes
-                        },
-                        "routing_sources": {
-                            route.domain_name: route.routing_source
-                            for route in knowledge_result.specialist_routes
-                        },
-                        "guided_domains": [
-                            route.domain_name
-                            for route in knowledge_result.specialist_routes
-                            if route.specialist_mode in {"guided", "active"}
-                        ],
-                        "shadow_domains": [
-                            route.domain_name
-                            for route in knowledge_result.specialist_routes
-                            if route.specialist_mode == "shadow"
-                        ],
-                    },
+                    self._domain_registry_event_payload(knowledge_result),
                 )
             )
 
@@ -568,6 +549,7 @@ class OrchestratorService:
                 )
             )
 
+        guided_memory_runtime_hints = self._guided_memory_runtime_hints(specialist_review)
         response_text = self._compose_response_text(
             directive=directive,
             governance_decision=governance_decision,
@@ -595,6 +577,21 @@ class OrchestratorService:
                     "identity_signature": identity_profile.identity_signature,
                     "response_style": final_response_style,
                     "identity_guardrail": governance_check.context.get("identity_guardrail"),
+                    "guided_memory_specialists": guided_memory_runtime_hints[
+                        "guided_memory_specialists"
+                    ],
+                    "semantic_memory_available": guided_memory_runtime_hints[
+                        "semantic_memory_available"
+                    ],
+                    "procedural_memory_available": guided_memory_runtime_hints[
+                        "procedural_memory_available"
+                    ],
+                    "semantic_memory_focus": guided_memory_runtime_hints[
+                        "semantic_memory_focus"
+                    ],
+                    "procedural_memory_hint": guided_memory_runtime_hints[
+                        "procedural_memory_hint"
+                    ],
                 },
             )
         )
@@ -725,6 +722,57 @@ class OrchestratorService:
                         for item in handoff_plan.selections
                         if item.linked_domain
                     },
+                    "selection_modes": {
+                        item.specialist_type: item.selection_mode
+                        for item in handoff_plan.selections
+                    },
+                    "route_maturity": {
+                        item.specialist_type: route_metadata_payload(
+                            item.linked_domain
+                        ).get("maturity")
+                        for item in handoff_plan.selections
+                        if item.linked_domain
+                    },
+                    "canonical_domain_refs_resolved": {
+                        item.specialist_type: list(
+                            canonical_domain_refs_for_name(item.linked_domain)
+                        )
+                        for item in handoff_plan.selections
+                        if item.linked_domain
+                    },
+                    "registry_link_matches": {
+                        item.specialist_type: (
+                            specialist_route_payload(
+                                item.linked_domain,
+                                item.specialist_type,
+                            ).get("link_matches")
+                            if item.linked_domain
+                            else False
+                        )
+                        for item in handoff_plan.selections
+                    },
+                    "registry_mode_matches": {
+                        item.specialist_type: (
+                            specialist_route_payload(
+                                item.linked_domain,
+                                item.specialist_type,
+                            ).get("specialist_mode") == item.selection_mode
+                            if item.linked_domain
+                            else item.selection_mode == "standard"
+                        )
+                        for item in handoff_plan.selections
+                    },
+                    "registry_specialist_eligibility": {
+                        item.specialist_type: (
+                            specialist_route_payload(
+                                item.linked_domain,
+                                item.specialist_type,
+                            ).get("eligible")
+                            if item.linked_domain
+                            else False
+                        )
+                        for item in handoff_plan.selections
+                    },
                     "domain_specialists": [
                         item.specialist_type
                         for item in handoff_plan.selections
@@ -787,6 +835,22 @@ class OrchestratorService:
                             item.specialist_type: len(item.shared_memory_context.memory_refs)
                             if item.shared_memory_context
                             else 0
+                            for item in handoff_plan.invocations
+                        },
+                        "memory_refs_by_specialist": {
+                            item.specialist_type: (
+                                item.shared_memory_context.memory_refs
+                                if item.shared_memory_context
+                                else []
+                            )
+                            for item in handoff_plan.invocations
+                        },
+                        "semantic_focus_by_specialist": {
+                            item.specialist_type: (
+                                item.shared_memory_context.semantic_focus
+                                if item.shared_memory_context
+                                else []
+                            )
                             for item in handoff_plan.invocations
                         },
                         "consumer_modes": {
@@ -917,6 +981,18 @@ class OrchestratorService:
                             item.specialist_type
                             for item in handoff_plan.invocations
                             if item.selection_mode in {"guided", "active"}
+                        ],
+                        "semantic_memory_specialists": [
+                            item.specialist_type
+                            for item in handoff_plan.invocations
+                            if item.shared_memory_context
+                            and "semantic" in item.shared_memory_context.consumed_memory_classes
+                        ],
+                        "procedural_memory_specialists": [
+                            item.specialist_type
+                            for item in handoff_plan.invocations
+                            if item.shared_memory_context
+                            and "procedural" in item.shared_memory_context.consumed_memory_classes
                         ],
                     },
                 )
@@ -1117,7 +1193,48 @@ class OrchestratorService:
                                 invocation.specialist_type: invocation.selection_mode
                                 for invocation in domain_invocation_index.values()
                             },
+                            "route_maturity": {
+                                invocation.specialist_type: route_metadata_payload(
+                                    invocation.linked_domain
+                                ).get("maturity")
+                                for invocation in domain_invocation_index.values()
+                                if invocation.linked_domain
+                            },
+                            "registry_link_matches": {
+                                invocation.specialist_type: specialist_route_payload(
+                                    invocation.linked_domain,
+                                    invocation.specialist_type,
+                                ).get("link_matches")
+                                for invocation in domain_invocation_index.values()
+                                if invocation.linked_domain
+                            },
+                            "registry_mode_matches": {
+                                invocation.specialist_type: (
+                                    specialist_route_payload(
+                                        invocation.linked_domain,
+                                        invocation.specialist_type,
+                                    ).get("specialist_mode") == invocation.selection_mode
+                                )
+                                for invocation in domain_invocation_index.values()
+                                if invocation.linked_domain
+                            },
+                            "registry_specialist_eligibility": {
+                                invocation.specialist_type: specialist_route_payload(
+                                    invocation.linked_domain,
+                                    invocation.specialist_type,
+                                ).get("eligible")
+                                for invocation in domain_invocation_index.values()
+                                if invocation.linked_domain
+                            },
                             "canonical_domain_refs": {
+                                invocation.specialist_type: (
+                                    list(canonical_domain_refs_for_name(invocation.linked_domain))
+                                    if invocation.linked_domain
+                                    else []
+                                )
+                                for invocation in domain_invocation_index.values()
+                            },
+                            "canonical_domain_refs_resolved": {
                                 invocation.specialist_type: (
                                     list(canonical_domain_refs_for_name(invocation.linked_domain))
                                     if invocation.linked_domain
@@ -1229,6 +1346,8 @@ class OrchestratorService:
             session_id=contract.session_id,
             mission_id=contract.mission_id,
             domain_hints=list(plan.active_domains),
+            canonical_domain_hints=list(plan.canonical_domains),
+            primary_canonical_domain=plan.primary_canonical_domain,
             specialist_hints=list(plan.specialist_hints),
             workflow_profile=workflow_profile,
             workflow_domain_route=workflow_domain_route,
@@ -1338,11 +1457,24 @@ class OrchestratorService:
         knowledge_result: KnowledgeRetrievalResult | None,
     ) -> PlanningContext:
         recovered = memory_recovery_result.recovered_items
+        canonical_domains = (
+            list(knowledge_result.registry_domains)
+            if knowledge_result
+            else list(cognitive_snapshot.canonical_domains)
+        )
+        primary_canonical_domain = (
+            self._resolve_primary_canonical_domain(
+                active_domains=cognitive_snapshot.active_domains,
+                canonical_domains=canonical_domains,
+            )
+        )
         return PlanningContext(
             intent=directive.intent,
             query=contract.content,
             recovered_context=recovered,
             active_domains=cognitive_snapshot.active_domains,
+            canonical_domains=canonical_domains,
+            primary_canonical_domain=primary_canonical_domain,
             active_minds=cognitive_snapshot.active_minds,
             knowledge_snippets=knowledge_result.snippets if knowledge_result else [],
             risk_markers=directive.risk_markers,
@@ -1441,6 +1573,101 @@ class OrchestratorService:
             ),
         )
 
+    def _domain_registry_event_payload(
+        self,
+        knowledge_result: KnowledgeRetrievalResult,
+    ) -> dict[str, object]:
+        route_metadata = {
+            route_name: route_metadata_payload(route_name)
+            for route_name in knowledge_result.active_domains
+        }
+        primary_route = resolve_primary_route(knowledge_result.active_domains)
+        primary_route_name = primary_route[0] if primary_route is not None else None
+        primary_canonical_domain = (
+            primary_canonical_domain_for_name(primary_route_name)
+            if primary_route_name is not None
+            else (
+                knowledge_result.registry_domains[0]
+                if knowledge_result.registry_domains
+                else None
+            )
+        )
+        return {
+            "active_domains": knowledge_result.active_domains,
+            "registry_domains": knowledge_result.registry_domains,
+            "route_domains": knowledge_result.active_domains,
+            "primary_route": primary_route_name,
+            "primary_canonical_domain": primary_canonical_domain,
+            "canonical_domain_refs_by_route": {
+                route_name: metadata["canonical_domain_refs"]
+                for route_name, metadata in route_metadata.items()
+            },
+            "route_modes": {
+                route_name: metadata["specialist_mode"]
+                for route_name, metadata in route_metadata.items()
+                if metadata["specialist_mode"] is not None
+            },
+            "specialist_mode": {
+                route_name: metadata["specialist_mode"]
+                for route_name, metadata in route_metadata.items()
+                if metadata["specialist_mode"] is not None
+            },
+            "route_maturity": {
+                route_name: metadata["maturity"]
+                for route_name, metadata in route_metadata.items()
+            },
+            "linked_specialist_types": {
+                route_name: metadata["linked_specialist_type"]
+                for route_name, metadata in route_metadata.items()
+                if metadata["linked_specialist_type"] is not None
+            },
+            "linked_specialist_type": {
+                route_name: metadata["linked_specialist_type"]
+                for route_name, metadata in route_metadata.items()
+                if metadata["linked_specialist_type"] is not None
+            },
+            "consumer_profiles": {
+                route_name: metadata["consumer_profile"]
+                for route_name, metadata in route_metadata.items()
+                if metadata["consumer_profile"] is not None
+            },
+            "workflow_profiles": {
+                route_name: metadata["workflow_profile"]
+                for route_name, metadata in route_metadata.items()
+                if metadata["workflow_profile"] is not None
+            },
+            "workflow_profile": {
+                route_name: metadata["workflow_profile"]
+                for route_name, metadata in route_metadata.items()
+                if metadata["workflow_profile"] is not None
+            },
+            "routing_sources": {
+                route.domain_name: route.routing_source
+                for route in knowledge_result.specialist_routes
+            },
+            "guided_domains": [
+                route.domain_name
+                for route in knowledge_result.specialist_routes
+                if route.specialist_mode in {"guided", "active"}
+            ],
+            "shadow_domains": [
+                route.domain_name
+                for route in knowledge_result.specialist_routes
+                if route.specialist_mode == "shadow"
+            ],
+        }
+
+    @staticmethod
+    def _resolve_primary_canonical_domain(
+        *,
+        active_domains: list[str],
+        canonical_domains: list[str],
+    ) -> str | None:
+        primary_route = resolve_primary_route(active_domains)
+        if primary_route is not None:
+            return primary_canonical_domain_for_name(primary_route[0])
+        return canonical_domains[0] if canonical_domains else None
+
     def _compose_response_text(
         self,
         *,
@@ -1454,6 +1681,7 @@ class OrchestratorService:
         operation_result: OperationResultContract | None,
     ) -> str:
         identity_profile = self.identity_engine.get_profile()
+        guided_memory_runtime_hints = self._guided_memory_runtime_hints(specialist_review)
         return self.synthesis_engine.compose(
             SynthesisInput(
                 intent=directive.intent,
@@ -1485,8 +1713,58 @@ class OrchestratorService:
                 session_anchor_goal=self._extract_context_hint(
                     memory_recovery_result.recovered_items, "session_anchor_goal="
                 ),
+                guided_memory_specialists=guided_memory_runtime_hints[
+                    "guided_memory_specialists"
+                ],
+                semantic_memory_focus=guided_memory_runtime_hints[
+                    "semantic_memory_focus"
+                ],
+                procedural_memory_hint=guided_memory_runtime_hints[
+                    "procedural_memory_hint"
+                ],
             )
         )
+
+    @staticmethod
+    def _guided_memory_runtime_hints(
+        specialist_review: SpecialistReview,
+    ) -> dict[str, object]:
+        guided_memory_specialists: list[str] = []
+        semantic_memory_focus: list[str] = []
+        procedural_memory_hint: str | None = None
+        semantic_memory_available = False
+        procedural_memory_available = False
+        for invocation in specialist_review.invocations:
+            context = invocation.shared_memory_context
+            if context is None or invocation.selection_mode not in {"guided", "active"}:
+                continue
+            if context.consumer_mode != "domain_guided_memory_packet":
+                continue
+            if invocation.specialist_type not in guided_memory_specialists:
+                guided_memory_specialists.append(invocation.specialist_type)
+            consumed_classes = set(context.consumed_memory_classes)
+            if "semantic" in consumed_classes:
+                semantic_memory_available = True
+                for focus in context.semantic_focus:
+                    if focus and focus not in semantic_memory_focus:
+                        semantic_memory_focus.append(focus)
+                    if len(semantic_memory_focus) >= 4:
+                        break
+            if "procedural" in consumed_classes:
+                procedural_memory_available = True
+                if procedural_memory_hint is None:
+                    procedural_memory_hint = (
+                        context.last_recommendation
+                        or (context.open_loops[0] if context.open_loops else None)
+                        or context.continuity_context_brief
+                    )
+        return {
+            "guided_memory_specialists": guided_memory_specialists,
+            "semantic_memory_available": semantic_memory_available,
+            "procedural_memory_available": procedural_memory_available,
+            "semantic_memory_focus": semantic_memory_focus,
+            "procedural_memory_hint": procedural_memory_hint,
+        }
 
     def _maybe_resolve_continuity_pause(self, contract: InputContract):
         resume_request = contract.metadata.get("continuity_resume")

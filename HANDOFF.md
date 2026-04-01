@@ -2,7 +2,7 @@
 
 ## Metadata
 
-- Atualizado em: 2026-03-31
+- Atualizado em: 2026-04-01
 - Branch: `main`
 - Commit de referência: `e165a5c`
 - Artefato canônico do projeto: `documento_mestre_jarvis.md`
@@ -19,10 +19,20 @@ Leitura operacional correta desta rodada:
 - `memory-service` já gera `domain_guided_memory_packet` de forma genérica para rotas promovidas do registry;
 - `orchestrator-service` passou a emitir `domain_specialist_completed`, além dos sinais legados de `shadow` quando eles existirem;
 - `observability-service` passou a auditar alinhamento de domínio por convocação canônica de especialista, não apenas por `shadow mode`.
+- `knowledge-service` agora da precedencia explicita a mencoes de rotas runtime e dominios canonicos declarados no registry, com matching normalizado sem dependencia de acento.
+- `orchestrator-service`, `planning-engine` e `operation dispatch` agora carregam `canonical_domains` e `primary_canonical_domain` diretamente do `domain_registry`, sem recomputar refs canonicas por heuristica local.
+- `cognitive-engine` passou a delegar ranking, suporte, supressao e tensao dominante ao `mind_registry`, e `specialist_hints` agora so nascem de rotas canonicas ativas do registry.
+- `memory-service` passou a materializar `semantic` e `procedural` como memoria `runtime_partial` apenas em packets guiados por dominio com evidencia persistida e compatibilidade canonica.
 
 ## Meta atual
 
 Abrir o próximo corte do `v2` sobre um runtime já alinhado aos eixos do Documento-Mestre, mantendo aderência por eixo como gate fixo de promoção e evitando ampliar superfícies cedo demais.
+
+### Foco operacional atual
+
+- primeiro: endurecer soberania de dominios no runtime, fazendo o registry governar mais do comportamento real;
+- depois: fechar a malha canonica entre dominios promovidos e especialistas elegiveis;
+- so entao: aprofundar arbitragem declarativa de mentes e memoria semantica/procedural.
 
 Sistema oficial de planejamento desta fase:
 
@@ -185,8 +195,8 @@ Regra de estudo externo no `v2`:
 
 Ordem recomendada:
 1. usar `docs/implementation/v2-repository-hygiene-and-tools-review-cut-closure.md` como fechamento estrutural mais recente;
-2. selecionar o proximo recorte funcional a partir de `docs/implementation/v2-adherence-snapshot.md` e do backlog vivo;
-3. preservar `axis gates`, baseline release-grade e a superficie ativa enxuta como regra continua;
+2. continuar o hardening de soberania de dominios no runtime a partir de `docs/implementation/v2-adherence-snapshot.md`, expandindo o uso do registry abaixo do retrieval local;
+3. fechar a malha canonica de elegibilidade entre dominios promovidos e especialistas antes de abrir novo salto funcional;
 4. manter historico regeneravel em `docs/archive/implementation/` e `tools/archive/` sem reexpandir a raiz do repositorio;
 5. manter qualquer delete definitivo dependente de nova checagem formal de referencias.
 

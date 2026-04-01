@@ -105,6 +105,8 @@ class DeliberativePlanContract:
     recommended_task_type: str
     requires_human_validation: bool
     rationale: str
+    canonical_domains: list[str] = field(default_factory=list)
+    primary_canonical_domain: str | None = None
     tensions_considered: list[str] = field(default_factory=list)
     specialist_hints: list[str] = field(default_factory=list)
     success_criteria: list[str] = field(default_factory=list)
@@ -258,6 +260,8 @@ class OperationDispatchContract:
     mission_id: MissionId | None = None
     risk_hint: RiskLevel | None = None
     domain_hints: list[str] = field(default_factory=list)
+    canonical_domain_hints: list[str] = field(default_factory=list)
+    primary_canonical_domain: str | None = None
     specialist_hints: list[str] = field(default_factory=list)
     tool_hints: list[str] = field(default_factory=list)
     workflow_profile: str | None = None

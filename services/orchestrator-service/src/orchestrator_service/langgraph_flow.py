@@ -168,33 +168,7 @@ class LangGraphFlowRunner:
                 self.orchestrator.make_event(
                     "domain_registry_resolved",
                     contract,
-                    {
-                        "active_domains": knowledge_result.active_domains,
-                        "registry_domains": knowledge_result.registry_domains,
-                        "route_domains": knowledge_result.active_domains,
-                        "canonical_domain_refs_by_route": {
-                            route.domain_name: route.canonical_domain_refs
-                            for route in knowledge_result.specialist_routes
-                        },
-                        "route_modes": {
-                            route.domain_name: route.specialist_mode
-                            for route in knowledge_result.specialist_routes
-                        },
-                        "routing_sources": {
-                            route.domain_name: route.routing_source
-                            for route in knowledge_result.specialist_routes
-                        },
-                        "guided_domains": [
-                            route.domain_name
-                            for route in knowledge_result.specialist_routes
-                            if route.specialist_mode in {"guided", "active"}
-                        ],
-                        "shadow_domains": [
-                            route.domain_name
-                            for route in knowledge_result.specialist_routes
-                            if route.specialist_mode == "shadow"
-                        ],
-                    },
+                    self.orchestrator._domain_registry_event_payload(knowledge_result),
                 )
             )
         return {"knowledge_result": knowledge_result, "events": events}

@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from identity_engine.engine import IdentityProfile
 
@@ -35,6 +35,9 @@ class SynthesisInput:
     session_continuity_brief: str | None = None
     session_continuity_mode: str | None = None
     session_anchor_goal: str | None = None
+    guided_memory_specialists: list[str] = field(default_factory=list)
+    semantic_memory_focus: list[str] = field(default_factory=list)
+    procedural_memory_hint: str | None = None
 
 
 class SynthesisEngine:
@@ -181,10 +184,18 @@ class SynthesisEngine:
                 "o pedido atual pede retomada explicita de continuidade relacionada em "
                 f"{plan.continuity_target_goal}"
             )
+        semantic_focus = ", ".join(synthesis_input.semantic_memory_focus[:2])
         if plan.continuity_action == "continuar" and plan.open_loops:
             base = arbitration or plan.rationale.split(";", maxsplit=1)[0]
+            if semantic_focus:
+                return (
+                    f"{base}; a missao ativa segue ancorada em {plan.open_loops[0]}; "
+                    f"memoria guiada reforca foco em {semantic_focus}"
+                )
             return f"{base}; a missao ativa segue ancorada em {plan.open_loops[0]}"
         if arbitration:
+            if semantic_focus:
+                return f"{arbitration}; memoria guiada reforca foco em {semantic_focus}"
             return arbitration
         return plan.rationale.split(";", maxsplit=1)[0]
 
@@ -216,6 +227,11 @@ class SynthesisEngine:
             next_action = plan.steps[0]
         else:
             next_action = "preservar uma proxima acao segura"
+        if synthesis_input.procedural_memory_hint:
+            return (
+                f"{next_action}; apoio procedural: {synthesis_input.procedural_memory_hint}; "
+                f"criterio de sucesso: {success}"
+            )
         return f"{next_action}; criterio de sucesso: {success}"
 
     def _limitation_line(self, synthesis_input: SynthesisInput) -> str | None:

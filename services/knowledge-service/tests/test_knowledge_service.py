@@ -117,6 +117,29 @@ def test_knowledge_service_supports_pilot_and_observability_queries() -> None:
     assert "pilot_operations" in result.active_domains
 
 
+def test_knowledge_service_prioritizes_canonical_domain_mentions_from_registry() -> None:
+    service = KnowledgeService()
+
+    result = service.retrieve_for_intent(
+        intent="analysis",
+        query="Preciso de apoio em computacao e desenvolvimento para revisar a mudanca do servico.",
+    )
+
+    assert result.active_domains[0] == "software_development"
+    assert "computacao_e_desenvolvimento" in result.registry_domains
+
+
+def test_knowledge_service_prioritizes_runtime_route_display_mentions_from_registry() -> None:
+    service = KnowledgeService()
+
+    result = service.retrieve_for_intent(
+        intent="analysis",
+        query="Acione a rota de runtime: governanca para revisar riscos e limites do release.",
+    )
+
+    assert result.active_domains[0] == "governance"
+
+
 def test_knowledge_service_exposes_domain_registry() -> None:
     service = KnowledgeService()
 

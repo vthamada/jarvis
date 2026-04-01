@@ -418,6 +418,8 @@ def test_memory_service_prepares_core_mediated_shared_memory_for_specialists() -
     assert "memory://domain/strategy" in persisted.memory_refs
     assert persisted.memory_class_policies["mission"]["sharing_mode"] == "core_mediated_read_only"
     assert persisted.memory_class_policies["domain"]["domain_linked"] is True
+    assert "semantic" not in persisted.consumed_memory_classes
+    assert "procedural" not in persisted.consumed_memory_classes
     assert persisted.consumer_mode == "baseline_shared_context"
     assert persisted.mission_context_brief is not None
     assert persisted.domain_context_brief is not None
@@ -494,6 +496,8 @@ def test_memory_service_builds_guided_domain_memory_packet_for_promoted_speciali
     )
     assert persisted is not None
     assert persisted.consumer_mode == "domain_guided_memory_packet"
+    assert "semantic" in persisted.consumed_memory_classes
+    assert "procedural" in persisted.consumed_memory_classes
     assert persisted.consumer_profile == guided.consumer_profile
     assert persisted.consumer_objective == guided.consumer_objective
     assert persisted.expected_deliverables == guided.expected_deliverables
@@ -823,6 +827,10 @@ def test_memory_service_builds_guided_domain_memory_packet_for_analysis_speciali
 
     guided = contexts["structured_analysis_specialist"]
     assert guided.consumer_mode == "domain_guided_memory_packet"
+    assert "semantic" in guided.consumed_memory_classes
+    assert "procedural" in guided.consumed_memory_classes
+    assert any(ref.startswith("memory://semantic/") for ref in guided.memory_refs)
+    assert any(ref.startswith("memory://procedural/") for ref in guided.memory_refs)
     assert guided.domain_context_brief is not None
     assert "active_domains=analysis,decision_risk" in guided.domain_context_brief
     persisted = service.get_specialist_shared_memory(

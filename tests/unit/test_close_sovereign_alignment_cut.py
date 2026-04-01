@@ -139,11 +139,24 @@ def test_close_sovereign_alignment_cut_builds_payload() -> None:
                     "active_domains": ["analysis", "decision_risk"],
                     "registry_domains": ["dados_estatistica_e_inteligencia_analitica"],
                     "route_domains": ["analysis", "decision_risk"],
+                    "primary_canonical_domain": "dados_estatistica_e_inteligencia_analitica",
                     "canonical_domain_refs_by_route": {
                         "analysis": ["dados_estatistica_e_inteligencia_analitica"],
                         "decision_risk": ["governanca_do_sistema"],
                     },
                     "route_modes": {"analysis": "guided", "decision_risk": "guided"},
+                    "route_maturity": {
+                        "analysis": "active_specialist",
+                        "decision_risk": "active_specialist",
+                    },
+                    "linked_specialist_types": {
+                        "analysis": "structured_analysis_specialist",
+                        "decision_risk": "governance_review_specialist",
+                    },
+                    "workflow_profiles": {
+                        "analysis": "structured_analysis_workflow",
+                        "decision_risk": "decision_risk_workflow",
+                    },
                     "routing_sources": {
                         "analysis": "domain_registry",
                         "decision_risk": "domain_registry",
@@ -220,7 +233,13 @@ def test_close_sovereign_alignment_cut_builds_payload() -> None:
                     "specialist_types": ["structured_analysis_specialist"],
                     "linked_domains": {"structured_analysis_specialist": "analysis"},
                     "selection_modes": {"structured_analysis_specialist": "guided"},
+                    "route_maturity": {"structured_analysis_specialist": "active_specialist"},
                     "canonical_domain_refs": {
+                        "structured_analysis_specialist": [
+                            "dados_estatistica_e_inteligencia_analitica"
+                        ]
+                    },
+                    "canonical_domain_refs_resolved": {
                         "structured_analysis_specialist": [
                             "dados_estatistica_e_inteligencia_analitica"
                         ]

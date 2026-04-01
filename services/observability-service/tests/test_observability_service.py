@@ -411,7 +411,36 @@ def test_observability_service_audits_domain_memory_and_sovereignty_alignment() 
                         "dados_estatistica_e_inteligencia_analitica",
                         "tomada_de_decisao_complexa",
                     ],
-                    "shadow_domains": ["software_development"],
+                    "route_domains": ["software_development", "analysis"],
+                    "primary_canonical_domain": "computacao_e_desenvolvimento",
+                    "canonical_domain_refs_by_route": {
+                        "software_development": ["computacao_e_desenvolvimento"],
+                        "analysis": [
+                            "dados_estatistica_e_inteligencia_analitica",
+                            "tomada_de_decisao_complexa",
+                        ],
+                    },
+                    "route_maturity": {
+                        "software_development": "active_specialist",
+                        "analysis": "active_specialist",
+                    },
+                    "route_modes": {
+                        "software_development": "guided",
+                        "analysis": "guided",
+                    },
+                    "linked_specialist_types": {
+                        "software_development": "software_change_specialist",
+                        "analysis": "structured_analysis_specialist",
+                    },
+                    "workflow_profiles": {
+                        "software_development": "software_change_workflow",
+                        "analysis": "structured_analysis_workflow",
+                    },
+                    "routing_sources": {
+                        "software_development": "domain_registry",
+                        "analysis": "domain_registry",
+                    },
+                    "shadow_domains": [],
                 },
                 request_id="req-specialist-align",
                 session_id="sess-specialist-align",
@@ -552,7 +581,11 @@ def test_observability_service_audits_domain_memory_and_sovereignty_alignment() 
                     "specialist_types": ["software_change_specialist"],
                     "linked_domains": {"software_change_specialist": "software_development"},
                     "selection_modes": {"software_change_specialist": "guided"},
+                    "route_maturity": {"software_change_specialist": "active_specialist"},
                     "canonical_domain_refs": {
+                        "software_change_specialist": ["computacao_e_desenvolvimento"]
+                    },
+                    "canonical_domain_refs_resolved": {
                         "software_change_specialist": ["computacao_e_desenvolvimento"]
                     },
                     "consumer_profiles": {
@@ -1383,3 +1416,162 @@ def test_observability_service_tracks_user_scope_status() -> None:
     audit = service.audit_flow(ObservabilityQuery(request_id="req-user-scope"))
 
     assert audit.user_scope_status == "recoverable"
+
+
+def test_observability_service_marks_domain_alignment_attention_when_selection_drifts() -> None:
+    temp_dir = runtime_dir("observability-selection-drift")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service.ingest_events(
+        [
+            InternalEventEnvelope(
+                event_id="evt-d1",
+                event_name="input_received",
+                timestamp="2026-04-01T00:00:00+00:00",
+                source_service="orchestrator-service",
+                payload={"content": "Review software rollout."},
+                request_id="req-selection-drift",
+                session_id="sess-selection-drift",
+                correlation_id="req-selection-drift",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-d2",
+                event_name="memory_recovered",
+                timestamp="2026-04-01T00:00:01+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_recommendation": "priorizar_loop_ativo"},
+                request_id="req-selection-drift",
+                session_id="sess-selection-drift",
+                correlation_id="req-selection-drift",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-d3",
+                event_name="intent_classified",
+                timestamp="2026-04-01T00:00:02+00:00",
+                source_service="orchestrator-service",
+                payload={"intent": "analysis"},
+                request_id="req-selection-drift",
+                session_id="sess-selection-drift",
+                correlation_id="req-selection-drift",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-d4",
+                event_name="domain_registry_resolved",
+                timestamp="2026-04-01T00:00:03+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "registry_domains": ["computacao_e_desenvolvimento"],
+                    "route_domains": ["software_development"],
+                    "canonical_domain_refs_by_route": {
+                        "software_development": ["computacao_e_desenvolvimento"]
+                    },
+                    "route_maturity": {"software_development": "active_specialist"},
+                    "route_modes": {"software_development": "guided"},
+                    "linked_specialist_types": {
+                        "software_development": "software_change_specialist"
+                    },
+                    "workflow_profiles": {
+                        "software_development": "software_change_workflow"
+                    },
+                    "routing_sources": {"software_development": "domain_registry"},
+                },
+                request_id="req-selection-drift",
+                session_id="sess-selection-drift",
+                correlation_id="req-selection-drift",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-d5",
+                event_name="context_composed",
+                timestamp="2026-04-01T00:00:04+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "active_minds": ["mente_analitica"],
+                    "primary_mind": "mente_analitica",
+                    "supporting_minds": [],
+                    "suppressed_minds": [],
+                    "supporting_mind_limit": 2,
+                    "suppressed_mind_limit": 3,
+                    "dominant_tension": "equilibrar profundidade analitica com conclusao util",
+                    "arbitration_summary": "mente_analitica lidera a resposta",
+                    "arbitration_source": "mind_registry",
+                },
+                request_id="req-selection-drift",
+                session_id="sess-selection-drift",
+                correlation_id="req-selection-drift",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-d6",
+                event_name="plan_built",
+                timestamp="2026-04-01T00:00:05+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_action": "continuar", "continuity_source": "active_mission"},
+                request_id="req-selection-drift",
+                session_id="sess-selection-drift",
+                correlation_id="req-selection-drift",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-d7",
+                event_name="continuity_decided",
+                timestamp="2026-04-01T00:00:06+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_action": "continuar", "continuity_source": "active_mission"},
+                request_id="req-selection-drift",
+                session_id="sess-selection-drift",
+                correlation_id="req-selection-drift",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-d8",
+                event_name="governance_checked",
+                timestamp="2026-04-01T00:00:07+00:00",
+                source_service="orchestrator-service",
+                payload={"decision": "allow_with_conditions"},
+                request_id="req-selection-drift",
+                session_id="sess-selection-drift",
+                correlation_id="req-selection-drift",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-d9",
+                event_name="specialist_selection_decided",
+                timestamp="2026-04-01T00:00:08+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "selected_specialists": ["software_change_specialist"],
+                    "domain_links": {"software_change_specialist": "software_development"},
+                    "selection_modes": {"software_change_specialist": "shadow"},
+                    "route_maturity": {"software_change_specialist": "active_specialist"},
+                    "canonical_domain_refs_resolved": {
+                        "software_change_specialist": ["computacao_e_desenvolvimento"]
+                    },
+                    "registry_link_matches": {"software_change_specialist": True},
+                    "registry_mode_matches": {"software_change_specialist": False},
+                    "registry_specialist_eligibility": {"software_change_specialist": False},
+                },
+                request_id="req-selection-drift",
+                session_id="sess-selection-drift",
+                correlation_id="req-selection-drift",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-d10",
+                event_name="response_synthesized",
+                timestamp="2026-04-01T00:00:09+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_action": "continuar"},
+                request_id="req-selection-drift",
+                session_id="sess-selection-drift",
+                correlation_id="req-selection-drift",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-d11",
+                event_name="memory_recorded",
+                timestamp="2026-04-01T00:00:10+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_mode": "continuar"},
+                request_id="req-selection-drift",
+                session_id="sess-selection-drift",
+                correlation_id="req-selection-drift",
+            ),
+        ]
+    )
+
+    audit = service.audit_flow(ObservabilityQuery(request_id="req-selection-drift"))
+
+    assert audit.domain_alignment_status == "attention_required"

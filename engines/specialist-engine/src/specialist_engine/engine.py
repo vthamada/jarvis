@@ -15,8 +15,8 @@ from shared.contracts import (
 )
 from shared.domain_registry import (
     canonical_domain_refs_for_name,
-    is_specialist_route,
-    resolve_route,
+    specialist_eligible_route,
+    specialist_route_payload,
 )
 from shared.specialist_registry import (
     GOVERNANCE_REVIEW_SPECIALIST,
@@ -207,29 +207,22 @@ class SpecialistEngine:
         domain_specialist_routes: list[DomainSpecialistRouteContract],
     ) -> list[SpecialistSelectionContract]:
         selections: list[SpecialistSelectionContract] = []
-        def canonical_route_for(specialist_type: str) -> DomainSpecialistRouteContract | None:
-            candidates: list[DomainSpecialistRouteContract] = []
-            for route in domain_specialist_routes:
-                if route.specialist_type != specialist_type:
-                    continue
-                resolved = resolve_route(route.domain_name)
-                if resolved is None:
-                    continue
-                if resolved.linked_specialist_type != specialist_type:
-                    continue
-                candidates.append(route)
-            if not candidates:
-                return None
 
-            ordered_active_domains = {
-                domain_name: index for index, domain_name in enumerate(plan.active_domains)
-            }
-            return min(
-                candidates,
-                key=lambda route: ordered_active_domains.get(
-                    route.domain_name,
-                    len(ordered_active_domains),
-                ),
+        def canonical_route_for(specialist_type: str) -> DomainSpecialistRouteContract | None:
+            matched = specialist_eligible_route(plan.active_domains, specialist_type)
+            if matched is None:
+                return None
+            route_name, entry = matched
+            for route in domain_specialist_routes:
+                if route.domain_name == route_name and route.specialist_type == specialist_type:
+                    return route
+            return DomainSpecialistRouteContract(
+                domain_name=route_name,
+                specialist_type=specialist_type,
+                specialist_mode=entry.specialist_mode or "standard",
+                routing_reason=entry.summary,
+                canonical_domain_refs=list(entry.canonical_refs),
+                routing_source="domain_registry",
             )
 
         has_decomposition = len(plan.steps) >= 3 or bool(plan.continuity_action)
@@ -242,6 +235,25 @@ class SpecialistEngine:
         )
         for specialist_hint in plan.specialist_hints:
             route = canonical_route_for(specialist_hint)
+            selection_mode = (
+                route.specialist_mode if route and route.specialist_mode else "standard"
+            )
+            linked_domain = route.domain_name if route else None
+            if route is None:
+                selections.append(
+                    SpecialistSelectionContract(
+                        specialist_type=specialist_hint,
+                        selection_status="not_eligible",
+                        selection_score=0.18,
+                        rationale=(
+                            "o registry soberano nao confirmou uma rota canonica ativa "
+                            "para este especialista"
+                        ),
+                        linked_domain=None,
+                        selection_mode="standard",
+                    )
+                )
+                continue
             if specialist_hint == OPERATIONAL_PLANNING_SPECIALIST and has_decomposition:
                 selections.append(
                     SpecialistSelectionContract(
@@ -250,10 +262,10 @@ class SpecialistEngine:
                         selection_score=0.84,
                         rationale=(
                             "o plano exige decomposicao, checkpoints "
-                            "e menor proxima acao segura"
+                            "e menor proxima acao segura em rota canonica ativa"
                         ),
-                        linked_domain=route.domain_name if route else None,
-                        selection_mode=route.specialist_mode if route else "standard",
+                        linked_domain=linked_domain,
+                        selection_mode=selection_mode,
                     )
                 )
             elif specialist_hint == STRUCTURED_ANALYSIS_SPECIALIST and has_tradeoff:
@@ -264,10 +276,10 @@ class SpecialistEngine:
                         selection_score=0.82,
                         rationale=(
                             "o contexto exige comparacao estruturada "
-                            "e criterio explicito de decisao"
+                            "e criterio explicito de decisao em rota canonica ativa"
                         ),
-                        linked_domain=route.domain_name if route else None,
-                        selection_mode=route.specialist_mode if route else "standard",
+                        linked_domain=linked_domain,
+                        selection_mode=selection_mode,
                     )
                 )
             elif specialist_hint == GOVERNANCE_REVIEW_SPECIALIST and has_risk:
@@ -276,19 +288,16 @@ class SpecialistEngine:
                         specialist_type=specialist_hint,
                         selection_status="selected",
                         selection_score=0.87,
-                        rationale="o plano exige cautela normativa, auditoria e revisao de limites",
+                        rationale=(
+                            "o plano exige cautela normativa, auditoria e revisao de limites "
+                            "em rota canonica ativa"
+                        ),
                         requires_governance_review=True,
-                        linked_domain=route.domain_name if route else None,
-                        selection_mode=route.specialist_mode if route else "standard",
+                        linked_domain=linked_domain,
+                        selection_mode=selection_mode,
                     )
                 )
-            elif (
-                specialist_hint == SOFTWARE_CHANGE_SPECIALIST
-                and route is not None
-                and route.domain_name in plan.active_domains
-                and is_specialist_route(route.domain_name)
-            ):
-                selection_mode = route.specialist_mode or "standard"
+            elif specialist_hint == SOFTWARE_CHANGE_SPECIALIST:
                 selection_score = 0.84 if selection_mode in {"guided", "active"} else 0.78
                 rationale = (
                     "o dominio de software ativo abriu uma rota canonica promovida "
@@ -305,7 +314,7 @@ class SpecialistEngine:
                         selection_status="selected",
                         selection_score=selection_score,
                         rationale=rationale,
-                        linked_domain=route.domain_name,
+                        linked_domain=linked_domain,
                         selection_mode=selection_mode,
                     )
                 )
@@ -319,8 +328,8 @@ class SpecialistEngine:
                             "o contexto atual nao justifica convocacao "
                             "especializada deste tipo"
                         ),
-                        linked_domain=route.domain_name if route else None,
-                        selection_mode=route.specialist_mode if route else "standard",
+                        linked_domain=linked_domain,
+                        selection_mode=selection_mode,
                     )
                 )
         return selections[:3]
@@ -512,17 +521,24 @@ class SpecialistEngine:
             return None
         if selection.linked_domain not in plan.active_domains:
             return "coerencia rota->dominio falhou: dominio vinculado nao esta no plano ativo"
-        route = resolve_route(selection.linked_domain)
-        if route is None or route.linked_specialist_type != selection.specialist_type:
+        route_payload = specialist_route_payload(
+            selection.linked_domain,
+            selection.specialist_type,
+        )
+        if route_payload["eligible"] is not True or route_payload["link_matches"] is not True:
             return "coerencia rota->especialista falhou: registry soberano nao confirma o vinculo"
-        if route.specialist_mode != selection.selection_mode:
+        if route_payload["specialist_mode"] != selection.selection_mode:
             return "coerencia rota->modo falhou: selection_mode diverge do registry soberano"
         if shared_memory_context is None:
             return "coerencia especialista->memoria falhou: contexto compartilhado ausente"
         if selection.selection_mode in {"guided", "active"} and (
             shared_memory_context.consumer_mode != "domain_guided_memory_packet"
         ):
-            return "coerencia especialista->memoria falhou: rota guiada sem packet canônico"
+            return "coerencia especialista->memoria falhou: rota guiada sem packet canonico"
+        if selection.selection_mode in {"guided", "active"} and not (
+            shared_memory_context.consumer_profile and shared_memory_context.consumer_objective
+        ):
+            return "coerencia especialista->memoria falhou: packet guiado sem consumer profile"
         consumed_classes = set(shared_memory_context.consumed_memory_classes)
         if not consumed_classes:
             consumed_classes = set(shared_memory_context.memory_class_policies)
@@ -540,13 +556,22 @@ class SpecialistEngine:
             "contextual",
         }.issubset(consumed_classes):
             return "coerencia especialista->memoria falhou: classes minimas nao anexadas"
+        memory_refs = set(shared_memory_context.memory_refs)
+        if "semantic" in consumed_classes and not any(
+            ref.startswith("memory://semantic") for ref in memory_refs
+        ):
+            return "coerencia especialista->memoria falhou: semantic sem ref guiado"
+        if "procedural" in consumed_classes and not any(
+            ref.startswith("memory://procedural") for ref in memory_refs
+        ):
+            return "coerencia especialista->memoria falhou: procedural sem ref guiado"
         linked_refs = set(canonical_domain_refs_for_name(selection.linked_domain))
         semantic_focus = set(shared_memory_context.semantic_focus)
         if linked_refs and not (
             linked_refs.intersection(semantic_focus) or selection.linked_domain in semantic_focus
         ):
             return (
-                "coerencia dominio->memoria falhou: foco semantico nao reflete o dominio canônico"
+                "coerencia dominio->memoria falhou: foco semantico nao reflete o dominio canonico"
             )
         if not (
             shared_memory_context.domain_mission_link_reason

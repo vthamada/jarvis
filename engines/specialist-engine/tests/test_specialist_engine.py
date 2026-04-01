@@ -12,7 +12,7 @@ def sample_plan() -> DeliberativePlanContract:
         plan_summary="decompor objetivo em etapas reversiveis",
         goal="Plan milestone M3",
         steps=["definir objetivo", "listar etapas", "recomendar proxima acao"],
-        active_domains=["strategy"],
+        active_domains=["operational_readiness"],
         active_minds=["mente_executiva"],
         constraints=["low-risk"],
         risks=["sem risco material alem do escopo controlado do v1"],
@@ -49,10 +49,30 @@ def test_specialist_engine_returns_subordinated_contributions_only_when_rule_mat
                     "continuidade=continuar"
                 ),
                 write_policy="through_core_only",
+                consumer_mode="domain_guided_memory_packet",
+                consumer_profile="guided_specialist_review",
+                consumer_objective=(
+                    "preservar coerencia de dominio e menor proxima acao segura"
+                ),
                 related_mission_ids=["mission-related"],
-                memory_refs=["mem-record-1"],
-                semantic_focus=["strategy"],
+                memory_refs=["memory://mission", "memory://domain/operational_readiness", "memory://contextual"],
+                consumed_memory_classes=["mission", "domain", "contextual"],
+                semantic_focus=["operational_readiness", "planejamento_e_coordenacao"],
                 open_loops=["fechar checkpoint principal"],
+                domain_mission_link_reason=(
+                    "route=operational_readiness canonicos="
+                    "planejamento_e_coordenacao"
+                ),
+                mission_context_brief=(
+                    "goal=Plan milestone M3 | related=nenhuma | "
+                    "recommendation=sem recomendacao dominante"
+                ),
+                domain_context_brief=(
+                    "active_domains=operational_readiness | "
+                    "semantic_focus=operational_readiness | "
+                    "memory_refs=memory://mission,"
+                    "memory://domain/operational_readiness"
+                ),
                 source_mission_goal="Plan milestone M3",
             )
         },
@@ -230,7 +250,7 @@ def test_specialist_engine_rejects_software_specialist_if_not_shadow_route() -> 
         plan_summary="avaliar estrategia sem especialista de software",
         goal="Review strategy options",
         steps=["mapear opcoes", "comparar", "recomendar"],
-        active_domains=["strategy"],
+        active_domains=["operational_readiness"],
         active_minds=["mente_analitica"],
         constraints=["through_core_only"],
         risks=[],
@@ -315,6 +335,10 @@ def test_specialist_engine_links_guided_analysis_domain_specialist_explicitly() 
                 ),
                 write_policy="through_core_only",
                 consumer_mode="domain_guided_memory_packet",
+                consumer_profile="guided_specialist_review",
+                consumer_objective=(
+                    "preservar coerencia de dominio e menor proxima acao segura"
+                ),
                 source_mission_goal="Compare rollout evidence",
                 mission_context_brief=(
                     "goal=Compare rollout evidence | related=nenhuma | "
@@ -398,6 +422,10 @@ def test_specialist_engine_links_guided_governance_domain_specialist_explicitly(
                 ),
                 write_policy="through_core_only",
                 consumer_mode="domain_guided_memory_packet",
+                consumer_profile="guided_specialist_review",
+                consumer_objective=(
+                    "preservar coerencia de dominio e menor proxima acao segura"
+                ),
                 source_mission_goal="Review governance limits",
                 mission_context_brief=(
                     "goal=Review governance limits | related=nenhuma | "
@@ -481,6 +509,10 @@ def test_specialist_engine_links_guided_operational_readiness_specialist_explici
                 ),
                 write_policy="through_core_only",
                 consumer_mode="domain_guided_memory_packet",
+                consumer_profile="guided_specialist_review",
+                consumer_objective=(
+                    "preservar coerencia de dominio e menor proxima acao segura"
+                ),
                 source_mission_goal="Plan readiness checks",
                 mission_context_brief=(
                     "goal=Plan readiness checks | related=nenhuma | "
@@ -564,6 +596,10 @@ def test_specialist_engine_links_guided_strategy_specialist_explicitly() -> None
                 ),
                 write_policy="through_core_only",
                 consumer_mode="domain_guided_memory_packet",
+                consumer_profile="guided_specialist_review",
+                consumer_objective=(
+                    "preservar coerencia de dominio e menor proxima acao segura"
+                ),
                 source_mission_goal="Plan strategic options",
                 mission_context_brief=(
                     "goal=Plan strategic options | related=nenhuma | "
@@ -646,6 +682,10 @@ def test_specialist_engine_links_guided_decision_risk_specialist_explicitly() ->
                 ),
                 write_policy="through_core_only",
                 consumer_mode="domain_guided_memory_packet",
+                consumer_profile="guided_specialist_review",
+                consumer_objective=(
+                    "preservar coerencia de dominio e menor proxima acao segura"
+                ),
                 source_mission_goal="Review decision risk",
                 mission_context_brief=(
                     "goal=Review decision risk | related=nenhuma | "
@@ -733,3 +773,57 @@ def test_specialist_engine_prefers_active_domain_order_when_routes_share_special
     assert handoff_plan.selections[0].linked_domain == "decision_risk"
     assert handoff_plan.selections[0].selection_mode == "guided"
 
+
+
+def test_specialist_engine_rejects_guided_memory_without_semantic_and_procedural_refs() -> None:
+    engine = SpecialistEngine()
+    handoff_plan = engine.plan_handoffs(
+        intent="planning",
+        plan=sample_plan(),
+        knowledge_snippets=["Priorize clareza de objetivo."],
+        shared_memory_contexts={
+            "operational_planning_specialist": SpecialistSharedMemoryContextContract(
+                specialist_type="operational_planning_specialist",
+                sharing_mode="core_mediated_read_only",
+                continuity_mode="continuar",
+                shared_memory_brief=(
+                    "specialist=operational_planning_specialist continuidade=continuar"
+                ),
+                write_policy="through_core_only",
+                consumer_mode="domain_guided_memory_packet",
+                consumer_profile="release_readiness_workflow",
+                consumer_objective="estruturar readiness checks e checkpoints",
+                related_mission_ids=["mission-related"],
+                memory_refs=["memory://mission", "memory://domain/operational_readiness", "memory://contextual"],
+                consumed_memory_classes=[
+                    "mission",
+                    "domain",
+                    "contextual",
+                    "semantic",
+                    "procedural",
+                ],
+                semantic_focus=["operational_readiness", "planejamento_e_coordenacao"],
+                open_loops=["fechar checkpoint principal"],
+                domain_mission_link_reason=(
+                    "route=operational_readiness canonicos="
+                    "planejamento_e_coordenacao"
+                ),
+                mission_context_brief=(
+                    "goal=Plan milestone M3 | related=nenhuma | "
+                    "recommendation=sem recomendacao dominante"
+                ),
+                domain_context_brief=(
+                    "active_domains=operational_readiness | "
+                    "semantic_focus=operational_readiness"
+                ),
+                source_mission_goal="Plan milestone M3",
+            )
+        },
+        session_id="sess-specialist-invalid-guided-memory",
+        mission_id="mission-specialist-invalid-guided-memory",
+        requested_by_service="orchestrator-service",
+    )
+
+    assert handoff_plan.selections[0].selection_status == "not_eligible"
+    assert "semantic sem ref guiado" in handoff_plan.selections[0].rationale
+    assert not handoff_plan.invocations

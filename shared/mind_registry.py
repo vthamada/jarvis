@@ -391,3 +391,180 @@ def arbitration_limits_for(mind_name: str) -> tuple[int, int]:
     if definition is None:
         return (2, 3)
     return (definition.max_supporting_minds, definition.max_suppressed_minds)
+
+
+def rank_active_minds(
+    *,
+    intent: str,
+    risk_markers: list[str],
+    canonical_domains: list[str],
+    mind_hints: list[str] | None = None,
+) -> list[str]:
+    """Rank active minds using sovereign registry policy."""
+
+    hinted_minds = {
+        mind_name for mind_name in (mind_hints or []) if mind_name in ACTIVE_MIND_REGISTRY
+    }
+    scored_minds: list[tuple[int, int, str]] = []
+    for mind_name in ACTIVE_MIND_REGISTRY:
+        definition = MIND_REGISTRY[mind_name]
+        score = 0
+        if mind_name in hinted_minds:
+            score += 50
+        if intent in definition.intent_affinities:
+            score += 20
+        score += sum(4 for domain in canonical_domains if domain in definition.domain_affinities)
+        if len(canonical_domains) > 1 and definition.family in {
+            "fundamental",
+            "estrategica_decisoria",
+        }:
+            score += 2
+        if risk_markers:
+            if definition.risk_bias == "governance":
+                score += 8 if intent == "sensitive_action" else 4
+            elif definition.risk_bias == "decision":
+                score += 6 if intent == "sensitive_action" else 3
+            elif definition.risk_bias == "operational_caution":
+                score += 5 if intent != "analysis" else 0
+        if intent == "sensitive_action" and mind_name == "mente_etica":
+            score += 4
+        if definition.runtime_status == "nuclear_active":
+            score += 5
+        scored_minds.append((score, definition.arbitration_priority, mind_name))
+
+    scored_minds.sort(key=lambda item: (-item[0], item[1], item[2]))
+    ordered = [mind_name for score, _, mind_name in scored_minds if score > 0]
+    if not ordered:
+        ordered = ["mente_executiva", "mente_pragmatica"]
+    return ordered
+
+
+def select_supporting_minds(
+    *,
+    primary_mind: str,
+    ordered_minds: list[str],
+    limit: int,
+) -> list[str]:
+    """Return registry-backed supporting minds."""
+
+    supporting: list[str] = []
+    chosen = {primary_mind}
+    for supporting_mind in preferred_support_for(primary_mind):
+        if supporting_mind in ACTIVE_MIND_REGISTRY and supporting_mind not in chosen:
+            supporting.append(supporting_mind)
+            chosen.add(supporting_mind)
+        if len(supporting) >= limit:
+            return supporting[:limit]
+    for supporting_mind in ordered_minds:
+        if supporting_mind not in chosen:
+            supporting.append(supporting_mind)
+            chosen.add(supporting_mind)
+        if len(supporting) >= limit:
+            break
+    return supporting[:limit]
+
+
+def select_suppressed_minds(
+    *,
+    primary_mind: str,
+    ordered_minds: list[str],
+    supporting_minds: list[str],
+    limit: int,
+) -> list[str]:
+    """Return the registry-backed suppressed set for observability."""
+
+    chosen = {primary_mind, *supporting_minds}
+    return [mind_name for mind_name in ordered_minds if mind_name not in chosen][:limit]
+
+
+def select_tensions(
+    *,
+    intent: str,
+    risk_markers: list[str],
+    domains: list[str],
+    primary_mind: str,
+    supporting_minds: list[str],
+) -> list[str]:
+    """Return dominant tensions implied by the current sovereign arbitration."""
+
+    tensions: list[str] = []
+    primary_definition = definition_for(primary_mind)
+    if primary_definition is not None:
+        tensions.append(primary_definition.dominant_tension)
+    if intent == "sensitive_action":
+        tensions.append("equilibrar solicitacao do usuario com limites normativos")
+    elif intent == "planning":
+        tensions.append("equilibrar ambicao estrategica com a menor proxima acao segura")
+    elif intent == "analysis":
+        tensions.append("equilibrar profundidade analitica com conclusao util")
+    else:
+        tensions.append("equilibrar clareza executiva com contexto suficiente")
+    if len(domains) > 1:
+        tensions.append("integrar dominios sem diluir o objetivo dominante")
+    if risk_markers:
+        tensions.append("equilibrar velocidade de resposta com cautela operacional")
+    if supporting_minds and "mente_critica" in supporting_minds:
+        tensions.append("preservar escrutinio suficiente antes de concluir")
+    return list(dict.fromkeys(tensions))
+
+
+def primary_domain_driver(
+    *,
+    primary_mind: str,
+    canonical_domains: list[str],
+) -> str | None:
+    """Resolve the dominant canonical domain associated with the primary mind."""
+
+    definition = definition_for(primary_mind)
+    if definition is None:
+        return canonical_domains[0] if canonical_domains else None
+    for domain in canonical_domains:
+        if domain in definition.domain_affinities:
+            return domain
+    return canonical_domains[0] if canonical_domains else None
+
+
+def build_arbitration_summary(
+    *,
+    primary_mind: str,
+    supporting_minds: list[str],
+    suppressed_minds: list[str],
+    dominant_tension: str,
+    domains: list[str],
+) -> str:
+    """Build a stable human-readable arbitration summary."""
+
+    support = ", ".join(supporting_minds) if supporting_minds else "sem apoio adicional"
+    suppressed = ", ".join(suppressed_minds) if suppressed_minds else "sem supressao relevante"
+    domain_hint = ", ".join(domains[:2])
+    return (
+        f"{primary_mind} lidera a resposta com apoio de {support}, "
+        f"suprimindo {suppressed} para manter foco em {domain_hint} "
+        f"enquanto arbitra {dominant_tension}"
+    )
+
+
+def build_deliberation_notes(
+    *,
+    intent: str,
+    primary_mind: str,
+    supporting_minds: list[str],
+    dominant_tension: str,
+    specialist_hints: list[str],
+    primary_domain_driver: str | None,
+) -> list[str]:
+    """Expose compact observability notes for the current arbitration."""
+
+    notes = [
+        f"linha_primaria={primary_mind}",
+        f"modo={intent}",
+        f"tensao_central={dominant_tension}",
+        "fonte_arbitragem=mind_registry",
+    ]
+    if primary_domain_driver:
+        notes.append(f"dominio_primario={primary_domain_driver}")
+    if supporting_minds:
+        notes.append(f"apoio={', '.join(supporting_minds)}")
+    if specialist_hints:
+        notes.append(f"apoio_subordinado={', '.join(specialist_hints[:2])}")
+    return notes

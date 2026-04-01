@@ -278,6 +278,7 @@ class ObservabilityService:
         domain_registry_event = self._first_event(events, "domain_registry_resolved")
         shared_memory_event = self._first_event(events, "specialist_shared_memory_linked")
         specialist_contract_event = self._first_event(events, "specialist_contracts_composed")
+        specialist_selection_event = self._first_event(events, "specialist_selection_decided")
         specialist_domain_event = self._first_event(events, "domain_specialist_completed")
         specialist_shadow_event = self._first_event(events, "specialist_shadow_mode_completed")
         first_event = events[0]
@@ -450,6 +451,7 @@ class ObservabilityService:
         )
         domain_alignment_status = self._domain_alignment_status(
             domain_registry_event=domain_registry_event,
+            specialist_selection_event=specialist_selection_event,
             specialist_domain_event=specialist_domain_event,
             specialist_shadow_event=specialist_shadow_event,
         )
@@ -640,6 +642,7 @@ class ObservabilityService:
     def _domain_alignment_status(
         *,
         domain_registry_event: InternalEventEnvelope | None,
+        specialist_selection_event: InternalEventEnvelope | None,
         specialist_domain_event: InternalEventEnvelope | None,
         specialist_shadow_event: InternalEventEnvelope | None,
     ) -> str:
@@ -654,12 +657,17 @@ class ObservabilityService:
             {},
         )
         route_modes = domain_registry_event.payload.get("route_modes", {})
+        route_maturity = domain_registry_event.payload.get("route_maturity", {})
+        linked_specialist_types = domain_registry_event.payload.get("linked_specialist_types", {})
+        workflow_profiles = domain_registry_event.payload.get("workflow_profiles", {})
         routing_sources = domain_registry_event.payload.get("routing_sources", {})
         if route_domains and canonical_refs_by_route:
             for route_domain in route_domains:
                 if route_domain not in canonical_refs_by_route:
                     return "attention_required"
-                if routing_sources and route_domain not in routing_sources:
+                if routing_sources and route_domain not in routing_sources and route_domain in linked_specialist_types:
+                    return "attention_required"
+                if route_domain not in route_maturity or route_maturity.get(route_domain) is None:
                     return "attention_required"
                 if route_domain in route_modes and route_modes[route_domain] not in {
                     "shadow",
@@ -668,16 +676,103 @@ class ObservabilityService:
                     None,
                 }:
                     return "attention_required"
+                if route_domain in linked_specialist_types and route_domain not in route_modes:
+                    return "attention_required"
+                if route_domain in workflow_profiles and not workflow_profiles.get(route_domain):
+                    return "attention_required"
+        if specialist_selection_event is not None:
+            selected_specialists = specialist_selection_event.payload.get(
+                "selected_specialists",
+                [],
+            )
+            linked_domains = specialist_selection_event.payload.get("domain_links", {})
+            selection_modes = specialist_selection_event.payload.get("selection_modes", {})
+            route_maturity_by_specialist = specialist_selection_event.payload.get(
+                "route_maturity",
+                {},
+            )
+            canonical_domain_refs = specialist_selection_event.payload.get(
+                "canonical_domain_refs_resolved",
+                {},
+            )
+            registry_link_matches = specialist_selection_event.payload.get(
+                "registry_link_matches",
+                {},
+            )
+            registry_mode_matches = specialist_selection_event.payload.get(
+                "registry_mode_matches",
+                {},
+            )
+            registry_specialist_eligibility = specialist_selection_event.payload.get(
+                "registry_specialist_eligibility",
+                {},
+            )
+            for specialist_type in selected_specialists:
+                linked_domain = linked_domains.get(specialist_type)
+                if not linked_domain:
+                    return "attention_required"
+                if route_domains and linked_domain not in route_domains:
+                    return "attention_required"
+                if canonical_domain_refs and not canonical_domain_refs.get(specialist_type):
+                    return "attention_required"
+                if route_maturity_by_specialist and not route_maturity_by_specialist.get(
+                    specialist_type
+                ):
+                    return "attention_required"
+                if registry_link_matches and registry_link_matches.get(specialist_type) is not True:
+                    return "attention_required"
+                if (
+                    registry_mode_matches
+                    and registry_mode_matches.get(specialist_type) is not True
+                ):
+                    return "attention_required"
+                if (
+                    registry_specialist_eligibility
+                    and registry_specialist_eligibility.get(specialist_type) is not True
+                ):
+                    return "attention_required"
+                if route_modes and selection_modes:
+                    if route_modes.get(linked_domain) != selection_modes.get(specialist_type):
+                        return "attention_required"
+                if linked_specialist_types and (
+                    linked_specialist_types.get(linked_domain) != specialist_type
+                ):
+                    return "attention_required"
         if specialist_domain_event is not None:
             linked_domains = specialist_domain_event.payload.get("linked_domains", {})
             selection_modes = specialist_domain_event.payload.get("selection_modes", {})
-            canonical_domain_refs = specialist_domain_event.payload.get("canonical_domain_refs", {})
+            route_maturity = specialist_domain_event.payload.get("route_maturity", {})
+            canonical_domain_refs = specialist_domain_event.payload.get("canonical_domain_refs_resolved", {})
+            registry_link_matches = specialist_domain_event.payload.get("registry_link_matches", {})
+            registry_mode_matches = specialist_domain_event.payload.get("registry_mode_matches", {})
+            registry_specialist_eligibility = specialist_domain_event.payload.get(
+                "registry_specialist_eligibility",
+                {},
+            )
             if not linked_domains or not selection_modes:
                 return "attention_required"
             for specialist_type, linked_domain in linked_domains.items():
                 if route_domains and linked_domain not in route_domains:
                     return "attention_required"
                 if canonical_domain_refs and not canonical_domain_refs.get(specialist_type):
+                    return "attention_required"
+                if route_maturity and not route_maturity.get(specialist_type):
+                    return "attention_required"
+                if registry_link_matches and registry_link_matches.get(specialist_type) is not True:
+                    return "attention_required"
+                if (
+                    registry_mode_matches
+                    and registry_mode_matches.get(specialist_type) is not True
+                ):
+                    return "attention_required"
+                if (
+                    registry_specialist_eligibility
+                    and registry_specialist_eligibility.get(specialist_type) is not True
+                ):
+                    return "attention_required"
+                if route_modes and route_modes.get(linked_domain) != selection_modes.get(specialist_type):
+                    return "attention_required"
+                if linked_specialist_types and linked_specialist_types.get(linked_domain) != specialist_type:
                     return "attention_required"
             return "healthy"
         if specialist_shadow_event is None:
@@ -779,6 +874,8 @@ class ObservabilityService:
         class_policies = shared_memory_event.payload.get("memory_class_policies", {})
         consumed_memory_classes = shared_memory_event.payload.get("consumed_memory_classes", {})
         memory_write_policies = shared_memory_event.payload.get("memory_write_policies", {})
+        memory_refs_by_specialist = shared_memory_event.payload.get("memory_refs_by_specialist", {})
+        semantic_focus_by_specialist = shared_memory_event.payload.get("semantic_focus_by_specialist", {})
         domain_mission_link_reasons = shared_memory_event.payload.get(
             "domain_mission_link_reasons",
             {},
@@ -805,6 +902,8 @@ class ObservabilityService:
                 return "attention_required"
             write_policies = memory_write_policies.get(specialist_type, {})
             consumer_mode = consumer_modes.get(specialist_type)
+            memory_refs = memory_refs_by_specialist.get(specialist_type, [])
+            semantic_focus = semantic_focus_by_specialist.get(specialist_type, [])
             if consumer_mode == "domain_guided_memory_packet":
                 if not consumer_profiles.get(specialist_type):
                     return "attention_required"
@@ -814,6 +913,8 @@ class ObservabilityService:
                     return "attention_required"
                 if not telemetry_focus.get(specialist_type):
                     return "attention_required"
+            elif {"semantic", "procedural"}.intersection(consumed):
+                return "attention_required"
             for policy in policies.values():
                 if not isinstance(policy, dict):
                     return "attention_required"
@@ -828,6 +929,15 @@ class ObservabilityService:
             for memory_class_name in consumed:
                 if write_policies and write_policies.get(memory_class_name) != "through_core_only":
                     return "attention_required"
+            if "semantic" in consumed:
+                if not any(str(ref).startswith("memory://semantic") for ref in memory_refs):
+                    return "attention_required"
+                if not semantic_focus:
+                    return "attention_required"
+            if "procedural" in consumed and not any(
+                str(ref).startswith("memory://procedural") for ref in memory_refs
+            ):
+                return "attention_required"
         return "healthy"
 
     @staticmethod

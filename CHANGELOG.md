@@ -1,5 +1,15 @@
 # Programa ate V3
 
+## 2026-04-01 - Runtime sovereignty and guided memory hardening
+
+- `domain_registry` passou a governar `canonical_domains`, `primary_canonical_domain`, `route_maturity`, `linked_specialist_type`, `specialist_mode` e `workflow_profile` no runtime.
+- `cognitive-engine` deixou de sugerir especialistas governados por `intent` puro; os hints agora dependem de rotas canonicas ativas.
+- `specialist-engine` passou a exigir coerencia completa entre rota, especialista, modo e memoria guiada, incluindo refs explicitas para `semantic`/`procedural` e `consumer_profile` em pacotes guiados.
+- `observability-service` passou a auditar drift ja em `specialist_selection_decided`, nao apenas no evento de conclusao do especialista.
+- `synthesis-engine` passou a aproveitar foco semantico e hint procedural de memoria guiada quando eles existem no runtime.
+- `mind_registry` virou a fonte soberana de ranking, apoio, supressao e tensao dominante das mentes.
+- `memory-service` passou a expor `semantic` e `procedural` como memoria `runtime_partial` em packets guiados por dominio quando ha evidencia persistida suficiente.
+
 ## 1. Objetivo
 
 Este documento define o programa de implementacao do JARVIS do `pos-v1` ate `v3`.

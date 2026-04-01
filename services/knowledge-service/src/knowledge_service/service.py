@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from json import loads
 from pathlib import Path
+from unicodedata import normalize
 
 from shared.contracts import DomainRegistryEntryContract, DomainSpecialistRouteContract
 from shared.domain_registry import (
@@ -47,6 +48,10 @@ class KnowledgeService:
     """Provide deterministic retrieval from a local curated corpus."""
 
     name = "knowledge-service"
+    _DOMAIN_NAME_MATCH_WEIGHT: float = 1.6
+    _KEYWORD_MATCH_WEIGHT: float = 1.25
+    _REGISTRY_ROUTE_MATCH_WEIGHT: float = 6.0
+    _REGISTRY_CANONICAL_MATCH_WEIGHT: float = 5.0
 
     def __init__(
         self,
@@ -101,28 +106,61 @@ class KnowledgeService:
 
         return list(self.domain_routes.keys())
 
-    _DOMAIN_NAME_MATCH_WEIGHT: float = 1.6
-    _KEYWORD_MATCH_WEIGHT: float = 1.25
+    @staticmethod
+    def _normalize_text(value: str) -> str:
+        folded = normalize("NFKD", value).encode("ascii", "ignore").decode("ascii")
+        return folded.lower().replace("_", " ")
 
     def _select_domains(self, intent: str, query: str) -> list[str]:
-        lowered = query.lower()
+        normalized_query = self._normalize_text(query)
         scores: dict[str, float] = {}
         for domain_name, entry in self.domains.items():
             route_entry = self.domain_routes.get(domain_name)
-            # Domains with a registry entry that are not runtime-eligible are excluded.
             if route_entry is not None and route_entry.maturity == "canonical_only":
                 scores[domain_name] = 0.0
                 continue
             score = self._intent_prior(intent, domain_name)
-            if domain_name in lowered:
+            score += self._registry_declaration_boost(domain_name, normalized_query)
+            normalized_domain_name = self._normalize_text(domain_name)
+            if normalized_domain_name and normalized_domain_name in normalized_query:
                 score += self._DOMAIN_NAME_MATCH_WEIGHT
             score += sum(
-                self._KEYWORD_MATCH_WEIGHT for keyword in entry.keywords if keyword in lowered
+                self._KEYWORD_MATCH_WEIGHT
+                for keyword in entry.keywords
+                if self._normalize_text(keyword) in normalized_query
             )
             scores[domain_name] = score
         ranked = sorted(scores.items(), key=lambda item: (-item[1], item[0]))
         selected = [name for name, score in ranked if score > 0.0]
         return selected[:3] or [FALLBACK_RUNTIME_ROUTE]
+
+    def _registry_declaration_boost(self, route_name: str, normalized_query: str) -> float:
+        entry = self.domain_routes.get(route_name)
+        if entry is None:
+            return 0.0
+        boost = 0.0
+        route_tokens = {
+            self._normalize_text(route_name),
+            self._normalize_text(route_name.replace("_", " ")),
+            self._normalize_text(entry.display_name),
+        }
+        if any(token and token in normalized_query for token in route_tokens):
+            boost = max(boost, self._REGISTRY_ROUTE_MATCH_WEIGHT)
+        for canonical_ref in entry.canonical_refs:
+            canonical_entry = self.canonical_domain_registry.get(canonical_ref)
+            canonical_tokens = {
+                self._normalize_text(canonical_ref),
+                self._normalize_text(canonical_ref.replace("_", " ")),
+            }
+            if canonical_entry is not None:
+                canonical_tokens.add(self._normalize_text(canonical_entry.display_name))
+            if any(token and token in normalized_query for token in canonical_tokens):
+                boost = max(boost, self._REGISTRY_CANONICAL_MATCH_WEIGHT)
+        if boost and entry.maturity == "active_specialist":
+            boost += 0.4
+        elif boost and entry.maturity == "active_registry":
+            boost += 0.2
+        return boost
 
     def _intent_prior(self, intent: str, domain_name: str) -> float:
         route_entry = self.domain_routes.get(domain_name)
@@ -211,7 +249,7 @@ class KnowledgeService:
                     specialist_type=entry.linked_specialist_type,
                     specialist_mode=entry.specialist_mode,
                     routing_reason=entry.summary
-                    or f"rota canônica ativa para o domínio {domain_name}",
+                    or f"rota canonica ativa para o dominio {domain_name}",
                     canonical_domain_refs=list(entry.canonical_refs),
                     routing_source=route_routing_source(domain_name),
                 )

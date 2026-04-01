@@ -2,22 +2,22 @@
 
 ## 1. Objetivo
 
-Este documento registra um snapshot de ader?ncia entre o estado atual do reposit?rio,
-a vis?o can?nica do [documento_mestre_jarvis.md](d:/Users/DTI/Desktop/jarvis/documento_mestre_jarvis.md)
-e a dire??o operacional consolidada nos documentos vivos do projeto.
+Este documento registra um snapshot de aderencia entre o estado atual do repositorio,
+a visao canonica do [documento_mestre_jarvis.md](d:/Users/DTI/Desktop/jarvis/documento_mestre_jarvis.md)
+e a direcao operacional consolidada nos documentos vivos do projeto.
 
 Ele existe para:
 
-- identificar rapidamente onde o runtime j? est? coerente com a vis?o;
+- identificar rapidamente onde o runtime ja esta coerente com a visao;
 - separar gap real de deferimento correto por fase;
-- orientar a escolha do pr?ximo recorte funcional sem reabrir decis?es j? fechadas;
-- manter backlog t?cnico subordinado ao Documento-Mestre, e n?o a conveni?ncias locais.
+- orientar a escolha do proximo recorte funcional sem reabrir decisoes ja fechadas;
+- manter backlog tecnico subordinado ao Documento-Mestre, e nao a conveniencias locais.
 
 Leitura correta:
 
-- o Documento-Mestre continua sendo a ?nica fonte can?nica de vis?o;
-- este arquivo ? uma auditoria derivada e revis?vel;
-- [HANDOFF.md](d:/Users/DTI/Desktop/jarvis/HANDOFF.md) continua sendo a retomada t?tico-operacional;
+- o Documento-Mestre continua sendo a unica fonte canonica de visao;
+- este arquivo e uma auditoria derivada e revisavel;
+- [HANDOFF.md](d:/Users/DTI/Desktop/jarvis/HANDOFF.md) continua sendo a retomada tatico-operacional;
 - [matriz-de-aderencia-mestre.md](d:/Users/DTI/Desktop/jarvis/docs/documentation/matriz-de-aderencia-mestre.md)
   continua sendo a taxonomia formal de status.
 
@@ -25,227 +25,233 @@ Leitura correta:
 
 ## 2. Fotografia atual
 
-Estado de refer?ncia desta revis?o:
+Estado de referencia desta revisao:
 
-- data da fotografia: `2026-03-31`
-- ?ltimo recorte funcional fechado: `v2-native-memory-scope-hardening-cut`
-- ?ltimo recorte estrutural fechado: `v2-repository-hygiene-and-tools-review-cut`
-- pr?ximo passo j? recomendado pelo reposit?rio: `select-next-functional-cut-from-adherence-snapshot`
+- data da fotografia: `2026-04-01`
+- ultimo recorte funcional fechado: `v2-native-memory-scope-hardening-cut`
+- ultimo recorte estrutural fechado: `v2-repository-hygiene-and-tools-review-cut`
+- passo funcional em andamento: `domain-sovereignty-runtime-hardening`
 
 Leitura executiva:
 
-- n?o existe hoje diverg?ncia arquitetural grave entre o sistema e o Documento-Mestre;
-- existe, sim, dist?ncia de materializa??o em alguns eixos centrais do `v2`;
-- os maiores gaps ainda est?o em soberania pr?tica de dom?nios no runtime,
-  cobertura can?nica dos especialistas e formaliza??o mais declarativa da arbitragem de mentes;
-- mem?ria, identidade, governan?a, observabilidade e soberania do n?cleo evolu?ram de forma consistente;
+- nao existe hoje divergencia arquitetural grave entre o sistema e o Documento-Mestre;
+- existe, sim, distancia de materializacao em alguns eixos centrais do `v2`;
+- os maiores gaps continuam em soberania pratica de dominios no runtime,
+  cobertura canonica dos especialistas e formalizacao mais declarativa da arbitragem de mentes;
+- memoria, identidade, governanca, observabilidade e soberania do nucleo evoluiram de forma consistente;
 - benchmark externo, memory gap e hardening nativo foram tratados corretamente como etapas subordinadas ao baseline,
-  n?o como desvio de dire??o.
+  nao como desvio de direcao.
 
 Em resumo:
 
-- a vis?o est? preservada;
-- o runtime est? coerente com a fase do programa;
-- o backlog correto agora volta a ser funcional, n?o estrutural.
+- a visao esta preservada;
+- o runtime esta coerente com a fase do programa;
+- o backlog correto agora volta a ser funcional, nao estrutural.
 
 ---
 
 ## 3. Leitura por eixo
 
-### 3.1 N?cleo central e fluxo principal
+### 3.1 Nucleo central e fluxo principal
 
-**Status:** `runtime parcial` ? forte, sem diverg?ncia material
+**Status:** `runtime parcial` - forte, sem divergencia material
 
-O que est? aderente:
+O que esta aderente:
 
-- o orquestrador permanece como autoridade suprema da rela??o com o usu?rio;
-- governan?a, mem?ria, conhecimento, cogni??o, especialistas, opera??o e observabilidade
-  continuam subordinados ao n?cleo;
-- LangGraph segue complementar e opcional, n?o substituto do runtime principal.
+- o orquestrador permanece como autoridade suprema da relacao com o usuario;
+- governanca, memoria, conhecimento, cognicao, especialistas, operacao e observabilidade
+  continuam subordinados ao nucleo;
+- LangGraph segue complementar e opcional, nao substituto do runtime principal.
 
 Gap relevante:
 
-- nenhum gap estrutural cr?tico neste eixo.
+- nenhum gap estrutural critico neste eixo.
 
 Leitura:
 
-- este eixo est? alinhado com a vis?o do mestre.
+- este eixo esta alinhado com a visao do mestre.
 
 ---
 
-### 3.2 Identidade, miss?o e princ?pios
+### 3.2 Identidade, missao e principios
 
-**Status:** `runtime parcial` ? consistente, com gate real
+**Status:** `runtime parcial` - consistente, com gate real
 
-O que est? aderente:
+O que esta aderente:
 
 - identidade entra no fluxo real;
-- governan?a j? audita coer?ncia de identidade;
-- observabilidade j? trata alinhamento identit?rio como sinal de eixo.
+- governanca ja audita coerencia de identidade;
+- observabilidade ja trata alinhamento identitario como sinal de eixo.
 
 Gap relevante:
 
-- identidade ainda ? mais forte como guardrail e trilha audit?vel do que como checklist declarativo completo por request.
+- identidade ainda e mais forte como guardrail e trilha auditavel do que como checklist declarativo completo por request.
 
 Leitura:
 
-- n?o h? diverg?ncia de dire??o; h? matura??o pendente.
+- nao ha divergencia de direcao; ha maturacao pendente.
 
 ---
 
-### 3.3 Mentes can?nicas
+### 3.3 Mentes canonicas
 
-**Status:** `runtime parcial` ? registry forte, arbitragem ainda h?brida
+**Status:** `runtime parcial` - registry forte, arbitragem ainda hibrida
 
-O que est? aderente:
+O que esta aderente:
 
 - o projeto preserva a ontologia das 24 mentes;
-- o registry de mentes existe e j? influencia composi??o, suporte e tens?o dominante;
-- o eixo n?o foi abandonado nem substitu?do por heur?stica puramente solta.
+- o registry de mentes existe e ja influencia composicao, suporte e tensao dominante;
+- o eixo nao foi abandonado nem substituido por heuristica puramente solta.
 
 Gap relevante:
 
-- parte importante da arbitragem ainda vive como l?gica do engine, n?o como regra declarativa soberana deriv?vel s? do registry;
-- a rela??o entre mente, dom?nio e especialista ainda pode ficar mais expl?cita e menos impl?cita.
+- a arbitragem principal ja foi puxada para helpers soberanos do `mind_registry`, reduzindo regra espalhada no engine;
+- a relacao entre mente, dominio e especialista ainda pode ficar mais explicita e menos implicita em consumidores posteriores.
 
 Leitura:
 
-- a vis?o foi respeitada, mas a materializa??o ainda est? incompleta.
+- a visao foi respeitada, mas a materializacao ainda esta incompleta.
 
 ---
 
-### 3.4 Dom?nios can?nicos e rotas de runtime
+### 3.4 Dominios canonicos e rotas de runtime
 
-**Status:** `runtime parcial` ? principal gap funcional restante
+**Status:** `runtime parcial` - principal gap funcional restante
 
-O que est? aderente:
+O que esta aderente:
 
-- o sistema j? possui registry can?nico de dom?nios;
-- a separa??o entre ontologia can?nica e rotas operacionais de runtime est? estabelecida;
-- existem rotas promovidas, contratos de consumo por dom?nio, workflows e v?nculos com especialistas.
+- o sistema ja possui registry canonico de dominios;
+- a separacao entre ontologia canonica e rotas operacionais de runtime esta estabelecida;
+- existem rotas promovidas, contratos de consumo por dominio, workflows e vinculos com especialistas;
+- o `knowledge-service` agora da precedencia explicita a mencoes declaradas de rota runtime
+  e dominio canonico do registry, com matching normalizado sem depender de acento.
 
 Gap relevante:
 
-- o registry ainda precisa governar o runtime com menos margem para heur?stica residual;
-- o knowledge retrieval ainda pode ficar mais explicitamente delimitado pelo dom?nio can?nico ativo;
-- maturidade de dom?nio ainda pode atuar com mais for?a como gate de promo??o.
+- o registry ja governa retrieval local, planning context, operation dispatch e sinais de observabilidade com `canonical_domains` e `primary_canonical_domain`;
+- ainda resta reduzir heuristica residual em consumidores mais perifericos do runtime;
+- maturidade de dominio ainda pode atuar com mais forca como gate de promocao.
 
 Leitura:
 
-- este continua sendo o eixo mais importante para o pr?ximo recorte funcional.
+- este continua sendo o eixo mais importante para o proximo recorte funcional,
+  mas o primeiro endurecimento ja entrou no baseline.
 
 ---
 
-### 3.5 Mem?rias can?nicas
+### 3.5 Memorias canonicas
 
-**Status:** `runtime parcial` ? avan?ou bastante, sem diverg?ncia de vis?o
+**Status:** `runtime parcial` - avancou bastante, sem divergencia de visao
 
-O que est? aderente:
+O que esta aderente:
 
-- o sistema mant?m a ideia de mem?ria estratificada e soberana;
+- o sistema mantem a ideia de memoria estratificada e soberana;
 - user scope nativo foi endurecido;
-- recorr?ncia soberana de especialistas promovidos foi implementada ainda `through_core_only`;
-- organization scope ficou corretamente bloqueado sem consumidor can?nico soberano;
-- benchmark e evid?ncia local evitaram reabrir absor??o externa por conveni?ncia.
+- recorrencia soberana de especialistas promovidos foi implementada ainda `through_core_only`;
+- organization scope ficou corretamente bloqueado sem consumidor canonico soberano;
+- benchmark e evidencia local evitaram reabrir absorcao externa por conveniencia.
 
 Gap relevante:
 
-- classes sem?ntica e procedural ainda n?o s?o consumo runtime forte;
-- promo??o e arquivamento autom?ticos por pol?tica continuam incompletos;
-- a camada multicamada nativa ainda pode crescer antes de qualquer absor??o futura.
+- `semantic` e `procedural` agora entram como `runtime_partial` em packets guiados por dominio quando existe evidencia persistida e compatibilidade canonica;
+- a coerencia desses packets ficou mais forte: rotas guiadas agora exigem `consumer_profile`, `consumer_objective` e refs explicitas para memoria `semantic`/`procedural` quando essas classes sao declaradas;
+- promocao e arquivamento automaticos por politica continuam incompletos;
+- a camada multicamada nativa ainda pode crescer antes de qualquer absorcao futura.
 
 Leitura:
 
-- este eixo est? consistente com a vis?o e com a fase atual.
+- este eixo esta consistente com a visao e com a fase atual.
 
 ---
 
-### 3.6 Governan?a, seguran?a e autonomia
+### 3.6 Governanca, seguranca e autonomia
 
-**Status:** `runtime parcial` ? forte
+**Status:** `runtime parcial` - forte
 
-O que est? aderente:
+O que esta aderente:
 
-- o sistema preserva governan?a como camada real, n?o decorativa;
-- decis?es de risco, bloqueio, deferimento e condi??es continuam no fluxo principal;
-- a evolu??o externa e os benchmarks continuam subordinados ao baseline soberano.
+- o sistema preserva governanca como camada real, nao decorativa;
+- decisoes de risco, bloqueio, deferimento e condicoes continuam no fluxo principal;
+- a evolucao externa e os benchmarks continuam subordinados ao baseline soberano.
 
 Gap relevante:
 
-- ainda existe espa?o para formalizar melhor governan?a de mem?ria e pol?ticas declarativas mais completas.
+- ainda existe espaco para formalizar melhor governanca de memoria e politicas declarativas mais completas.
 
 Leitura:
 
-- sem diverg?ncia material neste eixo.
+- sem divergencia material neste eixo.
 
 ---
 
 ### 3.7 Especialistas subordinados
 
-**Status:** `runtime parcial` ? segundo gap funcional principal
+**Status:** `runtime parcial` - segundo gap funcional principal
 
-O que est? aderente:
+O que esta aderente:
 
-- especialistas continuam subordinados ao n?cleo;
-- n?o existe concess?o de identidade pr?pria a especialistas;
-- handoffs continuam `through_core_only` e `advisory_only` quando aplic?vel;
-- mem?ria compartilhada e recorr?ncia foram mantidas como media??o do n?cleo.
+- especialistas continuam subordinados ao nucleo;
+- nao existe concessao de identidade propria a especialistas;
+- handoffs continuam `through_core_only` e `advisory_only` quando aplicavel;
+- memoria compartilhada e recorrencia foram mantidas como mediacao do nucleo.
 
 Gap relevante:
 
-- ainda falta fechar totalmente a malha can?nica entre todos os especialistas e seus dom?nios soberanos;
-- a passagem entre shadow, guided e n?veis posteriores ainda pode ficar mais formalizada por crit?rio.
+- hints e selecao de especialistas governados agora dependem de rotas canonicas ativas, com validacao de rota, modo, elegibilidade soberana e memoria coerente;
+- a observabilidade tambem passou a detectar drift mais cedo, ainda em `specialist_selection_decided`, antes da conclusao do especialista;
+- ainda falta fechar totalmente a malha canonica entre todos os especialistas e seus dominios soberanos;
+- a passagem entre shadow, guided e niveis posteriores ainda pode ficar mais formalizada por criterio.
 
 Leitura:
 
-- o eixo est? na dire??o certa, mas ainda n?o atingiu a forma plena do mestre.
+- o eixo esta na direcao certa, mas ainda nao atingiu a forma plena do mestre.
 
 ---
 
-### 3.8 Observabilidade e evid?ncia
+### 3.8 Observabilidade e evidencia
 
-**Status:** `runtime parcial` ? s?lido
+**Status:** `runtime parcial` - solido
 
-O que est? aderente:
+O que esta aderente:
 
-- o projeto j? opera com trilha audit?vel, comparadores, baseline verification e engineering gate;
-- decis?es de benchmark, closure de cuts e baseline release-grade j? entram como evid?ncia regener?vel.
+- o projeto ja opera com trilha auditavel, comparadores, baseline verification e engineering gate;
+- decisoes de benchmark, closure de cuts e baseline release-grade ja entram como evidencia regeneravel.
 
 Gap relevante:
 
 - ainda cabe reduzir carga documental sem perder auditabilidade;
-- parte dos sinais pode ficar mais consolidada por eixo ao longo dos pr?ximos cortes.
+- parte dos sinais pode ficar mais consolidada por eixo ao longo dos proximos cortes.
 
 Leitura:
 
-- eixo consistente com a vis?o.
+- eixo consistente com a visao.
 
 ---
 
-### 3.9 Evolu??o, benchmark e absor??o externa
+### 3.9 Evolucao, benchmark e absorcao externa
 
-**Status:** `deferido por fase` ? correto
+**Status:** `deferido por fase` - correto
 
-O que est? aderente:
+O que esta aderente:
 
-- benchmark governado foi usado como filtro de decis?o, n?o como atalho de arquitetura;
-- `Mastra` e `AutoGPT Platform` ficaram como refer?ncia;
-- `Mem0` ficou em `absorver_depois` e depois foi mantido fechado por evid?ncia local insuficiente;
-- nada externo assumiu o papel de c?rebro do sistema.
+- benchmark governado foi usado como filtro de decisao, nao como atalho de arquitetura;
+- `Mastra` e `AutoGPT Platform` ficaram como referencia;
+- `Mem0` ficou em `absorver_depois` e depois foi mantido fechado por evidencia local insuficiente;
+- nada externo assumiu o papel de cerebro do sistema.
 
 Leitura:
 
-- este eixo est? alinhado com a vis?o e com a sua dire??o expl?cita para o projeto.
+- este eixo esta alinhado com a visao e com a sua direcao explicita para o projeto.
 
 ---
 
-### 3.10 Voz, realtime e superf?cies amplas
+### 3.10 Voz, realtime e superficies amplas
 
-**Status:** `deferido por fase` ? correto
+**Status:** `deferido por fase` - correto
 
 Leitura:
 
-- continuam parte da vis?o, mas fora do caminho cr?tico do `v2`.
+- continuam parte da visao, mas fora do caminho critico do `v2`.
 
 ---
 
@@ -253,97 +259,101 @@ Leitura:
 
 | Eixo | Status | Leitura atual | Prioridade |
 |---|---|---|---|
-| N?cleo / Orquestrador | runtime parcial | forte, sem gap material | baixa |
-| Identidade | runtime parcial | operacional e audit?vel | baixa |
-| Mentes | runtime parcial | arbitragem ainda h?brida | m?dia |
-| Dom?nios | runtime parcial | registry ainda n?o governa todo o runtime como deveria | alta |
-| Mem?rias | runtime parcial | eixo fortalecido e coerente | m?dia |
-| Governan?a | runtime parcial | s?lida | baixa |
-| Especialistas | runtime parcial | cobertura can?nica ainda incompleta | alta |
+| Nucleo / Orquestrador | runtime parcial | forte, sem gap material | baixa |
+| Identidade | runtime parcial | operacional e auditavel | baixa |
+| Mentes | runtime parcial | arbitragem ainda hibrida | media |
+| Dominios | runtime parcial | registry governa mais do retrieval, mas ainda nao todo o runtime | alta |
+| Memorias | runtime parcial | eixo fortalecido e coerente | media |
+| Governanca | runtime parcial | solida | baixa |
+| Especialistas | runtime parcial | cobertura canonica ainda incompleta | alta |
 | Observabilidade | runtime parcial | forte | baixa |
-| Evolu??o / Benchmark | deferido por fase | corretamente subordinado | n?o aplic?vel |
-| Voz / Realtime | deferido por fase | corretamente adiado | n?o aplic?vel |
+| Evolucao / Benchmark | deferido por fase | corretamente subordinado | nao aplicavel |
+| Voz / Realtime | deferido por fase | corretamente adiado | nao aplicavel |
 
 ---
 
-## 5. Pr?xima sequ?ncia correta de implementa??o
+## 5. Proxima sequencia correta de implementacao
 
-Com base no estado atual do reposit?rio, a sequ?ncia mais coerente ?:
+Com base no estado atual do repositorio, a sequencia mais coerente e:
 
-### Passo 1 ? dom?nios soberanos no runtime
+### Passo 1 - dominios soberanos no runtime
 
 Foco:
 
-- fazer o `domain_registry` governar o routing com preced?ncia real sobre heur?stica residual;
-- aproximar knowledge retrieval do dom?nio can?nico ativo;
-- refor?ar maturidade de dom?nio como gate operacional.
+- fazer o `domain_registry` governar o routing com precedencia real sobre heuristica residual;
+- aproximar knowledge retrieval do dominio canonico ativo em mais consumidores alem do retrieval local;
+- reforcar maturidade de dominio como gate operacional.
+
+Estado:
+
+- o primeiro endurecimento ja entrou no `knowledge-service`.
 
 Por que vem primeiro:
 
-- no Documento-Mestre, dom?nio ? estrutura de orienta??o do conhecimento e da ativa??o;
-- especialistas e mem?ria de dom?nio ficam melhores quando o eixo de dom?nios est? realmente soberano.
+- no Documento-Mestre, dominio e estrutura de orientacao do conhecimento e da ativacao;
+- especialistas e memoria de dominio ficam melhores quando o eixo de dominios esta realmente soberano.
 
-### Passo 2 ? especialistas totalmente vinculados a dom?nios can?nicos
+### Passo 2 - especialistas totalmente vinculados a dominios canonicos
 
 Foco:
 
-- fechar o mapa can?nico completo entre especialistas promovidos e seus dom?nios;
-- formalizar melhor crit?rios de guided e elegibilidade;
-- reduzir ainda mais a infer?ncia residual fora do registry.
+- fechar o mapa canonico completo entre especialistas promovidos e seus dominios;
+- formalizar melhor criterios de guided e elegibilidade;
+- reduzir ainda mais a inferencia residual fora do registry.
 
 Por que vem depois do passo 1:
 
-- especialista subordinado sem eixo de dom?nio soberano fica mais fr?gil do que deveria.
+- especialista subordinado sem eixo de dominio soberano fica mais fragil do que deveria.
 
-### Passo 3 ? arbitragem de mentes mais declarativa
-
-Foco:
-
-- empurrar mais regras de composi??o para o registry;
-- tornar a arbitragem mais reproduz?vel e menos impl?cita no engine.
-
-### Passo 4 ? mem?ria sem?ntica e procedural mais fortes
+### Passo 3 - arbitragem de mentes mais declarativa
 
 Foco:
 
-- avan?ar classes ainda tipadas/documentadas para consumo runtime real;
-- s? reabrir absor??o externa se surgir nova evid?ncia acima do baseline nativo.
+- empurrar mais regras de composicao para o registry;
+- tornar a arbitragem mais reproduzivel e menos implicita no engine.
+
+### Passo 4 - memoria semantica e procedural mais fortes
+
+Foco:
+
+- avancar classes ainda tipadas/documentadas para consumo runtime real;
+- so reabrir absorcao externa se surgir nova evidencia acima do baseline nativo.
 
 ---
 
-## 6. O que n?o deve ser reaberto sem evid?ncia forte
+## 6. O que nao deve ser reaberto sem evidencia forte
 
-- JARVIS como sistema unificado, n?o chatbot simples;
-- soberania do n?cleo na rela??o com o usu?rio;
-- especialistas subordinados, n?o identidades paralelas;
-- governan?a, mem?ria can?nica e s?ntese final n?o externalizadas;
-- benchmark externo como apoio ou filtro, n?o como substituto do n?cleo;
-- organization scope bloqueado sem consumidor can?nico soberano;
-- `Mem0` sem promo??o autom?tica;
-- voz, realtime e superf?cies amplas fora do caminho cr?tico do `v2`.
+- JARVIS como sistema unificado, nao chatbot simples;
+- soberania do nucleo na relacao com o usuario;
+- especialistas subordinados, nao identidades paralelas;
+- governanca, memoria canonica e sintese final nao externalizadas;
+- benchmark externo como apoio ou filtro, nao como substituto do nucleo;
+- organization scope bloqueado sem consumidor canonico soberano;
+- `Mem0` sem promocao automatica;
+- voz, realtime e superficies amplas fora do caminho critico do `v2`.
 
 ---
 
-## 7. Conclus?o
+## 7. Conclusao
 
-A leitura correta hoje ?:
+A leitura correta hoje e:
 
-- o reposit?rio n?o est? divergindo da vis?o do Documento-Mestre;
-- tamb?m n?o est? divergindo da sua dire??o macro j? formalizada nos artefatos do projeto;
-- o que existe ? um conjunto de gaps de materializa??o normais para a fase do `v2`.
+- o repositorio nao esta divergindo da visao do Documento-Mestre;
+- tambem nao esta divergindo da sua direcao macro ja formalizada nos artefatos do projeto;
+- o que existe e um conjunto de gaps de materializacao normais para a fase do `v2`.
 
-A diverg?ncia relevante, neste momento, n?o ? de identidade do sistema.
-? de completude operacional em tr?s pontos:
+A divergencia relevante, neste momento, nao e de identidade do sistema.
+E de completude operacional em tres pontos:
 
-- dom?nios ainda mais fortes como eixo soberano do runtime;
-- especialistas ainda mais explicitamente subordinados ao dom?nio can?nico;
+- dominios ainda mais fortes como eixo soberano do runtime;
+- especialistas ainda mais explicitamente subordinados ao dominio canonico;
 - arbitragem de mentes ainda mais declarativa.
 
-Esse ? o backlog certo a partir daqui.
+Esse e o backlog certo a partir daqui.
 
 ---
 
-## 8. Refer?ncias
+## 8. Referencias
 
 - [documento_mestre_jarvis.md](d:/Users/DTI/Desktop/jarvis/documento_mestre_jarvis.md)
 - [HANDOFF.md](d:/Users/DTI/Desktop/jarvis/HANDOFF.md)

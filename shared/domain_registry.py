@@ -105,64 +105,71 @@ def load_domain_registries(
 
 CANONICAL_DOMAIN_REGISTRY, RUNTIME_ROUTE_REGISTRY = load_domain_registries()
 
-# Mapa curto de compatibilidade: labels de runtime continuam estaveis,
-# mas refs canonicas seguem como linguagem semantica principal do sistema.
 LEGACY_LABEL_TO_CANONICAL_DOMAINS: dict[str, tuple[str, ...]] = {
     name: entry.canonical_refs for name, entry in RUNTIME_ROUTE_REGISTRY.items()
 }
 
-# Rotas elegiveis para ativacao em runtime (exclui entradas canonical_only).
 RUNTIME_ELIGIBLE_ROUTES: frozenset[str] = frozenset(
     name for name, entry in RUNTIME_ROUTE_REGISTRY.items() if entry.maturity != "canonical_only"
 )
 
-# Rotas em que um especialista ligado ao dominio ja foi conectado ao runtime.
 SPECIALIST_ROUTE_MODES: frozenset[str] = frozenset({"shadow", "guided", "active"})
 SPECIALIST_ROUTES: frozenset[str] = frozenset(
     name
     for name, entry in RUNTIME_ROUTE_REGISTRY.items()
     if entry.linked_specialist_type and entry.specialist_mode in SPECIALIST_ROUTE_MODES
 )
-
-# Rotas em shadow permanecem observaveis para comparacoes e compatibilidade curta.
 SHADOW_SPECIALIST_ROUTES: frozenset[str] = frozenset(
     name for name, entry in RUNTIME_ROUTE_REGISTRY.items() if entry.specialist_mode == "shadow"
 )
-
-# Rotas promovidas ficam acima de shadow, mas continuam subordinadas ao nucleo.
 PROMOTED_SPECIALIST_ROUTES: frozenset[str] = frozenset(
     name
     for name, entry in RUNTIME_ROUTE_REGISTRY.items()
     if entry.specialist_mode in {"guided", "active"}
 )
-
-# Rota de fallback: ultima rota de runtime com maturity == "active_registry".
-# Por convencao, a rota mais geral/operacional fica por ultimo no JSON.
-_active_routes = [
+_ACTIVE_ROUTES = [
     name for name, entry in RUNTIME_ROUTE_REGISTRY.items() if entry.maturity == "active_registry"
 ]
-FALLBACK_RUNTIME_ROUTE: str = _active_routes[-1] if _active_routes else "productivity"
+FALLBACK_RUNTIME_ROUTE: str = _ACTIVE_ROUTES[-1] if _ACTIVE_ROUTES else "productivity"
 
 
 def is_shadow_route(route_name: str) -> bool:
     """Retorna True se a rota estiver em modo shadow no registry."""
+
     return route_name in SHADOW_SPECIALIST_ROUTES
 
 
 def is_specialist_route(route_name: str) -> bool:
     """Retorna True se a rota tiver especialista ligado ao dominio no registry."""
+
     return route_name in SPECIALIST_ROUTES
 
 
 def is_promoted_specialist_route(route_name: str) -> bool:
     """Retorna True se a rota estiver acima de shadow, mas ainda subordinada ao nucleo."""
+
     return route_name in PROMOTED_SPECIALIST_ROUTES
 
 
 def resolve_route(route_name: str) -> DomainEntry | None:
     """Retorna a DomainEntry de uma rota de runtime, ou None se nao existir."""
+
     return RUNTIME_ROUTE_REGISTRY.get(route_name)
 
+
+def resolve_primary_route(
+    route_names: list[str] | tuple[str, ...],
+) -> tuple[str, DomainEntry] | None:
+    """Return the first runtime route present in the ordered route list."""
+
+    for route_name in route_names:
+        entry = resolve_route(route_name)
+        if entry is not None:
+            return route_name, entry
+    fallback_entry = resolve_route(FALLBACK_RUNTIME_ROUTE)
+    if fallback_entry is None:
+        return None
+    return FALLBACK_RUNTIME_ROUTE, fallback_entry
 
 
 def resolve_workflow_route(
@@ -175,6 +182,7 @@ def resolve_workflow_route(
         if entry is not None and entry.workflow_profile:
             return route_name, entry
     return None
+
 
 def route_routing_source(route_name: str) -> str:
     """Retorna a origem que autorizou o identificador atual da rota."""
@@ -202,6 +210,7 @@ def primary_canonical_domain_for_name(domain_name: str) -> str | None:
 
 def canonical_scopes_for_route(route_name: str) -> frozenset[str]:
     """Retorna os valores de domain_scope das canonical_refs de uma rota."""
+
     refs = canonical_domain_refs_for_name(route_name)
     if not refs:
         return frozenset()
@@ -211,3 +220,112 @@ def canonical_scopes_for_route(route_name: str) -> frozenset[str]:
         if canonical_entry is not None:
             scopes.add(canonical_entry.domain_scope)
     return frozenset(scopes)
+
+
+def route_maturity(route_name: str) -> str | None:
+    entry = resolve_route(route_name)
+    return entry.maturity if entry is not None else None
+
+
+def route_linked_specialist_type(route_name: str) -> str | None:
+    entry = resolve_route(route_name)
+    return entry.linked_specialist_type if entry is not None else None
+
+
+def route_specialist_mode(route_name: str) -> str | None:
+    entry = resolve_route(route_name)
+    return entry.specialist_mode if entry is not None else None
+
+
+def route_consumer_profile(route_name: str) -> str | None:
+    entry = resolve_route(route_name)
+    return entry.consumer_profile if entry is not None else None
+
+
+def route_workflow_profile(route_name: str) -> str | None:
+    entry = resolve_route(route_name)
+    return entry.workflow_profile if entry is not None else None
+
+
+def route_metadata_payload(route_name: str) -> dict[str, object]:
+    """Serialize runtime-route metadata used by orchestrator and observability."""
+
+    entry = resolve_route(route_name)
+    if entry is None:
+        return {
+            "route_name": route_name,
+            "maturity": None,
+            "linked_specialist_type": None,
+            "specialist_mode": None,
+            "consumer_profile": None,
+            "workflow_profile": None,
+            "canonical_domain_refs": [],
+        }
+    return {
+        "route_name": route_name,
+        "maturity": entry.maturity,
+        "linked_specialist_type": entry.linked_specialist_type,
+        "specialist_mode": entry.specialist_mode,
+        "consumer_profile": entry.consumer_profile,
+        "workflow_profile": entry.workflow_profile,
+        "canonical_domain_refs": list(entry.canonical_refs),
+    }
+
+
+def specialist_route_payload(
+    route_name: str,
+    specialist_type: str | None = None,
+) -> dict[str, object]:
+    """Return stable route-specialist governance metadata for runtime checks."""
+
+    entry = resolve_route(route_name)
+    canonical_type = (
+        canonical_specialist_type(specialist_type) if specialist_type is not None else None
+    )
+    linked_specialist = entry.linked_specialist_type if entry is not None else None
+    specialist_mode = entry.specialist_mode if entry is not None else None
+    return {
+        "route_name": route_name,
+        "maturity": entry.maturity if entry is not None else None,
+        "canonical_domain_refs": list(entry.canonical_refs) if entry is not None else [],
+        "linked_specialist_type": linked_specialist,
+        "specialist_mode": specialist_mode,
+        "consumer_profile": entry.consumer_profile if entry is not None else None,
+        "workflow_profile": entry.workflow_profile if entry is not None else None,
+        "is_promoted": bool(entry is not None and is_promoted_specialist_route(route_name)),
+        "eligible": route_is_specialist_eligible(route_name, canonical_type),
+        "link_matches": (
+            linked_specialist == canonical_type
+            if canonical_type is not None
+            else linked_specialist is not None
+        ),
+        "mode_is_governed": specialist_mode in {"guided", "active"},
+    }
+
+
+def route_is_specialist_eligible(route_name: str, specialist_type: str | None = None) -> bool:
+    """Return whether a route is promoted and eligible for governed specialist use."""
+
+    entry = resolve_route(route_name)
+    if entry is None or not is_promoted_specialist_route(route_name):
+        return False
+    if specialist_type is None:
+        return entry.linked_specialist_type is not None
+    return entry.linked_specialist_type == canonical_specialist_type(specialist_type)
+
+
+def specialist_eligible_route(
+    route_names: list[str] | tuple[str, ...],
+    specialist_type: str,
+) -> tuple[str, DomainEntry] | None:
+    """Return the first route whose promoted specialist link matches the given specialist."""
+
+    canonical_type = canonical_specialist_type(specialist_type)
+    for route_name in route_names:
+        entry = resolve_route(route_name)
+        if entry is None:
+            continue
+        if not route_is_specialist_eligible(route_name, canonical_type):
+            continue
+        return route_name, entry
+    return None

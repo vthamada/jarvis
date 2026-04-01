@@ -25,7 +25,7 @@ def test_cognitive_engine_selects_primary_supporting_and_suppressed_minds() -> N
     assert snapshot.dominant_tension == "equilibrar profundidade analitica com conclusao util"
     assert snapshot.arbitration_summary
     assert snapshot.arbitration_source == "mind_registry"
-    assert "structured_analysis_specialist" in snapshot.specialist_hints
+    assert snapshot.specialist_hints == []
     assert snapshot.deliberation_notes
     assert "fonte_arbitragem=mind_registry" in snapshot.deliberation_notes
 
@@ -43,7 +43,7 @@ def test_cognitive_engine_prioritizes_sensitive_primary_from_registry_policy() -
     assert snapshot.dominant_tension == "equilibrar solicitacao do usuario com limites normativos"
 
 
-def test_cognitive_engine_prioritizes_domain_linked_shadow_specialist_hint() -> None:
+def test_cognitive_engine_prioritizes_registry_backed_specialist_hint() -> None:
     engine = CognitiveEngine()
     snapshot = engine.build_snapshot(
         intent="analysis",
@@ -53,8 +53,8 @@ def test_cognitive_engine_prioritizes_domain_linked_shadow_specialist_hint() -> 
             DomainSpecialistRouteContract(
                 domain_name="software_development",
                 specialist_type="software_change_specialist",
-                specialist_mode="shadow",
-                routing_reason="rota canonica de software em shadow mode",
+                specialist_mode="guided",
+                routing_reason="rota canonica de software em modo guiado",
             )
         ],
     )

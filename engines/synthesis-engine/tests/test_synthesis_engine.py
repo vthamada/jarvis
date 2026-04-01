@@ -251,3 +251,43 @@ def test_synthesis_engine_surfaces_governed_replay_recovery() -> None:
     assert "checkpoint recuperado ainda aguarda validacao" in response
     assert "permanece em modo governado" in response
     assert "aguarda validacao explicita" in response
+
+
+def test_synthesis_engine_uses_guided_semantic_and_procedural_memory_hints() -> None:
+    engine = SynthesisEngine()
+    identity = IdentityEngine().get_profile()
+    response = engine.compose(
+        SynthesisInput(
+            intent="planning",
+            identity_profile=identity,
+            response_style="estruturado",
+            governance_decision=GovernanceDecisionContract(
+                decision_id=GovernanceDecisionId("decision-6"),
+                governance_check_id=GovernanceCheckId("check-6"),
+                risk_level=RiskLevel.LOW,
+                decision=PermissionDecision.ALLOW_WITH_CONDITIONS,
+                justification="ok",
+                timestamp="2026-03-18T00:00:00Z",
+            ),
+            recovered_context=["context_summary=guided memory available"],
+            active_minds=["mente_executiva"],
+            active_domains=["strategy"],
+            knowledge_snippets=["Preserve continuidade segura."],
+            deliberative_plan=sample_plan(),
+            specialist_contributions=[],
+            operation_result=None,
+            identity_mode="structured_planning",
+            arbitration_summary="mente_executiva lidera com foco unico",
+            session_continuity_brief=(
+                "sessao segue ancorada em 'Plan milestone M3', com continuidade ativa em "
+                "'alinhar checkpoint principal'"
+            ),
+            session_continuity_mode="continuar",
+            session_anchor_goal="Plan milestone M3",
+            guided_memory_specialists=["structured_analysis_specialist"],
+            semantic_memory_focus=["estrategia_e_pensamento_sistemico", "strategy"],
+            procedural_memory_hint="manter o ultimo fio de recomendacao governada",
+        )
+    )
+    assert "memoria guiada reforca foco em estrategia_e_pensamento_sistemico, strategy" in response
+    assert "apoio procedural: manter o ultimo fio de recomendacao governada" in response

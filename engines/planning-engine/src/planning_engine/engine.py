@@ -80,6 +80,8 @@ class PlanningContext:
     risk_markers: list[str]
     requires_clarification: bool
     preferred_response_mode: str
+    canonical_domains: list[str] | None = None
+    primary_canonical_domain: str | None = None
     cognitive_rationale: str = ""
     tensions: list[str] | None = None
     specialist_hints: list[str] | None = None
@@ -137,7 +139,12 @@ class PlanningEngine:
             continuity_action=continuity_action,
             goal_conflict=goal_conflict,
         )
-        open_loops = list(context.open_loops or [])[:3]
+        open_loops = self._seed_open_loops(
+            context,
+            mission_goal=mission_goal,
+            dominant_goal=dominant_goal,
+            continuity_action=continuity_action,
+        )
         continuity_source = self._continuity_source(context, open_loops=open_loops)
         steps = self._build_steps(
             context,
@@ -206,6 +213,8 @@ class PlanningEngine:
             active_domains=context.active_domains or ["assistencia_pessoal_e_operacional"],
             active_minds=context.active_minds,
             constraints=constraints,
+            canonical_domains=list(context.canonical_domains or []),
+            primary_canonical_domain=context.primary_canonical_domain,
             risks=risks,
             recommended_task_type=recommended_task_type,
             requires_human_validation=requires_human_validation,
@@ -777,6 +786,24 @@ class PlanningEngine:
         if scope_shift and not overlap:
             return f"pedido atual desloca o foco da missao ativa '{mission_goal}'"
         return None
+
+    @staticmethod
+    def _seed_open_loops(
+        context: PlanningContext,
+        *,
+        mission_goal: str,
+        dominant_goal: str,
+        continuity_action: str,
+    ) -> list[str]:
+        open_loops = list(context.open_loops or [])[:3]
+        if open_loops or continuity_action != "continuar":
+            return open_loops
+        if context.intent != "planning":
+            return open_loops
+        for candidate in (mission_goal, dominant_goal, context.mission_recommendation):
+            if candidate:
+                return [candidate]
+        return open_loops
 
     @staticmethod
     def _meaningful_tokens(text: str) -> set[str]:
