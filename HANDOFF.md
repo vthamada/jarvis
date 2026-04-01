@@ -4,7 +4,7 @@
 
 - Atualizado em: 2026-04-01
 - Branch: `main`
-- Commit de referência: `909c0d7`
+- Commit de referência: `bdf569b`
 - Artefato canônico do projeto: `documento_mestre_jarvis.md`
 - Estado do projeto: `v1` encerrado e congelado para uso controlado; primeiro ciclo do `pós-v1` encerrado; primeiro ciclo do `v1.5` encerrado; primeiro corte do `v2` encerrado; `v2-alignment-cycle` encerrado; próximo corte do `v2` aberto
 
@@ -32,6 +32,14 @@ Leitura operacional correta desta rodada:
 - `cognitive-engine` passou a gerar `specialist_hints` apenas por rotas ativas elegiveis do registry, preservando a ordem das rotas ativas e sem reintroduzir heuristica por `intent` puro.
 - `memory_registry` passou a centralizar a politica declarativa que libera `semantic` e `procedural` em packets guiados para `planning`, `synthesis` e especialistas elegiveis.
 - `orchestrator-service` agora emite `primary_route`, `primary_canonical_domain`, `primary_route_matches` e `primary_canonical_matches` nos eventos de selecao e conclusao de especialistas, e a `observability-service` usa esses sinais como gate direto de alinhamento.
+- `planning-engine` agora usa `workflow_steps`, `workflow_checkpoints` e `workflow_decision_points` da rota promovida para moldar passos, restricoes, criterios de sucesso e rationale sem recompor esse contrato fora do registry.
+- `synthesis-engine` passou a tornar esse workflow mais explicito na resposta final, expondo checkpoint ativo e gate governado da rota promovida.
+- `planning-engine`, `orchestrator-service` e `observability-service` agora propagam `primary_mind`, `primary_domain_driver` e `arbitration_source` ate plano, resposta e auditoria.
+- `orchestrator-service` agora deriva hints de memoria guiada tambem do recovery soberano quando a rota ativa autoriza `semantic`/`procedural`, sem depender apenas de handoff especializado.
+- `domain_registry` agora expõe guidance soberano por `workflow_profile`, e `planning-engine`/`synthesis-engine` passaram a usar esse guidance para leitura final, foco de sucesso e papel explícito de memória semântica/procedural por rota promovida.
+- `memory_registry` e `memory-service` agora distinguem visibilidade de `semantic`/`procedural` entre reasoning final e packet de especialista: workflows analíticos/estratégicos/governados mantém `procedural` no runtime final, mas não o propagam automaticamente ao especialista subordinado.
+- `memory_registry` passou a separar a visibilidade de memoria guiada para `planning/synthesis` da visibilidade para especialistas, mantendo o mesmo contrato soberano.
+- `CHANGELOG.md` foi restaurado como changelog cronologico e o `engineering_gate` agora protege a identidade minima de `CHANGELOG.md`, `HANDOFF.md`, `documento_mestre_jarvis.md`, `docs/roadmap/programa-ate-v3.md` e `docs/implementation/v2-adherence-snapshot.md` antes da liberacao.
 
 ## Meta atual
 

@@ -7,8 +7,9 @@ from memory_service.service import MemoryService
 from observability_service.service import ObservabilityQuery, ObservabilityService
 from operational_service.service import OperationalService
 from orchestrator_service.service import OrchestratorResponse, OrchestratorService
+from specialist_engine.engine import SpecialistReview
 
-from shared.contracts import InputContract
+from shared.contracts import DeliberativePlanContract, InputContract
 from shared.types import (
     ChannelType,
     InputType,
@@ -76,6 +77,10 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     assert result.specialist_review.contributions
     assert result.deliberative_plan.canonical_domains
     assert result.deliberative_plan.primary_canonical_domain == "estrategia_e_pensamento_sistemico"
+    assert result.deliberative_plan.primary_mind is not None
+    assert result.deliberative_plan.primary_mind_family is not None
+    assert result.deliberative_plan.primary_domain_driver == "estrategia_e_pensamento_sistemico"
+    assert result.deliberative_plan.arbitration_source == "mind_registry"
     assert result.deliberative_plan.primary_route == "strategy"
     assert result.deliberative_plan.route_consumer_profile == "strategy_tradeoff_review"
     assert result.deliberative_plan.route_workflow_profile == "strategic_direction_workflow"
@@ -263,6 +268,21 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     continuity_event = next(
         event for event in stored_events if event.event_name == "continuity_decided"
     )
+    plan_event = next(event for event in stored_events if event.event_name == "plan_built")
+    assert plan_event.payload["primary_mind"] == context_event.payload["primary_mind"]
+    assert (
+        plan_event.payload["primary_domain_driver"]
+        == context_event.payload["primary_domain_driver"]
+    )
+    assert (
+        plan_event.payload["arbitration_source"]
+        == context_event.payload["arbitration_source"]
+    )
+    assert plan_event.payload["primary_route"] == result.deliberative_plan.primary_route
+    assert (
+        plan_event.payload["primary_canonical_domain"]
+        == result.deliberative_plan.primary_canonical_domain
+    )
     governed_event = next(event for event in stored_events if event.event_name == "plan_governed")
     assert governed_event.payload["identity_signature"] == "nucleo_soberano_unificado"
     assert governed_event.payload["identity_guardrail"]
@@ -271,6 +291,20 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     )
     assert response_event.payload["identity_signature"] == "nucleo_soberano_unificado"
     assert response_event.payload["response_style"]
+    assert response_event.payload["primary_mind"] == context_event.payload["primary_mind"]
+    assert (
+        response_event.payload["primary_domain_driver"]
+        == context_event.payload["primary_domain_driver"]
+    )
+    assert (
+        response_event.payload["arbitration_source"]
+        == context_event.payload["arbitration_source"]
+    )
+    assert response_event.payload["primary_route"] == result.deliberative_plan.primary_route
+    assert (
+        response_event.payload["primary_canonical_domain"]
+        == result.deliberative_plan.primary_canonical_domain
+    )
     assert response_event.payload["guided_memory_specialists"]
     memory_event = next(event for event in stored_events if event.event_name == "memory_recorded")
     assert continuity_event.payload["continuity_action"] == "continuar"
@@ -1207,3 +1241,54 @@ def test_orchestrator_service_emits_user_scope_memory_signals() -> None:
     )
     assert memory_recorded_event.payload["user_scope_status"] == "recoverable"
     assert memory_recorded_event.payload["user_scope_interaction_count"] == 2
+
+
+def test_orchestrator_service_uses_recovered_memory_hints_without_specialist_runtime() -> None:
+    plan = DeliberativePlanContract(
+        plan_summary="objetivo=Plan milestone M3; modo=structured_planning; continuidade=continuar",
+        goal="Plan milestone M3",
+        steps=["retomar o loop principal da missao: alinhar checkpoint principal"],
+        active_domains=["strategy"],
+        active_minds=["mente_executiva"],
+        constraints=["low-risk"],
+        risks=["sem risco material alem do escopo controlado do v1"],
+        recommended_task_type="draft_plan",
+        requires_human_validation=False,
+        rationale="objetivo_dominante=Plan milestone M3; continuidade=ativo",
+        specialist_hints=[],
+        success_criteria=["resposta deve fechar ou avancar o loop principal da missao"],
+        continuity_action="continuar",
+        continuity_reason="existem loops ativos que mantem a missao atual ancorada",
+        open_loops=["alinhar checkpoint principal"],
+        canonical_domains=["estrategia_e_pensamento_sistemico"],
+        primary_canonical_domain="estrategia_e_pensamento_sistemico",
+        primary_route="strategy",
+        route_workflow_profile="strategic_direction_workflow",
+        smallest_safe_next_action="retomar alinhar checkpoint principal antes de abrir novo escopo",
+    )
+    review = SpecialistReview(
+        specialist_hints=[],
+        selections=[],
+        invocations=[],
+        contributions=[],
+        summary="sem especialistas",
+        findings=[],
+        boundary_summary="sem handoff",
+    )
+
+    hints = OrchestratorService._guided_memory_runtime_hints(
+        review,
+        plan,
+        [
+            "mission_semantic_brief=objetivo=Plan milestone M3",
+            "mission_focus=estrategia_e_pensamento_sistemico,strategy",
+            "mission_recommendation=manter o ultimo fio de recomendacao governada",
+        ],
+    )
+
+    assert hints["guided_memory_specialists"] == []
+    assert hints["semantic_memory_available"] is True
+    assert "estrategia_e_pensamento_sistemico" in hints["semantic_memory_focus"]
+    assert "strategy" in hints["semantic_memory_focus"]
+    assert hints["procedural_memory_available"] is True
+    assert hints["procedural_memory_hint"] == "manter o ultimo fio de recomendacao governada"

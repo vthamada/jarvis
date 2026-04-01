@@ -6,6 +6,7 @@ def test_engineering_gate_quick_mode() -> None:
 
     assert [step.label for step in steps] == [
         "mojibake check",
+        "document guardrails",
         "ruff",
     ]
 
@@ -15,6 +16,7 @@ def test_engineering_gate_standard_mode() -> None:
 
     assert [step.label for step in steps] == [
         "mojibake check",
+        "document guardrails",
         "ruff",
         "pytest",
     ]
@@ -25,6 +27,7 @@ def test_engineering_gate_release_mode_with_controlled() -> None:
 
     assert [step.label for step in steps] == [
         "mojibake check",
+        "document guardrails",
         "ruff",
         "pytest",
         "axis artifact verification",

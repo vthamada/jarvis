@@ -41,10 +41,12 @@ Leitura executiva:
 - a soberania de dominios avancou mais um passo: rotas promovidas agora ja aparecem como `promoted_route_registry` soberano nos eventos do runtime, reduzindo recomputacao local no orquestrador e melhorando auditoria de elegibilidade.
 - a malha dominio->especialista tambem avancou: packets guiados de memoria agora nascem da rota promovida elegivel do registry e sao validados contra o contrato canonico da rota antes da convocacao especializada.
 - o contrato canonico da rota ativa passou a atravessar tambem o `planning` e a influenciar a `synthesis`, reduzindo a distancia entre memoria guiada disponivel e comportamento final do runtime.
-- esse contrato agora tambem molda passos, restricoes e criterio de saida do plano, e ja aparece na leitura final como objetivo, entrega esperada, foco de leitura e workflow ativo da rota promovida.
+- esse contrato agora tambem molda passos, restricoes, criterios de sucesso e checkpoint/gate governado do plano, e ja aparece na leitura final como objetivo, entrega esperada, foco de leitura e workflow ativo da rota promovida.
+- o vinculo `mente primária -> domínio primário -> rota ativa` agora também atravessa `planning`, `response_synthesized` e `observability`, reduzindo leitura implícita no runtime final.
 - memoria, identidade, governanca, observabilidade e soberania do nucleo evoluiram de forma consistente;
 - benchmark externo, memory gap e hardening nativo foram tratados corretamente como etapas subordinadas ao baseline,
   nao como desvio de direcao.
+- os documentos vivos que orientam historico, retomada e direcao do projeto passaram a ter guardrail explicito no gate, reduzindo risco de perda semantica por edicao acidental.
 
 Em resumo:
 
@@ -134,7 +136,8 @@ Gap relevante:
 
 - o `domain_registry` agora governa tambem o contrato soberano da rota primaria em `planning`, `memory`, `specialist`, `orchestrator` e observabilidade;
 - `primary_route`, `primary_canonical_domain`, `consumer_objective`, `expected_deliverables`, `telemetry_focus` e `workflow_profile` ja atravessam o runtime sem recomposicao heuristica relevante fora do registry;
-- o que sobra neste eixo e amadurecimento adicional de gates por `workflow_profile` e eventual expansao futura para novas rotas, nao correcao de baseline.
+- `workflow_profile` agora também governa guidance soberano de planejamento e síntese, incluindo foco de sucesso, leitura final e checkpoint/gate dominante por rota promovida;
+- o que sobra neste eixo ja e refinamento fino ou expansao futura para novas rotas, nao correcao de baseline.
 
 Leitura:
 
@@ -158,8 +161,9 @@ O que esta aderente:
 Gap relevante:
 
 - `semantic` e `procedural` agora entram como `runtime_partial` em packets guiados por dominio quando existe evidencia persistida e compatibilidade canonica;
+- o runtime final ja usa essas classes de forma mais explicita por `workflow_profile`, e a camada de especialista passou a receber `procedural` apenas quando a politica soberana da rota realmente exige isso.
 - a politica que libera essas classes saiu de decisao espalhada no servi?o e passou a viver mais explicitamente no `memory_registry`;
-- `planning` e `synthesis` ja usam esse apoio sem bypassar governanca, enquanto especialistas continuam presos ao contrato elegivel da rota promovida;
+- `planning` e `synthesis` ja usam esse apoio sem bypassar governanca, inclusive quando o hint nasce do recovery soberano da propria missao e nao apenas de handoff especializado, enquanto especialistas continuam presos ao contrato elegivel da rota promovida;
 - a camada multicamada nativa ainda pode crescer antes de qualquer absorcao futura, mas isso ja e maturacao incremental, nao correcao urgente.
 
 Leitura:

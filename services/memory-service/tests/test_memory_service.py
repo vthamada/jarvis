@@ -474,6 +474,7 @@ def test_memory_service_builds_guided_domain_memory_packet_for_promoted_speciali
     assert "goal=Analyze Python service rollout." in guided.mission_context_brief
     assert guided.domain_context_brief is not None
     assert "active_domains=software_development,analysis" in guided.domain_context_brief
+    assert "workflow_profile=software_change_workflow" in guided.domain_context_brief
     assert guided.continuity_context_brief is not None
     assert "continuity_mode=continuar" in guided.continuity_context_brief
     assert guided.consumer_profile == "software_change_review"
@@ -828,11 +829,12 @@ def test_memory_service_builds_guided_domain_memory_packet_for_analysis_speciali
     guided = contexts["structured_analysis_specialist"]
     assert guided.consumer_mode == "domain_guided_memory_packet"
     assert "semantic" in guided.consumed_memory_classes
-    assert "procedural" in guided.consumed_memory_classes
+    assert "procedural" not in guided.consumed_memory_classes
     assert any(ref.startswith("memory://semantic/") for ref in guided.memory_refs)
-    assert any(ref.startswith("memory://procedural/") for ref in guided.memory_refs)
+    assert not any(ref.startswith("memory://procedural/") for ref in guided.memory_refs)
     assert guided.domain_context_brief is not None
     assert "active_domains=analysis,decision_risk" in guided.domain_context_brief
+    assert "workflow_profile=structured_analysis_workflow" in guided.domain_context_brief
     persisted = service.get_specialist_shared_memory(
         session_id="sess-guided-analysis",
         specialist_type="structured_analysis_specialist",
@@ -945,8 +947,11 @@ def test_memory_service_builds_guided_domain_memory_packet_for_governance_specia
 
     guided = contexts["governance_review_specialist"]
     assert guided.consumer_mode == "domain_guided_memory_packet"
+    assert "semantic" in guided.consumed_memory_classes
+    assert "procedural" not in guided.consumed_memory_classes
     assert guided.domain_context_brief is not None
     assert "active_domains=governance,decision_risk" in guided.domain_context_brief
+    assert "workflow_profile=governance_boundary_workflow" in guided.domain_context_brief
 
 
 
@@ -994,8 +999,11 @@ def test_memory_service_builds_guided_packet_for_readiness_specialist() -> None:
 
     guided = contexts["operational_planning_specialist"]
     assert guided.consumer_mode == "domain_guided_memory_packet"
+    assert "semantic" in guided.consumed_memory_classes
+    assert "procedural" in guided.consumed_memory_classes
     assert guided.domain_context_brief is not None
     assert "active_domains=operational_readiness,observability" in guided.domain_context_brief
+    assert "workflow_profile=operational_readiness_workflow" in guided.domain_context_brief
 
 
 
@@ -1043,8 +1051,11 @@ def test_memory_service_builds_guided_packet_for_strategy_specialist() -> None:
 
     guided = contexts["structured_analysis_specialist"]
     assert guided.consumer_mode == "domain_guided_memory_packet"
+    assert "semantic" in guided.consumed_memory_classes
+    assert "procedural" not in guided.consumed_memory_classes
     assert guided.domain_context_brief is not None
     assert "active_domains=strategy,decision_risk" in guided.domain_context_brief
+    assert "workflow_profile=strategic_direction_workflow" in guided.domain_context_brief
 
 
 def test_memory_service_builds_guided_packet_for_decision_risk_specialist() -> None:
@@ -1091,8 +1102,11 @@ def test_memory_service_builds_guided_packet_for_decision_risk_specialist() -> N
 
     guided = contexts["governance_review_specialist"]
     assert guided.consumer_mode == "domain_guided_memory_packet"
+    assert "semantic" in guided.consumed_memory_classes
+    assert "procedural" not in guided.consumed_memory_classes
     assert guided.domain_context_brief is not None
     assert "active_domains=decision_risk,governance" in guided.domain_context_brief
+    assert "workflow_profile=decision_risk_workflow" in guided.domain_context_brief
 
 
 

@@ -36,6 +36,10 @@ def sample_plan() -> DeliberativePlanContract:
             "alinhar checkpoint principal"
         ),
         open_loops=["alinhar checkpoint principal"],
+        primary_mind="mente_executiva",
+        primary_mind_family="estrategica_decisoria",
+        primary_domain_driver="estrategia_e_pensamento_sistemico",
+        arbitration_source="mind_registry",
         primary_route="strategy",
         route_consumer_profile="strategy_tradeoff_review",
         route_consumer_objective=(
@@ -44,6 +48,15 @@ def sample_plan() -> DeliberativePlanContract:
         route_expected_deliverables=["tradeoff_map", "decision_criteria"],
         route_telemetry_focus=["tradeoff_clarity", "decision_trace"],
         route_workflow_profile="strategic_direction_workflow",
+        route_workflow_steps=[
+            "frame the strategic scenario and the decision horizon",
+            "compare trade-offs, constraints and leverage points",
+        ],
+        route_workflow_checkpoints=["scenario_framed", "tradeoffs_compared"],
+        route_workflow_decision_points=[
+            "scenario_scope_confirmed",
+            "tradeoff_criteria_governed",
+        ],
     )
 
 
@@ -87,6 +100,9 @@ def test_synthesis_engine_composes_unitary_allowed_response() -> None:
     assert "Recomendacao" in response
     assert "retomar alinhar checkpoint principal" in response
     assert "workflow ativo: strategic direction workflow" in response
+    assert "foco final: direcao recomendada, criterios e trade-offs dominantes" in response
+    assert "checkpoint ativo: scenario framed" in response
+    assert "gate governado: scenario scope confirmed" in response
     assert "Contribuicoes especialistas" not in response
     assert "Dominios:" not in response
     assert "Mentes:" not in response
@@ -298,9 +314,22 @@ def test_synthesis_engine_uses_guided_semantic_and_procedural_memory_hints() -> 
             procedural_memory_hint="manter o ultimo fio de recomendacao governada",
         )
     )
-    assert "memoria guiada reforca foco em estrategia_e_pensamento_sistemico, strategy" in response
+    assert (
+        "memoria guiada reforca framing estrategico e comparacao de trade-offs em "
+        "estrategia_e_pensamento_sistemico, strategy" in response
+    )
+    assert (
+        "mente executiva ancora o dominio primario estrategia e pensamento sistemico "
+        "via rota strategy" in response
+    )
     assert "strategy tradeoff review" in response
     assert "tradeoff map" in response
     assert "tradeoff clarity" in response
     assert "workflow ativo: strategic direction workflow" in response
-    assert "apoio procedural: manter o ultimo fio de recomendacao governada" in response
+    assert "foco final: direcao recomendada, criterios e trade-offs dominantes" in response
+    assert "checkpoint ativo: scenario framed" in response
+    assert "gate governado: scenario scope confirmed" in response
+    assert (
+        "apoio procedural orienta continuidade do fio decisorio e criterio de progressao: "
+        "manter o ultimo fio de recomendacao governada" in response
+    )

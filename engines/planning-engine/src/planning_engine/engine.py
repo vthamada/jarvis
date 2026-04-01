@@ -8,6 +8,7 @@ from shared.contracts import (
     DeliberativePlanContract,
     SpecialistContributionContract,
 )
+from shared.domain_registry import workflow_runtime_guidance
 from shared.specialist_registry import (
     GOVERNANCE_REVIEW_SPECIALIST,
     OPERATIONAL_PLANNING_SPECIALIST,
@@ -88,6 +89,9 @@ class PlanningContext:
     route_expected_deliverables: list[str] | None = None
     route_telemetry_focus: list[str] | None = None
     route_workflow_profile: str | None = None
+    route_workflow_steps: list[str] | None = None
+    route_workflow_checkpoints: list[str] | None = None
+    route_workflow_decision_points: list[str] | None = None
     cognitive_rationale: str = ""
     tensions: list[str] | None = None
     specialist_hints: list[str] | None = None
@@ -96,6 +100,9 @@ class PlanningContext:
     ambiguity_reason: str | None = None
     identity_mode: str | None = None
     primary_mind: str | None = None
+    primary_mind_family: str | None = None
+    primary_domain_driver: str | None = None
+    arbitration_source: str | None = None
     supporting_minds: list[str] | None = None
     dominant_tension: str | None = None
     arbitration_summary: str | None = None
@@ -227,12 +234,21 @@ class PlanningEngine:
             constraints=constraints,
             canonical_domains=list(context.canonical_domains or []),
             primary_canonical_domain=context.primary_canonical_domain,
+            primary_mind=context.primary_mind,
+            primary_mind_family=context.primary_mind_family,
+            primary_domain_driver=context.primary_domain_driver,
+            arbitration_source=context.arbitration_source,
             primary_route=context.primary_route,
             route_consumer_profile=context.route_consumer_profile,
             route_consumer_objective=context.route_consumer_objective,
             route_expected_deliverables=list(context.route_expected_deliverables or []),
             route_telemetry_focus=list(context.route_telemetry_focus or []),
             route_workflow_profile=context.route_workflow_profile,
+            route_workflow_steps=list(context.route_workflow_steps or []),
+            route_workflow_checkpoints=list(context.route_workflow_checkpoints or []),
+            route_workflow_decision_points=list(
+                context.route_workflow_decision_points or []
+            ),
             risks=risks,
             recommended_task_type=recommended_task_type,
             requires_human_validation=requires_human_validation,
@@ -415,10 +431,16 @@ class PlanningEngine:
                 f"reformular a missao ativa sem perder rastreabilidade: {mission_goal}",
             )
 
-        if context.mission_recommendation and len(steps) < 5:
+        if context.mission_recommendation and len(steps) < 4:
             steps.append(
                 "usar a recomendacao anterior como checkpoint antes da conclusao final"
             )
+        guidance = workflow_runtime_guidance(context.route_workflow_profile)
+        workflow_step_label = self._present_contract_label(
+            (context.route_workflow_steps or [None])[0]
+        )
+        if workflow_step_label and len(steps) < 5:
+            steps.append(f"cobrir a etapa do workflow ativo: {workflow_step_label}")
         deliverable_labels = [
             label
             for item in (context.route_expected_deliverables or [])[:2]
@@ -432,7 +454,9 @@ class PlanningEngine:
             steps.append(f"orientar a saida para {deliverable_hint} da rota ativa")
         workflow_label = self._present_contract_label(context.route_workflow_profile)
         if workflow_label and len(steps) < 5:
-            steps.append(f"manter o ritmo do workflow ativo: {workflow_label}")
+            steps.append(
+                f"manter o workflow ativo: {workflow_label}, priorizando {guidance.planning_focus}"
+            )
         return steps[:5]
 
     def _build_constraints(
@@ -443,6 +467,7 @@ class PlanningEngine:
         open_loops: list[str],
         goal_conflict: str | None,
     ) -> list[str]:
+        guidance = workflow_runtime_guidance(context.route_workflow_profile)
         constraints = [
             "manter escopo reversivel",
             "preservar rastreabilidade",
@@ -465,11 +490,30 @@ class PlanningEngine:
             constraints.append(
                 f"preservar o contrato guiado da rota ativa: {context.route_consumer_profile}"
             )
+        workflow_decision_label = self._present_contract_label(
+            (context.route_workflow_decision_points or [None])[0]
+        )
+        if workflow_decision_label:
+            constraints.append(
+                f"governar o decision point ativo: {workflow_decision_label}"
+            )
         telemetry_label = self._present_contract_label(
             (context.route_telemetry_focus or [None])[0]
         )
         if telemetry_label:
             constraints.append(f"preservar o foco observavel da rota ativa: {telemetry_label}")
+        semantic_anchor = self._semantic_memory_anchor(context)
+        if semantic_anchor:
+            constraints.append(
+                "usar memoria semantica apenas para "
+                f"{guidance.semantic_memory_role}: {semantic_anchor}"
+            )
+        procedural_anchor = self._procedural_memory_anchor(context)
+        if procedural_anchor:
+            constraints.append(
+                "usar memoria procedural apenas para "
+                f"{guidance.procedural_memory_role}: {procedural_anchor}"
+            )
         if continuity_action == "retomar":
             constraints.append(
                 "explicitar por que a retomada relacionada vence abrir um escopo novo"
@@ -515,6 +559,7 @@ class PlanningEngine:
         continuity_action: str,
         open_loops: list[str],
     ) -> list[str]:
+        guidance = workflow_runtime_guidance(context.route_workflow_profile)
         criteria = [
             "resposta deve manter voz unificada e objetivo dominante explicito",
             "recomendacao deve ser executavel dentro do escopo controlado do v1",
@@ -537,14 +582,27 @@ class PlanningEngine:
             )
         if open_loops and len(criteria) < 4:
             criteria.append("loop principal deve permanecer rastreavel na resposta final")
-        if context.route_expected_deliverables and len(criteria) < 5:
+        if context.route_expected_deliverables and len(criteria) < 6:
             criteria.append(
                 f"saida deve refletir {context.route_expected_deliverables[0]} da rota ativa"
             )
+        workflow_checkpoint_label = self._present_contract_label(
+            (context.route_workflow_checkpoints or [None])[0]
+        )
+        if workflow_checkpoint_label and len(criteria) < 6:
+            criteria.append(
+                "checkpoint do workflow ativo deve chegar a "
+                f"{workflow_checkpoint_label} e sustentar {guidance.success_focus}"
+            )
         workflow_label = self._present_contract_label(context.route_workflow_profile)
-        if workflow_label and len(criteria) < 5:
-            criteria.append(f"resposta deve manter o workflow ativo: {workflow_label}")
-        return criteria[:5]
+        if workflow_label and len(criteria) < 6:
+            criteria.append(
+                "resposta deve manter o workflow ativo: "
+                f"{workflow_label} com foco em {guidance.success_focus}"
+            )
+        elif context.route_workflow_profile and len(criteria) < 6:
+            criteria.append(f"saida deve sustentar {guidance.success_focus}")
+        return criteria[:6]
 
     def _recommended_task_type(
         self,
@@ -600,13 +658,25 @@ class PlanningEngine:
         continuity_reason: str,
         continuity_source: str,
     ) -> str:
+        guidance = workflow_runtime_guidance(context.route_workflow_profile)
         mode = context.identity_mode or context.preferred_response_mode
         route_profile = context.route_consumer_profile or "none"
         workflow_profile = context.route_workflow_profile or "none"
+        primary_mind = context.primary_mind or "none"
+        primary_mind_family = context.primary_mind_family or "none"
+        primary_domain_driver = context.primary_domain_driver or "none"
+        arbitration_source = context.arbitration_source or "none"
+        semantic_anchor = self._semantic_memory_anchor(context) or "none"
+        procedural_anchor = self._procedural_memory_anchor(context) or "none"
         return (
             f"objetivo={dominant_goal}; missao_ativa={mission_goal}; modo={mode}; "
+            f"mente_primaria={primary_mind}; familia_primaria={primary_mind_family}; "
+            f"dominio_primario={primary_domain_driver}; arbitragem_fonte={arbitration_source}; "
             f"rota_primaria={context.primary_route or 'none'}; consumer_profile={route_profile}; "
-            f"workflow_profile={workflow_profile}; continuidade={continuity_action}; "
+            f"workflow_profile={workflow_profile}; workflow_focus={guidance.planning_focus}; "
+            f"semantic_memory_anchor={semantic_anchor}; "
+            f"procedural_memory_anchor={procedural_anchor}; "
+            f"continuidade={continuity_action}; "
             f"fonte_continuidade={continuity_source}; "
             f"replay_status={context.continuity_replay_status or 'none'}; "
             f"recovery_mode={context.continuity_recovery_mode or 'none'}; "
@@ -652,18 +722,34 @@ class PlanningEngine:
         replay_status = context.continuity_replay_status or "none"
         recovery_mode = context.continuity_recovery_mode or "none"
         resume_point = context.continuity_resume_point or "nenhum"
+        guidance = workflow_runtime_guidance(context.route_workflow_profile)
         route_profile = context.route_consumer_profile or "none"
         route_objective = context.route_consumer_objective or "none"
         route_deliverables = ",".join((context.route_expected_deliverables or [])[:3]) or "none"
         route_telemetry = ",".join((context.route_telemetry_focus or [])[:3]) or "none"
         route_workflow = context.route_workflow_profile or "none"
+        workflow_checkpoints = ",".join((context.route_workflow_checkpoints or [])[:3]) or "none"
+        workflow_decisions = ",".join((context.route_workflow_decision_points or [])[:3]) or "none"
+        primary_mind = context.primary_mind or "none"
+        primary_mind_family = context.primary_mind_family or "none"
+        primary_domain_driver = context.primary_domain_driver or "none"
+        arbitration_source = context.arbitration_source or "none"
+        semantic_anchor = self._semantic_memory_anchor(context) or "none"
+        procedural_anchor = self._procedural_memory_anchor(context) or "none"
         return (
             f"objetivo_dominante={dominant_goal}; missao_ativa={mission_goal}; "
             f"objetivos_secundarios={secondary}; continuidade={continuity_hint}; "
+            f"mente_primaria={primary_mind}; familia_primaria={primary_mind_family}; "
+            f"dominio_primario={primary_domain_driver}; arbitragem_fonte={arbitration_source}; "
             f"loops_abertos={open_loops}; acao_continuidade={continuity_action}; "
             f"rota_primaria={context.primary_route or 'none'}; consumer_profile={route_profile}; "
             f"consumer_objective={route_objective}; deliverables={route_deliverables}; "
             f"telemetry_focus={route_telemetry}; workflow_profile={route_workflow}; "
+            f"workflow_focus={guidance.planning_focus}; response_focus={guidance.response_focus}; "
+            f"workflow_checkpoints={workflow_checkpoints}; "
+            f"workflow_decision_points={workflow_decisions}; "
+            f"semantic_memory_anchor={semantic_anchor}; "
+            f"procedural_memory_anchor={procedural_anchor}; "
             f"replay_status={replay_status}; recovery_mode={recovery_mode}; "
             f"resume_point={resume_point}; "
             f"motivo_continuidade={continuity_reason}; "
@@ -892,6 +978,21 @@ class PlanningEngine:
             if contribution.recommendation
         ]
         return "; ".join(resolutions[:3]) or fallback_summary
+
+    @staticmethod
+    def _semantic_memory_anchor(context: PlanningContext) -> str | None:
+        focus = ", ".join((context.mission_focus or [])[:2])
+        if focus:
+            return focus
+        return context.mission_semantic_brief
+
+    @staticmethod
+    def _procedural_memory_anchor(context: PlanningContext) -> str | None:
+        return (
+            context.mission_recommendation
+            or context.last_decision_frame
+            or context.continuity_resume_point
+        )
 
     @staticmethod
     def _select_context_hint(recovered_context: list[str]) -> str:

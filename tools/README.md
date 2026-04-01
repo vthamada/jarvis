@@ -16,6 +16,12 @@ Para validar que nao ha mojibake nem BOM nos arquivos de texto varridos pelo pro
 python tools/check_mojibake.py
 ```
 
+Para validar que documentos vivos criticos mantem identidade e piso historico minimo:
+
+```powershell
+python tools/verify_document_guardrails.py
+```
+
 ## Gates do baseline
 
 Os gates executaveis do `v1` continuam sendo:

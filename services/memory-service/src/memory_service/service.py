@@ -37,7 +37,7 @@ from shared.memory_registry import (
     DEFAULT_MEMORY_SCOPES,
     SHARED_MEMORY_CLASSES,
     default_priority_rules,
-    guided_optional_memory_classes,
+    guided_reasoning_memory_classes,
     guided_specialist_memory_classes,
     organization_scope_guard_payload,
     specialist_memory_policy_payload,
@@ -762,6 +762,11 @@ class MemoryService:
             if promoted_route_match is not None
             else {}
         )
+        workflow_profile = (
+            str(promoted_route_payload.get("workflow_profile"))
+            if promoted_route_payload.get("workflow_profile") is not None
+            else None
+        )
         optional_memory_classes = self._derive_guided_optional_memory_classes(
             promoted_route=promoted_route,
             mission_state=mission_state,
@@ -774,11 +779,12 @@ class MemoryService:
                 semantic_evidence=MemoryClass.SEMANTIC in optional_memory_classes,
                 procedural_evidence=MemoryClass.PROCEDURAL in optional_memory_classes,
                 domain_compatible=True,
+                workflow_profile=workflow_profile,
             )
         canonical_memory_refs = [
             f"memory://{memory_class.value}" for memory_class in shared_memory_classes
         ]
-        if MemoryClass.SEMANTIC in optional_memory_classes:
+        if MemoryClass.SEMANTIC in shared_memory_classes:
             semantic_ref = (
                 f"memory://semantic/mission/{source_mission_id}"
                 if source_mission_id
@@ -788,7 +794,7 @@ class MemoryService:
             )
             if semantic_ref not in dynamic_memory_refs:
                 dynamic_memory_refs.append(semantic_ref)
-        if MemoryClass.PROCEDURAL in optional_memory_classes:
+        if MemoryClass.PROCEDURAL in shared_memory_classes:
             procedural_ref = (
                 f"memory://procedural/mission/{source_mission_id}"
                 if source_mission_id
@@ -824,6 +830,7 @@ class MemoryService:
         domain_context_brief = (
             f"active_domains={','.join(active_domains[:3]) or 'nenhum'} | "
             f"semantic_focus={source_focus} | "
+            f"workflow_profile={workflow_profile or 'baseline'} | "
             f"memory_refs={','.join(memory_refs[:4])}"
         )
         continuity_context_brief = (
@@ -956,10 +963,11 @@ class MemoryService:
         ) or (route_name in semantic_sources if route_name else False)
         procedural_evidence = bool(procedural_sources)
 
-        return guided_optional_memory_classes(
+        return guided_reasoning_memory_classes(
             semantic_evidence=semantic_evidence,
             procedural_evidence=procedural_evidence,
             domain_compatible=domain_compatible,
+            workflow_profile=getattr(promoted_route, "workflow_profile", None),
         )
 
     def _build_recurrent_specialist_context(

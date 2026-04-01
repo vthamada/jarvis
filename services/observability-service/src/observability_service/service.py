@@ -270,6 +270,7 @@ class ObservabilityService:
         workflow_governance_event = self._first_event(events, "workflow_governance_declared")
         workflow_completed_event = self._first_event(events, "workflow_completed")
         directive_event = self._first_event(events, "directive_composed")
+        plan_event = self._first_event(events, "plan_built")
         plan_governed_event = self._first_event(events, "plan_governed")
         context_event = self._first_event(events, "context_composed")
         response_event = self._first_event(events, "response_synthesized")
@@ -457,6 +458,8 @@ class ObservabilityService:
         )
         mind_alignment_status = self._mind_alignment_status(
             context_event=context_event,
+            plan_event=plan_event,
+            response_event=response_event,
         )
         identity_alignment_status = self._identity_alignment_status(
             directive_event=directive_event,
@@ -928,10 +931,13 @@ class ObservabilityService:
     def _mind_alignment_status(
         *,
         context_event: InternalEventEnvelope | None,
+        plan_event: InternalEventEnvelope | None,
+        response_event: InternalEventEnvelope | None,
     ) -> str:
         if context_event is None:
             return "incomplete"
         primary_mind = context_event.payload.get("primary_mind")
+        primary_mind_family = context_event.payload.get("primary_mind_family")
         active_minds = context_event.payload.get("active_minds", [])
         supporting_minds = context_event.payload.get("supporting_minds", [])
         suppressed_minds = context_event.payload.get("suppressed_minds", [])
@@ -962,6 +968,54 @@ class ObservabilityService:
             return "attention_required"
         if isinstance(suppressed_limit, int) and len(suppressed_minds) > suppressed_limit:
             return "attention_required"
+        if plan_event is not None:
+            plan_primary_mind = plan_event.payload.get("primary_mind")
+            plan_primary_mind_family = plan_event.payload.get("primary_mind_family")
+            plan_primary_domain_driver = plan_event.payload.get("primary_domain_driver")
+            plan_arbitration_source = plan_event.payload.get("arbitration_source")
+            if plan_primary_mind is not None and plan_primary_mind != primary_mind:
+                return "attention_required"
+            if (
+                plan_primary_mind_family is not None
+                and primary_mind_family is not None
+                and plan_primary_mind_family != primary_mind_family
+            ):
+                return "attention_required"
+            if (
+                plan_primary_domain_driver is not None
+                and primary_domain_driver is not None
+                and plan_primary_domain_driver != primary_domain_driver
+            ):
+                return "attention_required"
+            if (
+                plan_arbitration_source is not None
+                and plan_arbitration_source != arbitration_source
+            ):
+                return "attention_required"
+        if response_event is not None:
+            response_primary_mind = response_event.payload.get("primary_mind")
+            response_primary_mind_family = response_event.payload.get("primary_mind_family")
+            response_primary_domain_driver = response_event.payload.get("primary_domain_driver")
+            response_arbitration_source = response_event.payload.get("arbitration_source")
+            if response_primary_mind is not None and response_primary_mind != primary_mind:
+                return "attention_required"
+            if (
+                response_primary_mind_family is not None
+                and primary_mind_family is not None
+                and response_primary_mind_family != primary_mind_family
+            ):
+                return "attention_required"
+            if (
+                response_primary_domain_driver is not None
+                and primary_domain_driver is not None
+                and response_primary_domain_driver != primary_domain_driver
+            ):
+                return "attention_required"
+            if (
+                response_arbitration_source is not None
+                and response_arbitration_source != arbitration_source
+            ):
+                return "attention_required"
         return "healthy"
 
     @staticmethod

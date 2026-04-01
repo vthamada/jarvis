@@ -40,7 +40,8 @@ from shared.domain_registry import (
     specialist_route_payload,
 )
 from shared.events import InternalEventEnvelope
-from shared.types import OperationId, PermissionDecision, RequestId
+from shared.memory_registry import guided_reasoning_memory_classes
+from shared.types import MemoryClass, OperationId, PermissionDecision, RequestId
 
 
 @dataclass
@@ -336,6 +337,13 @@ class OrchestratorService:
                     "steps": deliberative_plan.steps,
                     "dominant_tension": deliberative_plan.dominant_tension,
                     "smallest_safe_next_action": deliberative_plan.smallest_safe_next_action,
+                    "primary_mind": deliberative_plan.primary_mind,
+                    "primary_mind_family": deliberative_plan.primary_mind_family,
+                    "primary_domain_driver": deliberative_plan.primary_domain_driver,
+                    "arbitration_source": deliberative_plan.arbitration_source,
+                    "primary_route": deliberative_plan.primary_route,
+                    "primary_canonical_domain": deliberative_plan.primary_canonical_domain,
+                    "specialist_hints": deliberative_plan.specialist_hints,
                     "continuity_action": deliberative_plan.continuity_action,
                     "continuity_source": deliberative_plan.continuity_source,
                     "continuity_reason": deliberative_plan.continuity_reason,
@@ -550,7 +558,11 @@ class OrchestratorService:
                 )
             )
 
-        guided_memory_runtime_hints = self._guided_memory_runtime_hints(specialist_review)
+        guided_memory_runtime_hints = self._guided_memory_runtime_hints(
+            specialist_review,
+            deliberative_plan,
+            memory_recovery_result.recovered_items,
+        )
         response_text = self._compose_response_text(
             directive=directive,
             governance_decision=governance_decision,
@@ -578,6 +590,13 @@ class OrchestratorService:
                     "identity_signature": identity_profile.identity_signature,
                     "response_style": final_response_style,
                     "identity_guardrail": governance_check.context.get("identity_guardrail"),
+                    "primary_mind": deliberative_plan.primary_mind,
+                    "primary_mind_family": deliberative_plan.primary_mind_family,
+                    "primary_domain_driver": deliberative_plan.primary_domain_driver,
+                    "arbitration_source": deliberative_plan.arbitration_source,
+                    "primary_route": deliberative_plan.primary_route,
+                    "primary_canonical_domain": deliberative_plan.primary_canonical_domain,
+                    "specialist_hints": deliberative_plan.specialist_hints,
                     "guided_memory_specialists": guided_memory_runtime_hints[
                         "guided_memory_specialists"
                     ],
@@ -1528,6 +1547,13 @@ class OrchestratorService:
                 if primary_route_data.get("workflow_profile") is not None
                 else None
             ),
+            route_workflow_steps=list(primary_route_data.get("workflow_steps", [])),
+            route_workflow_checkpoints=list(
+                primary_route_data.get("workflow_checkpoints", [])
+            ),
+            route_workflow_decision_points=list(
+                primary_route_data.get("workflow_decision_points", [])
+            ),
             active_minds=cognitive_snapshot.active_minds,
             knowledge_snippets=knowledge_result.snippets if knowledge_result else [],
             risk_markers=directive.risk_markers,
@@ -1541,6 +1567,9 @@ class OrchestratorService:
             ambiguity_reason=directive.ambiguity_reason,
             identity_mode=directive.identity_mode,
             primary_mind=cognitive_snapshot.primary_mind,
+            primary_mind_family=cognitive_snapshot.primary_mind_family,
+            primary_domain_driver=cognitive_snapshot.primary_domain_driver,
+            arbitration_source=cognitive_snapshot.arbitration_source,
             supporting_minds=cognitive_snapshot.supporting_minds,
             dominant_tension=cognitive_snapshot.dominant_tension,
             arbitration_summary=cognitive_snapshot.arbitration_summary,
@@ -1769,7 +1798,11 @@ class OrchestratorService:
         operation_result: OperationResultContract | None,
     ) -> str:
         identity_profile = self.identity_engine.get_profile()
-        guided_memory_runtime_hints = self._guided_memory_runtime_hints(specialist_review)
+        guided_memory_runtime_hints = self._guided_memory_runtime_hints(
+            specialist_review,
+            deliberative_plan,
+            memory_recovery_result.recovered_items,
+        )
         return self.synthesis_engine.compose(
             SynthesisInput(
                 intent=directive.intent,
@@ -1816,12 +1849,34 @@ class OrchestratorService:
     @staticmethod
     def _guided_memory_runtime_hints(
         specialist_review: SpecialistReview,
+        deliberative_plan: DeliberativePlanContract,
+        recovered_context: list[str],
     ) -> dict[str, object]:
         guided_memory_specialists: list[str] = []
         semantic_memory_focus: list[str] = []
         procedural_memory_hint: str | None = None
         semantic_memory_available = False
         procedural_memory_available = False
+
+        def extract_context_hint(prefix: str) -> str | None:
+            for item in reversed(recovered_context):
+                if item.startswith(prefix):
+                    return item.removeprefix(prefix)
+            return None
+
+        def extract_list_hint(prefix: str, separator: str = ";") -> list[str]:
+            value = extract_context_hint(prefix)
+            if not value:
+                return []
+            return [part.strip() for part in value.split(separator) if part.strip()]
+
+        def append_unique(values: list[str]) -> None:
+            for value in values:
+                if value and value not in semantic_memory_focus:
+                    semantic_memory_focus.append(value)
+                if len(semantic_memory_focus) >= 4:
+                    break
+
         for invocation in specialist_review.invocations:
             context = invocation.shared_memory_context
             if context is None or invocation.selection_mode not in {"guided", "active"}:
@@ -1833,11 +1888,7 @@ class OrchestratorService:
             consumed_classes = set(context.consumed_memory_classes)
             if "semantic" in consumed_classes:
                 semantic_memory_available = True
-                for focus in context.semantic_focus:
-                    if focus and focus not in semantic_memory_focus:
-                        semantic_memory_focus.append(focus)
-                    if len(semantic_memory_focus) >= 4:
-                        break
+                append_unique(context.semantic_focus)
             if "procedural" in consumed_classes:
                 procedural_memory_available = True
                 if procedural_memory_hint is None:
@@ -1846,6 +1897,55 @@ class OrchestratorService:
                         or (context.open_loops[0] if context.open_loops else None)
                         or context.continuity_context_brief
                     )
+
+        mission_focus = extract_list_hint("mission_focus=", separator=",")
+        mission_semantic_brief = extract_context_hint("mission_semantic_brief=")
+        mission_recommendation = extract_context_hint("mission_recommendation=")
+        last_decision_frame = extract_context_hint("last_decision_frame=")
+        user_continuity_preference = extract_context_hint("user_continuity_preference=")
+        user_last_recommended_task_type = extract_context_hint(
+            "user_last_recommended_task_type="
+        )
+        semantic_sources: list[str] = []
+        append_candidates = [
+            deliberative_plan.primary_canonical_domain,
+            deliberative_plan.primary_route,
+            *deliberative_plan.canonical_domains,
+            *mission_focus,
+        ]
+        for candidate in append_candidates:
+            if candidate and candidate not in semantic_sources:
+                semantic_sources.append(candidate)
+        semantic_evidence = bool(semantic_sources or mission_semantic_brief)
+        route_refs = set(deliberative_plan.canonical_domains)
+        domain_compatible = not route_refs or bool(route_refs.intersection(semantic_sources))
+        procedural_evidence = bool(
+            procedural_memory_hint
+            or mission_recommendation
+            or last_decision_frame
+            or user_continuity_preference
+            or user_last_recommended_task_type
+            or deliberative_plan.smallest_safe_next_action
+        )
+        reasoning_classes = guided_reasoning_memory_classes(
+            semantic_evidence=semantic_evidence,
+            procedural_evidence=procedural_evidence,
+            domain_compatible=domain_compatible,
+            workflow_profile=deliberative_plan.route_workflow_profile,
+        )
+        if MemoryClass.SEMANTIC in reasoning_classes:
+            semantic_memory_available = True
+            append_unique(semantic_sources)
+        if MemoryClass.PROCEDURAL in reasoning_classes:
+            procedural_memory_available = True
+            if procedural_memory_hint is None:
+                procedural_memory_hint = (
+                    mission_recommendation
+                    or last_decision_frame
+                    or user_continuity_preference
+                    or user_last_recommended_task_type
+                    or deliberative_plan.smallest_safe_next_action
+                )
         return {
             "guided_memory_specialists": guided_memory_specialists,
             "semantic_memory_available": semantic_memory_available,

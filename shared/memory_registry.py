@@ -24,6 +24,43 @@ class MemoryPolicy:
     write_policy: str | None = None
 
 
+@dataclass(frozen=True)
+class WorkflowMemoryPolicy:
+    workflow_profile: str | None
+    reasoning_semantic_enabled: bool = True
+    reasoning_procedural_enabled: bool = True
+    specialist_semantic_enabled: bool = True
+    specialist_procedural_enabled: bool = True
+
+
+DEFAULT_WORKFLOW_MEMORY_POLICY = WorkflowMemoryPolicy(workflow_profile=None)
+
+WORKFLOW_MEMORY_POLICIES: dict[str, WorkflowMemoryPolicy] = {
+    "strategic_direction_workflow": WorkflowMemoryPolicy(
+        workflow_profile="strategic_direction_workflow",
+        specialist_procedural_enabled=False,
+    ),
+    "structured_analysis_workflow": WorkflowMemoryPolicy(
+        workflow_profile="structured_analysis_workflow",
+        specialist_procedural_enabled=False,
+    ),
+    "governance_boundary_workflow": WorkflowMemoryPolicy(
+        workflow_profile="governance_boundary_workflow",
+        specialist_procedural_enabled=False,
+    ),
+    "decision_risk_workflow": WorkflowMemoryPolicy(
+        workflow_profile="decision_risk_workflow",
+        specialist_procedural_enabled=False,
+    ),
+    "software_change_workflow": WorkflowMemoryPolicy(
+        workflow_profile="software_change_workflow",
+    ),
+    "operational_readiness_workflow": WorkflowMemoryPolicy(
+        workflow_profile="operational_readiness_workflow",
+    ),
+}
+
+
 MEMORY_REGISTRY: dict[MemoryClass, MemoryPolicy] = {
     MemoryClass.IDENTITY: MemoryPolicy(
         memory_class=MemoryClass.IDENTITY,
@@ -187,20 +224,47 @@ def specialist_shared_memory_classes() -> list[MemoryClass]:
     )
 
 
+def workflow_memory_policy(workflow_profile: str | None) -> WorkflowMemoryPolicy:
+    """Return the sovereign memory visibility policy for a workflow profile."""
+
+    if workflow_profile is None:
+        return DEFAULT_WORKFLOW_MEMORY_POLICY
+    return WORKFLOW_MEMORY_POLICIES.get(workflow_profile, DEFAULT_WORKFLOW_MEMORY_POLICY)
+
+
 def guided_optional_memory_classes(
     *,
     semantic_evidence: bool,
     procedural_evidence: bool,
     domain_compatible: bool,
+    workflow_profile: str | None = None,
 ) -> list[MemoryClass]:
     """Return the optional classes that a guided route may expose."""
 
+    policy = workflow_memory_policy(workflow_profile)
     classes: list[MemoryClass] = []
-    if domain_compatible and semantic_evidence:
+    if domain_compatible and semantic_evidence and policy.reasoning_semantic_enabled:
         classes.append(MemoryClass.SEMANTIC)
-    if domain_compatible and procedural_evidence:
+    if domain_compatible and procedural_evidence and policy.reasoning_procedural_enabled:
         classes.append(MemoryClass.PROCEDURAL)
     return classes
+
+
+def guided_reasoning_memory_classes(
+    *,
+    semantic_evidence: bool,
+    procedural_evidence: bool,
+    domain_compatible: bool,
+    workflow_profile: str | None = None,
+) -> list[MemoryClass]:
+    """Return the optional guided-memory classes visible to planning and synthesis."""
+
+    return guided_optional_memory_classes(
+        semantic_evidence=semantic_evidence,
+        procedural_evidence=procedural_evidence,
+        domain_compatible=domain_compatible,
+        workflow_profile=workflow_profile,
+    )
 
 
 def guided_specialist_memory_classes(
@@ -208,21 +272,26 @@ def guided_specialist_memory_classes(
     semantic_evidence: bool,
     procedural_evidence: bool,
     domain_compatible: bool,
+    workflow_profile: str | None = None,
 ) -> list[MemoryClass]:
     """Return the specialist-visible classes for a guided route packet."""
 
+    policy = workflow_memory_policy(workflow_profile)
     classes = [
         memory_class
         for memory_class in specialist_shared_memory_classes()
         if memory_class not in {MemoryClass.SEMANTIC, MemoryClass.PROCEDURAL}
     ]
-    classes.extend(
-        guided_optional_memory_classes(
-            semantic_evidence=semantic_evidence,
-            procedural_evidence=procedural_evidence,
-            domain_compatible=domain_compatible,
-        )
+    optional_classes = guided_reasoning_memory_classes(
+        semantic_evidence=semantic_evidence,
+        procedural_evidence=procedural_evidence,
+        domain_compatible=domain_compatible,
+        workflow_profile=workflow_profile,
     )
+    if MemoryClass.SEMANTIC in optional_classes and policy.specialist_semantic_enabled:
+        classes.append(MemoryClass.SEMANTIC)
+    if MemoryClass.PROCEDURAL in optional_classes and policy.specialist_procedural_enabled:
+        classes.append(MemoryClass.PROCEDURAL)
     return classes
 
 

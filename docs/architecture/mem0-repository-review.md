@@ -97,7 +97,7 @@ Pelos docs oficiais de OSS:
 Pela API de `Add Memories`:
 
 - o modelo aceita `user_id`, `agent_id`, `app_id`, `run_id`, `org_id`, `project_id`
-- a ingestao e ass?ncrona por default
+- a ingestao e assíncrona por default
 - o sistema trabalha com eventos de `ADD`, `UPDATE` e `DELETE`
 - ha suporte para graph enrichment via `enable_graph`
 

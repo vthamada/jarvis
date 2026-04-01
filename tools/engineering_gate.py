@@ -44,6 +44,10 @@ def build_gate_steps(*, mode: str, include_controlled: bool) -> list[GateStep]:
             command=[RUNNER, "tools/check_mojibake.py", "."],
         ),
         GateStep(
+            label="document guardrails",
+            command=[RUNNER, "tools/verify_document_guardrails.py"],
+        ),
+        GateStep(
             label="ruff",
             command=[RUNNER, "-m", "ruff", "check", "."],
         ),

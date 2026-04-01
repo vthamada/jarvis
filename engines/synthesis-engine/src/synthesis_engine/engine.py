@@ -12,6 +12,7 @@ from shared.contracts import (
     OperationResultContract,
     SpecialistContributionContract,
 )
+from shared.domain_registry import workflow_runtime_guidance
 from shared.types import PermissionDecision
 
 
@@ -184,22 +185,27 @@ class SynthesisEngine:
                 "o pedido atual pede retomada explicita de continuidade relacionada em "
                 f"{plan.continuity_target_goal}"
             )
+        guidance = workflow_runtime_guidance(plan.route_workflow_profile)
         semantic_focus = ", ".join(synthesis_input.semantic_memory_focus[:2])
         route_objective = plan.route_consumer_objective
         route_profile = self._present_contract_label(plan.route_consumer_profile)
         workflow_profile = self._present_contract_label(plan.route_workflow_profile)
+        semantic_role = self._present_contract_label(guidance.semantic_memory_role)
+        cognitive_anchor = self._cognitive_anchor_clause(plan)
         if plan.continuity_action == "continuar" and plan.open_loops:
             base = arbitration or plan.rationale.split(";", maxsplit=1)[0]
+            if cognitive_anchor:
+                base = f"{base}; {cognitive_anchor}"
             if semantic_focus and route_objective:
                 return (
                     f"{base}; a missao ativa segue ancorada em {plan.open_loops[0]}; "
                     f"rota {route_profile or 'ativa'} orienta {route_objective}; "
-                    f"memoria guiada reforca foco em {semantic_focus}"
+                    f"memoria guiada reforca {semantic_role} em {semantic_focus}"
                 )
             if semantic_focus:
                 return (
                     f"{base}; a missao ativa segue ancorada em {plan.open_loops[0]}; "
-                    f"memoria guiada reforca foco em {semantic_focus}"
+                    f"memoria guiada reforca {semantic_role} em {semantic_focus}"
                 )
             if route_objective:
                 workflow_clause = (
@@ -212,27 +218,33 @@ class SynthesisEngine:
                 )
             return f"{base}; a missao ativa segue ancorada em {plan.open_loops[0]}"
         if arbitration:
+            base = arbitration
+            if cognitive_anchor:
+                base = f"{base}; {cognitive_anchor}"
             if semantic_focus and route_objective:
                 workflow_clause = (
                     f"; workflow ativo: {workflow_profile}" if workflow_profile else ""
                 )
                 return (
-                    f"{arbitration}; rota {route_profile or 'ativa'} orienta {route_objective}; "
-                    f"memoria guiada reforca foco em {semantic_focus}"
+                    f"{base}; rota {route_profile or 'ativa'} orienta {route_objective}; "
+                    f"memoria guiada reforca {semantic_role} em {semantic_focus}"
                     f"{workflow_clause}"
                 )
             if semantic_focus:
-                return f"{arbitration}; memoria guiada reforca foco em {semantic_focus}"
+                return f"{base}; memoria guiada reforca {semantic_role} em {semantic_focus}"
             if route_objective:
                 workflow_clause = (
                     f"; workflow ativo: {workflow_profile}" if workflow_profile else ""
                 )
                 return (
-                    f"{arbitration}; rota {route_profile or 'ativa'} orienta {route_objective}"
+                    f"{base}; rota {route_profile or 'ativa'} orienta {route_objective}"
                     f"{workflow_clause}"
                 )
-            return arbitration
-        return plan.rationale.split(";", maxsplit=1)[0]
+            return base
+        base = plan.rationale.split(";", maxsplit=1)[0]
+        if cognitive_anchor:
+            return f"{base}; {cognitive_anchor}"
+        return base
 
     def _recommendation_line(self, synthesis_input: SynthesisInput) -> str:
         plan = synthesis_input.deliberative_plan
@@ -262,16 +274,19 @@ class SynthesisEngine:
             next_action = plan.steps[0]
         else:
             next_action = "preservar uma proxima acao segura"
+        guidance = workflow_runtime_guidance(plan.route_workflow_profile)
         deliverable_hint = (
             plan.route_expected_deliverables[0] if plan.route_expected_deliverables else None
         )
         telemetry_hint = (
             plan.route_telemetry_focus[0] if plan.route_telemetry_focus else None
         )
+        procedural_role = self._present_contract_label(guidance.procedural_memory_role)
+        response_focus = self._present_contract_label(guidance.response_focus)
         if synthesis_input.procedural_memory_hint:
             recommendation = (
-                f"{next_action}; apoio procedural: {synthesis_input.procedural_memory_hint}; "
-                f"criterio de sucesso: {success}"
+                f"{next_action}; apoio procedural orienta {procedural_role}: "
+                f"{synthesis_input.procedural_memory_hint}; criterio de sucesso: {success}"
             )
         else:
             recommendation = f"{next_action}; criterio de sucesso: {success}"
@@ -288,6 +303,24 @@ class SynthesisEngine:
         workflow_hint = self._present_contract_label(plan.route_workflow_profile)
         if workflow_hint:
             recommendation = f"{recommendation}; workflow ativo: {workflow_hint}"
+        if response_focus:
+            recommendation = f"{recommendation}; foco final: {response_focus}"
+        workflow_checkpoint = self._present_contract_label(
+            plan.route_workflow_checkpoints[0]
+            if plan.route_workflow_checkpoints
+            else None
+        )
+        if workflow_checkpoint:
+            recommendation = (
+                f"{recommendation}; checkpoint ativo: {workflow_checkpoint}"
+            )
+        workflow_decision = self._present_contract_label(
+            plan.route_workflow_decision_points[0]
+            if plan.route_workflow_decision_points
+            else None
+        )
+        if workflow_decision:
+            recommendation = f"{recommendation}; gate governado: {workflow_decision}"
         return recommendation
 
     def _limitation_line(self, synthesis_input: SynthesisInput) -> str | None:
@@ -319,6 +352,24 @@ class SynthesisEngine:
         if not value:
             return None
         return value.replace("_", " ")
+
+    @classmethod
+    def _cognitive_anchor_clause(cls, plan: DeliberativePlanContract) -> str | None:
+        primary_mind = cls._present_contract_label(plan.primary_mind)
+        primary_domain_driver = cls._present_contract_label(plan.primary_domain_driver)
+        primary_route = cls._present_contract_label(plan.primary_route)
+        if primary_mind and primary_domain_driver and primary_route:
+            return (
+                f"{primary_mind} ancora o dominio primario {primary_domain_driver} "
+                f"via rota {primary_route}"
+            )
+        if primary_mind and primary_domain_driver:
+            return f"{primary_mind} ancora o dominio primario {primary_domain_driver}"
+        if primary_domain_driver:
+            return f"dominio primario {primary_domain_driver} ancora a resposta"
+        if primary_mind:
+            return f"{primary_mind} ancora a resposta"
+        return None
 
     @staticmethod
     def _operational_line(synthesis_input: SynthesisInput) -> str | None:

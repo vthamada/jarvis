@@ -223,27 +223,72 @@ def test_planning_engine_carries_primary_route_contract_into_plan() -> None:
                 "domain_alignment",
             ],
             route_workflow_profile="strategic_direction_workflow",
+            route_workflow_steps=[
+                "frame the strategic scenario and the decision horizon",
+                "compare trade-offs, constraints and leverage points",
+                "recommend a direction with explicit criteria",
+            ],
+            route_workflow_checkpoints=[
+                "scenario_framed",
+                "tradeoffs_compared",
+                "direction_recommended",
+            ],
+            route_workflow_decision_points=[
+                "scenario_scope_confirmed",
+                "tradeoff_criteria_governed",
+                "direction_governed",
+            ],
             cognitive_rationale="intent=planning; mente_primaria=mente_decisoria",
             dominant_goal="comparar direcoes estrategicas do release",
             identity_mode="structured_planning",
             primary_mind="mente_decisoria",
+            primary_mind_family="estrategica_decisoria",
+            primary_domain_driver="estrategia_e_pensamento_sistemico",
+            arbitration_source="mind_registry",
+            mission_semantic_brief="objetivo=Plan strategic options; foco=trade-offs do release",
+            mission_focus=["estrategia_e_pensamento_sistemico", "strategy"],
+            mission_recommendation="manter o ultimo fio decisorio governado",
+            last_decision_frame="strategic_tradeoff_review",
             dominant_tension="equilibrar ambicao estrategica com a menor proxima acao segura",
         )
     )
 
+    assert plan.primary_mind == "mente_decisoria"
+    assert plan.primary_mind_family == "estrategica_decisoria"
+    assert plan.primary_domain_driver == "estrategia_e_pensamento_sistemico"
+    assert plan.arbitration_source == "mind_registry"
     assert plan.primary_route == "strategy"
     assert plan.route_consumer_profile == "strategy_tradeoff_review"
     assert "tradeoff_map" in plan.route_expected_deliverables
     assert "tradeoff_clarity" in plan.route_telemetry_focus
     assert plan.route_workflow_profile == "strategic_direction_workflow"
+    assert plan.route_workflow_checkpoints[0] == "scenario_framed"
+    assert plan.route_workflow_decision_points[0] == "scenario_scope_confirmed"
     assert "consumer_profile=strategy_tradeoff_review" in plan.rationale
+    assert "dominio_primario=estrategia_e_pensamento_sistemico" in plan.rationale
     assert any("tradeoff_map" in criterion for criterion in plan.success_criteria)
     assert any(
-        "orientar a saida para tradeoff map e decision criteria" in step
+        "direcao recomendada com criterios explicitos" in criterion
+        for criterion in plan.success_criteria
+    )
+    assert any("scenario framed" in criterion for criterion in plan.success_criteria)
+    assert any(
+        "cobrir a etapa do workflow ativo: frame the strategic scenario and the decision horizon"
+        in step
         for step in plan.steps
     )
     assert any(
-        "preservar o foco observavel da rota ativa: tradeoff clarity" in constraint
+        "governar o decision point ativo: scenario scope confirmed" in constraint
+        for constraint in plan.constraints
+    )
+    assert any(
+        "usar memoria semantica apenas para framing estrategico e comparacao de trade-offs"
+        in constraint
+        for constraint in plan.constraints
+    )
+    assert any(
+        "usar memoria procedural apenas para continuidade do fio decisorio e criterio de progressao"
+        in constraint
         for constraint in plan.constraints
     )
 
