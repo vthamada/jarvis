@@ -659,6 +659,7 @@ class ObservabilityService:
         route_modes = domain_registry_event.payload.get("route_modes", {})
         route_maturity = domain_registry_event.payload.get("route_maturity", {})
         linked_specialist_types = domain_registry_event.payload.get("linked_specialist_types", {})
+        promoted_route_registry = domain_registry_event.payload.get("promoted_route_registry", {})
         workflow_profiles = domain_registry_event.payload.get("workflow_profiles", {})
         routing_sources = domain_registry_event.payload.get("routing_sources", {})
         if route_domains and canonical_refs_by_route:
@@ -680,6 +681,20 @@ class ObservabilityService:
                     return "attention_required"
                 if route_domain in workflow_profiles and not workflow_profiles.get(route_domain):
                     return "attention_required"
+        if promoted_route_registry:
+            for route_domain, route_payload in promoted_route_registry.items():
+                if route_domain not in route_domains:
+                    return "attention_required"
+                if not route_payload.get("canonical_domain_refs"):
+                    return "attention_required"
+                if route_payload.get("linked_specialist_type") is None:
+                    return "attention_required"
+                if route_payload.get("specialist_mode") not in {"guided", "active"}:
+                    return "attention_required"
+                if route_payload.get("mode_is_governed") is not True:
+                    return "attention_required"
+                if route_payload.get("eligible") is not True:
+                    return "attention_required"
         if specialist_selection_event is not None:
             selected_specialists = specialist_selection_event.payload.get(
                 "selected_specialists",
@@ -693,6 +708,10 @@ class ObservabilityService:
             )
             canonical_domain_refs = specialist_selection_event.payload.get(
                 "canonical_domain_refs_resolved",
+                {},
+            )
+            registry_route_payloads = specialist_selection_event.payload.get(
+                "registry_route_payloads",
                 {},
             )
             registry_link_matches = specialist_selection_event.payload.get(
@@ -719,6 +738,16 @@ class ObservabilityService:
                     specialist_type
                 ):
                     return "attention_required"
+                if registry_route_payloads:
+                    route_payload = registry_route_payloads.get(specialist_type)
+                    if not route_payload:
+                        return "attention_required"
+                    if route_payload.get("route_name") != linked_domain:
+                        return "attention_required"
+                    if route_payload.get("linked_specialist_type") != specialist_type:
+                        return "attention_required"
+                    if not route_payload.get("canonical_domain_refs"):
+                        return "attention_required"
                 if registry_link_matches and registry_link_matches.get(specialist_type) is not True:
                     return "attention_required"
                 if (
@@ -730,6 +759,8 @@ class ObservabilityService:
                     registry_specialist_eligibility
                     and registry_specialist_eligibility.get(specialist_type) is not True
                 ):
+                    return "attention_required"
+                if promoted_route_registry and linked_domain not in promoted_route_registry:
                     return "attention_required"
                 if route_modes and selection_modes:
                     if route_modes.get(linked_domain) != selection_modes.get(specialist_type):
@@ -743,6 +774,10 @@ class ObservabilityService:
             selection_modes = specialist_domain_event.payload.get("selection_modes", {})
             route_maturity = specialist_domain_event.payload.get("route_maturity", {})
             canonical_domain_refs = specialist_domain_event.payload.get("canonical_domain_refs_resolved", {})
+            registry_route_payloads = specialist_domain_event.payload.get(
+                "registry_route_payloads",
+                {},
+            )
             registry_link_matches = specialist_domain_event.payload.get("registry_link_matches", {})
             registry_mode_matches = specialist_domain_event.payload.get("registry_mode_matches", {})
             registry_specialist_eligibility = specialist_domain_event.payload.get(
@@ -758,6 +793,16 @@ class ObservabilityService:
                     return "attention_required"
                 if route_maturity and not route_maturity.get(specialist_type):
                     return "attention_required"
+                if registry_route_payloads:
+                    route_payload = registry_route_payloads.get(specialist_type)
+                    if not route_payload:
+                        return "attention_required"
+                    if route_payload.get("route_name") != linked_domain:
+                        return "attention_required"
+                    if route_payload.get("linked_specialist_type") != specialist_type:
+                        return "attention_required"
+                    if not route_payload.get("canonical_domain_refs"):
+                        return "attention_required"
                 if registry_link_matches and registry_link_matches.get(specialist_type) is not True:
                     return "attention_required"
                 if (
@@ -769,6 +814,8 @@ class ObservabilityService:
                     registry_specialist_eligibility
                     and registry_specialist_eligibility.get(specialist_type) is not True
                 ):
+                    return "attention_required"
+                if promoted_route_registry and linked_domain not in promoted_route_registry:
                     return "attention_required"
                 if route_modes and route_modes.get(linked_domain) != selection_modes.get(specialist_type):
                     return "attention_required"

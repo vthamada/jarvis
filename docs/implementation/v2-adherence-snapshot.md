@@ -38,6 +38,8 @@ Leitura executiva:
 - existe, sim, distancia de materializacao em alguns eixos centrais do `v2`;
 - os maiores gaps continuam em soberania pratica de dominios no runtime,
   cobertura canonica dos especialistas e formalizacao mais declarativa da arbitragem de mentes;
+- a soberania de dominios avancou mais um passo: rotas promovidas agora ja aparecem como `promoted_route_registry` soberano nos eventos do runtime, reduzindo recomputacao local no orquestrador e melhorando auditoria de elegibilidade.
+- a malha dominio->especialista tambem avancou: packets guiados de memoria agora nascem da rota promovida elegivel do registry e sao validados contra o contrato canonico da rota antes da convocacao especializada.
 - memoria, identidade, governanca, observabilidade e soberania do nucleo evoluiram de forma consistente;
 - benchmark externo, memory gap e hardening nativo foram tratados corretamente como etapas subordinadas ao baseline,
   nao como desvio de direcao.

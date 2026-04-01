@@ -31,8 +31,8 @@ from shared.contracts import (
     SpecialistInvocationContract,
 )
 from shared.domain_registry import (
-    canonical_domain_refs_for_name,
     primary_canonical_domain_for_name,
+    promoted_specialist_route_payloads,
     resolve_primary_route,
     resolve_workflow_route,
     route_metadata_payload,
@@ -703,6 +703,7 @@ class OrchestratorService:
             requested_by_service=self.name,
         )
         updated_events = list(events)
+        selection_registry_payloads = self._specialist_registry_payloads(handoff_plan.selections)
         updated_events.append(
             self.make_event(
                 "specialist_selection_decided",
@@ -727,36 +728,23 @@ class OrchestratorService:
                         for item in handoff_plan.selections
                     },
                     "route_maturity": {
-                        item.specialist_type: route_metadata_payload(
-                            item.linked_domain
-                        ).get("maturity")
-                        for item in handoff_plan.selections
-                        if item.linked_domain
+                        specialist_type: payload.get("maturity")
+                        for specialist_type, payload in selection_registry_payloads.items()
                     },
                     "canonical_domain_refs_resolved": {
-                        item.specialist_type: list(
-                            canonical_domain_refs_for_name(item.linked_domain)
-                        )
-                        for item in handoff_plan.selections
-                        if item.linked_domain
+                        specialist_type: list(payload.get("canonical_domain_refs", []))
+                        for specialist_type, payload in selection_registry_payloads.items()
                     },
+                    "registry_route_payloads": selection_registry_payloads,
                     "registry_link_matches": {
-                        item.specialist_type: (
-                            specialist_route_payload(
-                                item.linked_domain,
-                                item.specialist_type,
-                            ).get("link_matches")
-                            if item.linked_domain
-                            else False
-                        )
-                        for item in handoff_plan.selections
+                        specialist_type: payload.get("link_matches") is True
+                        for specialist_type, payload in selection_registry_payloads.items()
                     },
                     "registry_mode_matches": {
                         item.specialist_type: (
-                            specialist_route_payload(
-                                item.linked_domain,
-                                item.specialist_type,
-                            ).get("specialist_mode") == item.selection_mode
+                            selection_registry_payloads.get(item.specialist_type, {}).get(
+                                "specialist_mode"
+                            ) == item.selection_mode
                             if item.linked_domain
                             else item.selection_mode == "standard"
                         )
@@ -764,10 +752,10 @@ class OrchestratorService:
                     },
                     "registry_specialist_eligibility": {
                         item.specialist_type: (
-                            specialist_route_payload(
-                                item.linked_domain,
-                                item.specialist_type,
+                            selection_registry_payloads.get(
+                                item.specialist_type, {}
                             ).get("eligible")
+                            is True
                             if item.linked_domain
                             else False
                         )
@@ -1176,6 +1164,9 @@ class OrchestratorService:
                 )
             )
             if domain_contributions:
+                completed_registry_payloads = self._specialist_registry_payloads(
+                    list(domain_invocation_index.values())
+                )
                 updated_events.append(
                     self.make_event(
                         "domain_specialist_completed",
@@ -1194,53 +1185,36 @@ class OrchestratorService:
                                 for invocation in domain_invocation_index.values()
                             },
                             "route_maturity": {
-                                invocation.specialist_type: route_metadata_payload(
-                                    invocation.linked_domain
-                                ).get("maturity")
-                                for invocation in domain_invocation_index.values()
-                                if invocation.linked_domain
+                                specialist_type: payload.get("maturity")
+                                for specialist_type, payload in completed_registry_payloads.items()
                             },
+                            "registry_route_payloads": completed_registry_payloads,
                             "registry_link_matches": {
-                                invocation.specialist_type: specialist_route_payload(
-                                    invocation.linked_domain,
-                                    invocation.specialist_type,
-                                ).get("link_matches")
-                                for invocation in domain_invocation_index.values()
-                                if invocation.linked_domain
+                                specialist_type: payload.get("link_matches") is True
+                                for specialist_type, payload in completed_registry_payloads.items()
                             },
                             "registry_mode_matches": {
                                 invocation.specialist_type: (
-                                    specialist_route_payload(
-                                        invocation.linked_domain,
-                                        invocation.specialist_type,
-                                    ).get("specialist_mode") == invocation.selection_mode
+                                    completed_registry_payloads.get(
+                                        invocation.specialist_type, {}
+                                    ).get(
+                                        "specialist_mode"
+                                    ) == invocation.selection_mode
                                 )
                                 for invocation in domain_invocation_index.values()
                                 if invocation.linked_domain
                             },
                             "registry_specialist_eligibility": {
-                                invocation.specialist_type: specialist_route_payload(
-                                    invocation.linked_domain,
-                                    invocation.specialist_type,
-                                ).get("eligible")
-                                for invocation in domain_invocation_index.values()
-                                if invocation.linked_domain
+                                specialist_type: payload.get("eligible") is True
+                                for specialist_type, payload in completed_registry_payloads.items()
                             },
                             "canonical_domain_refs": {
-                                invocation.specialist_type: (
-                                    list(canonical_domain_refs_for_name(invocation.linked_domain))
-                                    if invocation.linked_domain
-                                    else []
-                                )
-                                for invocation in domain_invocation_index.values()
+                                specialist_type: list(payload.get("canonical_domain_refs", []))
+                                for specialist_type, payload in completed_registry_payloads.items()
                             },
                             "canonical_domain_refs_resolved": {
-                                invocation.specialist_type: (
-                                    list(canonical_domain_refs_for_name(invocation.linked_domain))
-                                    if invocation.linked_domain
-                                    else []
-                                )
-                                for invocation in domain_invocation_index.values()
+                                specialist_type: list(payload.get("canonical_domain_refs", []))
+                                for specialist_type, payload in completed_registry_payloads.items()
                             },
                             "consumer_profiles": {
                                 invocation.specialist_type: (
@@ -1581,6 +1555,9 @@ class OrchestratorService:
             route_name: route_metadata_payload(route_name)
             for route_name in knowledge_result.active_domains
         }
+        promoted_route_registry = promoted_specialist_route_payloads(
+            knowledge_result.active_domains
+        )
         primary_route = resolve_primary_route(knowledge_result.active_domains)
         primary_route_name = primary_route[0] if primary_route is not None else None
         primary_canonical_domain = (
@@ -1616,6 +1593,7 @@ class OrchestratorService:
                 route_name: metadata["maturity"]
                 for route_name, metadata in route_metadata.items()
             },
+            "promoted_route_registry": promoted_route_registry,
             "linked_specialist_types": {
                 route_name: metadata["linked_specialist_type"]
                 for route_name, metadata in route_metadata.items()
@@ -1656,6 +1634,22 @@ class OrchestratorService:
                 if route.specialist_mode == "shadow"
             ],
         }
+
+    @staticmethod
+    def _specialist_registry_payloads(
+        selections: list[object],
+    ) -> dict[str, dict[str, object]]:
+        payloads: dict[str, dict[str, object]] = {}
+        for item in selections:
+            specialist_type = getattr(item, "specialist_type", None)
+            linked_domain = getattr(item, "linked_domain", None)
+            if not specialist_type or not linked_domain:
+                continue
+            payloads[specialist_type] = specialist_route_payload(
+                linked_domain,
+                specialist_type,
+            )
+        return payloads
 
     @staticmethod
     def _resolve_primary_canonical_domain(

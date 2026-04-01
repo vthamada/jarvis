@@ -50,10 +50,21 @@ def test_specialist_engine_returns_subordinated_contributions_only_when_rule_mat
                 ),
                 write_policy="through_core_only",
                 consumer_mode="domain_guided_memory_packet",
-                consumer_profile="guided_specialist_review",
+                consumer_profile="operational_readiness_review",
                 consumer_objective=(
-                    "preservar coerencia de dominio e menor proxima acao segura"
+                    "avaliar checkpoints de readiness, lacunas de execucao "
+                    "e proxima acao operacional"
                 ),
+                expected_deliverables=[
+                    "readiness_findings",
+                    "checkpoint_plan",
+                    "next_operational_action",
+                ],
+                telemetry_focus=[
+                    "checkpoint_coverage",
+                    "execution_readiness",
+                    "operational_trace",
+                ],
                 related_mission_ids=["mission-related"],
                 memory_refs=["memory://mission", "memory://domain/operational_readiness", "memory://contextual"],
                 consumed_memory_classes=["mission", "domain", "contextual"],
@@ -335,10 +346,20 @@ def test_specialist_engine_links_guided_analysis_domain_specialist_explicitly() 
                 ),
                 write_policy="through_core_only",
                 consumer_mode="domain_guided_memory_packet",
-                consumer_profile="guided_specialist_review",
+                consumer_profile="structured_analysis_review",
                 consumer_objective=(
-                    "preservar coerencia de dominio e menor proxima acao segura"
+                    "produzir achados estruturados, quadro comparativo e interpretacao recomendada"
                 ),
+                expected_deliverables=[
+                    "structured_findings",
+                    "comparison_frame",
+                    "recommended_interpretation",
+                ],
+                telemetry_focus=[
+                    "analysis_depth",
+                    "evidence_trace",
+                    "decision_support",
+                ],
                 source_mission_goal="Compare rollout evidence",
                 mission_context_brief=(
                     "goal=Compare rollout evidence | related=nenhuma | "
@@ -422,10 +443,20 @@ def test_specialist_engine_links_guided_governance_domain_specialist_explicitly(
                 ),
                 write_policy="through_core_only",
                 consumer_mode="domain_guided_memory_packet",
-                consumer_profile="guided_specialist_review",
+                consumer_profile="governance_boundary_review",
                 consumer_objective=(
-                    "preservar coerencia de dominio e menor proxima acao segura"
+                    "explicitar limites de governanca, condicoes e recomendacao orientada a risco"
                 ),
+                expected_deliverables=[
+                    "boundary_findings",
+                    "risk_conditions",
+                    "governance_recommendation",
+                ],
+                telemetry_focus=[
+                    "governance_alignment",
+                    "risk_trace",
+                    "condition_completeness",
+                ],
                 source_mission_goal="Review governance limits",
                 mission_context_brief=(
                     "goal=Review governance limits | related=nenhuma | "
@@ -509,10 +540,21 @@ def test_specialist_engine_links_guided_operational_readiness_specialist_explici
                 ),
                 write_policy="through_core_only",
                 consumer_mode="domain_guided_memory_packet",
-                consumer_profile="guided_specialist_review",
+                consumer_profile="operational_readiness_review",
                 consumer_objective=(
-                    "preservar coerencia de dominio e menor proxima acao segura"
+                    "avaliar checkpoints de readiness, lacunas de execucao "
+                    "e proxima acao operacional"
                 ),
+                expected_deliverables=[
+                    "readiness_findings",
+                    "checkpoint_plan",
+                    "next_operational_action",
+                ],
+                telemetry_focus=[
+                    "checkpoint_coverage",
+                    "execution_readiness",
+                    "operational_trace",
+                ],
                 source_mission_goal="Plan readiness checks",
                 mission_context_brief=(
                     "goal=Plan readiness checks | related=nenhuma | "
@@ -596,10 +638,21 @@ def test_specialist_engine_links_guided_strategy_specialist_explicitly() -> None
                 ),
                 write_policy="through_core_only",
                 consumer_mode="domain_guided_memory_packet",
-                consumer_profile="guided_specialist_review",
+                consumer_profile="strategy_tradeoff_review",
                 consumer_objective=(
-                    "preservar coerencia de dominio e menor proxima acao segura"
+                    "clarificar trade-offs estrategicos, enquadramento de cenario "
+                    "e direcao recomendada"
                 ),
+                expected_deliverables=[
+                    "tradeoff_map",
+                    "decision_criteria",
+                    "recommended_direction",
+                ],
+                telemetry_focus=[
+                    "tradeoff_clarity",
+                    "decision_trace",
+                    "domain_alignment",
+                ],
                 source_mission_goal="Plan strategic options",
                 mission_context_brief=(
                     "goal=Plan strategic options | related=nenhuma | "
@@ -682,10 +735,20 @@ def test_specialist_engine_links_guided_decision_risk_specialist_explicitly() ->
                 ),
                 write_policy="through_core_only",
                 consumer_mode="domain_guided_memory_packet",
-                consumer_profile="guided_specialist_review",
+                consumer_profile="decision_risk_gate_review",
                 consumer_objective=(
-                    "preservar coerencia de dominio e menor proxima acao segura"
+                    "explicitar reversibilidade, incerteza e o gate de decisao mais seguro"
                 ),
+                expected_deliverables=[
+                    "risk_findings",
+                    "reversibility_summary",
+                    "recommended_safe_gate",
+                ],
+                telemetry_focus=[
+                    "risk_gate_alignment",
+                    "uncertainty_trace",
+                    "reversibility_clarity",
+                ],
                 source_mission_goal="Review decision risk",
                 mission_context_brief=(
                     "goal=Review decision risk | related=nenhuma | "
@@ -775,6 +838,69 @@ def test_specialist_engine_prefers_active_domain_order_when_routes_share_special
 
 
 
+def test_specialist_engine_rejects_guided_memory_when_registry_contract_diverges() -> None:
+    engine = SpecialistEngine()
+    handoff_plan = engine.plan_handoffs(
+        intent="planning",
+        plan=sample_plan(),
+        knowledge_snippets=["Priorize clareza de objetivo."],
+        shared_memory_contexts={
+            "operational_planning_specialist": SpecialistSharedMemoryContextContract(
+                specialist_type="operational_planning_specialist",
+                sharing_mode="core_mediated_read_only",
+                continuity_mode="continuar",
+                shared_memory_brief=(
+                    "specialist=operational_planning_specialist continuidade=continuar"
+                ),
+                write_policy="through_core_only",
+                consumer_mode="domain_guided_memory_packet",
+                consumer_profile="wrong_profile",
+                consumer_objective=(
+                    "avaliar checkpoints de readiness, lacunas de execucao "
+                    "e proxima acao operacional"
+                ),
+                expected_deliverables=[
+                    "readiness_findings",
+                    "checkpoint_plan",
+                    "next_operational_action",
+                ],
+                telemetry_focus=[
+                    "checkpoint_coverage",
+                    "execution_readiness",
+                    "operational_trace",
+                ],
+                related_mission_ids=["mission-related"],
+                memory_refs=[
+                    "memory://mission",
+                    "memory://domain/operational_readiness",
+                    "memory://contextual",
+                ],
+                consumed_memory_classes=["mission", "domain", "contextual"],
+                semantic_focus=["operational_readiness", "planejamento_e_coordenacao"],
+                open_loops=["fechar checkpoint principal"],
+                domain_mission_link_reason=(
+                    "route=operational_readiness canonicos=planejamento_e_coordenacao"
+                ),
+                mission_context_brief=(
+                    "goal=Plan milestone M3 | related=nenhuma | "
+                    "recommendation=sem recomendacao dominante"
+                ),
+                domain_context_brief=(
+                    "active_domains=operational_readiness | semantic_focus=operational_readiness"
+                ),
+                source_mission_goal="Plan milestone M3",
+            )
+        },
+        session_id="sess-specialist-registry-mismatch",
+        mission_id="mission-specialist-registry-mismatch",
+        requested_by_service="orchestrator-service",
+    )
+
+    assert handoff_plan.selections[0].selection_status == "not_eligible"
+    assert "consumer_profile diverge do registry" in handoff_plan.selections[0].rationale
+    assert not handoff_plan.invocations
+
+
 def test_specialist_engine_rejects_guided_memory_without_semantic_and_procedural_refs() -> None:
     engine = SpecialistEngine()
     handoff_plan = engine.plan_handoffs(
@@ -791,8 +917,21 @@ def test_specialist_engine_rejects_guided_memory_without_semantic_and_procedural
                 ),
                 write_policy="through_core_only",
                 consumer_mode="domain_guided_memory_packet",
-                consumer_profile="release_readiness_workflow",
-                consumer_objective="estruturar readiness checks e checkpoints",
+                consumer_profile="operational_readiness_review",
+                consumer_objective=(
+                    "avaliar checkpoints de readiness, lacunas de execucao "
+                    "e proxima acao operacional"
+                ),
+                expected_deliverables=[
+                    "readiness_findings",
+                    "checkpoint_plan",
+                    "next_operational_action",
+                ],
+                telemetry_focus=[
+                    "checkpoint_coverage",
+                    "execution_readiness",
+                    "operational_trace",
+                ],
                 related_mission_ids=["mission-related"],
                 memory_refs=["memory://mission", "memory://domain/operational_readiness", "memory://contextual"],
                 consumed_memory_classes=[

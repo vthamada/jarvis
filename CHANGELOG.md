@@ -9,6 +9,8 @@
 - `synthesis-engine` passou a aproveitar foco semantico e hint procedural de memoria guiada quando eles existem no runtime.
 - `mind_registry` virou a fonte soberana de ranking, apoio, supressao e tensao dominante das mentes.
 - `memory-service` passou a expor `semantic` e `procedural` como memoria `runtime_partial` em packets guiados por dominio quando ha evidencia persistida suficiente.
+- `domain_registry` passou a publicar um `promoted_route_registry` soberano para rotas promovidas, reutilizado pelo `orchestrator-service` em `specialist_selection_decided` e `domain_specialist_completed`, com auditoria adicional na `observability-service`.
+- `memory-service` passou a usar a rota promovida elegivel do registry para montar packets guiados, e o `specialist-engine` endureceu a coerencia do contrato guiado contra `consumer_profile`, `consumer_objective`, `expected_deliverables` e `telemetry_focus` canonicos.
 
 ## 1. Objetivo
 

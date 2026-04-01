@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
+from unicodedata import normalize
 
 from shared.contracts import (
     DeliberativePlanContract,
@@ -504,6 +505,14 @@ class SpecialistEngine:
         return None
 
     @staticmethod
+    def _normalize_contract_text(value: object | None) -> str:
+        if value is None:
+            return ""
+        collapsed = " ".join(str(value).split())
+        normalized = normalize("NFKD", collapsed)
+        return "".join(char for char in normalized if not ord(char) > 127).lower()
+
+    @staticmethod
     def _build_summary(contributions: list[SpecialistContributionContract]) -> str:
         if not contributions:
             return "nenhuma contribuicao especializada adicional"
@@ -539,6 +548,35 @@ class SpecialistEngine:
             shared_memory_context.consumer_profile and shared_memory_context.consumer_objective
         ):
             return "coerencia especialista->memoria falhou: packet guiado sem consumer profile"
+        if selection.selection_mode in {"guided", "active"} and (
+            route_payload.get("consumer_profile")
+            and shared_memory_context.consumer_profile != route_payload.get("consumer_profile")
+        ):
+            return "coerencia especialista->memoria falhou: consumer_profile diverge do registry"
+        if selection.selection_mode in {"guided", "active"} and (
+            route_payload.get("consumer_objective")
+            and SpecialistEngine._normalize_contract_text(
+                shared_memory_context.consumer_objective
+            )
+            != SpecialistEngine._normalize_contract_text(
+                route_payload.get("consumer_objective")
+            )
+        ):
+            return "coerencia especialista->memoria falhou: consumer_objective diverge do registry"
+        if selection.selection_mode in {"guided", "active"} and (
+            route_payload.get("expected_deliverables")
+            and list(shared_memory_context.expected_deliverables)
+            != list(route_payload.get("expected_deliverables", []))
+        ):
+            return (
+                "coerencia especialista->memoria falhou: expected_deliverables divergem do registry"
+            )
+        if selection.selection_mode in {"guided", "active"} and (
+            route_payload.get("telemetry_focus")
+            and list(shared_memory_context.telemetry_focus)
+            != list(route_payload.get("telemetry_focus", []))
+        ):
+            return "coerencia especialista->memoria falhou: telemetry_focus diverge do registry"
         consumed_classes = set(shared_memory_context.consumed_memory_classes)
         if not consumed_classes:
             consumed_classes = set(shared_memory_context.memory_class_policies)

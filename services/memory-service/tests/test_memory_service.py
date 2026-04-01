@@ -842,6 +842,65 @@ def test_memory_service_builds_guided_domain_memory_packet_for_analysis_speciali
 
 
 
+def test_memory_service_prefers_first_eligible_route_when_specialist_is_shared() -> None:
+    temp_dir = runtime_dir("memory-guided-shared-analysis-route")
+    service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
+    contract = InputContract(
+        request_id=RequestId("req-guided-shared-analysis-1"),
+        session_id=SessionId("sess-guided-shared-analysis"),
+        mission_id=MissionId("mission-guided-shared-analysis"),
+        channel=ChannelType.CHAT,
+        input_type=InputType.TEXT,
+        content="Compare strategic options and clarify the dominant trade-off.",
+        timestamp="2026-03-27T00:20:00Z",
+    )
+    service.record_turn(
+        contract,
+        intent="planning",
+        response_text="Initial strategic analysis stored.",
+        deliberative_plan=DeliberativePlanContract(
+            plan_summary="comparar trade-offs estrategicos e recomendar direcao",
+            goal="Plan strategic options",
+            steps=["mapear opcoes", "comparar trade-offs", "recomendar direcao"],
+            active_domains=["strategy", "analysis"],
+            active_minds=["mente_decisoria"],
+            constraints=["through_core_only"],
+            risks=[],
+            recommended_task_type="draft_plan",
+            requires_human_validation=False,
+            rationale="contexto=strategy",
+            specialist_hints=["structured_analysis_specialist"],
+            continuity_action="continuar",
+            open_loops=["fechar criterio estrategico dominante"],
+        ),
+        governance_decision=PermissionDecision.ALLOW_WITH_CONDITIONS,
+    )
+
+    contexts = service.prepare_specialist_shared_memory(
+        session_id="sess-guided-shared-analysis",
+        specialist_hints=["structured_analysis_specialist"],
+        active_domains=["strategy", "analysis"],
+        mission_id="mission-guided-shared-analysis",
+        continuity_context=None,
+    )
+
+    guided = contexts["structured_analysis_specialist"]
+    assert guided.consumer_mode == "domain_guided_memory_packet"
+    assert guided.consumer_profile == "strategy_tradeoff_review"
+    assert guided.consumer_objective is not None
+    assert "trade-offs" in guided.consumer_objective
+    assert guided.expected_deliverables == [
+        "tradeoff_map",
+        "decision_criteria",
+        "recommended_direction",
+    ]
+    assert guided.telemetry_focus == [
+        "tradeoff_clarity",
+        "decision_trace",
+        "domain_alignment",
+    ]
+
+
 def test_memory_service_builds_guided_domain_memory_packet_for_governance_specialist() -> None:
     temp_dir = runtime_dir("memory-guided-governance")
     service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")

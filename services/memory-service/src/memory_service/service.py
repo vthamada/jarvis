@@ -32,7 +32,7 @@ from shared.contracts import (
     SpecialistSharedMemoryContextContract,
     UserScopeContextContract,
 )
-from shared.domain_registry import resolve_route
+from shared.domain_registry import specialist_eligible_route, specialist_route_payload
 from shared.memory_registry import (
     DEFAULT_MEMORY_SCOPES,
     SHARED_MEMORY_CLASSES,
@@ -749,20 +749,16 @@ class MemoryService:
                 dynamic_memory_refs.append(domain_ref)
             if domain_name not in semantic_focus and len(semantic_focus) < 5:
                 semantic_focus.append(domain_name)
-            route = resolve_route(domain_name)
-            if route is not None:
-                append_unique(list(route.canonical_refs), semantic_focus, 5)
+            route_payload = specialist_route_payload(domain_name)
+            append_unique(list(route_payload.get("canonical_domain_refs", [])), semantic_focus, 5)
         source_goal = mission_state.mission_goal if mission_state else None
         source_mission_id = mission_state.mission_id if mission_state else None
-        promoted_route = next(
-            (
-                route
-                for domain_name in active_domains
-                if (route := resolve_route(domain_name)) is not None
-                and route.linked_specialist_type == specialist_type
-                and route.specialist_mode in {"guided", "active"}
-            ),
-            None,
+        promoted_route_match = specialist_eligible_route(active_domains, specialist_type)
+        promoted_route = promoted_route_match[1] if promoted_route_match is not None else None
+        promoted_route_payload = (
+            specialist_route_payload(promoted_route_match[0], specialist_type)
+            if promoted_route_match is not None
+            else {}
         )
         optional_memory_classes = self._derive_guided_optional_memory_classes(
             promoted_route=promoted_route,
@@ -840,14 +836,24 @@ class MemoryService:
             if promoted_route is not None
             else "baseline_shared_context"
         )
-        consumer_profile = promoted_route.consumer_profile if promoted_route else None
-        consumer_objective = promoted_route.consumer_objective if promoted_route else None
-        expected_deliverables = list(promoted_route.expected_deliverables) if promoted_route else []
-        telemetry_focus = list(promoted_route.telemetry_focus) if promoted_route else []
+        consumer_profile = (
+            promoted_route_payload.get("consumer_profile") if promoted_route else None
+        )
+        consumer_objective = (
+            promoted_route_payload.get("consumer_objective") if promoted_route else None
+        )
+        expected_deliverables = (
+            list(promoted_route_payload.get("expected_deliverables", []))
+            if promoted_route
+            else []
+        )
+        telemetry_focus = (
+            list(promoted_route_payload.get("telemetry_focus", [])) if promoted_route else []
+        )
         domain_mission_link_reason = (
             f"route={promoted_route.domain_name if promoted_route else 'baseline'} "
             "canonicos="
-            f"{','.join(promoted_route.canonical_refs if promoted_route else ()) or 'none'} "
+            f"{','.join(promoted_route_payload.get('canonical_domain_refs', [])) or 'none'} "
             f"missao={source_goal or 'sessao_sem_missao_ancorada'}"
         )
         recurrent_context = self._build_recurrent_specialist_context(

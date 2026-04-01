@@ -291,6 +291,9 @@ def specialist_route_payload(
         "linked_specialist_type": linked_specialist,
         "specialist_mode": specialist_mode,
         "consumer_profile": entry.consumer_profile if entry is not None else None,
+        "consumer_objective": entry.consumer_objective if entry is not None else None,
+        "expected_deliverables": list(entry.expected_deliverables) if entry is not None else [],
+        "telemetry_focus": list(entry.telemetry_focus) if entry is not None else [],
         "workflow_profile": entry.workflow_profile if entry is not None else None,
         "is_promoted": bool(entry is not None and is_promoted_specialist_route(route_name)),
         "eligible": route_is_specialist_eligible(route_name, canonical_type),
@@ -301,6 +304,23 @@ def specialist_route_payload(
         ),
         "mode_is_governed": specialist_mode in {"guided", "active"},
     }
+
+
+def promoted_specialist_route_payloads(
+    route_names: list[str] | tuple[str, ...],
+) -> dict[str, dict[str, object]]:
+    """Return the sovereign promoted specialist registry slice for the given active routes."""
+
+    payloads: dict[str, dict[str, object]] = {}
+    for route_name in route_names:
+        entry = resolve_route(route_name)
+        if entry is None or not is_promoted_specialist_route(route_name):
+            continue
+        payloads[route_name] = specialist_route_payload(
+            route_name,
+            entry.linked_specialist_type,
+        )
+    return payloads
 
 
 def route_is_specialist_eligible(route_name: str, specialist_type: str | None = None) -> bool:

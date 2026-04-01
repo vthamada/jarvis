@@ -108,6 +108,11 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     )
     assert registry_event.payload["specialist_mode"]["strategy"] == "guided"
     assert registry_event.payload["workflow_profile"]["strategy"] == "strategic_direction_workflow"
+    assert (
+        registry_event.payload["promoted_route_registry"]["strategy"]["linked_specialist_type"]
+        == "structured_analysis_specialist"
+    )
+    assert registry_event.payload["promoted_route_registry"]["strategy"]["eligible"] is True
     workflow_event = next(
         event for event in stored_events if event.event_name == "workflow_composed"
     )
@@ -151,6 +156,10 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
         event for event in stored_events if event.event_name == "specialist_selection_decided"
     )
     assert specialist_selection_event.payload["selected_specialists"]
+    assert (
+        specialist_selection_event.payload["registry_route_payloads"][selected_specialist]["route_name"]
+        == "strategy"
+    )
     assert specialist_selection_event.payload["registry_link_matches"][selected_specialist] is True
     assert specialist_selection_event.payload["registry_mode_matches"][selected_specialist] is True
     assert (
@@ -161,6 +170,13 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
         event for event in stored_events if event.event_name == "specialist_handoff_governed"
     )
     assert specialist_handoff_event.payload["decision"] == PermissionDecision.ALLOW.value
+    domain_specialist_event = next(
+        event for event in stored_events if event.event_name == "domain_specialist_completed"
+    )
+    assert (
+        domain_specialist_event.payload["registry_route_payloads"][selected_specialist]["route_name"]
+        == "strategy"
+    )
     workflow_governance_event = next(
         event for event in stored_events if event.event_name == "workflow_governance_declared"
     )

@@ -23,6 +23,8 @@ Leitura operacional correta desta rodada:
 - `orchestrator-service`, `planning-engine` e `operation dispatch` agora carregam `canonical_domains` e `primary_canonical_domain` diretamente do `domain_registry`, sem recomputar refs canonicas por heuristica local.
 - `cognitive-engine` passou a delegar ranking, suporte, supressao e tensao dominante ao `mind_registry`, e `specialist_hints` agora so nascem de rotas canonicas ativas do registry.
 - `memory-service` passou a materializar `semantic` e `procedural` como memoria `runtime_partial` apenas em packets guiados por dominio com evidencia persistida e compatibilidade canonica.
+- `domain_registry` agora tambem expõe o slice soberano de `promoted_route_registry`, e o `orchestrator-service` passou a reutilizar esse payload nos eventos de selecao e conclusao de especialistas, reduzindo inferência residual na malha dominio->especialista.
+- `memory-service` agora resolve a rota promovida elegivel diretamente pelo registry soberano, e o `specialist-engine` compara `consumer_profile`, `consumer_objective`, `expected_deliverables` e `telemetry_focus` do packet guiado contra o contrato canonico da rota.
 
 ## Meta atual
 
