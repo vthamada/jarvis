@@ -1,10 +1,13 @@
 ﻿from pathlib import Path
 
 from tools.compare_orchestrator_paths import (
+    cognitive_recomposition_assessment,
     compare_results,
+    render_text,
     resolve_output_dir,
     serialize_comparisons,
     summarize_comparisons,
+    workflow_profile_assessment,
 )
 from tools.internal_pilot_support import PilotExecutionResult
 
@@ -33,6 +36,19 @@ def make_result(  # type: ignore[no-untyped-def]
     specialist_sovereignty_status: str = "healthy",
     axis_gate_status: str = "healthy",
     workflow_trace_status: str = "healthy",
+    workflow_profile_status: str = "healthy",
+    memory_causality_status: str = "causal_guidance",
+    dominant_tension: str | None = "equilibrar profundidade analitica com conclusao util",
+    arbitration_source: str | None = "mind_registry",
+    primary_domain_driver: str | None = "dados_estatistica_e_inteligencia_analitica",
+    mind_domain_specialist_status: str = "aligned",
+    cognitive_recomposition_applied: bool = False,
+    cognitive_recomposition_reason: str | None = None,
+    cognitive_recomposition_trigger: str | None = None,
+    semantic_memory_focus: list[str] | None = None,
+    procedural_memory_hint: str | None = "preservar criterio de comparacao mais recente",
+    semantic_memory_specialists: list[str] | None = None,
+    procedural_memory_specialists: list[str] | None = None,
     expected_continuity_action: str | None = "continuar",
     continuity_matches_expectation: bool | None = True,
     continuity_trace_status: str = "healthy",
@@ -68,6 +84,22 @@ def make_result(  # type: ignore[no-untyped-def]
         specialist_sovereignty_status=specialist_sovereignty_status,
         axis_gate_status=axis_gate_status,
         workflow_trace_status=workflow_trace_status,
+        workflow_profile_status=workflow_profile_status,
+        memory_causality_status=memory_causality_status,
+        dominant_tension=dominant_tension,
+        arbitration_source=arbitration_source,
+        primary_domain_driver=primary_domain_driver,
+        mind_domain_specialist_status=mind_domain_specialist_status,
+        cognitive_recomposition_applied=cognitive_recomposition_applied,
+        cognitive_recomposition_reason=cognitive_recomposition_reason,
+        cognitive_recomposition_trigger=cognitive_recomposition_trigger,
+        semantic_memory_focus=semantic_memory_focus
+        or ["dados_estatistica_e_inteligencia_analitica"],
+        procedural_memory_hint=procedural_memory_hint,
+        semantic_memory_specialists=semantic_memory_specialists
+        or ["structured_analysis_specialist"],
+        procedural_memory_specialists=procedural_memory_specialists
+        or ["structured_analysis_specialist"],
         expected_continuity_action=expected_continuity_action,
         continuity_matches_expectation=continuity_matches_expectation,
         continuity_trace_status=continuity_trace_status,
@@ -141,6 +173,49 @@ def test_compare_results_flags_axis_alignment_mismatch_fields() -> None:
     assert comparisons[0].mismatch_fields == ["domain_alignment_status", "axis_gate_status"]
 
 
+def test_compare_results_flags_release_signal_mismatch_fields() -> None:
+    baseline = [make_result(scenario_id="x", path_name="baseline")]
+    candidate = [
+        make_result(
+            scenario_id="x",
+            path_name="langgraph",
+            workflow_profile_status="maturation_recommended",
+            memory_causality_status="attached_only",
+            dominant_tension="equilibrar clareza executiva com a menor proxima acao segura",
+            arbitration_source="mind_registry_recomposition",
+            primary_domain_driver="assistencia_pessoal_e_operacional",
+            mind_domain_specialist_status="mismatch",
+            cognitive_recomposition_applied=True,
+            cognitive_recomposition_reason=(
+                "primary domain driver has no matching guided specialist route"
+            ),
+            cognitive_recomposition_trigger="specialist_route_impasse",
+            semantic_memory_focus=["produtividade_execucao_e_coordenacao"],
+            procedural_memory_hint="preservar o fio decisorio anterior",
+            semantic_memory_specialists=["operational_planning_specialist"],
+            procedural_memory_specialists=["operational_planning_specialist"],
+        )
+    ]
+
+    comparisons = compare_results(baseline, candidate)
+
+    assert comparisons[0].mismatch_fields == [
+        "workflow_profile_status",
+        "memory_causality_status",
+        "dominant_tension",
+        "arbitration_source",
+        "primary_domain_driver",
+        "mind_domain_specialist_status",
+        "cognitive_recomposition_applied",
+        "cognitive_recomposition_reason",
+        "cognitive_recomposition_trigger",
+        "semantic_memory_focus",
+        "procedural_memory_hint",
+        "semantic_memory_specialists",
+        "procedural_memory_specialists",
+    ]
+
+
 def test_serialize_comparisons_reports_equivalent_verdict() -> None:
     baseline = [make_result(scenario_id="x", path_name="baseline")]
     candidate = [make_result(scenario_id="x", path_name="langgraph")]
@@ -154,6 +229,137 @@ def test_serialize_comparisons_reports_equivalent_verdict() -> None:
     assert payload["overall_verdict"] == "equivalent"
     assert payload["comparison_summary"]["decision"] == "candidate_requires_iteration"
     assert payload["comparison_summary"]["candidate_axis_gate_pass_rate"] == 1.0
+    assert payload["scenario_results"][0]["baseline"]["workflow_profile_status"] == "healthy"
+    assert payload["scenario_results"][0]["candidate"]["workflow_profile_status"] == "healthy"
+    assert (
+        payload["comparison_summary"]["baseline_workflow_profile_decision"]
+        == "baseline_saudavel"
+    )
+    assert (
+        payload["comparison_summary"]["candidate_workflow_profile_decision"]
+        == "baseline_saudavel"
+    )
+    assert (
+        payload["scenario_results"][0]["baseline_workflow_profile_assessment"]
+        == "baseline_saudavel"
+    )
+    assert (
+        payload["scenario_results"][0]["candidate_workflow_profile_assessment"]
+        == "baseline_saudavel"
+    )
+    assert (
+        payload["scenario_results"][0]["baseline_memory_causality_assessment"]
+        == "causal_guidance"
+    )
+    assert (
+        payload["scenario_results"][0]["baseline_mind_domain_specialist_assessment"]
+        == "aligned"
+    )
+    assert (
+        payload["scenario_results"][0]["baseline_cognitive_recomposition_assessment"]
+        == "not_applicable"
+    )
+    assert payload["comparison_summary"]["candidate_cognitive_recomposition_decision"] == (
+        "not_applicable"
+    )
+
+
+def test_render_text_reports_workflow_profile_status() -> None:
+    payload = serialize_comparisons(
+        compare_results(
+            [make_result(scenario_id="x", path_name="baseline", workflow_profile_status="healthy")],
+            [
+                make_result(
+                    scenario_id="x",
+                    path_name="langgraph",
+                    workflow_profile_status="maturation_recommended",
+                    cognitive_recomposition_applied=True,
+                    cognitive_recomposition_reason=(
+                        "primary domain driver has no matching guided specialist route"
+                    ),
+                    cognitive_recomposition_trigger="specialist_route_impasse",
+                )
+            ],
+        ),
+        profile="development",
+        langgraph_status="available",
+    )
+
+    rendered = render_text(payload)
+
+    assert "baseline_workflow_profile_status=healthy" in rendered
+    assert "baseline_workflow_profile_assessment=baseline_saudavel" in rendered
+    assert "candidate_workflow_profile_status=maturation_recommended" in rendered
+    assert "candidate_workflow_profile_assessment=maturation_recommended" in rendered
+    assert "candidate_workflow_profile_decision=maturation_recommended" in rendered
+    assert "baseline_memory_causality_status=causal_guidance" in rendered
+    assert "candidate_memory_causality_status=causal_guidance" in rendered
+    assert "baseline_mind_domain_specialist_status=aligned" in rendered
+    assert "candidate_mind_domain_specialist_status=aligned" in rendered
+    assert "candidate_cognitive_recomposition_assessment=coherent" in rendered
+    assert "candidate_cognitive_recomposition_decision=coherent" in rendered
+
+
+def test_workflow_profile_assessment_classifies_statuses() -> None:
+    assert (
+        workflow_profile_assessment(make_result(scenario_id="x", path_name="baseline"))
+        == "baseline_saudavel"
+    )
+    assert (
+        workflow_profile_assessment(
+            make_result(
+                scenario_id="x",
+                path_name="baseline",
+                workflow_profile_status="maturation_recommended",
+            )
+        )
+        == "maturation_recommended"
+    )
+    assert (
+        workflow_profile_assessment(
+            make_result(
+                scenario_id="x",
+                path_name="baseline",
+                workflow_profile_status="attention_required",
+            )
+        )
+        == "attention_required"
+    )
+
+
+def test_cognitive_recomposition_assessment_classifies_statuses() -> None:
+    assert (
+        cognitive_recomposition_assessment(
+            make_result(scenario_id="x", path_name="baseline")
+        )
+        == "not_applicable"
+    )
+    assert (
+        cognitive_recomposition_assessment(
+            make_result(
+                scenario_id="x",
+                path_name="baseline",
+                cognitive_recomposition_applied=True,
+                cognitive_recomposition_reason=(
+                    "primary domain driver has no matching guided specialist route"
+                ),
+                cognitive_recomposition_trigger="specialist_route_impasse",
+            )
+        )
+        == "coherent"
+    )
+    assert (
+        cognitive_recomposition_assessment(
+            make_result(
+                scenario_id="x",
+                path_name="baseline",
+                cognitive_recomposition_applied=True,
+                cognitive_recomposition_reason=None,
+                cognitive_recomposition_trigger="specialist_route_impasse",
+            )
+        )
+        == "attention_required"
+    )
 
 
 def test_summarize_comparisons_promotes_candidate_ready_gate() -> None:

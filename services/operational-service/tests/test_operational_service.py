@@ -43,6 +43,18 @@ def test_operational_service_generates_text_artifact_for_supported_task() -> Non
             workflow_profile="strategic_direction_workflow",
             workflow_domain_route="strategy",
             workflow_objective="Plan milestone M3",
+            workflow_expected_deliverables=[
+                "tradeoff_map",
+                "decision_criteria",
+                "recommended_direction",
+            ],
+            workflow_telemetry_focus=[
+                "tradeoff_clarity",
+                "decision_trace",
+                "domain_alignment",
+            ],
+            workflow_success_focus="direcao recomendada com criterios explicitos",
+            workflow_response_focus="direcao recomendada, criterios e trade-offs dominantes",
             workflow_state="composed",
             workflow_governance_mode="core_mediated",
             workflow_steps=[
@@ -70,6 +82,19 @@ def test_operational_service_generates_text_artifact_for_supported_task() -> Non
     assert "Criterios de sucesso" in content
     assert "Workflow: strategic_direction_workflow" in content
     assert "Workflow domain route: strategy" in content
+    assert (
+        "Workflow deliverables: tradeoff_map; decision_criteria; recommended_direction"
+        in content
+    )
+    assert (
+        "Workflow telemetry focus: tradeoff_clarity; decision_trace; domain_alignment"
+        in content
+    )
+    assert "Workflow success focus: direcao recomendada com criterios explicitos" in content
+    assert (
+        "Workflow response focus: direcao recomendada, criterios e trade-offs dominantes"
+        in content
+    )
     assert "Workflow steps:" in content
     assert "Workflow governance: core_mediated" in content
     assert "Workflow decision points:" in content

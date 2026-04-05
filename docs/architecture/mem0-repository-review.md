@@ -112,9 +112,9 @@ Leitura para o JARVIS:
 
 Os melhores pontos de conversa sao:
 
-- [service.py](d:/Users/DTI/Desktop/jarvis/services/memory-service/src/memory_service/service.py)
-- [repository.py](d:/Users/DTI/Desktop/jarvis/services/memory-service/src/memory_service/repository.py)
-- [memory_registry.py](d:/Users/DTI/Desktop/jarvis/shared/memory_registry.py)
+- [service.py](../../services/memory-service/src/memory_service/service.py)
+- [repository.py](../../services/memory-service/src/memory_service/repository.py)
+- [memory_registry.py](../../shared/memory_registry.py)
 
 Especialmente nestes temas:
 

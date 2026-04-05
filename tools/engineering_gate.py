@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from subprocess import run
 from sys import executable
+from tempfile import gettempdir
+from uuid import uuid4
 
 ROOT = Path(__file__).resolve().parent.parent
 PROJECT_PYTHON = ROOT / ".venv" / "Scripts" / "python.exe"
@@ -38,6 +40,7 @@ def parse_args() -> Namespace:
 
 
 def build_gate_steps(*, mode: str, include_controlled: bool) -> list[GateStep]:
+    pytest_basetemp = Path(gettempdir()) / f"jarvis-engineering-gate-{uuid4().hex}"
     steps = [
         GateStep(
             label="mojibake check",
@@ -57,7 +60,14 @@ def build_gate_steps(*, mode: str, include_controlled: bool) -> list[GateStep]:
         steps.append(
             GateStep(
                 label="pytest",
-                command=[RUNNER, "-m", "pytest", "-q"],
+                command=[
+                    RUNNER,
+                    "-m",
+                    "pytest",
+                    "-q",
+                    "--basetemp",
+                    str(pytest_basetemp),
+                ],
             )
         )
 
@@ -66,6 +76,12 @@ def build_gate_steps(*, mode: str, include_controlled: bool) -> list[GateStep]:
             GateStep(
                 label="axis artifact verification",
                 command=[RUNNER, "tools/verify_axis_artifacts.py"],
+            )
+        )
+        steps.append(
+            GateStep(
+                label="release signal baseline verification",
+                command=[RUNNER, "tools/verify_release_signal_baseline.py"],
             )
         )
         steps.append(

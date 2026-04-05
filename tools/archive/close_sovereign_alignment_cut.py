@@ -71,6 +71,26 @@ class CutEvidenceSummary:
     baseline_axis_gate_pass_rate: float
     candidate_axis_gate_pass_rate: float
     candidate_runtime_coverage: float
+    baseline_workflow_profile_decision: str
+    candidate_workflow_profile_decision: str
+    baseline_workflow_baseline_rate: float
+    candidate_workflow_baseline_rate: float
+    baseline_workflow_maturation_rate: float
+    candidate_workflow_maturation_rate: float
+    baseline_memory_causality_decision: str
+    candidate_memory_causality_decision: str
+    baseline_memory_causal_rate: float
+    candidate_memory_causal_rate: float
+    baseline_memory_attached_only_rate: float
+    candidate_memory_attached_only_rate: float
+    baseline_mind_domain_specialist_decision: str
+    candidate_mind_domain_specialist_decision: str
+    baseline_mind_domain_specialist_alignment_rate: float
+    candidate_mind_domain_specialist_alignment_rate: float
+    baseline_cognitive_recomposition_decision: str
+    candidate_cognitive_recomposition_decision: str
+    baseline_cognitive_recomposition_coherent_rate: float
+    candidate_cognitive_recomposition_coherent_rate: float
 
 
 def parse_args() -> Namespace:
@@ -306,6 +326,38 @@ def _gate_pass_rate(
     return round(sum(1 for status in statuses if status == "healthy") / len(statuses), 4)
 
 
+def _comparison_label(
+    comparison_summary: dict[str, object],
+    *,
+    key: str,
+    default: str = "not_applicable",
+) -> str:
+    value = comparison_summary.get(key)
+    return default if value is None else str(value)
+
+
+def _comparison_rate(
+    comparison_payload: dict[str, object],
+    comparison_summary: dict[str, object],
+    *,
+    summary_key: str,
+    scenario_key: str,
+    target: str,
+) -> float:
+    summary_value = comparison_summary.get(summary_key)
+    if summary_value is not None:
+        return float(summary_value)
+    scenario_results = comparison_payload.get("scenario_results", [])
+    statuses = [
+        item[scenario_key]
+        for item in scenario_results
+        if isinstance(item, dict) and item.get(scenario_key) is not None
+    ]
+    if not statuses:
+        return 0.0
+    return round(sum(1 for status in statuses if status == target) / len(statuses), 4)
+
+
 def evidence_summary(
     *,
     observability_db: str,
@@ -460,6 +512,122 @@ def evidence_summary(
             scenario_key="candidate_axis_gate_status",
         ),
         candidate_runtime_coverage=float(comparison_summary["candidate_runtime_coverage"]),
+        baseline_workflow_profile_decision=_comparison_label(
+            comparison_summary,
+            key="baseline_workflow_profile_decision",
+        ),
+        candidate_workflow_profile_decision=_comparison_label(
+            comparison_summary,
+            key="candidate_workflow_profile_decision",
+        ),
+        baseline_workflow_baseline_rate=_comparison_rate(
+            comparison_payload,
+            comparison_summary,
+            summary_key="baseline_workflow_baseline_rate",
+            scenario_key="baseline_workflow_profile_assessment",
+            target="baseline_saudavel",
+        ),
+        candidate_workflow_baseline_rate=_comparison_rate(
+            comparison_payload,
+            comparison_summary,
+            summary_key="candidate_workflow_baseline_rate",
+            scenario_key="candidate_workflow_profile_assessment",
+            target="baseline_saudavel",
+        ),
+        baseline_workflow_maturation_rate=_comparison_rate(
+            comparison_payload,
+            comparison_summary,
+            summary_key="baseline_workflow_maturation_rate",
+            scenario_key="baseline_workflow_profile_assessment",
+            target="maturation_recommended",
+        ),
+        candidate_workflow_maturation_rate=_comparison_rate(
+            comparison_payload,
+            comparison_summary,
+            summary_key="candidate_workflow_maturation_rate",
+            scenario_key="candidate_workflow_profile_assessment",
+            target="maturation_recommended",
+        ),
+        baseline_memory_causality_decision=_comparison_label(
+            comparison_summary,
+            key="baseline_memory_causality_decision",
+        ),
+        candidate_memory_causality_decision=_comparison_label(
+            comparison_summary,
+            key="candidate_memory_causality_decision",
+        ),
+        baseline_memory_causal_rate=_comparison_rate(
+            comparison_payload,
+            comparison_summary,
+            summary_key="baseline_memory_causal_rate",
+            scenario_key="baseline_memory_causality_assessment",
+            target="causal_guidance",
+        ),
+        candidate_memory_causal_rate=_comparison_rate(
+            comparison_payload,
+            comparison_summary,
+            summary_key="candidate_memory_causal_rate",
+            scenario_key="candidate_memory_causality_assessment",
+            target="causal_guidance",
+        ),
+        baseline_memory_attached_only_rate=_comparison_rate(
+            comparison_payload,
+            comparison_summary,
+            summary_key="baseline_memory_attached_only_rate",
+            scenario_key="baseline_memory_causality_assessment",
+            target="attached_only",
+        ),
+        candidate_memory_attached_only_rate=_comparison_rate(
+            comparison_payload,
+            comparison_summary,
+            summary_key="candidate_memory_attached_only_rate",
+            scenario_key="candidate_memory_causality_assessment",
+            target="attached_only",
+        ),
+        baseline_mind_domain_specialist_decision=_comparison_label(
+            comparison_summary,
+            key="baseline_mind_domain_specialist_decision",
+        ),
+        candidate_mind_domain_specialist_decision=_comparison_label(
+            comparison_summary,
+            key="candidate_mind_domain_specialist_decision",
+        ),
+        baseline_mind_domain_specialist_alignment_rate=_comparison_rate(
+            comparison_payload,
+            comparison_summary,
+            summary_key="baseline_mind_domain_specialist_alignment_rate",
+            scenario_key="baseline_mind_domain_specialist_assessment",
+            target="aligned",
+        ),
+        candidate_mind_domain_specialist_alignment_rate=_comparison_rate(
+            comparison_payload,
+            comparison_summary,
+            summary_key="candidate_mind_domain_specialist_alignment_rate",
+            scenario_key="candidate_mind_domain_specialist_assessment",
+            target="aligned",
+        ),
+        baseline_cognitive_recomposition_decision=_comparison_label(
+            comparison_summary,
+            key="baseline_cognitive_recomposition_decision",
+        ),
+        candidate_cognitive_recomposition_decision=_comparison_label(
+            comparison_summary,
+            key="candidate_cognitive_recomposition_decision",
+        ),
+        baseline_cognitive_recomposition_coherent_rate=_comparison_rate(
+            comparison_payload,
+            comparison_summary,
+            summary_key="baseline_cognitive_recomposition_coherent_rate",
+            scenario_key="baseline_cognitive_recomposition_assessment",
+            target="coherent",
+        ),
+        candidate_cognitive_recomposition_coherent_rate=_comparison_rate(
+            comparison_payload,
+            comparison_summary,
+            summary_key="candidate_cognitive_recomposition_coherent_rate",
+            scenario_key="candidate_cognitive_recomposition_assessment",
+            target="coherent",
+        ),
     )
 
 
@@ -542,6 +710,30 @@ def render_text(payload: dict[str, object]) -> str:
             f"candidate_axis_adherence={evidence['candidate_axis_adherence_score']} "
             f"candidate_axis_gate_pass_rate={evidence['candidate_axis_gate_pass_rate']}"
         ),
+        (
+            "workflow_profile="
+            f"baseline_decision={evidence['baseline_workflow_profile_decision']} "
+            f"candidate_decision={evidence['candidate_workflow_profile_decision']} "
+            f"candidate_maturation_rate={evidence['candidate_workflow_maturation_rate']}"
+        ),
+        (
+            "memory_causality="
+            f"baseline_decision={evidence['baseline_memory_causality_decision']} "
+            f"candidate_decision={evidence['candidate_memory_causality_decision']} "
+            f"candidate_causal_rate={evidence['candidate_memory_causal_rate']}"
+        ),
+        (
+            "mind_domain_specialist="
+            f"baseline_decision={evidence['baseline_mind_domain_specialist_decision']} "
+            f"candidate_decision={evidence['candidate_mind_domain_specialist_decision']} "
+            f"candidate_alignment_rate={evidence['candidate_mind_domain_specialist_alignment_rate']}"
+        ),
+        (
+            "cognitive_recomposition="
+            f"baseline_decision={evidence['baseline_cognitive_recomposition_decision']} "
+            f"candidate_decision={evidence['candidate_cognitive_recomposition_decision']} "
+            f"candidate_coherent_rate={evidence['candidate_cognitive_recomposition_coherent_rate']}"
+        ),
         "next_cut=" + ",".join(item["item_id"] for item in payload["next_cut_scope"]),
         "deferred=" + ",".join(item["item_id"] for item in payload["deferred_scope"]),
         "vision=" + ",".join(item["item_id"] for item in payload["vision_scope"]),
@@ -582,6 +774,58 @@ def render_markdown(payload: dict[str, object]) -> str:
         f"- baseline axis gate pass rate: `{evidence['baseline_axis_gate_pass_rate']}`",
         f"- candidate axis gate pass rate: `{evidence['candidate_axis_gate_pass_rate']}`",
         f"- candidate runtime coverage: `{evidence['candidate_runtime_coverage']}`",
+        (
+            "- baseline workflow profile decision: "
+            f"`{evidence['baseline_workflow_profile_decision']}`"
+        ),
+        (
+            "- candidate workflow profile decision: "
+            f"`{evidence['candidate_workflow_profile_decision']}`"
+        ),
+        (
+            "- candidate workflow maturation rate: "
+            f"`{evidence['candidate_workflow_maturation_rate']}`"
+        ),
+        (
+            "- baseline memory causality decision: "
+            f"`{evidence['baseline_memory_causality_decision']}`"
+        ),
+        (
+            "- candidate memory causality decision: "
+            f"`{evidence['candidate_memory_causality_decision']}`"
+        ),
+        (
+            "- candidate memory causal rate: "
+            f"`{evidence['candidate_memory_causal_rate']}`"
+        ),
+        (
+            "- candidate memory attached-only rate: "
+            f"`{evidence['candidate_memory_attached_only_rate']}`"
+        ),
+        (
+            "- baseline mind-domain-specialist decision: "
+            f"`{evidence['baseline_mind_domain_specialist_decision']}`"
+        ),
+        (
+            "- candidate mind-domain-specialist decision: "
+            f"`{evidence['candidate_mind_domain_specialist_decision']}`"
+        ),
+        (
+            "- candidate mind-domain-specialist alignment rate: "
+            f"`{evidence['candidate_mind_domain_specialist_alignment_rate']}`"
+        ),
+        (
+            "- baseline cognitive recomposition decision: "
+            f"`{evidence['baseline_cognitive_recomposition_decision']}`"
+        ),
+        (
+            "- candidate cognitive recomposition decision: "
+            f"`{evidence['candidate_cognitive_recomposition_decision']}`"
+        ),
+        (
+            "- candidate cognitive recomposition coherent rate: "
+            f"`{evidence['candidate_cognitive_recomposition_coherent_rate']}`"
+        ),
         "",
         "## Metas atendidas",
         "",

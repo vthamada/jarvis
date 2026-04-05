@@ -362,6 +362,7 @@ class PlanningEngine:
         open_loops: list[str],
     ) -> list[str]:
         loop_focus = self._open_loop_focus(open_loops)
+        guidance = workflow_runtime_guidance(context.route_workflow_profile)
         if context.continuity_requires_manual_resume:
             resume_point = context.continuity_resume_point or "ultimo checkpoint consistente"
             steps = [
@@ -435,7 +436,14 @@ class PlanningEngine:
             steps.append(
                 "usar a recomendacao anterior como checkpoint antes da conclusao final"
             )
-        guidance = workflow_runtime_guidance(context.route_workflow_profile)
+        semantic_step = self._semantic_memory_step(context, guidance=guidance)
+        if semantic_step and semantic_step not in steps:
+            steps.insert(1 if steps else 0, semantic_step)
+            steps = steps[:5]
+        procedural_step = self._procedural_memory_step(context, guidance=guidance)
+        if procedural_step and procedural_step not in steps:
+            steps.insert(2 if len(steps) > 1 else len(steps), procedural_step)
+            steps = steps[:5]
         workflow_step_label = self._present_contract_label(
             (context.route_workflow_steps or [None])[0]
         )
@@ -582,27 +590,49 @@ class PlanningEngine:
             )
         if open_loops and len(criteria) < 4:
             criteria.append("loop principal deve permanecer rastreavel na resposta final")
-        if context.route_expected_deliverables and len(criteria) < 6:
-            criteria.append(
+        semantic_anchor = self._semantic_memory_anchor(context)
+        procedural_anchor = self._procedural_memory_anchor(context)
+        if context.route_expected_deliverables and len(criteria) < 7:
+            criterion = (
                 f"saida deve refletir {context.route_expected_deliverables[0]} da rota ativa"
+            )
+            if semantic_anchor:
+                criterion = (
+                    f"{criterion} e manter {guidance.semantic_memory_role}"
+                )
+            criteria.append(criterion)
+        primary_domain_label = self._present_contract_label(context.primary_domain_driver)
+        if (
+            primary_domain_label
+            and context.dominant_tension
+            and len(criteria) < 7
+        ):
+            criteria.append(
+                "dominio primario deve permanecer explicito em torno de "
+                f"{primary_domain_label} sem perder a tensao dominante"
             )
         workflow_checkpoint_label = self._present_contract_label(
             (context.route_workflow_checkpoints or [None])[0]
         )
-        if workflow_checkpoint_label and len(criteria) < 6:
-            criteria.append(
+        if workflow_checkpoint_label and len(criteria) < 7:
+            criterion = (
                 "checkpoint do workflow ativo deve chegar a "
                 f"{workflow_checkpoint_label} e sustentar {guidance.success_focus}"
             )
+            if procedural_anchor:
+                criterion = (
+                    f"{criterion} e preservar {guidance.procedural_memory_role}"
+                )
+            criteria.append(criterion)
         workflow_label = self._present_contract_label(context.route_workflow_profile)
-        if workflow_label and len(criteria) < 6:
+        if workflow_label and len(criteria) < 7:
             criteria.append(
                 "resposta deve manter o workflow ativo: "
                 f"{workflow_label} com foco em {guidance.success_focus}"
             )
-        elif context.route_workflow_profile and len(criteria) < 6:
+        elif context.route_workflow_profile and len(criteria) < 7:
             criteria.append(f"saida deve sustentar {guidance.success_focus}")
-        return criteria[:6]
+        return criteria[:7]
 
     def _recommended_task_type(
         self,
@@ -794,6 +824,12 @@ class PlanningEngine:
         goal_conflict: str | None,
     ) -> str:
         loop_focus = self._open_loop_focus(open_loops)
+        guidance = workflow_runtime_guidance(context.route_workflow_profile)
+        semantic_anchor = self._semantic_memory_anchor(context)
+        procedural_anchor = self._procedural_memory_anchor(context)
+        deliverable_label = self._present_contract_label(
+            (context.route_expected_deliverables or [None])[0]
+        )
         if context.requires_clarification:
             return "pedir confirmacao antes de qualquer execucao"
         if continuity_action == "reformular":
@@ -818,6 +854,11 @@ class PlanningEngine:
         if continuity_action == "encerrar" and loop_focus:
             return f"fechar {loop_focus} com criterio explicito"
         if continuity_action == "continuar" and loop_focus:
+            if procedural_anchor and context.route_workflow_profile:
+                return (
+                    f"retomar {loop_focus} preservando "
+                    f"{guidance.procedural_memory_role}: {procedural_anchor}"
+                )
             return f"retomar {loop_focus} antes de abrir novo escopo"
         if (
             continuity_action == "continuar"
@@ -827,7 +868,22 @@ class PlanningEngine:
         ):
             return "explicitar se a nova missao deve herdar continuidade de uma missao relacionada"
         if context.intent == "analysis":
+            if semantic_anchor and context.route_workflow_profile:
+                return (
+                    "explicitar o trade-off dominante usando "
+                    f"{guidance.semantic_memory_role}: {semantic_anchor}"
+                )
             return "explicitar o trade-off dominante antes de recomendar"
+        if (
+            context.intent == "planning"
+            and procedural_anchor
+            and context.route_workflow_profile
+            and deliverable_label
+        ):
+            return (
+                f"preservar {guidance.procedural_memory_role}: {procedural_anchor}; "
+                f"convergir para {deliverable_label}"
+            )
         if steps:
             return steps[0]
         return "avaliar pedido sem ampliar escopo"
@@ -986,12 +1042,57 @@ class PlanningEngine:
             return focus
         return context.mission_semantic_brief
 
+    def _semantic_memory_step(
+        self,
+        context: PlanningContext,
+        *,
+        guidance,
+    ) -> str | None:
+        if not self._semantic_memory_anchor(context) or not context.route_workflow_profile:
+            return None
+        route_objective = self._present_contract_label(context.route_consumer_objective)
+        if route_objective:
+            return (
+                "usar memoria semantica para "
+                f"{guidance.semantic_memory_role} antes de fechar {route_objective}"
+            )
+        deliverable_label = self._present_contract_label(
+            (context.route_expected_deliverables or [None])[0]
+        )
+        if deliverable_label:
+            return (
+                "usar memoria semantica para "
+                f"{guidance.semantic_memory_role} antes de consolidar {deliverable_label}"
+            )
+        return f"usar memoria semantica para {guidance.semantic_memory_role} antes da direcao final"
+
     @staticmethod
     def _procedural_memory_anchor(context: PlanningContext) -> str | None:
         return (
             context.mission_recommendation
             or context.last_decision_frame
             or context.continuity_resume_point
+        )
+
+    def _procedural_memory_step(
+        self,
+        context: PlanningContext,
+        *,
+        guidance,
+    ) -> str | None:
+        if not self._procedural_memory_anchor(context) or not context.route_workflow_profile:
+            return None
+        deliverable_label = self._present_contract_label(
+            (context.route_expected_deliverables or [None])[0]
+        )
+        if deliverable_label:
+            return (
+                "usar memoria procedural para "
+                f"{guidance.procedural_memory_role} e sustentar {deliverable_label}"
+            )
+        return (
+            "usar memoria procedural para "
+            f"{guidance.procedural_memory_role} na proxima acao"
         )
 
     @staticmethod

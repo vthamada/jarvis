@@ -16,6 +16,7 @@ from shared.contracts import (
 )
 from shared.domain_registry import (
     canonical_domain_refs_for_name,
+    route_is_specialist_eligible,
     specialist_eligible_route,
     specialist_route_payload,
 )
@@ -208,9 +209,40 @@ class SpecialistEngine:
         domain_specialist_routes: list[DomainSpecialistRouteContract],
     ) -> list[SpecialistSelectionContract]:
         selections: list[SpecialistSelectionContract] = []
+        route_candidates_by_specialist: dict[str, list[DomainSpecialistRouteContract]] = {}
+        for route in domain_specialist_routes:
+            canonical_type = canonical_specialist_type(route.specialist_type)
+            route_candidates_by_specialist.setdefault(canonical_type, []).append(
+                replace(route, specialist_type=canonical_type)
+            )
 
         def canonical_route_for(specialist_type: str) -> DomainSpecialistRouteContract | None:
-            matched = specialist_eligible_route(plan.active_domains, specialist_type)
+            canonical_type = canonical_specialist_type(specialist_type)
+            explicit_candidates = route_candidates_by_specialist.get(canonical_type, [])
+            preferred_domains: list[str] = []
+            if plan.primary_route:
+                preferred_domains.append(plan.primary_route)
+            if plan.primary_domain_driver is not None:
+                for active_domain in plan.active_domains:
+                    if active_domain in preferred_domains:
+                        continue
+                    canonical_refs = canonical_domain_refs_for_name(active_domain)
+                    if plan.primary_domain_driver in canonical_refs:
+                        preferred_domains.append(active_domain)
+            ordered_domains = preferred_domains + [
+                active_domain
+                for active_domain in plan.active_domains
+                if active_domain not in preferred_domains
+            ]
+            if explicit_candidates:
+                for active_domain in ordered_domains:
+                    for route in explicit_candidates:
+                        if route.domain_name != active_domain:
+                            continue
+                        if route_is_specialist_eligible(route.domain_name, canonical_type):
+                            return route
+                return None
+            matched = specialist_eligible_route(ordered_domains, specialist_type)
             if matched is None:
                 return None
             route_name, entry = matched
@@ -798,7 +830,11 @@ class SpecialistEngine:
                 else "planejamento_operacional_subordinado"
             )
         if specialist_hint == STRUCTURED_ANALYSIS_SPECIALIST:
-            return "analise_estruturada_subordinada"
+            return (
+                "analise_estruturada_guided"
+                if selection_mode in {"guided", "active"}
+                else "analise_estruturada_subordinada"
+            )
         if specialist_hint == GOVERNANCE_REVIEW_SPECIALIST:
             return (
                 "revisao_governanca_guided"

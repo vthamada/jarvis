@@ -67,6 +67,12 @@ def test_internal_pilot_report_summarizes_recent_request() -> None:
     assert "response_continuity_action" in summaries[0].missing_continuity_signals
     assert summaries[0].workflow_domain_route is None
     assert summaries[0].workflow_trace_status == "attention_required"
+    assert summaries[0].workflow_profile_status == "not_applicable"
+    assert summaries[0].workflow_profile_assessment == "not_applicable"
+    assert summaries[0].memory_causality_status == "not_applicable"
+    assert summaries[0].mind_domain_specialist_status == "incomplete"
+    assert summaries[0].cognitive_recomposition_applied is False
+    assert summaries[0].cognitive_recomposition_assessment == "not_applicable"
     assert summaries[0].continuity_trace_status == "incomplete"
     assert summaries[0].axis_gate_status == "attention_required"
     assert summaries[0].trace_status == "attention_required"
@@ -107,6 +113,27 @@ def test_internal_pilot_report_renders_text() -> None:
                     "axis_gate_status": "partial",
                     "expectation_status": "continuity_progressing",
                     "workflow_trace_status": "healthy",
+                    "workflow_profile_status": "maturation_recommended",
+                    "workflow_profile_assessment": "maturation_recommended",
+                    "memory_causality_status": "causal_guidance",
+                    "dominant_tension": "equilibrar profundidade analitica com conclusao util",
+                    "arbitration_source": "mind_registry",
+                    "primary_domain_driver": "dados_estatistica_e_inteligencia_analitica",
+                    "mind_domain_specialist_status": "aligned",
+                    "cognitive_recomposition_applied": False,
+                    "cognitive_recomposition_assessment": "not_applicable",
+                    "cognitive_recomposition_reason": None,
+                    "cognitive_recomposition_trigger": None,
+                    "semantic_memory_focus": [
+                        "dados_estatistica_e_inteligencia_analitica"
+                    ],
+                    "procedural_memory_hint": "preservar criterio de comparacao",
+                    "semantic_memory_specialists": [
+                        "structured_analysis_specialist"
+                    ],
+                    "procedural_memory_specialists": [
+                        "structured_analysis_specialist"
+                    ],
                     "continuity_trace_status": "attention_required",
                     "missing_continuity_signals": ["memory_continuity_mode"],
                     "continuity_anomaly_flags": ["retomar_missing_target_mission"],
@@ -130,5 +157,14 @@ def test_internal_pilot_report_renders_text() -> None:
     assert "axis_gate_status=partial" in rendered
     assert "expectation_status=continuity_progressing" in rendered
     assert "workflow_trace_status=healthy" in rendered
+    assert "workflow_profile_status=maturation_recommended" in rendered
+    assert "workflow_profile_assessment=maturation_recommended" in rendered
+    assert "memory_causality_status=causal_guidance" in rendered
+    assert "dominant_tension=equilibrar profundidade analitica com conclusao util" in rendered
+    assert "primary_domain_driver=dados_estatistica_e_inteligencia_analitica" in rendered
+    assert "mind_domain_specialist_status=aligned" in rendered
+    assert "cognitive_recomposition_assessment=not_applicable" in rendered
+    assert "semantic_memory_focus=dados_estatistica_e_inteligencia_analitica" in rendered
+    assert "procedural_memory_hint=preservar criterio de comparacao" in rendered
     assert "continuity_anomaly_flags=retomar_missing_target_mission" in rendered
     assert "trace_status=attention_required" in rendered

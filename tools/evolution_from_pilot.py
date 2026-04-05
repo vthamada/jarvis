@@ -120,6 +120,49 @@ def _evaluation_from_dict(payload: dict[str, object]) -> FlowEvaluationInput:
             if payload.get("axis_gate_status") is not None
             else None
         ),
+        workflow_profile_status=(
+            str(payload["workflow_profile_status"])
+            if payload.get("workflow_profile_status") is not None
+            else None
+        ),
+        memory_causality_status=(
+            str(payload["memory_causality_status"])
+            if payload.get("memory_causality_status") is not None
+            else None
+        ),
+        dominant_tension=(
+            str(payload["dominant_tension"])
+            if payload.get("dominant_tension") is not None
+            else None
+        ),
+        arbitration_source=(
+            str(payload["arbitration_source"])
+            if payload.get("arbitration_source") is not None
+            else None
+        ),
+        primary_domain_driver=(
+            str(payload["primary_domain_driver"])
+            if payload.get("primary_domain_driver") is not None
+            else None
+        ),
+        mind_domain_specialist_status=(
+            str(payload["mind_domain_specialist_status"])
+            if payload.get("mind_domain_specialist_status") is not None
+            else None
+        ),
+        cognitive_recomposition_applied=bool(
+            payload.get("cognitive_recomposition_applied", False)
+        ),
+        cognitive_recomposition_reason=(
+            str(payload["cognitive_recomposition_reason"])
+            if payload.get("cognitive_recomposition_reason") is not None
+            else None
+        ),
+        cognitive_recomposition_trigger=(
+            str(payload["cognitive_recomposition_trigger"])
+            if payload.get("cognitive_recomposition_trigger") is not None
+            else None
+        ),
         continuity_trace_status=(
             str(payload["continuity_trace_status"])
             if payload.get("continuity_trace_status") is not None
@@ -149,6 +192,9 @@ def build_payload(args: Namespace) -> dict[str, object]:
             and audit.identity_alignment_status == "healthy"
             and audit.memory_alignment_status == "healthy"
             and audit.specialist_sovereignty_status == "healthy"
+            and audit.workflow_profile_status in {None, "healthy", "not_applicable"}
+            and audit.memory_causality_status in {None, "causal_guidance", "not_applicable"}
+            and audit.mind_domain_specialist_status in {None, "aligned", "not_applicable"}
         ):
             continue
         proposal = evolution.create_proposal_from_flow_evaluation(
@@ -186,6 +232,15 @@ def build_payload(args: Namespace) -> dict[str, object]:
                     )
                     else "attention_required"
                 ),
+                workflow_profile_status=audit.workflow_profile_status,
+                memory_causality_status=audit.memory_causality_status,
+                dominant_tension=audit.dominant_tension,
+                arbitration_source=audit.arbitration_source,
+                primary_domain_driver=audit.primary_domain_driver,
+                mind_domain_specialist_status=audit.mind_domain_specialist_status,
+                cognitive_recomposition_applied=audit.cognitive_recomposition_applied,
+                cognitive_recomposition_reason=audit.cognitive_recomposition_reason,
+                cognitive_recomposition_trigger=audit.cognitive_recomposition_trigger,
                 continuity_trace_status=audit.continuity_trace_status,
                 missing_continuity_signals=audit.missing_continuity_signals,
                 continuity_anomaly_flags=audit.continuity_anomaly_flags,
@@ -215,11 +270,61 @@ def build_payload(args: Namespace) -> dict[str, object]:
                 baseline=baseline_eval,
                 candidate=candidate_eval,
                 governance_refs=["policy://sandbox/manual-review"],
-                notes=[f"comparison_scenario={item['scenario_id']}"],
+                notes=[
+                    f"comparison_scenario={item['scenario_id']}",
+                    (
+                        "workflow_profile="
+                        f"{item.get('baseline_workflow_profile_assessment', 'n/a')}"
+                        "->"
+                        f"{item.get('candidate_workflow_profile_assessment', 'n/a')}"
+                    ),
+                    (
+                        "memory_causality="
+                        f"{item.get('baseline_memory_causality_assessment', 'n/a')}"
+                        "->"
+                        f"{item.get('candidate_memory_causality_assessment', 'n/a')}"
+                    ),
+                    (
+                        "mind_domain_specialist="
+                        f"{item.get('baseline_mind_domain_specialist_assessment', 'n/a')}"
+                        "->"
+                        f"{item.get('candidate_mind_domain_specialist_assessment', 'n/a')}"
+                    ),
+                    (
+                        "cognitive_recomposition="
+                        f"{item.get('baseline_cognitive_recomposition_assessment', 'n/a')}"
+                        "->"
+                        f"{item.get('candidate_cognitive_recomposition_assessment', 'n/a')}"
+                    ),
+                ],
             )
             comparisons.append(
                 {
                     "scenario_id": item["scenario_id"],
+                    "baseline_workflow_profile_assessment": item.get(
+                        "baseline_workflow_profile_assessment"
+                    ),
+                    "candidate_workflow_profile_assessment": item.get(
+                        "candidate_workflow_profile_assessment"
+                    ),
+                    "baseline_memory_causality_assessment": item.get(
+                        "baseline_memory_causality_assessment"
+                    ),
+                    "candidate_memory_causality_assessment": item.get(
+                        "candidate_memory_causality_assessment"
+                    ),
+                    "baseline_mind_domain_specialist_assessment": item.get(
+                        "baseline_mind_domain_specialist_assessment"
+                    ),
+                    "candidate_mind_domain_specialist_assessment": item.get(
+                        "candidate_mind_domain_specialist_assessment"
+                    ),
+                    "baseline_cognitive_recomposition_assessment": item.get(
+                        "baseline_cognitive_recomposition_assessment"
+                    ),
+                    "candidate_cognitive_recomposition_assessment": item.get(
+                        "candidate_cognitive_recomposition_assessment"
+                    ),
                     "proposal": asdict(comparison.proposal),
                     "decision": asdict(comparison.decision),
                     "metric_deltas": comparison.metric_deltas,
@@ -243,6 +348,30 @@ def render_text(payload: dict[str, object]) -> str:
                 [
                     f"scenario_id={item['scenario_id']}",
                     f"decision={item['decision']['decision']}",
+                    (
+                        "workflow_profile="
+                        f"{item.get('baseline_workflow_profile_assessment', 'n/a')}"
+                        "->"
+                        f"{item.get('candidate_workflow_profile_assessment', 'n/a')}"
+                    ),
+                    (
+                        "memory_causality="
+                        f"{item.get('baseline_memory_causality_assessment', 'n/a')}"
+                        "->"
+                        f"{item.get('candidate_memory_causality_assessment', 'n/a')}"
+                    ),
+                    (
+                        "mind_domain_specialist="
+                        f"{item.get('baseline_mind_domain_specialist_assessment', 'n/a')}"
+                        "->"
+                        f"{item.get('candidate_mind_domain_specialist_assessment', 'n/a')}"
+                    ),
+                    (
+                        "cognitive_recomposition="
+                        f"{item.get('baseline_cognitive_recomposition_assessment', 'n/a')}"
+                        "->"
+                        f"{item.get('candidate_cognitive_recomposition_assessment', 'n/a')}"
+                    ),
                     f"rollback_plan_ref={item['decision']['rollback_plan_ref']}",
                 ]
             )

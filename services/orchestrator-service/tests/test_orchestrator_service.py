@@ -65,6 +65,24 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     assert result.operation_dispatch is not None
     assert result.operation_dispatch.canonical_domain_hints
     assert result.operation_dispatch.primary_canonical_domain == "estrategia_e_pensamento_sistemico"
+    assert result.operation_dispatch.workflow_expected_deliverables == [
+        "tradeoff_map",
+        "decision_criteria",
+        "recommended_direction",
+    ]
+    assert result.operation_dispatch.workflow_telemetry_focus == [
+        "tradeoff_clarity",
+        "decision_trace",
+        "domain_alignment",
+    ]
+    assert (
+        result.operation_dispatch.workflow_success_focus
+        == "direcao recomendada com criterios explicitos"
+    )
+    assert (
+        result.operation_dispatch.workflow_response_focus
+        == "direcao recomendada, criterios e trade-offs dominantes"
+    )
     assert result.operation_dispatch.workflow_objective == (
         "clarificar trade-offs estratégicos, enquadramento de cenário e direção recomendada"
     )
@@ -133,6 +151,24 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     assert workflow_event.payload["workflow_profile"] == "strategic_direction_workflow"
     assert workflow_event.payload["workflow_domain_route"] == "strategy"
     assert workflow_event.payload["workflow_state"] == "composed"
+    assert workflow_event.payload["workflow_expected_deliverables"] == [
+        "tradeoff_map",
+        "decision_criteria",
+        "recommended_direction",
+    ]
+    assert workflow_event.payload["workflow_telemetry_focus"] == [
+        "tradeoff_clarity",
+        "decision_trace",
+        "domain_alignment",
+    ]
+    assert (
+        workflow_event.payload["workflow_success_focus"]
+        == "direcao recomendada com criterios explicitos"
+    )
+    assert (
+        workflow_event.payload["workflow_response_focus"]
+        == "direcao recomendada, criterios e trade-offs dominantes"
+    )
     assert workflow_event.payload["workflow_governance_mode"] == "core_mediated"
     assert workflow_event.payload["workflow_steps"]
     assert workflow_event.payload["workflow_decision_points"] == [
@@ -189,6 +225,12 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
         is True
     )
     assert (
+        specialist_selection_event.payload["primary_domain_driver_matches"][
+            selected_specialist
+        ]
+        is True
+    )
+    assert (
         specialist_selection_event.payload["registry_specialist_eligibility"][selected_specialist]
         is True
     )
@@ -215,11 +257,21 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
         domain_specialist_event.payload["primary_canonical_matches"][selected_specialist]
         is True
     )
+    assert (
+        domain_specialist_event.payload["primary_domain_driver_matches"][
+            selected_specialist
+        ]
+        is True
+    )
     workflow_governance_event = next(
         event for event in stored_events if event.event_name == "workflow_governance_declared"
     )
     assert workflow_governance_event.payload["workflow_governance_mode"] == "core_mediated"
     assert workflow_governance_event.payload["workflow_domain_route"] == "strategy"
+    assert (
+        workflow_governance_event.payload["workflow_success_focus"]
+        == "direcao recomendada com criterios explicitos"
+    )
     assert workflow_governance_event.payload["workflow_decision_points"] == [
         "scenario_scope_confirmed",
         "tradeoff_criteria_governed",
@@ -230,6 +282,20 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     )
     assert workflow_completed_event.payload["workflow_domain_route"] == "strategy"
     assert workflow_completed_event.payload["workflow_state"] == "completed"
+    assert workflow_completed_event.payload["workflow_expected_deliverables"] == [
+        "tradeoff_map",
+        "decision_criteria",
+        "recommended_direction",
+    ]
+    assert workflow_completed_event.payload["workflow_telemetry_focus"] == [
+        "tradeoff_clarity",
+        "decision_trace",
+        "domain_alignment",
+    ]
+    assert (
+        workflow_completed_event.payload["workflow_response_focus"]
+        == "direcao recomendada, criterios e trade-offs dominantes"
+    )
     assert workflow_completed_event.payload["workflow_decisions"] == [
         "scenario_scope_confirmed",
         "tradeoff_criteria_governed",
@@ -300,11 +366,17 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
         response_event.payload["arbitration_source"]
         == context_event.payload["arbitration_source"]
     )
+    assert response_event.payload["dominant_tension"] == result.deliberative_plan.dominant_tension
     assert response_event.payload["primary_route"] == result.deliberative_plan.primary_route
     assert (
         response_event.payload["primary_canonical_domain"]
         == result.deliberative_plan.primary_canonical_domain
     )
+    assert (
+        response_event.payload["workflow_profile"]
+        == result.deliberative_plan.route_workflow_profile
+    )
+    assert response_event.payload["workflow_response_focus"]
     assert response_event.payload["guided_memory_specialists"]
     memory_event = next(event for event in stored_events if event.event_name == "memory_recorded")
     assert continuity_event.payload["continuity_action"] == "continuar"

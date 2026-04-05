@@ -93,6 +93,19 @@ class PilotExecutionResult:
     specialist_sovereignty_status: str
     axis_gate_status: str
     workflow_trace_status: str
+    workflow_profile_status: str
+    memory_causality_status: str
+    dominant_tension: str | None
+    arbitration_source: str | None
+    primary_domain_driver: str | None
+    mind_domain_specialist_status: str
+    cognitive_recomposition_applied: bool
+    cognitive_recomposition_reason: str | None
+    cognitive_recomposition_trigger: str | None
+    semantic_memory_focus: list[str]
+    procedural_memory_hint: str | None
+    semantic_memory_specialists: list[str]
+    procedural_memory_specialists: list[str]
     expected_continuity_action: str | None
     continuity_matches_expectation: bool | None
     continuity_trace_status: str
@@ -157,6 +170,22 @@ def default_pilot_scenarios() -> list[PilotScenario]:
             expected_continuity_action="continuar",
         ),
         PilotScenario(
+            scenario_id="guided_memory_followup",
+            content=(
+                "Plan the next pilot checkpoint and preserve the previous "
+                "recommendation before concluding."
+            ),
+            expectation=(
+                "Reuse semantic and procedural guidance from the active mission "
+                "without leaving the promoted workflow path."
+            ),
+            expected_decision=PermissionDecision.ALLOW_WITH_CONDITIONS.value,
+            expected_operation=True,
+            session_key="pilot-main",
+            mission_key="mission-pilot-v1",
+            expected_continuity_action="continuar",
+        ),
+        PilotScenario(
             scenario_id="continuity_conflict",
             content="Start a new marketing campaign instead.",
             expectation="Contain the conflicting direction and require explicit validation.",
@@ -190,6 +219,20 @@ def default_pilot_scenarios() -> list[PilotScenario]:
             expected_decision=PermissionDecision.BLOCK.value,
             expected_operation=False,
             session_key="pilot-guardrail",
+        ),
+        PilotScenario(
+            scenario_id="recomposition_impasse",
+            content="Plan productivity and governance for the pilot.",
+            expectation=(
+                "Force a specialist-route impasse where the primary domain driver "
+                "has no matching guided specialist route, making cognitive "
+                "recomposition explicit."
+            ),
+            expected_decision=PermissionDecision.DEFER_FOR_VALIDATION.value,
+            expected_operation=False,
+            session_key="pilot-recomposition",
+            mission_key="mission-pilot-recomposition",
+            expected_continuity_action="continuar",
         ),
         PilotScenario(
             scenario_id="software_shadow_review",
@@ -310,6 +353,19 @@ def run_pilot_scenarios(
                     audit.specialist_sovereignty_status,
                 ),
                 workflow_trace_status=audit.workflow_trace_status,
+                workflow_profile_status=audit.workflow_profile_status,
+                memory_causality_status=audit.memory_causality_status,
+                dominant_tension=audit.dominant_tension,
+                arbitration_source=audit.arbitration_source,
+                primary_domain_driver=audit.primary_domain_driver,
+                mind_domain_specialist_status=audit.mind_domain_specialist_status,
+                cognitive_recomposition_applied=audit.cognitive_recomposition_applied,
+                cognitive_recomposition_reason=audit.cognitive_recomposition_reason,
+                cognitive_recomposition_trigger=audit.cognitive_recomposition_trigger,
+                semantic_memory_focus=list(audit.semantic_memory_focus),
+                procedural_memory_hint=audit.procedural_memory_hint,
+                semantic_memory_specialists=list(audit.semantic_memory_specialists),
+                procedural_memory_specialists=list(audit.procedural_memory_specialists),
                 expected_continuity_action=scenario.expected_continuity_action,
                 continuity_matches_expectation=continuity_matches_expectation,
                 continuity_trace_status=audit.continuity_trace_status,

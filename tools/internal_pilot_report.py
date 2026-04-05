@@ -46,6 +46,21 @@ class PilotTraceSummary:
     axis_gate_status: str
     expectation_status: str
     workflow_trace_status: str
+    workflow_profile_status: str
+    workflow_profile_assessment: str
+    memory_causality_status: str
+    dominant_tension: str | None
+    arbitration_source: str | None
+    primary_domain_driver: str | None
+    mind_domain_specialist_status: str
+    cognitive_recomposition_applied: bool
+    cognitive_recomposition_assessment: str
+    cognitive_recomposition_reason: str | None
+    cognitive_recomposition_trigger: str | None
+    semantic_memory_focus: list[str]
+    procedural_memory_hint: str | None
+    semantic_memory_specialists: list[str]
+    procedural_memory_specialists: list[str]
     continuity_trace_status: str
     missing_continuity_signals: list[str]
     continuity_anomaly_flags: list[str]
@@ -124,6 +139,27 @@ def summarize_traces(
                 continuity_action=audit.continuity_action,
             ),
             workflow_trace_status=audit.workflow_trace_status,
+            workflow_profile_status=audit.workflow_profile_status,
+            workflow_profile_assessment=_workflow_profile_assessment(
+                audit.workflow_profile_status
+            ),
+            memory_causality_status=audit.memory_causality_status,
+            dominant_tension=audit.dominant_tension,
+            arbitration_source=audit.arbitration_source,
+            primary_domain_driver=audit.primary_domain_driver,
+            mind_domain_specialist_status=audit.mind_domain_specialist_status,
+            cognitive_recomposition_applied=audit.cognitive_recomposition_applied,
+            cognitive_recomposition_assessment=_cognitive_recomposition_assessment(
+                applied=audit.cognitive_recomposition_applied,
+                reason=audit.cognitive_recomposition_reason,
+                trigger=audit.cognitive_recomposition_trigger,
+            ),
+            cognitive_recomposition_reason=audit.cognitive_recomposition_reason,
+            cognitive_recomposition_trigger=audit.cognitive_recomposition_trigger,
+            semantic_memory_focus=list(audit.semantic_memory_focus),
+            procedural_memory_hint=audit.procedural_memory_hint,
+            semantic_memory_specialists=list(audit.semantic_memory_specialists),
+            procedural_memory_specialists=list(audit.procedural_memory_specialists),
             continuity_trace_status=audit.continuity_trace_status,
             missing_continuity_signals=audit.missing_continuity_signals,
             continuity_anomaly_flags=audit.continuity_anomaly_flags,
@@ -172,6 +208,31 @@ def _expectation_status(
     return "review_required"
 
 
+def _workflow_profile_assessment(workflow_profile_status: str | None) -> str:
+    if workflow_profile_status in {None, "not_applicable"}:
+        return "not_applicable"
+    if workflow_profile_status == "healthy":
+        return "baseline_saudavel"
+    if workflow_profile_status == "maturation_recommended":
+        return "maturation_recommended"
+    return "attention_required"
+
+
+def _cognitive_recomposition_assessment(
+    *,
+    applied: bool,
+    reason: str | None,
+    trigger: str | None,
+) -> str:
+    if not applied:
+        if reason is None and trigger is None:
+            return "not_applicable"
+        return "attention_required"
+    if reason is not None and trigger is not None:
+        return "coherent"
+    return "attention_required"
+
+
 def render_text(summaries: list[PilotTraceSummary]) -> str:
     if not summaries:
         return "No internal pilot traces found."
@@ -207,6 +268,36 @@ def render_text(summaries: list[PilotTraceSummary]) -> str:
             f"{getattr(summary, 'axis_gate_status', 'attention_required')} "
             f"expectation_status={summary.expectation_status} "
             f"workflow_trace_status={getattr(summary, 'workflow_trace_status', 'not_applicable')} "
+            "workflow_profile_status="
+            f"{getattr(summary, 'workflow_profile_status', 'not_applicable')} "
+            "workflow_profile_assessment="
+            f"{getattr(summary, 'workflow_profile_assessment', 'not_applicable')} "
+            "memory_causality_status="
+            f"{getattr(summary, 'memory_causality_status', 'not_applicable')} "
+            "dominant_tension="
+            f"{getattr(summary, 'dominant_tension', None) or 'none'} "
+            "arbitration_source="
+            f"{getattr(summary, 'arbitration_source', None) or 'none'} "
+            "primary_domain_driver="
+            f"{getattr(summary, 'primary_domain_driver', None) or 'none'} "
+            "mind_domain_specialist_status="
+            f"{getattr(summary, 'mind_domain_specialist_status', 'not_applicable')} "
+            "cognitive_recomposition_applied="
+            f"{getattr(summary, 'cognitive_recomposition_applied', False)} "
+            "cognitive_recomposition_assessment="
+            f"{getattr(summary, 'cognitive_recomposition_assessment', 'not_applicable')} "
+            "cognitive_recomposition_reason="
+            f"{getattr(summary, 'cognitive_recomposition_reason', None) or 'none'} "
+            "cognitive_recomposition_trigger="
+            f"{getattr(summary, 'cognitive_recomposition_trigger', None) or 'none'} "
+            "semantic_memory_focus="
+            f"{','.join(getattr(summary, 'semantic_memory_focus', [])) or 'none'} "
+            "procedural_memory_hint="
+            f"{getattr(summary, 'procedural_memory_hint', None) or 'none'} "
+            "semantic_memory_specialists="
+            f"{','.join(getattr(summary, 'semantic_memory_specialists', [])) or 'none'} "
+            "procedural_memory_specialists="
+            f"{','.join(getattr(summary, 'procedural_memory_specialists', [])) or 'none'} "
             "missing_continuity_signals="
             f"{','.join(summary.missing_continuity_signals) or 'none'} "
             "continuity_anomaly_flags="

@@ -5,6 +5,8 @@
 **Escopo:** leitura completa do Documento-Mestre, com validação local contra código e documentos ativos do repositório  
 **Objetivo:** identificar problemas reais do mestre, separar achados incorretos da auditoria anterior e orientar a correção do documento sem reescrita integral
 
+**Status atual:** documento arquivado como lastro da revisão estrutural do Documento-Mestre; não é artefato vivo de planejamento.
+
 ---
 
 ## 1. Resumo executivo
@@ -22,7 +24,7 @@ Conclusão desta auditoria:
 
 - o mestre **não precisa ser reescrito do zero**;
 - o mestre **precisa ser corrigido e refatorado estruturalmente**;
-- a implementação do sistema deve continuar sendo guiada pela [matriz de aderência](c:/Users/vtham/OneDrive/Área%20de%20Trabalho/jarvis/docs/documentation/matriz-de-aderencia-mestre.md), não por leitura informal do mestre;
+- a implementação do sistema deve continuar sendo guiada pela [matriz de aderência](../../documentation/matriz-de-aderencia-mestre.md), não por leitura informal do mestre;
 - a auditoria anterior deve ser tratada como **rascunho editorial imperfeito**, não como base confiável de correção.
 
 ---
@@ -31,10 +33,10 @@ Conclusão desta auditoria:
 
 Esta auditoria foi feita com:
 
-1. leitura completa estruturada do [documento_mestre_jarvis.md](c:/Users/vtham/OneDrive/%C3%81rea%20de%20Trabalho/jarvis/documento_mestre_jarvis.md), do início ao fim, por blocos sequenciais;
+1. leitura completa estruturada do [documento_mestre_jarvis.md](../../../documento_mestre_jarvis.md), do início ao fim, por blocos sequenciais;
 2. validação local de trechos críticos contra o próprio documento;
 3. comparação com a implementação atual e com os documentos vivos do repositório;
-4. uso da [matriz-de-aderencia-mestre.md](c:/Users/vtham/OneDrive/%C3%81rea%20de%20Trabalho/jarvis/docs/documentation/matriz-de-aderencia-mestre.md) como ponte entre visão canônica e backlog.
+4. uso da [matriz-de-aderencia-mestre.md](../../documentation/matriz-de-aderencia-mestre.md) como ponte entre visão canônica e backlog.
 
 Esta auditoria distingue explicitamente:
 
@@ -133,7 +135,7 @@ O mestre referencia:
 - `docs/operations/v1-production-controlled.md`
 - `docs/operations/go-live-readiness.md`
 
-Esses arquivos não existem hoje no repositório. Em compensação, existe [v1-operational-baseline.md](c:/Users/vtham/OneDrive/%C3%81rea%20de%20Trabalho/jarvis/docs/operations/v1-operational-baseline.md), que já cobre parte do espaço operacional real.
+Esses arquivos não existem hoje no repositório. Em compensação, existe [v1-operational-baseline.md](../../operations/v1-operational-baseline.md), que já cobre parte do espaço operacional real.
 
 **Diagnóstico:** problema real e objetivo.  
 **Correção indicada:** atualizar as referências do mestre para os arquivos vivos ou recriar os derivados que ele espera.
@@ -216,7 +218,7 @@ Mas ele **não deve ser usado como base direta de correção linha a linha**.
 
 ## 6. Leitura do mestre em relação à implementação atual
 
-Esta auditoria não substitui a [matriz-de-aderencia-mestre.md](c:/Users/vtham/OneDrive/%C3%81rea%20de%20Trabalho/jarvis/docs/documentation/matriz-de-aderencia-mestre.md), mas confirma suas conclusões principais.
+Esta auditoria não substitui a [matriz-de-aderencia-mestre.md](../../documentation/matriz-de-aderencia-mestre.md), mas confirma suas conclusões principais.
 
 ## 6.1 Mentes
 
@@ -325,7 +327,7 @@ O Documento-Mestre está **conceitualmente forte, estruturalmente sobrecarregado
 
 - **estado do mestre:** `válido, mas precisando de correção estrutural`
 - **estado da auditoria anterior:** `útil como rascunho crítico, insuficiente como base de correção`
-- **próxima ação correta:** corrigir o mestre por evidência confirmada e manter a [matriz de aderência](c:/Users/vtham/OneDrive/%C3%81rea%20de%20Trabalho/jarvis/docs/documentation/matriz-de-aderencia-mestre.md) como ponte oficial para backlog
+- **próxima ação correta:** corrigir o mestre por evidência confirmada e manter a [matriz de aderência](../../documentation/matriz-de-aderencia-mestre.md) como ponte oficial para backlog
 
 ### Próximo passo
 
@@ -335,4 +337,3 @@ Executar uma rodada de correção do mestre com foco em:
 2. referências quebradas;
 3. lacunas numéricas e resíduos editoriais;
 4. separação mais explícita entre constituição, arquitetura e operação.
-

@@ -271,9 +271,27 @@ def test_planning_engine_carries_primary_route_contract_into_plan() -> None:
         "direcao recomendada com criterios explicitos" in criterion
         for criterion in plan.success_criteria
     )
+    assert any(
+        "manter framing estrategico e comparacao de trade-offs" in criterion
+        for criterion in plan.success_criteria
+    )
     assert any("scenario framed" in criterion for criterion in plan.success_criteria)
     assert any(
-        "cobrir a etapa do workflow ativo: frame the strategic scenario and the decision horizon"
+        "preservar continuidade do fio decisorio e criterio de progressao" in criterion
+        for criterion in plan.success_criteria
+    )
+    assert any(
+        "dominio primario deve permanecer explicito em torno de estrategia e pensamento sistemico"
+        in criterion
+        for criterion in plan.success_criteria
+    )
+    assert any(
+        "usar memoria semantica para framing estrategico e comparacao de trade-offs"
+        in step
+        for step in plan.steps
+    )
+    assert any(
+        "usar memoria procedural para continuidade do fio decisorio e criterio de progressao"
         in step
         for step in plan.steps
     )
@@ -290,6 +308,12 @@ def test_planning_engine_carries_primary_route_contract_into_plan() -> None:
         "usar memoria procedural apenas para continuidade do fio decisorio e criterio de progressao"
         in constraint
         for constraint in plan.constraints
+    )
+    assert (
+        plan.smallest_safe_next_action
+        == "retomar comparar direcoes estrategicas do release preservando "
+        "continuidade do fio decisorio e criterio de progressao: "
+        "manter o ultimo fio decisorio governado"
     )
 
 

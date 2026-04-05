@@ -2,11 +2,12 @@
 
 ## Metadata
 
-- Atualizado em: 2026-04-01
+- Atualizado em: 2026-04-05
 - Branch: `main`
-- Commit de referência: `bdf569b`
+- Commit de referência: `5852749`
 - Artefato canônico do projeto: `documento_mestre_jarvis.md`
 - Estado do projeto: `v1` encerrado e congelado para uso controlado; primeiro ciclo do `pós-v1` encerrado; primeiro ciclo do `v1.5` encerrado; primeiro corte do `v2` encerrado; `v2-alignment-cycle` encerrado; próximo corte do `v2` aberto
+- Fila micro ativa: `docs/implementation/execution-backlog.md`
 
 ## Atualização do próximo corte do v2
 
@@ -17,6 +18,7 @@ Leitura operacional correta desta rodada:
 - as rotas `software_development`, `analysis`, `governance`, `operational_readiness`, `strategy` e `decision_risk` já operam em modo `guided`, ainda subordinadas ao núcleo;
 - `specialist-engine` agora aceita rotas canônicas de especialista acima de `shadow`, desde que continuem `through_core_only` e `advisory_only`, e passou a validar se o vínculo domínio->especialista realmente bate com o registry soberano;
 - `memory-service` já gera `domain_guided_memory_packet` de forma genérica para rotas promovidas do registry;
+- `cognitive-engine` e `specialist-engine` agora consomem `domain_specialist_routes` explicitamente antes de qualquer fallback local, preservando o contrato de rota resolvido pelo runtime;
 - `orchestrator-service` passou a emitir `domain_specialist_completed`, além dos sinais legados de `shadow` quando eles existirem;
 - `observability-service` passou a auditar alinhamento de domínio por convocação canônica de especialista, não apenas por `shadow mode`.
 - `knowledge-service` agora da precedencia explicita a mencoes de rotas runtime e dominios canonicos declarados no registry, com matching normalizado sem dependencia de acento.
@@ -34,11 +36,30 @@ Leitura operacional correta desta rodada:
 - `orchestrator-service` agora emite `primary_route`, `primary_canonical_domain`, `primary_route_matches` e `primary_canonical_matches` nos eventos de selecao e conclusao de especialistas, e a `observability-service` usa esses sinais como gate direto de alinhamento.
 - `planning-engine` agora usa `workflow_steps`, `workflow_checkpoints` e `workflow_decision_points` da rota promovida para moldar passos, restricoes, criterios de sucesso e rationale sem recompor esse contrato fora do registry.
 - `synthesis-engine` passou a tornar esse workflow mais explicito na resposta final, expondo checkpoint ativo e gate governado da rota promovida.
+- `operation_dispatch`, `workflow_composed`, `workflow_governance_declared`, `operation_completed` e `workflow_completed` agora carregam o mesmo slice soberano de `workflow_objective`, `workflow_expected_deliverables`, `workflow_telemetry_focus`, `workflow_success_focus` e `workflow_response_focus`.
+- `observability-service` passou a tratar drift nesse contrato de workflow como `attention_required`, exigindo coerencia entre composicao, despacho, execucao e fechamento do workflow.
+- `planning-engine` agora prioriza passos guiados de memoria semantica e procedural quando a rota ativa traz evidencia compativel, e `smallest_safe_next_action` passou a preservar explicitamente o fio procedural nas rotas elegiveis.
+- `synthesis-engine` agora trata memoria semantica como ancora do framing final e memoria procedural como fio causal que a proxima acao precisa preservar.
 - `planning-engine`, `orchestrator-service` e `observability-service` agora propagam `primary_mind`, `primary_domain_driver` e `arbitration_source` ate plano, resposta e auditoria.
+- `cognitive-engine` e `specialist-engine` agora priorizam rotas explicitas que batem com `primary_domain_driver` quando esse vinculo ja foi resolvido pelo runtime, sem alterar o baseline de fallback quando a rota ainda nao existe.
+- `orchestrator-service` e `observability-service` agora registram e auditam `primary_domain_driver_matches` na malha `mente -> dominio -> especialista`, cobrando que pelo menos um especialista selecionado/completado permaneça coerente com o dominio dominante quando esse sinal existir.
 - `orchestrator-service` agora deriva hints de memoria guiada tambem do recovery soberano quando a rota ativa autoriza `semantic`/`procedural`, sem depender apenas de handoff especializado.
 - `domain_registry` agora expõe guidance soberano por `workflow_profile`, e `planning-engine`/`synthesis-engine` passaram a usar esse guidance para leitura final, foco de sucesso e papel explícito de memória semântica/procedural por rota promovida.
 - `memory_registry` e `memory-service` agora distinguem visibilidade de `semantic`/`procedural` entre reasoning final e packet de especialista: workflows analíticos/estratégicos/governados mantém `procedural` no runtime final, mas não o propagam automaticamente ao especialista subordinado.
 - `memory_registry` passou a separar a visibilidade de memoria guiada para `planning/synthesis` da visibilidade para especialistas, mantendo o mesmo contrato soberano.
+- `observability-service` agora distingue `workflow_trace_status` de `workflow_profile_status`: o primeiro continua cobrando baseline saudavel, e o segundo passou a marcar `maturation_recommended` quando o workflow esta correto, mas ainda sem sinais ricos suficientes no runtime final.
+- `internal_pilot_report` e `compare_orchestrator_paths` agora carregam `workflow_profile_status` ate os artefatos comparativos, deixando esse sinal visivel fora da auditoria local.
+- `internal_pilot_report` e `compare_orchestrator_paths` agora tambem classificam esse sinal como `baseline_saudavel`, `maturation_recommended` ou `attention_required` por workflow, sem tratar maturacao recomendada como falha estrutural do baseline.
+- `observability-service`, `internal_pilot_report` e `compare_orchestrator_paths` agora distinguem memoria causal (`causal_guidance`) de memoria apenas anexada (`attached_only`), expondo tambem foco semantico, hint procedural e especialistas ligados a esse efeito.
+- os artefatos comparativos agora mostram `dominant_tension`, `primary_domain_driver` e `mind_domain_specialist_status`, deixando a malha `mente -> dominio -> especialista` menos implicita na leitura do baseline.
+- `cognitive-engine` agora aplica recomposicao observavel em impasses reais de rota especializada, `orchestrator-service` publica `cognitive_recomposition_applied` e `observability-service` audita a coerencia desse sinal ao longo do fluxo.
+- `evolution_from_pilot` e `evolution-lab` agora tratam `workflow_profile_status`, `memory_causality_status`, `mind_domain_specialist_status` e recomposicao cognitiva como sinais comparativos de refinamento, em vez de ignorar traces ainda saudaveis mas so parcialmente maduros.
+- os fechadores regeneraveis `close_alignment_cycle` e `close_sovereign_alignment_cut` agora carregam decisoes e taxas desses sinais novos, aproximando comparacao sandbox, snapshot e closure docs da mesma gramatica de maturacao.
+- `engineering_gate --mode release` agora roda `tools/verify_release_signal_baseline.py` e trata `workflow_profile_status`, `memory_causality_status`, `mind_domain_specialist_status` e recomposicao cognitiva como gramatica formal de release.
+- `internal_pilot_support` agora inclui cenarios deliberados para memoria causal (`guided_memory_followup`) e recomposicao cognitiva por `specialist_route_impasse` (`recomposition_impasse`), com cobertura em relatorio e comparacao.
+- `compare_orchestrator_paths` passou a marcar drift explicito de `workflow_profile_status`, `memory_causality_status`, `dominant_tension`, `primary_domain_driver`, `mind_domain_specialist_status` e recomposicao cognitiva entre baseline e candidata.
+- `planning-engine`, `synthesis-engine` e `response_synthesized` agora tornam `dominant_tension`, `primary_domain_driver`, `workflow_response_focus` e recomposicao cognitiva mais declarativos no comportamento final do runtime.
+- o lote atual do `execution-backlog` foi integralmente executado, incluindo `MB-008` a `MB-012`; nao ha item `ready` aberto neste momento.
 - `CHANGELOG.md` foi restaurado como changelog cronologico e o `engineering_gate` agora protege a identidade minima de `CHANGELOG.md`, `HANDOFF.md`, `documento_mestre_jarvis.md`, `docs/roadmap/programa-ate-v3.md` e `docs/implementation/v2-adherence-snapshot.md` antes da liberacao.
 
 ## Meta atual
@@ -49,11 +70,22 @@ Consolidar o fechamento operacional do `v2` sobre um runtime já alinhado aos ei
 
 - primeiro: preservar o `domain_registry` como autoridade única do contrato de rota promovida ao longo de `planning`, `memory`, `specialist`, `orchestrator` e observabilidade;
 - depois: aprofundar critérios de saída e leitura final por `workflow_profile` sem reintroduzir heurística espalhada;
-- só então: tratar memória semântica/procedural mais rica e relação `mente -> domínio -> especialista` como maturação futura, não como urgência de baseline.
+- depois disso: tornar memoria `semantic` e `procedural` mais causal por `workflow_profile`, sem quebrar a soberania do runtime atual;
+- depois disso: separar com mais precisao o que ja e baseline saudavel e o que ainda e `maturation_recommended` por `workflow_profile`;
+- depois disso: endurecer a cadeia `mente -> dominio -> especialista` com sinais cada vez menos implicitos e mais auditaveis;
+- depois disso: promover esses sinais declarativos ao proximo lote micro somente quando houver nova priorizacao macro ou novo gate de release a endurecer;
+- so entao: tratar maturacao mais ampla dessa relacao como frente futura, nao como urgencia de baseline.
+
+Regra operacional desta fase:
+
+- `HANDOFF.md` permanece macro e tatico;
+- a fila micro executavel agora vive exclusivamente em `docs/implementation/execution-backlog.md`;
+- o proximo item tecnico deve ser puxado dali, nao reconstruido localmente a partir deste handoff.
 
 Sistema oficial de planejamento desta fase:
 
 - `HANDOFF.md` como retomada tático-operacional;
+- `docs/implementation/execution-backlog.md` como fila micro soberana do corte ativo;
 - `docs/roadmap/programa-ate-v3.md` como direção do programa até `v3`;
 - `docs/archive/implementation/v2-cycle-closure.md` como fechamento formal do primeiro corte do `v2`;
 - `docs/archive/implementation/v2-alignment-cycle.md` como histórico fechado do ciclo anterior;
@@ -67,6 +99,8 @@ Sistema oficial de planejamento desta fase:
 - `docs/archive/implementation/v2-sovereign-alignment-cut.md` como histórico de transição do corte anterior;
 - `docs/archive/implementation/v2-domain-consumers-and-workflows-cut-closure.md` como fechamento formal regenerável do corte anterior imediato;
 - `docs/documentation/matriz-de-aderencia-mestre.md` como ponte entre visão canônica e backlog real.
+- `docs/documentation/repository-map-and-consistency-audit.md` como mapa vivo de papeis, inconsistencias e candidatos a reclassificacao do repositorio.
+- `docs/roadmap/programa-de-excelencia.md` como mapa completo de gaps, capacidades ausentes e direcao de maturacao para excelencia.
 
 Leitura prioritária de aderência neste momento:
 
@@ -133,6 +167,7 @@ Autonomia operacional nesta fase:
 
 - o agente ativo pode executar sozinho sincronização de docs vivos, refactors de nomenclatura, endurecimento de contratos, testes, observabilidade, gates e coerência entre registries e runtime;
 - o agente ativo pode abrir e fechar sprints dentro do corte ativo quando isso não mudar a direção macro já fechada;
+- o agente ativo pode puxar sozinho o próximo item `ready` de `docs/implementation/execution-backlog.md` quando `depende_do_operador = nao`;
 - o operador deve ser acionado apenas para decisões de direção, como mudança de ontologia, promoção de tecnologia externa a baseline central, abertura de nova superfície principal ou alteração da prioridade macro do programa;
 - a regra prática é simples: implementação dentro da direção fechada é autonomia do Codex; mudança de direção continua reservada ao operador.
 
@@ -213,9 +248,10 @@ Regra de estudo externo no `v2`:
 Ordem recomendada:
 1. tratar `docs/implementation/v2-adherence-snapshot.md` como leitura oficial do fechamento funcional do `v2`;
 2. manter `HANDOFF.md`, `CHANGELOG.md` e o snapshot como docs vivos do baseline sem abrir outro corte documental por inércia;
-3. se houver continuação ainda dentro do eixo atual, focar em critérios mais específicos por `workflow_profile` e em uso mais maduro de `semantic`/`procedural`;
-4. manter histórico regenerável em `docs/archive/implementation/` e `tools/archive/` sem reexpandir a raiz do repositório;
-5. só abrir uma nova frente funcional quando a priorização macro sair explicitamente do fechamento do `v2`.
+3. se houver continuação ainda dentro do eixo atual, promover esses sinais novos para gate e fechamento de release, para que deixem de existir apenas em piloto e closure histórico;
+4. depois disso, focar em critérios mais específicos por `workflow_profile` e em uso ainda mais maduro de `semantic`/`procedural`;
+5. manter histórico regenerável em `docs/archive/implementation/` e `tools/archive/` sem reexpandir a raiz do repositório;
+6. só abrir uma nova frente funcional quando a priorização macro sair explicitamente do fechamento do `v2`.
 
 ## Riscos e bloqueios
 

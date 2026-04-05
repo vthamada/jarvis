@@ -11,6 +11,8 @@ def test_default_pilot_scenarios_cover_allowed_and_blocked_paths() -> None:
     assert any(item.mission_key for item in scenarios)
     assert any(item.expected_decision == "defer_for_validation" for item in scenarios)
     assert any("continuity_resume" in item.metadata for item in scenarios)
+    assert any(item.scenario_id == "guided_memory_followup" for item in scenarios)
+    assert any(item.scenario_id == "recomposition_impasse" for item in scenarios)
 
 
 def test_run_pilot_scenarios_returns_structured_results() -> None:

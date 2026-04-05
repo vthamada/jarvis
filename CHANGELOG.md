@@ -1,5 +1,95 @@
 # CHANGELOG
 
+## 2026-04-05
+
+### Sinais de release e fechamento do lote micro MB-008 a MB-012
+
+- `tools/engineering_gate.py` agora roda `tools/verify_release_signal_baseline.py` no modo `release`, promovendo `workflow_profile_status`, `memory_causality_status`, `mind_domain_specialist_status` e recomposicao cognitiva a gramatica formal de liberacao;
+- `tools/internal_pilot_support.py` passou a incluir cenarios deliberados para memoria causal (`guided_memory_followup`) e recomposicao cognitiva por `specialist_route_impasse` (`recomposition_impasse`), com reflexo em `tools/internal_pilot_report.py` e `tools/compare_orchestrator_paths.py`;
+- `tools/compare_orchestrator_paths.py` agora marca drift explicito de `workflow_profile_status`, `memory_causality_status`, `dominant_tension`, `primary_domain_driver`, `mind_domain_specialist_status` e recomposicao cognitiva entre baseline e candidata;
+- `engines/planning-engine`, `engines/synthesis-engine` e `services/orchestrator-service` agora deixam `dominant_tension`, `primary_domain_driver`, `workflow_response_focus` e recomposicao cognitiva mais declarativos no comportamento final do runtime;
+- `docs/implementation/execution-backlog.md`, `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para marcar `MB-008` a `MB-012` como concluidos e registrar que o backlog micro voltou a ficar sem item `ready`.
+
+### Arquitetura de protective intelligence defensiva
+
+- criado `docs/architecture/protective-intelligence-architecture.md` para formalizar um eixo defensivo e investigativo integrado ao JARVIS, subordinado ao dominio canonico de seguranca, ao nucleo soberano e a governanca central;
+- o documento fixa a separacao entre memoria mutavel e ledger de evidencia, propoe `case-service`, `evidence-ledger-service` e `risk-signal-service`, e explicita limites como `through_core_only`, `advisory_only` e proibicao de retaliacao tecnica;
+- a ordem de implementacao ficou organizada por fases, de contratos e cadeia de custodia ate especialistas de OSINT, forense, risco e gates dedicados.
+
+### Mapa derivado de verticais do ecossistema
+
+- criado `docs/architecture/ecosystem-verticals-map.md` para organizar verticais derivadas do ecossistema do JARVIS sem competir com a ontologia canonica do mestre;
+- o mapa separa verticais compostas prioritarias, secundarias e tardias, mantendo `DevOS`, `ResearchOS`, `LifeOS`, `ExecutiveOS`, `FinanceOS` e `ProtectiveIntelligenceOS` como empacotamentos de produto e implementacao, e nao como fonte soberana do runtime;
+- `docs/architecture/protective-intelligence-architecture.md` foi ajustado para explicitar que `ProtectiveIntelligenceOS`, `SecurityOS` ou `IntelOS` sao apenas rotulos derivados de vertical, nao substitutos do dominio canonico de seguranca.
+
+### Saneamento da visao de ajuste arquitetural
+
+- `docs/architecture/visao_ajuste_arquitetural_jarvis.md` foi regravado sem mojibake e com linguagem alinhada ao baseline atual do JARVIS;
+- o documento passou a tratar `subsistemas` como agrupamento de implementacao e produto, sem competir com a taxonomia canonica de dominios, mentes e registries soberanos;
+- o eixo de seguranca, OSINT e forense agora aponta explicitamente para `docs/architecture/protective-intelligence-architecture.md` como desdobramento defensivo formal.
+
+### Fechamento integral do backlog micro soberano
+
+- `services/observability-service`, `tools/internal_pilot_report.py` e `tools/compare_orchestrator_paths.py` agora distinguem memoria causal (`causal_guidance`) de memoria apenas anexada (`attached_only`), expondo tambem foco semantico, hint procedural e especialistas associados a esse efeito;
+- `tools/internal_pilot_support.py` passou a carregar esses novos sinais de memoria guiada, alem de `dominant_tension`, `primary_domain_driver`, `mind_domain_specialist_status` e dados de recomposicao cognitiva para os artefatos comparativos;
+- `cognitive-engine` agora aplica recomposicao observavel em impasses reais de rota especializada, priorizando apoio critico sem quebrar a soberania do nucleo;
+- `orchestrator-service` passou a publicar `cognitive_recomposition_applied`, `cognitive_recomposition_reason` e `cognitive_recomposition_trigger` nos eventos do fluxo quando a recomposicao ocorre;
+- `observability-service` passou a auditar coerencia da recomposicao cognitiva e a explicitar `mind_domain_specialist_status` como leitura separada da malha `mente -> dominio -> especialista`;
+- `docs/implementation/execution-backlog.md` foi sincronizado para registrar `MB-003`, `MB-004` e `MB-005` como concluídos, deixando o lote micro atual sem item `ready`.
+
+### Promocao dos sinais novos para evolucao e fechadores
+
+- `evolution/evolution-lab/src/evolution_lab/service.py` e `tools/evolution_from_pilot.py` agora tratam `workflow_profile_status`, `memory_causality_status`, `mind_domain_specialist_status` e recomposicao cognitiva como sinais comparativos reais de refinamento, com `source_signals`, metricas e `risk_hint` coerentes com o baseline;
+- `tools/archive/close_alignment_cycle.py` e `tools/archive/close_sovereign_alignment_cut.py` agora carregam decisoes e taxas de `workflow_profile`, `memory_causality` e `mind_domain_specialist` nos payloads e markdowns regeneraveis de fechamento;
+- `evolution/evolution-lab/tests/test_evolution_lab_service.py`, `tests/unit/test_close_alignment_cycle.py` e `tests/unit/test_close_sovereign_alignment_cut.py` foram ampliados para cobrir essa nova evidencia;
+- `docs/implementation/execution-backlog.md`, `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para registrar `MB-006` e `MB-007` como concluidos e fixar que o lote micro atual continua sem item `ready`.
+
+## 2026-04-03
+
+### Backlog micro soberano e fluxo continuo de implementacao
+
+- criado `docs/implementation/execution-backlog.md` como fila micro soberana do corte ativo, com politicas explicitas de Kanban leve, `WIP limit = 1`, `Definition of Ready`, `Definition of Done` e seed inicial de itens `ready`;
+- `HANDOFF.md` passou a apontar explicitamente esse arquivo como fila micro ativa e deixou fixo que o handoff continua macro/tatico, nao backlog executavel;
+- `docs/implementation/v2-adherence-snapshot.md` passou a registrar explicitamente que o snapshot continua leitura de baseline, enquanto a fila micro vive em `execution-backlog.md`.
+
+### Propagacao de `workflow_profile_status` para artefatos comparativos
+
+- `tools/internal_pilot_support.py` passou a carregar `workflow_profile_status` dentro de `PilotExecutionResult`, permitindo que esse sinal atravesse a malha de comparacao e serializacao do piloto;
+- `tools/internal_pilot_report.py` agora expoe `workflow_profile_status` nas estruturas resumidas e no rendering textual do relatorio;
+- `tools/compare_orchestrator_paths.py` passou a incluir `workflow_profile_status` no texto e no payload serializado de comparacao, sem ainda mudar a semantica de decisao do comparador;
+- `docs/implementation/execution-backlog.md`, `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para marcar `MB-001` como concluido e registrar o novo estado do baseline.
+
+### Classificacao explicita de maturacao por workflow
+
+- `tools/internal_pilot_report.py` agora classifica `workflow_profile_status` em `baseline_saudavel`, `maturation_recommended`, `attention_required` ou `not_applicable`, deixando a leitura operacional mais objetiva;
+- `tools/compare_orchestrator_paths.py` passou a publicar essa mesma classificacao por cenario e tambem taxas e decisao agregada de workflow no `comparison_summary`;
+- a comparacao continua sem confundir `maturation_recommended` com falha estrutural de baseline, preservando a separacao entre maturacao de workflow e `axis_gate_status`;
+- `docs/implementation/execution-backlog.md`, `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para marcar `MB-002` como concluido e registrar a nova leitura do baseline.
+
+### Maturacao causal de memoria guiada no runtime soberano
+
+- `planning-engine` passou a tratar memoria `semantic` e `procedural` como alavancas causais do plano em rotas com `workflow_profile`, priorizando passos guiados de framing e continuidade antes de hints secundarios do workflow;
+- `planning-engine` passou a carregar esse efeito tambem em `success_criteria` e `smallest_safe_next_action`, preservando explicitamente o fio procedural quando a continuidade da rota depende dele;
+- `synthesis-engine` passou a tratar memoria semantica como ancora explicita do framing final e memoria procedural como fio que a proxima acao precisa preservar;
+- `cognitive-engine` e `specialist-engine` passaram a preferir rotas explicitas alinhadas ao `primary_domain_driver` quando esse vinculo ja foi resolvido pelo runtime, sem alterar o baseline de fallback quando a rota ainda nao existe;
+- `orchestrator-service` passou a publicar `primary_domain_driver_matches` nos eventos de selecao e conclusao de especialistas, e `observability-service` passou a usar esse sinal para cobrar coerencia explicita da malha `mente -> dominio -> especialista`;
+- `observability-service` passou a expor `workflow_profile_status` em paralelo a `workflow_trace_status`, separando baseline saudavel de `maturation_recommended` por `workflow_profile`;
+- `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para registrar que memoria guiada agora altera mais diretamente o comportamento final de `planning` e `synthesis`, e nao apenas o contexto disponivel.
+
+## 2026-04-02
+
+### Roteamento contratual e auditoria de consistencia do repositorio
+
+- `cognitive-engine` e `specialist-engine` passaram a consumir `domain_specialist_routes` explicitas antes de qualquer fallback local, reduzindo drift entre contratos roteados e a selecao real de especialistas;
+- `specialist-engine` passou a expor o papel guiado de analise estruturada de forma consistente tanto na invocacao quanto na contribuicao, e ganhou cobertura para precedencia de rota explicita sobre rederivacao local;
+- `tools/engineering_gate.py` passou a rodar `pytest` com `--basetemp` dedicado por execucao, e `conftest.py` passou a suprimir apenas o `PermissionError` ambiental de cleanup que quebrava o gate depois dos testes passarem;
+- `HANDOFF.md` foi resincronizado com o commit atual de baseline e agora registra explicitamente o novo comportamento de contratos roteados;
+- `docs/implementation/v2-adherence-snapshot.md` e `docs/architecture/mem0-repository-review.md` tiveram links locais absolutos antigos normalizados para paths relativos portaveis;
+- `operation_dispatch`, `workflow_composed`, `workflow_governance_declared`, `operation_completed` e `workflow_completed` passaram a carregar o mesmo slice soberano do contrato de workflow (`workflow_objective`, `workflow_expected_deliverables`, `workflow_telemetry_focus`, `workflow_success_focus`, `workflow_response_focus`);
+- `operational-service` passou a renderizar esses campos de contrato de workflow no artefato gerado, e `observability-service` passou a tratar drift entre composicao e execucao desse contrato como `attention_required`;
+- `auditoria_documento_mestre_jarvis.md` foi arquivado como `docs/archive/documentation/auditoria-primaria-documento-mestre.md`, limpando a raiz do repositorio e preservando a auditoria como referencia historica;
+- criado `docs/documentation/repository-map-and-consistency-audit.md` para mapear docs ativos vs historicos, tools ativos vs arquivados, diretorios gerados/locais e candidatos restantes a reclassificacao.
+
 ## 2026-04-01
 
 ### Fechamento do V2 runtime sovereignty hardening
@@ -348,7 +438,7 @@ Ele **não** substitui o Documento-Mestre, o `HANDOFF.md` ou futuros ADRs detalh
 
 ### Reescrita da auditoria primária do Documento-Mestre
 
-- `auditoria_documento_mestre_jarvis.md` foi reescrito como auditoria primária baseada em leitura completa do mestre e validação local, substituindo o relatório anterior que misturava achados corretos, exagerados e factualmente incorretos;
+- `docs/archive/documentation/auditoria-primaria-documento-mestre.md` foi reescrito como auditoria primária baseada em leitura completa do mestre e validação local, substituindo o relatório anterior que misturava achados corretos, exagerados e factualmente incorretos;
 - a nova auditoria separa problemas reais do Documento-Mestre, exageros da auditoria anterior, leitura mestre x implementação e plano de correção sem reescrita integral;
 - ficou formalizado que a correção do mestre deve partir de evidência confirmada no próprio repositório e continuar usando `docs/documentation/matriz-de-aderencia-mestre.md` como ponte entre visão canônica e backlog.
 

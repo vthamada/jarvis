@@ -24,6 +24,7 @@ from shared.mind_registry import (
 from shared.mind_registry import (
     primary_domain_driver as resolve_primary_domain_driver,
 )
+from shared.specialist_registry import canonical_specialist_type
 
 
 @dataclass(frozen=True)
@@ -47,6 +48,9 @@ class CognitiveSnapshot:
     primary_domain_driver: str | None
     supporting_mind_limit: int
     suppressed_mind_limit: int
+    recomposition_applied: bool
+    recomposition_reason: str | None
+    recomposition_trigger: str | None
 
 
 class CognitiveEngine:
@@ -67,6 +71,17 @@ class CognitiveEngine:
 
         active_domains = retrieved_domains or [FALLBACK_RUNTIME_ROUTE]
         canonical_domains = self._resolve_canonical_domains(active_domains)
+        normalized_routes = [
+            DomainSpecialistRouteContract(
+                domain_name=route.domain_name,
+                specialist_type=canonical_specialist_type(route.specialist_type),
+                specialist_mode=route.specialist_mode,
+                routing_reason=route.routing_reason,
+                canonical_domain_refs=list(route.canonical_domain_refs),
+                routing_source=route.routing_source,
+            )
+            for route in (domain_specialist_routes or [])
+        ]
         ordered_minds = rank_active_minds(
             intent=intent,
             risk_markers=risk_markers,
@@ -102,12 +117,29 @@ class CognitiveEngine:
             primary_mind=primary_mind,
             canonical_domains=canonical_domains,
         )
+        (
+            supporting_minds,
+            suppressed_minds,
+            arbitration_source,
+            recomposition_applied,
+            recomposition_reason,
+            recomposition_trigger,
+        ) = self._maybe_recompose_for_impasse(
+            primary_mind=primary_mind,
+            ordered_minds=ordered_minds,
+            supporting_minds=supporting_minds,
+            supporting_limit=supporting_limit,
+            suppressed_limit=suppressed_limit,
+            active_domains=active_domains,
+            primary_domain_driver=dominant_domain_driver,
+            domain_specialist_routes=normalized_routes,
+        )
         specialist_hints = self._select_specialist_hints(
             intent=intent,
             domains=active_domains,
             dominant_tension=dominant_tension,
             risk_markers=risk_markers,
-            domain_specialist_routes=domain_specialist_routes or [],
+            domain_specialist_routes=normalized_routes,
             primary_domain_driver=dominant_domain_driver,
         )
         arbitration_summary = build_arbitration_summary(
@@ -117,6 +149,11 @@ class CognitiveEngine:
             dominant_tension=dominant_tension,
             domains=active_domains,
         )
+        if recomposition_applied and recomposition_reason and recomposition_trigger:
+            arbitration_summary = (
+                f"{arbitration_summary}; recomposicao={recomposition_trigger}:"
+                f" {recomposition_reason}"
+            )
         deliberation_notes = build_deliberation_notes(
             intent=intent,
             primary_mind=primary_mind,
@@ -125,6 +162,11 @@ class CognitiveEngine:
             specialist_hints=specialist_hints,
             primary_domain_driver=dominant_domain_driver,
         )
+        if recomposition_applied and recomposition_reason and recomposition_trigger:
+            deliberation_notes.append(
+                "recomposicao_cognitiva="
+                f"{recomposition_trigger}:{recomposition_reason}"
+            )
         rationale = (
             f"mente_primaria={primary_mind}; familia={primary_family}; "
             f"suporte={', '.join(supporting_minds) or 'nenhum'}; "
@@ -133,7 +175,9 @@ class CognitiveEngine:
             f"tensao_dominante={dominant_tension}; dominios={active_domains}; "
             f"dominios_canonicos={canonical_domains}; "
             f"dominio_primario={dominant_domain_driver or 'none'}; "
-            f"arbitragem={arbitration_summary}"
+            f"fonte_arbitragem={arbitration_source}; "
+            f"arbitragem={arbitration_summary}; "
+            f"recomposicao_aplicada={recomposition_applied}"
         )
         return CognitiveSnapshot(
             active_minds=[primary_mind, *supporting_minds],
@@ -148,11 +192,14 @@ class CognitiveEngine:
             suppressed_minds=suppressed_minds,
             dominant_tension=dominant_tension,
             arbitration_summary=arbitration_summary,
-            arbitration_source="mind_registry",
+            arbitration_source=arbitration_source,
             primary_mind_family=primary_family,
             primary_domain_driver=dominant_domain_driver,
             supporting_mind_limit=supporting_limit,
             suppressed_mind_limit=suppressed_limit,
+            recomposition_applied=recomposition_applied,
+            recomposition_reason=recomposition_reason,
+            recomposition_trigger=recomposition_trigger,
         )
 
     @staticmethod
@@ -165,15 +212,41 @@ class CognitiveEngine:
         domain_specialist_routes: list[DomainSpecialistRouteContract],
         primary_domain_driver: str | None,
     ) -> list[str]:
-        del (
-            intent,
-            dominant_tension,
-            risk_markers,
-            domain_specialist_routes,
-            primary_domain_driver,
-        )
+        del (intent, dominant_tension, risk_markers)
         hints: list[str] = []
-        for route_name in domains:
+        route_map = {
+            route.domain_name: route
+            for route in domain_specialist_routes
+            if route.domain_name in domains
+        }
+        prioritized_domains: list[str] = []
+        if primary_domain_driver is not None and route_map:
+            for route_name in domains:
+                route_contract = route_map.get(route_name)
+                if route_contract is not None:
+                    canonical_refs = list(route_contract.canonical_domain_refs) or list(
+                        canonical_domain_refs_for_name(route_name)
+                    )
+                else:
+                    canonical_refs = list(canonical_domain_refs_for_name(route_name))
+                if (
+                    primary_domain_driver in canonical_refs
+                    and route_name not in prioritized_domains
+                ):
+                    prioritized_domains.append(route_name)
+        ordered_domains = prioritized_domains + [
+            route_name for route_name in domains if route_name not in prioritized_domains
+        ]
+        for route_name in ordered_domains:
+            route_contract = route_map.get(route_name)
+            if route_contract is not None:
+                specialist_type = canonical_specialist_type(route_contract.specialist_type)
+                if route_is_specialist_eligible(route_name, specialist_type):
+                    if specialist_type not in hints:
+                        hints.append(specialist_type)
+                continue
+            if route_map:
+                continue
             specialist_type = route_linked_specialist_type(route_name)
             if specialist_type is None:
                 continue
@@ -192,3 +265,68 @@ class CognitiveEngine:
                     canonical_domains.append(canonical_ref)
         return canonical_domains
 
+    @staticmethod
+    def _maybe_recompose_for_impasse(
+        *,
+        primary_mind: str,
+        ordered_minds: list[str],
+        supporting_minds: list[str],
+        supporting_limit: int,
+        suppressed_limit: int,
+        active_domains: list[str],
+        primary_domain_driver: str | None,
+        domain_specialist_routes: list[DomainSpecialistRouteContract],
+    ) -> tuple[list[str], list[str], str, bool, str | None, str | None]:
+        active_routes = [
+            route
+            for route in domain_specialist_routes
+            if route.specialist_mode in {"guided", "active"}
+        ]
+        if (
+            primary_domain_driver is None
+            or primary_mind == "mente_critica"
+            or not active_routes
+            or (len(active_domains) < 2 and len(active_routes) < 2)
+        ):
+            return supporting_minds, [
+                mind
+                for mind in ordered_minds
+                if mind not in {primary_mind, *supporting_minds}
+            ][:suppressed_limit], "mind_registry", False, None, None
+
+        if any(
+            primary_domain_driver in (
+                list(route.canonical_domain_refs)
+                or list(canonical_domain_refs_for_name(route.domain_name))
+            )
+            for route in active_routes
+        ):
+            return supporting_minds, [
+                mind
+                for mind in ordered_minds
+                if mind not in {primary_mind, *supporting_minds}
+            ][:suppressed_limit], "mind_registry", False, None, None
+
+        recomposed_support = [
+            "mente_critica",
+            *[mind for mind in supporting_minds if mind != "mente_critica"],
+        ]
+        deduped_support: list[str] = []
+        for mind in recomposed_support:
+            if mind == primary_mind or mind in deduped_support:
+                continue
+            deduped_support.append(mind)
+        deduped_support = deduped_support[:supporting_limit]
+        recomposed_suppressed = [
+            mind
+            for mind in ordered_minds
+            if mind not in {primary_mind, *deduped_support}
+        ][:suppressed_limit]
+        return (
+            deduped_support,
+            recomposed_suppressed,
+            "mind_registry_recomposition",
+            True,
+            "primary domain driver has no matching guided specialist route",
+            "specialist_route_impasse",
+        )

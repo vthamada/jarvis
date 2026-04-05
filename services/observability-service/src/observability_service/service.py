@@ -53,6 +53,19 @@ class FlowAudit:
     workflow_profile: str | None
     workflow_governance_mode: str | None
     workflow_trace_status: str
+    workflow_profile_status: str
+    memory_causality_status: str
+    dominant_tension: str | None
+    arbitration_source: str | None
+    primary_domain_driver: str | None
+    mind_domain_specialist_status: str
+    cognitive_recomposition_applied: bool
+    cognitive_recomposition_reason: str | None
+    cognitive_recomposition_trigger: str | None
+    semantic_memory_focus: list[str]
+    procedural_memory_hint: str | None
+    semantic_memory_specialists: list[str]
+    procedural_memory_specialists: list[str]
     event_names: list[str]
     missing_required_events: list[str]
     anomaly_flags: list[str]
@@ -233,6 +246,7 @@ class ObservabilityService:
                 workflow_profile=None,
                 workflow_governance_mode=None,
                 workflow_trace_status="incomplete",
+                workflow_profile_status="incomplete",
                 event_names=[],
                 missing_required_events=list(required_events),
                 anomaly_flags=["no_events_found"],
@@ -356,6 +370,110 @@ class ObservabilityService:
                 else None
             )
         )
+        dominant_tension = (
+            str(context_event.payload.get("dominant_tension"))
+            if context_event
+            and context_event.payload.get("dominant_tension") is not None
+            else (
+                str(plan_event.payload.get("dominant_tension"))
+                if plan_event and plan_event.payload.get("dominant_tension") is not None
+                else None
+            )
+        )
+        arbitration_source = (
+            str(context_event.payload.get("arbitration_source"))
+            if context_event
+            and context_event.payload.get("arbitration_source") is not None
+            else (
+                str(plan_event.payload.get("arbitration_source"))
+                if plan_event and plan_event.payload.get("arbitration_source") is not None
+                else (
+                    str(response_event.payload.get("arbitration_source"))
+                    if response_event
+                    and response_event.payload.get("arbitration_source") is not None
+                    else None
+                )
+            )
+        )
+        primary_domain_driver = (
+            str(context_event.payload.get("primary_domain_driver"))
+            if context_event
+            and context_event.payload.get("primary_domain_driver") is not None
+            else (
+                str(plan_event.payload.get("primary_domain_driver"))
+                if plan_event and plan_event.payload.get("primary_domain_driver") is not None
+                else (
+                    str(response_event.payload.get("primary_domain_driver"))
+                    if response_event
+                    and response_event.payload.get("primary_domain_driver") is not None
+                    else None
+                )
+            )
+        )
+        cognitive_recomposition_applied = bool(
+            (
+                context_event.payload.get("cognitive_recomposition_applied")
+                if context_event
+                else False
+            )
+            or (
+                response_event.payload.get("cognitive_recomposition_applied")
+                if response_event
+                else False
+            )
+        )
+        cognitive_recomposition_reason = (
+            str(context_event.payload.get("cognitive_recomposition_reason"))
+            if context_event
+            and context_event.payload.get("cognitive_recomposition_reason") is not None
+            else (
+                str(response_event.payload.get("cognitive_recomposition_reason"))
+                if response_event
+                and response_event.payload.get("cognitive_recomposition_reason") is not None
+                else None
+            )
+        )
+        cognitive_recomposition_trigger = (
+            str(context_event.payload.get("cognitive_recomposition_trigger"))
+            if context_event
+            and context_event.payload.get("cognitive_recomposition_trigger") is not None
+            else (
+                str(response_event.payload.get("cognitive_recomposition_trigger"))
+                if response_event
+                and response_event.payload.get("cognitive_recomposition_trigger") is not None
+                else None
+            )
+        )
+        semantic_memory_focus = [
+            str(item)
+            for item in (
+                response_event.payload.get("semantic_memory_focus", [])
+                if response_event
+                else []
+            )
+        ]
+        procedural_memory_hint = (
+            str(response_event.payload.get("procedural_memory_hint"))
+            if response_event
+            and response_event.payload.get("procedural_memory_hint") is not None
+            else None
+        )
+        semantic_memory_specialists = [
+            str(item)
+            for item in (
+                shared_memory_event.payload.get("semantic_memory_specialists", [])
+                if shared_memory_event
+                else []
+            )
+        ]
+        procedural_memory_specialists = [
+            str(item)
+            for item in (
+                shared_memory_event.payload.get("procedural_memory_specialists", [])
+                if shared_memory_event
+                else []
+            )
+        ]
         registry_domains = (
             [str(item) for item in domain_registry_event.payload.get("registry_domains", [])]
             if domain_registry_event
@@ -450,6 +568,17 @@ class ObservabilityService:
             workflow_governance_event=workflow_governance_event,
             workflow_completed_event=workflow_completed_event,
         )
+        workflow_profile_status = self._workflow_profile_status(
+            workflow_profile=workflow_profile,
+            workflow_trace_status=workflow_trace_status,
+            response_event=response_event,
+            shared_memory_event=shared_memory_event,
+            specialist_domain_event=specialist_domain_event,
+        )
+        memory_causality_status = self._memory_causality_status(
+            response_event=response_event,
+            shared_memory_event=shared_memory_event,
+        )
         domain_alignment_status = self._domain_alignment_status(
             domain_registry_event=domain_registry_event,
             specialist_selection_event=specialist_selection_event,
@@ -460,6 +589,11 @@ class ObservabilityService:
             context_event=context_event,
             plan_event=plan_event,
             response_event=response_event,
+        )
+        mind_domain_specialist_status = self._mind_domain_specialist_status(
+            context_event=context_event,
+            specialist_selection_event=specialist_selection_event,
+            specialist_domain_event=specialist_domain_event,
         )
         identity_alignment_status = self._identity_alignment_status(
             directive_event=directive_event,
@@ -493,6 +627,19 @@ class ObservabilityService:
             workflow_profile=workflow_profile,
             workflow_governance_mode=workflow_governance_mode,
             workflow_trace_status=workflow_trace_status,
+            workflow_profile_status=workflow_profile_status,
+            memory_causality_status=memory_causality_status,
+            dominant_tension=dominant_tension,
+            arbitration_source=arbitration_source,
+            primary_domain_driver=primary_domain_driver,
+            mind_domain_specialist_status=mind_domain_specialist_status,
+            cognitive_recomposition_applied=cognitive_recomposition_applied,
+            cognitive_recomposition_reason=cognitive_recomposition_reason,
+            cognitive_recomposition_trigger=cognitive_recomposition_trigger,
+            semantic_memory_focus=semantic_memory_focus,
+            procedural_memory_hint=procedural_memory_hint,
+            semantic_memory_specialists=semantic_memory_specialists,
+            procedural_memory_specialists=procedural_memory_specialists,
             event_names=event_names,
             missing_required_events=missing_required_events,
             anomaly_flags=anomaly_flags,
@@ -633,12 +780,112 @@ class ObservabilityService:
         completed_decisions = workflow_completed_event.payload.get("workflow_decisions", [])
         workflow_state = workflow_completed_event.payload.get("workflow_state")
         governance_mode = workflow_governance_event.payload.get("workflow_governance_mode")
+        workflow_objective = workflow_composed_event.payload.get("workflow_objective")
+        workflow_expected_deliverables = workflow_composed_event.payload.get(
+            "workflow_expected_deliverables",
+            [],
+        )
+        workflow_telemetry_focus = workflow_composed_event.payload.get(
+            "workflow_telemetry_focus",
+            [],
+        )
+        workflow_success_focus = workflow_governance_event.payload.get("workflow_success_focus")
+        workflow_response_focus = workflow_completed_event.payload.get("workflow_response_focus")
         if not decision_points or not completed_decisions:
             return "attention_required"
         if workflow_state not in {"completed", "failed"}:
             return "attention_required"
         if governance_mode != "core_mediated":
             return "attention_required"
+        if not workflow_objective:
+            return "attention_required"
+        if not workflow_expected_deliverables or not workflow_telemetry_focus:
+            return "attention_required"
+        if not workflow_success_focus or not workflow_response_focus:
+            return "attention_required"
+        if operation_event is not None:
+            if (
+                operation_event.payload.get("workflow_expected_deliverables")
+                != workflow_expected_deliverables
+            ):
+                return "attention_required"
+            if (
+                operation_event.payload.get("workflow_telemetry_focus")
+                != workflow_telemetry_focus
+            ):
+                return "attention_required"
+            if operation_event.payload.get("workflow_objective") != workflow_objective:
+                return "attention_required"
+        return "healthy"
+
+    @staticmethod
+    def _workflow_profile_status(
+        *,
+        workflow_profile: str | None,
+        workflow_trace_status: str,
+        response_event: InternalEventEnvelope | None,
+        shared_memory_event: InternalEventEnvelope | None,
+        specialist_domain_event: InternalEventEnvelope | None,
+    ) -> str:
+        if workflow_profile is None:
+            return "not_applicable"
+        if workflow_trace_status != "healthy":
+            return workflow_trace_status
+        if response_event is None:
+            return "maturation_recommended"
+        response_payload = response_event.payload
+        if not response_payload.get("primary_mind"):
+            return "maturation_recommended"
+        if not response_payload.get("primary_domain_driver"):
+            return "maturation_recommended"
+
+        guided_memory_specialists = [
+            str(item)
+            for item in response_payload.get("guided_memory_specialists", [])
+            if item
+        ]
+        semantic_memory_focus = [
+            str(item)
+            for item in response_payload.get("semantic_memory_focus", [])
+            if item
+        ]
+        procedural_memory_hint = response_payload.get("procedural_memory_hint")
+        shared_guided_specialists = (
+            [
+                str(item)
+                for item in shared_memory_event.payload.get("guided_specialists", [])
+                if item
+            ]
+            if shared_memory_event is not None
+            else []
+        )
+        domain_specialists = (
+            [
+                str(item)
+                for item in specialist_domain_event.payload.get("specialist_types", [])
+                if item
+            ]
+            if specialist_domain_event is not None
+            else []
+        )
+        has_specialist_support = bool(
+            guided_memory_specialists or shared_guided_specialists or domain_specialists
+        )
+
+        if workflow_profile in {
+            "strategic_direction_workflow",
+            "structured_analysis_workflow",
+        }:
+            if not has_specialist_support or not semantic_memory_focus:
+                return "maturation_recommended"
+        if workflow_profile in {
+            "strategic_direction_workflow",
+            "decision_risk_workflow",
+            "software_change_workflow",
+            "operational_readiness_workflow",
+        }:
+            if not procedural_memory_hint:
+                return "maturation_recommended"
         return "healthy"
 
     @staticmethod
@@ -747,12 +994,19 @@ class ObservabilityService:
             primary_canonical_domain = specialist_selection_event.payload.get(
                 "primary_canonical_domain"
             )
+            primary_domain_driver = specialist_selection_event.payload.get(
+                "primary_domain_driver"
+            )
             primary_route_matches = specialist_selection_event.payload.get(
                 "primary_route_matches",
                 {},
             )
             primary_canonical_matches = specialist_selection_event.payload.get(
                 "primary_canonical_matches",
+                {},
+            )
+            primary_domain_driver_matches = specialist_selection_event.payload.get(
+                "primary_domain_driver_matches",
                 {},
             )
             for specialist_type in selected_specialists:
@@ -807,6 +1061,22 @@ class ObservabilityService:
                         and primary_canonical_matches.get(specialist_type) is not True
                     ):
                         return "attention_required"
+                    if (
+                        primary_domain_driver
+                        and primary_domain_driver_matches
+                        and primary_domain_driver_matches.get(specialist_type) is not True
+                    ):
+                        return "attention_required"
+            if (
+                primary_domain_driver
+                and primary_domain_driver_matches
+                and selected_specialists
+                and not any(
+                    primary_domain_driver_matches.get(specialist_type) is True
+                    for specialist_type in selected_specialists
+                )
+            ):
+                return "attention_required"
         if specialist_domain_event is not None:
             linked_domains = specialist_domain_event.payload.get("linked_domains", {})
             selection_modes = specialist_domain_event.payload.get("selection_modes", {})
@@ -826,12 +1096,19 @@ class ObservabilityService:
             primary_canonical_domain = specialist_domain_event.payload.get(
                 "primary_canonical_domain"
             )
+            primary_domain_driver = specialist_domain_event.payload.get(
+                "primary_domain_driver"
+            )
             primary_route_matches = specialist_domain_event.payload.get(
                 "primary_route_matches",
                 {},
             )
             primary_canonical_matches = specialist_domain_event.payload.get(
                 "primary_canonical_matches",
+                {},
+            )
+            primary_domain_driver_matches = specialist_domain_event.payload.get(
+                "primary_domain_driver_matches",
                 {},
             )
             if not linked_domains or not selection_modes:
@@ -880,6 +1157,22 @@ class ObservabilityService:
                         and primary_canonical_matches.get(specialist_type) is not True
                     ):
                         return "attention_required"
+                    if (
+                        primary_domain_driver
+                        and primary_domain_driver_matches
+                        and primary_domain_driver_matches.get(specialist_type) is not True
+                    ):
+                        return "attention_required"
+            if (
+                primary_domain_driver
+                and primary_domain_driver_matches
+                and linked_domains
+                and not any(
+                    primary_domain_driver_matches.get(specialist_type) is True
+                    for specialist_type in linked_domains
+                )
+            ):
+                return "attention_required"
             return "healthy"
         if specialist_shadow_event is None:
             return "healthy"
@@ -944,15 +1237,30 @@ class ObservabilityService:
         dominant_tension = context_event.payload.get("dominant_tension")
         arbitration_summary = context_event.payload.get("arbitration_summary")
         arbitration_source = context_event.payload.get("arbitration_source")
+        recomposition_applied = bool(
+            context_event.payload.get("cognitive_recomposition_applied")
+        )
+        recomposition_reason = context_event.payload.get("cognitive_recomposition_reason")
+        recomposition_trigger = context_event.payload.get("cognitive_recomposition_trigger")
         canonical_domains = context_event.payload.get("canonical_domains", [])
         primary_domain_driver = context_event.payload.get("primary_domain_driver")
         support_limit = context_event.payload.get("supporting_mind_limit")
         suppressed_limit = context_event.payload.get("suppressed_mind_limit")
         if not primary_mind or not active_minds or not dominant_tension:
             return "partial"
-        if arbitration_source != "mind_registry":
+        allowed_source = (
+            "mind_registry_recomposition" if recomposition_applied else "mind_registry"
+        )
+        if arbitration_source != allowed_source:
             return "attention_required"
         if not arbitration_summary:
+            return "attention_required"
+        if recomposition_applied and (not recomposition_reason or not recomposition_trigger):
+            return "attention_required"
+        if (
+            not recomposition_applied
+            and (recomposition_reason is not None or recomposition_trigger is not None)
+        ):
             return "attention_required"
         if canonical_domains and primary_domain_driver and primary_domain_driver not in canonical_domains:
             return "attention_required"
@@ -973,6 +1281,15 @@ class ObservabilityService:
             plan_primary_mind_family = plan_event.payload.get("primary_mind_family")
             plan_primary_domain_driver = plan_event.payload.get("primary_domain_driver")
             plan_arbitration_source = plan_event.payload.get("arbitration_source")
+            plan_recomposition_applied = plan_event.payload.get(
+                "cognitive_recomposition_applied"
+            )
+            plan_recomposition_reason = plan_event.payload.get(
+                "cognitive_recomposition_reason"
+            )
+            plan_recomposition_trigger = plan_event.payload.get(
+                "cognitive_recomposition_trigger"
+            )
             if plan_primary_mind is not None and plan_primary_mind != primary_mind:
                 return "attention_required"
             if (
@@ -992,11 +1309,35 @@ class ObservabilityService:
                 and plan_arbitration_source != arbitration_source
             ):
                 return "attention_required"
+            if (
+                plan_recomposition_applied is not None
+                and bool(plan_recomposition_applied) != recomposition_applied
+            ):
+                return "attention_required"
+            if (
+                plan_recomposition_reason is not None
+                and plan_recomposition_reason != recomposition_reason
+            ):
+                return "attention_required"
+            if (
+                plan_recomposition_trigger is not None
+                and plan_recomposition_trigger != recomposition_trigger
+            ):
+                return "attention_required"
         if response_event is not None:
             response_primary_mind = response_event.payload.get("primary_mind")
             response_primary_mind_family = response_event.payload.get("primary_mind_family")
             response_primary_domain_driver = response_event.payload.get("primary_domain_driver")
             response_arbitration_source = response_event.payload.get("arbitration_source")
+            response_recomposition_applied = response_event.payload.get(
+                "cognitive_recomposition_applied"
+            )
+            response_recomposition_reason = response_event.payload.get(
+                "cognitive_recomposition_reason"
+            )
+            response_recomposition_trigger = response_event.payload.get(
+                "cognitive_recomposition_trigger"
+            )
             if response_primary_mind is not None and response_primary_mind != primary_mind:
                 return "attention_required"
             if (
@@ -1016,7 +1357,85 @@ class ObservabilityService:
                 and response_arbitration_source != arbitration_source
             ):
                 return "attention_required"
+            if (
+                response_recomposition_applied is not None
+                and bool(response_recomposition_applied) != recomposition_applied
+            ):
+                return "attention_required"
+            if (
+                response_recomposition_reason is not None
+                and response_recomposition_reason != recomposition_reason
+            ):
+                return "attention_required"
+            if (
+                response_recomposition_trigger is not None
+                and response_recomposition_trigger != recomposition_trigger
+            ):
+                return "attention_required"
         return "healthy"
+
+    @staticmethod
+    def _mind_domain_specialist_status(
+        *,
+        context_event: InternalEventEnvelope | None,
+        specialist_selection_event: InternalEventEnvelope | None,
+        specialist_domain_event: InternalEventEnvelope | None,
+    ) -> str:
+        if context_event is None:
+            return "incomplete"
+        primary_domain_driver = context_event.payload.get("primary_domain_driver")
+        if primary_domain_driver is None:
+            return "not_applicable"
+        specialist_event = specialist_domain_event or specialist_selection_event
+        if specialist_event is None:
+            return "not_applicable"
+        selected_specialists = specialist_event.payload.get(
+            "domain_specialists",
+            specialist_event.payload.get("specialist_types", []),
+        )
+        if not selected_specialists:
+            return "not_applicable"
+        matches = specialist_event.payload.get("primary_domain_driver_matches", {})
+        if not isinstance(matches, dict) or not matches:
+            return "attention_required"
+        if any(matches.get(str(item)) is True for item in selected_specialists):
+            return "aligned"
+        if all(matches.get(str(item)) is False for item in selected_specialists):
+            return "mismatch"
+        return "attention_required"
+
+    @staticmethod
+    def _memory_causality_status(
+        *,
+        response_event: InternalEventEnvelope | None,
+        shared_memory_event: InternalEventEnvelope | None,
+    ) -> str:
+        if response_event is None and shared_memory_event is None:
+            return "not_applicable"
+        response_payload = response_event.payload if response_event else {}
+        shared_payload = shared_memory_event.payload if shared_memory_event else {}
+        semantic_available = bool(response_payload.get("semantic_memory_available"))
+        procedural_available = bool(response_payload.get("procedural_memory_available"))
+        semantic_focus = [
+            str(item) for item in response_payload.get("semantic_memory_focus", [])
+        ]
+        procedural_hint = response_payload.get("procedural_memory_hint")
+        semantic_specialists = shared_payload.get("semantic_memory_specialists", [])
+        procedural_specialists = shared_payload.get("procedural_memory_specialists", [])
+        if semantic_focus and not semantic_available:
+            return "attention_required"
+        if procedural_hint and not procedural_available:
+            return "attention_required"
+        if semantic_focus or procedural_hint:
+            return "causal_guidance"
+        if (
+            semantic_available
+            or procedural_available
+            or semantic_specialists
+            or procedural_specialists
+        ):
+            return "attached_only"
+        return "not_applicable"
 
     @staticmethod
     def _memory_alignment_status(

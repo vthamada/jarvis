@@ -114,6 +114,17 @@ def test_evolution_lab_creates_proposal_from_flow_evaluation() -> None:
             mind_alignment_status="partial",
             identity_alignment_status="healthy",
             axis_gate_status="attention_required",
+            workflow_profile_status="maturation_recommended",
+            memory_causality_status="attached_only",
+            dominant_tension="equilibrar profundidade analitica com conclusao util",
+            arbitration_source="mind_registry",
+            primary_domain_driver="dados_estatistica_e_inteligencia_analitica",
+            mind_domain_specialist_status="incomplete",
+            cognitive_recomposition_applied=True,
+            cognitive_recomposition_reason=(
+                "primary domain driver has no matching guided specialist route"
+            ),
+            cognitive_recomposition_trigger="specialist_route_impasse",
             continuity_trace_status="attention_required",
             missing_continuity_signals=["memory_continuity_mode"],
             continuity_anomaly_flags=["retomar_missing_target_mission"],
@@ -127,6 +138,14 @@ def test_evolution_lab_creates_proposal_from_flow_evaluation() -> None:
     assert "continuity://runtime/langgraph_subflow" in proposal.source_signals
     assert "alignment://mind/partial" in proposal.source_signals
     assert "alignment://axis-gate/attention_required" in proposal.source_signals
+    assert "workflow://profile-status/maturation_recommended" in proposal.source_signals
+    assert "memory://causality/attached_only" in proposal.source_signals
+    assert (
+        "domain://primary-driver/dados_estatistica_e_inteligencia_analitica"
+        in proposal.source_signals
+    )
+    assert "alignment://mind-domain-specialist/incomplete" in proposal.source_signals
+    assert "mind://recomposition/applied" in proposal.source_signals
     assert proposal.risk_hint == "moderate"
 
 
@@ -161,6 +180,10 @@ def test_evolution_lab_compares_flow_evaluations() -> None:
             mind_alignment_status="partial",
             identity_alignment_status="healthy",
             axis_gate_status="attention_required",
+            workflow_profile_status="maturation_recommended",
+            memory_causality_status="attached_only",
+            primary_domain_driver="dados_estatistica_e_inteligencia_analitica",
+            mind_domain_specialist_status="incomplete",
             continuity_trace_status="attention_required",
             missing_continuity_signals=["memory_continuity_mode"],
             continuity_anomaly_flags=["retomar_missing_target_mission"],
@@ -181,6 +204,15 @@ def test_evolution_lab_compares_flow_evaluations() -> None:
             mind_alignment_status="healthy",
             identity_alignment_status="healthy",
             axis_gate_status="healthy",
+            workflow_profile_status="healthy",
+            memory_causality_status="causal_guidance",
+            primary_domain_driver="dados_estatistica_e_inteligencia_analitica",
+            mind_domain_specialist_status="aligned",
+            cognitive_recomposition_applied=True,
+            cognitive_recomposition_reason=(
+                "primary domain driver has no matching guided specialist route"
+            ),
+            cognitive_recomposition_trigger="specialist_route_impasse",
             continuity_trace_status="healthy",
         ),
         governance_refs=["policy://sandbox/manual-review"],
@@ -192,3 +224,6 @@ def test_evolution_lab_compares_flow_evaluations() -> None:
     assert comparison.metric_deltas["continuity_health"] > 0
     assert comparison.metric_deltas["runtime_statefulness"] > 0
     assert comparison.metric_deltas["axis_gate"] > 0
+    assert comparison.metric_deltas["workflow_profile"] > 0
+    assert comparison.metric_deltas["memory_causality"] > 0
+    assert comparison.metric_deltas["mind_domain_specialist"] > 0

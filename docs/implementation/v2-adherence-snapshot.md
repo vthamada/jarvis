@@ -3,7 +3,7 @@
 ## 1. Objetivo
 
 Este documento registra um snapshot de aderencia entre o estado atual do repositorio,
-a visao canonica do [documento_mestre_jarvis.md](d:/Users/DTI/Desktop/jarvis/documento_mestre_jarvis.md)
+a visao canonica do [documento_mestre_jarvis.md](../../documento_mestre_jarvis.md)
 e a direcao operacional consolidada nos documentos vivos do projeto.
 
 Ele existe para:
@@ -17,8 +17,9 @@ Leitura correta:
 
 - o Documento-Mestre continua sendo a unica fonte canonica de visao;
 - este arquivo e uma auditoria derivada e revisavel;
-- [HANDOFF.md](d:/Users/DTI/Desktop/jarvis/HANDOFF.md) continua sendo a retomada tatico-operacional;
-- [matriz-de-aderencia-mestre.md](d:/Users/DTI/Desktop/jarvis/docs/documentation/matriz-de-aderencia-mestre.md)
+- [HANDOFF.md](../../HANDOFF.md) continua sendo a retomada tatico-operacional;
+- [execution-backlog.md](./execution-backlog.md) passa a ser a fila micro ativa, e este snapshot nao deve voltar a carregar backlog executavel;
+- [matriz-de-aderencia-mestre.md](../documentation/matriz-de-aderencia-mestre.md)
   continua sendo a taxonomia formal de status.
 
 ---
@@ -27,7 +28,7 @@ Leitura correta:
 
 Estado de referencia desta revisao:
 
-- data da fotografia: `2026-04-01`
+- data da fotografia: `2026-04-05`
 - ultimo recorte funcional fechado: `v2-native-memory-scope-hardening-cut`
 - ultimo recorte estrutural fechado: `v2-repository-hygiene-and-tools-review-cut`
 - passo funcional em andamento: `domain-sovereignty-runtime-hardening`
@@ -42,7 +43,23 @@ Leitura executiva:
 - a malha dominio->especialista tambem avancou: packets guiados de memoria agora nascem da rota promovida elegivel do registry e sao validados contra o contrato canonico da rota antes da convocacao especializada.
 - o contrato canonico da rota ativa passou a atravessar tambem o `planning` e a influenciar a `synthesis`, reduzindo a distancia entre memoria guiada disponivel e comportamento final do runtime.
 - esse contrato agora tambem molda passos, restricoes, criterios de sucesso e checkpoint/gate governado do plano, e ja aparece na leitura final como objetivo, entrega esperada, foco de leitura e workflow ativo da rota promovida.
+- esse mesmo slice soberano agora tambem atravessa `operation_dispatch`, `workflow_*` e `operation_completed`, e a observabilidade passou a marcar drift quando objetivo, entregaveis, foco de sucesso, foco final e telemetria deixam de bater entre composicao e execucao.
+- memoria guiada avancou mais um passo: `semantic` e `procedural` agora alteram de forma mais causal `steps`, `smallest_safe_next_action`, `success_criteria` e framing final de `planning`/`synthesis`, em vez de aparecer apenas como hint contextual.
 - o vinculo `mente primária -> domínio primário -> rota ativa` agora também atravessa `planning`, `response_synthesized` e `observability`, reduzindo leitura implícita no runtime final.
+- a malha `mente -> dominio -> especialista` tambem ficou menos implicita: `cognitive-engine` e `specialist-engine` passaram a preferir rotas explicitas alinhadas ao `primary_domain_driver`, e a observabilidade passou a cobrar esse match quando o runtime ja o conhece.
+- a observabilidade tambem passou a distinguir `workflow_trace_status` de `workflow_profile_status`, separando falha real de baseline de sinais que ainda entram apenas como `maturation_recommended`.
+- `internal_pilot_report` e `compare_orchestrator_paths` agora tambem expoem `workflow_profile_status`, tornando esse sinal parte do artefato comparativo e nao apenas da auditoria local.
+- esses mesmos artefatos agora tambem classificam explicitamente o workflow em `baseline_saudavel`, `maturation_recommended` ou `attention_required`, deixando a leitura de maturacao separada do gate estrutural.
+- `observability-service`, `internal_pilot_report` e `compare_orchestrator_paths` agora distinguem memoria causal (`causal_guidance`) de memoria apenas anexada (`attached_only`), expondo tambem foco semantico, hint procedural e especialistas ligados a esse efeito.
+- `internal_pilot_report` e `compare_orchestrator_paths` agora tornam `dominant_tension`, `primary_domain_driver` e `mind_domain_specialist_status` parte explicita da leitura comparativa do baseline.
+- `cognitive-engine` agora aplica recomposicao observavel em impasses reais de rota especializada, `orchestrator-service` publica `cognitive_recomposition_applied` e `observability-service` audita esse sinal ao longo do fluxo.
+- `evolution_from_pilot` e `evolution-lab` agora tratam `workflow_profile_status`, `memory_causality_status`, `mind_domain_specialist_status` e recomposicao cognitiva como sinais comparativos de refinamento, e nao apenas como telemetria lateral do baseline.
+- os fechadores regeneraveis `close_alignment_cycle` e `close_sovereign_alignment_cut` agora carregam decisoes e taxas desses sinais novos, aproximando comparacao sandbox, snapshot e closure docs da mesma gramatica de maturacao.
+- `engineering_gate --mode release` agora roda um verificador dedicado (`tools/verify_release_signal_baseline.py`) para tratar `workflow_profile_status`, `memory_causality_status`, `mind_domain_specialist_status` e recomposicao cognitiva como gramatica formal de release.
+- o piloto agora inclui cenarios deliberados para memoria causal (`guided_memory_followup`) e recomposicao cognitiva por `specialist_route_impasse` (`recomposition_impasse`), com leitura comparativa e textual coerente.
+- `compare_orchestrator_paths` agora marca drift explicito de `workflow_profile_status`, `memory_causality_status`, `dominant_tension`, `primary_domain_driver`, `mind_domain_specialist_status` e recomposicao cognitiva entre baseline e candidata.
+- `planning-engine`, `synthesis-engine` e `response_synthesized` agora tornam `dominant_tension`, `primary_domain_driver`, `workflow_response_focus` e recomposicao cognitiva mais declarativos no comportamento final do runtime.
+- o lote micro atual do baseline foi totalmente executado, incluindo `MB-008` a `MB-012`; nao ha item `ready` aberto em `docs/implementation/execution-backlog.md`.
 - memoria, identidade, governanca, observabilidade e soberania do nucleo evoluiram de forma consistente;
 - benchmark externo, memory gap e hardening nativo foram tratados corretamente como etapas subordinadas ao baseline,
   nao como desvio de direcao.
@@ -164,6 +181,7 @@ Gap relevante:
 - o runtime final ja usa essas classes de forma mais explicita por `workflow_profile`, e a camada de especialista passou a receber `procedural` apenas quando a politica soberana da rota realmente exige isso.
 - a politica que libera essas classes saiu de decisao espalhada no servi?o e passou a viver mais explicitamente no `memory_registry`;
 - `planning` e `synthesis` ja usam esse apoio sem bypassar governanca, inclusive quando o hint nasce do recovery soberano da propria missao e nao apenas de handoff especializado, enquanto especialistas continuam presos ao contrato elegivel da rota promovida;
+- esse uso deixou de ser apenas ornamental: o `planning` agora prioriza passos guiados de framing/continuidade e a `smallest_safe_next_action` preserva o fio procedural quando a rota ativa depende dele, enquanto a `synthesis` ancora o framing final e cobra continuidade explicita da proxima acao;
 - a camada multicamada nativa ainda pode crescer antes de qualquer absorcao futura, mas isso ja e maturacao incremental, nao correcao urgente.
 
 Leitura:
@@ -301,15 +319,22 @@ Foco:
 
 Foco:
 
-- ampliar utilidade de `semantic` e `procedural` como apoio soberano de continuidade e framing;
+- ampliar utilidade de `semantic` e `procedural` como apoio soberano de continuidade e framing, agora com comparacao explicita entre memoria causal e memoria apenas anexada;
 - manter `organization_scope` fechado e evitar qualquer bypass de governanca.
 
 ### Passo 4 - deixar a relacao mente -> dominio -> especialista ainda mais explicita
 
 Foco:
 
-- reduzir consumo implicito dessa relacao em consumidores posteriores;
+- reduzir consumo implicito dessa relacao em consumidores posteriores, usando tambem `dominant_tension`, `mind_domain_specialist_status` e sinais de recomposicao como evidencias comparativas do baseline;
 - tratar isso como maturacao cognitiva futura, nao como lacuna critica do baseline.
+
+### Passo 5 - promover esses sinais a gate e fechamento de release
+
+Foco:
+
+- levar `workflow_profile_status`, `memory_causality_status`, `mind_domain_specialist_status` e recomposicao cognitiva para criterios formais de release quando aplicaveis;
+- manter a mesma gramatica entre comparacao sandbox, snapshot, handoff e fechamento regeneravel.
 
 ---
 
@@ -347,11 +372,11 @@ Esse e o backlog certo a partir daqui, mas ele ja nao caracteriza desvio materia
 
 ## 8. Referencias
 
-- [documento_mestre_jarvis.md](d:/Users/DTI/Desktop/jarvis/documento_mestre_jarvis.md)
-- [HANDOFF.md](d:/Users/DTI/Desktop/jarvis/HANDOFF.md)
-- [matriz-de-aderencia-mestre.md](d:/Users/DTI/Desktop/jarvis/docs/documentation/matriz-de-aderencia-mestre.md)
-- [v2-native-memory-scope-hardening-cut-closure.md](d:/Users/DTI/Desktop/jarvis/docs/implementation/v2-native-memory-scope-hardening-cut-closure.md)
-- [v2-repository-hygiene-and-tools-review-cut.md](d:/Users/DTI/Desktop/jarvis/docs/implementation/v2-repository-hygiene-and-tools-review-cut.md)
-- [v2-repository-hygiene-and-tools-review-cut-closure.md](d:/Users/DTI/Desktop/jarvis/docs/implementation/v2-repository-hygiene-and-tools-review-cut-closure.md)
-- [programa-ate-v3.md](d:/Users/DTI/Desktop/jarvis/docs/roadmap/programa-ate-v3.md)
-- [technology-study.md](d:/Users/DTI/Desktop/jarvis/docs/architecture/technology-study.md)
+- [documento_mestre_jarvis.md](../../documento_mestre_jarvis.md)
+- [HANDOFF.md](../../HANDOFF.md)
+- [matriz-de-aderencia-mestre.md](../documentation/matriz-de-aderencia-mestre.md)
+- [v2-native-memory-scope-hardening-cut-closure.md](./v2-native-memory-scope-hardening-cut-closure.md)
+- [v2-repository-hygiene-and-tools-review-cut.md](./v2-repository-hygiene-and-tools-review-cut.md)
+- [v2-repository-hygiene-and-tools-review-cut-closure.md](./v2-repository-hygiene-and-tools-review-cut-closure.md)
+- [programa-ate-v3.md](../roadmap/programa-ate-v3.md)
+- [technology-study.md](../architecture/technology-study.md)

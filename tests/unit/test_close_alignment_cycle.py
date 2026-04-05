@@ -29,13 +29,33 @@ def test_close_alignment_cycle_builds_next_v2_cut() -> None:
                 "comparison_summary": {
                     "matched_scenarios": 4,
                     "divergent_scenarios": 0,
-                    "baseline_axis_adherence_score": 0.94,
-                    "candidate_axis_adherence_score": 0.96,
-                    "baseline_axis_gate_pass_rate": 1.0,
-                    "candidate_axis_gate_pass_rate": 1.0,
-                    "candidate_runtime_coverage": 1.0,
-                    "decision": "candidate_ready_for_eval_gate",
-                },
+                "baseline_axis_adherence_score": 0.94,
+                "candidate_axis_adherence_score": 0.96,
+                "baseline_axis_gate_pass_rate": 1.0,
+                "candidate_axis_gate_pass_rate": 1.0,
+                "candidate_runtime_coverage": 1.0,
+                "baseline_workflow_profile_decision": "baseline_saudavel",
+                "candidate_workflow_profile_decision": "maturation_recommended",
+                "baseline_workflow_baseline_rate": 1.0,
+                "candidate_workflow_baseline_rate": 0.5,
+                "baseline_workflow_maturation_rate": 0.0,
+                "candidate_workflow_maturation_rate": 0.5,
+                "baseline_memory_causality_decision": "causal_guidance",
+                "candidate_memory_causality_decision": "causal_guidance",
+                "baseline_memory_causal_rate": 1.0,
+                "candidate_memory_causal_rate": 1.0,
+                "baseline_memory_attached_only_rate": 0.0,
+                "candidate_memory_attached_only_rate": 0.0,
+                "baseline_mind_domain_specialist_decision": "aligned",
+                "candidate_mind_domain_specialist_decision": "aligned",
+                "baseline_mind_domain_specialist_alignment_rate": 1.0,
+                "candidate_mind_domain_specialist_alignment_rate": 1.0,
+                "baseline_cognitive_recomposition_decision": "not_applicable",
+                "candidate_cognitive_recomposition_decision": "coherent",
+                "baseline_cognitive_recomposition_coherent_rate": 0.0,
+                "candidate_cognitive_recomposition_coherent_rate": 0.5,
+                "decision": "candidate_ready_for_eval_gate",
+            },
             },
             ensure_ascii=True,
             indent=2,
@@ -247,6 +267,13 @@ def test_close_alignment_cycle_builds_next_v2_cut() -> None:
     assert payload["evidence_summary"]["memory_alignment_healthy"] == 1
     assert payload["evidence_summary"]["sovereignty_healthy"] == 1
     assert payload["evidence_summary"]["axis_gate_healthy"] == 1
+    assert (
+        payload["evidence_summary"]["candidate_workflow_profile_decision"]
+        == "maturation_recommended"
+    )
+    assert payload["evidence_summary"]["candidate_memory_causality_decision"] == "causal_guidance"
+    assert payload["evidence_summary"]["candidate_mind_domain_specialist_decision"] == "aligned"
+    assert payload["evidence_summary"]["candidate_cognitive_recomposition_decision"] == "coherent"
     assert payload["next_cut_scope"][0]["item_id"] == "v2-domain-specialists-beyond-shadow"
     assert payload["deferred_scope"][0]["item_id"] == "defer-wide-computer-use"
     assert payload["vision_scope"][0]["item_id"] == "vision-robust-ecosystem"
@@ -294,6 +321,26 @@ def test_close_alignment_cycle_renders_markdown() -> None:
             "baseline_axis_gate_pass_rate": 1.0,
             "candidate_axis_gate_pass_rate": 1.0,
             "candidate_runtime_coverage": 1.0,
+            "baseline_workflow_profile_decision": "baseline_saudavel",
+            "candidate_workflow_profile_decision": "maturation_recommended",
+            "baseline_workflow_baseline_rate": 1.0,
+            "candidate_workflow_baseline_rate": 0.5,
+            "baseline_workflow_maturation_rate": 0.0,
+            "candidate_workflow_maturation_rate": 0.5,
+            "baseline_memory_causality_decision": "causal_guidance",
+            "candidate_memory_causality_decision": "causal_guidance",
+            "baseline_memory_causal_rate": 1.0,
+            "candidate_memory_causal_rate": 1.0,
+            "baseline_memory_attached_only_rate": 0.0,
+            "candidate_memory_attached_only_rate": 0.0,
+            "baseline_mind_domain_specialist_decision": "aligned",
+            "candidate_mind_domain_specialist_decision": "aligned",
+            "baseline_mind_domain_specialist_alignment_rate": 1.0,
+            "candidate_mind_domain_specialist_alignment_rate": 1.0,
+            "baseline_cognitive_recomposition_decision": "not_applicable",
+            "candidate_cognitive_recomposition_decision": "coherent",
+            "baseline_cognitive_recomposition_coherent_rate": 0.0,
+            "candidate_cognitive_recomposition_coherent_rate": 0.5,
         },
         "next_cut_scope": [
             {
@@ -332,3 +379,7 @@ def test_close_alignment_cycle_renders_markdown() -> None:
     assert "`defer-wide-computer-use`" in rendered
     assert "`vision-robust-ecosystem`" in rendered
     assert "candidate_ready_for_eval_gate" in rendered
+    assert "candidate workflow profile decision" in rendered
+    assert "candidate memory causality decision" in rendered
+    assert "candidate mind-domain-specialist decision" in rendered
+    assert "candidate cognitive recomposition decision" in rendered

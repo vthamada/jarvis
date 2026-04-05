@@ -205,12 +205,18 @@ class OperationalService:
         if not dispatch.workflow_profile:
             return "Workflow: not_defined"
         objective = dispatch.workflow_objective or dispatch.task_goal
+        deliverables = "; ".join(dispatch.workflow_expected_deliverables) or "none"
+        telemetry_focus = "; ".join(dispatch.workflow_telemetry_focus) or "none"
         steps = "; ".join(dispatch.workflow_steps) or "none"
         governance_mode = dispatch.workflow_governance_mode or "not_defined"
         return (
             f"Workflow: {dispatch.workflow_profile}\n"
             f"Workflow domain route: {dispatch.workflow_domain_route or 'fallback'}\n"
             f"Objetivo do workflow: {objective}\n"
+            f"Workflow deliverables: {deliverables}\n"
+            f"Workflow telemetry focus: {telemetry_focus}\n"
+            f"Workflow success focus: {dispatch.workflow_success_focus or 'not_defined'}\n"
+            f"Workflow response focus: {dispatch.workflow_response_focus or 'not_defined'}\n"
             f"Workflow state inicial: {dispatch.workflow_state or 'composed'}\n"
             f"Workflow governance: {governance_mode}\n"
             f"Workflow steps: {steps}"

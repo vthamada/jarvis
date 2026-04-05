@@ -319,6 +319,10 @@ def test_synthesis_engine_uses_guided_semantic_and_procedural_memory_hints() -> 
         "estrategia_e_pensamento_sistemico, strategy" in response
     )
     assert (
+        "framing final deve permanecer coerente com framing estrategico e comparacao "
+        "de trade-offs" in response
+    )
+    assert (
         "mente executiva ancora o dominio primario estrategia e pensamento sistemico "
         "via rota strategy" in response
     )
@@ -326,10 +330,66 @@ def test_synthesis_engine_uses_guided_semantic_and_procedural_memory_hints() -> 
     assert "tradeoff map" in response
     assert "tradeoff clarity" in response
     assert "workflow ativo: strategic direction workflow" in response
+    assert "dominio primario: estrategia e pensamento sistemico" in response
     assert "foco final: direcao recomendada, criterios e trade-offs dominantes" in response
+    assert (
+        "tensao dominante: equilibrar ambicao estrategica com a menor proxima acao segura"
+        in response
+    )
     assert "checkpoint ativo: scenario framed" in response
     assert "gate governado: scenario scope confirmed" in response
     assert (
         "apoio procedural orienta continuidade do fio decisorio e criterio de progressao: "
         "manter o ultimo fio de recomendacao governada" in response
     )
+    assert "proxima acao deve preservar esse fio" in response
+
+
+def test_synthesis_engine_surfaces_recomposition_in_final_reading() -> None:
+    engine = SynthesisEngine()
+    identity = IdentityEngine().get_profile()
+    recomposed_plan = sample_plan()
+    recomposed_plan.primary_domain_driver = "assistencia_pessoal_e_operacional"
+    recomposed_plan.dominant_tension = (
+        "equilibrar clareza executiva com a menor proxima acao segura"
+    )
+    recomposed_plan.arbitration_source = "mind_registry_recomposition"
+    response = engine.compose(
+        SynthesisInput(
+            intent="planning",
+            identity_profile=identity,
+            response_style="estruturado",
+            governance_decision=GovernanceDecisionContract(
+                decision_id=GovernanceDecisionId("decision-7"),
+                governance_check_id=GovernanceCheckId("check-7"),
+                risk_level=RiskLevel.MODERATE,
+                decision=PermissionDecision.ALLOW_WITH_CONDITIONS,
+                justification="ok",
+                timestamp="2026-03-18T00:00:00Z",
+            ),
+            recovered_context=["context_summary=recomposition happened"],
+            active_minds=["mente_executiva", "mente_critica"],
+            active_domains=["productivity", "governance"],
+            knowledge_snippets=["Preserve alinhamento entre dominio primario e rota ativa."],
+            deliberative_plan=recomposed_plan,
+            specialist_contributions=[],
+            operation_result=None,
+            identity_mode="structured_planning",
+            arbitration_summary=(
+                "mente_executiva lidera com apoio critico apos recomposicao de rota"
+            ),
+            session_continuity_brief=(
+                "sessao segue ancorada em 'Plan milestone M3', com continuidade ativa em "
+                "'alinhar checkpoint principal'"
+            ),
+            session_continuity_mode="continuar",
+            session_anchor_goal="Plan milestone M3",
+        )
+    )
+
+    assert "recomposicao cognitiva manteve o alinhamento com o dominio primario" in response
+    assert (
+        "recomposicao cognitiva: preservar o dominio primario antes de ampliar o "
+        "escopo" in response
+    )
+    assert "dominio primario: assistencia pessoal e operacional" in response

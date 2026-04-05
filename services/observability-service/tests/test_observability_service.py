@@ -910,6 +910,21 @@ def test_observability_service_audits_healthy_workflow_trace() -> None:
                     "operation_id": "op-workflow",
                     "workflow_profile": "strategic_direction_workflow",
                     "workflow_domain_route": "strategy",
+                    "workflow_objective": "clarify strategic tradeoffs and recommend a direction",
+                    "workflow_expected_deliverables": [
+                        "tradeoff_map",
+                        "decision_criteria",
+                        "recommended_direction",
+                    ],
+                    "workflow_telemetry_focus": [
+                        "tradeoff_clarity",
+                        "decision_trace",
+                        "domain_alignment",
+                    ],
+                    "workflow_success_focus": "direcao recomendada com criterios explicitos",
+                    "workflow_response_focus": (
+                        "direcao recomendada, criterios e trade-offs dominantes"
+                    ),
                     "workflow_state": "composed",
                     "workflow_governance_mode": "core_mediated",
                     "workflow_decision_points": [
@@ -932,6 +947,18 @@ def test_observability_service_audits_healthy_workflow_trace() -> None:
                     "operation_id": "op-workflow",
                     "workflow_profile": "strategic_direction_workflow",
                     "workflow_domain_route": "strategy",
+                    "workflow_objective": "clarify strategic tradeoffs and recommend a direction",
+                    "workflow_expected_deliverables": [
+                        "tradeoff_map",
+                        "decision_criteria",
+                        "recommended_direction",
+                    ],
+                    "workflow_telemetry_focus": [
+                        "tradeoff_clarity",
+                        "decision_trace",
+                        "domain_alignment",
+                    ],
+                    "workflow_success_focus": "direcao recomendada com criterios explicitos",
                     "workflow_state": "composed",
                     "workflow_governance_mode": "core_mediated",
                     "workflow_decision_points": [
@@ -955,6 +982,21 @@ def test_observability_service_audits_healthy_workflow_trace() -> None:
                     "task_type": "draft_plan",
                     "workflow_profile": "strategic_direction_workflow",
                     "workflow_domain_route": "strategy",
+                    "workflow_objective": "clarify strategic tradeoffs and recommend a direction",
+                    "workflow_expected_deliverables": [
+                        "tradeoff_map",
+                        "decision_criteria",
+                        "recommended_direction",
+                    ],
+                    "workflow_telemetry_focus": [
+                        "tradeoff_clarity",
+                        "decision_trace",
+                        "domain_alignment",
+                    ],
+                    "workflow_success_focus": "direcao recomendada com criterios explicitos",
+                    "workflow_response_focus": (
+                        "direcao recomendada, criterios e trade-offs dominantes"
+                    ),
                     "workflow_state": "dispatched",
                     "workflow_decision_points": [
                         "goal_scope_confirmed",
@@ -977,6 +1019,20 @@ def test_observability_service_audits_healthy_workflow_trace() -> None:
                     "status": "completed",
                     "workflow_profile": "strategic_direction_workflow",
                     "workflow_domain_route": "strategy",
+                    "workflow_objective": "clarify strategic tradeoffs and recommend a direction",
+                    "workflow_expected_deliverables": [
+                        "tradeoff_map",
+                        "decision_criteria",
+                        "recommended_direction",
+                    ],
+                    "workflow_telemetry_focus": [
+                        "tradeoff_clarity",
+                        "decision_trace",
+                        "domain_alignment",
+                    ],
+                    "workflow_response_focus": (
+                        "direcao recomendada, criterios e trade-offs dominantes"
+                    ),
                     "workflow_state": "completed",
                     "workflow_completed_steps": [
                         "structure the goal and success criteria",
@@ -1003,6 +1059,21 @@ def test_observability_service_audits_healthy_workflow_trace() -> None:
                     "operation_id": "op-workflow",
                     "workflow_profile": "strategic_direction_workflow",
                     "workflow_domain_route": "strategy",
+                    "workflow_objective": "clarify strategic tradeoffs and recommend a direction",
+                    "workflow_expected_deliverables": [
+                        "tradeoff_map",
+                        "decision_criteria",
+                        "recommended_direction",
+                    ],
+                    "workflow_telemetry_focus": [
+                        "tradeoff_clarity",
+                        "decision_trace",
+                        "domain_alignment",
+                    ],
+                    "workflow_success_focus": "direcao recomendada com criterios explicitos",
+                    "workflow_response_focus": (
+                        "direcao recomendada, criterios e trade-offs dominantes"
+                    ),
                     "workflow_state": "completed",
                     "workflow_governance_mode": "core_mediated",
                     "workflow_decision_points": [
@@ -1032,7 +1103,17 @@ def test_observability_service_audits_healthy_workflow_trace() -> None:
                 event_name="response_synthesized",
                 timestamp="2026-03-18T00:00:09+00:00",
                 source_service="orchestrator-service",
-                payload={"continuity_action": "continuar"},
+                payload={
+                    "continuity_action": "continuar",
+                    "primary_mind": "mente_planejadora",
+                    "primary_domain_driver": "estrategia_e_pensamento_sistemico",
+                    "guided_memory_specialists": ["structured_analysis_specialist"],
+                    "semantic_memory_focus": [
+                        "estrategia_e_pensamento_sistemico",
+                        "strategy",
+                    ],
+                    "procedural_memory_hint": "preservar o ultimo fio decisorio governado",
+                },
                 request_id="req-workflow",
                 session_id="sess-workflow",
                 correlation_id="req-workflow",
@@ -1056,10 +1137,283 @@ def test_observability_service_audits_healthy_workflow_trace() -> None:
     assert audit.workflow_profile == "strategic_direction_workflow"
     assert audit.workflow_governance_mode == "core_mediated"
     assert audit.workflow_trace_status == "healthy"
+    assert audit.workflow_profile_status == "healthy"
     assert audit.missing_required_events == []
     assert audit.anomaly_flags == []
     assert audit.trace_complete is True
 
+
+
+def test_observability_service_flags_workflow_contract_drift() -> None:
+    temp_dir = runtime_dir("observability-workflow-drift")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service.ingest_events(
+        [
+            InternalEventEnvelope(
+                event_id="evt-d1",
+                event_name="workflow_composed",
+                timestamp="2026-03-18T00:00:07+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "operation_id": "op-drift",
+                    "workflow_profile": "strategic_direction_workflow",
+                    "workflow_domain_route": "strategy",
+                    "workflow_objective": "clarify strategic tradeoffs and recommend a direction",
+                    "workflow_expected_deliverables": [],
+                    "workflow_telemetry_focus": ["tradeoff_clarity"],
+                    "workflow_success_focus": "direcao recomendada com criterios explicitos",
+                    "workflow_response_focus": (
+                        "direcao recomendada, criterios e trade-offs dominantes"
+                    ),
+                    "workflow_state": "composed",
+                    "workflow_governance_mode": "core_mediated",
+                    "workflow_decision_points": ["goal_scope_confirmed"],
+                },
+                request_id="req-workflow-drift",
+                session_id="sess-workflow-drift",
+                correlation_id="req-workflow-drift",
+                operation_id="op-drift",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-d2",
+                event_name="workflow_governance_declared",
+                timestamp="2026-03-18T00:00:07.500000+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "operation_id": "op-drift",
+                    "workflow_profile": "strategic_direction_workflow",
+                    "workflow_domain_route": "strategy",
+                    "workflow_objective": "clarify strategic tradeoffs and recommend a direction",
+                    "workflow_expected_deliverables": [],
+                    "workflow_telemetry_focus": ["tradeoff_clarity"],
+                    "workflow_success_focus": "direcao recomendada com criterios explicitos",
+                    "workflow_state": "composed",
+                    "workflow_governance_mode": "core_mediated",
+                    "workflow_decision_points": ["goal_scope_confirmed"],
+                },
+                request_id="req-workflow-drift",
+                session_id="sess-workflow-drift",
+                correlation_id="req-workflow-drift",
+                operation_id="op-drift",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-d3",
+                event_name="operation_completed",
+                timestamp="2026-03-18T00:00:08+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "operation_id": "op-drift",
+                    "status": "completed",
+                    "workflow_profile": "strategic_direction_workflow",
+                    "workflow_domain_route": "strategy",
+                    "workflow_objective": "clarify strategic tradeoffs and recommend a direction",
+                    "workflow_expected_deliverables": [],
+                    "workflow_telemetry_focus": ["tradeoff_clarity"],
+                    "workflow_response_focus": (
+                        "direcao recomendada, criterios e trade-offs dominantes"
+                    ),
+                    "workflow_state": "completed",
+                    "workflow_completed_steps": [
+                        "frame the strategic scenario and the decision horizon",
+                    ],
+                    "workflow_decisions": ["goal_scope_confirmed"],
+                },
+                request_id="req-workflow-drift",
+                session_id="sess-workflow-drift",
+                correlation_id="req-workflow-drift",
+                operation_id="op-drift",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-d4",
+                event_name="workflow_completed",
+                timestamp="2026-03-18T00:00:08.500000+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "operation_id": "op-drift",
+                    "workflow_profile": "strategic_direction_workflow",
+                    "workflow_domain_route": "strategy",
+                    "workflow_objective": "clarify strategic tradeoffs and recommend a direction",
+                    "workflow_expected_deliverables": [],
+                    "workflow_telemetry_focus": ["tradeoff_clarity"],
+                    "workflow_success_focus": "direcao recomendada com criterios explicitos",
+                    "workflow_response_focus": (
+                        "direcao recomendada, criterios e trade-offs dominantes"
+                    ),
+                    "workflow_state": "completed",
+                    "workflow_governance_mode": "core_mediated",
+                    "workflow_decision_points": ["goal_scope_confirmed"],
+                    "workflow_decisions": ["goal_scope_confirmed"],
+                    "status": "completed",
+                    "checkpoints": [
+                        "workflow_state:composed",
+                        "workflow_state:completed",
+                    ],
+                },
+                request_id="req-workflow-drift",
+                session_id="sess-workflow-drift",
+                correlation_id="req-workflow-drift",
+                operation_id="op-drift",
+            ),
+        ]
+    )
+
+    audit = service.audit_flow(ObservabilityQuery(request_id="req-workflow-drift"))
+
+    assert audit.workflow_trace_status == "attention_required"
+
+
+def test_observability_service_marks_workflow_profile_maturation_recommended() -> None:
+    temp_dir = runtime_dir("observability-workflow-maturation")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service.ingest_events(
+        [
+            InternalEventEnvelope(
+                event_id="evt-mw1",
+                event_name="workflow_composed",
+                timestamp="2026-03-18T00:00:07+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "operation_id": "op-maturation",
+                    "workflow_profile": "strategic_direction_workflow",
+                    "workflow_domain_route": "strategy",
+                    "workflow_objective": "clarify strategic tradeoffs and recommend a direction",
+                    "workflow_expected_deliverables": [
+                        "tradeoff_map",
+                        "decision_criteria",
+                        "recommended_direction",
+                    ],
+                    "workflow_telemetry_focus": [
+                        "tradeoff_clarity",
+                        "decision_trace",
+                        "domain_alignment",
+                    ],
+                    "workflow_success_focus": "direcao recomendada com criterios explicitos",
+                    "workflow_response_focus": (
+                        "direcao recomendada, criterios e trade-offs dominantes"
+                    ),
+                    "workflow_state": "composed",
+                    "workflow_governance_mode": "core_mediated",
+                    "workflow_decision_points": ["goal_scope_confirmed"],
+                },
+                request_id="req-workflow-maturation",
+                session_id="sess-workflow-maturation",
+                correlation_id="req-workflow-maturation",
+                operation_id="op-maturation",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-mw2",
+                event_name="workflow_governance_declared",
+                timestamp="2026-03-18T00:00:07.500000+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "operation_id": "op-maturation",
+                    "workflow_profile": "strategic_direction_workflow",
+                    "workflow_domain_route": "strategy",
+                    "workflow_objective": "clarify strategic tradeoffs and recommend a direction",
+                    "workflow_expected_deliverables": [
+                        "tradeoff_map",
+                        "decision_criteria",
+                        "recommended_direction",
+                    ],
+                    "workflow_telemetry_focus": [
+                        "tradeoff_clarity",
+                        "decision_trace",
+                        "domain_alignment",
+                    ],
+                    "workflow_success_focus": "direcao recomendada com criterios explicitos",
+                    "workflow_state": "composed",
+                    "workflow_governance_mode": "core_mediated",
+                    "workflow_decision_points": ["goal_scope_confirmed"],
+                },
+                request_id="req-workflow-maturation",
+                session_id="sess-workflow-maturation",
+                correlation_id="req-workflow-maturation",
+                operation_id="op-maturation",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-mw3",
+                event_name="operation_completed",
+                timestamp="2026-03-18T00:00:08+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "operation_id": "op-maturation",
+                    "status": "completed",
+                    "workflow_profile": "strategic_direction_workflow",
+                    "workflow_domain_route": "strategy",
+                    "workflow_objective": "clarify strategic tradeoffs and recommend a direction",
+                    "workflow_expected_deliverables": [
+                        "tradeoff_map",
+                        "decision_criteria",
+                        "recommended_direction",
+                    ],
+                    "workflow_telemetry_focus": [
+                        "tradeoff_clarity",
+                        "decision_trace",
+                        "domain_alignment",
+                    ],
+                    "workflow_response_focus": (
+                        "direcao recomendada, criterios e trade-offs dominantes"
+                    ),
+                    "workflow_state": "completed",
+                    "workflow_decisions": ["goal_scope_confirmed"],
+                },
+                request_id="req-workflow-maturation",
+                session_id="sess-workflow-maturation",
+                correlation_id="req-workflow-maturation",
+                operation_id="op-maturation",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-mw4",
+                event_name="workflow_completed",
+                timestamp="2026-03-18T00:00:08.500000+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "operation_id": "op-maturation",
+                    "workflow_profile": "strategic_direction_workflow",
+                    "workflow_domain_route": "strategy",
+                    "workflow_objective": "clarify strategic tradeoffs and recommend a direction",
+                    "workflow_expected_deliverables": [
+                        "tradeoff_map",
+                        "decision_criteria",
+                        "recommended_direction",
+                    ],
+                    "workflow_telemetry_focus": [
+                        "tradeoff_clarity",
+                        "decision_trace",
+                        "domain_alignment",
+                    ],
+                    "workflow_success_focus": "direcao recomendada com criterios explicitos",
+                    "workflow_response_focus": (
+                        "direcao recomendada, criterios e trade-offs dominantes"
+                    ),
+                    "workflow_state": "completed",
+                    "workflow_governance_mode": "core_mediated",
+                    "workflow_decision_points": ["goal_scope_confirmed"],
+                    "workflow_decisions": ["goal_scope_confirmed"],
+                },
+                request_id="req-workflow-maturation",
+                session_id="sess-workflow-maturation",
+                correlation_id="req-workflow-maturation",
+                operation_id="op-maturation",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-mw5",
+                event_name="response_synthesized",
+                timestamp="2026-03-18T00:00:09+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_action": "continuar"},
+                request_id="req-workflow-maturation",
+                session_id="sess-workflow-maturation",
+                correlation_id="req-workflow-maturation",
+            ),
+        ]
+    )
+
+    audit = service.audit_flow(ObservabilityQuery(request_id="req-workflow-maturation"))
+
+    assert audit.workflow_trace_status == "healthy"
+    assert audit.workflow_profile_status == "maturation_recommended"
+    assert audit.trace_complete is False
 
 
 def test_observability_service_tracks_organization_scope_no_go() -> None:
@@ -1705,3 +2059,658 @@ def test_observability_service_marks_domain_alignment_attention_when_selection_d
     audit = service.audit_flow(ObservabilityQuery(request_id="req-selection-drift"))
 
     assert audit.domain_alignment_status == "attention_required"
+
+
+def test_observability_service_flags_primary_driver_specialist_drift() -> None:
+    temp_dir = runtime_dir("observability-primary-driver-drift")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service.ingest_events(
+        [
+            InternalEventEnvelope(
+                event_id="evt-pd1",
+                event_name="input_received",
+                timestamp="2026-04-01T00:00:00+00:00",
+                source_service="orchestrator-service",
+                payload={"content": "Compare strategic options for the release."},
+                request_id="req-primary-driver-drift",
+                session_id="sess-primary-driver-drift",
+                correlation_id="req-primary-driver-drift",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-pd2",
+                event_name="memory_recovered",
+                timestamp="2026-04-01T00:00:01+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_recommendation": "priorizar_loop_ativo"},
+                request_id="req-primary-driver-drift",
+                session_id="sess-primary-driver-drift",
+                correlation_id="req-primary-driver-drift",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-pd3",
+                event_name="intent_classified",
+                timestamp="2026-04-01T00:00:02+00:00",
+                source_service="orchestrator-service",
+                payload={"intent": "analysis"},
+                request_id="req-primary-driver-drift",
+                session_id="sess-primary-driver-drift",
+                correlation_id="req-primary-driver-drift",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-pd4",
+                event_name="domain_registry_resolved",
+                timestamp="2026-04-01T00:00:03+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "registry_domains": [
+                        "estrategia_e_pensamento_sistemico",
+                        "dados_estatistica_e_inteligencia_analitica",
+                    ],
+                    "route_domains": ["strategy", "analysis"],
+                    "canonical_domain_refs_by_route": {
+                        "strategy": ["estrategia_e_pensamento_sistemico"],
+                        "analysis": ["dados_estatistica_e_inteligencia_analitica"],
+                    },
+                    "route_maturity": {
+                        "strategy": "active_specialist",
+                        "analysis": "active_specialist",
+                    },
+                    "route_modes": {"strategy": "guided", "analysis": "guided"},
+                    "linked_specialist_types": {
+                        "strategy": "structured_analysis_specialist",
+                        "analysis": "structured_analysis_specialist",
+                    },
+                    "workflow_profiles": {
+                        "strategy": "strategic_direction_workflow",
+                        "analysis": "structured_analysis_workflow",
+                    },
+                    "routing_sources": {
+                        "strategy": "domain_registry",
+                        "analysis": "domain_registry",
+                    },
+                    "promoted_route_registry": {
+                        "strategy": {
+                            "canonical_domain_refs": ["estrategia_e_pensamento_sistemico"],
+                            "linked_specialist_type": "structured_analysis_specialist",
+                            "specialist_mode": "guided",
+                            "maturity": "active_specialist",
+                            "mode_is_governed": True,
+                            "eligible": True,
+                        },
+                        "analysis": {
+                            "canonical_domain_refs": [
+                                "dados_estatistica_e_inteligencia_analitica"
+                            ],
+                            "linked_specialist_type": "structured_analysis_specialist",
+                            "specialist_mode": "guided",
+                            "maturity": "active_specialist",
+                            "mode_is_governed": True,
+                            "eligible": True,
+                        },
+                    },
+                    "consumer_profiles": {
+                        "strategy": "strategy_tradeoff_review",
+                        "analysis": "analysis_evidence_review",
+                    },
+                    "consumer_objectives": {
+                        "strategy": "clarificar trade-offs estrategicos",
+                        "analysis": "estruturar leitura de evidencia",
+                    },
+                    "expected_deliverables": {
+                        "strategy": ["tradeoff_map"],
+                        "analysis": ["analysis_findings"],
+                    },
+                    "telemetry_focus": {
+                        "strategy": ["tradeoff_clarity"],
+                        "analysis": ["evidence_clarity"],
+                    },
+                },
+                request_id="req-primary-driver-drift",
+                session_id="sess-primary-driver-drift",
+                correlation_id="req-primary-driver-drift",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-pd5",
+                event_name="context_composed",
+                timestamp="2026-04-01T00:00:04+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "active_minds": ["mente_decisoria"],
+                    "primary_mind": "mente_decisoria",
+                    "primary_mind_family": "estrategica_decisoria",
+                    "primary_domain_driver": "estrategia_e_pensamento_sistemico",
+                    "supporting_minds": [],
+                    "suppressed_minds": [],
+                    "supporting_mind_limit": 2,
+                    "suppressed_mind_limit": 3,
+                    "dominant_tension": (
+                        "equilibrar ambicao estrategica com a menor proxima acao segura"
+                    ),
+                    "arbitration_summary": "mente_decisoria lidera a resposta",
+                    "arbitration_source": "mind_registry",
+                    "canonical_domains": [
+                        "estrategia_e_pensamento_sistemico",
+                        "dados_estatistica_e_inteligencia_analitica",
+                    ],
+                },
+                request_id="req-primary-driver-drift",
+                session_id="sess-primary-driver-drift",
+                correlation_id="req-primary-driver-drift",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-pd6",
+                event_name="plan_built",
+                timestamp="2026-04-01T00:00:05+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "continuity_action": "continuar",
+                    "continuity_source": "active_mission",
+                    "primary_mind": "mente_decisoria",
+                    "primary_mind_family": "estrategica_decisoria",
+                    "primary_domain_driver": "estrategia_e_pensamento_sistemico",
+                    "arbitration_source": "mind_registry",
+                },
+                request_id="req-primary-driver-drift",
+                session_id="sess-primary-driver-drift",
+                correlation_id="req-primary-driver-drift",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-pd7",
+                event_name="continuity_decided",
+                timestamp="2026-04-01T00:00:06+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_action": "continuar", "continuity_source": "active_mission"},
+                request_id="req-primary-driver-drift",
+                session_id="sess-primary-driver-drift",
+                correlation_id="req-primary-driver-drift",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-pd8",
+                event_name="governance_checked",
+                timestamp="2026-04-01T00:00:07+00:00",
+                source_service="orchestrator-service",
+                payload={"decision": "allow_with_conditions"},
+                request_id="req-primary-driver-drift",
+                session_id="sess-primary-driver-drift",
+                correlation_id="req-primary-driver-drift",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-pd9",
+                event_name="specialist_selection_decided",
+                timestamp="2026-04-01T00:00:08+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "selected_specialists": ["structured_analysis_specialist"],
+                    "domain_links": {"structured_analysis_specialist": "analysis"},
+                    "selection_modes": {"structured_analysis_specialist": "guided"},
+                    "primary_mind": "mente_decisoria",
+                    "primary_mind_family": "estrategica_decisoria",
+                    "primary_domain_driver": "estrategia_e_pensamento_sistemico",
+                    "arbitration_source": "mind_registry",
+                    "primary_route": "strategy",
+                    "primary_canonical_domain": "estrategia_e_pensamento_sistemico",
+                    "route_maturity": {"structured_analysis_specialist": "active_specialist"},
+                    "canonical_domain_refs_resolved": {
+                        "structured_analysis_specialist": [
+                            "dados_estatistica_e_inteligencia_analitica"
+                        ]
+                    },
+                    "registry_route_payloads": {
+                        "structured_analysis_specialist": {
+                            "route_name": "analysis",
+                            "linked_specialist_type": "structured_analysis_specialist",
+                            "canonical_domain_refs": [
+                                "dados_estatistica_e_inteligencia_analitica"
+                            ],
+                        }
+                    },
+                    "registry_link_matches": {"structured_analysis_specialist": True},
+                    "registry_mode_matches": {"structured_analysis_specialist": True},
+                    "registry_specialist_eligibility": {"structured_analysis_specialist": True},
+                    "primary_route_matches": {"structured_analysis_specialist": False},
+                    "primary_canonical_matches": {"structured_analysis_specialist": False},
+                    "primary_domain_driver_matches": {
+                        "structured_analysis_specialist": False
+                    },
+                },
+                request_id="req-primary-driver-drift",
+                session_id="sess-primary-driver-drift",
+                correlation_id="req-primary-driver-drift",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-pd10",
+                event_name="response_synthesized",
+                timestamp="2026-04-01T00:00:09+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "continuity_action": "continuar",
+                    "primary_mind": "mente_decisoria",
+                    "primary_mind_family": "estrategica_decisoria",
+                    "primary_domain_driver": "estrategia_e_pensamento_sistemico",
+                    "arbitration_source": "mind_registry",
+                },
+                request_id="req-primary-driver-drift",
+                session_id="sess-primary-driver-drift",
+                correlation_id="req-primary-driver-drift",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-pd11",
+                event_name="memory_recorded",
+                timestamp="2026-04-01T00:00:10+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_mode": "continuar"},
+                request_id="req-primary-driver-drift",
+                session_id="sess-primary-driver-drift",
+                correlation_id="req-primary-driver-drift",
+            ),
+        ]
+    )
+
+    audit = service.audit_flow(ObservabilityQuery(request_id="req-primary-driver-drift"))
+
+    assert audit.domain_alignment_status == "attention_required"
+
+
+def test_observability_service_tracks_memory_causality_status() -> None:
+    temp_dir = runtime_dir("observability-memory-causality")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service.ingest_events(
+        [
+            InternalEventEnvelope(
+                event_id="evt-mc1",
+                event_name="input_received",
+                timestamp="2026-04-02T00:00:00+00:00",
+                source_service="orchestrator-service",
+                payload={"content": "Compare release options with prior context."},
+                request_id="req-memory-causality",
+                session_id="sess-memory-causality",
+                correlation_id="req-memory-causality",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-mc2",
+                event_name="memory_recovered",
+                timestamp="2026-04-02T00:00:01+00:00",
+                source_service="orchestrator-service",
+                payload={},
+                request_id="req-memory-causality",
+                session_id="sess-memory-causality",
+                correlation_id="req-memory-causality",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-mc3",
+                event_name="intent_classified",
+                timestamp="2026-04-02T00:00:02+00:00",
+                source_service="orchestrator-service",
+                payload={"intent": "analysis"},
+                request_id="req-memory-causality",
+                session_id="sess-memory-causality",
+                correlation_id="req-memory-causality",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-mc4",
+                event_name="context_composed",
+                timestamp="2026-04-02T00:00:03+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "active_minds": ["mente_analitica"],
+                    "primary_mind": "mente_analitica",
+                    "supporting_minds": [],
+                    "suppressed_minds": [],
+                    "supporting_mind_limit": 2,
+                    "suppressed_mind_limit": 2,
+                    "dominant_tension": "conectar contexto previo com decisao atual",
+                    "arbitration_summary": "mente analitica lidera a resposta",
+                    "arbitration_source": "mind_registry",
+                    "primary_domain_driver": "dados_estatistica_e_inteligencia_analitica",
+                    "canonical_domains": ["dados_estatistica_e_inteligencia_analitica"],
+                },
+                request_id="req-memory-causality",
+                session_id="sess-memory-causality",
+                correlation_id="req-memory-causality",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-mc5",
+                event_name="plan_built",
+                timestamp="2026-04-02T00:00:04+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "continuity_action": "continuar",
+                    "continuity_source": "active_mission",
+                    "primary_domain_driver": "dados_estatistica_e_inteligencia_analitica",
+                    "arbitration_source": "mind_registry",
+                },
+                request_id="req-memory-causality",
+                session_id="sess-memory-causality",
+                correlation_id="req-memory-causality",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-mc6",
+                event_name="continuity_decided",
+                timestamp="2026-04-02T00:00:05+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_action": "continuar", "continuity_source": "active_mission"},
+                request_id="req-memory-causality",
+                session_id="sess-memory-causality",
+                correlation_id="req-memory-causality",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-mc7",
+                event_name="governance_checked",
+                timestamp="2026-04-02T00:00:06+00:00",
+                source_service="orchestrator-service",
+                payload={"decision": "allow_with_conditions"},
+                request_id="req-memory-causality",
+                session_id="sess-memory-causality",
+                correlation_id="req-memory-causality",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-mc8",
+                event_name="specialist_shared_memory_linked",
+                timestamp="2026-04-02T00:00:07+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "sharing_modes": {
+                        "structured_analysis_specialist": "core_mediated_read_only"
+                    },
+                    "memory_class_policies": {
+                        "structured_analysis_specialist": {
+                            "semantic": {
+                                "specialist_shared": True,
+                                "sharing_mode": "core_mediated_read_only",
+                                "write_policy": "through_core_only",
+                            },
+                            "procedural": {
+                                "specialist_shared": True,
+                                "sharing_mode": "core_mediated_read_only",
+                                "write_policy": "through_core_only",
+                            },
+                        }
+                    },
+                    "consumed_memory_classes": {
+                        "structured_analysis_specialist": ["semantic", "procedural"]
+                    },
+                    "memory_write_policies": {
+                        "structured_analysis_specialist": {
+                            "semantic": "through_core_only",
+                            "procedural": "through_core_only",
+                        }
+                    },
+                    "memory_refs_by_specialist": {
+                        "structured_analysis_specialist": [
+                            "memory://semantic/release-context",
+                            "memory://procedural/release-checklist",
+                        ]
+                    },
+                    "semantic_focus_by_specialist": {
+                        "structured_analysis_specialist": [
+                            "dados_estatistica_e_inteligencia_analitica"
+                        ]
+                    },
+                    "consumer_modes": {
+                        "structured_analysis_specialist": "domain_guided_memory_packet"
+                    },
+                    "consumer_profiles": {
+                        "structured_analysis_specialist": "structured_analysis"
+                    },
+                    "consumer_objectives": {
+                        "structured_analysis_specialist": "compare_safe_options"
+                    },
+                    "expected_deliverables": {
+                        "structured_analysis_specialist": ["comparison_frame"]
+                    },
+                    "telemetry_focus": {
+                        "structured_analysis_specialist": ["analysis_trace"]
+                    },
+                    "domain_mission_link_reasons": {
+                        "structured_analysis_specialist": (
+                            "analysis linked to active mission and canonical domain"
+                        )
+                    },
+                    "semantic_memory_specialists": ["structured_analysis_specialist"],
+                    "procedural_memory_specialists": ["structured_analysis_specialist"],
+                },
+                request_id="req-memory-causality",
+                session_id="sess-memory-causality",
+                correlation_id="req-memory-causality",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-mc9",
+                event_name="response_synthesized",
+                timestamp="2026-04-02T00:00:08+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "continuity_action": "continuar",
+                    "primary_mind": "mente_analitica",
+                    "primary_mind_family": "fundamental",
+                    "primary_domain_driver": "dados_estatistica_e_inteligencia_analitica",
+                    "arbitration_source": "mind_registry",
+                    "semantic_memory_available": True,
+                    "procedural_memory_available": True,
+                    "semantic_memory_focus": [
+                        "dados_estatistica_e_inteligencia_analitica"
+                    ],
+                    "procedural_memory_hint": "preservar a moldura de comparacao mais recente",
+                },
+                request_id="req-memory-causality",
+                session_id="sess-memory-causality",
+                correlation_id="req-memory-causality",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-mc10",
+                event_name="memory_recorded",
+                timestamp="2026-04-02T00:00:09+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_mode": "continuar"},
+                request_id="req-memory-causality",
+                session_id="sess-memory-causality",
+                correlation_id="req-memory-causality",
+            ),
+        ]
+    )
+
+    audit = service.audit_flow(ObservabilityQuery(request_id="req-memory-causality"))
+
+    assert audit.memory_causality_status == "causal_guidance"
+    assert audit.semantic_memory_focus == ["dados_estatistica_e_inteligencia_analitica"]
+    assert (
+        audit.procedural_memory_hint
+        == "preservar a moldura de comparacao mais recente"
+    )
+    assert audit.semantic_memory_specialists == ["structured_analysis_specialist"]
+    assert audit.procedural_memory_specialists == ["structured_analysis_specialist"]
+
+
+def test_observability_service_tracks_cognitive_recomposition_alignment() -> None:
+    temp_dir = runtime_dir("observability-cognitive-recomposition")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service.ingest_events(
+        [
+            InternalEventEnvelope(
+                event_id="evt-cr1",
+                event_name="input_received",
+                timestamp="2026-04-02T00:00:00+00:00",
+                source_service="orchestrator-service",
+                payload={"content": "Resolve the domain impasse before answering."},
+                request_id="req-cognitive-recomposition",
+                session_id="sess-cognitive-recomposition",
+                correlation_id="req-cognitive-recomposition",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-cr2",
+                event_name="memory_recovered",
+                timestamp="2026-04-02T00:00:01+00:00",
+                source_service="orchestrator-service",
+                payload={},
+                request_id="req-cognitive-recomposition",
+                session_id="sess-cognitive-recomposition",
+                correlation_id="req-cognitive-recomposition",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-cr3",
+                event_name="intent_classified",
+                timestamp="2026-04-02T00:00:02+00:00",
+                source_service="orchestrator-service",
+                payload={"intent": "analysis"},
+                request_id="req-cognitive-recomposition",
+                session_id="sess-cognitive-recomposition",
+                correlation_id="req-cognitive-recomposition",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-cr4",
+                event_name="context_composed",
+                timestamp="2026-04-02T00:00:03+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "active_minds": ["mente_analitica", "mente_critica"],
+                    "primary_mind": "mente_analitica",
+                    "primary_mind_family": "fundamental",
+                    "supporting_minds": ["mente_critica"],
+                    "suppressed_minds": ["mente_expressiva"],
+                    "supporting_mind_limit": 2,
+                    "suppressed_mind_limit": 3,
+                    "dominant_tension": "equilibrar profundidade analitica com conclusao util",
+                    "arbitration_summary": (
+                        "mente analitica lidera com recomposicao critica"
+                    ),
+                    "arbitration_source": "mind_registry_recomposition",
+                    "canonical_domains": [
+                        "dados_estatistica_e_inteligencia_analitica"
+                    ],
+                    "primary_domain_driver": (
+                        "dados_estatistica_e_inteligencia_analitica"
+                    ),
+                    "cognitive_recomposition_applied": True,
+                    "cognitive_recomposition_reason": (
+                        "primary domain driver has no matching guided specialist route"
+                    ),
+                    "cognitive_recomposition_trigger": "specialist_route_impasse",
+                },
+                request_id="req-cognitive-recomposition",
+                session_id="sess-cognitive-recomposition",
+                correlation_id="req-cognitive-recomposition",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-cr5",
+                event_name="cognitive_recomposition_applied",
+                timestamp="2026-04-02T00:00:03.500000+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "primary_mind": "mente_analitica",
+                    "supporting_minds": ["mente_critica"],
+                    "primary_domain_driver": (
+                        "dados_estatistica_e_inteligencia_analitica"
+                    ),
+                    "arbitration_source": "mind_registry_recomposition",
+                    "cognitive_recomposition_reason": (
+                        "primary domain driver has no matching guided specialist route"
+                    ),
+                    "cognitive_recomposition_trigger": "specialist_route_impasse",
+                },
+                request_id="req-cognitive-recomposition",
+                session_id="sess-cognitive-recomposition",
+                correlation_id="req-cognitive-recomposition",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-cr6",
+                event_name="plan_built",
+                timestamp="2026-04-02T00:00:04+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "continuity_action": "continuar",
+                    "continuity_source": "active_mission",
+                    "primary_mind": "mente_analitica",
+                    "primary_mind_family": "fundamental",
+                    "primary_domain_driver": "dados_estatistica_e_inteligencia_analitica",
+                    "arbitration_source": "mind_registry_recomposition",
+                    "cognitive_recomposition_applied": True,
+                    "cognitive_recomposition_reason": (
+                        "primary domain driver has no matching guided specialist route"
+                    ),
+                    "cognitive_recomposition_trigger": "specialist_route_impasse",
+                },
+                request_id="req-cognitive-recomposition",
+                session_id="sess-cognitive-recomposition",
+                correlation_id="req-cognitive-recomposition",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-cr7",
+                event_name="continuity_decided",
+                timestamp="2026-04-02T00:00:05+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_action": "continuar", "continuity_source": "active_mission"},
+                request_id="req-cognitive-recomposition",
+                session_id="sess-cognitive-recomposition",
+                correlation_id="req-cognitive-recomposition",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-cr8",
+                event_name="governance_checked",
+                timestamp="2026-04-02T00:00:06+00:00",
+                source_service="orchestrator-service",
+                payload={"decision": "allow_with_conditions"},
+                request_id="req-cognitive-recomposition",
+                session_id="sess-cognitive-recomposition",
+                correlation_id="req-cognitive-recomposition",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-cr9",
+                event_name="domain_specialist_completed",
+                timestamp="2026-04-02T00:00:07+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "specialist_types": ["structured_analysis_specialist"],
+                    "primary_domain_driver": (
+                        "dados_estatistica_e_inteligencia_analitica"
+                    ),
+                    "primary_domain_driver_matches": {
+                        "structured_analysis_specialist": True
+                    },
+                },
+                request_id="req-cognitive-recomposition",
+                session_id="sess-cognitive-recomposition",
+                correlation_id="req-cognitive-recomposition",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-cr10",
+                event_name="response_synthesized",
+                timestamp="2026-04-02T00:00:08+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "continuity_action": "continuar",
+                    "primary_mind": "mente_analitica",
+                    "primary_mind_family": "fundamental",
+                    "primary_domain_driver": "dados_estatistica_e_inteligencia_analitica",
+                    "arbitration_source": "mind_registry_recomposition",
+                    "cognitive_recomposition_applied": True,
+                    "cognitive_recomposition_reason": (
+                        "primary domain driver has no matching guided specialist route"
+                    ),
+                    "cognitive_recomposition_trigger": "specialist_route_impasse",
+                },
+                request_id="req-cognitive-recomposition",
+                session_id="sess-cognitive-recomposition",
+                correlation_id="req-cognitive-recomposition",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-cr11",
+                event_name="memory_recorded",
+                timestamp="2026-04-02T00:00:09+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_mode": "continuar"},
+                request_id="req-cognitive-recomposition",
+                session_id="sess-cognitive-recomposition",
+                correlation_id="req-cognitive-recomposition",
+            ),
+        ]
+    )
+
+    audit = service.audit_flow(
+        ObservabilityQuery(request_id="req-cognitive-recomposition")
+    )
+
+    assert audit.mind_alignment_status == "healthy"
+    assert audit.mind_domain_specialist_status == "aligned"
+    assert audit.cognitive_recomposition_applied is True
+    assert (
+        audit.cognitive_recomposition_trigger == "specialist_route_impasse"
+    )

@@ -196,16 +196,25 @@ class SynthesisEngine:
             base = arbitration or plan.rationale.split(";", maxsplit=1)[0]
             if cognitive_anchor:
                 base = f"{base}; {cognitive_anchor}"
+            if plan.dominant_tension:
+                base = f"{base}; tensao dominante: {plan.dominant_tension}"
+            if plan.arbitration_source == "mind_registry_recomposition":
+                base = (
+                    f"{base}; recomposicao cognitiva manteve o alinhamento com o "
+                    "dominio primario"
+                )
             if semantic_focus and route_objective:
                 return (
                     f"{base}; a missao ativa segue ancorada em {plan.open_loops[0]}; "
                     f"rota {route_profile or 'ativa'} orienta {route_objective}; "
-                    f"memoria guiada reforca {semantic_role} em {semantic_focus}"
+                    f"memoria guiada reforca {semantic_role} em {semantic_focus}; "
+                    f"framing final deve permanecer coerente com {semantic_role}"
                 )
             if semantic_focus:
                 return (
                     f"{base}; a missao ativa segue ancorada em {plan.open_loops[0]}; "
-                    f"memoria guiada reforca {semantic_role} em {semantic_focus}"
+                    f"memoria guiada reforca {semantic_role} em {semantic_focus}; "
+                    f"framing final deve permanecer coerente com {semantic_role}"
                 )
             if route_objective:
                 workflow_clause = (
@@ -221,17 +230,28 @@ class SynthesisEngine:
             base = arbitration
             if cognitive_anchor:
                 base = f"{base}; {cognitive_anchor}"
+            if plan.dominant_tension:
+                base = f"{base}; tensao dominante: {plan.dominant_tension}"
+            if plan.arbitration_source == "mind_registry_recomposition":
+                base = (
+                    f"{base}; recomposicao cognitiva manteve o alinhamento com o "
+                    "dominio primario"
+                )
             if semantic_focus and route_objective:
                 workflow_clause = (
                     f"; workflow ativo: {workflow_profile}" if workflow_profile else ""
                 )
                 return (
                     f"{base}; rota {route_profile or 'ativa'} orienta {route_objective}; "
-                    f"memoria guiada reforca {semantic_role} em {semantic_focus}"
+                    f"memoria guiada reforca {semantic_role} em {semantic_focus}; "
+                    f"framing final deve permanecer coerente com {semantic_role}"
                     f"{workflow_clause}"
                 )
             if semantic_focus:
-                return f"{base}; memoria guiada reforca {semantic_role} em {semantic_focus}"
+                return (
+                    f"{base}; memoria guiada reforca {semantic_role} em {semantic_focus}; "
+                    f"framing final deve permanecer coerente com {semantic_role}"
+                )
             if route_objective:
                 workflow_clause = (
                     f"; workflow ativo: {workflow_profile}" if workflow_profile else ""
@@ -243,7 +263,16 @@ class SynthesisEngine:
             return base
         base = plan.rationale.split(";", maxsplit=1)[0]
         if cognitive_anchor:
-            return f"{base}; {cognitive_anchor}"
+            base = f"{base}; {cognitive_anchor}"
+        if plan.dominant_tension:
+            base = f"{base}; tensao dominante: {plan.dominant_tension}"
+        if plan.arbitration_source == "mind_registry_recomposition":
+            base = (
+                f"{base}; recomposicao cognitiva manteve o alinhamento com o dominio "
+                "primario"
+            )
+        if cognitive_anchor:
+            return base
         return base
 
     def _recommendation_line(self, synthesis_input: SynthesisInput) -> str:
@@ -283,10 +312,13 @@ class SynthesisEngine:
         )
         procedural_role = self._present_contract_label(guidance.procedural_memory_role)
         response_focus = self._present_contract_label(guidance.response_focus)
+        primary_domain_driver = self._present_contract_label(plan.primary_domain_driver)
         if synthesis_input.procedural_memory_hint:
             recommendation = (
                 f"{next_action}; apoio procedural orienta {procedural_role}: "
-                f"{synthesis_input.procedural_memory_hint}; criterio de sucesso: {success}"
+                f"{synthesis_input.procedural_memory_hint}; "
+                "proxima acao deve preservar esse fio; "
+                f"criterio de sucesso: {success}"
             )
         else:
             recommendation = f"{next_action}; criterio de sucesso: {success}"
@@ -303,8 +335,21 @@ class SynthesisEngine:
         workflow_hint = self._present_contract_label(plan.route_workflow_profile)
         if workflow_hint:
             recommendation = f"{recommendation}; workflow ativo: {workflow_hint}"
+        if primary_domain_driver:
+            recommendation = (
+                f"{recommendation}; dominio primario: {primary_domain_driver}"
+            )
         if response_focus:
             recommendation = f"{recommendation}; foco final: {response_focus}"
+        if plan.dominant_tension:
+            recommendation = (
+                f"{recommendation}; tensao dominante: {plan.dominant_tension}"
+            )
+        if plan.arbitration_source == "mind_registry_recomposition":
+            recommendation = (
+                f"{recommendation}; recomposicao cognitiva: preservar o dominio "
+                "primario antes de ampliar o escopo"
+            )
         workflow_checkpoint = self._present_contract_label(
             plan.route_workflow_checkpoints[0]
             if plan.route_workflow_checkpoints

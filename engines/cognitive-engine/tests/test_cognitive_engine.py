@@ -1,5 +1,6 @@
 from cognitive_engine.engine import CognitiveEngine
 
+from shared.contracts import DomainSpecialistRouteContract
 from shared.domain_registry import FALLBACK_RUNTIME_ROUTE
 
 
@@ -77,3 +78,73 @@ def test_cognitive_engine_deduplicates_guided_analysis_specialist_hint() -> None
 
     assert snapshot.specialist_hints[0] == "structured_analysis_specialist"
     assert snapshot.specialist_hints.count("structured_analysis_specialist") == 1
+
+
+def test_cognitive_engine_prefers_explicit_route_contracts_over_local_reredivation() -> None:
+    engine = CognitiveEngine()
+    snapshot = engine.build_snapshot(
+        intent="analysis",
+        risk_markers=[],
+        retrieved_domains=["analysis", "governance"],
+        domain_specialist_routes=[
+            DomainSpecialistRouteContract(
+                domain_name="analysis",
+                specialist_type="structured_analysis_specialist",
+                specialist_mode="guided",
+                routing_reason="rota canonica ja resolvida para analise",
+            )
+        ],
+    )
+
+    assert snapshot.specialist_hints == ["structured_analysis_specialist"]
+
+
+def test_cognitive_engine_prioritizes_explicit_route_matching_primary_domain_driver() -> None:
+    engine = CognitiveEngine()
+    snapshot = engine.build_snapshot(
+        intent="analysis",
+        risk_markers=[],
+        retrieved_domains=["software_development", "analysis"],
+        domain_specialist_routes=[
+            DomainSpecialistRouteContract(
+                domain_name="software_development",
+                specialist_type="software_change_specialist",
+                specialist_mode="guided",
+                routing_reason="rota de software resolvida",
+            ),
+            DomainSpecialistRouteContract(
+                domain_name="analysis",
+                specialist_type="structured_analysis_specialist",
+                specialist_mode="guided",
+                routing_reason="rota de analise resolvida",
+            ),
+        ],
+    )
+
+    assert snapshot.primary_domain_driver == "dados_estatistica_e_inteligencia_analitica"
+    assert snapshot.specialist_hints[0] == "structured_analysis_specialist"
+
+
+def test_cognitive_engine_applies_recomposition_on_specialist_route_impasse() -> None:
+    engine = CognitiveEngine()
+    snapshot = engine.build_snapshot(
+        intent="analysis",
+        risk_markers=[],
+        retrieved_domains=["analysis", "governance"],
+        domain_specialist_routes=[
+            DomainSpecialistRouteContract(
+                domain_name="governance",
+                specialist_type="governance_review_specialist",
+                specialist_mode="guided",
+                routing_reason="rota guiada de governanca resolvida",
+            )
+        ],
+    )
+
+    assert snapshot.primary_domain_driver == "dados_estatistica_e_inteligencia_analitica"
+    assert snapshot.recomposition_applied is True
+    assert snapshot.recomposition_trigger == "specialist_route_impasse"
+    assert snapshot.recomposition_reason
+    assert snapshot.arbitration_source == "mind_registry_recomposition"
+    assert "mente_critica" in snapshot.supporting_minds
+    assert "recomposicao_cognitiva=" in snapshot.deliberation_notes[-1]

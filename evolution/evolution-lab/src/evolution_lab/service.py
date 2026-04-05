@@ -58,6 +58,15 @@ class FlowEvaluationInput:
     memory_alignment_status: str | None = None
     specialist_sovereignty_status: str | None = None
     axis_gate_status: str | None = None
+    workflow_profile_status: str | None = None
+    memory_causality_status: str | None = None
+    dominant_tension: str | None = None
+    arbitration_source: str | None = None
+    primary_domain_driver: str | None = None
+    mind_domain_specialist_status: str | None = None
+    cognitive_recomposition_applied: bool = False
+    cognitive_recomposition_reason: str | None = None
+    cognitive_recomposition_trigger: str | None = None
     continuity_trace_status: str | None = None
     missing_continuity_signals: list[str] = field(default_factory=list)
     continuity_anomaly_flags: list[str] = field(default_factory=list)
@@ -188,14 +197,17 @@ class EvolutionLabService:
     ) -> EvolutionProposalContract:
         """Create a sandbox proposal from a pilot or runtime flow evaluation."""
 
+        requires_refinement = self._requires_refinement(evaluation)
         hypothesis = (
-            "Flow anomalies should be reduced without relaxing governance or traceability."
-            if evaluation.anomaly_flags or evaluation.missing_required_events
+            "Flow anomalies and alignment drifts should be reduced without relaxing governance "
+            "or traceability."
+            if requires_refinement
             else "Healthy flows may support a safer candidate path under the same controls."
         )
         expected_gain = (
-            "Reduce missing trace events and operational anomalies in the observed flow."
-            if evaluation.anomaly_flags or evaluation.missing_required_events
+            "Reduce trace gaps, workflow maturity drifts and route-alignment anomalies in the "
+            "observed flow."
+            if requires_refinement
             else "Preserve flow health while improving execution quality."
         )
         source_signals = [
@@ -233,6 +245,35 @@ class EvolutionLabService:
             )
         if evaluation.axis_gate_status:
             source_signals.append(f"alignment://axis-gate/{evaluation.axis_gate_status}")
+        if evaluation.workflow_profile_status:
+            source_signals.append(
+                f"workflow://profile-status/{evaluation.workflow_profile_status}"
+            )
+        if evaluation.memory_causality_status:
+            source_signals.append(
+                f"memory://causality/{evaluation.memory_causality_status}"
+            )
+        if evaluation.primary_domain_driver:
+            source_signals.append(
+                f"domain://primary-driver/{evaluation.primary_domain_driver}"
+            )
+        if evaluation.dominant_tension:
+            source_signals.append(f"mind://tension/{evaluation.dominant_tension}")
+        if evaluation.arbitration_source:
+            source_signals.append(
+                f"mind://arbitration-source/{evaluation.arbitration_source}"
+            )
+        if evaluation.mind_domain_specialist_status:
+            source_signals.append(
+                "alignment://mind-domain-specialist/"
+                f"{evaluation.mind_domain_specialist_status}"
+            )
+        if evaluation.cognitive_recomposition_applied:
+            source_signals.append("mind://recomposition/applied")
+        if evaluation.cognitive_recomposition_trigger:
+            source_signals.append(
+                f"mind://recomposition-trigger/{evaluation.cognitive_recomposition_trigger}"
+            )
         if evaluation.continuity_trace_status:
             source_signals.append(
                 f"continuity://trace-status/{evaluation.continuity_trace_status}"
@@ -345,6 +386,20 @@ class EvolutionLabService:
                 evaluation.specialist_sovereignty_status
             ),
             "axis_gate": EvolutionLabService._status_score(evaluation.axis_gate_status),
+            "workflow_profile": EvolutionLabService._workflow_profile_score(
+                evaluation.workflow_profile_status
+            ),
+            "memory_causality": EvolutionLabService._memory_causality_score(
+                evaluation.memory_causality_status
+            ),
+            "mind_domain_specialist": (
+                EvolutionLabService._mind_domain_specialist_score(
+                    evaluation.mind_domain_specialist_status
+                )
+            ),
+            "cognitive_recomposition_coherence": (
+                EvolutionLabService._recomposition_coherence_score(evaluation)
+            ),
             "shadow_coverage": 1.0 if evaluation.shadow_specialists else 0.0,
             "runtime_statefulness": (
                 1.0 if evaluation.continuity_runtime_mode == "langgraph_subflow" else 0.5
@@ -368,10 +423,88 @@ class EvolutionLabService:
         return weights.get(status, 0.0)
 
     @staticmethod
+    def _workflow_profile_score(status: str | None) -> float:
+        weights = {
+            "healthy": 1.0,
+            "maturation_recommended": 0.8,
+            "attention_required": 0.0,
+            "not_applicable": 0.7,
+        }
+        return weights.get(status, 0.7 if status is None else 0.0)
+
+    @staticmethod
+    def _memory_causality_score(status: str | None) -> float:
+        weights = {
+            "causal_guidance": 1.0,
+            "attached_only": 0.5,
+            "not_applicable": 0.7,
+            "attention_required": 0.0,
+        }
+        return weights.get(status, 0.7 if status is None else 0.0)
+
+    @staticmethod
+    def _mind_domain_specialist_score(status: str | None) -> float:
+        weights = {
+            "aligned": 1.0,
+            "not_applicable": 0.7,
+            "incomplete": 0.4,
+            "attention_required": 0.0,
+            "mismatch": 0.0,
+        }
+        return weights.get(status, 0.7 if status is None else 0.0)
+
+    @staticmethod
+    def _recomposition_coherence_score(evaluation: FlowEvaluationInput) -> float:
+        if evaluation.cognitive_recomposition_applied:
+            return (
+                1.0
+                if evaluation.cognitive_recomposition_reason
+                and evaluation.cognitive_recomposition_trigger
+                else 0.0
+            )
+        return (
+            1.0
+            if evaluation.cognitive_recomposition_reason is None
+            and evaluation.cognitive_recomposition_trigger is None
+            else 0.0
+        )
+
+    @staticmethod
+    def _requires_refinement(evaluation: FlowEvaluationInput) -> bool:
+        if evaluation.anomaly_flags or evaluation.missing_required_events:
+            return True
+        if evaluation.continuity_anomaly_flags or evaluation.missing_continuity_signals:
+            return True
+        if evaluation.workflow_profile_status in {
+            "maturation_recommended",
+            "attention_required",
+        }:
+            return True
+        if evaluation.memory_causality_status in {"attached_only", "attention_required"}:
+            return True
+        if evaluation.mind_domain_specialist_status in {
+            "incomplete",
+            "attention_required",
+            "mismatch",
+        }:
+            return True
+        return EvolutionLabService._recomposition_coherence_score(evaluation) < 1.0
+
+    @staticmethod
     def _risk_hint_from_flow(evaluation: FlowEvaluationInput) -> str:
         if evaluation.anomaly_flags or evaluation.continuity_anomaly_flags:
             return "moderate"
+        if evaluation.memory_causality_status == "attention_required":
+            return "moderate"
+        if evaluation.mind_domain_specialist_status in {"attention_required", "mismatch"}:
+            return "moderate"
         if evaluation.axis_gate_status not in {None, "healthy"}:
+            return "low_to_moderate"
+        if evaluation.workflow_profile_status in {"maturation_recommended", "attention_required"}:
+            return "low_to_moderate"
+        if evaluation.memory_causality_status == "attached_only":
+            return "low_to_moderate"
+        if evaluation.mind_domain_specialist_status == "incomplete":
             return "low_to_moderate"
         if evaluation.missing_required_events or evaluation.missing_continuity_signals:
             return "low_to_moderate"

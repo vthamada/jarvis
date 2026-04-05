@@ -38,6 +38,7 @@ from shared.domain_registry import (
     resolve_workflow_route,
     route_metadata_payload,
     specialist_route_payload,
+    workflow_runtime_guidance,
 )
 from shared.events import InternalEventEnvelope
 from shared.memory_registry import guided_reasoning_memory_classes
@@ -313,10 +314,38 @@ class OrchestratorService:
                     "dominant_tension": cognitive_snapshot.dominant_tension,
                     "arbitration_summary": cognitive_snapshot.arbitration_summary,
                     "arbitration_source": cognitive_snapshot.arbitration_source,
+                    "cognitive_recomposition_applied": (
+                        cognitive_snapshot.recomposition_applied
+                    ),
+                    "cognitive_recomposition_reason": (
+                        cognitive_snapshot.recomposition_reason
+                    ),
+                    "cognitive_recomposition_trigger": (
+                        cognitive_snapshot.recomposition_trigger
+                    ),
                     "specialist_hints": cognitive_snapshot.specialist_hints,
                 },
             )
         )
+        if cognitive_snapshot.recomposition_applied:
+            events.append(
+                self.make_event(
+                    "cognitive_recomposition_applied",
+                    contract,
+                    {
+                        "primary_mind": cognitive_snapshot.primary_mind,
+                        "supporting_minds": cognitive_snapshot.supporting_minds,
+                        "primary_domain_driver": cognitive_snapshot.primary_domain_driver,
+                        "arbitration_source": cognitive_snapshot.arbitration_source,
+                        "cognitive_recomposition_reason": (
+                            cognitive_snapshot.recomposition_reason
+                        ),
+                        "cognitive_recomposition_trigger": (
+                            cognitive_snapshot.recomposition_trigger
+                        ),
+                    },
+                )
+            )
 
         deliberative_plan = self.planning_engine.build_task_plan(
             self._build_planning_context(
@@ -341,6 +370,15 @@ class OrchestratorService:
                     "primary_mind_family": deliberative_plan.primary_mind_family,
                     "primary_domain_driver": deliberative_plan.primary_domain_driver,
                     "arbitration_source": deliberative_plan.arbitration_source,
+                    "cognitive_recomposition_applied": (
+                        cognitive_snapshot.recomposition_applied
+                    ),
+                    "cognitive_recomposition_reason": (
+                        cognitive_snapshot.recomposition_reason
+                    ),
+                    "cognitive_recomposition_trigger": (
+                        cognitive_snapshot.recomposition_trigger
+                    ),
                     "primary_route": deliberative_plan.primary_route,
                     "primary_canonical_domain": deliberative_plan.primary_canonical_domain,
                     "specialist_hints": deliberative_plan.specialist_hints,
@@ -466,6 +504,14 @@ class OrchestratorService:
                         "workflow_profile": operation_dispatch.workflow_profile,
                         "workflow_domain_route": operation_dispatch.workflow_domain_route,
                         "workflow_objective": operation_dispatch.workflow_objective,
+                        "workflow_expected_deliverables": (
+                            operation_dispatch.workflow_expected_deliverables
+                        ),
+                        "workflow_telemetry_focus": (
+                            operation_dispatch.workflow_telemetry_focus
+                        ),
+                        "workflow_success_focus": operation_dispatch.workflow_success_focus,
+                        "workflow_response_focus": operation_dispatch.workflow_response_focus,
                         "workflow_state": operation_dispatch.workflow_state,
                         "workflow_governance_mode": operation_dispatch.workflow_governance_mode,
                         "workflow_steps": operation_dispatch.workflow_steps,
@@ -484,6 +530,14 @@ class OrchestratorService:
                         "operation_id": str(operation_dispatch.operation_id),
                         "workflow_profile": operation_dispatch.workflow_profile,
                         "workflow_domain_route": operation_dispatch.workflow_domain_route,
+                        "workflow_objective": operation_dispatch.workflow_objective,
+                        "workflow_expected_deliverables": (
+                            operation_dispatch.workflow_expected_deliverables
+                        ),
+                        "workflow_telemetry_focus": (
+                            operation_dispatch.workflow_telemetry_focus
+                        ),
+                        "workflow_success_focus": operation_dispatch.workflow_success_focus,
                         "workflow_state": operation_dispatch.workflow_state,
                         "workflow_governance_mode": operation_dispatch.workflow_governance_mode,
                         "workflow_decision_points": operation_dispatch.workflow_decision_points,
@@ -499,6 +553,15 @@ class OrchestratorService:
                         "task_type": operation_dispatch.task_type,
                         "workflow_profile": operation_dispatch.workflow_profile,
                         "workflow_domain_route": operation_dispatch.workflow_domain_route,
+                        "workflow_objective": operation_dispatch.workflow_objective,
+                        "workflow_expected_deliverables": (
+                            operation_dispatch.workflow_expected_deliverables
+                        ),
+                        "workflow_telemetry_focus": (
+                            operation_dispatch.workflow_telemetry_focus
+                        ),
+                        "workflow_success_focus": operation_dispatch.workflow_success_focus,
+                        "workflow_response_focus": operation_dispatch.workflow_response_focus,
                         "workflow_state": "dispatched",
                         "workflow_steps": operation_dispatch.workflow_steps,
                         "workflow_decision_points": operation_dispatch.workflow_decision_points,
@@ -519,6 +582,14 @@ class OrchestratorService:
                         "artifacts": operation_result.artifacts,
                         "workflow_profile": operation_dispatch.workflow_profile,
                         "workflow_domain_route": operation_dispatch.workflow_domain_route,
+                        "workflow_objective": operation_dispatch.workflow_objective,
+                        "workflow_expected_deliverables": (
+                            operation_dispatch.workflow_expected_deliverables
+                        ),
+                        "workflow_telemetry_focus": (
+                            operation_dispatch.workflow_telemetry_focus
+                        ),
+                        "workflow_response_focus": operation_dispatch.workflow_response_focus,
                         "workflow_state": operation_result.workflow_state,
                         "workflow_checkpoints": operation_dispatch.workflow_checkpoints,
                         "workflow_completed_steps": operation_result.workflow_completed_steps,
@@ -534,6 +605,15 @@ class OrchestratorService:
                         "operation_id": str(operation_result.operation_id),
                         "workflow_profile": operation_dispatch.workflow_profile,
                         "workflow_domain_route": operation_dispatch.workflow_domain_route,
+                        "workflow_objective": operation_dispatch.workflow_objective,
+                        "workflow_expected_deliverables": (
+                            operation_dispatch.workflow_expected_deliverables
+                        ),
+                        "workflow_telemetry_focus": (
+                            operation_dispatch.workflow_telemetry_focus
+                        ),
+                        "workflow_success_focus": operation_dispatch.workflow_success_focus,
+                        "workflow_response_focus": operation_dispatch.workflow_response_focus,
                         "workflow_state": operation_result.workflow_state,
                         "workflow_governance_mode": operation_dispatch.workflow_governance_mode,
                         "workflow_decision_points": operation_dispatch.workflow_decision_points,
@@ -593,9 +673,23 @@ class OrchestratorService:
                     "primary_mind": deliberative_plan.primary_mind,
                     "primary_mind_family": deliberative_plan.primary_mind_family,
                     "primary_domain_driver": deliberative_plan.primary_domain_driver,
+                    "dominant_tension": deliberative_plan.dominant_tension,
                     "arbitration_source": deliberative_plan.arbitration_source,
+                    "cognitive_recomposition_applied": (
+                        cognitive_snapshot.recomposition_applied
+                    ),
+                    "cognitive_recomposition_reason": (
+                        cognitive_snapshot.recomposition_reason
+                    ),
+                    "cognitive_recomposition_trigger": (
+                        cognitive_snapshot.recomposition_trigger
+                    ),
                     "primary_route": deliberative_plan.primary_route,
                     "primary_canonical_domain": deliberative_plan.primary_canonical_domain,
+                    "workflow_profile": deliberative_plan.route_workflow_profile,
+                    "workflow_response_focus": workflow_runtime_guidance(
+                        deliberative_plan.route_workflow_profile
+                    ).response_focus,
                     "specialist_hints": deliberative_plan.specialist_hints,
                     "guided_memory_specialists": guided_memory_runtime_hints[
                         "guided_memory_specialists"
@@ -747,6 +841,10 @@ class OrchestratorService:
                         item.specialist_type: item.selection_mode
                         for item in handoff_plan.selections
                     },
+                    "primary_mind": deliberative_plan.primary_mind,
+                    "primary_mind_family": deliberative_plan.primary_mind_family,
+                    "primary_domain_driver": deliberative_plan.primary_domain_driver,
+                    "arbitration_source": deliberative_plan.arbitration_source,
                     "primary_route": deliberative_plan.primary_route,
                     "primary_canonical_domain": deliberative_plan.primary_canonical_domain,
                     "route_maturity": {
@@ -795,6 +893,15 @@ class OrchestratorService:
                             deliberative_plan.primary_canonical_domain
                             in payload.get("canonical_domain_refs", [])
                             if deliberative_plan.primary_canonical_domain is not None
+                            else False
+                        )
+                        for specialist_type, payload in selection_registry_payloads.items()
+                    },
+                    "primary_domain_driver_matches": {
+                        specialist_type: (
+                            deliberative_plan.primary_domain_driver
+                            in payload.get("canonical_domain_refs", [])
+                            if deliberative_plan.primary_domain_driver is not None
                             else False
                         )
                         for specialist_type, payload in selection_registry_payloads.items()
@@ -1214,6 +1321,10 @@ class OrchestratorService:
                                 item.specialist_type for item in domain_contributions
                             ],
                             "invocation_ids": [item.invocation_id for item in domain_contributions],
+                            "primary_mind": deliberative_plan.primary_mind,
+                            "primary_mind_family": deliberative_plan.primary_mind_family,
+                            "primary_domain_driver": deliberative_plan.primary_domain_driver,
+                            "arbitration_source": deliberative_plan.arbitration_source,
                             "linked_domains": {
                                 invocation.specialist_type: invocation.linked_domain
                                 for invocation in domain_invocation_index.values()
@@ -1260,6 +1371,15 @@ class OrchestratorService:
                                     deliberative_plan.primary_canonical_domain
                                     in payload.get("canonical_domain_refs", [])
                                     if deliberative_plan.primary_canonical_domain is not None
+                                    else False
+                                )
+                                for specialist_type, payload in completed_registry_payloads.items()
+                            },
+                            "primary_domain_driver_matches": {
+                                specialist_type: (
+                                    deliberative_plan.primary_domain_driver
+                                    in payload.get("canonical_domain_refs", [])
+                                    if deliberative_plan.primary_domain_driver is not None
                                     else False
                                 )
                                 for specialist_type, payload in completed_registry_payloads.items()
@@ -1356,6 +1476,7 @@ class OrchestratorService:
             workflow_checkpoints,
             workflow_decision_points,
         ) = self._build_workflow_profile(plan)
+        workflow_guidance = workflow_runtime_guidance(workflow_profile)
         expected_output = (
             plan.route_expected_deliverables[0]
             if plan.route_expected_deliverables
@@ -1387,6 +1508,10 @@ class OrchestratorService:
             workflow_profile=workflow_profile,
             workflow_domain_route=workflow_domain_route,
             workflow_objective=plan.route_consumer_objective or plan.goal,
+            workflow_expected_deliverables=list(plan.route_expected_deliverables),
+            workflow_telemetry_focus=list(plan.route_telemetry_focus),
+            workflow_success_focus=workflow_guidance.success_focus,
+            workflow_response_focus=workflow_guidance.response_focus,
             workflow_state="composed",
             workflow_governance_mode="core_mediated",
             workflow_steps=workflow_steps,

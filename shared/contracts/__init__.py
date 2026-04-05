@@ -280,6 +280,10 @@ class OperationDispatchContract:
     workflow_profile: str | None = None
     workflow_domain_route: str | None = None
     workflow_objective: str | None = None
+    workflow_expected_deliverables: list[str] = field(default_factory=list)
+    workflow_telemetry_focus: list[str] = field(default_factory=list)
+    workflow_success_focus: str | None = None
+    workflow_response_focus: str | None = None
     workflow_state: str | None = None
     workflow_governance_mode: str | None = None
     workflow_steps: list[str] = field(default_factory=list)
