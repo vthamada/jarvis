@@ -20,12 +20,15 @@ from synthesis_engine.engine import SynthesisEngine, SynthesisInput
 
 from shared.contracts import (
     ArtifactResultContract,
+    ContinuityPauseContract,
+    ContinuityReplayContract,
     DeliberativePlanContract,
     GovernanceCheckContract,
     GovernanceDecisionContract,
     InputContract,
     MemoryRecordContract,
     MemoryRecoveryContract,
+    MissionRuntimeStateContract,
     OperationDispatchContract,
     OperationResultContract,
     SpecialistInvocationContract,
@@ -42,7 +45,13 @@ from shared.domain_registry import (
 )
 from shared.events import InternalEventEnvelope
 from shared.memory_registry import guided_reasoning_memory_classes
-from shared.types import MemoryClass, OperationId, PermissionDecision, RequestId
+from shared.types import (
+    MemoryClass,
+    MissionStatus,
+    OperationId,
+    PermissionDecision,
+    RequestId,
+)
 
 
 @dataclass
@@ -68,12 +77,23 @@ class OrchestratorResponse:
     specialist_hints: list[str] = field(default_factory=list)
     specialist_invocations: list[SpecialistInvocationContract] = field(default_factory=list)
     specialist_boundary_summary: str | None = None
+    mission_runtime_state: MissionRuntimeStateContract | None = None
     specialist_handoff_check: GovernanceCheckContract | None = None
     specialist_handoff_decision: GovernanceDecisionContract | None = None
     specialist_review: SpecialistReview | None = None
     operation_dispatch: OperationDispatchContract | None = None
     operation_result: OperationResultContract | None = None
     events: list[InternalEventEnvelope] = field(default_factory=list)
+
+
+@dataclass
+class ContinuitySubflowResult:
+    """Structured result of the native continuity/runtime prelude."""
+
+    memory_recovery_result: MemoryRecoveryResult
+    continuity_replay: ContinuityReplayContract | None
+    resolved_pause: ContinuityPauseContract | None
+    events: list[InternalEventEnvelope]
 
 
 class OrchestratorService:
@@ -117,103 +137,9 @@ class OrchestratorService:
                 {"content": contract.content, "channel": contract.channel.value},
             )
         ]
-        resolved_pause = self._maybe_resolve_continuity_pause(contract)
-        if resolved_pause is not None:
-            events.append(
-                self.make_event(
-                    "continuity_pause_resolved",
-                    contract,
-                    {
-                        "checkpoint_id": resolved_pause.checkpoint_id,
-                        "pause_status": resolved_pause.pause_status,
-                        "resolution_status": resolved_pause.resolution_status,
-                        "resolved_by": resolved_pause.resolved_by,
-                    },
-                )
-            )
-
-        memory_recovery_result = self.memory_service.recover_for_input(contract)
-        continuity_replay = self.memory_service.get_session_continuity_replay(
-            str(contract.session_id)
-        )
-        events.append(
-            self.make_event(
-                "memory_recovered",
-                contract,
-                {
-                    "memory_query_id": str(
-                        memory_recovery_result.recovery_contract.memory_query_id
-                    ),
-                    "recovery_type": memory_recovery_result.recovery_contract.recovery_type.value,
-                    "continuity_recommendation": (
-                        memory_recovery_result.continuity_context.recommended_action
-                        if memory_recovery_result.continuity_context
-                        else None
-                    ),
-                    "related_candidate_count": (
-                        len(memory_recovery_result.continuity_context.related_candidates)
-                        if memory_recovery_result.continuity_context
-                        else 0
-                    ),
-                    "continuity_replay_status": (
-                        continuity_replay.replay_status if continuity_replay else None
-                    ),
-                    "user_scope_status": (
-                        memory_recovery_result.user_scope_context.context_status
-                        if memory_recovery_result.user_scope_context
-                        else "not_applicable"
-                    ),
-                    "user_scope_interaction_count": (
-                        memory_recovery_result.user_scope_context.interaction_count
-                        if memory_recovery_result.user_scope_context
-                        else 0
-                    ),
-                    "user_context_brief": (
-                        memory_recovery_result.user_scope_context.user_context_brief
-                        if memory_recovery_result.user_scope_context
-                        else None
-                    ),
-                    "user_scope_memory_refs": (
-                        memory_recovery_result.user_scope_context.memory_refs
-                        if memory_recovery_result.user_scope_context
-                        else []
-                    ),
-                    "organization_scope_status": memory_recovery_result.organization_scope_status,
-                    "organization_scope_reason": memory_recovery_result.organization_scope_reason,
-                    "organization_scope_reopen_signal": (
-                        memory_recovery_result.organization_scope_reopen_signal
-                    ),
-                },
-            )
-        )
-        if continuity_replay is not None:
-            events.append(
-                self.make_event(
-                    "continuity_replay_loaded",
-                    contract,
-                    {
-                        "checkpoint_id": continuity_replay.checkpoint_id,
-                        "replay_status": continuity_replay.replay_status,
-                        "recovery_mode": continuity_replay.recovery_mode,
-                        "resume_point": continuity_replay.resume_point,
-                        "checkpoint_status": continuity_replay.checkpoint_status,
-                        "requires_manual_resume": continuity_replay.requires_manual_resume,
-                    },
-                )
-            )
-            if continuity_replay.requires_manual_resume:
-                events.append(
-                    self.make_event(
-                        "continuity_recovery_governed",
-                        contract,
-                        {
-                            "checkpoint_id": continuity_replay.checkpoint_id,
-                            "replay_status": continuity_replay.replay_status,
-                            "recovery_mode": continuity_replay.recovery_mode,
-                            "resume_point": continuity_replay.resume_point,
-                        },
-                    )
-                )
+        continuity_result = self._run_native_continuity_subflow(contract, events)
+        events = continuity_result.events
+        memory_recovery_result = continuity_result.memory_recovery_result
 
         directive = self.executive_engine.direct(contract)
         identity_profile = self.identity_engine.get_profile()
@@ -428,6 +354,14 @@ class OrchestratorService:
             handoff_plan=specialist_handoff_plan,
             handoff_governance=(specialist_handoff_assessment.governance_decision),
             events=events,
+        )
+        mission_runtime_state, events = self._declare_mission_runtime_state(
+            contract,
+            deliberative_plan=deliberative_plan,
+            memory_recovery_result=memory_recovery_result,
+            specialist_review=specialist_review,
+            events=events,
+            runtime_mode="native_pipeline",
         )
 
         assessment = self.governance_service.assess_request(
@@ -769,6 +703,7 @@ class OrchestratorService:
                 "knowledge_result": knowledge_result,
                 "artifact_results": artifact_results,
                 "cognitive_snapshot": cognitive_snapshot,
+                "mission_runtime_state": mission_runtime_state,
                 "specialist_review": specialist_review,
                 "specialist_handoff_check": (specialist_handoff_assessment.governance_check),
                 "specialist_handoff_decision": (specialist_handoff_assessment.governance_decision),
@@ -1200,6 +1135,7 @@ class OrchestratorService:
         handoff_plan: SpecialistHandoffPlan,
         handoff_governance: GovernanceDecisionContract,
         events: list[InternalEventEnvelope],
+        runtime_mode: str = "native_pipeline",
     ) -> tuple[SpecialistReview, DeliberativePlanContract, list[InternalEventEnvelope]]:
         executable_plan = handoff_plan
         updated_events = list(events)
@@ -1233,6 +1169,7 @@ class OrchestratorService:
             knowledge_snippets=knowledge_result.snippets if knowledge_result else [],
             handoff_plan=executable_plan,
         )
+        refined_plan = deliberative_plan
         if specialist_review.specialist_hints:
             updated_events.append(
                 self.make_event(
@@ -1457,8 +1394,89 @@ class OrchestratorService:
                         },
                     )
                 )
-                return specialist_review, refined_plan, updated_events
-        return specialist_review, deliberative_plan, updated_events
+        updated_events.append(
+            self.make_event(
+                "specialist_subflow_completed",
+                contract,
+                self._build_specialist_subflow_payload(
+                    runtime_mode=runtime_mode,
+                    handoff_plan=handoff_plan,
+                    handoff_governance=handoff_governance,
+                    specialist_review=specialist_review,
+                    refined_plan=refined_plan,
+                    original_plan=deliberative_plan,
+                ),
+            )
+        )
+        return specialist_review, refined_plan, updated_events
+
+    def _declare_mission_runtime_state(
+        self,
+        contract: InputContract,
+        *,
+        deliberative_plan: DeliberativePlanContract,
+        memory_recovery_result: MemoryRecoveryResult,
+        specialist_review: SpecialistReview,
+        events: list[InternalEventEnvelope],
+        runtime_mode: str,
+    ) -> tuple[MissionRuntimeStateContract | None, list[InternalEventEnvelope]]:
+        if contract.mission_id is None:
+            return None, list(events)
+        mission_runtime_state = self._build_mission_runtime_state(
+            contract,
+            deliberative_plan=deliberative_plan,
+            memory_recovery_result=memory_recovery_result,
+            specialist_review=specialist_review,
+            runtime_mode=runtime_mode,
+        )
+        updated_events = list(events)
+        updated_events.append(
+            self.make_event(
+                "mission_runtime_state_declared",
+                contract,
+                {
+                    "runtime_mode": mission_runtime_state.runtime_mode,
+                    "mission_id": str(mission_runtime_state.mission_id),
+                    "mission_goal": mission_runtime_state.mission_goal,
+                    "mission_status": mission_runtime_state.mission_status.value,
+                    "continuity_action": mission_runtime_state.continuity_action,
+                    "continuity_source": mission_runtime_state.continuity_source,
+                    "continuity_target_mission_id": (
+                        str(mission_runtime_state.continuity_target_mission_id)
+                        if mission_runtime_state.continuity_target_mission_id
+                        else None
+                    ),
+                    "continuity_target_goal": mission_runtime_state.continuity_target_goal,
+                    "continuity_recommendation": (
+                        mission_runtime_state.continuity_recommendation
+                    ),
+                    "continuity_replay_status": (
+                        mission_runtime_state.continuity_replay_status
+                    ),
+                    "continuity_recovery_mode": (
+                        mission_runtime_state.continuity_recovery_mode
+                    ),
+                    "continuity_resume_point": (
+                        mission_runtime_state.continuity_resume_point
+                    ),
+                    "requires_manual_resume": (
+                        mission_runtime_state.requires_manual_resume
+                    ),
+                    "primary_route": mission_runtime_state.primary_route,
+                    "workflow_profile": mission_runtime_state.workflow_profile,
+                    "active_task_count": len(mission_runtime_state.active_tasks),
+                    "open_loop_count": len(mission_runtime_state.open_loops),
+                    "last_recommendation": mission_runtime_state.last_recommendation,
+                    "related_mission_id": (
+                        str(mission_runtime_state.related_mission_id)
+                        if mission_runtime_state.related_mission_id
+                        else None
+                    ),
+                    "related_mission_goal": mission_runtime_state.related_mission_goal,
+                },
+            )
+        )
+        return mission_runtime_state, updated_events
 
     def build_operation_dispatch(
         self,
@@ -2101,6 +2119,333 @@ class OrchestratorService:
             checkpoint_id=checkpoint_id,
         )
 
+    def _run_native_continuity_subflow(
+        self,
+        contract: InputContract,
+        events: list[InternalEventEnvelope],
+    ) -> ContinuitySubflowResult:
+        events = list(events)
+        resolved_pause = self._maybe_resolve_continuity_pause(contract)
+        if resolved_pause is not None:
+            events.append(
+                self.make_event(
+                    "continuity_pause_resolved",
+                    contract,
+                    {
+                        "checkpoint_id": resolved_pause.checkpoint_id,
+                        "pause_status": resolved_pause.pause_status,
+                        "resolution_status": resolved_pause.resolution_status,
+                        "resolved_by": resolved_pause.resolved_by,
+                    },
+                )
+            )
+
+        memory_recovery_result = self.memory_service.recover_for_input(contract)
+        continuity_replay = self.memory_service.get_session_continuity_replay(
+            str(contract.session_id)
+        )
+        events.append(
+            self.make_event(
+                "memory_recovered",
+                contract,
+                {
+                    "memory_query_id": str(
+                        memory_recovery_result.recovery_contract.memory_query_id
+                    ),
+                    "recovery_type": memory_recovery_result.recovery_contract.recovery_type.value,
+                    "continuity_recommendation": (
+                        memory_recovery_result.continuity_context.recommended_action
+                        if memory_recovery_result.continuity_context
+                        else None
+                    ),
+                    "related_candidate_count": (
+                        len(memory_recovery_result.continuity_context.related_candidates)
+                        if memory_recovery_result.continuity_context
+                        else 0
+                    ),
+                    "continuity_replay_status": (
+                        continuity_replay.replay_status if continuity_replay else None
+                    ),
+                    "user_scope_status": (
+                        memory_recovery_result.user_scope_context.context_status
+                        if memory_recovery_result.user_scope_context
+                        else "not_applicable"
+                    ),
+                    "user_scope_interaction_count": (
+                        memory_recovery_result.user_scope_context.interaction_count
+                        if memory_recovery_result.user_scope_context
+                        else 0
+                    ),
+                    "user_context_brief": (
+                        memory_recovery_result.user_scope_context.user_context_brief
+                        if memory_recovery_result.user_scope_context
+                        else None
+                    ),
+                    "user_scope_memory_refs": (
+                        memory_recovery_result.user_scope_context.memory_refs
+                        if memory_recovery_result.user_scope_context
+                        else []
+                    ),
+                    "organization_scope_status": memory_recovery_result.organization_scope_status,
+                    "organization_scope_reason": memory_recovery_result.organization_scope_reason,
+                    "organization_scope_reopen_signal": (
+                        memory_recovery_result.organization_scope_reopen_signal
+                    ),
+                },
+            )
+        )
+        if continuity_replay is not None:
+            events.append(
+                self.make_event(
+                    "continuity_replay_loaded",
+                    contract,
+                    {
+                        "checkpoint_id": continuity_replay.checkpoint_id,
+                        "replay_status": continuity_replay.replay_status,
+                        "recovery_mode": continuity_replay.recovery_mode,
+                        "resume_point": continuity_replay.resume_point,
+                        "checkpoint_status": continuity_replay.checkpoint_status,
+                        "requires_manual_resume": continuity_replay.requires_manual_resume,
+                    },
+                )
+            )
+            if continuity_replay.requires_manual_resume:
+                events.append(
+                    self.make_event(
+                        "continuity_recovery_governed",
+                        contract,
+                        {
+                            "checkpoint_id": continuity_replay.checkpoint_id,
+                            "replay_status": continuity_replay.replay_status,
+                            "recovery_mode": continuity_replay.recovery_mode,
+                            "resume_point": continuity_replay.resume_point,
+                        },
+                    )
+                )
+        events.append(
+            self.make_event(
+                "continuity_subflow_completed",
+                contract,
+                self._build_continuity_subflow_payload(
+                    runtime_mode="native_pipeline",
+                    resolved_pause=resolved_pause,
+                    memory_recovery_result=memory_recovery_result,
+                    continuity_replay=continuity_replay,
+                ),
+            )
+        )
+        return ContinuitySubflowResult(
+            memory_recovery_result=memory_recovery_result,
+            continuity_replay=continuity_replay,
+            resolved_pause=resolved_pause,
+            events=events,
+        )
+
+    @staticmethod
+    def _build_continuity_subflow_payload(
+        *,
+        runtime_mode: str,
+        resolved_pause: ContinuityPauseContract | None,
+        memory_recovery_result: MemoryRecoveryResult,
+        continuity_replay: ContinuityReplayContract | None,
+    ) -> dict[str, object]:
+        continuity_context = memory_recovery_result.continuity_context
+        return {
+            "runtime_mode": runtime_mode,
+            "subflow_name": "continuity_stateful",
+            "checkpoint_id": continuity_replay.checkpoint_id if continuity_replay else None,
+            "replay_status": continuity_replay.replay_status if continuity_replay else None,
+            "recovery_mode": continuity_replay.recovery_mode if continuity_replay else None,
+            "resume_point": continuity_replay.resume_point if continuity_replay else None,
+            "requires_manual_resume": (
+                continuity_replay.requires_manual_resume if continuity_replay else False
+            ),
+            "continuity_recommendation": (
+                continuity_context.recommended_action if continuity_context else None
+            ),
+            "related_candidate_count": (
+                len(continuity_context.related_candidates) if continuity_context else 0
+            ),
+            "pause_status": resolved_pause.pause_status if resolved_pause else None,
+            "pause_resolution_status": (
+                resolved_pause.resolution_status if resolved_pause else None
+            ),
+            "pause_resolved_by": resolved_pause.resolved_by if resolved_pause else None,
+        }
+
+    @staticmethod
+    def _build_specialist_subflow_payload(
+        *,
+        runtime_mode: str,
+        handoff_plan: SpecialistHandoffPlan,
+        handoff_governance: GovernanceDecisionContract,
+        specialist_review: SpecialistReview,
+        refined_plan: DeliberativePlanContract,
+        original_plan: DeliberativePlanContract,
+    ) -> dict[str, object]:
+        selected_specialists = [
+            item.specialist_type
+            for item in handoff_plan.selections
+            if item.selection_status == "selected"
+        ]
+        domain_specialists = [
+            item.specialist_type
+            for item in specialist_review.invocations
+            if item.linked_domain
+        ]
+        shadow_invocation_ids = {
+            item.invocation_id
+            for item in specialist_review.invocations
+            if item.selection_mode == "shadow"
+        }
+        live_contributions = [
+            item
+            for item in specialist_review.contributions
+            if item.invocation_id not in shadow_invocation_ids
+        ]
+        if not selected_specialists:
+            selection_status = "not_applicable"
+        else:
+            selection_status = "selected"
+        if handoff_governance.decision in {
+            PermissionDecision.BLOCK,
+            PermissionDecision.DEFER_FOR_VALIDATION,
+        }:
+            governance_status = "contained"
+        elif handoff_governance.decision == PermissionDecision.ALLOW_WITH_CONDITIONS:
+            governance_status = "approved_with_conditions"
+        else:
+            governance_status = "approved"
+        if specialist_review.invocations:
+            dispatch_status = "dispatched"
+        elif selected_specialists:
+            dispatch_status = "suppressed"
+        else:
+            dispatch_status = "not_applicable"
+        if specialist_review.contributions:
+            completion_status = "completed"
+        elif handoff_governance.decision in {
+            PermissionDecision.BLOCK,
+            PermissionDecision.DEFER_FOR_VALIDATION,
+        }:
+            completion_status = "contained"
+        elif selected_specialists:
+            completion_status = "no_contribution"
+        else:
+            completion_status = "not_applicable"
+        if live_contributions and refined_plan != original_plan:
+            refinement_status = "refined"
+        elif live_contributions:
+            refinement_status = "unchanged"
+        else:
+            refinement_status = "not_applicable"
+        return {
+            "runtime_mode": runtime_mode,
+            "subflow_name": "specialist_handoffs",
+            "selection_status": selection_status,
+            "governance_status": governance_status,
+            "dispatch_status": dispatch_status,
+            "completion_status": completion_status,
+            "refinement_status": refinement_status,
+            "selection_count": len(selected_specialists),
+            "invocation_count": len(specialist_review.invocations),
+            "contribution_count": len(specialist_review.contributions),
+            "live_contribution_count": len(live_contributions),
+            "selected_specialists": selected_specialists,
+            "domain_specialists": domain_specialists,
+            "shadow_specialists": [
+                item.specialist_type
+                for item in specialist_review.invocations
+                if item.selection_mode == "shadow"
+            ],
+            "guided_specialists": [
+                item.specialist_type
+                for item in specialist_review.invocations
+                if item.selection_mode in {"guided", "active"}
+            ],
+            "governance_decision": handoff_governance.decision.value,
+            "specialist_hints": list(specialist_review.specialist_hints),
+            "boundary_summary": specialist_review.boundary_summary,
+            "specialist_summary": specialist_review.summary,
+        }
+
+    def _build_mission_runtime_state(
+        self,
+        contract: InputContract,
+        *,
+        deliberative_plan: DeliberativePlanContract,
+        memory_recovery_result: MemoryRecoveryResult,
+        specialist_review: SpecialistReview,
+        runtime_mode: str,
+    ) -> MissionRuntimeStateContract:
+        mission_id = contract.mission_id
+        assert mission_id is not None
+        mission_state = self.memory_service.get_mission_state(str(mission_id))
+        continuity_context = memory_recovery_result.continuity_context
+        return MissionRuntimeStateContract(
+            mission_id=mission_id,
+            mission_goal=(
+                mission_state.mission_goal
+                if mission_state is not None
+                else contract.content
+            ),
+            mission_status=(
+                mission_state.mission_status
+                if mission_state is not None
+                else (
+                    MissionStatus.PAUSED
+                    if deliberative_plan.continuity_replay_status == "awaiting_validation"
+                    else MissionStatus.ACTIVE
+                )
+            ),
+            continuity_action=deliberative_plan.continuity_action,
+            continuity_source=deliberative_plan.continuity_source,
+            updated_at=datetime.now(UTC).isoformat(),
+            continuity_target_mission_id=deliberative_plan.continuity_target_mission_id,
+            continuity_target_goal=deliberative_plan.continuity_target_goal,
+            continuity_recommendation=(
+                continuity_context.recommended_action if continuity_context else None
+            ),
+            continuity_replay_status=deliberative_plan.continuity_replay_status,
+            continuity_recovery_mode=deliberative_plan.continuity_recovery_mode,
+            continuity_resume_point=deliberative_plan.continuity_resume_point,
+            requires_manual_resume=(
+                deliberative_plan.continuity_replay_status in {"awaiting_validation", "contained"}
+            ),
+            primary_route=deliberative_plan.primary_route,
+            workflow_profile=deliberative_plan.route_workflow_profile,
+            active_tasks=(
+                list(mission_state.active_tasks)
+                if mission_state is not None and mission_state.active_tasks
+                else list(deliberative_plan.steps[:3])
+            ),
+            open_loops=(
+                list(mission_state.open_loops)
+                if mission_state is not None and mission_state.open_loops
+                else list(deliberative_plan.open_loops)
+            ),
+            last_recommendation=(
+                mission_state.last_recommendation
+                if mission_state is not None and mission_state.last_recommendation
+                else (
+                    specialist_review.summary
+                    if specialist_review.summary != "core_only"
+                    else deliberative_plan.plan_summary
+                )
+            ),
+            related_mission_id=(
+                continuity_context.related_candidates[0].mission_id
+                if continuity_context and continuity_context.related_candidates
+                else None
+            ),
+            related_mission_goal=(
+                continuity_context.related_candidates[0].mission_goal
+                if continuity_context and continuity_context.related_candidates
+                else None
+            ),
+            runtime_mode=runtime_mode,
+        )
+
     @staticmethod
     def _extract_context_hint(recovered_context: list[str], prefix: str) -> str | None:
         for item in reversed(recovered_context):
@@ -2152,6 +2497,7 @@ class OrchestratorService:
             specialist_hints=deliberative_plan.specialist_hints,
             specialist_invocations=specialist_review.invocations,
             specialist_boundary_summary=specialist_review.boundary_summary,
+            mission_runtime_state=state.get("mission_runtime_state"),
             specialist_handoff_check=state.get("specialist_handoff_check"),
             specialist_handoff_decision=state.get("specialist_handoff_decision"),
             specialist_review=specialist_review,

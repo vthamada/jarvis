@@ -65,6 +65,8 @@ def test_internal_pilot_report_summarizes_recent_request() -> None:
     assert "plan_built" in summaries[0].missing_required_events
     assert "continuity_decided" in summaries[0].missing_required_events
     assert "response_continuity_action" in summaries[0].missing_continuity_signals
+    assert summaries[0].specialist_subflow_status == "not_applicable"
+    assert summaries[0].mission_runtime_state_status == "not_applicable"
     assert summaries[0].workflow_domain_route is None
     assert summaries[0].workflow_trace_status == "attention_required"
     assert summaries[0].workflow_profile_status == "not_applicable"
@@ -104,6 +106,9 @@ def test_internal_pilot_report_renders_text() -> None:
                     "continuity_action": "retomar",
                     "continuity_source": "related_mission",
                     "continuity_runtime_mode": "langgraph_subflow",
+                    "specialist_subflow_status": "healthy",
+                    "specialist_subflow_runtime_mode": "langgraph_subflow",
+                    "mission_runtime_state_status": "healthy",
                     "workflow_domain_route": "strategy",
                     "domain_alignment_status": "healthy",
                     "mind_alignment_status": "partial",
@@ -152,6 +157,8 @@ def test_internal_pilot_report_renders_text() -> None:
     assert "anomaly_flags=operation_missing_completion" in rendered
     assert "continuity_action=retomar" in rendered
     assert "continuity_runtime_mode=langgraph_subflow" in rendered
+    assert "specialist_subflow_status=healthy" in rendered
+    assert "mission_runtime_state_status=healthy" in rendered
     assert "workflow_domain_route=strategy" in rendered
     assert "mind_alignment_status=partial" in rendered
     assert "axis_gate_status=partial" in rendered

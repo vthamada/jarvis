@@ -115,12 +115,14 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     event_names = [event.event_name for event in stored_events]
     assert event_names == [event.event_name for event in result.events]
     assert "directive_composed" in event_names
+    assert "continuity_subflow_completed" in event_names
     assert "plan_built" in event_names
     assert "continuity_decided" in event_names
     assert "specialist_selection_decided" in event_names
     assert "specialist_shared_memory_linked" in event_names
     assert "specialist_contracts_composed" in event_names
     assert "specialist_handoff_governed" in event_names
+    assert "specialist_subflow_completed" in event_names
     assert "workflow_composed" in event_names
     assert "workflow_governance_declared" in event_names
     assert "specialists_completed" in event_names
@@ -138,6 +140,19 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
         registry_event.payload["linked_specialist_type"]["strategy"]
         == "structured_analysis_specialist"
     )
+    continuity_event = next(
+        event for event in stored_events if event.event_name == "continuity_subflow_completed"
+    )
+    assert continuity_event.payload["runtime_mode"] == "native_pipeline"
+    assert continuity_event.payload["subflow_name"] == "continuity_stateful"
+    specialist_subflow_event = next(
+        event for event in stored_events if event.event_name == "specialist_subflow_completed"
+    )
+    assert specialist_subflow_event.payload["runtime_mode"] == "native_pipeline"
+    assert specialist_subflow_event.payload["subflow_name"] == "specialist_handoffs"
+    assert specialist_subflow_event.payload["selection_status"] == "selected"
+    assert specialist_subflow_event.payload["governance_status"] == "approved"
+    assert specialist_subflow_event.payload["completion_status"] == "completed"
     assert registry_event.payload["specialist_mode"]["strategy"] == "guided"
     assert registry_event.payload["workflow_profile"]["strategy"] == "strategic_direction_workflow"
     assert (
@@ -639,6 +654,10 @@ def test_orchestrator_service_surfaces_related_mission_candidate_in_same_session
 
     assert result.deliberative_plan.continuity_source == "related_mission"
     assert result.deliberative_plan.continuity_action == "retomar"
+    assert result.mission_runtime_state is not None
+    assert result.mission_runtime_state.mission_id == MissionId("mission-b")
+    assert result.mission_runtime_state.related_mission_id == MissionId("mission-a")
+    assert result.mission_runtime_state.continuity_source == "related_mission"
     assert result.deliberative_plan.continuity_reason is not None
     assert any(item == "related_mission_id=mission-a" for item in result.recovered_context)
     assert any(
@@ -647,6 +666,12 @@ def test_orchestrator_service_surfaces_related_mission_candidate_in_same_session
     )
     assert any(item.startswith("session_continuity_mode=") for item in result.recovered_context)
     assert "continuity_decided" in [event.event_name for event in result.events]
+    mission_runtime_event = next(
+        event for event in result.events if event.event_name == "mission_runtime_state_declared"
+    )
+    assert mission_runtime_event.payload["mission_id"] == "mission-b"
+    assert mission_runtime_event.payload["related_mission_id"] == "mission-a"
+    assert mission_runtime_event.payload["continuity_source"] == "related_mission"
     assert "Continuidade ativa:" in result.response_text
     assert "missao_relacionada=Plan milestone M3 rollout." in result.deliberative_plan.rationale
 
@@ -889,6 +914,12 @@ def test_orchestrator_service_governs_replay_when_checkpoint_awaits_validation()
     )
     assert governed_event.payload["replay_status"] == "awaiting_validation"
     assert governed_event.payload["recovery_mode"] == "governed_review"
+    continuity_event = next(
+        event for event in result.events if event.event_name == "continuity_subflow_completed"
+    )
+    assert continuity_event.payload["runtime_mode"] == "native_pipeline"
+    assert continuity_event.payload["replay_status"] == "awaiting_validation"
+    assert continuity_event.payload["requires_manual_resume"] is True
 
 
 def test_orchestrator_service_tracks_manual_resolution_of_continuity_pause() -> None:
@@ -954,6 +985,11 @@ def test_orchestrator_service_tracks_manual_resolution_of_continuity_pause() -> 
     )
     assert resolved_event.payload["resolution_status"] == "approved"
     assert resolved_event.payload["resolved_by"] == "operator"
+    continuity_event = next(
+        event for event in result.events if event.event_name == "continuity_subflow_completed"
+    )
+    assert continuity_event.payload["pause_resolution_status"] == "approved"
+    assert continuity_event.payload["pause_resolved_by"] == "operator"
 
 
 

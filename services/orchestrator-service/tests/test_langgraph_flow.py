@@ -125,3 +125,8 @@ def test_langgraph_flow_replays_orchestrator_path_with_fake_runtime(
     )
     assert continuity_event.payload["runtime_mode"] == "langgraph_subflow"
     assert continuity_event.payload["subflow_name"] == "continuity_stateful"
+    specialist_subflow_event = next(
+        event for event in result.events if event.event_name == "specialist_subflow_completed"
+    )
+    assert specialist_subflow_event.payload["runtime_mode"] == "langgraph_subflow"
+    assert specialist_subflow_event.payload["subflow_name"] == "specialist_handoffs"

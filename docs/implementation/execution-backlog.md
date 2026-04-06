@@ -312,6 +312,230 @@ Escalar ao operador quando:
 - `depende_do_operador`: `nao`
 - `impacto_no_baseline`: backlog, handoff, snapshot e changelog voltam a convergir para um baseline sem item micro aberto, agora com gramatica de release e sinais cognitivos mais declarativos.
 
+### MB-013
+
+- `id`: `MB-013`
+- `prioridade`: `P0`
+- `status`: `done`
+- `eixo_do_mestre`: `docs/gates`
+- `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `operational_readiness_workflow`, `software_change_workflow`, `strategic_direction_workflow`
+- `micro_objetivo`: endurecer `verify_active_cut_baseline.py` para cobrar cobertura minima real das rotas promovidas e dos sinais novos no piloto focado.
+- `justificativa_arquitetural`: o baseline ativo ainda validava contratos de rota e benchmark, mas nao exigia evidencia minima de memoria causal, recomposicao cognitiva e cobertura por workflow profile nas rotas promovidas.
+- `arquivos/servicos_principais`: `tools/verify_active_cut_baseline.py`, `tests/unit/test_verify_active_cut_baseline.py`
+- `dependencias`: `MB-012`
+- `criterio_de_aceite`: o verificador de baseline ativo passa a falhar se o piloto focado perder cobertura das rotas promovidas, dos workflow profiles promovidos ou dos cenarios deliberados de memoria causal e recomposicao cognitiva.
+- `gate_minimo`: `pytest` direcionado do verificador, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `impacto_no_baseline`: `verify_active_cut_baseline.py` agora combina contratos estaticos do registry com evidencia minima real do piloto focado para decidir `baseline_release_ready`.
+
+### MB-014
+
+- `id`: `MB-014`
+- `prioridade`: `P0`
+- `status`: `done`
+- `eixo_do_mestre`: `observabilidade`
+- `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `operational_readiness_workflow`, `software_change_workflow`, `strategic_direction_workflow`
+- `micro_objetivo`: explicitar no piloto uma malha de cobertura por rota promovida, workflow profile e sinais deliberados de memoria causal e recomposicao cognitiva.
+- `justificativa_arquitetural`: sem cenarios explicitamente mapeados por rota/workflow, o baseline dependia de prompts acidentais e de inferencia local para saber se o piloto cobria o que o runtime promoveu.
+- `arquivos/servicos_principais`: `tools/internal_pilot_support.py`, `tests/unit/test_internal_pilot_support.py`
+- `dependencias`: `MB-013`
+- `criterio_de_aceite`: os cenarios canonicos do piloto passam a declarar `expected_route`, `expected_workflow_profile` e `coverage_tags`, cobrindo todas as rotas promovidas e os sinais deliberados do baseline.
+- `gate_minimo`: `pytest` direcionado do piloto, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `impacto_no_baseline`: `default_pilot_scenarios()` agora mapeia cobertura explicita para as seis rotas promovidas e para os sinais de `memory_causality` e `cognitive_recomposition`.
+
+### MB-015
+
+- `id`: `MB-015`
+- `prioridade`: `P1`
+- `status`: `done`
+- `eixo_do_mestre`: `docs/gates`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: tornar o artefato de baseline ativo mais legivel sobre cobertura de piloto, workflow profiles promovidos e sinais de maturacao exigidos para release.
+- `justificativa_arquitetural`: endurecer o gate sem melhorar a leitura do payload e do markdown manteria a cobertura escondida em logica interna e tornaria a manutencao futura mais opaca.
+- `arquivos/servicos_principais`: `tools/verify_active_cut_baseline.py`, `tests/unit/test_verify_active_cut_baseline.py`
+- `dependencias`: `MB-013`, `MB-014`
+- `criterio_de_aceite`: o payload, o texto e o markdown do baseline ativo passam a expor cobertura de piloto, match de workflow e readiness dos sinais deliberados.
+- `gate_minimo`: `pytest` direcionado do verificador, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `impacto_no_baseline`: o baseline ativo agora publica cobertura de piloto e readiness de sinais deliberados em vez de resumir apenas contratos de rota e benchmark.
+
+### MB-016
+
+- `id`: `MB-016`
+- `prioridade`: `P0`
+- `status`: `done`
+- `eixo_do_mestre`: `docs/gates`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: fechar o lote micro de endurecimento do baseline ativo, sincronizando backlog, handoff, snapshot e changelog.
+- `justificativa_arquitetural`: sem esse fechamento, a nova cobertura por rota/workflow e sinais deliberados ficaria como implementacao local sem consolidacao documental da fase.
+- `arquivos/servicos_principais`: `docs/implementation/execution-backlog.md`, `HANDOFF.md`, `docs/implementation/v2-adherence-snapshot.md`, `CHANGELOG.md`
+- `dependencias`: `MB-013`, `MB-014`, `MB-015`
+- `criterio_de_aceite`: o lote termina sem item `ready`, com docs vivos refletindo a nova cobertura do baseline ativo e gate minimo validado.
+- `gate_minimo`: `python tools/check_mojibake.py .` e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `impacto_no_baseline`: backlog, handoff, snapshot e changelog voltam a convergir para um baseline ativo que combina contratos promovidos com cobertura deliberada de piloto.
+
+### MB-017
+
+- `id`: `MB-017`
+- `prioridade`: `P0`
+- `status`: `done`
+- `eixo_do_mestre`: `docs/gates`
+- `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `operational_readiness_workflow`, `software_change_workflow`, `strategic_direction_workflow`
+- `micro_objetivo`: promover a cobertura deliberada do piloto para o fechador regeneravel do `v2-domain-consumers-and-workflows-cut`.
+- `justificativa_arquitetural`: o gate e o baseline ativo ja conheciam a nova cobertura, mas o fechamento regeneravel do corte ainda resumia apenas contratos e benchmark governance, perdendo a leitura minima por rota e workflow.
+- `arquivos/servicos_principais`: `tools/archive/close_domain_consumers_and_workflows_cut.py`, `tests/unit/test_close_domain_consumers_and_workflows_cut.py`
+- `dependencias`: `MB-016`
+- `criterio_de_aceite`: o fechador passa a expor coverage de piloto, match de workflow e readiness dos sinais deliberados no payload e no markdown.
+- `gate_minimo`: `pytest` direcionado do fechador, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `impacto_no_baseline`: o fechamento regeneravel do corte agora carrega cobertura deliberada de piloto como parte da evidencia minima do `baseline_release_ready`.
+
+### MB-018
+
+- `id`: `MB-018`
+- `prioridade`: `P1`
+- `status`: `done`
+- `eixo_do_mestre`: `docs/gates`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: atualizar a leitura executiva para refletir que o baseline do corte combina contratos promovidos com cobertura deliberada do piloto.
+- `justificativa_arquitetural`: sem leitura executiva coerente, a nova evidencia continua presa ao verificador tecnico e ao fechador regeneravel, em vez de orientar a narrativa oficial do estado atual.
+- `arquivos/servicos_principais`: `docs/executive/master-summary.md`, `docs/archive/implementation/v2-domain-consumers-and-workflows-cut-closure.md`
+- `dependencias`: `MB-017`
+- `criterio_de_aceite`: os documentos executivos e de fechamento passam a mencionar explicitamente cobertura das rotas promovidas, dos workflow profiles e dos sinais deliberados do piloto.
+- `gate_minimo`: `python tools/check_mojibake.py .` e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `impacto_no_baseline`: a leitura executiva oficial do corte deixa de tratar a cobertura deliberada do piloto como detalhe técnico implícito.
+
+### MB-019
+
+- `id`: `MB-019`
+- `prioridade`: `P0`
+- `status`: `done`
+- `eixo_do_mestre`: `docs/gates`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: fechar o lote micro de promovacao da cobertura deliberada para fechamento e leitura executiva.
+- `justificativa_arquitetural`: sem o fechamento formal da rodada, o baseline ganha nova leitura regeneravel sem consolidacao no backlog, handoff, snapshot e changelog.
+- `arquivos/servicos_principais`: `docs/implementation/execution-backlog.md`, `HANDOFF.md`, `docs/implementation/v2-adherence-snapshot.md`, `CHANGELOG.md`
+- `dependencias`: `MB-017`, `MB-018`
+- `criterio_de_aceite`: o lote termina sem item `ready`, com docs vivos refletindo o novo estado do corte e gate minimo validado.
+- `gate_minimo`: `python tools/check_mojibake.py .` e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `impacto_no_baseline`: backlog, handoff, snapshot e changelog voltam a convergir para um baseline que agora tambem projeta a cobertura deliberada do piloto na leitura executiva.
+
+### MB-020
+
+- `id`: `MB-020`
+- `prioridade`: `P0`
+- `status`: `done`
+- `eixo_do_mestre`: `mentes`
+- `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `operational_readiness_workflow`, `software_change_workflow`, `strategic_direction_workflow`
+- `micro_objetivo`: transformar `dominant_tension` e alinhamento `mente -> dominio -> especialista` em cobertura deliberada do baseline ativo, e nao apenas sinal incidental do piloto.
+- `justificativa_arquitetural`: o runtime e os comparadores ja expunham esses sinais, mas o verificador do baseline ainda nao exigia evidencia minima de que eles continuavam materializados nas rotas promovidas.
+- `arquivos/servicos_principais`: `tools/verify_active_cut_baseline.py`, `tools/internal_pilot_support.py`, `tests/unit/test_verify_active_cut_baseline.py`, `tests/unit/test_internal_pilot_support.py`
+- `dependencias`: `MB-019`
+- `criterio_de_aceite`: o baseline ativo passa a falhar se o piloto focado perder o cenario deliberado de `dominant_tension` ou de alinhamento `mind_domain_specialist`, e os cenarios canonicos declaram essa cobertura via `coverage_tags`.
+- `gate_minimo`: `pytest` direcionado dos verificadores/piloto, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `impacto_no_baseline`: `verify_active_cut_baseline.py` agora exige cobertura deliberada de `dominant_tension` e `mind_domain_specialist`, e os cenarios canonicos do piloto passaram a declarar esses sinais de forma explicita.
+
+### MB-021
+
+- `id`: `MB-021`
+- `prioridade`: `P1`
+- `status`: `done`
+- `eixo_do_mestre`: `docs/gates`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: promover esses dois sinais novos para o fechador regeneravel e para a leitura executiva do corte.
+- `justificativa_arquitetural`: sem isso, o baseline ativo endurece, mas a narrativa regeneravel do corte e a leitura executiva continuam atrasadas em relacao ao que o gate realmente passou a exigir.
+- `arquivos/servicos_principais`: `tools/archive/close_domain_consumers_and_workflows_cut.py`, `tests/unit/test_close_domain_consumers_and_workflows_cut.py`, `docs/archive/implementation/v2-domain-consumers-and-workflows-cut-closure.md`, `docs/executive/master-summary.md`
+- `dependencias`: `MB-020`
+- `criterio_de_aceite`: o fechador e os docs executivos passam a mencionar readiness deliberado de `dominant_tension` e `mind_domain_specialist` como parte da evidencia formal do corte.
+- `gate_minimo`: `pytest` direcionado do fechador, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `impacto_no_baseline`: o fechamento regeneravel do corte e a leitura executiva passam a refletir que o baseline deliberadamente cobre tensao cognitiva e alinhamento `mente -> dominio -> especialista`.
+
+### MB-022
+
+- `id`: `MB-022`
+- `prioridade`: `P0`
+- `status`: `done`
+- `eixo_do_mestre`: `docs/gates`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: fechar o lote micro final de robustez do `v2`, sincronizando backlog, handoff, snapshot e changelog.
+- `justificativa_arquitetural`: sem fechamento formal, a ultima pendencia real de robustez do `v2` continuaria como implementacao local sem consolidacao soberana do baseline.
+- `arquivos/servicos_principais`: `docs/implementation/execution-backlog.md`, `HANDOFF.md`, `docs/implementation/v2-adherence-snapshot.md`, `CHANGELOG.md`
+- `dependencias`: `MB-020`, `MB-021`
+- `criterio_de_aceite`: o lote termina sem item `ready`, com docs vivos refletindo que `workflow_profile`, memoria causal, recomposicao cognitiva, `dominant_tension` e alinhamento `mente -> dominio -> especialista` agora fazem parte da leitura formal de robustez do `v2`.
+- `gate_minimo`: `python tools/check_mojibake.py .` e `python tools/engineering_gate.py --mode release`
+- `depende_do_operador`: `nao`
+- `impacto_no_baseline`: backlog, handoff, snapshot e changelog convergem para um `v2` sem pendencia tecnica material de robustez dentro do baseline atual.
+
+### MB-023
+
+- `id`: `MB-023`
+- `prioridade`: `P0`
+- `status`: `done`
+- `eixo_do_mestre`: `governanca`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: formalizar a fase de continuidade/HITL/replay como subfluxo nativo do caminho padrao, alinhando seu fechamento ao caminho opcional de `LangGraph`.
+- `justificativa_arquitetural`: a continuidade ja era stateful, mas permanecia espalhada como logica inline no `handle_input`, enquanto apenas o caminho `LangGraph` publicava um fechamento explicito de subfluxo.
+- `arquivos/servicos_principais`: `services/orchestrator-service/src/orchestrator_service/service.py`, `services/orchestrator-service/src/orchestrator_service/langgraph_flow.py`, `services/orchestrator-service/tests/test_orchestrator_service.py`, `services/orchestrator-service/tests/test_langgraph_flow.py`
+- `dependencias`: `MB-022`
+- `criterio_de_aceite`: o caminho padrao passa a encapsular a continuidade em uma fase nativa com evento `continuity_subflow_completed`, e o caminho `LangGraph` reutiliza o mesmo payload soberano de fechamento.
+- `gate_minimo`: `pytest` direcionado do `orchestrator-service`, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `impacto_no_baseline`: a continuidade agora fecha como subfluxo explicito tambem no runtime padrao, com o mesmo tipo de evidencia estrutural ja existente no caminho `LangGraph`.
+
+### MB-024
+
+- `id`: `MB-024`
+- `prioridade`: `P0`
+- `status`: `done`
+- `eixo_do_mestre`: `governanca`
+- `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `operational_readiness_workflow`, `software_change_workflow`, `strategic_direction_workflow`
+- `micro_objetivo`: explicitar o lifecycle do subfluxo de especialistas no runtime padrao, com fases observaveis coerentes entre planejamento, governanca, execucao e retorno ao nucleo.
+- `justificativa_arquitetural`: o orquestrador ainda concentra demais a malha de handoff especializado, o que dificulta escalar especialistas e missões longas sem carregar `service.py` com logica transversal.
+- `arquivos/servicos_principais`: `services/orchestrator-service/src/orchestrator_service/service.py`, `engines/specialist-engine`, `services/observability-service`, testes do `orchestrator-service`
+- `dependencias`: `MB-023`
+- `criterio_de_aceite`: o caminho padrao passa a emitir um fechamento soberano do subfluxo de especialistas e a distinguir claramente fases de selecao, governanca, execucao e refinamento.
+- `gate_minimo`: `pytest` direcionado do `orchestrator-service` e `observability-service`, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `impacto_no_baseline`: o runtime agora fecha o subfluxo de especialistas com payload soberano e observabilidade dedicada, distinguindo selecao, governanca, execucao, refinamento e `runtime_mode` entre o caminho nativo e o caminho `LangGraph`.
+
+### MB-025
+
+- `id`: `MB-025`
+- `prioridade`: `P1`
+- `status`: `done`
+- `eixo_do_mestre`: `memorias`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: introduzir um contrato minimo de `mission_runtime_state` para preparar missões assincronas e continuidade longa sem reabrir a ontologia do sistema.
+- `justificativa_arquitetural`: a missao ja existe como contexto e continuidade, mas ainda nao aparece como estado operacional explicito e auditavel o suficiente para a fase pre-`v3`.
+- `arquivos/servicos_principais`: `services/memory-service`, `shared/contracts`, `services/orchestrator-service`, verificadores do baseline ativo
+- `dependencias`: `MB-024`
+- `criterio_de_aceite`: o runtime passa a expor um estado minimo de missao ativa/relacionada e readiness para retomada longa sem depender de recomposicao textual de hints.
+- `gate_minimo`: `pytest` direcionado, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `impacto_no_baseline`: o runtime agora declara `mission_runtime_state` para requests com missao ativa, related mission e readiness de retomada, deixando a continuidade longa menos dependente de recomposicao textual de hints.
+
+### MB-026
+
+- `id`: `MB-026`
+- `prioridade`: `P1`
+- `status`: `done`
+- `eixo_do_mestre`: `observabilidade`
+- `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `operational_readiness_workflow`, `software_change_workflow`, `strategic_direction_workflow`
+- `micro_objetivo`: consolidar leitura agregada de hardening pre-`v3` por workflow e por subfluxo, para que continuidade, especialistas e missao longa passem a ser lidos como readiness arquitetural e nao apenas telemetria dispersa.
+- `justificativa_arquitetural`: sem essa agregacao, os novos estados formais entram no runtime, mas continuam aparecendo de forma muito localizada para guiar benchmark, fechamento e decisao de transicao para `v3`.
+- `arquivos/servicos_principais`: `tools/internal_pilot_report.py`, `tools/compare_orchestrator_paths.py`, `tools/verify_active_cut_baseline.py`, `docs/executive/master-summary.md`
+- `dependencias`: `MB-025`
+- `criterio_de_aceite`: comparadores, baseline ativo e leitura executiva passam a enxergar subfluxos stateful e readiness de missao longa como sinais agregados do lote pre-`v3`.
+- `gate_minimo`: `pytest` direcionado dos tools afetados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `impacto_no_baseline`: comparadores, baseline ativo, fechamento regeneravel e leitura executiva agora tratam `specialist_subflow` e `mission_runtime_state` como sinais agregados de hardening arquitetural pre-`v3`, e nao apenas telemetria localizada.
+
 ---
 
 ## 5. Regras de manutencao da fila
@@ -324,7 +548,7 @@ Escalar ao operador quando:
 
 Estado atual da fila:
 
-- nao ha item `ready`, `in_progress` ou `blocked` neste momento;
-- `MB-008` a `MB-012` foram concluidos e fecharam o lote atual;
-- a fila volta a aguardar nova priorizacao macro ou novo lote micro soberano;
-- o baseline atual ja trata sinais de release, memoria causal, recomposicao cognitiva e malha `mente -> dominio -> especialista` como parte da sua leitura formal de maturacao.
+- o lote `pre-v3 hardening` foi concluido;
+- `MB-023` a `MB-026` foram executados sem reabrir a robustez ja fechada do `v2`;
+- nao ha item `ready`, `in_progress` ou `blocked` na fila micro neste momento;
+- o baseline atual continua sem pendencia tecnica material de robustez do `v2`, e o proximo passo agora depende de decisao sobre a fronteira arquitetural do `v3`.

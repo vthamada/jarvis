@@ -28,10 +28,10 @@ Leitura correta:
 
 Estado de referencia desta revisao:
 
-- data da fotografia: `2026-04-05`
+- data da fotografia: `2026-04-06`
 - ultimo recorte funcional fechado: `v2-native-memory-scope-hardening-cut`
 - ultimo recorte estrutural fechado: `v2-repository-hygiene-and-tools-review-cut`
-- passo funcional em andamento: `domain-sovereignty-runtime-hardening`
+- passo funcional em andamento: `decisao-da-fronteira-pre-v3`
 
 Leitura executiva:
 
@@ -59,7 +59,14 @@ Leitura executiva:
 - o piloto agora inclui cenarios deliberados para memoria causal (`guided_memory_followup`) e recomposicao cognitiva por `specialist_route_impasse` (`recomposition_impasse`), com leitura comparativa e textual coerente.
 - `compare_orchestrator_paths` agora marca drift explicito de `workflow_profile_status`, `memory_causality_status`, `dominant_tension`, `primary_domain_driver`, `mind_domain_specialist_status` e recomposicao cognitiva entre baseline e candidata.
 - `planning-engine`, `synthesis-engine` e `response_synthesized` agora tornam `dominant_tension`, `primary_domain_driver`, `workflow_response_focus` e recomposicao cognitiva mais declarativos no comportamento final do runtime.
-- o lote micro atual do baseline foi totalmente executado, incluindo `MB-008` a `MB-012`; nao ha item `ready` aberto em `docs/implementation/execution-backlog.md`.
+- `verify_active_cut_baseline.py` agora combina contratos promovidos com um piloto focado que cobre as seis rotas promovidas, seus `workflow_profiles` e os sinais deliberados de memoria causal e recomposicao cognitiva.
+- `internal_pilot_support` agora declara `expected_route`, `expected_workflow_profile` e `coverage_tags` nos cenarios canonicos do piloto, tornando a cobertura por rota/workflow parte explicita do baseline ativo.
+- o baseline ativo agora tambem exige cenarios deliberados para `dominant_tension` e alinhamento `mente -> dominio -> especialista`, deixando esses sinais como readiness formal de robustez do `v2`.
+- `close_domain_consumers_and_workflows_cut` agora carrega coverage de piloto, match de workflow e readiness dos sinais deliberados como parte da evidencia regeneravel do corte.
+- a leitura executiva do corte em `master-summary` e no closure doc arquivado agora tambem reflete que o baseline combina contratos promovidos com cobertura deliberada do piloto.
+- o caminho padrao do `orchestrator-service` agora tambem fecha a continuidade como subfluxo explicito via `continuity_subflow_completed`, alinhado ao mesmo payload soberano usado pelo caminho opcional de `LangGraph`.
+- o lote `pre-v3 hardening` foi concluido no `execution-backlog`; `MB-023` a `MB-026` fecharam continuidade stateful nativa, specialist subflow explicito, `mission_runtime_state` e leitura agregada desses sinais no baseline.
+- `observability-service`, `internal_pilot_report`, `compare_orchestrator_paths`, `verify_active_cut_baseline.py` e o fechamento regeneravel do corte agora tratam `specialist_subflow` e `mission_runtime_state` como readiness arquitetural pre-`v3`, e nao apenas telemetria localizada.
 - memoria, identidade, governanca, observabilidade e soberania do nucleo evoluiram de forma consistente;
 - benchmark externo, memory gap e hardening nativo foram tratados corretamente como etapas subordinadas ao baseline,
   nao como desvio de direcao.
@@ -69,7 +76,7 @@ Em resumo:
 
 - a visao esta preservada;
 - o runtime esta coerente com a fase do programa;
-- o backlog correto agora volta a ser funcional, nao estrutural.
+- o backlog correto agora e de decisao da fronteira pre-`v3` e de maturacao incremental, nao de correcao estrutural do `v2`.
 
 ---
 
@@ -359,7 +366,7 @@ A leitura correta hoje e:
 - tambem nao esta divergindo da sua direcao macro ja formalizada nos artefatos do projeto;
 - o que existe e um conjunto de gaps de materializacao normais para a fase do `v2`.
 
-A divergencia relevante, neste momento, nao e mais de fechamento funcional do `v2`.
+A divergencia relevante, neste momento, nao e mais de robustez do `v2`.
 O que resta e maturacao adicional em tres pontos:
 
 - criterios mais especificos por `workflow_profile` no runtime final;

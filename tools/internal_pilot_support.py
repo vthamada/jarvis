@@ -61,6 +61,9 @@ class PilotScenario:
     session_key: str
     mission_key: str | None = None
     expected_continuity_action: str | None = None
+    expected_route: str | None = None
+    expected_workflow_profile: str | None = None
+    coverage_tags: list[str] = field(default_factory=list)
     metadata: dict[str, object] = field(default_factory=dict)
 
 
@@ -83,6 +86,9 @@ class PilotExecutionResult:
     continuity_action: str | None
     continuity_source: str | None
     continuity_runtime_mode: str | None
+    specialist_subflow_status: str
+    specialist_subflow_runtime_mode: str | None
+    mission_runtime_state_status: str
     workflow_domain_route: str | None
     registry_domains: list[str]
     shadow_specialists: list[str]
@@ -119,6 +125,11 @@ class PilotExecutionResult:
     active_domains: list[str]
     specialist_hints: list[str]
     response_preview: str
+    expected_route: str | None = None
+    route_matches_expectation: bool | None = None
+    expected_workflow_profile: str | None = None
+    workflow_profile_matches_expectation: bool | None = None
+    coverage_tags: list[str] = field(default_factory=list)
 
 
 def runtime_dir(name: str) -> Path:
@@ -149,6 +160,16 @@ def default_pilot_scenarios() -> list[PilotScenario]:
             session_key="pilot-main",
             mission_key="mission-pilot-v1",
             expected_continuity_action="continuar",
+            expected_route="operational_readiness",
+            expected_workflow_profile="operational_readiness_workflow",
+            coverage_tags=[
+                "guided_route",
+                "workflow_profile",
+                "dominant_tension",
+                "mind_domain_specialist",
+                "specialist_subflow",
+                "mission_runtime_state",
+            ],
         ),
         PilotScenario(
             scenario_id="controlled_summary",
@@ -158,6 +179,28 @@ def default_pilot_scenarios() -> list[PilotScenario]:
             expected_operation=True,
             session_key="pilot-summary",
             expected_continuity_action="continuar",
+        ),
+        PilotScenario(
+            scenario_id="analysis_guided_review",
+            content="Analyze the pilot data and compare the strongest signal.",
+            expectation=(
+                "Exercise the structured analysis workflow with a guided route that "
+                "remains non-operational."
+            ),
+            expected_decision=PermissionDecision.ALLOW.value,
+            expected_operation=False,
+            session_key="pilot-analysis",
+            mission_key="mission-pilot-analysis",
+            expected_route="analysis",
+            expected_workflow_profile="structured_analysis_workflow",
+            coverage_tags=[
+                "guided_route",
+                "workflow_profile",
+                "dominant_tension",
+                "mind_domain_specialist",
+                "specialist_subflow",
+                "mission_runtime_state",
+            ],
         ),
         PilotScenario(
             scenario_id="analysis_followup",
@@ -184,6 +227,63 @@ def default_pilot_scenarios() -> list[PilotScenario]:
             session_key="pilot-main",
             mission_key="mission-pilot-v1",
             expected_continuity_action="continuar",
+            expected_route="operational_readiness",
+            expected_workflow_profile="operational_readiness_workflow",
+            coverage_tags=[
+                "guided_route",
+                "workflow_profile",
+                "memory_causality",
+                "specialist_subflow",
+                "mission_runtime_state",
+            ],
+        ),
+        PilotScenario(
+            scenario_id="decision_risk_review",
+            content=(
+                "Compare the decision risk of shipping today versus delaying the "
+                "pilot by one week."
+            ),
+            expectation=(
+                "Exercise the decision-risk workflow as a governed, non-operational "
+                "decision path."
+            ),
+            expected_decision=PermissionDecision.DEFER_FOR_VALIDATION.value,
+            expected_operation=False,
+            session_key="pilot-risk",
+            mission_key="mission-pilot-risk",
+            expected_route="decision_risk",
+            expected_workflow_profile="decision_risk_workflow",
+            coverage_tags=[
+                "guided_route",
+                "workflow_profile",
+                "dominant_tension",
+                "specialist_subflow",
+                "mission_runtime_state",
+            ],
+        ),
+        PilotScenario(
+            scenario_id="governance_boundary_review",
+            content=(
+                "Review the governance boundary for the pilot and identify which "
+                "approval is required."
+            ),
+            expectation=(
+                "Exercise the governance boundary workflow with explicit manual "
+                "validation pressure."
+            ),
+            expected_decision=PermissionDecision.DEFER_FOR_VALIDATION.value,
+            expected_operation=False,
+            session_key="pilot-governance",
+            mission_key="mission-pilot-governance",
+            expected_route="governance",
+            expected_workflow_profile="governance_boundary_workflow",
+            coverage_tags=[
+                "guided_route",
+                "workflow_profile",
+                "dominant_tension",
+                "specialist_subflow",
+                "mission_runtime_state",
+            ],
         ),
         PilotScenario(
             scenario_id="continuity_conflict",
@@ -204,6 +304,16 @@ def default_pilot_scenarios() -> list[PilotScenario]:
             session_key="pilot-main",
             mission_key="mission-pilot-v1",
             expected_continuity_action="continuar",
+            expected_route="strategy",
+            expected_workflow_profile="strategic_direction_workflow",
+            coverage_tags=[
+                "guided_route",
+                "workflow_profile",
+                "dominant_tension",
+                "mind_domain_specialist",
+                "specialist_subflow",
+                "mission_runtime_state",
+            ],
             metadata={
                 "continuity_resume": {
                     "approved": True,
@@ -233,6 +343,7 @@ def default_pilot_scenarios() -> list[PilotScenario]:
             session_key="pilot-recomposition",
             mission_key="mission-pilot-recomposition",
             expected_continuity_action="continuar",
+            coverage_tags=["cognitive_recomposition", "mission_runtime_state"],
         ),
         PilotScenario(
             scenario_id="software_shadow_review",
@@ -246,6 +357,14 @@ def default_pilot_scenarios() -> list[PilotScenario]:
             session_key="pilot-software",
             mission_key="mission-pilot-software",
             expected_continuity_action="continuar",
+            expected_route="software_development",
+            expected_workflow_profile="software_change_workflow",
+            coverage_tags=[
+                "guided_route",
+                "workflow_profile",
+                "specialist_subflow",
+                "mission_runtime_state",
+            ],
         ),
     ]
 
@@ -306,6 +425,14 @@ def run_pilot_scenarios(
         audit = orchestrator.observability_service.audit_flow(
             ObservabilityQuery(request_id=request_id, limit=100)
         )
+        resolved_route = (
+            audit.workflow_domain_route
+            or (
+                response.deliberative_plan.primary_route
+                if response.deliberative_plan is not None
+                else None
+            )
+        )
         operation_completed = response.operation_result is not None
         continuity_matches_expectation = (
             audit.continuity_action == scenario.expected_continuity_action
@@ -337,7 +464,10 @@ def run_pilot_scenarios(
                 continuity_action=audit.continuity_action,
                 continuity_source=audit.continuity_source,
                 continuity_runtime_mode=audit.continuity_runtime_mode,
-                workflow_domain_route=audit.workflow_domain_route,
+                specialist_subflow_status=audit.specialist_subflow_status,
+                specialist_subflow_runtime_mode=audit.specialist_subflow_runtime_mode,
+                mission_runtime_state_status=audit.mission_runtime_state_status,
+                workflow_domain_route=resolved_route,
                 registry_domains=list(audit.registry_domains),
                 shadow_specialists=list(audit.shadow_specialists),
                 domain_alignment_status=audit.domain_alignment_status,
@@ -379,6 +509,21 @@ def run_pilot_scenarios(
                 active_domains=list(response.active_domains),
                 specialist_hints=list(response.specialist_hints),
                 response_preview=response.response_text[:160],
+                expected_route=scenario.expected_route,
+                route_matches_expectation=(
+                    resolved_route == scenario.expected_route
+                    if scenario.expected_route is not None
+                    else None
+                ),
+                expected_workflow_profile=scenario.expected_workflow_profile,
+                workflow_profile_matches_expectation=(
+                    response.deliberative_plan is not None
+                    and response.deliberative_plan.route_workflow_profile
+                    == scenario.expected_workflow_profile
+                    if scenario.expected_workflow_profile is not None
+                    else None
+                ),
+                coverage_tags=list(scenario.coverage_tags),
             )
         )
     return results

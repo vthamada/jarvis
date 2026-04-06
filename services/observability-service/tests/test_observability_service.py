@@ -2714,3 +2714,175 @@ def test_observability_service_tracks_cognitive_recomposition_alignment() -> Non
     assert (
         audit.cognitive_recomposition_trigger == "specialist_route_impasse"
     )
+
+
+def test_observability_service_tracks_specialist_subflow_and_mission_runtime_state() -> None:
+    temp_dir = runtime_dir("observability-pre-v3-hardening")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service.ingest_events(
+        [
+            InternalEventEnvelope(
+                event_id="evt-p1",
+                event_name="input_received",
+                timestamp="2026-04-03T00:00:00+00:00",
+                source_service="orchestrator-service",
+                payload={"content": "Plan the pilot checkpoint."},
+                request_id="req-pre-v3",
+                session_id="sess-pre-v3",
+                mission_id="mission-pre-v3",
+                correlation_id="req-pre-v3",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-p2",
+                event_name="memory_recovered",
+                timestamp="2026-04-03T00:00:01+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_recommendation": "continuar"},
+                request_id="req-pre-v3",
+                session_id="sess-pre-v3",
+                mission_id="mission-pre-v3",
+                correlation_id="req-pre-v3",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-p3",
+                event_name="intent_classified",
+                timestamp="2026-04-03T00:00:02+00:00",
+                source_service="orchestrator-service",
+                payload={"intent": "planning"},
+                request_id="req-pre-v3",
+                session_id="sess-pre-v3",
+                mission_id="mission-pre-v3",
+                correlation_id="req-pre-v3",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-p4",
+                event_name="context_composed",
+                timestamp="2026-04-03T00:00:03+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "primary_domain_driver": "estrategia_e_pensamento_sistemico",
+                    "arbitration_source": "mind_registry",
+                },
+                request_id="req-pre-v3",
+                session_id="sess-pre-v3",
+                mission_id="mission-pre-v3",
+                correlation_id="req-pre-v3",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-p5",
+                event_name="plan_built",
+                timestamp="2026-04-03T00:00:04+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_action": "continuar", "continuity_source": "active_mission"},
+                request_id="req-pre-v3",
+                session_id="sess-pre-v3",
+                mission_id="mission-pre-v3",
+                correlation_id="req-pre-v3",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-p6",
+                event_name="continuity_decided",
+                timestamp="2026-04-03T00:00:05+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_action": "continuar", "continuity_source": "active_mission"},
+                request_id="req-pre-v3",
+                session_id="sess-pre-v3",
+                mission_id="mission-pre-v3",
+                correlation_id="req-pre-v3",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-p7",
+                event_name="specialist_selection_decided",
+                timestamp="2026-04-03T00:00:06+00:00",
+                source_service="orchestrator-service",
+                payload={"domain_specialists": ["structured_analysis_specialist"]},
+                request_id="req-pre-v3",
+                session_id="sess-pre-v3",
+                mission_id="mission-pre-v3",
+                correlation_id="req-pre-v3",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-p8",
+                event_name="specialist_subflow_completed",
+                timestamp="2026-04-03T00:00:07+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "runtime_mode": "native_pipeline",
+                    "subflow_name": "specialist_handoffs",
+                    "selection_status": "selected",
+                    "governance_status": "approved",
+                    "dispatch_status": "dispatched",
+                    "completion_status": "completed",
+                    "selection_count": 1,
+                    "invocation_count": 1,
+                    "contribution_count": 1,
+                },
+                request_id="req-pre-v3",
+                session_id="sess-pre-v3",
+                mission_id="mission-pre-v3",
+                correlation_id="req-pre-v3",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-p9",
+                event_name="mission_runtime_state_declared",
+                timestamp="2026-04-03T00:00:08+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "runtime_mode": "native_pipeline",
+                    "mission_id": "mission-pre-v3",
+                    "mission_goal": "Plan the pilot checkpoint.",
+                    "mission_status": "active",
+                    "continuity_action": "continuar",
+                    "continuity_source": "active_mission",
+                    "primary_route": "strategy",
+                    "workflow_profile": "strategic_direction_workflow",
+                    "active_task_count": 2,
+                    "open_loop_count": 1,
+                },
+                request_id="req-pre-v3",
+                session_id="sess-pre-v3",
+                mission_id="mission-pre-v3",
+                correlation_id="req-pre-v3",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-p10",
+                event_name="governance_checked",
+                timestamp="2026-04-03T00:00:09+00:00",
+                source_service="orchestrator-service",
+                payload={"decision": "allow_with_conditions"},
+                request_id="req-pre-v3",
+                session_id="sess-pre-v3",
+                mission_id="mission-pre-v3",
+                correlation_id="req-pre-v3",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-p11",
+                event_name="response_synthesized",
+                timestamp="2026-04-03T00:00:10+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_action": "continuar"},
+                request_id="req-pre-v3",
+                session_id="sess-pre-v3",
+                mission_id="mission-pre-v3",
+                correlation_id="req-pre-v3",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-p12",
+                event_name="memory_recorded",
+                timestamp="2026-04-03T00:00:11+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_mode": "continuar"},
+                request_id="req-pre-v3",
+                session_id="sess-pre-v3",
+                mission_id="mission-pre-v3",
+                correlation_id="req-pre-v3",
+            ),
+        ]
+    )
+
+    audit = service.audit_flow(ObservabilityQuery(request_id="req-pre-v3"))
+
+    assert audit.specialist_subflow_status == "healthy"
+    assert audit.specialist_subflow_runtime_mode == "native_pipeline"
+    assert audit.mission_runtime_state_status == "healthy"
+    assert audit.trace_complete is True

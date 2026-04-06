@@ -118,6 +118,10 @@ Leitura curta do momento:
 - o fechamento formal do corte soberano segue regenerável por `tools/archive/close_sovereign_alignment_cut.py` em `docs/archive/implementation/v2-sovereign-alignment-cut-closure.md`;
 - o fechamento formal do corte de consumers/workflows segue regenerável por `tools/archive/close_domain_consumers_and_workflows_cut.py` em `docs/archive/implementation/v2-domain-consumers-and-workflows-cut-closure.md`.
 - o plano regenerável do corte ativo segue emitido por `tools/archive/render_governed_benchmark_execution_plan.py` em `docs/archive/implementation/v2-governed-benchmark-execution-plan.md`.
+- o lote `pre-v3 hardening` tambem ja foi concluido no backlog micro, deixando continuidade stateful nativa, `specialist_subflow` e `mission_runtime_state` como baseline observado e comparavel.
+- o proximo passo do programa deixou de ser correção estrutural do `v2` e passou a ser decidir a fronteira arquitetural suficiente para abertura do `v3`.
+- o baseline ativo do corte agora tambem combina contratos promovidos do registry com cobertura deliberada do piloto, exigindo as seis rotas promovidas, seus `workflow_profiles` e sinais minimos de memoria causal e recomposicao cognitiva antes de manter `baseline_release_ready`.
+- essa cobertura deliberada agora tambem exige `dominant_tension` e alinhamento `mente -> dominio -> especialista` como parte explicita da leitura de robustez do `v2`, em vez de deixar esses sinais apenas nos comparadores tecnicos.
 ---
 
 ## 7. Risco principal
@@ -130,9 +134,9 @@ O risco estrutural complementar é outro:
 
 Leitura executiva atual desse risco:
 
-- `domínios` é hoje o maior descompasso estrutural;
-- `memórias` é o eixo operacional mais urgente do `v2`;
-- `mentes` precisa sair do estado implícito e ganhar registry canônico.
+- o risco principal deixou de ser descompasso estrutural do `v2` e passou a ser abrir nova frente macro antes de aproveitar o baseline já endurecido;
+- `domínios`, `memórias` e `mentes` ainda admitem maturação adicional, mas já não configuram pendência técnica material de robustez no baseline atual;
+- o próximo erro a evitar é misturar expansão funcional nova com baseline ainda não consolidado documentalmente.
 
 O projeto deve evitar:
 
@@ -149,5 +153,6 @@ O próximo passo executivo mais racional é:
 - usar `docs/implementation/v2-native-memory-scope-hardening-cut-closure.md` como fechamento formal mais recente do eixo de memoria nativa;
 - usar `docs/implementation/v2-repository-hygiene-and-tools-review-cut-closure.md` como fechamento estrutural mais recente;
 - selecionar agora o proximo recorte funcional com base em `docs/implementation/v2-adherence-snapshot.md`, sem reabrir ruido estrutural;
+- usar o fechamento regeneravel do `v2-domain-consumers-and-workflows-cut` como leitura executiva minima de cobertura por rota, workflow e sinais deliberados antes de qualquer benchmark novo;
 - manter `Mastra` e `AutoGPT Platform` apenas como referencia e `Mem0` como candidata condicional de reabertura futura;
 - manter fora do proximo recorte voz oficial, `computer use` amplo, `pgvector` como base canonica e assistente operacional amplo.

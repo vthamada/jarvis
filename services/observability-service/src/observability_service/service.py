@@ -74,6 +74,9 @@ class FlowAudit:
     continuity_target_mission_id: str | None
     continuity_target_goal: str | None
     continuity_runtime_mode: str | None
+    specialist_subflow_status: str
+    specialist_subflow_runtime_mode: str | None
+    mission_runtime_state_status: str
     registry_domains: list[str]
     domain_specialists: list[str]
     shadow_specialists: list[str]
@@ -101,6 +104,9 @@ class FlowAudit:
             and not self.missing_continuity_signals
             and not self.continuity_anomaly_flags
             and self.workflow_trace_status in {"healthy", "not_applicable"}
+            and self.specialist_subflow_status
+            in {"healthy", "not_applicable", "contained"}
+            and self.mission_runtime_state_status in {"healthy", "not_applicable"}
         )
 
 
@@ -255,6 +261,9 @@ class ObservabilityService:
                 continuity_target_mission_id=None,
                 continuity_target_goal=None,
                 continuity_runtime_mode=None,
+                specialist_subflow_status="incomplete",
+                specialist_subflow_runtime_mode=None,
+                mission_runtime_state_status="incomplete",
                 registry_domains=[],
                 domain_specialists=[],
                 shadow_specialists=[],
@@ -280,6 +289,8 @@ class ObservabilityService:
         operation_event = self._first_event(events, "operation_completed")
         continuity_event = self._first_event(events, "continuity_decided")
         continuity_runtime_event = self._first_event(events, "continuity_subflow_completed")
+        specialist_subflow_event = self._first_event(events, "specialist_subflow_completed")
+        mission_runtime_event = self._first_event(events, "mission_runtime_state_declared")
         workflow_composed_event = self._first_event(events, "workflow_composed")
         workflow_governance_event = self._first_event(events, "workflow_governance_declared")
         workflow_completed_event = self._first_event(events, "workflow_completed")
@@ -328,6 +339,12 @@ class ObservabilityService:
             if continuity_runtime_event
             and continuity_runtime_event.payload.get("runtime_mode") is not None
             else "baseline_linear"
+        )
+        specialist_subflow_runtime_mode = (
+            str(specialist_subflow_event.payload.get("runtime_mode"))
+            if specialist_subflow_event
+            and specialist_subflow_event.payload.get("runtime_mode") is not None
+            else None
         )
         workflow_domain_route = (
             str(workflow_composed_event.payload.get("workflow_domain_route"))
@@ -595,6 +612,15 @@ class ObservabilityService:
             specialist_selection_event=specialist_selection_event,
             specialist_domain_event=specialist_domain_event,
         )
+        specialist_subflow_status = self._specialist_subflow_status(
+            specialist_subflow_event=specialist_subflow_event,
+            specialist_selection_event=specialist_selection_event,
+            specialist_domain_event=specialist_domain_event,
+        )
+        mission_runtime_state_status = self._mission_runtime_state_status(
+            mission_runtime_event=mission_runtime_event,
+            first_event=first_event,
+        )
         identity_alignment_status = self._identity_alignment_status(
             directive_event=directive_event,
             plan_governed_event=plan_governed_event,
@@ -648,6 +674,9 @@ class ObservabilityService:
             continuity_target_mission_id=continuity_target_mission_id,
             continuity_target_goal=continuity_target_goal,
             continuity_runtime_mode=continuity_runtime_mode,
+            specialist_subflow_status=specialist_subflow_status,
+            specialist_subflow_runtime_mode=specialist_subflow_runtime_mode,
+            mission_runtime_state_status=mission_runtime_state_status,
             registry_domains=registry_domains,
             domain_specialists=domain_specialists,
             shadow_specialists=shadow_specialists,
@@ -1403,6 +1432,78 @@ class ObservabilityService:
         if all(matches.get(str(item)) is False for item in selected_specialists):
             return "mismatch"
         return "attention_required"
+
+    @staticmethod
+    def _specialist_subflow_status(
+        *,
+        specialist_subflow_event: InternalEventEnvelope | None,
+        specialist_selection_event: InternalEventEnvelope | None,
+        specialist_domain_event: InternalEventEnvelope | None,
+    ) -> str:
+        if specialist_subflow_event is None:
+            if specialist_selection_event is None and specialist_domain_event is None:
+                return "not_applicable"
+            return "incomplete"
+        selected_count = int(specialist_subflow_event.payload.get("selection_count", 0) or 0)
+        invocation_count = int(
+            specialist_subflow_event.payload.get("invocation_count", 0) or 0
+        )
+        contribution_count = int(
+            specialist_subflow_event.payload.get("contribution_count", 0) or 0
+        )
+        selection_status = specialist_subflow_event.payload.get("selection_status")
+        governance_status = specialist_subflow_event.payload.get("governance_status")
+        dispatch_status = specialist_subflow_event.payload.get("dispatch_status")
+        completion_status = specialist_subflow_event.payload.get("completion_status")
+        if selected_count == 0 and selection_status == "not_applicable":
+            return "not_applicable"
+        if governance_status == "contained":
+            if contribution_count == 0 and completion_status == "contained":
+                return "contained"
+            return "attention_required"
+        if selected_count > 0 and invocation_count == 0:
+            return "attention_required"
+        if selected_count != invocation_count:
+            return "attention_required"
+        if selected_count > 0 and dispatch_status != "dispatched":
+            return "attention_required"
+        if contribution_count == 0 and completion_status not in {"not_applicable", "contained"}:
+            return "attention_required"
+        if contribution_count > 0 and completion_status != "completed":
+            return "attention_required"
+        return "healthy"
+
+    @staticmethod
+    def _mission_runtime_state_status(
+        *,
+        mission_runtime_event: InternalEventEnvelope | None,
+        first_event: InternalEventEnvelope,
+    ) -> str:
+        if first_event.mission_id is None:
+            return "not_applicable"
+        if mission_runtime_event is None:
+            return "incomplete"
+        required_fields = (
+            "mission_id",
+            "mission_goal",
+            "mission_status",
+            "continuity_action",
+            "primary_route",
+            "workflow_profile",
+        )
+        if any(mission_runtime_event.payload.get(field) in {None, ""} for field in required_fields):
+            return "attention_required"
+        continuity_source = mission_runtime_event.payload.get("continuity_source")
+        continuity_target_mission_id = mission_runtime_event.payload.get(
+            "continuity_target_mission_id"
+        )
+        if continuity_source == "related_mission" and continuity_target_mission_id is None:
+            return "attention_required"
+        if mission_runtime_event.payload.get("active_task_count") is None:
+            return "attention_required"
+        if mission_runtime_event.payload.get("open_loop_count") is None:
+            return "attention_required"
+        return "healthy"
 
     @staticmethod
     def _memory_causality_status(

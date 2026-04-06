@@ -35,6 +35,9 @@ class PilotTraceSummary:
     continuity_action: str | None
     continuity_source: str | None
     continuity_runtime_mode: str | None
+    specialist_subflow_status: str
+    specialist_subflow_runtime_mode: str | None
+    mission_runtime_state_status: str
     workflow_domain_route: str | None
     registry_domains: list[str]
     shadow_specialists: list[str]
@@ -118,6 +121,9 @@ def summarize_traces(
             continuity_action=audit.continuity_action,
             continuity_source=audit.continuity_source,
             continuity_runtime_mode=audit.continuity_runtime_mode,
+            specialist_subflow_status=audit.specialist_subflow_status,
+            specialist_subflow_runtime_mode=audit.specialist_subflow_runtime_mode,
+            mission_runtime_state_status=audit.mission_runtime_state_status,
             workflow_domain_route=audit.workflow_domain_route,
             registry_domains=list(audit.registry_domains),
             shadow_specialists=list(audit.shadow_specialists),
@@ -233,6 +239,22 @@ def _cognitive_recomposition_assessment(
     return "attention_required"
 
 
+def _specialist_subflow_assessment(status: str | None) -> str:
+    if status in {None, "not_applicable"}:
+        return "not_applicable"
+    if status in {"healthy", "contained"}:
+        return status
+    return "attention_required"
+
+
+def _mission_runtime_state_assessment(status: str | None) -> str:
+    if status in {None, "not_applicable"}:
+        return "not_applicable"
+    if status == "healthy":
+        return "healthy"
+    return "attention_required"
+
+
 def render_text(summaries: list[PilotTraceSummary]) -> str:
     if not summaries:
         return "No internal pilot traces found."
@@ -249,6 +271,20 @@ def render_text(summaries: list[PilotTraceSummary]) -> str:
             f"continuity_action={summary.continuity_action or 'none'} "
             f"continuity_source={summary.continuity_source or 'none'} "
             f"continuity_runtime_mode={summary.continuity_runtime_mode or 'none'} "
+            "specialist_subflow_status="
+            f"{getattr(summary, 'specialist_subflow_status', 'not_applicable')} "
+            "specialist_subflow_runtime_mode="
+            f"{getattr(summary, 'specialist_subflow_runtime_mode', None) or 'none'} "
+            "specialist_subflow_assessment="
+            f"{_specialist_subflow_assessment(
+                getattr(summary, 'specialist_subflow_status', None)
+            )} "
+            "mission_runtime_state_status="
+            f"{getattr(summary, 'mission_runtime_state_status', 'not_applicable')} "
+            "mission_runtime_state_assessment="
+            f"{_mission_runtime_state_assessment(
+                getattr(summary, 'mission_runtime_state_status', None)
+            )} "
             f"workflow_domain_route={getattr(summary, 'workflow_domain_route', None) or 'none'} "
             "registry_domains="
             f"{','.join(getattr(summary, 'registry_domains', [])) or 'none'} "

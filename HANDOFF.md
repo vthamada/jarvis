@@ -2,9 +2,9 @@
 
 ## Metadata
 
-- Atualizado em: 2026-04-05
+- Atualizado em: 2026-04-06
 - Branch: `main`
-- Commit de referência: `5852749`
+- Commit de referência: `842ffc3`
 - Artefato canônico do projeto: `documento_mestre_jarvis.md`
 - Estado do projeto: `v1` encerrado e congelado para uso controlado; primeiro ciclo do `pós-v1` encerrado; primeiro ciclo do `v1.5` encerrado; primeiro corte do `v2` encerrado; `v2-alignment-cycle` encerrado; próximo corte do `v2` aberto
 - Fila micro ativa: `docs/implementation/execution-backlog.md`
@@ -59,7 +59,16 @@ Leitura operacional correta desta rodada:
 - `internal_pilot_support` agora inclui cenarios deliberados para memoria causal (`guided_memory_followup`) e recomposicao cognitiva por `specialist_route_impasse` (`recomposition_impasse`), com cobertura em relatorio e comparacao.
 - `compare_orchestrator_paths` passou a marcar drift explicito de `workflow_profile_status`, `memory_causality_status`, `dominant_tension`, `primary_domain_driver`, `mind_domain_specialist_status` e recomposicao cognitiva entre baseline e candidata.
 - `planning-engine`, `synthesis-engine` e `response_synthesized` agora tornam `dominant_tension`, `primary_domain_driver`, `workflow_response_focus` e recomposicao cognitiva mais declarativos no comportamento final do runtime.
-- o lote atual do `execution-backlog` foi integralmente executado, incluindo `MB-008` a `MB-012`; nao ha item `ready` aberto neste momento.
+- `verify_active_cut_baseline.py` agora combina contratos promovidos com um piloto focado que cobre as seis rotas promovidas, seus `workflow_profiles` e os sinais deliberados de memoria causal e recomposicao cognitiva.
+- `internal_pilot_support` agora declara `expected_route`, `expected_workflow_profile` e `coverage_tags` nos cenarios canonicos do piloto, tornando a cobertura por rota/workflow parte explicita do baseline.
+- o baseline ativo agora tambem exige cenarios deliberados para `dominant_tension` e alinhamento `mente -> dominio -> especialista`, promovendo esses sinais a readiness formal de robustez do `v2`.
+- `close_domain_consumers_and_workflows_cut` agora carrega coverage de piloto, match de workflow e readiness dos sinais deliberados como parte da evidencia regeneravel do corte.
+- `master-summary` e `docs/archive/implementation/v2-domain-consumers-and-workflows-cut-closure.md` agora refletem que o baseline do corte combina contratos promovidos com cobertura deliberada do piloto, em vez de tratar isso como detalhe tecnico implícito.
+- o lote atual do `execution-backlog` foi integralmente executado, incluindo `MB-020` a `MB-022`; nao ha item `ready` aberto neste momento.
+- o caminho padrao do `orchestrator-service` agora tambem fecha a continuidade como subfluxo explicito via `continuity_subflow_completed`, alinhado ao mesmo payload soberano usado pelo caminho opcional de `LangGraph`.
+- o lote `pre-v3 hardening` foi concluido em `docs/implementation/execution-backlog.md`, com `MB-023` a `MB-026` fechados e sem item `ready` aberto na fila micro.
+- o `orchestrator-service` agora fecha o lifecycle de especialistas como subfluxo explicito (`specialist_subflow_completed`) e tambem declara `mission_runtime_state` para requests com missao ativa, related mission e readiness de retomada.
+- `observability-service`, `internal_pilot_report`, `compare_orchestrator_paths`, `verify_active_cut_baseline.py` e o fechamento regeneravel do corte agora tratam `specialist_subflow` e `mission_runtime_state` como sinais agregados de hardening arquitetural pre-`v3`.
 - `CHANGELOG.md` foi restaurado como changelog cronologico e o `engineering_gate` agora protege a identidade minima de `CHANGELOG.md`, `HANDOFF.md`, `documento_mestre_jarvis.md`, `docs/roadmap/programa-ate-v3.md` e `docs/implementation/v2-adherence-snapshot.md` antes da liberacao.
 
 ## Meta atual
@@ -73,8 +82,8 @@ Consolidar o fechamento operacional do `v2` sobre um runtime já alinhado aos ei
 - depois disso: tornar memoria `semantic` e `procedural` mais causal por `workflow_profile`, sem quebrar a soberania do runtime atual;
 - depois disso: separar com mais precisao o que ja e baseline saudavel e o que ainda e `maturation_recommended` por `workflow_profile`;
 - depois disso: endurecer a cadeia `mente -> dominio -> especialista` com sinais cada vez menos implicitos e mais auditaveis;
-- depois disso: promover esses sinais declarativos ao proximo lote micro somente quando houver nova priorizacao macro ou novo gate de release a endurecer;
-- so entao: tratar maturacao mais ampla dessa relacao como frente futura, nao como urgencia de baseline.
+- depois disso: usar o hardening pre-`v3` fechado como baseline para decidir a proxima frente macro, sem reabrir localmente continuidade, lifecycle de especialistas ou mission runtime state;
+- so entao: decidir a fronteira entre hardening arquitetural suficiente e abertura da proxima frente macro do `v3`.
 
 Regra operacional desta fase:
 
@@ -232,9 +241,11 @@ Principais entregas já consolidadas:
 Pendências principais desta fase:
 
 - manter os docs vivos refletindo o baseline soberano já absorvido no `v2`;
+- tratar o lote `pre-v3 hardening` em `docs/implementation/execution-backlog.md` como concluido, sem reabrir `MB-024` a `MB-026` como fila pendente;
 - refinar critérios de saída por `workflow_profile` sem abrir nova heurística fora dos registries;
 - aprofundar o uso de `semantic` e `procedural` como maturação de runtime, não como reabertura de arquitetura;
 - continuar tornando a relação `mente -> domínio -> especialista` mais explícita em consumidores posteriores quando isso trouxer ganho real.
+- não existe neste momento pendência técnica material de robustez dentro do baseline atual do `v2`; o restante já entra como maturação incremental ou próxima frente macro.
 
 Regra de estudo externo no `v2`:
 
@@ -248,10 +259,10 @@ Regra de estudo externo no `v2`:
 Ordem recomendada:
 1. tratar `docs/implementation/v2-adherence-snapshot.md` como leitura oficial do fechamento funcional do `v2`;
 2. manter `HANDOFF.md`, `CHANGELOG.md` e o snapshot como docs vivos do baseline sem abrir outro corte documental por inércia;
-3. se houver continuação ainda dentro do eixo atual, promover esses sinais novos para gate e fechamento de release, para que deixem de existir apenas em piloto e closure histórico;
+3. tratar `MB-023` a `MB-026` do lote `pre-v3 hardening` como baseline ja fechado, nao como backlog aberto;
 4. depois disso, focar em critérios mais específicos por `workflow_profile` e em uso ainda mais maduro de `semantic`/`procedural`;
 5. manter histórico regenerável em `docs/archive/implementation/` e `tools/archive/` sem reexpandir a raiz do repositório;
-6. só abrir uma nova frente funcional quando a priorização macro sair explicitamente do fechamento do `v2`.
+6. só abrir uma nova frente funcional quando o hardening pré-`v3` estiver suficiente e a priorização macro sair explicitamente do fechamento do `v2`.
 
 ## Riscos e bloqueios
 

@@ -26,6 +26,9 @@ def make_result(  # type: ignore[no-untyped-def]
     continuity_action: str | None = "continuar",
     continuity_source: str | None = "active_mission",
     continuity_runtime_mode: str | None = "baseline_linear",
+    specialist_subflow_status: str = "healthy",
+    specialist_subflow_runtime_mode: str | None = "native_pipeline",
+    mission_runtime_state_status: str = "healthy",
     workflow_domain_route: str | None = "strategy",
     registry_domains: list[str] | None = None,
     shadow_specialists: list[str] | None = None,
@@ -74,6 +77,9 @@ def make_result(  # type: ignore[no-untyped-def]
         continuity_action=continuity_action,
         continuity_source=continuity_source,
         continuity_runtime_mode=continuity_runtime_mode,
+        specialist_subflow_status=specialist_subflow_status,
+        specialist_subflow_runtime_mode=specialist_subflow_runtime_mode,
+        mission_runtime_state_status=mission_runtime_state_status,
         workflow_domain_route=workflow_domain_route,
         registry_domains=registry_domains or ["strategy"],
         shadow_specialists=shadow_specialists or [],
@@ -185,6 +191,8 @@ def test_compare_results_flags_release_signal_mismatch_fields() -> None:
             arbitration_source="mind_registry_recomposition",
             primary_domain_driver="assistencia_pessoal_e_operacional",
             mind_domain_specialist_status="mismatch",
+            specialist_subflow_status="contained",
+            mission_runtime_state_status="attention_required",
             cognitive_recomposition_applied=True,
             cognitive_recomposition_reason=(
                 "primary domain driver has no matching guided specialist route"
@@ -206,6 +214,8 @@ def test_compare_results_flags_release_signal_mismatch_fields() -> None:
         "arbitration_source",
         "primary_domain_driver",
         "mind_domain_specialist_status",
+        "specialist_subflow_status",
+        "mission_runtime_state_status",
         "cognitive_recomposition_applied",
         "cognitive_recomposition_reason",
         "cognitive_recomposition_trigger",
@@ -256,6 +266,14 @@ def test_serialize_comparisons_reports_equivalent_verdict() -> None:
         == "aligned"
     )
     assert (
+        payload["scenario_results"][0]["baseline_specialist_subflow_assessment"]
+        == "healthy"
+    )
+    assert (
+        payload["scenario_results"][0]["baseline_mission_runtime_state_assessment"]
+        == "healthy"
+    )
+    assert (
         payload["scenario_results"][0]["baseline_cognitive_recomposition_assessment"]
         == "not_applicable"
     )
@@ -296,6 +314,10 @@ def test_render_text_reports_workflow_profile_status() -> None:
     assert "candidate_memory_causality_status=causal_guidance" in rendered
     assert "baseline_mind_domain_specialist_status=aligned" in rendered
     assert "candidate_mind_domain_specialist_status=aligned" in rendered
+    assert "baseline_specialist_subflow_status=healthy" in rendered
+    assert "candidate_specialist_subflow_status=healthy" in rendered
+    assert "baseline_mission_runtime_state_status=healthy" in rendered
+    assert "candidate_mission_runtime_state_status=healthy" in rendered
     assert "candidate_cognitive_recomposition_assessment=coherent" in rendered
     assert "candidate_cognitive_recomposition_decision=coherent" in rendered
 

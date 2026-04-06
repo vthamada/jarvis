@@ -78,6 +78,14 @@ def mind_domain_specialist_assessment(result: PilotExecutionResult) -> str:
     return result.mind_domain_specialist_status
 
 
+def specialist_subflow_assessment(result: PilotExecutionResult) -> str:
+    return result.specialist_subflow_status
+
+
+def mission_runtime_state_assessment(result: PilotExecutionResult) -> str:
+    return result.mission_runtime_state_status
+
+
 def cognitive_recomposition_assessment(result: PilotExecutionResult) -> str:
     if not result.cognitive_recomposition_applied:
         if (
@@ -124,6 +132,15 @@ def summarize_comparisons(
             "candidate_mind_domain_specialist_decision": "not_applicable",
             "baseline_mind_domain_specialist_alignment_rate": 0.0,
             "candidate_mind_domain_specialist_alignment_rate": 0.0,
+            "baseline_specialist_subflow_decision": "not_applicable",
+            "candidate_specialist_subflow_decision": "not_applicable",
+            "baseline_specialist_subflow_healthy_rate": 0.0,
+            "candidate_specialist_subflow_healthy_rate": 0.0,
+            "candidate_specialist_runtime_coverage": 0.0,
+            "baseline_mission_runtime_state_decision": "not_applicable",
+            "candidate_mission_runtime_state_decision": "not_applicable",
+            "baseline_mission_runtime_state_healthy_rate": 0.0,
+            "candidate_mission_runtime_state_healthy_rate": 0.0,
             "baseline_cognitive_recomposition_decision": "not_applicable",
             "candidate_cognitive_recomposition_decision": "not_applicable",
             "baseline_cognitive_recomposition_coherent_rate": 0.0,
@@ -190,12 +207,37 @@ def summarize_comparisons(
     candidate_mind_domain_specialist = [
         mind_domain_specialist_assessment(item) for item in available_candidates
     ]
+    baseline_specialist_subflow = [
+        specialist_subflow_assessment(item.baseline) for item in comparisons
+    ]
+    candidate_specialist_subflow = [
+        specialist_subflow_assessment(item) for item in available_candidates
+    ]
+    baseline_mission_runtime_state = [
+        mission_runtime_state_assessment(item.baseline) for item in comparisons
+    ]
+    candidate_mission_runtime_state = [
+        mission_runtime_state_assessment(item) for item in available_candidates
+    ]
     baseline_cognitive_recomposition = [
         cognitive_recomposition_assessment(item.baseline) for item in comparisons
     ]
     candidate_cognitive_recomposition = [
         cognitive_recomposition_assessment(item) for item in available_candidates
     ]
+    specialist_runtime_coverage = round(
+        (
+            sum(
+                1
+                for item in available_candidates
+                if item.specialist_subflow_runtime_mode == "langgraph_subflow"
+            )
+            / len(available_candidates)
+        )
+        if available_candidates
+        else 0.0,
+        4,
+    )
     if langgraph_status != "available":
         decision = "candidate_unavailable"
     elif (
@@ -276,6 +318,35 @@ def summarize_comparisons(
             candidate_mind_domain_specialist,
             "aligned",
         ),
+        "baseline_specialist_subflow_decision": summarize_statuses(
+            baseline_specialist_subflow
+        ),
+        "candidate_specialist_subflow_decision": summarize_statuses(
+            candidate_specialist_subflow
+        ),
+        "baseline_specialist_subflow_healthy_rate": status_rate(
+            baseline_specialist_subflow,
+            "healthy",
+        ),
+        "candidate_specialist_subflow_healthy_rate": status_rate(
+            candidate_specialist_subflow,
+            "healthy",
+        ),
+        "candidate_specialist_runtime_coverage": specialist_runtime_coverage,
+        "baseline_mission_runtime_state_decision": summarize_statuses(
+            baseline_mission_runtime_state
+        ),
+        "candidate_mission_runtime_state_decision": summarize_statuses(
+            candidate_mission_runtime_state
+        ),
+        "baseline_mission_runtime_state_healthy_rate": status_rate(
+            baseline_mission_runtime_state,
+            "healthy",
+        ),
+        "candidate_mission_runtime_state_healthy_rate": status_rate(
+            candidate_mission_runtime_state,
+            "healthy",
+        ),
         "baseline_cognitive_recomposition_decision": summarize_recomposition_statuses(
             baseline_cognitive_recomposition
         ),
@@ -323,6 +394,10 @@ def summarize_statuses(statuses: list[str]) -> str:
         return "not_applicable"
     if any(item == "attention_required" for item in statuses):
         return "attention_required"
+    if any(item == "contained" for item in statuses):
+        return "contained"
+    if any(item == "healthy" for item in statuses):
+        return "healthy"
     if any(item == "mismatch" for item in statuses):
         return "mismatch"
     if any(item == "causal_guidance" for item in statuses):
@@ -410,6 +485,13 @@ def compare_results(
                 != candidate.mind_domain_specialist_status
             ):
                 mismatch_fields.append("mind_domain_specialist_status")
+            if baseline.specialist_subflow_status != candidate.specialist_subflow_status:
+                mismatch_fields.append("specialist_subflow_status")
+            if (
+                baseline.mission_runtime_state_status
+                != candidate.mission_runtime_state_status
+            ):
+                mismatch_fields.append("mission_runtime_state_status")
             if (
                 baseline.cognitive_recomposition_applied
                 != candidate.cognitive_recomposition_applied
@@ -542,6 +624,14 @@ def render_text(payload: dict[str, object]) -> str:
                         f"{item['baseline']['mind_domain_specialist_status']}"
                     ),
                     (
+                        "baseline_specialist_subflow_status="
+                        f"{item['baseline']['specialist_subflow_status']}"
+                    ),
+                    (
+                        "baseline_mission_runtime_state_status="
+                        f"{item['baseline']['mission_runtime_state_status']}"
+                    ),
+                    (
                         "baseline_cognitive_recomposition_applied="
                         f"{item['baseline']['cognitive_recomposition_applied']}"
                     ),
@@ -588,6 +678,18 @@ def render_text(payload: dict[str, object]) -> str:
                         f"{item['candidate']['mind_domain_specialist_status']}"
                         if item["candidate"]
                         else "candidate_mind_domain_specialist_status=n/a"
+                    ),
+                    (
+                        "candidate_specialist_subflow_status="
+                        f"{item['candidate']['specialist_subflow_status']}"
+                        if item["candidate"]
+                        else "candidate_specialist_subflow_status=n/a"
+                    ),
+                    (
+                        "candidate_mission_runtime_state_status="
+                        f"{item['candidate']['mission_runtime_state_status']}"
+                        if item["candidate"]
+                        else "candidate_mission_runtime_state_status=n/a"
                     ),
                     (
                         "candidate_cognitive_recomposition_applied="
@@ -679,6 +781,24 @@ def render_text(payload: dict[str, object]) -> str:
                 f"{summary['baseline_mind_domain_specialist_alignment_rate']}",
                 "candidate_mind_domain_specialist_alignment_rate="
                 f"{summary['candidate_mind_domain_specialist_alignment_rate']}",
+                "baseline_specialist_subflow_decision="
+                f"{summary['baseline_specialist_subflow_decision']}",
+                "candidate_specialist_subflow_decision="
+                f"{summary['candidate_specialist_subflow_decision']}",
+                "baseline_specialist_subflow_healthy_rate="
+                f"{summary['baseline_specialist_subflow_healthy_rate']}",
+                "candidate_specialist_subflow_healthy_rate="
+                f"{summary['candidate_specialist_subflow_healthy_rate']}",
+                "candidate_specialist_runtime_coverage="
+                f"{summary['candidate_specialist_runtime_coverage']}",
+                "baseline_mission_runtime_state_decision="
+                f"{summary['baseline_mission_runtime_state_decision']}",
+                "candidate_mission_runtime_state_decision="
+                f"{summary['candidate_mission_runtime_state_decision']}",
+                "baseline_mission_runtime_state_healthy_rate="
+                f"{summary['baseline_mission_runtime_state_healthy_rate']}",
+                "candidate_mission_runtime_state_healthy_rate="
+                f"{summary['candidate_mission_runtime_state_healthy_rate']}",
                 "baseline_cognitive_recomposition_decision="
                 f"{summary['baseline_cognitive_recomposition_decision']}",
                 "candidate_cognitive_recomposition_decision="
@@ -737,6 +857,12 @@ def serialize_comparisons(
                 "baseline_mind_domain_specialist_assessment": (
                     mind_domain_specialist_assessment(item.baseline)
                 ),
+                "baseline_specialist_subflow_assessment": specialist_subflow_assessment(
+                    item.baseline
+                ),
+                "baseline_mission_runtime_state_assessment": (
+                    mission_runtime_state_assessment(item.baseline)
+                ),
                 "baseline_cognitive_recomposition_assessment": (
                     cognitive_recomposition_assessment(item.baseline)
                 ),
@@ -757,6 +883,16 @@ def serialize_comparisons(
                 ),
                 "candidate_mind_domain_specialist_assessment": (
                     mind_domain_specialist_assessment(item.candidate)
+                    if item.candidate
+                    else None
+                ),
+                "candidate_specialist_subflow_assessment": (
+                    specialist_subflow_assessment(item.candidate)
+                    if item.candidate
+                    else None
+                ),
+                "candidate_mission_runtime_state_assessment": (
+                    mission_runtime_state_assessment(item.candidate)
                     if item.candidate
                     else None
                 ),

@@ -32,6 +32,25 @@ class CutEvidenceSummary:
     benchmark_now_candidates: int
     reference_envelope_candidates: int
     promotion_trigger_rules: int
+    targeted_pilot_scenarios: int
+    targeted_route_matches: int
+    targeted_route_expectations: int
+    targeted_workflow_matches: int
+    targeted_workflow_expectations: int
+    promoted_routes_covered_by_pilot: int
+    promoted_workflow_profiles_covered_by_pilot: int
+    memory_causality_ready_scenarios: int
+    memory_causality_target_scenarios: int
+    mind_domain_specialist_ready_scenarios: int
+    mind_domain_specialist_target_scenarios: int
+    dominant_tension_ready_scenarios: int
+    dominant_tension_target_scenarios: int
+    cognitive_recomposition_ready_scenarios: int
+    cognitive_recomposition_target_scenarios: int
+    specialist_subflow_ready_scenarios: int
+    specialist_subflow_target_scenarios: int
+    mission_runtime_state_ready_scenarios: int
+    mission_runtime_state_target_scenarios: int
     baseline_decision: str
 
 
@@ -175,6 +194,53 @@ def build_payload() -> dict[str, object]:
         benchmark_now_candidates=int(summary["benchmark_now_candidates"]),
         reference_envelope_candidates=int(summary["reference_envelope_candidates"]),
         promotion_trigger_rules=int(summary["promotion_trigger_rules"]),
+        targeted_pilot_scenarios=int(summary["targeted_pilot_scenarios"]),
+        targeted_route_matches=int(summary["targeted_route_matches"]),
+        targeted_route_expectations=int(summary["targeted_route_expectations"]),
+        targeted_workflow_matches=int(summary["targeted_workflow_matches"]),
+        targeted_workflow_expectations=int(summary["targeted_workflow_expectations"]),
+        promoted_routes_covered_by_pilot=int(
+            summary["promoted_routes_covered_by_pilot"]
+        ),
+        promoted_workflow_profiles_covered_by_pilot=int(
+            summary["promoted_workflow_profiles_covered_by_pilot"]
+        ),
+        memory_causality_ready_scenarios=int(
+            summary["memory_causality_ready_scenarios"]
+        ),
+        memory_causality_target_scenarios=int(
+            summary["memory_causality_target_scenarios"]
+        ),
+        mind_domain_specialist_ready_scenarios=int(
+            summary["mind_domain_specialist_ready_scenarios"]
+        ),
+        mind_domain_specialist_target_scenarios=int(
+            summary["mind_domain_specialist_target_scenarios"]
+        ),
+        dominant_tension_ready_scenarios=int(
+            summary["dominant_tension_ready_scenarios"]
+        ),
+        dominant_tension_target_scenarios=int(
+            summary["dominant_tension_target_scenarios"]
+        ),
+        cognitive_recomposition_ready_scenarios=int(
+            summary["cognitive_recomposition_ready_scenarios"]
+        ),
+        cognitive_recomposition_target_scenarios=int(
+            summary["cognitive_recomposition_target_scenarios"]
+        ),
+        specialist_subflow_ready_scenarios=int(
+            summary["specialist_subflow_ready_scenarios"]
+        ),
+        specialist_subflow_target_scenarios=int(
+            summary["specialist_subflow_target_scenarios"]
+        ),
+        mission_runtime_state_ready_scenarios=int(
+            summary["mission_runtime_state_ready_scenarios"]
+        ),
+        mission_runtime_state_target_scenarios=int(
+            summary["mission_runtime_state_target_scenarios"]
+        ),
         baseline_decision=str(baseline_payload["decision"]),
     )
     decision = "complete_v2_domain_consumers_and_workflows_cut"
@@ -233,6 +299,34 @@ def render_text(payload: dict[str, object]) -> str:
                 f"reference_envelope={evidence['reference_envelope_candidates']} "
                 f"promotion_rules={evidence['promotion_trigger_rules']}"
             ),
+            (
+                "pilot="
+                f"scenarios={evidence['targeted_pilot_scenarios']} "
+                f"route_matches={evidence['targeted_route_matches']}/"
+                f"{evidence['targeted_route_expectations']} "
+                f"workflow_matches={evidence['targeted_workflow_matches']}/"
+                f"{evidence['targeted_workflow_expectations']}"
+            ),
+            (
+                "signals="
+                f"memory_causality_ready={evidence['memory_causality_ready_scenarios']}/"
+                f"{evidence['memory_causality_target_scenarios']} "
+                "mind_domain_specialist_ready="
+                f"{evidence['mind_domain_specialist_ready_scenarios']}/"
+                f"{evidence['mind_domain_specialist_target_scenarios']} "
+                "dominant_tension_ready="
+                f"{evidence['dominant_tension_ready_scenarios']}/"
+                f"{evidence['dominant_tension_target_scenarios']} "
+                "specialist_subflow_ready="
+                f"{evidence['specialist_subflow_ready_scenarios']}/"
+                f"{evidence['specialist_subflow_target_scenarios']} "
+                "mission_runtime_state_ready="
+                f"{evidence['mission_runtime_state_ready_scenarios']}/"
+                f"{evidence['mission_runtime_state_target_scenarios']} "
+                "cognitive_recomposition_ready="
+                f"{evidence['cognitive_recomposition_ready_scenarios']}/"
+                f"{evidence['cognitive_recomposition_target_scenarios']}"
+            ),
         ]
     )
 
@@ -266,6 +360,55 @@ def render_markdown(payload: dict[str, object]) -> str:
             f"`{evidence['reference_envelope_candidates']}`"
         ),
         f"- promotion trigger rules: `{evidence['promotion_trigger_rules']}`",
+        f"- targeted pilot scenarios: `{evidence['targeted_pilot_scenarios']}`",
+        (
+            "- targeted pilot route matches: "
+            f"`{evidence['targeted_route_matches']}`/"
+            f"`{evidence['targeted_route_expectations']}`"
+        ),
+        (
+            "- targeted pilot workflow matches: "
+            f"`{evidence['targeted_workflow_matches']}`/"
+            f"`{evidence['targeted_workflow_expectations']}`"
+        ),
+        (
+            "- promoted routes covered by pilot: "
+            f"`{evidence['promoted_routes_covered_by_pilot']}`"
+        ),
+        (
+            "- promoted workflow profiles covered by pilot: "
+            f"`{evidence['promoted_workflow_profiles_covered_by_pilot']}`"
+        ),
+        (
+            "- memory causality scenarios ready: "
+            f"`{evidence['memory_causality_ready_scenarios']}`/"
+            f"`{evidence['memory_causality_target_scenarios']}`"
+        ),
+        (
+            "- mind-domain-specialist scenarios ready: "
+            f"`{evidence['mind_domain_specialist_ready_scenarios']}`/"
+            f"`{evidence['mind_domain_specialist_target_scenarios']}`"
+        ),
+        (
+            "- dominant tension scenarios ready: "
+            f"`{evidence['dominant_tension_ready_scenarios']}`/"
+            f"`{evidence['dominant_tension_target_scenarios']}`"
+        ),
+        (
+            "- specialist subflow scenarios ready: "
+            f"`{evidence['specialist_subflow_ready_scenarios']}`/"
+            f"`{evidence['specialist_subflow_target_scenarios']}`"
+        ),
+        (
+            "- mission runtime state scenarios ready: "
+            f"`{evidence['mission_runtime_state_ready_scenarios']}`/"
+            f"`{evidence['mission_runtime_state_target_scenarios']}`"
+        ),
+        (
+            "- cognitive recomposition scenarios ready: "
+            f"`{evidence['cognitive_recomposition_ready_scenarios']}`/"
+            f"`{evidence['cognitive_recomposition_target_scenarios']}`"
+        ),
         "",
         "## Metas atendidas",
         "",

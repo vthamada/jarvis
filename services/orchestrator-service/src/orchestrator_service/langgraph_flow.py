@@ -23,6 +23,7 @@ class OrchestratorFlowState(TypedDict, total=False):
     specialist_review: object
     specialist_handoff_check: object | None
     specialist_handoff_decision: object | None
+    mission_runtime_state: object | None
     governance_check: object
     governance_decision: object
     operation_dispatch: object | None
@@ -291,12 +292,22 @@ class LangGraphFlowRunner:
                 handoff_plan=handoff_plan,
                 handoff_governance=handoff_assessment.governance_decision,
                 events=events,
+                runtime_mode="langgraph_subflow",
             )
+        )
+        mission_runtime_state, events = self.orchestrator._declare_mission_runtime_state(
+            contract,
+            deliberative_plan=refined_plan,
+            memory_recovery_result=state["memory_recovery_result"],
+            specialist_review=specialist_review,
+            events=events,
+            runtime_mode="langgraph_subflow",
         )
         return {
             "specialist_review": specialist_review,
             "specialist_handoff_check": handoff_assessment.governance_check,
             "specialist_handoff_decision": handoff_assessment.governance_decision,
+            "mission_runtime_state": mission_runtime_state,
             "deliberative_plan": refined_plan,
             "events": events,
         }
@@ -663,28 +674,20 @@ class LangGraphContinuityFlowRunner:
 
     def _seal_subflow(self, state: ContinuityFlowState) -> ContinuityFlowState:
         contract = state["contract"]
+        memory_recovery_result = state["memory_recovery_result"]
         continuity_replay = state.get("continuity_replay")
+        resolved_pause = state.get("resolved_pause")
         events = list(state["events"])
         events.append(
             self.orchestrator.make_event(
                 "continuity_subflow_completed",
                 contract,
-                {
-                    "runtime_mode": "langgraph_subflow",
-                    "subflow_name": "continuity_stateful",
-                    "checkpoint_id": (
-                        continuity_replay.checkpoint_id if continuity_replay else None
-                    ),
-                    "replay_status": (
-                        continuity_replay.replay_status if continuity_replay else None
-                    ),
-                    "recovery_mode": (
-                        continuity_replay.recovery_mode if continuity_replay else None
-                    ),
-                    "requires_manual_resume": (
-                        continuity_replay.requires_manual_resume if continuity_replay else False
-                    ),
-                },
+                self.orchestrator._build_continuity_subflow_payload(
+                    runtime_mode="langgraph_subflow",
+                    resolved_pause=resolved_pause,
+                    memory_recovery_result=memory_recovery_result,
+                    continuity_replay=continuity_replay,
+                ),
             )
         )
         return {"events": events}

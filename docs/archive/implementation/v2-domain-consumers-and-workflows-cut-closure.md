@@ -22,6 +22,8 @@ O corte fechou estas capacidades:
 - workflows compostos auditaveis com `workflow_state`, `workflow_governance_mode`, `workflow_decision_points`, `workflow_completed_steps` e `workflow_decisions`;
 - benchmark governado como artefato regeneravel por familia, em vez de pesquisa dispersa;
 - baseline `release-grade` verificavel para rotas ativas, contratos de consumo, workflows e benchmark governance.
+- cobertura deliberada do piloto para as seis rotas promovidas, seus `workflow_profiles` e sinais minimos de `memory_causality` e `cognitive_recomposition`.
+- cobertura deliberada adicional para `dominant_tension` e alinhamento `mente -> dominio -> especialista`, deixando esses sinais como readiness formal do baseline e nao apenas telemetria incidental.
 
 ---
 
@@ -42,6 +44,8 @@ Leitura correta da evidencia:
 
 - o baseline do corte deixou de ser interpretacao manual e passou a ter verificador executavel;
 - `benchmark_now` virou envelope formal de comparacao, nao permissao para absorcao direta;
+- a cobertura do piloto deixou de ser implicita e passou a fazer parte do baseline executavel do corte;
+- o baseline agora exige tambem evidencias deliberadas de tensao cognitiva e de coerencia `mente -> dominio -> especialista` nas rotas promovidas;
 - o proximo recorte deve nascer sobre esse baseline, e nao reimplementa-lo de forma local.
 
 ---
@@ -90,6 +94,8 @@ Racional:
 O corte deve ser considerado formalmente fechado quando:
 
 - `tools/verify_active_cut_baseline.py` retornar `baseline_release_ready`;
+- o fechamento regeneravel do corte mostrar cobertura deliberada de piloto sem lacunas nas rotas promovidas e nos `workflow_profiles` promovidos;
+- o fechamento regeneravel do corte tambem mostrar readiness de `dominant_tension` e alinhamento `mente -> dominio -> especialista` nos cenarios deliberados do piloto;
 - `tools/engineering_gate.py --mode release` exigir o baseline e o fechamento do corte;
 - `HANDOFF.md`, `README.md` e `docs/executive/master-summary.md` refletirem o mesmo estado real;
 - o backlog do proximo recorte estiver classificado sem reabrir consumidores, workflows e benchmark governance como fase em aberto.

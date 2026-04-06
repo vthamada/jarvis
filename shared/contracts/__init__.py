@@ -451,6 +451,31 @@ class MissionStateContract:
 
 
 @dataclass
+class MissionRuntimeStateContract:
+    mission_id: MissionId
+    mission_goal: str
+    mission_status: MissionStatus
+    continuity_action: str | None
+    continuity_source: str | None
+    updated_at: UpdatedAt
+    continuity_target_mission_id: MissionId | None = None
+    continuity_target_goal: str | None = None
+    continuity_recommendation: str | None = None
+    continuity_replay_status: str | None = None
+    continuity_recovery_mode: str | None = None
+    continuity_resume_point: str | None = None
+    requires_manual_resume: bool = False
+    primary_route: str | None = None
+    workflow_profile: str | None = None
+    active_tasks: list[str] = field(default_factory=list)
+    open_loops: list[str] = field(default_factory=list)
+    last_recommendation: str | None = None
+    related_mission_id: MissionId | None = None
+    related_mission_goal: str | None = None
+    runtime_mode: str | None = None
+
+
+@dataclass
 class ArtifactResultContract:
     artifact_id: ArtifactId
     artifact_type: str

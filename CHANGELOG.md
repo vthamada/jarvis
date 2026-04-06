@@ -1,6 +1,51 @@
 # CHANGELOG
 
+## 2026-04-06
+
+### Fechamento do lote pre-v3 hardening
+
+- `services/orchestrator-service/src/orchestrator_service/service.py` agora fecha explicitamente o lifecycle de especialistas com `specialist_subflow_completed` e declara `mission_runtime_state` para requests com missao ativa, related mission e readiness de retomada;
+- `services/orchestrator-service/src/orchestrator_service/langgraph_flow.py` passou a espelhar o mesmo contrato soberano de `specialist_subflow` e `mission_runtime_state`, reduzindo assimetria entre o caminho nativo e o caminho opcional de `LangGraph`;
+- `services/observability-service/src/observability_service/service.py`, `tools/internal_pilot_report.py`, `tools/compare_orchestrator_paths.py`, `tools/verify_active_cut_baseline.py` e `tools/archive/close_domain_consumers_and_workflows_cut.py` agora tratam `specialist_subflow` e `mission_runtime_state` como sinais agregados de readiness arquitetural pre-`v3`;
+- `shared/contracts/__init__.py` passou a expor `MissionRuntimeStateContract`, preparando continuidade longa e missao assincrona sem reabrir a ontologia do sistema;
+- `docs/implementation/execution-backlog.md`, `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para marcar `MB-024` a `MB-026` como concluidos e registrar o lote `pre-v3 hardening` como fechado.
+
+### Abertura do lote pre-v3 hardening e continuidade stateful nativa
+
+- `services/orchestrator-service/src/orchestrator_service/service.py` agora formaliza a fase de continuidade/HITL/replay como subfluxo nativo do caminho padrao, em vez de manter essa logica apenas inline no `handle_input`;
+- o runtime padrao passou a emitir `continuity_subflow_completed`, com `runtime_mode = native_pipeline`, `subflow_name = continuity_stateful`, replay, recomendacao de continuidade e dados de resolucao manual quando existirem;
+- `services/orchestrator-service/src/orchestrator_service/langgraph_flow.py` passou a reutilizar o mesmo payload soberano de fechamento da continuidade, reduzindo drift entre o caminho nativo e o caminho opcional de `LangGraph`;
+- `services/orchestrator-service/tests/test_orchestrator_service.py` e `services/orchestrator-service/tests/test_langgraph_flow.py` foram ampliados para cobrar esse fechamento explicito;
+- `docs/implementation/execution-backlog.md`, `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para abrir o lote `pre-v3 hardening`, marcar `MB-023` como concluido e registrar `MB-024` a `MB-026` como fila ativa seguinte.
+
 ## 2026-04-05
+
+### Fechamento da ultima pendencia de robustez do v2
+
+- `tools/verify_active_cut_baseline.py` agora exige, alem de memoria causal e recomposicao cognitiva, cobertura deliberada de `dominant_tension` e alinhamento `mente -> dominio -> especialista` como parte formal do `baseline_release_ready`;
+- `tools/internal_pilot_support.py` passou a declarar essas coberturas nos cenarios canonicos promovidos, transformando tensao cognitiva e coerencia `mind_domain_specialist` em sinais deliberados do piloto, e nao telemetria incidental;
+- `tools/archive/close_domain_consumers_and_workflows_cut.py`, `docs/archive/implementation/v2-domain-consumers-and-workflows-cut-closure.md` e `docs/executive/master-summary.md` agora refletem explicitamente essa nova readiness de robustez;
+- `docs/implementation/execution-backlog.md`, `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para registrar `MB-020` a `MB-022` como concluidos e fixar que o `v2` nao tem mais pendencia tecnica material de robustez dentro do baseline atual.
+
+### Cobertura deliberada do piloto promovida a fechamento e leitura executiva
+
+- `tools/archive/close_domain_consumers_and_workflows_cut.py` agora carrega cobertura do piloto, match por rota/workflow e readiness dos sinais deliberados de `memory_causality` e `cognitive_recomposition` como parte da evidencia regeneravel do corte;
+- `tests/unit/test_close_domain_consumers_and_workflows_cut.py` foi ampliado para cobrar essas novas evidencias no payload e no markdown;
+- `docs/archive/implementation/v2-domain-consumers-and-workflows-cut-closure.md` e `docs/executive/master-summary.md` agora refletem explicitamente que o baseline do corte combina contratos promovidos com cobertura deliberada do piloto;
+- `docs/implementation/execution-backlog.md`, `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para registrar `MB-017` a `MB-019` como concluidos e manter o backlog micro sem item `ready`.
+
+### Cobertura deliberada do baseline ativo por rota e workflow
+
+- `tools/verify_active_cut_baseline.py` passou a combinar os contratos promovidos do registry com um piloto focado em rotas promovidas, `workflow_profiles` promovidos e sinais deliberados de `memory_causality` e `cognitive_recomposition`;
+- `tools/internal_pilot_support.py` agora declara `expected_route`, `expected_workflow_profile` e `coverage_tags` nos cenarios canonicos do piloto, cobrindo explicitamente `analysis`, `decision_risk`, `governance`, `operational_readiness`, `software_development` e `strategy`;
+- o baseline ativo agora falha se perder cobertura deliberada das rotas promovidas, dos workflow profiles promovidos ou dos cenarios minimos de memoria causal e recomposicao cognitiva;
+- `docs/implementation/execution-backlog.md`, `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para registrar `MB-013` a `MB-016` como concluidos e manter o backlog micro novamente sem item `ready`.
+
+### Refinamento da arquitetura de protective intelligence
+
+- `docs/architecture/protective-intelligence-architecture.md` foi enriquecido com o que havia de util no rascunho externo de `SecurityOS`, sem absorver a ontologia paralela do documento-fonte;
+- a arquitetura agora inclui especialistas opcionais de maturacao (`detection_correlation_specialist`, `hunt_coordination_specialist` e `case_intelligence_specialist`), familias de ferramentas candidatas por categoria e uma matriz de governanca separando `monitorar`, `investigar`, `responder` e `executar acao critica`;
+- o eixo de seguranca continua formalizado como `protective intelligence` subordinado ao dominio canonico e ao nucleo soberano, e nao como novo subsistema soberano do JARVIS.
 
 ### Sinais de release e fechamento do lote micro MB-008 a MB-012
 

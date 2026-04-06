@@ -194,6 +194,12 @@ Especialistas sugeridos para o eixo:
 - `threat_intelligence_specialist`
 - `incident_response_specialist`
 
+Especialistas opcionais de fase posterior:
+
+- `detection_correlation_specialist`
+- `hunt_coordination_specialist`
+- `case_intelligence_specialist`
+
 Regras obrigatorias:
 
 - todos permanecem subordinados ao nucleo;
@@ -234,6 +240,37 @@ Regras obrigatorias:
 - apoio a continuidade;
 - recomendacoes de recuperacao e reducao de dano.
 
+### 5.2 Especialistas opcionais de maturacao
+
+Os especialistas abaixo sao uteis, mas devem entrar apenas quando o baseline
+do eixo ja tiver:
+
+- caso e ledger estaveis;
+- governanca madura;
+- observabilidade dedicada;
+- trilha auditavel coerente.
+
+#### `detection_correlation_specialist`
+
+- unifica sinais de multiplas fontes;
+- reduz ruido;
+- consolida hipoteses de incidente;
+- sugere clusters e relacoes entre eventos.
+
+#### `hunt_coordination_specialist`
+
+- organiza hunts orientados por hipotese;
+- aciona consultas e verificacoes defensivas no proprio perimetro;
+- prioriza sinais a partir de risco e caso;
+- devolve achados ao nucleo, sem acao soberana propria.
+
+#### `case_intelligence_specialist`
+
+- consolida narrativa tecnica e executiva do caso;
+- relaciona evidencias, achados, hipoteses e sinais de risco;
+- preserva legibilidade de dossies e continuidade investigativa;
+- ajuda a separar fato, hipotese e inferencia.
+
 ---
 
 ## 6. Tool layer permitida
@@ -250,6 +287,133 @@ Exemplos defensivos e aceitaveis:
 - ingestao de documentos, prints e anexos;
 - canarios e sensores no proprio ambiente;
 - verificadores de integridade e exposicao.
+
+### 6.1 Familias de ferramentas candidatas
+
+As familias abaixo sao candidatas de integracao. Elas devem entrar primeiro
+como:
+
+- referencia;
+- experimento controlado;
+- ou complemento subordinado.
+
+Nenhuma delas deve assumir papel de cerebro do sistema.
+
+#### Endpoint, DFIR e visibilidade de host
+
+Exemplos de categoria:
+
+- `Velociraptor`
+- `Wazuh`
+- `osquery`
+- `Fleet`
+
+Papel esperado:
+
+- coleta remota no proprio ambiente;
+- inventario e postura;
+- visibilidade de endpoint;
+- artefatos e hunts defensivos.
+
+#### Timeline e reconstrucao de eventos
+
+Exemplos de categoria:
+
+- `Plaso`
+- `Timesketch`
+- `OSDFIR Infrastructure`
+
+Papel esperado:
+
+- super timeline;
+- analise temporal;
+- reconstrucao de sequencia de eventos;
+- apoio a investigacao colaborativa.
+
+#### Rede, NSM e trafego
+
+Exemplos de categoria:
+
+- `Zeek`
+- `Suricata`
+- `Arkime`
+
+Papel esperado:
+
+- visibilidade de trafego;
+- correlacao de sessao;
+- triagem defensiva de rede;
+- apoio a investigações no proprio perimetro.
+
+#### CTI, IoCs e enriquecimento
+
+Exemplos de categoria:
+
+- `MISP`
+- `Cortex`
+- `TheHive`
+
+Papel esperado:
+
+- observables e enriquecimento;
+- casos e correlacao;
+- apoio a threat intelligence e a narrativa de incidente.
+
+#### OSINT publico e attack surface awareness
+
+Exemplos de categoria:
+
+- `Shodan`
+- `Maltego`
+- `SpiderFoot`
+- `theHarvester`
+
+Papel esperado:
+
+- descoberta de ativos publicos;
+- correlacao aberta;
+- exposicao externa;
+- apoio a OSINT dentro de limites publicos e defensivos.
+
+#### Hunting e triagem por padroes
+
+Exemplos de categoria:
+
+- `YARA`
+- `YARA-X`
+- `Sigma`
+
+Papel esperado:
+
+- matching de arquivos e indicadores;
+- regras de deteccao;
+- hunting defensivo baseado em padroes;
+- enriquecimento tecnico de achados.
+
+#### Orquestracao de resposta
+
+Exemplos de categoria:
+
+- `Shuffle`
+- `Cortex Responders`
+- integracoes controladas do proprio ambiente
+
+Papel esperado:
+
+- playbooks;
+- automacao controlada;
+- escalonamento;
+- resposta governada.
+
+### 6.2 Regra de integracao das tools
+
+Toda tool desse eixo deve ser tratada como:
+
+- capability subordinada;
+- invocada via especialistas ou servicos governados;
+- observavel;
+- reversivel quando aplicavel;
+- e nunca diretamente soberana diante do usuario.
 
 ---
 
@@ -417,6 +581,51 @@ Acoes sensiveis devem exigir gate humano explicito, por exemplo:
 - acao de contencao com impacto operacional maior;
 - compartilhamento externo de evidencias;
 - qualquer acao com implicacao juridica direta.
+
+### 10.4 Matriz de governanca por classe de acao
+
+#### Monitorar
+
+Permite por padrao, com observabilidade:
+
+- coletar sinais do proprio ambiente;
+- consolidar timeline;
+- ler fontes publicas;
+- registrar caso e evidencia.
+
+#### Investigar
+
+Permite com guardrails e escopo explicito:
+
+- correlacionar entidades;
+- enriquecer indicadores;
+- comparar artefatos;
+- produzir achados e hipoteses;
+- abrir ou atualizar dossie tecnico.
+
+#### Responder
+
+Permite apenas de forma condicionada:
+
+- sugerir contencao;
+- preparar playbooks;
+- escalonar caso;
+- recomendar bloqueios ou isolamento.
+
+Regra:
+
+- resposta automatica so entra com governanca mais rigida, politicas claras e
+  trilha auditavel.
+
+#### Executar acao critica
+
+Exige gate humano explicito e envelope de risco apropriado:
+
+- bloquear host ou identidade;
+- alterar configuracao sensivel;
+- compartilhar evidencia externamente;
+- executar resposta de alto impacto operacional;
+- produzir efeito irreversivel.
 
 ---
 
