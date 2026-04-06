@@ -69,6 +69,8 @@ Leitura operacional correta desta rodada:
 - o lote `pre-v3 hardening` foi concluido em `docs/implementation/execution-backlog.md`, com `MB-023` a `MB-026` fechados e sem item `ready` aberto na fila micro.
 - o `orchestrator-service` agora fecha o lifecycle de especialistas como subfluxo explicito (`specialist_subflow_completed`) e tambem declara `mission_runtime_state` para requests com missao ativa, related mission e readiness de retomada.
 - `observability-service`, `internal_pilot_report`, `compare_orchestrator_paths`, `verify_active_cut_baseline.py` e o fechamento regeneravel do corte agora tratam `specialist_subflow` e `mission_runtime_state` como sinais agregados de hardening arquitetural pre-`v3`.
+- a proxima frente macro foi escolhida e documentada como `pre-v3 protective intelligence foundation`, com guia proprio em `docs/implementation/pre-v3-protective-intelligence-foundation-cut.md`.
+- o novo lote micro dessa frente ja foi aberto em `docs/implementation/execution-backlog.md`: `MB-027` esta `ready`, `MB-028` a `MB-031` estao `blocked` por dependencia, e nenhuma implementacao desse eixo foi iniciada nesta rodada.
 - `CHANGELOG.md` foi restaurado como changelog cronologico e o `engineering_gate` agora protege a identidade minima de `CHANGELOG.md`, `HANDOFF.md`, `documento_mestre_jarvis.md`, `docs/roadmap/programa-ate-v3.md` e `docs/implementation/v2-adherence-snapshot.md` antes da liberacao.
 
 ## Meta atual
@@ -83,7 +85,8 @@ Consolidar o fechamento operacional do `v2` sobre um runtime já alinhado aos ei
 - depois disso: separar com mais precisao o que ja e baseline saudavel e o que ainda e `maturation_recommended` por `workflow_profile`;
 - depois disso: endurecer a cadeia `mente -> dominio -> especialista` com sinais cada vez menos implicitos e mais auditaveis;
 - depois disso: usar o hardening pre-`v3` fechado como baseline para decidir a proxima frente macro, sem reabrir localmente continuidade, lifecycle de especialistas ou mission runtime state;
-- so entao: decidir a fronteira entre hardening arquitetural suficiente e abertura da proxima frente macro do `v3`.
+- depois disso: abrir a fundacao de `protective intelligence` por contratos, ledger de evidencia, casos, sinais de risco e guardrails minimos;
+- so entao: decidir se o `v3` deve abrir por essa frente, por outra vertical derivada ou por mais maturacao transversal.
 
 Regra operacional desta fase:
 
@@ -242,6 +245,7 @@ Pendências principais desta fase:
 
 - manter os docs vivos refletindo o baseline soberano já absorvido no `v2`;
 - tratar o lote `pre-v3 hardening` em `docs/implementation/execution-backlog.md` como concluido, sem reabrir `MB-024` a `MB-026` como fila pendente;
+- manter `docs/implementation/pre-v3-protective-intelligence-foundation-cut.md` como documento macro ativo da proxima frente, sem antecipar implementacao fora da fila micro;
 - refinar critérios de saída por `workflow_profile` sem abrir nova heurística fora dos registries;
 - aprofundar o uso de `semantic` e `procedural` como maturação de runtime, não como reabertura de arquitetura;
 - continuar tornando a relação `mente -> domínio -> especialista` mais explícita em consumidores posteriores quando isso trouxer ganho real.
@@ -262,7 +266,13 @@ Ordem recomendada:
 3. tratar `MB-023` a `MB-026` do lote `pre-v3 hardening` como baseline ja fechado, nao como backlog aberto;
 4. depois disso, focar em critérios mais específicos por `workflow_profile` e em uso ainda mais maduro de `semantic`/`procedural`;
 5. manter histórico regenerável em `docs/archive/implementation/` e `tools/archive/` sem reexpandir a raiz do repositório;
-6. só abrir uma nova frente funcional quando o hardening pré-`v3` estiver suficiente e a priorização macro sair explicitamente do fechamento do `v2`.
+6. só abrir outra frente funcional se esta prioridade macro mudar explicitamente.
+
+Atualização desta rodada:
+
+- a frente macro escolhida para a próxima implementação é `pre-v3 protective intelligence foundation`;
+- o documento macro ativo passa a ser `docs/implementation/pre-v3-protective-intelligence-foundation-cut.md`;
+- a fila micro correspondente já foi aberta com `MB-027` a `MB-031`, mas nenhum item dessa frente foi implementado ainda.
 
 ## Riscos e bloqueios
 

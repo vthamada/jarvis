@@ -536,6 +536,86 @@ Escalar ao operador quando:
 - `depende_do_operador`: `nao`
 - `impacto_no_baseline`: comparadores, baseline ativo, fechamento regeneravel e leitura executiva agora tratam `specialist_subflow` e `mission_runtime_state` como sinais agregados de hardening arquitetural pre-`v3`, e nao apenas telemetria localizada.
 
+### MB-027
+
+- `id`: `MB-027`
+- `prioridade`: `P0`
+- `status`: `ready`
+- `eixo_do_mestre`: `governanca`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: introduzir os contratos canonicos minimos de `protective intelligence` para caso, evidencia, cadeia de custodia, achado, hipotese e sinal de risco.
+- `justificativa_arquitetural`: a proxima frente funcional do sistema precisa nascer por interfaces estaveis e auditaveis, sem improvisar ontologia local no momento de abrir servicos novos.
+- `arquivos/servicos_principais`: `shared/contracts/__init__.py`, `docs/implementation/pre-v3-protective-intelligence-foundation-cut.md`, `docs/architecture/protective-intelligence-architecture.md`
+- `dependencias`: nenhuma
+- `criterio_de_aceite`: o repositorio passa a expor contratos compartilhados claros para `case_record`, `evidence_item`, `evidence_chain_entry`, `finding`, `hypothesis` e `risk_signal`, todos subordinados ao nucleo e sem semantica ofensiva.
+- `gate_minimo`: `pytest` direcionado de contratos, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `impacto_no_baseline`: pendente
+
+### MB-028
+
+- `id`: `MB-028`
+- `prioridade`: `P0`
+- `status`: `blocked`
+- `eixo_do_mestre`: `memorias`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: criar o `evidence-ledger-service` minimo para registrar artefatos com hash, proveniencia e cadeia de custodia.
+- `justificativa_arquitetural`: evidencia nao deve ser tratada como memoria mutavel comum, e a nova frente perde rigor imediatamente se o ledger nascer depois das features analiticas.
+- `arquivos/servicos_principais`: `services/evidence-ledger-service`, `shared/contracts/__init__.py`, `services/observability-service`
+- `dependencias`: `MB-027`
+- `criterio_de_aceite`: o sistema consegue registrar evidencias com integridade minima, trilha de custodia e leitura auditavel, ainda sem abrir automacao ofensiva nem toolchain ampla.
+- `gate_minimo`: `pytest` direcionado do novo servico, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `impacto_no_baseline`: pendente
+
+### MB-029
+
+- `id`: `MB-029`
+- `prioridade`: `P1`
+- `status`: `blocked`
+- `eixo_do_mestre`: `governanca`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: criar o `case-service` minimo com timeline, entidades e vinculo entre caso, evidencia, hipoteses e achados.
+- `justificativa_arquitetural`: sem caso formal, o eixo de `protective intelligence` vira colecao de artefatos soltos e perde capacidade de continuidade investigativa.
+- `arquivos/servicos_principais`: `services/case-service`, `shared/contracts/__init__.py`, `services/orchestrator-service`
+- `dependencias`: `MB-027`, `MB-028`
+- `criterio_de_aceite`: o sistema consegue abrir um caso, anexar evidencias registradas, manter timeline basica e associar entidades/achados sem sair do nucleo.
+- `gate_minimo`: `pytest` direcionado do novo servico, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `impacto_no_baseline`: pendente
+
+### MB-030
+
+- `id`: `MB-030`
+- `prioridade`: `P1`
+- `status`: `blocked`
+- `eixo_do_mestre`: `observabilidade`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: criar o `risk-signal-service` minimo para consolidar sinais, prioridade e proxima acao defensiva recomendada por caso.
+- `justificativa_arquitetural`: o eixo so ganha valor operacional quando os artefatos investigativos conseguem se transformar em leitura de risco e recomendacao auditavel.
+- `arquivos/servicos_principais`: `services/risk-signal-service`, `services/case-service`, `services/observability-service`
+- `dependencias`: `MB-029`
+- `criterio_de_aceite`: o sistema consolida sinais de risco por caso, preserva proveniencia e publica recomendacoes defensivas sem automatizar resposta critica.
+- `gate_minimo`: `pytest` direcionado do novo servico, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `impacto_no_baseline`: pendente
+
+### MB-031
+
+- `id`: `MB-031`
+- `prioridade`: `P1`
+- `status`: `blocked`
+- `eixo_do_mestre`: `docs/gates`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: introduzir governanca, observabilidade e gate minimo para a fundacao de `protective intelligence`, fechando o primeiro lote do eixo sem reabrir o baseline do `v2`.
+- `justificativa_arquitetural`: uma frente nova nao deve nascer sem guardrails explicitos, senao a capacidade entra no sistema antes da disciplina operacional correspondente.
+- `arquivos/servicos_principais`: `services/governance-service`, `services/observability-service`, `tools/engineering_gate.py`, `HANDOFF.md`, `docs/implementation/v2-adherence-snapshot.md`
+- `dependencias`: `MB-028`, `MB-029`, `MB-030`
+- `criterio_de_aceite`: o eixo ganha sinais minimos de observabilidade, politicas de governanca coerentes e gate suficiente para ser tratado como frente funcional real, ainda defensiva e `advisory_only`.
+- `gate_minimo`: `pytest` direcionado, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `impacto_no_baseline`: pendente
+
 ---
 
 ## 5. Regras de manutencao da fila
@@ -548,7 +628,8 @@ Escalar ao operador quando:
 
 Estado atual da fila:
 
-- o lote `pre-v3 hardening` foi concluido;
-- `MB-023` a `MB-026` foram executados sem reabrir a robustez ja fechada do `v2`;
-- nao ha item `ready`, `in_progress` ou `blocked` na fila micro neste momento;
-- o baseline atual continua sem pendencia tecnica material de robustez do `v2`, e o proximo passo agora depende de decisao sobre a fronteira arquitetural do `v3`.
+- o lote `pre-v3 hardening` foi concluido e preservado como baseline fechado;
+- a proxima frente macro escolhida e `pre-v3 protective intelligence foundation`;
+- `MB-027` e o primeiro item `ready` do novo lote;
+- `MB-028` a `MB-031` estao `blocked` apenas por dependencia da ordem de implementacao, nao por decisao aberta do operador;
+- esta rodada abriu a frente e a fila, mas nao iniciou implementacao do runtime.

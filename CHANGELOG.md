@@ -2,6 +2,12 @@
 
 ## 2026-04-06
 
+### Mapeamento da próxima frente macro sem iniciar implementação
+
+- criado `docs/implementation/pre-v3-protective-intelligence-foundation-cut.md` para abrir formalmente a próxima frente macro do sistema, com escopo defensivo e ordem de implementação explícita;
+- `docs/implementation/execution-backlog.md` agora carrega `MB-027` a `MB-031` como fila do novo lote, deixando `MB-027` em `ready` e os demais itens `blocked` apenas por dependência da ordem;
+- `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para tratar `pre-v3 protective intelligence foundation` como próxima frente ativa mapeada, ainda não iniciada no runtime.
+
 ### Fechamento do lote pre-v3 hardening
 
 - `services/orchestrator-service/src/orchestrator_service/service.py` agora fecha explicitamente o lifecycle de especialistas com `specialist_subflow_completed` e declara `mission_runtime_state` para requests com missao ativa, related mission e readiness de retomada;

@@ -31,7 +31,7 @@ Estado de referencia desta revisao:
 - data da fotografia: `2026-04-06`
 - ultimo recorte funcional fechado: `v2-native-memory-scope-hardening-cut`
 - ultimo recorte estrutural fechado: `v2-repository-hygiene-and-tools-review-cut`
-- passo funcional em andamento: `decisao-da-fronteira-pre-v3`
+- passo funcional em andamento: `pre-v3-protective-intelligence-foundation` (mapeado, nao iniciado)
 
 Leitura executiva:
 
@@ -67,6 +67,8 @@ Leitura executiva:
 - o caminho padrao do `orchestrator-service` agora tambem fecha a continuidade como subfluxo explicito via `continuity_subflow_completed`, alinhado ao mesmo payload soberano usado pelo caminho opcional de `LangGraph`.
 - o lote `pre-v3 hardening` foi concluido no `execution-backlog`; `MB-023` a `MB-026` fecharam continuidade stateful nativa, specialist subflow explicito, `mission_runtime_state` e leitura agregada desses sinais no baseline.
 - `observability-service`, `internal_pilot_report`, `compare_orchestrator_paths`, `verify_active_cut_baseline.py` e o fechamento regeneravel do corte agora tratam `specialist_subflow` e `mission_runtime_state` como readiness arquitetural pre-`v3`, e nao apenas telemetria localizada.
+- a proxima frente macro foi escolhida e documentada como `pre-v3 protective intelligence foundation`, com escopo inicial restrito a contratos, ledger de evidencia, casos, sinais de risco e guardrails minimos.
+- o novo lote micro dessa frente ja foi aberto no `execution-backlog`, mas nenhuma implementacao do eixo foi iniciada nesta rodada.
 - memoria, identidade, governanca, observabilidade e soberania do nucleo evoluiram de forma consistente;
 - benchmark externo, memory gap e hardening nativo foram tratados corretamente como etapas subordinadas ao baseline,
   nao como desvio de direcao.
@@ -76,7 +78,7 @@ Em resumo:
 
 - a visao esta preservada;
 - o runtime esta coerente com a fase do programa;
-- o backlog correto agora e de decisao da fronteira pre-`v3` e de maturacao incremental, nao de correcao estrutural do `v2`.
+- o backlog correto agora e de fundacao controlada da proxima frente macro e de maturacao incremental, nao de correcao estrutural do `v2`.
 
 ---
 
