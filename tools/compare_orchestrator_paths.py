@@ -70,12 +70,36 @@ def workflow_profile_assessment(result: PilotExecutionResult) -> str:
     return "attention_required"
 
 
+def metacognitive_guidance_assessment(result: PilotExecutionResult) -> str:
+    return result.metacognitive_guidance_status
+
+
+def mind_disagreement_assessment(result: PilotExecutionResult) -> str:
+    return result.mind_disagreement_status
+
+
+def mind_validation_checkpoint_assessment(result: PilotExecutionResult) -> str:
+    return result.mind_validation_checkpoint_status
+
+
 def memory_causality_assessment(result: PilotExecutionResult) -> str:
     return result.memory_causality_status
 
 
+def memory_lifecycle_assessment(result: PilotExecutionResult) -> str:
+    return result.memory_lifecycle_status
+
+
+def memory_corpus_assessment(result: PilotExecutionResult) -> str:
+    return result.memory_corpus_status
+
+
 def mind_domain_specialist_assessment(result: PilotExecutionResult) -> str:
     return result.mind_domain_specialist_status
+
+
+def mind_domain_specialist_chain_assessment(result: PilotExecutionResult) -> str:
+    return result.mind_domain_specialist_chain_status
 
 
 def specialist_subflow_assessment(result: PilotExecutionResult) -> str:
@@ -102,6 +126,159 @@ def cognitive_recomposition_assessment(result: PilotExecutionResult) -> str:
     return "attention_required"
 
 
+def workflow_key(result: PilotExecutionResult) -> str:
+    return result.expected_workflow_profile or result.workflow_domain_route or "baseline_runtime"
+
+
+def refinement_vectors(result: PilotExecutionResult) -> list[dict[str, str]]:
+    workflow_profile = workflow_key(result)
+    vectors: list[dict[str, str]] = []
+
+    def add_vector(axis: str, priority: str, recommendation: str) -> None:
+        vectors.append(
+            {
+                "workflow_profile": workflow_profile,
+                "axis": axis,
+                "priority": priority,
+                "recommendation": recommendation,
+            }
+        )
+
+    if result.metacognitive_guidance_status in {"incomplete", "attention_required"}:
+        add_vector(
+            "metacognitive_guidance",
+            "p0",
+            "endurecer a ancora metacognitiva ate ela alterar criterio de saida de forma coerente",
+        )
+    if result.mind_disagreement_status in {
+        "validation_required",
+        "deep_review_required",
+        "attention_required",
+    } or result.mind_validation_checkpoint_status == "attention_required":
+        add_vector(
+            "mind_composition",
+            "p0",
+            "transformar a discordancia entre mentes em checkpoint governado do workflow ativo",
+        )
+    if result.memory_causality_status in {"attached_only", "attention_required"}:
+        add_vector(
+            "memory_causality",
+            "p0",
+            (
+                "fazer semantic e procedural alterarem framing, continuidade "
+                "e proxima acao de forma causal"
+            ),
+        )
+    if result.mind_domain_specialist_chain_status in {
+        "incomplete",
+        "attention_required",
+        "mismatch",
+    }:
+        add_vector(
+            "mind_domain_specialist_chain",
+            "p0",
+            (
+                "restaurar coerencia evidence-first entre mente primaria, "
+                "dominio e especialista guiado"
+            ),
+        )
+    if result.workflow_profile_status in {"maturation_recommended", "attention_required"}:
+        add_vector(
+            "workflow_profile",
+            "p1",
+            "alinhar o contrato do workflow ativo com passos, checkpoints e criterio de resposta",
+        )
+    if result.memory_lifecycle_status in {"review_recommended", "attention_required"}:
+        add_vector(
+            "memory_lifecycle",
+            "p1",
+            "reduzir revisao pendente e estabilizar retencao/promocao no corpus guiado",
+        )
+    if result.memory_corpus_status in {"monitor", "review_recommended"}:
+        add_vector(
+            "memory_corpus",
+            "p1",
+            "revisar pressao de retencao por classe antes de ampliar memoria guiada",
+        )
+    return vectors
+
+
+def _priority_rank(priority: str) -> int:
+    return {"p0": 0, "p1": 1, "p2": 2}.get(priority, 9)
+
+
+def aggregate_refinement_vectors(
+    results: list[PilotExecutionResult],
+) -> list[dict[str, str]]:
+    grouped: dict[tuple[str, str], dict[str, str]] = {}
+    for result in results:
+        for vector in refinement_vectors(result):
+            key = (vector["workflow_profile"], vector["axis"])
+            current = grouped.get(key)
+            if current is None or _priority_rank(vector["priority"]) < _priority_rank(
+                current["priority"]
+            ):
+                grouped[key] = vector
+    return sorted(
+        grouped.values(),
+        key=lambda item: (
+            _priority_rank(item["priority"]),
+            item["workflow_profile"],
+            item["axis"],
+        ),
+    )
+
+
+def vector_axes(vectors: list[dict[str, str]]) -> str:
+    axes = ",".join(vector["axis"] for vector in vectors)
+    return axes or "none"
+
+
+def matrix_workflows(matrix: dict[str, dict[str, object]]) -> str:
+    workflows = ",".join(matrix.keys())
+    return workflows or "none"
+
+
+def evaluation_matrix(
+    results: list[PilotExecutionResult],
+) -> dict[str, dict[str, object]]:
+    workflows = sorted({workflow_key(result) for result in results})
+    matrix: dict[str, dict[str, object]] = {}
+    for workflow in workflows:
+        workflow_results = [result for result in results if workflow_key(result) == workflow]
+        matrix[workflow] = {
+            "workflow_profile": summarize_workflow_profile_assessments(
+                [workflow_profile_assessment(result) for result in workflow_results]
+            ),
+            "metacognitive_guidance": summarize_statuses(
+                [metacognitive_guidance_assessment(result) for result in workflow_results]
+            ),
+            "mind_disagreement": summarize_statuses(
+                [mind_disagreement_assessment(result) for result in workflow_results]
+            ),
+            "mind_validation_checkpoint": summarize_statuses(
+                [
+                    mind_validation_checkpoint_assessment(result)
+                    for result in workflow_results
+                ]
+            ),
+            "memory_causality": summarize_statuses(
+                [memory_causality_assessment(result) for result in workflow_results]
+            ),
+            "memory_lifecycle": summarize_statuses(
+                [memory_lifecycle_assessment(result) for result in workflow_results]
+            ),
+            "memory_corpus": summarize_statuses(
+                [memory_corpus_assessment(result) for result in workflow_results]
+            ),
+            "mind_domain_specialist_chain": summarize_statuses(
+                [mind_domain_specialist_chain_assessment(result) for result in workflow_results]
+            ),
+            "priority_vectors": aggregate_refinement_vectors(workflow_results),
+        }
+    return matrix
+
+
 def summarize_comparisons(
     comparisons: list[PathComparisonResult],
     *,
@@ -122,16 +299,36 @@ def summarize_comparisons(
             "baseline_workflow_maturation_rate": 0.0,
             "candidate_workflow_baseline_rate": 0.0,
             "candidate_workflow_maturation_rate": 0.0,
+            "baseline_metacognitive_guidance_decision": "not_applicable",
+            "candidate_metacognitive_guidance_decision": "not_applicable",
+            "baseline_metacognitive_guidance_healthy_rate": 0.0,
+            "candidate_metacognitive_guidance_healthy_rate": 0.0,
+            "baseline_mind_disagreement_decision": "not_applicable",
+            "candidate_mind_disagreement_decision": "not_applicable",
+            "baseline_mind_validation_checkpoint_decision": "not_applicable",
+            "candidate_mind_validation_checkpoint_decision": "not_applicable",
             "baseline_memory_causality_decision": "not_applicable",
             "candidate_memory_causality_decision": "not_applicable",
             "baseline_memory_causal_rate": 0.0,
             "candidate_memory_causal_rate": 0.0,
             "baseline_memory_attached_only_rate": 0.0,
             "candidate_memory_attached_only_rate": 0.0,
+            "baseline_memory_lifecycle_decision": "not_applicable",
+            "candidate_memory_lifecycle_decision": "not_applicable",
+            "baseline_memory_lifecycle_retained_rate": 0.0,
+            "candidate_memory_lifecycle_retained_rate": 0.0,
+            "baseline_memory_lifecycle_review_rate": 0.0,
+            "candidate_memory_lifecycle_review_rate": 0.0,
+            "baseline_memory_corpus_decision": "not_applicable",
+            "candidate_memory_corpus_decision": "not_applicable",
             "baseline_mind_domain_specialist_decision": "not_applicable",
             "candidate_mind_domain_specialist_decision": "not_applicable",
             "baseline_mind_domain_specialist_alignment_rate": 0.0,
             "candidate_mind_domain_specialist_alignment_rate": 0.0,
+            "baseline_mind_domain_specialist_chain_decision": "not_applicable",
+            "candidate_mind_domain_specialist_chain_decision": "not_applicable",
+            "baseline_mind_domain_specialist_chain_alignment_rate": 0.0,
+            "candidate_mind_domain_specialist_chain_alignment_rate": 0.0,
             "baseline_specialist_subflow_decision": "not_applicable",
             "candidate_specialist_subflow_decision": "not_applicable",
             "baseline_specialist_subflow_healthy_rate": 0.0,
@@ -145,6 +342,10 @@ def summarize_comparisons(
             "candidate_cognitive_recomposition_decision": "not_applicable",
             "baseline_cognitive_recomposition_coherent_rate": 0.0,
             "candidate_cognitive_recomposition_coherent_rate": 0.0,
+            "baseline_refinement_vectors": [],
+            "candidate_refinement_vectors": [],
+            "baseline_evaluation_matrix": {},
+            "candidate_evaluation_matrix": {},
             "decision": "no_scenarios",
         }
     matched = sum(1 for item in comparisons if item.core_match)
@@ -195,17 +396,53 @@ def summarize_comparisons(
     candidate_workflow_assessments = [
         workflow_profile_assessment(item) for item in available_candidates
     ]
+    baseline_metacognitive_guidance = [
+        metacognitive_guidance_assessment(item.baseline) for item in comparisons
+    ]
+    candidate_metacognitive_guidance = [
+        metacognitive_guidance_assessment(item) for item in available_candidates
+    ]
+    baseline_mind_disagreement = [
+        mind_disagreement_assessment(item.baseline) for item in comparisons
+    ]
+    candidate_mind_disagreement = [
+        mind_disagreement_assessment(item) for item in available_candidates
+    ]
+    baseline_mind_validation_checkpoint = [
+        mind_validation_checkpoint_assessment(item.baseline) for item in comparisons
+    ]
+    candidate_mind_validation_checkpoint = [
+        mind_validation_checkpoint_assessment(item) for item in available_candidates
+    ]
     baseline_memory_causality = [
         memory_causality_assessment(item.baseline) for item in comparisons
     ]
     candidate_memory_causality = [
         memory_causality_assessment(item) for item in available_candidates
     ]
+    baseline_memory_lifecycle = [
+        memory_lifecycle_assessment(item.baseline) for item in comparisons
+    ]
+    candidate_memory_lifecycle = [
+        memory_lifecycle_assessment(item) for item in available_candidates
+    ]
+    baseline_memory_corpus = [
+        memory_corpus_assessment(item.baseline) for item in comparisons
+    ]
+    candidate_memory_corpus = [
+        memory_corpus_assessment(item) for item in available_candidates
+    ]
     baseline_mind_domain_specialist = [
         mind_domain_specialist_assessment(item.baseline) for item in comparisons
     ]
     candidate_mind_domain_specialist = [
         mind_domain_specialist_assessment(item) for item in available_candidates
+    ]
+    baseline_mind_domain_specialist_chain = [
+        mind_domain_specialist_chain_assessment(item.baseline) for item in comparisons
+    ]
+    candidate_mind_domain_specialist_chain = [
+        mind_domain_specialist_chain_assessment(item) for item in available_candidates
     ]
     baseline_specialist_subflow = [
         specialist_subflow_assessment(item.baseline) for item in comparisons
@@ -282,6 +519,32 @@ def summarize_comparisons(
             candidate_workflow_assessments,
             "maturation_recommended",
         ),
+        "baseline_metacognitive_guidance_decision": summarize_statuses(
+            baseline_metacognitive_guidance
+        ),
+        "candidate_metacognitive_guidance_decision": summarize_statuses(
+            candidate_metacognitive_guidance
+        ),
+        "baseline_metacognitive_guidance_healthy_rate": status_rate(
+            baseline_metacognitive_guidance,
+            "healthy",
+        ),
+        "candidate_metacognitive_guidance_healthy_rate": status_rate(
+            candidate_metacognitive_guidance,
+            "healthy",
+        ),
+        "baseline_mind_disagreement_decision": summarize_statuses(
+            baseline_mind_disagreement
+        ),
+        "candidate_mind_disagreement_decision": summarize_statuses(
+            candidate_mind_disagreement
+        ),
+        "baseline_mind_validation_checkpoint_decision": summarize_statuses(
+            baseline_mind_validation_checkpoint
+        ),
+        "candidate_mind_validation_checkpoint_decision": summarize_statuses(
+            candidate_mind_validation_checkpoint
+        ),
         "baseline_memory_causality_decision": summarize_statuses(
             baseline_memory_causality
         ),
@@ -304,6 +567,34 @@ def summarize_comparisons(
             candidate_memory_causality,
             "attached_only",
         ),
+        "baseline_memory_lifecycle_decision": summarize_statuses(
+            baseline_memory_lifecycle
+        ),
+        "candidate_memory_lifecycle_decision": summarize_statuses(
+            candidate_memory_lifecycle
+        ),
+        "baseline_memory_lifecycle_retained_rate": status_rate(
+            baseline_memory_lifecycle,
+            "retained",
+        ),
+        "candidate_memory_lifecycle_retained_rate": status_rate(
+            candidate_memory_lifecycle,
+            "retained",
+        ),
+        "baseline_memory_lifecycle_review_rate": status_rate(
+            baseline_memory_lifecycle,
+            "review_recommended",
+        ),
+        "candidate_memory_lifecycle_review_rate": status_rate(
+            candidate_memory_lifecycle,
+            "review_recommended",
+        ),
+        "baseline_memory_corpus_decision": summarize_statuses(
+            baseline_memory_corpus
+        ),
+        "candidate_memory_corpus_decision": summarize_statuses(
+            candidate_memory_corpus
+        ),
         "baseline_mind_domain_specialist_decision": summarize_statuses(
             baseline_mind_domain_specialist
         ),
@@ -316,6 +607,20 @@ def summarize_comparisons(
         ),
         "candidate_mind_domain_specialist_alignment_rate": status_rate(
             candidate_mind_domain_specialist,
+            "aligned",
+        ),
+        "baseline_mind_domain_specialist_chain_decision": summarize_statuses(
+            baseline_mind_domain_specialist_chain
+        ),
+        "candidate_mind_domain_specialist_chain_decision": summarize_statuses(
+            candidate_mind_domain_specialist_chain
+        ),
+        "baseline_mind_domain_specialist_chain_alignment_rate": status_rate(
+            baseline_mind_domain_specialist_chain,
+            "aligned",
+        ),
+        "candidate_mind_domain_specialist_chain_alignment_rate": status_rate(
+            candidate_mind_domain_specialist_chain,
             "aligned",
         ),
         "baseline_specialist_subflow_decision": summarize_statuses(
@@ -361,6 +666,16 @@ def summarize_comparisons(
             candidate_cognitive_recomposition,
             "coherent",
         ),
+        "baseline_refinement_vectors": aggregate_refinement_vectors(
+            [item.baseline for item in comparisons]
+        ),
+        "candidate_refinement_vectors": aggregate_refinement_vectors(
+            available_candidates
+        ),
+        "baseline_evaluation_matrix": evaluation_matrix(
+            [item.baseline for item in comparisons]
+        ),
+        "candidate_evaluation_matrix": evaluation_matrix(available_candidates),
         "decision": decision,
     }
 
@@ -394,8 +709,24 @@ def summarize_statuses(statuses: list[str]) -> str:
         return "not_applicable"
     if any(item == "attention_required" for item in statuses):
         return "attention_required"
+    if any(item == "deep_review_required" for item in statuses):
+        return "deep_review_required"
+    if any(item == "validation_required" for item in statuses):
+        return "validation_required"
+    if any(item == "review_recommended" for item in statuses):
+        return "review_recommended"
+    if any(item == "monitor" for item in statuses):
+        return "monitor"
     if any(item == "contained" for item in statuses):
         return "contained"
+    if any(item == "stable" for item in statuses):
+        return "stable"
+    if any(item == "retained" for item in statuses):
+        return "retained"
+    if any(item == "promoted" for item in statuses):
+        return "promoted"
+    if any(item == "emerging" for item in statuses):
+        return "emerging"
     if any(item == "healthy" for item in statuses):
         return "healthy"
     if any(item == "mismatch" for item in statuses):
@@ -472,8 +803,32 @@ def compare_results(
                 mismatch_fields.append("workflow_trace_status")
             if baseline.workflow_profile_status != candidate.workflow_profile_status:
                 mismatch_fields.append("workflow_profile_status")
+            if (
+                baseline.metacognitive_guidance_status
+                != candidate.metacognitive_guidance_status
+            ):
+                mismatch_fields.append("metacognitive_guidance_status")
+            if baseline.mind_disagreement_status != candidate.mind_disagreement_status:
+                mismatch_fields.append("mind_disagreement_status")
+            if (
+                baseline.mind_validation_checkpoint_status
+                != candidate.mind_validation_checkpoint_status
+            ):
+                mismatch_fields.append("mind_validation_checkpoint_status")
             if baseline.memory_causality_status != candidate.memory_causality_status:
                 mismatch_fields.append("memory_causality_status")
+            if baseline.memory_lifecycle_status != candidate.memory_lifecycle_status:
+                mismatch_fields.append("memory_lifecycle_status")
+            if baseline.memory_review_status != candidate.memory_review_status:
+                mismatch_fields.append("memory_review_status")
+            if baseline.memory_corpus_status != candidate.memory_corpus_status:
+                mismatch_fields.append("memory_corpus_status")
+            if baseline.memory_retention_pressure != candidate.memory_retention_pressure:
+                mismatch_fields.append("memory_retention_pressure")
+            if baseline.primary_mind != candidate.primary_mind:
+                mismatch_fields.append("primary_mind")
+            if baseline.primary_route != candidate.primary_route:
+                mismatch_fields.append("primary_route")
             if baseline.dominant_tension != candidate.dominant_tension:
                 mismatch_fields.append("dominant_tension")
             if baseline.arbitration_source != candidate.arbitration_source:
@@ -485,6 +840,16 @@ def compare_results(
                 != candidate.mind_domain_specialist_status
             ):
                 mismatch_fields.append("mind_domain_specialist_status")
+            if (
+                baseline.mind_domain_specialist_chain_status
+                != candidate.mind_domain_specialist_chain_status
+            ):
+                mismatch_fields.append("mind_domain_specialist_chain_status")
+            if (
+                baseline.mind_domain_specialist_chain
+                != candidate.mind_domain_specialist_chain
+            ):
+                mismatch_fields.append("mind_domain_specialist_chain")
             if baseline.specialist_subflow_status != candidate.specialist_subflow_status:
                 mismatch_fields.append("specialist_subflow_status")
             if (
@@ -507,10 +872,28 @@ def compare_results(
                 != candidate.cognitive_recomposition_trigger
             ):
                 mismatch_fields.append("cognitive_recomposition_trigger")
+            if baseline.semantic_memory_source != candidate.semantic_memory_source:
+                mismatch_fields.append("semantic_memory_source")
+            if baseline.procedural_memory_source != candidate.procedural_memory_source:
+                mismatch_fields.append("procedural_memory_source")
             if baseline.semantic_memory_focus != candidate.semantic_memory_focus:
                 mismatch_fields.append("semantic_memory_focus")
             if baseline.procedural_memory_hint != candidate.procedural_memory_hint:
                 mismatch_fields.append("procedural_memory_hint")
+            if baseline.semantic_memory_effects != candidate.semantic_memory_effects:
+                mismatch_fields.append("semantic_memory_effects")
+            if baseline.procedural_memory_effects != candidate.procedural_memory_effects:
+                mismatch_fields.append("procedural_memory_effects")
+            if (
+                baseline.semantic_memory_lifecycle
+                != candidate.semantic_memory_lifecycle
+            ):
+                mismatch_fields.append("semantic_memory_lifecycle")
+            if (
+                baseline.procedural_memory_lifecycle
+                != candidate.procedural_memory_lifecycle
+            ):
+                mismatch_fields.append("procedural_memory_lifecycle")
             if (
                 baseline.semantic_memory_specialists
                 != candidate.semantic_memory_specialists
@@ -608,8 +991,52 @@ def render_text(payload: dict[str, object]) -> str:
                         f"{item['baseline_workflow_profile_assessment']}"
                     ),
                     (
+                        "baseline_metacognitive_guidance_status="
+                        f"{item['baseline']['metacognitive_guidance_status']}"
+                    ),
+                    (
+                        "baseline_mind_disagreement_status="
+                        f"{item['baseline']['mind_disagreement_status']}"
+                    ),
+                    (
+                        "baseline_mind_disagreement_assessment="
+                        f"{item['baseline_mind_disagreement_assessment']}"
+                    ),
+                    (
+                        "baseline_mind_validation_checkpoint_status="
+                        f"{item['baseline']['mind_validation_checkpoint_status']}"
+                    ),
+                    (
+                        "baseline_mind_validation_checkpoint_assessment="
+                        f"{item['baseline_mind_validation_checkpoint_assessment']}"
+                    ),
+                    (
                         "baseline_memory_causality_status="
                         f"{item['baseline']['memory_causality_status']}"
+                    ),
+                    (
+                        "baseline_memory_lifecycle_status="
+                        f"{item['baseline']['memory_lifecycle_status']}"
+                    ),
+                    (
+                        "baseline_memory_corpus_status="
+                        f"{item['baseline']['memory_corpus_status']}"
+                    ),
+                    (
+                        "baseline_memory_corpus_assessment="
+                        f"{item['baseline_memory_corpus_assessment']}"
+                    ),
+                    (
+                        "baseline_memory_retention_pressure="
+                        f"{item['baseline']['memory_retention_pressure'] or 'none'}"
+                    ),
+                    (
+                        "baseline_primary_mind="
+                        f"{item['baseline']['primary_mind'] or 'none'}"
+                    ),
+                    (
+                        "baseline_primary_route="
+                        f"{item['baseline']['primary_route'] or 'none'}"
                     ),
                     (
                         "baseline_dominant_tension="
@@ -622,6 +1049,10 @@ def render_text(payload: dict[str, object]) -> str:
                     (
                         "baseline_mind_domain_specialist_status="
                         f"{item['baseline']['mind_domain_specialist_status']}"
+                    ),
+                    (
+                        "baseline_mind_domain_specialist_chain_status="
+                        f"{item['baseline']['mind_domain_specialist_chain_status']}"
                     ),
                     (
                         "baseline_specialist_subflow_status="
@@ -656,10 +1087,76 @@ def render_text(payload: dict[str, object]) -> str:
                         else "candidate_workflow_profile_assessment=n/a"
                     ),
                     (
+                        "candidate_metacognitive_guidance_status="
+                        f"{item['candidate']['metacognitive_guidance_status']}"
+                        if item["candidate"]
+                        else "candidate_metacognitive_guidance_status=n/a"
+                    ),
+                    (
+                        "candidate_mind_disagreement_status="
+                        f"{item['candidate']['mind_disagreement_status']}"
+                        if item["candidate"]
+                        else "candidate_mind_disagreement_status=n/a"
+                    ),
+                    (
+                        "candidate_mind_disagreement_assessment="
+                        f"{item['candidate_mind_disagreement_assessment']}"
+                        if item["candidate_mind_disagreement_assessment"] is not None
+                        else "candidate_mind_disagreement_assessment=n/a"
+                    ),
+                    (
+                        "candidate_mind_validation_checkpoint_status="
+                        f"{item['candidate']['mind_validation_checkpoint_status']}"
+                        if item["candidate"]
+                        else "candidate_mind_validation_checkpoint_status=n/a"
+                    ),
+                    (
+                        "candidate_mind_validation_checkpoint_assessment="
+                        f"{item['candidate_mind_validation_checkpoint_assessment']}"
+                        if item["candidate_mind_validation_checkpoint_assessment"] is not None
+                        else "candidate_mind_validation_checkpoint_assessment=n/a"
+                    ),
+                    (
                         "candidate_memory_causality_status="
                         f"{item['candidate']['memory_causality_status']}"
                         if item["candidate"]
                         else "candidate_memory_causality_status=n/a"
+                    ),
+                    (
+                        "candidate_memory_lifecycle_status="
+                        f"{item['candidate']['memory_lifecycle_status']}"
+                        if item["candidate"]
+                        else "candidate_memory_lifecycle_status=n/a"
+                    ),
+                    (
+                        "candidate_memory_corpus_status="
+                        f"{item['candidate']['memory_corpus_status']}"
+                        if item["candidate"]
+                        else "candidate_memory_corpus_status=n/a"
+                    ),
+                    (
+                        "candidate_memory_corpus_assessment="
+                        f"{item['candidate_memory_corpus_assessment']}"
+                        if item["candidate_memory_corpus_assessment"] is not None
+                        else "candidate_memory_corpus_assessment=n/a"
+                    ),
+                    (
+                        "candidate_memory_retention_pressure="
+                        f"{item['candidate']['memory_retention_pressure'] or 'none'}"
+                        if item["candidate"]
+                        else "candidate_memory_retention_pressure=n/a"
+                    ),
+                    (
+                        "candidate_primary_mind="
+                        f"{item['candidate']['primary_mind'] or 'none'}"
+                        if item["candidate"]
+                        else "candidate_primary_mind=n/a"
+                    ),
+                    (
+                        "candidate_primary_route="
+                        f"{item['candidate']['primary_route'] or 'none'}"
+                        if item["candidate"]
+                        else "candidate_primary_route=n/a"
                     ),
                     (
                         "candidate_dominant_tension="
@@ -678,6 +1175,12 @@ def render_text(payload: dict[str, object]) -> str:
                         f"{item['candidate']['mind_domain_specialist_status']}"
                         if item["candidate"]
                         else "candidate_mind_domain_specialist_status=n/a"
+                    ),
+                    (
+                        "candidate_mind_domain_specialist_chain_status="
+                        f"{item['candidate']['mind_domain_specialist_chain_status']}"
+                        if item["candidate"]
+                        else "candidate_mind_domain_specialist_chain_status=n/a"
                     ),
                     (
                         "candidate_specialist_subflow_status="
@@ -708,6 +1211,16 @@ def render_text(payload: dict[str, object]) -> str:
                         f"{item['candidate']['cognitive_recomposition_trigger'] or 'none'}"
                         if item["candidate"]
                         else "candidate_cognitive_recomposition_trigger=n/a"
+                    ),
+                    (
+                        "baseline_refinement_axes="
+                        f"{vector_axes(item['baseline_refinement_vectors'])}"
+                    ),
+                    (
+                        "candidate_refinement_axes="
+                        f"{vector_axes(item['candidate_refinement_vectors'])}"
+                        if item["candidate"]
+                        else "candidate_refinement_axes=n/a"
                     ),
                     f"baseline_expectation_score={item['baseline_expectation_score']}",
                     f"baseline_axis_adherence_score={item['baseline_axis_adherence_score']}",
@@ -761,6 +1274,14 @@ def render_text(payload: dict[str, object]) -> str:
                 f"{summary['candidate_workflow_baseline_rate']}",
                 "candidate_workflow_maturation_rate="
                 f"{summary['candidate_workflow_maturation_rate']}",
+                "baseline_metacognitive_guidance_decision="
+                f"{summary['baseline_metacognitive_guidance_decision']}",
+                "candidate_metacognitive_guidance_decision="
+                f"{summary['candidate_metacognitive_guidance_decision']}",
+                "baseline_metacognitive_guidance_healthy_rate="
+                f"{summary['baseline_metacognitive_guidance_healthy_rate']}",
+                "candidate_metacognitive_guidance_healthy_rate="
+                f"{summary['candidate_metacognitive_guidance_healthy_rate']}",
                 "baseline_memory_causality_decision="
                 f"{summary['baseline_memory_causality_decision']}",
                 "candidate_memory_causality_decision="
@@ -773,6 +1294,30 @@ def render_text(payload: dict[str, object]) -> str:
                 f"{summary['baseline_memory_attached_only_rate']}",
                 "candidate_memory_attached_only_rate="
                 f"{summary['candidate_memory_attached_only_rate']}",
+                "baseline_memory_lifecycle_decision="
+                f"{summary['baseline_memory_lifecycle_decision']}",
+                "candidate_memory_lifecycle_decision="
+                f"{summary['candidate_memory_lifecycle_decision']}",
+                "baseline_memory_lifecycle_retained_rate="
+                f"{summary['baseline_memory_lifecycle_retained_rate']}",
+                "candidate_memory_lifecycle_retained_rate="
+                f"{summary['candidate_memory_lifecycle_retained_rate']}",
+                "baseline_memory_lifecycle_review_rate="
+                f"{summary['baseline_memory_lifecycle_review_rate']}",
+                "candidate_memory_lifecycle_review_rate="
+                f"{summary['candidate_memory_lifecycle_review_rate']}",
+                "baseline_mind_disagreement_decision="
+                f"{summary['baseline_mind_disagreement_decision']}",
+                "candidate_mind_disagreement_decision="
+                f"{summary['candidate_mind_disagreement_decision']}",
+                "baseline_mind_validation_checkpoint_decision="
+                f"{summary['baseline_mind_validation_checkpoint_decision']}",
+                "candidate_mind_validation_checkpoint_decision="
+                f"{summary['candidate_mind_validation_checkpoint_decision']}",
+                "baseline_memory_corpus_decision="
+                f"{summary['baseline_memory_corpus_decision']}",
+                "candidate_memory_corpus_decision="
+                f"{summary['candidate_memory_corpus_decision']}",
                 "baseline_mind_domain_specialist_decision="
                 f"{summary['baseline_mind_domain_specialist_decision']}",
                 "candidate_mind_domain_specialist_decision="
@@ -781,6 +1326,14 @@ def render_text(payload: dict[str, object]) -> str:
                 f"{summary['baseline_mind_domain_specialist_alignment_rate']}",
                 "candidate_mind_domain_specialist_alignment_rate="
                 f"{summary['candidate_mind_domain_specialist_alignment_rate']}",
+                "baseline_mind_domain_specialist_chain_decision="
+                f"{summary['baseline_mind_domain_specialist_chain_decision']}",
+                "candidate_mind_domain_specialist_chain_decision="
+                f"{summary['candidate_mind_domain_specialist_chain_decision']}",
+                "baseline_mind_domain_specialist_chain_alignment_rate="
+                f"{summary['baseline_mind_domain_specialist_chain_alignment_rate']}",
+                "candidate_mind_domain_specialist_chain_alignment_rate="
+                f"{summary['candidate_mind_domain_specialist_chain_alignment_rate']}",
                 "baseline_specialist_subflow_decision="
                 f"{summary['baseline_specialist_subflow_decision']}",
                 "candidate_specialist_subflow_decision="
@@ -807,6 +1360,14 @@ def render_text(payload: dict[str, object]) -> str:
                 f"{summary['baseline_cognitive_recomposition_coherent_rate']}",
                 "candidate_cognitive_recomposition_coherent_rate="
                 f"{summary['candidate_cognitive_recomposition_coherent_rate']}",
+                "baseline_refinement_axes="
+                f"{vector_axes(summary['baseline_refinement_vectors'])}",
+                "candidate_refinement_axes="
+                f"{vector_axes(summary['candidate_refinement_vectors'])}",
+                "baseline_evaluation_matrix_workflows="
+                f"{matrix_workflows(summary['baseline_evaluation_matrix'])}",
+                "candidate_evaluation_matrix_workflows="
+                f"{matrix_workflows(summary['candidate_evaluation_matrix'])}",
             ]
         )
     )
@@ -851,11 +1412,29 @@ def serialize_comparisons(
                 "baseline_workflow_profile_assessment": workflow_profile_assessment(
                     item.baseline
                 ),
+                "baseline_metacognitive_guidance_assessment": (
+                    metacognitive_guidance_assessment(item.baseline)
+                ),
+                "baseline_mind_disagreement_assessment": mind_disagreement_assessment(
+                    item.baseline
+                ),
+                "baseline_mind_validation_checkpoint_assessment": (
+                    mind_validation_checkpoint_assessment(item.baseline)
+                ),
                 "baseline_memory_causality_assessment": memory_causality_assessment(
+                    item.baseline
+                ),
+                "baseline_memory_lifecycle_assessment": memory_lifecycle_assessment(
+                    item.baseline
+                ),
+                "baseline_memory_corpus_assessment": memory_corpus_assessment(
                     item.baseline
                 ),
                 "baseline_mind_domain_specialist_assessment": (
                     mind_domain_specialist_assessment(item.baseline)
+                ),
+                "baseline_mind_domain_specialist_chain_assessment": (
+                    mind_domain_specialist_chain_assessment(item.baseline)
                 ),
                 "baseline_specialist_subflow_assessment": specialist_subflow_assessment(
                     item.baseline
@@ -866,6 +1445,7 @@ def serialize_comparisons(
                 "baseline_cognitive_recomposition_assessment": (
                     cognitive_recomposition_assessment(item.baseline)
                 ),
+                "baseline_refinement_vectors": refinement_vectors(item.baseline),
                 "candidate_expectation_score": (
                     expectation_score(item.candidate) if item.candidate else None
                 ),
@@ -878,11 +1458,39 @@ def serialize_comparisons(
                 "candidate_workflow_profile_assessment": (
                     workflow_profile_assessment(item.candidate) if item.candidate else None
                 ),
+                "candidate_metacognitive_guidance_assessment": (
+                    metacognitive_guidance_assessment(item.candidate)
+                    if item.candidate
+                    else None
+                ),
+                "candidate_mind_disagreement_assessment": (
+                    mind_disagreement_assessment(item.candidate)
+                    if item.candidate
+                    else None
+                ),
+                "candidate_mind_validation_checkpoint_assessment": (
+                    mind_validation_checkpoint_assessment(item.candidate)
+                    if item.candidate
+                    else None
+                ),
                 "candidate_memory_causality_assessment": (
                     memory_causality_assessment(item.candidate) if item.candidate else None
                 ),
+                "candidate_memory_lifecycle_assessment": (
+                    memory_lifecycle_assessment(item.candidate)
+                    if item.candidate
+                    else None
+                ),
+                "candidate_memory_corpus_assessment": (
+                    memory_corpus_assessment(item.candidate) if item.candidate else None
+                ),
                 "candidate_mind_domain_specialist_assessment": (
                     mind_domain_specialist_assessment(item.candidate)
+                    if item.candidate
+                    else None
+                ),
+                "candidate_mind_domain_specialist_chain_assessment": (
+                    mind_domain_specialist_chain_assessment(item.candidate)
                     if item.candidate
                     else None
                 ),
@@ -900,6 +1508,9 @@ def serialize_comparisons(
                     cognitive_recomposition_assessment(item.candidate)
                     if item.candidate
                     else None
+                ),
+                "candidate_refinement_vectors": (
+                    refinement_vectors(item.candidate) if item.candidate else []
                 ),
                 "baseline": result_to_dict(item.baseline),
                 "candidate": result_to_dict(item.candidate) if item.candidate else None,

@@ -540,81 +540,225 @@ Escalar ao operador quando:
 
 - `id`: `MB-027`
 - `prioridade`: `P0`
-- `status`: `ready`
+- `status`: `deferred`
 - `eixo_do_mestre`: `governanca`
 - `workflow_profile_afetado`: `nao_aplicavel`
 - `micro_objetivo`: introduzir os contratos canonicos minimos de `protective intelligence` para caso, evidencia, cadeia de custodia, achado, hipotese e sinal de risco.
-- `justificativa_arquitetural`: a proxima frente funcional do sistema precisa nascer por interfaces estaveis e auditaveis, sem improvisar ontologia local no momento de abrir servicos novos.
+- `justificativa_arquitetural`: o eixo continua valido, mas foi rebaixado porque o programa ainda precisa fechar maturacao do nucleo cognitivo antes de abrir uma vertical nova por contratos e servicos dedicados.
 - `arquivos/servicos_principais`: `shared/contracts/__init__.py`, `docs/implementation/pre-v3-protective-intelligence-foundation-cut.md`, `docs/architecture/protective-intelligence-architecture.md`
 - `dependencias`: nenhuma
 - `criterio_de_aceite`: o repositorio passa a expor contratos compartilhados claros para `case_record`, `evidence_item`, `evidence_chain_entry`, `finding`, `hypothesis` e `risk_signal`, todos subordinados ao nucleo e sem semantica ofensiva.
 - `gate_minimo`: `pytest` direcionado de contratos, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
 - `depende_do_operador`: `nao`
-- `impacto_no_baseline`: pendente
+- `impacto_no_baseline`: `deferred` por repriorizacao macro; sem implementacao iniciada.
 
 ### MB-028
 
 - `id`: `MB-028`
 - `prioridade`: `P0`
-- `status`: `blocked`
+- `status`: `deferred`
 - `eixo_do_mestre`: `memorias`
 - `workflow_profile_afetado`: `nao_aplicavel`
 - `micro_objetivo`: criar o `evidence-ledger-service` minimo para registrar artefatos com hash, proveniencia e cadeia de custodia.
-- `justificativa_arquitetural`: evidencia nao deve ser tratada como memoria mutavel comum, e a nova frente perde rigor imediatamente se o ledger nascer depois das features analiticas.
+- `justificativa_arquitetural`: evidencia nao deve ser tratada como memoria mutavel comum, mas o eixo inteiro foi rebaixado ate que metacognicao, memoria causal e lifecycle nativos avancem mais no nucleo.
 - `arquivos/servicos_principais`: `services/evidence-ledger-service`, `shared/contracts/__init__.py`, `services/observability-service`
 - `dependencias`: `MB-027`
 - `criterio_de_aceite`: o sistema consegue registrar evidencias com integridade minima, trilha de custodia e leitura auditavel, ainda sem abrir automacao ofensiva nem toolchain ampla.
 - `gate_minimo`: `pytest` direcionado do novo servico, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
 - `depende_do_operador`: `nao`
-- `impacto_no_baseline`: pendente
+- `impacto_no_baseline`: `deferred` por repriorizacao macro; sem implementacao iniciada.
 
 ### MB-029
 
 - `id`: `MB-029`
 - `prioridade`: `P1`
-- `status`: `blocked`
+- `status`: `deferred`
 - `eixo_do_mestre`: `governanca`
 - `workflow_profile_afetado`: `nao_aplicavel`
 - `micro_objetivo`: criar o `case-service` minimo com timeline, entidades e vinculo entre caso, evidencia, hipoteses e achados.
-- `justificativa_arquitetural`: sem caso formal, o eixo de `protective intelligence` vira colecao de artefatos soltos e perde capacidade de continuidade investigativa.
+- `justificativa_arquitetural`: sem caso formal, o eixo perde capacidade de continuidade investigativa, mas essa fundacao so deve voltar para a fila ativa depois que o nucleo cognitivo fechar as prioridades de maturacao ainda abertas.
 - `arquivos/servicos_principais`: `services/case-service`, `shared/contracts/__init__.py`, `services/orchestrator-service`
 - `dependencias`: `MB-027`, `MB-028`
 - `criterio_de_aceite`: o sistema consegue abrir um caso, anexar evidencias registradas, manter timeline basica e associar entidades/achados sem sair do nucleo.
 - `gate_minimo`: `pytest` direcionado do novo servico, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
 - `depende_do_operador`: `nao`
-- `impacto_no_baseline`: pendente
+- `impacto_no_baseline`: `deferred` por repriorizacao macro; sem implementacao iniciada.
 
 ### MB-030
 
 - `id`: `MB-030`
 - `prioridade`: `P1`
-- `status`: `blocked`
+- `status`: `deferred`
 - `eixo_do_mestre`: `observabilidade`
 - `workflow_profile_afetado`: `nao_aplicavel`
 - `micro_objetivo`: criar o `risk-signal-service` minimo para consolidar sinais, prioridade e proxima acao defensiva recomendada por caso.
-- `justificativa_arquitetural`: o eixo so ganha valor operacional quando os artefatos investigativos conseguem se transformar em leitura de risco e recomendacao auditavel.
+- `justificativa_arquitetural`: o eixo so ganha valor operacional quando os artefatos investigativos conseguem se transformar em leitura de risco e recomendacao auditavel, mas a prioridade atual voltou ao nucleo e ao seu amadurecimento causal.
 - `arquivos/servicos_principais`: `services/risk-signal-service`, `services/case-service`, `services/observability-service`
 - `dependencias`: `MB-029`
 - `criterio_de_aceite`: o sistema consolida sinais de risco por caso, preserva proveniencia e publica recomendacoes defensivas sem automatizar resposta critica.
 - `gate_minimo`: `pytest` direcionado do novo servico, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
 - `depende_do_operador`: `nao`
-- `impacto_no_baseline`: pendente
+- `impacto_no_baseline`: `deferred` por repriorizacao macro; sem implementacao iniciada.
 
 ### MB-031
 
 - `id`: `MB-031`
 - `prioridade`: `P1`
-- `status`: `blocked`
+- `status`: `deferred`
 - `eixo_do_mestre`: `docs/gates`
 - `workflow_profile_afetado`: `nao_aplicavel`
 - `micro_objetivo`: introduzir governanca, observabilidade e gate minimo para a fundacao de `protective intelligence`, fechando o primeiro lote do eixo sem reabrir o baseline do `v2`.
-- `justificativa_arquitetural`: uma frente nova nao deve nascer sem guardrails explicitos, senao a capacidade entra no sistema antes da disciplina operacional correspondente.
+- `justificativa_arquitetural`: uma frente nova nao deve nascer sem guardrails explicitos, mas esse fechamento fica diferido ate que o nucleo cognitivo volte a ser o foco ativo da fila micro.
 - `arquivos/servicos_principais`: `services/governance-service`, `services/observability-service`, `tools/engineering_gate.py`, `HANDOFF.md`, `docs/implementation/v2-adherence-snapshot.md`
 - `dependencias`: `MB-028`, `MB-029`, `MB-030`
 - `criterio_de_aceite`: o eixo ganha sinais minimos de observabilidade, politicas de governanca coerentes e gate suficiente para ser tratado como frente funcional real, ainda defensiva e `advisory_only`.
 - `gate_minimo`: `pytest` direcionado, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
 - `depende_do_operador`: `nao`
-- `impacto_no_baseline`: pendente
+- `impacto_no_baseline`: `deferred` por repriorizacao macro; sem implementacao iniciada.
+
+### MB-032
+
+- `id`: `MB-032`
+- `prioridade`: `P0`
+- `status`: `done`
+- `eixo_do_mestre`: `mentes`
+- `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`
+- `micro_objetivo`: transformar metacognicao de sinal declarativo em criterio causal de deliberacao no runtime final, fazendo `primary_mind`, `dominant_tension` e `primary_domain_driver` influenciarem explicitamente criterio de saida, proxima acao e contencao quando houver conflito real.
+- `justificativa_arquitetural`: o `programa-de-excelencia` ainda aponta metacognicao real como prioridade alta do nucleo; abrir uma vertical nova antes disso alonga o gap central em vez de fecha-lo.
+- `arquivos/servicos_principais`: `engines/cognitive-engine`, `engines/planning-engine`, `engines/synthesis-engine`, `services/observability-service`
+- `dependencias`: nenhuma
+- `criterio_de_aceite`: quando houver ancora cognitiva ativa, plano, sintese e auditoria conseguem explicitar se ela alterou `success_criteria`, `smallest_safe_next_action` ou recomendacao de contencao, sem criar heuristica nova fora dos registries.
+- `gate_minimo`: `pytest` direcionado dos engines/servicos tocados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `impacto_no_baseline`: `planning`, `synthesis`, `response_synthesized` e `observability` agora carregam `metacognitive_guidance_*` e distinguem quando a ancora cognitiva alterou criterio de saida, proxima acao segura e recomendacao de contencao.
+
+### MB-033
+
+- `id`: `MB-033`
+- `prioridade`: `P0`
+- `status`: `done`
+- `eixo_do_mestre`: `memorias`
+- `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
+- `micro_objetivo`: aprofundar o uso causal de `semantic` e `procedural` por `workflow_profile` e por fonte de continuidade, distinguindo melhor reasoning final, packet de especialista e recovery de missao.
+- `justificativa_arquitetural`: memoria causal ja entrou no runtime, mas ainda e um dos maiores gaps remanescentes do nucleo; ela precisa amadurecer antes de abrir uma vertical nova com servicos dedicados.
+- `arquivos/servicos_principais`: `shared/memory_registry.py`, `services/memory-service/src/memory_service/service.py`, `engines/planning-engine`, `engines/synthesis-engine`, `services/observability-service`
+- `dependencias`: `MB-032`
+- `criterio_de_aceite`: o runtime final passa a diferenciar, por workflow e por fonte de continuidade, quando `semantic` e `procedural` alteraram framing, continuidade e proxima acao, sem bypass de governanca nem regressao para hints apenas anexados.
+- `gate_minimo`: `pytest` direcionado dos servicos/engines tocados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `impacto_no_baseline`: `memory_registry`, `memory-service`, `planning`, `synthesis` e `observability` agora distinguem fonte, efeitos, lifecycle e revisao de `semantic`/`procedural` por `workflow_profile` e por fonte de continuidade, separando reasoning final, packet de especialista e recovery de missao.
+
+### MB-034
+
+- `id`: `MB-034`
+- `prioridade`: `P1`
+- `status`: `done`
+- `eixo_do_mestre`: `memorias`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: iniciar lifecycle nativo de memoria com consolidacao, promocao, envelhecimento e revisao de artefatos `semantic` e `procedural`, sem dependencia externa nova.
+- `justificativa_arquitetural`: o `programa-de-excelencia` ainda identifica lifecycle de memoria como gap central; sem isso, o sistema lembra e usa contexto, mas aprende pouco como ecossistema vivo.
+- `arquivos/servicos_principais`: `shared/memory_registry.py`, `services/memory-service/src/memory_service/service.py`, `services/memory-service/src/memory_service/repository.py`, `services/observability-service`
+- `dependencias`: `MB-033`
+- `criterio_de_aceite`: o baseline passa a distinguir pelo menos estados nativos de consolidacao, retencao e envelhecimento para memoria util do runtime, com politica soberana e observabilidade correspondente.
+- `gate_minimo`: `pytest` direcionado do `memory-service`, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `impacto_no_baseline`: `memory_registry` e `memory-service` agora tratam consolidacao, promocao, retencao e revisao de `semantic`/`procedural` como sinais soberanos de lifecycle, propagados para planning, synthesis, packets guiados e observabilidade.
+
+### MB-035
+
+- `id`: `MB-035`
+- `prioridade`: `P1`
+- `status`: `done`
+- `eixo_do_mestre`: `mentes`
+- `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
+- `micro_objetivo`: tornar a relacao `mente -> dominio -> especialista` evidencia primaria do runtime e do piloto, reduzindo inferencia posterior a partir de rationale textual.
+- `justificativa_arquitetural`: a cadeia ja esta menos implicita, mas ainda nao e evidence-first em todos os consumidores posteriores; esse e um gap de profundidade cognitiva, nao de nova vertical.
+- `arquivos/servicos_principais`: `services/orchestrator-service`, `services/observability-service`, `engines/specialist-engine`, `tools/compare_orchestrator_paths.py`, `tools/internal_pilot_report.py`
+- `dependencias`: `MB-032`
+- `criterio_de_aceite`: runtime, piloto e comparadores passam a explicar esse encadeamento com payload e leitura dedicados, sem depender de parse manual do `rationale`.
+- `gate_minimo`: `pytest` direcionado dos servicos/tools tocados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `impacto_no_baseline`: `orchestrator`, `observability`, piloto e comparadores agora carregam `mind_domain_specialist_chain_*`, `primary_mind` e `primary_route` como evidencia primaria do runtime, reduzindo inferencia posterior a partir de rationale textual.
+
+### MB-036
+
+- `id`: `MB-036`
+- `prioridade`: `P1`
+- `status`: `done`
+- `eixo_do_mestre`: `observabilidade`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: promover metacognicao causal, lifecycle de memoria e coerencia `mente -> dominio -> especialista` a sinais formais de evolucao, comparacao sandbox e readiness de release.
+- `justificativa_arquitetural`: sem esse fechamento, os proximos avancos do nucleo ficam locais demais e nao se tornam capacidade autoevolutiva governada do ecossistema.
+- `arquivos/servicos_principais`: `tools/evolution_from_pilot.py`, `evolution/evolution-lab/src/evolution_lab/service.py`, `tools/compare_orchestrator_paths.py`, `tools/verify_release_signal_baseline.py`
+- `dependencias`: `MB-033`, `MB-034`, `MB-035`
+- `criterio_de_aceite`: comparadores, laboratorio e verificadores de release passam a tratar esses tres eixos como sinais formais de maturacao do nucleo antes da abertura de nova vertical.
+- `gate_minimo`: `pytest` direcionado dos tools afetados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `impacto_no_baseline`: `evolution_from_pilot`, `evolution-lab`, `compare_orchestrator_paths`, `internal_pilot_report` e `verify_release_signal_baseline` agora promovem metacognicao causal, lifecycle de memoria e coerencia `mente -> dominio -> especialista` a sinais formais de evolucao governada e readiness de release.
+
+### MB-037
+
+- `id`: `MB-037`
+- `prioridade`: `P0`
+- `status`: `done`
+- `eixo_do_mestre`: `observabilidade`
+- `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
+- `micro_objetivo`: transformar metacognicao causal, lifecycle de memoria e coerencia `mente -> dominio -> especialista` em vetores priorizados de refinamento por workflow, para que o loop evolutivo passe a sugerir o proximo ganho do nucleo em vez de apenas relatar estado.
+- `justificativa_arquitetural`: os sinais novos ja viraram baseline de runtime e release; o passo correto agora e faze-los orientar evolucao governada de forma mais acionavel, sem abrir nova vertical.
+- `arquivos/servicos_principais`: `evolution/evolution-lab/src/evolution_lab/service.py`, `tools/evolution_from_pilot.py`, `tools/compare_orchestrator_paths.py`, `tools/internal_pilot_report.py`
+- `dependencias`: `MB-036`
+- `criterio_de_aceite`: comparadores, laboratorio e relatorios passam a expor `refinement_vectors` ou leitura equivalente por workflow, separando baseline saudavel de melhoria priorizada sem rebaixar maturacao a falha estrutural.
+- `gate_minimo`: `pytest` direcionado dos tools afetados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `impacto_no_baseline`: `evolution-lab`, `evolution_from_pilot`, `compare_orchestrator_paths` e `internal_pilot_report` agora publicam `refinement_vectors` por workflow e deixam o loop evolutivo sugerir o proximo ganho do nucleo em vez de apenas relatar estado.
+
+### MB-038
+
+- `id`: `MB-038`
+- `prioridade`: `P0`
+- `status`: `done`
+- `eixo_do_mestre`: `mentes`
+- `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
+- `micro_objetivo`: fazer tensao dominante e discordancia entre mentes virarem restricao, checkpoint de validacao ou passo extra do plano quando o workflow exigir profundidade cognitiva maior.
+- `justificativa_arquitetural`: a ancora metacognitiva ja e causal, mas a composicao entre mentes ainda precisa sair do nivel declarativo e ganhar efeito deliberativo mais profundo no plano e na sintese.
+- `arquivos/servicos_principais`: `engines/cognitive-engine`, `engines/planning-engine`, `engines/synthesis-engine`, `services/observability-service`
+- `dependencias`: `MB-037`
+- `criterio_de_aceite`: quando houver tensao ou discordancia relevante, o runtime passa a explicitar restricao, validacao adicional ou checkpoint governado sem espalhar heuristica fora dos registries.
+- `gate_minimo`: `pytest` direcionado dos engines/servicos tocados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `impacto_no_baseline`: `planning`, `synthesis`, `orchestrator` e `observability` agora tratam discordancia entre mentes como restricao, checkpoint governado e leitura auditavel do runtime quando o workflow pede maior profundidade cognitiva.
+
+### MB-039
+
+- `id`: `MB-039`
+- `prioridade`: `P1`
+- `status`: `done`
+- `eixo_do_mestre`: `memorias`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: introduzir telemetria de corpus e pressao de retencao por classe de memoria, tornando consolidacao, promocao, retencao e envelhecimento parte observavel do sistema vivo, e nao apenas decisao local por request.
+- `justificativa_arquitetural`: o lifecycle nativo ja existe como sinal; o proximo ganho e fazer o sistema enxergar a saude do proprio corpus com disciplina, antes de qualquer expansao de storage ou dependencia externa.
+- `arquivos/servicos_principais`: `shared/memory_registry.py`, `services/memory-service/src/memory_service/service.py`, `services/memory-service/src/memory_service/repository.py`, `services/observability-service/src/observability_service/service.py`
+- `dependencias`: `MB-038`
+- `criterio_de_aceite`: o baseline passa a publicar resumo coerente de consolidacao, retencao, envelhecimento e revisao por classe, com leitura suficiente para orientar maturacao e evitar crescimento sem criterio.
+- `gate_minimo`: `pytest` direcionado do `memory-service` e `observability-service`, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `impacto_no_baseline`: o baseline agora publica `memory_corpus_status`, `memory_retention_pressure` e resumo de corpus por classe, tornando lifecycle, revisao e pressao de retencao parte observavel do sistema vivo.
+
+### MB-040
+
+- `id`: `MB-040`
+- `prioridade`: `P1`
+- `status`: `done`
+- `eixo_do_mestre`: `docs/gates`
+- `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
+- `micro_objetivo`: formalizar uma matriz de evals por eixo e por workflow usando os sinais do nucleo como criterio de maturacao, para que excelencia deixe de ser so leitura estrategica e vire gate operacional mais fino.
+- `justificativa_arquitetural`: o `programa-de-excelencia` ainda aponta falta de framework formal de evals por eixo e workflow; isso deve nascer sobre o baseline soberano ja endurecido, nao sobre uma vertical nova.
+- `arquivos/servicos_principais`: `tools/compare_orchestrator_paths.py`, `tools/verify_active_cut_baseline.py`, `tools/verify_release_signal_baseline.py`, `docs/roadmap/programa-de-excelencia.md`
+- `dependencias`: `MB-037`, `MB-038`, `MB-039`
+- `criterio_de_aceite`: comparadores e verificadores passam a distinguir de forma mais formal baseline saudavel, maturacao recomendada e vetor prioritario de refinamento por eixo/workflow.
+- `gate_minimo`: `pytest` direcionado dos tools afetados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `impacto_no_baseline`: comparadores e verificadores agora expõem matriz formal por workflow/eixo, distinguem baseline saudavel de maturacao recomendada e carregam vetores priorizados de refinamento como criterio operacional.
 
 ---
 
@@ -629,7 +773,9 @@ Escalar ao operador quando:
 Estado atual da fila:
 
 - o lote `pre-v3 hardening` foi concluido e preservado como baseline fechado;
-- a proxima frente macro escolhida e `pre-v3 protective intelligence foundation`;
-- `MB-027` e o primeiro item `ready` do novo lote;
-- `MB-028` a `MB-031` estao `blocked` apenas por dependencia da ordem de implementacao, nao por decisao aberta do operador;
-- esta rodada abriu a frente e a fila, mas nao iniciou implementacao do runtime.
+- `protective intelligence foundation` permanece mapeada, mas foi reclassificada para `deferred`;
+- `MB-027` a `MB-031` nao devem ser puxados sem repriorizacao macro explicita do operador;
+- `MB-032` a `MB-036` foram concluidos e fecharam o lote atual de maturacao do nucleo cognitivo;
+- `MB-037` a `MB-040` foram concluidos e fecharam o lote de autoevolucao governada, composicao de mentes mais profunda, telemetria viva de memoria e evals formais por eixo/workflow;
+- a fila micro esta sem item `ready` neste momento e exige repriorizacao explicita do proximo lote;
+- esta rodada fecha o lote atual sem reativar `protective intelligence` e sem reabrir itens ja concluidos por inercia local.

@@ -51,17 +51,34 @@ class PilotTraceSummary:
     workflow_trace_status: str
     workflow_profile_status: str
     workflow_profile_assessment: str
+    metacognitive_guidance_status: str
+    mind_disagreement_status: str
+    mind_validation_checkpoint_status: str
     memory_causality_status: str
+    primary_mind: str | None
+    primary_route: str | None
     dominant_tension: str | None
     arbitration_source: str | None
     primary_domain_driver: str | None
     mind_domain_specialist_status: str
+    mind_domain_specialist_chain_status: str
+    mind_domain_specialist_chain: str | None
     cognitive_recomposition_applied: bool
     cognitive_recomposition_assessment: str
     cognitive_recomposition_reason: str | None
     cognitive_recomposition_trigger: str | None
+    semantic_memory_source: str | None
+    procedural_memory_source: str | None
     semantic_memory_focus: list[str]
     procedural_memory_hint: str | None
+    semantic_memory_effects: list[str]
+    procedural_memory_effects: list[str]
+    semantic_memory_lifecycle: str | None
+    procedural_memory_lifecycle: str | None
+    memory_lifecycle_status: str
+    memory_review_status: str
+    memory_corpus_status: str
+    memory_retention_pressure: str | None
     semantic_memory_specialists: list[str]
     procedural_memory_specialists: list[str]
     continuity_trace_status: str
@@ -149,11 +166,20 @@ def summarize_traces(
             workflow_profile_assessment=_workflow_profile_assessment(
                 audit.workflow_profile_status
             ),
+            metacognitive_guidance_status=audit.metacognitive_guidance_status,
+            mind_disagreement_status=audit.mind_disagreement_status,
+            mind_validation_checkpoint_status=audit.mind_validation_checkpoint_status,
             memory_causality_status=audit.memory_causality_status,
+            primary_mind=audit.primary_mind,
+            primary_route=audit.primary_route,
             dominant_tension=audit.dominant_tension,
             arbitration_source=audit.arbitration_source,
             primary_domain_driver=audit.primary_domain_driver,
             mind_domain_specialist_status=audit.mind_domain_specialist_status,
+            mind_domain_specialist_chain_status=(
+                audit.mind_domain_specialist_chain_status
+            ),
+            mind_domain_specialist_chain=audit.mind_domain_specialist_chain,
             cognitive_recomposition_applied=audit.cognitive_recomposition_applied,
             cognitive_recomposition_assessment=_cognitive_recomposition_assessment(
                 applied=audit.cognitive_recomposition_applied,
@@ -162,8 +188,18 @@ def summarize_traces(
             ),
             cognitive_recomposition_reason=audit.cognitive_recomposition_reason,
             cognitive_recomposition_trigger=audit.cognitive_recomposition_trigger,
+            semantic_memory_source=audit.semantic_memory_source,
+            procedural_memory_source=audit.procedural_memory_source,
             semantic_memory_focus=list(audit.semantic_memory_focus),
             procedural_memory_hint=audit.procedural_memory_hint,
+            semantic_memory_effects=list(audit.semantic_memory_effects),
+            procedural_memory_effects=list(audit.procedural_memory_effects),
+            semantic_memory_lifecycle=audit.semantic_memory_lifecycle,
+            procedural_memory_lifecycle=audit.procedural_memory_lifecycle,
+            memory_lifecycle_status=audit.memory_lifecycle_status,
+            memory_review_status=audit.memory_review_status,
+            memory_corpus_status=audit.memory_corpus_status,
+            memory_retention_pressure=audit.memory_retention_pressure,
             semantic_memory_specialists=list(audit.semantic_memory_specialists),
             procedural_memory_specialists=list(audit.procedural_memory_specialists),
             continuity_trace_status=audit.continuity_trace_status,
@@ -308,8 +344,18 @@ def render_text(summaries: list[PilotTraceSummary]) -> str:
             f"{getattr(summary, 'workflow_profile_status', 'not_applicable')} "
             "workflow_profile_assessment="
             f"{getattr(summary, 'workflow_profile_assessment', 'not_applicable')} "
+            "metacognitive_guidance_status="
+            f"{getattr(summary, 'metacognitive_guidance_status', 'not_applicable')} "
+            "mind_disagreement_status="
+            f"{getattr(summary, 'mind_disagreement_status', 'not_applicable')} "
+            "mind_validation_checkpoint_status="
+            f"{getattr(summary, 'mind_validation_checkpoint_status', 'not_applicable')} "
             "memory_causality_status="
             f"{getattr(summary, 'memory_causality_status', 'not_applicable')} "
+            "primary_mind="
+            f"{getattr(summary, 'primary_mind', None) or 'none'} "
+            "primary_route="
+            f"{getattr(summary, 'primary_route', None) or 'none'} "
             "dominant_tension="
             f"{getattr(summary, 'dominant_tension', None) or 'none'} "
             "arbitration_source="
@@ -318,6 +364,10 @@ def render_text(summaries: list[PilotTraceSummary]) -> str:
             f"{getattr(summary, 'primary_domain_driver', None) or 'none'} "
             "mind_domain_specialist_status="
             f"{getattr(summary, 'mind_domain_specialist_status', 'not_applicable')} "
+            "mind_domain_specialist_chain_status="
+            f"{getattr(summary, 'mind_domain_specialist_chain_status', 'not_applicable')} "
+            "mind_domain_specialist_chain="
+            f"{getattr(summary, 'mind_domain_specialist_chain', None) or 'none'} "
             "cognitive_recomposition_applied="
             f"{getattr(summary, 'cognitive_recomposition_applied', False)} "
             "cognitive_recomposition_assessment="
@@ -326,10 +376,30 @@ def render_text(summaries: list[PilotTraceSummary]) -> str:
             f"{getattr(summary, 'cognitive_recomposition_reason', None) or 'none'} "
             "cognitive_recomposition_trigger="
             f"{getattr(summary, 'cognitive_recomposition_trigger', None) or 'none'} "
+            "semantic_memory_source="
+            f"{getattr(summary, 'semantic_memory_source', None) or 'none'} "
+            "procedural_memory_source="
+            f"{getattr(summary, 'procedural_memory_source', None) or 'none'} "
             "semantic_memory_focus="
             f"{','.join(getattr(summary, 'semantic_memory_focus', [])) or 'none'} "
             "procedural_memory_hint="
             f"{getattr(summary, 'procedural_memory_hint', None) or 'none'} "
+            "semantic_memory_effects="
+            f"{','.join(getattr(summary, 'semantic_memory_effects', [])) or 'none'} "
+            "procedural_memory_effects="
+            f"{','.join(getattr(summary, 'procedural_memory_effects', [])) or 'none'} "
+            "semantic_memory_lifecycle="
+            f"{getattr(summary, 'semantic_memory_lifecycle', None) or 'none'} "
+            "procedural_memory_lifecycle="
+            f"{getattr(summary, 'procedural_memory_lifecycle', None) or 'none'} "
+            "memory_lifecycle_status="
+            f"{getattr(summary, 'memory_lifecycle_status', 'not_applicable')} "
+            "memory_review_status="
+            f"{getattr(summary, 'memory_review_status', 'not_applicable')} "
+            "memory_corpus_status="
+            f"{getattr(summary, 'memory_corpus_status', 'not_applicable')} "
+            "memory_retention_pressure="
+            f"{getattr(summary, 'memory_retention_pressure', None) or 'none'} "
             "semantic_memory_specialists="
             f"{','.join(getattr(summary, 'semantic_memory_specialists', [])) or 'none'} "
             "procedural_memory_specialists="

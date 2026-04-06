@@ -11,16 +11,33 @@ def make_pilot_result(  # type: ignore[no-untyped-def]
     expected_workflow_profile: str | None,
     workflow_profile_matches_expectation: bool | None,
     memory_causality_status: str = "causal_guidance",
+    metacognitive_guidance_status: str = "healthy",
+    mind_disagreement_status: str = "not_applicable",
+    mind_validation_checkpoint_status: str = "not_applicable",
+    memory_lifecycle_status: str = "retained",
+    memory_review_status: str = "stable",
+    memory_corpus_status: str = "stable",
+    memory_retention_pressure: str | None = "low",
     cognitive_recomposition_applied: bool = False,
     cognitive_recomposition_reason: str | None = None,
     cognitive_recomposition_trigger: str | None = None,
     dominant_tension: str | None = "equilibrar profundidade analitica com conclusao util",
+    primary_mind: str | None = "analise_estruturada",
+    primary_route: str | None = None,
     arbitration_source: str | None = "mind_registry",
     primary_domain_driver: str | None = "dados_estatistica_e_inteligencia_analitica",
     mind_domain_specialist_status: str = "aligned",
+    mind_domain_specialist_chain_status: str = "aligned",
+    mind_domain_specialist_chain: str | None = None,
     specialist_subflow_status: str = "healthy",
     specialist_subflow_runtime_mode: str | None = "native_pipeline",
     mission_runtime_state_status: str = "healthy",
+    semantic_memory_source: str | None = "active_mission",
+    procedural_memory_source: str | None = "active_mission",
+    semantic_memory_effects: list[str] | None = None,
+    procedural_memory_effects: list[str] | None = None,
+    semantic_memory_lifecycle: str | None = "retained",
+    procedural_memory_lifecycle: str | None = "retained",
     coverage_tags: list[str] | None = None,
 ) -> PilotExecutionResult:
     return PilotExecutionResult(
@@ -53,16 +70,41 @@ def make_pilot_result(  # type: ignore[no-untyped-def]
         axis_gate_status="healthy",
         workflow_trace_status="healthy",
         workflow_profile_status="healthy",
+        metacognitive_guidance_status=metacognitive_guidance_status,
+        mind_disagreement_status=mind_disagreement_status,
+        mind_validation_checkpoint_status=mind_validation_checkpoint_status,
         memory_causality_status=memory_causality_status,
+        primary_mind=primary_mind,
+        primary_route=primary_route or workflow_domain_route,
         dominant_tension=dominant_tension,
         arbitration_source=arbitration_source,
         primary_domain_driver=primary_domain_driver,
         mind_domain_specialist_status=mind_domain_specialist_status,
+        mind_domain_specialist_chain_status=mind_domain_specialist_chain_status,
+        mind_domain_specialist_chain=(
+            mind_domain_specialist_chain
+            if mind_domain_specialist_chain is not None
+            else (
+                f"{primary_mind or 'none'} -> {primary_domain_driver or 'none'} -> "
+                f"{(primary_route or workflow_domain_route) or 'none'} -> "
+                "specialists[structured_analysis_specialist]"
+            )
+        ),
         cognitive_recomposition_applied=cognitive_recomposition_applied,
         cognitive_recomposition_reason=cognitive_recomposition_reason,
         cognitive_recomposition_trigger=cognitive_recomposition_trigger,
+        semantic_memory_source=semantic_memory_source,
+        procedural_memory_source=procedural_memory_source,
         semantic_memory_focus=[],
         procedural_memory_hint=None,
+        semantic_memory_effects=semantic_memory_effects or ["framing", "continuity"],
+        procedural_memory_effects=procedural_memory_effects or ["next_action", "continuity"],
+        semantic_memory_lifecycle=semantic_memory_lifecycle,
+        procedural_memory_lifecycle=procedural_memory_lifecycle,
+        memory_lifecycle_status=memory_lifecycle_status,
+        memory_review_status=memory_review_status,
+        memory_corpus_status=memory_corpus_status,
+        memory_retention_pressure=memory_retention_pressure,
         semantic_memory_specialists=[],
         procedural_memory_specialists=[],
         expected_continuity_action=None,
@@ -97,11 +139,14 @@ def test_verify_active_cut_baseline_reports_release_ready() -> None:
                 expected_workflow_profile="structured_analysis_workflow",
                 workflow_profile_matches_expectation=True,
                 coverage_tags=[
+                    "mind_disagreement",
                     "dominant_tension",
                     "mind_domain_specialist",
                     "specialist_subflow",
                     "mission_runtime_state",
                 ],
+                mind_disagreement_status="validation_required",
+                mind_validation_checkpoint_status="healthy",
             ),
             make_pilot_result(
                 scenario_id="decision-risk",
@@ -128,9 +173,12 @@ def test_verify_active_cut_baseline_reports_release_ready() -> None:
                 workflow_profile_matches_expectation=True,
                 coverage_tags=[
                     "memory_causality",
+                    "memory_corpus",
                     "specialist_subflow",
                     "mission_runtime_state",
                 ],
+                memory_corpus_status="monitor",
+                memory_retention_pressure="moderate",
             ),
             make_pilot_result(
                 scenario_id="software",
@@ -174,7 +222,9 @@ def test_verify_active_cut_baseline_reports_release_ready() -> None:
     assert payload["summary"]["promoted_routes_missing_pilot_coverage"] == 0
     assert payload["summary"]["promoted_workflow_profiles_missing_pilot_coverage"] == 0
     assert payload["summary"]["memory_causality_ready_scenarios"] == 1
+    assert payload["summary"]["mind_disagreement_ready_scenarios"] == 1
     assert payload["summary"]["mind_domain_specialist_ready_scenarios"] == 1
+    assert payload["summary"]["memory_corpus_ready_scenarios"] == 1
     assert payload["summary"]["dominant_tension_ready_scenarios"] == 1
     assert payload["summary"]["specialist_subflow_ready_scenarios"] == 2
     assert payload["summary"]["mission_runtime_state_ready_scenarios"] == 3
@@ -193,9 +243,12 @@ def test_verify_active_cut_baseline_markdown_mentions_notes() -> None:
                 workflow_profile_matches_expectation=True,
                 coverage_tags=[
                     "memory_causality",
+                    "memory_corpus",
                     "specialist_subflow",
                     "mission_runtime_state",
                 ],
+                memory_corpus_status="monitor",
+                memory_retention_pressure="moderate",
             ),
             make_pilot_result(
                 scenario_id="recomposition",
@@ -221,7 +274,9 @@ def test_verify_active_cut_baseline_markdown_mentions_notes() -> None:
     assert "consumer contract" in rendered
     assert "targeted pilot route matches" in rendered
     assert "memory causality scenarios ready" in rendered
+    assert "mind disagreement scenarios ready" in rendered
     assert "mind-domain-specialist scenarios ready" in rendered
+    assert "memory corpus scenarios ready" in rendered
     assert "dominant tension scenarios ready" in rendered
     assert "specialist subflow scenarios ready" in rendered
     assert "mission runtime state scenarios ready" in rendered
@@ -237,6 +292,7 @@ def test_verify_active_cut_baseline_requires_deliberate_cognitive_coverage() -> 
                 route_matches_expectation=True,
                 expected_workflow_profile="structured_analysis_workflow",
                 workflow_profile_matches_expectation=True,
+                coverage_tags=["mind_disagreement"],
             ),
             make_pilot_result(
                 scenario_id="decision-risk",
@@ -300,5 +356,7 @@ def test_verify_active_cut_baseline_requires_deliberate_cognitive_coverage() -> 
     )
 
     assert payload["decision"] == "baseline_requires_iteration"
+    assert payload["summary"]["mind_disagreement_ready_scenarios"] == 0
     assert payload["summary"]["mind_domain_specialist_ready_scenarios"] == 0
+    assert payload["summary"]["memory_corpus_ready_scenarios"] == 0
     assert payload["summary"]["dominant_tension_ready_scenarios"] == 0

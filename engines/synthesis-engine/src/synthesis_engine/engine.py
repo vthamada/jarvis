@@ -117,6 +117,24 @@ class SynthesisEngine:
                 "seguranca"
             )
             recommendation = synthesis_input.governance_decision.justification
+        if plan and plan.metacognitive_guidance_applied and plan.metacognitive_guidance_summary:
+            judgment = (
+                f"{judgment}; ancora metacognitiva: "
+                f"{plan.metacognitive_guidance_summary}"
+            )
+        if (
+            plan
+            and plan.metacognitive_containment_recommendation
+            and synthesis_input.governance_decision.decision
+            in {
+                PermissionDecision.BLOCK,
+                PermissionDecision.DEFER_FOR_VALIDATION,
+            }
+        ):
+            recommendation = (
+                f"{recommendation}; contencao recomendada: "
+                f"{plan.metacognitive_containment_recommendation}"
+            )
         continuity_line = self._continuity_line(synthesis_input)
         response = (
             f"{f'Continuidade ativa: {continuity_line}. ' if continuity_line else ''}"
@@ -170,20 +188,28 @@ class SynthesisEngine:
     def _judgment_line(self, synthesis_input: SynthesisInput) -> str:
         plan = synthesis_input.deliberative_plan
         arbitration = synthesis_input.arbitration_summary or plan.specialist_resolution_summary
+        metacognitive_clause = (
+            f"; ancora metacognitiva: {plan.metacognitive_guidance_summary}"
+            if plan.metacognitive_guidance_applied and plan.metacognitive_guidance_summary
+            else ""
+        )
         if plan.continuity_action == "reformular":
             return (
                 "o pedido atual tensiona a missao ativa e precisa de reformulacao "
                 "governavel antes de qualquer desvio"
+                f"{metacognitive_clause}"
             )
         if plan.continuity_action == "encerrar" and plan.open_loops:
             return (
                 "o pedido atual permite fechar o loop principal da missao: "
                 f"{plan.open_loops[0]}"
+                f"{metacognitive_clause}"
             )
         if plan.continuity_action == "retomar" and plan.continuity_target_goal:
             return (
                 "o pedido atual pede retomada explicita de continuidade relacionada em "
                 f"{plan.continuity_target_goal}"
+                f"{metacognitive_clause}"
             )
         guidance = workflow_runtime_guidance(plan.route_workflow_profile)
         semantic_focus = ", ".join(synthesis_input.semantic_memory_focus[:2])
@@ -191,11 +217,16 @@ class SynthesisEngine:
         route_profile = self._present_contract_label(plan.route_consumer_profile)
         workflow_profile = self._present_contract_label(plan.route_workflow_profile)
         semantic_role = self._present_contract_label(guidance.semantic_memory_role)
+        semantic_source = self._present_contract_label(plan.semantic_memory_source)
+        semantic_lifecycle = self._present_contract_label(plan.semantic_memory_lifecycle)
         cognitive_anchor = self._cognitive_anchor_clause(plan)
+        metacognitive_guidance = plan.metacognitive_guidance_summary
         if plan.continuity_action == "continuar" and plan.open_loops:
             base = arbitration or plan.rationale.split(";", maxsplit=1)[0]
             if cognitive_anchor:
                 base = f"{base}; {cognitive_anchor}"
+            if plan.metacognitive_guidance_applied and metacognitive_guidance:
+                base = f"{base}; ancora metacognitiva: {metacognitive_guidance}"
             if plan.dominant_tension:
                 base = f"{base}; tensao dominante: {plan.dominant_tension}"
             if plan.arbitration_source == "mind_registry_recomposition":
@@ -204,17 +235,27 @@ class SynthesisEngine:
                     "dominio primario"
                 )
             if semantic_focus and route_objective:
+                memory_clause = ""
+                if semantic_source:
+                    memory_clause = f"; fonte semantica: {semantic_source}"
+                if semantic_lifecycle:
+                    memory_clause = f"{memory_clause}; lifecycle semantico: {semantic_lifecycle}"
                 return (
                     f"{base}; a missao ativa segue ancorada em {plan.open_loops[0]}; "
                     f"rota {route_profile or 'ativa'} orienta {route_objective}; "
                     f"memoria guiada reforca {semantic_role} em {semantic_focus}; "
                     f"framing final deve permanecer coerente com {semantic_role}"
+                    f"{memory_clause}"
                 )
             if semantic_focus:
+                memory_clause = ""
+                if semantic_source:
+                    memory_clause = f"; fonte semantica: {semantic_source}"
                 return (
                     f"{base}; a missao ativa segue ancorada em {plan.open_loops[0]}; "
                     f"memoria guiada reforca {semantic_role} em {semantic_focus}; "
                     f"framing final deve permanecer coerente com {semantic_role}"
+                    f"{memory_clause}"
                 )
             if route_objective:
                 workflow_clause = (
@@ -230,6 +271,8 @@ class SynthesisEngine:
             base = arbitration
             if cognitive_anchor:
                 base = f"{base}; {cognitive_anchor}"
+            if plan.metacognitive_guidance_applied and metacognitive_guidance:
+                base = f"{base}; ancora metacognitiva: {metacognitive_guidance}"
             if plan.dominant_tension:
                 base = f"{base}; tensao dominante: {plan.dominant_tension}"
             if plan.arbitration_source == "mind_registry_recomposition":
@@ -241,16 +284,26 @@ class SynthesisEngine:
                 workflow_clause = (
                     f"; workflow ativo: {workflow_profile}" if workflow_profile else ""
                 )
+                memory_clause = ""
+                if semantic_source:
+                    memory_clause = f"; fonte semantica: {semantic_source}"
+                if semantic_lifecycle:
+                    memory_clause = f"{memory_clause}; lifecycle semantico: {semantic_lifecycle}"
                 return (
                     f"{base}; rota {route_profile or 'ativa'} orienta {route_objective}; "
                     f"memoria guiada reforca {semantic_role} em {semantic_focus}; "
                     f"framing final deve permanecer coerente com {semantic_role}"
+                    f"{memory_clause}"
                     f"{workflow_clause}"
                 )
             if semantic_focus:
+                memory_clause = (
+                    f"; fonte semantica: {semantic_source}" if semantic_source else ""
+                )
                 return (
                     f"{base}; memoria guiada reforca {semantic_role} em {semantic_focus}; "
                     f"framing final deve permanecer coerente com {semantic_role}"
+                    f"{memory_clause}"
                 )
             if route_objective:
                 workflow_clause = (
@@ -264,6 +317,8 @@ class SynthesisEngine:
         base = plan.rationale.split(";", maxsplit=1)[0]
         if cognitive_anchor:
             base = f"{base}; {cognitive_anchor}"
+        if plan.metacognitive_guidance_applied and metacognitive_guidance:
+            base = f"{base}; ancora metacognitiva: {metacognitive_guidance}"
         if plan.dominant_tension:
             base = f"{base}; tensao dominante: {plan.dominant_tension}"
         if plan.arbitration_source == "mind_registry_recomposition":
@@ -313,6 +368,8 @@ class SynthesisEngine:
         procedural_role = self._present_contract_label(guidance.procedural_memory_role)
         response_focus = self._present_contract_label(guidance.response_focus)
         primary_domain_driver = self._present_contract_label(plan.primary_domain_driver)
+        procedural_source = self._present_contract_label(plan.procedural_memory_source)
+        procedural_lifecycle = self._present_contract_label(plan.procedural_memory_lifecycle)
         if synthesis_input.procedural_memory_hint:
             recommendation = (
                 f"{next_action}; apoio procedural orienta {procedural_role}: "
@@ -345,6 +402,16 @@ class SynthesisEngine:
             recommendation = (
                 f"{recommendation}; tensao dominante: {plan.dominant_tension}"
             )
+        if plan.mind_disagreement_status and plan.mind_disagreement_status != "not_applicable":
+            recommendation = (
+                f"{recommendation}; discordancia cognitiva: "
+                f"{self._present_contract_label(plan.mind_disagreement_status)}"
+            )
+        if plan.mind_validation_checkpoints:
+            recommendation = (
+                f"{recommendation}; checkpoint cognitivo: "
+                f"{self._present_contract_label(plan.mind_validation_checkpoints[0])}"
+            )
         if plan.arbitration_source == "mind_registry_recomposition":
             recommendation = (
                 f"{recommendation}; recomposicao cognitiva: preservar o dominio "
@@ -366,6 +433,29 @@ class SynthesisEngine:
         )
         if workflow_decision:
             recommendation = f"{recommendation}; gate governado: {workflow_decision}"
+        if procedural_source:
+            recommendation = (
+                f"{recommendation}; fonte procedural: {procedural_source}"
+            )
+        if procedural_lifecycle:
+            recommendation = (
+                f"{recommendation}; lifecycle procedural: {procedural_lifecycle}"
+            )
+        if plan.memory_review_status and plan.memory_review_status != "not_needed":
+            recommendation = (
+                f"{recommendation}; revisao de memoria: "
+                f"{self._present_contract_label(plan.memory_review_status)}"
+            )
+        if plan.metacognitive_guidance_applied and plan.metacognitive_effects:
+            recommendation = (
+                f"{recommendation}; efeitos metacognitivos: "
+                f"{', '.join(plan.metacognitive_effects)}"
+            )
+        if plan.metacognitive_containment_recommendation:
+            recommendation = (
+                f"{recommendation}; contencao preferencial: "
+                f"{plan.metacognitive_containment_recommendation}"
+            )
         return recommendation
 
     def _limitation_line(self, synthesis_input: SynthesisInput) -> str | None:
@@ -387,6 +477,15 @@ class SynthesisEngine:
             limits.append(synthesis_input.governance_decision.conditions[0])
         if plan.requires_human_validation:
             limits.append("o plano ainda pede validacao humana antes de ampliar escopo")
+        if plan.memory_review_status == "review_recommended":
+            limits.append("a memoria guiada entrou em faixa de revisao recomendada")
+        if plan.mind_disagreement_status == "deep_review_required":
+            limits.append("a tensao dominante ainda pede revisao cognitiva mais profunda")
+        elif plan.mind_disagreement_status == "validation_required":
+            limits.append(
+                "a resposta ainda precisa validar como a discordancia "
+                "entre mentes foi resolvida"
+            )
         material_risks = [risk for risk in plan.risks if "sem risco material" not in risk.lower()]
         if material_risks:
             limits.append(material_risks[0])

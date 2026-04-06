@@ -359,6 +359,18 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
         plan_event.payload["arbitration_source"]
         == context_event.payload["arbitration_source"]
     )
+    assert (
+        plan_event.payload["metacognitive_guidance_applied"]
+        == result.deliberative_plan.metacognitive_guidance_applied
+    )
+    assert (
+        plan_event.payload["metacognitive_guidance_summary"]
+        == result.deliberative_plan.metacognitive_guidance_summary
+    )
+    assert (
+        plan_event.payload["metacognitive_effects"]
+        == result.deliberative_plan.metacognitive_effects
+    )
     assert plan_event.payload["primary_route"] == result.deliberative_plan.primary_route
     assert (
         plan_event.payload["primary_canonical_domain"]
@@ -380,6 +392,18 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     assert (
         response_event.payload["arbitration_source"]
         == context_event.payload["arbitration_source"]
+    )
+    assert (
+        response_event.payload["metacognitive_guidance_applied"]
+        == result.deliberative_plan.metacognitive_guidance_applied
+    )
+    assert (
+        response_event.payload["metacognitive_guidance_summary"]
+        == result.deliberative_plan.metacognitive_guidance_summary
+    )
+    assert (
+        response_event.payload["metacognitive_effects"]
+        == result.deliberative_plan.metacognitive_effects
     )
     assert response_event.payload["dominant_tension"] == result.deliberative_plan.dominant_tension
     assert response_event.payload["primary_route"] == result.deliberative_plan.primary_route

@@ -117,6 +117,22 @@ def test_synthesis_engine_surfaces_reformulation_without_pipeline_listing() -> N
     reformulation_plan.risks = [
         "pedido atual pode deslocar a missao ativa sem reformulacao explicita"
     ]
+    reformulation_plan.metacognitive_guidance_applied = True
+    reformulation_plan.metacognitive_guidance_summary = (
+        "mente executiva ancora estrategia e pensamento sistemico via strategy "
+        "sob tensao equilibrar ambicao estrategica com a menor proxima acao segura"
+    )
+    reformulation_plan.metacognitive_effects = [
+        "success_criteria",
+        "smallest_safe_next_action",
+        "containment_recommendation",
+    ]
+    reformulation_plan.metacognitive_containment_recommendation = (
+        "conter ampliacao de escopo ate mente executiva ancora estrategia e "
+        "pensamento sistemico via strategy sob tensao equilibrar ambicao "
+        "estrategica com a menor proxima acao segura explicitar como o pedido "
+        "atual afeta a missao ativa"
+    )
     response = engine.compose(
         SynthesisInput(
             intent="planning",
@@ -151,6 +167,8 @@ def test_synthesis_engine_surfaces_reformulation_without_pipeline_listing() -> N
     assert "Continuidade ativa: sessao entrou em reformulacao governada" in response
     assert "tensiona a missao ativa" in response
     assert "explicitar como o novo pedido afeta alinhar checkpoint principal" in response
+    assert "ancora metacognitiva:" in response
+    assert "contencao preferencial:" in response
     assert "Dominios:" not in response
 
 
@@ -281,6 +299,16 @@ def test_synthesis_engine_surfaces_governed_replay_recovery() -> None:
 def test_synthesis_engine_uses_guided_semantic_and_procedural_memory_hints() -> None:
     engine = SynthesisEngine()
     identity = IdentityEngine().get_profile()
+    plan = sample_plan()
+    plan.metacognitive_guidance_applied = True
+    plan.metacognitive_guidance_summary = (
+        "mente executiva ancora estrategia e pensamento sistemico via strategy "
+        "sob tensao equilibrar ambicao estrategica com a menor proxima acao segura"
+    )
+    plan.metacognitive_effects = [
+        "success_criteria",
+        "smallest_safe_next_action",
+    ]
     response = engine.compose(
         SynthesisInput(
             intent="planning",
@@ -298,7 +326,7 @@ def test_synthesis_engine_uses_guided_semantic_and_procedural_memory_hints() -> 
             active_minds=["mente_executiva"],
             active_domains=["strategy"],
             knowledge_snippets=["Preserve continuidade segura."],
-            deliberative_plan=sample_plan(),
+            deliberative_plan=plan,
             specialist_contributions=[],
             operation_result=None,
             identity_mode="structured_planning",
@@ -338,6 +366,8 @@ def test_synthesis_engine_uses_guided_semantic_and_procedural_memory_hints() -> 
     )
     assert "checkpoint ativo: scenario framed" in response
     assert "gate governado: scenario scope confirmed" in response
+    assert "ancora metacognitiva:" in response
+    assert "efeitos metacognitivos: success_criteria, smallest_safe_next_action" in response
     assert (
         "apoio procedural orienta continuidade do fio decisorio e criterio de progressao: "
         "manter o ultimo fio de recomendacao governada" in response

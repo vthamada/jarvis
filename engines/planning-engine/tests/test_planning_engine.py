@@ -58,8 +58,14 @@ def test_planning_engine_builds_structured_plan_with_continuity() -> None:
     assert any("loop principal da missao" in criterion for criterion in plan.success_criteria)
     assert (
         plan.smallest_safe_next_action
-        == "retomar definir escopo final antes de abrir novo escopo"
+        == "retomar definir escopo final antes de abrir novo escopo; "
+        "ancora cognitiva: mente primaria mente executiva ancora a deliberacao "
+        "sob tensao equilibrar ambicao estrategica com a menor proxima acao segura"
     )
+    assert plan.metacognitive_guidance_applied is True
+    assert plan.metacognitive_guidance_summary is not None
+    assert "success_criteria" in plan.metacognitive_effects
+    assert "smallest_safe_next_action" in plan.metacognitive_effects
     assert "conflito_missao=nenhum" in plan.rationale
     assert "recomendacao_previa=retomar o escopo final antes da proxima acao" in plan.rationale
     assert plan.continuity_source == "active_mission"
@@ -147,6 +153,9 @@ def test_planning_engine_reformulates_when_new_request_conflicts_with_active_mis
         == "reformular a missao ativa sem perder rastreabilidade: Plan milestone M3"
     )
     assert any("deslocar a missao ativa" in risk for risk in plan.risks)
+    assert plan.metacognitive_guidance_applied is True
+    assert "containment_recommendation" in plan.metacognitive_effects
+    assert plan.metacognitive_containment_recommendation is not None
     assert (
         "conflito_missao=pedido atual desloca o foco da missao ativa 'Plan milestone M3'"
         in plan.rationale
@@ -281,7 +290,7 @@ def test_planning_engine_carries_primary_route_contract_into_plan() -> None:
         for criterion in plan.success_criteria
     )
     assert any(
-        "dominio primario deve permanecer explicito em torno de estrategia e pensamento sistemico"
+        "ancora cognitiva mente decisoria deve manter estrategia e pensamento sistemico"
         in criterion
         for criterion in plan.success_criteria
     )
@@ -313,8 +322,19 @@ def test_planning_engine_carries_primary_route_contract_into_plan() -> None:
         plan.smallest_safe_next_action
         == "retomar comparar direcoes estrategicas do release preservando "
         "continuidade do fio decisorio e criterio de progressao: "
-        "manter o ultimo fio decisorio governado"
+        "manter o ultimo fio decisorio governado; ancora cognitiva: "
+        "mente decisoria ancora estrategia e pensamento sistemico via strategy "
+        "sob tensao equilibrar ambicao estrategica com a menor proxima acao segura"
     )
+    assert plan.metacognitive_guidance_applied is True
+    assert plan.metacognitive_guidance_summary == (
+        "mente decisoria ancora estrategia e pensamento sistemico via strategy "
+        "sob tensao equilibrar ambicao estrategica com a menor proxima acao segura"
+    )
+    assert plan.metacognitive_effects == [
+        "success_criteria",
+        "smallest_safe_next_action",
+    ]
 
 
 def test_planning_engine_refines_plan_and_consolidates_specialists() -> None:

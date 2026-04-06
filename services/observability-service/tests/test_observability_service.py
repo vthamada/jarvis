@@ -350,6 +350,171 @@ def test_observability_service_audits_continuity_signals() -> None:
     assert audit.trace_complete is False
 
 
+def test_observability_service_audits_metacognitive_guidance() -> None:
+    temp_dir = runtime_dir("observability-metacognition")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service.ingest_events(
+        [
+            InternalEventEnvelope(
+                event_id="evt-m1",
+                event_name="input_received",
+                timestamp="2026-03-18T00:00:00+00:00",
+                source_service="orchestrator-service",
+                payload={"content": "Plan strategic options for the release."},
+                request_id="req-meta",
+                session_id="sess-meta",
+                correlation_id="req-meta",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-m2",
+                event_name="memory_recovered",
+                timestamp="2026-03-18T00:00:01+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_recommendation": "priorizar_missao_ativa"},
+                request_id="req-meta",
+                session_id="sess-meta",
+                correlation_id="req-meta",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-m3",
+                event_name="intent_classified",
+                timestamp="2026-03-18T00:00:02+00:00",
+                source_service="orchestrator-service",
+                payload={"intent": "planning"},
+                request_id="req-meta",
+                session_id="sess-meta",
+                correlation_id="req-meta",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-m4",
+                event_name="context_composed",
+                timestamp="2026-03-18T00:00:03+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "active_minds": ["mente_decisoria", "mente_estrategica"],
+                    "primary_mind": "mente_decisoria",
+                    "primary_mind_family": "estrategica_decisoria",
+                    "supporting_minds": ["mente_estrategica"],
+                    "suppressed_minds": [],
+                    "supporting_mind_limit": 2,
+                    "suppressed_mind_limit": 3,
+                    "dominant_tension": (
+                        "equilibrar ambicao estrategica com a menor proxima acao segura"
+                    ),
+                    "arbitration_summary": (
+                        "mente_decisoria lidera com apoio estrategico e foco unico"
+                    ),
+                    "arbitration_source": "mind_registry",
+                    "primary_domain_driver": "estrategia_e_pensamento_sistemico",
+                    "canonical_domains": ["estrategia_e_pensamento_sistemico"],
+                },
+                request_id="req-meta",
+                session_id="sess-meta",
+                correlation_id="req-meta",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-m5",
+                event_name="plan_built",
+                timestamp="2026-03-18T00:00:04+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "primary_mind": "mente_decisoria",
+                    "primary_mind_family": "estrategica_decisoria",
+                    "primary_domain_driver": "estrategia_e_pensamento_sistemico",
+                    "arbitration_source": "mind_registry",
+                    "dominant_tension": (
+                        "equilibrar ambicao estrategica com a menor proxima acao segura"
+                    ),
+                    "metacognitive_guidance_applied": True,
+                    "metacognitive_guidance_summary": (
+                        "mente decisoria ancora estrategia e pensamento sistemico via "
+                        "strategy sob tensao equilibrar ambicao estrategica com a "
+                        "menor proxima acao segura"
+                    ),
+                    "metacognitive_effects": [
+                        "success_criteria",
+                        "smallest_safe_next_action",
+                    ],
+                    "metacognitive_containment_recommendation": None,
+                    "continuity_action": "continuar",
+                    "continuity_source": "active_mission",
+                },
+                request_id="req-meta",
+                session_id="sess-meta",
+                correlation_id="req-meta",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-m6",
+                event_name="continuity_decided",
+                timestamp="2026-03-18T00:00:05+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "continuity_action": "continuar",
+                    "continuity_source": "active_mission",
+                },
+                request_id="req-meta",
+                session_id="sess-meta",
+                correlation_id="req-meta",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-m7",
+                event_name="governance_checked",
+                timestamp="2026-03-18T00:00:06+00:00",
+                source_service="orchestrator-service",
+                payload={"decision": "allow_with_conditions"},
+                request_id="req-meta",
+                session_id="sess-meta",
+                correlation_id="req-meta",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-m8",
+                event_name="response_synthesized",
+                timestamp="2026-03-18T00:00:07+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "primary_mind": "mente_decisoria",
+                    "primary_mind_family": "estrategica_decisoria",
+                    "primary_domain_driver": "estrategia_e_pensamento_sistemico",
+                    "arbitration_source": "mind_registry",
+                    "metacognitive_guidance_applied": True,
+                    "metacognitive_guidance_summary": (
+                        "mente decisoria ancora estrategia e pensamento sistemico via "
+                        "strategy sob tensao equilibrar ambicao estrategica com a "
+                        "menor proxima acao segura"
+                    ),
+                    "metacognitive_effects": [
+                        "success_criteria",
+                        "smallest_safe_next_action",
+                    ],
+                    "metacognitive_containment_recommendation": None,
+                },
+                request_id="req-meta",
+                session_id="sess-meta",
+                correlation_id="req-meta",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-m9",
+                event_name="memory_recorded",
+                timestamp="2026-03-18T00:00:08+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_mode": "continuar"},
+                request_id="req-meta",
+                session_id="sess-meta",
+                correlation_id="req-meta",
+            ),
+        ]
+    )
+
+    audit = service.audit_flow(ObservabilityQuery(request_id="req-meta"))
+
+    assert audit.metacognitive_guidance_status == "healthy"
+    assert audit.metacognitive_guidance_summary is not None
+    assert audit.metacognitive_effects == [
+        "success_criteria",
+        "smallest_safe_next_action",
+    ]
+
+
 def test_observability_service_audits_domain_memory_and_sovereignty_alignment() -> None:
     temp_dir = runtime_dir("observability-specialist-alignment")
     service = ObservabilityService(database_path=str(temp_dir / "observability.db"))

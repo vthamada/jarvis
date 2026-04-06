@@ -37,8 +37,8 @@ from shared.memory_registry import (
     DEFAULT_MEMORY_SCOPES,
     SHARED_MEMORY_CLASSES,
     default_priority_rules,
-    guided_reasoning_memory_classes,
-    guided_specialist_memory_classes,
+    guided_memory_decision,
+    memory_corpus_telemetry,
     organization_scope_guard_payload,
     specialist_memory_policy_payload,
 )
@@ -444,6 +444,10 @@ class MemoryService:
                     semantic_focus=list(context.semantic_focus),
                     open_loops=list(context.open_loops),
                     last_recommendation=context.last_recommendation,
+                    semantic_memory_lifecycle=context.semantic_memory_lifecycle,
+                    procedural_memory_lifecycle=context.procedural_memory_lifecycle,
+                    memory_lifecycle_status=context.memory_lifecycle_status,
+                    memory_review_status=context.memory_review_status,
                     domain_mission_link_reason=context.domain_mission_link_reason,
                     recurrent_context_status=context.recurrent_context_status,
                     recurrent_interaction_count=context.recurrent_interaction_count,
@@ -767,20 +771,28 @@ class MemoryService:
             if promoted_route_payload.get("workflow_profile") is not None
             else None
         )
-        optional_memory_classes = self._derive_guided_optional_memory_classes(
+        memory_decision = self._derive_guided_memory_decision(
             promoted_route=promoted_route,
             mission_state=mission_state,
             related_states=related_states,
             user_scope_snapshot=user_scope_snapshot,
             previous_context=previous_context,
+            continuity_mode=continuity_mode,
         )
-        if optional_memory_classes:
-            shared_memory_classes = guided_specialist_memory_classes(
-                semantic_evidence=MemoryClass.SEMANTIC in optional_memory_classes,
-                procedural_evidence=MemoryClass.PROCEDURAL in optional_memory_classes,
-                domain_compatible=True,
-                workflow_profile=workflow_profile,
-            )
+        if memory_decision.specialist_classes:
+            shared_memory_classes = list(memory_decision.specialist_classes)
+        corpus_summary = self.repository.summarize_memory_corpus()
+        corpus_telemetry = memory_corpus_telemetry(
+            user_scope_records=corpus_summary.user_scope_records,
+            mission_state_records=corpus_summary.mission_state_records,
+            specialist_context_records=corpus_summary.specialist_context_records,
+            semantic_records=corpus_summary.semantic_records,
+            procedural_records=corpus_summary.procedural_records,
+            retained_records=corpus_summary.retained_records,
+            promoted_records=corpus_summary.promoted_records,
+            aging_records=corpus_summary.aging_records,
+            review_recommended_records=corpus_summary.review_recommended_records,
+        )
         canonical_memory_refs = [
             f"memory://{memory_class.value}" for memory_class in shared_memory_classes
         ]
@@ -831,6 +843,12 @@ class MemoryService:
             f"active_domains={','.join(active_domains[:3]) or 'nenhum'} | "
             f"semantic_focus={source_focus} | "
             f"workflow_profile={workflow_profile or 'baseline'} | "
+            f"semantic_source={memory_decision.semantic_source or 'none'} | "
+            f"procedural_source={memory_decision.procedural_source or 'none'} | "
+            f"memory_lifecycle={memory_decision.lifecycle_status} | "
+            f"memory_review={memory_decision.review_status} | "
+            f"memory_corpus_status={corpus_telemetry.corpus_status} | "
+            f"memory_retention_pressure={corpus_telemetry.retention_pressure} | "
             f"memory_refs={','.join(memory_refs[:4])}"
         )
         continuity_context_brief = (
@@ -903,6 +921,17 @@ class MemoryService:
             semantic_focus=semantic_focus,
             open_loops=open_loops,
             last_recommendation=mission_state.last_recommendation if mission_state else None,
+            semantic_memory_source=memory_decision.semantic_source,
+            procedural_memory_source=memory_decision.procedural_source,
+            semantic_memory_effects=list(memory_decision.semantic_effects),
+            procedural_memory_effects=list(memory_decision.procedural_effects),
+            semantic_memory_lifecycle=memory_decision.semantic_lifecycle,
+            procedural_memory_lifecycle=memory_decision.procedural_lifecycle,
+            memory_lifecycle_status=memory_decision.lifecycle_status,
+            memory_review_status=memory_decision.review_status,
+            memory_corpus_status=corpus_telemetry.corpus_status,
+            memory_retention_pressure=corpus_telemetry.retention_pressure,
+            memory_corpus_summary=dict(corpus_telemetry.summary),
             domain_mission_link_reason=domain_mission_link_reason,
             recurrent_context_status=recurrent_context["status"],
             recurrent_interaction_count=recurrent_context["interaction_count"],
@@ -912,7 +941,7 @@ class MemoryService:
             recurrent_continuity_modes=recurrent_context["continuity_modes"],
         )
 
-    def _derive_guided_optional_memory_classes(
+    def _derive_guided_memory_decision(
         self,
         *,
         promoted_route: object | None,
@@ -920,54 +949,89 @@ class MemoryService:
         related_states: list[MissionStateContract],
         user_scope_snapshot: StoredUserScopeSnapshot | None,
         previous_context: SpecialistSharedMemoryContextContract | None,
-    ) -> list[MemoryClass]:
+        continuity_mode: str,
+    ):
         if promoted_route is None:
-            return []
+            return guided_memory_decision(
+                semantic_sources=[],
+                procedural_sources=[],
+                domain_compatible=False,
+                workflow_profile=None,
+                continuity_source=None,
+            )
 
-        semantic_sources: list[str] = []
-        procedural_sources: list[str] = []
+        semantic_labels: list[str] = []
+        procedural_labels: list[str] = []
+        semantic_evidence: list[str] = []
+        procedural_evidence: list[str] = []
         if mission_state is not None:
-            semantic_sources.extend(mission_state.semantic_focus)
+            semantic_evidence.extend(mission_state.semantic_focus)
             if mission_state.semantic_brief:
-                semantic_sources.append(mission_state.semantic_brief)
+                semantic_evidence.append(mission_state.semantic_brief)
+            if semantic_evidence:
+                semantic_labels.append("active_mission")
             if mission_state.recent_plan_steps:
-                procedural_sources.extend(mission_state.recent_plan_steps)
+                procedural_evidence.extend(mission_state.recent_plan_steps)
             if mission_state.last_recommendation:
-                procedural_sources.append(mission_state.last_recommendation)
+                procedural_evidence.append(mission_state.last_recommendation)
+            if procedural_evidence:
+                procedural_labels.append("active_mission")
         for related_state in related_states:
-            semantic_sources.extend(related_state.semantic_focus)
+            semantic_evidence.extend(related_state.semantic_focus)
             if related_state.semantic_brief:
-                semantic_sources.append(related_state.semantic_brief)
+                semantic_evidence.append(related_state.semantic_brief)
+            semantic_labels.append("related_mission")
             if related_state.recent_plan_steps:
-                procedural_sources.extend(related_state.recent_plan_steps)
+                procedural_evidence.extend(related_state.recent_plan_steps)
             if related_state.last_recommendation:
-                procedural_sources.append(related_state.last_recommendation)
+                procedural_evidence.append(related_state.last_recommendation)
+            procedural_labels.append("related_mission")
         if previous_context is not None:
-            semantic_sources.extend(previous_context.semantic_focus)
+            semantic_evidence.extend(previous_context.semantic_focus)
             if previous_context.shared_memory_brief:
-                semantic_sources.append(previous_context.shared_memory_brief)
+                semantic_evidence.append(previous_context.shared_memory_brief)
+            semantic_labels.append("recurrent_specialist")
             if previous_context.last_recommendation:
-                procedural_sources.append(previous_context.last_recommendation)
-            procedural_sources.extend(previous_context.recurrent_continuity_modes)
+                procedural_evidence.append(previous_context.last_recommendation)
+            procedural_evidence.extend(previous_context.recurrent_continuity_modes)
+            procedural_labels.append("recurrent_specialist")
         if user_scope_snapshot is not None:
             if user_scope_snapshot.last_recommended_task_type:
-                procedural_sources.append(user_scope_snapshot.last_recommended_task_type)
+                procedural_evidence.append(user_scope_snapshot.last_recommended_task_type)
             if user_scope_snapshot.continuity_preference:
-                procedural_sources.append(user_scope_snapshot.continuity_preference)
+                procedural_evidence.append(user_scope_snapshot.continuity_preference)
+            if user_scope_snapshot.recent_domain_focus:
+                semantic_labels.append("user_scope")
+            if (
+                user_scope_snapshot.last_recommended_task_type
+                or user_scope_snapshot.continuity_preference
+            ):
+                procedural_labels.append("user_scope")
 
         route_refs = set(getattr(promoted_route, "canonical_refs", ()) or ())
         route_name = getattr(promoted_route, "domain_name", None)
-        semantic_evidence = bool(semantic_sources)
+        semantic_signal = bool(semantic_evidence)
         domain_compatible = not route_refs or any(
-            ref in semantic_sources for ref in route_refs
-        ) or (route_name in semantic_sources if route_name else False)
-        procedural_evidence = bool(procedural_sources)
-
-        return guided_reasoning_memory_classes(
-            semantic_evidence=semantic_evidence,
-            procedural_evidence=procedural_evidence,
+            ref in semantic_evidence for ref in route_refs
+        ) or (route_name in semantic_evidence if route_name else False)
+        procedural_signal = bool(procedural_evidence)
+        continuity_source = (
+            "related_mission"
+            if "related_mission" in semantic_labels or "related_mission" in procedural_labels
+            else "active_mission"
+            if "active_mission" in semantic_labels or "active_mission" in procedural_labels
+            else "user_scope"
+            if "user_scope" in semantic_labels or "user_scope" in procedural_labels
+            else "fresh_request"
+        )
+        if continuity_mode == "retomar_missao_relacionada":
+            continuity_source = "related_mission"
+        return guided_memory_decision(
+            semantic_sources=semantic_labels if semantic_signal else [],
+            procedural_sources=procedural_labels if procedural_signal else [],
             domain_compatible=domain_compatible,
             workflow_profile=getattr(promoted_route, "workflow_profile", None),
+            continuity_source=continuity_source,
         )
 
     def _build_recurrent_specialist_context(

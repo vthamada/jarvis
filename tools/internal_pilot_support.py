@@ -100,16 +100,29 @@ class PilotExecutionResult:
     axis_gate_status: str
     workflow_trace_status: str
     workflow_profile_status: str
+    metacognitive_guidance_status: str
     memory_causality_status: str
+    primary_mind: str | None
+    primary_route: str | None
     dominant_tension: str | None
     arbitration_source: str | None
     primary_domain_driver: str | None
     mind_domain_specialist_status: str
+    mind_domain_specialist_chain_status: str
+    mind_domain_specialist_chain: str | None
     cognitive_recomposition_applied: bool
     cognitive_recomposition_reason: str | None
     cognitive_recomposition_trigger: str | None
+    semantic_memory_source: str | None
+    procedural_memory_source: str | None
     semantic_memory_focus: list[str]
     procedural_memory_hint: str | None
+    semantic_memory_effects: list[str]
+    procedural_memory_effects: list[str]
+    semantic_memory_lifecycle: str | None
+    procedural_memory_lifecycle: str | None
+    memory_lifecycle_status: str
+    memory_review_status: str
     semantic_memory_specialists: list[str]
     procedural_memory_specialists: list[str]
     expected_continuity_action: str | None
@@ -130,6 +143,10 @@ class PilotExecutionResult:
     expected_workflow_profile: str | None = None
     workflow_profile_matches_expectation: bool | None = None
     coverage_tags: list[str] = field(default_factory=list)
+    mind_disagreement_status: str = "not_applicable"
+    mind_validation_checkpoint_status: str = "not_applicable"
+    memory_corpus_status: str = "not_applicable"
+    memory_retention_pressure: str | None = None
 
 
 def runtime_dir(name: str) -> Path:
@@ -166,6 +183,7 @@ def default_pilot_scenarios() -> list[PilotScenario]:
                 "guided_route",
                 "workflow_profile",
                 "dominant_tension",
+                "mind_disagreement",
                 "mind_domain_specialist",
                 "specialist_subflow",
                 "mission_runtime_state",
@@ -233,6 +251,7 @@ def default_pilot_scenarios() -> list[PilotScenario]:
                 "guided_route",
                 "workflow_profile",
                 "memory_causality",
+                "memory_corpus",
                 "specialist_subflow",
                 "mission_runtime_state",
             ],
@@ -257,6 +276,7 @@ def default_pilot_scenarios() -> list[PilotScenario]:
                 "guided_route",
                 "workflow_profile",
                 "dominant_tension",
+                "mind_disagreement",
                 "specialist_subflow",
                 "mission_runtime_state",
             ],
@@ -281,6 +301,7 @@ def default_pilot_scenarios() -> list[PilotScenario]:
                 "guided_route",
                 "workflow_profile",
                 "dominant_tension",
+                "mind_disagreement",
                 "specialist_subflow",
                 "mission_runtime_state",
             ],
@@ -484,16 +505,31 @@ def run_pilot_scenarios(
                 ),
                 workflow_trace_status=audit.workflow_trace_status,
                 workflow_profile_status=audit.workflow_profile_status,
+                metacognitive_guidance_status=audit.metacognitive_guidance_status,
                 memory_causality_status=audit.memory_causality_status,
+                primary_mind=audit.primary_mind,
+                primary_route=audit.primary_route,
                 dominant_tension=audit.dominant_tension,
                 arbitration_source=audit.arbitration_source,
                 primary_domain_driver=audit.primary_domain_driver,
                 mind_domain_specialist_status=audit.mind_domain_specialist_status,
+                mind_domain_specialist_chain_status=(
+                    audit.mind_domain_specialist_chain_status
+                ),
+                mind_domain_specialist_chain=audit.mind_domain_specialist_chain,
                 cognitive_recomposition_applied=audit.cognitive_recomposition_applied,
                 cognitive_recomposition_reason=audit.cognitive_recomposition_reason,
                 cognitive_recomposition_trigger=audit.cognitive_recomposition_trigger,
+                semantic_memory_source=audit.semantic_memory_source,
+                procedural_memory_source=audit.procedural_memory_source,
                 semantic_memory_focus=list(audit.semantic_memory_focus),
                 procedural_memory_hint=audit.procedural_memory_hint,
+                semantic_memory_effects=list(audit.semantic_memory_effects),
+                procedural_memory_effects=list(audit.procedural_memory_effects),
+                semantic_memory_lifecycle=audit.semantic_memory_lifecycle,
+                procedural_memory_lifecycle=audit.procedural_memory_lifecycle,
+                memory_lifecycle_status=audit.memory_lifecycle_status,
+                memory_review_status=audit.memory_review_status,
                 semantic_memory_specialists=list(audit.semantic_memory_specialists),
                 procedural_memory_specialists=list(audit.procedural_memory_specialists),
                 expected_continuity_action=scenario.expected_continuity_action,
@@ -524,6 +560,10 @@ def run_pilot_scenarios(
                     else None
                 ),
                 coverage_tags=list(scenario.coverage_tags),
+                mind_disagreement_status=audit.mind_disagreement_status,
+                mind_validation_checkpoint_status=audit.mind_validation_checkpoint_status,
+                memory_corpus_status=audit.memory_corpus_status,
+                memory_retention_pressure=audit.memory_retention_pressure,
             )
         )
     return results

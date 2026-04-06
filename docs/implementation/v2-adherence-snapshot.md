@@ -31,7 +31,7 @@ Estado de referencia desta revisao:
 - data da fotografia: `2026-04-06`
 - ultimo recorte funcional fechado: `v2-native-memory-scope-hardening-cut`
 - ultimo recorte estrutural fechado: `v2-repository-hygiene-and-tools-review-cut`
-- passo funcional em andamento: `pre-v3-protective-intelligence-foundation` (mapeado, nao iniciado)
+- passo funcional em andamento: `autoevolucao-governada-do-nucleo` (`MB-037` a `MB-040` concluidos; fila micro sem item `ready` ate nova repriorizacao)
 
 Leitura executiva:
 
@@ -47,6 +47,7 @@ Leitura executiva:
 - memoria guiada avancou mais um passo: `semantic` e `procedural` agora alteram de forma mais causal `steps`, `smallest_safe_next_action`, `success_criteria` e framing final de `planning`/`synthesis`, em vez de aparecer apenas como hint contextual.
 - o vinculo `mente primária -> domínio primário -> rota ativa` agora também atravessa `planning`, `response_synthesized` e `observability`, reduzindo leitura implícita no runtime final.
 - a malha `mente -> dominio -> especialista` tambem ficou menos implicita: `cognitive-engine` e `specialist-engine` passaram a preferir rotas explicitas alinhadas ao `primary_domain_driver`, e a observabilidade passou a cobrar esse match quando o runtime ja o conhece.
+- metacognicao causal avancou um passo real: `planning`, `synthesis`, `response_synthesized` e `observability` agora explicitam quando a ancora cognitiva alterou `success_criteria`, `smallest_safe_next_action` ou recomendacao de contencao, em vez de deixar esse efeito apenas implícito no rationale.
 - a observabilidade tambem passou a distinguir `workflow_trace_status` de `workflow_profile_status`, separando falha real de baseline de sinais que ainda entram apenas como `maturation_recommended`.
 - `internal_pilot_report` e `compare_orchestrator_paths` agora tambem expoem `workflow_profile_status`, tornando esse sinal parte do artefato comparativo e nao apenas da auditoria local.
 - esses mesmos artefatos agora tambem classificam explicitamente o workflow em `baseline_saudavel`, `maturation_recommended` ou `attention_required`, deixando a leitura de maturacao separada do gate estrutural.
@@ -67,8 +68,17 @@ Leitura executiva:
 - o caminho padrao do `orchestrator-service` agora tambem fecha a continuidade como subfluxo explicito via `continuity_subflow_completed`, alinhado ao mesmo payload soberano usado pelo caminho opcional de `LangGraph`.
 - o lote `pre-v3 hardening` foi concluido no `execution-backlog`; `MB-023` a `MB-026` fecharam continuidade stateful nativa, specialist subflow explicito, `mission_runtime_state` e leitura agregada desses sinais no baseline.
 - `observability-service`, `internal_pilot_report`, `compare_orchestrator_paths`, `verify_active_cut_baseline.py` e o fechamento regeneravel do corte agora tratam `specialist_subflow` e `mission_runtime_state` como readiness arquitetural pre-`v3`, e nao apenas telemetria localizada.
-- a proxima frente macro foi escolhida e documentada como `pre-v3 protective intelligence foundation`, com escopo inicial restrito a contratos, ledger de evidencia, casos, sinais de risco e guardrails minimos.
-- o novo lote micro dessa frente ja foi aberto no `execution-backlog`, mas nenhuma implementacao do eixo foi iniciada nesta rodada.
+- `pre-v3 protective intelligence foundation` foi mapeada e preservada como frente futura candidata, mas deixou de ser a proxima frente ativa;
+- o `execution-backlog` foi recentrado no nucleo cognitivo: `MB-027` a `MB-031` passaram para `deferred`, e o novo lote ativo volta a priorizar metacognicao, memoria causal/lifecycle e a relacao `mente -> dominio -> especialista`;
+- dentro desse lote, `MB-032` a `MB-036` ja foram fechados; memoria causal/lifecycle, cadeia `mente -> dominio -> especialista` e readiness de evolucao/release agora entram como baseline do nucleo, e nao mais como pendencia do lote atual;
+- `memory_registry`, `memory-service`, `planning`, `synthesis` e `observability` agora distinguem fonte, efeitos, lifecycle e revisao de `semantic`/`procedural` por `workflow_profile` e por fonte de continuidade, separando reasoning final, packet de especialista e recovery de missao;
+- `orchestrator-service`, `observability-service`, `internal_pilot_report` e `compare_orchestrator_paths` agora tratam `mind_domain_specialist_chain_*`, `primary_mind` e `primary_route` como evidencia primaria do runtime e do piloto, em vez de depender de leitura posterior de `rationale`;
+- `evolution_from_pilot`, `evolution-lab`, `compare_orchestrator_paths`, `internal_pilot_report` e `verify_release_signal_baseline.py` agora promovem metacognicao causal, lifecycle de memoria e coerencia `mente -> dominio -> especialista` a sinais formais de evolucao governada e readiness de release;
+- `compare_orchestrator_paths`, `evolution-lab` e `evolution_from_pilot` agora publicam `refinement_vectors` por workflow, transformando sinais do nucleo em leitura priorizada de refinamento e nao apenas em relatorio de estado;
+- `planning`, `synthesis`, `orchestrator` e `observability` agora tratam discordancia entre mentes como restricao, checkpoint governado e leitura auditavel quando o workflow exige profundidade cognitiva maior;
+- `memory-service`, `memory_registry`, `observability` e o piloto agora publicam `memory_corpus_status`, `memory_retention_pressure` e resumo do corpus por classe, tornando o lifecycle de memoria observavel tambem no nivel de corpus;
+- `verify_active_cut_baseline.py`, `verify_release_signal_baseline.py` e `programa-de-excelencia.md` agora materializam uma matriz formal por eixo/workflow sobre esse baseline mais maduro;
+- a fila micro ja fechou o lote seguinte do nucleo: `MB-037` a `MB-040` foram concluidos e agora deixam vetores priorizados de refinamento, composicao de mentes mais profunda, telemetria viva de memoria e matriz formal de evals como baseline operacional do ciclo;
 - memoria, identidade, governanca, observabilidade e soberania do nucleo evoluiram de forma consistente;
 - benchmark externo, memory gap e hardening nativo foram tratados corretamente como etapas subordinadas ao baseline,
   nao como desvio de direcao.
@@ -78,7 +88,7 @@ Em resumo:
 
 - a visao esta preservada;
 - o runtime esta coerente com a fase do programa;
-- o backlog correto agora e de fundacao controlada da proxima frente macro e de maturacao incremental, nao de correcao estrutural do `v2`.
+- o backlog correto agora e de maturacao disciplinada do nucleo e de preparacao da autoevolucao governada, nao de abertura imediata de uma nova vertical.
 
 ---
 
@@ -138,7 +148,8 @@ O que esta aderente:
 Gap relevante:
 
 - a arbitragem principal ja foi puxada para helpers soberanos do `mind_registry`, reduzindo regra espalhada no engine;
-- a relacao entre mente, dominio e especialista ainda pode ficar mais explicita e menos implicita em consumidores posteriores.
+- a relacao entre mente, dominio e especialista agora ja atravessa runtime, piloto, comparadores e release signals como evidencia primaria;
+- o que resta aqui ja e profundidade futura de uso causal desses sinais em consumidores posteriores, nao falta de materializacao basica.
 
 Leitura:
 
@@ -191,6 +202,7 @@ Gap relevante:
 - a politica que libera essas classes saiu de decisao espalhada no servi?o e passou a viver mais explicitamente no `memory_registry`;
 - `planning` e `synthesis` ja usam esse apoio sem bypassar governanca, inclusive quando o hint nasce do recovery soberano da propria missao e nao apenas de handoff especializado, enquanto especialistas continuam presos ao contrato elegivel da rota promovida;
 - esse uso deixou de ser apenas ornamental: o `planning` agora prioriza passos guiados de framing/continuidade e a `smallest_safe_next_action` preserva o fio procedural quando a rota ativa depende dele, enquanto a `synthesis` ancora o framing final e cobra continuidade explicita da proxima acao;
+- o baseline agora tambem distingue fonte, efeitos, lifecycle e revisao de `semantic`/`procedural`, deixando consolidacao, promocao, retencao e review como sinais soberanos do runtime e da observabilidade;
 - a camada multicamada nativa ainda pode crescer antes de qualquer absorcao futura, mas isso ja e maturacao incremental, nao correcao urgente.
 
 Leitura:
@@ -295,55 +307,41 @@ Leitura:
 |---|---|---|---|
 | Nucleo / Orquestrador | runtime parcial | forte, sem gap material | baixa |
 | Identidade | runtime parcial | operacional e auditavel | baixa |
-| Mentes | runtime parcial | arbitragem ainda hibrida | media |
+| Mentes | runtime parcial | arbitragem forte, mas ainda pouco causal em consumidores finais | alta |
 | Dominios | runtime parcial | contrato soberano ja atravessa o runtime promovido | media |
-| Memorias | runtime parcial | eixo fortalecido e coerente | media |
+| Memorias | runtime parcial | eixo fortalecido, mas lifecycle e causalidade ainda pedem profundidade | alta |
 | Governanca | runtime parcial | solida | baixa |
 | Especialistas | runtime parcial | malha promovida fechada e auditavel | media |
 | Observabilidade | runtime parcial | forte | baixa |
-| Evolucao / Benchmark | deferido por fase | corretamente subordinado | nao aplicavel |
+| Evolucao / Benchmark | deferido por fase | corretamente subordinado, mas pronto para amadurecer com sinais do nucleo | media |
 | Voz / Realtime | deferido por fase | corretamente adiado | nao aplicavel |
 
 ---
 
 ## 5. Proxima sequencia correta de implementacao
 
-Com base no estado atual do repositorio, a sequencia mais coerente deixou de ser correcao estrutural do `v2` e passou a ser maturacao disciplinada do baseline:
+Com base no estado atual do repositorio, a sequencia mais coerente agora comeca por repriorizar o proximo lote do nucleo sem reativar nenhuma vertical nova:
 
-### Passo 1 - consolidar o fechamento operacional do `v2`
-
-Foco:
-
-- manter `HANDOFF.md`, `CHANGELOG.md` e este snapshot como leitura viva do baseline;
-- tratar dominios, especialistas promovidos e memoria guiada como eixos funcionalmente fechados no `v2` atual.
-
-### Passo 2 - aprofundar criterios por `workflow_profile`
+### Passo 1 - tratar `MB-037` a `MB-040` como baseline fechado
 
 Foco:
 
-- tornar criterios de saida e leitura final ainda mais especificos por rota promovida;
-- fazer isso sem espalhar heuristica fora de `domain_registry`, `memory_registry` e `mind_registry`.
+- usar `refinement_vectors`, matriz formal de evals e telemetria de corpus como leitura operacional ja absorvida;
+- evitar reabrir esse mesmo lote por inercia local.
 
-### Passo 3 - amadurecer memoria semantica e procedural
-
-Foco:
-
-- ampliar utilidade de `semantic` e `procedural` como apoio soberano de continuidade e framing, agora com comparacao explicita entre memoria causal e memoria apenas anexada;
-- manter `organization_scope` fechado e evitar qualquer bypass de governanca.
-
-### Passo 4 - deixar a relacao mente -> dominio -> especialista ainda mais explicita
+### Passo 2 - abrir um novo lote sobre o que esses sinais passaram a mostrar
 
 Foco:
 
-- reduzir consumo implicito dessa relacao em consumidores posteriores, usando tambem `dominant_tension`, `mind_domain_specialist_status` e sinais de recomposicao como evidencias comparativas do baseline;
-- tratar isso como maturacao cognitiva futura, nao como lacuna critica do baseline.
+- aprofundar autoevolucao governada com base em vetores por workflow ja formalizados;
+- decidir o proximo lote a partir dos sinais do runtime, e nao por abertura prematura de vertical.
 
-### Passo 5 - promover esses sinais a gate e fechamento de release
+### Passo 3 - continuar maturando o nucleo antes de qualquer frente macro nova
 
 Foco:
 
-- levar `workflow_profile_status`, `memory_causality_status`, `mind_domain_specialist_status` e recomposicao cognitiva para criterios formais de release quando aplicaveis;
-- manter a mesma gramatica entre comparacao sandbox, snapshot, handoff e fechamento regeneravel.
+- usar a matriz de evals e a telemetria de memoria para identificar o proximo ganho causal do nucleo;
+- manter `protective intelligence` em `deferred` ate nova decisao explicita.
 
 ---
 
@@ -376,6 +374,9 @@ O que resta e maturacao adicional em tres pontos:
 - relacao mente -> dominio -> especialista ainda mais explicita em consumidores posteriores.
 
 Esse e o backlog certo a partir daqui, mas ele ja nao caracteriza desvio material do `v2`.
+
+`Protective intelligence` continua como eixo valido e estudado, mas em estado
+`deferred` ate que esse lote de maturacao do nucleo seja realmente fechado.
 
 ---
 

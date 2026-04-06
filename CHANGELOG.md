@@ -2,6 +2,40 @@
 
 ## 2026-04-06
 
+### Fechamento do lote cognitivo MB-037 a MB-040
+
+- `evolution/evolution-lab/src/evolution_lab/service.py`, `tools/evolution_from_pilot.py`, `tools/compare_orchestrator_paths.py` e `tools/internal_pilot_report.py` agora publicam `refinement_vectors` por workflow e transformam os sinais do nucleo em leitura priorizada de refinamento para autoevolucao governada;
+- `engines/planning-engine/src/planning_engine/engine.py`, `engines/synthesis-engine/src/synthesis_engine/engine.py`, `services/orchestrator-service/src/orchestrator_service/service.py` e `services/observability-service/src/observability_service/service.py` agora tratam discordancia entre mentes como restricao, checkpoint governado e leitura auditavel do runtime quando o workflow exige profundidade cognitiva maior;
+- `shared/memory_registry.py`, `services/memory-service/src/memory_service/repository.py`, `services/memory-service/src/memory_service/service.py`, `services/observability-service/src/observability_service/service.py` e `tools/internal_pilot_support.py` agora publicam `memory_corpus_status`, `memory_retention_pressure` e cobertura deliberada de corpus no baseline vivo;
+- `tools/verify_release_signal_baseline.py`, `tools/verify_active_cut_baseline.py` e `docs/roadmap/programa-de-excelencia.md` agora tratam matriz formal de evals por eixo/workflow como parte explicita do baseline operacional, e nao apenas como direcao abstrata;
+- `docs/implementation/execution-backlog.md`, `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para marcar `MB-037` a `MB-040` como concluidos e deixar a fila micro sem item `ready` ate nova repriorizacao.
+
+### Abertura do proximo lote do nucleo cognitivo
+
+- `docs/implementation/execution-backlog.md` agora abre `MB-037` a `MB-040`, com `MB-037` em `ready` para transformar sinais do nucleo em vetores priorizados de refinamento por workflow;
+- o novo lote ficou explicitamente organizado em quatro frentes: autoevolucao governada, composicao de mentes mais profunda, telemetria viva de memoria e matriz formal de evals por eixo/workflow;
+- `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para refletir esse proximo passo sem reativar `protective intelligence`.
+
+### Fechamento do lote cognitivo MB-033 a MB-036
+
+- `shared/memory_registry.py`, `services/memory-service/src/memory_service/service.py`, `engines/planning-engine/src/planning_engine/engine.py`, `engines/synthesis-engine/src/synthesis_engine/engine.py` e `services/observability-service/src/observability_service/service.py` agora distinguem fonte, efeitos, lifecycle e revisao de `semantic`/`procedural` por `workflow_profile` e por fonte de continuidade, separando reasoning final, packet de especialista e recovery de missao;
+- `services/orchestrator-service/src/orchestrator_service/service.py`, `services/observability-service/src/observability_service/service.py`, `tools/internal_pilot_support.py`, `tools/internal_pilot_report.py` e `tools/compare_orchestrator_paths.py` agora tratam `mind_domain_specialist_chain_*`, `primary_mind` e `primary_route` como evidencia primaria do runtime e do piloto;
+- `tools/evolution_from_pilot.py`, `evolution/evolution-lab/src/evolution_lab/service.py`, `tools/compare_orchestrator_paths.py` e `tools/verify_release_signal_baseline.py` agora promovem metacognicao causal, lifecycle de memoria e coerencia `mente -> dominio -> especialista` a sinais formais de evolucao governada e readiness de release;
+- `docs/implementation/execution-backlog.md`, `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para marcar `MB-033` a `MB-036` como concluidos e registrar o lote atual do nucleo cognitivo como fechado, sem item `ready`.
+
+### Metacognicao causal no runtime final
+
+- `shared/contracts/__init__.py` e `engines/planning-engine/src/planning_engine/engine.py` agora materializam `metacognitive_guidance_*` no plano deliberativo, distinguindo quando `primary_mind`, `primary_domain_driver` e `dominant_tension` alteraram `success_criteria`, `smallest_safe_next_action` e recomendacao de contencao;
+- `engines/synthesis-engine/src/synthesis_engine/engine.py` passou a refletir essa guidance na leitura final e nas respostas governadas, deixando explicito quando a contencao ou a proxima acao foram ancoradas por metacognicao;
+- `services/orchestrator-service/src/orchestrator_service/service.py` e `services/observability-service/src/observability_service/service.py` agora propagam e auditam `metacognitive_guidance_applied`, `metacognitive_guidance_summary`, `metacognitive_effects` e `metacognitive_containment_recommendation`;
+- `docs/implementation/execution-backlog.md`, `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para marcar `MB-032` como concluido e liberar `MB-033` como proximo item `ready`.
+
+### Repriorizacao do backlog para o nucleo cognitivo
+
+- `docs/implementation/execution-backlog.md` foi recentrado no nucleo cognitivo: `MB-027` a `MB-031` passaram para `deferred`, e um novo lote (`MB-032` a `MB-036`) foi aberto para metacognicao deliberativa, memoria causal/lifecycle e relacao `mente -> dominio -> especialista`;
+- `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para deixar explicito que a prioridade correta agora e maturacao do nucleo, nao abertura imediata de `protective intelligence`;
+- `docs/implementation/pre-v3-protective-intelligence-foundation-cut.md` foi preservado como frente futura candidata, mas deixou de ser tratado como frente ativa da rodada.
+
 ### Mapeamento da próxima frente macro sem iniciar implementação
 
 - criado `docs/implementation/pre-v3-protective-intelligence-foundation-cut.md` para abrir formalmente a próxima frente macro do sistema, com escopo defensivo e ordem de implementação explícita;

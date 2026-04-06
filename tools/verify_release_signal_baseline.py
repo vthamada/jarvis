@@ -20,13 +20,25 @@ def _make_result(  # type: ignore[no-untyped-def]
     scenario_id: str,
     path_name: str,
     workflow_profile_status: str = "healthy",
+    metacognitive_guidance_status: str = "healthy",
+    mind_disagreement_status: str = "not_applicable",
+    mind_validation_checkpoint_status: str = "not_applicable",
     memory_causality_status: str = "causal_guidance",
+    memory_lifecycle_status: str = "retained",
+    memory_review_status: str = "stable",
+    memory_corpus_status: str = "stable",
+    memory_retention_pressure: str | None = "low",
     mind_domain_specialist_status: str = "aligned",
+    mind_domain_specialist_chain_status: str = "aligned",
     cognitive_recomposition_applied: bool = False,
     cognitive_recomposition_reason: str | None = None,
     cognitive_recomposition_trigger: str | None = None,
     dominant_tension: str | None = "equilibrar profundidade analitica com conclusao util",
+    primary_mind: str | None = "analise_estruturada",
+    primary_route: str | None = "analysis",
     primary_domain_driver: str | None = "dados_estatistica_e_inteligencia_analitica",
+    semantic_memory_source: str | None = "active_mission",
+    procedural_memory_source: str | None = "active_mission",
     semantic_memory_focus: list[str] | None = None,
     procedural_memory_hint: str | None = "preservar criterio de comparacao mais recente",
 ) -> Any:
@@ -62,17 +74,37 @@ def _make_result(  # type: ignore[no-untyped-def]
         axis_gate_status="healthy",
         workflow_trace_status="healthy",
         workflow_profile_status=workflow_profile_status,
+        metacognitive_guidance_status=metacognitive_guidance_status,
+        mind_disagreement_status=mind_disagreement_status,
+        mind_validation_checkpoint_status=mind_validation_checkpoint_status,
         memory_causality_status=memory_causality_status,
+        primary_mind=primary_mind,
+        primary_route=primary_route,
         dominant_tension=dominant_tension,
         arbitration_source="mind_registry",
         primary_domain_driver=primary_domain_driver,
         mind_domain_specialist_status=mind_domain_specialist_status,
+        mind_domain_specialist_chain_status=mind_domain_specialist_chain_status,
+        mind_domain_specialist_chain=(
+            f"{primary_mind or 'none'} -> {primary_domain_driver or 'none'} -> "
+            f"{primary_route or 'none'} -> specialists[structured_analysis_specialist]"
+        ),
         cognitive_recomposition_applied=cognitive_recomposition_applied,
         cognitive_recomposition_reason=cognitive_recomposition_reason,
         cognitive_recomposition_trigger=cognitive_recomposition_trigger,
+        semantic_memory_source=semantic_memory_source,
+        procedural_memory_source=procedural_memory_source,
         semantic_memory_focus=semantic_memory_focus
         or ["dados_estatistica_e_inteligencia_analitica"],
         procedural_memory_hint=procedural_memory_hint,
+        semantic_memory_effects=["framing", "continuity"],
+        procedural_memory_effects=["next_action", "continuity"],
+        semantic_memory_lifecycle="retained",
+        procedural_memory_lifecycle="retained",
+        memory_lifecycle_status=memory_lifecycle_status,
+        memory_review_status=memory_review_status,
+        memory_corpus_status=memory_corpus_status,
+        memory_retention_pressure=memory_retention_pressure,
         semantic_memory_specialists=["structured_analysis_specialist"],
         procedural_memory_specialists=["structured_analysis_specialist"],
         expected_continuity_action="continuar",
@@ -121,19 +153,39 @@ def _make_pilot_trace_summary() -> Any:
         workflow_trace_status="healthy",
         workflow_profile_status="maturation_recommended",
         workflow_profile_assessment="maturation_recommended",
+        metacognitive_guidance_status="healthy",
+        mind_disagreement_status="validation_required",
+        mind_validation_checkpoint_status="attention_required",
         memory_causality_status="attached_only",
+        primary_mind="analise_estruturada",
+        primary_route="analysis",
         dominant_tension="equilibrar profundidade analitica com conclusao util",
         arbitration_source="mind_registry_recomposition",
         primary_domain_driver="assistencia_pessoal_e_operacional",
         mind_domain_specialist_status="mismatch",
+        mind_domain_specialist_chain_status="attention_required",
+        mind_domain_specialist_chain=(
+            "analise_estruturada -> assistencia_pessoal_e_operacional -> analysis -> "
+            "specialists[structured_analysis_specialist]"
+        ),
         cognitive_recomposition_applied=True,
         cognitive_recomposition_assessment="coherent",
         cognitive_recomposition_reason=(
             "primary domain driver has no matching guided specialist route"
         ),
         cognitive_recomposition_trigger="specialist_route_impasse",
+        semantic_memory_source="related_mission",
+        procedural_memory_source="active_mission",
         semantic_memory_focus=["produtividade_execucao_e_coordenacao"],
         procedural_memory_hint="preservar o fio decisorio anterior",
+        semantic_memory_effects=["framing", "continuity"],
+        procedural_memory_effects=["next_action", "continuity"],
+        semantic_memory_lifecycle="promoted",
+        procedural_memory_lifecycle="retained",
+        memory_lifecycle_status="review_recommended",
+        memory_review_status="review_recommended",
+        memory_corpus_status="review_recommended",
+        memory_retention_pressure="high",
         semantic_memory_specialists=["structured_analysis_specialist"],
         procedural_memory_specialists=["structured_analysis_specialist"],
         continuity_trace_status="healthy",
@@ -192,16 +244,30 @@ def _make_closure_payload() -> dict[str, object]:
         "candidate_workflow_baseline_rate": 0.5,
         "baseline_workflow_maturation_rate": 0.0,
         "candidate_workflow_maturation_rate": 0.5,
+        "baseline_metacognitive_guidance_decision": "healthy",
+        "candidate_metacognitive_guidance_decision": "healthy",
+        "baseline_metacognitive_guidance_healthy_rate": 1.0,
+        "candidate_metacognitive_guidance_healthy_rate": 1.0,
         "baseline_memory_causality_decision": "causal_guidance",
         "candidate_memory_causality_decision": "attached_only",
         "baseline_memory_causal_rate": 1.0,
         "candidate_memory_causal_rate": 0.5,
         "baseline_memory_attached_only_rate": 0.0,
         "candidate_memory_attached_only_rate": 0.5,
+        "baseline_memory_lifecycle_decision": "retained",
+        "candidate_memory_lifecycle_decision": "review_recommended",
+        "baseline_memory_lifecycle_retained_rate": 1.0,
+        "candidate_memory_lifecycle_retained_rate": 0.5,
+        "baseline_memory_lifecycle_review_rate": 0.0,
+        "candidate_memory_lifecycle_review_rate": 0.5,
         "baseline_mind_domain_specialist_decision": "aligned",
         "candidate_mind_domain_specialist_decision": "mismatch",
         "baseline_mind_domain_specialist_alignment_rate": 1.0,
         "candidate_mind_domain_specialist_alignment_rate": 0.5,
+        "baseline_mind_domain_specialist_chain_decision": "aligned",
+        "candidate_mind_domain_specialist_chain_decision": "attention_required",
+        "baseline_mind_domain_specialist_chain_alignment_rate": 1.0,
+        "candidate_mind_domain_specialist_chain_alignment_rate": 0.5,
         "baseline_cognitive_recomposition_decision": "not_applicable",
         "candidate_cognitive_recomposition_decision": "coherent",
         "baseline_cognitive_recomposition_coherent_rate": 0.0,
@@ -268,8 +334,16 @@ def main() -> None:
                     scenario_id="baseline",
                     path_name="candidate",
                     workflow_profile_status="maturation_recommended",
+                    metacognitive_guidance_status="healthy",
+                    mind_disagreement_status="validation_required",
+                    mind_validation_checkpoint_status="attention_required",
                     memory_causality_status="attached_only",
+                    memory_lifecycle_status="review_recommended",
+                    memory_review_status="review_recommended",
+                    memory_corpus_status="review_recommended",
+                    memory_retention_pressure="high",
                     mind_domain_specialist_status="mismatch",
+                    mind_domain_specialist_chain_status="attention_required",
                     cognitive_recomposition_applied=True,
                     cognitive_recomposition_reason=(
                         "primary domain driver has no matching guided specialist route"
@@ -278,7 +352,11 @@ def main() -> None:
                     dominant_tension=(
                         "equilibrar clareza executiva com a menor proxima acao segura"
                     ),
+                    primary_mind="analise_estruturada",
+                    primary_route="analysis",
                     primary_domain_driver="assistencia_pessoal_e_operacional",
+                    semantic_memory_source="related_mission",
+                    procedural_memory_source="active_mission",
                     semantic_memory_focus=["produtividade_execucao_e_coordenacao"],
                     procedural_memory_hint="preservar o fio decisorio anterior",
                 )
@@ -300,24 +378,106 @@ def main() -> None:
         "Comparison summary lost the cognitive recomposition release decision.",
     )
     _ensure(
+        summary["candidate_metacognitive_guidance_decision"] == "healthy",
+        "Comparison summary lost the metacognitive guidance release decision.",
+    )
+    _ensure(
         summary["candidate_memory_causality_decision"] == "attached_only",
         "Comparison summary lost the memory causality release decision.",
+    )
+    _ensure(
+        summary["candidate_memory_lifecycle_decision"] == "review_recommended",
+        "Comparison summary lost the memory lifecycle release decision.",
+    )
+    _ensure(
+        summary["candidate_mind_disagreement_decision"] == "validation_required",
+        "Comparison summary lost the mind disagreement release decision.",
+    )
+    _ensure(
+        summary["candidate_mind_validation_checkpoint_decision"] == "attention_required",
+        "Comparison summary lost the mind validation checkpoint release decision.",
+    )
+    _ensure(
+        summary["candidate_memory_corpus_decision"] == "review_recommended",
+        "Comparison summary lost the memory corpus release decision.",
     )
     _ensure(
         summary["candidate_mind_domain_specialist_decision"] == "mismatch",
         "Comparison summary lost the mind-domain-specialist release decision.",
     )
     _ensure(
+        summary["candidate_mind_domain_specialist_chain_decision"]
+        == "attention_required",
+        "Comparison summary lost the mind-domain-specialist chain release decision.",
+    )
+    _ensure(
+        scenario["candidate_mind_disagreement_assessment"] == "validation_required",
+        "Scenario comparison lost the mind disagreement assessment.",
+    )
+    _ensure(
+        scenario["candidate_mind_validation_checkpoint_assessment"]
+        == "attention_required",
+        "Scenario comparison lost the mind validation checkpoint assessment.",
+    )
+    _ensure(
+        scenario["candidate_memory_corpus_assessment"] == "review_recommended",
+        "Scenario comparison lost the memory corpus assessment.",
+    )
+    _ensure(
         scenario["candidate_cognitive_recomposition_assessment"] == "coherent",
         "Scenario comparison lost the recomposition assessment.",
+    )
+    _ensure(
+        "candidate_metacognitive_guidance_decision=healthy" in comparison_text,
+        "Comparison text lost the metacognitive guidance release line.",
+    )
+    _ensure(
+        "candidate_mind_disagreement_decision=validation_required" in comparison_text,
+        "Comparison text lost the mind disagreement release line.",
+    )
+    _ensure(
+        "candidate_mind_validation_checkpoint_decision=attention_required"
+        in comparison_text,
+        "Comparison text lost the mind validation checkpoint release line.",
+    )
+    _ensure(
+        "candidate_memory_corpus_decision=review_recommended" in comparison_text,
+        "Comparison text lost the memory corpus release line.",
+    )
+    _ensure(
+        "candidate_refinement_axes=" in comparison_text
+        and "mind_composition" in comparison_text
+        and "memory_corpus" in comparison_text
+        and "workflow_profile" in comparison_text,
+        "Comparison text lost the refinement vector summary.",
+    )
+    _ensure(
+        "candidate_evaluation_matrix_workflows=analysis" in comparison_text,
+        "Comparison text lost the evaluation matrix workflow summary.",
     )
     _ensure(
         "candidate_cognitive_recomposition_decision=coherent" in comparison_text,
         "Comparison text lost the recomposition release line.",
     )
     _ensure(
+        "candidate_memory_lifecycle_decision=review_recommended" in comparison_text,
+        "Comparison text lost the memory lifecycle release line.",
+    )
+    _ensure(
         "cognitive_recomposition_assessment=coherent" in pilot_text,
         "Pilot report text lost the recomposition assessment.",
+    )
+    _ensure(
+        "mind_disagreement_status=validation_required" in pilot_text,
+        "Pilot report text lost the mind disagreement assessment.",
+    )
+    _ensure(
+        "memory_corpus_status=review_recommended" in pilot_text,
+        "Pilot report text lost the memory corpus assessment.",
+    )
+    _ensure(
+        "memory_lifecycle_status=review_recommended" in pilot_text,
+        "Pilot report text lost the memory lifecycle assessment.",
     )
     _ensure(
         "candidate cognitive recomposition decision" in alignment_markdown,

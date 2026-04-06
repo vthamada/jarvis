@@ -84,8 +84,9 @@ reabrir sua ontologia.
 
 ### 4.1 Metacognicao como deliberacao real
 
-O sistema ja arbitra mentes no inicio do fluxo, mas ainda nao revisa a propria
-estrategia cognitiva durante a execucao.
+O sistema ja arbitra mentes no inicio do fluxo e agora tambem materializa
+discordancia e checkpoints cognitivos no plano, mas ainda nao revisa a propria
+estrategia durante toda a execucao com a profundidade ideal.
 
 O que falta:
 
@@ -119,8 +120,9 @@ Sinal de excelencia:
 
 ### 4.3 Ciclo de vida de memoria como sistema vivo
 
-O projeto ja tem registry e politicas por classe, mas ainda nao opera promocao,
-consolidacao e arquivamento como sistema vivo.
+O projeto ja tem registry, politicas por classe e agora tambem publica
+telemetria de corpus e pressao de retencao, mas ainda nao opera promocao,
+consolidacao e arquivamento como sistema vivo no nivel desejado.
 
 O que falta:
 
@@ -166,7 +168,8 @@ canonicos ou operacionais:
 
 - arquitetura de tool use como camada subordinada ao nucleo;
 - gestao da janela de contexto e criterio de compactacao;
-- framework formal de evals por eixo e por workflow;
+- framework formal de evals por eixo e por workflow, agora iniciado mas ainda
+  incompleto;
 - modelagem explicita do usuario;
 - defesa contra adversarial inputs e prompt injection;
 - estrategia de deployment, operacao real, release e degradacao.
@@ -257,6 +260,12 @@ Resultado esperado:
   deliberacao interna real.
 
 ### 7.4 Quarta frente: formalizar excelencia como gate
+
+A base dessa frente ja existe no runtime atual: `compare_orchestrator_paths`,
+`verify_release_signal_baseline.py` e `verify_active_cut_baseline.py` ja
+publicam matriz por workflow/eixo e vetores priorizados de refinamento. O
+proximo ganho aqui nao e "criar do zero", e sim ampliar cobertura e usar essa
+matriz como criterio mais fino de promocao.
 
 1. Traduzir sinais de excelencia em evals por eixo e por workflow.
 2. Separar claramente:

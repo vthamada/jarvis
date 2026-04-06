@@ -2,12 +2,13 @@
 
 ## 1. Objetivo
 
-Este documento abre a proxima frente macro recomendada depois do fechamento do
+Este documento preserva uma frente macro mapeada depois do fechamento do
 `pre-v3 hardening`.
 
-O objetivo do recorte e construir a fundacao minima de `protective
+O objetivo do recorte e deixar descrita a fundacao minima de `protective
 intelligence` dentro do ecossistema do JARVIS, sem reabrir a ontologia do
-sistema e sem introduzir capacidades ofensivas.
+sistema e sem introduzir capacidades ofensivas, para uso futuro quando a
+prioridade macro do programa voltar a esse eixo.
 
 Leitura correta:
 
@@ -15,13 +16,13 @@ Leitura correta:
 - ele usa [protective-intelligence-architecture.md](../architecture/protective-intelligence-architecture.md)
   como arquitetura-base do eixo;
 - ele nao reabre a robustez ja fechada do `v2`;
-- ele prepara a primeira frente funcional nova antes do `v3`.
+- ele permanece como frente candidata futura, nao como execucao ativa desta rodada.
 
 ---
 
-## 2. Por que esta e a proxima frente
+## 2. Por que esta frente continua valida, mas nao e prioridade agora
 
-Esta frente foi escolhida porque:
+Esta frente continua valida porque:
 
 - parte de um baseline ja endurecido em dominios, memorias, mentes,
   observabilidade e gates;
@@ -30,9 +31,16 @@ Esta frente foi escolhida porque:
 - nao exige promover tecnologia externa nova a baseline central nesta fase;
 - respeita a regra de seguranca governada e `through_core_only`.
 
-Alternativas como `LifeOS`, `FinanceOS` e expansao ampla de superficie permanecem
-validas, mas ficam depois desta fundacao por exigirem mais maturidade de
-memoria, continuidade e governanca operacional.
+Mesmo assim, ela nao e prioridade agora porque o programa ainda precisa fechar
+mais maturacao no nucleo:
+
+- metacognicao mais causal no runtime final;
+- memoria `semantic` e `procedural` mais viva;
+- lifecycle nativo de memoria;
+- relacao `mente -> dominio -> especialista` ainda menos implicita.
+
+Por isso, esta frente fica preservada em `deferred` ate nova decisao macro
+explicita.
 
 ---
 
@@ -102,8 +110,8 @@ Itens iniciais do lote:
 - `MB-030`: `risk-signal-service` minimo;
 - `MB-031`: observabilidade, governanca e gate do eixo.
 
-Este documento abre a frente. A execucao so comeca quando o primeiro item
-`ready` for puxado.
+Este documento preserva a frente. A execucao so deve comecar quando houver
+repriorizacao macro explicita e o primeiro item deixar de estar em `deferred`.
 
 ---
 
@@ -123,8 +131,9 @@ Esta frente so deve ser tratada como minimamente pronta quando:
 
 ## 8. Decisao operacional desta rodada
 
-Estado desta abertura:
+Estado atual:
 
-- frente macro escolhida: `pre-v3 protective intelligence foundation`;
-- documentacao aberta e backlog micro preparado;
-- nenhuma implementacao do runtime foi iniciada nesta rodada.
+- frente macro mapeada: `pre-v3 protective intelligence foundation`;
+- documentacao preservada para uso futuro;
+- backlog micro correspondente reclassificado para `deferred`;
+- nenhuma implementacao do runtime foi iniciada neste eixo.

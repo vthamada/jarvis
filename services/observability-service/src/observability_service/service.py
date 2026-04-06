@@ -55,15 +55,35 @@ class FlowAudit:
     workflow_trace_status: str
     workflow_profile_status: str
     memory_causality_status: str
+    primary_mind: str | None
+    primary_route: str | None
     dominant_tension: str | None
     arbitration_source: str | None
     primary_domain_driver: str | None
+    metacognitive_guidance_status: str
+    metacognitive_guidance_summary: str | None
+    metacognitive_effects: list[str]
+    metacognitive_containment_recommendation: str | None
+    mind_disagreement_status: str
+    mind_validation_checkpoint_status: str
     mind_domain_specialist_status: str
+    mind_domain_specialist_chain_status: str
+    mind_domain_specialist_chain: str | None
     cognitive_recomposition_applied: bool
     cognitive_recomposition_reason: str | None
     cognitive_recomposition_trigger: str | None
+    semantic_memory_source: str | None
+    procedural_memory_source: str | None
     semantic_memory_focus: list[str]
     procedural_memory_hint: str | None
+    semantic_memory_effects: list[str]
+    procedural_memory_effects: list[str]
+    semantic_memory_lifecycle: str | None
+    procedural_memory_lifecycle: str | None
+    memory_lifecycle_status: str
+    memory_review_status: str
+    memory_corpus_status: str
+    memory_retention_pressure: str | None
     semantic_memory_specialists: list[str]
     procedural_memory_specialists: list[str]
     event_names: list[str]
@@ -253,9 +273,41 @@ class ObservabilityService:
                 workflow_governance_mode=None,
                 workflow_trace_status="incomplete",
                 workflow_profile_status="incomplete",
+                memory_causality_status="incomplete",
+                primary_mind=None,
+                primary_route=None,
+                dominant_tension=None,
+                arbitration_source=None,
+                primary_domain_driver=None,
+                metacognitive_guidance_status="incomplete",
+                metacognitive_guidance_summary=None,
+                metacognitive_effects=[],
+                metacognitive_containment_recommendation=None,
+                mind_disagreement_status="incomplete",
+                mind_validation_checkpoint_status="incomplete",
                 event_names=[],
                 missing_required_events=list(required_events),
                 anomaly_flags=["no_events_found"],
+                mind_domain_specialist_status="incomplete",
+                mind_domain_specialist_chain_status="incomplete",
+                mind_domain_specialist_chain=None,
+                cognitive_recomposition_applied=False,
+                cognitive_recomposition_reason=None,
+                cognitive_recomposition_trigger=None,
+                semantic_memory_source=None,
+                procedural_memory_source=None,
+                semantic_memory_focus=[],
+                procedural_memory_hint=None,
+                semantic_memory_effects=[],
+                procedural_memory_effects=[],
+                semantic_memory_lifecycle=None,
+                procedural_memory_lifecycle=None,
+                memory_lifecycle_status="incomplete",
+                memory_review_status="incomplete",
+                memory_corpus_status="incomplete",
+                memory_retention_pressure=None,
+                semantic_memory_specialists=[],
+                procedural_memory_specialists=[],
                 continuity_action=None,
                 continuity_source=None,
                 continuity_target_mission_id=None,
@@ -387,6 +439,36 @@ class ObservabilityService:
                 else None
             )
         )
+        primary_mind = (
+            str(context_event.payload.get("primary_mind"))
+            if context_event
+            and context_event.payload.get("primary_mind") is not None
+            else (
+                str(plan_event.payload.get("primary_mind"))
+                if plan_event and plan_event.payload.get("primary_mind") is not None
+                else (
+                    str(response_event.payload.get("primary_mind"))
+                    if response_event
+                    and response_event.payload.get("primary_mind") is not None
+                    else None
+                )
+            )
+        )
+        primary_route = (
+            str(plan_event.payload.get("primary_route"))
+            if plan_event and plan_event.payload.get("primary_route") is not None
+            else (
+                str(response_event.payload.get("primary_route"))
+                if response_event
+                and response_event.payload.get("primary_route") is not None
+                else (
+                    str(mission_runtime_event.payload.get("primary_route"))
+                    if mission_runtime_event
+                    and mission_runtime_event.payload.get("primary_route") is not None
+                    else None
+                )
+            )
+        )
         dominant_tension = (
             str(context_event.payload.get("dominant_tension"))
             if context_event
@@ -425,6 +507,42 @@ class ObservabilityService:
                     and response_event.payload.get("primary_domain_driver") is not None
                     else None
                 )
+            )
+        )
+        metacognitive_guidance_summary = (
+            str(plan_event.payload.get("metacognitive_guidance_summary"))
+            if plan_event
+            and plan_event.payload.get("metacognitive_guidance_summary") is not None
+            else (
+                str(response_event.payload.get("metacognitive_guidance_summary"))
+                if response_event
+                and response_event.payload.get("metacognitive_guidance_summary") is not None
+                else None
+            )
+        )
+        metacognitive_effects = [
+            str(item)
+            for item in (
+                plan_event.payload.get("metacognitive_effects", [])
+                if plan_event
+                else (
+                    response_event.payload.get("metacognitive_effects", [])
+                    if response_event
+                    else []
+                )
+            )
+        ]
+        metacognitive_containment_recommendation = (
+            str(plan_event.payload.get("metacognitive_containment_recommendation"))
+            if plan_event
+            and plan_event.payload.get("metacognitive_containment_recommendation")
+            is not None
+            else (
+                str(response_event.payload.get("metacognitive_containment_recommendation"))
+                if response_event
+                and response_event.payload.get("metacognitive_containment_recommendation")
+                is not None
+                else None
             )
         )
         cognitive_recomposition_applied = bool(
@@ -474,6 +592,106 @@ class ObservabilityService:
             if response_event
             and response_event.payload.get("procedural_memory_hint") is not None
             else None
+        )
+        semantic_memory_source = (
+            str(response_event.payload.get("semantic_memory_source"))
+            if response_event
+            and response_event.payload.get("semantic_memory_source") is not None
+            else (
+                str(plan_event.payload.get("semantic_memory_source"))
+                if plan_event
+                and plan_event.payload.get("semantic_memory_source") is not None
+                else None
+            )
+        )
+        procedural_memory_source = (
+            str(response_event.payload.get("procedural_memory_source"))
+            if response_event
+            and response_event.payload.get("procedural_memory_source") is not None
+            else (
+                str(plan_event.payload.get("procedural_memory_source"))
+                if plan_event
+                and plan_event.payload.get("procedural_memory_source") is not None
+                else None
+            )
+        )
+        semantic_memory_effects = [
+            str(item)
+            for item in (
+                response_event.payload.get("semantic_memory_effects", [])
+                if response_event
+                else (
+                    plan_event.payload.get("semantic_memory_effects", [])
+                    if plan_event
+                    else []
+                )
+            )
+        ]
+        procedural_memory_effects = [
+            str(item)
+            for item in (
+                response_event.payload.get("procedural_memory_effects", [])
+                if response_event
+                else (
+                    plan_event.payload.get("procedural_memory_effects", [])
+                    if plan_event
+                    else []
+                )
+            )
+        ]
+        semantic_memory_lifecycle = (
+            str(response_event.payload.get("semantic_memory_lifecycle"))
+            if response_event
+            and response_event.payload.get("semantic_memory_lifecycle") is not None
+            else (
+                str(plan_event.payload.get("semantic_memory_lifecycle"))
+                if plan_event
+                and plan_event.payload.get("semantic_memory_lifecycle") is not None
+                else None
+            )
+        )
+        procedural_memory_lifecycle = (
+            str(response_event.payload.get("procedural_memory_lifecycle"))
+            if response_event
+            and response_event.payload.get("procedural_memory_lifecycle") is not None
+            else (
+                str(plan_event.payload.get("procedural_memory_lifecycle"))
+                if plan_event
+                and plan_event.payload.get("procedural_memory_lifecycle") is not None
+                else None
+            )
+        )
+        memory_lifecycle_status = (
+            str(response_event.payload.get("memory_lifecycle_status"))
+            if response_event
+            and response_event.payload.get("memory_lifecycle_status") is not None
+            else (
+                str(plan_event.payload.get("memory_lifecycle_status"))
+                if plan_event
+                and plan_event.payload.get("memory_lifecycle_status") is not None
+                else (
+                    str(memory_event.payload.get("memory_lifecycle_status"))
+                    if memory_event
+                    and memory_event.payload.get("memory_lifecycle_status") is not None
+                    else "not_applicable"
+                )
+            )
+        )
+        memory_review_status = (
+            str(response_event.payload.get("memory_review_status"))
+            if response_event
+            and response_event.payload.get("memory_review_status") is not None
+            else (
+                str(plan_event.payload.get("memory_review_status"))
+                if plan_event
+                and plan_event.payload.get("memory_review_status") is not None
+                else (
+                    str(memory_event.payload.get("memory_review_status"))
+                    if memory_event
+                    and memory_event.payload.get("memory_review_status") is not None
+                    else "not_applicable"
+                )
+            )
         )
         semantic_memory_specialists = [
             str(item)
@@ -607,10 +825,38 @@ class ObservabilityService:
             plan_event=plan_event,
             response_event=response_event,
         )
+        metacognitive_guidance_status = self._metacognitive_guidance_status(
+            context_event=context_event,
+            plan_event=plan_event,
+            response_event=response_event,
+        )
+        mind_disagreement_status = self._mind_disagreement_status(
+            plan_event=plan_event,
+            response_event=response_event,
+        )
+        mind_validation_checkpoint_status = self._mind_validation_checkpoint_status(
+            plan_event=plan_event,
+            response_event=response_event,
+            mind_disagreement_status=mind_disagreement_status,
+        )
         mind_domain_specialist_status = self._mind_domain_specialist_status(
             context_event=context_event,
             specialist_selection_event=specialist_selection_event,
             specialist_domain_event=specialist_domain_event,
+        )
+        mind_domain_specialist_chain_status = self._mind_domain_specialist_chain_status(
+            response_event=response_event,
+            specialist_selection_event=specialist_selection_event,
+            specialist_domain_event=specialist_domain_event,
+            mind_domain_specialist_status=mind_domain_specialist_status,
+        )
+        mind_domain_specialist_chain = self._mind_domain_specialist_chain(
+            response_event=response_event,
+            specialist_selection_event=specialist_selection_event,
+            specialist_domain_event=specialist_domain_event,
+            primary_mind=primary_mind,
+            primary_domain_driver=primary_domain_driver,
+            primary_route=primary_route,
         )
         specialist_subflow_status = self._specialist_subflow_status(
             specialist_subflow_event=specialist_subflow_event,
@@ -640,6 +886,9 @@ class ObservabilityService:
         specialist_recurrence_status = self._specialist_recurrence_status(
             shared_memory_event=shared_memory_event,
         )
+        memory_corpus_status, memory_retention_pressure = self._memory_corpus_signals(
+            shared_memory_event=shared_memory_event,
+        )
         specialist_sovereignty_status = self._specialist_sovereignty_status(
             specialist_contract_event=specialist_contract_event,
         )
@@ -655,15 +904,37 @@ class ObservabilityService:
             workflow_trace_status=workflow_trace_status,
             workflow_profile_status=workflow_profile_status,
             memory_causality_status=memory_causality_status,
+            primary_mind=primary_mind,
+            primary_route=primary_route,
             dominant_tension=dominant_tension,
             arbitration_source=arbitration_source,
             primary_domain_driver=primary_domain_driver,
+            metacognitive_guidance_status=metacognitive_guidance_status,
+            metacognitive_guidance_summary=metacognitive_guidance_summary,
+            metacognitive_effects=metacognitive_effects,
+            metacognitive_containment_recommendation=(
+                metacognitive_containment_recommendation
+            ),
+            mind_disagreement_status=mind_disagreement_status,
+            mind_validation_checkpoint_status=mind_validation_checkpoint_status,
             mind_domain_specialist_status=mind_domain_specialist_status,
+            mind_domain_specialist_chain_status=mind_domain_specialist_chain_status,
+            mind_domain_specialist_chain=mind_domain_specialist_chain,
             cognitive_recomposition_applied=cognitive_recomposition_applied,
             cognitive_recomposition_reason=cognitive_recomposition_reason,
             cognitive_recomposition_trigger=cognitive_recomposition_trigger,
+            semantic_memory_source=semantic_memory_source,
+            procedural_memory_source=procedural_memory_source,
             semantic_memory_focus=semantic_memory_focus,
             procedural_memory_hint=procedural_memory_hint,
+            semantic_memory_effects=semantic_memory_effects,
+            procedural_memory_effects=procedural_memory_effects,
+            semantic_memory_lifecycle=semantic_memory_lifecycle,
+            procedural_memory_lifecycle=procedural_memory_lifecycle,
+            memory_lifecycle_status=memory_lifecycle_status,
+            memory_review_status=memory_review_status,
+            memory_corpus_status=memory_corpus_status,
+            memory_retention_pressure=memory_retention_pressure,
             semantic_memory_specialists=semantic_memory_specialists,
             procedural_memory_specialists=procedural_memory_specialists,
             event_names=event_names,
@@ -758,6 +1029,10 @@ class ObservabilityService:
             return "pause_controlled_usage_and_investigate_missing_trace"
         if audit.governance_decision in {"block", "defer_for_validation"}:
             return "keep_contained_and_require_manual_review"
+        if audit.mind_validation_checkpoint_status == "attention_required":
+            return "review_mind_validation_checkpoint_before_promoting_the_flow"
+        if audit.memory_corpus_status == "review_recommended":
+            return "review_memory_corpus_pressure_before_expanding_guided_memory_usage"
         if audit.anomaly_flags or audit.missing_required_events:
             return "contain_request_and_revert_to_last_validated_baseline"
         if audit.continuity_anomaly_flags or audit.missing_continuity_signals:
@@ -1404,6 +1679,88 @@ class ObservabilityService:
         return "healthy"
 
     @staticmethod
+    def _metacognitive_guidance_status(
+        *,
+        context_event: InternalEventEnvelope | None,
+        plan_event: InternalEventEnvelope | None,
+        response_event: InternalEventEnvelope | None,
+    ) -> str:
+        if context_event is None:
+            return "incomplete"
+        primary_mind = context_event.payload.get("primary_mind")
+        primary_domain_driver = context_event.payload.get("primary_domain_driver")
+        dominant_tension = context_event.payload.get("dominant_tension")
+        if not dominant_tension or not (primary_mind or primary_domain_driver):
+            return "not_applicable"
+        if plan_event is None:
+            return "incomplete"
+        plan_applied = bool(plan_event.payload.get("metacognitive_guidance_applied"))
+        plan_summary = plan_event.payload.get("metacognitive_guidance_summary")
+        plan_effects = plan_event.payload.get("metacognitive_effects", [])
+        plan_containment = plan_event.payload.get(
+            "metacognitive_containment_recommendation"
+        )
+        if plan_applied:
+            if not plan_summary or not isinstance(plan_effects, list) or not plan_effects:
+                return "attention_required"
+        elif plan_summary is not None or plan_effects or plan_containment is not None:
+            return "attention_required"
+        if response_event is None:
+            return "healthy"
+        response_applied = bool(response_event.payload.get("metacognitive_guidance_applied"))
+        response_summary = response_event.payload.get("metacognitive_guidance_summary")
+        response_effects = response_event.payload.get("metacognitive_effects", [])
+        response_containment = response_event.payload.get(
+            "metacognitive_containment_recommendation"
+        )
+        if response_applied != plan_applied:
+            return "attention_required"
+        if response_summary != plan_summary:
+            return "attention_required"
+        if response_containment != plan_containment:
+            return "attention_required"
+        if list(response_effects or []) != list(plan_effects or []):
+            return "attention_required"
+        return "healthy"
+
+    @staticmethod
+    def _mind_disagreement_status(
+        *,
+        plan_event: InternalEventEnvelope | None,
+        response_event: InternalEventEnvelope | None,
+    ) -> str:
+        for event in (response_event, plan_event):
+            if event is None:
+                continue
+            status = event.payload.get("mind_disagreement_status")
+            if status is not None:
+                return str(status)
+        return "not_applicable"
+
+    @staticmethod
+    def _mind_validation_checkpoint_status(
+        *,
+        plan_event: InternalEventEnvelope | None,
+        response_event: InternalEventEnvelope | None,
+        mind_disagreement_status: str,
+    ) -> str:
+        if mind_disagreement_status == "not_applicable":
+            return "not_applicable"
+        checkpoints = []
+        if plan_event is not None:
+            checkpoints = list(plan_event.payload.get("mind_validation_checkpoints", []))
+        response_checkpoints = []
+        if response_event is not None:
+            response_checkpoints = list(
+                response_event.payload.get("mind_validation_checkpoints", [])
+            )
+        if not checkpoints:
+            return "attention_required"
+        if response_checkpoints and response_checkpoints != checkpoints:
+            return "attention_required"
+        return "healthy"
+
+    @staticmethod
     def _mind_domain_specialist_status(
         *,
         context_event: InternalEventEnvelope | None,
@@ -1521,13 +1878,26 @@ class ObservabilityService:
             str(item) for item in response_payload.get("semantic_memory_focus", [])
         ]
         procedural_hint = response_payload.get("procedural_memory_hint")
+        semantic_source = response_payload.get("semantic_memory_source")
+        procedural_source = response_payload.get("procedural_memory_source")
+        semantic_effects = list(response_payload.get("semantic_memory_effects", []))
+        procedural_effects = list(response_payload.get("procedural_memory_effects", []))
+        memory_lifecycle_status = response_payload.get("memory_lifecycle_status")
         semantic_specialists = shared_payload.get("semantic_memory_specialists", [])
         procedural_specialists = shared_payload.get("procedural_memory_specialists", [])
         if semantic_focus and not semantic_available:
             return "attention_required"
         if procedural_hint and not procedural_available:
             return "attention_required"
-        if semantic_focus or procedural_hint:
+        if semantic_source is not None and "framing" not in semantic_effects:
+            return "attention_required"
+        if procedural_source is not None and "next_action" not in procedural_effects:
+            return "attention_required"
+        if memory_lifecycle_status == "review_recommended" and not (
+            semantic_source or procedural_source
+        ):
+            return "attention_required"
+        if semantic_focus or procedural_hint or semantic_source or procedural_source:
             return "causal_guidance"
         if (
             semantic_available
@@ -1537,6 +1907,50 @@ class ObservabilityService:
         ):
             return "attached_only"
         return "not_applicable"
+
+    @staticmethod
+    def _mind_domain_specialist_chain_status(
+        *,
+        response_event: InternalEventEnvelope | None,
+        specialist_selection_event: InternalEventEnvelope | None,
+        specialist_domain_event: InternalEventEnvelope | None,
+        mind_domain_specialist_status: str,
+    ) -> str:
+        for event in (response_event, specialist_selection_event, specialist_domain_event):
+            if event is None:
+                continue
+            status = event.payload.get("mind_domain_specialist_chain_status")
+            if status is not None:
+                return str(status)
+        return mind_domain_specialist_status
+
+    @staticmethod
+    def _mind_domain_specialist_chain(
+        *,
+        response_event: InternalEventEnvelope | None,
+        specialist_selection_event: InternalEventEnvelope | None,
+        specialist_domain_event: InternalEventEnvelope | None,
+        primary_mind: str | None,
+        primary_domain_driver: str | None,
+        primary_route: str | None,
+    ) -> str | None:
+        for event in (response_event, specialist_selection_event, specialist_domain_event):
+            if event is None:
+                continue
+            chain = event.payload.get("mind_domain_specialist_chain")
+            if chain is not None:
+                return str(chain)
+        if primary_mind is None and primary_domain_driver is None and primary_route is None:
+            return None
+        selected_specialists = (
+            specialist_selection_event.payload.get("domain_specialists", [])
+            if specialist_selection_event
+            else []
+        )
+        return (
+            f"{primary_mind or 'none'} -> {primary_domain_driver or 'none'} -> "
+            f"{primary_route or 'none'} -> specialists[{','.join(selected_specialists) or 'none'}]"
+        )
 
     @staticmethod
     def _memory_alignment_status(
@@ -1616,6 +2030,48 @@ class ObservabilityService:
             ):
                 return "attention_required"
         return "healthy"
+
+    @staticmethod
+    def _memory_corpus_signals(
+        *,
+        shared_memory_event: InternalEventEnvelope | None,
+    ) -> tuple[str, str | None]:
+        if shared_memory_event is None:
+            return "not_applicable", None
+        payload = shared_memory_event.payload
+        corpus_statuses = payload.get("memory_corpus_statuses", {})
+        retention_pressures = payload.get("memory_retention_pressures", {})
+        statuses = [
+            str(item)
+            for item in (corpus_statuses.values() if isinstance(corpus_statuses, dict) else [])
+            if item is not None
+        ]
+        pressures = [
+            str(item)
+            for item in (
+                retention_pressures.values()
+                if isinstance(retention_pressures, dict)
+                else []
+            )
+            if item is not None
+        ]
+        if not statuses:
+            return "not_applicable", None
+        if "review_recommended" in statuses:
+            status = "review_recommended"
+        elif "monitor" in statuses:
+            status = "monitor"
+        else:
+            status = "stable"
+        if "high" in pressures:
+            pressure = "high"
+        elif "moderate" in pressures:
+            pressure = "moderate"
+        elif "low" in pressures:
+            pressure = "low"
+        else:
+            pressure = None
+        return status, pressure
 
     @staticmethod
     def _user_scope_status(

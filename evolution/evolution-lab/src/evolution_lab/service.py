@@ -59,11 +59,25 @@ class FlowEvaluationInput:
     specialist_sovereignty_status: str | None = None
     axis_gate_status: str | None = None
     workflow_profile_status: str | None = None
+    metacognitive_guidance_status: str | None = None
+    mind_disagreement_status: str | None = None
+    mind_validation_checkpoint_status: str | None = None
     memory_causality_status: str | None = None
+    primary_mind: str | None = None
+    primary_route: str | None = None
     dominant_tension: str | None = None
     arbitration_source: str | None = None
     primary_domain_driver: str | None = None
     mind_domain_specialist_status: str | None = None
+    mind_domain_specialist_chain_status: str | None = None
+    semantic_memory_source: str | None = None
+    procedural_memory_source: str | None = None
+    semantic_memory_lifecycle: str | None = None
+    procedural_memory_lifecycle: str | None = None
+    memory_lifecycle_status: str | None = None
+    memory_review_status: str | None = None
+    memory_corpus_status: str | None = None
+    memory_retention_pressure: str | None = None
     cognitive_recomposition_applied: bool = False
     cognitive_recomposition_reason: str | None = None
     cognitive_recomposition_trigger: str | None = None
@@ -210,6 +224,16 @@ class EvolutionLabService:
             if requires_refinement
             else "Preserve flow health while improving execution quality."
         )
+        refinement_vectors = self._refinement_vectors_from_flow_evaluation(evaluation)
+        if refinement_vectors:
+            top_vector = refinement_vectors[0]
+            hypothesis = (
+                f"{hypothesis} Prioritize {top_vector['axis']} on "
+                f"{top_vector['workflow_profile']}."
+            )
+            expected_gain = (
+                f"{expected_gain} Next gain: {top_vector['recommendation']}."
+            )
         source_signals = [
             f"observability://request/{evaluation.request_id}",
             f"governance://decision/{evaluation.governance_decision or 'unknown'}",
@@ -249,10 +273,52 @@ class EvolutionLabService:
             source_signals.append(
                 f"workflow://profile-status/{evaluation.workflow_profile_status}"
             )
+        if evaluation.metacognitive_guidance_status:
+            source_signals.append(
+                "mind://metacognitive-guidance/"
+                f"{evaluation.metacognitive_guidance_status}"
+            )
+        if evaluation.mind_disagreement_status:
+            source_signals.append(
+                f"mind://disagreement/{evaluation.mind_disagreement_status}"
+            )
+        if evaluation.mind_validation_checkpoint_status:
+            source_signals.append(
+                "mind://validation-checkpoint/"
+                f"{evaluation.mind_validation_checkpoint_status}"
+            )
         if evaluation.memory_causality_status:
             source_signals.append(
                 f"memory://causality/{evaluation.memory_causality_status}"
             )
+        if evaluation.semantic_memory_source:
+            source_signals.append(
+                f"memory://semantic-source/{evaluation.semantic_memory_source}"
+            )
+        if evaluation.procedural_memory_source:
+            source_signals.append(
+                f"memory://procedural-source/{evaluation.procedural_memory_source}"
+            )
+        if evaluation.memory_lifecycle_status:
+            source_signals.append(
+                f"memory://lifecycle/{evaluation.memory_lifecycle_status}"
+            )
+        if evaluation.memory_review_status:
+            source_signals.append(
+                f"memory://review/{evaluation.memory_review_status}"
+            )
+        if evaluation.memory_corpus_status:
+            source_signals.append(
+                f"memory://corpus/{evaluation.memory_corpus_status}"
+            )
+        if evaluation.memory_retention_pressure:
+            source_signals.append(
+                f"memory://retention-pressure/{evaluation.memory_retention_pressure}"
+            )
+        if evaluation.primary_mind:
+            source_signals.append(f"mind://primary/{evaluation.primary_mind}")
+        if evaluation.primary_route:
+            source_signals.append(f"domain://primary-route/{evaluation.primary_route}")
         if evaluation.primary_domain_driver:
             source_signals.append(
                 f"domain://primary-driver/{evaluation.primary_domain_driver}"
@@ -268,6 +334,11 @@ class EvolutionLabService:
                 "alignment://mind-domain-specialist/"
                 f"{evaluation.mind_domain_specialist_status}"
             )
+        if evaluation.mind_domain_specialist_chain_status:
+            source_signals.append(
+                "alignment://mind-domain-specialist-chain/"
+                f"{evaluation.mind_domain_specialist_chain_status}"
+            )
         if evaluation.cognitive_recomposition_applied:
             source_signals.append("mind://recomposition/applied")
         if evaluation.cognitive_recomposition_trigger:
@@ -277,6 +348,13 @@ class EvolutionLabService:
         if evaluation.continuity_trace_status:
             source_signals.append(
                 f"continuity://trace-status/{evaluation.continuity_trace_status}"
+            )
+        for vector in refinement_vectors[:3]:
+            source_signals.append(
+                "refinement://"
+                f"{vector['priority']}/"
+                f"{vector['workflow_profile']}/"
+                f"{vector['axis']}"
             )
         return self.create_proposal(
             proposal_type="flow_evaluation_refinement",
@@ -389,12 +467,29 @@ class EvolutionLabService:
             "workflow_profile": EvolutionLabService._workflow_profile_score(
                 evaluation.workflow_profile_status
             ),
+            "metacognitive_guidance": EvolutionLabService._status_score(
+                evaluation.metacognitive_guidance_status
+            ),
+            "mind_disagreement": EvolutionLabService._mind_disagreement_score(
+                evaluation.mind_disagreement_status
+            ),
             "memory_causality": EvolutionLabService._memory_causality_score(
                 evaluation.memory_causality_status
+            ),
+            "memory_lifecycle": EvolutionLabService._memory_lifecycle_score(
+                evaluation.memory_lifecycle_status
+            ),
+            "memory_corpus": EvolutionLabService._memory_corpus_score(
+                evaluation.memory_corpus_status
             ),
             "mind_domain_specialist": (
                 EvolutionLabService._mind_domain_specialist_score(
                     evaluation.mind_domain_specialist_status
+                )
+            ),
+            "mind_domain_specialist_chain": (
+                EvolutionLabService._mind_domain_specialist_score(
+                    evaluation.mind_domain_specialist_chain_status
                 )
             ),
             "cognitive_recomposition_coherence": (
@@ -443,6 +538,41 @@ class EvolutionLabService:
         return weights.get(status, 0.7 if status is None else 0.0)
 
     @staticmethod
+    def _mind_disagreement_score(status: str | None) -> float:
+        weights = {
+            "not_applicable": 0.7,
+            "contained": 1.0,
+            "validation_required": 0.4,
+            "deep_review_required": 0.2,
+            "attention_required": 0.0,
+        }
+        return weights.get(status, 0.7 if status is None else 0.0)
+
+    @staticmethod
+    def _memory_lifecycle_score(status: str | None) -> float:
+        weights = {
+            "promoted": 1.0,
+            "retained": 1.0,
+            "emerging": 0.7,
+            "not_applicable": 0.7,
+            "review_recommended": 0.3,
+            "attention_required": 0.0,
+            "incomplete": 0.2,
+        }
+        return weights.get(status, 0.7 if status is None else 0.0)
+
+    @staticmethod
+    def _memory_corpus_score(status: str | None) -> float:
+        weights = {
+            "stable": 1.0,
+            "monitor": 0.6,
+            "review_recommended": 0.2,
+            "not_applicable": 0.7,
+            "attention_required": 0.0,
+        }
+        return weights.get(status, 0.7 if status is None else 0.0)
+
+    @staticmethod
     def _mind_domain_specialist_score(status: str | None) -> float:
         weights = {
             "aligned": 1.0,
@@ -480,9 +610,29 @@ class EvolutionLabService:
             "attention_required",
         }:
             return True
+        if evaluation.metacognitive_guidance_status in {"incomplete", "attention_required"}:
+            return True
+        if evaluation.mind_disagreement_status in {
+            "validation_required",
+            "deep_review_required",
+            "attention_required",
+        }:
+            return True
+        if evaluation.mind_validation_checkpoint_status == "attention_required":
+            return True
         if evaluation.memory_causality_status in {"attached_only", "attention_required"}:
             return True
+        if evaluation.memory_lifecycle_status in {"review_recommended", "attention_required"}:
+            return True
+        if evaluation.memory_corpus_status in {"monitor", "review_recommended"}:
+            return True
         if evaluation.mind_domain_specialist_status in {
+            "incomplete",
+            "attention_required",
+            "mismatch",
+        }:
+            return True
+        if evaluation.mind_domain_specialist_chain_status in {
             "incomplete",
             "attention_required",
             "mismatch",
@@ -494,9 +644,27 @@ class EvolutionLabService:
     def _risk_hint_from_flow(evaluation: FlowEvaluationInput) -> str:
         if evaluation.anomaly_flags or evaluation.continuity_anomaly_flags:
             return "moderate"
+        if evaluation.metacognitive_guidance_status == "attention_required":
+            return "moderate"
+        if evaluation.mind_disagreement_status in {
+            "deep_review_required",
+            "attention_required",
+        }:
+            return "moderate"
+        if evaluation.mind_validation_checkpoint_status == "attention_required":
+            return "moderate"
         if evaluation.memory_causality_status == "attention_required":
             return "moderate"
+        if evaluation.memory_lifecycle_status == "attention_required":
+            return "moderate"
+        if evaluation.memory_corpus_status == "review_recommended":
+            return "moderate"
         if evaluation.mind_domain_specialist_status in {"attention_required", "mismatch"}:
+            return "moderate"
+        if evaluation.mind_domain_specialist_chain_status in {
+            "attention_required",
+            "mismatch",
+        }:
             return "moderate"
         if evaluation.axis_gate_status not in {None, "healthy"}:
             return "low_to_moderate"
@@ -504,11 +672,94 @@ class EvolutionLabService:
             return "low_to_moderate"
         if evaluation.memory_causality_status == "attached_only":
             return "low_to_moderate"
+        if evaluation.memory_lifecycle_status == "review_recommended":
+            return "low_to_moderate"
+        if evaluation.memory_corpus_status == "monitor":
+            return "low_to_moderate"
         if evaluation.mind_domain_specialist_status == "incomplete":
+            return "low_to_moderate"
+        if evaluation.mind_domain_specialist_chain_status == "incomplete":
             return "low_to_moderate"
         if evaluation.missing_required_events or evaluation.missing_continuity_signals:
             return "low_to_moderate"
         return "low"
+
+    @staticmethod
+    def _workflow_key(evaluation: FlowEvaluationInput) -> str:
+        if evaluation.primary_route:
+            return evaluation.primary_route
+        if evaluation.registry_domains:
+            return evaluation.registry_domains[0]
+        return "baseline_runtime"
+
+    @staticmethod
+    def _refinement_vectors_from_flow_evaluation(
+        evaluation: FlowEvaluationInput,
+    ) -> list[dict[str, str]]:
+        workflow_profile = EvolutionLabService._workflow_key(evaluation)
+        vectors: list[dict[str, str]] = []
+
+        def add_vector(axis: str, priority: str, recommendation: str) -> None:
+            vectors.append(
+                {
+                    "axis": axis,
+                    "priority": priority,
+                    "workflow_profile": workflow_profile,
+                    "recommendation": recommendation,
+                }
+            )
+
+        if evaluation.metacognitive_guidance_status in {"incomplete", "attention_required"}:
+            add_vector(
+                "metacognitive_guidance",
+                "p0",
+                "endurecer a ancora metacognitiva ate ela alterar criterio de saida de forma coerente",
+            )
+        if evaluation.mind_disagreement_status in {
+            "validation_required",
+            "deep_review_required",
+            "attention_required",
+        } or evaluation.mind_validation_checkpoint_status == "attention_required":
+            add_vector(
+                "mind_composition",
+                "p0",
+                "transformar a discordancia entre mentes em checkpoint governado do workflow ativo",
+            )
+        if evaluation.memory_causality_status in {"attached_only", "attention_required"}:
+            add_vector(
+                "memory_causality",
+                "p0",
+                "fazer semantic e procedural alterarem framing, continuidade e proxima acao de forma causal",
+            )
+        if evaluation.memory_lifecycle_status in {"review_recommended", "attention_required"}:
+            add_vector(
+                "memory_lifecycle",
+                "p1",
+                "reduzir revisao pendente e estabilizar retencao/promocao no corpus guiado",
+            )
+        if evaluation.memory_corpus_status in {"monitor", "review_recommended"}:
+            add_vector(
+                "memory_corpus",
+                "p1",
+                "revisar pressao de retencao por classe antes de ampliar memoria guiada",
+            )
+        if evaluation.workflow_profile_status in {"maturation_recommended", "attention_required"}:
+            add_vector(
+                "workflow_profile",
+                "p1",
+                "alinhar o contrato do workflow ativo com passos, checkpoints e criterio de resposta",
+            )
+        if evaluation.mind_domain_specialist_chain_status in {
+            "incomplete",
+            "attention_required",
+            "mismatch",
+        }:
+            add_vector(
+                "mind_domain_specialist_chain",
+                "p0",
+                "restaurar coerencia evidence-first entre mente primaria, dominio e especialista guiado",
+            )
+        return vectors
 
     @staticmethod
     def now() -> str:

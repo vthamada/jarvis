@@ -44,14 +44,7 @@ from shared.domain_registry import (
     workflow_runtime_guidance,
 )
 from shared.events import InternalEventEnvelope
-from shared.memory_registry import guided_reasoning_memory_classes
-from shared.types import (
-    MemoryClass,
-    MissionStatus,
-    OperationId,
-    PermissionDecision,
-    RequestId,
-)
+from shared.types import MissionStatus, OperationId, PermissionDecision, RequestId
 
 
 @dataclass
@@ -292,6 +285,20 @@ class OrchestratorService:
                     "steps": deliberative_plan.steps,
                     "dominant_tension": deliberative_plan.dominant_tension,
                     "smallest_safe_next_action": deliberative_plan.smallest_safe_next_action,
+                    "metacognitive_guidance_applied": (
+                        deliberative_plan.metacognitive_guidance_applied
+                    ),
+                    "metacognitive_guidance_summary": (
+                        deliberative_plan.metacognitive_guidance_summary
+                    ),
+                    "metacognitive_effects": deliberative_plan.metacognitive_effects,
+                    "metacognitive_containment_recommendation": (
+                        deliberative_plan.metacognitive_containment_recommendation
+                    ),
+                    "mind_disagreement_status": deliberative_plan.mind_disagreement_status,
+                    "mind_validation_checkpoints": (
+                        deliberative_plan.mind_validation_checkpoints
+                    ),
                     "primary_mind": deliberative_plan.primary_mind,
                     "primary_mind_family": deliberative_plan.primary_mind_family,
                     "primary_domain_driver": deliberative_plan.primary_domain_driver,
@@ -307,6 +314,23 @@ class OrchestratorService:
                     ),
                     "primary_route": deliberative_plan.primary_route,
                     "primary_canonical_domain": deliberative_plan.primary_canonical_domain,
+                    "semantic_memory_source": deliberative_plan.semantic_memory_source,
+                    "procedural_memory_source": deliberative_plan.procedural_memory_source,
+                    "semantic_memory_effects": deliberative_plan.semantic_memory_effects,
+                    "procedural_memory_effects": deliberative_plan.procedural_memory_effects,
+                    "semantic_memory_lifecycle": (
+                        deliberative_plan.semantic_memory_lifecycle
+                    ),
+                    "procedural_memory_lifecycle": (
+                        deliberative_plan.procedural_memory_lifecycle
+                    ),
+                    "memory_lifecycle_status": deliberative_plan.memory_lifecycle_status,
+                    "memory_review_status": deliberative_plan.memory_review_status,
+                    "mind_domain_specialist_chain": (
+                        f"{deliberative_plan.primary_mind or 'none'} -> "
+                        f"{deliberative_plan.primary_domain_driver or 'none'} -> "
+                        f"{deliberative_plan.primary_route or 'none'}"
+                    ),
                     "specialist_hints": deliberative_plan.specialist_hints,
                     "continuity_action": deliberative_plan.continuity_action,
                     "continuity_source": deliberative_plan.continuity_source,
@@ -577,6 +601,18 @@ class OrchestratorService:
             deliberative_plan,
             memory_recovery_result.recovered_items,
         )
+        chain_payload = self._mind_domain_specialist_chain_payload(
+            deliberative_plan,
+            selected_specialists=[
+                contribution.specialist_type
+                for contribution in specialist_review.contributions
+            ],
+            selected_domains=[
+                invocation.linked_domain
+                for invocation in specialist_review.invocations
+                if invocation.linked_domain
+            ],
+        )
         response_text = self._compose_response_text(
             directive=directive,
             governance_decision=governance_decision,
@@ -609,6 +645,20 @@ class OrchestratorService:
                     "primary_domain_driver": deliberative_plan.primary_domain_driver,
                     "dominant_tension": deliberative_plan.dominant_tension,
                     "arbitration_source": deliberative_plan.arbitration_source,
+                    "metacognitive_guidance_applied": (
+                        deliberative_plan.metacognitive_guidance_applied
+                    ),
+                    "metacognitive_guidance_summary": (
+                        deliberative_plan.metacognitive_guidance_summary
+                    ),
+                    "metacognitive_effects": deliberative_plan.metacognitive_effects,
+                    "metacognitive_containment_recommendation": (
+                        deliberative_plan.metacognitive_containment_recommendation
+                    ),
+                    "mind_disagreement_status": deliberative_plan.mind_disagreement_status,
+                    "mind_validation_checkpoints": (
+                        deliberative_plan.mind_validation_checkpoints
+                    ),
                     "cognitive_recomposition_applied": (
                         cognitive_snapshot.recomposition_applied
                     ),
@@ -634,12 +684,26 @@ class OrchestratorService:
                     "procedural_memory_available": guided_memory_runtime_hints[
                         "procedural_memory_available"
                     ],
+                    "semantic_memory_source": deliberative_plan.semantic_memory_source,
+                    "procedural_memory_source": deliberative_plan.procedural_memory_source,
+                    "semantic_memory_effects": deliberative_plan.semantic_memory_effects,
+                    "procedural_memory_effects": deliberative_plan.procedural_memory_effects,
+                    "semantic_memory_lifecycle": (
+                        deliberative_plan.semantic_memory_lifecycle
+                    ),
+                    "procedural_memory_lifecycle": (
+                        deliberative_plan.procedural_memory_lifecycle
+                    ),
+                    "memory_lifecycle_status": deliberative_plan.memory_lifecycle_status,
+                    "memory_review_status": deliberative_plan.memory_review_status,
                     "semantic_memory_focus": guided_memory_runtime_hints[
                         "semantic_memory_focus"
                     ],
                     "procedural_memory_hint": guided_memory_runtime_hints[
                         "procedural_memory_hint"
                     ],
+                    "mind_domain_specialist_chain_status": chain_payload["status"],
+                    "mind_domain_specialist_chain": chain_payload["chain"],
                 },
             )
         )
@@ -686,6 +750,16 @@ class OrchestratorService:
                     "organization_scope_reopen_signal": (
                         memory_record_result.organization_scope_reopen_signal
                     ),
+                    "semantic_memory_source": deliberative_plan.semantic_memory_source,
+                    "procedural_memory_source": deliberative_plan.procedural_memory_source,
+                    "semantic_memory_lifecycle": (
+                        deliberative_plan.semantic_memory_lifecycle
+                    ),
+                    "procedural_memory_lifecycle": (
+                        deliberative_plan.procedural_memory_lifecycle
+                    ),
+                    "memory_lifecycle_status": deliberative_plan.memory_lifecycle_status,
+                    "memory_review_status": deliberative_plan.memory_review_status,
                 },
             )
         )
@@ -753,6 +827,21 @@ class OrchestratorService:
         )
         updated_events = list(events)
         selection_registry_payloads = self._specialist_registry_payloads(handoff_plan.selections)
+        selected_specialists = [
+            item.specialist_type
+            for item in handoff_plan.selections
+            if item.selection_status == "selected"
+        ]
+        selected_domains = [
+            item.linked_domain
+            for item in handoff_plan.selections
+            if item.selection_status == "selected" and item.linked_domain
+        ]
+        chain_payload = self._mind_domain_specialist_chain_payload(
+            deliberative_plan,
+            selected_specialists=selected_specialists,
+            selected_domains=selected_domains,
+        )
         updated_events.append(
             self.make_event(
                 "specialist_selection_decided",
@@ -865,6 +954,8 @@ class OrchestratorService:
                     "selection_rationales": {
                         item.specialist_type: item.rationale for item in handoff_plan.selections
                     },
+                    "mind_domain_specialist_chain_status": chain_payload["status"],
+                    "mind_domain_specialist_chain": chain_payload["chain"],
                 },
             )
         )
@@ -1062,6 +1153,96 @@ class OrchestratorService:
                             if item.shared_memory_context
                             and "procedural" in item.shared_memory_context.consumed_memory_classes
                         ],
+                        "semantic_memory_sources": {
+                            item.specialist_type: (
+                                item.shared_memory_context.semantic_memory_source
+                                if item.shared_memory_context
+                                else None
+                            )
+                            for item in handoff_plan.invocations
+                        },
+                        "procedural_memory_sources": {
+                            item.specialist_type: (
+                                item.shared_memory_context.procedural_memory_source
+                                if item.shared_memory_context
+                                else None
+                            )
+                            for item in handoff_plan.invocations
+                        },
+                        "semantic_memory_effects": {
+                            item.specialist_type: (
+                                item.shared_memory_context.semantic_memory_effects
+                                if item.shared_memory_context
+                                else []
+                            )
+                            for item in handoff_plan.invocations
+                        },
+                        "procedural_memory_effects": {
+                            item.specialist_type: (
+                                item.shared_memory_context.procedural_memory_effects
+                                if item.shared_memory_context
+                                else []
+                            )
+                            for item in handoff_plan.invocations
+                        },
+                        "semantic_memory_lifecycles": {
+                            item.specialist_type: (
+                                item.shared_memory_context.semantic_memory_lifecycle
+                                if item.shared_memory_context
+                                else None
+                            )
+                            for item in handoff_plan.invocations
+                        },
+                        "procedural_memory_lifecycles": {
+                            item.specialist_type: (
+                                item.shared_memory_context.procedural_memory_lifecycle
+                                if item.shared_memory_context
+                                else None
+                            )
+                            for item in handoff_plan.invocations
+                        },
+                        "memory_lifecycle_statuses": {
+                            item.specialist_type: (
+                                item.shared_memory_context.memory_lifecycle_status
+                                if item.shared_memory_context
+                                else "not_applicable"
+                            )
+                            for item in handoff_plan.invocations
+                        },
+                        "memory_review_statuses": {
+                            item.specialist_type: (
+                                item.shared_memory_context.memory_review_status
+                                if item.shared_memory_context
+                                else "not_applicable"
+                            )
+                            for item in handoff_plan.invocations
+                        },
+                        "memory_corpus_statuses": {
+                            item.specialist_type: (
+                                item.shared_memory_context.memory_corpus_status
+                                if item.shared_memory_context
+                                else "not_applicable"
+                            )
+                            for item in handoff_plan.invocations
+                        },
+                        "memory_retention_pressures": {
+                            item.specialist_type: (
+                                item.shared_memory_context.memory_retention_pressure
+                                if item.shared_memory_context
+                                else None
+                            )
+                            for item in handoff_plan.invocations
+                        },
+                        "memory_corpus_summaries": {
+                            item.specialist_type: (
+                                item.shared_memory_context.memory_corpus_summary
+                                if item.shared_memory_context
+                                else {}
+                            )
+                            for item in handoff_plan.invocations
+                        },
+                        "mind_domain_specialist_chain_status": chain_payload["status"],
+                        "mind_domain_specialist_chain": chain_payload["chain"],
                     },
                 )
             )
@@ -1464,6 +1645,12 @@ class OrchestratorService:
                     ),
                     "primary_route": mission_runtime_state.primary_route,
                     "workflow_profile": mission_runtime_state.workflow_profile,
+                    "primary_mind": deliberative_plan.primary_mind,
+                    "primary_domain_driver": deliberative_plan.primary_domain_driver,
+                    "semantic_memory_source": deliberative_plan.semantic_memory_source,
+                    "procedural_memory_source": deliberative_plan.procedural_memory_source,
+                    "memory_lifecycle_status": deliberative_plan.memory_lifecycle_status,
+                    "memory_review_status": deliberative_plan.memory_review_status,
                     "active_task_count": len(mission_runtime_state.active_tasks),
                     "open_loop_count": len(mission_runtime_state.open_loops),
                     "last_recommendation": mission_runtime_state.last_recommendation,
@@ -1714,6 +1901,7 @@ class OrchestratorService:
             primary_domain_driver=cognitive_snapshot.primary_domain_driver,
             arbitration_source=cognitive_snapshot.arbitration_source,
             supporting_minds=cognitive_snapshot.supporting_minds,
+            suppressed_minds=cognitive_snapshot.suppressed_minds,
             dominant_tension=cognitive_snapshot.dominant_tension,
             arbitration_summary=cognitive_snapshot.arbitration_summary,
             identity_continuity_brief=self._extract_context_hint(
@@ -1795,6 +1983,20 @@ class OrchestratorService:
             continuity_requires_manual_resume=(
                 self._extract_context_hint(recovered, "continuity_replay_status=")
                 in {"awaiting_validation", "contained"}
+            ),
+            user_scope_status=self._extract_context_hint(recovered, "user_scope_status="),
+            user_domain_focus=self._extract_list_hint(
+                recovered,
+                "user_domain_focus=",
+                separator=",",
+            ),
+            user_last_recommended_task_type=self._extract_context_hint(
+                recovered,
+                "user_last_recommended_task_type=",
+            ),
+            user_continuity_preference=self._extract_context_hint(
+                recovered,
+                "user_continuity_preference=",
             ),
         )
 
@@ -2049,37 +2251,27 @@ class OrchestratorService:
         user_last_recommended_task_type = extract_context_hint(
             "user_last_recommended_task_type="
         )
-        semantic_sources: list[str] = []
-        append_candidates = [
-            deliberative_plan.primary_canonical_domain,
-            deliberative_plan.primary_route,
-            *deliberative_plan.canonical_domains,
-            *mission_focus,
-        ]
-        for candidate in append_candidates:
-            if candidate and candidate not in semantic_sources:
-                semantic_sources.append(candidate)
-        semantic_evidence = bool(semantic_sources or mission_semantic_brief)
-        route_refs = set(deliberative_plan.canonical_domains)
-        domain_compatible = not route_refs or bool(route_refs.intersection(semantic_sources))
-        procedural_evidence = bool(
-            procedural_memory_hint
-            or mission_recommendation
-            or last_decision_frame
-            or user_continuity_preference
-            or user_last_recommended_task_type
-            or deliberative_plan.smallest_safe_next_action
-        )
-        reasoning_classes = guided_reasoning_memory_classes(
-            semantic_evidence=semantic_evidence,
-            procedural_evidence=procedural_evidence,
-            domain_compatible=domain_compatible,
-            workflow_profile=deliberative_plan.route_workflow_profile,
-        )
-        if MemoryClass.SEMANTIC in reasoning_classes:
+        if (
+            deliberative_plan.semantic_memory_source is not None
+            or mission_focus
+            or mission_semantic_brief is not None
+        ):
             semantic_memory_available = True
-            append_unique(semantic_sources)
-        if MemoryClass.PROCEDURAL in reasoning_classes:
+            append_unique(
+                [
+                    *mission_focus,
+                    mission_semantic_brief or "",
+                    deliberative_plan.primary_canonical_domain or "",
+                    deliberative_plan.primary_route or "",
+                ]
+            )
+        if (
+            deliberative_plan.procedural_memory_source is not None
+            or mission_recommendation is not None
+            or last_decision_frame is not None
+            or user_continuity_preference is not None
+            or user_last_recommended_task_type is not None
+        ):
             procedural_memory_available = True
             if procedural_memory_hint is None:
                 procedural_memory_hint = (
@@ -2095,6 +2287,38 @@ class OrchestratorService:
             "procedural_memory_available": procedural_memory_available,
             "semantic_memory_focus": semantic_memory_focus,
             "procedural_memory_hint": procedural_memory_hint,
+        }
+
+    @staticmethod
+    def _mind_domain_specialist_chain_payload(
+        deliberative_plan: DeliberativePlanContract,
+        *,
+        selected_specialists: list[str],
+        selected_domains: list[str],
+    ) -> dict[str, object]:
+        primary_mind = deliberative_plan.primary_mind or "none"
+        primary_domain_driver = deliberative_plan.primary_domain_driver or "none"
+        primary_route = deliberative_plan.primary_route or "none"
+        specialists = ",".join(selected_specialists[:3]) if selected_specialists else "none"
+        domains = ",".join(selected_domains[:3]) if selected_domains else "none"
+        if deliberative_plan.primary_domain_driver is None and not selected_specialists:
+            status = "not_applicable"
+        elif selected_specialists and deliberative_plan.primary_route:
+            route_match = deliberative_plan.primary_route in selected_domains
+            domain_match = deliberative_plan.primary_domain_driver in (
+                deliberative_plan.canonical_domains or []
+            )
+            status = "aligned" if route_match and domain_match else "attention_required"
+        elif selected_specialists:
+            status = "attention_required"
+        else:
+            status = "incomplete"
+        return {
+            "status": status,
+            "chain": (
+                f"{primary_mind} -> {primary_domain_driver} -> {primary_route} -> "
+                f"domains[{domains}] -> specialists[{specialists}]"
+            ),
         }
 
     def _maybe_resolve_continuity_pause(self, contract: InputContract):

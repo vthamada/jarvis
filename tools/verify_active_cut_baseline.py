@@ -44,8 +44,12 @@ class ActiveCutBaselineSummary:
     promoted_workflow_profiles_missing_pilot_coverage: int
     memory_causality_target_scenarios: int
     memory_causality_ready_scenarios: int
+    mind_disagreement_target_scenarios: int
+    mind_disagreement_ready_scenarios: int
     mind_domain_specialist_target_scenarios: int
     mind_domain_specialist_ready_scenarios: int
+    memory_corpus_target_scenarios: int
+    memory_corpus_ready_scenarios: int
     dominant_tension_target_scenarios: int
     dominant_tension_ready_scenarios: int
     cognitive_recomposition_target_scenarios: int
@@ -107,8 +111,14 @@ def _build_targeted_pilot_summary(
     memory_causality_targets = [
         item for item in pilot_results if "memory_causality" in item.coverage_tags
     ]
+    mind_disagreement_targets = [
+        item for item in pilot_results if "mind_disagreement" in item.coverage_tags
+    ]
     mind_domain_specialist_targets = [
         item for item in pilot_results if "mind_domain_specialist" in item.coverage_tags
+    ]
+    memory_corpus_targets = [
+        item for item in pilot_results if "memory_corpus" in item.coverage_tags
     ]
     dominant_tension_targets = [
         item for item in pilot_results if "dominant_tension" in item.coverage_tags
@@ -149,6 +159,14 @@ def _build_targeted_pilot_summary(
                 for item in memory_causality_targets
                 if item.memory_causality_status == "causal_guidance"
             ),
+            "mind_disagreement_target_scenarios": len(mind_disagreement_targets),
+            "mind_disagreement_ready_scenarios": sum(
+                1
+                for item in mind_disagreement_targets
+                if item.mind_disagreement_status
+                in {"contained", "validation_required", "deep_review_required"}
+                and item.mind_validation_checkpoint_status != "incomplete"
+            ),
             "mind_domain_specialist_target_scenarios": len(
                 mind_domain_specialist_targets
             ),
@@ -159,6 +177,13 @@ def _build_targeted_pilot_summary(
                     item.mind_domain_specialist_status == "aligned"
                     and item.primary_domain_driver is not None
                 )
+            ),
+            "memory_corpus_target_scenarios": len(memory_corpus_targets),
+            "memory_corpus_ready_scenarios": sum(
+                1
+                for item in memory_corpus_targets
+                if item.memory_corpus_status
+                in {"stable", "monitor", "review_recommended"}
             ),
             "dominant_tension_target_scenarios": len(dominant_tension_targets),
             "dominant_tension_ready_scenarios": sum(
@@ -304,11 +329,23 @@ def build_payload(
         memory_causality_ready_scenarios=int(
             pilot_summary["memory_causality_ready_scenarios"]
         ),
+        mind_disagreement_target_scenarios=int(
+            pilot_summary["mind_disagreement_target_scenarios"]
+        ),
+        mind_disagreement_ready_scenarios=int(
+            pilot_summary["mind_disagreement_ready_scenarios"]
+        ),
         mind_domain_specialist_target_scenarios=int(
             pilot_summary["mind_domain_specialist_target_scenarios"]
         ),
         mind_domain_specialist_ready_scenarios=int(
             pilot_summary["mind_domain_specialist_ready_scenarios"]
+        ),
+        memory_corpus_target_scenarios=int(
+            pilot_summary["memory_corpus_target_scenarios"]
+        ),
+        memory_corpus_ready_scenarios=int(
+            pilot_summary["memory_corpus_ready_scenarios"]
         ),
         dominant_tension_target_scenarios=int(
             pilot_summary["dominant_tension_target_scenarios"]
@@ -349,7 +386,9 @@ def build_payload(
         summary.benchmark_now_candidates == 0
         or summary.promotion_trigger_rules < 5
         or summary.memory_causality_ready_scenarios == 0
+        or summary.mind_disagreement_ready_scenarios == 0
         or summary.mind_domain_specialist_ready_scenarios == 0
+        or summary.memory_corpus_ready_scenarios == 0
         or summary.dominant_tension_ready_scenarios == 0
         or summary.cognitive_recomposition_ready_scenarios == 0
         or summary.specialist_subflow_ready_scenarios == 0
@@ -380,11 +419,12 @@ def build_payload(
             ),
             (
                 "o baseline ativo precisa manter pelo menos um cenario deliberado "
-                "de memoria causal e um de recomposicao cognitiva"
+                "de memoria causal, um de corpus de memoria e um de recomposicao cognitiva"
             ),
             (
                 "o baseline ativo precisa manter pelo menos um cenario deliberado "
-                "de alinhamento mente->dominio->especialista e um de tensao dominante"
+                "de alinhamento mente->dominio->especialista, um de tensao dominante "
+                "e um de discordancia cognitiva governada"
             ),
             (
                 "o baseline ativo precisa manter pelo menos um cenario deliberado "
@@ -433,9 +473,15 @@ def render_text(payload: dict[str, object]) -> str:
                 "signals="
                 f"memory_causality_ready={summary['memory_causality_ready_scenarios']}/"
                 f"{summary['memory_causality_target_scenarios']} "
+                "mind_disagreement_ready="
+                f"{summary['mind_disagreement_ready_scenarios']}/"
+                f"{summary['mind_disagreement_target_scenarios']} "
                 "mind_domain_specialist_ready="
                 f"{summary['mind_domain_specialist_ready_scenarios']}/"
                 f"{summary['mind_domain_specialist_target_scenarios']} "
+                "memory_corpus_ready="
+                f"{summary['memory_corpus_ready_scenarios']}/"
+                f"{summary['memory_corpus_target_scenarios']} "
                 "dominant_tension_ready="
                 f"{summary['dominant_tension_ready_scenarios']}/"
                 f"{summary['dominant_tension_target_scenarios']} "
@@ -522,9 +568,19 @@ def render_markdown(payload: dict[str, object]) -> str:
             f"`{summary['memory_causality_target_scenarios']}`"
         ),
         (
+            "- mind disagreement scenarios ready: "
+            f"`{summary['mind_disagreement_ready_scenarios']}`/"
+            f"`{summary['mind_disagreement_target_scenarios']}`"
+        ),
+        (
             "- mind-domain-specialist scenarios ready: "
             f"`{summary['mind_domain_specialist_ready_scenarios']}`/"
             f"`{summary['mind_domain_specialist_target_scenarios']}`"
+        ),
+        (
+            "- memory corpus scenarios ready: "
+            f"`{summary['memory_corpus_ready_scenarios']}`/"
+            f"`{summary['memory_corpus_target_scenarios']}`"
         ),
         (
             "- dominant tension scenarios ready: "

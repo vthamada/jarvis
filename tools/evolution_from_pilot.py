@@ -125,9 +125,34 @@ def _evaluation_from_dict(payload: dict[str, object]) -> FlowEvaluationInput:
             if payload.get("workflow_profile_status") is not None
             else None
         ),
+        metacognitive_guidance_status=(
+            str(payload["metacognitive_guidance_status"])
+            if payload.get("metacognitive_guidance_status") is not None
+            else None
+        ),
+        mind_disagreement_status=(
+            str(payload["mind_disagreement_status"])
+            if payload.get("mind_disagreement_status") is not None
+            else "not_applicable"
+        ),
+        mind_validation_checkpoint_status=(
+            str(payload["mind_validation_checkpoint_status"])
+            if payload.get("mind_validation_checkpoint_status") is not None
+            else "not_applicable"
+        ),
         memory_causality_status=(
             str(payload["memory_causality_status"])
             if payload.get("memory_causality_status") is not None
+            else None
+        ),
+        primary_mind=(
+            str(payload["primary_mind"])
+            if payload.get("primary_mind") is not None
+            else None
+        ),
+        primary_route=(
+            str(payload["primary_route"])
+            if payload.get("primary_route") is not None
             else None
         ),
         dominant_tension=(
@@ -148,6 +173,51 @@ def _evaluation_from_dict(payload: dict[str, object]) -> FlowEvaluationInput:
         mind_domain_specialist_status=(
             str(payload["mind_domain_specialist_status"])
             if payload.get("mind_domain_specialist_status") is not None
+            else None
+        ),
+        mind_domain_specialist_chain_status=(
+            str(payload["mind_domain_specialist_chain_status"])
+            if payload.get("mind_domain_specialist_chain_status") is not None
+            else None
+        ),
+        semantic_memory_source=(
+            str(payload["semantic_memory_source"])
+            if payload.get("semantic_memory_source") is not None
+            else None
+        ),
+        procedural_memory_source=(
+            str(payload["procedural_memory_source"])
+            if payload.get("procedural_memory_source") is not None
+            else None
+        ),
+        semantic_memory_lifecycle=(
+            str(payload["semantic_memory_lifecycle"])
+            if payload.get("semantic_memory_lifecycle") is not None
+            else None
+        ),
+        procedural_memory_lifecycle=(
+            str(payload["procedural_memory_lifecycle"])
+            if payload.get("procedural_memory_lifecycle") is not None
+            else None
+        ),
+        memory_lifecycle_status=(
+            str(payload["memory_lifecycle_status"])
+            if payload.get("memory_lifecycle_status") is not None
+            else None
+        ),
+        memory_review_status=(
+            str(payload["memory_review_status"])
+            if payload.get("memory_review_status") is not None
+            else None
+        ),
+        memory_corpus_status=(
+            str(payload["memory_corpus_status"])
+            if payload.get("memory_corpus_status") is not None
+            else "not_applicable"
+        ),
+        memory_retention_pressure=(
+            str(payload["memory_retention_pressure"])
+            if payload.get("memory_retention_pressure") is not None
             else None
         ),
         cognitive_recomposition_applied=bool(
@@ -193,8 +263,15 @@ def build_payload(args: Namespace) -> dict[str, object]:
             and audit.memory_alignment_status == "healthy"
             and audit.specialist_sovereignty_status == "healthy"
             and audit.workflow_profile_status in {None, "healthy", "not_applicable"}
+            and audit.metacognitive_guidance_status in {None, "healthy", "not_applicable"}
+            and audit.mind_disagreement_status in {None, "not_applicable", "contained"}
+            and audit.mind_validation_checkpoint_status in {None, "not_applicable", "healthy"}
             and audit.memory_causality_status in {None, "causal_guidance", "not_applicable"}
+            and audit.memory_lifecycle_status in {None, "retained", "promoted", "not_applicable"}
+            and audit.memory_corpus_status in {None, "stable", "not_applicable"}
             and audit.mind_domain_specialist_status in {None, "aligned", "not_applicable"}
+            and audit.mind_domain_specialist_chain_status
+            in {None, "aligned", "not_applicable"}
         ):
             continue
         proposal = evolution.create_proposal_from_flow_evaluation(
@@ -233,11 +310,27 @@ def build_payload(args: Namespace) -> dict[str, object]:
                     else "attention_required"
                 ),
                 workflow_profile_status=audit.workflow_profile_status,
+                metacognitive_guidance_status=audit.metacognitive_guidance_status,
+                mind_disagreement_status=audit.mind_disagreement_status,
+                mind_validation_checkpoint_status=audit.mind_validation_checkpoint_status,
                 memory_causality_status=audit.memory_causality_status,
+                primary_mind=audit.primary_mind,
+                primary_route=audit.primary_route,
                 dominant_tension=audit.dominant_tension,
                 arbitration_source=audit.arbitration_source,
                 primary_domain_driver=audit.primary_domain_driver,
                 mind_domain_specialist_status=audit.mind_domain_specialist_status,
+                mind_domain_specialist_chain_status=(
+                    audit.mind_domain_specialist_chain_status
+                ),
+                semantic_memory_source=audit.semantic_memory_source,
+                procedural_memory_source=audit.procedural_memory_source,
+                semantic_memory_lifecycle=audit.semantic_memory_lifecycle,
+                procedural_memory_lifecycle=audit.procedural_memory_lifecycle,
+                memory_lifecycle_status=audit.memory_lifecycle_status,
+                memory_review_status=audit.memory_review_status,
+                memory_corpus_status=audit.memory_corpus_status,
+                memory_retention_pressure=audit.memory_retention_pressure,
                 cognitive_recomposition_applied=audit.cognitive_recomposition_applied,
                 cognitive_recomposition_reason=audit.cognitive_recomposition_reason,
                 cognitive_recomposition_trigger=audit.cognitive_recomposition_trigger,
@@ -279,16 +372,46 @@ def build_payload(args: Namespace) -> dict[str, object]:
                         f"{item.get('candidate_workflow_profile_assessment', 'n/a')}"
                     ),
                     (
+                        "metacognitive_guidance="
+                        f"{item.get('baseline_metacognitive_guidance_assessment', 'n/a')}"
+                        "->"
+                        f"{item.get('candidate_metacognitive_guidance_assessment', 'n/a')}"
+                    ),
+                    (
+                        "mind_disagreement="
+                        f"{item.get('baseline_mind_disagreement_assessment', 'n/a')}"
+                        "->"
+                        f"{item.get('candidate_mind_disagreement_assessment', 'n/a')}"
+                    ),
+                    (
                         "memory_causality="
                         f"{item.get('baseline_memory_causality_assessment', 'n/a')}"
                         "->"
                         f"{item.get('candidate_memory_causality_assessment', 'n/a')}"
                     ),
                     (
+                        "memory_lifecycle="
+                        f"{item.get('baseline_memory_lifecycle_assessment', 'n/a')}"
+                        "->"
+                        f"{item.get('candidate_memory_lifecycle_assessment', 'n/a')}"
+                    ),
+                    (
+                        "memory_corpus="
+                        f"{item.get('baseline_memory_corpus_assessment', 'n/a')}"
+                        "->"
+                        f"{item.get('candidate_memory_corpus_assessment', 'n/a')}"
+                    ),
+                    (
                         "mind_domain_specialist="
                         f"{item.get('baseline_mind_domain_specialist_assessment', 'n/a')}"
                         "->"
                         f"{item.get('candidate_mind_domain_specialist_assessment', 'n/a')}"
+                    ),
+                    (
+                        "mind_domain_specialist_chain="
+                        f"{item.get('baseline_mind_domain_specialist_chain_assessment', 'n/a')}"
+                        "->"
+                        f"{item.get('candidate_mind_domain_specialist_chain_assessment', 'n/a')}"
                     ),
                     (
                         "cognitive_recomposition="
@@ -307,17 +430,47 @@ def build_payload(args: Namespace) -> dict[str, object]:
                     "candidate_workflow_profile_assessment": item.get(
                         "candidate_workflow_profile_assessment"
                     ),
+                    "baseline_metacognitive_guidance_assessment": item.get(
+                        "baseline_metacognitive_guidance_assessment"
+                    ),
+                    "candidate_metacognitive_guidance_assessment": item.get(
+                        "candidate_metacognitive_guidance_assessment"
+                    ),
+                    "baseline_mind_disagreement_assessment": item.get(
+                        "baseline_mind_disagreement_assessment"
+                    ),
+                    "candidate_mind_disagreement_assessment": item.get(
+                        "candidate_mind_disagreement_assessment"
+                    ),
                     "baseline_memory_causality_assessment": item.get(
                         "baseline_memory_causality_assessment"
                     ),
                     "candidate_memory_causality_assessment": item.get(
                         "candidate_memory_causality_assessment"
                     ),
+                    "baseline_memory_lifecycle_assessment": item.get(
+                        "baseline_memory_lifecycle_assessment"
+                    ),
+                    "candidate_memory_lifecycle_assessment": item.get(
+                        "candidate_memory_lifecycle_assessment"
+                    ),
+                    "baseline_memory_corpus_assessment": item.get(
+                        "baseline_memory_corpus_assessment"
+                    ),
+                    "candidate_memory_corpus_assessment": item.get(
+                        "candidate_memory_corpus_assessment"
+                    ),
                     "baseline_mind_domain_specialist_assessment": item.get(
                         "baseline_mind_domain_specialist_assessment"
                     ),
                     "candidate_mind_domain_specialist_assessment": item.get(
                         "candidate_mind_domain_specialist_assessment"
+                    ),
+                    "baseline_mind_domain_specialist_chain_assessment": item.get(
+                        "baseline_mind_domain_specialist_chain_assessment"
+                    ),
+                    "candidate_mind_domain_specialist_chain_assessment": item.get(
+                        "candidate_mind_domain_specialist_chain_assessment"
                     ),
                     "baseline_cognitive_recomposition_assessment": item.get(
                         "baseline_cognitive_recomposition_assessment"
@@ -355,16 +508,46 @@ def render_text(payload: dict[str, object]) -> str:
                         f"{item.get('candidate_workflow_profile_assessment', 'n/a')}"
                     ),
                     (
+                        "metacognitive_guidance="
+                        f"{item.get('baseline_metacognitive_guidance_assessment', 'n/a')}"
+                        "->"
+                        f"{item.get('candidate_metacognitive_guidance_assessment', 'n/a')}"
+                    ),
+                    (
+                        "mind_disagreement="
+                        f"{item.get('baseline_mind_disagreement_assessment', 'n/a')}"
+                        "->"
+                        f"{item.get('candidate_mind_disagreement_assessment', 'n/a')}"
+                    ),
+                    (
                         "memory_causality="
                         f"{item.get('baseline_memory_causality_assessment', 'n/a')}"
                         "->"
                         f"{item.get('candidate_memory_causality_assessment', 'n/a')}"
                     ),
                     (
+                        "memory_lifecycle="
+                        f"{item.get('baseline_memory_lifecycle_assessment', 'n/a')}"
+                        "->"
+                        f"{item.get('candidate_memory_lifecycle_assessment', 'n/a')}"
+                    ),
+                    (
+                        "memory_corpus="
+                        f"{item.get('baseline_memory_corpus_assessment', 'n/a')}"
+                        "->"
+                        f"{item.get('candidate_memory_corpus_assessment', 'n/a')}"
+                    ),
+                    (
                         "mind_domain_specialist="
                         f"{item.get('baseline_mind_domain_specialist_assessment', 'n/a')}"
                         "->"
                         f"{item.get('candidate_mind_domain_specialist_assessment', 'n/a')}"
+                    ),
+                    (
+                        "mind_domain_specialist_chain="
+                        f"{item.get('baseline_mind_domain_specialist_chain_assessment', 'n/a')}"
+                        "->"
+                        f"{item.get('candidate_mind_domain_specialist_chain_assessment', 'n/a')}"
                     ),
                     (
                         "cognitive_recomposition="

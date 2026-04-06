@@ -4,7 +4,7 @@
 
 - Atualizado em: 2026-04-06
 - Branch: `main`
-- Commit de referência: `842ffc3`
+- Commit de referência: `5a8fda6`
 - Artefato canônico do projeto: `documento_mestre_jarvis.md`
 - Estado do projeto: `v1` encerrado e congelado para uso controlado; primeiro ciclo do `pós-v1` encerrado; primeiro ciclo do `v1.5` encerrado; primeiro corte do `v2` encerrado; `v2-alignment-cycle` encerrado; próximo corte do `v2` aberto
 - Fila micro ativa: `docs/implementation/execution-backlog.md`
@@ -47,6 +47,13 @@ Leitura operacional correta desta rodada:
 - `domain_registry` agora expõe guidance soberano por `workflow_profile`, e `planning-engine`/`synthesis-engine` passaram a usar esse guidance para leitura final, foco de sucesso e papel explícito de memória semântica/procedural por rota promovida.
 - `memory_registry` e `memory-service` agora distinguem visibilidade de `semantic`/`procedural` entre reasoning final e packet de especialista: workflows analíticos/estratégicos/governados mantém `procedural` no runtime final, mas não o propagam automaticamente ao especialista subordinado.
 - `memory_registry` passou a separar a visibilidade de memoria guiada para `planning/synthesis` da visibilidade para especialistas, mantendo o mesmo contrato soberano.
+- `planning-engine` agora materializa `metacognitive_guidance` no plano deliberativo, distinguindo quando `primary_mind`, `primary_domain_driver` e `dominant_tension` alteraram criterio de saida, proxima acao segura e contencao.
+- `synthesis-engine`, `response_synthesized` e `observability-service` agora propagam e auditam esse slice causal de metacognicao, em vez de deixar a ancora cognitiva apenas como leitura descritiva de rationale.
+- `memory_registry`, `memory-service`, `planning-engine`, `synthesis-engine` e `observability-service` agora distinguem fonte, efeitos, lifecycle e revisao de `semantic`/`procedural` por `workflow_profile` e por fonte de continuidade, separando reasoning final, packet de especialista e recovery de missao.
+- `orchestrator-service`, `observability-service`, `internal_pilot_report` e `compare_orchestrator_paths` agora carregam `mind_domain_specialist_chain_*`, `primary_mind` e `primary_route` como evidencia primaria do runtime, em vez de depender de parse posterior de `rationale`.
+- `evolution_from_pilot`, `evolution-lab`, `compare_orchestrator_paths`, `internal_pilot_report` e `verify_release_signal_baseline.py` agora tratam metacognicao causal, lifecycle de memoria e coerencia `mente -> dominio -> especialista` como sinais formais de evolucao governada e readiness de release.
+- `compare_orchestrator_paths`, `evolution-lab` e `evolution_from_pilot` agora publicam `refinement_vectors` por workflow, permitindo que o loop evolutivo sugira prioridade de refinamento do nucleo com base no runtime real.
+- `planning`, `synthesis`, `orchestrator`, `memory`, `observability` e o piloto agora tambem carregam `mind_disagreement_status`, `mind_validation_checkpoint_status`, `memory_corpus_status` e `memory_retention_pressure` como sinais auditaveis do baseline.
 - `observability-service` agora distingue `workflow_trace_status` de `workflow_profile_status`: o primeiro continua cobrando baseline saudavel, e o segundo passou a marcar `maturation_recommended` quando o workflow esta correto, mas ainda sem sinais ricos suficientes no runtime final.
 - `internal_pilot_report` e `compare_orchestrator_paths` agora carregam `workflow_profile_status` ate os artefatos comparativos, deixando esse sinal visivel fora da auditoria local.
 - `internal_pilot_report` e `compare_orchestrator_paths` agora tambem classificam esse sinal como `baseline_saudavel`, `maturation_recommended` ou `attention_required` por workflow, sem tratar maturacao recomendada como falha estrutural do baseline.
@@ -59,18 +66,18 @@ Leitura operacional correta desta rodada:
 - `internal_pilot_support` agora inclui cenarios deliberados para memoria causal (`guided_memory_followup`) e recomposicao cognitiva por `specialist_route_impasse` (`recomposition_impasse`), com cobertura em relatorio e comparacao.
 - `compare_orchestrator_paths` passou a marcar drift explicito de `workflow_profile_status`, `memory_causality_status`, `dominant_tension`, `primary_domain_driver`, `mind_domain_specialist_status` e recomposicao cognitiva entre baseline e candidata.
 - `planning-engine`, `synthesis-engine` e `response_synthesized` agora tornam `dominant_tension`, `primary_domain_driver`, `workflow_response_focus` e recomposicao cognitiva mais declarativos no comportamento final do runtime.
-- `verify_active_cut_baseline.py` agora combina contratos promovidos com um piloto focado que cobre as seis rotas promovidas, seus `workflow_profiles` e os sinais deliberados de memoria causal e recomposicao cognitiva.
+- `verify_active_cut_baseline.py` agora combina contratos promovidos com um piloto focado que cobre as seis rotas promovidas, seus `workflow_profiles` e os sinais deliberados de memoria causal, discordancia entre mentes, corpus de memoria e recomposicao cognitiva.
 - `internal_pilot_support` agora declara `expected_route`, `expected_workflow_profile` e `coverage_tags` nos cenarios canonicos do piloto, tornando a cobertura por rota/workflow parte explicita do baseline.
 - o baseline ativo agora tambem exige cenarios deliberados para `dominant_tension` e alinhamento `mente -> dominio -> especialista`, promovendo esses sinais a readiness formal de robustez do `v2`.
 - `close_domain_consumers_and_workflows_cut` agora carrega coverage de piloto, match de workflow e readiness dos sinais deliberados como parte da evidencia regeneravel do corte.
 - `master-summary` e `docs/archive/implementation/v2-domain-consumers-and-workflows-cut-closure.md` agora refletem que o baseline do corte combina contratos promovidos com cobertura deliberada do piloto, em vez de tratar isso como detalhe tecnico implícito.
-- o lote atual do `execution-backlog` foi integralmente executado, incluindo `MB-020` a `MB-022`; nao ha item `ready` aberto neste momento.
+- o lote anterior do `execution-backlog` foi integralmente executado, incluindo `MB-020` a `MB-022`; esse fechamento permanece valido e o proximo item `ready` agora pertence ao novo lote de maturacao do nucleo.
 - o caminho padrao do `orchestrator-service` agora tambem fecha a continuidade como subfluxo explicito via `continuity_subflow_completed`, alinhado ao mesmo payload soberano usado pelo caminho opcional de `LangGraph`.
-- o lote `pre-v3 hardening` foi concluido em `docs/implementation/execution-backlog.md`, com `MB-023` a `MB-026` fechados e sem item `ready` aberto na fila micro.
+- o lote `pre-v3 hardening` foi concluido em `docs/implementation/execution-backlog.md`, com `MB-023` a `MB-026` fechados; esse baseline permanece encerrado e nao deve ser reaberto por inercia.
 - o `orchestrator-service` agora fecha o lifecycle de especialistas como subfluxo explicito (`specialist_subflow_completed`) e tambem declara `mission_runtime_state` para requests com missao ativa, related mission e readiness de retomada.
 - `observability-service`, `internal_pilot_report`, `compare_orchestrator_paths`, `verify_active_cut_baseline.py` e o fechamento regeneravel do corte agora tratam `specialist_subflow` e `mission_runtime_state` como sinais agregados de hardening arquitetural pre-`v3`.
-- a proxima frente macro foi escolhida e documentada como `pre-v3 protective intelligence foundation`, com guia proprio em `docs/implementation/pre-v3-protective-intelligence-foundation-cut.md`.
-- o novo lote micro dessa frente ja foi aberto em `docs/implementation/execution-backlog.md`: `MB-027` esta `ready`, `MB-028` a `MB-031` estao `blocked` por dependencia, e nenhuma implementacao desse eixo foi iniciada nesta rodada.
+- a frente `pre-v3 protective intelligence foundation` foi mapeada e preservada em `docs/implementation/pre-v3-protective-intelligence-foundation-cut.md`, mas deixou de ser a proxima frente ativa do programa.
+- o lote micro `MB-027` a `MB-031` foi reclassificado para `deferred` em `docs/implementation/execution-backlog.md`; nenhuma implementacao desse eixo deve ser puxada sem repriorizacao macro explicita do operador.
 - `CHANGELOG.md` foi restaurado como changelog cronologico e o `engineering_gate` agora protege a identidade minima de `CHANGELOG.md`, `HANDOFF.md`, `documento_mestre_jarvis.md`, `docs/roadmap/programa-ate-v3.md` e `docs/implementation/v2-adherence-snapshot.md` antes da liberacao.
 
 ## Meta atual
@@ -84,8 +91,11 @@ Consolidar o fechamento operacional do `v2` sobre um runtime já alinhado aos ei
 - depois disso: tornar memoria `semantic` e `procedural` mais causal por `workflow_profile`, sem quebrar a soberania do runtime atual;
 - depois disso: separar com mais precisao o que ja e baseline saudavel e o que ainda e `maturation_recommended` por `workflow_profile`;
 - depois disso: endurecer a cadeia `mente -> dominio -> especialista` com sinais cada vez menos implicitos e mais auditaveis;
-- depois disso: usar o hardening pre-`v3` fechado como baseline para decidir a proxima frente macro, sem reabrir localmente continuidade, lifecycle de especialistas ou mission runtime state;
-- depois disso: abrir a fundacao de `protective intelligence` por contratos, ledger de evidencia, casos, sinais de risco e guardrails minimos;
+- depois disso: usar o hardening pre-`v3` fechado como baseline para recentrar a fila micro em metacognicao mais causal, memoria mais viva e relacao `mente -> dominio -> especialista` menos implicita;
+- `MB-032` a `MB-036` foram concluidos nesse eixo; o lote atual fechou metacognicao causal, memoria causal/lifecycle e evidencia primaria da cadeia `mente -> dominio -> especialista`;
+- `MB-037` a `MB-040` foram concluidos; o baseline agora ja carrega vetores priorizados de refinamento por workflow, composicao de mentes mais profunda, telemetria viva de memoria e matriz formal de evals por eixo/workflow;
+- a fila micro ficou sem item `ready` depois desse fechamento e precisa de repriorizacao explicita do proximo lote, sem reativar `protective intelligence` por inercia;
+- so depois disso: reavaliar qual vertical derivada deve abrir a proxima frente macro; `protective intelligence` permanece mapeado, mas em `deferred` ate nova decisao explicita;
 - so entao: decidir se o `v3` deve abrir por essa frente, por outra vertical derivada ou por mais maturacao transversal.
 
 Regra operacional desta fase:
@@ -245,11 +255,11 @@ Pendências principais desta fase:
 
 - manter os docs vivos refletindo o baseline soberano já absorvido no `v2`;
 - tratar o lote `pre-v3 hardening` em `docs/implementation/execution-backlog.md` como concluido, sem reabrir `MB-024` a `MB-026` como fila pendente;
-- manter `docs/implementation/pre-v3-protective-intelligence-foundation-cut.md` como documento macro ativo da proxima frente, sem antecipar implementacao fora da fila micro;
-- refinar critérios de saída por `workflow_profile` sem abrir nova heurística fora dos registries;
-- aprofundar o uso de `semantic` e `procedural` como maturação de runtime, não como reabertura de arquitetura;
-- continuar tornando a relação `mente -> domínio -> especialista` mais explícita em consumidores posteriores quando isso trouxer ganho real.
-- não existe neste momento pendência técnica material de robustez dentro do baseline atual do `v2`; o restante já entra como maturação incremental ou próxima frente macro.
+- manter `docs/implementation/pre-v3-protective-intelligence-foundation-cut.md` como estudo macro preservado, mas em estado `deferred`, sem tratar esse eixo como fila ativa;
+- tratar `MB-032` a `MB-036` como baseline ja fechado, sem reabrir o mesmo lote por inercia local;
+- tratar `MB-037` a `MB-040` como lote fechado, sem reabrir o mesmo trabalho por inercia local;
+- continuar refinando criterios de saida por `workflow_profile`, uso soberano de memoria e profundidade da cadeia `mente -> dominio -> especialista` apenas quando isso justificar um novo lote real;
+- nao existe neste momento pendencia tecnica material de robustez dentro do baseline atual do `v2`; o restante ja entra como maturacao incremental ou proxima frente macro.
 
 Regra de estudo externo no `v2`:
 
@@ -264,15 +274,19 @@ Ordem recomendada:
 1. tratar `docs/implementation/v2-adherence-snapshot.md` como leitura oficial do fechamento funcional do `v2`;
 2. manter `HANDOFF.md`, `CHANGELOG.md` e o snapshot como docs vivos do baseline sem abrir outro corte documental por inércia;
 3. tratar `MB-023` a `MB-026` do lote `pre-v3 hardening` como baseline ja fechado, nao como backlog aberto;
-4. depois disso, focar em critérios mais específicos por `workflow_profile` e em uso ainda mais maduro de `semantic`/`procedural`;
-5. manter histórico regenerável em `docs/archive/implementation/` e `tools/archive/` sem reexpandir a raiz do repositório;
-6. só abrir outra frente funcional se esta prioridade macro mudar explicitamente.
+4. reclassificar `MB-027` a `MB-031` como `deferred`, preservando `protective intelligence` apenas como frente mapeada e nao ativa;
+5. tratar `MB-037` a `MB-040` como baseline fechado e usar seus sinais para escolher o proximo lote tecnico;
+6. manter a fila micro sem novo item `ready` ate repriorizacao explicita, sem abrir concorrencia paralela por impulso;
+7. manter historico regeneravel em `docs/archive/implementation/` e `tools/archive/` sem reexpandir a raiz do repositorio;
+8. so abrir outra frente funcional ou novo lote micro se esta prioridade macro mudar explicitamente.
 
 Atualização desta rodada:
 
-- a frente macro escolhida para a próxima implementação é `pre-v3 protective intelligence foundation`;
-- o documento macro ativo passa a ser `docs/implementation/pre-v3-protective-intelligence-foundation-cut.md`;
-- a fila micro correspondente já foi aberta com `MB-027` a `MB-031`, mas nenhum item dessa frente foi implementado ainda.
+- `pre-v3 protective intelligence foundation` foi rebaixada para `deferred`;
+- `docs/implementation/pre-v3-protective-intelligence-foundation-cut.md` fica preservado como estudo macro, nao como frente ativa;
+- a fila micro voltou a priorizar maturacao do nucleo cognitivo; `MB-032` a `MB-036` foram executados e fecharam o lote atual;
+- o lote `MB-037` a `MB-040` foi concluido na fila micro e fechou a rodada de autoevolucao governada do nucleo;
+- `execution-backlog.md`, `HANDOFF.md`, `v2-adherence-snapshot.md` e `CHANGELOG.md` agora registram esse fechamento e deixam a fila sem item `ready` ate nova priorizacao.
 
 ## Riscos e bloqueios
 

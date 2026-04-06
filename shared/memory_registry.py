@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Sequence
 from dataclasses import dataclass
 
 from shared.types import MemoryClass
@@ -31,6 +31,35 @@ class WorkflowMemoryPolicy:
     reasoning_procedural_enabled: bool = True
     specialist_semantic_enabled: bool = True
     specialist_procedural_enabled: bool = True
+
+
+@dataclass(frozen=True)
+class MemoryLifecycleDecision:
+    semantic_lifecycle: str | None
+    procedural_lifecycle: str | None
+    lifecycle_status: str
+    review_status: str
+
+
+@dataclass(frozen=True)
+class GuidedMemoryDecision:
+    reasoning_classes: tuple[MemoryClass, ...]
+    specialist_classes: tuple[MemoryClass, ...]
+    semantic_source: str | None
+    procedural_source: str | None
+    semantic_effects: tuple[str, ...]
+    procedural_effects: tuple[str, ...]
+    semantic_lifecycle: str | None
+    procedural_lifecycle: str | None
+    lifecycle_status: str
+    review_status: str
+
+
+@dataclass(frozen=True)
+class MemoryCorpusTelemetry:
+    corpus_status: str
+    retention_pressure: str
+    summary: dict[str, int]
 
 
 DEFAULT_WORKFLOW_MEMORY_POLICY = WorkflowMemoryPolicy(workflow_profile=None)
@@ -295,6 +324,158 @@ def guided_specialist_memory_classes(
     return classes
 
 
+def memory_lifecycle_decision(
+    *,
+    semantic_sources: Sequence[str],
+    procedural_sources: Sequence[str],
+    continuity_source: str | None = None,
+) -> MemoryLifecycleDecision:
+    """Return the sovereign lifecycle classification for guided memory usage."""
+
+    semantic_lifecycle = _memory_lifecycle_label(
+        sources=semantic_sources,
+        continuity_source=continuity_source,
+    )
+    procedural_lifecycle = _memory_lifecycle_label(
+        sources=procedural_sources,
+        continuity_source=continuity_source,
+    )
+    labels = [label for label in (semantic_lifecycle, procedural_lifecycle) if label]
+    if not labels:
+        lifecycle_status = "not_applicable"
+    elif "aging" in labels:
+        lifecycle_status = "review_recommended"
+    elif "retained" in labels:
+        lifecycle_status = "retained"
+    elif "promoted" in labels:
+        lifecycle_status = "promoted"
+    else:
+        lifecycle_status = "emerging"
+    if "aging" in labels:
+        review_status = "review_recommended"
+    elif "consolidating" in labels:
+        review_status = "monitor"
+    elif labels:
+        review_status = "stable"
+    else:
+        review_status = "not_needed"
+    return MemoryLifecycleDecision(
+        semantic_lifecycle=semantic_lifecycle,
+        procedural_lifecycle=procedural_lifecycle,
+        lifecycle_status=lifecycle_status,
+        review_status=review_status,
+    )
+
+
+def guided_memory_decision(
+    *,
+    semantic_sources: Sequence[str],
+    procedural_sources: Sequence[str],
+    domain_compatible: bool,
+    workflow_profile: str | None = None,
+    continuity_source: str | None = None,
+) -> GuidedMemoryDecision:
+    """Resolve the sovereign guided-memory decision for reasoning and specialist use."""
+
+    reasoning_classes = tuple(
+        guided_reasoning_memory_classes(
+            semantic_evidence=bool(semantic_sources),
+            procedural_evidence=bool(procedural_sources),
+            domain_compatible=domain_compatible,
+            workflow_profile=workflow_profile,
+        )
+    )
+    specialist_classes = tuple(
+        guided_specialist_memory_classes(
+            semantic_evidence=bool(semantic_sources),
+            procedural_evidence=bool(procedural_sources),
+            domain_compatible=domain_compatible,
+            workflow_profile=workflow_profile,
+        )
+    )
+    lifecycle = memory_lifecycle_decision(
+        semantic_sources=semantic_sources,
+        procedural_sources=procedural_sources,
+        continuity_source=continuity_source,
+    )
+    semantic_source = (
+        _preferred_memory_source(semantic_sources, continuity_source)
+        if MemoryClass.SEMANTIC in reasoning_classes
+        else None
+    )
+    procedural_source = (
+        _preferred_memory_source(procedural_sources, continuity_source)
+        if MemoryClass.PROCEDURAL in reasoning_classes
+        else None
+    )
+    semantic_effects = _memory_effects_for_source(
+        semantic_source,
+        primary_effect="framing",
+    )
+    procedural_effects = _memory_effects_for_source(
+        procedural_source,
+        primary_effect="next_action",
+    )
+    return GuidedMemoryDecision(
+        reasoning_classes=reasoning_classes,
+        specialist_classes=specialist_classes,
+        semantic_source=semantic_source,
+        procedural_source=procedural_source,
+        semantic_effects=tuple(semantic_effects),
+        procedural_effects=tuple(procedural_effects),
+        semantic_lifecycle=lifecycle.semantic_lifecycle,
+        procedural_lifecycle=lifecycle.procedural_lifecycle,
+        lifecycle_status=lifecycle.lifecycle_status,
+        review_status=lifecycle.review_status,
+    )
+
+
+def memory_corpus_telemetry(
+    *,
+    user_scope_records: int,
+    mission_state_records: int,
+    specialist_context_records: int,
+    semantic_records: int,
+    procedural_records: int,
+    retained_records: int,
+    promoted_records: int,
+    aging_records: int,
+    review_recommended_records: int,
+) -> MemoryCorpusTelemetry:
+    """Classify memory corpus pressure without introducing a new storage layer."""
+
+    total_guided_records = semantic_records + procedural_records
+    if review_recommended_records >= 3 or aging_records >= 3 or total_guided_records >= 18:
+        retention_pressure = "high"
+    elif review_recommended_records >= 1 or aging_records >= 1 or total_guided_records >= 9:
+        retention_pressure = "moderate"
+    else:
+        retention_pressure = "low"
+
+    if retention_pressure == "high":
+        corpus_status = "review_recommended"
+    elif retention_pressure == "moderate":
+        corpus_status = "monitor"
+    else:
+        corpus_status = "stable"
+
+    return MemoryCorpusTelemetry(
+        corpus_status=corpus_status,
+        retention_pressure=retention_pressure,
+        summary={
+            "user_scope_records": user_scope_records,
+            "mission_state_records": mission_state_records,
+            "specialist_context_records": specialist_context_records,
+            "semantic_records": semantic_records,
+            "procedural_records": procedural_records,
+            "retained_records": retained_records,
+            "promoted_records": promoted_records,
+            "aging_records": aging_records,
+            "review_recommended_records": review_recommended_records,
+        },
+    )
+
+
 def default_priority_rules() -> list[str]:
     """Expose the runtime ordering rules implied by the registry."""
 
@@ -342,3 +523,65 @@ def specialist_memory_policy_payload(
 DEFAULT_MEMORY_SCOPES: list[MemoryClass] = default_memory_scopes()
 
 SHARED_MEMORY_CLASSES: list[MemoryClass] = specialist_shared_memory_classes()
+
+
+def _preferred_memory_source(
+    sources: Sequence[str],
+    continuity_source: str | None,
+) -> str | None:
+    normalized: list[str] = []
+    for item in sources:
+        if item and item not in normalized:
+            normalized.append(item)
+    if not normalized:
+        return None
+    preferred_order: list[str] = []
+    if continuity_source:
+        preferred_order.append(continuity_source)
+    preferred_order.extend(
+        [
+            "related_mission",
+            "active_mission",
+            "user_scope",
+            "recurrent_specialist",
+            "fresh_request",
+        ]
+    )
+    for candidate in preferred_order:
+        if candidate in normalized:
+            return candidate
+    return normalized[0]
+
+
+def _memory_effects_for_source(
+    source: str | None,
+    *,
+    primary_effect: str,
+) -> list[str]:
+    if source is None:
+        return []
+    effects = [primary_effect]
+    if source != "fresh_request":
+        effects.append("continuity")
+    return effects
+
+
+def _memory_lifecycle_label(
+    *,
+    sources: Sequence[str],
+    continuity_source: str | None,
+) -> str | None:
+    normalized = {item for item in sources if item}
+    if not normalized:
+        return None
+    cross_context = bool(
+        normalized.intersection({"related_mission", "user_scope", "recurrent_specialist"})
+    )
+    active_context = "active_mission" in normalized
+    if continuity_source == "fresh_request" and (cross_context or active_context):
+        return "aging"
+    if cross_context and active_context:
+        return "retained"
+    if cross_context:
+        return "promoted"
+    return "consolidating"

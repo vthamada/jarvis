@@ -7,7 +7,7 @@
 
 ## Evidencia consolidada
 
-- active_implementation_docs: `10`
+- active_implementation_docs: `11`
 - archived_implementation_docs: `25`
 - docs_moved_to_archive: `15`
 - active_tool_entrypoints: `20`

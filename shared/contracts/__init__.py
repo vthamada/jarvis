@@ -126,6 +126,20 @@ class DeliberativePlanContract:
     specialist_resolution_summary: str | None = None
     dominant_tension: str | None = None
     smallest_safe_next_action: str | None = None
+    metacognitive_guidance_applied: bool = False
+    metacognitive_guidance_summary: str | None = None
+    metacognitive_effects: list[str] = field(default_factory=list)
+    metacognitive_containment_recommendation: str | None = None
+    semantic_memory_source: str | None = None
+    procedural_memory_source: str | None = None
+    semantic_memory_effects: list[str] = field(default_factory=list)
+    procedural_memory_effects: list[str] = field(default_factory=list)
+    semantic_memory_lifecycle: str | None = None
+    procedural_memory_lifecycle: str | None = None
+    memory_lifecycle_status: str | None = None
+    memory_review_status: str | None = None
+    mind_disagreement_status: str | None = None
+    mind_validation_checkpoints: list[str] = field(default_factory=list)
     continuity_action: str | None = None
     continuity_reason: str | None = None
     open_loops: list[str] = field(default_factory=list)
@@ -199,6 +213,17 @@ class SpecialistSharedMemoryContextContract:
     semantic_focus: list[str] = field(default_factory=list)
     open_loops: list[str] = field(default_factory=list)
     last_recommendation: str | None = None
+    semantic_memory_source: str | None = None
+    procedural_memory_source: str | None = None
+    semantic_memory_effects: list[str] = field(default_factory=list)
+    procedural_memory_effects: list[str] = field(default_factory=list)
+    semantic_memory_lifecycle: str | None = None
+    procedural_memory_lifecycle: str | None = None
+    memory_lifecycle_status: str | None = None
+    memory_review_status: str | None = None
+    memory_corpus_status: str | None = None
+    memory_retention_pressure: str | None = None
+    memory_corpus_summary: dict[str, int] = field(default_factory=dict)
     domain_mission_link_reason: str | None = None
     recurrent_context_status: str = "not_applicable"
     recurrent_interaction_count: int = 0

@@ -9,6 +9,7 @@ from shared.contracts import (
     SpecialistContributionContract,
 )
 from shared.domain_registry import workflow_runtime_guidance
+from shared.memory_registry import guided_memory_decision
 from shared.specialist_registry import (
     GOVERNANCE_REVIEW_SPECIALIST,
     OPERATIONAL_PLANNING_SPECIALIST,
@@ -67,6 +68,13 @@ IGNORED_TOKENS = {
     "um",
 }
 
+DEEP_COGNITIVE_WORKFLOWS = {
+    "structured_analysis_workflow",
+    "decision_risk_workflow",
+    "governance_boundary_workflow",
+    "strategic_direction_workflow",
+}
+
 
 @dataclass(frozen=True)
 class PlanningContext:
@@ -104,6 +112,7 @@ class PlanningContext:
     primary_domain_driver: str | None = None
     arbitration_source: str | None = None
     supporting_minds: list[str] | None = None
+    suppressed_minds: list[str] | None = None
     dominant_tension: str | None = None
     arbitration_summary: str | None = None
     identity_continuity_brief: str | None = None
@@ -125,6 +134,20 @@ class PlanningContext:
     continuity_recovery_mode: str | None = None
     continuity_resume_point: str | None = None
     continuity_requires_manual_resume: bool = False
+    user_scope_status: str | None = None
+    user_domain_focus: list[str] | None = None
+    user_last_recommended_task_type: str | None = None
+    user_continuity_preference: str | None = None
+
+
+@dataclass(frozen=True)
+class MetacognitiveGuidance:
+    """Bounded metacognitive effects propagated into the runtime plan."""
+
+    applied: bool
+    summary: str | None
+    effects: list[str]
+    containment_recommendation: str | None
 
 
 class PlanningEngine:
@@ -178,6 +201,7 @@ class PlanningEngine:
             continuity_action=continuity_action,
             open_loops=open_loops,
             goal_conflict=goal_conflict,
+            dominant_tension=dominant_tension,
         )
         constraints = self._build_constraints(
             context,
@@ -194,6 +218,40 @@ class PlanningEngine:
             context,
             continuity_action=continuity_action,
             open_loops=open_loops,
+            dominant_tension=dominant_tension,
+        )
+        mind_disagreement_status = self._mind_disagreement_status(
+            context,
+            dominant_tension=dominant_tension,
+        )
+        mind_validation_checkpoints = self._mind_validation_checkpoints(
+            context,
+            dominant_tension=dominant_tension,
+            disagreement_status=mind_disagreement_status,
+        )
+        steps, constraints, success_criteria = self._apply_mind_validation_guidance(
+            steps=steps,
+            constraints=constraints,
+            success_criteria=success_criteria,
+            mind_validation_checkpoints=mind_validation_checkpoints,
+            disagreement_status=mind_disagreement_status,
+        )
+        metacognitive_guidance = self._build_metacognitive_guidance(
+            context,
+            dominant_tension=dominant_tension,
+            continuity_action=continuity_action,
+            goal_conflict=goal_conflict,
+            success_criteria=success_criteria,
+            smallest_safe_next_action=smallest_safe_next_action,
+        )
+        memory_decision = self._guided_memory_decision(
+            context,
+            continuity_source=continuity_source,
+        )
+        smallest_safe_next_action = self._apply_guided_memory_to_next_action(
+            smallest_safe_next_action,
+            context=context,
+            memory_decision=memory_decision,
         )
         recommended_task_type = self._recommended_task_type(
             context,
@@ -211,6 +269,8 @@ class PlanningEngine:
             mission_goal=mission_goal,
             dominant_tension=dominant_tension,
             smallest_safe_next_action=smallest_safe_next_action,
+            metacognitive_guidance=metacognitive_guidance,
+            memory_decision=memory_decision,
             continuity_action=continuity_action,
             continuity_reason=continuity_reason,
             continuity_source=continuity_source,
@@ -221,6 +281,8 @@ class PlanningEngine:
             dominant_goal=dominant_goal,
             mission_goal=mission_goal,
             dominant_tension=dominant_tension,
+            metacognitive_guidance=metacognitive_guidance,
+            memory_decision=memory_decision,
             continuity_action=continuity_action,
             goal_conflict=goal_conflict,
             continuity_reason=continuity_reason,
@@ -259,6 +321,22 @@ class PlanningEngine:
             specialist_resolution_summary=None,
             dominant_tension=dominant_tension,
             smallest_safe_next_action=smallest_safe_next_action,
+            metacognitive_guidance_applied=metacognitive_guidance.applied,
+            metacognitive_guidance_summary=metacognitive_guidance.summary,
+            metacognitive_effects=metacognitive_guidance.effects,
+            metacognitive_containment_recommendation=(
+                metacognitive_guidance.containment_recommendation
+            ),
+            semantic_memory_source=memory_decision.semantic_source,
+            procedural_memory_source=memory_decision.procedural_source,
+            semantic_memory_effects=list(memory_decision.semantic_effects),
+            procedural_memory_effects=list(memory_decision.procedural_effects),
+            semantic_memory_lifecycle=memory_decision.semantic_lifecycle,
+            procedural_memory_lifecycle=memory_decision.procedural_lifecycle,
+            memory_lifecycle_status=memory_decision.lifecycle_status,
+            memory_review_status=memory_decision.review_status,
+            mind_disagreement_status=mind_disagreement_status,
+            mind_validation_checkpoints=mind_validation_checkpoints,
             continuity_action=continuity_action,
             continuity_reason=continuity_reason,
             open_loops=open_loops,
@@ -560,12 +638,108 @@ class PlanningEngine:
             )
         return risks or ["sem risco material alem do escopo controlado do v1"]
 
+    def _mind_disagreement_status(
+        self,
+        context: PlanningContext,
+        *,
+        dominant_tension: str,
+    ) -> str:
+        if not dominant_tension:
+            return "not_applicable"
+        supporting_count = len(context.supporting_minds or [])
+        suppressed_count = len(context.suppressed_minds or [])
+        if supporting_count == 0 and suppressed_count == 0:
+            return "not_applicable"
+        deep_workflow = context.route_workflow_profile in DEEP_COGNITIVE_WORKFLOWS
+        if suppressed_count > 0 and deep_workflow:
+            return "deep_review_required"
+        if suppressed_count > 0 or (supporting_count >= 2 and deep_workflow):
+            return "validation_required"
+        return "contained"
+
+    def _mind_validation_checkpoints(
+        self,
+        context: PlanningContext,
+        *,
+        dominant_tension: str,
+        disagreement_status: str,
+    ) -> list[str]:
+        if disagreement_status == "not_applicable":
+            return []
+        checkpoints: list[str] = [
+            f"validar a tensao dominante antes de concluir: {dominant_tension}"
+        ]
+        workflow_checkpoint_label = self._present_contract_label(
+            (context.route_workflow_checkpoints or [None])[0]
+        )
+        if workflow_checkpoint_label:
+            checkpoints.append(
+                f"passar pelo checkpoint governado: {workflow_checkpoint_label}"
+            )
+        workflow_decision_label = self._present_contract_label(
+            (context.route_workflow_decision_points or [None])[0]
+        )
+        if workflow_decision_label:
+            checkpoints.append(
+                f"revisar o decision point ativo sob discordancia: {workflow_decision_label}"
+            )
+        if context.suppressed_minds:
+            suppressed = ", ".join((context.suppressed_minds or [])[:2])
+            checkpoints.append(
+                f"conferir se a linha final absorveu a discordancia de {suppressed}"
+            )
+        return checkpoints[:3]
+
+    def _apply_mind_validation_guidance(
+        self,
+        *,
+        steps: list[str],
+        constraints: list[str],
+        success_criteria: list[str],
+        mind_validation_checkpoints: list[str],
+        disagreement_status: str,
+    ) -> tuple[list[str], list[str], list[str]]:
+        if disagreement_status == "not_applicable":
+            return steps, constraints, success_criteria
+
+        updated_steps = list(steps)
+        updated_constraints = list(constraints)
+        updated_success = list(success_criteria)
+
+        if mind_validation_checkpoints:
+            validation_step = (
+                f"executar validacao cognitiva: {mind_validation_checkpoints[0]}"
+            )
+            if validation_step not in updated_steps:
+                updated_steps.append(validation_step)
+        if disagreement_status in {"validation_required", "deep_review_required"}:
+            constraint = "nao encerrar a resposta sem validacao cognitiva governada"
+            if constraint not in updated_constraints:
+                updated_constraints.append(constraint)
+            criterion = (
+                "saida final deve deixar explicito como a discordancia "
+                "entre mentes foi resolvida"
+            )
+            if criterion not in updated_success:
+                updated_success.append(criterion)
+        if disagreement_status == "deep_review_required":
+            deep_step = "adicionar um passo extra de revisao antes da conclusao final"
+            if deep_step not in updated_steps:
+                updated_steps.append(deep_step)
+            deep_constraint = (
+                "manter checkpoint adicional quando a tensao dominante exigir profundidade maior"
+            )
+            if deep_constraint not in updated_constraints:
+                updated_constraints.append(deep_constraint)
+        return updated_steps[:6], updated_constraints[:9], updated_success[:8]
+
     def _build_success_criteria(
         self,
         context: PlanningContext,
         *,
         continuity_action: str,
         open_loops: list[str],
+        dominant_tension: str,
     ) -> list[str]:
         guidance = workflow_runtime_guidance(context.route_workflow_profile)
         criteria = [
@@ -601,15 +775,24 @@ class PlanningEngine:
                     f"{criterion} e manter {guidance.semantic_memory_role}"
                 )
             criteria.append(criterion)
+        primary_mind_label = self._present_contract_label(context.primary_mind)
         primary_domain_label = self._present_contract_label(context.primary_domain_driver)
-        if (
-            primary_domain_label
-            and context.dominant_tension
-            and len(criteria) < 7
-        ):
+        if primary_domain_label and dominant_tension and len(criteria) < 7:
+            if primary_mind_label:
+                criteria.append(
+                    "ancora cognitiva "
+                    f"{primary_mind_label} deve manter {primary_domain_label} "
+                    f"explicito sob tensao {dominant_tension}"
+                )
+            else:
+                criteria.append(
+                    "dominio primario deve permanecer explicito em torno de "
+                    f"{primary_domain_label} sob tensao {dominant_tension}"
+                )
+        elif primary_mind_label and dominant_tension and len(criteria) < 7:
             criteria.append(
-                "dominio primario deve permanecer explicito em torno de "
-                f"{primary_domain_label} sem perder a tensao dominante"
+                f"mente primaria {primary_mind_label} deve governar o criterio de saida "
+                f"sob tensao {dominant_tension}"
             )
         workflow_checkpoint_label = self._present_contract_label(
             (context.route_workflow_checkpoints or [None])[0]
@@ -684,6 +867,8 @@ class PlanningEngine:
         mission_goal: str,
         dominant_tension: str,
         smallest_safe_next_action: str,
+        metacognitive_guidance: MetacognitiveGuidance,
+        memory_decision,
         continuity_action: str,
         continuity_reason: str,
         continuity_source: str,
@@ -706,12 +891,22 @@ class PlanningEngine:
             f"workflow_profile={workflow_profile}; workflow_focus={guidance.planning_focus}; "
             f"semantic_memory_anchor={semantic_anchor}; "
             f"procedural_memory_anchor={procedural_anchor}; "
+            f"semantic_memory_source={memory_decision.semantic_source or 'none'}; "
+            f"procedural_memory_source={memory_decision.procedural_source or 'none'}; "
+            "semantic_memory_effects="
+            f"{','.join(memory_decision.semantic_effects) or 'none'}; "
+            "procedural_memory_effects="
+            f"{','.join(memory_decision.procedural_effects) or 'none'}; "
+            f"memory_lifecycle={memory_decision.lifecycle_status}; "
+            f"memory_review={memory_decision.review_status}; "
             f"continuidade={continuity_action}; "
             f"fonte_continuidade={continuity_source}; "
             f"replay_status={context.continuity_replay_status or 'none'}; "
             f"recovery_mode={context.continuity_recovery_mode or 'none'}; "
             f"motivo_continuidade={continuity_reason}; "
             f"tensao={dominant_tension}; "
+            f"metacognitive_guidance={metacognitive_guidance.summary or 'none'}; "
+            f"metacognitive_effects={','.join(metacognitive_guidance.effects) or 'none'}; "
             f"proxima_acao={smallest_safe_next_action}"
         )
 
@@ -723,6 +918,8 @@ class PlanningEngine:
         dominant_goal: str,
         mission_goal: str,
         dominant_tension: str,
+        metacognitive_guidance: MetacognitiveGuidance,
+        memory_decision,
         continuity_action: str,
         goal_conflict: str | None,
         continuity_reason: str,
@@ -766,6 +963,10 @@ class PlanningEngine:
         arbitration_source = context.arbitration_source or "none"
         semantic_anchor = self._semantic_memory_anchor(context) or "none"
         procedural_anchor = self._procedural_memory_anchor(context) or "none"
+        user_scope_status = context.user_scope_status or "none"
+        user_domain_focus = ",".join((context.user_domain_focus or [])[:3]) or "none"
+        user_task_type = context.user_last_recommended_task_type or "none"
+        user_continuity_preference = context.user_continuity_preference or "none"
         return (
             f"objetivo_dominante={dominant_goal}; missao_ativa={mission_goal}; "
             f"objetivos_secundarios={secondary}; continuidade={continuity_hint}; "
@@ -780,11 +981,29 @@ class PlanningEngine:
             f"workflow_decision_points={workflow_decisions}; "
             f"semantic_memory_anchor={semantic_anchor}; "
             f"procedural_memory_anchor={procedural_anchor}; "
+            f"semantic_memory_source={memory_decision.semantic_source or 'none'}; "
+            f"procedural_memory_source={memory_decision.procedural_source or 'none'}; "
+            "semantic_memory_effects="
+            f"{','.join(memory_decision.semantic_effects) or 'none'}; "
+            "procedural_memory_effects="
+            f"{','.join(memory_decision.procedural_effects) or 'none'}; "
+            f"semantic_memory_lifecycle={memory_decision.semantic_lifecycle or 'none'}; "
+            f"procedural_memory_lifecycle={memory_decision.procedural_lifecycle or 'none'}; "
+            f"memory_lifecycle={memory_decision.lifecycle_status}; "
+            f"memory_review={memory_decision.review_status}; "
+            f"user_scope_status={user_scope_status}; "
+            f"user_domain_focus={user_domain_focus}; "
+            f"user_last_recommended_task_type={user_task_type}; "
+            f"user_continuity_preference={user_continuity_preference}; "
             f"replay_status={replay_status}; recovery_mode={recovery_mode}; "
             f"resume_point={resume_point}; "
             f"motivo_continuidade={continuity_reason}; "
             f"conflito_missao={conflict_text}; contexto={context_hint}; apoio={knowledge_hint}; "
             f"arbitragem={arbitration}; tensao={dominant_tension}; "
+            f"metacognitive_guidance={metacognitive_guidance.summary or 'none'}; "
+            f"metacognitive_effects={','.join(metacognitive_guidance.effects) or 'none'}; "
+            f"metacognitive_containment="
+            f"{metacognitive_guidance.containment_recommendation or 'none'}; "
             f"memoria_semantica={semantic_hint}; recomendacao_previa={previous_recommendation}; "
             f"missao_relacionada={related_goal}; razao_relacionada={related_reason}; "
             f"prioridade_relacionada={related_priority}; ranking_continuidade={ranking_summary}; "
@@ -822,11 +1041,16 @@ class PlanningEngine:
         continuity_action: str,
         open_loops: list[str],
         goal_conflict: str | None,
+        dominant_tension: str,
     ) -> str:
         loop_focus = self._open_loop_focus(open_loops)
         guidance = workflow_runtime_guidance(context.route_workflow_profile)
         semantic_anchor = self._semantic_memory_anchor(context)
         procedural_anchor = self._procedural_memory_anchor(context)
+        action_anchor = self._metacognitive_action_anchor(
+            context,
+            dominant_tension=dominant_tension,
+        )
         deliverable_label = self._present_contract_label(
             (context.route_expected_deliverables or [None])[0]
         )
@@ -834,8 +1058,15 @@ class PlanningEngine:
             return "pedir confirmacao antes de qualquer execucao"
         if continuity_action == "reformular":
             if loop_focus:
+                if action_anchor:
+                    return f"explicitar como o novo pedido afeta {loop_focus}; {action_anchor}"
                 return f"explicitar como o novo pedido afeta {loop_focus}"
             if goal_conflict:
+                if action_anchor:
+                    return (
+                        "explicitar se o novo pedido substitui ou adia a missao ativa; "
+                        f"{action_anchor}"
+                    )
                 return "explicitar se o novo pedido substitui ou adia a missao ativa"
         if context.continuity_requires_manual_resume:
             if context.continuity_resume_point:
@@ -846,19 +1077,36 @@ class PlanningEngine:
             return "pedir validacao antes de retomar qualquer continuidade"
         if continuity_action == "retomar":
             if context.related_mission_goal:
+                if action_anchor:
+                    return (
+                        "explicitar por que a missao relacionada deve ser retomada antes de "
+                        f"abrir novo escopo; {action_anchor}"
+                    )
                 return (
                     "explicitar por que a missao relacionada deve ser retomada antes de "
                     "abrir novo escopo"
                 )
+            if action_anchor:
+                return (
+                    "retomar a continuidade relacionada antes de abrir novo escopo; "
+                    f"{action_anchor}"
+                )
             return "retomar a continuidade relacionada antes de abrir novo escopo"
         if continuity_action == "encerrar" and loop_focus:
+            if action_anchor:
+                return f"fechar {loop_focus} com criterio explicito; {action_anchor}"
             return f"fechar {loop_focus} com criterio explicito"
         if continuity_action == "continuar" and loop_focus:
             if procedural_anchor and context.route_workflow_profile:
-                return (
+                action = (
                     f"retomar {loop_focus} preservando "
                     f"{guidance.procedural_memory_role}: {procedural_anchor}"
                 )
+                if action_anchor:
+                    return f"{action}; {action_anchor}"
+                return action
+            if action_anchor:
+                return f"retomar {loop_focus} antes de abrir novo escopo; {action_anchor}"
             return f"retomar {loop_focus} antes de abrir novo escopo"
         if (
             continuity_action == "continuar"
@@ -869,10 +1117,15 @@ class PlanningEngine:
             return "explicitar se a nova missao deve herdar continuidade de uma missao relacionada"
         if context.intent == "analysis":
             if semantic_anchor and context.route_workflow_profile:
-                return (
+                action = (
                     "explicitar o trade-off dominante usando "
                     f"{guidance.semantic_memory_role}: {semantic_anchor}"
                 )
+                if action_anchor:
+                    return f"{action}; {action_anchor}"
+                return action
+            if action_anchor:
+                return f"explicitar o trade-off dominante antes de recomendar; {action_anchor}"
             return "explicitar o trade-off dominante antes de recomendar"
         if (
             context.intent == "planning"
@@ -880,13 +1133,139 @@ class PlanningEngine:
             and context.route_workflow_profile
             and deliverable_label
         ):
-            return (
+            action = (
                 f"preservar {guidance.procedural_memory_role}: {procedural_anchor}; "
                 f"convergir para {deliverable_label}"
             )
+            if action_anchor:
+                return f"{action}; {action_anchor}"
+            return action
         if steps:
             return steps[0]
         return "avaliar pedido sem ampliar escopo"
+
+    def _build_metacognitive_guidance(
+        self,
+        context: PlanningContext,
+        *,
+        dominant_tension: str,
+        continuity_action: str,
+        goal_conflict: str | None,
+        success_criteria: list[str],
+        smallest_safe_next_action: str,
+    ) -> MetacognitiveGuidance:
+        summary = self._metacognitive_guidance_summary(
+            context,
+            dominant_tension=dominant_tension,
+        )
+        if summary is None:
+            return MetacognitiveGuidance(
+                applied=False,
+                summary=None,
+                effects=[],
+                containment_recommendation=None,
+            )
+        effects: list[str] = []
+        if any(
+            criterion.startswith("ancora cognitiva")
+            or criterion.startswith("mente primaria")
+            for criterion in success_criteria
+        ):
+            effects.append("success_criteria")
+        if "ancora cognitiva" in smallest_safe_next_action:
+            effects.append("smallest_safe_next_action")
+        containment_recommendation = self._metacognitive_containment_recommendation(
+            context,
+            dominant_tension=dominant_tension,
+            continuity_action=continuity_action,
+            goal_conflict=goal_conflict,
+        )
+        if containment_recommendation is not None:
+            effects.append("containment_recommendation")
+        return MetacognitiveGuidance(
+            applied=bool(effects),
+            summary=summary,
+            effects=effects,
+            containment_recommendation=containment_recommendation,
+        )
+
+    def _metacognitive_guidance_summary(
+        self,
+        context: PlanningContext,
+        *,
+        dominant_tension: str,
+    ) -> str | None:
+        if not dominant_tension:
+            return None
+        primary_mind_label = self._present_contract_label(context.primary_mind)
+        primary_domain_label = self._present_contract_label(context.primary_domain_driver)
+        primary_route_label = self._present_contract_label(context.primary_route)
+        if primary_mind_label and primary_domain_label and primary_route_label:
+            return (
+                f"{primary_mind_label} ancora {primary_domain_label} via "
+                f"{primary_route_label} sob tensao {dominant_tension}"
+            )
+        if primary_mind_label and primary_domain_label:
+            return (
+                f"{primary_mind_label} ancora {primary_domain_label} "
+                f"sob tensao {dominant_tension}"
+            )
+        if primary_domain_label:
+            return (
+                f"dominio primario {primary_domain_label} ancora a deliberacao "
+                f"sob tensao {dominant_tension}"
+            )
+        if primary_mind_label:
+            return (
+                f"mente primaria {primary_mind_label} ancora a deliberacao "
+                f"sob tensao {dominant_tension}"
+            )
+        return None
+
+    def _metacognitive_action_anchor(
+        self,
+        context: PlanningContext,
+        *,
+        dominant_tension: str,
+    ) -> str | None:
+        summary = self._metacognitive_guidance_summary(
+            context,
+            dominant_tension=dominant_tension,
+        )
+        if summary is None:
+            return None
+        return f"ancora cognitiva: {summary}"
+
+    def _metacognitive_containment_recommendation(
+        self,
+        context: PlanningContext,
+        *,
+        dominant_tension: str,
+        continuity_action: str,
+        goal_conflict: str | None,
+    ) -> str | None:
+        summary = self._metacognitive_guidance_summary(
+            context,
+            dominant_tension=dominant_tension,
+        )
+        if summary is None:
+            return None
+        if goal_conflict or continuity_action == "reformular":
+            return (
+                "conter ampliacao de escopo ate "
+                f"{summary} explicitar como o pedido atual afeta a missao ativa"
+            )
+        if context.continuity_requires_manual_resume:
+            return (
+                "conter retomada automatica ate "
+                f"{summary} validar o checkpoint recuperado"
+            )
+        if context.route_workflow_profile == "governance_boundary_workflow":
+            return (
+                "conter progressao ate "
+                f"{summary} explicitar limites, condicoes e trilha governada"
+            )
+        return None
 
     def _resolve_dominant_tension(
         self,
@@ -1040,6 +1419,11 @@ class PlanningEngine:
         focus = ", ".join((context.mission_focus or [])[:2])
         if focus:
             return focus
+        user_focus = ", ".join((context.user_domain_focus or [])[:2])
+        if user_focus:
+            return user_focus
+        if context.related_mission_goal:
+            return context.related_mission_goal
         return context.mission_semantic_brief
 
     def _semantic_memory_step(
@@ -1072,6 +1456,8 @@ class PlanningEngine:
             context.mission_recommendation
             or context.last_decision_frame
             or context.continuity_resume_point
+            or context.user_last_recommended_task_type
+            or context.user_continuity_preference
         )
 
     def _procedural_memory_step(
@@ -1108,3 +1494,86 @@ class PlanningEngine:
             if not item.startswith(skipped_prefixes):
                 return item
         return recovered_context[-1] if recovered_context else "sem continuidade previa relevante"
+
+    def _guided_memory_decision(
+        self,
+        context: PlanningContext,
+        *,
+        continuity_source: str,
+    ):
+        return guided_memory_decision(
+            semantic_sources=self._semantic_memory_sources(context),
+            procedural_sources=self._procedural_memory_sources(context),
+            domain_compatible=bool(
+                context.primary_route
+                or context.primary_canonical_domain
+                or context.route_workflow_profile
+            ),
+            workflow_profile=context.route_workflow_profile,
+            continuity_source=continuity_source,
+        )
+
+    @staticmethod
+    def _semantic_memory_sources(context: PlanningContext) -> list[str]:
+        sources: list[str] = []
+        if context.mission_focus or context.mission_semantic_brief:
+            sources.append("active_mission")
+        if context.related_mission_id and (
+            context.related_mission_goal
+            or context.related_continuity_reason
+            or context.related_open_loops
+        ):
+            sources.append("related_mission")
+        if (
+            context.user_scope_status not in {None, "not_applicable", "incomplete"}
+            and (
+                context.user_domain_focus
+                or context.user_continuity_preference
+                or context.primary_canonical_domain
+            )
+        ):
+            sources.append("user_scope")
+        return sources
+
+    @staticmethod
+    def _procedural_memory_sources(context: PlanningContext) -> list[str]:
+        sources: list[str] = []
+        if (
+            context.mission_recommendation
+            or context.last_decision_frame
+            or context.continuity_resume_point
+        ):
+            sources.append("active_mission")
+        if context.related_mission_id and (
+            context.related_continuity_reason
+            or context.related_open_loops
+            or context.related_mission_goal
+        ):
+            sources.append("related_mission")
+        if (
+            context.user_scope_status not in {None, "not_applicable", "incomplete"}
+            and (
+                context.user_last_recommended_task_type
+                or context.user_continuity_preference
+            )
+        ):
+            sources.append("user_scope")
+        return sources
+
+    def _apply_guided_memory_to_next_action(
+        self,
+        action: str,
+        *,
+        context: PlanningContext,
+        memory_decision,
+    ) -> str:
+        if (
+            not memory_decision.procedural_source
+            or "next_action" not in memory_decision.procedural_effects
+        ):
+            return action
+        anchor = self._procedural_memory_anchor(context)
+        if not anchor or anchor in action:
+            return action
+        role = workflow_runtime_guidance(context.route_workflow_profile).procedural_memory_role
+        return f"{action}; preservar {role}: {anchor}"
