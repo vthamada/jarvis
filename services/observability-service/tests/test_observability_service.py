@@ -1445,6 +1445,8 @@ def test_observability_service_audits_healthy_workflow_trace() -> None:
                     "continuity_action": "continuar",
                     "primary_mind": "mente_planejadora",
                     "primary_domain_driver": "estrategia_e_pensamento_sistemico",
+                    "workflow_output_status": "coherent",
+                    "workflow_output_errors": [],
                     "guided_memory_specialists": ["structured_analysis_specialist"],
                     "semantic_memory_focus": [
                         "estrategia_e_pensamento_sistemico",
@@ -1769,7 +1771,11 @@ def test_observability_service_marks_workflow_profile_maturation_recommended() -
                 event_name="response_synthesized",
                 timestamp="2026-03-18T00:00:09+00:00",
                 source_service="orchestrator-service",
-                payload={"continuity_action": "continuar"},
+                payload={
+                    "continuity_action": "continuar",
+                    "workflow_output_status": "partial",
+                    "workflow_output_errors": ["missing_clause:workflow_checkpoint"],
+                },
                 request_id="req-workflow-maturation",
                 session_id="sess-workflow-maturation",
                 correlation_id="req-workflow-maturation",
@@ -1781,6 +1787,165 @@ def test_observability_service_marks_workflow_profile_maturation_recommended() -
 
     assert audit.workflow_trace_status == "healthy"
     assert audit.workflow_profile_status == "maturation_recommended"
+    assert audit.trace_complete is False
+
+
+def test_observability_service_flags_workflow_output_misalignment() -> None:
+    temp_dir = runtime_dir("observability-workflow-output-misaligned")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service.ingest_events(
+        [
+            InternalEventEnvelope(
+                event_id="evt-wom1",
+                event_name="workflow_composed",
+                timestamp="2026-03-18T00:00:07+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "operation_id": "op-workflow-output-misaligned",
+                    "workflow_profile": "strategic_direction_workflow",
+                    "workflow_domain_route": "strategy",
+                    "workflow_objective": "clarify strategic tradeoffs and recommend a direction",
+                    "workflow_expected_deliverables": [
+                        "tradeoff_map",
+                        "decision_criteria",
+                    ],
+                    "workflow_telemetry_focus": [
+                        "tradeoff_clarity",
+                        "decision_trace",
+                    ],
+                    "workflow_success_focus": "direcao recomendada com criterios explicitos",
+                    "workflow_response_focus": (
+                        "direcao recomendada, criterios e trade-offs dominantes"
+                    ),
+                    "workflow_state": "composed",
+                    "workflow_governance_mode": "core_mediated",
+                    "workflow_checkpoints": ["goal_scope_confirmed"],
+                    "workflow_checkpoint_state": {
+                        "goal_scope_confirmed": "pending"
+                    },
+                    "workflow_resume_status": "fresh_start",
+                    "workflow_resume_point": None,
+                    "workflow_resume_eligible": False,
+                    "workflow_decision_points": ["goal_scope_confirmed"],
+                },
+                request_id="req-workflow-output-misaligned",
+                session_id="sess-workflow-output-misaligned",
+                correlation_id="req-workflow-output-misaligned",
+                operation_id="op-workflow-output-misaligned",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-wom2",
+                event_name="workflow_governance_declared",
+                timestamp="2026-03-18T00:00:07.500000+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "operation_id": "op-workflow-output-misaligned",
+                    "workflow_profile": "strategic_direction_workflow",
+                    "workflow_domain_route": "strategy",
+                    "workflow_objective": "clarify strategic tradeoffs and recommend a direction",
+                    "workflow_expected_deliverables": [
+                        "tradeoff_map",
+                        "decision_criteria",
+                    ],
+                    "workflow_telemetry_focus": [
+                        "tradeoff_clarity",
+                        "decision_trace",
+                    ],
+                    "workflow_success_focus": "direcao recomendada com criterios explicitos",
+                    "workflow_state": "composed",
+                    "workflow_governance_mode": "core_mediated",
+                    "workflow_resume_status": "fresh_start",
+                    "workflow_resume_point": None,
+                    "workflow_decision_points": ["goal_scope_confirmed"],
+                },
+                request_id="req-workflow-output-misaligned",
+                session_id="sess-workflow-output-misaligned",
+                correlation_id="req-workflow-output-misaligned",
+                operation_id="op-workflow-output-misaligned",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-wom3",
+                event_name="workflow_completed",
+                timestamp="2026-03-18T00:00:08.500000+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "operation_id": "op-workflow-output-misaligned",
+                    "workflow_profile": "strategic_direction_workflow",
+                    "workflow_domain_route": "strategy",
+                    "workflow_objective": "clarify strategic tradeoffs and recommend a direction",
+                    "workflow_expected_deliverables": [
+                        "tradeoff_map",
+                        "decision_criteria",
+                    ],
+                    "workflow_telemetry_focus": [
+                        "tradeoff_clarity",
+                        "decision_trace",
+                    ],
+                    "workflow_success_focus": "direcao recomendada com criterios explicitos",
+                    "workflow_response_focus": (
+                        "direcao recomendada, criterios e trade-offs dominantes"
+                    ),
+                    "workflow_state": "completed",
+                    "workflow_governance_mode": "core_mediated",
+                    "workflow_checkpoint_state": {
+                        "goal_scope_confirmed": "completed"
+                    },
+                    "workflow_pending_checkpoints": [],
+                    "workflow_resume_status": "completed_without_resume",
+                    "workflow_resume_point": None,
+                    "workflow_decision_points": ["goal_scope_confirmed"],
+                    "workflow_decisions": ["goal_scope_confirmed"],
+                },
+                request_id="req-workflow-output-misaligned",
+                session_id="sess-workflow-output-misaligned",
+                correlation_id="req-workflow-output-misaligned",
+                operation_id="op-workflow-output-misaligned",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-wom4",
+                event_name="response_synthesized",
+                timestamp="2026-03-18T00:00:09+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "continuity_action": "continuar",
+                    "primary_mind": "mente_planejadora",
+                    "primary_domain_driver": "estrategia_e_pensamento_sistemico",
+                    "workflow_output_status": "misaligned",
+                    "workflow_output_errors": [
+                        "mismatched_clause:workflow_response_focus"
+                    ],
+                    "guided_memory_specialists": ["structured_analysis_specialist"],
+                    "semantic_memory_focus": [
+                        "estrategia_e_pensamento_sistemico",
+                        "strategy",
+                    ],
+                    "procedural_memory_hint": "preservar o ultimo fio decisorio governado",
+                },
+                request_id="req-workflow-output-misaligned",
+                session_id="sess-workflow-output-misaligned",
+                correlation_id="req-workflow-output-misaligned",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-wom5",
+                event_name="memory_recorded",
+                timestamp="2026-03-18T00:00:10+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_mode": "continuar"},
+                request_id="req-workflow-output-misaligned",
+                session_id="sess-workflow-output-misaligned",
+                correlation_id="req-workflow-output-misaligned",
+            ),
+        ]
+    )
+
+    audit = service.audit_flow(
+        ObservabilityQuery(request_id="req-workflow-output-misaligned")
+    )
+
+    assert audit.workflow_output_status == "misaligned"
+    assert "mismatched_clause:workflow_response_focus" in audit.workflow_output_errors
+    assert audit.workflow_profile_status == "attention_required"
+    assert "workflow_output_misaligned" in audit.anomaly_flags
     assert audit.trace_complete is False
 
 

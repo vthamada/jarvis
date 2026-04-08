@@ -7,6 +7,7 @@ from tools.compare_orchestrator_paths import (
     resolve_output_dir,
     serialize_comparisons,
     summarize_comparisons,
+    workflow_output_assessment,
     workflow_profile_assessment,
 )
 from tools.internal_pilot_support import PilotExecutionResult
@@ -43,6 +44,7 @@ def make_result(  # type: ignore[no-untyped-def]
     workflow_resume_status: str = "fresh_start",
     workflow_pending_checkpoint_count: int = 0,
     workflow_profile_status: str = "healthy",
+    workflow_output_status: str = "coherent",
     metacognitive_guidance_status: str = "healthy",
     mind_disagreement_status: str = "not_applicable",
     mind_validation_checkpoint_status: str = "not_applicable",
@@ -116,6 +118,7 @@ def make_result(  # type: ignore[no-untyped-def]
         workflow_resume_status=workflow_resume_status,
         workflow_pending_checkpoint_count=workflow_pending_checkpoint_count,
         workflow_profile_status=workflow_profile_status,
+        workflow_output_status=workflow_output_status,
         metacognitive_guidance_status=metacognitive_guidance_status,
         mind_disagreement_status=mind_disagreement_status,
         mind_validation_checkpoint_status=mind_validation_checkpoint_status,
@@ -235,6 +238,7 @@ def test_compare_results_flags_release_signal_mismatch_fields() -> None:
             scenario_id="x",
             path_name="langgraph",
             workflow_profile_status="maturation_recommended",
+            workflow_output_status="partial",
             mind_disagreement_status="validation_required",
             mind_validation_checkpoint_status="attention_required",
             memory_causality_status="attached_only",
@@ -262,6 +266,7 @@ def test_compare_results_flags_release_signal_mismatch_fields() -> None:
 
     assert comparisons[0].mismatch_fields == [
         "workflow_profile_status",
+        "workflow_output_status",
         "mind_disagreement_status",
         "mind_validation_checkpoint_status",
         "memory_causality_status",
@@ -309,6 +314,10 @@ def test_serialize_comparisons_reports_equivalent_verdict() -> None:
     )
     assert (
         payload["scenario_results"][0]["baseline_workflow_profile_assessment"]
+        == "baseline_saudavel"
+    )
+    assert (
+        payload["scenario_results"][0]["baseline_workflow_output_assessment"]
         == "baseline_saudavel"
     )
     assert (
@@ -362,6 +371,7 @@ def test_render_text_reports_workflow_profile_status() -> None:
                     scenario_id="x",
                     path_name="langgraph",
                     workflow_profile_status="maturation_recommended",
+                    workflow_output_status="partial",
                     mind_disagreement_status="validation_required",
                     mind_validation_checkpoint_status="attention_required",
                     memory_corpus_status="monitor",
@@ -390,6 +400,9 @@ def test_render_text_reports_workflow_profile_status() -> None:
     assert "candidate_workflow_profile_status=maturation_recommended" in rendered
     assert "candidate_workflow_profile_assessment=maturation_recommended" in rendered
     assert "candidate_workflow_profile_decision=maturation_recommended" in rendered
+    assert "candidate_workflow_output_status=partial" in rendered
+    assert "candidate_workflow_output_assessment=maturation_recommended" in rendered
+    assert "candidate_workflow_output_decision=maturation_recommended" in rendered
     assert "candidate_mind_disagreement_status=validation_required" in rendered
     assert "candidate_mind_disagreement_assessment=validation_required" in rendered
     assert (
@@ -420,7 +433,7 @@ def test_render_text_reports_workflow_profile_status() -> None:
     assert (
         "candidate_refinement_axes="
         "mind_composition,memory_corpus,procedural_artifacts,workflow_checkpointing,"
-        "workflow_profile,workflow_resume"
+        "workflow_output,workflow_profile,workflow_resume"
     ) in rendered
     assert "candidate_evaluation_matrix_workflows=strategy" in rendered
 
@@ -446,6 +459,33 @@ def test_workflow_profile_assessment_classifies_statuses() -> None:
                 scenario_id="x",
                 path_name="baseline",
                 workflow_profile_status="attention_required",
+            )
+        )
+        == "attention_required"
+    )
+
+
+def test_workflow_output_assessment_classifies_statuses() -> None:
+    assert (
+        workflow_output_assessment(make_result(scenario_id="x", path_name="baseline"))
+        == "baseline_saudavel"
+    )
+    assert (
+        workflow_output_assessment(
+            make_result(
+                scenario_id="x",
+                path_name="baseline",
+                workflow_output_status="partial",
+            )
+        )
+        == "maturation_recommended"
+    )
+    assert (
+        workflow_output_assessment(
+            make_result(
+                scenario_id="x",
+                path_name="baseline",
+                workflow_output_status="misaligned",
             )
         )
         == "attention_required"

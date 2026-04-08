@@ -664,6 +664,7 @@ class OrchestratorService:
         )
         chain_payload = self._mind_domain_specialist_chain_payload(
             deliberative_plan,
+            planned_specialists=list(deliberative_plan.specialist_hints),
             selected_specialists=[
                 contribution.specialist_type
                 for contribution in specialist_review.contributions
@@ -797,6 +798,8 @@ class OrchestratorService:
                     "output_validation_retry_applied": (
                         synthesis_result.output_validation_retry_applied
                     ),
+                    "workflow_output_status": synthesis_result.workflow_output_status,
+                    "workflow_output_errors": synthesis_result.workflow_output_errors,
                     "semantic_memory_focus": guided_memory_runtime_hints[
                         "semantic_memory_focus"
                     ],
@@ -971,6 +974,7 @@ class OrchestratorService:
         ]
         chain_payload = self._mind_domain_specialist_chain_payload(
             deliberative_plan,
+            planned_specialists=list(deliberative_plan.specialist_hints),
             selected_specialists=selected_specialists,
             selected_domains=selected_domains,
         )
@@ -2578,6 +2582,7 @@ class OrchestratorService:
     def _mind_domain_specialist_chain_payload(
         deliberative_plan: DeliberativePlanContract,
         *,
+        planned_specialists: list[str],
         selected_specialists: list[str],
         selected_domains: list[str],
     ) -> dict[str, object]:
@@ -2586,14 +2591,29 @@ class OrchestratorService:
         primary_route = deliberative_plan.primary_route or "none"
         specialists = ",".join(selected_specialists[:3]) if selected_specialists else "none"
         domains = ",".join(selected_domains[:3]) if selected_domains else "none"
+        planned = ",".join(planned_specialists[:3]) if planned_specialists else "none"
+        planned_hint_match = bool(
+            not planned_specialists
+            or any(item in planned_specialists for item in selected_specialists)
+        )
+        route_match = bool(
+            deliberative_plan.primary_route and deliberative_plan.primary_route in selected_domains
+        )
+        domain_match = bool(
+            deliberative_plan.primary_domain_driver
+            and deliberative_plan.primary_domain_driver
+            in (deliberative_plan.canonical_domains or [])
+        )
         if deliberative_plan.primary_domain_driver is None and not selected_specialists:
             status = "not_applicable"
-        elif selected_specialists and deliberative_plan.primary_route:
-            route_match = deliberative_plan.primary_route in selected_domains
-            domain_match = deliberative_plan.primary_domain_driver in (
-                deliberative_plan.canonical_domains or []
-            )
-            status = "aligned" if route_match and domain_match else "attention_required"
+        elif selected_specialists and route_match and domain_match and planned_hint_match:
+            status = "aligned"
+        elif selected_specialists and not planned_hint_match:
+            status = "mismatch"
+        elif selected_specialists and (route_match or domain_match):
+            status = "evidence_partial"
+        elif planned_specialists and not selected_specialists:
+            status = "incomplete"
         elif selected_specialists:
             status = "attention_required"
         else:
@@ -2602,7 +2622,7 @@ class OrchestratorService:
             "status": status,
             "chain": (
                 f"{primary_mind} -> {primary_domain_driver} -> {primary_route} -> "
-                f"domains[{domains}] -> specialists[{specialists}]"
+                f"planned[{planned}] -> domains[{domains}] -> specialists[{specialists}]"
             ),
         }
 

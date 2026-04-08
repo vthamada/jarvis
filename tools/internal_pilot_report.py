@@ -54,6 +54,8 @@ class PilotTraceSummary:
     workflow_pending_checkpoint_count: int
     workflow_profile_status: str
     workflow_profile_assessment: str
+    workflow_output_status: str
+    workflow_output_assessment: str
     metacognitive_guidance_status: str
     mind_disagreement_status: str
     mind_validation_checkpoint_status: str
@@ -175,6 +177,10 @@ def summarize_traces(
             workflow_profile_assessment=_workflow_profile_assessment(
                 audit.workflow_profile_status
             ),
+            workflow_output_status=audit.workflow_output_status,
+            workflow_output_assessment=_workflow_output_assessment(
+                audit.workflow_output_status
+            ),
             metacognitive_guidance_status=audit.metacognitive_guidance_status,
             mind_disagreement_status=audit.mind_disagreement_status,
             mind_validation_checkpoint_status=audit.mind_validation_checkpoint_status,
@@ -272,6 +278,16 @@ def _workflow_profile_assessment(workflow_profile_status: str | None) -> str:
     return "attention_required"
 
 
+def _workflow_output_assessment(workflow_output_status: str | None) -> str:
+    if workflow_output_status in {None, "not_applicable"}:
+        return "not_applicable"
+    if workflow_output_status == "coherent":
+        return "baseline_saudavel"
+    if workflow_output_status == "partial":
+        return "maturation_recommended"
+    return "attention_required"
+
+
 def _cognitive_recomposition_assessment(
     *,
     applied: bool,
@@ -357,6 +373,10 @@ def _render_summary(summary: PilotTraceSummary) -> str:
         f"{getattr(summary, 'workflow_profile_status', 'not_applicable')} "
         "workflow_profile_assessment="
         f"{getattr(summary, 'workflow_profile_assessment', 'not_applicable')} "
+        "workflow_output_status="
+        f"{getattr(summary, 'workflow_output_status', 'not_applicable')} "
+        "workflow_output_assessment="
+        f"{getattr(summary, 'workflow_output_assessment', 'not_applicable')} "
         "metacognitive_guidance_status="
         f"{getattr(summary, 'metacognitive_guidance_status', 'not_applicable')} "
         "mind_disagreement_status="

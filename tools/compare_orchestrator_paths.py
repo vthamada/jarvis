@@ -70,6 +70,17 @@ def workflow_profile_assessment(result: PilotExecutionResult) -> str:
     return "attention_required"
 
 
+def workflow_output_assessment(result: PilotExecutionResult) -> str:
+    status = result.workflow_output_status
+    if status == "coherent":
+        return "baseline_saudavel"
+    if status == "partial":
+        return "maturation_recommended"
+    if status in {None, "not_applicable"}:
+        return "not_applicable"
+    return "attention_required"
+
+
 def metacognitive_guidance_assessment(result: PilotExecutionResult) -> str:
     return result.metacognitive_guidance_status
 
@@ -162,6 +173,12 @@ def refinement_vectors(result: PilotExecutionResult) -> list[dict[str, str]]:
             "p0",
             "endurecer a ancora metacognitiva ate ela alterar criterio de saida de forma coerente",
         )
+    if result.workflow_output_status in {"partial", "misaligned"}:
+        add_vector(
+            "workflow_output",
+            "p0" if result.workflow_output_status == "misaligned" else "p1",
+            "alinhar a resposta final ao contrato do workflow ativo com clausulas e foco coerentes",
+        )
     if result.mind_disagreement_status in {
         "validation_required",
         "deep_review_required",
@@ -183,6 +200,7 @@ def refinement_vectors(result: PilotExecutionResult) -> list[dict[str, str]]:
         )
     if result.mind_domain_specialist_chain_status in {
         "incomplete",
+        "evidence_partial",
         "attention_required",
         "mismatch",
     }:
@@ -280,6 +298,9 @@ def evaluation_matrix(
             "workflow_profile": summarize_workflow_profile_assessments(
                 [workflow_profile_assessment(result) for result in workflow_results]
             ),
+            "workflow_output": summarize_workflow_profile_assessments(
+                [workflow_output_assessment(result) for result in workflow_results]
+            ),
             "metacognitive_guidance": summarize_statuses(
                 [metacognitive_guidance_assessment(result) for result in workflow_results]
             ),
@@ -338,6 +359,12 @@ def summarize_comparisons(
             "baseline_workflow_maturation_rate": 0.0,
             "candidate_workflow_baseline_rate": 0.0,
             "candidate_workflow_maturation_rate": 0.0,
+            "baseline_workflow_output_decision": "not_applicable",
+            "candidate_workflow_output_decision": "not_applicable",
+            "baseline_workflow_output_baseline_rate": 0.0,
+            "candidate_workflow_output_baseline_rate": 0.0,
+            "baseline_workflow_output_maturation_rate": 0.0,
+            "candidate_workflow_output_maturation_rate": 0.0,
             "baseline_metacognitive_guidance_decision": "not_applicable",
             "candidate_metacognitive_guidance_decision": "not_applicable",
             "baseline_metacognitive_guidance_healthy_rate": 0.0,
@@ -448,6 +475,12 @@ def summarize_comparisons(
     ]
     candidate_workflow_assessments = [
         workflow_profile_assessment(item) for item in available_candidates
+    ]
+    baseline_workflow_output_assessments = [
+        workflow_output_assessment(item.baseline) for item in comparisons
+    ]
+    candidate_workflow_output_assessments = [
+        workflow_output_assessment(item) for item in available_candidates
     ]
     baseline_metacognitive_guidance = [
         metacognitive_guidance_assessment(item.baseline) for item in comparisons
@@ -574,6 +607,12 @@ def summarize_comparisons(
         "candidate_workflow_profile_decision": summarize_workflow_profile_assessments(
             candidate_workflow_assessments
         ),
+        "baseline_workflow_output_decision": summarize_workflow_profile_assessments(
+            baseline_workflow_output_assessments
+        ),
+        "candidate_workflow_output_decision": summarize_workflow_profile_assessments(
+            candidate_workflow_output_assessments
+        ),
         "baseline_workflow_baseline_rate": workflow_profile_rate(
             baseline_workflow_assessments,
             "baseline_saudavel",
@@ -588,6 +627,22 @@ def summarize_comparisons(
         ),
         "candidate_workflow_maturation_rate": workflow_profile_rate(
             candidate_workflow_assessments,
+            "maturation_recommended",
+        ),
+        "baseline_workflow_output_baseline_rate": workflow_profile_rate(
+            baseline_workflow_output_assessments,
+            "baseline_saudavel",
+        ),
+        "candidate_workflow_output_baseline_rate": workflow_profile_rate(
+            candidate_workflow_output_assessments,
+            "baseline_saudavel",
+        ),
+        "baseline_workflow_output_maturation_rate": workflow_profile_rate(
+            baseline_workflow_output_assessments,
+            "maturation_recommended",
+        ),
+        "candidate_workflow_output_maturation_rate": workflow_profile_rate(
+            candidate_workflow_output_assessments,
             "maturation_recommended",
         ),
         "baseline_metacognitive_guidance_decision": summarize_statuses(
@@ -948,6 +1003,8 @@ def compare_results(
                 mismatch_fields.append("workflow_pending_checkpoint_count")
             if baseline.workflow_profile_status != candidate.workflow_profile_status:
                 mismatch_fields.append("workflow_profile_status")
+            if baseline.workflow_output_status != candidate.workflow_output_status:
+                mismatch_fields.append("workflow_output_status")
             if (
                 baseline.metacognitive_guidance_status
                 != candidate.metacognitive_guidance_status
@@ -1188,6 +1245,14 @@ def render_text(payload: dict[str, object]) -> str:
                         f"{item['baseline_workflow_profile_assessment']}"
                     ),
                     (
+                        "baseline_workflow_output_status="
+                        f"{item['baseline']['workflow_output_status']}"
+                    ),
+                    (
+                        "baseline_workflow_output_assessment="
+                        f"{item['baseline_workflow_output_assessment']}"
+                    ),
+                    (
                         "baseline_metacognitive_guidance_status="
                         f"{item['baseline']['metacognitive_guidance_status']}"
                     ),
@@ -1294,6 +1359,18 @@ def render_text(payload: dict[str, object]) -> str:
                         f"{item['candidate_workflow_profile_assessment']}"
                         if item["candidate_workflow_profile_assessment"] is not None
                         else "candidate_workflow_profile_assessment=n/a"
+                    ),
+                    (
+                        "candidate_workflow_output_status="
+                        f"{item['candidate']['workflow_output_status']}"
+                        if item["candidate"] is not None
+                        else "candidate_workflow_output_status=n/a"
+                    ),
+                    (
+                        "candidate_workflow_output_assessment="
+                        f"{item['candidate_workflow_output_assessment']}"
+                        if item["candidate_workflow_output_assessment"] is not None
+                        else "candidate_workflow_output_assessment=n/a"
                     ),
                     (
                         "candidate_metacognitive_guidance_status="
@@ -1493,6 +1570,10 @@ def render_text(payload: dict[str, object]) -> str:
                 f"{summary['baseline_workflow_profile_decision']}",
                 "candidate_workflow_profile_decision="
                 f"{summary['candidate_workflow_profile_decision']}",
+                "baseline_workflow_output_decision="
+                f"{summary['baseline_workflow_output_decision']}",
+                "candidate_workflow_output_decision="
+                f"{summary['candidate_workflow_output_decision']}",
                 "baseline_workflow_baseline_rate="
                 f"{summary['baseline_workflow_baseline_rate']}",
                 "baseline_workflow_maturation_rate="
@@ -1501,6 +1582,14 @@ def render_text(payload: dict[str, object]) -> str:
                 f"{summary['candidate_workflow_baseline_rate']}",
                 "candidate_workflow_maturation_rate="
                 f"{summary['candidate_workflow_maturation_rate']}",
+                "baseline_workflow_output_baseline_rate="
+                f"{summary['baseline_workflow_output_baseline_rate']}",
+                "baseline_workflow_output_maturation_rate="
+                f"{summary['baseline_workflow_output_maturation_rate']}",
+                "candidate_workflow_output_baseline_rate="
+                f"{summary['candidate_workflow_output_baseline_rate']}",
+                "candidate_workflow_output_maturation_rate="
+                f"{summary['candidate_workflow_output_maturation_rate']}",
                 "baseline_metacognitive_guidance_decision="
                 f"{summary['baseline_metacognitive_guidance_decision']}",
                 "candidate_metacognitive_guidance_decision="
@@ -1667,6 +1756,9 @@ def serialize_comparisons(
                 "baseline_workflow_profile_assessment": workflow_profile_assessment(
                     item.baseline
                 ),
+                "baseline_workflow_output_assessment": workflow_output_assessment(
+                    item.baseline
+                ),
                 "baseline_metacognitive_guidance_assessment": (
                     metacognitive_guidance_assessment(item.baseline)
                 ),
@@ -1721,6 +1813,9 @@ def serialize_comparisons(
                 ),
                 "candidate_workflow_profile_assessment": (
                     workflow_profile_assessment(item.candidate) if item.candidate else None
+                ),
+                "candidate_workflow_output_assessment": (
+                    workflow_output_assessment(item.candidate) if item.candidate else None
                 ),
                 "candidate_metacognitive_guidance_assessment": (
                     metacognitive_guidance_assessment(item.candidate)

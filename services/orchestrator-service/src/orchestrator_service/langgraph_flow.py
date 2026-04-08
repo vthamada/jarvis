@@ -569,6 +569,8 @@ class LangGraphFlowRunner:
                     "output_validation_retry_applied": (
                         synthesis_result.output_validation_retry_applied
                     ),
+                    "workflow_output_status": synthesis_result.workflow_output_status,
+                    "workflow_output_errors": synthesis_result.workflow_output_errors,
                     "continuity_action": state["deliberative_plan"].continuity_action,
                     "continuity_source": state["deliberative_plan"].continuity_source,
                     "continuity_target_mission_id": (

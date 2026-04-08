@@ -61,6 +61,7 @@ class FlowEvaluationInput:
     specialist_sovereignty_status: str | None = None
     axis_gate_status: str | None = None
     workflow_profile_status: str | None = None
+    workflow_output_status: str | None = None
     metacognitive_guidance_status: str | None = None
     mind_disagreement_status: str | None = None
     mind_validation_checkpoint_status: str | None = None
@@ -318,6 +319,10 @@ class EvolutionLabService:
             source_signals.append(
                 f"workflow://profile-status/{evaluation.workflow_profile_status}"
             )
+        if evaluation.workflow_output_status:
+            source_signals.append(
+                f"workflow://output-status/{evaluation.workflow_output_status}"
+            )
         if evaluation.metacognitive_guidance_status:
             source_signals.append(
                 "mind://metacognitive-guidance/"
@@ -555,6 +560,9 @@ class EvolutionLabService:
             "workflow_profile": EvolutionLabService._workflow_profile_score(
                 evaluation.workflow_profile_status
             ),
+            "workflow_output": EvolutionLabService._workflow_output_score(
+                evaluation.workflow_output_status
+            ),
             "metacognitive_guidance": EvolutionLabService._status_score(
                 evaluation.metacognitive_guidance_status
             ),
@@ -620,6 +628,16 @@ class EvolutionLabService:
             "healthy": 1.0,
             "maturation_recommended": 0.8,
             "attention_required": 0.0,
+            "not_applicable": 0.7,
+        }
+        return weights.get(status, 0.7 if status is None else 0.0)
+
+    @staticmethod
+    def _workflow_output_score(status: str | None) -> float:
+        weights = {
+            "coherent": 1.0,
+            "partial": 0.8,
+            "misaligned": 0.0,
             "not_applicable": 0.7,
         }
         return weights.get(status, 0.7 if status is None else 0.0)
@@ -699,6 +717,7 @@ class EvolutionLabService:
     def _mind_domain_specialist_score(status: str | None) -> float:
         weights = {
             "aligned": 1.0,
+            "evidence_partial": 0.6,
             "not_applicable": 0.7,
             "incomplete": 0.4,
             "attention_required": 0.0,
@@ -733,6 +752,8 @@ class EvolutionLabService:
             "attention_required",
         }:
             return True
+        if evaluation.workflow_output_status in {"partial", "misaligned"}:
+            return True
         if evaluation.metacognitive_guidance_status in {"incomplete", "attention_required"}:
             return True
         if evaluation.mind_disagreement_status in {
@@ -757,12 +778,14 @@ class EvolutionLabService:
             return True
         if evaluation.mind_domain_specialist_status in {
             "incomplete",
+            "evidence_partial",
             "attention_required",
             "mismatch",
         }:
             return True
         if evaluation.mind_domain_specialist_chain_status in {
             "incomplete",
+            "evidence_partial",
             "attention_required",
             "mismatch",
         }:
@@ -799,9 +822,13 @@ class EvolutionLabService:
             "mismatch",
         }:
             return "moderate"
+        if evaluation.workflow_output_status == "misaligned":
+            return "moderate"
         if evaluation.axis_gate_status not in {None, "healthy"}:
             return "low_to_moderate"
         if evaluation.workflow_profile_status in {"maturation_recommended", "attention_required"}:
+            return "low_to_moderate"
+        if evaluation.workflow_output_status == "partial":
             return "low_to_moderate"
         if evaluation.memory_causality_status == "attached_only":
             return "low_to_moderate"
@@ -815,7 +842,7 @@ class EvolutionLabService:
             return "low_to_moderate"
         if evaluation.mind_domain_specialist_status == "incomplete":
             return "low_to_moderate"
-        if evaluation.mind_domain_specialist_chain_status == "incomplete":
+        if evaluation.mind_domain_specialist_chain_status in {"incomplete", "evidence_partial"}:
             return "low_to_moderate"
         if evaluation.missing_required_events or evaluation.missing_continuity_signals:
             return "low_to_moderate"
@@ -851,6 +878,12 @@ class EvolutionLabService:
                 "metacognitive_guidance",
                 "p0",
                 "endurecer a ancora metacognitiva ate ela alterar criterio de saida de forma coerente",
+            )
+        if evaluation.workflow_output_status in {"partial", "misaligned"}:
+            add_vector(
+                "workflow_output",
+                "p0" if evaluation.workflow_output_status == "misaligned" else "p1",
+                "alinhar a resposta final ao contrato do workflow ativo com clausulas e foco coerentes",
             )
         if evaluation.mind_disagreement_status in {
             "validation_required",
@@ -900,6 +933,7 @@ class EvolutionLabService:
             )
         if evaluation.mind_domain_specialist_chain_status in {
             "incomplete",
+            "evidence_partial",
             "attention_required",
             "mismatch",
         }:
@@ -918,6 +952,7 @@ class EvolutionLabService:
         return {
             workflow: {
                 "workflow_profile": evaluation.workflow_profile_status or "not_applicable",
+                "workflow_output": evaluation.workflow_output_status or "not_applicable",
                 "metacognitive_guidance": (
                     evaluation.metacognitive_guidance_status or "not_applicable"
                 ),

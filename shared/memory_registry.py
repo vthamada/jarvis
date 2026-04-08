@@ -452,10 +452,14 @@ def guided_memory_decision(
     semantic_effects = _memory_effects_for_source(
         semantic_source,
         primary_effect="framing",
+        workflow_profile=workflow_profile,
+        continuity_source=continuity_source,
     )
     procedural_effects = _memory_effects_for_source(
         procedural_source,
         primary_effect="next_action",
+        workflow_profile=workflow_profile,
+        continuity_source=continuity_source,
     )
     return GuidedMemoryDecision(
         reasoning_classes=reasoning_classes,
@@ -758,13 +762,37 @@ def _memory_effects_for_source(
     source: str | None,
     *,
     primary_effect: str,
+    workflow_profile: str | None,
+    continuity_source: str | None,
 ) -> list[str]:
     if source is None:
         return []
     effects = [primary_effect]
     if source != "fresh_request":
         effects.append("continuity")
-    return effects
+    if continuity_source in {"active_mission", "related_mission"}:
+        effects.append("priority")
+    if primary_effect == "framing" and workflow_profile in {
+        "structured_analysis_workflow",
+        "decision_risk_workflow",
+        "governance_boundary_workflow",
+    }:
+        effects.append("depth")
+    if primary_effect == "framing" and workflow_profile in {
+        "strategic_direction_workflow",
+        "operational_readiness_workflow",
+    }:
+        effects.append("recommendation")
+    if primary_effect == "next_action" and workflow_profile in {
+        "strategic_direction_workflow",
+        "decision_risk_workflow",
+        "software_change_workflow",
+        "operational_readiness_workflow",
+    }:
+        effects.append("recommendation")
+    if primary_effect == "next_action" and workflow_profile == "governance_boundary_workflow":
+        effects.append("depth")
+    return list(dict.fromkeys(effects))
 
 
 def _memory_lifecycle_label(

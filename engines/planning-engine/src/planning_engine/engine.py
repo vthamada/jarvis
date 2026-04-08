@@ -259,6 +259,13 @@ class PlanningEngine:
             context,
             continuity_source=continuity_source,
         )
+        steps, constraints, success_criteria = self._apply_memory_causality_guidance(
+            steps=steps,
+            constraints=constraints,
+            success_criteria=success_criteria,
+            context=context,
+            memory_decision=memory_decision,
+        )
         smallest_safe_next_action = self._apply_guided_memory_to_next_action(
             smallest_safe_next_action,
             context=context,
@@ -1749,3 +1756,60 @@ class PlanningEngine:
             return action
         role = workflow_runtime_guidance(context.route_workflow_profile).procedural_memory_role
         return f"{action}; preservar {role}: {anchor}"
+
+    def _apply_memory_causality_guidance(
+        self,
+        *,
+        steps: list[str],
+        constraints: list[str],
+        success_criteria: list[str],
+        context: PlanningContext,
+        memory_decision,
+    ) -> tuple[list[str], list[str], list[str]]:
+        updated_steps = list(steps)
+        updated_constraints = list(constraints)
+        updated_success = list(success_criteria)
+        guidance = workflow_runtime_guidance(context.route_workflow_profile)
+
+        if "priority" in memory_decision.semantic_effects:
+            semantic_step = (
+                "priorizar a leitura semantica antes de consolidar o fechamento "
+                f"do workflow: {guidance.semantic_memory_role}"
+            )
+            if semantic_step not in updated_steps:
+                updated_steps.insert(0, semantic_step)
+        if "depth" in memory_decision.semantic_effects:
+            depth_constraint = (
+                "nao reduzir a leitura final enquanto a memoria semantica ainda "
+                f"estiver aprofundando {guidance.semantic_memory_role}"
+            )
+            if depth_constraint not in updated_constraints:
+                updated_constraints.append(depth_constraint)
+        if "recommendation" in memory_decision.semantic_effects:
+            semantic_criterion = (
+                "recomendacao final deve refletir o framing semantico dominante "
+                "do workflow ativo"
+            )
+            if semantic_criterion not in updated_success:
+                updated_success.append(semantic_criterion)
+
+        if "priority" in memory_decision.procedural_effects:
+            procedural_step = (
+                "priorizar a memoria procedural na ordenacao da proxima acao segura"
+            )
+            if procedural_step not in updated_steps:
+                updated_steps.append(procedural_step)
+        if "depth" in memory_decision.procedural_effects:
+            procedural_constraint = (
+                "manter validacao procedural extra antes de concluir a resposta final"
+            )
+            if procedural_constraint not in updated_constraints:
+                updated_constraints.append(procedural_constraint)
+        if "recommendation" in memory_decision.procedural_effects:
+            procedural_criterion = (
+                "recomendacao final deve preservar a continuidade procedural do workflow"
+            )
+            if procedural_criterion not in updated_success:
+                updated_success.append(procedural_criterion)
+
+        return updated_steps[:7], updated_constraints[:10], updated_success[:9]

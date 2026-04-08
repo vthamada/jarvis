@@ -418,6 +418,48 @@ def test_planning_engine_carries_primary_route_contract_into_plan() -> None:
         "mente decisoria ancora estrategia e pensamento sistemico via strategy "
         "sob tensao equilibrar ambicao estrategica com a menor proxima acao segura"
     )
+
+
+def test_planning_engine_adds_priority_and_recommendation_memory_guidance() -> None:
+    engine = PlanningEngine()
+    plan = engine.build_task_plan(
+        PlanningContext(
+            intent="planning",
+            query="Recommend the safest strategic direction.",
+            recovered_context=[],
+            active_domains=["strategy"],
+            active_minds=["mente_decisoria"],
+            knowledge_snippets=["Preserve strategic continuity."],
+            risk_markers=[],
+            requires_clarification=False,
+            preferred_response_mode="plan_and_operate",
+            canonical_domains=["estrategia_e_pensamento_sistemico"],
+            primary_canonical_domain="estrategia_e_pensamento_sistemico",
+            primary_route="strategy",
+            route_workflow_profile="strategic_direction_workflow",
+            dominant_goal="clarificar a direcao recomendada",
+            primary_mind="mente_decisoria",
+            primary_domain_driver="estrategia_e_pensamento_sistemico",
+            mission_goal="Recommend the safest strategic direction.",
+            mission_semantic_brief="objetivo=Recommend the safest strategic direction.",
+            mission_focus=["strategy", "tradeoff"],
+            mission_recommendation="retomar o ultimo criterio estrategico governado",
+            last_decision_frame="strategy",
+        )
+    )
+
+    assert "priority" in plan.semantic_memory_effects
+    assert "recommendation" in plan.semantic_memory_effects
+    assert "priority" in plan.procedural_memory_effects
+    assert "recommendation" in plan.procedural_memory_effects
+    assert any("priorizar a leitura semantica" in step for step in plan.steps)
+    assert any(
+        "framing semantico dominante" in criterion for criterion in plan.success_criteria
+    )
+    assert any(
+        "continuidade procedural do workflow" in criterion
+        for criterion in plan.success_criteria
+    )
     assert plan.metacognitive_effects == [
         "success_criteria",
         "smallest_safe_next_action",

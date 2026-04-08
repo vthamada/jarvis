@@ -2,6 +2,26 @@
 
 ## 2026-04-08
 
+### MB-048 a MB-051 fechados na maturacao causal final do nucleo
+
+- `shared/memory_registry.py`, `engines/planning-engine/src/planning_engine/engine.py` e `engines/synthesis-engine/src/synthesis_engine/engine.py` agora distinguem melhor efeitos de `semantic` e `procedural` por `workflow_profile` e por fonte de continuidade, fazendo memoria causal pesar em prioridade, profundidade e recomendacao final do runtime;
+- `services/orchestrator-service/src/orchestrator_service/service.py`, `engines/synthesis-engine/src/synthesis_engine/engine.py` e `tools/compare_orchestrator_paths.py` agora tratam a cadeia `mente -> dominio -> especialista` como evidencia primaria mais rica, incluindo planned hints, alinhamento parcial e coerencia do encadeamento no runtime e nos comparadores;
+- `evolution/evolution-lab/src/evolution_lab/service.py`, `tools/evolution_from_pilot.py`, `tools/internal_pilot_report.py`, `tools/compare_orchestrator_paths.py` e `tools/verify_release_signal_baseline.py` agora promovem `workflow_output_status` e essa cadeia evidence-first a leitura formal de `baseline_saudavel`, `maturation_recommended` ou `attention_required` para piloto, comparadores, laboratorio e release;
+- `docs/implementation/execution-backlog.md`, `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para marcar `MB-048` a `MB-051` como concluidos e deixar a fila micro sem novo item `ready` ate repriorizacao explicita.
+
+### MB-047 fechado na maturacao causal final do nucleo
+
+- `engines/synthesis-engine/src/synthesis_engine/engine.py` agora distingue validacao generica de output de completude orientada por `workflow_profile`, separando saida coerente, parcial e desalinhada por workflow sem trocar a gramatica minima da resposta;
+- `services/orchestrator-service/src/orchestrator_service/service.py` e `services/orchestrator-service/src/orchestrator_service/langgraph_flow.py` agora propagam `workflow_output_status` e `workflow_output_errors` no `response_synthesized`, tornando esse slice auditavel no runtime principal e no caminho opcional de `LangGraph`;
+- `services/observability-service/src/observability_service/service.py` agora usa esse slice para fazer `workflow_profile_status` pesar na completude formal do fluxo, distinguindo `maturation_recommended` de `attention_required` quando o problema ja e desalinhamento do output;
+- `docs/implementation/execution-backlog.md`, `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para marcar `MB-047` como concluido e liberar `MB-048` como o proximo item `ready`.
+
+### Novo lote MB-047 a MB-051 aberto para o nucleo
+
+- `docs/implementation/execution-backlog.md` agora abre `MB-047` a `MB-051` como novo lote ativo de maturacao causal final do nucleo, com `MB-047` em `ready` e os demais itens bloqueados apenas pela ordem de dependencia;
+- o novo lote formaliza no backlog o modo de raciocinio recomendado por item: `high` para `MB-047`, `MB-048`, `MB-049` e `MB-051`, `medium` para `MB-050`, e `extra high` apenas para a decisao de abertura ou repriorizacao macro do lote;
+- `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para refletir que a fila micro voltou a ter proximo passo explicito sem reativar `protective intelligence`.
+
 ### MB-044 a MB-046 fechados na Onda 1 de absorcao disciplinada
 
 - `services/orchestrator-service/src/orchestrator_service/service.py`, `services/orchestrator-service/src/orchestrator_service/langgraph_flow.py`, `services/operational-service/src/operational_service/service.py` e `services/observability-service/src/observability_service/service.py` agora carregam `workflow_checkpoint_state`, `workflow_resume_status`, `workflow_resume_point` e `workflow_pending_checkpoints` como sinais soberanos de durable execution e retomada governada;

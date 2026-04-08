@@ -63,7 +63,7 @@ def sample_plan() -> DeliberativePlanContract:
 def test_synthesis_engine_composes_unitary_allowed_response() -> None:
     engine = SynthesisEngine()
     identity = IdentityEngine().get_profile()
-    response = engine.compose(
+    result = engine.compose_result(
         SynthesisInput(
             intent="planning",
             identity_profile=identity,
@@ -93,6 +93,10 @@ def test_synthesis_engine_composes_unitary_allowed_response() -> None:
             session_anchor_goal="Plan milestone M3",
         )
     )
+    response = result.response_text
+    assert result.output_validation_status == "coherent"
+    assert result.workflow_output_status == "coherent"
+    assert result.workflow_output_errors == []
     assert "Continuidade ativa" in response
     assert "sessao segue ancorada em 'Plan milestone M3'" in response
     assert "Leitura do objetivo" in response
@@ -137,10 +141,51 @@ def test_synthesis_engine_repairs_output_when_plan_is_missing() -> None:
 
     assert result.output_validation_status == "repaired"
     assert result.output_validation_retry_applied is True
+    assert result.workflow_output_status == "not_applicable"
+    assert result.workflow_output_errors == []
     assert "missing_clause:judgment" in result.output_validation_errors
     assert "Leitura do objetivo:" in result.response_text
     assert "Julgamento:" in result.response_text
     assert "Recomendacao:" in result.response_text
+
+
+def test_synthesis_engine_marks_workflow_output_partial_when_workflow_clauses_are_missing() -> None:
+    engine = SynthesisEngine()
+    identity = IdentityEngine().get_profile()
+    engine._compose_raw_response = lambda _input: (
+        "Leitura do objetivo: Plan milestone M3. "
+        "Julgamento: manter a direcao recomendada sob governanca. "
+        "Recomendacao: retomar alinhar checkpoint principal; criterio de sucesso: "
+        "resposta coerente e reversivel."
+    )
+    result = engine.compose_result(
+        SynthesisInput(
+            intent="planning",
+            identity_profile=identity,
+            response_style="estruturado",
+            governance_decision=GovernanceDecisionContract(
+                decision_id=GovernanceDecisionId("decision-workflow-partial"),
+                governance_check_id=GovernanceCheckId("check-workflow-partial"),
+                risk_level=RiskLevel.LOW,
+                decision=PermissionDecision.ALLOW,
+                justification="ok",
+                timestamp="2026-03-18T00:00:00Z",
+            ),
+            recovered_context=[],
+            active_minds=["mente_executiva"],
+            active_domains=["strategy"],
+            knowledge_snippets=[],
+            deliberative_plan=sample_plan(),
+            specialist_contributions=[],
+            operation_result=None,
+            identity_mode="structured_planning",
+        )
+    )
+
+    assert result.output_validation_status == "coherent"
+    assert result.workflow_output_status == "partial"
+    assert "missing_clause:workflow_profile" in result.workflow_output_errors
+    assert "missing_clause:workflow_response_focus" in result.workflow_output_errors
 
 
 def test_synthesis_engine_surfaces_cross_session_recall_and_compaction() -> None:
@@ -187,6 +232,52 @@ def test_synthesis_engine_surfaces_cross_session_recall_and_compaction() -> None
 
     assert "recall cross-session:" in response
     assert "contexto vivo compactado sem reabrir historico bruto" in response
+
+
+def test_synthesis_engine_surfaces_memory_effects_and_evidence_first_chain() -> None:
+    engine = SynthesisEngine()
+    identity = IdentityEngine().get_profile()
+    plan = sample_plan()
+    plan.semantic_memory_effects = ["framing", "continuity", "priority", "recommendation"]
+    plan.procedural_memory_effects = [
+        "next_action",
+        "continuity",
+        "priority",
+        "recommendation",
+    ]
+
+    response = engine.compose(
+        SynthesisInput(
+            intent="planning",
+            identity_profile=identity,
+            response_style="estruturado",
+            governance_decision=GovernanceDecisionContract(
+                decision_id=GovernanceDecisionId("decision-memory-effects"),
+                governance_check_id=GovernanceCheckId("check-memory-effects"),
+                risk_level=RiskLevel.LOW,
+                decision=PermissionDecision.ALLOW,
+                justification="ok",
+                timestamp="2026-03-18T00:00:00Z",
+            ),
+            recovered_context=[],
+            active_minds=["mente_executiva"],
+            active_domains=["strategy"],
+            knowledge_snippets=[],
+            deliberative_plan=plan,
+            specialist_contributions=[],
+            operation_result=None,
+            identity_mode="structured_planning",
+        )
+    )
+
+    assert (
+        "cadeia evidence-first: mente executiva -> estrategia e pensamento sistemico"
+        in response
+    )
+    assert "memoria semantica prioriza o framing antes do fechamento" in response
+    assert "memoria semantica orienta a direcao recomendada" in response
+    assert "memoria procedural prioriza a ordem da proxima acao" in response
+    assert "memoria procedural ancora a recomendacao final" in response
 
 
 def test_synthesis_engine_surfaces_reformulation_without_pipeline_listing() -> None:

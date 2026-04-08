@@ -119,6 +119,7 @@ def test_evolution_lab_creates_proposal_from_flow_evaluation() -> None:
             identity_alignment_status="healthy",
             axis_gate_status="attention_required",
             workflow_profile_status="maturation_recommended",
+            workflow_output_status="partial",
             memory_causality_status="attached_only",
             workflow_checkpoint_status="attention_required",
             workflow_resume_status="manual_resume_required",
@@ -148,6 +149,7 @@ def test_evolution_lab_creates_proposal_from_flow_evaluation() -> None:
     assert "alignment://mind/partial" in proposal.source_signals
     assert "alignment://axis-gate/attention_required" in proposal.source_signals
     assert "workflow://profile-status/maturation_recommended" in proposal.source_signals
+    assert "workflow://output-status/partial" in proposal.source_signals
     assert "memory://causality/attached_only" in proposal.source_signals
     assert "workflow://checkpoint-status/attention_required" in proposal.source_signals
     assert "artifact://procedural-status/candidate" in proposal.source_signals
@@ -159,6 +161,7 @@ def test_evolution_lab_creates_proposal_from_flow_evaluation() -> None:
     assert "mind://recomposition/applied" in proposal.source_signals
     assert proposal.risk_hint == "moderate"
     assert proposal.refinement_vectors[0]["axis"] in {
+        "workflow_output",
         "metacognitive_guidance",
         "memory_causality",
         "mind_composition",
@@ -200,6 +203,7 @@ def test_evolution_lab_compares_flow_evaluations() -> None:
             identity_alignment_status="healthy",
             axis_gate_status="attention_required",
             workflow_profile_status="maturation_recommended",
+            workflow_output_status="partial",
             memory_causality_status="attached_only",
             workflow_checkpoint_status="attention_required",
             workflow_resume_status="manual_resume_required",
@@ -229,6 +233,7 @@ def test_evolution_lab_compares_flow_evaluations() -> None:
             identity_alignment_status="healthy",
             axis_gate_status="healthy",
             workflow_profile_status="healthy",
+            workflow_output_status="coherent",
             memory_causality_status="causal_guidance",
             workflow_checkpoint_status="healthy",
             workflow_resume_status="resume_available",
@@ -254,6 +259,7 @@ def test_evolution_lab_compares_flow_evaluations() -> None:
     assert comparison.metric_deltas["runtime_statefulness"] > 0
     assert comparison.metric_deltas["axis_gate"] > 0
     assert comparison.metric_deltas["workflow_profile"] > 0
+    assert comparison.metric_deltas["workflow_output"] > 0
     assert comparison.metric_deltas["memory_causality"] > 0
     assert comparison.metric_deltas["workflow_checkpoint"] > 0
     assert comparison.metric_deltas["workflow_resume"] > 0

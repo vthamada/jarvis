@@ -451,6 +451,8 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     assert response_event.payload["output_validation_status"] == "coherent"
     assert response_event.payload["output_validation_errors"] == []
     assert response_event.payload["output_validation_retry_applied"] is False
+    assert response_event.payload["workflow_output_status"] == "coherent"
+    assert response_event.payload["workflow_output_errors"] == []
     assert response_event.payload["primary_route"] == result.deliberative_plan.primary_route
     assert (
         response_event.payload["primary_canonical_domain"]
@@ -832,7 +834,10 @@ def test_orchestrator_service_closes_active_loop_explicitly() -> None:
         )
     )
     assert result.deliberative_plan.continuity_action == "encerrar"
-    assert result.deliberative_plan.steps[0].startswith("fechar explicitamente o loop principal")
+    assert any(
+        step.startswith("fechar explicitamente o loop principal")
+        for step in result.deliberative_plan.steps
+    )
     assert "continuity_decided" in [event.event_name for event in result.events]
     assert "fechar o loop principal da missao" in result.response_text
 

@@ -4,7 +4,7 @@
 
 - Atualizado em: 2026-04-08
 - Branch: `main`
-- Commit de referência: `51fa435`
+- Commit de referência: `ffb2759`
 - Artefato canônico do projeto: `documento_mestre_jarvis.md`
 - Estado do projeto: `v1` encerrado e congelado para uso controlado; primeiro ciclo do `pós-v1` encerrado; primeiro ciclo do `v1.5` encerrado; primeiro corte do `v2` encerrado; `v2-alignment-cycle` encerrado; próximo corte do `v2` aberto
 - Fila micro ativa: `docs/implementation/execution-backlog.md`
@@ -102,8 +102,13 @@ Consolidar o fechamento operacional do `v2` sobre um runtime já alinhado aos ei
 - `MB-044` foi concluido: `orchestrator`, `langgraph_flow`, `operational-service` e `observability` agora carregam `workflow_checkpoint_state`, `workflow_resume_status`, `workflow_resume_point` e `workflow_pending_checkpoints` como sinais soberanos de durable execution e retomada governada;
 - `MB-045` foi concluido: `memory-service`, `repository`, `planning`, `synthesis` e `orchestrator` agora tratam artefatos procedurais versionados, reutilizaveis e sempre `through_core_only` como parte explicita do baseline;
 - `MB-046` foi concluido: `evolution-lab`, comparadores e verificadores de release agora persistem `candidate_refs`, `refinement_vectors`, `evaluation_matrix`, `selection_criteria` e `metric_deltas` como traducao governada de compile/eval loops;
-- a fila micro volta a ficar sem novo item `ready` ate repriorizacao explicita do proximo lote;
-- so depois disso: reavaliar qual vertical derivada deve abrir a proxima frente macro; `protective intelligence` permanece mapeado, mas em `deferred` ate nova decisao explicita;
+- `MB-047` a `MB-051` foram concluidos e fecharam o lote de maturacao causal final do nucleo;
+- `synthesis`, `response_synthesized` e `observability` agora distinguem output coerente, parcial e desalinhado por `workflow_profile`, e esse sinal atravessa piloto, comparadores, `evolution-lab` e verificadores de release como leitura formal de `baseline_saudavel`, `maturation_recommended` ou `attention_required`;
+- `memory_registry`, `planning` e `synthesis` agora tornam `semantic` e `procedural` mais causais por workflow e por fonte de continuidade, fazendo essas memorias pesarem em prioridade, profundidade e recomendacao final do runtime;
+- `orchestrator`, `synthesis`, comparadores e laboratorio agora tratam a cadeia `mente -> dominio -> especialista` como evidencia primaria mais rica, incluindo planned hints, alinhamento parcial e coerencia do encadeamento no runtime final;
+- a fila micro volta a ficar sem item `ready` ate a proxima repriorizacao explicita; a abertura do proximo lote continua sendo decisao `extra high`, mas a implementacao dos cards segue o modo recomendado em cada item;
+- a decisao de abertura e ordenacao desse novo lote deve ser tratada como rodada `extra high`, mas a implementacao dos cards segue a recomendacao declarada no backlog;
+- so depois desse lote: reavaliar qual vertical derivada deve abrir a proxima frente macro; `protective intelligence` permanece mapeado, mas em `deferred` ate nova decisao explicita;
 - so entao: decidir se o `v3` deve abrir por essa frente, por outra vertical derivada ou por mais maturacao transversal.
 
 Regra operacional desta fase:

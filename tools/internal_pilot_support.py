@@ -103,6 +103,7 @@ class PilotExecutionResult:
     workflow_resume_status: str
     workflow_pending_checkpoint_count: int
     workflow_profile_status: str
+    workflow_output_status: str
     metacognitive_guidance_status: str
     memory_causality_status: str
     primary_mind: str | None
@@ -514,6 +515,7 @@ def run_pilot_scenarios(
                 workflow_resume_status=audit.workflow_resume_status,
                 workflow_pending_checkpoint_count=audit.workflow_pending_checkpoint_count,
                 workflow_profile_status=audit.workflow_profile_status,
+                workflow_output_status=audit.workflow_output_status,
                 metacognitive_guidance_status=audit.metacognitive_guidance_status,
                 memory_causality_status=audit.memory_causality_status,
                 primary_mind=audit.primary_mind,

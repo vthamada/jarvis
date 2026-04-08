@@ -31,7 +31,7 @@ Estado de referencia desta revisao:
 - data da fotografia: `2026-04-08`
 - ultimo recorte funcional fechado: `v2-native-memory-scope-hardening-cut`
 - ultimo recorte estrutural fechado: `v2-repository-hygiene-and-tools-review-cut`
-- passo funcional em andamento: `absorcao-disciplinada-da-onda-1` (`MB-037` a `MB-040` concluidos; `MB-041` a `MB-046` concluidos; fila micro sem novo item `ready` ate repriorizacao)
+- passo funcional em andamento: `maturacao-causal-final-do-nucleo` (`MB-037` a `MB-040` concluidos; `MB-041` a `MB-046` concluidos; `MB-047` a `MB-051` concluidos; fila micro sem novo item `ready`)
 
 Leitura executiva:
 
@@ -91,6 +91,10 @@ Leitura executiva:
 - `MB-044` ja materializou o quarto recorte dessa traducao: `orchestrator`, `langgraph_flow`, `operational-service` e `observability` agora tratam checkpoint, retomada, ponto de resume e checkpoints pendentes como sinais soberanos de continuidade stateful.
 - `MB-045` ja materializou o quinto recorte dessa traducao: `memory-service`, `repository`, `planning`, `synthesis` e `orchestrator` agora carregam artefatos procedurais versionados e reutilizaveis, sempre `through_core_only`, como primitive governada do runtime.
 - `MB-046` ja materializou o sexto recorte dessa traducao: `evolution-lab`, comparadores, piloto e verificadores de release agora persistem candidatos, vetores de refinamento, matriz de avaliacao, criterios de selecao e deltas metricos como baseline da Onda 1.
+- `MB-047` ja materializou o proximo passo do nucleo: `synthesis`, `response_synthesized` e `observability` agora distinguem output coerente, output parcial e output desalinhado por `workflow_profile`, tornando o contrato de workflow criterio auditavel de saida na ultima milha do runtime.
+- `MB-048` agora tambem esta fechado: `memory_registry`, `planning` e `synthesis` passaram a distinguir melhor os efeitos de `semantic` e `procedural` por workflow e por fonte de continuidade, fazendo memoria causal pesar em prioridade, profundidade e recomendacao final.
+- `MB-049` agora tambem esta fechado: `orchestrator`, `synthesis`, comparadores e laboratorio tratam a cadeia `mente -> dominio -> especialista` como evidencia primaria mais rica, inclusive com planned hints, alinhamento parcial e coerencia do encadeamento no runtime final.
+- `MB-050` e `MB-051` agora tambem estao fechados: `workflow_output_status` atravessa piloto, comparadores, `evolution-lab`, `evolution_from_pilot` e `verify_release_signal_baseline.py` como leitura formal de maturacao, e os proximos experimentos do laboratorio passam a ser priorizados por workflow usando esses sinais mais causais do nucleo.
 
 Em resumo:
 
@@ -337,18 +341,22 @@ Foco:
 - usar `refinement_vectors`, matriz formal de evals e telemetria de corpus como leitura operacional ja absorvida;
 - evitar reabrir esse mesmo lote por inercia local.
 
-### Passo 2 - abrir um novo lote sobre o que esses sinais passaram a mostrar
+### Passo 2 - consolidar o fechamento do lote `MB-047` a `MB-051`
 
 Foco:
 
-- aprofundar autoevolucao governada com base em vetores por workflow ja formalizados;
-- decidir o proximo lote a partir dos sinais do runtime, e nao por abertura prematura de vertical.
+- `MB-047`: concluido; `workflow_profile` agora governa criterio auditavel de saida e completude na ultima milha do runtime;
+- `MB-048`: concluido; `semantic` e `procedural` agora pesam mais em prioridade, profundidade e recomendacao final por workflow e por fonte de continuidade;
+- `MB-049`: concluido; a cadeia `mente -> dominio -> especialista` ficou mais evidence-first nos consumidores finais e nos sinais de release;
+- `MB-050`: concluido; `baseline_saudavel` vs `maturation_recommended` ficou mais formal em piloto, comparadores, `evolution-lab` e gates;
+- `MB-051`: concluido; o `evolution-lab` agora usa esses sinais refinados para priorizar melhor os proximos experimentos por workflow.
 
 ### Passo 3 - continuar maturando o nucleo antes de qualquer frente macro nova
 
 Foco:
 
-- usar a matriz de evals e a telemetria de memoria para identificar o proximo ganho causal do nucleo;
+- usar a matriz de evals e a telemetria de memoria para identificar o proximo ganho causal do nucleo depois do fechamento do lote `MB-047` a `MB-051`;
+- abrir o proximo lote apenas por repriorizacao explicita, sem reativar `protective intelligence` por inercia.
 - manter `protective intelligence` em `deferred` ate nova decisao explicita.
 
 ---

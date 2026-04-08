@@ -125,6 +125,11 @@ def _evaluation_from_dict(payload: dict[str, object]) -> FlowEvaluationInput:
             if payload.get("workflow_profile_status") is not None
             else None
         ),
+        workflow_output_status=(
+            str(payload["workflow_output_status"])
+            if payload.get("workflow_output_status") is not None
+            else None
+        ),
         metacognitive_guidance_status=(
             str(payload["metacognitive_guidance_status"])
             if payload.get("metacognitive_guidance_status") is not None
@@ -289,6 +294,7 @@ def build_payload(args: Namespace) -> dict[str, object]:
             and audit.memory_alignment_status == "healthy"
             and audit.specialist_sovereignty_status == "healthy"
             and audit.workflow_profile_status in {None, "healthy", "not_applicable"}
+            and audit.workflow_output_status in {None, "coherent", "not_applicable"}
             and audit.metacognitive_guidance_status in {None, "healthy", "not_applicable"}
             and audit.mind_disagreement_status in {None, "not_applicable", "contained"}
             and audit.mind_validation_checkpoint_status in {None, "not_applicable", "healthy"}
@@ -336,6 +342,7 @@ def build_payload(args: Namespace) -> dict[str, object]:
                     else "attention_required"
                 ),
                 workflow_profile_status=audit.workflow_profile_status,
+                workflow_output_status=audit.workflow_output_status,
                 metacognitive_guidance_status=audit.metacognitive_guidance_status,
                 mind_disagreement_status=audit.mind_disagreement_status,
                 mind_validation_checkpoint_status=audit.mind_validation_checkpoint_status,
@@ -402,6 +409,12 @@ def build_payload(args: Namespace) -> dict[str, object]:
                         f"{item.get('baseline_workflow_profile_assessment', 'n/a')}"
                         "->"
                         f"{item.get('candidate_workflow_profile_assessment', 'n/a')}"
+                    ),
+                    (
+                        "workflow_output="
+                        f"{item.get('baseline_workflow_output_assessment', 'n/a')}"
+                        "->"
+                        f"{item.get('candidate_workflow_output_assessment', 'n/a')}"
                     ),
                     (
                         "metacognitive_guidance="
@@ -479,6 +492,12 @@ def build_payload(args: Namespace) -> dict[str, object]:
                     ),
                     "candidate_workflow_profile_assessment": item.get(
                         "candidate_workflow_profile_assessment"
+                    ),
+                    "baseline_workflow_output_assessment": item.get(
+                        "baseline_workflow_output_assessment"
+                    ),
+                    "candidate_workflow_output_assessment": item.get(
+                        "candidate_workflow_output_assessment"
                     ),
                     "baseline_metacognitive_guidance_assessment": item.get(
                         "baseline_metacognitive_guidance_assessment"
@@ -574,6 +593,12 @@ def render_text(payload: dict[str, object]) -> str:
                         f"{item.get('baseline_workflow_profile_assessment', 'n/a')}"
                         "->"
                         f"{item.get('candidate_workflow_profile_assessment', 'n/a')}"
+                    ),
+                    (
+                        "workflow_output="
+                        f"{item.get('baseline_workflow_output_assessment', 'n/a')}"
+                        "->"
+                        f"{item.get('candidate_workflow_output_assessment', 'n/a')}"
                     ),
                     (
                         "metacognitive_guidance="

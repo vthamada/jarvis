@@ -64,6 +64,8 @@ class FlowAudit:
     output_validation_status: str
     output_validation_errors: list[str]
     output_validation_retry_applied: bool
+    workflow_output_status: str
+    workflow_output_errors: list[str]
     memory_causality_status: str
     primary_mind: str | None
     primary_route: str | None
@@ -141,8 +143,10 @@ class FlowAudit:
             and not self.continuity_anomaly_flags
             and self.workflow_trace_status in {"healthy", "not_applicable"}
             and self.workflow_checkpoint_status in {"healthy", "not_applicable"}
+            and self.workflow_profile_status in {"healthy", "not_applicable"}
             and self.contract_validation_status in {"coherent", "repaired", "not_applicable"}
             and self.output_validation_status in {"coherent", "repaired", "not_applicable"}
+            and self.workflow_output_status in {"coherent", "not_applicable"}
             and self.specialist_subflow_status
             in {"healthy", "not_applicable", "contained"}
             and self.mission_runtime_state_status in {"healthy", "not_applicable"}
@@ -298,6 +302,8 @@ class ObservabilityService:
                 output_validation_status="incomplete",
                 output_validation_errors=[],
                 output_validation_retry_applied=False,
+                workflow_output_status="incomplete",
+                workflow_output_errors=[],
                 memory_causality_status="incomplete",
                 primary_mind=None,
                 primary_route=None,
@@ -522,6 +528,20 @@ class ObservabilityService:
             and response_event.payload.get("output_validation_retry_applied") is not None
             else False
         )
+        workflow_output_status = (
+            str(response_event.payload.get("workflow_output_status"))
+            if response_event
+            and response_event.payload.get("workflow_output_status") is not None
+            else ("incomplete" if response_event is None else "not_applicable")
+        )
+        workflow_output_errors = [
+            str(item)
+            for item in (
+                response_event.payload.get("workflow_output_errors", [])
+                if response_event
+                else []
+            )
+        ]
         primary_mind = (
             str(context_event.payload.get("primary_mind"))
             if context_event
@@ -864,6 +884,8 @@ class ObservabilityService:
             anomaly_flags.append("contract_validation_failed")
         if output_validation_status == "invalid":
             anomaly_flags.append("output_validation_failed")
+        if workflow_output_status == "misaligned":
+            anomaly_flags.append("workflow_output_misaligned")
 
         if continuity_event is None:
             missing_continuity_signals.append("continuity_decided")
@@ -931,6 +953,7 @@ class ObservabilityService:
             response_event=response_event,
             shared_memory_event=shared_memory_event,
             specialist_domain_event=specialist_domain_event,
+            workflow_output_status=workflow_output_status,
         )
         memory_causality_status = self._memory_causality_status(
             response_event=response_event,
@@ -1035,6 +1058,8 @@ class ObservabilityService:
             output_validation_status=output_validation_status,
             output_validation_errors=output_validation_errors,
             output_validation_retry_applied=output_validation_retry_applied,
+            workflow_output_status=workflow_output_status,
+            workflow_output_errors=workflow_output_errors,
             memory_causality_status=memory_causality_status,
             primary_mind=primary_mind,
             primary_route=primary_route,
@@ -1447,12 +1472,17 @@ class ObservabilityService:
         response_event: InternalEventEnvelope | None,
         shared_memory_event: InternalEventEnvelope | None,
         specialist_domain_event: InternalEventEnvelope | None,
+        workflow_output_status: str,
     ) -> str:
         if workflow_profile is None:
             return "not_applicable"
         if workflow_trace_status != "healthy":
             return workflow_trace_status
         if response_event is None:
+            return "maturation_recommended"
+        if workflow_output_status == "misaligned":
+            return "attention_required"
+        if workflow_output_status in {"partial", "incomplete"}:
             return "maturation_recommended"
         response_payload = response_event.payload
         if not response_payload.get("primary_mind"):

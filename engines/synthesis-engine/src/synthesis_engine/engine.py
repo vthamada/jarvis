@@ -56,6 +56,8 @@ class SynthesisResult:
     output_validation_status: str
     output_validation_errors: list[str]
     output_validation_retry_applied: bool
+    workflow_output_status: str
+    workflow_output_errors: list[str]
 
 
 class SynthesisEngine:
@@ -71,12 +73,18 @@ class SynthesisEngine:
 
         response_text = self._compose_raw_response(synthesis_input)
         validation_errors = self._validate_output(response_text)
+        workflow_output_status, workflow_output_errors = self._assess_workflow_output(
+            response_text,
+            synthesis_input=synthesis_input,
+        )
         if not validation_errors:
             return SynthesisResult(
                 response_text=response_text,
                 output_validation_status="coherent",
                 output_validation_errors=[],
                 output_validation_retry_applied=False,
+                workflow_output_status=workflow_output_status,
+                workflow_output_errors=workflow_output_errors,
             )
 
         repaired_response = self._repair_output(
@@ -85,6 +93,10 @@ class SynthesisEngine:
             errors=validation_errors,
         )
         repaired_errors = self._validate_output(repaired_response)
+        repaired_workflow_status, repaired_workflow_errors = self._assess_workflow_output(
+            repaired_response,
+            synthesis_input=synthesis_input,
+        )
         repaired_status = "repaired" if not repaired_errors else "invalid"
         return SynthesisResult(
             response_text=repaired_response,
@@ -95,6 +107,8 @@ class SynthesisEngine:
                 else list(repaired_errors)
             ),
             output_validation_retry_applied=True,
+            workflow_output_status=repaired_workflow_status,
+            workflow_output_errors=repaired_workflow_errors,
         )
 
     def _compose_raw_response(self, synthesis_input: SynthesisInput) -> str:
@@ -157,9 +171,9 @@ class SynthesisEngine:
     ) -> str:
         plan = synthesis_input.deliberative_plan
         goal_line = self._goal_line(synthesis_input)
-        if plan and plan.smallest_safe_next_action:
+        if plan is not None:
             recommendation = (
-                f"{plan.smallest_safe_next_action}; manter framing governado "
+                f"{self._recommendation_line(synthesis_input)}; manter framing governado "
                 "enquanto o output e recomposto"
             )
         else:
@@ -182,6 +196,123 @@ class SynthesisEngine:
         if limitation:
             repaired = f"{repaired}. Limite atual: {limitation}"
         return repaired
+
+    def _assess_workflow_output(
+        self,
+        response_text: str,
+        *,
+        synthesis_input: SynthesisInput,
+    ) -> tuple[str, list[str]]:
+        plan = synthesis_input.deliberative_plan
+        if plan is None or not plan.route_workflow_profile:
+            return ("not_applicable", [])
+        errors = self._validate_workflow_output(
+            response_text,
+            synthesis_input=synthesis_input,
+        )
+        if not errors:
+            return ("coherent", [])
+        if any(error.startswith("mismatched_clause:") for error in errors):
+            return ("misaligned", errors)
+        return ("partial", errors)
+
+    def _validate_workflow_output(
+        self,
+        response_text: str,
+        *,
+        synthesis_input: SynthesisInput,
+    ) -> list[str]:
+        plan = synthesis_input.deliberative_plan
+        if plan is None or not plan.route_workflow_profile:
+            return []
+        guidance = workflow_runtime_guidance(plan.route_workflow_profile)
+        errors: list[str] = []
+        workflow_label = self._present_contract_label(plan.route_workflow_profile)
+        if workflow_label:
+            errors.extend(
+                self._validate_expected_clause(
+                    response_text,
+                    clause_name="workflow_profile",
+                    clause_prefix="workflow ativo:",
+                    expected_value=workflow_label,
+                )
+            )
+        response_focus = self._present_contract_label(guidance.response_focus)
+        if response_focus:
+            errors.extend(
+                self._validate_expected_clause(
+                    response_text,
+                    clause_name="workflow_response_focus",
+                    clause_prefix="foco final:",
+                    expected_value=response_focus,
+                )
+            )
+        workflow_checkpoint = self._present_contract_label(
+            plan.route_workflow_checkpoints[0] if plan.route_workflow_checkpoints else None
+        )
+        if workflow_checkpoint:
+            errors.extend(
+                self._validate_expected_clause(
+                    response_text,
+                    clause_name="workflow_checkpoint",
+                    clause_prefix="checkpoint ativo:",
+                    expected_value=workflow_checkpoint,
+                )
+            )
+        workflow_decision = self._present_contract_label(
+            plan.route_workflow_decision_points[0]
+            if plan.route_workflow_decision_points
+            else None
+        )
+        if workflow_decision:
+            errors.extend(
+                self._validate_expected_clause(
+                    response_text,
+                    clause_name="workflow_gate",
+                    clause_prefix="gate governado:",
+                    expected_value=workflow_decision,
+                )
+            )
+        expected_deliverable = self._present_contract_label(
+            plan.route_expected_deliverables[0] if plan.route_expected_deliverables else None
+        )
+        if expected_deliverable:
+            errors.extend(
+                self._validate_expected_clause(
+                    response_text,
+                    clause_name="workflow_deliverable",
+                    clause_prefix="entrega esperada:",
+                    expected_value=expected_deliverable,
+                )
+            )
+        telemetry_focus = self._present_contract_label(
+            plan.route_telemetry_focus[0] if plan.route_telemetry_focus else None
+        )
+        if telemetry_focus:
+            errors.extend(
+                self._validate_expected_clause(
+                    response_text,
+                    clause_name="workflow_telemetry_focus",
+                    clause_prefix="foco de leitura:",
+                    expected_value=telemetry_focus,
+                )
+            )
+        return errors
+
+    @staticmethod
+    def _validate_expected_clause(
+        response_text: str,
+        *,
+        clause_name: str,
+        clause_prefix: str,
+        expected_value: str,
+    ) -> list[str]:
+        expected_clause = f"{clause_prefix} {expected_value}"
+        if expected_clause in response_text:
+            return []
+        if clause_prefix in response_text:
+            return [f"mismatched_clause:{clause_name}"]
+        return [f"missing_clause:{clause_name}"]
 
     @staticmethod
     def _procedural_artifact_line(synthesis_input: SynthesisInput) -> str | None:
@@ -342,6 +473,7 @@ class SynthesisEngine:
         route_objective = plan.route_consumer_objective
         route_profile = self._present_contract_label(plan.route_consumer_profile)
         workflow_profile = self._present_contract_label(plan.route_workflow_profile)
+        chain_clause = self._mind_domain_specialist_clause(plan)
         semantic_role = self._present_contract_label(guidance.semantic_memory_role)
         semantic_source = self._present_contract_label(plan.semantic_memory_source)
         semantic_lifecycle = self._present_contract_label(plan.semantic_memory_lifecycle)
@@ -373,6 +505,7 @@ class SynthesisEngine:
                     f"rota {route_profile or 'ativa'} orienta {route_objective}; "
                     f"memoria guiada reforca {semantic_role} em {semantic_focus}; "
                     f"framing final deve permanecer coerente com {semantic_role}"
+                    f"{f'; {chain_clause}' if chain_clause else ''}"
                     f"{memory_clause}"
                 )
             if semantic_focus:
@@ -385,12 +518,15 @@ class SynthesisEngine:
                     f"{base}; a missao ativa segue ancorada em {plan.open_loops[0]}; "
                     f"memoria guiada reforca {semantic_role} em {semantic_focus}; "
                     f"framing final deve permanecer coerente com {semantic_role}"
+                    f"{f'; {chain_clause}' if chain_clause else ''}"
                     f"{memory_clause}"
                 )
             if route_objective:
                 workflow_clause = (
                     f"; workflow ativo: {workflow_profile}" if workflow_profile else ""
                 )
+                if chain_clause:
+                    workflow_clause = f"{workflow_clause}; {chain_clause}"
                 if cross_session_clause:
                     workflow_clause = f"{workflow_clause}; {cross_session_clause}"
                 return (
@@ -429,6 +565,7 @@ class SynthesisEngine:
                     f"memoria guiada reforca {semantic_role} em {semantic_focus}; "
                     f"framing final deve permanecer coerente com {semantic_role}"
                     f"{memory_clause}"
+                    f"{f'; {chain_clause}' if chain_clause else ''}"
                     f"{workflow_clause}"
                 )
             if semantic_focus:
@@ -440,12 +577,15 @@ class SynthesisEngine:
                 return (
                     f"{base}; memoria guiada reforca {semantic_role} em {semantic_focus}; "
                     f"framing final deve permanecer coerente com {semantic_role}"
+                    f"{f'; {chain_clause}' if chain_clause else ''}"
                     f"{memory_clause}"
                 )
             if route_objective:
                 workflow_clause = (
                     f"; workflow ativo: {workflow_profile}" if workflow_profile else ""
                 )
+                if chain_clause:
+                    workflow_clause = f"{workflow_clause}; {chain_clause}"
                 if cross_session_clause:
                     workflow_clause = f"{workflow_clause}; {cross_session_clause}"
                 return (
@@ -520,6 +660,12 @@ class SynthesisEngine:
             )
         else:
             recommendation = f"{next_action}; criterio de sucesso: {success}"
+        semantic_effect_clause = self._semantic_effect_clause(plan)
+        if semantic_effect_clause:
+            recommendation = f"{recommendation}; {semantic_effect_clause}"
+        procedural_effect_clause = self._procedural_effect_clause(plan)
+        if procedural_effect_clause:
+            recommendation = f"{recommendation}; {procedural_effect_clause}"
         if deliverable_hint:
             recommendation = (
                 f"{recommendation}; entrega esperada: "
@@ -602,6 +748,32 @@ class SynthesisEngine:
             )
         return recommendation
 
+    def _semantic_effect_clause(self, plan: DeliberativePlanContract) -> str | None:
+        effects = list(plan.semantic_memory_effects or [])
+        if not effects:
+            return None
+        clauses: list[str] = []
+        if "priority" in effects:
+            clauses.append("memoria semantica prioriza o framing antes do fechamento")
+        if "depth" in effects:
+            clauses.append("memoria semantica pede profundidade adicional na leitura final")
+        if "recommendation" in effects:
+            clauses.append("memoria semantica orienta a direcao recomendada")
+        return "; ".join(clauses) if clauses else None
+
+    def _procedural_effect_clause(self, plan: DeliberativePlanContract) -> str | None:
+        effects = list(plan.procedural_memory_effects or [])
+        if not effects:
+            return None
+        clauses: list[str] = []
+        if "priority" in effects:
+            clauses.append("memoria procedural prioriza a ordem da proxima acao")
+        if "depth" in effects:
+            clauses.append("memoria procedural exige validacao adicional antes do fechamento")
+        if "recommendation" in effects:
+            clauses.append("memoria procedural ancora a recomendacao final")
+        return "; ".join(clauses) if clauses else None
+
     def _limitation_line(self, synthesis_input: SynthesisInput) -> str | None:
         plan = synthesis_input.deliberative_plan
         limits: list[str] = []
@@ -662,6 +834,22 @@ class SynthesisEngine:
         if primary_mind:
             return f"{primary_mind} ancora a resposta"
         return None
+
+    @classmethod
+    def _mind_domain_specialist_clause(cls, plan: DeliberativePlanContract) -> str | None:
+        if not plan.primary_mind or not plan.primary_domain_driver or not plan.primary_route:
+            return None
+        if not plan.specialist_hints:
+            return None
+        specialist_label = cls._present_contract_label(plan.specialist_hints[0])
+        if specialist_label is None:
+            return None
+        return (
+            "cadeia evidence-first: "
+            f"{cls._present_contract_label(plan.primary_mind)} -> "
+            f"{cls._present_contract_label(plan.primary_domain_driver)} -> "
+            f"{cls._present_contract_label(plan.primary_route)} -> {specialist_label}"
+        )
 
     @staticmethod
     def _cross_session_recall_clause(

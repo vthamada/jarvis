@@ -31,6 +31,7 @@ def _make_result(  # type: ignore[no-untyped-def]
     workflow_checkpoint_status: str = "healthy",
     workflow_resume_status: str = "fresh_start",
     workflow_pending_checkpoint_count: int = 0,
+    workflow_output_status: str = "coherent",
     procedural_artifact_status: str = "reusable",
     procedural_artifact_version: int | None = 1,
     mind_domain_specialist_status: str = "aligned",
@@ -82,6 +83,7 @@ def _make_result(  # type: ignore[no-untyped-def]
         workflow_resume_status=workflow_resume_status,
         workflow_pending_checkpoint_count=workflow_pending_checkpoint_count,
         workflow_profile_status=workflow_profile_status,
+        workflow_output_status=workflow_output_status,
         metacognitive_guidance_status=metacognitive_guidance_status,
         mind_disagreement_status=mind_disagreement_status,
         mind_validation_checkpoint_status=mind_validation_checkpoint_status,
@@ -167,6 +169,8 @@ def _make_pilot_trace_summary() -> Any:
         workflow_pending_checkpoint_count=1,
         workflow_profile_status="maturation_recommended",
         workflow_profile_assessment="maturation_recommended",
+        workflow_output_status="partial",
+        workflow_output_assessment="maturation_recommended",
         metacognitive_guidance_status="healthy",
         mind_disagreement_status="validation_required",
         mind_validation_checkpoint_status="attention_required",
@@ -263,6 +267,12 @@ def _make_closure_payload() -> dict[str, object]:
         "candidate_workflow_baseline_rate": 0.5,
         "baseline_workflow_maturation_rate": 0.0,
         "candidate_workflow_maturation_rate": 0.5,
+        "baseline_workflow_output_decision": "baseline_saudavel",
+        "candidate_workflow_output_decision": "maturation_recommended",
+        "baseline_workflow_output_baseline_rate": 1.0,
+        "candidate_workflow_output_baseline_rate": 0.5,
+        "baseline_workflow_output_maturation_rate": 0.0,
+        "candidate_workflow_output_maturation_rate": 0.5,
         "baseline_metacognitive_guidance_decision": "healthy",
         "candidate_metacognitive_guidance_decision": "healthy",
         "baseline_metacognitive_guidance_healthy_rate": 1.0,
@@ -367,6 +377,7 @@ def main() -> None:
                     scenario_id="baseline",
                     path_name="candidate",
                     workflow_profile_status="maturation_recommended",
+                    workflow_output_status="partial",
                     metacognitive_guidance_status="healthy",
                     mind_disagreement_status="validation_required",
                     mind_validation_checkpoint_status="attention_required",
@@ -411,6 +422,10 @@ def main() -> None:
 
     summary = comparison_payload["comparison_summary"]
     scenario = comparison_payload["scenario_results"][0]
+    _ensure(
+        summary["candidate_workflow_output_decision"] == "maturation_recommended",
+        "Comparison summary lost the workflow output release decision.",
+    )
     _ensure(
         summary["candidate_cognitive_recomposition_decision"] == "coherent",
         "Comparison summary lost the cognitive recomposition release decision.",
@@ -461,6 +476,10 @@ def main() -> None:
         "Comparison summary lost the mind-domain-specialist chain release decision.",
     )
     _ensure(
+        scenario["candidate_workflow_output_assessment"] == "maturation_recommended",
+        "Scenario comparison lost the workflow output assessment.",
+    )
+    _ensure(
         scenario["candidate_mind_disagreement_assessment"] == "validation_required",
         "Scenario comparison lost the mind disagreement assessment.",
     )
@@ -488,6 +507,10 @@ def main() -> None:
     _ensure(
         scenario["candidate_cognitive_recomposition_assessment"] == "coherent",
         "Scenario comparison lost the recomposition assessment.",
+    )
+    _ensure(
+        "candidate_workflow_output_decision=maturation_recommended" in comparison_text,
+        "Comparison text lost the workflow output release line.",
     )
     _ensure(
         "candidate_metacognitive_guidance_decision=healthy" in comparison_text,
@@ -540,6 +563,10 @@ def main() -> None:
     _ensure(
         "cognitive_recomposition_assessment=coherent" in pilot_text,
         "Pilot report text lost the recomposition assessment.",
+    )
+    _ensure(
+        "workflow_output_status=partial" in pilot_text,
+        "Pilot report text lost the workflow output assessment.",
     )
     _ensure(
         "mind_disagreement_status=validation_required" in pilot_text,

@@ -856,6 +856,91 @@ Escalar ao operador quando:
 - `depende_do_operador`: `nao`
 - `impacto_no_baseline`: `evolution-lab`, `compare_orchestrator_paths`, `evolution_from_pilot`, `internal_pilot_report` e `verify_release_signal_baseline.py` agora registram `candidate_refs`, `refinement_vectors`, `evaluation_matrix`, `selection_criteria` e `metric_deltas`, fechando a Onda 1 como traducao governada de compile/eval loops.
 
+### MB-047
+
+- `id`: `MB-047`
+- `prioridade`: `P0`
+- `status`: `done`
+- `eixo_do_mestre`: `fluxo_principal`
+- `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
+- `micro_objetivo`: transformar `workflow_profile` em criterio real de saida, completude e qualidade da ultima milha do runtime, evitando linguagem generica quando a rota ja conhece foco, checkpoint e gate de entrega.
+- `justificativa_arquitetural`: o contrato de workflow ja atravessa o runtime, mas ainda ha espaco para fazer criterio de fechamento e completude final depender menos de framing generico e mais do contrato soberano da rota.
+- `arquivos/servicos_principais`: `shared/domain_registry.py`, `engines/planning-engine`, `engines/synthesis-engine`, `services/orchestrator-service`, `services/observability-service`
+- `dependencias`: `MB-044`
+- `criterio_de_aceite`: `planning`, `synthesis`, `orchestrator` e `observability` passam a distinguir criterios de saida e completude por `workflow_profile`, com sinais auditaveis que separam output coerente, output parcial e output desalinhado por rota.
+- `gate_minimo`: `pytest` direcionado dos engines/servicos tocados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `impacto_no_baseline`: `synthesis`, `orchestrator` e `observability` agora distinguem output coerente, parcial e desalinhado por `workflow_profile`, e esse contrato passou a pesar no fechamento formal do fluxo.
+
+### MB-048
+
+- `id`: `MB-048`
+- `prioridade`: `P0`
+- `status`: `done`
+- `eixo_do_mestre`: `memorias`
+- `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
+- `micro_objetivo`: tornar `semantic` e `procedural` mais causais no runtime final, fazendo framing, prioridade, profundidade e recomendacao final responderem melhor a continuidade util por workflow e por fonte de memoria.
+- `justificativa_arquitetural`: depois de distinguir memoria viva, lifecycle e artefatos procedurais, o proximo ganho real e fazer essas classes pesarem mais na direcao do raciocinio, e nao apenas na ancoragem contextual.
+- `arquivos/servicos_principais`: `shared/memory_registry.py`, `services/memory-service`, `engines/planning-engine`, `engines/synthesis-engine`, `services/orchestrator-service`
+- `dependencias`: `MB-047`
+- `criterio_de_aceite`: o runtime final passa a distinguir melhor quando `semantic` e `procedural` alteraram framing, prioridade, profundidade e recomendacao final por `workflow_profile`, sem bypass de governanca nem regressao para hints apenas anexados.
+- `gate_minimo`: `pytest` direcionado de `memory-service`/engines tocados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `impacto_no_baseline`: `memory_registry`, `planning`, `synthesis` e os comparadores agora distinguem efeito de memoria por workflow e por fonte de continuidade, fazendo `semantic` e `procedural` pesarem em prioridade, profundidade e recomendacao final do runtime.
+
+### MB-049
+
+- `id`: `MB-049`
+- `prioridade`: `P0`
+- `status`: `done`
+- `eixo_do_mestre`: `cognicao`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: tornar a cadeia `mente -> dominio -> especialista` ainda mais evidence-first nos consumidores finais, reduzindo o que ainda fica implicito entre selecao, sintese, comparacao e release signals.
+- `justificativa_arquitetural`: a cadeia ja existe como sinal primario, mas ainda pode pesar mais na decisao final e nos criterios de coerencia do ecossistema sem virar heuristica espalhada.
+- `arquivos/servicos_principais`: `engines/cognitive-engine`, `engines/planning-engine`, `engines/synthesis-engine`, `services/orchestrator-service`, `services/observability-service`, `tools/compare_orchestrator_paths.py`
+- `dependencias`: `MB-047`, `MB-048`
+- `criterio_de_aceite`: a cadeia `mente -> dominio -> especialista` passa a influenciar mais explicitamente selecao, sintese, comparacao e readiness de release, com menos dependencia de parse posterior de rationale.
+- `gate_minimo`: `pytest` direcionado dos engines/servicos/tools tocados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `impacto_no_baseline`: `orchestrator`, `synthesis`, `compare_orchestrator_paths` e `evolution-lab` agora tratam a cadeia `mente -> dominio -> especialista` como evidencia primaria mais rica, incluindo planned hints, alinhamento parcial e coerencia do encadeamento no runtime final.
+
+### MB-050
+
+- `id`: `MB-050`
+- `prioridade`: `P1`
+- `status`: `done`
+- `eixo_do_mestre`: `docs/gates`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: separar formalmente `baseline_saudavel` de `maturation_recommended` em observabilidade, comparadores, piloto e gates, para que maturacao futura nao seja confundida com regressao estrutural.
+- `justificativa_arquitetural`: o projeto ja distinguiu parte dessa leitura, mas falta torná-la mais formal e uniforme para evitar drift de interpretacao entre runtime, comparacao e release.
+- `arquivos/servicos_principais`: `services/observability-service`, `tools/internal_pilot_report.py`, `tools/compare_orchestrator_paths.py`, `tools/verify_release_signal_baseline.py`, `tools/verify_active_cut_baseline.py`
+- `dependencias`: `MB-047`, `MB-048`, `MB-049`
+- `criterio_de_aceite`: `baseline_saudavel`, `maturation_recommended` e `attention_required` passam a ter semantica mais consistente entre auditoria, piloto, comparadores e gates, sem alterar o contrato do usuario final por conveniencia local.
+- `gate_minimo`: `pytest` direcionado dos tools/servicos tocados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `medium`
+- `impacto_no_baseline`: `workflow_output_status` agora entra formalmente em piloto, comparadores, `evolution-lab` e verificadores de release como separacao explicita entre `baseline_saudavel`, `maturation_recommended` e `attention_required`.
+
+### MB-051
+
+- `id`: `MB-051`
+- `prioridade`: `P1`
+- `status`: `done`
+- `eixo_do_mestre`: `evolucao`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: fazer o `evolution-lab` usar os sinais refinados do nucleo para priorizar melhor quais refinamentos merecem experimento real por workflow, preparando o proximo salto de autoevolucao governada.
+- `justificativa_arquitetural`: depois de fechar compile/eval loops da Onda 1, o proximo ganho nao e abrir nova vertical, e sim fazer o laboratorio priorizar melhor o que deve virar experimento candidato.
+- `arquivos/servicos_principais`: `evolution/evolution-lab`, `tools/evolution_from_pilot.py`, `tools/compare_orchestrator_paths.py`, `tools/verify_release_signal_baseline.py`
+- `dependencias`: `MB-048`, `MB-049`, `MB-050`
+- `criterio_de_aceite`: o laboratorio passa a priorizar melhor candidatos por workflow com base em sinais mais causais do nucleo, sem automatizar promocao de mudanca nem abrir frente macro nova.
+- `gate_minimo`: `pytest` direcionado dos tools/servicos tocados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `impacto_no_baseline`: `evolution_from_pilot`, `evolution-lab` e `verify_release_signal_baseline.py` agora usam sinais mais causais do nucleo para priorizar experimentos por workflow, sem automatizar promocao nem abrir nova frente macro.
+
 ---
 
 ## 5. Regras de manutencao da fila
@@ -875,5 +960,8 @@ Estado atual da fila:
 - `MB-037` a `MB-040` foram concluidos e fecharam o lote de autoevolucao governada, composicao de mentes mais profunda, telemetria viva de memoria e evals formais por eixo/workflow;
 - `docs/architecture/technology-absorption-order.md` agora formaliza a ordem oficial de traducao disciplinada das referencias externas para o JARVIS;
 - `MB-041` a `MB-046` foram concluidos e fecharam o lote de absorcao disciplinada da Onda 1;
-- a fila micro volta a ficar sem item `ready` ate repriorizacao explicita do proximo lote;
-- esta rodada fecha a Onda 1 sem reativar `protective intelligence` e sem reabrir itens ja concluidos por inercia local.
+- `MB-047` a `MB-051` formaram o lote de maturacao causal final do nucleo e ja foram concluidos;
+- `MB-047` a `MB-051` foram concluidos e fecharam o lote de maturacao causal final do nucleo;
+- a fila micro volta a ficar sem item `ready` ate a proxima repriorizacao explicita do operador;
+- a abertura deste lote foi uma decisao de prioridade macro e deve ser tratada como rodada de raciocinio `extra high`, mas a implementacao dos itens segue a recomendacao declarada em cada card;
+- esta rodada reabre a fila sem reativar `protective intelligence` e sem reabrir itens ja concluidos por inercia local.
