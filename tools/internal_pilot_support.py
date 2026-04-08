@@ -99,6 +99,9 @@ class PilotExecutionResult:
     specialist_sovereignty_status: str
     axis_gate_status: str
     workflow_trace_status: str
+    workflow_checkpoint_status: str
+    workflow_resume_status: str
+    workflow_pending_checkpoint_count: int
     workflow_profile_status: str
     metacognitive_guidance_status: str
     memory_causality_status: str
@@ -123,6 +126,9 @@ class PilotExecutionResult:
     procedural_memory_lifecycle: str | None
     memory_lifecycle_status: str
     memory_review_status: str
+    procedural_artifact_status: str
+    procedural_artifact_refs: list[str]
+    procedural_artifact_version: int | None
     semantic_memory_specialists: list[str]
     procedural_memory_specialists: list[str]
     expected_continuity_action: str | None
@@ -504,6 +510,9 @@ def run_pilot_scenarios(
                     audit.specialist_sovereignty_status,
                 ),
                 workflow_trace_status=audit.workflow_trace_status,
+                workflow_checkpoint_status=audit.workflow_checkpoint_status,
+                workflow_resume_status=audit.workflow_resume_status,
+                workflow_pending_checkpoint_count=audit.workflow_pending_checkpoint_count,
                 workflow_profile_status=audit.workflow_profile_status,
                 metacognitive_guidance_status=audit.metacognitive_guidance_status,
                 memory_causality_status=audit.memory_causality_status,
@@ -530,6 +539,9 @@ def run_pilot_scenarios(
                 procedural_memory_lifecycle=audit.procedural_memory_lifecycle,
                 memory_lifecycle_status=audit.memory_lifecycle_status,
                 memory_review_status=audit.memory_review_status,
+                procedural_artifact_status=audit.procedural_artifact_status,
+                procedural_artifact_refs=list(audit.procedural_artifact_refs),
+                procedural_artifact_version=audit.procedural_artifact_version,
                 semantic_memory_specialists=list(audit.semantic_memory_specialists),
                 procedural_memory_specialists=list(audit.procedural_memory_specialists),
                 expected_continuity_action=scenario.expected_continuity_action,

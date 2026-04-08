@@ -32,6 +32,8 @@ class ComparisonInput:
     governance_refs: list[str]
     notes: list[str]
     strategy_name: str | None = None
+    selection_criteria: dict[str, object] = field(default_factory=dict)
+    candidate_refs: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -84,6 +86,12 @@ class FlowEvaluationInput:
     continuity_trace_status: str | None = None
     missing_continuity_signals: list[str] = field(default_factory=list)
     continuity_anomaly_flags: list[str] = field(default_factory=list)
+    workflow_checkpoint_status: str | None = None
+    workflow_resume_status: str | None = None
+    workflow_pending_checkpoint_count: int = 0
+    procedural_artifact_status: str | None = None
+    procedural_artifact_ref_count: int = 0
+    procedural_artifact_version: int | None = None
 
 
 @dataclass(frozen=True)
@@ -119,6 +127,11 @@ class EvolutionLabService:
         risk_hint: str | None = None,
         proposed_tests: list[str] | None = None,
         strategy_name: str | None = None,
+        candidate_refs: list[str] | None = None,
+        refinement_vectors: list[dict[str, object]] | None = None,
+        evaluation_matrix: dict[str, dict[str, object]] | None = None,
+        selection_criteria: dict[str, object] | None = None,
+        strategy_context: dict[str, object] | None = None,
     ) -> EvolutionProposalContract:
         """Register a sandbox proposal for later comparison."""
 
@@ -146,6 +159,11 @@ class EvolutionLabService:
                 "rollback_plan_mandatory",
                 f"preferred_strategy={chosen_strategy}",
             ],
+            candidate_refs=list(candidate_refs or []),
+            refinement_vectors=list(refinement_vectors or []),
+            evaluation_matrix=dict(evaluation_matrix or {}),
+            selection_criteria=dict(selection_criteria or {}),
+            strategy_context=dict(strategy_context or {}),
         )
         self.repository.record_proposal(proposal)
         return proposal
@@ -158,6 +176,9 @@ class EvolutionLabService:
         """Compare a candidate against the baseline and keep the outcome sandbox-only."""
 
         chosen_strategy = self.resolve_strategy_name(comparison.strategy_name)
+        selection_criteria = dict(
+            comparison.selection_criteria or self._selection_criteria(chosen_strategy)
+        )
         metric_deltas = {
             key: round(
                 comparison.candidate_metrics.get(key, 0.0)
@@ -170,16 +191,24 @@ class EvolutionLabService:
         risk_score = round(comparison.candidate_metrics.get("risk", 0.0), 4)
         improved = sum(1 for value in metric_deltas.values() if value > 0)
         degraded = sum(1 for value in metric_deltas.values() if value < 0)
+        candidate_meets_selection = self._candidate_meets_selection_criteria(
+            selection_criteria=selection_criteria,
+            baseline_metrics=comparison.baseline_metrics,
+            candidate_metrics=comparison.candidate_metrics,
+            metric_deltas=metric_deltas,
+        )
         decision_name = (
             "sandbox_candidate"
             if improved >= degraded
             and risk_score <= comparison.baseline_metrics.get("risk", risk_score)
+            and candidate_meets_selection
             else "hold_baseline"
         )
         summary = (
             f"baseline={comparison.baseline_label}; candidate={comparison.candidate_label}; "
             f"strategy={chosen_strategy}; improved_metrics={improved}; degraded_metrics={degraded}; "
-            f"stability={stability_score}; risk={risk_score}"
+            f"stability={stability_score}; risk={risk_score}; "
+            f"selection_ok={candidate_meets_selection}"
         )
         decision = EvolutionDecisionContract(
             evolution_decision_id=EvolutionDecisionId(f"evo-decision-{uuid4().hex[:8]}"),
@@ -193,7 +222,20 @@ class EvolutionLabService:
             stability_score=stability_score,
             risk_score=risk_score,
             notes=comparison.notes
-            + [f"strategy={chosen_strategy}", f"metric_deltas={metric_deltas}"],
+            + [
+                f"strategy={chosen_strategy}",
+                f"metric_deltas={metric_deltas}",
+                f"selection_criteria={selection_criteria}",
+            ],
+            baseline_label=comparison.baseline_label,
+            candidate_label=comparison.candidate_label,
+            selected_candidate_label=(
+                comparison.candidate_label if decision_name == "sandbox_candidate" else None
+            ),
+            selection_criteria=selection_criteria,
+            baseline_metrics=dict(comparison.baseline_metrics),
+            candidate_metrics=dict(comparison.candidate_metrics),
+            metric_deltas=metric_deltas,
         )
         self.repository.record_decision(decision)
         return EvolutionComparisonResult(
@@ -225,6 +267,9 @@ class EvolutionLabService:
             else "Preserve flow health while improving execution quality."
         )
         refinement_vectors = self._refinement_vectors_from_flow_evaluation(evaluation)
+        evaluation_matrix = self._evaluation_matrix_from_flow_evaluation(evaluation)
+        resolved_strategy = self.resolve_strategy_name(strategy_name)
+        selection_criteria = self._selection_criteria(resolved_strategy)
         if refinement_vectors:
             top_vector = refinement_vectors[0]
             hypothesis = (
@@ -349,6 +394,19 @@ class EvolutionLabService:
             source_signals.append(
                 f"continuity://trace-status/{evaluation.continuity_trace_status}"
             )
+        if evaluation.workflow_checkpoint_status:
+            source_signals.append(
+                "workflow://checkpoint-status/"
+                f"{evaluation.workflow_checkpoint_status}"
+            )
+        if evaluation.workflow_resume_status:
+            source_signals.append(
+                f"workflow://resume-status/{evaluation.workflow_resume_status}"
+            )
+        if evaluation.procedural_artifact_status:
+            source_signals.append(
+                f"artifact://procedural-status/{evaluation.procedural_artifact_status}"
+            )
         for vector in refinement_vectors[:3]:
             source_signals.append(
                 "refinement://"
@@ -366,6 +424,24 @@ class EvolutionLabService:
             risk_hint=self._risk_hint_from_flow(evaluation),
             proposed_tests=["python tools/go_live_internal_checklist.py --profile controlled"],
             strategy_name=strategy_name,
+            candidate_refs=(
+                [f"trace://{evaluation.request_id}"]
+                + (
+                    [f"artifact://procedural/{evaluation.request_id}"]
+                    if evaluation.procedural_artifact_status not in {None, "not_applicable"}
+                    else []
+                )
+            ),
+            refinement_vectors=refinement_vectors,
+            evaluation_matrix=evaluation_matrix,
+            selection_criteria=selection_criteria,
+            strategy_context={
+                "compile_loop_mode": "metric_driven_sandbox",
+                "strategy": resolved_strategy,
+                "top_refinement_axis": (
+                    refinement_vectors[0]["axis"] if refinement_vectors else "none"
+                ),
+            },
         )
 
     def compare_flow_evaluations(
@@ -392,6 +468,18 @@ class EvolutionLabService:
                 governance_refs=governance_refs,
                 notes=notes,
                 strategy_name=strategy_name,
+                selection_criteria=self._selection_criteria(
+                    self.resolve_strategy_name(strategy_name)
+                ),
+                candidate_refs=[
+                    f"trace://{candidate.request_id}",
+                    *(
+                        [f"artifact://procedural/{candidate.request_id}"]
+                        if candidate.procedural_artifact_status
+                        not in {None, "not_applicable"}
+                        else []
+                    ),
+                ],
             ),
         )
 
@@ -481,6 +569,15 @@ class EvolutionLabService:
             ),
             "memory_corpus": EvolutionLabService._memory_corpus_score(
                 evaluation.memory_corpus_status
+            ),
+            "workflow_checkpoint": EvolutionLabService._status_score(
+                evaluation.workflow_checkpoint_status
+            ),
+            "workflow_resume": EvolutionLabService._workflow_resume_score(
+                evaluation.workflow_resume_status
+            ),
+            "procedural_artifact": EvolutionLabService._procedural_artifact_score(
+                evaluation.procedural_artifact_status
             ),
             "mind_domain_specialist": (
                 EvolutionLabService._mind_domain_specialist_score(
@@ -573,6 +670,32 @@ class EvolutionLabService:
         return weights.get(status, 0.7 if status is None else 0.0)
 
     @staticmethod
+    def _workflow_resume_score(status: str | None) -> float:
+        weights = {
+            "resumed_from_checkpoint": 1.0,
+            "resume_available": 0.9,
+            "checkpointed_for_followup": 1.0,
+            "checkpointed_for_manual_resume": 0.8,
+            "completed_without_resume": 0.8,
+            "fresh_start": 0.7,
+            "manual_resume_required": 0.4,
+            "resume_blocked": 0.0,
+            "not_applicable": 0.7,
+        }
+        return weights.get(status, 0.7 if status is None else 0.0)
+
+    @staticmethod
+    def _procedural_artifact_score(status: str | None) -> float:
+        weights = {
+            "reusable": 1.0,
+            "candidate": 0.8,
+            "archivable": 0.4,
+            "blocked": 0.0,
+            "not_applicable": 0.7,
+        }
+        return weights.get(status, 0.7 if status is None else 0.0)
+
+    @staticmethod
     def _mind_domain_specialist_score(status: str | None) -> float:
         weights = {
             "aligned": 1.0,
@@ -626,6 +749,12 @@ class EvolutionLabService:
             return True
         if evaluation.memory_corpus_status in {"monitor", "review_recommended"}:
             return True
+        if evaluation.workflow_checkpoint_status in {"incomplete", "attention_required"}:
+            return True
+        if evaluation.workflow_resume_status in {"manual_resume_required", "resume_blocked"}:
+            return True
+        if evaluation.procedural_artifact_status in {"candidate", "blocked"}:
+            return True
         if evaluation.mind_domain_specialist_status in {
             "incomplete",
             "attention_required",
@@ -659,6 +788,10 @@ class EvolutionLabService:
             return "moderate"
         if evaluation.memory_corpus_status == "review_recommended":
             return "moderate"
+        if evaluation.workflow_checkpoint_status == "attention_required":
+            return "moderate"
+        if evaluation.workflow_resume_status == "resume_blocked":
+            return "moderate"
         if evaluation.mind_domain_specialist_status in {"attention_required", "mismatch"}:
             return "moderate"
         if evaluation.mind_domain_specialist_chain_status in {
@@ -675,6 +808,10 @@ class EvolutionLabService:
         if evaluation.memory_lifecycle_status == "review_recommended":
             return "low_to_moderate"
         if evaluation.memory_corpus_status == "monitor":
+            return "low_to_moderate"
+        if evaluation.workflow_resume_status == "manual_resume_required":
+            return "low_to_moderate"
+        if evaluation.procedural_artifact_status == "candidate":
             return "low_to_moderate"
         if evaluation.mind_domain_specialist_status == "incomplete":
             return "low_to_moderate"
@@ -749,6 +886,18 @@ class EvolutionLabService:
                 "p1",
                 "alinhar o contrato do workflow ativo com passos, checkpoints e criterio de resposta",
             )
+        if evaluation.workflow_checkpoint_status in {"incomplete", "attention_required"}:
+            add_vector(
+                "workflow_checkpointing",
+                "p1",
+                "materializar checkpoints completos e retomada observavel no workflow ativo",
+            )
+        if evaluation.procedural_artifact_status == "candidate":
+            add_vector(
+                "procedural_artifacts",
+                "p1",
+                "promover know-how procedural candidato para artefato reutilizavel through_core_only",
+            )
         if evaluation.mind_domain_specialist_chain_status in {
             "incomplete",
             "attention_required",
@@ -760,6 +909,74 @@ class EvolutionLabService:
                 "restaurar coerencia evidence-first entre mente primaria, dominio e especialista guiado",
             )
         return vectors
+
+    @staticmethod
+    def _evaluation_matrix_from_flow_evaluation(
+        evaluation: FlowEvaluationInput,
+    ) -> dict[str, dict[str, object]]:
+        workflow = EvolutionLabService._workflow_key(evaluation)
+        return {
+            workflow: {
+                "workflow_profile": evaluation.workflow_profile_status or "not_applicable",
+                "metacognitive_guidance": (
+                    evaluation.metacognitive_guidance_status or "not_applicable"
+                ),
+                "mind_disagreement": evaluation.mind_disagreement_status or "not_applicable",
+                "mind_validation_checkpoint": (
+                    evaluation.mind_validation_checkpoint_status or "not_applicable"
+                ),
+                "memory_causality": evaluation.memory_causality_status or "not_applicable",
+                "memory_lifecycle": evaluation.memory_lifecycle_status or "not_applicable",
+                "memory_corpus": evaluation.memory_corpus_status or "not_applicable",
+                "workflow_checkpoint": (
+                    evaluation.workflow_checkpoint_status or "not_applicable"
+                ),
+                "workflow_resume": evaluation.workflow_resume_status or "not_applicable",
+                "procedural_artifact": (
+                    evaluation.procedural_artifact_status or "not_applicable"
+                ),
+            }
+        }
+
+    @staticmethod
+    def _selection_criteria(strategy_name: str) -> dict[str, object]:
+        return {
+            "strategy": strategy_name,
+            "risk_must_not_increase": True,
+            "stability_min_delta": 0.0,
+            "trace_completeness_floor": 0.7,
+            "axis_gate_floor": 0.6,
+        }
+
+    @staticmethod
+    def _candidate_meets_selection_criteria(
+        *,
+        selection_criteria: dict[str, object],
+        baseline_metrics: dict[str, float],
+        candidate_metrics: dict[str, float],
+        metric_deltas: dict[str, float],
+    ) -> bool:
+        if selection_criteria.get("risk_must_not_increase") and (
+            candidate_metrics.get("risk", 0.0) > baseline_metrics.get("risk", 0.0)
+        ):
+            return False
+        if metric_deltas.get("stability", 0.0) < float(
+            selection_criteria.get("stability_min_delta", 0.0)
+        ):
+            return False
+        if (
+            "trace_completeness" in candidate_metrics
+            and candidate_metrics.get("trace_completeness", 0.0)
+            < float(selection_criteria.get("trace_completeness_floor", 0.0))
+        ):
+            return False
+        if (
+            "axis_gate" in candidate_metrics
+            and candidate_metrics.get("axis_gate", 0.0)
+            < float(selection_criteria.get("axis_gate_floor", 0.0))
+        ):
+            return False
+        return True
 
     @staticmethod
     def now() -> str:

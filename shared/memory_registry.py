@@ -37,8 +37,13 @@ class WorkflowMemoryPolicy:
 class MemoryLifecycleDecision:
     semantic_lifecycle: str | None
     procedural_lifecycle: str | None
+    semantic_memory_state: str | None
+    procedural_memory_state: str | None
     lifecycle_status: str
     review_status: str
+    consolidation_status: str
+    fixation_status: str
+    archive_status: str
 
 
 @dataclass(frozen=True)
@@ -51,8 +56,13 @@ class GuidedMemoryDecision:
     procedural_effects: tuple[str, ...]
     semantic_lifecycle: str | None
     procedural_lifecycle: str | None
+    semantic_memory_state: str | None
+    procedural_memory_state: str | None
     lifecycle_status: str
     review_status: str
+    consolidation_status: str
+    fixation_status: str
+    archive_status: str
 
 
 @dataclass(frozen=True)
@@ -60,6 +70,28 @@ class MemoryCorpusTelemetry:
     corpus_status: str
     retention_pressure: str
     summary: dict[str, int]
+
+
+@dataclass(frozen=True)
+class ProceduralArtifactDecision:
+    eligible: bool
+    artifact_status: str
+    artifact_kind: str
+    reuse_scope: str
+    versioning_mode: str
+    through_core_only: bool
+
+
+@dataclass(frozen=True)
+class ContextWindowPolicy:
+    requested_limit: int
+    live_turn_limit: int
+    continuity_hint_limit: int
+    user_hint_limit: int
+    mission_hint_limit: int
+    plan_hint_limit: int
+    compaction_status: str
+    cross_session_recall_status: str
 
 
 DEFAULT_WORKFLOW_MEMORY_POLICY = WorkflowMemoryPolicy(workflow_profile=None)
@@ -359,11 +391,20 @@ def memory_lifecycle_decision(
         review_status = "stable"
     else:
         review_status = "not_needed"
+    lifecycle_support = memory_lifecycle_support_signals(
+        semantic_lifecycle=semantic_lifecycle,
+        procedural_lifecycle=procedural_lifecycle,
+    )
     return MemoryLifecycleDecision(
         semantic_lifecycle=semantic_lifecycle,
         procedural_lifecycle=procedural_lifecycle,
+        semantic_memory_state=lifecycle_support["semantic_memory_state"],
+        procedural_memory_state=lifecycle_support["procedural_memory_state"],
         lifecycle_status=lifecycle_status,
         review_status=review_status,
+        consolidation_status=lifecycle_support["consolidation_status"],
+        fixation_status=lifecycle_support["fixation_status"],
+        archive_status=lifecycle_support["archive_status"],
     )
 
 
@@ -425,8 +466,13 @@ def guided_memory_decision(
         procedural_effects=tuple(procedural_effects),
         semantic_lifecycle=lifecycle.semantic_lifecycle,
         procedural_lifecycle=lifecycle.procedural_lifecycle,
+        semantic_memory_state=lifecycle.semantic_memory_state,
+        procedural_memory_state=lifecycle.procedural_memory_state,
         lifecycle_status=lifecycle.lifecycle_status,
         review_status=lifecycle.review_status,
+        consolidation_status=lifecycle.consolidation_status,
+        fixation_status=lifecycle.fixation_status,
+        archive_status=lifecycle.archive_status,
     )
 
 
@@ -441,13 +487,27 @@ def memory_corpus_telemetry(
     promoted_records: int,
     aging_records: int,
     review_recommended_records: int,
+    fixed_records: int,
+    operational_records: int,
+    archivable_records: int,
+    consolidating_records: int,
 ) -> MemoryCorpusTelemetry:
     """Classify memory corpus pressure without introducing a new storage layer."""
 
     total_guided_records = semantic_records + procedural_records
-    if review_recommended_records >= 3 or aging_records >= 3 or total_guided_records >= 18:
+    if (
+        review_recommended_records >= 3
+        or aging_records >= 3
+        or archivable_records >= 3
+        or total_guided_records >= 18
+    ):
         retention_pressure = "high"
-    elif review_recommended_records >= 1 or aging_records >= 1 or total_guided_records >= 9:
+    elif (
+        review_recommended_records >= 1
+        or aging_records >= 1
+        or archivable_records >= 1
+        or total_guided_records >= 9
+    ):
         retention_pressure = "moderate"
     else:
         retention_pressure = "low"
@@ -472,7 +532,65 @@ def memory_corpus_telemetry(
             "promoted_records": promoted_records,
             "aging_records": aging_records,
             "review_recommended_records": review_recommended_records,
+            "fixed_records": fixed_records,
+            "operational_records": operational_records,
+            "archivable_records": archivable_records,
+            "consolidating_records": consolidating_records,
         },
+    )
+
+
+def context_window_policy(
+    *,
+    requested_limit: int,
+    user_scope_status: str | None,
+    interaction_count: int,
+    has_session_continuity: bool,
+    has_related_mission: bool,
+    has_mission_context: bool,
+) -> ContextWindowPolicy:
+    """Return the sovereign policy for live context compaction and recall."""
+
+    normalized_limit = max(1, requested_limit)
+    has_user_scope = user_scope_status not in {None, "not_applicable"}
+    recall_active = (
+        user_scope_status == "recoverable"
+        or has_session_continuity
+        or has_related_mission
+    )
+    recall_seeded = has_user_scope or has_mission_context or interaction_count > 0
+
+    if recall_active:
+        return ContextWindowPolicy(
+            requested_limit=normalized_limit,
+            live_turn_limit=min(2, normalized_limit),
+            continuity_hint_limit=7,
+            user_hint_limit=max(6, normalized_limit),
+            mission_hint_limit=9,
+            plan_hint_limit=5,
+            compaction_status="compressed_live_context",
+            cross_session_recall_status="active",
+        )
+    if recall_seeded:
+        return ContextWindowPolicy(
+            requested_limit=normalized_limit,
+            live_turn_limit=min(2, normalized_limit),
+            continuity_hint_limit=6,
+            user_hint_limit=max(5, normalized_limit),
+            mission_hint_limit=8,
+            plan_hint_limit=4,
+            compaction_status="seeded_live_context",
+            cross_session_recall_status="seeded",
+        )
+    return ContextWindowPolicy(
+        requested_limit=normalized_limit,
+        live_turn_limit=min(3, normalized_limit),
+        continuity_hint_limit=3,
+        user_hint_limit=normalized_limit,
+        mission_hint_limit=6,
+        plan_hint_limit=2,
+        compaction_status="minimal_live_context",
+        cross_session_recall_status="not_applicable",
     )
 
 
@@ -523,6 +641,89 @@ def specialist_memory_policy_payload(
 DEFAULT_MEMORY_SCOPES: list[MemoryClass] = default_memory_scopes()
 
 SHARED_MEMORY_CLASSES: list[MemoryClass] = specialist_shared_memory_classes()
+
+
+def memory_lifecycle_support_signals(
+    *,
+    semantic_lifecycle: str | None,
+    procedural_lifecycle: str | None,
+) -> dict[str, str | None]:
+    """Return explicit lifecycle support signals without changing canonical labels."""
+
+    semantic_memory_state = _memory_state_for_lifecycle(semantic_lifecycle)
+    procedural_memory_state = _memory_state_for_lifecycle(procedural_lifecycle)
+    labels = [label for label in (semantic_lifecycle, procedural_lifecycle) if label]
+    if not labels:
+        consolidation_status = "not_applicable"
+        fixation_status = "not_applicable"
+        archive_status = "not_applicable"
+    else:
+        if any(label == "aging" for label in labels):
+            consolidation_status = "revisit_before_reuse"
+        elif any(label == "consolidating" for label in labels):
+            consolidation_status = "in_progress"
+        else:
+            consolidation_status = "consolidated"
+        fixation_status = (
+            "fixed" if any(label == "retained" for label in labels) else "not_fixed"
+        )
+        archive_status = (
+            "archive_candidate"
+            if any(label == "aging" for label in labels)
+            else "active_memory"
+        )
+    return {
+        "semantic_memory_state": semantic_memory_state,
+        "procedural_memory_state": procedural_memory_state,
+        "consolidation_status": consolidation_status,
+        "fixation_status": fixation_status,
+        "archive_status": archive_status,
+    }
+
+
+def procedural_artifact_decision(
+    *,
+    workflow_profile: str | None,
+    procedural_lifecycle: str | None,
+    procedural_memory_state: str | None,
+    memory_review_status: str | None,
+) -> ProceduralArtifactDecision:
+    """Return whether guided procedural memory may become a reusable core artifact."""
+
+    if not workflow_profile or not procedural_lifecycle or not procedural_memory_state:
+        return ProceduralArtifactDecision(
+            eligible=False,
+            artifact_status="not_applicable",
+            artifact_kind="workflow_procedure",
+            reuse_scope="through_core_only",
+            versioning_mode="increment_on_contract_shift",
+            through_core_only=True,
+        )
+    if memory_review_status == "attention_required":
+        return ProceduralArtifactDecision(
+            eligible=False,
+            artifact_status="blocked",
+            artifact_kind="workflow_procedure",
+            reuse_scope="through_core_only",
+            versioning_mode="increment_on_contract_shift",
+            through_core_only=True,
+        )
+    if procedural_memory_state == "fixed":
+        artifact_status = "reusable"
+    elif procedural_memory_state == "operational":
+        artifact_status = "candidate"
+    elif procedural_memory_state == "archivable":
+        artifact_status = "archivable"
+    else:
+        artifact_status = "not_applicable"
+    return ProceduralArtifactDecision(
+        eligible=artifact_status in {"candidate", "reusable", "archivable"},
+        artifact_status=artifact_status,
+        artifact_kind="workflow_procedure",
+        reuse_scope="through_core_only",
+        versioning_mode="increment_on_contract_shift",
+        through_core_only=True,
+    )
 
 
 def _preferred_memory_source(
@@ -585,3 +786,13 @@ def _memory_lifecycle_label(
     if cross_context:
         return "promoted"
     return "consolidating"
+
+
+def _memory_state_for_lifecycle(label: str | None) -> str | None:
+    if label == "retained":
+        return "fixed"
+    if label in {"promoted", "consolidating"}:
+        return "operational"
+    if label == "aging":
+        return "archivable"
+    return None

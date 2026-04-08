@@ -371,11 +371,50 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
         plan_event.payload["metacognitive_effects"]
         == result.deliberative_plan.metacognitive_effects
     )
+    assert plan_event.payload["contract_validation_status"] == "coherent"
+    assert plan_event.payload["contract_validation_errors"] == []
+    assert plan_event.payload["contract_validation_retry_applied"] is False
     assert plan_event.payload["primary_route"] == result.deliberative_plan.primary_route
     assert (
         plan_event.payload["primary_canonical_domain"]
         == result.deliberative_plan.primary_canonical_domain
     )
+    workflow_composed_event = next(
+        event for event in stored_events if event.event_name == "workflow_composed"
+    )
+    operation_dispatched_event = next(
+        event for event in stored_events if event.event_name == "operation_dispatched"
+    )
+    operation_completed_event = next(
+        event for event in stored_events if event.event_name == "operation_completed"
+    )
+    workflow_completed_event = next(
+        event for event in stored_events if event.event_name == "workflow_completed"
+    )
+    assert workflow_composed_event.payload["workflow_checkpoint_state"]
+    assert workflow_composed_event.payload["workflow_resume_status"] in {
+        "fresh_start",
+        "resume_available",
+        "manual_resume_required",
+    }
+    assert operation_dispatched_event.payload["workflow_checkpoint_state"] == (
+        workflow_composed_event.payload["workflow_checkpoint_state"]
+    )
+    assert operation_dispatched_event.payload["workflow_resume_status"] in {
+        "fresh_start",
+        "resume_available",
+        "manual_resume_required",
+    }
+    assert operation_completed_event.payload["workflow_checkpoint_state"]
+    assert operation_completed_event.payload["workflow_pending_checkpoints"] == []
+    assert workflow_completed_event.payload["workflow_pending_checkpoints"] == []
+    assert workflow_completed_event.payload["workflow_resume_status"] in {
+        "completed_without_resume",
+        "resumed_from_checkpoint",
+        "checkpointed_for_followup",
+        "checkpointed_for_manual_resume",
+        "resume_blocked",
+    }
     governed_event = next(event for event in stored_events if event.event_name == "plan_governed")
     assert governed_event.payload["identity_signature"] == "nucleo_soberano_unificado"
     assert governed_event.payload["identity_guardrail"]
@@ -406,6 +445,12 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
         == result.deliberative_plan.metacognitive_effects
     )
     assert response_event.payload["dominant_tension"] == result.deliberative_plan.dominant_tension
+    assert response_event.payload["contract_validation_status"] == "coherent"
+    assert response_event.payload["contract_validation_errors"] == []
+    assert response_event.payload["contract_validation_retry_applied"] is False
+    assert response_event.payload["output_validation_status"] == "coherent"
+    assert response_event.payload["output_validation_errors"] == []
+    assert response_event.payload["output_validation_retry_applied"] is False
     assert response_event.payload["primary_route"] == result.deliberative_plan.primary_route
     assert (
         response_event.payload["primary_canonical_domain"]
@@ -421,6 +466,10 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     assert continuity_event.payload["continuity_action"] == "continuar"
     assert response_event.payload["continuity_action"] == "continuar"
     assert memory_event.payload["continuity_mode"] == "continuar"
+    assert memory_event.payload["procedural_artifact_status"] == "candidate"
+    assert memory_event.payload["procedural_artifact_refs"]
+    assert memory_event.payload["procedural_artifact_version"] == 1
+    assert memory_event.payload["procedural_artifact_summary"] is not None
 
 
 def test_orchestrator_service_requests_clarification_without_operation() -> None:
@@ -1367,6 +1416,9 @@ def test_orchestrator_service_emits_user_scope_memory_signals() -> None:
     )
     assert memory_recovered_event.payload["user_scope_interaction_count"] == 1
     assert memory_recovered_event.payload["user_scope_memory_refs"]
+    assert memory_recovered_event.payload["context_compaction_status"] == "seeded_live_context"
+    assert memory_recovered_event.payload["cross_session_recall_status"] == "seeded"
+    assert memory_recovered_event.payload["context_live_summary"] is not None
     assert (
         memory_recorded_event.payload["organization_scope_status"]
         == "no_go_without_canonical_consumer"

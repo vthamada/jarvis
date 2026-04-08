@@ -16,6 +16,7 @@ from shared.contracts import (
     SpecialistSharedMemoryContextContract,
     UserScopeContextContract,
 )
+from shared.memory_registry import memory_lifecycle_support_signals
 from shared.types import MissionStatus
 
 try:
@@ -126,6 +127,10 @@ class StoredSpecialistSharedMemory:
     procedural_memory_lifecycle: str | None = None
     memory_lifecycle_status: str | None = None
     memory_review_status: str | None = None
+    procedural_artifact_status: str | None = None
+    procedural_artifact_refs: list[str] = field(default_factory=list)
+    procedural_artifact_version: int | None = None
+    procedural_artifact_summary: str | None = None
     domain_mission_link_reason: str | None = None
     recurrent_context_status: str = "not_applicable"
     recurrent_interaction_count: int = 0
@@ -146,6 +151,10 @@ class MemoryCorpusSummary:
     promoted_records: int
     aging_records: int
     review_recommended_records: int
+    fixed_records: int
+    operational_records: int
+    archivable_records: int
+    consolidating_records: int
 
 
 class MemoryRepository(ABC):
@@ -638,14 +647,16 @@ class SqliteMemoryRepository(MemoryRepository):
                     consumed_memory_classes, memory_write_policies, semantic_focus,
                     open_loops, last_recommendation, semantic_memory_lifecycle,
                     procedural_memory_lifecycle, memory_lifecycle_status,
-                    memory_review_status, domain_mission_link_reason,
+                    memory_review_status, procedural_artifact_status,
+                    procedural_artifact_refs, procedural_artifact_version,
+                    procedural_artifact_summary, domain_mission_link_reason,
                     recurrent_context_status, recurrent_interaction_count,
                     recurrent_context_brief, recurrent_domain_focus,
                     recurrent_memory_refs, recurrent_continuity_modes, updated_at
                 )
                 VALUES (
                     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
                 )
                 ON CONFLICT(session_id, specialist_type) DO UPDATE SET
                     sharing_mode = excluded.sharing_mode,
@@ -675,6 +686,10 @@ class SqliteMemoryRepository(MemoryRepository):
                     procedural_memory_lifecycle = excluded.procedural_memory_lifecycle,
                     memory_lifecycle_status = excluded.memory_lifecycle_status,
                     memory_review_status = excluded.memory_review_status,
+                    procedural_artifact_status = excluded.procedural_artifact_status,
+                    procedural_artifact_refs = excluded.procedural_artifact_refs,
+                    procedural_artifact_version = excluded.procedural_artifact_version,
+                    procedural_artifact_summary = excluded.procedural_artifact_summary,
                     domain_mission_link_reason = excluded.domain_mission_link_reason,
                     recurrent_context_status = excluded.recurrent_context_status,
                     recurrent_interaction_count = excluded.recurrent_interaction_count,
@@ -714,6 +729,10 @@ class SqliteMemoryRepository(MemoryRepository):
                     snapshot.procedural_memory_lifecycle,
                     snapshot.memory_lifecycle_status,
                     snapshot.memory_review_status,
+                    snapshot.procedural_artifact_status,
+                    dumps(snapshot.procedural_artifact_refs),
+                    snapshot.procedural_artifact_version,
+                    snapshot.procedural_artifact_summary,
                     snapshot.domain_mission_link_reason,
                     snapshot.recurrent_context_status,
                     snapshot.recurrent_interaction_count,
@@ -744,6 +763,8 @@ class SqliteMemoryRepository(MemoryRepository):
                        semantic_focus, open_loops, last_recommendation,
                        semantic_memory_lifecycle, procedural_memory_lifecycle,
                        memory_lifecycle_status, memory_review_status,
+                       procedural_artifact_status, procedural_artifact_refs,
+                       procedural_artifact_version, procedural_artifact_summary,
                        domain_mission_link_reason, recurrent_context_status,
                        recurrent_interaction_count, recurrent_context_brief,
                        recurrent_domain_focus, recurrent_memory_refs,
@@ -773,6 +794,8 @@ class SqliteMemoryRepository(MemoryRepository):
                        semantic_focus, open_loops, last_recommendation,
                        semantic_memory_lifecycle, procedural_memory_lifecycle,
                        memory_lifecycle_status, memory_review_status,
+                       procedural_artifact_status, procedural_artifact_refs,
+                       procedural_artifact_version, procedural_artifact_summary,
                        domain_mission_link_reason, recurrent_context_status,
                        recurrent_interaction_count, recurrent_context_brief,
                        recurrent_domain_focus, recurrent_memory_refs,
@@ -921,6 +944,46 @@ class SqliteMemoryRepository(MemoryRepository):
                     """
                 ).fetchone()["total"]
             )
+            fixed_records = int(
+                connection.execute(
+                    """
+                    SELECT COUNT(*) AS total
+                    FROM specialist_shared_memory
+                    WHERE semantic_memory_lifecycle = 'retained'
+                       OR procedural_memory_lifecycle = 'retained'
+                    """
+                ).fetchone()["total"]
+            )
+            operational_records = int(
+                connection.execute(
+                    """
+                    SELECT COUNT(*) AS total
+                    FROM specialist_shared_memory
+                    WHERE semantic_memory_lifecycle IN ('promoted', 'consolidating')
+                       OR procedural_memory_lifecycle IN ('promoted', 'consolidating')
+                    """
+                ).fetchone()["total"]
+            )
+            archivable_records = int(
+                connection.execute(
+                    """
+                    SELECT COUNT(*) AS total
+                    FROM specialist_shared_memory
+                    WHERE semantic_memory_lifecycle = 'aging'
+                       OR procedural_memory_lifecycle = 'aging'
+                    """
+                ).fetchone()["total"]
+            )
+            consolidating_records = int(
+                connection.execute(
+                    """
+                    SELECT COUNT(*) AS total
+                    FROM specialist_shared_memory
+                    WHERE semantic_memory_lifecycle = 'consolidating'
+                       OR procedural_memory_lifecycle = 'consolidating'
+                    """
+                ).fetchone()["total"]
+            )
         return MemoryCorpusSummary(
             user_scope_records=user_scope_records,
             mission_state_records=mission_state_records,
@@ -931,6 +994,10 @@ class SqliteMemoryRepository(MemoryRepository):
             promoted_records=promoted_records,
             aging_records=aging_records,
             review_recommended_records=review_recommended_records,
+            fixed_records=fixed_records,
+            operational_records=operational_records,
+            archivable_records=archivable_records,
+            consolidating_records=consolidating_records,
         )
 
     def _connect(self) -> Connection:
@@ -1054,6 +1121,10 @@ class SqliteMemoryRepository(MemoryRepository):
                     procedural_memory_lifecycle TEXT,
                     memory_lifecycle_status TEXT,
                     memory_review_status TEXT,
+                    procedural_artifact_status TEXT,
+                    procedural_artifact_refs TEXT NOT NULL DEFAULT '[]',
+                    procedural_artifact_version INTEGER,
+                    procedural_artifact_summary TEXT,
                     domain_mission_link_reason TEXT,
                     recurrent_context_status TEXT NOT NULL DEFAULT 'not_applicable',
                     recurrent_interaction_count INTEGER NOT NULL DEFAULT 0,
@@ -1173,6 +1244,30 @@ class SqliteMemoryRepository(MemoryRepository):
                 connection,
                 "specialist_shared_memory",
                 "memory_review_status",
+                "TEXT",
+            )
+            self._ensure_column(
+                connection,
+                "specialist_shared_memory",
+                "procedural_artifact_status",
+                "TEXT",
+            )
+            self._ensure_column(
+                connection,
+                "specialist_shared_memory",
+                "procedural_artifact_refs",
+                "TEXT NOT NULL DEFAULT '[]'",
+            )
+            self._ensure_column(
+                connection,
+                "specialist_shared_memory",
+                "procedural_artifact_version",
+                "INTEGER",
+            )
+            self._ensure_column(
+                connection,
+                "specialist_shared_memory",
+                "procedural_artifact_summary",
                 "TEXT",
             )
             self._ensure_column(connection, "specialist_shared_memory", "user_id", "TEXT")
@@ -1297,6 +1392,10 @@ class SqliteMemoryRepository(MemoryRepository):
 
     @staticmethod
     def _row_to_specialist_shared_memory(row: Row) -> SpecialistSharedMemoryContextContract:
+        lifecycle_support = memory_lifecycle_support_signals(
+            semantic_lifecycle=row["semantic_memory_lifecycle"],
+            procedural_lifecycle=row["procedural_memory_lifecycle"],
+        )
         return SpecialistSharedMemoryContextContract(
             specialist_type=str(row["specialist_type"]),
             sharing_mode=str(row["sharing_mode"]),
@@ -1323,8 +1422,21 @@ class SqliteMemoryRepository(MemoryRepository):
             last_recommendation=row["last_recommendation"],
             semantic_memory_lifecycle=row["semantic_memory_lifecycle"],
             procedural_memory_lifecycle=row["procedural_memory_lifecycle"],
+            semantic_memory_state=str(lifecycle_support["semantic_memory_state"])
+            if lifecycle_support["semantic_memory_state"] is not None
+            else None,
+            procedural_memory_state=str(lifecycle_support["procedural_memory_state"])
+            if lifecycle_support["procedural_memory_state"] is not None
+            else None,
             memory_lifecycle_status=row["memory_lifecycle_status"],
             memory_review_status=row["memory_review_status"],
+            memory_consolidation_status=str(lifecycle_support["consolidation_status"]),
+            memory_fixation_status=str(lifecycle_support["fixation_status"]),
+            memory_archive_status=str(lifecycle_support["archive_status"]),
+            procedural_artifact_status=row["procedural_artifact_status"],
+            procedural_artifact_refs=list(loads(row["procedural_artifact_refs"] or "[]")),
+            procedural_artifact_version=row["procedural_artifact_version"],
+            procedural_artifact_summary=row["procedural_artifact_summary"],
             domain_mission_link_reason=row["domain_mission_link_reason"],
             recurrent_context_status=str(row["recurrent_context_status"] or "not_applicable"),
             recurrent_interaction_count=int(row["recurrent_interaction_count"] or 0),
@@ -1762,7 +1874,9 @@ class PostgresMemoryRepository(MemoryRepository):
                     consumed_memory_classes, memory_write_policies, semantic_focus,
                     open_loops, last_recommendation, semantic_memory_lifecycle,
                     procedural_memory_lifecycle, memory_lifecycle_status,
-                    memory_review_status, domain_mission_link_reason,
+                    memory_review_status, procedural_artifact_status,
+                    procedural_artifact_refs, procedural_artifact_version,
+                    procedural_artifact_summary, domain_mission_link_reason,
                     recurrent_context_status, recurrent_interaction_count,
                     recurrent_context_brief, recurrent_domain_focus,
                     recurrent_memory_refs, recurrent_continuity_modes, updated_at
@@ -1770,7 +1884,7 @@ class PostgresMemoryRepository(MemoryRepository):
                 VALUES (
                     %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
                     %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
-                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
                 )
                 ON CONFLICT (session_id, specialist_type) DO UPDATE SET
                     sharing_mode = EXCLUDED.sharing_mode,
@@ -1800,6 +1914,10 @@ class PostgresMemoryRepository(MemoryRepository):
                     procedural_memory_lifecycle = EXCLUDED.procedural_memory_lifecycle,
                     memory_lifecycle_status = EXCLUDED.memory_lifecycle_status,
                     memory_review_status = EXCLUDED.memory_review_status,
+                    procedural_artifact_status = EXCLUDED.procedural_artifact_status,
+                    procedural_artifact_refs = EXCLUDED.procedural_artifact_refs,
+                    procedural_artifact_version = EXCLUDED.procedural_artifact_version,
+                    procedural_artifact_summary = EXCLUDED.procedural_artifact_summary,
                     domain_mission_link_reason = EXCLUDED.domain_mission_link_reason,
                     recurrent_context_status = EXCLUDED.recurrent_context_status,
                     recurrent_interaction_count = EXCLUDED.recurrent_interaction_count,
@@ -1839,6 +1957,10 @@ class PostgresMemoryRepository(MemoryRepository):
                     snapshot.procedural_memory_lifecycle,
                     snapshot.memory_lifecycle_status,
                     snapshot.memory_review_status,
+                    snapshot.procedural_artifact_status,
+                    dumps(snapshot.procedural_artifact_refs),
+                    snapshot.procedural_artifact_version,
+                    snapshot.procedural_artifact_summary,
                     snapshot.domain_mission_link_reason,
                     snapshot.recurrent_context_status,
                     snapshot.recurrent_interaction_count,
@@ -1869,6 +1991,8 @@ class PostgresMemoryRepository(MemoryRepository):
                        semantic_focus, open_loops, last_recommendation,
                        semantic_memory_lifecycle, procedural_memory_lifecycle,
                        memory_lifecycle_status, memory_review_status,
+                       procedural_artifact_status, procedural_artifact_refs,
+                       procedural_artifact_version, procedural_artifact_summary,
                        domain_mission_link_reason, recurrent_context_status,
                        recurrent_interaction_count, recurrent_context_brief,
                        recurrent_domain_focus, recurrent_memory_refs,
@@ -1936,6 +2060,8 @@ class PostgresMemoryRepository(MemoryRepository):
                        semantic_focus, open_loops, last_recommendation,
                        semantic_memory_lifecycle, procedural_memory_lifecycle,
                        memory_lifecycle_status, memory_review_status,
+                       procedural_artifact_status, procedural_artifact_refs,
+                       procedural_artifact_version, procedural_artifact_summary,
                        domain_mission_link_reason, recurrent_context_status,
                        recurrent_interaction_count, recurrent_context_brief,
                        recurrent_domain_focus, recurrent_memory_refs,
@@ -2127,6 +2253,42 @@ class PostgresMemoryRepository(MemoryRepository):
                 """
             )
             review_recommended_records = int(cursor.fetchone()["total"])
+            cursor.execute(
+                """
+                SELECT COUNT(*) AS total
+                FROM specialist_shared_memory
+                WHERE semantic_memory_lifecycle = 'retained'
+                   OR procedural_memory_lifecycle = 'retained'
+                """
+            )
+            fixed_records = int(cursor.fetchone()["total"])
+            cursor.execute(
+                """
+                SELECT COUNT(*) AS total
+                FROM specialist_shared_memory
+                WHERE semantic_memory_lifecycle IN ('promoted', 'consolidating')
+                   OR procedural_memory_lifecycle IN ('promoted', 'consolidating')
+                """
+            )
+            operational_records = int(cursor.fetchone()["total"])
+            cursor.execute(
+                """
+                SELECT COUNT(*) AS total
+                FROM specialist_shared_memory
+                WHERE semantic_memory_lifecycle = 'aging'
+                   OR procedural_memory_lifecycle = 'aging'
+                """
+            )
+            archivable_records = int(cursor.fetchone()["total"])
+            cursor.execute(
+                """
+                SELECT COUNT(*) AS total
+                FROM specialist_shared_memory
+                WHERE semantic_memory_lifecycle = 'consolidating'
+                   OR procedural_memory_lifecycle = 'consolidating'
+                """
+            )
+            consolidating_records = int(cursor.fetchone()["total"])
         return MemoryCorpusSummary(
             user_scope_records=user_scope_records,
             mission_state_records=mission_state_records,
@@ -2137,6 +2299,10 @@ class PostgresMemoryRepository(MemoryRepository):
             promoted_records=promoted_records,
             aging_records=aging_records,
             review_recommended_records=review_recommended_records,
+            fixed_records=fixed_records,
+            operational_records=operational_records,
+            archivable_records=archivable_records,
+            consolidating_records=consolidating_records,
         )
 
     def _connect(self):
@@ -2258,6 +2424,10 @@ class PostgresMemoryRepository(MemoryRepository):
                     procedural_memory_lifecycle TEXT,
                     memory_lifecycle_status TEXT,
                     memory_review_status TEXT,
+                    procedural_artifact_status TEXT,
+                    procedural_artifact_refs TEXT NOT NULL DEFAULT '[]',
+                    procedural_artifact_version INTEGER,
+                    procedural_artifact_summary TEXT,
                     domain_mission_link_reason TEXT,
                     recurrent_context_status TEXT NOT NULL DEFAULT 'not_applicable',
                     recurrent_interaction_count INTEGER NOT NULL DEFAULT 0,
@@ -2389,6 +2559,22 @@ class PostgresMemoryRepository(MemoryRepository):
             cursor.execute(
                 "ALTER TABLE specialist_shared_memory ADD COLUMN IF NOT EXISTS "
                 "memory_review_status TEXT"
+            )
+            cursor.execute(
+                "ALTER TABLE specialist_shared_memory ADD COLUMN IF NOT EXISTS "
+                "procedural_artifact_status TEXT"
+            )
+            cursor.execute(
+                "ALTER TABLE specialist_shared_memory ADD COLUMN IF NOT EXISTS "
+                "procedural_artifact_refs TEXT NOT NULL DEFAULT '[]'"
+            )
+            cursor.execute(
+                "ALTER TABLE specialist_shared_memory ADD COLUMN IF NOT EXISTS "
+                "procedural_artifact_version INTEGER"
+            )
+            cursor.execute(
+                "ALTER TABLE specialist_shared_memory ADD COLUMN IF NOT EXISTS "
+                "procedural_artifact_summary TEXT"
             )
             cursor.execute(
                 "ALTER TABLE specialist_shared_memory ADD COLUMN IF NOT EXISTS user_id TEXT"

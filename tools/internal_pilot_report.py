@@ -49,6 +49,9 @@ class PilotTraceSummary:
     axis_gate_status: str
     expectation_status: str
     workflow_trace_status: str
+    workflow_checkpoint_status: str
+    workflow_resume_status: str
+    workflow_pending_checkpoint_count: int
     workflow_profile_status: str
     workflow_profile_assessment: str
     metacognitive_guidance_status: str
@@ -77,6 +80,9 @@ class PilotTraceSummary:
     procedural_memory_lifecycle: str | None
     memory_lifecycle_status: str
     memory_review_status: str
+    procedural_artifact_status: str
+    procedural_artifact_refs: list[str]
+    procedural_artifact_version: int | None
     memory_corpus_status: str
     memory_retention_pressure: str | None
     semantic_memory_specialists: list[str]
@@ -162,6 +168,9 @@ def summarize_traces(
                 continuity_action=audit.continuity_action,
             ),
             workflow_trace_status=audit.workflow_trace_status,
+            workflow_checkpoint_status=audit.workflow_checkpoint_status,
+            workflow_resume_status=audit.workflow_resume_status,
+            workflow_pending_checkpoint_count=audit.workflow_pending_checkpoint_count,
             workflow_profile_status=audit.workflow_profile_status,
             workflow_profile_assessment=_workflow_profile_assessment(
                 audit.workflow_profile_status
@@ -198,6 +207,9 @@ def summarize_traces(
             procedural_memory_lifecycle=audit.procedural_memory_lifecycle,
             memory_lifecycle_status=audit.memory_lifecycle_status,
             memory_review_status=audit.memory_review_status,
+            procedural_artifact_status=audit.procedural_artifact_status,
+            procedural_artifact_refs=list(audit.procedural_artifact_refs),
+            procedural_artifact_version=audit.procedural_artifact_version,
             memory_corpus_status=audit.memory_corpus_status,
             memory_retention_pressure=audit.memory_retention_pressure,
             semantic_memory_specialists=list(audit.semantic_memory_specialists),
@@ -335,6 +347,12 @@ def _render_summary(summary: PilotTraceSummary) -> str:
         f"{getattr(summary, 'axis_gate_status', 'attention_required')} "
         f"expectation_status={summary.expectation_status} "
         f"workflow_trace_status={getattr(summary, 'workflow_trace_status', 'not_applicable')} "
+        "workflow_checkpoint_status="
+        f"{getattr(summary, 'workflow_checkpoint_status', 'not_applicable')} "
+        "workflow_resume_status="
+        f"{getattr(summary, 'workflow_resume_status', 'not_applicable')} "
+        "workflow_pending_checkpoint_count="
+        f"{getattr(summary, 'workflow_pending_checkpoint_count', 0)} "
         "workflow_profile_status="
         f"{getattr(summary, 'workflow_profile_status', 'not_applicable')} "
         "workflow_profile_assessment="
@@ -391,6 +409,12 @@ def _render_summary(summary: PilotTraceSummary) -> str:
         f"{getattr(summary, 'memory_lifecycle_status', 'not_applicable')} "
         "memory_review_status="
         f"{getattr(summary, 'memory_review_status', 'not_applicable')} "
+        "procedural_artifact_status="
+        f"{getattr(summary, 'procedural_artifact_status', 'not_applicable')} "
+        "procedural_artifact_refs="
+        f"{','.join(getattr(summary, 'procedural_artifact_refs', [])) or 'none'} "
+        "procedural_artifact_version="
+        f"{getattr(summary, 'procedural_artifact_version', None) or 'none'} "
         "memory_corpus_status="
         f"{getattr(summary, 'memory_corpus_status', 'not_applicable')} "
         "memory_retention_pressure="

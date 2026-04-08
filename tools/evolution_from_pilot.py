@@ -220,6 +220,32 @@ def _evaluation_from_dict(payload: dict[str, object]) -> FlowEvaluationInput:
             if payload.get("memory_retention_pressure") is not None
             else None
         ),
+        workflow_checkpoint_status=(
+            str(payload["workflow_checkpoint_status"])
+            if payload.get("workflow_checkpoint_status") is not None
+            else None
+        ),
+        workflow_resume_status=(
+            str(payload["workflow_resume_status"])
+            if payload.get("workflow_resume_status") is not None
+            else None
+        ),
+        workflow_pending_checkpoint_count=int(
+            payload.get("workflow_pending_checkpoint_count", 0)
+        ),
+        procedural_artifact_status=(
+            str(payload["procedural_artifact_status"])
+            if payload.get("procedural_artifact_status") is not None
+            else None
+        ),
+        procedural_artifact_ref_count=int(
+            payload.get("procedural_artifact_ref_count", 0)
+        ),
+        procedural_artifact_version=(
+            int(payload["procedural_artifact_version"])
+            if payload.get("procedural_artifact_version") is not None
+            else None
+        ),
         cognitive_recomposition_applied=bool(
             payload.get("cognitive_recomposition_applied", False)
         ),
@@ -337,6 +363,12 @@ def build_payload(args: Namespace) -> dict[str, object]:
                 continuity_trace_status=audit.continuity_trace_status,
                 missing_continuity_signals=audit.missing_continuity_signals,
                 continuity_anomaly_flags=audit.continuity_anomaly_flags,
+                workflow_checkpoint_status=audit.workflow_checkpoint_status,
+                workflow_resume_status=audit.workflow_resume_status,
+                workflow_pending_checkpoint_count=audit.workflow_pending_checkpoint_count,
+                procedural_artifact_status=audit.procedural_artifact_status,
+                procedural_artifact_ref_count=len(audit.procedural_artifact_refs),
+                procedural_artifact_version=audit.procedural_artifact_version,
             ),
             target_scope="orchestrator-service",
         )
@@ -402,6 +434,24 @@ def build_payload(args: Namespace) -> dict[str, object]:
                         f"{item.get('candidate_memory_corpus_assessment', 'n/a')}"
                     ),
                     (
+                        "workflow_checkpoint="
+                        f"{item.get('baseline_workflow_checkpoint_assessment', 'n/a')}"
+                        "->"
+                        f"{item.get('candidate_workflow_checkpoint_assessment', 'n/a')}"
+                    ),
+                    (
+                        "workflow_resume="
+                        f"{item.get('baseline_workflow_resume_assessment', 'n/a')}"
+                        "->"
+                        f"{item.get('candidate_workflow_resume_assessment', 'n/a')}"
+                    ),
+                    (
+                        "procedural_artifact="
+                        f"{item.get('baseline_procedural_artifact_assessment', 'n/a')}"
+                        "->"
+                        f"{item.get('candidate_procedural_artifact_assessment', 'n/a')}"
+                    ),
+                    (
                         "mind_domain_specialist="
                         f"{item.get('baseline_mind_domain_specialist_assessment', 'n/a')}"
                         "->"
@@ -459,6 +509,24 @@ def build_payload(args: Namespace) -> dict[str, object]:
                     ),
                     "candidate_memory_corpus_assessment": item.get(
                         "candidate_memory_corpus_assessment"
+                    ),
+                    "baseline_workflow_checkpoint_assessment": item.get(
+                        "baseline_workflow_checkpoint_assessment"
+                    ),
+                    "candidate_workflow_checkpoint_assessment": item.get(
+                        "candidate_workflow_checkpoint_assessment"
+                    ),
+                    "baseline_workflow_resume_assessment": item.get(
+                        "baseline_workflow_resume_assessment"
+                    ),
+                    "candidate_workflow_resume_assessment": item.get(
+                        "candidate_workflow_resume_assessment"
+                    ),
+                    "baseline_procedural_artifact_assessment": item.get(
+                        "baseline_procedural_artifact_assessment"
+                    ),
+                    "candidate_procedural_artifact_assessment": item.get(
+                        "candidate_procedural_artifact_assessment"
                     ),
                     "baseline_mind_domain_specialist_assessment": item.get(
                         "baseline_mind_domain_specialist_assessment"
@@ -536,6 +604,24 @@ def render_text(payload: dict[str, object]) -> str:
                         f"{item.get('baseline_memory_corpus_assessment', 'n/a')}"
                         "->"
                         f"{item.get('candidate_memory_corpus_assessment', 'n/a')}"
+                    ),
+                    (
+                        "workflow_checkpoint="
+                        f"{item.get('baseline_workflow_checkpoint_assessment', 'n/a')}"
+                        "->"
+                        f"{item.get('candidate_workflow_checkpoint_assessment', 'n/a')}"
+                    ),
+                    (
+                        "workflow_resume="
+                        f"{item.get('baseline_workflow_resume_assessment', 'n/a')}"
+                        "->"
+                        f"{item.get('candidate_workflow_resume_assessment', 'n/a')}"
+                    ),
+                    (
+                        "procedural_artifact="
+                        f"{item.get('baseline_procedural_artifact_assessment', 'n/a')}"
+                        "->"
+                        f"{item.get('candidate_procedural_artifact_assessment', 'n/a')}"
                     ),
                     (
                         "mind_domain_specialist="

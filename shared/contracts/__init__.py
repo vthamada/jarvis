@@ -123,6 +123,9 @@ class DeliberativePlanContract:
     tensions_considered: list[str] = field(default_factory=list)
     specialist_hints: list[str] = field(default_factory=list)
     success_criteria: list[str] = field(default_factory=list)
+    contract_validation_status: str = "not_evaluated"
+    contract_validation_errors: list[str] = field(default_factory=list)
+    contract_validation_retry_applied: bool = False
     specialist_resolution_summary: str | None = None
     dominant_tension: str | None = None
     smallest_safe_next_action: str | None = None
@@ -136,8 +139,17 @@ class DeliberativePlanContract:
     procedural_memory_effects: list[str] = field(default_factory=list)
     semantic_memory_lifecycle: str | None = None
     procedural_memory_lifecycle: str | None = None
+    semantic_memory_state: str | None = None
+    procedural_memory_state: str | None = None
     memory_lifecycle_status: str | None = None
     memory_review_status: str | None = None
+    memory_consolidation_status: str | None = None
+    memory_fixation_status: str | None = None
+    memory_archive_status: str | None = None
+    procedural_artifact_status: str | None = None
+    procedural_artifact_ref: str | None = None
+    procedural_artifact_version: int | None = None
+    procedural_artifact_summary: str | None = None
     mind_disagreement_status: str | None = None
     mind_validation_checkpoints: list[str] = field(default_factory=list)
     continuity_action: str | None = None
@@ -219,8 +231,17 @@ class SpecialistSharedMemoryContextContract:
     procedural_memory_effects: list[str] = field(default_factory=list)
     semantic_memory_lifecycle: str | None = None
     procedural_memory_lifecycle: str | None = None
+    semantic_memory_state: str | None = None
+    procedural_memory_state: str | None = None
     memory_lifecycle_status: str | None = None
     memory_review_status: str | None = None
+    memory_consolidation_status: str | None = None
+    memory_fixation_status: str | None = None
+    memory_archive_status: str | None = None
+    procedural_artifact_status: str | None = None
+    procedural_artifact_refs: list[str] = field(default_factory=list)
+    procedural_artifact_version: int | None = None
+    procedural_artifact_summary: str | None = None
     memory_corpus_status: str | None = None
     memory_retention_pressure: str | None = None
     memory_corpus_summary: dict[str, int] = field(default_factory=dict)
@@ -314,6 +335,10 @@ class OperationDispatchContract:
     workflow_steps: list[str] = field(default_factory=list)
     workflow_checkpoints: list[str] = field(default_factory=list)
     workflow_decision_points: list[str] = field(default_factory=list)
+    workflow_checkpoint_state: dict[str, str] = field(default_factory=dict)
+    workflow_resume_point: str | None = None
+    workflow_resume_status: str | None = None
+    workflow_resume_eligible: bool = False
     deadline_hint: str | None = None
     priority_hint: str | None = None
     artifact_destination: str | None = None
@@ -332,6 +357,10 @@ class OperationResultContract:
     workflow_state: str | None = None
     workflow_completed_steps: list[str] = field(default_factory=list)
     workflow_decisions: list[str] = field(default_factory=list)
+    workflow_checkpoint_state: dict[str, str] = field(default_factory=dict)
+    workflow_pending_checkpoints: list[str] = field(default_factory=list)
+    workflow_resume_point: str | None = None
+    workflow_resume_status: str | None = None
     next_recommendation: str | None = None
     governance_flags: list[str] = field(default_factory=list)
     memory_record_hints: list[str] = field(default_factory=list)
@@ -462,7 +491,7 @@ class MissionStateContract:
     session_origin: str | None = None
     active_tasks: list[str] = field(default_factory=list)
     related_memories: list[str] = field(default_factory=list)
-    related_artifacts: list[str] = field(default_factory=list)
+    related_artifacts: list[dict[str, object]] = field(default_factory=list)
     recent_plan_steps: list[str] = field(default_factory=list)
     last_recommendation: str | None = None
     semantic_brief: str | None = None
@@ -530,6 +559,11 @@ class EvolutionProposalContract:
     requires_sandbox: bool = True
     proposed_tests: list[str] = field(default_factory=list)
     promotion_constraints: list[str] = field(default_factory=list)
+    candidate_refs: list[str] = field(default_factory=list)
+    refinement_vectors: list[dict[str, object]] = field(default_factory=list)
+    evaluation_matrix: dict[str, dict[str, object]] = field(default_factory=dict)
+    selection_criteria: dict[str, object] = field(default_factory=dict)
+    strategy_context: dict[str, object] = field(default_factory=dict)
 
 
 @dataclass
@@ -545,3 +579,10 @@ class EvolutionDecisionContract:
     stability_score: float | None = None
     risk_score: float | None = None
     notes: list[str] = field(default_factory=list)
+    baseline_label: str | None = None
+    candidate_label: str | None = None
+    selected_candidate_label: str | None = None
+    selection_criteria: dict[str, object] = field(default_factory=dict)
+    baseline_metrics: dict[str, float] = field(default_factory=dict)
+    candidate_metrics: dict[str, float] = field(default_factory=dict)
+    metric_deltas: dict[str, float] = field(default_factory=dict)

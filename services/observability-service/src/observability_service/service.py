@@ -53,7 +53,17 @@ class FlowAudit:
     workflow_profile: str | None
     workflow_governance_mode: str | None
     workflow_trace_status: str
+    workflow_checkpoint_status: str
+    workflow_resume_status: str
+    workflow_resume_point: str | None
+    workflow_pending_checkpoint_count: int
     workflow_profile_status: str
+    contract_validation_status: str
+    contract_validation_errors: list[str]
+    contract_validation_retry_applied: bool
+    output_validation_status: str
+    output_validation_errors: list[str]
+    output_validation_retry_applied: bool
     memory_causality_status: str
     primary_mind: str | None
     primary_route: str | None
@@ -82,6 +92,12 @@ class FlowAudit:
     procedural_memory_lifecycle: str | None
     memory_lifecycle_status: str
     memory_review_status: str
+    memory_consolidation_status: str
+    memory_fixation_status: str
+    memory_archive_status: str
+    procedural_artifact_status: str
+    procedural_artifact_refs: list[str]
+    procedural_artifact_version: int | None
     memory_corpus_status: str
     memory_retention_pressure: str | None
     semantic_memory_specialists: list[str]
@@ -124,6 +140,9 @@ class FlowAudit:
             and not self.missing_continuity_signals
             and not self.continuity_anomaly_flags
             and self.workflow_trace_status in {"healthy", "not_applicable"}
+            and self.workflow_checkpoint_status in {"healthy", "not_applicable"}
+            and self.contract_validation_status in {"coherent", "repaired", "not_applicable"}
+            and self.output_validation_status in {"coherent", "repaired", "not_applicable"}
             and self.specialist_subflow_status
             in {"healthy", "not_applicable", "contained"}
             and self.mission_runtime_state_status in {"healthy", "not_applicable"}
@@ -273,6 +292,12 @@ class ObservabilityService:
                 workflow_governance_mode=None,
                 workflow_trace_status="incomplete",
                 workflow_profile_status="incomplete",
+                contract_validation_status="incomplete",
+                contract_validation_errors=[],
+                contract_validation_retry_applied=False,
+                output_validation_status="incomplete",
+                output_validation_errors=[],
+                output_validation_retry_applied=False,
                 memory_causality_status="incomplete",
                 primary_mind=None,
                 primary_route=None,
@@ -304,6 +329,9 @@ class ObservabilityService:
                 procedural_memory_lifecycle=None,
                 memory_lifecycle_status="incomplete",
                 memory_review_status="incomplete",
+                memory_consolidation_status="incomplete",
+                memory_fixation_status="incomplete",
+                memory_archive_status="incomplete",
                 memory_corpus_status="incomplete",
                 memory_retention_pressure=None,
                 semantic_memory_specialists=[],
@@ -339,6 +367,7 @@ class ObservabilityService:
         event_names = [event.event_name for event in events]
         governance_event = self._first_event(events, "governance_checked")
         operation_event = self._first_event(events, "operation_completed")
+        operation_dispatched_event = self._first_event(events, "operation_dispatched")
         continuity_event = self._first_event(events, "continuity_decided")
         continuity_runtime_event = self._first_event(events, "continuity_subflow_completed")
         specialist_subflow_event = self._first_event(events, "specialist_subflow_completed")
@@ -438,6 +467,60 @@ class ObservabilityService:
                 and workflow_completed_event.payload.get("workflow_governance_mode") is not None
                 else None
             )
+        )
+        contract_validation_status = (
+            str(response_event.payload.get("contract_validation_status"))
+            if response_event
+            and response_event.payload.get("contract_validation_status") is not None
+            else (
+                str(plan_event.payload.get("contract_validation_status"))
+                if plan_event
+                and plan_event.payload.get("contract_validation_status") is not None
+                else "not_applicable"
+            )
+        )
+        contract_validation_errors = [
+            str(item)
+            for item in (
+                response_event.payload.get("contract_validation_errors", [])
+                if response_event
+                else (
+                    plan_event.payload.get("contract_validation_errors", [])
+                    if plan_event
+                    else []
+                )
+            )
+        ]
+        contract_validation_retry_applied = bool(
+            response_event.payload.get("contract_validation_retry_applied")
+            if response_event
+            and response_event.payload.get("contract_validation_retry_applied") is not None
+            else (
+                plan_event.payload.get("contract_validation_retry_applied")
+                if plan_event
+                and plan_event.payload.get("contract_validation_retry_applied") is not None
+                else False
+            )
+        )
+        output_validation_status = (
+            str(response_event.payload.get("output_validation_status"))
+            if response_event
+            and response_event.payload.get("output_validation_status") is not None
+            else ("incomplete" if response_event is None else "not_applicable")
+        )
+        output_validation_errors = [
+            str(item)
+            for item in (
+                response_event.payload.get("output_validation_errors", [])
+                if response_event
+                else []
+            )
+        ]
+        output_validation_retry_applied = bool(
+            response_event.payload.get("output_validation_retry_applied")
+            if response_event
+            and response_event.payload.get("output_validation_retry_applied") is not None
+            else False
         )
         primary_mind = (
             str(context_event.payload.get("primary_mind"))
@@ -693,6 +776,30 @@ class ObservabilityService:
                 )
             )
         )
+        memory_consolidation_status = self._lifecycle_support_status(
+            response_event=response_event,
+            plan_event=plan_event,
+            shared_memory_event=shared_memory_event,
+            field_name="memory_consolidation_status",
+            map_name="memory_consolidation_statuses",
+            priority_order=("in_progress", "revisit_before_reuse", "consolidated"),
+        )
+        memory_fixation_status = self._lifecycle_support_status(
+            response_event=response_event,
+            plan_event=plan_event,
+            shared_memory_event=shared_memory_event,
+            field_name="memory_fixation_status",
+            map_name="memory_fixation_statuses",
+            priority_order=("not_fixed", "fixed"),
+        )
+        memory_archive_status = self._lifecycle_support_status(
+            response_event=response_event,
+            plan_event=plan_event,
+            shared_memory_event=shared_memory_event,
+            field_name="memory_archive_status",
+            map_name="memory_archive_statuses",
+            priority_order=("archive_candidate", "active_memory"),
+        )
         semantic_memory_specialists = [
             str(item)
             for item in (
@@ -753,6 +860,10 @@ class ObservabilityService:
             "governance_blocked" not in event_names
         ):
             anomaly_flags.append("blocked_flow_missing_block_event")
+        if contract_validation_status == "invalid":
+            anomaly_flags.append("contract_validation_failed")
+        if output_validation_status == "invalid":
+            anomaly_flags.append("output_validation_failed")
 
         if continuity_event is None:
             missing_continuity_signals.append("continuity_decided")
@@ -798,9 +909,20 @@ class ObservabilityService:
             continuity_anomaly_flags=continuity_anomaly_flags,
         )
         workflow_trace_status = self._workflow_trace_status(
-            operation_event=operation_event,
+            operation_dispatched_event=operation_dispatched_event,
             workflow_composed_event=workflow_composed_event,
             workflow_governance_event=workflow_governance_event,
+            workflow_completed_event=workflow_completed_event,
+        )
+        workflow_checkpoint_status = self._workflow_checkpoint_status(
+            workflow_composed_event=workflow_composed_event,
+            workflow_completed_event=workflow_completed_event,
+        )
+        workflow_resume_status, workflow_resume_point = self._workflow_resume_signals(
+            workflow_composed_event=workflow_composed_event,
+            workflow_completed_event=workflow_completed_event,
+        )
+        workflow_pending_checkpoint_count = self._workflow_pending_checkpoint_count(
             workflow_completed_event=workflow_completed_event,
         )
         workflow_profile_status = self._workflow_profile_status(
@@ -902,7 +1024,17 @@ class ObservabilityService:
             workflow_profile=workflow_profile,
             workflow_governance_mode=workflow_governance_mode,
             workflow_trace_status=workflow_trace_status,
+            workflow_checkpoint_status=workflow_checkpoint_status,
+            workflow_resume_status=workflow_resume_status,
+            workflow_resume_point=workflow_resume_point,
+            workflow_pending_checkpoint_count=workflow_pending_checkpoint_count,
             workflow_profile_status=workflow_profile_status,
+            contract_validation_status=contract_validation_status,
+            contract_validation_errors=contract_validation_errors,
+            contract_validation_retry_applied=contract_validation_retry_applied,
+            output_validation_status=output_validation_status,
+            output_validation_errors=output_validation_errors,
+            output_validation_retry_applied=output_validation_retry_applied,
             memory_causality_status=memory_causality_status,
             primary_mind=primary_mind,
             primary_route=primary_route,
@@ -933,6 +1065,66 @@ class ObservabilityService:
             procedural_memory_lifecycle=procedural_memory_lifecycle,
             memory_lifecycle_status=memory_lifecycle_status,
             memory_review_status=memory_review_status,
+            memory_consolidation_status=memory_consolidation_status,
+            memory_fixation_status=memory_fixation_status,
+            memory_archive_status=memory_archive_status,
+            procedural_artifact_status=(
+                str(response_event.payload.get("procedural_artifact_status"))
+                if response_event and response_event.payload.get("procedural_artifact_status") is not None
+                else (
+                    str(plan_event.payload.get("procedural_artifact_status"))
+                    if plan_event and plan_event.payload.get("procedural_artifact_status") is not None
+                    else (
+                        str(memory_event.payload.get("procedural_artifact_status"))
+                        if memory_event and memory_event.payload.get("procedural_artifact_status") is not None
+                        else "not_applicable"
+                    )
+                )
+            ),
+            procedural_artifact_refs=(
+                [
+                    str(item)
+                    for item in response_event.payload.get("procedural_artifact_refs", [])
+                    if item
+                ]
+                if response_event is not None
+                and response_event.payload.get("procedural_artifact_refs")
+                else (
+                    [
+                        str(item)
+                        for item in plan_event.payload.get("procedural_artifact_refs", [])
+                        if item
+                    ]
+                    if plan_event is not None
+                    and plan_event.payload.get("procedural_artifact_refs")
+                    else (
+                        [
+                            str(item)
+                            for item in memory_event.payload.get("procedural_artifact_refs", [])
+                            if item
+                        ]
+                        if memory_event is not None
+                        and memory_event.payload.get("procedural_artifact_refs")
+                        else []
+                    )
+                )
+            ),
+            procedural_artifact_version=(
+                int(response_event.payload.get("procedural_artifact_version"))
+                if response_event is not None
+                and response_event.payload.get("procedural_artifact_version") is not None
+                else (
+                    int(plan_event.payload.get("procedural_artifact_version"))
+                    if plan_event is not None
+                    and plan_event.payload.get("procedural_artifact_version") is not None
+                    else (
+                        int(memory_event.payload.get("procedural_artifact_version"))
+                        if memory_event is not None
+                        and memory_event.payload.get("procedural_artifact_version") is not None
+                        else None
+                    )
+                )
+            ),
             memory_corpus_status=memory_corpus_status,
             memory_retention_pressure=memory_retention_pressure,
             semantic_memory_specialists=semantic_memory_specialists,
@@ -1027,6 +1219,10 @@ class ObservabilityService:
     def _recommended_operator_action(audit: FlowAudit) -> str:
         if "no_events_found" in audit.anomaly_flags:
             return "pause_controlled_usage_and_investigate_missing_trace"
+        if audit.contract_validation_status == "invalid":
+            return "rebuild_plan_contract_before_resuming_flow"
+        if audit.output_validation_status == "invalid":
+            return "contain_response_and_recompose_with_last_valid_plan"
         if audit.governance_decision in {"block", "defer_for_validation"}:
             return "keep_contained_and_require_manual_review"
         if audit.mind_validation_checkpoint_status == "attention_required":
@@ -1064,14 +1260,20 @@ class ObservabilityService:
     @staticmethod
     def _workflow_trace_status(
         *,
-        operation_event: InternalEventEnvelope | None,
+        operation_dispatched_event: InternalEventEnvelope | None,
         workflow_composed_event: InternalEventEnvelope | None,
         workflow_governance_event: InternalEventEnvelope | None,
         workflow_completed_event: InternalEventEnvelope | None,
     ) -> str:
         if (
-            operation_event is None
+            operation_dispatched_event is None
             and workflow_composed_event is None
+            and workflow_governance_event is None
+            and workflow_completed_event is None
+        ):
+            return "not_applicable"
+        if (
+            workflow_composed_event is None
             and workflow_governance_event is None
             and workflow_completed_event is None
         ):
@@ -1081,10 +1283,21 @@ class ObservabilityService:
         if workflow_governance_event is None or workflow_completed_event is None:
             return "incomplete"
         decision_points = workflow_composed_event.payload.get("workflow_decision_points", [])
+        workflow_checkpoints = workflow_composed_event.payload.get("workflow_checkpoints", [])
+        checkpoint_state = workflow_completed_event.payload.get("workflow_checkpoint_state", {})
+        pending_checkpoints = workflow_completed_event.payload.get(
+            "workflow_pending_checkpoints",
+            [],
+        )
         completed_decisions = workflow_completed_event.payload.get("workflow_decisions", [])
         workflow_state = workflow_completed_event.payload.get("workflow_state")
         governance_mode = workflow_governance_event.payload.get("workflow_governance_mode")
         workflow_objective = workflow_composed_event.payload.get("workflow_objective")
+        composed_checkpoint_state = workflow_composed_event.payload.get(
+            "workflow_checkpoint_state",
+            {},
+        )
+        resume_status = workflow_completed_event.payload.get("workflow_resume_status")
         workflow_expected_deliverables = workflow_composed_event.payload.get(
             "workflow_expected_deliverables",
             [],
@@ -1097,6 +1310,24 @@ class ObservabilityService:
         workflow_response_focus = workflow_completed_event.payload.get("workflow_response_focus")
         if not decision_points or not completed_decisions:
             return "attention_required"
+        if not workflow_checkpoints or not checkpoint_state or not composed_checkpoint_state:
+            return "attention_required"
+        if sorted(checkpoint_state) != sorted(workflow_checkpoints):
+            return "attention_required"
+        if sorted(composed_checkpoint_state) != sorted(workflow_checkpoints):
+            return "attention_required"
+        if any(status != "completed" for status in checkpoint_state.values()):
+            return "attention_required"
+        if pending_checkpoints:
+            return "attention_required"
+        if resume_status not in {
+            "resumed_from_checkpoint",
+            "checkpointed_for_followup",
+            "checkpointed_for_manual_resume",
+            "completed_without_resume",
+            "resume_blocked",
+        }:
+            return "attention_required"
         if workflow_state not in {"completed", "failed"}:
             return "attention_required"
         if governance_mode != "core_mediated":
@@ -1107,20 +1338,106 @@ class ObservabilityService:
             return "attention_required"
         if not workflow_success_focus or not workflow_response_focus:
             return "attention_required"
-        if operation_event is not None:
+        if operation_dispatched_event is not None:
             if (
-                operation_event.payload.get("workflow_expected_deliverables")
+                operation_dispatched_event.payload.get("workflow_expected_deliverables")
                 != workflow_expected_deliverables
             ):
                 return "attention_required"
             if (
-                operation_event.payload.get("workflow_telemetry_focus")
+                operation_dispatched_event.payload.get("workflow_telemetry_focus")
                 != workflow_telemetry_focus
             ):
                 return "attention_required"
-            if operation_event.payload.get("workflow_objective") != workflow_objective:
+            if (
+                operation_dispatched_event.payload.get("workflow_objective")
+                != workflow_objective
+            ):
+                return "attention_required"
+            if (
+                operation_dispatched_event.payload.get("workflow_checkpoint_state")
+                != composed_checkpoint_state
+            ):
+                return "attention_required"
+            if operation_dispatched_event.payload.get("workflow_resume_status") not in {
+                "fresh_start",
+                "resume_available",
+                "manual_resume_required",
+            }:
                 return "attention_required"
         return "healthy"
+
+    @staticmethod
+    def _workflow_checkpoint_status(
+        *,
+        workflow_composed_event: InternalEventEnvelope | None,
+        workflow_completed_event: InternalEventEnvelope | None,
+    ) -> str:
+        if workflow_composed_event is None and workflow_completed_event is None:
+            return "not_applicable"
+        if workflow_composed_event is None or workflow_completed_event is None:
+            return "incomplete"
+        workflow_checkpoints = workflow_composed_event.payload.get("workflow_checkpoints", [])
+        composed_state = workflow_composed_event.payload.get("workflow_checkpoint_state", {})
+        completed_state = workflow_completed_event.payload.get("workflow_checkpoint_state", {})
+        pending_checkpoints = workflow_completed_event.payload.get(
+            "workflow_pending_checkpoints",
+            [],
+        )
+        if not workflow_checkpoints or not composed_state or not completed_state:
+            return "attention_required"
+        if any(status not in {"pending", "resume_ready"} for status in composed_state.values()):
+            return "attention_required"
+        if any(status != "completed" for status in completed_state.values()):
+            return "attention_required"
+        if pending_checkpoints:
+            return "attention_required"
+        return "healthy"
+
+    @staticmethod
+    def _workflow_resume_signals(
+        *,
+        workflow_composed_event: InternalEventEnvelope | None,
+        workflow_completed_event: InternalEventEnvelope | None,
+    ) -> tuple[str, str | None]:
+        if workflow_composed_event is None and workflow_completed_event is None:
+            return ("not_applicable", None)
+        completed_status = (
+            str(workflow_completed_event.payload.get("workflow_resume_status"))
+            if workflow_completed_event is not None
+            and workflow_completed_event.payload.get("workflow_resume_status") is not None
+            else None
+        )
+        completed_point = (
+            str(workflow_completed_event.payload.get("workflow_resume_point"))
+            if workflow_completed_event is not None
+            and workflow_completed_event.payload.get("workflow_resume_point") is not None
+            else None
+        )
+        if completed_status is not None:
+            return (completed_status, completed_point)
+        composed_status = (
+            str(workflow_composed_event.payload.get("workflow_resume_status"))
+            if workflow_composed_event is not None
+            and workflow_composed_event.payload.get("workflow_resume_status") is not None
+            else "incomplete"
+        )
+        composed_point = (
+            str(workflow_composed_event.payload.get("workflow_resume_point"))
+            if workflow_composed_event is not None
+            and workflow_composed_event.payload.get("workflow_resume_point") is not None
+            else None
+        )
+        return (composed_status, composed_point)
+
+    @staticmethod
+    def _workflow_pending_checkpoint_count(
+        *,
+        workflow_completed_event: InternalEventEnvelope | None,
+    ) -> int:
+        if workflow_completed_event is None:
+            return 0
+        return len(workflow_completed_event.payload.get("workflow_pending_checkpoints", []))
 
     @staticmethod
     def _workflow_profile_status(
@@ -1967,6 +2284,23 @@ class ObservabilityService:
         memory_write_policies = shared_memory_event.payload.get("memory_write_policies", {})
         memory_refs_by_specialist = shared_memory_event.payload.get("memory_refs_by_specialist", {})
         semantic_focus_by_specialist = shared_memory_event.payload.get("semantic_focus_by_specialist", {})
+        semantic_memory_states = shared_memory_event.payload.get("semantic_memory_states", {})
+        procedural_memory_states = shared_memory_event.payload.get(
+            "procedural_memory_states",
+            {},
+        )
+        memory_consolidation_statuses = shared_memory_event.payload.get(
+            "memory_consolidation_statuses",
+            {},
+        )
+        memory_fixation_statuses = shared_memory_event.payload.get(
+            "memory_fixation_statuses",
+            {},
+        )
+        memory_archive_statuses = shared_memory_event.payload.get(
+            "memory_archive_statuses",
+            {},
+        )
         domain_mission_link_reasons = shared_memory_event.payload.get(
             "domain_mission_link_reasons",
             {},
@@ -1995,6 +2329,18 @@ class ObservabilityService:
             consumer_mode = consumer_modes.get(specialist_type)
             memory_refs = memory_refs_by_specialist.get(specialist_type, [])
             semantic_focus = semantic_focus_by_specialist.get(specialist_type, [])
+            consolidation_status = memory_consolidation_statuses.get(
+                specialist_type,
+                "not_applicable",
+            )
+            fixation_status = memory_fixation_statuses.get(
+                specialist_type,
+                "not_applicable",
+            )
+            archive_status = memory_archive_statuses.get(
+                specialist_type,
+                "not_applicable",
+            )
             if consumer_mode == "domain_guided_memory_packet":
                 if not consumer_profiles.get(specialist_type):
                     return "attention_required"
@@ -2021,15 +2367,84 @@ class ObservabilityService:
                 if write_policies and write_policies.get(memory_class_name) != "through_core_only":
                     return "attention_required"
             if "semantic" in consumed:
+                if semantic_memory_states.get(specialist_type) not in {
+                    "fixed",
+                    "operational",
+                    "archivable",
+                }:
+                    return "attention_required"
                 if not any(str(ref).startswith("memory://semantic") for ref in memory_refs):
                     return "attention_required"
                 if not semantic_focus:
                     return "attention_required"
+            if "procedural" in consumed and procedural_memory_states.get(specialist_type) not in {
+                "fixed",
+                "operational",
+                "archivable",
+            }:
+                return "attention_required"
             if "procedural" in consumed and not any(
                 str(ref).startswith("memory://procedural") for ref in memory_refs
             ):
                 return "attention_required"
+            if consolidation_status not in {
+                "in_progress",
+                "consolidated",
+                "revisit_before_reuse",
+                "not_applicable",
+            }:
+                return "attention_required"
+            if fixation_status not in {"fixed", "not_fixed", "not_applicable"}:
+                return "attention_required"
+            if archive_status not in {
+                "archive_candidate",
+                "active_memory",
+                "not_applicable",
+            }:
+                return "attention_required"
+            if archive_status == "archive_candidate" and not any(
+                item == "review_recommended"
+                for item in (
+                    shared_memory_event.payload.get("memory_review_statuses", {})
+                    .values()
+                )
+            ):
+                return "attention_required"
         return "healthy"
+
+    @staticmethod
+    def _lifecycle_support_status(
+        *,
+        response_event: InternalEventEnvelope | None,
+        plan_event: InternalEventEnvelope | None,
+        shared_memory_event: InternalEventEnvelope | None,
+        field_name: str,
+        map_name: str,
+        priority_order: tuple[str, ...],
+    ) -> str:
+        for event in (response_event, plan_event):
+            if event is None:
+                continue
+            value = event.payload.get(field_name)
+            if value is not None:
+                return str(value)
+        if shared_memory_event is None:
+            return "not_applicable"
+        values = [
+            str(item)
+            for item in (
+                shared_memory_event.payload.get(map_name, {}).values()
+                if isinstance(shared_memory_event.payload.get(map_name, {}), dict)
+                else []
+            )
+            if item is not None
+        ]
+        if not values:
+            return "not_applicable"
+        for candidate in priority_order:
+            if candidate in values:
+                return candidate
+        return values[0]
 
     @staticmethod
     def _memory_corpus_signals(

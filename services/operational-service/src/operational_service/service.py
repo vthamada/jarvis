@@ -65,6 +65,20 @@ class OperationalService:
         workflow_completed_steps = (
             list(dispatch.workflow_steps) if status == OperationStatus.COMPLETED else []
         )
+        workflow_checkpoint_state = self._workflow_checkpoint_state(
+            dispatch,
+            successful=(status == OperationStatus.COMPLETED),
+        )
+        workflow_pending_checkpoints = [
+            checkpoint
+            for checkpoint, checkpoint_status in workflow_checkpoint_state.items()
+            if checkpoint_status != "completed"
+        ]
+        workflow_resume_status, workflow_resume_point = self._workflow_resume_outcome(
+            dispatch,
+            successful=(status == OperationStatus.COMPLETED),
+            pending_checkpoints=workflow_pending_checkpoints,
+        )
         workflow_decisions = self._workflow_decisions(
             dispatch,
             successful=(status == OperationStatus.COMPLETED),
@@ -81,15 +95,21 @@ class OperationalService:
                 "operational_execution_started",
                 f"workflow_route:{dispatch.workflow_domain_route or 'fallback'}",
                 f"workflow_state:{dispatch.workflow_state or 'composed'}",
+                f"workflow_resume_status:{dispatch.workflow_resume_status or 'fresh_start'}",
                 "workflow_state:executing",
                 *workflow_checkpoint_tokens,
                 f"workflow_state:{workflow_state}",
+                f"workflow_resume_outcome:{workflow_resume_status}",
                 "operational_execution_finished",
             ],
             workflow_domain_route=dispatch.workflow_domain_route,
             workflow_state=workflow_state,
             workflow_completed_steps=workflow_completed_steps,
             workflow_decisions=workflow_decisions,
+            workflow_checkpoint_state=workflow_checkpoint_state,
+            workflow_pending_checkpoints=workflow_pending_checkpoints,
+            workflow_resume_point=workflow_resume_point,
+            workflow_resume_status=workflow_resume_status,
             next_recommendation=(
                 "continue" if status == OperationStatus.COMPLETED else "review_dispatch"
             ),
@@ -237,6 +257,43 @@ class OperationalService:
         if not successful:
             return decision_points[:1]
         return decision_points
+
+    @staticmethod
+    def _workflow_checkpoint_state(
+        dispatch: OperationDispatchContract,
+        *,
+        successful: bool,
+    ) -> dict[str, str]:
+        if not dispatch.workflow_checkpoints:
+            return {}
+        if successful:
+            return {checkpoint: "completed" for checkpoint in dispatch.workflow_checkpoints}
+        state = dict(dispatch.workflow_checkpoint_state)
+        if not state:
+            return {}
+        first_checkpoint = dispatch.workflow_checkpoints[0]
+        state[first_checkpoint] = "completed"
+        for checkpoint in dispatch.workflow_checkpoints[1:]:
+            state[checkpoint] = "pending"
+        return state
+
+    @staticmethod
+    def _workflow_resume_outcome(
+        dispatch: OperationDispatchContract,
+        *,
+        successful: bool,
+        pending_checkpoints: list[str],
+    ) -> tuple[str, str | None]:
+        resume_point = dispatch.workflow_resume_point or dispatch.smallest_safe_next_action
+        if not successful:
+            return ("resume_blocked", resume_point)
+        if dispatch.workflow_resume_status == "resume_available":
+            return ("resumed_from_checkpoint", resume_point)
+        if dispatch.requires_human_validation and resume_point:
+            return ("checkpointed_for_manual_resume", resume_point)
+        if resume_point or pending_checkpoints:
+            return ("checkpointed_for_followup", resume_point)
+        return ("completed_without_resume", None)
 
     @staticmethod
     def _domain_line(domain_hints: list[str]) -> str:

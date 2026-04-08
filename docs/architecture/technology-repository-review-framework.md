@@ -8,11 +8,18 @@ que ja sobreviveram a triagem arquitetural inicial do JARVIS.
 Ele nao substitui:
 
 - `docs/architecture/technology-study.md`
+- `docs/architecture/technology-capability-extraction-map.md`
 - benchmark governado
 - decisao por corte
 
 Ele entra depois dessas camadas, quando uma tecnologia deixa de ser apenas curiosidade,
 referencia conceitual ou benchmark leve e passa a exigir due diligence tecnica real.
+
+Leitura correta da pilha de artefatos:
+
+1. `technology-study.md` responde o papel arquitetural e a classe de decisao
+2. `technology-capability-extraction-map.md` responde o que vale traduzir para o JARVIS
+3. este framework responde quando uma tecnologia ja precisa de analise de repositorio real
 
 ## 2. Quando usar
 

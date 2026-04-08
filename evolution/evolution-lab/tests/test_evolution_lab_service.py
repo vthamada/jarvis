@@ -57,7 +57,11 @@ def test_evolution_lab_persists_proposals_and_sandbox_candidate_decision() -> No
     assert comparison.metric_deltas["stability"] > 0
     assert "strategy://manual_variants" in proposal.source_signals
     assert "preferred_strategy=manual_variants" in proposal.promotion_constraints
+    assert proposal.selection_criteria == {}
+    assert proposal.evaluation_matrix == {}
     assert "strategy=manual_variants" in comparison.decision.notes
+    assert comparison.decision.selection_criteria["strategy"] == "manual_variants"
+    assert comparison.decision.metric_deltas["stability"] > 0
     assert service.list_recent_proposals(limit=1)[0].target_scope == "orchestrator-service"
     assert service.list_recent_decisions(limit=1)[0].decision == "sandbox_candidate"
 
@@ -116,6 +120,11 @@ def test_evolution_lab_creates_proposal_from_flow_evaluation() -> None:
             axis_gate_status="attention_required",
             workflow_profile_status="maturation_recommended",
             memory_causality_status="attached_only",
+            workflow_checkpoint_status="attention_required",
+            workflow_resume_status="manual_resume_required",
+            procedural_artifact_status="candidate",
+            procedural_artifact_ref_count=1,
+            procedural_artifact_version=2,
             dominant_tension="equilibrar profundidade analitica com conclusao util",
             arbitration_source="mind_registry",
             primary_domain_driver="dados_estatistica_e_inteligencia_analitica",
@@ -140,6 +149,8 @@ def test_evolution_lab_creates_proposal_from_flow_evaluation() -> None:
     assert "alignment://axis-gate/attention_required" in proposal.source_signals
     assert "workflow://profile-status/maturation_recommended" in proposal.source_signals
     assert "memory://causality/attached_only" in proposal.source_signals
+    assert "workflow://checkpoint-status/attention_required" in proposal.source_signals
+    assert "artifact://procedural-status/candidate" in proposal.source_signals
     assert (
         "domain://primary-driver/dados_estatistica_e_inteligencia_analitica"
         in proposal.source_signals
@@ -147,6 +158,14 @@ def test_evolution_lab_creates_proposal_from_flow_evaluation() -> None:
     assert "alignment://mind-domain-specialist/incomplete" in proposal.source_signals
     assert "mind://recomposition/applied" in proposal.source_signals
     assert proposal.risk_hint == "moderate"
+    assert proposal.refinement_vectors[0]["axis"] in {
+        "metacognitive_guidance",
+        "memory_causality",
+        "mind_composition",
+        "mind_domain_specialist_chain",
+        "workflow_checkpointing",
+    }
+    assert "baseline_runtime" in proposal.evaluation_matrix
 
 
 def test_evolution_lab_compares_flow_evaluations() -> None:
@@ -182,6 +201,11 @@ def test_evolution_lab_compares_flow_evaluations() -> None:
             axis_gate_status="attention_required",
             workflow_profile_status="maturation_recommended",
             memory_causality_status="attached_only",
+            workflow_checkpoint_status="attention_required",
+            workflow_resume_status="manual_resume_required",
+            procedural_artifact_status="candidate",
+            procedural_artifact_ref_count=1,
+            procedural_artifact_version=2,
             primary_domain_driver="dados_estatistica_e_inteligencia_analitica",
             mind_domain_specialist_status="incomplete",
             continuity_trace_status="attention_required",
@@ -206,6 +230,11 @@ def test_evolution_lab_compares_flow_evaluations() -> None:
             axis_gate_status="healthy",
             workflow_profile_status="healthy",
             memory_causality_status="causal_guidance",
+            workflow_checkpoint_status="healthy",
+            workflow_resume_status="resume_available",
+            procedural_artifact_status="reusable",
+            procedural_artifact_ref_count=1,
+            procedural_artifact_version=3,
             primary_domain_driver="dados_estatistica_e_inteligencia_analitica",
             mind_domain_specialist_status="aligned",
             cognitive_recomposition_applied=True,
@@ -226,4 +255,7 @@ def test_evolution_lab_compares_flow_evaluations() -> None:
     assert comparison.metric_deltas["axis_gate"] > 0
     assert comparison.metric_deltas["workflow_profile"] > 0
     assert comparison.metric_deltas["memory_causality"] > 0
+    assert comparison.metric_deltas["workflow_checkpoint"] > 0
+    assert comparison.metric_deltas["workflow_resume"] > 0
+    assert comparison.metric_deltas["procedural_artifact"] > 0
     assert comparison.metric_deltas["mind_domain_specialist"] > 0

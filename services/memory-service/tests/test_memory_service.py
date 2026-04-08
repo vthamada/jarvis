@@ -12,7 +12,7 @@ from memory_service.repository import (
 from memory_service.service import MemoryRecordResult, MemoryRecoveryResult, MemoryService
 
 from shared.contracts import DeliberativePlanContract, InputContract, SpecialistContributionContract
-from shared.memory_registry import DEFAULT_MEMORY_SCOPES
+from shared.memory_registry import DEFAULT_MEMORY_SCOPES, memory_lifecycle_decision
 from shared.types import (
     ChannelType,
     InputType,
@@ -499,6 +499,15 @@ def test_memory_service_builds_guided_domain_memory_packet_for_promoted_speciali
     assert persisted.consumer_mode == "domain_guided_memory_packet"
     assert "semantic" in persisted.consumed_memory_classes
     assert "procedural" in persisted.consumed_memory_classes
+    assert guided.semantic_memory_state == "operational"
+    assert guided.procedural_memory_state == "operational"
+    assert guided.memory_consolidation_status == "in_progress"
+    assert guided.memory_fixation_status == "not_fixed"
+    assert guided.memory_archive_status == "active_memory"
+    assert guided.procedural_artifact_status == "candidate"
+    assert guided.procedural_artifact_refs
+    assert guided.procedural_artifact_version == 1
+    assert guided.procedural_artifact_summary is not None
     assert persisted.consumer_profile == guided.consumer_profile
     assert persisted.consumer_objective == guided.consumer_objective
     assert persisted.expected_deliverables == guided.expected_deliverables
@@ -506,6 +515,15 @@ def test_memory_service_builds_guided_domain_memory_packet_for_promoted_speciali
     assert persisted.mission_context_brief == guided.mission_context_brief
     assert persisted.domain_context_brief == guided.domain_context_brief
     assert persisted.continuity_context_brief == guided.continuity_context_brief
+    assert persisted.semantic_memory_state == "operational"
+    assert persisted.procedural_memory_state == "operational"
+    assert persisted.memory_consolidation_status == "in_progress"
+    assert persisted.memory_fixation_status == "not_fixed"
+    assert persisted.memory_archive_status == "active_memory"
+    assert persisted.procedural_artifact_status == "candidate"
+    assert persisted.procedural_artifact_refs == guided.procedural_artifact_refs
+    assert persisted.procedural_artifact_version == guided.procedural_artifact_version
+    assert persisted.procedural_artifact_summary == guided.procedural_artifact_summary
 
 
 def test_memory_service_persists_session_continuity_for_governed_reformulation() -> None:
@@ -903,6 +921,24 @@ def test_memory_service_prefers_first_eligible_route_when_specialist_is_shared()
     ]
 
 
+def test_memory_service_exposes_archivable_lifecycle_policy_for_stale_guided_memory() -> None:
+    decision = memory_lifecycle_decision(
+        semantic_sources=["related_mission"],
+        procedural_sources=["user_scope"],
+        continuity_source="fresh_request",
+    )
+
+    assert decision.semantic_lifecycle == "aging"
+    assert decision.procedural_lifecycle == "aging"
+    assert decision.semantic_memory_state == "archivable"
+    assert decision.procedural_memory_state == "archivable"
+    assert decision.lifecycle_status == "review_recommended"
+    assert decision.review_status == "review_recommended"
+    assert decision.consolidation_status == "revisit_before_reuse"
+    assert decision.fixation_status == "not_fixed"
+    assert decision.archive_status == "archive_candidate"
+
+
 def test_memory_service_builds_guided_domain_memory_packet_for_governance_specialist() -> None:
     temp_dir = runtime_dir("memory-guided-governance")
     service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
@@ -1210,4 +1246,16 @@ def test_memory_service_recovers_recoverable_user_scope_context() -> None:
     assert recovered.user_scope_context.recent_domain_focus
     assert any(item == "user_scope_status=recoverable" for item in recovered.user_hints)
     assert any(item.startswith("user_context_brief=") for item in recovered.user_hints)
+    assert any(
+        item == "context_compaction_status=compressed_live_context"
+        for item in recovered.session_context
+    )
+    assert any(item.startswith("context_live_summary=") for item in recovered.session_context)
+    assert any(
+        item == "cross_session_recall_status=active" for item in recovered.recovered_items
+    )
+    assert any(
+        item.startswith("cross_session_recall_summary=")
+        for item in recovered.recovered_items
+    )
     assert any(str(scope.value) == "user" for scope in recovered.recovery_contract.requested_scopes)

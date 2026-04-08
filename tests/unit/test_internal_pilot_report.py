@@ -68,7 +68,7 @@ def test_internal_pilot_report_summarizes_recent_request() -> None:
     assert summaries[0].specialist_subflow_status == "not_applicable"
     assert summaries[0].mission_runtime_state_status == "not_applicable"
     assert summaries[0].workflow_domain_route is None
-    assert summaries[0].workflow_trace_status == "attention_required"
+    assert summaries[0].workflow_trace_status == "not_applicable"
     assert summaries[0].workflow_profile_status == "not_applicable"
     assert summaries[0].workflow_profile_assessment == "not_applicable"
     assert summaries[0].memory_causality_status == "not_applicable"

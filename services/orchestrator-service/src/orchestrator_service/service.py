@@ -16,7 +16,7 @@ from observability_service.service import ObservabilityService
 from operational_service.service import OperationalService
 from planning_engine.engine import PlanningContext, PlanningEngine
 from specialist_engine.engine import SpecialistEngine, SpecialistHandoffPlan, SpecialistReview
-from synthesis_engine.engine import SynthesisEngine, SynthesisInput
+from synthesis_engine.engine import SynthesisEngine, SynthesisInput, SynthesisResult
 
 from shared.contracts import (
     ArtifactResultContract,
@@ -280,6 +280,15 @@ class OrchestratorService:
                 "plan_built",
                 contract,
                 {
+                    "contract_validation_status": (
+                        deliberative_plan.contract_validation_status
+                    ),
+                    "contract_validation_errors": (
+                        deliberative_plan.contract_validation_errors
+                    ),
+                    "contract_validation_retry_applied": (
+                        deliberative_plan.contract_validation_retry_applied
+                    ),
                     "recommended_task_type": deliberative_plan.recommended_task_type,
                     "requires_human_validation": deliberative_plan.requires_human_validation,
                     "steps": deliberative_plan.steps,
@@ -324,8 +333,25 @@ class OrchestratorService:
                     "procedural_memory_lifecycle": (
                         deliberative_plan.procedural_memory_lifecycle
                     ),
+                    "semantic_memory_state": deliberative_plan.semantic_memory_state,
+                    "procedural_memory_state": deliberative_plan.procedural_memory_state,
                     "memory_lifecycle_status": deliberative_plan.memory_lifecycle_status,
                     "memory_review_status": deliberative_plan.memory_review_status,
+                    "memory_consolidation_status": (
+                        deliberative_plan.memory_consolidation_status
+                    ),
+                    "memory_fixation_status": deliberative_plan.memory_fixation_status,
+                    "memory_archive_status": deliberative_plan.memory_archive_status,
+                    "procedural_artifact_status": (
+                        deliberative_plan.procedural_artifact_status
+                    ),
+                    "procedural_artifact_ref": deliberative_plan.procedural_artifact_ref,
+                    "procedural_artifact_version": (
+                        deliberative_plan.procedural_artifact_version
+                    ),
+                    "procedural_artifact_summary": (
+                        deliberative_plan.procedural_artifact_summary
+                    ),
                     "mind_domain_specialist_chain": (
                         f"{deliberative_plan.primary_mind or 'none'} -> "
                         f"{deliberative_plan.primary_domain_driver or 'none'} -> "
@@ -452,6 +478,7 @@ class OrchestratorService:
                 contract,
                 plan=deliberative_plan,
                 specialist_review=specialist_review,
+                mission_runtime_state=mission_runtime_state,
             )
             events.append(
                 self.make_event(
@@ -474,7 +501,15 @@ class OrchestratorService:
                         "workflow_governance_mode": operation_dispatch.workflow_governance_mode,
                         "workflow_steps": operation_dispatch.workflow_steps,
                         "workflow_checkpoints": operation_dispatch.workflow_checkpoints,
+                        "workflow_checkpoint_state": (
+                            operation_dispatch.workflow_checkpoint_state
+                        ),
                         "workflow_decision_points": operation_dispatch.workflow_decision_points,
+                        "workflow_resume_point": operation_dispatch.workflow_resume_point,
+                        "workflow_resume_status": operation_dispatch.workflow_resume_status,
+                        "workflow_resume_eligible": (
+                            operation_dispatch.workflow_resume_eligible
+                        ),
                         "task_type": operation_dispatch.task_type,
                         "domain_hints": operation_dispatch.domain_hints,
                     },
@@ -499,6 +534,8 @@ class OrchestratorService:
                         "workflow_state": operation_dispatch.workflow_state,
                         "workflow_governance_mode": operation_dispatch.workflow_governance_mode,
                         "workflow_decision_points": operation_dispatch.workflow_decision_points,
+                        "workflow_resume_status": operation_dispatch.workflow_resume_status,
+                        "workflow_resume_point": operation_dispatch.workflow_resume_point,
                     },
                 )
             )
@@ -522,7 +559,15 @@ class OrchestratorService:
                         "workflow_response_focus": operation_dispatch.workflow_response_focus,
                         "workflow_state": "dispatched",
                         "workflow_steps": operation_dispatch.workflow_steps,
+                        "workflow_checkpoint_state": (
+                            operation_dispatch.workflow_checkpoint_state
+                        ),
                         "workflow_decision_points": operation_dispatch.workflow_decision_points,
+                        "workflow_resume_status": operation_dispatch.workflow_resume_status,
+                        "workflow_resume_point": operation_dispatch.workflow_resume_point,
+                        "workflow_resume_eligible": (
+                            operation_dispatch.workflow_resume_eligible
+                        ),
                         "specialist_hints": operation_dispatch.specialist_hints,
                     },
                 )
@@ -550,8 +595,16 @@ class OrchestratorService:
                         "workflow_response_focus": operation_dispatch.workflow_response_focus,
                         "workflow_state": operation_result.workflow_state,
                         "workflow_checkpoints": operation_dispatch.workflow_checkpoints,
+                        "workflow_checkpoint_state": (
+                            operation_result.workflow_checkpoint_state
+                        ),
                         "workflow_completed_steps": operation_result.workflow_completed_steps,
+                        "workflow_pending_checkpoints": (
+                            operation_result.workflow_pending_checkpoints
+                        ),
                         "workflow_decisions": operation_result.workflow_decisions,
+                        "workflow_resume_status": operation_result.workflow_resume_status,
+                        "workflow_resume_point": operation_result.workflow_resume_point,
                     },
                 )
             )
@@ -578,6 +631,14 @@ class OrchestratorService:
                         "workflow_decisions": operation_result.workflow_decisions,
                         "status": operation_result.status.value,
                         "checkpoints": operation_result.checkpoints,
+                        "workflow_checkpoint_state": (
+                            operation_result.workflow_checkpoint_state
+                        ),
+                        "workflow_pending_checkpoints": (
+                            operation_result.workflow_pending_checkpoints
+                        ),
+                        "workflow_resume_status": operation_result.workflow_resume_status,
+                        "workflow_resume_point": operation_result.workflow_resume_point,
                     },
                 )
             )
@@ -613,7 +674,7 @@ class OrchestratorService:
                 if invocation.linked_domain
             ],
         )
-        response_text = self._compose_response_text(
+        synthesis_result = self._compose_response(
             directive=directive,
             governance_decision=governance_decision,
             memory_recovery_result=memory_recovery_result,
@@ -623,6 +684,7 @@ class OrchestratorService:
             specialist_review=specialist_review,
             operation_result=operation_result,
         )
+        response_text = synthesis_result.response_text
         events.append(
             self.make_event(
                 "response_synthesized",
@@ -694,14 +756,65 @@ class OrchestratorService:
                     "procedural_memory_lifecycle": (
                         deliberative_plan.procedural_memory_lifecycle
                     ),
+                    "semantic_memory_state": deliberative_plan.semantic_memory_state,
+                    "procedural_memory_state": deliberative_plan.procedural_memory_state,
                     "memory_lifecycle_status": deliberative_plan.memory_lifecycle_status,
                     "memory_review_status": deliberative_plan.memory_review_status,
+                    "memory_consolidation_status": (
+                        deliberative_plan.memory_consolidation_status
+                    ),
+                    "memory_fixation_status": deliberative_plan.memory_fixation_status,
+                    "memory_archive_status": deliberative_plan.memory_archive_status,
+                    "procedural_artifact_status": (
+                        deliberative_plan.procedural_artifact_status
+                    ),
+                    "procedural_artifact_refs": (
+                        [deliberative_plan.procedural_artifact_ref]
+                        if deliberative_plan.procedural_artifact_ref
+                        else []
+                    ),
+                    "procedural_artifact_version": (
+                        deliberative_plan.procedural_artifact_version
+                    ),
+                    "procedural_artifact_summary": (
+                        deliberative_plan.procedural_artifact_summary
+                    ),
+                    "contract_validation_status": (
+                        deliberative_plan.contract_validation_status
+                    ),
+                    "contract_validation_errors": (
+                        deliberative_plan.contract_validation_errors
+                    ),
+                    "contract_validation_retry_applied": (
+                        deliberative_plan.contract_validation_retry_applied
+                    ),
+                    "output_validation_status": (
+                        synthesis_result.output_validation_status
+                    ),
+                    "output_validation_errors": (
+                        synthesis_result.output_validation_errors
+                    ),
+                    "output_validation_retry_applied": (
+                        synthesis_result.output_validation_retry_applied
+                    ),
                     "semantic_memory_focus": guided_memory_runtime_hints[
                         "semantic_memory_focus"
                     ],
                     "procedural_memory_hint": guided_memory_runtime_hints[
                         "procedural_memory_hint"
                     ],
+                    "context_compaction_status": self._extract_context_hint(
+                        memory_recovery_result.recovered_items,
+                        "context_compaction_status=",
+                    ),
+                    "cross_session_recall_status": self._extract_context_hint(
+                        memory_recovery_result.recovered_items,
+                        "cross_session_recall_status=",
+                    ),
+                    "cross_session_recall_summary": self._extract_context_hint(
+                        memory_recovery_result.recovered_items,
+                        "cross_session_recall_summary=",
+                    ),
                     "mind_domain_specialist_chain_status": chain_payload["status"],
                     "mind_domain_specialist_chain": chain_payload["chain"],
                 },
@@ -758,8 +871,27 @@ class OrchestratorService:
                     "procedural_memory_lifecycle": (
                         deliberative_plan.procedural_memory_lifecycle
                     ),
+                    "semantic_memory_state": deliberative_plan.semantic_memory_state,
+                    "procedural_memory_state": deliberative_plan.procedural_memory_state,
                     "memory_lifecycle_status": deliberative_plan.memory_lifecycle_status,
                     "memory_review_status": deliberative_plan.memory_review_status,
+                    "memory_consolidation_status": (
+                        deliberative_plan.memory_consolidation_status
+                    ),
+                    "memory_fixation_status": deliberative_plan.memory_fixation_status,
+                    "memory_archive_status": deliberative_plan.memory_archive_status,
+                    "procedural_artifact_status": (
+                        memory_record_result.procedural_artifact_status
+                    ),
+                    "procedural_artifact_refs": (
+                        memory_record_result.procedural_artifact_refs
+                    ),
+                    "procedural_artifact_version": (
+                        memory_record_result.procedural_artifact_version
+                    ),
+                    "procedural_artifact_summary": (
+                        memory_record_result.procedural_artifact_summary
+                    ),
                 },
             )
         )
@@ -1201,6 +1333,22 @@ class OrchestratorService:
                             )
                             for item in handoff_plan.invocations
                         },
+                        "semantic_memory_states": {
+                            item.specialist_type: (
+                                item.shared_memory_context.semantic_memory_state
+                                if item.shared_memory_context
+                                else None
+                            )
+                            for item in handoff_plan.invocations
+                        },
+                        "procedural_memory_states": {
+                            item.specialist_type: (
+                                item.shared_memory_context.procedural_memory_state
+                                if item.shared_memory_context
+                                else None
+                            )
+                            for item in handoff_plan.invocations
+                        },
                         "memory_lifecycle_statuses": {
                             item.specialist_type: (
                                 item.shared_memory_context.memory_lifecycle_status
@@ -1214,6 +1362,54 @@ class OrchestratorService:
                                 item.shared_memory_context.memory_review_status
                                 if item.shared_memory_context
                                 else "not_applicable"
+                            )
+                            for item in handoff_plan.invocations
+                        },
+                        "memory_consolidation_statuses": {
+                            item.specialist_type: (
+                                item.shared_memory_context.memory_consolidation_status
+                                if item.shared_memory_context
+                                else "not_applicable"
+                            )
+                            for item in handoff_plan.invocations
+                        },
+                        "memory_fixation_statuses": {
+                            item.specialist_type: (
+                                item.shared_memory_context.memory_fixation_status
+                                if item.shared_memory_context
+                                else "not_applicable"
+                            )
+                            for item in handoff_plan.invocations
+                        },
+                        "memory_archive_statuses": {
+                            item.specialist_type: (
+                                item.shared_memory_context.memory_archive_status
+                                if item.shared_memory_context
+                                else "not_applicable"
+                            )
+                            for item in handoff_plan.invocations
+                        },
+                        "procedural_artifact_statuses": {
+                            item.specialist_type: (
+                                item.shared_memory_context.procedural_artifact_status
+                                if item.shared_memory_context
+                                else "not_applicable"
+                            )
+                            for item in handoff_plan.invocations
+                        },
+                        "procedural_artifact_refs_by_specialist": {
+                            item.specialist_type: (
+                                item.shared_memory_context.procedural_artifact_refs
+                                if item.shared_memory_context
+                                else []
+                            )
+                            for item in handoff_plan.invocations
+                        },
+                        "procedural_artifact_versions": {
+                            item.specialist_type: (
+                                item.shared_memory_context.procedural_artifact_version
+                                if item.shared_memory_context
+                                else None
                             )
                             for item in handoff_plan.invocations
                         },
@@ -1671,6 +1867,7 @@ class OrchestratorService:
         *,
         plan: DeliberativePlanContract,
         specialist_review: SpecialistReview,
+        mission_runtime_state: MissionRuntimeStateContract | None = None,
     ) -> OperationDispatchContract:
         """Create the operational dispatch for an allowed request."""
 
@@ -1682,6 +1879,29 @@ class OrchestratorService:
             workflow_decision_points,
         ) = self._build_workflow_profile(plan)
         workflow_guidance = workflow_runtime_guidance(workflow_profile)
+        workflow_resume_point = (
+            mission_runtime_state.continuity_resume_point
+            if mission_runtime_state is not None and mission_runtime_state.continuity_resume_point
+            else plan.continuity_resume_point
+        )
+        workflow_resume_eligible = bool(workflow_resume_point) and not (
+            mission_runtime_state.requires_manual_resume
+            if mission_runtime_state is not None
+            else plan.continuity_requires_manual_resume
+        )
+        workflow_resume_status = (
+            "resume_available"
+            if workflow_resume_eligible
+            else (
+                "manual_resume_required"
+                if workflow_resume_point
+                else "fresh_start"
+            )
+        )
+        workflow_checkpoint_state = self._initial_workflow_checkpoint_state(
+            workflow_checkpoints,
+            resume_status=workflow_resume_status,
+        )
         expected_output = (
             plan.route_expected_deliverables[0]
             if plan.route_expected_deliverables
@@ -1722,8 +1942,23 @@ class OrchestratorService:
             workflow_steps=workflow_steps,
             workflow_checkpoints=workflow_checkpoints,
             workflow_decision_points=workflow_decision_points,
+            workflow_checkpoint_state=workflow_checkpoint_state,
+            workflow_resume_point=workflow_resume_point,
+            workflow_resume_status=workflow_resume_status,
+            workflow_resume_eligible=workflow_resume_eligible,
             priority_hint=contract.priority_hint,
         )
+
+    @staticmethod
+    def _initial_workflow_checkpoint_state(
+        workflow_checkpoints: list[str],
+        *,
+        resume_status: str,
+    ) -> dict[str, str]:
+        if not workflow_checkpoints:
+            return {}
+        initial_state = "resume_ready" if resume_status == "resume_available" else "pending"
+        return {checkpoint: initial_state for checkpoint in workflow_checkpoints}
 
     @staticmethod
     def _build_workflow_profile(
@@ -1998,6 +2233,39 @@ class OrchestratorService:
                 recovered,
                 "user_continuity_preference=",
             ),
+            context_compaction_status=self._extract_context_hint(
+                recovered, "context_compaction_status="
+            ),
+            context_compaction_summary=self._extract_context_hint(
+                recovered, "context_compaction_summary="
+            ),
+            context_live_summary=self._extract_context_hint(
+                recovered, "context_live_summary="
+            ),
+            cross_session_recall_status=self._extract_context_hint(
+                recovered, "cross_session_recall_status="
+            ),
+            cross_session_recall_summary=self._extract_context_hint(
+                recovered, "cross_session_recall_summary="
+            ),
+            procedural_artifact_status=self._extract_context_hint(
+                recovered, "procedural_artifact_status="
+            ),
+            procedural_artifact_ref=self._extract_context_hint(
+                recovered, "procedural_artifact_ref="
+            ),
+            procedural_artifact_version=(
+                int(version_hint)
+                if (
+                    version_hint := self._extract_context_hint(
+                        recovered, "procedural_artifact_version="
+                    )
+                )
+                else None
+            ),
+            procedural_artifact_summary=self._extract_context_hint(
+                recovered, "procedural_artifact_summary="
+            ),
         )
 
     def _domain_registry_event_payload(
@@ -2130,7 +2398,7 @@ class OrchestratorService:
             return primary_canonical_domain_for_name(primary_route[0])
         return canonical_domains[0] if canonical_domains else None
 
-    def _compose_response_text(
+    def _compose_response(
         self,
         *,
         directive: ExecutiveDirective,
@@ -2141,14 +2409,14 @@ class OrchestratorService:
         deliberative_plan: DeliberativePlanContract,
         specialist_review: SpecialistReview,
         operation_result: OperationResultContract | None,
-    ) -> str:
+    ) -> SynthesisResult:
         identity_profile = self.identity_engine.get_profile()
         guided_memory_runtime_hints = self._guided_memory_runtime_hints(
             specialist_review,
             deliberative_plan,
             memory_recovery_result.recovered_items,
         )
-        return self.synthesis_engine.compose(
+        return self.synthesis_engine.compose_result(
             SynthesisInput(
                 intent=directive.intent,
                 identity_profile=identity_profile,
@@ -2179,6 +2447,20 @@ class OrchestratorService:
                 session_anchor_goal=self._extract_context_hint(
                     memory_recovery_result.recovered_items, "session_anchor_goal="
                 ),
+                context_compaction_status=self._extract_context_hint(
+                    memory_recovery_result.recovered_items, "context_compaction_status="
+                ),
+                context_live_summary=self._extract_context_hint(
+                    memory_recovery_result.recovered_items, "context_live_summary="
+                ),
+                cross_session_recall_status=self._extract_context_hint(
+                    memory_recovery_result.recovered_items,
+                    "cross_session_recall_status=",
+                ),
+                cross_session_recall_summary=self._extract_context_hint(
+                    memory_recovery_result.recovered_items,
+                    "cross_session_recall_summary=",
+                ),
                 guided_memory_specialists=guided_memory_runtime_hints[
                     "guided_memory_specialists"
                 ],
@@ -2188,6 +2470,9 @@ class OrchestratorService:
                 procedural_memory_hint=guided_memory_runtime_hints[
                     "procedural_memory_hint"
                 ],
+                procedural_artifact_status=deliberative_plan.procedural_artifact_status,
+                procedural_artifact_ref=deliberative_plan.procedural_artifact_ref,
+                procedural_artifact_summary=deliberative_plan.procedural_artifact_summary,
             )
         )
 
@@ -2404,6 +2689,26 @@ class OrchestratorService:
                         memory_recovery_result.user_scope_context.user_context_brief
                         if memory_recovery_result.user_scope_context
                         else None
+                    ),
+                    "context_compaction_status": self._extract_context_hint(
+                        memory_recovery_result.recovered_items,
+                        "context_compaction_status=",
+                    ),
+                    "context_compaction_summary": self._extract_context_hint(
+                        memory_recovery_result.recovered_items,
+                        "context_compaction_summary=",
+                    ),
+                    "context_live_summary": self._extract_context_hint(
+                        memory_recovery_result.recovered_items,
+                        "context_live_summary=",
+                    ),
+                    "cross_session_recall_status": self._extract_context_hint(
+                        memory_recovery_result.recovered_items,
+                        "cross_session_recall_status=",
+                    ),
+                    "cross_session_recall_summary": self._extract_context_hint(
+                        memory_recovery_result.recovered_items,
+                        "cross_session_recall_summary=",
                     ),
                     "user_scope_memory_refs": (
                         memory_recovery_result.user_scope_context.memory_refs

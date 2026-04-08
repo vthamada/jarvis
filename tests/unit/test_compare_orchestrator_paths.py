@@ -39,6 +39,9 @@ def make_result(  # type: ignore[no-untyped-def]
     specialist_sovereignty_status: str = "healthy",
     axis_gate_status: str = "healthy",
     workflow_trace_status: str = "healthy",
+    workflow_checkpoint_status: str = "healthy",
+    workflow_resume_status: str = "fresh_start",
+    workflow_pending_checkpoint_count: int = 0,
     workflow_profile_status: str = "healthy",
     metacognitive_guidance_status: str = "healthy",
     mind_disagreement_status: str = "not_applicable",
@@ -48,6 +51,9 @@ def make_result(  # type: ignore[no-untyped-def]
     memory_review_status: str = "stable",
     memory_corpus_status: str = "stable",
     memory_retention_pressure: str | None = "low",
+    procedural_artifact_status: str = "reusable",
+    procedural_artifact_refs: list[str] | None = None,
+    procedural_artifact_version: int | None = 1,
     primary_mind: str | None = "planejamento_estruturado",
     primary_route: str | None = "strategy",
     dominant_tension: str | None = "equilibrar profundidade analitica com conclusao util",
@@ -106,6 +112,9 @@ def make_result(  # type: ignore[no-untyped-def]
         specialist_sovereignty_status=specialist_sovereignty_status,
         axis_gate_status=axis_gate_status,
         workflow_trace_status=workflow_trace_status,
+        workflow_checkpoint_status=workflow_checkpoint_status,
+        workflow_resume_status=workflow_resume_status,
+        workflow_pending_checkpoint_count=workflow_pending_checkpoint_count,
         workflow_profile_status=workflow_profile_status,
         metacognitive_guidance_status=metacognitive_guidance_status,
         mind_disagreement_status=mind_disagreement_status,
@@ -136,6 +145,10 @@ def make_result(  # type: ignore[no-untyped-def]
         procedural_memory_lifecycle=procedural_memory_lifecycle,
         memory_lifecycle_status=memory_lifecycle_status,
         memory_review_status=memory_review_status,
+        procedural_artifact_status=procedural_artifact_status,
+        procedural_artifact_refs=procedural_artifact_refs
+        or ["artifact://procedural/strategy/strategy_workflow/v1"],
+        procedural_artifact_version=procedural_artifact_version,
         memory_corpus_status=memory_corpus_status,
         memory_retention_pressure=memory_retention_pressure,
         semantic_memory_specialists=semantic_memory_specialists
@@ -353,6 +366,11 @@ def test_render_text_reports_workflow_profile_status() -> None:
                     mind_validation_checkpoint_status="attention_required",
                     memory_corpus_status="monitor",
                     memory_retention_pressure="moderate",
+                    workflow_checkpoint_status="attention_required",
+                    workflow_resume_status="manual_resume_required",
+                    workflow_pending_checkpoint_count=1,
+                    procedural_artifact_status="candidate",
+                    procedural_artifact_version=2,
                     cognitive_recomposition_applied=True,
                     cognitive_recomposition_reason=(
                         "primary domain driver has no matching guided specialist route"
@@ -385,6 +403,12 @@ def test_render_text_reports_workflow_profile_status() -> None:
     assert "candidate_memory_corpus_status=monitor" in rendered
     assert "candidate_memory_corpus_assessment=monitor" in rendered
     assert "candidate_memory_retention_pressure=moderate" in rendered
+    assert "candidate_workflow_checkpoint_status=attention_required" in rendered
+    assert "candidate_workflow_checkpoint_assessment=attention_required" in rendered
+    assert "candidate_workflow_resume_status=manual_resume_required" in rendered
+    assert "candidate_workflow_resume_assessment=manual_resume_required" in rendered
+    assert "candidate_procedural_artifact_status=candidate" in rendered
+    assert "candidate_procedural_artifact_assessment=candidate" in rendered
     assert "baseline_mind_domain_specialist_status=aligned" in rendered
     assert "candidate_mind_domain_specialist_status=aligned" in rendered
     assert "baseline_specialist_subflow_status=healthy" in rendered
@@ -393,7 +417,11 @@ def test_render_text_reports_workflow_profile_status() -> None:
     assert "candidate_mission_runtime_state_status=healthy" in rendered
     assert "candidate_cognitive_recomposition_assessment=coherent" in rendered
     assert "candidate_cognitive_recomposition_decision=coherent" in rendered
-    assert "candidate_refinement_axes=mind_composition,memory_corpus,workflow_profile" in rendered
+    assert (
+        "candidate_refinement_axes="
+        "mind_composition,memory_corpus,procedural_artifacts,workflow_checkpointing,"
+        "workflow_profile,workflow_resume"
+    ) in rendered
     assert "candidate_evaluation_matrix_workflows=strategy" in rendered
 
 

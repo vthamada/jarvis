@@ -34,8 +34,13 @@ class EvolutionLabRepository:
                     risk_hint,
                     requires_sandbox,
                     proposed_tests,
-                    promotion_constraints
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    promotion_constraints,
+                    candidate_refs,
+                    refinement_vectors,
+                    evaluation_matrix,
+                    selection_criteria,
+                    strategy_context
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     str(proposal.evolution_proposal_id),
@@ -50,6 +55,11 @@ class EvolutionLabRepository:
                     int(proposal.requires_sandbox),
                     dumps(proposal.proposed_tests),
                     dumps(proposal.promotion_constraints),
+                    dumps(proposal.candidate_refs),
+                    dumps(proposal.refinement_vectors),
+                    dumps(proposal.evaluation_matrix),
+                    dumps(proposal.selection_criteria),
+                    dumps(proposal.strategy_context),
                 ),
             )
 
@@ -68,8 +78,15 @@ class EvolutionLabRepository:
                     governance_refs,
                     stability_score,
                     risk_score,
-                    notes
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    notes,
+                    baseline_label,
+                    candidate_label,
+                    selected_candidate_label,
+                    selection_criteria,
+                    baseline_metrics,
+                    candidate_metrics,
+                    metric_deltas
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     str(decision.evolution_decision_id),
@@ -83,6 +100,13 @@ class EvolutionLabRepository:
                     decision.stability_score,
                     decision.risk_score,
                     dumps(decision.notes),
+                    decision.baseline_label,
+                    decision.candidate_label,
+                    decision.selected_candidate_label,
+                    dumps(decision.selection_criteria),
+                    dumps(decision.baseline_metrics),
+                    dumps(decision.candidate_metrics),
+                    dumps(decision.metric_deltas),
                 ),
             )
 
@@ -128,7 +152,12 @@ class EvolutionLabRepository:
                     risk_hint TEXT,
                     requires_sandbox INTEGER NOT NULL,
                     proposed_tests TEXT NOT NULL,
-                    promotion_constraints TEXT NOT NULL
+                    promotion_constraints TEXT NOT NULL,
+                    candidate_refs TEXT NOT NULL DEFAULT '[]',
+                    refinement_vectors TEXT NOT NULL DEFAULT '[]',
+                    evaluation_matrix TEXT NOT NULL DEFAULT '{}',
+                    selection_criteria TEXT NOT NULL DEFAULT '{}',
+                    strategy_context TEXT NOT NULL DEFAULT '{}'
                 );
 
                 CREATE TABLE IF NOT EXISTS evolution_decisions (
@@ -142,9 +171,88 @@ class EvolutionLabRepository:
                     governance_refs TEXT NOT NULL,
                     stability_score REAL,
                     risk_score REAL,
-                    notes TEXT NOT NULL
+                    notes TEXT NOT NULL,
+                    baseline_label TEXT,
+                    candidate_label TEXT,
+                    selected_candidate_label TEXT,
+                    selection_criteria TEXT NOT NULL DEFAULT '{}',
+                    baseline_metrics TEXT NOT NULL DEFAULT '{}',
+                    candidate_metrics TEXT NOT NULL DEFAULT '{}',
+                    metric_deltas TEXT NOT NULL DEFAULT '{}'
                 );
                 """
+            )
+            self._ensure_column(
+                connection,
+                "evolution_proposals",
+                "candidate_refs",
+                "TEXT NOT NULL DEFAULT '[]'",
+            )
+            self._ensure_column(
+                connection,
+                "evolution_proposals",
+                "refinement_vectors",
+                "TEXT NOT NULL DEFAULT '[]'",
+            )
+            self._ensure_column(
+                connection,
+                "evolution_proposals",
+                "evaluation_matrix",
+                "TEXT NOT NULL DEFAULT '{}'",
+            )
+            self._ensure_column(
+                connection,
+                "evolution_proposals",
+                "selection_criteria",
+                "TEXT NOT NULL DEFAULT '{}'",
+            )
+            self._ensure_column(
+                connection,
+                "evolution_proposals",
+                "strategy_context",
+                "TEXT NOT NULL DEFAULT '{}'",
+            )
+            self._ensure_column(
+                connection,
+                "evolution_decisions",
+                "baseline_label",
+                "TEXT",
+            )
+            self._ensure_column(
+                connection,
+                "evolution_decisions",
+                "candidate_label",
+                "TEXT",
+            )
+            self._ensure_column(
+                connection,
+                "evolution_decisions",
+                "selected_candidate_label",
+                "TEXT",
+            )
+            self._ensure_column(
+                connection,
+                "evolution_decisions",
+                "selection_criteria",
+                "TEXT NOT NULL DEFAULT '{}'",
+            )
+            self._ensure_column(
+                connection,
+                "evolution_decisions",
+                "baseline_metrics",
+                "TEXT NOT NULL DEFAULT '{}'",
+            )
+            self._ensure_column(
+                connection,
+                "evolution_decisions",
+                "candidate_metrics",
+                "TEXT NOT NULL DEFAULT '{}'",
+            )
+            self._ensure_column(
+                connection,
+                "evolution_decisions",
+                "metric_deltas",
+                "TEXT NOT NULL DEFAULT '{}'",
             )
 
     def _connect(self) -> Connection:
@@ -167,6 +275,11 @@ class EvolutionLabRepository:
             requires_sandbox=bool(row["requires_sandbox"]),
             proposed_tests=loads(row["proposed_tests"]),
             promotion_constraints=loads(row["promotion_constraints"]),
+            candidate_refs=loads(row["candidate_refs"] or "[]"),
+            refinement_vectors=loads(row["refinement_vectors"] or "[]"),
+            evaluation_matrix=loads(row["evaluation_matrix"] or "{}"),
+            selection_criteria=loads(row["selection_criteria"] or "{}"),
+            strategy_context=loads(row["strategy_context"] or "{}"),
         )
 
     @staticmethod
@@ -183,4 +296,28 @@ class EvolutionLabRepository:
             stability_score=row["stability_score"],
             risk_score=row["risk_score"],
             notes=loads(row["notes"]),
+            baseline_label=row["baseline_label"],
+            candidate_label=row["candidate_label"],
+            selected_candidate_label=row["selected_candidate_label"],
+            selection_criteria=loads(row["selection_criteria"] or "{}"),
+            baseline_metrics=loads(row["baseline_metrics"] or "{}"),
+            candidate_metrics=loads(row["candidate_metrics"] or "{}"),
+            metric_deltas=loads(row["metric_deltas"] or "{}"),
+        )
+
+    @staticmethod
+    def _ensure_column(
+        connection: Connection,
+        table_name: str,
+        column_name: str,
+        definition: str,
+    ) -> None:
+        columns = {
+            str(row["name"])
+            for row in connection.execute(f"PRAGMA table_info({table_name})").fetchall()
+        }
+        if column_name in columns:
+            return
+        connection.execute(
+            f"ALTER TABLE {table_name} ADD COLUMN {column_name} {definition}"
         )

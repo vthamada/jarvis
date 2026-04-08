@@ -28,6 +28,11 @@ def _make_result(  # type: ignore[no-untyped-def]
     memory_review_status: str = "stable",
     memory_corpus_status: str = "stable",
     memory_retention_pressure: str | None = "low",
+    workflow_checkpoint_status: str = "healthy",
+    workflow_resume_status: str = "fresh_start",
+    workflow_pending_checkpoint_count: int = 0,
+    procedural_artifact_status: str = "reusable",
+    procedural_artifact_version: int | None = 1,
     mind_domain_specialist_status: str = "aligned",
     mind_domain_specialist_chain_status: str = "aligned",
     cognitive_recomposition_applied: bool = False,
@@ -73,6 +78,9 @@ def _make_result(  # type: ignore[no-untyped-def]
         specialist_sovereignty_status="healthy",
         axis_gate_status="healthy",
         workflow_trace_status="healthy",
+        workflow_checkpoint_status=workflow_checkpoint_status,
+        workflow_resume_status=workflow_resume_status,
+        workflow_pending_checkpoint_count=workflow_pending_checkpoint_count,
         workflow_profile_status=workflow_profile_status,
         metacognitive_guidance_status=metacognitive_guidance_status,
         mind_disagreement_status=mind_disagreement_status,
@@ -103,6 +111,9 @@ def _make_result(  # type: ignore[no-untyped-def]
         procedural_memory_lifecycle="retained",
         memory_lifecycle_status=memory_lifecycle_status,
         memory_review_status=memory_review_status,
+        procedural_artifact_status=procedural_artifact_status,
+        procedural_artifact_refs=["artifact://procedural/analysis/structured_analysis_workflow/v1"],
+        procedural_artifact_version=procedural_artifact_version,
         memory_corpus_status=memory_corpus_status,
         memory_retention_pressure=memory_retention_pressure,
         semantic_memory_specialists=["structured_analysis_specialist"],
@@ -151,6 +162,9 @@ def _make_pilot_trace_summary() -> Any:
         axis_gate_status="healthy",
         expectation_status="continuity_progressing",
         workflow_trace_status="healthy",
+        workflow_checkpoint_status="attention_required",
+        workflow_resume_status="manual_resume_required",
+        workflow_pending_checkpoint_count=1,
         workflow_profile_status="maturation_recommended",
         workflow_profile_assessment="maturation_recommended",
         metacognitive_guidance_status="healthy",
@@ -184,6 +198,11 @@ def _make_pilot_trace_summary() -> Any:
         procedural_memory_lifecycle="retained",
         memory_lifecycle_status="review_recommended",
         memory_review_status="review_recommended",
+        procedural_artifact_status="candidate",
+        procedural_artifact_refs=[
+            "artifact://procedural/analysis/structured_analysis_workflow/v2"
+        ],
+        procedural_artifact_version=2,
         memory_corpus_status="review_recommended",
         memory_retention_pressure="high",
         semantic_memory_specialists=["structured_analysis_specialist"],
@@ -260,6 +279,20 @@ def _make_closure_payload() -> dict[str, object]:
         "candidate_memory_lifecycle_retained_rate": 0.5,
         "baseline_memory_lifecycle_review_rate": 0.0,
         "candidate_memory_lifecycle_review_rate": 0.5,
+        "baseline_workflow_checkpoint_decision": "healthy",
+        "candidate_workflow_checkpoint_decision": "attention_required",
+        "baseline_workflow_checkpoint_healthy_rate": 1.0,
+        "candidate_workflow_checkpoint_healthy_rate": 0.5,
+        "baseline_workflow_resume_decision": "fresh_start",
+        "candidate_workflow_resume_decision": "manual_resume_required",
+        "baseline_workflow_resume_available_rate": 0.0,
+        "candidate_workflow_resume_available_rate": 0.0,
+        "baseline_procedural_artifact_decision": "reusable",
+        "candidate_procedural_artifact_decision": "candidate",
+        "baseline_procedural_artifact_reusable_rate": 1.0,
+        "candidate_procedural_artifact_reusable_rate": 0.5,
+        "baseline_procedural_artifact_candidate_rate": 0.0,
+        "candidate_procedural_artifact_candidate_rate": 0.5,
         "baseline_mind_domain_specialist_decision": "aligned",
         "candidate_mind_domain_specialist_decision": "mismatch",
         "baseline_mind_domain_specialist_alignment_rate": 1.0,
@@ -342,6 +375,11 @@ def main() -> None:
                     memory_review_status="review_recommended",
                     memory_corpus_status="review_recommended",
                     memory_retention_pressure="high",
+                    workflow_checkpoint_status="attention_required",
+                    workflow_resume_status="manual_resume_required",
+                    workflow_pending_checkpoint_count=1,
+                    procedural_artifact_status="candidate",
+                    procedural_artifact_version=2,
                     mind_domain_specialist_status="mismatch",
                     mind_domain_specialist_chain_status="attention_required",
                     cognitive_recomposition_applied=True,
@@ -402,6 +440,18 @@ def main() -> None:
         "Comparison summary lost the memory corpus release decision.",
     )
     _ensure(
+        summary["candidate_workflow_checkpoint_decision"] == "attention_required",
+        "Comparison summary lost the workflow checkpoint release decision.",
+    )
+    _ensure(
+        summary["candidate_workflow_resume_decision"] == "manual_resume_required",
+        "Comparison summary lost the workflow resume release decision.",
+    )
+    _ensure(
+        summary["candidate_procedural_artifact_decision"] == "candidate",
+        "Comparison summary lost the procedural artifact release decision.",
+    )
+    _ensure(
         summary["candidate_mind_domain_specialist_decision"] == "mismatch",
         "Comparison summary lost the mind-domain-specialist release decision.",
     )
@@ -424,6 +474,18 @@ def main() -> None:
         "Scenario comparison lost the memory corpus assessment.",
     )
     _ensure(
+        scenario["candidate_workflow_checkpoint_assessment"] == "attention_required",
+        "Scenario comparison lost the workflow checkpoint assessment.",
+    )
+    _ensure(
+        scenario["candidate_workflow_resume_assessment"] == "manual_resume_required",
+        "Scenario comparison lost the workflow resume assessment.",
+    )
+    _ensure(
+        scenario["candidate_procedural_artifact_assessment"] == "candidate",
+        "Scenario comparison lost the procedural artifact assessment.",
+    )
+    _ensure(
         scenario["candidate_cognitive_recomposition_assessment"] == "coherent",
         "Scenario comparison lost the recomposition assessment.",
     )
@@ -443,6 +505,18 @@ def main() -> None:
     _ensure(
         "candidate_memory_corpus_decision=review_recommended" in comparison_text,
         "Comparison text lost the memory corpus release line.",
+    )
+    _ensure(
+        "candidate_workflow_checkpoint_decision=attention_required" in comparison_text,
+        "Comparison text lost the workflow checkpoint release line.",
+    )
+    _ensure(
+        "candidate_workflow_resume_decision=manual_resume_required" in comparison_text,
+        "Comparison text lost the workflow resume release line.",
+    )
+    _ensure(
+        "candidate_procedural_artifact_decision=candidate" in comparison_text,
+        "Comparison text lost the procedural artifact release line.",
     )
     _ensure(
         "candidate_refinement_axes=" in comparison_text
@@ -474,6 +548,18 @@ def main() -> None:
     _ensure(
         "memory_corpus_status=review_recommended" in pilot_text,
         "Pilot report text lost the memory corpus assessment.",
+    )
+    _ensure(
+        "workflow_checkpoint_status=attention_required" in pilot_text,
+        "Pilot report text lost the workflow checkpoint assessment.",
+    )
+    _ensure(
+        "workflow_resume_status=manual_resume_required" in pilot_text,
+        "Pilot report text lost the workflow resume assessment.",
+    )
+    _ensure(
+        "procedural_artifact_status=candidate" in pilot_text,
+        "Pilot report text lost the procedural artifact assessment.",
     )
     _ensure(
         "memory_lifecycle_status=review_recommended" in pilot_text,

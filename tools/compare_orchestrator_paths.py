@@ -94,6 +94,18 @@ def memory_corpus_assessment(result: PilotExecutionResult) -> str:
     return result.memory_corpus_status
 
 
+def workflow_checkpoint_assessment(result: PilotExecutionResult) -> str:
+    return result.workflow_checkpoint_status
+
+
+def workflow_resume_assessment(result: PilotExecutionResult) -> str:
+    return result.workflow_resume_status
+
+
+def procedural_artifact_assessment(result: PilotExecutionResult) -> str:
+    return result.procedural_artifact_status
+
+
 def mind_domain_specialist_assessment(result: PilotExecutionResult) -> str:
     return result.mind_domain_specialist_status
 
@@ -200,6 +212,24 @@ def refinement_vectors(result: PilotExecutionResult) -> list[dict[str, str]]:
             "p1",
             "revisar pressao de retencao por classe antes de ampliar memoria guiada",
         )
+    if result.workflow_checkpoint_status in {"incomplete", "attention_required"}:
+        add_vector(
+            "workflow_checkpointing",
+            "p1",
+            "materializar checkpoints completos e retomada observavel no workflow ativo",
+        )
+    if result.workflow_resume_status in {"manual_resume_required", "resume_blocked"}:
+        add_vector(
+            "workflow_resume",
+            "p1",
+            "reduzir retomada manual e preservar resume points governados por workflow",
+        )
+    if result.procedural_artifact_status == "candidate":
+        add_vector(
+            "procedural_artifacts",
+            "p1",
+            "promover know-how procedural candidato para artefato reutilizavel through_core_only",
+        )
     return vectors
 
 
@@ -271,6 +301,15 @@ def evaluation_matrix(
             "memory_corpus": summarize_statuses(
                 [memory_corpus_assessment(result) for result in workflow_results]
             ),
+            "workflow_checkpoint": summarize_statuses(
+                [workflow_checkpoint_assessment(result) for result in workflow_results]
+            ),
+            "workflow_resume": summarize_statuses(
+                [workflow_resume_assessment(result) for result in workflow_results]
+            ),
+            "procedural_artifact": summarize_statuses(
+                [procedural_artifact_assessment(result) for result in workflow_results]
+            ),
             "mind_domain_specialist_chain": summarize_statuses(
                 [mind_domain_specialist_chain_assessment(result) for result in workflow_results]
             ),
@@ -321,6 +360,20 @@ def summarize_comparisons(
             "candidate_memory_lifecycle_review_rate": 0.0,
             "baseline_memory_corpus_decision": "not_applicable",
             "candidate_memory_corpus_decision": "not_applicable",
+            "baseline_workflow_checkpoint_decision": "not_applicable",
+            "candidate_workflow_checkpoint_decision": "not_applicable",
+            "baseline_workflow_checkpoint_healthy_rate": 0.0,
+            "candidate_workflow_checkpoint_healthy_rate": 0.0,
+            "baseline_workflow_resume_decision": "not_applicable",
+            "candidate_workflow_resume_decision": "not_applicable",
+            "baseline_workflow_resume_available_rate": 0.0,
+            "candidate_workflow_resume_available_rate": 0.0,
+            "baseline_procedural_artifact_decision": "not_applicable",
+            "candidate_procedural_artifact_decision": "not_applicable",
+            "baseline_procedural_artifact_reusable_rate": 0.0,
+            "candidate_procedural_artifact_reusable_rate": 0.0,
+            "baseline_procedural_artifact_candidate_rate": 0.0,
+            "candidate_procedural_artifact_candidate_rate": 0.0,
             "baseline_mind_domain_specialist_decision": "not_applicable",
             "candidate_mind_domain_specialist_decision": "not_applicable",
             "baseline_mind_domain_specialist_alignment_rate": 0.0,
@@ -431,6 +484,24 @@ def summarize_comparisons(
     ]
     candidate_memory_corpus = [
         memory_corpus_assessment(item) for item in available_candidates
+    ]
+    baseline_workflow_checkpoint = [
+        workflow_checkpoint_assessment(item.baseline) for item in comparisons
+    ]
+    candidate_workflow_checkpoint = [
+        workflow_checkpoint_assessment(item) for item in available_candidates
+    ]
+    baseline_workflow_resume = [
+        workflow_resume_assessment(item.baseline) for item in comparisons
+    ]
+    candidate_workflow_resume = [
+        workflow_resume_assessment(item) for item in available_candidates
+    ]
+    baseline_procedural_artifact = [
+        procedural_artifact_assessment(item.baseline) for item in comparisons
+    ]
+    candidate_procedural_artifact = [
+        procedural_artifact_assessment(item) for item in available_candidates
     ]
     baseline_mind_domain_specialist = [
         mind_domain_specialist_assessment(item.baseline) for item in comparisons
@@ -595,6 +666,56 @@ def summarize_comparisons(
         "candidate_memory_corpus_decision": summarize_statuses(
             candidate_memory_corpus
         ),
+        "baseline_workflow_checkpoint_decision": summarize_statuses(
+            baseline_workflow_checkpoint
+        ),
+        "candidate_workflow_checkpoint_decision": summarize_statuses(
+            candidate_workflow_checkpoint
+        ),
+        "baseline_workflow_checkpoint_healthy_rate": status_rate(
+            baseline_workflow_checkpoint,
+            "healthy",
+        ),
+        "candidate_workflow_checkpoint_healthy_rate": status_rate(
+            candidate_workflow_checkpoint,
+            "healthy",
+        ),
+        "baseline_workflow_resume_decision": summarize_statuses(
+            baseline_workflow_resume
+        ),
+        "candidate_workflow_resume_decision": summarize_statuses(
+            candidate_workflow_resume
+        ),
+        "baseline_workflow_resume_available_rate": status_rate(
+            baseline_workflow_resume,
+            "resume_available",
+        ),
+        "candidate_workflow_resume_available_rate": status_rate(
+            candidate_workflow_resume,
+            "resume_available",
+        ),
+        "baseline_procedural_artifact_decision": summarize_statuses(
+            baseline_procedural_artifact
+        ),
+        "candidate_procedural_artifact_decision": summarize_statuses(
+            candidate_procedural_artifact
+        ),
+        "baseline_procedural_artifact_reusable_rate": status_rate(
+            baseline_procedural_artifact,
+            "reusable",
+        ),
+        "candidate_procedural_artifact_reusable_rate": status_rate(
+            candidate_procedural_artifact,
+            "reusable",
+        ),
+        "baseline_procedural_artifact_candidate_rate": status_rate(
+            baseline_procedural_artifact,
+            "candidate",
+        ),
+        "candidate_procedural_artifact_candidate_rate": status_rate(
+            candidate_procedural_artifact,
+            "candidate",
+        ),
         "baseline_mind_domain_specialist_decision": summarize_statuses(
             baseline_mind_domain_specialist
         ),
@@ -707,6 +828,10 @@ def summarize_workflow_profile_assessments(assessments: list[str]) -> str:
 def summarize_statuses(statuses: list[str]) -> str:
     if not statuses:
         return "not_applicable"
+    if any(item == "resume_blocked" for item in statuses):
+        return "resume_blocked"
+    if any(item == "manual_resume_required" for item in statuses):
+        return "manual_resume_required"
     if any(item == "attention_required" for item in statuses):
         return "attention_required"
     if any(item == "deep_review_required" for item in statuses):
@@ -717,6 +842,10 @@ def summarize_statuses(statuses: list[str]) -> str:
         return "review_recommended"
     if any(item == "monitor" for item in statuses):
         return "monitor"
+    if any(item == "candidate" for item in statuses):
+        return "candidate"
+    if any(item == "blocked" for item in statuses):
+        return "blocked"
     if any(item == "contained" for item in statuses):
         return "contained"
     if any(item == "stable" for item in statuses):
@@ -725,6 +854,10 @@ def summarize_statuses(statuses: list[str]) -> str:
         return "retained"
     if any(item == "promoted" for item in statuses):
         return "promoted"
+    if any(item == "resume_available" for item in statuses):
+        return "resume_available"
+    if any(item == "reusable" for item in statuses):
+        return "reusable"
     if any(item == "emerging" for item in statuses):
         return "emerging"
     if any(item == "healthy" for item in statuses):
@@ -801,6 +934,18 @@ def compare_results(
                 mismatch_fields.append("workflow_domain_route")
             if baseline.workflow_trace_status != candidate.workflow_trace_status:
                 mismatch_fields.append("workflow_trace_status")
+            if (
+                baseline.workflow_checkpoint_status
+                != candidate.workflow_checkpoint_status
+            ):
+                mismatch_fields.append("workflow_checkpoint_status")
+            if baseline.workflow_resume_status != candidate.workflow_resume_status:
+                mismatch_fields.append("workflow_resume_status")
+            if (
+                baseline.workflow_pending_checkpoint_count
+                != candidate.workflow_pending_checkpoint_count
+            ):
+                mismatch_fields.append("workflow_pending_checkpoint_count")
             if baseline.workflow_profile_status != candidate.workflow_profile_status:
                 mismatch_fields.append("workflow_profile_status")
             if (
@@ -825,6 +970,18 @@ def compare_results(
                 mismatch_fields.append("memory_corpus_status")
             if baseline.memory_retention_pressure != candidate.memory_retention_pressure:
                 mismatch_fields.append("memory_retention_pressure")
+            if (
+                baseline.procedural_artifact_status
+                != candidate.procedural_artifact_status
+            ):
+                mismatch_fields.append("procedural_artifact_status")
+            if baseline.procedural_artifact_refs != candidate.procedural_artifact_refs:
+                mismatch_fields.append("procedural_artifact_refs")
+            if (
+                baseline.procedural_artifact_version
+                != candidate.procedural_artifact_version
+            ):
+                mismatch_fields.append("procedural_artifact_version")
             if baseline.primary_mind != candidate.primary_mind:
                 mismatch_fields.append("primary_mind")
             if baseline.primary_route != candidate.primary_route:
@@ -965,6 +1122,22 @@ def render_text(payload: dict[str, object]) -> str:
                     ),
                     f"baseline_workflow_trace={item['baseline']['workflow_trace_status']}",
                     (
+                        "baseline_workflow_checkpoint_status="
+                        f"{item['baseline']['workflow_checkpoint_status']}"
+                    ),
+                    (
+                        "baseline_workflow_checkpoint_assessment="
+                        f"{item['baseline_workflow_checkpoint_assessment']}"
+                    ),
+                    (
+                        "baseline_workflow_resume_status="
+                        f"{item['baseline']['workflow_resume_status']}"
+                    ),
+                    (
+                        "baseline_workflow_resume_assessment="
+                        f"{item['baseline_workflow_resume_assessment']}"
+                    ),
+                    (
                         "candidate_runtime="
                         f"{item['candidate']['continuity_runtime_mode']}"
                         if item["candidate"]
@@ -981,6 +1154,30 @@ def render_text(payload: dict[str, object]) -> str:
                         f"{item['candidate']['workflow_trace_status']}"
                         if item["candidate"]
                         else "candidate_workflow_trace=n/a"
+                    ),
+                    (
+                        "candidate_workflow_checkpoint_status="
+                        f"{item['candidate']['workflow_checkpoint_status']}"
+                        if item["candidate"]
+                        else "candidate_workflow_checkpoint_status=n/a"
+                    ),
+                    (
+                        "candidate_workflow_checkpoint_assessment="
+                        f"{item['candidate_workflow_checkpoint_assessment']}"
+                        if item["candidate_workflow_checkpoint_assessment"] is not None
+                        else "candidate_workflow_checkpoint_assessment=n/a"
+                    ),
+                    (
+                        "candidate_workflow_resume_status="
+                        f"{item['candidate']['workflow_resume_status']}"
+                        if item["candidate"]
+                        else "candidate_workflow_resume_status=n/a"
+                    ),
+                    (
+                        "candidate_workflow_resume_assessment="
+                        f"{item['candidate_workflow_resume_assessment']}"
+                        if item["candidate_workflow_resume_assessment"] is not None
+                        else "candidate_workflow_resume_assessment=n/a"
                     ),
                     (
                         "baseline_workflow_profile_status="
@@ -1029,6 +1226,18 @@ def render_text(payload: dict[str, object]) -> str:
                     (
                         "baseline_memory_retention_pressure="
                         f"{item['baseline']['memory_retention_pressure'] or 'none'}"
+                    ),
+                    (
+                        "baseline_procedural_artifact_status="
+                        f"{item['baseline']['procedural_artifact_status']}"
+                    ),
+                    (
+                        "baseline_procedural_artifact_assessment="
+                        f"{item['baseline_procedural_artifact_assessment']}"
+                    ),
+                    (
+                        "baseline_procedural_artifact_version="
+                        f"{item['baseline']['procedural_artifact_version'] or 'none'}"
                     ),
                     (
                         "baseline_primary_mind="
@@ -1145,6 +1354,24 @@ def render_text(payload: dict[str, object]) -> str:
                         f"{item['candidate']['memory_retention_pressure'] or 'none'}"
                         if item["candidate"]
                         else "candidate_memory_retention_pressure=n/a"
+                    ),
+                    (
+                        "candidate_procedural_artifact_status="
+                        f"{item['candidate']['procedural_artifact_status']}"
+                        if item["candidate"]
+                        else "candidate_procedural_artifact_status=n/a"
+                    ),
+                    (
+                        "candidate_procedural_artifact_assessment="
+                        f"{item['candidate_procedural_artifact_assessment']}"
+                        if item["candidate_procedural_artifact_assessment"] is not None
+                        else "candidate_procedural_artifact_assessment=n/a"
+                    ),
+                    (
+                        "candidate_procedural_artifact_version="
+                        f"{item['candidate']['procedural_artifact_version'] or 'none'}"
+                        if item["candidate"]
+                        else "candidate_procedural_artifact_version=n/a"
                     ),
                     (
                         "candidate_primary_mind="
@@ -1318,6 +1545,34 @@ def render_text(payload: dict[str, object]) -> str:
                 f"{summary['baseline_memory_corpus_decision']}",
                 "candidate_memory_corpus_decision="
                 f"{summary['candidate_memory_corpus_decision']}",
+                "baseline_workflow_checkpoint_decision="
+                f"{summary['baseline_workflow_checkpoint_decision']}",
+                "candidate_workflow_checkpoint_decision="
+                f"{summary['candidate_workflow_checkpoint_decision']}",
+                "baseline_workflow_checkpoint_healthy_rate="
+                f"{summary['baseline_workflow_checkpoint_healthy_rate']}",
+                "candidate_workflow_checkpoint_healthy_rate="
+                f"{summary['candidate_workflow_checkpoint_healthy_rate']}",
+                "baseline_workflow_resume_decision="
+                f"{summary['baseline_workflow_resume_decision']}",
+                "candidate_workflow_resume_decision="
+                f"{summary['candidate_workflow_resume_decision']}",
+                "baseline_workflow_resume_available_rate="
+                f"{summary['baseline_workflow_resume_available_rate']}",
+                "candidate_workflow_resume_available_rate="
+                f"{summary['candidate_workflow_resume_available_rate']}",
+                "baseline_procedural_artifact_decision="
+                f"{summary['baseline_procedural_artifact_decision']}",
+                "candidate_procedural_artifact_decision="
+                f"{summary['candidate_procedural_artifact_decision']}",
+                "baseline_procedural_artifact_reusable_rate="
+                f"{summary['baseline_procedural_artifact_reusable_rate']}",
+                "candidate_procedural_artifact_reusable_rate="
+                f"{summary['candidate_procedural_artifact_reusable_rate']}",
+                "baseline_procedural_artifact_candidate_rate="
+                f"{summary['baseline_procedural_artifact_candidate_rate']}",
+                "candidate_procedural_artifact_candidate_rate="
+                f"{summary['candidate_procedural_artifact_candidate_rate']}",
                 "baseline_mind_domain_specialist_decision="
                 f"{summary['baseline_mind_domain_specialist_decision']}",
                 "candidate_mind_domain_specialist_decision="
@@ -1415,6 +1670,12 @@ def serialize_comparisons(
                 "baseline_metacognitive_guidance_assessment": (
                     metacognitive_guidance_assessment(item.baseline)
                 ),
+                "baseline_workflow_checkpoint_assessment": workflow_checkpoint_assessment(
+                    item.baseline
+                ),
+                "baseline_workflow_resume_assessment": workflow_resume_assessment(
+                    item.baseline
+                ),
                 "baseline_mind_disagreement_assessment": mind_disagreement_assessment(
                     item.baseline
                 ),
@@ -1428,6 +1689,9 @@ def serialize_comparisons(
                     item.baseline
                 ),
                 "baseline_memory_corpus_assessment": memory_corpus_assessment(
+                    item.baseline
+                ),
+                "baseline_procedural_artifact_assessment": procedural_artifact_assessment(
                     item.baseline
                 ),
                 "baseline_mind_domain_specialist_assessment": (
@@ -1463,6 +1727,16 @@ def serialize_comparisons(
                     if item.candidate
                     else None
                 ),
+                "candidate_workflow_checkpoint_assessment": (
+                    workflow_checkpoint_assessment(item.candidate)
+                    if item.candidate
+                    else None
+                ),
+                "candidate_workflow_resume_assessment": (
+                    workflow_resume_assessment(item.candidate)
+                    if item.candidate
+                    else None
+                ),
                 "candidate_mind_disagreement_assessment": (
                     mind_disagreement_assessment(item.candidate)
                     if item.candidate
@@ -1483,6 +1757,11 @@ def serialize_comparisons(
                 ),
                 "candidate_memory_corpus_assessment": (
                     memory_corpus_assessment(item.candidate) if item.candidate else None
+                ),
+                "candidate_procedural_artifact_assessment": (
+                    procedural_artifact_assessment(item.candidate)
+                    if item.candidate
+                    else None
                 ),
                 "candidate_mind_domain_specialist_assessment": (
                     mind_domain_specialist_assessment(item.candidate)

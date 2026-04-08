@@ -2,9 +2,9 @@
 
 ## Metadata
 
-- Atualizado em: 2026-04-06
+- Atualizado em: 2026-04-08
 - Branch: `main`
-- Commit de referência: `5a8fda6`
+- Commit de referência: `51fa435`
 - Artefato canônico do projeto: `documento_mestre_jarvis.md`
 - Estado do projeto: `v1` encerrado e congelado para uso controlado; primeiro ciclo do `pós-v1` encerrado; primeiro ciclo do `v1.5` encerrado; primeiro corte do `v2` encerrado; `v2-alignment-cycle` encerrado; próximo corte do `v2` aberto
 - Fila micro ativa: `docs/implementation/execution-backlog.md`
@@ -94,7 +94,15 @@ Consolidar o fechamento operacional do `v2` sobre um runtime já alinhado aos ei
 - depois disso: usar o hardening pre-`v3` fechado como baseline para recentrar a fila micro em metacognicao mais causal, memoria mais viva e relacao `mente -> dominio -> especialista` menos implicita;
 - `MB-032` a `MB-036` foram concluidos nesse eixo; o lote atual fechou metacognicao causal, memoria causal/lifecycle e evidencia primaria da cadeia `mente -> dominio -> especialista`;
 - `MB-037` a `MB-040` foram concluidos; o baseline agora ja carrega vetores priorizados de refinamento por workflow, composicao de mentes mais profunda, telemetria viva de memoria e matriz formal de evals por eixo/workflow;
-- a fila micro ficou sem item `ready` depois desse fechamento e precisa de repriorizacao explicita do proximo lote, sem reativar `protective intelligence` por inercia;
+- a ordem oficial de absorcao tecnologica agora esta formalizada em `docs/architecture/technology-absorption-order.md`, com leitura por ondas e por camada do sistema;
+- `MB-041` a `MB-046` foram concluidos como lote de absorcao disciplinada da Onda 1, sem adocao cega de stack externa;
+- `MB-041` foi concluido: o runtime agora tem validacao canonica de `DeliberativePlanContract`, repair soberano pequeno no `planning`, validacao/recomposicao minima de output na `synthesis` e observabilidade explicita para `contract_validation_status` e `output_validation_status`;
+- `MB-042` foi concluido: `memory_registry`, `memory-service`, `orchestrator`, `planning` e `synthesis` agora tratam contexto vivo compactado e recall cross-session como politica soberana do baseline, sem inflar a janela nem reabrir historico bruto;
+- `MB-043` foi concluido: `memory_registry`, `memory-service`, `repository`, `planning`, `orchestrator` e `observability` agora distinguem memoria guiada operacional, fixada e arquivavel, com sinais explicitos de consolidacao, fixacao e arquivamento no runtime e no corpus;
+- `MB-044` foi concluido: `orchestrator`, `langgraph_flow`, `operational-service` e `observability` agora carregam `workflow_checkpoint_state`, `workflow_resume_status`, `workflow_resume_point` e `workflow_pending_checkpoints` como sinais soberanos de durable execution e retomada governada;
+- `MB-045` foi concluido: `memory-service`, `repository`, `planning`, `synthesis` e `orchestrator` agora tratam artefatos procedurais versionados, reutilizaveis e sempre `through_core_only` como parte explicita do baseline;
+- `MB-046` foi concluido: `evolution-lab`, comparadores e verificadores de release agora persistem `candidate_refs`, `refinement_vectors`, `evaluation_matrix`, `selection_criteria` e `metric_deltas` como traducao governada de compile/eval loops;
+- a fila micro volta a ficar sem novo item `ready` ate repriorizacao explicita do proximo lote;
 - so depois disso: reavaliar qual vertical derivada deve abrir a proxima frente macro; `protective intelligence` permanece mapeado, mas em `deferred` ate nova decisao explicita;
 - so entao: decidir se o `v3` deve abrir por essa frente, por outra vertical derivada ou por mais maturacao transversal.
 
@@ -123,6 +131,8 @@ Sistema oficial de planejamento desta fase:
 - `docs/documentation/matriz-de-aderencia-mestre.md` como ponte entre visão canônica e backlog real.
 - `docs/documentation/repository-map-and-consistency-audit.md` como mapa vivo de papeis, inconsistencias e candidatos a reclassificacao do repositorio.
 - `docs/roadmap/programa-de-excelencia.md` como mapa completo de gaps, capacidades ausentes e direcao de maturacao para excelencia.
+- `docs/architecture/technology-capability-extraction-map.md` como mapa do melhor valor extraivel de cada tecnologia externa.
+- `docs/architecture/technology-absorption-order.md` como ordem oficial de traducao disciplinada dessas referencias para o JARVIS.
 
 Leitura prioritária de aderência neste momento:
 

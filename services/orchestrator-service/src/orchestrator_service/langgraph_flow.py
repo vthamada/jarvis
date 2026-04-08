@@ -234,6 +234,15 @@ class LangGraphFlowRunner:
                 "plan_built",
                 contract,
                 {
+                    "contract_validation_status": (
+                        deliberative_plan.contract_validation_status
+                    ),
+                    "contract_validation_errors": (
+                        deliberative_plan.contract_validation_errors
+                    ),
+                    "contract_validation_retry_applied": (
+                        deliberative_plan.contract_validation_retry_applied
+                    ),
                     "recommended_task_type": deliberative_plan.recommended_task_type,
                     "requires_human_validation": deliberative_plan.requires_human_validation,
                     "steps": deliberative_plan.steps,
@@ -379,6 +388,7 @@ class LangGraphFlowRunner:
         operation_dispatch = None
         operation_result = None
         artifact_results: list[object] = []
+        mission_runtime_state = state.get("mission_runtime_state")
         if (
             governance_decision.decision
             in {
@@ -391,6 +401,7 @@ class LangGraphFlowRunner:
                 contract,
                 plan=deliberative_plan,
                 specialist_review=specialist_review,
+                mission_runtime_state=mission_runtime_state,
             )
             events.append(
                 self.orchestrator.make_event(
@@ -405,7 +416,15 @@ class LangGraphFlowRunner:
                         "workflow_governance_mode": operation_dispatch.workflow_governance_mode,
                         "workflow_steps": operation_dispatch.workflow_steps,
                         "workflow_checkpoints": operation_dispatch.workflow_checkpoints,
+                        "workflow_checkpoint_state": (
+                            operation_dispatch.workflow_checkpoint_state
+                        ),
                         "workflow_decision_points": operation_dispatch.workflow_decision_points,
+                        "workflow_resume_point": operation_dispatch.workflow_resume_point,
+                        "workflow_resume_status": operation_dispatch.workflow_resume_status,
+                        "workflow_resume_eligible": (
+                            operation_dispatch.workflow_resume_eligible
+                        ),
                         "task_type": operation_dispatch.task_type,
                         "domain_hints": operation_dispatch.domain_hints,
                     },
@@ -422,6 +441,8 @@ class LangGraphFlowRunner:
                         "workflow_state": operation_dispatch.workflow_state,
                         "workflow_governance_mode": operation_dispatch.workflow_governance_mode,
                         "workflow_decision_points": operation_dispatch.workflow_decision_points,
+                        "workflow_resume_status": operation_dispatch.workflow_resume_status,
+                        "workflow_resume_point": operation_dispatch.workflow_resume_point,
                     },
                 )
             )
@@ -436,7 +457,15 @@ class LangGraphFlowRunner:
                         "workflow_domain_route": operation_dispatch.workflow_domain_route,
                         "workflow_state": "dispatched",
                         "workflow_steps": operation_dispatch.workflow_steps,
+                        "workflow_checkpoint_state": (
+                            operation_dispatch.workflow_checkpoint_state
+                        ),
                         "workflow_decision_points": operation_dispatch.workflow_decision_points,
+                        "workflow_resume_status": operation_dispatch.workflow_resume_status,
+                        "workflow_resume_point": operation_dispatch.workflow_resume_point,
+                        "workflow_resume_eligible": (
+                            operation_dispatch.workflow_resume_eligible
+                        ),
                         "specialist_hints": operation_dispatch.specialist_hints,
                     },
                 )
@@ -456,8 +485,16 @@ class LangGraphFlowRunner:
                         "workflow_domain_route": operation_dispatch.workflow_domain_route,
                         "workflow_state": operation_result.workflow_state,
                         "workflow_checkpoints": operation_dispatch.workflow_checkpoints,
+                        "workflow_checkpoint_state": (
+                            operation_result.workflow_checkpoint_state
+                        ),
                         "workflow_completed_steps": operation_result.workflow_completed_steps,
+                        "workflow_pending_checkpoints": (
+                            operation_result.workflow_pending_checkpoints
+                        ),
                         "workflow_decisions": operation_result.workflow_decisions,
+                        "workflow_resume_status": operation_result.workflow_resume_status,
+                        "workflow_resume_point": operation_result.workflow_resume_point,
                     },
                 )
             )
@@ -475,6 +512,14 @@ class LangGraphFlowRunner:
                         "workflow_decisions": operation_result.workflow_decisions,
                         "status": operation_result.status.value,
                         "checkpoints": operation_result.checkpoints,
+                        "workflow_checkpoint_state": (
+                            operation_result.workflow_checkpoint_state
+                        ),
+                        "workflow_pending_checkpoints": (
+                            operation_result.workflow_pending_checkpoints
+                        ),
+                        "workflow_resume_status": operation_result.workflow_resume_status,
+                        "workflow_resume_point": operation_result.workflow_resume_point,
                     },
                 )
             )
@@ -488,7 +533,7 @@ class LangGraphFlowRunner:
     def _synthesize_response(self, state: OrchestratorFlowState) -> OrchestratorFlowState:
         contract = state["contract"]
         directive = state["directive"]
-        response_text = self.orchestrator._compose_response_text(
+        synthesis_result = self.orchestrator._compose_response(
             directive=directive,
             governance_decision=state["governance_decision"],
             memory_recovery_result=state["memory_recovery_result"],
@@ -498,6 +543,7 @@ class LangGraphFlowRunner:
             specialist_review=state["specialist_review"],
             operation_result=state.get("operation_result"),
         )
+        response_text = synthesis_result.response_text
         events = list(state["events"])
         events.append(
             self.orchestrator.make_event(
@@ -505,6 +551,24 @@ class LangGraphFlowRunner:
                 contract,
                 {
                     "intent": directive.intent,
+                    "contract_validation_status": (
+                        state["deliberative_plan"].contract_validation_status
+                    ),
+                    "contract_validation_errors": (
+                        state["deliberative_plan"].contract_validation_errors
+                    ),
+                    "contract_validation_retry_applied": (
+                        state["deliberative_plan"].contract_validation_retry_applied
+                    ),
+                    "output_validation_status": (
+                        synthesis_result.output_validation_status
+                    ),
+                    "output_validation_errors": (
+                        synthesis_result.output_validation_errors
+                    ),
+                    "output_validation_retry_applied": (
+                        synthesis_result.output_validation_retry_applied
+                    ),
                     "continuity_action": state["deliberative_plan"].continuity_action,
                     "continuity_source": state["deliberative_plan"].continuity_source,
                     "continuity_target_mission_id": (

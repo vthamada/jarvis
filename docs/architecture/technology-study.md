@@ -11,6 +11,13 @@ Ele existe para manter uma leitura única sobre:
 - o que é referência arquitetural;
 - o que deve continuar em laboratório ou pós-`v1`.
 
+Agora ele também deve ser lido em conjunto com:
+
+- `docs/architecture/technology-capability-extraction-map.md`
+- `docs/architecture/technology-absorption-order.md`
+- `docs/architecture/technology-repository-review-framework.md`
+- revisões profundas de repositório quando elas existirem
+
 Em caso de conflito, `documento_mestre_jarvis.md` continua prevalecendo.
 
 ---
@@ -76,6 +83,25 @@ Perguntas mínimas obrigatórias durante o estudo:
 2. que parte dela pode ser reaproveitada sem terceirizar identidade, memória, governança ou síntese;
 3. se ela deve entrar como baseline, complemento, laboratório ou apenas referência;
 4. como validar ganho real sem quebrar o baseline atual.
+
+### 4.1 O que esta camada não respondia sozinha
+
+Até aqui, este estudo classificava bem:
+
+- papel arquitetural;
+- classe de decisão;
+- lugar de benchmark ou inspiração.
+
+Mas ele ainda não respondia com profundidade suficiente:
+
+- quais primitivas de cada tecnologia realmente valem mais do que a stack inteira;
+- o que pertence a workflow, memória, tool use, runtime operacional ou evolução;
+- o que deve virar backlog de tradução para o JARVIS e o que deve ficar apenas como referência.
+
+Essa lacuna passa a ser coberta por:
+
+- `docs/architecture/technology-capability-extraction-map.md`
+- revisões profundas de repositório para tecnologias que já merecem due diligence técnica real
 
 ---
 
@@ -788,3 +814,36 @@ Leitura correta:
 - a revisao profunda nao promove tecnologia ao nucleo;
 - ela serve para verificar se uma tecnologia continua fazendo sentido quando saimos das docs e olhamos o repositorio real;
 - o primeiro caso aplicado reforcou `Mem0` como `absorver depois`, mas apenas por absorcao estreita, tardia e reversivel.
+
+### 18.9 Mapa expandido de potencial tecnologico
+
+A leitura correta do ecossistema, depois do aprofundamento desta revisao, e:
+
+- `LangGraph`, `Mastra`, `OpenAI Agents SDK` e `Microsoft Agent Framework`
+  concentram mais valor em durable execution, handoffs, guardrails, checkpoints
+  e contratos de workflow do que em identidade do sistema;
+- `Letta`, `Zep`, `Graphiti`, `Mem0`, `Hermes Agent` e `OpenClaw`
+  concentram mais valor em memoria, continuidade, recall, skills e runtime
+  persistente do que em governanca soberana;
+- `OpenHands`, `browser-use`, `Open Interpreter` e `Claude Computer Use`
+  concentram mais valor em substrate operacional e computer use do que em
+  arquitetura cognitiva;
+- `PydanticAI`, `Qwen-Agent` e `smolagents` concentram mais valor em contratos,
+  validacao, MCP, tool use e simplicidade de composicao do que em estrutura de
+  sistema;
+- `DSPy / MIPROv2`, `TextGrad`, `AFlow`, `EvoAgentX`, `SEAL` e `Darwin Godel
+  Machine` concentram mais valor em algoritmos de refinamento e evolucao
+  governada do que em produto final.
+
+Regra nova de leitura:
+
+- o principal ganho para o JARVIS nao vem de "adotar uma tecnologia";
+- vem de traduzir o melhor padrao de cada familia para a camada correta do
+  sistema.
+
+Artefatos que agora devem ser lidos em conjunto:
+
+- `docs/architecture/technology-capability-extraction-map.md`
+- `docs/architecture/technology-absorption-order.md`
+- `docs/architecture/mem0-repository-review.md`
+- `docs/architecture/hermes-agent-repository-review.md`

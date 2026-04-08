@@ -110,6 +110,81 @@ def test_planning_engine_marks_related_continuity_source_when_candidate_is_prese
     assert "ranking_continuidade=missao relacionada mission-a venceu o ranking" in plan.rationale
 
 
+def test_planning_engine_uses_compaction_and_cross_session_recall_as_constraints() -> None:
+    engine = PlanningEngine()
+    plan = engine.build_task_plan(
+        PlanningContext(
+            intent="analysis",
+            query="Continue the release trade-off analysis.",
+            recovered_context=[
+                "context_summary=release analysis already exists",
+                "context_compaction_status=compressed_live_context",
+                "context_live_summary=turns=2;user_scope=recoverable;continuity=none;cross_session=active",
+                "cross_session_recall_status=active",
+                (
+                    "cross_session_recall_summary="
+                    "user_scope=intents=planning,analysis | "
+                    "related=Plan milestone M3 rollout"
+                ),
+                "mission_semantic_brief=objetivo=Continue the release trade-off analysis.",
+            ],
+            active_domains=["analysis", "strategy"],
+            active_minds=["mente_analitica", "mente_executiva"],
+            knowledge_snippets=["Preserve trade-off clarity."],
+            risk_markers=[],
+            requires_clarification=False,
+            preferred_response_mode="analysis_only",
+            cognitive_rationale="intent=analysis; mente_primaria=mente_analitica",
+            dominant_goal="aprofundar a leitura comparativa com continuidade",
+            primary_mind="mente_analitica",
+            primary_domain_driver="analise_estruturada_e_modelagem",
+            mission_goal="Continue the release trade-off analysis.",
+            context_compaction_status="compressed_live_context",
+            context_compaction_summary="live_turns=2;continuity_hints=0;recalled_sources=2",
+            context_live_summary=(
+                "turns=2;user_scope=recoverable;continuity=none;cross_session=active"
+            ),
+            cross_session_recall_status="active",
+            cross_session_recall_summary=(
+                "user_scope=intents=planning,analysis | related=Plan milestone M3 rollout"
+            ),
+        )
+    )
+
+    assert any(
+        "contexto vivo compactado" in constraint for constraint in plan.constraints
+    )
+    assert any(
+        "recall cross-session" in constraint for constraint in plan.constraints
+    )
+    assert "context_compaction=compressed_live_context" in plan.plan_summary
+    assert "cross_session_recall=active" in plan.rationale
+
+
+def test_planning_engine_repairs_missing_required_contract_fields() -> None:
+    engine = PlanningEngine()
+    plan = engine.build_task_plan(
+        PlanningContext(
+            intent="planning",
+            query="Stabilize the next step safely.",
+            recovered_context=[],
+            active_domains=[],
+            active_minds=[],
+            knowledge_snippets=[],
+            risk_markers=[],
+            requires_clarification=False,
+            preferred_response_mode="plan_and_operate",
+        )
+    )
+
+    assert plan.contract_validation_status == "repaired"
+    assert plan.contract_validation_retry_applied is True
+    assert "missing_required_field:active_minds" in plan.contract_validation_errors
+    assert plan.active_minds == ["mente_executiva"]
+    assert plan.steps
+    assert plan.success_criteria
+
+
 def test_planning_engine_reformulates_when_new_request_conflicts_with_active_mission() -> None:
     engine = PlanningEngine()
     plan = engine.build_task_plan(
@@ -257,6 +332,10 @@ def test_planning_engine_carries_primary_route_contract_into_plan() -> None:
             mission_semantic_brief="objetivo=Plan strategic options; foco=trade-offs do release",
             mission_focus=["estrategia_e_pensamento_sistemico", "strategy"],
             mission_recommendation="manter o ultimo fio decisorio governado",
+            procedural_artifact_status="candidate",
+            procedural_artifact_ref="artifact://procedural/strategy/strategic_direction_workflow/v1",
+            procedural_artifact_version=1,
+            procedural_artifact_summary="procedimento guiado para revisao de trade-offs",
             last_decision_frame="strategic_tradeoff_review",
             dominant_tension="equilibrar ambicao estrategica com a menor proxima acao segura",
         )
@@ -273,8 +352,16 @@ def test_planning_engine_carries_primary_route_contract_into_plan() -> None:
     assert plan.route_workflow_profile == "strategic_direction_workflow"
     assert plan.route_workflow_checkpoints[0] == "scenario_framed"
     assert plan.route_workflow_decision_points[0] == "scenario_scope_confirmed"
+    assert plan.procedural_artifact_status == "candidate"
+    assert (
+        plan.procedural_artifact_ref
+        == "artifact://procedural/strategy/strategic_direction_workflow/v1"
+    )
+    assert plan.procedural_artifact_version == 1
     assert "consumer_profile=strategy_tradeoff_review" in plan.rationale
     assert "dominio_primario=estrategia_e_pensamento_sistemico" in plan.rationale
+    assert "procedural_artifact_status=candidate" in plan.rationale
+    assert "artifact://procedural/strategy/strategic_direction_workflow/v1" in plan.rationale
     assert any("tradeoff_map" in criterion for criterion in plan.success_criteria)
     assert any(
         "direcao recomendada com criterios explicitos" in criterion

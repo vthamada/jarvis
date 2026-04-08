@@ -515,6 +515,140 @@ def test_observability_service_audits_metacognitive_guidance() -> None:
     ]
 
 
+def test_observability_service_distinguishes_contract_and_output_validation_failures() -> None:
+    temp_dir = runtime_dir("observability-validation")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service.ingest_events(
+        [
+            InternalEventEnvelope(
+                event_id="evt-v1",
+                event_name="input_received",
+                timestamp="2026-03-18T00:00:00+00:00",
+                source_service="orchestrator-service",
+                payload={"content": "pilot"},
+                request_id="req-val",
+                session_id="sess-val",
+                correlation_id="req-val",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-v2",
+                event_name="memory_recovered",
+                timestamp="2026-03-18T00:00:01+00:00",
+                source_service="orchestrator-service",
+                payload={},
+                request_id="req-val",
+                session_id="sess-val",
+                correlation_id="req-val",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-v3",
+                event_name="intent_classified",
+                timestamp="2026-03-18T00:00:02+00:00",
+                source_service="orchestrator-service",
+                payload={"intent": "planning"},
+                request_id="req-val",
+                session_id="sess-val",
+                correlation_id="req-val",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-v4",
+                event_name="context_composed",
+                timestamp="2026-03-18T00:00:03+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "primary_mind": "mente_executiva",
+                    "primary_domain_driver": "estrategia_e_pensamento_sistemico",
+                    "dominant_tension": "equilibrar ambicao com a menor proxima acao segura",
+                },
+                request_id="req-val",
+                session_id="sess-val",
+                correlation_id="req-val",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-v5",
+                event_name="plan_built",
+                timestamp="2026-03-18T00:00:04+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "continuity_action": "continuar",
+                    "continuity_source": "active_mission",
+                    "contract_validation_status": "repaired",
+                    "contract_validation_errors": ["missing_required_field:active_minds"],
+                    "contract_validation_retry_applied": True,
+                },
+                request_id="req-val",
+                session_id="sess-val",
+                correlation_id="req-val",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-v6",
+                event_name="continuity_decided",
+                timestamp="2026-03-18T00:00:05+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "continuity_action": "continuar",
+                    "continuity_source": "active_mission",
+                },
+                request_id="req-val",
+                session_id="sess-val",
+                correlation_id="req-val",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-v7",
+                event_name="governance_checked",
+                timestamp="2026-03-18T00:00:06+00:00",
+                source_service="orchestrator-service",
+                payload={"decision": "allow"},
+                request_id="req-val",
+                session_id="sess-val",
+                correlation_id="req-val",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-v8",
+                event_name="response_synthesized",
+                timestamp="2026-03-18T00:00:07+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "continuity_action": "continuar",
+                    "contract_validation_status": "repaired",
+                    "contract_validation_errors": ["missing_required_field:active_minds"],
+                    "contract_validation_retry_applied": True,
+                    "output_validation_status": "invalid",
+                    "output_validation_errors": ["missing_clause:recommendation"],
+                    "output_validation_retry_applied": True,
+                },
+                request_id="req-val",
+                session_id="sess-val",
+                correlation_id="req-val",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-v9",
+                event_name="memory_recorded",
+                timestamp="2026-03-18T00:00:08+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_mode": "continuar"},
+                request_id="req-val",
+                session_id="sess-val",
+                correlation_id="req-val",
+            ),
+        ]
+    )
+
+    audit = service.audit_flow(ObservabilityQuery(request_id="req-val"))
+    evidence = service.build_incident_evidence(ObservabilityQuery(request_id="req-val"))
+
+    assert audit.contract_validation_status == "repaired"
+    assert audit.contract_validation_retry_applied is True
+    assert audit.output_validation_status == "invalid"
+    assert audit.output_validation_retry_applied is True
+    assert "output_validation_failed" in audit.anomaly_flags
+    assert audit.trace_complete is False
+    assert (
+        evidence.recommended_operator_action
+        == "contain_response_and_recompose_with_last_valid_plan"
+    )
+
+
 def test_observability_service_audits_domain_memory_and_sovereignty_alignment() -> None:
     temp_dir = runtime_dir("observability-specialist-alignment")
     service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
@@ -1090,11 +1224,24 @@ def test_observability_service_audits_healthy_workflow_trace() -> None:
                     "workflow_response_focus": (
                         "direcao recomendada, criterios e trade-offs dominantes"
                     ),
-                    "workflow_state": "composed",
-                    "workflow_governance_mode": "core_mediated",
-                    "workflow_decision_points": [
-                        "goal_scope_confirmed",
-                        "step_sequence_validated",
+                        "workflow_state": "composed",
+                        "workflow_governance_mode": "core_mediated",
+                        "workflow_checkpoints": [
+                            "goal_scope_confirmed",
+                            "step_sequence_validated",
+                            "next_action_governed",
+                        ],
+                        "workflow_checkpoint_state": {
+                            "goal_scope_confirmed": "pending",
+                            "step_sequence_validated": "pending",
+                            "next_action_governed": "pending",
+                        },
+                        "workflow_resume_status": "fresh_start",
+                        "workflow_resume_point": None,
+                        "workflow_resume_eligible": False,
+                        "workflow_decision_points": [
+                            "goal_scope_confirmed",
+                            "step_sequence_validated",
                         "next_action_governed",
                     ],
                 },
@@ -1123,12 +1270,14 @@ def test_observability_service_audits_healthy_workflow_trace() -> None:
                         "decision_trace",
                         "domain_alignment",
                     ],
-                    "workflow_success_focus": "direcao recomendada com criterios explicitos",
-                    "workflow_state": "composed",
-                    "workflow_governance_mode": "core_mediated",
-                    "workflow_decision_points": [
-                        "goal_scope_confirmed",
-                        "step_sequence_validated",
+                        "workflow_success_focus": "direcao recomendada com criterios explicitos",
+                        "workflow_state": "composed",
+                        "workflow_governance_mode": "core_mediated",
+                        "workflow_resume_status": "fresh_start",
+                        "workflow_resume_point": None,
+                        "workflow_decision_points": [
+                            "goal_scope_confirmed",
+                            "step_sequence_validated",
                         "next_action_governed",
                     ],
                 },
@@ -1159,13 +1308,21 @@ def test_observability_service_audits_healthy_workflow_trace() -> None:
                         "domain_alignment",
                     ],
                     "workflow_success_focus": "direcao recomendada com criterios explicitos",
-                    "workflow_response_focus": (
-                        "direcao recomendada, criterios e trade-offs dominantes"
-                    ),
-                    "workflow_state": "dispatched",
-                    "workflow_decision_points": [
-                        "goal_scope_confirmed",
-                        "step_sequence_validated",
+                        "workflow_response_focus": (
+                            "direcao recomendada, criterios e trade-offs dominantes"
+                        ),
+                        "workflow_state": "dispatched",
+                        "workflow_checkpoint_state": {
+                            "goal_scope_confirmed": "pending",
+                            "step_sequence_validated": "pending",
+                            "next_action_governed": "pending",
+                        },
+                        "workflow_resume_status": "fresh_start",
+                        "workflow_resume_point": None,
+                        "workflow_resume_eligible": False,
+                        "workflow_decision_points": [
+                            "goal_scope_confirmed",
+                            "step_sequence_validated",
                         "next_action_governed",
                     ],
                 },
@@ -1204,12 +1361,20 @@ def test_observability_service_audits_healthy_workflow_trace() -> None:
                         "sequence the smallest safe steps",
                         "emit checkpoints and the next safe action",
                     ],
-                    "workflow_decisions": [
-                        "goal_scope_confirmed",
-                        "step_sequence_validated",
-                        "next_action_governed",
-                    ],
-                },
+                        "workflow_decisions": [
+                            "goal_scope_confirmed",
+                            "step_sequence_validated",
+                            "next_action_governed",
+                        ],
+                        "workflow_checkpoint_state": {
+                            "goal_scope_confirmed": "completed",
+                            "step_sequence_validated": "completed",
+                            "next_action_governed": "completed",
+                        },
+                        "workflow_pending_checkpoints": [],
+                        "workflow_resume_status": "completed_without_resume",
+                        "workflow_resume_point": None,
+                    },
                 request_id="req-workflow",
                 session_id="sess-workflow",
                 correlation_id="req-workflow",
@@ -1240,10 +1405,18 @@ def test_observability_service_audits_healthy_workflow_trace() -> None:
                         "direcao recomendada, criterios e trade-offs dominantes"
                     ),
                     "workflow_state": "completed",
-                    "workflow_governance_mode": "core_mediated",
-                    "workflow_decision_points": [
-                        "goal_scope_confirmed",
-                        "step_sequence_validated",
+                        "workflow_governance_mode": "core_mediated",
+                        "workflow_checkpoint_state": {
+                            "goal_scope_confirmed": "completed",
+                            "step_sequence_validated": "completed",
+                            "next_action_governed": "completed",
+                        },
+                        "workflow_pending_checkpoints": [],
+                        "workflow_resume_status": "completed_without_resume",
+                        "workflow_resume_point": None,
+                        "workflow_decision_points": [
+                            "goal_scope_confirmed",
+                            "step_sequence_validated",
                         "next_action_governed",
                     ],
                     "workflow_decisions": [
@@ -1330,10 +1503,17 @@ def test_observability_service_flags_workflow_contract_drift() -> None:
                     "workflow_response_focus": (
                         "direcao recomendada, criterios e trade-offs dominantes"
                     ),
-                    "workflow_state": "composed",
-                    "workflow_governance_mode": "core_mediated",
-                    "workflow_decision_points": ["goal_scope_confirmed"],
-                },
+                        "workflow_state": "composed",
+                        "workflow_governance_mode": "core_mediated",
+                        "workflow_checkpoints": ["goal_scope_confirmed"],
+                        "workflow_checkpoint_state": {
+                            "goal_scope_confirmed": "pending"
+                        },
+                        "workflow_resume_status": "fresh_start",
+                        "workflow_resume_point": None,
+                        "workflow_resume_eligible": False,
+                        "workflow_decision_points": ["goal_scope_confirmed"],
+                    },
                 request_id="req-workflow-drift",
                 session_id="sess-workflow-drift",
                 correlation_id="req-workflow-drift",
@@ -1351,11 +1531,13 @@ def test_observability_service_flags_workflow_contract_drift() -> None:
                     "workflow_objective": "clarify strategic tradeoffs and recommend a direction",
                     "workflow_expected_deliverables": [],
                     "workflow_telemetry_focus": ["tradeoff_clarity"],
-                    "workflow_success_focus": "direcao recomendada com criterios explicitos",
-                    "workflow_state": "composed",
-                    "workflow_governance_mode": "core_mediated",
-                    "workflow_decision_points": ["goal_scope_confirmed"],
-                },
+                        "workflow_success_focus": "direcao recomendada com criterios explicitos",
+                        "workflow_state": "composed",
+                        "workflow_governance_mode": "core_mediated",
+                        "workflow_resume_status": "fresh_start",
+                        "workflow_resume_point": None,
+                        "workflow_decision_points": ["goal_scope_confirmed"],
+                    },
                 request_id="req-workflow-drift",
                 session_id="sess-workflow-drift",
                 correlation_id="req-workflow-drift",
@@ -1458,6 +1640,13 @@ def test_observability_service_marks_workflow_profile_maturation_recommended() -
                     ),
                     "workflow_state": "composed",
                     "workflow_governance_mode": "core_mediated",
+                    "workflow_checkpoints": ["goal_scope_confirmed"],
+                    "workflow_checkpoint_state": {
+                        "goal_scope_confirmed": "pending"
+                    },
+                    "workflow_resume_status": "fresh_start",
+                    "workflow_resume_point": None,
+                    "workflow_resume_eligible": False,
                     "workflow_decision_points": ["goal_scope_confirmed"],
                 },
                 request_id="req-workflow-maturation",
@@ -1488,6 +1677,8 @@ def test_observability_service_marks_workflow_profile_maturation_recommended() -
                     "workflow_success_focus": "direcao recomendada com criterios explicitos",
                     "workflow_state": "composed",
                     "workflow_governance_mode": "core_mediated",
+                    "workflow_resume_status": "fresh_start",
+                    "workflow_resume_point": None,
                     "workflow_decision_points": ["goal_scope_confirmed"],
                 },
                 request_id="req-workflow-maturation",
@@ -1516,12 +1707,18 @@ def test_observability_service_marks_workflow_profile_maturation_recommended() -
                         "decision_trace",
                         "domain_alignment",
                     ],
-                    "workflow_response_focus": (
-                        "direcao recomendada, criterios e trade-offs dominantes"
-                    ),
-                    "workflow_state": "completed",
-                    "workflow_decisions": ["goal_scope_confirmed"],
-                },
+                        "workflow_response_focus": (
+                            "direcao recomendada, criterios e trade-offs dominantes"
+                        ),
+                        "workflow_state": "completed",
+                        "workflow_decisions": ["goal_scope_confirmed"],
+                        "workflow_checkpoint_state": {
+                            "goal_scope_confirmed": "completed"
+                        },
+                        "workflow_pending_checkpoints": [],
+                        "workflow_resume_status": "completed_without_resume",
+                        "workflow_resume_point": None,
+                    },
                 request_id="req-workflow-maturation",
                 session_id="sess-workflow-maturation",
                 correlation_id="req-workflow-maturation",
@@ -1551,11 +1748,17 @@ def test_observability_service_marks_workflow_profile_maturation_recommended() -
                     "workflow_response_focus": (
                         "direcao recomendada, criterios e trade-offs dominantes"
                     ),
-                    "workflow_state": "completed",
-                    "workflow_governance_mode": "core_mediated",
-                    "workflow_decision_points": ["goal_scope_confirmed"],
-                    "workflow_decisions": ["goal_scope_confirmed"],
-                },
+                        "workflow_state": "completed",
+                        "workflow_governance_mode": "core_mediated",
+                        "workflow_checkpoint_state": {
+                            "goal_scope_confirmed": "completed"
+                        },
+                        "workflow_pending_checkpoints": [],
+                        "workflow_resume_status": "completed_without_resume",
+                        "workflow_resume_point": None,
+                        "workflow_decision_points": ["goal_scope_confirmed"],
+                        "workflow_decisions": ["goal_scope_confirmed"],
+                    },
                 request_id="req-workflow-maturation",
                 session_id="sess-workflow-maturation",
                 correlation_id="req-workflow-maturation",
@@ -2633,6 +2836,24 @@ def test_observability_service_tracks_memory_causality_status() -> None:
                     },
                     "semantic_memory_specialists": ["structured_analysis_specialist"],
                     "procedural_memory_specialists": ["structured_analysis_specialist"],
+                    "semantic_memory_states": {
+                        "structured_analysis_specialist": "operational"
+                    },
+                    "procedural_memory_states": {
+                        "structured_analysis_specialist": "operational"
+                    },
+                    "memory_consolidation_statuses": {
+                        "structured_analysis_specialist": "in_progress"
+                    },
+                    "memory_fixation_statuses": {
+                        "structured_analysis_specialist": "not_fixed"
+                    },
+                    "memory_archive_statuses": {
+                        "structured_analysis_specialist": "active_memory"
+                    },
+                    "memory_review_statuses": {
+                        "structured_analysis_specialist": "monitor"
+                    },
                 },
                 request_id="req-memory-causality",
                 session_id="sess-memory-causality",
@@ -2683,6 +2904,9 @@ def test_observability_service_tracks_memory_causality_status() -> None:
     )
     assert audit.semantic_memory_specialists == ["structured_analysis_specialist"]
     assert audit.procedural_memory_specialists == ["structured_analysis_specialist"]
+    assert audit.memory_consolidation_status == "in_progress"
+    assert audit.memory_fixation_status == "not_fixed"
+    assert audit.memory_archive_status == "active_memory"
 
 
 def test_observability_service_tracks_cognitive_recomposition_alignment() -> None:

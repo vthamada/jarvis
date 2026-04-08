@@ -36,9 +36,26 @@ class SynthesisInput:
     session_continuity_brief: str | None = None
     session_continuity_mode: str | None = None
     session_anchor_goal: str | None = None
+    context_compaction_status: str | None = None
+    context_live_summary: str | None = None
+    cross_session_recall_status: str | None = None
+    cross_session_recall_summary: str | None = None
     guided_memory_specialists: list[str] = field(default_factory=list)
     semantic_memory_focus: list[str] = field(default_factory=list)
     procedural_memory_hint: str | None = None
+    procedural_artifact_status: str | None = None
+    procedural_artifact_ref: str | None = None
+    procedural_artifact_summary: str | None = None
+
+
+@dataclass(frozen=True)
+class SynthesisResult:
+    """Structured synthesis output plus lightweight validation metadata."""
+
+    response_text: str
+    output_validation_status: str
+    output_validation_errors: list[str]
+    output_validation_retry_applied: bool
 
 
 class SynthesisEngine:
@@ -47,7 +64,41 @@ class SynthesisEngine:
     name = "synthesis-engine"
 
     def compose(self, synthesis_input: SynthesisInput) -> str:
+        return self.compose_result(synthesis_input).response_text
+
+    def compose_result(self, synthesis_input: SynthesisInput) -> SynthesisResult:
         """Create a response that reflects identity, context, and outcome."""
+
+        response_text = self._compose_raw_response(synthesis_input)
+        validation_errors = self._validate_output(response_text)
+        if not validation_errors:
+            return SynthesisResult(
+                response_text=response_text,
+                output_validation_status="coherent",
+                output_validation_errors=[],
+                output_validation_retry_applied=False,
+            )
+
+        repaired_response = self._repair_output(
+            response_text,
+            synthesis_input=synthesis_input,
+            errors=validation_errors,
+        )
+        repaired_errors = self._validate_output(repaired_response)
+        repaired_status = "repaired" if not repaired_errors else "invalid"
+        return SynthesisResult(
+            response_text=repaired_response,
+            output_validation_status=repaired_status,
+            output_validation_errors=(
+                list(validation_errors)
+                if repaired_status == "repaired"
+                else list(repaired_errors)
+            ),
+            output_validation_retry_applied=True,
+        )
+
+    def _compose_raw_response(self, synthesis_input: SynthesisInput) -> str:
+        """Create the raw response before output validation/recovery."""
 
         if synthesis_input.governance_decision.decision in {
             PermissionDecision.BLOCK,
@@ -69,10 +120,13 @@ class SynthesisEngine:
         parts.extend(
             [
                 f"Leitura do objetivo: {plan.goal}.",
-            f"Julgamento: {self._judgment_line(synthesis_input)}.",
-            f"Recomendacao: {self._recommendation_line(synthesis_input)}.",
+                f"Julgamento: {self._judgment_line(synthesis_input)}.",
+                f"Recomendacao: {self._recommendation_line(synthesis_input)}.",
             ]
         )
+        artifact_line = self._procedural_artifact_line(synthesis_input)
+        if artifact_line:
+            parts.append(f"Artefato procedural: {artifact_line}.")
         limitation = self._limitation_line(synthesis_input)
         if limitation:
             parts.append(f"Limite atual: {limitation}.")
@@ -80,6 +134,74 @@ class SynthesisEngine:
         if operational_result:
             parts.append(f"Resultado operacional: {operational_result}.")
         return " ".join(parts)
+
+    @staticmethod
+    def _validate_output(response_text: str) -> list[str]:
+        errors: list[str] = []
+        if not response_text.strip():
+            errors.append("empty_response")
+        if "Leitura do objetivo:" not in response_text:
+            errors.append("missing_clause:goal_read")
+        if "Julgamento:" not in response_text:
+            errors.append("missing_clause:judgment")
+        if "Recomendacao:" not in response_text:
+            errors.append("missing_clause:recommendation")
+        return errors
+
+    def _repair_output(
+        self,
+        response_text: str,
+        *,
+        synthesis_input: SynthesisInput,
+        errors: list[str],
+    ) -> str:
+        plan = synthesis_input.deliberative_plan
+        goal_line = self._goal_line(synthesis_input)
+        if plan and plan.smallest_safe_next_action:
+            recommendation = (
+                f"{plan.smallest_safe_next_action}; manter framing governado "
+                "enquanto o output e recomposto"
+            )
+        else:
+            recommendation = (
+                "manter framing governado e recompor a resposta a partir do ultimo "
+                "plano coerente"
+            )
+        judgment = (
+            "o output inicial nao preservou o contrato minimo de resposta e foi "
+            "recomposto em modo seguro"
+        )
+        if response_text.strip():
+            judgment = f"{judgment}; falhas detectadas: {', '.join(errors)}"
+        repaired = (
+            f"Leitura do objetivo: {goal_line}. "
+            f"Julgamento: {judgment}. "
+            f"Recomendacao: {recommendation}"
+        )
+        limitation = self._limitation_line(synthesis_input)
+        if limitation:
+            repaired = f"{repaired}. Limite atual: {limitation}"
+        return repaired
+
+    @staticmethod
+    def _procedural_artifact_line(synthesis_input: SynthesisInput) -> str | None:
+        plan = synthesis_input.deliberative_plan
+        status = (
+            synthesis_input.procedural_artifact_status
+            or (plan.procedural_artifact_status if plan is not None else None)
+        )
+        artifact_ref = (
+            synthesis_input.procedural_artifact_ref
+            or (plan.procedural_artifact_ref if plan is not None else None)
+        )
+        if status in {None, "not_applicable"} or not artifact_ref:
+            return None
+        summary = (
+            synthesis_input.procedural_artifact_summary
+            or (plan.procedural_artifact_summary if plan is not None else None)
+            or "procedimento guiado consolidado"
+        )
+        return f"{status} ({artifact_ref}) | {summary}"
 
     def _compose_governed_response(self, synthesis_input: SynthesisInput) -> str:
         goal_line = self._goal_line(synthesis_input)
@@ -188,6 +310,7 @@ class SynthesisEngine:
     def _judgment_line(self, synthesis_input: SynthesisInput) -> str:
         plan = synthesis_input.deliberative_plan
         arbitration = synthesis_input.arbitration_summary or plan.specialist_resolution_summary
+        cross_session_clause = self._cross_session_recall_clause(synthesis_input)
         metacognitive_clause = (
             f"; ancora metacognitiva: {plan.metacognitive_guidance_summary}"
             if plan.metacognitive_guidance_applied and plan.metacognitive_guidance_summary
@@ -198,18 +321,21 @@ class SynthesisEngine:
                 "o pedido atual tensiona a missao ativa e precisa de reformulacao "
                 "governavel antes de qualquer desvio"
                 f"{metacognitive_clause}"
+                f"{f'; {cross_session_clause}' if cross_session_clause else ''}"
             )
         if plan.continuity_action == "encerrar" and plan.open_loops:
             return (
                 "o pedido atual permite fechar o loop principal da missao: "
                 f"{plan.open_loops[0]}"
                 f"{metacognitive_clause}"
+                f"{f'; {cross_session_clause}' if cross_session_clause else ''}"
             )
         if plan.continuity_action == "retomar" and plan.continuity_target_goal:
             return (
                 "o pedido atual pede retomada explicita de continuidade relacionada em "
                 f"{plan.continuity_target_goal}"
                 f"{metacognitive_clause}"
+                f"{f'; {cross_session_clause}' if cross_session_clause else ''}"
             )
         guidance = workflow_runtime_guidance(plan.route_workflow_profile)
         semantic_focus = ", ".join(synthesis_input.semantic_memory_focus[:2])
@@ -240,6 +366,8 @@ class SynthesisEngine:
                     memory_clause = f"; fonte semantica: {semantic_source}"
                 if semantic_lifecycle:
                     memory_clause = f"{memory_clause}; lifecycle semantico: {semantic_lifecycle}"
+                if cross_session_clause:
+                    memory_clause = f"{memory_clause}; {cross_session_clause}"
                 return (
                     f"{base}; a missao ativa segue ancorada em {plan.open_loops[0]}; "
                     f"rota {route_profile or 'ativa'} orienta {route_objective}; "
@@ -251,6 +379,8 @@ class SynthesisEngine:
                 memory_clause = ""
                 if semantic_source:
                     memory_clause = f"; fonte semantica: {semantic_source}"
+                if cross_session_clause:
+                    memory_clause = f"{memory_clause}; {cross_session_clause}"
                 return (
                     f"{base}; a missao ativa segue ancorada em {plan.open_loops[0]}; "
                     f"memoria guiada reforca {semantic_role} em {semantic_focus}; "
@@ -261,12 +391,15 @@ class SynthesisEngine:
                 workflow_clause = (
                     f"; workflow ativo: {workflow_profile}" if workflow_profile else ""
                 )
+                if cross_session_clause:
+                    workflow_clause = f"{workflow_clause}; {cross_session_clause}"
                 return (
                     f"{base}; a missao ativa segue ancorada em {plan.open_loops[0]}; "
                     f"rota {route_profile or 'ativa'} orienta {route_objective}"
                     f"{workflow_clause}"
                 )
-            return f"{base}; a missao ativa segue ancorada em {plan.open_loops[0]}"
+            suffix = f"; {cross_session_clause}" if cross_session_clause else ""
+            return f"{base}; a missao ativa segue ancorada em {plan.open_loops[0]}{suffix}"
         if arbitration:
             base = arbitration
             if cognitive_anchor:
@@ -289,6 +422,8 @@ class SynthesisEngine:
                     memory_clause = f"; fonte semantica: {semantic_source}"
                 if semantic_lifecycle:
                     memory_clause = f"{memory_clause}; lifecycle semantico: {semantic_lifecycle}"
+                if cross_session_clause:
+                    memory_clause = f"{memory_clause}; {cross_session_clause}"
                 return (
                     f"{base}; rota {route_profile or 'ativa'} orienta {route_objective}; "
                     f"memoria guiada reforca {semantic_role} em {semantic_focus}; "
@@ -300,6 +435,8 @@ class SynthesisEngine:
                 memory_clause = (
                     f"; fonte semantica: {semantic_source}" if semantic_source else ""
                 )
+                if cross_session_clause:
+                    memory_clause = f"{memory_clause}; {cross_session_clause}"
                 return (
                     f"{base}; memoria guiada reforca {semantic_role} em {semantic_focus}; "
                     f"framing final deve permanecer coerente com {semantic_role}"
@@ -309,10 +446,14 @@ class SynthesisEngine:
                 workflow_clause = (
                     f"; workflow ativo: {workflow_profile}" if workflow_profile else ""
                 )
+                if cross_session_clause:
+                    workflow_clause = f"{workflow_clause}; {cross_session_clause}"
                 return (
                     f"{base}; rota {route_profile or 'ativa'} orienta {route_objective}"
                     f"{workflow_clause}"
                 )
+            if cross_session_clause:
+                return f"{base}; {cross_session_clause}"
             return base
         base = plan.rationale.split(";", maxsplit=1)[0]
         if cognitive_anchor:
@@ -326,8 +467,8 @@ class SynthesisEngine:
                 f"{base}; recomposicao cognitiva manteve o alinhamento com o dominio "
                 "primario"
             )
-        if cognitive_anchor:
-            return base
+        if cross_session_clause:
+            base = f"{base}; {cross_session_clause}"
         return base
 
     def _recommendation_line(self, synthesis_input: SynthesisInput) -> str:
@@ -441,6 +582,9 @@ class SynthesisEngine:
             recommendation = (
                 f"{recommendation}; lifecycle procedural: {procedural_lifecycle}"
             )
+        compaction_clause = self._context_compaction_clause(synthesis_input)
+        if compaction_clause:
+            recommendation = f"{recommendation}; {compaction_clause}"
         if plan.memory_review_status and plan.memory_review_status != "not_needed":
             recommendation = (
                 f"{recommendation}; revisao de memoria: "
@@ -461,6 +605,10 @@ class SynthesisEngine:
     def _limitation_line(self, synthesis_input: SynthesisInput) -> str | None:
         plan = synthesis_input.deliberative_plan
         limits: list[str] = []
+        if plan is None:
+            if synthesis_input.governance_decision.conditions:
+                return synthesis_input.governance_decision.conditions[0]
+            return None
         if plan.continuity_action == "reformular" and plan.open_loops:
             limits.append(
                 "a missao ativa ainda tem loop aberto e nao pode ser desviada em silencio"
@@ -514,6 +662,27 @@ class SynthesisEngine:
         if primary_mind:
             return f"{primary_mind} ancora a resposta"
         return None
+
+    @staticmethod
+    def _cross_session_recall_clause(
+        synthesis_input: SynthesisInput,
+    ) -> str | None:
+        if synthesis_input.cross_session_recall_status != "active":
+            return None
+        if synthesis_input.cross_session_recall_summary:
+            return f"recall cross-session: {synthesis_input.cross_session_recall_summary}"
+        return "recall cross-session ativo"
+
+    @staticmethod
+    def _context_compaction_clause(
+        synthesis_input: SynthesisInput,
+    ) -> str | None:
+        if synthesis_input.context_compaction_status not in {
+            "compressed_live_context",
+            "seeded_live_context",
+        }:
+            return None
+        return "contexto vivo compactado sem reabrir historico bruto"
 
     @staticmethod
     def _operational_line(synthesis_input: SynthesisInput) -> str | None:

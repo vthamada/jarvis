@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import UTC, datetime
 from os import getenv
 from uuid import uuid4
@@ -32,14 +32,21 @@ from shared.contracts import (
     SpecialistSharedMemoryContextContract,
     UserScopeContextContract,
 )
-from shared.domain_registry import specialist_eligible_route, specialist_route_payload
+from shared.domain_registry import (
+    primary_route_payload,
+    specialist_eligible_route,
+    specialist_route_payload,
+)
 from shared.memory_registry import (
     DEFAULT_MEMORY_SCOPES,
     SHARED_MEMORY_CLASSES,
+    context_window_policy,
     default_priority_rules,
     guided_memory_decision,
     memory_corpus_telemetry,
+    memory_lifecycle_support_signals,
     organization_scope_guard_payload,
+    procedural_artifact_decision,
     specialist_memory_policy_payload,
 )
 from shared.specialist_registry import (
@@ -91,6 +98,10 @@ class MemoryRecordResult:
     organization_scope_reason: str
     organization_scope_reopen_signal: str
     user_scope_context: UserScopeContextContract | None = None
+    procedural_artifact_status: str | None = None
+    procedural_artifact_refs: list[str] = field(default_factory=list)
+    procedural_artifact_version: int | None = None
+    procedural_artifact_summary: str | None = None
 
 
 class MemoryService:
@@ -152,6 +163,10 @@ class MemoryService:
         """Persist a minimal episodic entry and refresh contextual continuity."""
 
         specialist_contributions = specialist_contributions or []
+        accepted = governance_decision not in {
+            PermissionDecision.BLOCK,
+            PermissionDecision.DEFER_FOR_VALIDATION,
+        }
         open_loops = self._extract_open_loops(deliberative_plan, specialist_contributions)
         decision_frame = self._decision_frame(deliberative_plan)
         dominant_goal = deliberative_plan.goal if deliberative_plan else contract.content
@@ -235,7 +250,7 @@ class MemoryService:
                 )
             )
         if contract.mission_id:
-            mission_state = self._build_mission_state(
+            mission_state, procedural_artifact = self._build_mission_state(
                 contract,
                 record_contract.memory_record_id,
                 intent,
@@ -246,6 +261,13 @@ class MemoryService:
             )
             if mission_state is not None:
                 self.repository.upsert_mission_state(mission_state)
+        else:
+            mission_state = None
+            procedural_artifact = self._build_procedural_artifact(
+                contract,
+                deliberative_plan=deliberative_plan if accepted else None,
+                previous_artifacts=[],
+            )
         user_scope_context: UserScopeContextContract | None = None
         if contract.user_id:
             user_scope_snapshot = self._build_user_scope_snapshot(
@@ -264,6 +286,30 @@ class MemoryService:
             organization_scope_reason=organization_scope_guard["reason"],
             organization_scope_reopen_signal=organization_scope_guard["reopen_signal"],
             user_scope_context=user_scope_context,
+            procedural_artifact_status=(
+                str(procedural_artifact.get("artifact_status"))
+                if procedural_artifact is not None
+                and procedural_artifact.get("artifact_status") is not None
+                else None
+            ),
+            procedural_artifact_refs=(
+                [str(procedural_artifact.get("artifact_ref"))]
+                if procedural_artifact is not None
+                and procedural_artifact.get("artifact_ref") is not None
+                else []
+            ),
+            procedural_artifact_version=(
+                int(procedural_artifact.get("version"))
+                if procedural_artifact is not None
+                and procedural_artifact.get("version") is not None
+                else None
+            ),
+            procedural_artifact_summary=(
+                str(procedural_artifact.get("summary"))
+                if procedural_artifact is not None
+                and procedural_artifact.get("summary") is not None
+                else None
+            ),
         )
 
     def get_mission_state(self, mission_id: str) -> MissionStateContract | None:
@@ -448,6 +494,10 @@ class MemoryService:
                     procedural_memory_lifecycle=context.procedural_memory_lifecycle,
                     memory_lifecycle_status=context.memory_lifecycle_status,
                     memory_review_status=context.memory_review_status,
+                    procedural_artifact_status=context.procedural_artifact_status,
+                    procedural_artifact_refs=list(context.procedural_artifact_refs),
+                    procedural_artifact_version=context.procedural_artifact_version,
+                    procedural_artifact_summary=context.procedural_artifact_summary,
                     domain_mission_link_reason=context.domain_mission_link_reason,
                     recurrent_context_status=context.recurrent_context_status,
                     recurrent_interaction_count=context.recurrent_interaction_count,
@@ -503,6 +553,7 @@ class MemoryService:
         plan_hints: list[str] = []
         continuity_context: MissionContinuityContextContract | None = None
         user_scope_context: UserScopeContextContract | None = None
+        mission_state: MissionStateContract | None = None
         if contract.user_id:
             user_scope_context = self.repository.fetch_user_scope_snapshot(contract.user_id)
             if user_scope_context is None:
@@ -631,6 +682,30 @@ class MemoryService:
                     mission_hints.append(
                         f"mission_steps={' ; '.join(mission_state.recent_plan_steps[:3])}"
                     )
+                latest_artifact = self._latest_procedural_artifact(
+                    mission_state.related_artifacts
+                )
+                if latest_artifact is not None:
+                    if latest_artifact.get("artifact_status") is not None:
+                        plan_hints.append(
+                            "procedural_artifact_status="
+                            f"{latest_artifact['artifact_status']}"
+                        )
+                    if latest_artifact.get("artifact_ref") is not None:
+                        plan_hints.append(
+                            "procedural_artifact_ref="
+                            f"{latest_artifact['artifact_ref']}"
+                        )
+                    if latest_artifact.get("summary") is not None:
+                        plan_hints.append(
+                            "procedural_artifact_summary="
+                            f"{latest_artifact['summary']}"
+                        )
+                    if latest_artifact.get("version") is not None:
+                        plan_hints.append(
+                            "procedural_artifact_version="
+                            f"{latest_artifact['version']}"
+                        )
                 continuity_context = self._build_continuity_context(contract, mission_state)
                 if continuity_context and continuity_context.related_candidates:
                     primary = continuity_context.related_candidates[0]
@@ -666,22 +741,192 @@ class MemoryService:
                     mission_hints.append(
                         f"related_continuity_priority={primary.priority_score:.2f}"
                     )
-        final_session_context = list(session_context[-limit:])
-        if summary and not any(
-            item.startswith("context_summary=") for item in final_session_context
+        context_policy = context_window_policy(
+            requested_limit=limit,
+            user_scope_status=(
+                user_scope_context.context_status if user_scope_context is not None else None
+            ),
+            interaction_count=(
+                user_scope_context.interaction_count if user_scope_context is not None else 0
+            ),
+            has_session_continuity=session_continuity is not None,
+            has_related_mission=bool(
+                continuity_context and continuity_context.related_candidates
+            ),
+            has_mission_context=mission_state is not None,
+        )
+        live_turn_context = list(session_context[-context_policy.live_turn_limit :])
+        trimmed_continuity_hints = self._compact_prefixed_hints(
+            continuity_hints,
+            preferred_prefixes=(
+                "session_continuity_brief=",
+                "session_continuity_mode=",
+                "continuity_checkpoint_id=",
+                "continuity_checkpoint_status=",
+                "continuity_replay_status=",
+                "continuity_recovery_mode=",
+                "continuity_resume_point=",
+                "session_anchor_goal=",
+                "continuity_pause_status=",
+            ),
+            limit=context_policy.continuity_hint_limit,
+        )
+        cross_session_sources = self._cross_session_recall_sources(
+            user_scope_context=user_scope_context,
+            session_continuity=session_continuity,
+            mission_state=mission_state,
+            continuity_context=continuity_context,
+        )
+        cross_session_summary = self._cross_session_recall_summary(
+            user_scope_context=user_scope_context,
+            session_continuity=session_continuity,
+            mission_state=mission_state,
+            continuity_context=continuity_context,
+        )
+        if context_policy.cross_session_recall_status != "not_applicable":
+            plan_hints.extend(
+                [
+                    f"cross_session_recall_status={context_policy.cross_session_recall_status}",
+                    "cross_session_recall_sources="
+                    f"{';'.join(cross_session_sources) if cross_session_sources else 'none'}",
+                ]
+            )
+            if cross_session_summary:
+                plan_hints.append(f"cross_session_recall_summary={cross_session_summary}")
+        final_session_context: list[str] = []
+        if (
+            summary
+            or live_turn_context
+            or trimmed_continuity_hints
+            or context_policy.cross_session_recall_status != "not_applicable"
         ):
-            final_session_context.insert(0, f"context_summary={summary}")
-        for hint in continuity_hints:
-            if hint not in final_session_context:
-                final_session_context.append(hint)
+            user_scope_label = (
+                user_scope_context.context_status if user_scope_context else "none"
+            )
+            continuity_label = (
+                session_continuity.continuity_mode if session_continuity else "none"
+            )
+            final_session_context.extend(
+                [
+                    f"context_compaction_status={context_policy.compaction_status}",
+                    "context_compaction_summary="
+                    f"live_turns={len(live_turn_context)};"
+                    f"continuity_hints={len(trimmed_continuity_hints)};"
+                    f"recalled_sources={len(cross_session_sources)}",
+                    "context_live_summary="
+                    f"turns={len(live_turn_context)};"
+                    f"user_scope={user_scope_label};"
+                    f"continuity={continuity_label};"
+                    f"cross_session={context_policy.cross_session_recall_status}",
+                ]
+            )
+            if summary:
+                final_session_context.insert(0, f"context_summary={summary}")
+            for item in [*live_turn_context, *trimmed_continuity_hints]:
+                if item not in final_session_context:
+                    final_session_context.append(item)
+        compacted_plan_hints = self._compact_prefixed_hints(
+            plan_hints,
+            preferred_prefixes=(
+                "prior_plan=",
+                "prior_steps=",
+                "cross_session_recall_status=",
+                "cross_session_recall_sources=",
+                "cross_session_recall_summary=",
+            ),
+            limit=context_policy.plan_hint_limit,
+        )
         return (
-            user_hints[:limit],
+            user_hints[: context_policy.user_hint_limit],
             final_session_context,
-            mission_hints[:12],
-            plan_hints[-2:],
+            mission_hints[: context_policy.mission_hint_limit],
+            compacted_plan_hints,
             continuity_context,
             user_scope_context,
         )
+
+    @staticmethod
+    def _cross_session_recall_sources(
+        *,
+        user_scope_context: UserScopeContextContract | None,
+        session_continuity: SessionContinuitySnapshot | None,
+        mission_state: MissionStateContract | None,
+        continuity_context: MissionContinuityContextContract | None,
+    ) -> list[str]:
+        sources: list[str] = []
+        if (
+            user_scope_context is not None
+            and user_scope_context.context_status not in {"tracked_only", "not_applicable"}
+        ):
+            sources.append("user_scope")
+        if session_continuity is not None:
+            sources.append("session_continuity")
+        if mission_state is not None:
+            sources.append("active_mission")
+        if continuity_context and continuity_context.related_candidates:
+            sources.append("related_mission")
+        return sources
+
+    @classmethod
+    def _cross_session_recall_summary(
+        cls,
+        *,
+        user_scope_context: UserScopeContextContract | None,
+        session_continuity: SessionContinuitySnapshot | None,
+        mission_state: MissionStateContract | None,
+        continuity_context: MissionContinuityContextContract | None,
+    ) -> str | None:
+        fragments: list[str] = []
+        if (
+            user_scope_context is not None
+            and user_scope_context.context_status not in {"tracked_only", "not_applicable"}
+            and user_scope_context.user_context_brief
+        ):
+            fragments.append(
+                f"user_scope={cls._shorten_memory_hint(user_scope_context.user_context_brief)}"
+            )
+        if session_continuity is not None:
+            anchor = session_continuity.anchor_goal or session_continuity.continuity_brief
+            if anchor:
+                fragments.append(f"anchor={cls._shorten_memory_hint(anchor)}")
+        if continuity_context and continuity_context.related_candidates:
+            fragments.append(
+                "related="
+                f"{cls._shorten_memory_hint(continuity_context.related_candidates[0].mission_goal)}"
+            )
+        elif mission_state is not None and mission_state.semantic_brief:
+            fragments.append(
+                f"mission={cls._shorten_memory_hint(mission_state.semantic_brief)}"
+            )
+        if not fragments:
+            return None
+        return " | ".join(fragments[:3])
+
+    @staticmethod
+    def _shorten_memory_hint(value: str, *, limit: int = 96) -> str:
+        compact = " ".join(value.split())
+        if len(compact) <= limit:
+            return compact
+        return f"{compact[: limit - 3].rstrip()}..."
+
+    @staticmethod
+    def _compact_prefixed_hints(
+        hints: list[str],
+        *,
+        preferred_prefixes: tuple[str, ...],
+        limit: int,
+    ) -> list[str]:
+        if limit <= 0 or not hints:
+            return []
+        selected: list[str] = []
+        for prefix in preferred_prefixes:
+            match = next((item for item in hints if item.startswith(prefix)), None)
+            if match and match not in selected:
+                selected.append(match)
+        for item in hints:
+            if item not in selected:
+                selected.append(item)
+        return selected[:limit]
 
     def _resolve_related_states(
         self,
@@ -792,6 +1037,10 @@ class MemoryService:
             promoted_records=corpus_summary.promoted_records,
             aging_records=corpus_summary.aging_records,
             review_recommended_records=corpus_summary.review_recommended_records,
+            fixed_records=corpus_summary.fixed_records,
+            operational_records=corpus_summary.operational_records,
+            archivable_records=corpus_summary.archivable_records,
+            consolidating_records=corpus_summary.consolidating_records,
         )
         canonical_memory_refs = [
             f"memory://{memory_class.value}" for memory_class in shared_memory_classes
@@ -823,6 +1072,31 @@ class MemoryService:
             memory_class_name: str(policy.get("write_policy", "through_core_only"))
             for memory_class_name, policy in memory_class_policies.items()
         }
+        latest_artifact = (
+            self._latest_procedural_artifact(mission_state.related_artifacts)
+            if mission_state is not None
+            else None
+        )
+        procedural_artifact_refs = (
+            [str(latest_artifact.get("artifact_ref"))]
+            if latest_artifact is not None and latest_artifact.get("artifact_ref") is not None
+            else []
+        )
+        procedural_artifact_status = (
+            str(latest_artifact.get("artifact_status"))
+            if latest_artifact is not None and latest_artifact.get("artifact_status") is not None
+            else None
+        )
+        procedural_artifact_version = (
+            int(latest_artifact.get("version"))
+            if latest_artifact is not None and latest_artifact.get("version") is not None
+            else None
+        )
+        procedural_artifact_summary = (
+            str(latest_artifact.get("summary"))
+            if latest_artifact is not None and latest_artifact.get("summary") is not None
+            else None
+        )
 
         related_summary = (
             ", ".join(str(item.mission_id) for item in related_states[:2]) or "nenhuma"
@@ -845,8 +1119,14 @@ class MemoryService:
             f"workflow_profile={workflow_profile or 'baseline'} | "
             f"semantic_source={memory_decision.semantic_source or 'none'} | "
             f"procedural_source={memory_decision.procedural_source or 'none'} | "
+            f"semantic_state={memory_decision.semantic_memory_state or 'none'} | "
+            f"procedural_state={memory_decision.procedural_memory_state or 'none'} | "
             f"memory_lifecycle={memory_decision.lifecycle_status} | "
             f"memory_review={memory_decision.review_status} | "
+            f"memory_consolidation={memory_decision.consolidation_status} | "
+            f"memory_fixation={memory_decision.fixation_status} | "
+            f"memory_archive={memory_decision.archive_status} | "
+            f"procedural_artifact_status={procedural_artifact_status or 'none'} | "
             f"memory_corpus_status={corpus_telemetry.corpus_status} | "
             f"memory_retention_pressure={corpus_telemetry.retention_pressure} | "
             f"memory_refs={','.join(memory_refs[:4])}"
@@ -927,8 +1207,17 @@ class MemoryService:
             procedural_memory_effects=list(memory_decision.procedural_effects),
             semantic_memory_lifecycle=memory_decision.semantic_lifecycle,
             procedural_memory_lifecycle=memory_decision.procedural_lifecycle,
+            semantic_memory_state=memory_decision.semantic_memory_state,
+            procedural_memory_state=memory_decision.procedural_memory_state,
             memory_lifecycle_status=memory_decision.lifecycle_status,
             memory_review_status=memory_decision.review_status,
+            memory_consolidation_status=memory_decision.consolidation_status,
+            memory_fixation_status=memory_decision.fixation_status,
+            memory_archive_status=memory_decision.archive_status,
+            procedural_artifact_status=procedural_artifact_status,
+            procedural_artifact_refs=procedural_artifact_refs,
+            procedural_artifact_version=procedural_artifact_version,
+            procedural_artifact_summary=procedural_artifact_summary,
             memory_corpus_status=corpus_telemetry.corpus_status,
             memory_retention_pressure=corpus_telemetry.retention_pressure,
             memory_corpus_summary=dict(corpus_telemetry.summary),
@@ -1157,7 +1446,7 @@ class MemoryService:
         open_loops: list[str],
         decision_frame: str,
         governance_decision: PermissionDecision | None,
-    ) -> MissionStateContract | None:
+    ) -> tuple[MissionStateContract | None, dict[str, object] | None]:
         mission_id = str(contract.mission_id)
         previous = self.repository.fetch_mission_state(mission_id)
         accepted = governance_decision not in {
@@ -1165,7 +1454,7 @@ class MemoryService:
             PermissionDecision.DEFER_FOR_VALIDATION,
         }
         if previous is None and not accepted:
-            return None
+            return None, None
 
         checkpoints = list(previous.checkpoints) if previous else []
         active_tasks = list(previous.active_tasks) if previous else []
@@ -1211,7 +1500,17 @@ class MemoryService:
             recommendation=last_recommendation,
             previous=previous,
         )
-        return MissionStateContract(
+        procedural_artifact = self._build_procedural_artifact(
+            contract,
+            deliberative_plan=deliberative_plan if accepted else None,
+            previous_artifacts=related_artifacts,
+        )
+        if procedural_artifact is not None:
+            related_artifacts = self._merge_procedural_artifact(
+                existing_artifacts=related_artifacts,
+                artifact=procedural_artifact,
+            )
+        mission_state = MissionStateContract(
             mission_id=contract.mission_id,
             mission_goal=mission_goal,
             mission_status=MissionStatus.ACTIVE,
@@ -1230,6 +1529,174 @@ class MemoryService:
             last_decision_frame=persisted_frame,
             owner_context=contract.user_id or str(contract.session_id),
             updated_at=self.now(),
+        )
+        return mission_state, procedural_artifact
+
+    def _build_procedural_artifact(
+        self,
+        contract: InputContract,
+        *,
+        deliberative_plan: DeliberativePlanContract | None,
+        previous_artifacts: list[dict[str, object]],
+    ) -> dict[str, object] | None:
+        if deliberative_plan is None:
+            return None
+        artifact_route, workflow_profile = self._procedural_artifact_route_context(
+            deliberative_plan
+        )
+        (
+            procedural_lifecycle,
+            procedural_memory_state,
+            memory_review_status,
+        ) = self._procedural_artifact_memory_signals(
+            deliberative_plan,
+            workflow_profile=workflow_profile,
+        )
+        artifact_decision = procedural_artifact_decision(
+            workflow_profile=workflow_profile,
+            procedural_lifecycle=procedural_lifecycle,
+            procedural_memory_state=procedural_memory_state,
+            memory_review_status=memory_review_status,
+        )
+        if not artifact_decision.eligible:
+            return None
+        artifact_key = f"{artifact_route}::{workflow_profile}"
+        content_signature = "::".join(
+            [
+                deliberative_plan.plan_summary or "",
+                deliberative_plan.smallest_safe_next_action or "",
+                *deliberative_plan.steps[:3],
+            ]
+        )
+        matching = [
+            item
+            for item in previous_artifacts
+            if isinstance(item, dict) and item.get("artifact_key") == artifact_key
+        ]
+        latest = (
+            max(
+                matching,
+                key=lambda item: int(item.get("version", 0) or 0),
+            )
+            if matching
+            else None
+        )
+        if latest is not None and latest.get("content_signature") == content_signature:
+            version = int(latest.get("version", 1) or 1)
+        else:
+            version = max(
+                [int(item.get("version", 0) or 0) for item in matching],
+                default=0,
+            ) + 1
+        artifact_ref = (
+            f"artifact://procedural/{artifact_route}/{workflow_profile}/v{version}"
+        )
+        return {
+            "artifact_ref": artifact_ref,
+            "artifact_key": artifact_key,
+            "artifact_kind": artifact_decision.artifact_kind,
+            "artifact_status": artifact_decision.artifact_status,
+            "reuse_scope": artifact_decision.reuse_scope,
+            "through_core_only": artifact_decision.through_core_only,
+            "versioning_mode": artifact_decision.versioning_mode,
+            "version": version,
+            "workflow_profile": workflow_profile,
+            "primary_route": artifact_route,
+            "summary": (
+                deliberative_plan.smallest_safe_next_action
+                or deliberative_plan.plan_summary
+                or deliberative_plan.goal
+            ),
+            "steps_snapshot": list(deliberative_plan.steps[:3]),
+            "source_mission_id": str(contract.mission_id) if contract.mission_id else None,
+            "source_request_id": str(contract.request_id),
+            "content_signature": content_signature,
+            "updated_at": self.now(),
+        }
+
+    @staticmethod
+    def _procedural_artifact_memory_signals(
+        deliberative_plan: DeliberativePlanContract,
+        *,
+        workflow_profile: str | None,
+    ) -> tuple[str | None, str | None, str | None]:
+        procedural_lifecycle = deliberative_plan.procedural_memory_lifecycle
+        procedural_memory_state = deliberative_plan.procedural_memory_state
+        memory_review_status = deliberative_plan.memory_review_status
+        if workflow_profile is None:
+            return procedural_lifecycle, procedural_memory_state, memory_review_status
+        if procedural_lifecycle is None:
+            procedural_lifecycle = "consolidating"
+        if procedural_memory_state is None:
+            support_signals = memory_lifecycle_support_signals(
+                semantic_lifecycle=None,
+                procedural_lifecycle=procedural_lifecycle,
+            )
+            procedural_memory_state = support_signals["procedural_memory_state"]
+        if memory_review_status is None:
+            if procedural_lifecycle == "aging":
+                memory_review_status = "review_recommended"
+            elif procedural_lifecycle == "consolidating":
+                memory_review_status = "monitor"
+            else:
+                memory_review_status = "stable"
+        return procedural_lifecycle, procedural_memory_state, memory_review_status
+
+    @staticmethod
+    def _procedural_artifact_route_context(
+        deliberative_plan: DeliberativePlanContract,
+    ) -> tuple[str, str | None]:
+        if deliberative_plan.primary_route is not None:
+            return (
+                deliberative_plan.primary_route,
+                deliberative_plan.route_workflow_profile
+                or deliberative_plan.recommended_task_type
+                or "assisted_execution_workflow",
+            )
+        route_payload = primary_route_payload(deliberative_plan.active_domains)
+        if route_payload is not None:
+            route_name, payload = route_payload
+            return (
+                route_name,
+                str(payload.get("workflow_profile") or deliberative_plan.recommended_task_type)
+                if payload.get("workflow_profile") or deliberative_plan.recommended_task_type
+                else "assisted_execution_workflow",
+            )
+        return (
+            "baseline_runtime",
+            deliberative_plan.route_workflow_profile
+            or deliberative_plan.recommended_task_type
+            or "assisted_execution_workflow",
+        )
+
+    @staticmethod
+    def _merge_procedural_artifact(
+        *,
+        existing_artifacts: list[dict[str, object]],
+        artifact: dict[str, object],
+    ) -> list[dict[str, object]]:
+        filtered = [
+            item
+            for item in existing_artifacts
+            if not (
+                isinstance(item, dict)
+                and item.get("artifact_key") == artifact.get("artifact_key")
+                and item.get("version") == artifact.get("version")
+            )
+        ]
+        filtered.append(artifact)
+        return filtered[-5:]
+
+    @staticmethod
+    def _latest_procedural_artifact(
+        artifacts: list[dict[str, object]],
+    ) -> dict[str, object] | None:
+        normalized = [item for item in artifacts if isinstance(item, dict)]
+        if not normalized:
+            return None
+        return max(
+            normalized,
+            key=lambda item: int(item.get("version", 0) or 0),
         )
 
     def _build_continuity_checkpoint(

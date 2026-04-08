@@ -1,5 +1,43 @@
 # CHANGELOG
 
+## 2026-04-08
+
+### MB-044 a MB-046 fechados na Onda 1 de absorcao disciplinada
+
+- `services/orchestrator-service/src/orchestrator_service/service.py`, `services/orchestrator-service/src/orchestrator_service/langgraph_flow.py`, `services/operational-service/src/operational_service/service.py` e `services/observability-service/src/observability_service/service.py` agora carregam `workflow_checkpoint_state`, `workflow_resume_status`, `workflow_resume_point` e `workflow_pending_checkpoints` como sinais soberanos de durable execution e retomada governada;
+- `shared/memory_registry.py`, `services/memory-service/src/memory_service/service.py`, `services/memory-service/src/memory_service/repository.py`, `engines/planning-engine/src/planning_engine/engine.py` e `engines/synthesis-engine/src/synthesis_engine/engine.py` agora materializam artefatos procedurais versionados, reutilizaveis e `through_core_only`, com refs, versao e resumo auditaveis no runtime;
+- `evolution/evolution-lab/src/evolution_lab/service.py`, `evolution/evolution-lab/src/evolution_lab/repository.py`, `tools/compare_orchestrator_paths.py`, `tools/evolution_from_pilot.py`, `tools/internal_pilot_report.py` e `tools/verify_release_signal_baseline.py` agora persistem `candidate_refs`, `refinement_vectors`, `evaluation_matrix`, `selection_criteria` e `metric_deltas` como traducao governada de compile/eval loops;
+- `docs/implementation/execution-backlog.md`, `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para marcar `MB-044` a `MB-046` como concluidos e deixar a fila micro sem novo item `ready` ate repriorizacao.
+
+### MB-043 fechado na Onda 1 de absorcao disciplinada
+
+- `shared/memory_registry.py` agora distingue memoria guiada operacional, fixada e arquivavel sem trocar os labels canonicos de lifecycle, expondo sinais explicitos de consolidacao, fixacao e arquivamento para o runtime;
+- `services/memory-service/src/memory_service/service.py` e `services/memory-service/src/memory_service/repository.py` agora propagam esses sinais para packets guiados, resumos de corpus e recuperacao persistida de `specialist_shared_memory`, sem abrir dependencia externa nem schema central novo;
+- `engines/planning-engine/src/planning_engine/engine.py`, `services/orchestrator-service/src/orchestrator_service/service.py` e `services/observability-service/src/observability_service/service.py` agora carregam e auditam `memory_consolidation_status`, `memory_fixation_status` e `memory_archive_status` como parte explicita do baseline soberano;
+- `docs/implementation/execution-backlog.md`, `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para marcar `MB-043` como concluido e liberar `MB-044` como o proximo item `ready`.
+
+### MB-042 fechado na Onda 1 de absorcao disciplinada
+
+- `shared/memory_registry.py` agora formaliza uma politica soberana de contexto vivo compactado e recall cross-session, inspirada em referencias externas, mas sem substituir o `memory_registry` nem inflar a janela de contexto do runtime;
+- `services/memory-service/src/memory_service/service.py` passou a distinguir contexto vivo, hints de continuidade e recall cross-session com compactacao disciplinada, preservando `prior_plan`, `session_continuity_*` e resumo cross-session sem reabrir historico bruto;
+- `services/orchestrator-service/src/orchestrator_service/service.py`, `engines/planning-engine/src/planning_engine/engine.py` e `engines/synthesis-engine/src/synthesis_engine/engine.py` agora propagam e usam `context_compaction_*` e `cross_session_recall_*` como sinais auditaveis do baseline, com efeito leve e governado em planejamento e resposta final;
+- `docs/implementation/execution-backlog.md`, `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para marcar `MB-042` como concluido e liberar `MB-043` como o proximo item `ready`.
+
+### MB-041 fechado na Onda 1 de absorcao disciplinada
+
+- `shared/schemas/__init__.py`, `shared/contract_validation.py` e `shared/contracts/__init__.py` agora formalizam um primeiro recorte soberano de validacao tipada para `DeliberativePlanContract`, sem introduzir dependencia central nova nem trocar a gramatica canonica do runtime;
+- `engines/planning-engine/src/planning_engine/engine.py` agora valida o plano deliberativo contra schema canonico e aplica repair pequeno, deterministico e auditavel quando um campo obrigatorio nasce inconsistente;
+- `engines/synthesis-engine/src/synthesis_engine/engine.py` agora valida o output minimo da resposta final, recompõe saida segura quando o texto perde clausulas obrigatorias e expõe `output_validation_status` no runtime;
+- `services/orchestrator-service/src/orchestrator_service/service.py`, `services/orchestrator-service/src/orchestrator_service/langgraph_flow.py` e `services/observability-service/src/observability_service/service.py` agora propagam e auditam `contract_validation_status` e `output_validation_status`, distinguindo contrato coerente, contrato reparado, falha de contrato e falha de output;
+- `docs/implementation/execution-backlog.md`, `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para marcar `MB-041` como concluido e liberar `MB-042` como o proximo item `ready`.
+
+### Ordem oficial de absorcao tecnologica e novo lote do backlog
+
+- criado `docs/architecture/technology-absorption-order.md` para transformar o estudo tecnologico ampliado em uma ordem oficial de traducao disciplinada por ondas, separando o que deve fortalecer o nucleo agora do que deve permanecer como complemento futuro ou horizonte de pesquisa;
+- `docs/architecture/technology-study.md` e `docs/architecture/technology-capability-extraction-map.md` agora apontam explicitamente essa nova ordem de absorcao como leitura operacional complementar ao estudo-base e ao mapa de extracao de valor;
+- `docs/implementation/execution-backlog.md` agora abre `MB-041` a `MB-046` como lote de absorcao disciplinada da Onda 1, com `MB-041` em `ready` para contratos tipados e validacao soberana inspirados em `PydanticAI` e `Mastra`;
+- `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para registrar que a proxima rodada ativa ja nao e apenas repriorizacao abstrata: existe ordem oficial de absorcao e lote micro aberto sem reativar `protective intelligence`.
+
 ## 2026-04-06
 
 ### Fechamento do lote cognitivo MB-037 a MB-040

@@ -760,6 +760,102 @@ Escalar ao operador quando:
 - `depende_do_operador`: `nao`
 - `impacto_no_baseline`: comparadores e verificadores agora expõem matriz formal por workflow/eixo, distinguem baseline saudavel de maturacao recomendada e carregam vetores priorizados de refinamento como criterio operacional.
 
+### MB-041
+
+- `id`: `MB-041`
+- `prioridade`: `P0`
+- `status`: `done`
+- `eixo_do_mestre`: `docs/gates`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: abrir a traducao disciplinada da Onda 1 de absorcao, formalizando um recorte implementavel de contratos tipados e validacao soberana inspirado em `PydanticAI` e `Mastra`, sem trocar a gramatica canonica do JARVIS.
+- `justificativa_arquitetural`: depois do fechamento de `MB-037` a `MB-040`, o proximo passo correto nao e abrir nova vertical, e sim transformar o estudo tecnologico em backlog de traducao do que mais fortalece o nucleo.
+- `arquivos/servicos_principais`: `shared/contracts/__init__.py`, `engines/planning-engine`, `engines/synthesis-engine`, `services/orchestrator-service`, `services/observability-service`
+- `dependencias`: nenhuma
+- `criterio_de_aceite`: existe ao menos um primeiro recorte de validacao tipada e retry/validator semantics aplicado ao runtime, com observabilidade suficiente para distinguir falha de contrato, falha de output e saida coerente.
+- `gate_minimo`: `pytest` direcionado dos engines/servicos tocados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `impacto_no_baseline`: `planning-engine` agora valida e repara o contrato deliberativo contra schema canonico, `synthesis-engine` passou a validar/recompor output minimo, e `orchestrator`/`observability` distinguem `contract_validation_status` e `output_validation_status` no runtime.
+
+### MB-042
+
+- `id`: `MB-042`
+- `prioridade`: `P0`
+- `status`: `done`
+- `eixo_do_mestre`: `memorias`
+- `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
+- `micro_objetivo`: traduzir padroes de contexto vivo, compressao disciplinada e recall cross-session inspirados em `Letta`, `Hermes Agent` e `Qwen-Agent`, sem substituir o `memory_registry`.
+- `justificativa_arquitetural`: o `programa-de-excelencia` ainda aponta gestao de contexto e memoria causal como lacuna canonica forte; essa traducao e mais util agora do que abrir runtime operacional amplo.
+- `arquivos/servicos_principais`: `shared/memory_registry.py`, `services/memory-service`, `services/orchestrator-service`, `engines/planning-engine`, `engines/synthesis-engine`
+- `dependencias`: nenhuma
+- `criterio_de_aceite`: o baseline ganha politica soberana de compactacao/recall e consegue distinguir melhor memoria viva de contexto descartavel sem inflar a janela de contexto.
+- `gate_minimo`: `pytest` direcionado de `memory-service`/engines tocados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `impacto_no_baseline`: `memory_registry`, `memory-service`, `orchestrator`, `planning` e `synthesis` agora tratam contexto vivo compactado e recall cross-session como politica soberana do baseline, distinguindo memoria viva de contexto descartavel sem reabrir historico bruto.
+
+### MB-043
+
+- `id`: `MB-043`
+- `prioridade`: `P0`
+- `status`: `done`
+- `eixo_do_mestre`: `memorias`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: materializar lifecycle de memoria mais vivo, com manutencao, consolidacao e distincao entre memoria fixada, operacional e arquivavel, inspirado em `Letta / MemGPT`.
+- `justificativa_arquitetural`: a camada de memoria do JARVIS ja e forte, mas ainda pode crescer muito em manutencao ativa antes de qualquer absorcao mais ampla de stack externa.
+- `arquivos/servicos_principais`: `shared/memory_registry.py`, `services/memory-service/src/memory_service/service.py`, `services/memory-service/src/memory_service/repository.py`, `services/observability-service`
+- `dependencias`: `MB-042`
+- `criterio_de_aceite`: o sistema passa a manter sinais e politicas mais explicitas de consolidacao, fixacao, arquivamento e revisao de memoria util sem quebrar a ontologia canonica.
+- `gate_minimo`: `pytest` direcionado do `memory-service`, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `impacto_no_baseline`: `memory_registry`, `memory-service`, `repository`, `planning`, `orchestrator` e `observability` agora distinguem estados operacionais, fixados e arquivaveis da memoria guiada, com sinais explicitos de consolidacao, fixacao e arquivamento no runtime e no corpus.
+
+### MB-044
+
+- `id`: `MB-044`
+- `prioridade`: `P1`
+- `status`: `done`
+- `eixo_do_mestre`: `continuidade`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: aprofundar durable execution, resumabilidade e checkpoints de workflow inspirados em `LangGraph` e `Mastra`, sem transformar o runtime inteiro no runtime principal dessas stacks.
+- `justificativa_arquitetural`: o baseline ja usa subfluxos e sinais stateful, mas a proxima profundidade real de continuidade longa ainda depende de checkpointing e retomada mais ricos.
+- `arquivos/servicos_principais`: `services/orchestrator-service`, `services/orchestrator-service/src/orchestrator_service/langgraph_flow.py`, `shared/contracts/__init__.py`, `services/observability-service`
+- `dependencias`: `MB-041`, `MB-042`
+- `criterio_de_aceite`: o runtime ganha checkpointing/resume mais rico em workflows longos, com trace observavel e sem terceirizar governanca ou ontologia ao grafo.
+- `gate_minimo`: `pytest` direcionado do `orchestrator-service`, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `impacto_no_baseline`: `orchestrator-service`, `langgraph_flow`, `operational-service`, `observability-service` e contratos compartilhados agora carregam `workflow_checkpoint_state`, `workflow_resume_status`, `workflow_resume_point` e `workflow_pending_checkpoints` como sinais soberanos de durable execution e retomada governada.
+
+### MB-045
+
+- `id`: `MB-045`
+- `prioridade`: `P1`
+- `status`: `done`
+- `eixo_do_mestre`: `memorias`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: abrir o primeiro lifecycle soberano de artefatos procedurais reutilizaveis, inspirado em `Hermes Agent` e `OpenClaw`, sem confundir isso com promocao de especialista ou tool use irrestrito.
+- `justificativa_arquitetural`: memoria procedural ainda e classe de memoria; o passo seguinte e avaliar quando ela deve virar artefato reutilizavel e governado pelo nucleo.
+- `arquivos/servicos_principais`: `shared/memory_registry.py`, `services/memory-service`, `evolution/evolution-lab`, `services/observability-service`
+- `dependencias`: `MB-042`, `MB-043`
+- `criterio_de_aceite`: existe ao menos um fluxo experimental controlado em que know-how procedural vira artefato rastreavel, versionavel e reutilizavel, ainda `through_core_only`.
+- `gate_minimo`: `pytest` direcionado dos servicos/tools tocados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `impacto_no_baseline`: `memory_registry`, `memory-service`, `repository`, `planning`, `synthesis` e `orchestrator` agora distinguem `procedural_artifact_status`, refs, versao e resumo como artefato reutilizavel `through_core_only`, sem confundir isso com promocao de especialista ou tool use irrestrito.
+
+### MB-046
+
+- `id`: `MB-046`
+- `prioridade`: `P1`
+- `status`: `done`
+- `eixo_do_mestre`: `evolucao`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: traduzir `compile/eval loops` inspirados em `DSPy / MIPROv2` e `TextGrad` para o `evolution-lab`, tornando proposals de refinamento mais metric-driven e menos manuais.
+- `justificativa_arquitetural`: o baseline ja tem `refinement_vectors`; o passo seguinte e deixar o laboratorio propor, priorizar e comparar variantes com algoritmo de refinamento mais forte.
+- `arquivos/servicos_principais`: `evolution/evolution-lab/src/evolution_lab/service.py`, `tools/evolution_from_pilot.py`, `tools/compare_orchestrator_paths.py`, `tools/verify_release_signal_baseline.py`
+- `dependencias`: `MB-041`, `MB-043`, `MB-045`
+- `criterio_de_aceite`: o laboratorio passa a registrar propostas com metricas, candidatos, criterio de selecao e comparacao mais explicitamente inspirados em compile loops, sem automatizar promocao de mudanca.
+- `gate_minimo`: `pytest` direcionado dos tools/servicos tocados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `impacto_no_baseline`: `evolution-lab`, `compare_orchestrator_paths`, `evolution_from_pilot`, `internal_pilot_report` e `verify_release_signal_baseline.py` agora registram `candidate_refs`, `refinement_vectors`, `evaluation_matrix`, `selection_criteria` e `metric_deltas`, fechando a Onda 1 como traducao governada de compile/eval loops.
+
 ---
 
 ## 5. Regras de manutencao da fila
@@ -777,5 +873,7 @@ Estado atual da fila:
 - `MB-027` a `MB-031` nao devem ser puxados sem repriorizacao macro explicita do operador;
 - `MB-032` a `MB-036` foram concluidos e fecharam o lote atual de maturacao do nucleo cognitivo;
 - `MB-037` a `MB-040` foram concluidos e fecharam o lote de autoevolucao governada, composicao de mentes mais profunda, telemetria viva de memoria e evals formais por eixo/workflow;
-- a fila micro esta sem item `ready` neste momento e exige repriorizacao explicita do proximo lote;
-- esta rodada fecha o lote atual sem reativar `protective intelligence` e sem reabrir itens ja concluidos por inercia local.
+- `docs/architecture/technology-absorption-order.md` agora formaliza a ordem oficial de traducao disciplinada das referencias externas para o JARVIS;
+- `MB-041` a `MB-046` foram concluidos e fecharam o lote de absorcao disciplinada da Onda 1;
+- a fila micro volta a ficar sem item `ready` ate repriorizacao explicita do proximo lote;
+- esta rodada fecha a Onda 1 sem reativar `protective intelligence` e sem reabrir itens ja concluidos por inercia local.

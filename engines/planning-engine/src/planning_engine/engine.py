@@ -4,12 +4,14 @@ from __future__ import annotations
 
 from dataclasses import dataclass, replace
 
+from shared.contract_validation import validate_contract_instance
 from shared.contracts import (
     DeliberativePlanContract,
     SpecialistContributionContract,
 )
 from shared.domain_registry import workflow_runtime_guidance
 from shared.memory_registry import guided_memory_decision
+from shared.schemas import DELIBERATIVE_PLAN_SCHEMA
 from shared.specialist_registry import (
     GOVERNANCE_REVIEW_SPECIALIST,
     OPERATIONAL_PLANNING_SPECIALIST,
@@ -138,6 +140,15 @@ class PlanningContext:
     user_domain_focus: list[str] | None = None
     user_last_recommended_task_type: str | None = None
     user_continuity_preference: str | None = None
+    context_compaction_status: str | None = None
+    context_compaction_summary: str | None = None
+    context_live_summary: str | None = None
+    cross_session_recall_status: str | None = None
+    cross_session_recall_summary: str | None = None
+    procedural_artifact_status: str | None = None
+    procedural_artifact_ref: str | None = None
+    procedural_artifact_version: int | None = None
+    procedural_artifact_summary: str | None = None
 
 
 @dataclass(frozen=True)
@@ -287,7 +298,7 @@ class PlanningEngine:
             goal_conflict=goal_conflict,
             continuity_reason=continuity_reason,
         )
-        return DeliberativePlanContract(
+        plan = DeliberativePlanContract(
             plan_summary=plan_summary,
             goal=dominant_goal,
             steps=steps,
@@ -333,8 +344,17 @@ class PlanningEngine:
             procedural_memory_effects=list(memory_decision.procedural_effects),
             semantic_memory_lifecycle=memory_decision.semantic_lifecycle,
             procedural_memory_lifecycle=memory_decision.procedural_lifecycle,
+            semantic_memory_state=memory_decision.semantic_memory_state,
+            procedural_memory_state=memory_decision.procedural_memory_state,
             memory_lifecycle_status=memory_decision.lifecycle_status,
             memory_review_status=memory_decision.review_status,
+            memory_consolidation_status=memory_decision.consolidation_status,
+            memory_fixation_status=memory_decision.fixation_status,
+            memory_archive_status=memory_decision.archive_status,
+            procedural_artifact_status=context.procedural_artifact_status,
+            procedural_artifact_ref=context.procedural_artifact_ref,
+            procedural_artifact_version=context.procedural_artifact_version,
+            procedural_artifact_summary=context.procedural_artifact_summary,
             mind_disagreement_status=mind_disagreement_status,
             mind_validation_checkpoints=mind_validation_checkpoints,
             continuity_action=continuity_action,
@@ -353,6 +373,7 @@ class PlanningEngine:
             continuity_recovery_mode=context.continuity_recovery_mode,
             continuity_resume_point=context.continuity_resume_point,
         )
+        return self._validate_plan_contract(plan, context=context)
 
     def refine_task_plan(
         self,
@@ -419,6 +440,110 @@ class PlanningEngine:
             open_loops=open_loop_hints[:3],
             rationale=f"{plan.rationale}; resolucao_especialistas={resolution_summary}",
         )
+
+    def _validate_plan_contract(
+        self,
+        plan: DeliberativePlanContract,
+        *,
+        context: PlanningContext,
+    ) -> DeliberativePlanContract:
+        validation = validate_contract_instance(
+            plan,
+            schema=DELIBERATIVE_PLAN_SCHEMA,
+        )
+        if validation.status == "coherent":
+            return replace(
+                plan,
+                contract_validation_status="coherent",
+                contract_validation_errors=[],
+                contract_validation_retry_applied=False,
+            )
+
+        repaired_plan = self._repair_plan_contract(
+            plan,
+            context=context,
+            errors=validation.errors,
+        )
+        repaired_validation = validate_contract_instance(
+            repaired_plan,
+            schema=DELIBERATIVE_PLAN_SCHEMA,
+        )
+        repaired_status = (
+            "repaired" if repaired_validation.status == "coherent" else "invalid"
+        )
+        return replace(
+            repaired_plan,
+            contract_validation_status=repaired_status,
+            contract_validation_errors=(
+                list(validation.errors)
+                if repaired_status == "repaired"
+                else list(repaired_validation.errors)
+            ),
+            contract_validation_retry_applied=True,
+        )
+
+    def _repair_plan_contract(
+        self,
+        plan: DeliberativePlanContract,
+        *,
+        context: PlanningContext,
+        errors: list[str],
+    ) -> DeliberativePlanContract:
+        missing_fields = {
+            error.removeprefix("missing_required_field:")
+            for error in errors
+            if error.startswith("missing_required_field:")
+        }
+        if not missing_fields:
+            return plan
+
+        goal = plan.goal or context.dominant_goal or context.query
+        repair_fields: dict[str, object] = {}
+        if "goal" in missing_fields:
+            repair_fields["goal"] = goal or "manter leitura segura do objetivo atual"
+        if "plan_summary" in missing_fields:
+            repair_fields["plan_summary"] = (
+                f"objetivo={goal or 'manter leitura segura do objetivo atual'}; "
+                "validacao=repair_applied"
+            )
+        if "steps" in missing_fields:
+            fallback_step = (
+                plan.smallest_safe_next_action
+                or "clarificar a menor proxima acao segura antes de operar"
+            )
+            repair_fields["steps"] = [fallback_step]
+        if "active_domains" in missing_fields:
+            repair_fields["active_domains"] = list(
+                plan.active_domains
+                or context.active_domains
+                or ["assistencia_pessoal_e_operacional"]
+            )
+        if "active_minds" in missing_fields:
+            repair_fields["active_minds"] = list(
+                plan.active_minds or context.active_minds or ["mente_executiva"]
+            )
+        if "constraints" in missing_fields:
+            repair_fields["constraints"] = list(plan.constraints) or [
+                "preservar governanca, rastreabilidade e reversibilidade",
+            ]
+        if "risks" in missing_fields:
+            repair_fields["risks"] = list(plan.risks) or [
+                "nenhum risco material explicitado; manter revisao governada",
+            ]
+        if "recommended_task_type" in missing_fields:
+            repair_fields["recommended_task_type"] = (
+                plan.recommended_task_type or "general_response"
+            )
+        if "rationale" in missing_fields:
+            repair_fields["rationale"] = (
+                f"validacao_canonicidade=repair_applied; "
+                f"objetivo_dominante={goal or 'indefinido'}"
+            )
+        if "success_criteria" in missing_fields:
+            repair_fields["success_criteria"] = list(plan.success_criteria) or [
+                "resposta deve permanecer coerente com o objetivo e a governanca",
+            ]
+        return replace(plan, **repair_fields)
 
     @staticmethod
     def _specialist_step(specialist_type: str) -> str | None:
@@ -599,6 +724,17 @@ class PlanningEngine:
             constraints.append(
                 "usar memoria procedural apenas para "
                 f"{guidance.procedural_memory_role}: {procedural_anchor}"
+            )
+        if context.context_compaction_status in {
+            "compressed_live_context",
+            "seeded_live_context",
+        }:
+            constraints.append(
+                "preservar contexto vivo compactado sem reabrir historico bruto da sessao"
+            )
+        if context.cross_session_recall_status == "active":
+            constraints.append(
+                "usar recall cross-session apenas por resumo soberano e rastreavel"
             )
         if continuity_action == "retomar":
             constraints.append(
@@ -883,6 +1019,8 @@ class PlanningEngine:
         arbitration_source = context.arbitration_source or "none"
         semantic_anchor = self._semantic_memory_anchor(context) or "none"
         procedural_anchor = self._procedural_memory_anchor(context) or "none"
+        procedural_artifact_status = context.procedural_artifact_status or "none"
+        procedural_artifact_ref = context.procedural_artifact_ref or "none"
         return (
             f"objetivo={dominant_goal}; missao_ativa={mission_goal}; modo={mode}; "
             f"mente_primaria={primary_mind}; familia_primaria={primary_mind_family}; "
@@ -893,6 +1031,10 @@ class PlanningEngine:
             f"procedural_memory_anchor={procedural_anchor}; "
             f"semantic_memory_source={memory_decision.semantic_source or 'none'}; "
             f"procedural_memory_source={memory_decision.procedural_source or 'none'}; "
+            f"procedural_artifact_status={procedural_artifact_status}; "
+            f"procedural_artifact_ref={procedural_artifact_ref}; "
+            f"context_compaction={context.context_compaction_status or 'none'}; "
+            f"cross_session_recall={context.cross_session_recall_status or 'none'}; "
             "semantic_memory_effects="
             f"{','.join(memory_decision.semantic_effects) or 'none'}; "
             "procedural_memory_effects="
@@ -963,10 +1105,23 @@ class PlanningEngine:
         arbitration_source = context.arbitration_source or "none"
         semantic_anchor = self._semantic_memory_anchor(context) or "none"
         procedural_anchor = self._procedural_memory_anchor(context) or "none"
+        procedural_artifact_status = context.procedural_artifact_status or "none"
+        procedural_artifact_ref = context.procedural_artifact_ref or "none"
+        procedural_artifact_version = (
+            str(context.procedural_artifact_version)
+            if context.procedural_artifact_version is not None
+            else "none"
+        )
+        procedural_artifact_summary = context.procedural_artifact_summary or "none"
         user_scope_status = context.user_scope_status or "none"
         user_domain_focus = ",".join((context.user_domain_focus or [])[:3]) or "none"
         user_task_type = context.user_last_recommended_task_type or "none"
         user_continuity_preference = context.user_continuity_preference or "none"
+        context_compaction = context.context_compaction_status or "none"
+        context_compaction_summary = context.context_compaction_summary or "none"
+        context_live_summary = context.context_live_summary or "none"
+        cross_session_recall = context.cross_session_recall_status or "none"
+        cross_session_summary = context.cross_session_recall_summary or "none"
         return (
             f"objetivo_dominante={dominant_goal}; missao_ativa={mission_goal}; "
             f"objetivos_secundarios={secondary}; continuidade={continuity_hint}; "
@@ -983,18 +1138,32 @@ class PlanningEngine:
             f"procedural_memory_anchor={procedural_anchor}; "
             f"semantic_memory_source={memory_decision.semantic_source or 'none'}; "
             f"procedural_memory_source={memory_decision.procedural_source or 'none'}; "
+            f"procedural_artifact_status={procedural_artifact_status}; "
+            f"procedural_artifact_ref={procedural_artifact_ref}; "
+            f"procedural_artifact_version={procedural_artifact_version}; "
+            f"procedural_artifact_summary={procedural_artifact_summary}; "
             "semantic_memory_effects="
             f"{','.join(memory_decision.semantic_effects) or 'none'}; "
             "procedural_memory_effects="
             f"{','.join(memory_decision.procedural_effects) or 'none'}; "
             f"semantic_memory_lifecycle={memory_decision.semantic_lifecycle or 'none'}; "
             f"procedural_memory_lifecycle={memory_decision.procedural_lifecycle or 'none'}; "
+            f"semantic_memory_state={memory_decision.semantic_memory_state or 'none'}; "
+            f"procedural_memory_state={memory_decision.procedural_memory_state or 'none'}; "
             f"memory_lifecycle={memory_decision.lifecycle_status}; "
             f"memory_review={memory_decision.review_status}; "
+            f"memory_consolidation={memory_decision.consolidation_status}; "
+            f"memory_fixation={memory_decision.fixation_status}; "
+            f"memory_archive={memory_decision.archive_status}; "
             f"user_scope_status={user_scope_status}; "
             f"user_domain_focus={user_domain_focus}; "
             f"user_last_recommended_task_type={user_task_type}; "
             f"user_continuity_preference={user_continuity_preference}; "
+            f"context_compaction={context_compaction}; "
+            f"context_compaction_summary={context_compaction_summary}; "
+            f"context_live_summary={context_live_summary}; "
+            f"cross_session_recall={cross_session_recall}; "
+            f"cross_session_summary={cross_session_summary}; "
             f"replay_status={replay_status}; recovery_mode={recovery_mode}; "
             f"resume_point={resume_point}; "
             f"motivo_continuidade={continuity_reason}; "
@@ -1489,6 +1658,9 @@ class PlanningEngine:
             "identity_continuity_",
             "open_loops=",
             "last_decision_frame=",
+            "context_compaction_",
+            "context_live_summary=",
+            "cross_session_recall_",
         )
         for item in reversed(recovered_context):
             if not item.startswith(skipped_prefixes):

@@ -28,10 +28,10 @@ Leitura correta:
 
 Estado de referencia desta revisao:
 
-- data da fotografia: `2026-04-06`
+- data da fotografia: `2026-04-08`
 - ultimo recorte funcional fechado: `v2-native-memory-scope-hardening-cut`
 - ultimo recorte estrutural fechado: `v2-repository-hygiene-and-tools-review-cut`
-- passo funcional em andamento: `autoevolucao-governada-do-nucleo` (`MB-037` a `MB-040` concluidos; fila micro sem item `ready` ate nova repriorizacao)
+- passo funcional em andamento: `absorcao-disciplinada-da-onda-1` (`MB-037` a `MB-040` concluidos; `MB-041` a `MB-046` concluidos; fila micro sem novo item `ready` ate repriorizacao)
 
 Leitura executiva:
 
@@ -83,12 +83,20 @@ Leitura executiva:
 - benchmark externo, memory gap e hardening nativo foram tratados corretamente como etapas subordinadas ao baseline,
   nao como desvio de direcao.
 - os documentos vivos que orientam historico, retomada e direcao do projeto passaram a ter guardrail explicito no gate, reduzindo risco de perda semantica por edicao acidental.
+- o estudo tecnologico agora ganhou ordem oficial de absorcao, separando melhor traducao imediata de padroes, complementos controlados e horizonte de pesquisa.
+- o backlog correto passou a tratar absorcao tecnologica como traducao disciplinada de primitives para o nucleo, e nao como adocao direta de frameworks externos.
+- `MB-041` ja materializou o primeiro recorte dessa traducao: `DeliberativePlanContract` agora passa por validacao canonica com repair pequeno e auditavel, a `synthesis` valida o output minimo e `observability` diferencia falha de contrato, falha de output e saida coerente sem trocar a gramatica do runtime.
+- `MB-042` ja materializou o segundo recorte dessa traducao: `memory_registry`, `memory-service`, `orchestrator`, `planning` e `synthesis` agora tratam contexto vivo compactado e recall cross-session como politica soberana do baseline, distinguindo memoria viva de contexto descartavel sem reabrir historico bruto.
+- `MB-043` ja materializou o terceiro recorte dessa traducao: `memory_registry`, `memory-service`, `repository`, `planning`, `orchestrator` e `observability` agora distinguem memoria guiada operacional, fixada e arquivavel, com sinais explicitos de consolidacao, fixacao e arquivamento sem quebrar a ontologia canonica.
+- `MB-044` ja materializou o quarto recorte dessa traducao: `orchestrator`, `langgraph_flow`, `operational-service` e `observability` agora tratam checkpoint, retomada, ponto de resume e checkpoints pendentes como sinais soberanos de continuidade stateful.
+- `MB-045` ja materializou o quinto recorte dessa traducao: `memory-service`, `repository`, `planning`, `synthesis` e `orchestrator` agora carregam artefatos procedurais versionados e reutilizaveis, sempre `through_core_only`, como primitive governada do runtime.
+- `MB-046` ja materializou o sexto recorte dessa traducao: `evolution-lab`, comparadores, piloto e verificadores de release agora persistem candidatos, vetores de refinamento, matriz de avaliacao, criterios de selecao e deltas metricos como baseline da Onda 1.
 
 Em resumo:
 
 - a visao esta preservada;
 - o runtime esta coerente com a fase do programa;
-- o backlog correto agora e de maturacao disciplinada do nucleo e de preparacao da autoevolucao governada, nao de abertura imediata de uma nova vertical.
+- o backlog correto agora e de maturacao disciplinada do nucleo, preparacao da autoevolucao governada e traducao disciplinada da Onda 1 de absorcao tecnologica, nao de abertura imediata de uma nova vertical.
 
 ---
 

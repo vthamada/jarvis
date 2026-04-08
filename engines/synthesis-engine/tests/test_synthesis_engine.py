@@ -108,6 +108,87 @@ def test_synthesis_engine_composes_unitary_allowed_response() -> None:
     assert "Mentes:" not in response
 
 
+def test_synthesis_engine_repairs_output_when_plan_is_missing() -> None:
+    engine = SynthesisEngine()
+    identity = IdentityEngine().get_profile()
+    result = engine.compose_result(
+        SynthesisInput(
+            intent="planning",
+            identity_profile=identity,
+            response_style="estruturado",
+            governance_decision=GovernanceDecisionContract(
+                decision_id=GovernanceDecisionId("decision-repair"),
+                governance_check_id=GovernanceCheckId("check-repair"),
+                risk_level=RiskLevel.LOW,
+                decision=PermissionDecision.ALLOW,
+                justification="ok",
+                timestamp="2026-03-18T00:00:00Z",
+            ),
+            recovered_context=[],
+            active_minds=["mente_executiva"],
+            active_domains=["strategy"],
+            knowledge_snippets=[],
+            deliberative_plan=None,
+            specialist_contributions=[],
+            operation_result=None,
+            identity_mode="structured_planning",
+        )
+    )
+
+    assert result.output_validation_status == "repaired"
+    assert result.output_validation_retry_applied is True
+    assert "missing_clause:judgment" in result.output_validation_errors
+    assert "Leitura do objetivo:" in result.response_text
+    assert "Julgamento:" in result.response_text
+    assert "Recomendacao:" in result.response_text
+
+
+def test_synthesis_engine_surfaces_cross_session_recall_and_compaction() -> None:
+    engine = SynthesisEngine()
+    identity = IdentityEngine().get_profile()
+    response = engine.compose(
+        SynthesisInput(
+            intent="planning",
+            identity_profile=identity,
+            response_style="estruturado",
+            governance_decision=GovernanceDecisionContract(
+                decision_id=GovernanceDecisionId("decision-cross-session"),
+                governance_check_id=GovernanceCheckId("check-cross-session"),
+                risk_level=RiskLevel.LOW,
+                decision=PermissionDecision.ALLOW,
+                justification="ok",
+                timestamp="2026-03-18T00:00:00Z",
+            ),
+            recovered_context=["context_summary=previous context"],
+            active_minds=["mente_executiva"],
+            active_domains=["strategy"],
+            knowledge_snippets=["Priorize continuidade disciplinada."],
+            deliberative_plan=sample_plan(),
+            specialist_contributions=[],
+            operation_result=None,
+            identity_mode="structured_planning",
+            arbitration_summary="mente_executiva lidera com apoio estrategico e foco unico",
+            session_continuity_brief=(
+                "sessao segue ancorada em 'Plan milestone M3', com continuidade ativa em "
+                "'alinhar checkpoint principal'"
+            ),
+            session_continuity_mode="continuar",
+            session_anchor_goal="Plan milestone M3",
+            context_compaction_status="compressed_live_context",
+            context_live_summary=(
+                "turns=2;user_scope=recoverable;continuity=continuar;cross_session=active"
+            ),
+            cross_session_recall_status="active",
+            cross_session_recall_summary=(
+                "user_scope=intents=planning,analysis | anchor=Plan milestone M3"
+            ),
+        )
+    )
+
+    assert "recall cross-session:" in response
+    assert "contexto vivo compactado sem reabrir historico bruto" in response
+
+
 def test_synthesis_engine_surfaces_reformulation_without_pipeline_listing() -> None:
     engine = SynthesisEngine()
     identity = IdentityEngine().get_profile()
@@ -309,6 +390,11 @@ def test_synthesis_engine_uses_guided_semantic_and_procedural_memory_hints() -> 
         "success_criteria",
         "smallest_safe_next_action",
     ]
+    plan.procedural_artifact_status = "candidate"
+    plan.procedural_artifact_ref = (
+        "artifact://procedural/strategy/strategic_direction_workflow/v1"
+    )
+    plan.procedural_artifact_summary = "procedimento guiado para revisao de trade-offs"
     response = engine.compose(
         SynthesisInput(
             intent="planning",
@@ -373,6 +459,12 @@ def test_synthesis_engine_uses_guided_semantic_and_procedural_memory_hints() -> 
         "manter o ultimo fio de recomendacao governada" in response
     )
     assert "proxima acao deve preservar esse fio" in response
+    assert (
+        "Artefato procedural: candidate "
+        "(artifact://procedural/strategy/strategic_direction_workflow/v1)"
+        in response
+    )
+    assert "procedimento guiado para revisao de trade-offs" in response
 
 
 def test_synthesis_engine_surfaces_recomposition_in_final_reading() -> None:
