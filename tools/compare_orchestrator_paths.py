@@ -125,6 +125,28 @@ def mind_domain_specialist_chain_assessment(result: PilotExecutionResult) -> str
     return result.mind_domain_specialist_chain_status
 
 
+def mind_composition_assessment(result: PilotExecutionResult) -> str:
+    if result.mind_domain_specialist_chain_status in {"attention_required", "mismatch"}:
+        return "attention_required"
+    if result.mind_domain_specialist_status in {"attention_required", "mismatch"}:
+        return "attention_required"
+    if result.mind_validation_checkpoint_status == "attention_required":
+        return "attention_required"
+    if result.mind_disagreement_status == "deep_review_required":
+        return "attention_required"
+    if result.mind_domain_specialist_chain_status in {"incomplete", "evidence_partial"}:
+        return "maturation_recommended"
+    if result.mind_domain_specialist_status in {"incomplete", "evidence_partial"}:
+        return "maturation_recommended"
+    if result.mind_disagreement_status == "validation_required":
+        return "maturation_recommended"
+    if result.mind_disagreement_status in {None, "not_applicable", "contained"} and (
+        result.mind_validation_checkpoint_status in {None, "not_applicable", "healthy"}
+    ):
+        return "baseline_saudavel"
+    return "maturation_recommended"
+
+
 def specialist_subflow_assessment(result: PilotExecutionResult) -> str:
     return result.specialist_subflow_status
 
@@ -313,6 +335,9 @@ def evaluation_matrix(
                     for result in workflow_results
                 ]
             ),
+            "mind_composition": summarize_workflow_profile_assessments(
+                [mind_composition_assessment(result) for result in workflow_results]
+            ),
             "memory_causality": summarize_statuses(
                 [memory_causality_assessment(result) for result in workflow_results]
             ),
@@ -337,6 +362,90 @@ def evaluation_matrix(
             "priority_vectors": aggregate_refinement_vectors(workflow_results),
         }
     return matrix
+
+
+WAVE_TWO_READINESS_REQUIREMENTS: dict[str, dict[str, set[str]]] = {
+    "openai_agents_sdk": {
+        "workflow_checkpoint": {"healthy"},
+        "workflow_resume": {"healthy", "resume_available", "fresh_start"},
+        "workflow_output": {"baseline_saudavel", "not_applicable"},
+        "mind_domain_specialist_chain": {"aligned", "not_applicable"},
+    },
+    "qwen_agent": {
+        "workflow_profile": {"baseline_saudavel", "maturation_recommended", "not_applicable"},
+        "memory_causality": {"causal_guidance", "not_applicable"},
+        "memory_corpus": {"stable", "not_applicable"},
+    },
+    "graphiti_zep": {
+        "memory_lifecycle": {"retained", "promoted", "not_applicable"},
+        "memory_corpus": {"stable", "not_applicable"},
+        "memory_causality": {"causal_guidance", "not_applicable"},
+    },
+    "mem0": {
+        "memory_lifecycle": {"retained", "promoted", "not_applicable"},
+        "memory_corpus": {"stable", "not_applicable"},
+        "workflow_profile": {"baseline_saudavel", "maturation_recommended", "not_applicable"},
+    },
+    "openhands": {
+        "workflow_output": {"baseline_saudavel", "not_applicable"},
+        "procedural_artifact": {"reusable", "not_applicable"},
+        "mind_domain_specialist_chain": {"aligned", "not_applicable"},
+    },
+    "browser_use": {
+        "workflow_checkpoint": {"healthy"},
+        "workflow_resume": {"healthy", "resume_available", "fresh_start"},
+        "workflow_output": {"baseline_saudavel", "maturation_recommended", "not_applicable"},
+    },
+    "open_interpreter": {
+        "workflow_checkpoint": {"healthy"},
+        "workflow_resume": {"healthy", "resume_available", "fresh_start"},
+        "procedural_artifact": {"reusable", "not_applicable"},
+    },
+    "autogpt_platform": {
+        "workflow_checkpoint": {"healthy"},
+        "workflow_resume": {"healthy", "resume_available", "fresh_start"},
+        "workflow_profile": {"baseline_saudavel", "not_applicable"},
+        "workflow_output": {"baseline_saudavel", "not_applicable"},
+    },
+}
+
+
+def wave_two_readiness_matrix(
+    matrix: dict[str, dict[str, object]],
+) -> dict[str, dict[str, object]]:
+    readiness: dict[str, dict[str, object]] = {}
+    if not matrix:
+        return readiness
+    for technology, requirements in WAVE_TWO_READINESS_REQUIREMENTS.items():
+        blockers: list[str] = []
+        covered_workflows: list[str] = []
+        for workflow_name, workflow_matrix in matrix.items():
+            for axis, accepted in requirements.items():
+                value = str(workflow_matrix.get(axis, "not_applicable"))
+                if value not in accepted:
+                    blockers.append(f"{workflow_name}:{axis}={value}")
+                else:
+                    covered_workflows.append(workflow_name)
+        readiness[technology] = {
+            "status": (
+                "ready_for_controlled_experiment"
+                if not blockers
+                else "stabilize_nucleus_first"
+            ),
+            "covered_workflows": sorted(set(covered_workflows)),
+            "blockers": blockers[:6],
+        }
+    return readiness
+
+
+def wave_two_readiness_summary(matrix: dict[str, dict[str, object]]) -> str:
+    readiness = wave_two_readiness_matrix(matrix)
+    if not readiness:
+        return "none"
+    return ",".join(
+        f"{technology}:{payload['status']}"
+        for technology, payload in sorted(readiness.items())
+    )
 
 
 def summarize_comparisons(
@@ -426,6 +535,8 @@ def summarize_comparisons(
             "candidate_refinement_vectors": [],
             "baseline_evaluation_matrix": {},
             "candidate_evaluation_matrix": {},
+            "baseline_wave_two_readiness_matrix": {},
+            "candidate_wave_two_readiness_matrix": {},
             "decision": "no_scenarios",
         }
     matched = sum(1 for item in comparisons if item.core_match)
@@ -592,6 +703,8 @@ def summarize_comparisons(
         decision = "keep_baseline"
     else:
         decision = "candidate_requires_iteration"
+    baseline_matrix = evaluation_matrix([item.baseline for item in comparisons])
+    candidate_matrix = evaluation_matrix(available_candidates)
     return {
         "scenario_count": total,
         "matched_scenarios": matched,
@@ -848,10 +961,14 @@ def summarize_comparisons(
         "candidate_refinement_vectors": aggregate_refinement_vectors(
             available_candidates
         ),
-        "baseline_evaluation_matrix": evaluation_matrix(
-            [item.baseline for item in comparisons]
+        "baseline_evaluation_matrix": baseline_matrix,
+        "candidate_evaluation_matrix": candidate_matrix,
+        "baseline_wave_two_readiness_matrix": wave_two_readiness_matrix(
+            baseline_matrix
         ),
-        "candidate_evaluation_matrix": evaluation_matrix(available_candidates),
+        "candidate_wave_two_readiness_matrix": wave_two_readiness_matrix(
+            candidate_matrix
+        ),
         "decision": decision,
     }
 
@@ -913,6 +1030,10 @@ def summarize_statuses(statuses: list[str]) -> str:
         return "resume_available"
     if any(item == "reusable" for item in statuses):
         return "reusable"
+    if any(item == "aligned" for item in statuses):
+        return "aligned"
+    if any(item == "fresh_start" for item in statuses):
+        return "fresh_start"
     if any(item == "emerging" for item in statuses):
         return "emerging"
     if any(item == "healthy" for item in statuses):
@@ -1712,6 +1833,10 @@ def render_text(payload: dict[str, object]) -> str:
                 f"{matrix_workflows(summary['baseline_evaluation_matrix'])}",
                 "candidate_evaluation_matrix_workflows="
                 f"{matrix_workflows(summary['candidate_evaluation_matrix'])}",
+                "baseline_wave_two_readiness="
+                f"{wave_two_readiness_summary(summary['baseline_evaluation_matrix'])}",
+                "candidate_wave_two_readiness="
+                f"{wave_two_readiness_summary(summary['candidate_evaluation_matrix'])}",
             ]
         )
     )

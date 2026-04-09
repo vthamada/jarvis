@@ -571,6 +571,30 @@ class LangGraphFlowRunner:
                     ),
                     "workflow_output_status": synthesis_result.workflow_output_status,
                     "workflow_output_errors": synthesis_result.workflow_output_errors,
+                    "primary_mind": state["deliberative_plan"].primary_mind,
+                    "primary_mind_family": state["deliberative_plan"].primary_mind_family,
+                    "primary_domain_driver": (
+                        state["deliberative_plan"].primary_domain_driver
+                    ),
+                    "arbitration_source": state["deliberative_plan"].arbitration_source,
+                    "mind_disagreement_status": (
+                        state["deliberative_plan"].mind_disagreement_status
+                    ),
+                    "mind_validation_checkpoints": (
+                        state["deliberative_plan"].mind_validation_checkpoints
+                    ),
+                    "cognitive_strategy_shift_applied": (
+                        state["deliberative_plan"].cognitive_strategy_shift_applied
+                    ),
+                    "cognitive_strategy_shift_summary": (
+                        state["deliberative_plan"].cognitive_strategy_shift_summary
+                    ),
+                    "cognitive_strategy_shift_trigger": (
+                        state["deliberative_plan"].cognitive_strategy_shift_trigger
+                    ),
+                    "cognitive_strategy_shift_effects": (
+                        state["deliberative_plan"].cognitive_strategy_shift_effects
+                    ),
                     "continuity_action": state["deliberative_plan"].continuity_action,
                     "continuity_source": state["deliberative_plan"].continuity_source,
                     "continuity_target_mission_id": (

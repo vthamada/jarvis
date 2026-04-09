@@ -558,6 +558,54 @@ def test_synthesis_engine_uses_guided_semantic_and_procedural_memory_hints() -> 
     assert "procedimento guiado para revisao de trade-offs" in response
 
 
+def test_synthesis_engine_surfaces_mid_flow_cognitive_strategy_shift() -> None:
+    engine = SynthesisEngine()
+    identity = IdentityEngine().get_profile()
+    plan = sample_plan()
+    plan.cognitive_strategy_shift_applied = True
+    plan.cognitive_strategy_shift_summary = (
+        "revisao especializada manteve tensao aberta sob workflow governado; "
+        "checkpoint ativo scenario framed; loop alinhar checkpoint principal"
+    )
+    plan.cognitive_strategy_shift_trigger = "guided_validation_impasse"
+    plan.cognitive_strategy_shift_effects = [
+        "steps",
+        "constraints",
+        "success_criteria",
+        "smallest_safe_next_action",
+    ]
+    response = engine.compose(
+        SynthesisInput(
+            intent="planning",
+            identity_profile=identity,
+            response_style="estruturado",
+            governance_decision=GovernanceDecisionContract(
+                decision_id=GovernanceDecisionId("decision-shift"),
+                governance_check_id=GovernanceCheckId("check-shift"),
+                risk_level=RiskLevel.LOW,
+                decision=PermissionDecision.ALLOW_WITH_CONDITIONS,
+                justification="ok",
+                timestamp="2026-03-18T00:00:00Z",
+            ),
+            recovered_context=[],
+            active_minds=["mente_executiva"],
+            active_domains=["strategy"],
+            knowledge_snippets=[],
+            deliberative_plan=plan,
+            specialist_contributions=[],
+            operation_result=None,
+            identity_mode="structured_planning",
+        )
+    )
+
+    assert "mudanca de estrategia mid-flow:" in response
+    assert "gatilho de estrategia: guided validation impasse" in response
+    assert (
+        "efeitos da estrategia: steps, constraints, success_criteria, "
+        "smallest_safe_next_action" in response
+    )
+
+
 def test_synthesis_engine_surfaces_recomposition_in_final_reading() -> None:
     engine = SynthesisEngine()
     identity = IdentityEngine().get_profile()

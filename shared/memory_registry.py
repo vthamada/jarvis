@@ -66,6 +66,18 @@ class GuidedMemoryDecision:
 
 
 @dataclass(frozen=True)
+class MemoryLifecycleRuntimePolicy:
+    reasoning_mode: str
+    specialist_mode: str
+    recurrent_reuse_status: str
+    recovery_mode: str
+    allow_recurrent_reuse: bool
+    allow_semantic_specialist: bool
+    allow_procedural_specialist: bool
+    allow_procedural_artifact_reuse: bool
+
+
+@dataclass(frozen=True)
 class MemoryCorpusTelemetry:
     corpus_status: str
     retention_pressure: str
@@ -541,6 +553,64 @@ def memory_corpus_telemetry(
             "archivable_records": archivable_records,
             "consolidating_records": consolidating_records,
         },
+    )
+
+
+def memory_lifecycle_runtime_policy(
+    *,
+    semantic_memory_state: str | None,
+    procedural_memory_state: str | None,
+    review_status: str | None,
+    archive_status: str | None,
+    retention_pressure: str | None,
+) -> MemoryLifecycleRuntimePolicy:
+    """Translate lifecycle telemetry into a small sovereign runtime posture."""
+
+    semantic_specialist_allowed = semantic_memory_state in {"fixed", "operational"}
+    procedural_specialist_allowed = procedural_memory_state == "fixed"
+
+    if archive_status == "archive_candidate":
+        return MemoryLifecycleRuntimePolicy(
+            reasoning_mode="review_before_reuse",
+            specialist_mode="review_only",
+            recurrent_reuse_status="review_required",
+            recovery_mode="review_before_reuse",
+            allow_recurrent_reuse=False,
+            allow_semantic_specialist=False,
+            allow_procedural_specialist=False,
+            allow_procedural_artifact_reuse=False,
+        )
+    if review_status == "review_recommended":
+        return MemoryLifecycleRuntimePolicy(
+            reasoning_mode="review_before_reuse",
+            specialist_mode="constrained_guided",
+            recurrent_reuse_status="review_required",
+            recovery_mode="review_before_reuse",
+            allow_recurrent_reuse=False,
+            allow_semantic_specialist=semantic_specialist_allowed,
+            allow_procedural_specialist=procedural_specialist_allowed,
+            allow_procedural_artifact_reuse=procedural_memory_state == "fixed",
+        )
+    if retention_pressure == "high":
+        return MemoryLifecycleRuntimePolicy(
+            reasoning_mode="consolidate_before_expand",
+            specialist_mode="constrained_guided",
+            recurrent_reuse_status="monitor",
+            recovery_mode="consolidate_before_expand",
+            allow_recurrent_reuse=True,
+            allow_semantic_specialist=semantic_specialist_allowed,
+            allow_procedural_specialist=procedural_specialist_allowed,
+            allow_procedural_artifact_reuse=procedural_memory_state == "fixed",
+        )
+    return MemoryLifecycleRuntimePolicy(
+        reasoning_mode="active_guided",
+        specialist_mode="active_guided",
+        recurrent_reuse_status="enabled",
+        recovery_mode="active_guided",
+        allow_recurrent_reuse=True,
+        allow_semantic_specialist=semantic_memory_state in {"fixed", "operational", None},
+        allow_procedural_specialist=procedural_memory_state in {"fixed", "operational", None},
+        allow_procedural_artifact_reuse=procedural_memory_state in {"fixed", "operational", None},
     )
 
 

@@ -148,3 +148,40 @@ def test_cognitive_engine_applies_recomposition_on_specialist_route_impasse() ->
     assert snapshot.arbitration_source == "mind_registry_recomposition"
     assert "mente_critica" in snapshot.supporting_minds
     assert "recomposicao_cognitiva=" in snapshot.deliberation_notes[-1]
+
+
+def test_cognitive_engine_prioritizes_domains_and_specialists_from_memory_guidance() -> None:
+    engine = CognitiveEngine()
+    snapshot = engine.build_snapshot(
+        intent="analysis",
+        risk_markers=[],
+        retrieved_domains=["strategy", "analysis"],
+        domain_specialist_routes=[
+            DomainSpecialistRouteContract(
+                domain_name="strategy",
+                specialist_type="structured_analysis_specialist",
+                specialist_mode="guided",
+                routing_reason="rota de estrategia resolvida",
+            ),
+            DomainSpecialistRouteContract(
+                domain_name="analysis",
+                specialist_type="structured_analysis_specialist",
+                specialist_mode="guided",
+                routing_reason="rota de analise resolvida",
+            ),
+        ],
+        memory_priority_domains=["analysis"],
+        memory_specialist_hints=["structured_analysis_specialist"],
+        memory_priority_sources=["mission_focus", "continuity_ranking"],
+        memory_priority_summary="analysis:6[mission_focus,continuity_ranking]",
+    )
+
+    assert snapshot.active_domains == ["analysis", "strategy"]
+    assert snapshot.memory_priority_applied is True
+    assert snapshot.memory_priority_domains == ["analysis"]
+    assert snapshot.memory_priority_specialist_hints == [
+        "structured_analysis_specialist"
+    ]
+    assert snapshot.memory_priority_sources == ["mission_focus", "continuity_ranking"]
+    assert snapshot.memory_priority_summary == "analysis:6[mission_focus,continuity_ranking]"
+    assert snapshot.specialist_hints[0] == "structured_analysis_specialist"

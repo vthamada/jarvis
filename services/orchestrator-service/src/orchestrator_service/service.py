@@ -206,6 +206,10 @@ class OrchestratorService:
                 )
             )
 
+        memory_route_guidance = self._memory_route_guidance(
+            active_domains=knowledge_result.active_domains if knowledge_result else [],
+            recovered_context=memory_recovery_result.recovered_items,
+        )
         cognitive_snapshot = self.cognitive_engine.build_snapshot(
             intent=directive.intent,
             risk_markers=directive.risk_markers,
@@ -214,6 +218,10 @@ class OrchestratorService:
                 knowledge_result.specialist_routes if knowledge_result else []
             ),
             mind_hints=directive.mind_hints,
+            memory_priority_domains=memory_route_guidance["prioritized_domains"],
+            memory_specialist_hints=memory_route_guidance["prioritized_specialists"],
+            memory_priority_sources=memory_route_guidance["sources"],
+            memory_priority_summary=memory_route_guidance["summary"],
         )
         events.append(
             self.make_event(
@@ -243,6 +251,13 @@ class OrchestratorService:
                         cognitive_snapshot.recomposition_trigger
                     ),
                     "specialist_hints": cognitive_snapshot.specialist_hints,
+                    "memory_priority_applied": cognitive_snapshot.memory_priority_applied,
+                    "memory_priority_domains": cognitive_snapshot.memory_priority_domains,
+                    "memory_priority_specialist_hints": (
+                        cognitive_snapshot.memory_priority_specialist_hints
+                    ),
+                    "memory_priority_sources": cognitive_snapshot.memory_priority_sources,
+                    "memory_priority_summary": cognitive_snapshot.memory_priority_summary,
                 },
             )
         )
@@ -273,6 +288,7 @@ class OrchestratorService:
                 memory_recovery_result=memory_recovery_result,
                 cognitive_snapshot=cognitive_snapshot,
                 knowledge_result=knowledge_result,
+                memory_route_guidance=memory_route_guidance,
             )
         )
         events.append(
@@ -307,6 +323,18 @@ class OrchestratorService:
                     "mind_disagreement_status": deliberative_plan.mind_disagreement_status,
                     "mind_validation_checkpoints": (
                         deliberative_plan.mind_validation_checkpoints
+                    ),
+                    "cognitive_strategy_shift_applied": (
+                        deliberative_plan.cognitive_strategy_shift_applied
+                    ),
+                    "cognitive_strategy_shift_summary": (
+                        deliberative_plan.cognitive_strategy_shift_summary
+                    ),
+                    "cognitive_strategy_shift_trigger": (
+                        deliberative_plan.cognitive_strategy_shift_trigger
+                    ),
+                    "cognitive_strategy_shift_effects": (
+                        deliberative_plan.cognitive_strategy_shift_effects
                     ),
                     "primary_mind": deliberative_plan.primary_mind,
                     "primary_mind_family": deliberative_plan.primary_mind_family,
@@ -721,6 +749,18 @@ class OrchestratorService:
                     "mind_disagreement_status": deliberative_plan.mind_disagreement_status,
                     "mind_validation_checkpoints": (
                         deliberative_plan.mind_validation_checkpoints
+                    ),
+                    "cognitive_strategy_shift_applied": (
+                        deliberative_plan.cognitive_strategy_shift_applied
+                    ),
+                    "cognitive_strategy_shift_summary": (
+                        deliberative_plan.cognitive_strategy_shift_summary
+                    ),
+                    "cognitive_strategy_shift_trigger": (
+                        deliberative_plan.cognitive_strategy_shift_trigger
+                    ),
+                    "cognitive_strategy_shift_effects": (
+                        deliberative_plan.cognitive_strategy_shift_effects
                     ),
                     "cognitive_recomposition_applied": (
                         cognitive_snapshot.recomposition_applied
@@ -1772,6 +1812,21 @@ class OrchestratorService:
                             "specialist_resolution_summary": (
                                 refined_plan.specialist_resolution_summary
                             ),
+                            "cognitive_strategy_shift_applied": (
+                                refined_plan.cognitive_strategy_shift_applied
+                            ),
+                            "cognitive_strategy_shift_summary": (
+                                refined_plan.cognitive_strategy_shift_summary
+                            ),
+                            "cognitive_strategy_shift_trigger": (
+                                refined_plan.cognitive_strategy_shift_trigger
+                            ),
+                            "cognitive_strategy_shift_effects": (
+                                refined_plan.cognitive_strategy_shift_effects
+                            ),
+                            "smallest_safe_next_action": (
+                                refined_plan.smallest_safe_next_action
+                            ),
                         },
                     )
                 )
@@ -2069,6 +2124,7 @@ class OrchestratorService:
         memory_recovery_result: MemoryRecoveryResult,
         cognitive_snapshot,
         knowledge_result: KnowledgeRetrievalResult | None,
+        memory_route_guidance: dict[str, object] | None = None,
     ) -> PlanningContext:
         recovered = memory_recovery_result.recovered_items
         canonical_domains = (
@@ -2089,6 +2145,7 @@ class OrchestratorService:
                 canonical_domains=canonical_domains,
             )
         )
+        route_guidance = memory_route_guidance or {}
         return PlanningContext(
             intent=directive.intent,
             query=contract.content,
@@ -2251,6 +2308,21 @@ class OrchestratorService:
             ),
             cross_session_recall_summary=self._extract_context_hint(
                 recovered, "cross_session_recall_summary="
+            ),
+            memory_priority_status=(
+                str(route_guidance.get("status"))
+                if route_guidance.get("status") is not None
+                else "registry_only"
+            ),
+            memory_priority_domains=list(route_guidance.get("prioritized_domains", [])),
+            memory_priority_specialists=list(
+                route_guidance.get("prioritized_specialists", [])
+            ),
+            memory_priority_sources=list(route_guidance.get("sources", [])),
+            memory_priority_summary=(
+                str(route_guidance.get("summary"))
+                if route_guidance.get("summary") is not None
+                else None
             ),
             procedural_artifact_status=self._extract_context_hint(
                 recovered, "procedural_artifact_status="
@@ -3014,6 +3086,134 @@ class OrchestratorService:
                 raw = item.removeprefix(prefix)
                 return [part.strip() for part in raw.split(separator) if part.strip()]
         return []
+
+    @staticmethod
+    def _memory_route_guidance(
+        *,
+        active_domains: list[str],
+        recovered_context: list[str],
+    ) -> dict[str, object]:
+        if not active_domains:
+            return {
+                "status": "registry_only",
+                "prioritized_domains": [],
+                "prioritized_specialists": [],
+                "sources": [],
+                "summary": None,
+            }
+
+        mission_focus = OrchestratorService._extract_list_hint(
+            recovered_context,
+            "mission_focus=",
+            separator=",",
+        )
+        user_domain_focus = OrchestratorService._extract_list_hint(
+            recovered_context,
+            "user_domain_focus=",
+            separator=",",
+        )
+        continuity_recommendation = OrchestratorService._extract_context_hint(
+            recovered_context,
+            "continuity_recommendation=",
+        )
+        procedural_artifact_status = OrchestratorService._extract_context_hint(
+            recovered_context,
+            "procedural_artifact_status=",
+        )
+        related_priority_raw = OrchestratorService._extract_context_hint(
+            recovered_context,
+            "related_continuity_priority=",
+        )
+        try:
+            related_priority = float(related_priority_raw) if related_priority_raw else None
+        except ValueError:
+            related_priority = None
+
+        focus_sources = {
+            "mission_focus": set(mission_focus),
+            "user_scope": set(user_domain_focus),
+        }
+        scores: dict[str, int] = {}
+        reasons_by_domain: dict[str, list[str]] = {}
+        prioritized_specialists: list[str] = []
+        sources: list[str] = []
+
+        for route_name in active_domains:
+            metadata = route_metadata_payload(route_name)
+            match_tokens = {route_name, *metadata["canonical_domain_refs"]}
+            score = 0
+            reasons: list[str] = []
+
+            for source_name, focus_values in focus_sources.items():
+                if focus_values.intersection(match_tokens):
+                    weight = 4 if source_name == "mission_focus" else 3
+                    score += weight
+                    reasons.append(source_name)
+                    if source_name not in sources:
+                        sources.append(source_name)
+
+            if (
+                continuity_recommendation == "retomar_missao_relacionada"
+                and related_priority is not None
+                and related_priority >= 0.6
+                and reasons
+            ):
+                score += 2
+                reasons.append("continuity_ranking")
+                if "continuity_ranking" not in sources:
+                    sources.append("continuity_ranking")
+
+            if (
+                procedural_artifact_status in {"candidate", "reusable", "fixed"}
+                and metadata["linked_specialist_type"] is not None
+            ):
+                score += 1
+                reasons.append("procedural_artifact")
+                if "procedural_artifact" not in sources:
+                    sources.append("procedural_artifact")
+
+            if score <= 0:
+                continue
+            scores[route_name] = score
+            reasons_by_domain[route_name] = reasons
+            specialist_type = metadata["linked_specialist_type"]
+            if specialist_type is not None and specialist_type not in prioritized_specialists:
+                prioritized_specialists.append(str(specialist_type))
+
+        if not scores:
+            return {
+                "status": "registry_only",
+                "prioritized_domains": [],
+                "prioritized_specialists": [],
+                "sources": [],
+                "summary": None,
+            }
+
+        prioritized_domains = sorted(
+            scores,
+            key=lambda route_name: (-scores[route_name], active_domains.index(route_name)),
+        )
+        sources = [
+            source_name
+            for source_name in (
+                "mission_focus",
+                "user_scope",
+                "continuity_ranking",
+                "procedural_artifact",
+            )
+            if source_name in sources
+        ]
+        summary = " > ".join(
+            f"{route_name}:{scores[route_name]}[{','.join(reasons_by_domain[route_name])}]"
+            for route_name in prioritized_domains
+        )
+        return {
+            "status": "memory_guided",
+            "prioritized_domains": prioritized_domains,
+            "prioritized_specialists": prioritized_specialists,
+            "sources": sources,
+            "summary": summary,
+        }
 
     @staticmethod
     def _build_response_from_state(state: dict[str, object]) -> OrchestratorResponse:

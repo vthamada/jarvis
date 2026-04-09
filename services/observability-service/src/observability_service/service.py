@@ -84,6 +84,11 @@ class FlowAudit:
     cognitive_recomposition_applied: bool
     cognitive_recomposition_reason: str | None
     cognitive_recomposition_trigger: str | None
+    cognitive_strategy_shift_status: str
+    cognitive_strategy_shift_applied: bool
+    cognitive_strategy_shift_summary: str | None
+    cognitive_strategy_shift_trigger: str | None
+    cognitive_strategy_shift_effects: list[str]
     semantic_memory_source: str | None
     procedural_memory_source: str | None
     semantic_memory_focus: list[str]
@@ -147,6 +152,7 @@ class FlowAudit:
             and self.contract_validation_status in {"coherent", "repaired", "not_applicable"}
             and self.output_validation_status in {"coherent", "repaired", "not_applicable"}
             and self.workflow_output_status in {"coherent", "not_applicable"}
+            and self.cognitive_strategy_shift_status in {"healthy", "not_applicable"}
             and self.specialist_subflow_status
             in {"healthy", "not_applicable", "contained"}
             and self.mission_runtime_state_status in {"healthy", "not_applicable"}
@@ -325,6 +331,11 @@ class ObservabilityService:
                 cognitive_recomposition_applied=False,
                 cognitive_recomposition_reason=None,
                 cognitive_recomposition_trigger=None,
+                cognitive_strategy_shift_status="incomplete",
+                cognitive_strategy_shift_applied=False,
+                cognitive_strategy_shift_summary=None,
+                cognitive_strategy_shift_trigger=None,
+                cognitive_strategy_shift_effects=[],
                 semantic_memory_source=None,
                 procedural_memory_source=None,
                 semantic_memory_focus=[],
@@ -383,6 +394,7 @@ class ObservabilityService:
         workflow_completed_event = self._first_event(events, "workflow_completed")
         directive_event = self._first_event(events, "directive_composed")
         plan_event = self._first_event(events, "plan_built")
+        plan_refined_event = self._first_event(events, "plan_refined")
         plan_governed_event = self._first_event(events, "plan_governed")
         context_event = self._first_event(events, "context_composed")
         response_event = self._first_event(events, "response_synthesized")
@@ -682,6 +694,52 @@ class ObservabilityService:
                 else None
             )
         )
+        cognitive_strategy_shift_applied = bool(
+            (
+                plan_refined_event.payload.get("cognitive_strategy_shift_applied")
+                if plan_refined_event
+                else False
+            )
+            or (
+                response_event.payload.get("cognitive_strategy_shift_applied")
+                if response_event
+                else False
+            )
+        )
+        cognitive_strategy_shift_summary = (
+            str(plan_refined_event.payload.get("cognitive_strategy_shift_summary"))
+            if plan_refined_event
+            and plan_refined_event.payload.get("cognitive_strategy_shift_summary") is not None
+            else (
+                str(response_event.payload.get("cognitive_strategy_shift_summary"))
+                if response_event
+                and response_event.payload.get("cognitive_strategy_shift_summary") is not None
+                else None
+            )
+        )
+        cognitive_strategy_shift_trigger = (
+            str(plan_refined_event.payload.get("cognitive_strategy_shift_trigger"))
+            if plan_refined_event
+            and plan_refined_event.payload.get("cognitive_strategy_shift_trigger") is not None
+            else (
+                str(response_event.payload.get("cognitive_strategy_shift_trigger"))
+                if response_event
+                and response_event.payload.get("cognitive_strategy_shift_trigger") is not None
+                else None
+            )
+        )
+        cognitive_strategy_shift_effects = [
+            str(item)
+            for item in (
+                plan_refined_event.payload.get("cognitive_strategy_shift_effects", [])
+                if plan_refined_event
+                else (
+                    response_event.payload.get("cognitive_strategy_shift_effects", [])
+                    if response_event
+                    else []
+                )
+            )
+        ]
         semantic_memory_focus = [
             str(item)
             for item in (
@@ -995,6 +1053,10 @@ class ObservabilityService:
             specialist_domain_event=specialist_domain_event,
             mind_domain_specialist_status=mind_domain_specialist_status,
         )
+        cognitive_strategy_shift_status = self._cognitive_strategy_shift_status(
+            plan_refined_event=plan_refined_event,
+            response_event=response_event,
+        )
         mind_domain_specialist_chain = self._mind_domain_specialist_chain(
             response_event=response_event,
             specialist_selection_event=specialist_selection_event,
@@ -1080,6 +1142,11 @@ class ObservabilityService:
             cognitive_recomposition_applied=cognitive_recomposition_applied,
             cognitive_recomposition_reason=cognitive_recomposition_reason,
             cognitive_recomposition_trigger=cognitive_recomposition_trigger,
+            cognitive_strategy_shift_status=cognitive_strategy_shift_status,
+            cognitive_strategy_shift_applied=cognitive_strategy_shift_applied,
+            cognitive_strategy_shift_summary=cognitive_strategy_shift_summary,
+            cognitive_strategy_shift_trigger=cognitive_strategy_shift_trigger,
+            cognitive_strategy_shift_effects=cognitive_strategy_shift_effects,
             semantic_memory_source=semantic_memory_source,
             procedural_memory_source=procedural_memory_source,
             semantic_memory_focus=semantic_memory_focus,
@@ -2026,6 +2093,60 @@ class ObservabilityService:
         return "healthy"
 
     @staticmethod
+    def _cognitive_strategy_shift_status(
+        *,
+        plan_refined_event: InternalEventEnvelope | None,
+        response_event: InternalEventEnvelope | None,
+    ) -> str:
+        if plan_refined_event is None:
+            if response_event is None:
+                return "not_applicable"
+            response_applied = bool(
+                response_event.payload.get("cognitive_strategy_shift_applied")
+            )
+            response_has_details = any(
+                response_event.payload.get(field_name) is not None
+                for field_name in (
+                    "cognitive_strategy_shift_summary",
+                    "cognitive_strategy_shift_trigger",
+                )
+            ) or bool(response_event.payload.get("cognitive_strategy_shift_effects", []))
+            return "attention_required" if response_applied or response_has_details else "not_applicable"
+
+        plan_applied = bool(plan_refined_event.payload.get("cognitive_strategy_shift_applied"))
+        plan_summary = plan_refined_event.payload.get("cognitive_strategy_shift_summary")
+        plan_trigger = plan_refined_event.payload.get("cognitive_strategy_shift_trigger")
+        plan_effects = list(
+            plan_refined_event.payload.get("cognitive_strategy_shift_effects", [])
+        )
+        if plan_applied:
+            if not plan_summary or not plan_trigger or not plan_effects:
+                return "attention_required"
+        elif plan_summary is not None or plan_trigger is not None or plan_effects:
+            return "attention_required"
+
+        if response_event is None:
+            return "healthy" if plan_applied else "not_applicable"
+
+        response_applied = bool(
+            response_event.payload.get("cognitive_strategy_shift_applied")
+        )
+        response_summary = response_event.payload.get("cognitive_strategy_shift_summary")
+        response_trigger = response_event.payload.get("cognitive_strategy_shift_trigger")
+        response_effects = list(
+            response_event.payload.get("cognitive_strategy_shift_effects", [])
+        )
+        if response_applied != plan_applied:
+            return "attention_required"
+        if response_summary != plan_summary:
+            return "attention_required"
+        if response_trigger != plan_trigger:
+            return "attention_required"
+        if response_effects != plan_effects:
+            return "attention_required"
+        return "healthy" if plan_applied else "not_applicable"
+
+    @staticmethod
     def _metacognitive_guidance_status(
         *,
         context_event: InternalEventEnvelope | None,
@@ -2415,6 +2536,19 @@ class ObservabilityService:
                 return "attention_required"
             if "procedural" in consumed and not any(
                 str(ref).startswith("memory://procedural") for ref in memory_refs
+            ):
+                return "attention_required"
+            if archive_status == "archive_candidate" and {"semantic", "procedural"}.intersection(
+                consumed
+            ):
+                return "attention_required"
+            if (
+                shared_memory_event.payload.get("memory_review_statuses", {}).get(
+                    specialist_type
+                )
+                == "review_recommended"
+                and "procedural" in consumed
+                and procedural_memory_states.get(specialist_type) != "fixed"
             ):
                 return "attention_required"
             if consolidation_status not in {

@@ -44,6 +44,7 @@ from shared.memory_registry import (
     default_priority_rules,
     guided_memory_decision,
     memory_corpus_telemetry,
+    memory_lifecycle_runtime_policy,
     memory_lifecycle_support_signals,
     organization_scope_guard_payload,
     procedural_artifact_decision,
@@ -554,6 +555,7 @@ class MemoryService:
         continuity_context: MissionContinuityContextContract | None = None
         user_scope_context: UserScopeContextContract | None = None
         mission_state: MissionStateContract | None = None
+        latest_artifact: dict[str, object] | None = None
         if contract.user_id:
             user_scope_context = self.repository.fetch_user_scope_snapshot(contract.user_id)
             if user_scope_context is None:
@@ -691,17 +693,26 @@ class MemoryService:
                             "procedural_artifact_status="
                             f"{latest_artifact['artifact_status']}"
                         )
-                    if latest_artifact.get("artifact_ref") is not None:
+                    if (
+                        latest_artifact.get("artifact_ref") is not None
+                        and latest_artifact.get("artifact_status") != "archivable"
+                    ):
                         plan_hints.append(
                             "procedural_artifact_ref="
                             f"{latest_artifact['artifact_ref']}"
                         )
-                    if latest_artifact.get("summary") is not None:
+                    if (
+                        latest_artifact.get("summary") is not None
+                        and latest_artifact.get("artifact_status") != "archivable"
+                    ):
                         plan_hints.append(
                             "procedural_artifact_summary="
                             f"{latest_artifact['summary']}"
                         )
-                    if latest_artifact.get("version") is not None:
+                    if (
+                        latest_artifact.get("version") is not None
+                        and latest_artifact.get("artifact_status") != "archivable"
+                    ):
                         plan_hints.append(
                             "procedural_artifact_version="
                             f"{latest_artifact['version']}"
@@ -755,6 +766,41 @@ class MemoryService:
             ),
             has_mission_context=mission_state is not None,
         )
+        corpus_summary = self.repository.summarize_memory_corpus()
+        corpus_telemetry = memory_corpus_telemetry(
+            user_scope_records=corpus_summary.user_scope_records,
+            mission_state_records=corpus_summary.mission_state_records,
+            specialist_context_records=corpus_summary.specialist_context_records,
+            semantic_records=corpus_summary.semantic_records,
+            procedural_records=corpus_summary.procedural_records,
+            retained_records=corpus_summary.retained_records,
+            promoted_records=corpus_summary.promoted_records,
+            aging_records=corpus_summary.aging_records,
+            review_recommended_records=corpus_summary.review_recommended_records,
+            fixed_records=corpus_summary.fixed_records,
+            operational_records=corpus_summary.operational_records,
+            archivable_records=corpus_summary.archivable_records,
+            consolidating_records=corpus_summary.consolidating_records,
+        )
+        recovery_mode = (
+            "review_before_reuse"
+            if latest_artifact is not None
+            and latest_artifact.get("artifact_status") == "archivable"
+            else "consolidate_before_expand"
+            if corpus_telemetry.retention_pressure == "high"
+            else "active_guided"
+        )
+        if (
+            latest_artifact is not None
+            and latest_artifact.get("artifact_status") == "archivable"
+        ) or corpus_telemetry.retention_pressure != "low":
+            plan_hints.extend(
+                [
+                    f"memory_corpus_status={corpus_telemetry.corpus_status}",
+                    f"memory_retention_pressure={corpus_telemetry.retention_pressure}",
+                    f"memory_recovery_mode={recovery_mode}",
+                ]
+            )
         live_turn_context = list(session_context[-context_policy.live_turn_limit :])
         trimmed_continuity_hints = self._compact_prefixed_hints(
             continuity_hints,
@@ -830,6 +876,10 @@ class MemoryService:
             preferred_prefixes=(
                 "prior_plan=",
                 "prior_steps=",
+                "procedural_artifact_status=",
+                "memory_recovery_mode=",
+                "memory_corpus_status=",
+                "memory_retention_pressure=",
                 "cross_session_recall_status=",
                 "cross_session_recall_sources=",
                 "cross_session_recall_summary=",
@@ -1042,6 +1092,63 @@ class MemoryService:
             archivable_records=corpus_summary.archivable_records,
             consolidating_records=corpus_summary.consolidating_records,
         )
+        runtime_semantic_state = memory_decision.semantic_memory_state
+        runtime_procedural_state = memory_decision.procedural_memory_state
+        runtime_review_status = memory_decision.review_status
+        runtime_archive_status = memory_decision.archive_status
+        if previous_context is not None:
+            if (
+                mission_state is None
+                and not related_states
+                and user_scope_snapshot is None
+            ):
+                runtime_semantic_state = (
+                    previous_context.semantic_memory_state or runtime_semantic_state
+                )
+                runtime_procedural_state = (
+                    previous_context.procedural_memory_state or runtime_procedural_state
+                )
+                runtime_review_status = (
+                    previous_context.memory_review_status or runtime_review_status
+                )
+                runtime_archive_status = (
+                    previous_context.memory_archive_status or runtime_archive_status
+                )
+            if (
+                previous_context.memory_review_status == "review_recommended"
+                and runtime_review_status != "review_recommended"
+            ):
+                runtime_review_status = previous_context.memory_review_status
+            if (
+                previous_context.memory_archive_status == "archive_candidate"
+                and runtime_archive_status != "archive_candidate"
+            ):
+                runtime_archive_status = previous_context.memory_archive_status
+                runtime_semantic_state = (
+                    previous_context.semantic_memory_state or runtime_semantic_state
+                )
+                runtime_procedural_state = (
+                    previous_context.procedural_memory_state or runtime_procedural_state
+                )
+        runtime_policy = memory_lifecycle_runtime_policy(
+            semantic_memory_state=runtime_semantic_state,
+            procedural_memory_state=runtime_procedural_state,
+            review_status=runtime_review_status,
+            archive_status=runtime_archive_status,
+            retention_pressure=corpus_telemetry.retention_pressure,
+        )
+        if not runtime_policy.allow_semantic_specialist:
+            shared_memory_classes = [
+                memory_class
+                for memory_class in shared_memory_classes
+                if memory_class is not MemoryClass.SEMANTIC
+            ]
+        if not runtime_policy.allow_procedural_specialist:
+            shared_memory_classes = [
+                memory_class
+                for memory_class in shared_memory_classes
+                if memory_class is not MemoryClass.PROCEDURAL
+            ]
         canonical_memory_refs = [
             f"memory://{memory_class.value}" for memory_class in shared_memory_classes
         ]
@@ -1097,6 +1204,10 @@ class MemoryService:
             if latest_artifact is not None and latest_artifact.get("summary") is not None
             else None
         )
+        if not runtime_policy.allow_procedural_artifact_reuse:
+            procedural_artifact_refs = []
+            procedural_artifact_version = None
+            procedural_artifact_summary = None
 
         related_summary = (
             ", ".join(str(item.mission_id) for item in related_states[:2]) or "nenhuma"
@@ -1126,6 +1237,8 @@ class MemoryService:
             f"memory_consolidation={memory_decision.consolidation_status} | "
             f"memory_fixation={memory_decision.fixation_status} | "
             f"memory_archive={memory_decision.archive_status} | "
+            f"memory_runtime_mode={runtime_policy.specialist_mode} | "
+            f"memory_recovery_mode={runtime_policy.recovery_mode} | "
             f"procedural_artifact_status={procedural_artifact_status or 'none'} | "
             f"memory_corpus_status={corpus_telemetry.corpus_status} | "
             f"memory_retention_pressure={corpus_telemetry.retention_pressure} | "
@@ -1133,13 +1246,14 @@ class MemoryService:
         )
         continuity_context_brief = (
             f"continuity_mode={continuity_mode} | open_loops={open_loop_summary} | "
-            f"source_mission_id={source_mission_id or 'none'}"
+            f"source_mission_id={source_mission_id or 'none'} | "
+            f"recurrent_memory_status={runtime_policy.recurrent_reuse_status}"
         )
         shared_memory_brief = (
             f"specialist={specialist_type} continuidade={continuity_mode} "
             f"fonte={source_goal or 'sessao sem missao ancorada'} "
             f"relacoes={related_summary} foco={source_focus} "
-            f"open_loops={open_loop_summary}"
+            f"open_loops={open_loop_summary} runtime={runtime_policy.specialist_mode}"
         )
         consumer_mode = (
             "domain_guided_memory_packet"
@@ -1176,6 +1290,8 @@ class MemoryService:
             source_goal=source_goal,
             consumer_objective=consumer_objective,
             memory_refs=memory_refs,
+            recurrent_reuse_status=runtime_policy.recurrent_reuse_status,
+            allow_reuse=runtime_policy.allow_recurrent_reuse,
         )
         return SpecialistSharedMemoryContextContract(
             specialist_type=specialist_type,
@@ -1275,7 +1391,12 @@ class MemoryService:
             if related_state.last_recommendation:
                 procedural_evidence.append(related_state.last_recommendation)
             procedural_labels.append("related_mission")
-        if previous_context is not None:
+        previous_context_allowed = (
+            previous_context is not None
+            and previous_context.memory_archive_status != "archive_candidate"
+            and previous_context.memory_review_status != "review_recommended"
+        )
+        if previous_context_allowed and previous_context is not None:
             semantic_evidence.extend(previous_context.semantic_focus)
             if previous_context.shared_memory_brief:
                 semantic_evidence.append(previous_context.shared_memory_brief)
@@ -1335,6 +1456,8 @@ class MemoryService:
         source_goal: str | None,
         consumer_objective: str | None,
         memory_refs: list[str],
+        recurrent_reuse_status: str,
+        allow_reuse: bool,
     ) -> dict[str, object]:
         if user_id is None or promoted_route is None:
             return {
@@ -1345,28 +1468,42 @@ class MemoryService:
                 "memory_refs": [],
                 "continuity_modes": [],
             }
+        stale_previous_context = previous_context is not None and (
+            previous_context.memory_review_status == "review_recommended"
+            or previous_context.memory_archive_status == "archive_candidate"
+        )
         interaction_count = (
             previous_context.recurrent_interaction_count if previous_context else 0
         ) + 1
         domain_focus = self._merge_recent_values(
-            previous_context.recurrent_domain_focus if previous_context else [],
+            previous_context.recurrent_domain_focus if previous_context and allow_reuse else [],
             active_domains[:3],
             limit=4,
         )
         recurrent_memory_refs = self._merge_recent_values(
-            previous_context.recurrent_memory_refs if previous_context else [],
+            previous_context.recurrent_memory_refs if previous_context and allow_reuse else [],
             memory_refs[:4],
             limit=6,
         )
         continuity_modes = self._merge_recent_values(
-            previous_context.recurrent_continuity_modes if previous_context else [],
+            previous_context.recurrent_continuity_modes
+            if previous_context and allow_reuse
+            else [],
             [continuity_mode],
             limit=3,
         )
-        status = "recoverable" if interaction_count >= 2 else "seeded"
+        status = (
+            recurrent_reuse_status
+            if stale_previous_context and recurrent_reuse_status != "enabled"
+            else "recoverable"
+            if interaction_count >= 2
+            else "seeded"
+        )
         brief_parts = [
             f"specialist={specialist_type}",
             f"interactions={interaction_count}",
+            "reuse="
+            f"{recurrent_reuse_status if stale_previous_context else 'enabled'}",
         ]
         if domain_focus:
             brief_parts.append(f"domains={','.join(domain_focus[:3])}")

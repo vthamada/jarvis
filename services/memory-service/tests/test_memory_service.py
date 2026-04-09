@@ -11,7 +11,12 @@ from memory_service.repository import (
 )
 from memory_service.service import MemoryRecordResult, MemoryRecoveryResult, MemoryService
 
-from shared.contracts import DeliberativePlanContract, InputContract, SpecialistContributionContract
+from shared.contracts import (
+    DeliberativePlanContract,
+    InputContract,
+    SpecialistContributionContract,
+    SpecialistSharedMemoryContextContract,
+)
 from shared.memory_registry import DEFAULT_MEMORY_SCOPES, memory_lifecycle_decision
 from shared.types import (
     ChannelType,
@@ -937,6 +942,121 @@ def test_memory_service_exposes_archivable_lifecycle_policy_for_stale_guided_mem
     assert decision.consolidation_status == "revisit_before_reuse"
     assert decision.fixation_status == "not_fixed"
     assert decision.archive_status == "archive_candidate"
+
+
+def test_memory_service_recovery_marks_archivable_procedural_artifact_for_review() -> None:
+    temp_dir = runtime_dir("memory-archivable-artifact-recovery")
+    service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
+    contract = InputContract(
+        request_id=RequestId("req-archivable-artifact-1"),
+        session_id=SessionId("sess-archivable-artifact"),
+        mission_id=MissionId("mission-archivable-artifact"),
+        channel=ChannelType.CHAT,
+        input_type=InputType.TEXT,
+        content="Prepare the rollout procedure update.",
+        timestamp="2026-04-09T00:00:00Z",
+    )
+    service.record_turn(
+        contract,
+        intent="planning",
+        response_text="Governed rollout procedure stored.",
+        deliberative_plan=DeliberativePlanContract(
+            plan_summary="estruturar procedimento de rollout com revisao governada",
+            goal="Prepare rollout procedure update",
+            steps=["preparar patch", "revisar rollback", "publicar checkpoint"],
+            active_domains=["software_development"],
+            active_minds=["mente_executiva"],
+            constraints=["through_core_only"],
+            risks=[],
+            recommended_task_type="draft_plan",
+            requires_human_validation=False,
+            rationale="contexto=software",
+            specialist_hints=["software_change_specialist"],
+            continuity_action="continuar",
+            open_loops=["revisar checkpoint de rollback"],
+            procedural_memory_lifecycle="aging",
+            procedural_memory_state="archivable",
+            memory_review_status="review_recommended",
+        ),
+        governance_decision=PermissionDecision.ALLOW_WITH_CONDITIONS,
+    )
+
+    recovered = service.recover_for_input(
+        InputContract(
+            request_id=RequestId("req-archivable-artifact-2"),
+            session_id=SessionId("sess-archivable-artifact"),
+            mission_id=MissionId("mission-archivable-artifact"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Continue the rollout procedure review.",
+            timestamp="2026-04-09T00:01:00Z",
+        )
+    )
+
+    assert "procedural_artifact_status=archivable" in recovered.plan_hints
+    assert "memory_recovery_mode=review_before_reuse" in recovered.plan_hints
+    assert not any(item.startswith("procedural_artifact_ref=") for item in recovered.plan_hints)
+    assert not any(
+        item.startswith("procedural_artifact_summary=") for item in recovered.plan_hints
+    )
+
+
+def test_memory_service_blocks_auto_reuse_of_archivable_recurrent_specialist_memory(
+    monkeypatch,
+) -> None:
+    temp_dir = runtime_dir("memory-archivable-recurrent-specialist")
+    service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
+
+    stale_context = SpecialistSharedMemoryContextContract(
+        specialist_type="software_change_specialist",
+        sharing_mode="core_mediated_read_only",
+        continuity_mode="continuar",
+        shared_memory_brief="specialist=software_change_specialist continuidade=continuar",
+        write_policy="through_core_only",
+        consumer_mode="domain_guided_memory_packet",
+        semantic_focus=["software_development"],
+        semantic_memory_lifecycle="aging",
+        procedural_memory_lifecycle="aging",
+        semantic_memory_state="archivable",
+        procedural_memory_state="archivable",
+        memory_lifecycle_status="review_recommended",
+        memory_review_status="review_recommended",
+        memory_consolidation_status="revisit_before_reuse",
+        memory_fixation_status="not_fixed",
+        memory_archive_status="archive_candidate",
+        recurrent_context_status="recoverable",
+        recurrent_interaction_count=2,
+        recurrent_context_brief="specialist=software_change_specialist | reuse=enabled",
+        recurrent_domain_focus=["software_development"],
+        recurrent_memory_refs=["memory://semantic/mission/old"],
+        recurrent_continuity_modes=["continuar"],
+    )
+
+    monkeypatch.setattr(
+        service.repository,
+        "fetch_latest_specialist_shared_memory_for_user",
+        lambda **_: stale_context,
+    )
+
+    contexts = service.prepare_specialist_shared_memory(
+        session_id="sess-archivable-recurrent-specialist",
+        specialist_hints=["software_change_specialist"],
+        active_domains=["software_development"],
+        mission_id=None,
+        continuity_context=None,
+        user_id="user-archivable-recurrent",
+    )
+
+    guided = contexts["software_change_specialist"]
+
+    assert guided.consumer_mode == "domain_guided_memory_packet"
+    assert "semantic" not in guided.consumed_memory_classes
+    assert "procedural" not in guided.consumed_memory_classes
+    assert guided.recurrent_context_status == "review_required"
+    assert guided.continuity_context_brief is not None
+    assert "recurrent_memory_status=review_required" in guided.continuity_context_brief
+    assert guided.domain_context_brief is not None
+    assert "memory_runtime_mode=review_only" in guided.domain_context_brief
 
 
 def test_memory_service_builds_guided_domain_memory_packet_for_governance_specialist() -> None:

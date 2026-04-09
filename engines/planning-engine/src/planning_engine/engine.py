@@ -145,6 +145,11 @@ class PlanningContext:
     context_live_summary: str | None = None
     cross_session_recall_status: str | None = None
     cross_session_recall_summary: str | None = None
+    memory_priority_status: str | None = None
+    memory_priority_domains: list[str] | None = None
+    memory_priority_specialists: list[str] | None = None
+    memory_priority_sources: list[str] | None = None
+    memory_priority_summary: str | None = None
     procedural_artifact_status: str | None = None
     procedural_artifact_ref: str | None = None
     procedural_artifact_version: int | None = None
@@ -159,6 +164,17 @@ class MetacognitiveGuidance:
     summary: str | None
     effects: list[str]
     containment_recommendation: str | None
+
+
+@dataclass(frozen=True)
+class CognitiveStrategyShift:
+    """Mid-flow strategy adjustment triggered by a governed plan impasse."""
+
+    applied: bool
+    summary: str | None
+    trigger: str | None
+    effects: list[str]
+    next_action: str | None = None
 
 
 class PlanningEngine:
@@ -244,8 +260,10 @@ class PlanningEngine:
             steps=steps,
             constraints=constraints,
             success_criteria=success_criteria,
+            context=context,
             mind_validation_checkpoints=mind_validation_checkpoints,
             disagreement_status=mind_disagreement_status,
+            dominant_tension=dominant_tension,
         )
         metacognitive_guidance = self._build_metacognitive_guidance(
             context,
@@ -432,20 +450,141 @@ class PlanningEngine:
             if loop_constraint not in refined_constraints:
                 refined_constraints.append(loop_constraint)
 
+        strategy_shift = self._mid_flow_cognitive_strategy_shift(
+            plan=plan,
+            specialist_summary=specialist_summary,
+            specialist_contributions=specialist_contributions,
+            open_loop_hints=open_loop_hints,
+        )
+        if strategy_shift.applied:
+            shift_step = (
+                "executar mudanca de estrategia cognitiva mid-flow: "
+                f"{strategy_shift.summary}"
+            )
+            if shift_step not in refined_steps:
+                refined_steps.insert(0, shift_step)
+            shift_constraint = (
+                "nao concluir a sintese final sem fechar a mudanca de estrategia "
+                "cognitiva mid-flow"
+            )
+            if shift_constraint not in refined_constraints:
+                refined_constraints.append(shift_constraint)
+            shift_criterion = (
+                "saida final deve explicitar como a mudanca de estrategia "
+                "cognitiva resolveu o impasse ativo"
+            )
+            if shift_criterion not in success_criteria:
+                success_criteria.append(shift_criterion)
+
         resolution_summary = self._specialist_resolution_summary(
             specialist_contributions,
             specialist_summary,
         )
         return replace(
             plan,
-            steps=refined_steps,
-            constraints=refined_constraints,
+            steps=refined_steps[:6],
+            constraints=refined_constraints[:9],
             risks=refined_risks,
             requires_human_validation=requires_human_validation,
-            success_criteria=success_criteria,
+            success_criteria=success_criteria[:8],
             specialist_resolution_summary=resolution_summary,
             open_loops=open_loop_hints[:3],
-            rationale=f"{plan.rationale}; resolucao_especialistas={resolution_summary}",
+            smallest_safe_next_action=(
+                strategy_shift.next_action or plan.smallest_safe_next_action
+            ),
+            cognitive_strategy_shift_applied=strategy_shift.applied,
+            cognitive_strategy_shift_summary=strategy_shift.summary,
+            cognitive_strategy_shift_trigger=strategy_shift.trigger,
+            cognitive_strategy_shift_effects=list(strategy_shift.effects),
+            rationale=(
+                f"{plan.rationale}; resolucao_especialistas={resolution_summary}"
+                if not strategy_shift.applied or not strategy_shift.summary
+                else (
+                    f"{plan.rationale}; resolucao_especialistas={resolution_summary}; "
+                    f"mudanca_estrategia_mid_flow={strategy_shift.trigger}:"
+                    f"{strategy_shift.summary}"
+                )
+            ),
+        )
+
+    def _mid_flow_cognitive_strategy_shift(
+        self,
+        *,
+        plan: DeliberativePlanContract,
+        specialist_summary: str,
+        specialist_contributions: list[SpecialistContributionContract],
+        open_loop_hints: list[str],
+    ) -> CognitiveStrategyShift:
+        if not specialist_contributions or not plan.route_workflow_profile:
+            return CognitiveStrategyShift(False, None, None, [])
+
+        unresolved_risks = 0
+        unresolved_constraints = 0
+        unresolved_open_loops = len(open_loop_hints)
+        for contribution in specialist_contributions:
+            for finding in contribution.findings:
+                if finding.startswith("risk:"):
+                    unresolved_risks += 1
+                elif finding.startswith("constraint:"):
+                    unresolved_constraints += 1
+                elif finding.startswith("open_loop:"):
+                    unresolved_open_loops += 1
+
+        disagreement_status = plan.mind_disagreement_status or "not_applicable"
+        if disagreement_status not in {"validation_required", "deep_review_required"}:
+            return CognitiveStrategyShift(False, None, None, [])
+        if (unresolved_risks + unresolved_constraints + unresolved_open_loops) == 0:
+            return CognitiveStrategyShift(False, None, None, [])
+
+        workflow_checkpoint = self._present_contract_label(
+            plan.route_workflow_checkpoints[0] if plan.route_workflow_checkpoints else None
+        )
+        workflow_decision = self._present_contract_label(
+            plan.route_workflow_decision_points[0]
+            if plan.route_workflow_decision_points
+            else None
+        )
+        open_loop = open_loop_hints[0] if open_loop_hints else None
+
+        trigger = (
+            "deep_review_impasse"
+            if disagreement_status == "deep_review_required"
+            else "guided_validation_impasse"
+        )
+        summary_parts = [
+            "revisao especializada manteve tensao aberta sob workflow governado"
+        ]
+        if workflow_checkpoint:
+            summary_parts.append(f"checkpoint ativo {workflow_checkpoint}")
+        if workflow_decision:
+            summary_parts.append(f"gate {workflow_decision}")
+        if open_loop:
+            summary_parts.append(f"loop {open_loop}")
+        if specialist_summary:
+            summary_parts.append(
+                f"sintese especializada: {specialist_summary.split(';', maxsplit=1)[0]}"
+            )
+        summary = "; ".join(summary_parts)
+        next_action = (
+            f"revisar {workflow_checkpoint} antes da sintese final"
+            if workflow_checkpoint
+            else (
+                f"resolver {open_loop} antes da sintese final"
+                if open_loop
+                else "revalidar o framing cognitivo antes da sintese final"
+            )
+        )
+        return CognitiveStrategyShift(
+            applied=True,
+            summary=summary,
+            trigger=trigger,
+            effects=[
+                "steps",
+                "constraints",
+                "success_criteria",
+                "smallest_safe_next_action",
+            ],
+            next_action=next_action,
         )
 
     def _validate_plan_contract(
@@ -839,8 +978,10 @@ class PlanningEngine:
         steps: list[str],
         constraints: list[str],
         success_criteria: list[str],
+        context: PlanningContext,
         mind_validation_checkpoints: list[str],
         disagreement_status: str,
+        dominant_tension: str,
     ) -> tuple[list[str], list[str], list[str]]:
         if disagreement_status == "not_applicable":
             return steps, constraints, success_criteria
@@ -865,6 +1006,21 @@ class PlanningEngine:
             )
             if criterion not in updated_success:
                 updated_success.append(criterion)
+            supporting = ", ".join((context.supporting_minds or [])[:2])
+            suppressed = ", ".join((context.suppressed_minds or [])[:2])
+            if supporting:
+                composition_step = (
+                    f"reconciliar o apoio de {supporting} antes do fechamento final"
+                )
+                if composition_step not in updated_steps:
+                    updated_steps.insert(1 if updated_steps else 0, composition_step)
+            if suppressed:
+                composition_criterion = (
+                    "saida final deve absorver a discordancia de "
+                    f"{suppressed} sob tensao {dominant_tension}"
+                )
+                if composition_criterion not in updated_success:
+                    updated_success.insert(1 if updated_success else 0, composition_criterion)
         if disagreement_status == "deep_review_required":
             deep_step = "adicionar um passo extra de revisao antes da conclusao final"
             if deep_step not in updated_steps:
@@ -1024,6 +1180,12 @@ class PlanningEngine:
         primary_mind_family = context.primary_mind_family or "none"
         primary_domain_driver = context.primary_domain_driver or "none"
         arbitration_source = context.arbitration_source or "none"
+        memory_priority_status = context.memory_priority_status or "registry_only"
+        memory_priority_domains = ",".join(context.memory_priority_domains or []) or "none"
+        memory_priority_specialists = (
+            ",".join(context.memory_priority_specialists or []) or "none"
+        )
+        memory_priority_sources = ",".join(context.memory_priority_sources or []) or "none"
         semantic_anchor = self._semantic_memory_anchor(context) or "none"
         procedural_anchor = self._procedural_memory_anchor(context) or "none"
         procedural_artifact_status = context.procedural_artifact_status or "none"
@@ -1034,6 +1196,10 @@ class PlanningEngine:
             f"dominio_primario={primary_domain_driver}; arbitragem_fonte={arbitration_source}; "
             f"rota_primaria={context.primary_route or 'none'}; consumer_profile={route_profile}; "
             f"workflow_profile={workflow_profile}; workflow_focus={guidance.planning_focus}; "
+            f"memory_priority_status={memory_priority_status}; "
+            f"memory_priority_domains={memory_priority_domains}; "
+            f"memory_priority_specialists={memory_priority_specialists}; "
+            f"memory_priority_sources={memory_priority_sources}; "
             f"semantic_memory_anchor={semantic_anchor}; "
             f"procedural_memory_anchor={procedural_anchor}; "
             f"semantic_memory_source={memory_decision.semantic_source or 'none'}; "
@@ -1106,6 +1272,13 @@ class PlanningEngine:
         route_workflow = context.route_workflow_profile or "none"
         workflow_checkpoints = ",".join((context.route_workflow_checkpoints or [])[:3]) or "none"
         workflow_decisions = ",".join((context.route_workflow_decision_points or [])[:3]) or "none"
+        memory_priority_status = context.memory_priority_status or "registry_only"
+        memory_priority_domains = ",".join((context.memory_priority_domains or [])[:3]) or "none"
+        memory_priority_specialists = (
+            ",".join((context.memory_priority_specialists or [])[:3]) or "none"
+        )
+        memory_priority_sources = ",".join((context.memory_priority_sources or [])[:3]) or "none"
+        memory_priority_summary = context.memory_priority_summary or "none"
         primary_mind = context.primary_mind or "none"
         primary_mind_family = context.primary_mind_family or "none"
         primary_domain_driver = context.primary_domain_driver or "none"
@@ -1141,6 +1314,11 @@ class PlanningEngine:
             f"workflow_focus={guidance.planning_focus}; response_focus={guidance.response_focus}; "
             f"workflow_checkpoints={workflow_checkpoints}; "
             f"workflow_decision_points={workflow_decisions}; "
+            f"memory_priority_status={memory_priority_status}; "
+            f"memory_priority_domains={memory_priority_domains}; "
+            f"memory_priority_specialists={memory_priority_specialists}; "
+            f"memory_priority_sources={memory_priority_sources}; "
+            f"memory_priority_summary={memory_priority_summary}; "
             f"semantic_memory_anchor={semantic_anchor}; "
             f"procedural_memory_anchor={procedural_anchor}; "
             f"semantic_memory_source={memory_decision.semantic_source or 'none'}; "
@@ -1223,6 +1401,9 @@ class PlanningEngine:
         guidance = workflow_runtime_guidance(context.route_workflow_profile)
         semantic_anchor = self._semantic_memory_anchor(context)
         procedural_anchor = self._procedural_memory_anchor(context)
+        memory_priority_route = self._present_contract_label(
+            (context.memory_priority_domains or [None])[0]
+        )
         action_anchor = self._metacognitive_action_anchor(
             context,
             dominant_tension=dominant_tension,
@@ -1253,14 +1434,19 @@ class PlanningEngine:
             return "pedir validacao antes de retomar qualquer continuidade"
         if continuity_action == "retomar":
             if context.related_mission_goal:
+                route_clause = (
+                    f" e preservar a rota priorizada por memoria em {memory_priority_route}"
+                    if memory_priority_route
+                    else ""
+                )
                 if action_anchor:
                     return (
                         "explicitar por que a missao relacionada deve ser retomada antes de "
-                        f"abrir novo escopo; {action_anchor}"
+                        f"abrir novo escopo{route_clause}; {action_anchor}"
                     )
                 return (
                     "explicitar por que a missao relacionada deve ser retomada antes de "
-                    "abrir novo escopo"
+                    f"abrir novo escopo{route_clause}"
                 )
             if action_anchor:
                 return (
@@ -1278,6 +1464,11 @@ class PlanningEngine:
                     f"retomar {loop_focus} preservando "
                     f"{guidance.procedural_memory_role}: {procedural_anchor}"
                 )
+                if memory_priority_route:
+                    action = (
+                        f"{action}; manter prioridade de rota guiada por memoria em "
+                        f"{memory_priority_route}"
+                    )
                 if action_anchor:
                     return f"{action}; {action_anchor}"
                 return action

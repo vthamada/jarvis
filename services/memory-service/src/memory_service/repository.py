@@ -2006,6 +2006,10 @@ class PostgresMemoryRepository(MemoryRepository):
             row = cursor.fetchone()
         if row is None:
             return None
+        lifecycle_support = memory_lifecycle_support_signals(
+            semantic_lifecycle=row["semantic_memory_lifecycle"],
+            procedural_lifecycle=row["procedural_memory_lifecycle"],
+        )
         return SpecialistSharedMemoryContextContract(
             specialist_type=row["specialist_type"],
             sharing_mode=row["sharing_mode"],
@@ -2032,8 +2036,21 @@ class PostgresMemoryRepository(MemoryRepository):
             last_recommendation=row["last_recommendation"],
             semantic_memory_lifecycle=row["semantic_memory_lifecycle"],
             procedural_memory_lifecycle=row["procedural_memory_lifecycle"],
+            semantic_memory_state=str(lifecycle_support["semantic_memory_state"])
+            if lifecycle_support["semantic_memory_state"] is not None
+            else None,
+            procedural_memory_state=str(lifecycle_support["procedural_memory_state"])
+            if lifecycle_support["procedural_memory_state"] is not None
+            else None,
             memory_lifecycle_status=row["memory_lifecycle_status"],
             memory_review_status=row["memory_review_status"],
+            memory_consolidation_status=str(lifecycle_support["consolidation_status"]),
+            memory_fixation_status=str(lifecycle_support["fixation_status"]),
+            memory_archive_status=str(lifecycle_support["archive_status"]),
+            procedural_artifact_status=row["procedural_artifact_status"],
+            procedural_artifact_refs=list(loads(row["procedural_artifact_refs"] or "[]")),
+            procedural_artifact_version=row["procedural_artifact_version"],
+            procedural_artifact_summary=row["procedural_artifact_summary"],
             domain_mission_link_reason=row["domain_mission_link_reason"],
             recurrent_context_status=row["recurrent_context_status"] or "not_applicable",
             recurrent_interaction_count=int(row["recurrent_interaction_count"] or 0),
@@ -2080,6 +2097,10 @@ class PostgresMemoryRepository(MemoryRepository):
             row = cursor.fetchone()
         if row is None:
             return None
+        lifecycle_support = memory_lifecycle_support_signals(
+            semantic_lifecycle=row["semantic_memory_lifecycle"],
+            procedural_lifecycle=row["procedural_memory_lifecycle"],
+        )
         return SpecialistSharedMemoryContextContract(
             specialist_type=row["specialist_type"],
             sharing_mode=row["sharing_mode"],
@@ -2106,8 +2127,21 @@ class PostgresMemoryRepository(MemoryRepository):
             last_recommendation=row["last_recommendation"],
             semantic_memory_lifecycle=row["semantic_memory_lifecycle"],
             procedural_memory_lifecycle=row["procedural_memory_lifecycle"],
+            semantic_memory_state=str(lifecycle_support["semantic_memory_state"])
+            if lifecycle_support["semantic_memory_state"] is not None
+            else None,
+            procedural_memory_state=str(lifecycle_support["procedural_memory_state"])
+            if lifecycle_support["procedural_memory_state"] is not None
+            else None,
             memory_lifecycle_status=row["memory_lifecycle_status"],
             memory_review_status=row["memory_review_status"],
+            memory_consolidation_status=str(lifecycle_support["consolidation_status"]),
+            memory_fixation_status=str(lifecycle_support["fixation_status"]),
+            memory_archive_status=str(lifecycle_support["archive_status"]),
+            procedural_artifact_status=row["procedural_artifact_status"],
+            procedural_artifact_refs=list(loads(row["procedural_artifact_refs"] or "[]")),
+            procedural_artifact_version=row["procedural_artifact_version"],
+            procedural_artifact_summary=row["procedural_artifact_summary"],
             domain_mission_link_reason=row["domain_mission_link_reason"],
             recurrent_context_status=row["recurrent_context_status"] or "not_applicable",
             recurrent_interaction_count=int(row["recurrent_interaction_count"] or 0),

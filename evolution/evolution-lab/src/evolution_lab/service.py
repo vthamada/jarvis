@@ -269,6 +269,7 @@ class EvolutionLabService:
         )
         refinement_vectors = self._refinement_vectors_from_flow_evaluation(evaluation)
         evaluation_matrix = self._evaluation_matrix_from_flow_evaluation(evaluation)
+        wave_two_readiness = self._wave_two_readiness_matrix_from_evaluation(evaluation)
         resolved_strategy = self.resolve_strategy_name(strategy_name)
         selection_criteria = self._selection_criteria(resolved_strategy)
         if refinement_vectors:
@@ -446,6 +447,12 @@ class EvolutionLabService:
                 "top_refinement_axis": (
                     refinement_vectors[0]["axis"] if refinement_vectors else "none"
                 ),
+                "wave_two_readiness_matrix": wave_two_readiness,
+                "wave_two_ready_targets": [
+                    technology
+                    for technology, payload in wave_two_readiness.items()
+                    if payload.get("status") == "ready_for_controlled_experiment"
+                ],
             },
         )
 
@@ -960,6 +967,9 @@ class EvolutionLabService:
                 "mind_validation_checkpoint": (
                     evaluation.mind_validation_checkpoint_status or "not_applicable"
                 ),
+                "mind_composition": EvolutionLabService._mind_composition_assessment(
+                    evaluation
+                ),
                 "memory_causality": evaluation.memory_causality_status or "not_applicable",
                 "memory_lifecycle": evaluation.memory_lifecycle_status or "not_applicable",
                 "memory_corpus": evaluation.memory_corpus_status or "not_applicable",
@@ -972,6 +982,104 @@ class EvolutionLabService:
                 ),
             }
         }
+
+    @staticmethod
+    def _mind_composition_assessment(evaluation: FlowEvaluationInput) -> str:
+        if evaluation.mind_domain_specialist_chain_status in {
+            "attention_required",
+            "mismatch",
+        }:
+            return "attention_required"
+        if evaluation.mind_domain_specialist_status in {"attention_required", "mismatch"}:
+            return "attention_required"
+        if evaluation.mind_validation_checkpoint_status == "attention_required":
+            return "attention_required"
+        if evaluation.mind_disagreement_status == "deep_review_required":
+            return "attention_required"
+        if evaluation.mind_domain_specialist_chain_status in {
+            "incomplete",
+            "evidence_partial",
+        }:
+            return "maturation_recommended"
+        if evaluation.mind_domain_specialist_status in {"incomplete", "evidence_partial"}:
+            return "maturation_recommended"
+        if evaluation.mind_disagreement_status == "validation_required":
+            return "maturation_recommended"
+        if evaluation.mind_disagreement_status in {None, "not_applicable", "contained"} and (
+            evaluation.mind_validation_checkpoint_status
+            in {None, "not_applicable", "healthy"}
+        ):
+            return "baseline_saudavel"
+        return "maturation_recommended"
+
+    @staticmethod
+    def _wave_two_readiness_matrix_from_evaluation(
+        evaluation: FlowEvaluationInput,
+    ) -> dict[str, dict[str, object]]:
+        matrix = EvolutionLabService._evaluation_matrix_from_flow_evaluation(evaluation)
+        workflow = next(iter(matrix.keys()))
+        row = matrix[workflow]
+        requirements: dict[str, dict[str, set[str]]] = {
+            "openai_agents_sdk": {
+                "workflow_checkpoint": {"healthy"},
+                "workflow_resume": {"healthy", "resume_available", "fresh_start"},
+                "workflow_output": {"coherent", "not_applicable"},
+                "mind_domain_specialist_chain": {"aligned", "not_applicable"},
+            },
+            "qwen_agent": {
+                "workflow_profile": {"healthy", "maturation_recommended", "not_applicable"},
+                "memory_causality": {"causal_guidance", "not_applicable"},
+                "memory_corpus": {"stable", "not_applicable"},
+            },
+            "graphiti_zep": {
+                "memory_lifecycle": {"retained", "promoted", "not_applicable"},
+                "memory_corpus": {"stable", "not_applicable"},
+                "memory_causality": {"causal_guidance", "not_applicable"},
+            },
+            "mem0": {
+                "memory_lifecycle": {"retained", "promoted", "not_applicable"},
+                "memory_corpus": {"stable", "not_applicable"},
+                "workflow_profile": {"healthy", "maturation_recommended", "not_applicable"},
+            },
+            "openhands": {
+                "workflow_output": {"coherent", "not_applicable"},
+                "procedural_artifact": {"reusable", "not_applicable"},
+                "mind_domain_specialist_chain": {"aligned", "not_applicable"},
+            },
+            "browser_use": {
+                "workflow_checkpoint": {"healthy"},
+                "workflow_resume": {"healthy", "resume_available", "fresh_start"},
+                "workflow_output": {"coherent", "partial", "not_applicable"},
+            },
+            "open_interpreter": {
+                "workflow_checkpoint": {"healthy"},
+                "workflow_resume": {"healthy", "resume_available", "fresh_start"},
+                "procedural_artifact": {"reusable", "not_applicable"},
+            },
+            "autogpt_platform": {
+                "workflow_checkpoint": {"healthy"},
+                "workflow_resume": {"healthy", "resume_available", "fresh_start"},
+                "workflow_profile": {"healthy", "not_applicable"},
+                "workflow_output": {"coherent", "not_applicable"},
+            },
+        }
+        readiness: dict[str, dict[str, object]] = {}
+        for technology, axes in requirements.items():
+            blockers = [
+                f"{axis}={row.get(axis, 'not_applicable')}"
+                for axis, accepted in axes.items()
+                if str(row.get(axis, "not_applicable")) not in accepted
+            ]
+            readiness[technology] = {
+                "status": (
+                    "ready_for_controlled_experiment"
+                    if not blockers
+                    else "stabilize_nucleus_first"
+                ),
+                "workflow_profile": workflow,
+                "blockers": blockers[:4],
+            }
+        return readiness
 
     @staticmethod
     def _selection_criteria(strategy_name: str) -> dict[str, object]:

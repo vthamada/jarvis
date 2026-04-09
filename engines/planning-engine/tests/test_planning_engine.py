@@ -110,6 +110,58 @@ def test_planning_engine_marks_related_continuity_source_when_candidate_is_prese
     assert "ranking_continuidade=missao relacionada mission-a venceu o ranking" in plan.rationale
 
 
+def test_planning_engine_uses_memory_route_priority_and_mind_composition_guidance() -> None:
+    engine = PlanningEngine()
+    plan = engine.build_task_plan(
+        PlanningContext(
+            intent="analysis",
+            query="Continue the governed analysis.",
+            recovered_context=["context_summary=analysis mission already active"],
+            active_domains=["analysis", "strategy"],
+            active_minds=["mente_analitica", "mente_critica", "mente_logica"],
+            knowledge_snippets=["Preserve the analytical chain."],
+            risk_markers=[],
+            requires_clarification=False,
+            preferred_response_mode="analysis_only",
+            route_workflow_profile="structured_analysis_workflow",
+            route_workflow_checkpoints=["analysis_scope_confirmed"],
+            route_workflow_decision_points=["insight_governed"],
+            route_expected_deliverables=["analysis_frame"],
+            cognitive_rationale="intent=analysis; mente_primaria=mente_analitica",
+            dominant_goal="aprofundar a leitura analitica sem perder continuidade",
+            primary_mind="mente_analitica",
+            primary_mind_family="fundamental",
+            primary_domain_driver="dados_estatistica_e_inteligencia_analitica",
+            supporting_minds=["mente_logica", "mente_critica"],
+            suppressed_minds=["mente_pragmatica"],
+            dominant_tension="equilibrar profundidade analitica com conclusao util",
+            arbitration_summary="mente analitica lidera com revisao critica",
+            mission_goal="Continue the governed analysis.",
+            continuity_recommendation="retomar_missao_relacionada",
+            related_mission_id="mission-analysis",
+            related_mission_goal="Continue the governed analysis.",
+            related_continuity_reason="foco_compartilhado=analysis",
+            related_continuity_priority=0.92,
+            continuity_ranking_summary="mission-analysis venceu o ranking de continuidade",
+            memory_priority_status="memory_guided",
+            memory_priority_domains=["analysis"],
+            memory_priority_specialists=["structured_analysis_specialist"],
+            memory_priority_sources=["mission_focus", "continuity_ranking"],
+            memory_priority_summary="analysis:6[mission_focus,continuity_ranking]",
+        )
+    )
+
+    assert "memory_priority_status=memory_guided" in plan.plan_summary
+    assert "memory_priority_domains=analysis" in plan.rationale
+    assert "reconciliar o apoio de mente_logica, mente_critica" in " ".join(plan.steps)
+    assert any(
+        "mente_pragmatica" in criterion for criterion in plan.success_criteria
+    )
+    assert "preservar a rota priorizada por memoria em analysis" in (
+        plan.smallest_safe_next_action
+    )
+
+
 def test_planning_engine_uses_compaction_and_cross_session_recall_as_constraints() -> None:
     engine = PlanningEngine()
     plan = engine.build_task_plan(
@@ -532,6 +584,72 @@ def test_planning_engine_refines_plan_and_consolidates_specialists() -> None:
     assert any("checkpoint intermediario" in step for step in refined.steps)
     assert any("criterio dominante" in criterion for criterion in refined.success_criteria)
     assert "resolucao_especialistas=" in refined.rationale
+
+
+def test_planning_engine_applies_mid_flow_cognitive_strategy_shift_when_impasse_persists() -> None:
+    engine = PlanningEngine()
+    base_plan = engine.build_task_plan(
+        PlanningContext(
+            intent="analysis",
+            query="Analyze rollout options",
+            recovered_context=[],
+            active_domains=["analysis"],
+            active_minds=["mente_analitica", "mente_critica"],
+            knowledge_snippets=["Compare custo, risco e reversibilidade."],
+            risk_markers=[],
+            requires_clarification=False,
+            preferred_response_mode="analysis_only",
+            route_workflow_profile="structured_analysis_workflow",
+            route_workflow_checkpoints=["analysis_framed"],
+            route_workflow_decision_points=["analysis_scope_governed"],
+            dominant_goal="produzir leitura confiavel antes de agir",
+            primary_mind="mente_analitica",
+            primary_domain_driver="dados_estatistica_e_inteligencia_analitica",
+            supporting_minds=["mente_critica", "mente_logica"],
+            suppressed_minds=["mente_expressiva"],
+            dominant_tension="equilibrar profundidade analitica com conclusao util",
+        )
+    )
+    base_plan.mind_disagreement_status = "validation_required"
+    base_plan.mind_validation_checkpoints = [
+        (
+            "validar a tensao dominante antes de concluir: equilibrar "
+            "profundidade analitica com conclusao util"
+        )
+    ]
+    base_plan.smallest_safe_next_action = "comparar os cenarios antes da sintese final"
+
+    refined = engine.refine_task_plan(
+        base_plan,
+        specialist_summary="trade-offs seguem abertos sob checkpoint governado",
+        specialist_contributions=[
+            SpecialistContributionContract(
+                specialist_type="structured_analysis_specialist",
+                role="analise_estruturada_subordinada",
+                focus="trade-offs, evidencia e criterio de decisao",
+                findings=[
+                    "risk: impasse analitico ainda pede validacao adicional",
+                    "open_loop: consolidar criterio dominante",
+                ],
+                recommendation="manter comparacao governada antes da recomendacao final",
+                confidence=0.82,
+            ),
+        ],
+    )
+
+    assert refined.cognitive_strategy_shift_applied is True
+    assert refined.cognitive_strategy_shift_trigger == "guided_validation_impasse"
+    assert refined.cognitive_strategy_shift_summary is not None
+    assert "steps" in refined.cognitive_strategy_shift_effects
+    assert refined.steps[0].startswith(
+        "executar mudanca de estrategia cognitiva mid-flow:"
+    )
+    assert refined.smallest_safe_next_action == "revisar analysis framed antes da sintese final"
+    assert any(
+        "discordancia" in criterion or "criterio dominante" in criterion
+        for criterion in refined.success_criteria
+    )
+    assert "mudanca_estrategia_mid_flow=guided_validation_impasse:" in refined.rationale
 
 
 def test_planning_engine_routes_governed_replay_to_safe_recovery() -> None:

@@ -3074,6 +3074,101 @@ def test_observability_service_tracks_memory_causality_status() -> None:
     assert audit.memory_archive_status == "active_memory"
 
 
+def test_observability_service_flags_archivable_guided_memory_reuse() -> None:
+    temp_dir = runtime_dir("observability-archivable-guided-memory")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service.ingest_events(
+        [
+            InternalEventEnvelope(
+                event_id="evt-archivable-memory",
+                event_name="specialist_shared_memory_linked",
+                timestamp="2026-04-09T00:00:00+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "sharing_modes": {
+                        "software_change_specialist": "core_mediated_read_only"
+                    },
+                    "memory_class_policies": {
+                        "software_change_specialist": {
+                            "mission": {
+                                "specialist_shared": True,
+                                "sharing_mode": "core_mediated_read_only",
+                                "write_policy": "through_core_only",
+                            },
+                            "semantic": {
+                                "specialist_shared": True,
+                                "sharing_mode": "core_mediated_read_only",
+                                "write_policy": "through_core_only",
+                            },
+                        }
+                    },
+                    "consumed_memory_classes": {
+                        "software_change_specialist": ["mission", "semantic"]
+                    },
+                    "memory_write_policies": {
+                        "software_change_specialist": {
+                            "mission": "through_core_only",
+                            "semantic": "through_core_only",
+                        }
+                    },
+                    "memory_refs_by_specialist": {
+                        "software_change_specialist": [
+                            "memory://mission",
+                            "memory://semantic/mission/old",
+                        ]
+                    },
+                    "semantic_focus_by_specialist": {
+                        "software_change_specialist": ["software_development"]
+                    },
+                    "consumer_modes": {
+                        "software_change_specialist": "domain_guided_memory_packet"
+                    },
+                    "consumer_profiles": {
+                        "software_change_specialist": "software_change_review"
+                    },
+                    "consumer_objectives": {
+                        "software_change_specialist": "review rollout change"
+                    },
+                    "expected_deliverables": {
+                        "software_change_specialist": ["change_assessment"]
+                    },
+                    "telemetry_focus": {
+                        "software_change_specialist": ["change_trace"]
+                    },
+                    "domain_mission_link_reasons": {
+                        "software_change_specialist": "software route linked to active mission"
+                    },
+                    "semantic_memory_states": {
+                        "software_change_specialist": "archivable"
+                    },
+                    "procedural_memory_states": {
+                        "software_change_specialist": "archivable"
+                    },
+                    "memory_consolidation_statuses": {
+                        "software_change_specialist": "revisit_before_reuse"
+                    },
+                    "memory_fixation_statuses": {
+                        "software_change_specialist": "not_fixed"
+                    },
+                    "memory_archive_statuses": {
+                        "software_change_specialist": "archive_candidate"
+                    },
+                    "memory_review_statuses": {
+                        "software_change_specialist": "review_recommended"
+                    },
+                },
+                request_id="req-archivable-memory",
+                session_id="sess-archivable-memory",
+                correlation_id="req-archivable-memory",
+            )
+        ]
+    )
+
+    audit = service.audit_flow(ObservabilityQuery(request_id="req-archivable-memory"))
+
+    assert audit.memory_alignment_status == "attention_required"
+
+
 def test_observability_service_tracks_cognitive_recomposition_alignment() -> None:
     temp_dir = runtime_dir("observability-cognitive-recomposition")
     service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
@@ -3268,6 +3363,174 @@ def test_observability_service_tracks_cognitive_recomposition_alignment() -> Non
     assert (
         audit.cognitive_recomposition_trigger == "specialist_route_impasse"
     )
+
+
+def test_observability_service_tracks_mid_flow_cognitive_strategy_shift() -> None:
+    temp_dir = runtime_dir("observability-cognitive-strategy-shift")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service.ingest_events(
+        [
+            InternalEventEnvelope(
+                event_id="evt-css1",
+                event_name="input_received",
+                timestamp="2026-04-09T00:00:00+00:00",
+                source_service="orchestrator-service",
+                payload={"content": "Resolve the strategic impasse before concluding."},
+                request_id="req-cognitive-shift",
+                session_id="sess-cognitive-shift",
+                correlation_id="req-cognitive-shift",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-css2",
+                event_name="memory_recovered",
+                timestamp="2026-04-09T00:00:01+00:00",
+                source_service="orchestrator-service",
+                payload={},
+                request_id="req-cognitive-shift",
+                session_id="sess-cognitive-shift",
+                correlation_id="req-cognitive-shift",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-css3",
+                event_name="intent_classified",
+                timestamp="2026-04-09T00:00:02+00:00",
+                source_service="orchestrator-service",
+                payload={"intent": "planning"},
+                request_id="req-cognitive-shift",
+                session_id="sess-cognitive-shift",
+                correlation_id="req-cognitive-shift",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-css4",
+                event_name="context_composed",
+                timestamp="2026-04-09T00:00:03+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "active_minds": ["mente_executiva", "mente_critica"],
+                    "primary_mind": "mente_executiva",
+                    "primary_mind_family": "estrategica_decisoria",
+                    "supporting_minds": ["mente_critica"],
+                    "suppressed_minds": ["mente_expressiva"],
+                    "supporting_mind_limit": 2,
+                    "suppressed_mind_limit": 3,
+                    "dominant_tension": "equilibrar direcao estrategica com checkpoint governado",
+                    "arbitration_summary": "mente executiva lidera com apoio critico",
+                    "arbitration_source": "mind_registry",
+                    "canonical_domains": ["estrategia_e_pensamento_sistemico"],
+                    "primary_domain_driver": "estrategia_e_pensamento_sistemico",
+                },
+                request_id="req-cognitive-shift",
+                session_id="sess-cognitive-shift",
+                correlation_id="req-cognitive-shift",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-css5",
+                event_name="plan_built",
+                timestamp="2026-04-09T00:00:04+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "primary_mind": "mente_executiva",
+                    "primary_mind_family": "estrategica_decisoria",
+                    "primary_domain_driver": "estrategia_e_pensamento_sistemico",
+                    "arbitration_source": "mind_registry",
+                    "mind_disagreement_status": "validation_required",
+                    "mind_validation_checkpoints": ["validar o checkpoint estrategico"],
+                },
+                request_id="req-cognitive-shift",
+                session_id="sess-cognitive-shift",
+                correlation_id="req-cognitive-shift",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-css6",
+                event_name="continuity_decided",
+                timestamp="2026-04-09T00:00:05+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_action": "continuar", "continuity_source": "active_mission"},
+                request_id="req-cognitive-shift",
+                session_id="sess-cognitive-shift",
+                correlation_id="req-cognitive-shift",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-css7",
+                event_name="plan_refined",
+                timestamp="2026-04-09T00:00:06+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "cognitive_strategy_shift_applied": True,
+                    "cognitive_strategy_shift_summary": (
+                        "revisao especializada manteve tensao aberta sob workflow governado; "
+                        "checkpoint ativo scenario framed; loop alinhar checkpoint principal"
+                    ),
+                    "cognitive_strategy_shift_trigger": "guided_validation_impasse",
+                    "cognitive_strategy_shift_effects": [
+                        "steps",
+                        "constraints",
+                        "success_criteria",
+                        "smallest_safe_next_action",
+                    ],
+                },
+                request_id="req-cognitive-shift",
+                session_id="sess-cognitive-shift",
+                correlation_id="req-cognitive-shift",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-css8",
+                event_name="governance_checked",
+                timestamp="2026-04-09T00:00:07+00:00",
+                source_service="orchestrator-service",
+                payload={"decision": "allow_with_conditions"},
+                request_id="req-cognitive-shift",
+                session_id="sess-cognitive-shift",
+                correlation_id="req-cognitive-shift",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-css9",
+                event_name="response_synthesized",
+                timestamp="2026-04-09T00:00:08+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "continuity_action": "continuar",
+                    "primary_mind": "mente_executiva",
+                    "primary_mind_family": "estrategica_decisoria",
+                    "primary_domain_driver": "estrategia_e_pensamento_sistemico",
+                    "arbitration_source": "mind_registry",
+                    "workflow_output_status": "coherent",
+                    "cognitive_strategy_shift_applied": True,
+                    "cognitive_strategy_shift_summary": (
+                        "revisao especializada manteve tensao aberta sob workflow governado; "
+                        "checkpoint ativo scenario framed; loop alinhar checkpoint principal"
+                    ),
+                    "cognitive_strategy_shift_trigger": "guided_validation_impasse",
+                    "cognitive_strategy_shift_effects": [
+                        "steps",
+                        "constraints",
+                        "success_criteria",
+                        "smallest_safe_next_action",
+                    ],
+                },
+                request_id="req-cognitive-shift",
+                session_id="sess-cognitive-shift",
+                correlation_id="req-cognitive-shift",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-css10",
+                event_name="memory_recorded",
+                timestamp="2026-04-09T00:00:09+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_mode": "continuar"},
+                request_id="req-cognitive-shift",
+                session_id="sess-cognitive-shift",
+                correlation_id="req-cognitive-shift",
+            ),
+        ]
+    )
+
+    audit = service.audit_flow(ObservabilityQuery(request_id="req-cognitive-shift"))
+
+    assert audit.cognitive_strategy_shift_status == "healthy"
+    assert audit.cognitive_strategy_shift_applied is True
+    assert audit.cognitive_strategy_shift_trigger == "guided_validation_impasse"
+    assert "steps" in audit.cognitive_strategy_shift_effects
 
 
 def test_observability_service_tracks_specialist_subflow_and_mission_runtime_state() -> None:

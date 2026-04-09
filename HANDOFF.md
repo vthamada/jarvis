@@ -2,9 +2,9 @@
 
 ## Metadata
 
-- Atualizado em: 2026-04-08
+- Atualizado em: 2026-04-09
 - Branch: `main`
-- Commit de referência: `ffb2759`
+- Commit de referência: `4008dd1`
 - Artefato canônico do projeto: `documento_mestre_jarvis.md`
 - Estado do projeto: `v1` encerrado e congelado para uso controlado; primeiro ciclo do `pós-v1` encerrado; primeiro ciclo do `v1.5` encerrado; primeiro corte do `v2` encerrado; `v2-alignment-cycle` encerrado; próximo corte do `v2` aberto
 - Fila micro ativa: `docs/implementation/execution-backlog.md`
@@ -106,8 +106,13 @@ Consolidar o fechamento operacional do `v2` sobre um runtime já alinhado aos ei
 - `synthesis`, `response_synthesized` e `observability` agora distinguem output coerente, parcial e desalinhado por `workflow_profile`, e esse sinal atravessa piloto, comparadores, `evolution-lab` e verificadores de release como leitura formal de `baseline_saudavel`, `maturation_recommended` ou `attention_required`;
 - `memory_registry`, `planning` e `synthesis` agora tornam `semantic` e `procedural` mais causais por workflow e por fonte de continuidade, fazendo essas memorias pesarem em prioridade, profundidade e recomendacao final do runtime;
 - `orchestrator`, `synthesis`, comparadores e laboratorio agora tratam a cadeia `mente -> dominio -> especialista` como evidencia primaria mais rica, incluindo planned hints, alinhamento parcial e coerencia do encadeamento no runtime final;
-- a fila micro volta a ficar sem item `ready` ate a proxima repriorizacao explicita; a abertura do proximo lote continua sendo decisao `extra high`, mas a implementacao dos cards segue o modo recomendado em cada item;
-- a decisao de abertura e ordenacao desse novo lote deve ser tratada como rodada `extra high`, mas a implementacao dos cards segue a recomendacao declarada no backlog;
+- `MB-052` a `MB-056` foram concluidos e fecharam o lote atual de maturacao adaptativa do nucleo;
+- `MB-052` foi concluido: `planning-engine`, `synthesis-engine`, `orchestrator-service` e `observability-service` agora tornam mudanca de estrategia cognitiva mid-flow observavel quando a revisao especializada mantem um impasse governado;
+- `MB-053` foi concluido: `memory_registry`, `memory-service`, `repository` e `observability-service` agora fazem lifecycle de memoria alterar recovery, packet guiado, reuso recorrente e drift de memoria arquivavel no especialista;
+- `MB-054` foi concluido: memoria relevante agora influencia rota prioritaria, hints especializados, ranking de continuidade e a leitura causal do caminho do runtime;
+- `MB-055` foi concluido: composicao de mentes, discordancia e checkpoint de validacao agora pesam mais explicitamente em planejamento, sintese, comparadores e readiness de release;
+- `MB-056` foi concluido: `evolution-lab`, comparadores e `technology-absorption-order.md` agora publicam matriz de readiness da Onda 2 subordinada aos sinais causais do nucleo;
+- a fila micro volta a ficar sem item `ready` ate nova repriorizacao explicita; a abertura do proximo lote continua sendo rodada `extra high`;
 - so depois desse lote: reavaliar qual vertical derivada deve abrir a proxima frente macro; `protective intelligence` permanece mapeado, mas em `deferred` ate nova decisao explicita;
 - so entao: decidir se o `v3` deve abrir por essa frente, por outra vertical derivada ou por mais maturacao transversal.
 
@@ -121,6 +126,7 @@ Sistema oficial de planejamento desta fase:
 
 - `HANDOFF.md` como retomada tático-operacional;
 - `docs/implementation/execution-backlog.md` como fila micro soberana do corte ativo;
+- `docs/operations/chat-transition-template.md` como template operacional para abrir novo chat sem perder foco entre lotes;
 - `docs/roadmap/programa-ate-v3.md` como direção do programa até `v3`;
 - `docs/archive/implementation/v2-cycle-closure.md` como fechamento formal do primeiro corte do `v2`;
 - `docs/archive/implementation/v2-alignment-cycle.md` como histórico fechado do ciclo anterior;

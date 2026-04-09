@@ -51,6 +51,11 @@ class CognitiveSnapshot:
     recomposition_applied: bool
     recomposition_reason: str | None
     recomposition_trigger: str | None
+    memory_priority_applied: bool
+    memory_priority_domains: list[str]
+    memory_priority_specialist_hints: list[str]
+    memory_priority_sources: list[str]
+    memory_priority_summary: str | None
 
 
 class CognitiveEngine:
@@ -66,10 +71,17 @@ class CognitiveEngine:
         retrieved_domains: list[str],
         domain_specialist_routes: list[DomainSpecialistRouteContract] | None = None,
         mind_hints: list[str] | None = None,
+        memory_priority_domains: list[str] | None = None,
+        memory_specialist_hints: list[str] | None = None,
+        memory_priority_sources: list[str] | None = None,
+        memory_priority_summary: str | None = None,
     ) -> CognitiveSnapshot:
         """Return an initial cognitive decomposition for the request."""
 
-        active_domains = retrieved_domains or [FALLBACK_RUNTIME_ROUTE]
+        active_domains = self._prioritize_domains_with_memory(
+            retrieved_domains or [FALLBACK_RUNTIME_ROUTE],
+            memory_priority_domains or [],
+        )
         canonical_domains = self._resolve_canonical_domains(active_domains)
         normalized_routes = [
             DomainSpecialistRouteContract(
@@ -141,6 +153,7 @@ class CognitiveEngine:
             risk_markers=risk_markers,
             domain_specialist_routes=normalized_routes,
             primary_domain_driver=dominant_domain_driver,
+            memory_specialist_hints=memory_specialist_hints or [],
         )
         arbitration_summary = build_arbitration_summary(
             primary_mind=primary_mind,
@@ -177,7 +190,11 @@ class CognitiveEngine:
             f"dominio_primario={dominant_domain_driver or 'none'}; "
             f"fonte_arbitragem={arbitration_source}; "
             f"arbitragem={arbitration_summary}; "
-            f"recomposicao_aplicada={recomposition_applied}"
+            f"recomposicao_aplicada={recomposition_applied}; "
+            "memoria_prioridade="
+            f"{'on' if memory_priority_domains else 'off'};"
+            f"memoria_dominios={memory_priority_domains or ['none']}; "
+            f"memoria_hints={memory_specialist_hints or ['none']}"
         )
         return CognitiveSnapshot(
             active_minds=[primary_mind, *supporting_minds],
@@ -200,6 +217,11 @@ class CognitiveEngine:
             recomposition_applied=recomposition_applied,
             recomposition_reason=recomposition_reason,
             recomposition_trigger=recomposition_trigger,
+            memory_priority_applied=bool(memory_priority_domains or memory_specialist_hints),
+            memory_priority_domains=list(memory_priority_domains or []),
+            memory_priority_specialist_hints=list(memory_specialist_hints or []),
+            memory_priority_sources=list(memory_priority_sources or []),
+            memory_priority_summary=memory_priority_summary,
         )
 
     @staticmethod
@@ -211,9 +233,14 @@ class CognitiveEngine:
         risk_markers: list[str],
         domain_specialist_routes: list[DomainSpecialistRouteContract],
         primary_domain_driver: str | None,
+        memory_specialist_hints: list[str],
     ) -> list[str]:
         del (intent, dominant_tension, risk_markers)
         hints: list[str] = []
+        for specialist_type in memory_specialist_hints:
+            canonical_type = canonical_specialist_type(specialist_type)
+            if canonical_type not in hints:
+                hints.append(canonical_type)
         route_map = {
             route.domain_name: route
             for route in domain_specialist_routes
@@ -255,6 +282,16 @@ class CognitiveEngine:
             if specialist_type not in hints:
                 hints.append(specialist_type)
         return hints[:3]
+
+    @staticmethod
+    def _prioritize_domains_with_memory(
+        domains: list[str],
+        memory_priority_domains: list[str],
+    ) -> list[str]:
+        prioritized = [domain for domain in memory_priority_domains if domain in domains]
+        if not prioritized:
+            return list(domains)
+        return prioritized + [domain for domain in domains if domain not in prioritized]
 
     @staticmethod
     def _resolve_canonical_domains(domains: list[str]) -> list[str]:

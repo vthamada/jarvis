@@ -152,6 +152,10 @@ class DeliberativePlanContract:
     procedural_artifact_summary: str | None = None
     mind_disagreement_status: str | None = None
     mind_validation_checkpoints: list[str] = field(default_factory=list)
+    cognitive_strategy_shift_applied: bool = False
+    cognitive_strategy_shift_summary: str | None = None
+    cognitive_strategy_shift_trigger: str | None = None
+    cognitive_strategy_shift_effects: list[str] = field(default_factory=list)
     continuity_action: str | None = None
     continuity_reason: str | None = None
     open_loops: list[str] = field(default_factory=list)

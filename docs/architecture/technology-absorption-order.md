@@ -191,6 +191,11 @@ O que nao absorver:
 Estas tecnologias ja sao importantes, mas devem entrar depois que a Onda 1
 estiver mais bem traduzida.
 
+Estado atual:
+
+- a Onda 2 agora ja possui matriz formal de readiness em `compare_orchestrator_paths.py` e no `evolution-lab`, subordinada aos sinais causais do nucleo;
+- isso nao ativa automaticamente nenhum item da Onda 2: a matriz serve para filtrar candidatos a experimento controlado, nao para abrir frente macro nem promover stack externa por impulso.
+
 #### 7. `OpenAI Agents SDK`
 
 Absorver:
@@ -368,6 +373,8 @@ A ordem acima vira backlog assim:
 - **Onda 1** gera itens `ready` e `blocked` no backlog micro atual;
 - **Onda 2** gera itens `blocked` ou `deferred`, dependendo da maturidade do
   baseline;
+- a abertura de qualquer item da Onda 2 deve usar tambem a matriz formal de
+  readiness publicada por comparadores e `evolution-lab`;
 - **Onda 3** fica mapeada, mas nao entra como fila ativa;
 - **Onda 4** entra no radar do `evolution-lab` e em estudos/papers, nao em
   backlog implementavel.

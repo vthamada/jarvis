@@ -169,6 +169,15 @@ def test_evolution_lab_creates_proposal_from_flow_evaluation() -> None:
         "workflow_checkpointing",
     }
     assert "baseline_runtime" in proposal.evaluation_matrix
+    assert (
+        proposal.evaluation_matrix["baseline_runtime"]["mind_composition"]
+        == "maturation_recommended"
+    )
+    assert "wave_two_readiness_matrix" in proposal.strategy_context
+    assert (
+        proposal.strategy_context["wave_two_readiness_matrix"]["graphiti_zep"]["status"]
+        == "stabilize_nucleus_first"
+    )
 
 
 def test_evolution_lab_compares_flow_evaluations() -> None:

@@ -418,6 +418,19 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     governed_event = next(event for event in stored_events if event.event_name == "plan_governed")
     assert governed_event.payload["identity_signature"] == "nucleo_soberano_unificado"
     assert governed_event.payload["identity_guardrail"]
+    refined_event = next(event for event in stored_events if event.event_name == "plan_refined")
+    assert (
+        refined_event.payload["cognitive_strategy_shift_applied"]
+        == result.deliberative_plan.cognitive_strategy_shift_applied
+    )
+    assert (
+        refined_event.payload["cognitive_strategy_shift_summary"]
+        == result.deliberative_plan.cognitive_strategy_shift_summary
+    )
+    assert (
+        refined_event.payload["cognitive_strategy_shift_trigger"]
+        == result.deliberative_plan.cognitive_strategy_shift_trigger
+    )
     response_event = next(
         event for event in stored_events if event.event_name == "response_synthesized"
     )
@@ -443,6 +456,22 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     assert (
         response_event.payload["metacognitive_effects"]
         == result.deliberative_plan.metacognitive_effects
+    )
+    assert (
+        response_event.payload["cognitive_strategy_shift_applied"]
+        == result.deliberative_plan.cognitive_strategy_shift_applied
+    )
+    assert (
+        response_event.payload["cognitive_strategy_shift_summary"]
+        == result.deliberative_plan.cognitive_strategy_shift_summary
+    )
+    assert (
+        response_event.payload["cognitive_strategy_shift_trigger"]
+        == result.deliberative_plan.cognitive_strategy_shift_trigger
+    )
+    assert (
+        response_event.payload["cognitive_strategy_shift_effects"]
+        == result.deliberative_plan.cognitive_strategy_shift_effects
     )
     assert response_event.payload["dominant_tension"] == result.deliberative_plan.dominant_tension
     assert response_event.payload["contract_validation_status"] == "coherent"
@@ -1481,3 +1510,27 @@ def test_orchestrator_service_uses_recovered_memory_hints_without_specialist_run
     assert "strategy" in hints["semantic_memory_focus"]
     assert hints["procedural_memory_available"] is True
     assert hints["procedural_memory_hint"] == "manter o ultimo fio de recomendacao governada"
+
+
+def test_orchestrator_service_prioritizes_route_guidance_from_recovered_memory() -> None:
+    guidance = OrchestratorService._memory_route_guidance(
+        active_domains=["strategy", "analysis", "documentation"],
+        recovered_context=[
+            "mission_focus=dados_estatistica_e_inteligencia_analitica",
+            "user_domain_focus=estrategia_e_pensamento_sistemico",
+            "continuity_recommendation=retomar_missao_relacionada",
+            "related_continuity_priority=0.91",
+            "procedural_artifact_status=reusable",
+        ],
+    )
+
+    assert guidance["status"] == "memory_guided"
+    assert guidance["prioritized_domains"][:2] == ["analysis", "strategy"]
+    assert guidance["prioritized_specialists"] == ["structured_analysis_specialist"]
+    assert guidance["sources"] == [
+        "mission_focus",
+        "user_scope",
+        "continuity_ranking",
+        "procedural_artifact",
+    ]
+    assert "analysis:" in str(guidance["summary"])

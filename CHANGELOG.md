@@ -1,5 +1,40 @@
 # CHANGELOG
 
+## 2026-04-09
+
+### Template operacional para transicao de chat
+
+- criado `docs/operations/chat-transition-template.md` para padronizar a abertura de novas conversas quando um lote for fechado ou quando a repriorizacao do backlog exigir reset de contexto;
+- o template agora separa prompt curto, prompt completo, checklist de transicao e regra pratica de quando continuar no mesmo chat versus abrir outro;
+- `HANDOFF.md` passou a referenciar esse artefato como apoio operacional, sem substituir o papel do handoff macro nem da fila micro soberana.
+
+### MB-054 a MB-056 fechados na maturacao adaptativa do nucleo
+
+- `engines/cognitive-engine/src/cognitive_engine/engine.py`, `services/orchestrator-service/src/orchestrator_service/service.py` e `engines/planning-engine/src/planning_engine/engine.py` agora fazem memoria relevante influenciar rota prioritaria, hints especializados, ranking de continuidade e racionalidade do caminho escolhido pelo runtime;
+- `engines/synthesis-engine/src/synthesis_engine/engine.py`, `services/observability-service/src/observability_service/service.py` e `tools/compare_orchestrator_paths.py` agora tratam composicao de mentes, discordancia, checkpoint de validacao e cadeia `mente -> dominio -> especialista` como sinais causais mais explicitos de saida, maturacao e release;
+- `evolution/evolution-lab/src/evolution_lab/service.py`, `tools/compare_orchestrator_paths.py` e `docs/architecture/technology-absorption-order.md` agora publicam matriz de readiness da Onda 2 subordinada aos sinais do nucleo, mantendo a proxima absorcao externa como experimento controlado;
+- `docs/implementation/execution-backlog.md`, `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para marcar `MB-054` a `MB-056` como concluidos e fechar a fila micro ativa ate nova repriorizacao explicita.
+
+### MB-053 fechado na maturacao causal final do nucleo
+
+- `shared/memory_registry.py` agora traduz lifecycle de memoria em postura operacional soberana, distinguindo quando recovery, packet guiado e reuso recorrente permanecem ativos, entram em revisao ou devem parar de herdar memoria arquivavel automaticamente;
+- `services/memory-service/src/memory_service/service.py` e `services/memory-service/src/memory_service/repository.py` agora aplicam essa politica no recovery e na memoria compartilhada de especialistas, contendo refs e artefatos arquivaveis ate revisao explicita sem quebrar as classes canonicas do sistema;
+- `services/observability-service/src/observability_service/service.py` agora marca desalinhamento quando memoria guiada arquivavel continua exposta ao especialista como se estivesse ativa;
+- `docs/implementation/execution-backlog.md`, `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para marcar `MB-053` como concluido e liberar `MB-054` como o proximo item `ready`.
+
+### MB-052 fechado na maturacao causal final do nucleo
+
+- `shared/contracts/__init__.py`, `shared/schemas/__init__.py` e `engines/planning-engine/src/planning_engine/engine.py` agora tratam mudanca de estrategia cognitiva mid-flow como parte do contrato deliberativo, aplicada no `refine_task_plan` quando a revisao especializada preserva um impasse governado;
+- `engines/synthesis-engine/src/synthesis_engine/engine.py`, `services/orchestrator-service/src/orchestrator_service/service.py` e `services/orchestrator-service/src/orchestrator_service/langgraph_flow.py` agora propagam esse slice para a resposta final e para os eventos `plan_refined` e `response_synthesized`, mantendo motivo, gatilho e efeitos observaveis;
+- `services/observability-service/src/observability_service/service.py` agora audita a coerencia dessa mudanca mid-flow entre plano refinado e resposta final;
+- `docs/implementation/execution-backlog.md`, `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para marcar `MB-052` como concluido e liberar `MB-053` como o proximo item `ready`.
+
+### Abertura do lote MB-052 a MB-056 para o nucleo
+
+- `docs/implementation/execution-backlog.md` agora abre `MB-052` a `MB-056` como novo lote ativo do nucleo, com `MB-052` em `ready` para metacognicao adaptativa mid-flow e os demais itens bloqueados apenas pela ordem de dependencia;
+- o novo lote formaliza a sequencia seguinte do sistema: lifecycle de memoria como sistema vivo, memoria influenciando rota/especialista, composicao de mentes mais causal e readiness controlada da Onda 2 sem abrir nova vertical;
+- `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para refletir esse novo lote, atualizar o commit de referencia para `4008dd1` e corrigir a leitura da fila micro ativa.
+
 ## 2026-04-08
 
 ### MB-048 a MB-051 fechados na maturacao causal final do nucleo

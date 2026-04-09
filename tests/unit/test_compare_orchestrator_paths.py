@@ -360,6 +360,18 @@ def test_serialize_comparisons_reports_equivalent_verdict() -> None:
     )
     assert payload["comparison_summary"]["baseline_refinement_vectors"] == []
     assert "strategy" in payload["comparison_summary"]["baseline_evaluation_matrix"]
+    assert (
+        payload["comparison_summary"]["baseline_evaluation_matrix"]["strategy"][
+            "mind_composition"
+        ]
+        == "baseline_saudavel"
+    )
+    assert (
+        payload["comparison_summary"]["baseline_wave_two_readiness_matrix"][
+            "openai_agents_sdk"
+        ]["status"]
+        == "ready_for_controlled_experiment"
+    )
 
 
 def test_render_text_reports_workflow_profile_status() -> None:
@@ -436,6 +448,7 @@ def test_render_text_reports_workflow_profile_status() -> None:
         "workflow_output,workflow_profile,workflow_resume"
     ) in rendered
     assert "candidate_evaluation_matrix_workflows=strategy" in rendered
+    assert "candidate_wave_two_readiness=" in rendered
 
 
 def test_workflow_profile_assessment_classifies_statuses() -> None:

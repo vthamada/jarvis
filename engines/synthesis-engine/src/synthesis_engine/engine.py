@@ -447,11 +447,18 @@ class SynthesisEngine:
             if plan.metacognitive_guidance_applied and plan.metacognitive_guidance_summary
             else ""
         )
+        strategy_shift_clause = (
+            f"; mudanca de estrategia mid-flow: {plan.cognitive_strategy_shift_summary}"
+            if plan.cognitive_strategy_shift_applied
+            and plan.cognitive_strategy_shift_summary
+            else ""
+        )
         if plan.continuity_action == "reformular":
             return (
                 "o pedido atual tensiona a missao ativa e precisa de reformulacao "
                 "governavel antes de qualquer desvio"
                 f"{metacognitive_clause}"
+                f"{strategy_shift_clause}"
                 f"{f'; {cross_session_clause}' if cross_session_clause else ''}"
             )
         if plan.continuity_action == "encerrar" and plan.open_loops:
@@ -459,6 +466,7 @@ class SynthesisEngine:
                 "o pedido atual permite fechar o loop principal da missao: "
                 f"{plan.open_loops[0]}"
                 f"{metacognitive_clause}"
+                f"{strategy_shift_clause}"
                 f"{f'; {cross_session_clause}' if cross_session_clause else ''}"
             )
         if plan.continuity_action == "retomar" and plan.continuity_target_goal:
@@ -466,6 +474,7 @@ class SynthesisEngine:
                 "o pedido atual pede retomada explicita de continuidade relacionada em "
                 f"{plan.continuity_target_goal}"
                 f"{metacognitive_clause}"
+                f"{strategy_shift_clause}"
                 f"{f'; {cross_session_clause}' if cross_session_clause else ''}"
             )
         guidance = workflow_runtime_guidance(plan.route_workflow_profile)
@@ -485,6 +494,14 @@ class SynthesisEngine:
                 base = f"{base}; {cognitive_anchor}"
             if plan.metacognitive_guidance_applied and metacognitive_guidance:
                 base = f"{base}; ancora metacognitiva: {metacognitive_guidance}"
+            if (
+                plan.cognitive_strategy_shift_applied
+                and plan.cognitive_strategy_shift_summary
+            ):
+                base = (
+                    f"{base}; mudanca de estrategia mid-flow: "
+                    f"{plan.cognitive_strategy_shift_summary}"
+                )
             if plan.dominant_tension:
                 base = f"{base}; tensao dominante: {plan.dominant_tension}"
             if plan.arbitration_source == "mind_registry_recomposition":
@@ -542,6 +559,14 @@ class SynthesisEngine:
                 base = f"{base}; {cognitive_anchor}"
             if plan.metacognitive_guidance_applied and metacognitive_guidance:
                 base = f"{base}; ancora metacognitiva: {metacognitive_guidance}"
+            if (
+                plan.cognitive_strategy_shift_applied
+                and plan.cognitive_strategy_shift_summary
+            ):
+                base = (
+                    f"{base}; mudanca de estrategia mid-flow: "
+                    f"{plan.cognitive_strategy_shift_summary}"
+                )
             if plan.dominant_tension:
                 base = f"{base}; tensao dominante: {plan.dominant_tension}"
             if plan.arbitration_source == "mind_registry_recomposition":
@@ -600,6 +625,11 @@ class SynthesisEngine:
             base = f"{base}; {cognitive_anchor}"
         if plan.metacognitive_guidance_applied and metacognitive_guidance:
             base = f"{base}; ancora metacognitiva: {metacognitive_guidance}"
+        if plan.cognitive_strategy_shift_applied and plan.cognitive_strategy_shift_summary:
+            base = (
+                f"{base}; mudanca de estrategia mid-flow: "
+                f"{plan.cognitive_strategy_shift_summary}"
+            )
         if plan.dominant_tension:
             base = f"{base}; tensao dominante: {plan.dominant_tension}"
         if plan.arbitration_source == "mind_registry_recomposition":
@@ -699,6 +729,22 @@ class SynthesisEngine:
                 f"{recommendation}; checkpoint cognitivo: "
                 f"{self._present_contract_label(plan.mind_validation_checkpoints[0])}"
             )
+        if (
+            plan.cognitive_strategy_shift_applied
+            and plan.cognitive_strategy_shift_summary
+        ):
+            recommendation = (
+                f"{recommendation}; mudanca de estrategia mid-flow: "
+                f"{plan.cognitive_strategy_shift_summary}"
+            )
+        if (
+            plan.cognitive_strategy_shift_applied
+            and plan.cognitive_strategy_shift_trigger
+        ):
+            recommendation = (
+                f"{recommendation}; gatilho de estrategia: "
+                f"{self._present_contract_label(plan.cognitive_strategy_shift_trigger)}"
+            )
         if plan.arbitration_source == "mind_registry_recomposition":
             recommendation = (
                 f"{recommendation}; recomposicao cognitiva: preservar o dominio "
@@ -740,6 +786,14 @@ class SynthesisEngine:
             recommendation = (
                 f"{recommendation}; efeitos metacognitivos: "
                 f"{', '.join(plan.metacognitive_effects)}"
+            )
+        if (
+            plan.cognitive_strategy_shift_applied
+            and plan.cognitive_strategy_shift_effects
+        ):
+            recommendation = (
+                f"{recommendation}; efeitos da estrategia: "
+                f"{', '.join(plan.cognitive_strategy_shift_effects)}"
             )
         if plan.metacognitive_containment_recommendation:
             recommendation = (
@@ -805,6 +859,10 @@ class SynthesisEngine:
             limits.append(
                 "a resposta ainda precisa validar como a discordancia "
                 "entre mentes foi resolvida"
+            )
+        if plan.cognitive_strategy_shift_applied:
+            limits.append(
+                "o impasse mid-flow ainda precisa ser resolvido antes do fechamento final"
             )
         material_risks = [risk for risk in plan.risks if "sem risco material" not in risk.lower()]
         if material_risks:

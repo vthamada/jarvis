@@ -941,6 +941,91 @@ Escalar ao operador quando:
 - `modo_de_raciocinio_recomendado`: `high`
 - `impacto_no_baseline`: `evolution_from_pilot`, `evolution-lab` e `verify_release_signal_baseline.py` agora usam sinais mais causais do nucleo para priorizar experimentos por workflow, sem automatizar promocao nem abrir nova frente macro.
 
+### MB-052
+
+- `id`: `MB-052`
+- `prioridade`: `P0`
+- `status`: `done`
+- `eixo_do_mestre`: `mentes`
+- `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`
+- `micro_objetivo`: tornar a metacognicao mais adaptativa no meio do fluxo, fazendo recomposicao e mudanca de estrategia cognitiva reagirem a impasses reais de plano, workflow e output sem esperar apenas o fechamento final.
+- `justificativa_arquitetural`: o baseline agora ja audita `workflow_output_status`, discordancia entre mentes e recomposicao cognitiva; o proximo ganho real e fazer esses sinais alterarem o proprio caminho do runtime durante a execucao.
+- `arquivos/servicos_principais`: `engines/cognitive-engine`, `engines/planning-engine`, `services/orchestrator-service`, `services/observability-service`
+- `dependencias`: `MB-047`, `MB-049`
+- `criterio_de_aceite`: o runtime passa a emitir recomposicao ou mudanca de estrategia cognitiva mid-flow quando houver impasse real de plano/output, com `reason`, `trigger` e impacto rastreavel em passos, checkpoints ou criterios de saida, sem bypass de governanca nem de soberania de dominio.
+- `gate_minimo`: `pytest` direcionado dos engines/servicos tocados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `impacto_no_baseline`: `planning-engine`, `synthesis-engine`, `orchestrator-service` e `observability-service` agora tornam a mudanca de estrategia cognitiva mid-flow parte observavel do baseline quando a revisao especializada preserva um impasse governado.
+
+### MB-053
+
+- `id`: `MB-053`
+- `prioridade`: `P0`
+- `status`: `done`
+- `eixo_do_mestre`: `memorias`
+- `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
+- `micro_objetivo`: transformar lifecycle de memoria em sistema vivo operacional, fazendo promocao, consolidacao, fixacao, revisao e arquivamento alterarem de forma controlada recovery, packet guiado e corpus util do runtime.
+- `justificativa_arquitetural`: o baseline ja publica telemetria de `retention_pressure`, consolidacao, fixacao e arquivamento, mas ainda falta fazer esse lifecycle alterar comportamento real de recuperacao e manutencao do corpus.
+- `arquivos/servicos_principais`: `shared/memory_registry.py`, `services/memory-service/src/memory_service/service.py`, `services/memory-service/src/memory_service/repository.py`, `services/observability-service`
+- `dependencias`: `MB-052`
+- `criterio_de_aceite`: o runtime passa a aplicar regras soberanas de promocao, consolidacao, revisao e arquivamento no proprio fluxo de memoria, sem inflar o corpus nem quebrar as classes canonicas do sistema.
+- `gate_minimo`: `pytest` direcionado de `memory-service`/`observability-service`, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `impacto_no_baseline`: `memory_registry`, `memory-service`, `repository` e `observability-service` agora fazem lifecycle de memoria alterar recovery, packet guiado, reuso recorrente e auditoria de drift quando memoria arquivavel tenta voltar ao especialista sem revisao.
+
+### MB-054
+
+- `id`: `MB-054`
+- `prioridade`: `P0`
+- `status`: `done`
+- `eixo_do_mestre`: `memorias`
+- `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
+- `micro_objetivo`: fazer memoria util influenciar mais explicitamente rota, hint especializado e ranking de continuidade, em vez de pesar quase so em framing e recomendacao final.
+- `justificativa_arquitetural`: depois de fortalecer a causalidade de `semantic` e `procedural` no plano e na sintese, o proximo passo e fazer historico util alterar selecao de caminho do runtime.
+- `arquivos/servicos_principais`: `engines/cognitive-engine`, `engines/planning-engine`, `engines/specialist-engine`, `services/orchestrator-service`, `services/memory-service`
+- `dependencias`: `MB-052`, `MB-053`
+- `criterio_de_aceite`: rota, especialista, profundidade e ranking de continuidade passam a responder melhor a memoria relevante do usuario/missao, sem reintroduzir heuristica espalhada fora dos registries soberanos.
+- `gate_minimo`: `pytest` direcionado dos engines/servicos tocados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `impacto_no_baseline`: `cognitive-engine`, `orchestrator-service`, `planning-engine` e comparadores agora fazem memoria relevante influenciar rota prioritaria, hints especializados, ranking de continuidade e leitura causal do caminho do runtime, sem reintroduzir heuristica espalhada fora dos registries soberanos.
+
+### MB-055
+
+- `id`: `MB-055`
+- `prioridade`: `P1`
+- `status`: `done`
+- `eixo_do_mestre`: `mentes`
+- `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`
+- `micro_objetivo`: aprofundar a composicao de mentes por workflow e dominio, fazendo historico de composicoes, tensao dominante e discordancia entre mentes alterarem apoio, validacao e fechamento do fluxo de forma mais causal.
+- `justificativa_arquitetural`: a composicao cognitiva atual ja e visivel e util, mas ainda e mais declarativa do que deliberativa no meio e no fim do fluxo.
+- `arquivos/servicos_principais`: `shared/mind_registry.py`, `engines/cognitive-engine`, `engines/planning-engine`, `services/observability-service`, `tools/compare_orchestrator_paths.py`, `tools/verify_release_signal_baseline.py`
+- `dependencias`: `MB-052`, `MB-054`
+- `criterio_de_aceite`: composicao de mentes passa a influenciar mais explicitamente apoio, validacao, criterios de saida e readiness de release por workflow, com menos dependencia de parse posterior de `rationale`.
+- `gate_minimo`: `pytest` direcionado dos engines/servicos/tools tocados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `impacto_no_baseline`: `planning-engine`, `synthesis-engine`, `observability-service`, `compare_orchestrator_paths.py` e `verify_release_signal_baseline.py` agora tratam discordancia, checkpoint de validacao entre mentes e cadeia `mente -> dominio -> especialista` como sinais causais mais explicitos de saida, maturacao e release.
+
+### MB-056
+
+- `id`: `MB-056`
+- `prioridade`: `P1`
+- `status`: `done`
+- `eixo_do_mestre`: `evolucao`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: formalizar readiness da Onda 2 de absorcao como matriz de experimento controlado, usando os sinais causais do nucleo para indicar quais referencias externas merecem traducao pequena no proximo ciclo sem abrir nova vertical nem promover stack por impulso.
+- `justificativa_arquitetural`: a Onda 1 foi absorvida com disciplina; o proximo passo nao e importar mais tecnologia, e sim criar criterio formal para decidir onde a Onda 2 realmente agrega ao nucleo.
+- `arquivos/servicos_principais`: `evolution/evolution-lab`, `tools/evolution_from_pilot.py`, `tools/compare_orchestrator_paths.py`, `docs/architecture/technology-absorption-order.md`
+- `dependencias`: `MB-053`, `MB-054`, `MB-055`
+- `criterio_de_aceite`: o laboratorio e os comparadores passam a publicar uma matriz de readiness para experimentos da Onda 2, subordinada aos sinais do nucleo e sem automatizar promocao de tecnologia externa.
+- `gate_minimo`: `pytest` direcionado dos tools/servicos tocados, `ruff` direcionado, `python tools/check_mojibake.py docs/architecture docs/implementation` e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `impacto_no_baseline`: `evolution-lab`, `compare_orchestrator_paths.py` e `docs/architecture/technology-absorption-order.md` agora publicam uma matriz de readiness da Onda 2 subordinada aos sinais causais do nucleo, mantendo a proxima absorcao externa como experimento controlado em vez de frente macro nova.
+
 ---
 
 ## 5. Regras de manutencao da fila
@@ -961,7 +1046,11 @@ Estado atual da fila:
 - `docs/architecture/technology-absorption-order.md` agora formaliza a ordem oficial de traducao disciplinada das referencias externas para o JARVIS;
 - `MB-041` a `MB-046` foram concluidos e fecharam o lote de absorcao disciplinada da Onda 1;
 - `MB-047` a `MB-051` formaram o lote de maturacao causal final do nucleo e ja foram concluidos;
-- `MB-047` a `MB-051` foram concluidos e fecharam o lote de maturacao causal final do nucleo;
-- a fila micro volta a ficar sem item `ready` ate a proxima repriorizacao explicita do operador;
-- a abertura deste lote foi uma decisao de prioridade macro e deve ser tratada como rodada de raciocinio `extra high`, mas a implementacao dos itens segue a recomendacao declarada em cada card;
-- esta rodada reabre a fila sem reativar `protective intelligence` e sem reabrir itens ja concluidos por inercia local.
+- `MB-052` a `MB-056` foram concluidos e fecharam o lote atual de maturacao adaptativa do nucleo;
+- `MB-052` tornou a metacognicao adaptativa mid-flow observavel por `plan_refined`, `response_synthesized` e auditoria local;
+- `MB-053` transformou lifecycle de memoria em comportamento operacional vivo para recovery, packet guiado e reuso recorrente de especialista;
+- `MB-054` fez memoria relevante influenciar de forma mais causal rota, hints especializados e ranking de continuidade;
+- `MB-055` aprofundou a composicao de mentes como sinal causal do runtime e dos gates de release;
+- `MB-056` formalizou a matriz de readiness da Onda 2 como experimento controlado subordinado aos sinais do nucleo;
+- a fila micro volta a ficar sem item `ready` ate nova repriorizacao explicita do operador;
+- a abertura ou repriorizacao do proximo lote continua sendo rodada `extra high`, sem reativar `protective intelligence` nem reabrir itens ja concluidos por inercia local.

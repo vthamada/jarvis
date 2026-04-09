@@ -28,10 +28,10 @@ Leitura correta:
 
 Estado de referencia desta revisao:
 
-- data da fotografia: `2026-04-08`
+- data da fotografia: `2026-04-09`
 - ultimo recorte funcional fechado: `v2-native-memory-scope-hardening-cut`
 - ultimo recorte estrutural fechado: `v2-repository-hygiene-and-tools-review-cut`
-- passo funcional em andamento: `maturacao-causal-final-do-nucleo` (`MB-037` a `MB-040` concluidos; `MB-041` a `MB-046` concluidos; `MB-047` a `MB-051` concluidos; fila micro sem novo item `ready`)
+- passo funcional em andamento: `maturacao-causal-final-do-nucleo` (`MB-037` a `MB-040` concluidos; `MB-041` a `MB-046` concluidos; `MB-047` a `MB-051` concluidos; `MB-052` a `MB-056` concluidos; aguardando abertura explicita do proximo lote micro)
 
 Leitura executiva:
 
@@ -95,6 +95,8 @@ Leitura executiva:
 - `MB-048` agora tambem esta fechado: `memory_registry`, `planning` e `synthesis` passaram a distinguir melhor os efeitos de `semantic` e `procedural` por workflow e por fonte de continuidade, fazendo memoria causal pesar em prioridade, profundidade e recomendacao final.
 - `MB-049` agora tambem esta fechado: `orchestrator`, `synthesis`, comparadores e laboratorio tratam a cadeia `mente -> dominio -> especialista` como evidencia primaria mais rica, inclusive com planned hints, alinhamento parcial e coerencia do encadeamento no runtime final.
 - `MB-050` e `MB-051` agora tambem estao fechados: `workflow_output_status` atravessa piloto, comparadores, `evolution-lab`, `evolution_from_pilot` e `verify_release_signal_baseline.py` como leitura formal de maturacao, e os proximos experimentos do laboratorio passam a ser priorizados por workflow usando esses sinais mais causais do nucleo.
+- `MB-052` agora tambem esta fechado: `planning-engine` aplica mudanca de estrategia cognitiva mid-flow no `refine_task_plan` quando a revisao especializada preserva um impasse governado, `synthesis-engine` torna esse ajuste explicito na leitura final, `orchestrator-service` o publica em `plan_refined` e `response_synthesized`, e `observability-service` audita a coerencia desse slice ao longo do fluxo.
+- `MB-053` agora tambem esta fechado: `memory_registry`, `memory-service`, `repository` e `observability-service` passaram a conter reuso automatico de memoria arquivavel, fazer recovery marcar `review_before_reuse` quando o lifecycle exige revisao e tratar drift de packet guiado arquivavel como desalinhamento auditavel.
 
 Em resumo:
 
@@ -351,12 +353,23 @@ Foco:
 - `MB-050`: concluido; `baseline_saudavel` vs `maturation_recommended` ficou mais formal em piloto, comparadores, `evolution-lab` e gates;
 - `MB-051`: concluido; o `evolution-lab` agora usa esses sinais refinados para priorizar melhor os proximos experimentos por workflow.
 
-### Passo 3 - continuar maturando o nucleo antes de qualquer frente macro nova
+### Passo 3 - executar o lote `MB-052` a `MB-056`
 
 Foco:
 
-- usar a matriz de evals e a telemetria de memoria para identificar o proximo ganho causal do nucleo depois do fechamento do lote `MB-047` a `MB-051`;
-- abrir o proximo lote apenas por repriorizacao explicita, sem reativar `protective intelligence` por inercia.
+- `MB-052`: concluido; a mudanca de estrategia cognitiva mid-flow agora reage a impasse governado de revisao especializada e fica observavel no plano refinado, na resposta e na auditoria;
+- `MB-053`: concluido; lifecycle de memoria agora altera recovery, packet guiado e reuso recorrente de especialista de forma soberana e observavel;
+- `MB-054`: concluido; memoria relevante agora influencia mais explicitamente rota, hints especializados, ranking de continuidade e a leitura causal do caminho do runtime;
+- `MB-055`: concluido; composicao de mentes por workflow e dominio agora pesa mais em validacao, criterios de saida e readiness de release;
+- `MB-056`: concluido; readiness da Onda 2 agora existe como matriz de experimento controlado nos comparadores, no laboratorio e na ordem oficial de absorcao, sem abrir nova vertical nem promover stack externa por impulso.
+
+### Passo 4 - continuar maturando o nucleo antes de qualquer frente macro nova
+
+Foco:
+
+- usar a matriz de evals e a telemetria de memoria para identificar o proximo ganho causal do nucleo depois do fechamento do lote `MB-052` a `MB-056`;
+- abrir o proximo lote micro apenas por decisao explicita, usando a nova matriz de readiness da Onda 2 como insumo e nao como gatilho automatico de absorcao;
+- manter a abertura ou repriorizacao dos lotes seguintes como decisao explicita, sem reativar `protective intelligence` por inercia;
 - manter `protective intelligence` em `deferred` ate nova decisao explicita.
 
 ---
