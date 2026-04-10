@@ -145,6 +145,21 @@ def _evaluation_from_dict(payload: dict[str, object]) -> FlowEvaluationInput:
             if payload.get("mind_validation_checkpoint_status") is not None
             else "not_applicable"
         ),
+        adaptive_intervention_status=(
+            str(payload["adaptive_intervention_status"])
+            if payload.get("adaptive_intervention_status") is not None
+            else "not_applicable"
+        ),
+        adaptive_intervention_selected_action=(
+            str(payload["adaptive_intervention_selected_action"])
+            if payload.get("adaptive_intervention_selected_action") is not None
+            else None
+        ),
+        adaptive_intervention_effectiveness=(
+            str(payload["adaptive_intervention_effectiveness"])
+            if payload.get("adaptive_intervention_effectiveness") is not None
+            else "not_applicable"
+        ),
         memory_causality_status=(
             str(payload["memory_causality_status"])
             if payload.get("memory_causality_status") is not None
@@ -298,6 +313,9 @@ def build_payload(args: Namespace) -> dict[str, object]:
             and audit.metacognitive_guidance_status in {None, "healthy", "not_applicable"}
             and audit.mind_disagreement_status in {None, "not_applicable", "contained"}
             and audit.mind_validation_checkpoint_status in {None, "not_applicable", "healthy"}
+            and audit.adaptive_intervention_status in {None, "healthy", "not_applicable"}
+            and audit.adaptive_intervention_effectiveness
+            in {None, "effective", "not_applicable"}
             and audit.memory_causality_status in {None, "causal_guidance", "not_applicable"}
             and audit.memory_lifecycle_status in {None, "retained", "promoted", "not_applicable"}
             and audit.memory_corpus_status in {None, "stable", "not_applicable"}
@@ -346,6 +364,13 @@ def build_payload(args: Namespace) -> dict[str, object]:
                 metacognitive_guidance_status=audit.metacognitive_guidance_status,
                 mind_disagreement_status=audit.mind_disagreement_status,
                 mind_validation_checkpoint_status=audit.mind_validation_checkpoint_status,
+                adaptive_intervention_status=audit.adaptive_intervention_status,
+                adaptive_intervention_selected_action=(
+                    audit.adaptive_intervention_selected_action
+                ),
+                adaptive_intervention_effectiveness=(
+                    audit.adaptive_intervention_effectiveness
+                ),
                 memory_causality_status=audit.memory_causality_status,
                 primary_mind=audit.primary_mind,
                 primary_route=audit.primary_route,

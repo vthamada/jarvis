@@ -84,6 +84,13 @@ class FlowAudit:
     cognitive_recomposition_applied: bool
     cognitive_recomposition_reason: str | None
     cognitive_recomposition_trigger: str | None
+    adaptive_intervention_status: str
+    adaptive_intervention_reason: str | None
+    adaptive_intervention_trigger: str | None
+    adaptive_intervention_selected_action: str | None
+    adaptive_intervention_expected_effect: str | None
+    adaptive_intervention_effects: list[str]
+    adaptive_intervention_effectiveness: str
     cognitive_strategy_shift_status: str
     cognitive_strategy_shift_applied: bool
     cognitive_strategy_shift_summary: str | None
@@ -152,6 +159,9 @@ class FlowAudit:
             and self.contract_validation_status in {"coherent", "repaired", "not_applicable"}
             and self.output_validation_status in {"coherent", "repaired", "not_applicable"}
             and self.workflow_output_status in {"coherent", "not_applicable"}
+            and self.adaptive_intervention_status in {"healthy", "not_applicable"}
+            and self.adaptive_intervention_effectiveness
+            in {"effective", "not_applicable"}
             and self.cognitive_strategy_shift_status in {"healthy", "not_applicable"}
             and self.specialist_subflow_status
             in {"healthy", "not_applicable", "contained"}
@@ -331,6 +341,13 @@ class ObservabilityService:
                 cognitive_recomposition_applied=False,
                 cognitive_recomposition_reason=None,
                 cognitive_recomposition_trigger=None,
+                adaptive_intervention_status="incomplete",
+                adaptive_intervention_reason=None,
+                adaptive_intervention_trigger=None,
+                adaptive_intervention_selected_action=None,
+                adaptive_intervention_expected_effect=None,
+                adaptive_intervention_effects=[],
+                adaptive_intervention_effectiveness="incomplete",
                 cognitive_strategy_shift_status="incomplete",
                 cognitive_strategy_shift_applied=False,
                 cognitive_strategy_shift_summary=None,
@@ -694,6 +711,121 @@ class ObservabilityService:
                 else None
             )
         )
+        adaptive_intervention_status = self._adaptive_intervention_status(
+            plan_event=plan_event,
+            plan_refined_event=plan_refined_event,
+            workflow_composed_event=workflow_composed_event,
+            operation_dispatched_event=operation_dispatched_event,
+            response_event=response_event,
+        )
+        adaptive_intervention_source = (
+            plan_refined_event
+            if plan_refined_event
+            and (
+                plan_refined_event.payload.get("adaptive_intervention_status") is not None
+                or plan_refined_event.payload.get("adaptive_intervention_selected_action")
+                is not None
+            )
+            else (
+                plan_event
+                if plan_event
+                and (
+                    plan_event.payload.get("adaptive_intervention_status") is not None
+                    or plan_event.payload.get("adaptive_intervention_selected_action")
+                    is not None
+                )
+                else None
+            )
+        )
+        adaptive_intervention_reason = (
+            str(adaptive_intervention_source.payload.get("adaptive_intervention_reason"))
+            if adaptive_intervention_source
+            and adaptive_intervention_source.payload.get("adaptive_intervention_reason")
+            is not None
+            else (
+                str(response_event.payload.get("adaptive_intervention_reason"))
+                if response_event
+                and response_event.payload.get("adaptive_intervention_reason") is not None
+                else None
+            )
+        )
+        adaptive_intervention_trigger = (
+            str(adaptive_intervention_source.payload.get("adaptive_intervention_trigger"))
+            if adaptive_intervention_source
+            and adaptive_intervention_source.payload.get("adaptive_intervention_trigger")
+            is not None
+            else (
+                str(response_event.payload.get("adaptive_intervention_trigger"))
+                if response_event
+                and response_event.payload.get("adaptive_intervention_trigger") is not None
+                else None
+            )
+        )
+        adaptive_intervention_selected_action = (
+            str(
+                adaptive_intervention_source.payload.get(
+                    "adaptive_intervention_selected_action"
+                )
+            )
+            if adaptive_intervention_source
+            and adaptive_intervention_source.payload.get(
+                "adaptive_intervention_selected_action"
+            )
+            is not None
+            else (
+                str(response_event.payload.get("adaptive_intervention_selected_action"))
+                if response_event
+                and response_event.payload.get("adaptive_intervention_selected_action")
+                is not None
+                else (
+                    str(
+                        operation_dispatched_event.payload.get(
+                            "adaptive_intervention_selected_action"
+                        )
+                    )
+                    if operation_dispatched_event
+                    and operation_dispatched_event.payload.get(
+                        "adaptive_intervention_selected_action"
+                    )
+                    is not None
+                    else None
+                )
+            )
+        )
+        adaptive_intervention_expected_effect = (
+            str(
+                adaptive_intervention_source.payload.get(
+                    "adaptive_intervention_expected_effect"
+                )
+            )
+            if adaptive_intervention_source
+            and adaptive_intervention_source.payload.get(
+                "adaptive_intervention_expected_effect"
+            )
+            is not None
+            else (
+                str(response_event.payload.get("adaptive_intervention_expected_effect"))
+                if response_event
+                and response_event.payload.get("adaptive_intervention_expected_effect")
+                is not None
+                else None
+            )
+        )
+        adaptive_intervention_effects = [
+            str(item)
+            for item in (
+                adaptive_intervention_source.payload.get(
+                    "adaptive_intervention_effects",
+                    [],
+                )
+                if adaptive_intervention_source
+                else (
+                    response_event.payload.get("adaptive_intervention_effects", [])
+                    if response_event
+                    else []
+                )
+            )
+        ]
         cognitive_strategy_shift_applied = bool(
             (
                 plan_refined_event.payload.get("cognitive_strategy_shift_applied")
@@ -1099,6 +1231,17 @@ class ObservabilityService:
         specialist_sovereignty_status = self._specialist_sovereignty_status(
             specialist_contract_event=specialist_contract_event,
         )
+        adaptive_intervention_effectiveness = self._adaptive_intervention_effectiveness(
+            adaptive_intervention_status=adaptive_intervention_status,
+            adaptive_intervention_selected_action=adaptive_intervention_selected_action,
+            workflow_output_status=workflow_output_status,
+            mind_validation_checkpoint_status=mind_validation_checkpoint_status,
+            memory_causality_status=memory_causality_status,
+            memory_corpus_status=memory_corpus_status,
+            workflow_resume_status=workflow_resume_status,
+            governance_decision=governance_decision,
+            specialist_subflow_status=specialist_subflow_status,
+        )
 
         return FlowAudit(
             request_id=first_event.request_id,
@@ -1142,6 +1285,13 @@ class ObservabilityService:
             cognitive_recomposition_applied=cognitive_recomposition_applied,
             cognitive_recomposition_reason=cognitive_recomposition_reason,
             cognitive_recomposition_trigger=cognitive_recomposition_trigger,
+            adaptive_intervention_status=adaptive_intervention_status,
+            adaptive_intervention_reason=adaptive_intervention_reason,
+            adaptive_intervention_trigger=adaptive_intervention_trigger,
+            adaptive_intervention_selected_action=adaptive_intervention_selected_action,
+            adaptive_intervention_expected_effect=adaptive_intervention_expected_effect,
+            adaptive_intervention_effects=adaptive_intervention_effects,
+            adaptive_intervention_effectiveness=adaptive_intervention_effectiveness,
             cognitive_strategy_shift_status=cognitive_strategy_shift_status,
             cognitive_strategy_shift_applied=cognitive_strategy_shift_applied,
             cognitive_strategy_shift_summary=cognitive_strategy_shift_summary,
@@ -1317,6 +1467,8 @@ class ObservabilityService:
             return "contain_response_and_recompose_with_last_valid_plan"
         if audit.governance_decision in {"block", "defer_for_validation"}:
             return "keep_contained_and_require_manual_review"
+        if audit.adaptive_intervention_effectiveness == "insufficient":
+            return "review_adaptive_intervention_before_promoting_the_flow"
         if audit.mind_validation_checkpoint_status == "attention_required":
             return "review_mind_validation_checkpoint_before_promoting_the_flow"
         if audit.memory_corpus_status == "review_recommended":
@@ -2145,6 +2297,131 @@ class ObservabilityService:
         if response_effects != plan_effects:
             return "attention_required"
         return "healthy" if plan_applied else "not_applicable"
+
+    @staticmethod
+    def _adaptive_intervention_status(
+        *,
+        plan_event: InternalEventEnvelope | None,
+        plan_refined_event: InternalEventEnvelope | None,
+        workflow_composed_event: InternalEventEnvelope | None,
+        operation_dispatched_event: InternalEventEnvelope | None,
+        response_event: InternalEventEnvelope | None,
+    ) -> str:
+        source_event = (
+            plan_refined_event
+            if plan_refined_event
+            and (
+                plan_refined_event.payload.get("adaptive_intervention_status") is not None
+                or plan_refined_event.payload.get("adaptive_intervention_selected_action")
+                is not None
+            )
+            else plan_event
+        )
+        if source_event is None:
+            if response_event is None:
+                return "not_applicable"
+            response_has_details = any(
+                response_event.payload.get(field_name) is not None
+                for field_name in (
+                    "adaptive_intervention_status",
+                    "adaptive_intervention_reason",
+                    "adaptive_intervention_trigger",
+                    "adaptive_intervention_selected_action",
+                    "adaptive_intervention_expected_effect",
+                )
+            ) or bool(response_event.payload.get("adaptive_intervention_effects", []))
+            return "attention_required" if response_has_details else "not_applicable"
+
+        plan_status = source_event.payload.get("adaptive_intervention_status")
+        plan_reason = source_event.payload.get("adaptive_intervention_reason")
+        plan_trigger = source_event.payload.get("adaptive_intervention_trigger")
+        plan_action = source_event.payload.get("adaptive_intervention_selected_action")
+        plan_expected_effect = source_event.payload.get(
+            "adaptive_intervention_expected_effect"
+        )
+        plan_effects = list(source_event.payload.get("adaptive_intervention_effects", []))
+        plan_applied = plan_status == "applied" or plan_action is not None
+
+        if plan_applied:
+            if (
+                plan_status != "applied"
+                or not plan_reason
+                or not plan_trigger
+                or not plan_action
+                or not plan_expected_effect
+                or not plan_effects
+            ):
+                return "attention_required"
+        elif any(
+            value is not None for value in (plan_reason, plan_trigger, plan_action, plan_expected_effect)
+        ) or plan_effects:
+            return "attention_required"
+
+        for event in (workflow_composed_event, operation_dispatched_event, response_event):
+            if event is None:
+                continue
+            event_status = event.payload.get("adaptive_intervention_status")
+            event_action = event.payload.get("adaptive_intervention_selected_action")
+            event_reason = event.payload.get("adaptive_intervention_reason")
+            event_trigger = event.payload.get("adaptive_intervention_trigger")
+            event_expected_effect = event.payload.get("adaptive_intervention_expected_effect")
+            event_effects = list(event.payload.get("adaptive_intervention_effects", []))
+            if event_status is None and event_action is None and not event_effects:
+                continue
+            if event_status != plan_status:
+                return "attention_required"
+            if event_action != plan_action:
+                return "attention_required"
+            if event_reason is not None and event_reason != plan_reason:
+                return "attention_required"
+            if event_trigger is not None and event_trigger != plan_trigger:
+                return "attention_required"
+            if event_expected_effect is not None and event_expected_effect != plan_expected_effect:
+                return "attention_required"
+            if event_effects and event_effects != plan_effects:
+                return "attention_required"
+        return "healthy" if plan_applied else "not_applicable"
+
+    @staticmethod
+    def _adaptive_intervention_effectiveness(
+        *,
+        adaptive_intervention_status: str,
+        adaptive_intervention_selected_action: str | None,
+        workflow_output_status: str,
+        mind_validation_checkpoint_status: str,
+        memory_causality_status: str,
+        memory_corpus_status: str,
+        workflow_resume_status: str,
+        governance_decision: str | None,
+        specialist_subflow_status: str,
+    ) -> str:
+        if adaptive_intervention_status == "not_applicable":
+            return "not_applicable"
+        if adaptive_intervention_status != "healthy":
+            return "incomplete"
+        if adaptive_intervention_selected_action == "safe_containment":
+            if governance_decision in {"block", "defer_for_validation", "allow_with_conditions"}:
+                return "effective"
+            if workflow_resume_status == "manual_resume_required":
+                return "effective"
+            return "insufficient"
+        if adaptive_intervention_selected_action == "clarification_checkpoint":
+            return "effective" if workflow_output_status == "coherent" else "insufficient"
+        if adaptive_intervention_selected_action == "memory_review_checkpoint":
+            if workflow_output_status == "coherent" and memory_causality_status == "healthy":
+                return "effective"
+            if memory_corpus_status == "review_recommended":
+                return "effective"
+            return "insufficient"
+        if adaptive_intervention_selected_action == "specialist_reevaluation":
+            if (
+                specialist_subflow_status in {"healthy", "contained"}
+                and mind_validation_checkpoint_status in {"healthy", "not_applicable"}
+                and workflow_output_status == "coherent"
+            ):
+                return "effective"
+            return "insufficient"
+        return "effective" if workflow_output_status == "coherent" else "insufficient"
 
     @staticmethod
     def _metacognitive_guidance_status(

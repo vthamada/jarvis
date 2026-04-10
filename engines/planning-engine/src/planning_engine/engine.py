@@ -150,6 +150,8 @@ class PlanningContext:
     memory_priority_specialists: list[str] | None = None
     memory_priority_sources: list[str] | None = None
     memory_priority_summary: str | None = None
+    memory_corpus_status: str | None = None
+    memory_retention_pressure: str | None = None
     procedural_artifact_status: str | None = None
     procedural_artifact_ref: str | None = None
     procedural_artifact_version: int | None = None
@@ -175,6 +177,21 @@ class CognitiveStrategyShift:
     trigger: str | None
     effects: list[str]
     next_action: str | None = None
+
+
+@dataclass(frozen=True)
+class AdaptiveIntervention:
+    """Governed intervention applied when runtime signals indicate containment or review."""
+
+    applied: bool
+    status: str
+    reason: str | None
+    trigger: str | None
+    selected_action: str | None
+    expected_effect: str | None
+    effects: list[str]
+    next_action: str | None = None
+    requires_human_validation: bool = False
 
 
 class PlanningEngine:
@@ -289,6 +306,28 @@ class PlanningEngine:
             context=context,
             memory_decision=memory_decision,
         )
+        adaptive_intervention = self._adaptive_intervention(
+            context,
+            continuity_action=continuity_action,
+            goal_conflict=goal_conflict,
+            dominant_tension=dominant_tension,
+            mind_disagreement_status=mind_disagreement_status,
+            mind_validation_checkpoints=mind_validation_checkpoints,
+            memory_decision=memory_decision,
+        )
+        (
+            steps,
+            constraints,
+            success_criteria,
+            smallest_safe_next_action,
+            intervention_requires_human_validation,
+        ) = self._apply_adaptive_intervention(
+            steps=steps,
+            constraints=constraints,
+            success_criteria=success_criteria,
+            smallest_safe_next_action=smallest_safe_next_action,
+            adaptive_intervention=adaptive_intervention,
+        )
         recommended_task_type = self._recommended_task_type(
             context,
             continuity_action=continuity_action,
@@ -298,6 +337,9 @@ class PlanningEngine:
             risks=risks,
             continuity_action=continuity_action,
             open_loops=open_loops,
+        )
+        requires_human_validation = (
+            requires_human_validation or intervention_requires_human_validation
         )
         plan_summary = self._build_summary(
             context,
@@ -311,6 +353,14 @@ class PlanningEngine:
             continuity_reason=continuity_reason,
             continuity_source=continuity_source,
         )
+        if adaptive_intervention.applied:
+            plan_summary = (
+                f"{plan_summary}; adaptive_intervention="
+                f"{adaptive_intervention.selected_action or 'none'}; "
+                f"adaptive_intervention_trigger={adaptive_intervention.trigger or 'none'}; "
+                "adaptive_intervention_effect="
+                f"{adaptive_intervention.expected_effect or 'none'}"
+            )
         rationale = self._build_rationale(
             context,
             risks=risks,
@@ -322,6 +372,13 @@ class PlanningEngine:
             continuity_action=continuity_action,
             goal_conflict=goal_conflict,
             continuity_reason=continuity_reason,
+        )
+        rationale = (
+            f"{rationale}; adaptive_intervention_status={adaptive_intervention.status}; "
+            f"adaptive_intervention_reason={adaptive_intervention.reason or 'none'}; "
+            f"adaptive_intervention_trigger={adaptive_intervention.trigger or 'none'}; "
+            "adaptive_intervention_expected_effect="
+            f"{adaptive_intervention.expected_effect or 'none'}"
         )
         plan = DeliberativePlanContract(
             plan_summary=plan_summary,
@@ -382,6 +439,12 @@ class PlanningEngine:
             procedural_artifact_summary=context.procedural_artifact_summary,
             mind_disagreement_status=mind_disagreement_status,
             mind_validation_checkpoints=mind_validation_checkpoints,
+            adaptive_intervention_status=adaptive_intervention.status,
+            adaptive_intervention_reason=adaptive_intervention.reason,
+            adaptive_intervention_trigger=adaptive_intervention.trigger,
+            adaptive_intervention_selected_action=adaptive_intervention.selected_action,
+            adaptive_intervention_expected_effect=adaptive_intervention.expected_effect,
+            adaptive_intervention_effects=list(adaptive_intervention.effects),
             continuity_action=continuity_action,
             continuity_reason=continuity_reason,
             open_loops=open_loops,
@@ -476,6 +539,31 @@ class PlanningEngine:
             if shift_criterion not in success_criteria:
                 success_criteria.append(shift_criterion)
 
+        adaptive_intervention = self._adaptive_intervention_from_specialist_review(
+            plan=plan,
+            specialist_summary=specialist_summary,
+            specialist_contributions=specialist_contributions,
+            open_loop_hints=open_loop_hints,
+        )
+        (
+            refined_steps,
+            refined_constraints,
+            success_criteria,
+            refined_next_action,
+            adaptive_requires_human_validation,
+        ) = self._apply_adaptive_intervention(
+            steps=refined_steps,
+            constraints=refined_constraints,
+            success_criteria=success_criteria,
+            smallest_safe_next_action=(
+                strategy_shift.next_action or plan.smallest_safe_next_action
+            ),
+            adaptive_intervention=adaptive_intervention,
+        )
+        requires_human_validation = (
+            requires_human_validation or adaptive_requires_human_validation
+        )
+
         resolution_summary = self._specialist_resolution_summary(
             specialist_contributions,
             specialist_summary,
@@ -489,18 +577,26 @@ class PlanningEngine:
             success_criteria=success_criteria[:8],
             specialist_resolution_summary=resolution_summary,
             open_loops=open_loop_hints[:3],
-            smallest_safe_next_action=(
-                strategy_shift.next_action or plan.smallest_safe_next_action
-            ),
+            smallest_safe_next_action=refined_next_action,
+            adaptive_intervention_status=adaptive_intervention.status,
+            adaptive_intervention_reason=adaptive_intervention.reason,
+            adaptive_intervention_trigger=adaptive_intervention.trigger,
+            adaptive_intervention_selected_action=adaptive_intervention.selected_action,
+            adaptive_intervention_expected_effect=adaptive_intervention.expected_effect,
+            adaptive_intervention_effects=list(adaptive_intervention.effects),
             cognitive_strategy_shift_applied=strategy_shift.applied,
             cognitive_strategy_shift_summary=strategy_shift.summary,
             cognitive_strategy_shift_trigger=strategy_shift.trigger,
             cognitive_strategy_shift_effects=list(strategy_shift.effects),
             rationale=(
-                f"{plan.rationale}; resolucao_especialistas={resolution_summary}"
+                f"{plan.rationale}; resolucao_especialistas={resolution_summary}; "
+                f"adaptive_intervention_status={adaptive_intervention.status}; "
+                f"adaptive_intervention_reason={adaptive_intervention.reason or 'none'}"
                 if not strategy_shift.applied or not strategy_shift.summary
                 else (
                     f"{plan.rationale}; resolucao_especialistas={resolution_summary}; "
+                    f"adaptive_intervention_status={adaptive_intervention.status}; "
+                    f"adaptive_intervention_reason={adaptive_intervention.reason or 'none'}; "
                     f"mudanca_estrategia_mid_flow={strategy_shift.trigger}:"
                     f"{strategy_shift.summary}"
                 )
@@ -626,6 +722,294 @@ class PlanningEngine:
                 else list(repaired_validation.errors)
             ),
             contract_validation_retry_applied=True,
+        )
+
+    def _adaptive_intervention(
+        self,
+        context: PlanningContext,
+        *,
+        continuity_action: str,
+        goal_conflict: str | None,
+        dominant_tension: str,
+        mind_disagreement_status: str,
+        mind_validation_checkpoints: list[str],
+        memory_decision,
+    ) -> AdaptiveIntervention:
+        if context.requires_clarification:
+            return AdaptiveIntervention(
+                applied=True,
+                status="applied",
+                reason="pedido ainda exige checkpoint soberano de clarificacao",
+                trigger="clarification_required",
+                selected_action="clarification_checkpoint",
+                expected_effect=(
+                    "contain execution until the intent and expected outcome "
+                    "are explicit"
+                ),
+                effects=[
+                    "steps",
+                    "constraints",
+                    "success_criteria",
+                    "smallest_safe_next_action",
+                ],
+                next_action="executar checkpoint de clarificacao antes de qualquer execucao",
+            )
+        if (
+            context.continuity_requires_manual_resume
+            or continuity_action == "reformular"
+            or goal_conflict is not None
+        ):
+            return AdaptiveIntervention(
+                applied=True,
+                status="applied",
+                reason="continuidade recuperada ou conflito de missao exige contencao governada",
+                trigger=(
+                    "manual_resume_required"
+                    if context.continuity_requires_manual_resume
+                    else "mission_conflict_detected"
+                ),
+                selected_action="safe_containment",
+                expected_effect=(
+                    "freeze unsafe continuity until a governed direction is "
+                    "explicitly confirmed"
+                ),
+                effects=[
+                    "steps",
+                    "constraints",
+                    "success_criteria",
+                    "smallest_safe_next_action",
+                    "requires_human_validation",
+                ],
+                next_action="conter a continuidade ativa e validar a direcao antes de operar",
+                requires_human_validation=True,
+            )
+        if (
+            memory_decision.review_status == "review_recommended"
+            or context.memory_corpus_status == "review_recommended"
+            or context.memory_retention_pressure == "high"
+        ):
+            return AdaptiveIntervention(
+                applied=True,
+                status="applied",
+                reason="pressao de memoria ou corpus governado exige checkpoint de revisao",
+                trigger=(
+                    "memory_retention_pressure_high"
+                    if context.memory_retention_pressure == "high"
+                    else "memory_review_recommended"
+                ),
+                selected_action="memory_review_checkpoint",
+                expected_effect="stabilize recall usage before final synthesis or reuse expansion",
+                effects=[
+                    "steps",
+                    "constraints",
+                    "success_criteria",
+                    "smallest_safe_next_action",
+                ],
+                next_action=(
+                    "executar checkpoint de memoria antes da sintese final"
+                    if not context.memory_corpus_status
+                    else (
+                        "executar checkpoint de memoria antes da sintese final: "
+                        f"{context.memory_corpus_status}"
+                    )
+                ),
+            )
+        if mind_disagreement_status in {"validation_required", "deep_review_required"}:
+            checkpoint = mind_validation_checkpoints[0] if mind_validation_checkpoints else None
+            reason = (
+                "discordancia entre mentes exige reavaliacao especializada antes do fechamento"
+            )
+            if dominant_tension:
+                reason = f"{reason}: {dominant_tension}"
+            return AdaptiveIntervention(
+                applied=True,
+                status="applied",
+                reason=reason,
+                trigger=(
+                    "deep_review_required"
+                    if mind_disagreement_status == "deep_review_required"
+                    else "mind_validation_required"
+                ),
+                selected_action="specialist_reevaluation",
+                expected_effect=(
+                    "force governed specialist reevaluation before the final "
+                    "synthesis closes the active tension"
+                ),
+                effects=[
+                    "steps",
+                    "constraints",
+                    "success_criteria",
+                    "smallest_safe_next_action",
+                ],
+                next_action=(
+                    f"executar reavaliacao especializada: {checkpoint}"
+                    if checkpoint
+                    else "executar reavaliacao especializada antes da sintese final"
+                ),
+                requires_human_validation=False,
+            )
+        return AdaptiveIntervention(
+            applied=False,
+            status="not_applicable",
+            reason=None,
+            trigger=None,
+            selected_action=None,
+            expected_effect=None,
+            effects=[],
+        )
+
+    def _adaptive_intervention_from_specialist_review(
+        self,
+        *,
+        plan: DeliberativePlanContract,
+        specialist_summary: str,
+        specialist_contributions: list[SpecialistContributionContract],
+        open_loop_hints: list[str],
+    ) -> AdaptiveIntervention:
+        unresolved_findings = sum(
+            1
+            for contribution in specialist_contributions
+            for finding in contribution.findings
+            if finding.startswith(("risk:", "constraint:", "open_loop:", "success:"))
+        )
+        if (
+            specialist_contributions
+            and plan.mind_disagreement_status in {"validation_required", "deep_review_required"}
+            and unresolved_findings > 0
+        ):
+            focus = open_loop_hints[0] if open_loop_hints else specialist_summary
+            return AdaptiveIntervention(
+                applied=True,
+                status="applied",
+                reason=(
+                    "revisao especializada preservou tensao ativa e exige nova convergencia "
+                    f"antes do fechamento: {focus}"
+                ),
+                trigger=(
+                    "deep_review_impasse"
+                    if plan.mind_disagreement_status == "deep_review_required"
+                    else "guided_validation_impasse"
+                ),
+                selected_action="specialist_reevaluation",
+                expected_effect=(
+                    "close specialist disagreement under governed review "
+                    "before the final synthesis"
+                ),
+                effects=[
+                    "steps",
+                    "constraints",
+                    "success_criteria",
+                    "smallest_safe_next_action",
+                ],
+                next_action=(
+                    f"executar reavaliacao especializada sobre {focus}"
+                    if focus
+                    else "executar reavaliacao especializada antes da sintese final"
+                ),
+                requires_human_validation=False,
+            )
+        return AdaptiveIntervention(
+            applied=plan.adaptive_intervention_status == "applied",
+            status=plan.adaptive_intervention_status or "not_applicable",
+            reason=plan.adaptive_intervention_reason,
+            trigger=plan.adaptive_intervention_trigger,
+            selected_action=plan.adaptive_intervention_selected_action,
+            expected_effect=plan.adaptive_intervention_expected_effect,
+            effects=list(plan.adaptive_intervention_effects),
+            next_action=plan.smallest_safe_next_action,
+            requires_human_validation=(
+                plan.adaptive_intervention_selected_action
+                in {"safe_containment", "specialist_reevaluation"}
+            ),
+        )
+
+    def _apply_adaptive_intervention(
+        self,
+        *,
+        steps: list[str],
+        constraints: list[str],
+        success_criteria: list[str],
+        smallest_safe_next_action: str | None,
+        adaptive_intervention: AdaptiveIntervention,
+    ) -> tuple[list[str], list[str], list[str], str | None, bool]:
+        if not adaptive_intervention.applied or not adaptive_intervention.selected_action:
+            return (
+                steps,
+                constraints,
+                success_criteria,
+                smallest_safe_next_action,
+                False,
+            )
+
+        updated_steps = list(steps)
+        updated_constraints = list(constraints)
+        updated_success = list(success_criteria)
+
+        constraint_map = {
+            "clarification_checkpoint": (
+                "nao operar enquanto o objetivo e o resultado esperado permanecerem ambiguos"
+            ),
+            "safe_containment": (
+                "manter contencao governada ate confirmar direcao segura e auditavel"
+            ),
+            "memory_review_checkpoint": (
+                "nao expandir o uso de memoria guiada sem checkpoint de revisao soberano"
+            ),
+            "specialist_reevaluation": (
+                "nao encerrar a sintese final sem reavaliacao especializada governada"
+            ),
+        }
+        success_map = {
+            "clarification_checkpoint": (
+                "saida final deve mostrar que a clarificacao fechou a ambiguidade operacional"
+            ),
+            "safe_containment": (
+                "saida final deve explicitar como a contencao preservou a direcao segura"
+            ),
+            "memory_review_checkpoint": (
+                "saida final deve explicitar como o checkpoint de memoria estabilizou a resposta"
+            ),
+            "specialist_reevaluation": (
+                "saida final deve mostrar como a reavaliacao especializada fechou a tensao ativa"
+            ),
+        }
+        intervention_constraint = constraint_map[adaptive_intervention.selected_action]
+        if intervention_constraint not in updated_constraints:
+            updated_constraints.append(intervention_constraint)
+        intervention_success = success_map[adaptive_intervention.selected_action]
+        if intervention_success not in updated_success:
+            updated_success.append(intervention_success)
+
+        if adaptive_intervention.selected_action == "clarification_checkpoint":
+            intervention_step = (
+                "executar checkpoint de clarificacao antes de qualquer operacao"
+            )
+            if intervention_step not in updated_steps:
+                updated_steps.insert(0, intervention_step)
+            next_action = adaptive_intervention.next_action or smallest_safe_next_action
+        elif adaptive_intervention.selected_action == "safe_containment":
+            if not any("contencao" in step for step in updated_steps[:2]):
+                updated_steps.append(
+                    "manter a continuidade sob contencao governada ate validacao explicita"
+                )
+            next_action = smallest_safe_next_action or adaptive_intervention.next_action
+        elif adaptive_intervention.selected_action == "memory_review_checkpoint":
+            if not any("checkpoint de memoria" in step for step in updated_steps):
+                updated_steps.append("executar checkpoint de memoria antes da sintese final")
+            next_action = smallest_safe_next_action or adaptive_intervention.next_action
+        else:
+            if not any("validacao cognitiva" in step for step in updated_steps):
+                updated_steps.append(
+                    "executar reavaliacao especializada antes da sintese final"
+                )
+            next_action = smallest_safe_next_action or adaptive_intervention.next_action
+
+        return (
+            updated_steps[:6],
+            updated_constraints[:9],
+            updated_success[:8],
+            next_action,
+            adaptive_intervention.requires_human_validation,
         )
 
     def _repair_plan_contract(

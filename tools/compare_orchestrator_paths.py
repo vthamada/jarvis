@@ -93,6 +93,12 @@ def mind_validation_checkpoint_assessment(result: PilotExecutionResult) -> str:
     return result.mind_validation_checkpoint_status
 
 
+def adaptive_intervention_assessment(result: PilotExecutionResult) -> str:
+    if result.adaptive_intervention_status in {None, "not_applicable"}:
+        return "not_applicable"
+    return result.adaptive_intervention_effectiveness
+
+
 def memory_causality_assessment(result: PilotExecutionResult) -> str:
     return result.memory_causality_status
 
@@ -210,6 +216,15 @@ def refinement_vectors(result: PilotExecutionResult) -> list[dict[str, str]]:
             "mind_composition",
             "p0",
             "transformar a discordancia entre mentes em checkpoint governado do workflow ativo",
+        )
+    if result.adaptive_intervention_effectiveness in {"insufficient", "incomplete"}:
+        add_vector(
+            "adaptive_intervention",
+            "p0",
+            (
+                "fazer a intervencao adaptativa fechar o trigger causal "
+                "sem degradar a saida nem a governanca"
+            ),
         )
     if result.memory_causality_status in {"attached_only", "attention_required"}:
         add_vector(
@@ -335,6 +350,9 @@ def evaluation_matrix(
                     for result in workflow_results
                 ]
             ),
+            "adaptive_intervention": summarize_statuses(
+                [adaptive_intervention_assessment(result) for result in workflow_results]
+            ),
             "mind_composition": summarize_workflow_profile_assessments(
                 [mind_composition_assessment(result) for result in workflow_results]
             ),
@@ -369,6 +387,7 @@ WAVE_TWO_READINESS_REQUIREMENTS: dict[str, dict[str, set[str]]] = {
         "workflow_checkpoint": {"healthy"},
         "workflow_resume": {"healthy", "resume_available", "fresh_start"},
         "workflow_output": {"baseline_saudavel", "not_applicable"},
+        "adaptive_intervention": {"effective", "not_applicable"},
         "mind_domain_specialist_chain": {"aligned", "not_applicable"},
     },
     "qwen_agent": {
@@ -395,6 +414,7 @@ WAVE_TWO_READINESS_REQUIREMENTS: dict[str, dict[str, set[str]]] = {
         "workflow_checkpoint": {"healthy"},
         "workflow_resume": {"healthy", "resume_available", "fresh_start"},
         "workflow_output": {"baseline_saudavel", "maturation_recommended", "not_applicable"},
+        "adaptive_intervention": {"effective", "not_applicable"},
     },
     "open_interpreter": {
         "workflow_checkpoint": {"healthy"},
@@ -482,6 +502,8 @@ def summarize_comparisons(
             "candidate_mind_disagreement_decision": "not_applicable",
             "baseline_mind_validation_checkpoint_decision": "not_applicable",
             "candidate_mind_validation_checkpoint_decision": "not_applicable",
+            "baseline_adaptive_intervention_decision": "not_applicable",
+            "candidate_adaptive_intervention_decision": "not_applicable",
             "baseline_memory_causality_decision": "not_applicable",
             "candidate_memory_causality_decision": "not_applicable",
             "baseline_memory_causal_rate": 0.0,
@@ -610,6 +632,12 @@ def summarize_comparisons(
     ]
     candidate_mind_validation_checkpoint = [
         mind_validation_checkpoint_assessment(item) for item in available_candidates
+    ]
+    baseline_adaptive_intervention = [
+        adaptive_intervention_assessment(item.baseline) for item in comparisons
+    ]
+    candidate_adaptive_intervention = [
+        adaptive_intervention_assessment(item) for item in available_candidates
     ]
     baseline_memory_causality = [
         memory_causality_assessment(item.baseline) for item in comparisons
@@ -783,6 +811,12 @@ def summarize_comparisons(
         ),
         "candidate_mind_validation_checkpoint_decision": summarize_statuses(
             candidate_mind_validation_checkpoint
+        ),
+        "baseline_adaptive_intervention_decision": summarize_statuses(
+            baseline_adaptive_intervention
+        ),
+        "candidate_adaptive_intervention_decision": summarize_statuses(
+            candidate_adaptive_intervention
         ),
         "baseline_memory_causality_decision": summarize_statuses(
             baseline_memory_causality
@@ -1008,6 +1042,12 @@ def summarize_statuses(statuses: list[str]) -> str:
         return "attention_required"
     if any(item == "deep_review_required" for item in statuses):
         return "deep_review_required"
+    if any(item == "insufficient" for item in statuses):
+        return "insufficient"
+    if any(item == "incomplete" for item in statuses):
+        return "incomplete"
+    if any(item == "effective" for item in statuses):
+        return "effective"
     if any(item == "validation_required" for item in statuses):
         return "validation_required"
     if any(item == "review_recommended" for item in statuses):
@@ -1148,6 +1188,21 @@ def compare_results(
                 mismatch_fields.append("memory_corpus_status")
             if baseline.memory_retention_pressure != candidate.memory_retention_pressure:
                 mismatch_fields.append("memory_retention_pressure")
+            if (
+                baseline.adaptive_intervention_status
+                != candidate.adaptive_intervention_status
+            ):
+                mismatch_fields.append("adaptive_intervention_status")
+            if (
+                baseline.adaptive_intervention_selected_action
+                != candidate.adaptive_intervention_selected_action
+            ):
+                mismatch_fields.append("adaptive_intervention_selected_action")
+            if (
+                baseline.adaptive_intervention_effectiveness
+                != candidate.adaptive_intervention_effectiveness
+            ):
+                mismatch_fields.append("adaptive_intervention_effectiveness")
             if (
                 baseline.procedural_artifact_status
                 != candidate.procedural_artifact_status
@@ -1394,6 +1449,18 @@ def render_text(payload: dict[str, object]) -> str:
                         f"{item['baseline_mind_validation_checkpoint_assessment']}"
                     ),
                     (
+                        "baseline_adaptive_intervention_status="
+                        f"{item['baseline']['adaptive_intervention_status']}"
+                    ),
+                    (
+                        "baseline_adaptive_intervention_selected_action="
+                        f"{item['baseline']['adaptive_intervention_selected_action'] or 'none'}"
+                    ),
+                    (
+                        "baseline_adaptive_intervention_assessment="
+                        f"{item['baseline_adaptive_intervention_assessment']}"
+                    ),
+                    (
                         "baseline_memory_causality_status="
                         f"{item['baseline']['memory_causality_status']}"
                     ),
@@ -1522,6 +1589,24 @@ def render_text(payload: dict[str, object]) -> str:
                         f"{item['candidate_mind_validation_checkpoint_assessment']}"
                         if item["candidate_mind_validation_checkpoint_assessment"] is not None
                         else "candidate_mind_validation_checkpoint_assessment=n/a"
+                    ),
+                    (
+                        "candidate_adaptive_intervention_status="
+                        f"{item['candidate']['adaptive_intervention_status']}"
+                        if item["candidate"]
+                        else "candidate_adaptive_intervention_status=n/a"
+                    ),
+                    (
+                        "candidate_adaptive_intervention_selected_action="
+                        f"{item['candidate']['adaptive_intervention_selected_action'] or 'none'}"
+                        if item["candidate"]
+                        else "candidate_adaptive_intervention_selected_action=n/a"
+                    ),
+                    (
+                        "candidate_adaptive_intervention_assessment="
+                        f"{item['candidate_adaptive_intervention_assessment']}"
+                        if item["candidate_adaptive_intervention_assessment"] is not None
+                        else "candidate_adaptive_intervention_assessment=n/a"
                     ),
                     (
                         "candidate_memory_causality_status="
@@ -1751,6 +1836,10 @@ def render_text(payload: dict[str, object]) -> str:
                 f"{summary['baseline_mind_validation_checkpoint_decision']}",
                 "candidate_mind_validation_checkpoint_decision="
                 f"{summary['candidate_mind_validation_checkpoint_decision']}",
+                "baseline_adaptive_intervention_decision="
+                f"{summary['baseline_adaptive_intervention_decision']}",
+                "candidate_adaptive_intervention_decision="
+                f"{summary['candidate_adaptive_intervention_decision']}",
                 "baseline_memory_corpus_decision="
                 f"{summary['baseline_memory_corpus_decision']}",
                 "candidate_memory_corpus_decision="
@@ -1899,6 +1988,9 @@ def serialize_comparisons(
                 "baseline_mind_validation_checkpoint_assessment": (
                     mind_validation_checkpoint_assessment(item.baseline)
                 ),
+                "baseline_adaptive_intervention_assessment": (
+                    adaptive_intervention_assessment(item.baseline)
+                ),
                 "baseline_memory_causality_assessment": memory_causality_assessment(
                     item.baseline
                 ),
@@ -1964,6 +2056,11 @@ def serialize_comparisons(
                 ),
                 "candidate_mind_validation_checkpoint_assessment": (
                     mind_validation_checkpoint_assessment(item.candidate)
+                    if item.candidate
+                    else None
+                ),
+                "candidate_adaptive_intervention_assessment": (
+                    adaptive_intervention_assessment(item.candidate)
                     if item.candidate
                     else None
                 ),

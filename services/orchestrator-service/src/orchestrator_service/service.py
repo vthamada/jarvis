@@ -324,6 +324,24 @@ class OrchestratorService:
                     "mind_validation_checkpoints": (
                         deliberative_plan.mind_validation_checkpoints
                     ),
+                    "adaptive_intervention_status": (
+                        deliberative_plan.adaptive_intervention_status
+                    ),
+                    "adaptive_intervention_reason": (
+                        deliberative_plan.adaptive_intervention_reason
+                    ),
+                    "adaptive_intervention_trigger": (
+                        deliberative_plan.adaptive_intervention_trigger
+                    ),
+                    "adaptive_intervention_selected_action": (
+                        deliberative_plan.adaptive_intervention_selected_action
+                    ),
+                    "adaptive_intervention_expected_effect": (
+                        deliberative_plan.adaptive_intervention_expected_effect
+                    ),
+                    "adaptive_intervention_effects": (
+                        deliberative_plan.adaptive_intervention_effects
+                    ),
                     "cognitive_strategy_shift_applied": (
                         deliberative_plan.cognitive_strategy_shift_applied
                     ),
@@ -538,6 +556,24 @@ class OrchestratorService:
                         "workflow_resume_eligible": (
                             operation_dispatch.workflow_resume_eligible
                         ),
+                        "adaptive_intervention_status": (
+                            operation_dispatch.adaptive_intervention_status
+                        ),
+                        "adaptive_intervention_reason": (
+                            operation_dispatch.adaptive_intervention_reason
+                        ),
+                        "adaptive_intervention_trigger": (
+                            operation_dispatch.adaptive_intervention_trigger
+                        ),
+                        "adaptive_intervention_selected_action": (
+                            operation_dispatch.adaptive_intervention_selected_action
+                        ),
+                        "adaptive_intervention_expected_effect": (
+                            operation_dispatch.adaptive_intervention_expected_effect
+                        ),
+                        "adaptive_intervention_effects": (
+                            operation_dispatch.adaptive_intervention_effects
+                        ),
                         "task_type": operation_dispatch.task_type,
                         "domain_hints": operation_dispatch.domain_hints,
                     },
@@ -564,6 +600,12 @@ class OrchestratorService:
                         "workflow_decision_points": operation_dispatch.workflow_decision_points,
                         "workflow_resume_status": operation_dispatch.workflow_resume_status,
                         "workflow_resume_point": operation_dispatch.workflow_resume_point,
+                        "adaptive_intervention_status": (
+                            operation_dispatch.adaptive_intervention_status
+                        ),
+                        "adaptive_intervention_selected_action": (
+                            operation_dispatch.adaptive_intervention_selected_action
+                        ),
                     },
                 )
             )
@@ -595,6 +637,24 @@ class OrchestratorService:
                         "workflow_resume_point": operation_dispatch.workflow_resume_point,
                         "workflow_resume_eligible": (
                             operation_dispatch.workflow_resume_eligible
+                        ),
+                        "adaptive_intervention_status": (
+                            operation_dispatch.adaptive_intervention_status
+                        ),
+                        "adaptive_intervention_reason": (
+                            operation_dispatch.adaptive_intervention_reason
+                        ),
+                        "adaptive_intervention_trigger": (
+                            operation_dispatch.adaptive_intervention_trigger
+                        ),
+                        "adaptive_intervention_selected_action": (
+                            operation_dispatch.adaptive_intervention_selected_action
+                        ),
+                        "adaptive_intervention_expected_effect": (
+                            operation_dispatch.adaptive_intervention_expected_effect
+                        ),
+                        "adaptive_intervention_effects": (
+                            operation_dispatch.adaptive_intervention_effects
                         ),
                         "specialist_hints": operation_dispatch.specialist_hints,
                     },
@@ -749,6 +809,24 @@ class OrchestratorService:
                     "mind_disagreement_status": deliberative_plan.mind_disagreement_status,
                     "mind_validation_checkpoints": (
                         deliberative_plan.mind_validation_checkpoints
+                    ),
+                    "adaptive_intervention_status": (
+                        deliberative_plan.adaptive_intervention_status
+                    ),
+                    "adaptive_intervention_reason": (
+                        deliberative_plan.adaptive_intervention_reason
+                    ),
+                    "adaptive_intervention_trigger": (
+                        deliberative_plan.adaptive_intervention_trigger
+                    ),
+                    "adaptive_intervention_selected_action": (
+                        deliberative_plan.adaptive_intervention_selected_action
+                    ),
+                    "adaptive_intervention_expected_effect": (
+                        deliberative_plan.adaptive_intervention_expected_effect
+                    ),
+                    "adaptive_intervention_effects": (
+                        deliberative_plan.adaptive_intervention_effects
                     ),
                     "cognitive_strategy_shift_applied": (
                         deliberative_plan.cognitive_strategy_shift_applied
@@ -1812,6 +1890,24 @@ class OrchestratorService:
                             "specialist_resolution_summary": (
                                 refined_plan.specialist_resolution_summary
                             ),
+                            "adaptive_intervention_status": (
+                                refined_plan.adaptive_intervention_status
+                            ),
+                            "adaptive_intervention_reason": (
+                                refined_plan.adaptive_intervention_reason
+                            ),
+                            "adaptive_intervention_trigger": (
+                                refined_plan.adaptive_intervention_trigger
+                            ),
+                            "adaptive_intervention_selected_action": (
+                                refined_plan.adaptive_intervention_selected_action
+                            ),
+                            "adaptive_intervention_expected_effect": (
+                                refined_plan.adaptive_intervention_expected_effect
+                            ),
+                            "adaptive_intervention_effects": (
+                                refined_plan.adaptive_intervention_effects
+                            ),
                             "cognitive_strategy_shift_applied": (
                                 refined_plan.cognitive_strategy_shift_applied
                             ),
@@ -1983,6 +2079,16 @@ class OrchestratorService:
             success_criteria=list(plan.success_criteria),
             smallest_safe_next_action=plan.smallest_safe_next_action,
             requires_human_validation=plan.requires_human_validation,
+            adaptive_intervention_status=plan.adaptive_intervention_status,
+            adaptive_intervention_reason=plan.adaptive_intervention_reason,
+            adaptive_intervention_trigger=plan.adaptive_intervention_trigger,
+            adaptive_intervention_selected_action=(
+                plan.adaptive_intervention_selected_action
+            ),
+            adaptive_intervention_expected_effect=(
+                plan.adaptive_intervention_expected_effect
+            ),
+            adaptive_intervention_effects=list(plan.adaptive_intervention_effects),
             session_id=contract.session_id,
             mission_id=contract.mission_id,
             domain_hints=list(plan.active_domains),
@@ -2279,6 +2385,12 @@ class OrchestratorService:
             continuity_requires_manual_resume=(
                 self._extract_context_hint(recovered, "continuity_replay_status=")
                 in {"awaiting_validation", "contained"}
+            ),
+            memory_corpus_status=self._extract_context_hint(
+                recovered, "memory_corpus_status="
+            ),
+            memory_retention_pressure=self._extract_context_hint(
+                recovered, "memory_retention_pressure="
             ),
             user_scope_status=self._extract_context_hint(recovered, "user_scope_status="),
             user_domain_focus=self._extract_list_hint(

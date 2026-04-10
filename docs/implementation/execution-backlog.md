@@ -1026,6 +1026,91 @@ Escalar ao operador quando:
 - `modo_de_raciocinio_recomendado`: `high`
 - `impacto_no_baseline`: `evolution-lab`, `compare_orchestrator_paths.py` e `docs/architecture/technology-absorption-order.md` agora publicam uma matriz de readiness da Onda 2 subordinada aos sinais causais do nucleo, mantendo a proxima absorcao externa como experimento controlado em vez de frente macro nova.
 
+### MB-057
+
+- `id`: `MB-057`
+- `prioridade`: `P0`
+- `status`: `completed`
+- `eixo_do_mestre`: `fluxo_principal`
+- `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
+- `micro_objetivo`: transformar os sinais causais ja materializados no baseline em um contrato soberano de intervencao adaptativa governada, antes da sintese final e sem abrir nova vertical do sistema.
+- `justificativa_arquitetural`: o runtime ja produz `workflow_output_status`, `mind_disagreement_status`, `mind_validation_checkpoint_status`, `memory_retention_pressure`, `workflow_resume_status` e sinais correlatos, mas o proximo ganho real do nucleo e fazer esses slices escolherem checkpoints e contencoes bounded em vez de ficarem apenas como evidencia posterior.
+- `arquivos/servicos_principais`: `shared/domain_registry.py`, `engines/planning-engine`, `services/orchestrator-service`, `services/observability-service`
+- `dependencias`: `MB-052`, `MB-053`, `MB-055`
+- `criterio_de_aceite`: `planning` e `orchestrator` passam a carregar um slice explicito de `adaptive_intervention_*`, derivado apenas de sinais soberanos e guidance do `workflow_profile`, distinguindo pelo menos checkpoint de clarificacao, checkpoint de revisao de memoria, reavaliacao especializada e contencao segura sem heuristica espalhada fora dos registries do nucleo.
+- `gate_minimo`: `pytest` direcionado dos engines/servicos tocados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `impacto_no_baseline`: o runtime passa a tratar intervencao adaptativa como contrato soberano e auditavel do fluxo, usando sinais ja existentes do nucleo para decidir o proximo movimento seguro antes do fechamento final.
+
+### MB-058
+
+- `id`: `MB-058`
+- `prioridade`: `P0`
+- `status`: `completed`
+- `eixo_do_mestre`: `governanca`
+- `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
+- `micro_objetivo`: fazer `planning`, `orchestrator`, memoria e revisao especializada aplicarem esse contrato como politica governada de proximo passo, evitando tanto overreaction quanto silencio quando os sinais pedirem intervencao.
+- `justificativa_arquitetural`: depois de formalizar o contrato, o ganho seguinte e fazer o runtime reagir de forma pequena, reversivel e explicavel quando houver impasse, pressao de memoria, checkpoint de validacao ou perda de completude por workflow.
+- `arquivos/servicos_principais`: `engines/planning-engine`, `engines/specialist-engine`, `services/orchestrator-service`, `services/memory-service`, `services/governance-service`
+- `dependencias`: `MB-057`
+- `criterio_de_aceite`: o runtime passa a escolher uma unica intervencao governada por request quando os sinais justificarem isso, registrando `reason`, `trigger`, `selected_action` e `expected_effect` sem bypassar governanca, sem abrir especialistas fora da rota elegivel e sem transformar contencao em fallback generico.
+- `gate_minimo`: `pytest` direcionado dos engines/servicos tocados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `impacto_no_baseline`: `planning`, `orchestrator`, memoria e governanca passam a responder ao estado causal do runtime com checkpoints e contencoes bounded, em vez de apenas relatar o problema no fim do fluxo.
+
+### MB-059
+
+- `id`: `MB-059`
+- `prioridade`: `P1`
+- `status`: `completed`
+- `eixo_do_mestre`: `observabilidade`
+- `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
+- `micro_objetivo`: tornar essas intervencoes parte da evidencia formal do baseline, com cenarios deliberados, comparacao de caminhos e leitura auditavel do que foi util, excessivo ou insuficiente por workflow.
+- `justificativa_arquitetural`: sem observabilidade propria, a intervencao adaptativa correria o risco de virar heuristica opaca; o baseline precisa mostrar quando houve intervencao, por que ela aconteceu e se ela melhorou o fechamento do fluxo.
+- `arquivos/servicos_principais`: `services/observability-service`, `tools/internal_pilot_support.py`, `tools/internal_pilot_report.py`, `tools/compare_orchestrator_paths.py`, `tools/verify_active_cut_baseline.py`
+- `dependencias`: `MB-058`
+- `criterio_de_aceite`: piloto, comparadores e auditoria passam a cobrir cenarios deliberados de intervencao adaptativa e a expor pelo menos `adaptive_intervention_status`, `adaptive_intervention_reason` e `adaptive_intervention_effectiveness`, distinguindo resposta coerente de intervencao desnecessaria ou insuficiente.
+- `gate_minimo`: `pytest` direcionado dos tools/servicos tocados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `impacto_no_baseline`: a intervencao adaptativa deixa de ser apenas comportamento interno e passa a existir como sinal auditavel e comparavel do baseline por workflow.
+
+### MB-060
+
+- `id`: `MB-060`
+- `prioridade`: `P1`
+- `status`: `completed`
+- `eixo_do_mestre`: `evolucao`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: fazer `refinement_vectors`, `evaluation_matrix` e verificadores de release usarem a efetividade das intervencoes adaptativas como insumo de priorizacao do proximo refinamento do nucleo, sem automatizar promocao de mudanca.
+- `justificativa_arquitetural`: o laboratorio ja sabe ler sinais causais do runtime; o proximo ganho e usar o resultado das intervencoes governadas para separar melhor o que merece experimento, o que pede hardening e o que continua apenas como maturacao recomendada.
+- `arquivos/servicos_principais`: `evolution/evolution-lab`, `tools/evolution_from_pilot.py`, `tools/compare_orchestrator_paths.py`, `tools/verify_release_signal_baseline.py`
+- `dependencias`: `MB-059`
+- `criterio_de_aceite`: `evolution-lab`, comparadores e verificadores passam a registrar `adaptive_intervention_effectiveness` e seu peso em `refinement_vectors`/`evaluation_matrix`, priorizando refinamentos por workflow sem transformar o laboratorio em promotor automatico de baseline.
+- `gate_minimo`: `pytest` direcionado dos tools/servicos tocados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `impacto_no_baseline`: o loop evolutivo passa a tratar a efetividade das intervencoes adaptativas como insumo formal de priorizacao do proximo ganho causal do nucleo.
+
+### MB-061
+
+- `id`: `MB-061`
+- `prioridade`: `P1`
+- `status`: `completed`
+- `eixo_do_mestre`: `docs/gates`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: fechar o lote de intervencao adaptativa governada do nucleo, sincronizando backlog, handoff, snapshot, changelog e gate com o novo estado real do baseline.
+- `justificativa_arquitetural`: esse lote altera criterio de comportamento do runtime e a leitura comparativa do baseline; o fechamento precisa consolidar o contrato novo sem deixar docs vivos em drift nem reabrir a fila por inercia.
+- `arquivos/servicos_principais`: `docs/implementation/execution-backlog.md`, `HANDOFF.md`, `docs/implementation/v2-adherence-snapshot.md`, `CHANGELOG.md`
+- `dependencias`: `MB-057`, `MB-058`, `MB-059`, `MB-060`
+- `criterio_de_aceite`: o lote termina com docs vivos refletindo a intervencao adaptativa governada como baseline do nucleo, `CHANGELOG.md` sincronizado e gate minimo validado, deixando o proximo passo macro explicitamente ancorado nos novos sinais do runtime.
+- `gate_minimo`: `python tools/check_mojibake.py docs/implementation docs/operations HANDOFF.md CHANGELOG.md` e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `medium`
+- `impacto_no_baseline`: o lote fecha com memoria operacional, backlog micro, snapshot e changelog coerentes com a nova gramatica de intervencao adaptativa governada do nucleo.
+
 ---
 
 ## 5. Regras de manutencao da fila
@@ -1052,5 +1137,8 @@ Estado atual da fila:
 - `MB-054` fez memoria relevante influenciar de forma mais causal rota, hints especializados e ranking de continuidade;
 - `MB-055` aprofundou a composicao de mentes como sinal causal do runtime e dos gates de release;
 - `MB-056` formalizou a matriz de readiness da Onda 2 como experimento controlado subordinado aos sinais do nucleo;
-- a fila micro volta a ficar sem item `ready` ate nova repriorizacao explicita do operador;
-- a abertura ou repriorizacao do proximo lote continua sendo rodada `extra high`, sem reativar `protective intelligence` nem reabrir itens ja concluidos por inercia local.
+- `MB-057` a `MB-061` foram concluidos e fecharam o lote de intervencao adaptativa governada do nucleo;
+- `MB-057` e `MB-058` agora tratam `adaptive_intervention_*` como contrato soberano do runtime em `planning`, `orchestrator`, dispatch e fluxo opcional de `LangGraph`, sem transformar a intervencao em fallback generico;
+- `MB-059` e `MB-060` agora tornam a efetividade dessas intervencoes parte do baseline auditavel em `observability`, piloto, comparadores, `evolution-lab`, `evolution_from_pilot` e verificadores de release;
+- `MB-061` fecha o lote com docs vivos e gate sincronizados, deixando a fila micro novamente sem item `ready` ate nova repriorizacao explicita do nucleo;
+- `protective intelligence foundation` continua `deferred` e a matriz da Onda 2 segue como insumo, nao como gatilho automatico para abrir nova vertical.

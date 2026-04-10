@@ -152,6 +152,12 @@ class DeliberativePlanContract:
     procedural_artifact_summary: str | None = None
     mind_disagreement_status: str | None = None
     mind_validation_checkpoints: list[str] = field(default_factory=list)
+    adaptive_intervention_status: str | None = None
+    adaptive_intervention_reason: str | None = None
+    adaptive_intervention_trigger: str | None = None
+    adaptive_intervention_selected_action: str | None = None
+    adaptive_intervention_expected_effect: str | None = None
+    adaptive_intervention_effects: list[str] = field(default_factory=list)
     cognitive_strategy_shift_applied: bool = False
     cognitive_strategy_shift_summary: str | None = None
     cognitive_strategy_shift_trigger: str | None = None
@@ -319,6 +325,12 @@ class OperationDispatchContract:
     success_criteria: list[str] = field(default_factory=list)
     smallest_safe_next_action: str | None = None
     requires_human_validation: bool = False
+    adaptive_intervention_status: str | None = None
+    adaptive_intervention_reason: str | None = None
+    adaptive_intervention_trigger: str | None = None
+    adaptive_intervention_selected_action: str | None = None
+    adaptive_intervention_expected_effect: str | None = None
+    adaptive_intervention_effects: list[str] = field(default_factory=list)
     session_id: SessionId | None = None
     mission_id: MissionId | None = None
     risk_hint: RiskLevel | None = None

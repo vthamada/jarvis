@@ -152,6 +152,12 @@ class PilotExecutionResult:
     coverage_tags: list[str] = field(default_factory=list)
     mind_disagreement_status: str = "not_applicable"
     mind_validation_checkpoint_status: str = "not_applicable"
+    adaptive_intervention_status: str = "not_applicable"
+    adaptive_intervention_reason: str | None = None
+    adaptive_intervention_trigger: str | None = None
+    adaptive_intervention_selected_action: str | None = None
+    adaptive_intervention_expected_effect: str | None = None
+    adaptive_intervention_effectiveness: str = "not_applicable"
     memory_corpus_status: str = "not_applicable"
     memory_retention_pressure: str | None = None
 
@@ -576,6 +582,18 @@ def run_pilot_scenarios(
                 coverage_tags=list(scenario.coverage_tags),
                 mind_disagreement_status=audit.mind_disagreement_status,
                 mind_validation_checkpoint_status=audit.mind_validation_checkpoint_status,
+                adaptive_intervention_status=audit.adaptive_intervention_status,
+                adaptive_intervention_reason=audit.adaptive_intervention_reason,
+                adaptive_intervention_trigger=audit.adaptive_intervention_trigger,
+                adaptive_intervention_selected_action=(
+                    audit.adaptive_intervention_selected_action
+                ),
+                adaptive_intervention_expected_effect=(
+                    audit.adaptive_intervention_expected_effect
+                ),
+                adaptive_intervention_effectiveness=(
+                    audit.adaptive_intervention_effectiveness
+                ),
                 memory_corpus_status=audit.memory_corpus_status,
                 memory_retention_pressure=audit.memory_retention_pressure,
             )

@@ -31,7 +31,7 @@ Estado de referencia desta revisao:
 - data da fotografia: `2026-04-09`
 - ultimo recorte funcional fechado: `v2-native-memory-scope-hardening-cut`
 - ultimo recorte estrutural fechado: `v2-repository-hygiene-and-tools-review-cut`
-- passo funcional em andamento: `maturacao-causal-final-do-nucleo` (`MB-037` a `MB-040` concluidos; `MB-041` a `MB-046` concluidos; `MB-047` a `MB-051` concluidos; `MB-052` a `MB-056` concluidos; aguardando abertura explicita do proximo lote micro)
+- passo funcional em andamento: `sem item ready` (`MB-037` a `MB-040` concluidos; `MB-041` a `MB-046` concluidos; `MB-047` a `MB-051` concluidos; `MB-052` a `MB-056` concluidos; `MB-057` a `MB-061` concluidos; fila micro aguardando repriorizacao explicita)
 
 Leitura executiva:
 
@@ -97,6 +97,7 @@ Leitura executiva:
 - `MB-050` e `MB-051` agora tambem estao fechados: `workflow_output_status` atravessa piloto, comparadores, `evolution-lab`, `evolution_from_pilot` e `verify_release_signal_baseline.py` como leitura formal de maturacao, e os proximos experimentos do laboratorio passam a ser priorizados por workflow usando esses sinais mais causais do nucleo.
 - `MB-052` agora tambem esta fechado: `planning-engine` aplica mudanca de estrategia cognitiva mid-flow no `refine_task_plan` quando a revisao especializada preserva um impasse governado, `synthesis-engine` torna esse ajuste explicito na leitura final, `orchestrator-service` o publica em `plan_refined` e `response_synthesized`, e `observability-service` audita a coerencia desse slice ao longo do fluxo.
 - `MB-053` agora tambem esta fechado: `memory_registry`, `memory-service`, `repository` e `observability-service` passaram a conter reuso automatico de memoria arquivavel, fazer recovery marcar `review_before_reuse` quando o lifecycle exige revisao e tratar drift de packet guiado arquivavel como desalinhamento auditavel.
+- `MB-057` a `MB-061` agora estao fechados: o runtime usa `adaptive_intervention_*` como contrato soberano de checkpoint/contencao bounded, a observabilidade distingue intervencao efetiva de insuficiente, e piloto/comparadores/evolucao passaram a tratar esse slice como evidência formal do baseline.
 
 Em resumo:
 
@@ -363,14 +364,15 @@ Foco:
 - `MB-055`: concluido; composicao de mentes por workflow e dominio agora pesa mais em validacao, criterios de saida e readiness de release;
 - `MB-056`: concluido; readiness da Onda 2 agora existe como matriz de experimento controlado nos comparadores, no laboratorio e na ordem oficial de absorcao, sem abrir nova vertical nem promover stack externa por impulso.
 
-### Passo 4 - continuar maturando o nucleo antes de qualquer frente macro nova
+### Passo 4 - lote `MB-057` a `MB-061` concluido
 
 Foco:
 
-- usar a matriz de evals e a telemetria de memoria para identificar o proximo ganho causal do nucleo depois do fechamento do lote `MB-052` a `MB-056`;
-- abrir o proximo lote micro apenas por decisao explicita, usando a nova matriz de readiness da Onda 2 como insumo e nao como gatilho automatico de absorcao;
-- manter a abertura ou repriorizacao dos lotes seguintes como decisao explicita, sem reativar `protective intelligence` por inercia;
-- manter `protective intelligence` em `deferred` ate nova decisao explicita.
+- `MB-057`: concluido; `shared/contracts`, `shared/schemas` e `planning-engine` agora formalizam `adaptive_intervention_*` como slice soberano do plano deliberativo;
+- `MB-058`: concluido; `orchestrator-service` e o caminho opcional de `LangGraph` agora propagam esse slice por `plan_built`, `plan_refined`, dispatch, `workflow_*` e `response_synthesized`, mantendo checkpoint/contencao bounded sem substituir a linha principal do plano;
+- `MB-059`: concluido; `observability-service`, `internal_pilot_support.py`, `internal_pilot_report.py` e `compare_orchestrator_paths.py` agora distinguem intervencao efetiva de insuficiente/incompleta no baseline auditavel;
+- `MB-060`: concluido; `evolution-lab`, `evolution_from_pilot.py`, comparadores e `verify_release_signal_baseline.py` agora usam a efetividade da intervencao adaptativa em `refinement_vectors`, `evaluation_matrix` e leitura de release;
+- `MB-061`: concluido; backlog, handoff, snapshot e changelog foram sincronizados e a fila micro voltou a ficar sem item `ready`, mantendo `protective intelligence` em `deferred` e a Onda 2 apenas como insumo controlado.
 
 ---
 
@@ -402,7 +404,7 @@ O que resta e maturacao adicional em tres pontos:
 - uso mais rico de memoria `semantic` e `procedural` sem perder soberania;
 - relacao mente -> dominio -> especialista ainda mais explicita em consumidores posteriores.
 
-Esse e o backlog certo a partir daqui, mas ele ja nao caracteriza desvio material do `v2`.
+O lote `MB-057` a `MB-061` foi fechado exatamente para atacar esses tres pontos sem abrir nova vertical: ele transforma sinais causais ja presentes do nucleo em intervencoes adaptativas bounded, auditaveis e priorizaveis pelo loop evolutivo, e deixa a fila micro pronta para nova repriorizacao explicita.
 
 `Protective intelligence` continua como eixo valido e estudado, mas em estado
 `deferred` ate que esse lote de maturacao do nucleo seja realmente fechado.

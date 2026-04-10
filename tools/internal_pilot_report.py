@@ -59,6 +59,11 @@ class PilotTraceSummary:
     metacognitive_guidance_status: str
     mind_disagreement_status: str
     mind_validation_checkpoint_status: str
+    adaptive_intervention_status: str
+    adaptive_intervention_reason: str | None
+    adaptive_intervention_trigger: str | None
+    adaptive_intervention_selected_action: str | None
+    adaptive_intervention_effectiveness: str
     memory_causality_status: str
     primary_mind: str | None
     primary_route: str | None
@@ -184,6 +189,15 @@ def summarize_traces(
             metacognitive_guidance_status=audit.metacognitive_guidance_status,
             mind_disagreement_status=audit.mind_disagreement_status,
             mind_validation_checkpoint_status=audit.mind_validation_checkpoint_status,
+            adaptive_intervention_status=audit.adaptive_intervention_status,
+            adaptive_intervention_reason=audit.adaptive_intervention_reason,
+            adaptive_intervention_trigger=audit.adaptive_intervention_trigger,
+            adaptive_intervention_selected_action=(
+                audit.adaptive_intervention_selected_action
+            ),
+            adaptive_intervention_effectiveness=(
+                audit.adaptive_intervention_effectiveness
+            ),
             memory_causality_status=audit.memory_causality_status,
             primary_mind=audit.primary_mind,
             primary_route=audit.primary_route,
@@ -245,6 +259,8 @@ def service_query(request_id: str):
 
 def _trace_status(audit) -> str:
     if audit.anomaly_flags or audit.continuity_anomaly_flags:
+        return "attention_required"
+    if audit.adaptive_intervention_effectiveness in {"insufficient", "incomplete"}:
         return "attention_required"
     if audit.missing_required_events or audit.missing_continuity_signals:
         return "incomplete"
@@ -383,6 +399,14 @@ def _render_summary(summary: PilotTraceSummary) -> str:
         f"{getattr(summary, 'mind_disagreement_status', 'not_applicable')} "
         "mind_validation_checkpoint_status="
         f"{getattr(summary, 'mind_validation_checkpoint_status', 'not_applicable')} "
+        "adaptive_intervention_status="
+        f"{getattr(summary, 'adaptive_intervention_status', 'not_applicable')} "
+        "adaptive_intervention_selected_action="
+        f"{getattr(summary, 'adaptive_intervention_selected_action', None) or 'none'} "
+        "adaptive_intervention_effectiveness="
+        f"{getattr(summary, 'adaptive_intervention_effectiveness', 'not_applicable')} "
+        "adaptive_intervention_trigger="
+        f"{getattr(summary, 'adaptive_intervention_trigger', None) or 'none'} "
         "memory_causality_status="
         f"{getattr(summary, 'memory_causality_status', 'not_applicable')} "
         "primary_mind="

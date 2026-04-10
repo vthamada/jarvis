@@ -65,6 +65,9 @@ class FlowEvaluationInput:
     metacognitive_guidance_status: str | None = None
     mind_disagreement_status: str | None = None
     mind_validation_checkpoint_status: str | None = None
+    adaptive_intervention_status: str | None = None
+    adaptive_intervention_selected_action: str | None = None
+    adaptive_intervention_effectiveness: str | None = None
     memory_causality_status: str | None = None
     primary_mind: str | None = None
     primary_route: str | None = None
@@ -338,6 +341,21 @@ class EvolutionLabService:
                 "mind://validation-checkpoint/"
                 f"{evaluation.mind_validation_checkpoint_status}"
             )
+        if evaluation.adaptive_intervention_status:
+            source_signals.append(
+                "runtime://adaptive-intervention/"
+                f"{evaluation.adaptive_intervention_status}"
+            )
+        if evaluation.adaptive_intervention_selected_action:
+            source_signals.append(
+                "runtime://adaptive-intervention-action/"
+                f"{evaluation.adaptive_intervention_selected_action}"
+            )
+        if evaluation.adaptive_intervention_effectiveness:
+            source_signals.append(
+                "runtime://adaptive-intervention-effectiveness/"
+                f"{evaluation.adaptive_intervention_effectiveness}"
+            )
         if evaluation.memory_causality_status:
             source_signals.append(
                 f"memory://causality/{evaluation.memory_causality_status}"
@@ -576,6 +594,10 @@ class EvolutionLabService:
             "mind_disagreement": EvolutionLabService._mind_disagreement_score(
                 evaluation.mind_disagreement_status
             ),
+            "adaptive_intervention": EvolutionLabService._adaptive_intervention_score(
+                evaluation.adaptive_intervention_status,
+                evaluation.adaptive_intervention_effectiveness,
+            ),
             "memory_causality": EvolutionLabService._memory_causality_score(
                 evaluation.memory_causality_status
             ),
@@ -710,6 +732,21 @@ class EvolutionLabService:
         return weights.get(status, 0.7 if status is None else 0.0)
 
     @staticmethod
+    def _adaptive_intervention_score(
+        status: str | None,
+        effectiveness: str | None,
+    ) -> float:
+        if status in {None, "not_applicable"}:
+            return 0.7
+        weights = {
+            "effective": 1.0,
+            "insufficient": 0.3,
+            "incomplete": 0.1,
+            "not_applicable": 0.7,
+        }
+        return weights.get(effectiveness or "incomplete", 0.0)
+
+    @staticmethod
     def _procedural_artifact_score(status: str | None) -> float:
         weights = {
             "reusable": 1.0,
@@ -771,6 +808,10 @@ class EvolutionLabService:
             return True
         if evaluation.mind_validation_checkpoint_status == "attention_required":
             return True
+        if evaluation.adaptive_intervention_status == "attention_required":
+            return True
+        if evaluation.adaptive_intervention_effectiveness in {"insufficient", "incomplete"}:
+            return True
         if evaluation.memory_causality_status in {"attached_only", "attention_required"}:
             return True
         if evaluation.memory_lifecycle_status in {"review_recommended", "attention_required"}:
@@ -811,6 +852,8 @@ class EvolutionLabService:
         }:
             return "moderate"
         if evaluation.mind_validation_checkpoint_status == "attention_required":
+            return "moderate"
+        if evaluation.adaptive_intervention_effectiveness in {"insufficient", "incomplete"}:
             return "moderate"
         if evaluation.memory_causality_status == "attention_required":
             return "moderate"
@@ -902,6 +945,12 @@ class EvolutionLabService:
                 "p0",
                 "transformar a discordancia entre mentes em checkpoint governado do workflow ativo",
             )
+        if evaluation.adaptive_intervention_effectiveness in {"insufficient", "incomplete"}:
+            add_vector(
+                "adaptive_intervention",
+                "p0",
+                "fazer a intervencao adaptativa alterar steps, contencao ou revisao com efeito observavel",
+            )
         if evaluation.memory_causality_status in {"attached_only", "attention_required"}:
             add_vector(
                 "memory_causality",
@@ -967,6 +1016,11 @@ class EvolutionLabService:
                 "mind_validation_checkpoint": (
                     evaluation.mind_validation_checkpoint_status or "not_applicable"
                 ),
+                "adaptive_intervention": (
+                    evaluation.adaptive_intervention_effectiveness
+                    if evaluation.adaptive_intervention_status not in {None, "not_applicable"}
+                    else "not_applicable"
+                ),
                 "mind_composition": EvolutionLabService._mind_composition_assessment(
                     evaluation
                 ),
@@ -1024,6 +1078,7 @@ class EvolutionLabService:
                 "workflow_checkpoint": {"healthy"},
                 "workflow_resume": {"healthy", "resume_available", "fresh_start"},
                 "workflow_output": {"coherent", "not_applicable"},
+                "adaptive_intervention": {"effective", "not_applicable"},
                 "mind_domain_specialist_chain": {"aligned", "not_applicable"},
             },
             "qwen_agent": {
@@ -1050,6 +1105,7 @@ class EvolutionLabService:
                 "workflow_checkpoint": {"healthy"},
                 "workflow_resume": {"healthy", "resume_available", "fresh_start"},
                 "workflow_output": {"coherent", "partial", "not_applicable"},
+                "adaptive_intervention": {"effective", "not_applicable"},
             },
             "open_interpreter": {
                 "workflow_checkpoint": {"healthy"},

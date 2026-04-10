@@ -2,6 +2,20 @@
 
 ## 2026-04-09
 
+### MB-057 a MB-061 fechados na intervencao adaptativa governada do nucleo
+
+- `shared/contracts/__init__.py`, `shared/schemas/__init__.py` e `engines/planning-engine/src/planning_engine/engine.py` agora formalizam `adaptive_intervention_*` como contrato soberano do plano deliberativo, derivado de sinais do runtime e `workflow_profile` sem abrir heuristica paralela;
+- `services/orchestrator-service/src/orchestrator_service/service.py` e `services/orchestrator-service/src/orchestrator_service/langgraph_flow.py` agora propagam esse slice por `plan_built`, `plan_refined`, dispatch, `workflow_*` e `response_synthesized`, preservando checkpoints de clarificacao, revisao de memoria, reavaliacao especializada e contencao segura sem dominar a linha principal do plano;
+- `services/observability-service/src/observability_service/service.py`, `tools/internal_pilot_support.py`, `tools/internal_pilot_report.py`, `tools/compare_orchestrator_paths.py`, `evolution/evolution-lab/src/evolution_lab/service.py`, `tools/evolution_from_pilot.py` e `tools/verify_release_signal_baseline.py` agora tratam efetividade de intervencao adaptativa como sinal formal do baseline para auditoria, piloto, comparacao, priorizacao evolutiva e release;
+- `docs/implementation/execution-backlog.md`, `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para marcar `MB-057` a `MB-061` como concluidos e deixar a fila micro novamente sem item `ready` ate nova repriorizacao explicita.
+
+### Abertura do lote MB-057 a MB-061 para intervencao adaptativa governada
+
+- `docs/implementation/execution-backlog.md` agora abre `MB-057` a `MB-061` como novo lote ativo do nucleo, com `MB-057` em `ready` e os demais itens bloqueados apenas pela ordem de dependencia;
+- o novo lote formaliza a proxima prioridade tecnica do JARVIS: transformar `workflow_output_status`, discordancia entre mentes, pressao de memoria, checkpoints de validacao e sinais de retomada em intervencoes adaptativas soberanas antes da sintese final;
+- `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para refletir a repriorizacao explicita, corrigir o commit de referencia para `18fc7ac` e sair do estado "sem item ready";
+- `protective intelligence` permanece `deferred`, e a matriz de readiness da Onda 2 continua servindo apenas como insumo controlado para o proximo refinamento, nao como gatilho automatico de nova frente macro.
+
 ### Template operacional para transicao de chat
 
 - criado `docs/operations/chat-transition-template.md` para padronizar a abertura de novas conversas quando um lote for fechado ou quando a repriorizacao do backlog exigir reset de contexto;

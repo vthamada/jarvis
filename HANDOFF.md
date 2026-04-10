@@ -4,7 +4,7 @@
 
 - Atualizado em: 2026-04-09
 - Branch: `main`
-- Commit de referência: `4008dd1`
+- Commit de referência: `18fc7ac`
 - Artefato canônico do projeto: `documento_mestre_jarvis.md`
 - Estado do projeto: `v1` encerrado e congelado para uso controlado; primeiro ciclo do `pós-v1` encerrado; primeiro ciclo do `v1.5` encerrado; primeiro corte do `v2` encerrado; `v2-alignment-cycle` encerrado; próximo corte do `v2` aberto
 - Fila micro ativa: `docs/implementation/execution-backlog.md`
@@ -82,7 +82,7 @@ Leitura operacional correta desta rodada:
 
 ## Meta atual
 
-Consolidar o fechamento operacional do `v2` sobre um runtime já alinhado aos eixos do Documento-Mestre, registrando como baseline o que virou contrato soberano e deixando o restante como maturação futura, não como gap crítico.
+Consolidar o fechamento operacional do `v2` sobre um runtime já alinhado aos eixos do Documento-Mestre, fazendo os sinais causais já absorvidos virarem critério soberano de intervenção adaptativa antes de qualquer nova frente macro.
 
 ### Foco operacional atual
 
@@ -112,7 +112,10 @@ Consolidar o fechamento operacional do `v2` sobre um runtime já alinhado aos ei
 - `MB-054` foi concluido: memoria relevante agora influencia rota prioritaria, hints especializados, ranking de continuidade e a leitura causal do caminho do runtime;
 - `MB-055` foi concluido: composicao de mentes, discordancia e checkpoint de validacao agora pesam mais explicitamente em planejamento, sintese, comparadores e readiness de release;
 - `MB-056` foi concluido: `evolution-lab`, comparadores e `technology-absorption-order.md` agora publicam matriz de readiness da Onda 2 subordinada aos sinais causais do nucleo;
-- a fila micro volta a ficar sem item `ready` ate nova repriorizacao explicita; a abertura do proximo lote continua sendo rodada `extra high`;
+- `MB-057` a `MB-061` foram concluidos e fecharam o lote de intervencao adaptativa governada do nucleo antes da sintese final;
+- `MB-057` e `MB-058` agora formalizam e aplicam `adaptive_intervention_*` em `planning`, `orchestrator`, dispatch, revisao especializada e fluxo opcional de `LangGraph`, sem bypassar governanca nem substituir a linha principal do plano;
+- `MB-059` e `MB-060` agora tornam a efetividade dessas intervencoes parte do baseline auditavel em `observability`, piloto, comparadores, `evolution-lab`, `evolution_from_pilot` e verificadores de release;
+- a fila micro volta a ficar sem item `ready`, e o proximo lote do nucleo precisa ser repriorizado explicitamente a partir desses sinais novos;
 - so depois desse lote: reavaliar qual vertical derivada deve abrir a proxima frente macro; `protective intelligence` permanece mapeado, mas em `deferred` ate nova decisao explicita;
 - so entao: decidir se o `v3` deve abrir por essa frente, por outra vertical derivada ou por mais maturacao transversal.
 
@@ -292,22 +295,21 @@ Regra de estudo externo no `v2`:
 ## Próximos passos imediatos
 
 Ordem recomendada:
-1. tratar `docs/implementation/v2-adherence-snapshot.md` como leitura oficial do fechamento funcional do `v2`;
-2. manter `HANDOFF.md`, `CHANGELOG.md` e o snapshot como docs vivos do baseline sem abrir outro corte documental por inércia;
-3. tratar `MB-023` a `MB-026` do lote `pre-v3 hardening` como baseline ja fechado, nao como backlog aberto;
-4. reclassificar `MB-027` a `MB-031` como `deferred`, preservando `protective intelligence` apenas como frente mapeada e nao ativa;
-5. tratar `MB-037` a `MB-040` como baseline fechado e usar seus sinais para escolher o proximo lote tecnico;
-6. manter a fila micro sem novo item `ready` ate repriorizacao explicita, sem abrir concorrencia paralela por impulso;
-7. manter historico regeneravel em `docs/archive/implementation/` e `tools/archive/` sem reexpandir a raiz do repositorio;
-8. so abrir outra frente funcional ou novo lote micro se esta prioridade macro mudar explicitamente.
+1. tratar `docs/implementation/v2-adherence-snapshot.md` como leitura oficial do baseline atual do `v2`, agora ja com o lote `MB-057` a `MB-061` fechado;
+2. manter `HANDOFF.md`, `CHANGELOG.md` e o snapshot como docs vivos do baseline sem abrir outro corte documental por inercia;
+3. preservar `MB-023` a `MB-026` como baseline fechado e `MB-027` a `MB-031` como `deferred`, sem reabrir `protective intelligence` por impulso;
+4. usar o lote `MB-057` a `MB-061` como baseline fechado para decidir qual e o proximo ganho causal do nucleo, sem abrir frente por inercia;
+5. repriorizar explicitamente o proximo lote micro antes de voltar a implementar, sem usar a matriz da Onda 2 como gatilho automatico de absorcao externa;
+6. manter historico regeneravel em `docs/archive/implementation/` e `tools/archive/` sem reexpandir a raiz do repositorio;
+7. so abrir outra frente funcional ou novo lote micro quando essa repriorizacao explicita acontecer ou se a prioridade macro mudar.
 
 Atualização desta rodada:
 
-- `pre-v3 protective intelligence foundation` foi rebaixada para `deferred`;
-- `docs/implementation/pre-v3-protective-intelligence-foundation-cut.md` fica preservado como estudo macro, nao como frente ativa;
-- a fila micro voltou a priorizar maturacao do nucleo cognitivo; `MB-032` a `MB-036` foram executados e fecharam o lote atual;
-- o lote `MB-037` a `MB-040` foi concluido na fila micro e fechou a rodada de autoevolucao governada do nucleo;
-- `execution-backlog.md`, `HANDOFF.md`, `v2-adherence-snapshot.md` e `CHANGELOG.md` agora registram esse fechamento e deixam a fila sem item `ready` ate nova priorizacao.
+- `MB-052` a `MB-056` permanecem fechados como lote anterior de maturacao adaptativa do nucleo;
+- `MB-057` a `MB-061` foram concluidos e fecharam o lote de intervencao adaptativa governada do nucleo;
+- `adaptive_intervention_*` agora existe como contrato soberano do runtime, evidenciado em `planning`, `orchestrator`, `observability`, piloto, comparadores, `evolution-lab` e verificadores de release;
+- a fila micro volta a ficar sem item `ready`, exigindo repriorizacao explicita antes do proximo lote;
+- `protective intelligence` segue preservada em `deferred`, e a matriz de readiness da Onda 2 continua apenas como insumo controlado do proximo refinamento do nucleo.
 
 ## Riscos e bloqueios
 
