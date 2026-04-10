@@ -17,6 +17,10 @@ Nao usar como substituto de:
 - `docs/implementation/v2-adherence-snapshot.md`, que continua sendo a leitura
   de baseline e aderencia.
 
+Tambem nao usar para carregar logs extensos, exploracao descartavel ou historico
+bruto de varias rodadas. O objetivo aqui e preservar estado util, nao mover
+ruido entre conversas.
+
 ---
 
 ## 1. Quando abrir novo chat
@@ -29,11 +33,43 @@ Abrir um novo chat costuma ser melhor quando:
 - vamos trocar de modo de trabalho: implementacao, mapeamento, estudo, review
   ou fechamento.
 
+Antes de abrir novo chat, considerar se basta compactar o estado atual:
+
+- mesmo lote, mesma direcao e muito ruido intermediario: preferir resumir e
+  continuar;
+- lote fechado, repriorizacao, troca de modo ou contexto poluido: preferir abrir
+  novo chat.
+
+Compactacao automatica isolada nao e motivo suficiente para trocar de chat.
+
+- primeira compactacao, mesmo lote e mesma direcao: continuar no mesmo chat;
+- compactacao seguida de mudanca de lote, modo ou prioridade: abrir novo chat;
+- duas compactacoes dentro do mesmo lote: preparar a troca no proximo marco
+  natural;
+- se a janela compactada volta rapido para zona alta de uso ou o agente comeca
+  a revisitar decisoes ja fechadas, considerar abrir novo chat mesmo sem fechar
+  o lote.
+
+Faixas praticas de contexto:
+
+- ate cerca de `50%`: normalmente seguir;
+- entre `50%` e `65%`: atencao ao ruido, mas sem pressa para trocar;
+- entre `65%` e `75%`: planejar troca no proximo checkpoint se a conversa nao
+  estiver ficando mais clara;
+- acima de `75%`: forte candidato a compactacao ou novo chat, a menos que o item
+  atual esteja claramente em reta final.
+
 Continuar no mesmo chat ainda pode ser suficiente quando:
 
 - o item atual ainda esta aberto;
 - a direcao nao mudou;
 - o trabalho continua claramente dentro do mesmo lote.
+
+Politica anti-fragmentacao:
+
+- nao abrir novo chat por tamanho bruto da conversa apenas;
+- preferir um chat por lote coerente, nao um chat por item pequeno;
+- abrir por fronteira de trabalho, nao por ansiedade de contexto.
 
 ---
 
@@ -49,6 +85,13 @@ Leia primeiro:
 - HANDOFF.md
 - docs/implementation/execution-backlog.md
 - docs/implementation/v2-adherence-snapshot.md
+
+Estado minimo:
+- branch atual
+- ultimo commit relevante
+- `git status` resumido
+- ultimo gate executado
+- item `MB-xxx` mais recente e proximo candidato
 
 Objetivo:
 - mapear o proximo passo correto;
@@ -89,6 +132,14 @@ Leia primeiro:
 - docs/architecture/technology-absorption-order.md
 - e os arquivos centrais do runtime que forem necessarios
 
+Estado operacional minimo a reconstruir:
+- branch atual;
+- ultimo commit relevante;
+- `git status` resumido;
+- ultimo gate executado;
+- item `MB-xxx` encerrado;
+- proximo item `ready` ou razao objetiva para nao haver um.
+
 O que eu quero que voce faca:
 1. reconstruir o estado atual do projeto a partir dos docs vivos e do codigo relevante;
 2. dizer qual e o proximo passo mais correto;
@@ -109,7 +160,33 @@ Regras:
 
 ---
 
-## 4. Checklist de transicao
+## 4. Modos de raciocinio
+
+Regra pratica:
+
+- `low`: sincronizacao documental, lint, wiring simples, leitura dirigida,
+  ajustes pequenos e validacao pontual, sem alterar comportamento relevante do
+  runtime;
+- `medium`: implementacao local, reversivel e de baixo raio de impacto,
+  refactor contido, testes direcionados e integracao disciplinada quando o
+  contrato ja estiver claro;
+- `high`: repriorizacao, arquitetura, bugs ambiguos, seguranca, migracoes,
+  tradeoffs, definicao de novo lote e qualquer implementacao relevante em
+  runtime, memoria, governanca, observabilidade, contratos compartilhados ou
+  baseline;
+- `xhigh` ou equivalente: usar so em problemas realmente densos, caros e com
+  justificativa clara.
+
+Se houver duvida:
+
+- planejamento e mapeamento: comecar em `high`;
+- implementacao do nucleo: comecar em `high`;
+- implementacao local e claramente delimitada: comecar em `medium`;
+- rodada simples de manutencao: comecar em `low`.
+
+---
+
+## 5. Checklist de transicao
 
 Antes de abrir o novo chat, conferir:
 
@@ -118,13 +195,31 @@ Antes de abrir o novo chat, conferir:
 - `v2-adherence-snapshot.md` sincronizado com o baseline;
 - `CHANGELOG.md` registrando a rodada encerrada;
 - gate apropriado executado;
-- worktree em estado conhecido.
+- worktree em estado conhecido;
+- branch e ultimo commit anotados;
+- quantidade de compactacoes recentes entendida;
+- percentual atual de contexto interpretado junto com o nivel de ruido;
+- se a conversa atual ainda cabe em compactacao, decidir isso antes de abrir
+  novo chat.
 
 ---
 
-## 5. Regra pratica
+## 6. Regra pratica
 
 Se houver duvida:
 
 - mesmo lote ainda em execucao: continuar no chat atual;
+- mesmo lote, mas muito ruido intermediario: resumir/compactar antes de trocar;
+- primeira compactacao sem mudanca de direcao: continuar;
+- compactacao recorrente e proxima rodada mais estrategica: trocar no proximo
+  checkpoint;
 - lote fechado e nova repriorizacao: abrir novo chat com este template.
+
+Arvore curta de decisao:
+
+1. O lote atual ainda esta aberto e a direcao nao mudou?
+   - sim: continuar no mesmo chat, salvo ruido excessivo;
+2. O problema e ruido, nao troca de frente?
+   - sim: compactar ou resumir antes de trocar;
+3. O lote acabou, a prioridade mudou ou houve mais de uma compactacao relevante?
+   - sim: abrir novo chat.
