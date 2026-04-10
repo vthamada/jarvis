@@ -788,7 +788,7 @@ class PlanningEngine:
             or context.memory_corpus_status == "review_recommended"
             or context.memory_retention_pressure == "high"
         ):
-            return AdaptiveIntervention(
+            memory_review_candidate = AdaptiveIntervention(
                 applied=True,
                 status="applied",
                 reason="pressao de memoria ou corpus governado exige checkpoint de revisao",
@@ -814,6 +814,8 @@ class PlanningEngine:
                     )
                 ),
             )
+        else:
+            memory_review_candidate = None
         if mind_disagreement_status in {"validation_required", "deep_review_required"}:
             checkpoint = mind_validation_checkpoints[0] if mind_validation_checkpoints else None
             reason = (
@@ -821,7 +823,7 @@ class PlanningEngine:
             )
             if dominant_tension:
                 reason = f"{reason}: {dominant_tension}"
-            return AdaptiveIntervention(
+            specialist_candidate = AdaptiveIntervention(
                 applied=True,
                 status="applied",
                 reason=reason,
@@ -848,6 +850,18 @@ class PlanningEngine:
                 ),
                 requires_human_validation=False,
             )
+        else:
+            specialist_candidate = None
+        selected = self._select_workflow_adaptive_intervention(
+            workflow_profile=context.route_workflow_profile,
+            candidates=[
+                candidate
+                for candidate in (memory_review_candidate, specialist_candidate)
+                if candidate is not None
+            ],
+        )
+        if selected is not None:
+            return selected
         return AdaptiveIntervention(
             applied=False,
             status="not_applicable",
@@ -872,13 +886,32 @@ class PlanningEngine:
             for finding in contribution.findings
             if finding.startswith(("risk:", "constraint:", "open_loop:", "success:"))
         )
+        current_plan_intervention = (
+            AdaptiveIntervention(
+                applied=plan.adaptive_intervention_status == "applied",
+                status=plan.adaptive_intervention_status or "not_applicable",
+                reason=plan.adaptive_intervention_reason,
+                trigger=plan.adaptive_intervention_trigger,
+                selected_action=plan.adaptive_intervention_selected_action,
+                expected_effect=plan.adaptive_intervention_expected_effect,
+                effects=list(plan.adaptive_intervention_effects),
+                next_action=plan.smallest_safe_next_action,
+                requires_human_validation=(
+                    plan.adaptive_intervention_selected_action
+                    == "safe_containment"
+                ),
+            )
+            if plan.adaptive_intervention_status == "applied"
+            and plan.adaptive_intervention_selected_action
+            else None
+        )
         if (
             specialist_contributions
             and plan.mind_disagreement_status in {"validation_required", "deep_review_required"}
             and unresolved_findings > 0
         ):
             focus = open_loop_hints[0] if open_loop_hints else specialist_summary
-            return AdaptiveIntervention(
+            specialist_candidate = AdaptiveIntervention(
                 applied=True,
                 status="applied",
                 reason=(
@@ -908,20 +941,71 @@ class PlanningEngine:
                 ),
                 requires_human_validation=False,
             )
+            selected = self._select_workflow_adaptive_intervention(
+                workflow_profile=plan.route_workflow_profile,
+                candidates=[
+                    candidate
+                    for candidate in (current_plan_intervention, specialist_candidate)
+                    if candidate is not None
+                ],
+            )
+            if selected is not None:
+                return selected
+        if current_plan_intervention is not None:
+            return current_plan_intervention
         return AdaptiveIntervention(
-            applied=plan.adaptive_intervention_status == "applied",
-            status=plan.adaptive_intervention_status or "not_applicable",
-            reason=plan.adaptive_intervention_reason,
-            trigger=plan.adaptive_intervention_trigger,
-            selected_action=plan.adaptive_intervention_selected_action,
-            expected_effect=plan.adaptive_intervention_expected_effect,
-            effects=list(plan.adaptive_intervention_effects),
-            next_action=plan.smallest_safe_next_action,
-            requires_human_validation=(
-                plan.adaptive_intervention_selected_action
-                in {"safe_containment", "specialist_reevaluation"}
+            applied=False,
+            status="not_applicable",
+            reason=None,
+            trigger=None,
+            selected_action=None,
+            expected_effect=None,
+            effects=[],
+        )
+
+    def _select_workflow_adaptive_intervention(
+        self,
+        *,
+        workflow_profile: str | None,
+        candidates: list[AdaptiveIntervention],
+    ) -> AdaptiveIntervention | None:
+        if not candidates:
+            return None
+        if len(candidates) == 1:
+            return candidates[0]
+
+        priority = workflow_runtime_guidance(
+            workflow_profile
+        ).adaptive_intervention_priority
+        priority_map = {
+            action: index for index, action in enumerate(priority)
+        }
+        selected = min(
+            candidates,
+            key=lambda candidate: priority_map.get(
+                candidate.selected_action or "",
+                len(priority_map),
             ),
         )
+        competing_actions = [
+            candidate.selected_action
+            for candidate in candidates
+            if candidate.selected_action and candidate.selected_action != selected.selected_action
+        ]
+        if not competing_actions:
+            return selected
+        workflow_label = workflow_profile or "default_workflow"
+        competing_labels = ", ".join(competing_actions)
+        selection_reason = (
+            f"{selected.reason}; prioridade soberana de {workflow_label} favoreceu "
+            f"{selected.selected_action} sobre {competing_labels}"
+            if selected.reason
+            else (
+                f"prioridade soberana de {workflow_label} favoreceu "
+                f"{selected.selected_action} sobre {competing_labels}"
+            )
+        )
+        return replace(selected, reason=selection_reason)
 
     def _apply_adaptive_intervention(
         self,

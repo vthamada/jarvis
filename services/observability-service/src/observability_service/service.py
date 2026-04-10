@@ -13,6 +13,7 @@ from observability_service.agentic import (
     LangSmithObservabilityAdapter,
 )
 from observability_service.repository import ObservabilityRepository
+from shared.domain_registry import workflow_runtime_guidance
 from shared.events import InternalEventEnvelope
 
 
@@ -91,6 +92,7 @@ class FlowAudit:
     adaptive_intervention_expected_effect: str | None
     adaptive_intervention_effects: list[str]
     adaptive_intervention_effectiveness: str
+    adaptive_intervention_policy_status: str
     cognitive_strategy_shift_status: str
     cognitive_strategy_shift_applied: bool
     cognitive_strategy_shift_summary: str | None
@@ -162,6 +164,8 @@ class FlowAudit:
             and self.adaptive_intervention_status in {"healthy", "not_applicable"}
             and self.adaptive_intervention_effectiveness
             in {"effective", "not_applicable"}
+            and self.adaptive_intervention_policy_status
+            in {"policy_aligned", "mandatory_override", "not_applicable"}
             and self.cognitive_strategy_shift_status in {"healthy", "not_applicable"}
             and self.specialist_subflow_status
             in {"healthy", "not_applicable", "contained"}
@@ -348,6 +352,7 @@ class ObservabilityService:
                 adaptive_intervention_expected_effect=None,
                 adaptive_intervention_effects=[],
                 adaptive_intervention_effectiveness="incomplete",
+                adaptive_intervention_policy_status="incomplete",
                 cognitive_strategy_shift_status="incomplete",
                 cognitive_strategy_shift_applied=False,
                 cognitive_strategy_shift_summary=None,
@@ -1242,6 +1247,18 @@ class ObservabilityService:
             governance_decision=governance_decision,
             specialist_subflow_status=specialist_subflow_status,
         )
+        adaptive_intervention_policy_status = self._adaptive_intervention_policy_status(
+            workflow_profile=workflow_profile,
+            adaptive_intervention_status=adaptive_intervention_status,
+            adaptive_intervention_trigger=adaptive_intervention_trigger,
+            adaptive_intervention_selected_action=adaptive_intervention_selected_action,
+            mind_disagreement_status=mind_disagreement_status,
+            memory_review_status=memory_review_status,
+            memory_corpus_status=memory_corpus_status,
+            memory_retention_pressure=memory_retention_pressure,
+            workflow_resume_status=workflow_resume_status,
+            continuity_action=continuity_action,
+        )
 
         return FlowAudit(
             request_id=first_event.request_id,
@@ -1292,6 +1309,7 @@ class ObservabilityService:
             adaptive_intervention_expected_effect=adaptive_intervention_expected_effect,
             adaptive_intervention_effects=adaptive_intervention_effects,
             adaptive_intervention_effectiveness=adaptive_intervention_effectiveness,
+            adaptive_intervention_policy_status=adaptive_intervention_policy_status,
             cognitive_strategy_shift_status=cognitive_strategy_shift_status,
             cognitive_strategy_shift_applied=cognitive_strategy_shift_applied,
             cognitive_strategy_shift_summary=cognitive_strategy_shift_summary,
@@ -1467,6 +1485,8 @@ class ObservabilityService:
             return "contain_response_and_recompose_with_last_valid_plan"
         if audit.governance_decision in {"block", "defer_for_validation"}:
             return "keep_contained_and_require_manual_review"
+        if audit.adaptive_intervention_policy_status == "attention_required":
+            return "review_workflow_adaptive_intervention_policy_before_promoting_the_flow"
         if audit.adaptive_intervention_effectiveness == "insufficient":
             return "review_adaptive_intervention_before_promoting_the_flow"
         if audit.mind_validation_checkpoint_status == "attention_required":
@@ -2422,6 +2442,70 @@ class ObservabilityService:
                 return "effective"
             return "insufficient"
         return "effective" if workflow_output_status == "coherent" else "insufficient"
+
+    @staticmethod
+    def _adaptive_intervention_policy_status(
+        *,
+        workflow_profile: str | None,
+        adaptive_intervention_status: str,
+        adaptive_intervention_trigger: str | None,
+        adaptive_intervention_selected_action: str | None,
+        mind_disagreement_status: str,
+        memory_review_status: str,
+        memory_corpus_status: str,
+        memory_retention_pressure: str | None,
+        workflow_resume_status: str,
+        continuity_action: str | None,
+    ) -> str:
+        if adaptive_intervention_status == "not_applicable":
+            return "not_applicable"
+        if adaptive_intervention_status != "healthy" or adaptive_intervention_selected_action is None:
+            return "attention_required"
+        if adaptive_intervention_selected_action == "clarification_checkpoint":
+            return (
+                "mandatory_override"
+                if adaptive_intervention_trigger == "clarification_required"
+                else "attention_required"
+            )
+        if adaptive_intervention_selected_action == "safe_containment":
+            if adaptive_intervention_trigger in {
+                "manual_resume_required",
+                "mission_conflict_detected",
+            }:
+                return "mandatory_override"
+            if (
+                workflow_resume_status == "manual_resume_required"
+                or continuity_action == "reformular"
+            ):
+                return "mandatory_override"
+            return "attention_required"
+
+        candidate_actions: list[str] = []
+        if (
+            memory_review_status == "review_recommended"
+            or memory_corpus_status == "review_recommended"
+            or memory_retention_pressure == "high"
+        ):
+            candidate_actions.append("memory_review_checkpoint")
+        if mind_disagreement_status in {"validation_required", "deep_review_required"}:
+            candidate_actions.append("specialist_reevaluation")
+        if not candidate_actions:
+            return "attention_required"
+
+        for prioritized_action in workflow_runtime_guidance(
+            workflow_profile
+        ).adaptive_intervention_priority:
+            if prioritized_action in candidate_actions:
+                return (
+                    "policy_aligned"
+                    if adaptive_intervention_selected_action == prioritized_action
+                    else "attention_required"
+                )
+        return (
+            "policy_aligned"
+            if adaptive_intervention_selected_action == candidate_actions[0]
+            else "attention_required"
+        )
 
     @staticmethod
     def _metacognitive_guidance_status(

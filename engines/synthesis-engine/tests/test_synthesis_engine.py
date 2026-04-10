@@ -606,6 +606,60 @@ def test_synthesis_engine_surfaces_mid_flow_cognitive_strategy_shift() -> None:
     )
 
 
+def test_synthesis_engine_surfaces_workflow_priority_for_adaptive_intervention() -> None:
+    engine = SynthesisEngine()
+    identity = IdentityEngine().get_profile()
+    plan = sample_plan()
+    plan.adaptive_intervention_status = "healthy"
+    plan.adaptive_intervention_selected_action = "specialist_reevaluation"
+    plan.adaptive_intervention_reason = (
+        "workflow pede fechar tensao especializada antes do fechamento final"
+    )
+    plan.adaptive_intervention_trigger = "mind_validation_required"
+    plan.adaptive_intervention_expected_effect = "specialist_validation"
+    plan.adaptive_intervention_effects = ["success_criteria", "specialist_hints"]
+
+    result = engine.compose_result(
+        SynthesisInput(
+            intent="planning",
+            identity_profile=identity,
+            response_style="estruturado",
+            governance_decision=GovernanceDecisionContract(
+                decision_id=GovernanceDecisionId("decision-adaptive-priority"),
+                governance_check_id=GovernanceCheckId("check-adaptive-priority"),
+                risk_level=RiskLevel.LOW,
+                decision=PermissionDecision.ALLOW_WITH_CONDITIONS,
+                justification="ok",
+                timestamp="2026-03-18T00:00:00Z",
+            ),
+            recovered_context=[],
+            active_minds=["mente_executiva"],
+            active_domains=["strategy"],
+            knowledge_snippets=[],
+            deliberative_plan=plan,
+            specialist_contributions=[],
+            operation_result=None,
+            identity_mode="structured_planning",
+        )
+    )
+
+    assert result.workflow_output_status == "coherent"
+    assert (
+        result.adaptive_intervention_workflow_priority_summary
+        == "workflow strategic direction workflow priorizou specialist reevaluation "
+        "para proteger direcao recomendada, criterios e trade-offs dominantes, "
+        "preservando checkpoint scenario framed e gate scenario scope confirmed"
+    )
+    assert result.adaptive_intervention_preserved_checkpoint == "scenario framed"
+    assert result.adaptive_intervention_preserved_gate == "scenario scope confirmed"
+    assert (
+        "Intervencao adaptativa: workflow strategic direction workflow priorizou "
+        "specialist reevaluation para proteger direcao recomendada, criterios e "
+        "trade-offs dominantes, preservando checkpoint scenario framed e gate "
+        "scenario scope confirmed." in result.response_text
+    )
+
+
 def test_synthesis_engine_surfaces_recomposition_in_final_reading() -> None:
     engine = SynthesisEngine()
     identity = IdentityEngine().get_profile()

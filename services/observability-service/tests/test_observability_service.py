@@ -3703,3 +3703,252 @@ def test_observability_service_tracks_specialist_subflow_and_mission_runtime_sta
     assert audit.specialist_subflow_runtime_mode == "native_pipeline"
     assert audit.mission_runtime_state_status == "healthy"
     assert audit.trace_complete is True
+
+
+def _adaptive_intervention_policy_events(
+    *,
+    request_id: str,
+    session_id: str,
+    workflow_profile: str,
+    selected_action: str,
+    trigger: str,
+    reason: str,
+    mind_disagreement_status: str = "not_applicable",
+    memory_review_status: str = "stable",
+    memory_corpus_status: str | None = None,
+    memory_retention_pressure: str | None = None,
+) -> list[InternalEventEnvelope]:
+    shared_memory_payload: dict[str, object] = {}
+    if memory_corpus_status is not None:
+        shared_memory_payload["memory_corpus_statuses"] = {
+            "structured_analysis_specialist": memory_corpus_status
+        }
+    if memory_retention_pressure is not None:
+        shared_memory_payload["memory_retention_pressures"] = {
+            "structured_analysis_specialist": memory_retention_pressure
+        }
+
+    return [
+        InternalEventEnvelope(
+            event_id=f"{request_id}-1",
+            event_name="input_received",
+            timestamp="2026-04-10T00:00:00+00:00",
+            source_service="orchestrator-service",
+            payload={"content": "audit adaptive intervention policy"},
+            request_id=request_id,
+            session_id=session_id,
+            correlation_id=request_id,
+        ),
+        InternalEventEnvelope(
+            event_id=f"{request_id}-2",
+            event_name="memory_recovered",
+            timestamp="2026-04-10T00:00:01+00:00",
+            source_service="orchestrator-service",
+            payload={},
+            request_id=request_id,
+            session_id=session_id,
+            correlation_id=request_id,
+        ),
+        InternalEventEnvelope(
+            event_id=f"{request_id}-3",
+            event_name="intent_classified",
+            timestamp="2026-04-10T00:00:02+00:00",
+            source_service="orchestrator-service",
+            payload={"intent": "analysis"},
+            request_id=request_id,
+            session_id=session_id,
+            correlation_id=request_id,
+        ),
+        InternalEventEnvelope(
+            event_id=f"{request_id}-4",
+            event_name="context_composed",
+            timestamp="2026-04-10T00:00:03+00:00",
+            source_service="orchestrator-service",
+            payload={
+                "primary_mind": "mente_analitica",
+                "primary_mind_family": "fundamental",
+                "primary_domain_driver": "dados_estatistica_e_inteligencia_analitica",
+                "arbitration_source": "mind_registry",
+                "dominant_tension": "equilibrar profundidade analitica com fechamento util",
+            },
+            request_id=request_id,
+            session_id=session_id,
+            correlation_id=request_id,
+        ),
+        InternalEventEnvelope(
+            event_id=f"{request_id}-5",
+            event_name="workflow_composed",
+            timestamp="2026-04-10T00:00:04+00:00",
+            source_service="orchestrator-service",
+            payload={
+                "workflow_profile": workflow_profile,
+                "workflow_domain_route": "analysis",
+                "workflow_governance_mode": "guided_runtime_contract",
+            },
+            request_id=request_id,
+            session_id=session_id,
+            correlation_id=request_id,
+        ),
+        InternalEventEnvelope(
+            event_id=f"{request_id}-6",
+            event_name="plan_built",
+            timestamp="2026-04-10T00:00:05+00:00",
+            source_service="orchestrator-service",
+            payload={
+                "mind_disagreement_status": mind_disagreement_status,
+                "mind_validation_checkpoints": ["validar a proxima decisao"],
+                "memory_review_status": memory_review_status,
+                "adaptive_intervention_status": "applied",
+                "adaptive_intervention_reason": reason,
+                "adaptive_intervention_trigger": trigger,
+                "adaptive_intervention_selected_action": selected_action,
+                "adaptive_intervention_expected_effect": "preserve a governed next step",
+                "adaptive_intervention_effects": [
+                    "steps",
+                    "constraints",
+                    "success_criteria",
+                    "smallest_safe_next_action",
+                ],
+            },
+            request_id=request_id,
+            session_id=session_id,
+            correlation_id=request_id,
+        ),
+        InternalEventEnvelope(
+            event_id=f"{request_id}-7",
+            event_name="continuity_decided",
+            timestamp="2026-04-10T00:00:06+00:00",
+            source_service="orchestrator-service",
+            payload={"continuity_action": "continuar", "continuity_source": "active_mission"},
+            request_id=request_id,
+            session_id=session_id,
+            correlation_id=request_id,
+        ),
+        InternalEventEnvelope(
+            event_id=f"{request_id}-8",
+            event_name="governance_checked",
+            timestamp="2026-04-10T00:00:07+00:00",
+            source_service="orchestrator-service",
+            payload={"decision": "allow_with_conditions"},
+            request_id=request_id,
+            session_id=session_id,
+            correlation_id=request_id,
+        ),
+        InternalEventEnvelope(
+            event_id=f"{request_id}-9",
+            event_name="response_synthesized",
+            timestamp="2026-04-10T00:00:08+00:00",
+            source_service="orchestrator-service",
+            payload={
+                "continuity_action": "continuar",
+                "workflow_output_status": "coherent",
+                "mind_disagreement_status": mind_disagreement_status,
+                "adaptive_intervention_status": "applied",
+                "adaptive_intervention_reason": reason,
+                "adaptive_intervention_trigger": trigger,
+                "adaptive_intervention_selected_action": selected_action,
+                "adaptive_intervention_expected_effect": "preserve a governed next step",
+                "adaptive_intervention_effects": [
+                    "steps",
+                    "constraints",
+                    "success_criteria",
+                    "smallest_safe_next_action",
+                ],
+            },
+            request_id=request_id,
+            session_id=session_id,
+            correlation_id=request_id,
+        ),
+        InternalEventEnvelope(
+            event_id=f"{request_id}-10",
+            event_name="memory_recorded",
+            timestamp="2026-04-10T00:00:09+00:00",
+            source_service="orchestrator-service",
+            payload={"continuity_mode": "continuar"},
+            request_id=request_id,
+            session_id=session_id,
+            correlation_id=request_id,
+        ),
+        InternalEventEnvelope(
+            event_id=f"{request_id}-11",
+            event_name="specialist_shared_memory_linked",
+            timestamp="2026-04-10T00:00:10+00:00",
+            source_service="orchestrator-service",
+            payload=shared_memory_payload,
+            request_id=request_id,
+            session_id=session_id,
+            correlation_id=request_id,
+        ),
+    ]
+
+
+def test_observability_service_marks_workflow_priority_as_policy_aligned() -> None:
+    temp_dir = runtime_dir("observability-adaptive-policy-aligned")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service.ingest_events(
+        _adaptive_intervention_policy_events(
+            request_id="req-adaptive-policy-aligned",
+            session_id="sess-adaptive-policy-aligned",
+            workflow_profile="operational_readiness_workflow",
+            selected_action="memory_review_checkpoint",
+            trigger="memory_review_recommended",
+            reason="pressao de memoria exige checkpoint de revisao",
+            mind_disagreement_status="validation_required",
+            memory_review_status="review_recommended",
+            memory_corpus_status="review_recommended",
+        )
+    )
+
+    audit = service.audit_flow(
+        ObservabilityQuery(request_id="req-adaptive-policy-aligned")
+    )
+
+    assert audit.adaptive_intervention_status == "healthy"
+    assert audit.adaptive_intervention_policy_status == "policy_aligned"
+
+
+def test_observability_service_marks_mandatory_override_for_clarification() -> None:
+    temp_dir = runtime_dir("observability-adaptive-policy-override")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service.ingest_events(
+        _adaptive_intervention_policy_events(
+            request_id="req-adaptive-policy-override",
+            session_id="sess-adaptive-policy-override",
+            workflow_profile="structured_analysis_workflow",
+            selected_action="clarification_checkpoint",
+            trigger="clarification_required",
+            reason="pedido ainda exige checkpoint soberano de clarificacao",
+        )
+    )
+
+    audit = service.audit_flow(
+        ObservabilityQuery(request_id="req-adaptive-policy-override")
+    )
+
+    assert audit.adaptive_intervention_status == "healthy"
+    assert audit.adaptive_intervention_policy_status == "mandatory_override"
+
+
+def test_observability_service_flags_adaptive_intervention_policy_mismatch() -> None:
+    temp_dir = runtime_dir("observability-adaptive-policy-mismatch")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service.ingest_events(
+        _adaptive_intervention_policy_events(
+            request_id="req-adaptive-policy-mismatch",
+            session_id="sess-adaptive-policy-mismatch",
+            workflow_profile="structured_analysis_workflow",
+            selected_action="memory_review_checkpoint",
+            trigger="memory_review_recommended",
+            reason="pressao de memoria exige checkpoint de revisao",
+            mind_disagreement_status="validation_required",
+            memory_review_status="review_recommended",
+            memory_corpus_status="review_recommended",
+        )
+    )
+
+    audit = service.audit_flow(
+        ObservabilityQuery(request_id="req-adaptive-policy-mismatch")
+    )
+
+    assert audit.adaptive_intervention_status == "healthy"
+    assert audit.adaptive_intervention_policy_status == "attention_required"

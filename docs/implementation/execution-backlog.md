@@ -16,6 +16,7 @@ Hierarquia correta:
 - `documento_mestre_jarvis.md` continua como visao canonica;
 - `docs/documentation/matriz-de-aderencia-mestre.md` continua como ponte formal de aderencia;
 - `docs/roadmap/programa-ate-v3.md` continua como programa macro;
+- `docs/implementation/unified-gap-and-absorption-backlog.md` agora consolida o backlog macro do que ainda falta, incluindo gaps do sistema, traducao tecnologica, superficies, evolucao e pesquisa;
 - `HANDOFF.md` continua como retomada tatico-operacional;
 - `docs/implementation/v2-adherence-snapshot.md` continua como leitura viva do baseline;
 - este arquivo e apenas a fila micro ativa do corte corrente.
@@ -24,6 +25,7 @@ Regra central:
 
 - este backlog nao substitui a direcao macro;
 - ele organiza a execucao do proximo trabalho pequeno e fechavel;
+- quando a fila ficar sem item `ready`, a repriorizacao deve partir de `docs/implementation/unified-gap-and-absorption-backlog.md`;
 - nenhuma mudanca de direcao entra aqui sem decisao explicita do operador.
 
 ---
@@ -1111,6 +1113,91 @@ Escalar ao operador quando:
 - `modo_de_raciocinio_recomendado`: `medium`
 - `impacto_no_baseline`: o lote fecha com memoria operacional, backlog micro, snapshot e changelog coerentes com a nova gramatica de intervencao adaptativa governada do nucleo.
 
+### MB-062
+
+- `id`: `MB-062`
+- `prioridade`: `P0`
+- `status`: `done`
+- `eixo_do_mestre`: `fluxo_principal`
+- `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
+- `micro_objetivo`: fazer a escolha entre `memory_review_checkpoint` e `specialist_reevaluation` respeitar prioridade soberana por `workflow_profile`, em vez de depender de ordem fixa do engine.
+- `justificativa_arquitetural`: o contrato de intervencao adaptativa ja existia, mas a selecao entre revisao de memoria e reavaliacao especializada ainda era quase generica; o proximo ganho real e deixar o workflow ativo governar essa precedencia sem reabrir heuristica local espalhada.
+- `arquivos/servicos_principais`: `shared/domain_registry.py`, `engines/planning-engine/src/planning_engine/engine.py`, `engines/planning-engine/tests/test_planning_engine.py`
+- `dependencias`: `MB-057`, `MB-058`
+- `criterio_de_aceite`: quando houver sinais concorrentes de memoria e discordancia cognitiva, o `planning-engine` passa a selecionar a intervencao de acordo com a prioridade soberana do `workflow_profile`; clarificacao e contencao segura continuam tendo precedencia absoluta.
+- `gate_minimo`: `pytest` direcionado do `planning-engine`, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `impacto_no_baseline`: o runtime agora deixa a prioridade entre revisao de memoria e reavaliacao especializada ser governada pelo registry soberano de workflow, reduzindo genericidade residual na intervencao adaptativa.
+
+### MB-063
+
+- `id`: `MB-063`
+- `prioridade`: `P0`
+- `status`: `done`
+- `eixo_do_mestre`: `observabilidade`
+- `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
+- `micro_objetivo`: auditar e comparar se a intervencao adaptativa escolhida bate com a prioridade soberana do `workflow_profile`, distinguindo match correto de override por salvaguarda obrigatoria.
+- `justificativa_arquitetural`: depois de mover a prioridade para o registry, o baseline precisa evidenciar quando a escolha seguiu a politica do workflow e quando foi corretamente sobreposta por clarificacao ou contencao segura.
+- `arquivos/servicos_principais`: `services/observability-service`, `tools/internal_pilot_report.py`, `tools/compare_orchestrator_paths.py`, `tools/verify_release_signal_baseline.py`
+- `dependencias`: `MB-062`
+- `criterio_de_aceite`: auditoria, comparadores e leitura de release passam a expor pelo menos um sinal de `adaptive_intervention_policy_status`, diferenciando `policy_aligned`, `mandatory_override` e `attention_required`.
+- `gate_minimo`: `pytest` direcionado dos services/tools afetados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `impacto_no_baseline`: a prioridade soberana de intervencao deixa de existir apenas no `planning` e passa a virar evidencia auditavel do baseline por workflow.
+
+### MB-064
+
+- `id`: `MB-064`
+- `prioridade`: `P1`
+- `status`: `done`
+- `eixo_do_mestre`: `sintese`
+- `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
+- `micro_objetivo`: tornar a leitura final do runtime mais explicita sobre por que a prioridade do workflow escolheu uma intervencao e qual checkpoint ativo ela preservou.
+- `justificativa_arquitetural`: sem essa camada, a politica de prioridade fica correta internamente, mas ainda exige parse heroico de rationale para entender o efeito da escolha no fechamento do fluxo.
+- `arquivos/servicos_principais`: `engines/synthesis-engine`, `services/orchestrator-service`
+- `dependencias`: `MB-063`
+- `criterio_de_aceite`: `response_synthesized` e a resposta final passam a refletir, de forma bounded, o motivo do workflow para a intervencao selecionada e o checkpoint/gate preservado por ela.
+- `gate_minimo`: `pytest` direcionado dos engines/servicos afetados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `medium`
+- `impacto_no_baseline`: a ultima milha do runtime agora explicita a prioridade soberana da intervencao por workflow, inclusive com checkpoint e gate preservados em `synthesis` e `response_synthesized`.
+
+### MB-065
+
+- `id`: `MB-065`
+- `prioridade`: `P1`
+- `status`: `done`
+- `eixo_do_mestre`: `evolucao`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: fazer `refinement_vectors` e a `evaluation_matrix` usarem mismatch ou inefetividade da politica de intervencao por workflow como insumo de refinamento do nucleo.
+- `justificativa_arquitetural`: depois de auditar a politica, o loop evolutivo precisa saber quais workflows ainda escolhem a intervencao certa, mas fecham mal, e quais ainda pedem ajuste na propria prioridade soberana.
+- `arquivos/servicos_principais`: `evolution/evolution-lab`, `tools/evolution_from_pilot.py`, `tools/compare_orchestrator_paths.py`
+- `dependencias`: `MB-063`, `MB-064`
+- `criterio_de_aceite`: mismatch ou efetividade insuficiente da politica de intervencao passam a influenciar `refinement_vectors` por workflow sem promover mudanca automaticamente.
+- `gate_minimo`: `pytest` direcionado dos tools/servicos afetados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `impacto_no_baseline`: mismatch ou fechamento insuficiente da politica de intervencao agora entram em `refinement_vectors`, `evaluation_matrix` e propostas sandbox como criterio evolutivo por workflow.
+
+### MB-066
+
+- `id`: `MB-066`
+- `prioridade`: `P1`
+- `status`: `done`
+- `eixo_do_mestre`: `docs/gates`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: fechar o lote de prioridade soberana de intervencao por workflow com docs vivos, changelog e gate sincronizados.
+- `justificativa_arquitetural`: esse lote muda a leitura do baseline e da propria evidencia comparativa; o fechamento precisa consolidar a nova gramatica sem deixar a fila ou os docs em drift.
+- `arquivos/servicos_principais`: `docs/implementation/execution-backlog.md`, `HANDOFF.md`, `docs/implementation/v2-adherence-snapshot.md`, `CHANGELOG.md`
+- `dependencias`: `MB-063`, `MB-064`, `MB-065`
+- `criterio_de_aceite`: o lote termina com docs vivos coerentes com a nova prioridade soberana por workflow, `CHANGELOG.md` sincronizado e gate minimo validado.
+- `gate_minimo`: `python tools/check_mojibake.py docs/implementation docs/operations HANDOFF.md CHANGELOG.md` e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `medium`
+- `impacto_no_baseline`: o lote fecha com sintese, comparadores, loop evolutivo e docs vivos sincronizados em torno da prioridade soberana de intervencao por workflow.
+
 ---
 
 ## 5. Regras de manutencao da fila
@@ -1141,4 +1228,9 @@ Estado atual da fila:
 - `MB-057` e `MB-058` agora tratam `adaptive_intervention_*` como contrato soberano do runtime em `planning`, `orchestrator`, dispatch e fluxo opcional de `LangGraph`, sem transformar a intervencao em fallback generico;
 - `MB-059` e `MB-060` agora tornam a efetividade dessas intervencoes parte do baseline auditavel em `observability`, piloto, comparadores, `evolution-lab`, `evolution_from_pilot` e verificadores de release;
 - `MB-061` fecha o lote com docs vivos e gate sincronizados, deixando a fila micro novamente sem item `ready` ate nova repriorizacao explicita do nucleo;
+- `MB-062` inaugurou o lote seguinte e ja foi concluido: a prioridade entre `memory_review_checkpoint` e `specialist_reevaluation` agora respeita guidance soberano por `workflow_profile`;
+- `MB-063` tambem foi concluido: `observability-service`, piloto, comparadores e leitura de release agora expõem `adaptive_intervention_policy_status`, distinguindo `policy_aligned`, `mandatory_override` e `attention_required` como evidencia auditavel por workflow;
+- `MB-064` a `MB-066` agora tambem foram concluidos: a sintese final e `response_synthesized` explicam a prioridade do workflow e o checkpoint/gate preservado, enquanto `evolution-lab`, `evolution_from_pilot.py` e `compare_orchestrator_paths.py` passaram a tratar a politica de intervencao como insumo formal de refinamento;
+- `docs/implementation/unified-gap-and-absorption-backlog.md` agora consolida o que ainda falta no sistema, integrando gaps do nucleo, traducao tecnologica, superficies, evolucao e pesquisa em um unico mapa macro para a proxima repriorizacao;
+- a fila micro volta a ficar sem item `ready` ate nova repriorizacao explicita do nucleo;
 - `protective intelligence foundation` continua `deferred` e a matriz da Onda 2 segue como insumo, nao como gatilho automatico para abrir nova vertical.

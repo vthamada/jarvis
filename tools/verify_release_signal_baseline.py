@@ -32,6 +32,11 @@ def _make_result(  # type: ignore[no-untyped-def]
     workflow_resume_status: str = "fresh_start",
     workflow_pending_checkpoint_count: int = 0,
     workflow_output_status: str = "coherent",
+    adaptive_intervention_status: str = "not_applicable",
+    adaptive_intervention_reason: str | None = None,
+    adaptive_intervention_trigger: str | None = None,
+    adaptive_intervention_selected_action: str | None = None,
+    adaptive_intervention_effectiveness: str = "not_applicable",
     procedural_artifact_status: str = "reusable",
     procedural_artifact_version: int | None = 1,
     mind_domain_specialist_status: str = "aligned",
@@ -47,6 +52,7 @@ def _make_result(  # type: ignore[no-untyped-def]
     procedural_memory_source: str | None = "active_mission",
     semantic_memory_focus: list[str] | None = None,
     procedural_memory_hint: str | None = "preservar criterio de comparacao mais recente",
+    adaptive_intervention_policy_status: str = "not_applicable",
 ) -> Any:
     from tools.internal_pilot_support import PilotExecutionResult
 
@@ -87,6 +93,12 @@ def _make_result(  # type: ignore[no-untyped-def]
         metacognitive_guidance_status=metacognitive_guidance_status,
         mind_disagreement_status=mind_disagreement_status,
         mind_validation_checkpoint_status=mind_validation_checkpoint_status,
+        adaptive_intervention_status=adaptive_intervention_status,
+        adaptive_intervention_reason=adaptive_intervention_reason,
+        adaptive_intervention_trigger=adaptive_intervention_trigger,
+        adaptive_intervention_selected_action=adaptive_intervention_selected_action,
+        adaptive_intervention_effectiveness=adaptive_intervention_effectiveness,
+        adaptive_intervention_policy_status=adaptive_intervention_policy_status,
         memory_causality_status=memory_causality_status,
         primary_mind=primary_mind,
         primary_route=primary_route,
@@ -179,6 +191,7 @@ def _make_pilot_trace_summary() -> Any:
         adaptive_intervention_trigger="mind_validation_required",
         adaptive_intervention_selected_action="specialist_reevaluation",
         adaptive_intervention_effectiveness="effective",
+        adaptive_intervention_policy_status="policy_aligned",
         memory_causality_status="attached_only",
         primary_mind="analise_estruturada",
         primary_route="analysis",
@@ -386,6 +399,14 @@ def main() -> None:
                     metacognitive_guidance_status="healthy",
                     mind_disagreement_status="validation_required",
                     mind_validation_checkpoint_status="attention_required",
+                    adaptive_intervention_status="healthy",
+                    adaptive_intervention_reason=(
+                        "discordancia entre mentes exigiu checkpoint governado"
+                    ),
+                    adaptive_intervention_trigger="mind_validation_required",
+                    adaptive_intervention_selected_action="specialist_reevaluation",
+                    adaptive_intervention_effectiveness="effective",
+                    adaptive_intervention_policy_status="policy_aligned",
                     memory_causality_status="attached_only",
                     memory_lifecycle_status="review_recommended",
                     memory_review_status="review_recommended",
@@ -456,6 +477,10 @@ def main() -> None:
         "Comparison summary lost the mind validation checkpoint release decision.",
     )
     _ensure(
+        summary["candidate_adaptive_intervention_policy_decision"] == "policy_aligned",
+        "Comparison summary lost the adaptive intervention policy release decision.",
+    )
+    _ensure(
         summary["candidate_memory_corpus_decision"] == "review_recommended",
         "Comparison summary lost the memory corpus release decision.",
     )
@@ -494,6 +519,11 @@ def main() -> None:
         "Scenario comparison lost the mind validation checkpoint assessment.",
     )
     _ensure(
+        scenario["candidate_adaptive_intervention_policy_assessment"]
+        == "policy_aligned",
+        "Scenario comparison lost the adaptive intervention policy assessment.",
+    )
+    _ensure(
         scenario["candidate_memory_corpus_assessment"] == "review_recommended",
         "Scenario comparison lost the memory corpus assessment.",
     )
@@ -529,6 +559,11 @@ def main() -> None:
         "candidate_mind_validation_checkpoint_decision=attention_required"
         in comparison_text,
         "Comparison text lost the mind validation checkpoint release line.",
+    )
+    _ensure(
+        "candidate_adaptive_intervention_policy_decision=policy_aligned"
+        in comparison_text,
+        "Comparison text lost the adaptive intervention policy release line.",
     )
     _ensure(
         "candidate_memory_corpus_decision=review_recommended" in comparison_text,
@@ -588,6 +623,10 @@ def main() -> None:
     _ensure(
         "workflow_resume_status=manual_resume_required" in pilot_text,
         "Pilot report text lost the workflow resume assessment.",
+    )
+    _ensure(
+        "adaptive_intervention_policy_status=policy_aligned" in pilot_text,
+        "Pilot report text lost the adaptive intervention policy assessment.",
     )
     _ensure(
         "procedural_artifact_status=candidate" in pilot_text,

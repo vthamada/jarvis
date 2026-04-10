@@ -1,4 +1,4 @@
-from planning_engine.engine import PlanningContext, PlanningEngine
+from planning_engine.engine import AdaptiveIntervention, PlanningContext, PlanningEngine
 
 from shared.contracts import SpecialistContributionContract
 
@@ -650,6 +650,8 @@ def test_planning_engine_applies_mid_flow_cognitive_strategy_shift_when_impasse_
         for criterion in refined.success_criteria
     )
     assert "mudanca_estrategia_mid_flow=guided_validation_impasse:" in refined.rationale
+    assert refined.adaptive_intervention_selected_action == "specialist_reevaluation"
+    assert refined.requires_human_validation is False
 
 
 def test_planning_engine_routes_governed_replay_to_safe_recovery() -> None:
@@ -685,3 +687,67 @@ def test_planning_engine_routes_governed_replay_to_safe_recovery() -> None:
     assert plan.continuity_replay_status == "awaiting_validation"
     assert plan.continuity_recovery_mode == "governed_review"
     assert plan.continuity_resume_point == "continuar:fechar checkpoint principal"
+
+
+def test_planning_engine_prioritizes_specialist_reevaluation_for_analysis_workflows() -> None:
+    engine = PlanningEngine()
+    plan = engine.build_task_plan(
+        PlanningContext(
+            intent="analysis",
+            query="Compare the rollout trade-offs and decide the safest path.",
+            recovered_context=[],
+            active_domains=["analysis", "strategy"],
+            active_minds=["mente_analitica", "mente_critica"],
+            knowledge_snippets=["Compare evidence before closing the recommendation."],
+            risk_markers=[],
+            requires_clarification=False,
+            preferred_response_mode="analysis_only",
+            route_workflow_profile="structured_analysis_workflow",
+            route_workflow_checkpoints=["analysis_framed"],
+            route_workflow_decision_points=["tradeoff_review_governed"],
+            supporting_minds=["mente_critica", "mente_logica"],
+            dominant_tension="equilibrar profundidade analitica com conclusao util",
+            memory_retention_pressure="high",
+        )
+    )
+
+    assert plan.adaptive_intervention_status == "applied"
+    assert plan.adaptive_intervention_selected_action == "specialist_reevaluation"
+    assert plan.adaptive_intervention_trigger == "mind_validation_required"
+    assert "prioridade soberana de structured_analysis_workflow" in (
+        plan.adaptive_intervention_reason or ""
+    )
+
+
+def test_planning_engine_prioritizes_memory_review_for_readiness_workflows() -> None:
+    engine = PlanningEngine()
+    selected = engine._select_workflow_adaptive_intervention(
+        workflow_profile="operational_readiness_workflow",
+        candidates=[
+            AdaptiveIntervention(
+                applied=True,
+                status="applied",
+                reason="pressao de memoria pede revisao antes de prosseguir",
+                trigger="memory_retention_pressure_high",
+                selected_action="memory_review_checkpoint",
+                expected_effect="stabilize recall usage before final synthesis or reuse expansion",
+                effects=["steps", "constraints"],
+            ),
+            AdaptiveIntervention(
+                applied=True,
+                status="applied",
+                reason="discordancia especializada pede reavaliacao antes do fechamento",
+                trigger="mind_validation_required",
+                selected_action="specialist_reevaluation",
+                expected_effect="force governed specialist reevaluation before closing",
+                effects=["steps", "success_criteria"],
+            ),
+        ],
+    )
+
+    assert selected is not None
+    assert selected.selected_action == "memory_review_checkpoint"
+    assert selected.trigger == "memory_retention_pressure_high"
+    assert "prioridade soberana de operational_readiness_workflow" in (
+        selected.reason or ""
+    )

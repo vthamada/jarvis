@@ -160,6 +160,11 @@ def _evaluation_from_dict(payload: dict[str, object]) -> FlowEvaluationInput:
             if payload.get("adaptive_intervention_effectiveness") is not None
             else "not_applicable"
         ),
+        adaptive_intervention_policy_status=(
+            str(payload["adaptive_intervention_policy_status"])
+            if payload.get("adaptive_intervention_policy_status") is not None
+            else "not_applicable"
+        ),
         memory_causality_status=(
             str(payload["memory_causality_status"])
             if payload.get("memory_causality_status") is not None
@@ -316,6 +321,8 @@ def build_payload(args: Namespace) -> dict[str, object]:
             and audit.adaptive_intervention_status in {None, "healthy", "not_applicable"}
             and audit.adaptive_intervention_effectiveness
             in {None, "effective", "not_applicable"}
+            and audit.adaptive_intervention_policy_status
+            in {None, "policy_aligned", "mandatory_override", "not_applicable"}
             and audit.memory_causality_status in {None, "causal_guidance", "not_applicable"}
             and audit.memory_lifecycle_status in {None, "retained", "promoted", "not_applicable"}
             and audit.memory_corpus_status in {None, "stable", "not_applicable"}
@@ -370,6 +377,9 @@ def build_payload(args: Namespace) -> dict[str, object]:
                 ),
                 adaptive_intervention_effectiveness=(
                     audit.adaptive_intervention_effectiveness
+                ),
+                adaptive_intervention_policy_status=(
+                    audit.adaptive_intervention_policy_status
                 ),
                 memory_causality_status=audit.memory_causality_status,
                 primary_mind=audit.primary_mind,
@@ -460,6 +470,12 @@ def build_payload(args: Namespace) -> dict[str, object]:
                         f"{item.get('candidate_memory_causality_assessment', 'n/a')}"
                     ),
                     (
+                        "adaptive_intervention_policy="
+                        f"{item.get('baseline_adaptive_intervention_policy_assessment', 'n/a')}"
+                        "->"
+                        f"{item.get('candidate_adaptive_intervention_policy_assessment', 'n/a')}"
+                    ),
+                    (
                         "memory_lifecycle="
                         f"{item.get('baseline_memory_lifecycle_assessment', 'n/a')}"
                         "->"
@@ -541,6 +557,12 @@ def build_payload(args: Namespace) -> dict[str, object]:
                     ),
                     "candidate_memory_causality_assessment": item.get(
                         "candidate_memory_causality_assessment"
+                    ),
+                    "baseline_adaptive_intervention_policy_assessment": item.get(
+                        "baseline_adaptive_intervention_policy_assessment"
+                    ),
+                    "candidate_adaptive_intervention_policy_assessment": item.get(
+                        "candidate_adaptive_intervention_policy_assessment"
                     ),
                     "baseline_memory_lifecycle_assessment": item.get(
                         "baseline_memory_lifecycle_assessment"
@@ -642,6 +664,12 @@ def render_text(payload: dict[str, object]) -> str:
                         f"{item.get('baseline_memory_causality_assessment', 'n/a')}"
                         "->"
                         f"{item.get('candidate_memory_causality_assessment', 'n/a')}"
+                    ),
+                    (
+                        "adaptive_intervention_policy="
+                        f"{item.get('baseline_adaptive_intervention_policy_assessment', 'n/a')}"
+                        "->"
+                        f"{item.get('candidate_adaptive_intervention_policy_assessment', 'n/a')}"
                     ),
                     (
                         "memory_lifecycle="

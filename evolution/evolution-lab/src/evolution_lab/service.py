@@ -68,6 +68,7 @@ class FlowEvaluationInput:
     adaptive_intervention_status: str | None = None
     adaptive_intervention_selected_action: str | None = None
     adaptive_intervention_effectiveness: str | None = None
+    adaptive_intervention_policy_status: str | None = None
     memory_causality_status: str | None = None
     primary_mind: str | None = None
     primary_route: str | None = None
@@ -356,6 +357,11 @@ class EvolutionLabService:
                 "runtime://adaptive-intervention-effectiveness/"
                 f"{evaluation.adaptive_intervention_effectiveness}"
             )
+        if evaluation.adaptive_intervention_policy_status:
+            source_signals.append(
+                "runtime://adaptive-intervention-policy/"
+                f"{evaluation.adaptive_intervention_policy_status}"
+            )
         if evaluation.memory_causality_status:
             source_signals.append(
                 f"memory://causality/{evaluation.memory_causality_status}"
@@ -598,6 +604,13 @@ class EvolutionLabService:
                 evaluation.adaptive_intervention_status,
                 evaluation.adaptive_intervention_effectiveness,
             ),
+            "adaptive_intervention_policy": (
+                EvolutionLabService._adaptive_intervention_policy_score(
+                    EvolutionLabService._adaptive_intervention_policy_readiness(
+                        evaluation
+                    )
+                )
+            ),
             "memory_causality": EvolutionLabService._memory_causality_score(
                 evaluation.memory_causality_status
             ),
@@ -747,6 +760,17 @@ class EvolutionLabService:
         return weights.get(effectiveness or "incomplete", 0.0)
 
     @staticmethod
+    def _adaptive_intervention_policy_score(status: str | None) -> float:
+        weights = {
+            "policy_aligned": 1.0,
+            "mandatory_override": 0.9,
+            "review_recommended": 0.6,
+            "attention_required": 0.0,
+            "not_applicable": 0.7,
+        }
+        return weights.get(status, 0.7 if status is None else 0.0)
+
+    @staticmethod
     def _procedural_artifact_score(status: str | None) -> float:
         weights = {
             "reusable": 1.0,
@@ -810,6 +834,11 @@ class EvolutionLabService:
             return True
         if evaluation.adaptive_intervention_status == "attention_required":
             return True
+        if (
+            EvolutionLabService._adaptive_intervention_policy_readiness(evaluation)
+            in {"attention_required", "review_recommended"}
+        ):
+            return True
         if evaluation.adaptive_intervention_effectiveness in {"insufficient", "incomplete"}:
             return True
         if evaluation.memory_causality_status in {"attached_only", "attention_required"}:
@@ -853,6 +882,8 @@ class EvolutionLabService:
             return "moderate"
         if evaluation.mind_validation_checkpoint_status == "attention_required":
             return "moderate"
+        if evaluation.adaptive_intervention_policy_status == "attention_required":
+            return "moderate"
         if evaluation.adaptive_intervention_effectiveness in {"insufficient", "incomplete"}:
             return "moderate"
         if evaluation.memory_causality_status == "attention_required":
@@ -874,6 +905,11 @@ class EvolutionLabService:
             return "moderate"
         if evaluation.workflow_output_status == "misaligned":
             return "moderate"
+        if (
+            EvolutionLabService._adaptive_intervention_policy_readiness(evaluation)
+            == "review_recommended"
+        ):
+            return "low_to_moderate"
         if evaluation.axis_gate_status not in {None, "healthy"}:
             return "low_to_moderate"
         if evaluation.workflow_profile_status in {"maturation_recommended", "attention_required"}:
@@ -912,6 +948,9 @@ class EvolutionLabService:
     ) -> list[dict[str, str]]:
         workflow_profile = EvolutionLabService._workflow_key(evaluation)
         vectors: list[dict[str, str]] = []
+        adaptive_policy_readiness = (
+            EvolutionLabService._adaptive_intervention_policy_readiness(evaluation)
+        )
 
         def add_vector(axis: str, priority: str, recommendation: str) -> None:
             vectors.append(
@@ -950,6 +989,18 @@ class EvolutionLabService:
                 "adaptive_intervention",
                 "p0",
                 "fazer a intervencao adaptativa alterar steps, contencao ou revisao com efeito observavel",
+            )
+        if adaptive_policy_readiness == "attention_required":
+            add_vector(
+                "adaptive_intervention_policy",
+                "p0",
+                "realinhar a prioridade soberana do workflow com a intervencao que realmente preserva o checkpoint ativo",
+            )
+        elif adaptive_policy_readiness == "review_recommended":
+            add_vector(
+                "adaptive_intervention_policy",
+                "p1",
+                "revisar a prioridade soberana do workflow porque a politica escolhida segue valida, mas ainda fecha mal o checkpoint preservado",
             )
         if evaluation.memory_causality_status in {"attached_only", "attention_required"}:
             add_vector(
@@ -1021,6 +1072,11 @@ class EvolutionLabService:
                     if evaluation.adaptive_intervention_status not in {None, "not_applicable"}
                     else "not_applicable"
                 ),
+                "adaptive_intervention_policy": (
+                    EvolutionLabService._adaptive_intervention_policy_readiness(
+                        evaluation
+                    )
+                ),
                 "mind_composition": EvolutionLabService._mind_composition_assessment(
                     evaluation
                 ),
@@ -1036,6 +1092,22 @@ class EvolutionLabService:
                 ),
             }
         }
+
+    @staticmethod
+    def _adaptive_intervention_policy_readiness(
+        evaluation: FlowEvaluationInput,
+    ) -> str:
+        status = evaluation.adaptive_intervention_policy_status
+        if status in {None, "not_applicable"}:
+            return "not_applicable"
+        if status == "attention_required":
+            return "attention_required"
+        if (
+            status in {"policy_aligned", "mandatory_override"}
+            and evaluation.adaptive_intervention_effectiveness in {"insufficient", "incomplete"}
+        ):
+            return "review_recommended"
+        return status
 
     @staticmethod
     def _mind_composition_assessment(evaluation: FlowEvaluationInput) -> str:

@@ -2,12 +2,13 @@
 
 ## Metadata
 
-- Atualizado em: 2026-04-09
+- Atualizado em: 2026-04-10
 - Branch: `main`
-- Commit de referência: `18fc7ac`
+- Commit de referência: `23f5059`
 - Artefato canônico do projeto: `documento_mestre_jarvis.md`
 - Estado do projeto: `v1` encerrado e congelado para uso controlado; primeiro ciclo do `pós-v1` encerrado; primeiro ciclo do `v1.5` encerrado; primeiro corte do `v2` encerrado; `v2-alignment-cycle` encerrado; próximo corte do `v2` aberto
 - Fila micro ativa: `docs/implementation/execution-backlog.md`
+- Backlog macro unificado: `docs/implementation/unified-gap-and-absorption-backlog.md`
 
 ## Atualização do próximo corte do v2
 
@@ -82,9 +83,33 @@ Leitura operacional correta desta rodada:
 
 ## Meta atual
 
+Leitura atualizada desta rodada:
+
+- o baseline fechado do `v2` agora precisa virar repriorizacao explicita, e nao
+  continuacao inercial de lotes ja concluidos;
+- `docs/implementation/unified-gap-and-absorption-backlog.md` passa a ser o
+  mapa macro do que ainda falta no sistema;
+- a proxima fila micro deve nascer dali, sem abrir vertical nova por impulso.
+
 Consolidar o fechamento operacional do `v2` sobre um runtime já alinhado aos eixos do Documento-Mestre, fazendo os sinais causais já absorvidos virarem critério soberano de intervenção adaptativa antes de qualquer nova frente macro.
 
 ### Foco operacional atual
+
+Atualizacao desta rodada:
+
+- preservar `MB-037` a `MB-066` como baseline fechado e nao reabrir Onda 1,
+  maturacao causal, maturacao adaptativa ou politica soberana por workflow por
+  inercia local;
+- usar `docs/implementation/unified-gap-and-absorption-backlog.md` como backlog
+  macro do que ainda falta, separando gaps do nucleo, traducao tecnologica,
+  superficies, evolucao, verticais `deferred` e pesquisa;
+- derivar o proximo lote micro a partir de itens que ainda aumentem
+  profundidade do nucleo no `v2 restante`, e nao de superficies amplas;
+- tratar a Onda 2 apenas como experimento controlado guiado pela matriz de
+  readiness ja existente;
+- manter `protective intelligence`, `voice/realtime`, memoria temporal forte,
+  `OpenClaw`, `Manus` e auto-modificacao fora da fila micro ate mudanca
+  explicita de fase.
 
 - primeiro: preservar o `domain_registry` como autoridade única do contrato de rota promovida ao longo de `planning`, `memory`, `specialist`, `orchestrator` e observabilidade;
 - depois: aprofundar critérios de saída e leitura final por `workflow_profile` sem reintroduzir heurística espalhada;
@@ -129,6 +154,7 @@ Sistema oficial de planejamento desta fase:
 
 - `HANDOFF.md` como retomada tático-operacional;
 - `docs/implementation/execution-backlog.md` como fila micro soberana do corte ativo;
+- `docs/implementation/unified-gap-and-absorption-backlog.md` como mapa macro do que ainda falta e base para a proxima repriorizacao;
 - `docs/operations/chat-transition-template.md` como template operacional para abrir novo chat sem perder foco entre lotes;
 - `docs/roadmap/programa-ate-v3.md` como direção do programa até `v3`;
 - `docs/archive/implementation/v2-cycle-closure.md` como fechamento formal do primeiro corte do `v2`;
@@ -295,20 +321,27 @@ Regra de estudo externo no `v2`:
 ## Próximos passos imediatos
 
 Ordem recomendada:
-1. tratar `docs/implementation/v2-adherence-snapshot.md` como leitura oficial do baseline atual do `v2`, agora ja com o lote `MB-057` a `MB-061` fechado;
-2. manter `HANDOFF.md`, `CHANGELOG.md` e o snapshot como docs vivos do baseline sem abrir outro corte documental por inercia;
-3. preservar `MB-023` a `MB-026` como baseline fechado e `MB-027` a `MB-031` como `deferred`, sem reabrir `protective intelligence` por impulso;
-4. usar o lote `MB-057` a `MB-061` como baseline fechado para decidir qual e o proximo ganho causal do nucleo, sem abrir frente por inercia;
-5. repriorizar explicitamente o proximo lote micro antes de voltar a implementar, sem usar a matriz da Onda 2 como gatilho automatico de absorcao externa;
-6. manter historico regeneravel em `docs/archive/implementation/` e `tools/archive/` sem reexpandir a raiz do repositorio;
-7. so abrir outra frente funcional ou novo lote micro quando essa repriorizacao explicita acontecer ou se a prioridade macro mudar.
+1. usar `docs/implementation/unified-gap-and-absorption-backlog.md` como mapa macro do que ainda falta, antes de abrir novo item `ready`;
+2. derivar o proximo lote micro do `execution-backlog` a partir de um eixo claro desse backlog macro, preferindo profundidade do nucleo no `v2 restante`;
+3. tratar `docs/implementation/v2-adherence-snapshot.md` como leitura oficial do baseline atual do `v2`, agora ja com o lote `MB-062` a `MB-066` fechado;
+4. manter `HANDOFF.md`, `CHANGELOG.md` e o snapshot como docs vivos do baseline sem abrir outro corte documental por inercia;
+5. preservar `MB-023` a `MB-026` como baseline fechado e `MB-027` a `MB-031` como `deferred`, sem reabrir `protective intelligence` por impulso;
+6. tratar `MB-062` a `MB-066` como baseline ja fechado do lote de prioridade soberana por workflow, preservando a gramatica nova em `planning`, `synthesis`, `response_synthesized`, comparadores e loop evolutivo;
+7. manter a fila micro sem item `ready` ate nova repriorizacao explicita do operador, sem reabrir o lote por inercia local;
+8. manter historico regeneravel em `docs/archive/implementation/` e `tools/archive/` sem reexpandir a raiz do repositorio;
+9. so abrir outra frente funcional ou novo lote micro quando essa repriorizacao explicita acontecer ou se a prioridade macro mudar.
 
 Atualização desta rodada:
 
 - `MB-052` a `MB-056` permanecem fechados como lote anterior de maturacao adaptativa do nucleo;
 - `MB-057` a `MB-061` foram concluidos e fecharam o lote de intervencao adaptativa governada do nucleo;
 - `adaptive_intervention_*` agora existe como contrato soberano do runtime, evidenciado em `planning`, `orchestrator`, `observability`, piloto, comparadores, `evolution-lab` e verificadores de release;
-- a fila micro volta a ficar sem item `ready`, exigindo repriorizacao explicita antes do proximo lote;
+- `MB-062` ja foi concluido e abriu o novo lote de prioridade soberana por workflow, fazendo `structured_analysis`, `strategy`, `software_change`, `governance`, `decision_risk` e `operational_readiness` deixarem de compartilhar a mesma precedencia fixa entre revisao de memoria e reavaliacao especializada;
+- `MB-063` agora tambem foi concluido: `observability-service`, `internal_pilot_report`, `compare_orchestrator_paths.py` e `verify_release_signal_baseline.py` passaram a publicar `adaptive_intervention_policy_status`, distinguindo `policy_aligned`, `mandatory_override` e `attention_required`;
+- `MB-064` a `MB-066` agora tambem foram concluidos: `synthesis` e `response_synthesized` passaram a expor a prioridade do workflow com checkpoint/gate preservado, enquanto `evolution-lab`, `evolution_from_pilot.py` e comparadores promovem a politica de intervencao a criterio formal de refinamento;
+- a fila micro volta a ficar sem item `ready`, aguardando apenas nova repriorizacao explicita do operador;
+- a rodada seguinte recuperou o gate global: `planning-engine` deixou de promover `specialist_reevaluation` a validacao humana no plano refinado, `shared/domain_registry.py` voltou a preservar `workflow_steps`, `workflow_checkpoints` e `workflow_decision_points` em rotas promovidas, e `python tools/engineering_gate.py --mode standard` agora fecha sem falhas;
+- `documento_mestre_jarvis.md`, `docs/roadmap/programa-ate-v3.md` e `docs/implementation/v2-adherence-snapshot.md` agora deixam mais explicito que LLMs e runtimes agentic entram como substrato subordinado ao nucleo, que multiplas superficies expõem a mesma entidade e que o horizonte do `v3` inclui estado operacional mais rico do ecossistema;
 - `protective intelligence` segue preservada em `deferred`, e a matriz de readiness da Onda 2 continua apenas como insumo controlado do proximo refinamento do nucleo.
 
 ## Riscos e bloqueios
@@ -324,6 +357,7 @@ Atualização desta rodada:
 - `README.md`
 - `HANDOFF.md`
 - `CHANGELOG.md`
+- `docs/implementation/unified-gap-and-absorption-backlog.md`
 - `docs/roadmap/programa-ate-v3.md`
 - `docs/archive/implementation/v2-domain-consumers-and-workflows-cut.md`
 - `docs/archive/implementation/v2-memory-gap-evidence-cut.md`
@@ -334,6 +368,7 @@ Atualização desta rodada:
 - `docs/archive/implementation/v2-native-memory-scope-hardening-cut.md`
 - `docs/documentation/matriz-de-aderencia-mestre.md`
 - `docs/architecture/technology-study.md`
+- `docs/architecture/turboquant-review.md`
 - `docs/archive/implementation/`
 - `docs/operations/v1-operational-baseline.md`
 - `services/orchestrator-service/src/orchestrator_service/service.py`
@@ -352,11 +387,13 @@ Leitura mínima para qualquer novo agente:
 1. `HANDOFF.md`
 2. `documento_mestre_jarvis.md`
 3. `docs/roadmap/programa-ate-v3.md`
-4. `docs/archive/implementation/v1-5-cycle-closure.md`
-5. `docs/archive/implementation/v2-cycle-closure.md`
-6. `docs/archive/implementation/v2-alignment-cycle.md`
-7. `docs/archive/implementation/v2-sovereign-alignment-cut.md`
-8. `docs/architecture/technology-study.md`
+4. `docs/implementation/unified-gap-and-absorption-backlog.md`
+5. `docs/archive/implementation/v1-5-cycle-closure.md`
+6. `docs/archive/implementation/v2-cycle-closure.md`
+7. `docs/archive/implementation/v2-alignment-cycle.md`
+8. `docs/archive/implementation/v2-sovereign-alignment-cut.md`
+9. `docs/architecture/technology-study.md`
+10. `docs/architecture/turboquant-review.md`
 
 
 ## Visão de absorção tecnológica

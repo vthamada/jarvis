@@ -99,6 +99,24 @@ def adaptive_intervention_assessment(result: PilotExecutionResult) -> str:
     return result.adaptive_intervention_effectiveness
 
 
+def adaptive_intervention_policy_assessment(result: PilotExecutionResult) -> str:
+    return result.adaptive_intervention_policy_status
+
+
+def adaptive_intervention_policy_readiness(result: PilotExecutionResult) -> str:
+    status = result.adaptive_intervention_policy_status
+    if status in {None, "not_applicable"}:
+        return "not_applicable"
+    if status == "attention_required":
+        return "attention_required"
+    if (
+        status in {"policy_aligned", "mandatory_override"}
+        and result.adaptive_intervention_effectiveness in {"insufficient", "incomplete"}
+    ):
+        return "review_recommended"
+    return status
+
+
 def memory_causality_assessment(result: PilotExecutionResult) -> str:
     return result.memory_causality_status
 
@@ -184,6 +202,7 @@ def workflow_key(result: PilotExecutionResult) -> str:
 def refinement_vectors(result: PilotExecutionResult) -> list[dict[str, str]]:
     workflow_profile = workflow_key(result)
     vectors: list[dict[str, str]] = []
+    adaptive_policy_readiness = adaptive_intervention_policy_readiness(result)
 
     def add_vector(axis: str, priority: str, recommendation: str) -> None:
         vectors.append(
@@ -224,6 +243,24 @@ def refinement_vectors(result: PilotExecutionResult) -> list[dict[str, str]]:
             (
                 "fazer a intervencao adaptativa fechar o trigger causal "
                 "sem degradar a saida nem a governanca"
+            ),
+        )
+    if adaptive_policy_readiness == "attention_required":
+        add_vector(
+            "adaptive_intervention_policy",
+            "p0",
+            (
+                "realinhar a prioridade soberana do workflow com a intervencao "
+                "que realmente preserva checkpoint e gate ativos"
+            ),
+        )
+    elif adaptive_policy_readiness == "review_recommended":
+        add_vector(
+            "adaptive_intervention_policy",
+            "p1",
+            (
+                "revisar a prioridade soberana do workflow porque a politica "
+                "seguida ainda fecha mal o checkpoint preservado"
             ),
         )
     if result.memory_causality_status in {"attached_only", "attention_required"}:
@@ -352,6 +389,12 @@ def evaluation_matrix(
             ),
             "adaptive_intervention": summarize_statuses(
                 [adaptive_intervention_assessment(result) for result in workflow_results]
+            ),
+            "adaptive_intervention_policy": summarize_statuses(
+                [
+                    adaptive_intervention_policy_readiness(result)
+                    for result in workflow_results
+                ]
             ),
             "mind_composition": summarize_workflow_profile_assessments(
                 [mind_composition_assessment(result) for result in workflow_results]
@@ -504,6 +547,12 @@ def summarize_comparisons(
             "candidate_mind_validation_checkpoint_decision": "not_applicable",
             "baseline_adaptive_intervention_decision": "not_applicable",
             "candidate_adaptive_intervention_decision": "not_applicable",
+            "baseline_adaptive_intervention_policy_decision": "not_applicable",
+            "candidate_adaptive_intervention_policy_decision": "not_applicable",
+            "baseline_adaptive_intervention_policy_aligned_rate": 0.0,
+            "candidate_adaptive_intervention_policy_aligned_rate": 0.0,
+            "baseline_adaptive_intervention_mandatory_override_rate": 0.0,
+            "candidate_adaptive_intervention_mandatory_override_rate": 0.0,
             "baseline_memory_causality_decision": "not_applicable",
             "candidate_memory_causality_decision": "not_applicable",
             "baseline_memory_causal_rate": 0.0,
@@ -638,6 +687,12 @@ def summarize_comparisons(
     ]
     candidate_adaptive_intervention = [
         adaptive_intervention_assessment(item) for item in available_candidates
+    ]
+    baseline_adaptive_intervention_policy = [
+        adaptive_intervention_policy_assessment(item.baseline) for item in comparisons
+    ]
+    candidate_adaptive_intervention_policy = [
+        adaptive_intervention_policy_assessment(item) for item in available_candidates
     ]
     baseline_memory_causality = [
         memory_causality_assessment(item.baseline) for item in comparisons
@@ -817,6 +872,28 @@ def summarize_comparisons(
         ),
         "candidate_adaptive_intervention_decision": summarize_statuses(
             candidate_adaptive_intervention
+        ),
+        "baseline_adaptive_intervention_policy_decision": summarize_statuses(
+            baseline_adaptive_intervention_policy
+        ),
+        "candidate_adaptive_intervention_policy_decision": summarize_statuses(
+            candidate_adaptive_intervention_policy
+        ),
+        "baseline_adaptive_intervention_policy_aligned_rate": status_rate(
+            baseline_adaptive_intervention_policy,
+            "policy_aligned",
+        ),
+        "candidate_adaptive_intervention_policy_aligned_rate": status_rate(
+            candidate_adaptive_intervention_policy,
+            "policy_aligned",
+        ),
+        "baseline_adaptive_intervention_mandatory_override_rate": status_rate(
+            baseline_adaptive_intervention_policy,
+            "mandatory_override",
+        ),
+        "candidate_adaptive_intervention_mandatory_override_rate": status_rate(
+            candidate_adaptive_intervention_policy,
+            "mandatory_override",
         ),
         "baseline_memory_causality_decision": summarize_statuses(
             baseline_memory_causality
@@ -1040,6 +1117,10 @@ def summarize_statuses(statuses: list[str]) -> str:
         return "manual_resume_required"
     if any(item == "attention_required" for item in statuses):
         return "attention_required"
+    if any(item == "mandatory_override" for item in statuses):
+        return "mandatory_override"
+    if any(item == "policy_aligned" for item in statuses):
+        return "policy_aligned"
     if any(item == "deep_review_required" for item in statuses):
         return "deep_review_required"
     if any(item == "insufficient" for item in statuses):
@@ -1203,6 +1284,11 @@ def compare_results(
                 != candidate.adaptive_intervention_effectiveness
             ):
                 mismatch_fields.append("adaptive_intervention_effectiveness")
+            if (
+                baseline.adaptive_intervention_policy_status
+                != candidate.adaptive_intervention_policy_status
+            ):
+                mismatch_fields.append("adaptive_intervention_policy_status")
             if (
                 baseline.procedural_artifact_status
                 != candidate.procedural_artifact_status
@@ -1461,6 +1547,14 @@ def render_text(payload: dict[str, object]) -> str:
                         f"{item['baseline_adaptive_intervention_assessment']}"
                     ),
                     (
+                        "baseline_adaptive_intervention_policy_status="
+                        f"{item['baseline']['adaptive_intervention_policy_status']}"
+                    ),
+                    (
+                        "baseline_adaptive_intervention_policy_assessment="
+                        f"{item['baseline_adaptive_intervention_policy_assessment']}"
+                    ),
+                    (
                         "baseline_memory_causality_status="
                         f"{item['baseline']['memory_causality_status']}"
                     ),
@@ -1607,6 +1701,18 @@ def render_text(payload: dict[str, object]) -> str:
                         f"{item['candidate_adaptive_intervention_assessment']}"
                         if item["candidate_adaptive_intervention_assessment"] is not None
                         else "candidate_adaptive_intervention_assessment=n/a"
+                    ),
+                    (
+                        "candidate_adaptive_intervention_policy_status="
+                        f"{item['candidate']['adaptive_intervention_policy_status']}"
+                        if item["candidate"]
+                        else "candidate_adaptive_intervention_policy_status=n/a"
+                    ),
+                    (
+                        "candidate_adaptive_intervention_policy_assessment="
+                        f"{item['candidate_adaptive_intervention_policy_assessment']}"
+                        if item["candidate_adaptive_intervention_policy_assessment"] is not None
+                        else "candidate_adaptive_intervention_policy_assessment=n/a"
                     ),
                     (
                         "candidate_memory_causality_status="
@@ -1840,6 +1946,10 @@ def render_text(payload: dict[str, object]) -> str:
                 f"{summary['baseline_adaptive_intervention_decision']}",
                 "candidate_adaptive_intervention_decision="
                 f"{summary['candidate_adaptive_intervention_decision']}",
+                "baseline_adaptive_intervention_policy_decision="
+                f"{summary['baseline_adaptive_intervention_policy_decision']}",
+                "candidate_adaptive_intervention_policy_decision="
+                f"{summary['candidate_adaptive_intervention_policy_decision']}",
                 "baseline_memory_corpus_decision="
                 f"{summary['baseline_memory_corpus_decision']}",
                 "candidate_memory_corpus_decision="
@@ -1991,6 +2101,9 @@ def serialize_comparisons(
                 "baseline_adaptive_intervention_assessment": (
                     adaptive_intervention_assessment(item.baseline)
                 ),
+                "baseline_adaptive_intervention_policy_assessment": (
+                    adaptive_intervention_policy_assessment(item.baseline)
+                ),
                 "baseline_memory_causality_assessment": memory_causality_assessment(
                     item.baseline
                 ),
@@ -2061,6 +2174,11 @@ def serialize_comparisons(
                 ),
                 "candidate_adaptive_intervention_assessment": (
                     adaptive_intervention_assessment(item.candidate)
+                    if item.candidate
+                    else None
+                ),
+                "candidate_adaptive_intervention_policy_assessment": (
+                    adaptive_intervention_policy_assessment(item.candidate)
                     if item.candidate
                     else None
                 ),

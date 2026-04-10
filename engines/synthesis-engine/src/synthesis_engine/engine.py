@@ -58,6 +58,9 @@ class SynthesisResult:
     output_validation_retry_applied: bool
     workflow_output_status: str
     workflow_output_errors: list[str]
+    adaptive_intervention_workflow_priority_summary: str | None
+    adaptive_intervention_preserved_checkpoint: str | None
+    adaptive_intervention_preserved_gate: str | None
 
 
 class SynthesisEngine:
@@ -73,6 +76,11 @@ class SynthesisEngine:
 
         response_text = self._compose_raw_response(synthesis_input)
         validation_errors = self._validate_output(response_text)
+        (
+            adaptive_intervention_summary,
+            adaptive_intervention_checkpoint,
+            adaptive_intervention_gate,
+        ) = self._adaptive_intervention_workflow_priority_details(synthesis_input)
         workflow_output_status, workflow_output_errors = self._assess_workflow_output(
             response_text,
             synthesis_input=synthesis_input,
@@ -85,6 +93,13 @@ class SynthesisEngine:
                 output_validation_retry_applied=False,
                 workflow_output_status=workflow_output_status,
                 workflow_output_errors=workflow_output_errors,
+                adaptive_intervention_workflow_priority_summary=(
+                    adaptive_intervention_summary
+                ),
+                adaptive_intervention_preserved_checkpoint=(
+                    adaptive_intervention_checkpoint
+                ),
+                adaptive_intervention_preserved_gate=adaptive_intervention_gate,
             )
 
         repaired_response = self._repair_output(
@@ -109,6 +124,9 @@ class SynthesisEngine:
             output_validation_retry_applied=True,
             workflow_output_status=repaired_workflow_status,
             workflow_output_errors=repaired_workflow_errors,
+            adaptive_intervention_workflow_priority_summary=adaptive_intervention_summary,
+            adaptive_intervention_preserved_checkpoint=adaptive_intervention_checkpoint,
+            adaptive_intervention_preserved_gate=adaptive_intervention_gate,
         )
 
     def _compose_raw_response(self, synthesis_input: SynthesisInput) -> str:
@@ -138,6 +156,11 @@ class SynthesisEngine:
                 f"Recomendacao: {self._recommendation_line(synthesis_input)}.",
             ]
         )
+        adaptive_intervention_line = self._adaptive_intervention_workflow_priority_line(
+            synthesis_input
+        )
+        if adaptive_intervention_line:
+            parts.append(f"Intervencao adaptativa: {adaptive_intervention_line}.")
         artifact_line = self._procedural_artifact_line(synthesis_input)
         if artifact_line:
             parts.append(f"Artefato procedural: {artifact_line}.")
@@ -192,6 +215,13 @@ class SynthesisEngine:
             f"Julgamento: {judgment}. "
             f"Recomendacao: {recommendation}"
         )
+        adaptive_intervention_line = self._adaptive_intervention_workflow_priority_line(
+            synthesis_input
+        )
+        if adaptive_intervention_line:
+            repaired = (
+                f"{repaired}. Intervencao adaptativa: {adaptive_intervention_line}"
+            )
         limitation = self._limitation_line(synthesis_input)
         if limitation:
             repaired = f"{repaired}. Limite atual: {limitation}"
@@ -271,6 +301,18 @@ class SynthesisEngine:
                     clause_name="workflow_gate",
                     clause_prefix="gate governado:",
                     expected_value=workflow_decision,
+                )
+            )
+        adaptive_intervention_line = self._adaptive_intervention_workflow_priority_line(
+            synthesis_input
+        )
+        if adaptive_intervention_line:
+            errors.extend(
+                self._validate_expected_clause(
+                    response_text,
+                    clause_name="adaptive_intervention_workflow_priority",
+                    clause_prefix="Intervencao adaptativa:",
+                    expected_value=adaptive_intervention_line,
                 )
             )
         expected_deliverable = self._present_contract_label(
@@ -395,6 +437,13 @@ class SynthesisEngine:
             f"Julgamento: {judgment}. "
             f"Recomendacao: {recommendation}"
         )
+        adaptive_intervention_line = self._adaptive_intervention_workflow_priority_line(
+            synthesis_input
+        )
+        if adaptive_intervention_line:
+            response = (
+                f"{response}. Intervencao adaptativa: {adaptive_intervention_line}"
+            )
         limitation = self._limitation_line(synthesis_input)
         if limitation:
             response = f"{response}. Limite atual: {limitation}"
@@ -827,6 +876,79 @@ class SynthesisEngine:
         if "recommendation" in effects:
             clauses.append("memoria procedural ancora a recomendacao final")
         return "; ".join(clauses) if clauses else None
+
+    def _adaptive_intervention_workflow_priority_line(
+        self,
+        synthesis_input: SynthesisInput,
+    ) -> str | None:
+        summary, _, _ = self._adaptive_intervention_workflow_priority_details(
+            synthesis_input
+        )
+        return summary
+
+    def _adaptive_intervention_workflow_priority_details(
+        self,
+        synthesis_input: SynthesisInput,
+    ) -> tuple[str | None, str | None, str | None]:
+        plan = synthesis_input.deliberative_plan
+        if (
+            plan is None
+            or plan.adaptive_intervention_status in {None, "not_applicable"}
+            or not plan.adaptive_intervention_selected_action
+        ):
+            return (None, None, None)
+        guidance = workflow_runtime_guidance(plan.route_workflow_profile)
+        workflow_label = self._present_contract_label(plan.route_workflow_profile)
+        action_label = self._present_contract_label(
+            plan.adaptive_intervention_selected_action
+        )
+        if workflow_label is None or action_label is None:
+            return (None, None, None)
+        preserved_checkpoint = self._present_contract_label(
+            plan.route_workflow_checkpoints[0]
+            if plan.route_workflow_checkpoints
+            else None
+        )
+        preserved_gate = self._present_contract_label(
+            plan.route_workflow_decision_points[0]
+            if plan.route_workflow_decision_points
+            else None
+        )
+        focus_map = {
+            "clarification_checkpoint": "clareza operacional antes da resposta final",
+            "safe_containment": "o caminho governado antes de qualquer retomada",
+            "memory_review_checkpoint": self._present_contract_label(
+                guidance.procedural_memory_role
+            )
+            or "continuidade segura da proxima acao",
+            "specialist_reevaluation": self._present_contract_label(
+                guidance.response_focus
+            )
+            or "o foco final do workflow ativo",
+        }
+        protected_focus = focus_map.get(
+            plan.adaptive_intervention_selected_action,
+            self._present_contract_label(guidance.response_focus)
+            or "o foco final do workflow ativo",
+        )
+        preservation_clause = ""
+        if preserved_checkpoint and preserved_gate:
+            preservation_clause = (
+                f", preservando checkpoint {preserved_checkpoint} "
+                f"e gate {preserved_gate}"
+            )
+        elif preserved_checkpoint:
+            preservation_clause = (
+                f", preservando checkpoint {preserved_checkpoint}"
+            )
+        elif preserved_gate:
+            preservation_clause = f", preservando gate {preserved_gate}"
+        return (
+            f"workflow {workflow_label} priorizou {action_label} "
+            f"para proteger {protected_focus}{preservation_clause}",
+            preserved_checkpoint,
+            preserved_gate,
+        )
 
     def _limitation_line(self, synthesis_input: SynthesisInput) -> str | None:
         plan = synthesis_input.deliberative_plan

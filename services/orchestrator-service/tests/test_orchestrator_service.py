@@ -8,6 +8,7 @@ from observability_service.service import ObservabilityQuery, ObservabilityServi
 from operational_service.service import OperationalService
 from orchestrator_service.service import OrchestratorResponse, OrchestratorService
 from specialist_engine.engine import SpecialistReview
+from synthesis_engine.engine import SynthesisResult
 
 from shared.contracts import DeliberativePlanContract, InputContract
 from shared.types import (
@@ -31,6 +32,31 @@ def runtime_dir(name: str) -> Path:
 
 def test_orchestrator_service_name() -> None:
     assert OrchestratorService.name == "orchestrator-service"
+
+
+def test_orchestrator_service_surfaces_adaptive_intervention_payload_from_synthesis() -> None:
+    payload = OrchestratorService._adaptive_intervention_response_payload(
+        synthesis_result=SynthesisResult(
+            response_text="ok",
+            output_validation_status="coherent",
+            output_validation_errors=[],
+            output_validation_retry_applied=False,
+            workflow_output_status="coherent",
+            workflow_output_errors=[],
+            adaptive_intervention_workflow_priority_summary=(
+                "workflow strategic direction workflow priorizou specialist "
+                "reevaluation para proteger direcao recomendada, criterios e "
+                "trade-offs dominantes, preservando checkpoint scenario framed "
+                "e gate scenario scope confirmed"
+            ),
+            adaptive_intervention_preserved_checkpoint="scenario framed",
+            adaptive_intervention_preserved_gate="scenario scope confirmed",
+        )
+    )
+
+    assert payload["adaptive_intervention_workflow_priority_summary"]
+    assert payload["adaptive_intervention_preserved_checkpoint"] == "scenario framed"
+    assert payload["adaptive_intervention_preserved_gate"] == "scenario scope confirmed"
 
 
 def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
@@ -493,6 +519,24 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     )
     assert response_event.payload["workflow_response_focus"]
     assert response_event.payload["guided_memory_specialists"]
+    if result.deliberative_plan.adaptive_intervention_selected_action:
+        assert response_event.payload["adaptive_intervention_workflow_priority_summary"]
+        assert (
+            response_event.payload["adaptive_intervention_preserved_checkpoint"]
+            == result.deliberative_plan.route_workflow_checkpoints[0].replace("_", " ")
+        )
+        assert (
+            response_event.payload["adaptive_intervention_preserved_gate"]
+            == result.deliberative_plan.route_workflow_decision_points[0].replace("_", " ")
+        )
+        assert (
+            response_event.payload["adaptive_intervention_workflow_priority_summary"]
+            in result.response_text
+        )
+    else:
+        assert response_event.payload["adaptive_intervention_workflow_priority_summary"] is None
+        assert response_event.payload["adaptive_intervention_preserved_checkpoint"] is None
+        assert response_event.payload["adaptive_intervention_preserved_gate"] is None
     memory_event = next(event for event in stored_events if event.event_name == "memory_recorded")
     assert continuity_event.payload["continuity_action"] == "continuar"
     assert response_event.payload["continuity_action"] == "continuar"

@@ -828,6 +828,9 @@ class OrchestratorService:
                     "adaptive_intervention_effects": (
                         deliberative_plan.adaptive_intervention_effects
                     ),
+                    **self._adaptive_intervention_response_payload(
+                        synthesis_result=synthesis_result
+                    ),
                     "cognitive_strategy_shift_applied": (
                         deliberative_plan.cognitive_strategy_shift_applied
                     ),
@@ -2663,6 +2666,23 @@ class OrchestratorService:
                 procedural_artifact_summary=deliberative_plan.procedural_artifact_summary,
             )
         )
+
+    @staticmethod
+    def _adaptive_intervention_response_payload(
+        *,
+        synthesis_result: SynthesisResult,
+    ) -> dict[str, object]:
+        return {
+            "adaptive_intervention_workflow_priority_summary": (
+                synthesis_result.adaptive_intervention_workflow_priority_summary
+            ),
+            "adaptive_intervention_preserved_checkpoint": (
+                synthesis_result.adaptive_intervention_preserved_checkpoint
+            ),
+            "adaptive_intervention_preserved_gate": (
+                synthesis_result.adaptive_intervention_preserved_gate
+            ),
+        }
 
     @staticmethod
     def _guided_memory_runtime_hints(

@@ -73,6 +73,7 @@ def test_internal_pilot_report_summarizes_recent_request() -> None:
     assert summaries[0].workflow_profile_assessment == "not_applicable"
     assert summaries[0].workflow_output_status == "incomplete"
     assert summaries[0].workflow_output_assessment == "attention_required"
+    assert summaries[0].adaptive_intervention_policy_status == "not_applicable"
     assert summaries[0].memory_causality_status == "not_applicable"
     assert summaries[0].mind_domain_specialist_status == "incomplete"
     assert summaries[0].cognitive_recomposition_applied is False
@@ -124,6 +125,7 @@ def test_internal_pilot_report_renders_text() -> None:
                     "workflow_profile_assessment": "maturation_recommended",
                     "workflow_output_status": "partial",
                     "workflow_output_assessment": "maturation_recommended",
+                    "adaptive_intervention_policy_status": "policy_aligned",
                     "memory_causality_status": "causal_guidance",
                     "dominant_tension": "equilibrar profundidade analitica com conclusao util",
                     "arbitration_source": "mind_registry",
@@ -172,6 +174,7 @@ def test_internal_pilot_report_renders_text() -> None:
     assert "workflow_profile_assessment=maturation_recommended" in rendered
     assert "workflow_output_status=partial" in rendered
     assert "workflow_output_assessment=maturation_recommended" in rendered
+    assert "adaptive_intervention_policy_status=policy_aligned" in rendered
     assert "memory_causality_status=causal_guidance" in rendered
     assert "dominant_tension=equilibrar profundidade analitica com conclusao util" in rendered
     assert "primary_domain_driver=dados_estatistica_e_inteligencia_analitica" in rendered

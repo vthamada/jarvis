@@ -142,6 +142,12 @@ Leitura central para o JARVIS:
 | SEAL | self-edits que geram dados de finetuning e diretivas de adaptacao | ideia de "self-edit" persistente e reward-based adaptation | pesquisa de fase futura | nao tentar auto-atualizacao de pesos no baseline atual | deferred |
 | Darwin Godel Machine | auto-modificacao de codigo com validacao empirica e arquivo de variantes | arquivo de candidatos, open-ended exploration, benchmark-gated self-modification | pesquisa de longo prazo para evolucao governada | nao permitir self-modification do nucleo sem sandbox, oversight e gates muito mais fortes | deferred |
 
+### 4.7 Infraestrutura inferencial e vector retrieval
+
+| Tecnologia | Forca principal | Padrao extraivel para o JARVIS | Camada JARVIS | Limite de absorcao | Prioridade |
+| --- | --- | --- | --- | --- | --- |
+| TurboQuant | online vector quantization para `KV cache` e `vector search`, com baixa sobrecarga e foco em distorcao/retrieval | gramatica de compressao vetorial por bitwidth, benchmark de `recall x latencia x memoria`, referencia para `KV cache` comprimido e retrieval vetorial de alta escala | futuro substrate inferencial, `voice/realtime` de contexto longo e retrieval semantico tardio | nao confundir com memoria canonica, nem tratar como justificativa para substituir `PostgreSQL`, `pgvector` ou o nucleo antes de existir consumidor real | baixa |
+
 ---
 
 ## 5. Algoritmos e padroes que mais valem ouro para o JARVIS
@@ -170,6 +176,9 @@ Leitura central para o JARVIS:
 ### 5.2 Padroes de alto valor, mas nao para agora
 
 - connectors e project skills de produto ampla;
+- compressao inferencial e vector retrieval em escala: fonte principal
+  `TurboQuant`; valor para futuro `long-context`, `voice/realtime` pesado e
+  retrieval vetorial quando houver pressao real de memoria/latencia;
 - desktop bridge generalista;
 - cloud async execution como superficie principal;
 - auto-adaptacao de pesos;
@@ -219,9 +228,12 @@ Esta priorizacao agora foi convertida em ordem operacional em:
    - excelente referencia de gateway e skills, mas nao e o foco atual
 2. **Manus**
    - mais forte como vertical de produto ampla do que como prioridade do baseline
-3. **SEAL**
+3. **TurboQuant**
+   - promissor para compressao de `KV cache` e retrieval vetorial, mas ainda
+     sem consumidor canonico no JARVIS atual
+4. **SEAL**
    - relevante como pesquisa, prematuro para o sistema atual
-4. **Darwin Godel Machine**
+5. **Darwin Godel Machine**
    - relevante como horizonte de autoevolucao forte, ainda muito cedo
 
 ---
@@ -232,6 +244,9 @@ Esta priorizacao agora foi convertida em ordem operacional em:
   principalmente referencia de runtime persistente, skills e memoria procedural.
 - `Mem0` nao e a resposta natural para toda memoria do JARVIS; seu melhor valor
   esta em ownership/scoping, nao em substituir o `memory_registry`.
+- `TurboQuant` nao e resposta para memoria canonica nem para os gaps centrais
+  do nucleo; seu valor esta em compressao inferencial e retrieval vetorial de
+  escala tardia.
 - `Mastra` nao compete com o nucleo cognitivo do JARVIS; ela e uma referencia
   forte de semantica de workflow e observabilidade.
 - `OpenHands` nao deve virar identidade do sistema; ele e substrate de coding.
@@ -321,3 +336,8 @@ Esta priorizacao agora foi convertida em ordem operacional em:
 - SEAL repo: https://github.com/Continual-Intelligence/SEAL
 - SEAL paper page: https://huggingface.co/papers/2506.10943
 - Darwin Godel Machine paper page: https://huggingface.co/papers/2505.22954
+
+### 8.6 Infraestrutura inferencial e vector retrieval
+
+- Google Research blog on TurboQuant: https://research.google/blog/turboquant-redefining-ai-efficiency-with-extreme-compression/
+- TurboQuant paper: https://arxiv.org/abs/2504.19874

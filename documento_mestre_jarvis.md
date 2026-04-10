@@ -47,6 +47,7 @@ O JARVIS não deve ser entendido como um simples assistente conversacional, nem 
 - planejar e coordenar ações;
 - produzir artefatos e intervenções úteis;
 - agir com autonomia governada;
+- usar LLMs, modelos inferenciais e runtimes auxiliares como substrato cognitivo subordinado, sem delegar a eles a soberania do sistema;
 - monitorar seu próprio desempenho;
 - aprender com experiência;
 - evoluir sem perder identidade.
@@ -74,9 +75,11 @@ O JARVIS deve possuir as seguintes características estruturais e funcionais:
 - **Unificado**: o usuário interage com uma única entidade coerente.
 - **Persistente**: o sistema mantém continuidade temporal e contextual.
 - **Multimodal**: o sistema pode operar com diferentes tipos de entrada e saída.
+- **Multissuperficie**: o sistema pode se manifestar por chat, voz, console, web, API e outras superficies sem fragmentar identidade, memoria ou missao.
 - **Multidomínio**: o sistema cobre um amplo espectro do conhecimento humano aplicado.
 - **Metacognitivo**: o sistema pensa sobre seu próprio pensamento e seu próprio desempenho.
 - **Operacional**: o sistema não apenas analisa, mas também age.
+- **Situado em ecossistema**: o sistema mantém noção do estado operacional do ambiente, dos workflows, dos artefatos e dos recursos com que interage, e nao apenas do historico conversacional.
 - **Autoevolutivo**: o sistema pode se aperfeiçoar ao longo do tempo sob critérios governados.
 - **Orientado por princípios**: o sistema deve preservar missão, identidade e limites.
 
@@ -220,6 +223,21 @@ Responsável por escolher:
 - quais memórias recuperar;
 - quais fluxos internos iniciar;
 - quais capacidades operacionais acionar.
+- quais ferramentas concretas sao elegiveis sob governanca.
+
+### 9.2.1 Decisor soberano de capacidades e ferramentas
+
+A decisao sobre qual ferramenta, integracao ou runtime auxiliar deve ser usado nao deve nascer de improviso livre de uma LLM isolada.
+
+O fluxo correto deve obedecer a seguinte ordem logica:
+
+1. interpretar a necessidade;
+2. mapear a capacidade requerida;
+3. filtrar elegibilidade, contexto e risco;
+4. aplicar governanca;
+5. selecionar a ferramenta concreta.
+
+A LLM pode ajudar a inferir a necessidade, comparar opcoes e formular o plano, mas a autoridade final sobre capacidade, elegibilidade e execucao pertence ao Nucleo Executivo e Metacognitivo.
 
 ### 9.3 Planejador
 
@@ -238,9 +256,26 @@ Responsável por sincronizar:
 - mentes cognitivas;
 - domínios;
 - memória;
+- estado operacional do ecossistema;
 - camada operacional;
 - camada meta;
 - camada evolutiva.
+
+### 9.4.1 Modelo de estado operacional do ecossistema
+
+O JARVIS nao deve manter apenas memoria de conversa. Ele deve sustentar uma representacao persistente do que esta em curso no ecossistema em que opera.
+
+Esse estado inclui, quando aplicavel:
+
+- missoes ativas;
+- workflows em aberto;
+- checkpoints e pontos de retomada;
+- artefatos em producao;
+- superficies e sessoes ativas;
+- integracoes e recursos relevantes;
+- sinais do ambiente que alterem prioridade, risco ou continuidade.
+
+Regra arquitetural: o JARVIS nao deve lembrar apenas do que foi dito; ele deve lembrar do que esta em curso no sistema que opera.
 
 ### 9.5 Priorizador
 
@@ -2759,6 +2794,25 @@ Isso significa que:
 
 ---
 
+### 26.1.1 Principio de unidade multissuperficie
+
+A mesma entidade deve poder se manifestar por multiplas superficies sem parecer varios agentes independentes.
+
+Isso inclui, por exemplo:
+
+- chat;
+- voz;
+- console;
+- web;
+- API;
+- futuras superficies multimodais.
+
+Cada superficie deve ser entendida como canal ou corpo operacional da mesma entidade, nunca como identidade concorrente.
+
+**Regra arquitetural:** multiplas superficies, uma unica entidade.
+
+---
+
 ### 26.2 Princípio de pluralidade interna
 
 Embora o usuário perceba uma única entidade, o sistema deve conter multiplicidade interna organizada.
@@ -2789,6 +2843,25 @@ Esse núcleo deve ser responsável por:
 - supervisionar evolução.
 
 **Regra arquitetural:** o sistema deve possuir um centro de coordenação e não apenas múltiplas partes autônomas sem eixo unificador.
+
+---
+
+### 26.3.1 Principio de substrato inferencial subordinado
+
+Modelos inferenciais, LLMs, runtimes agentic e frameworks externos podem fornecer linguagem, raciocinio, tool-use, durable execution e outras capacidades relevantes.
+
+No entanto, eles nao devem assumir, por completo:
+
+- identidade;
+- memoria canonica;
+- governanca;
+- continuidade;
+- sintese final;
+- autoridade executiva do sistema.
+
+O JARVIS pode terceirizar inferencia, mas nao deve terceirizar soberania.
+
+**Regra arquitetural:** inferencia pode ser fornecida por modelos e runtimes auxiliares; soberania do sistema permanece no nucleo proprio do JARVIS.
 
 ---
 

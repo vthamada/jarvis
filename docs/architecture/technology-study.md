@@ -155,6 +155,7 @@ Uso correto dessa classificação:
 | AutoGen | multiagentes e conversação entre agentes | benchmark histórico de orquestração | `inspiração arquitetural` |
 | PostgreSQL | backbone operacional de memória e persistência | base operacional própria | `adotar no v1` |
 | pgvector | extensão vetorial do backbone relacional | complemento futuro de memória semântica | `deferir para pós-v1` |
+| TurboQuant | compressao vetorial para `KV cache` e `vector search` em escala | benchmark conceitual de infraestrutura inferencial e retrieval | `inspiração arquitetural` |
 | LangSmith | observabilidade agentic complementar | complemento de tracing e evals | `complementar no v1` |
 | OpenAI Realtime / Voice | camada moderna de voz e realtime | complemento de interface e voz | `complementar no v1` |
 | OpenHands | especialista subordinado de software | referência central de agente de software | `complementar no v1` |
@@ -209,17 +210,32 @@ Decisão atual:
 - mantido fora do caminho crítico do `v1`;
 - continua como fluxo opcional no repositório atual.
 
-### 8.2 PostgreSQL + pgvector
+### 8.2 PostgreSQL + pgvector + TurboQuant
 
 Leitura atual:
 
 - `PostgreSQL` já foi validado e entrou como backend operacional oficial;
 - `pgvector` continua aprovado arquiteturalmente, mas ainda não tem consumidor canônico suficiente para virar parte obrigatória do baseline.
+- `TurboQuant` aparece como referência útil de compressao vetorial para
+  `KV cache` e `vector search`, mas ainda sem consumidor canônico do JARVIS que
+  justifique promoção.
 
 Decisão atual:
 
 - `PostgreSQL`: `adotar no v1`
 - `pgvector`: `deferir para pós-v1`
+- `TurboQuant`: `inspiração arquitetural`
+
+Leitura correta:
+
+- `pgvector` e `TurboQuant` nao competem pelo mesmo papel imediato;
+- `pgvector` pertence ao backbone futuro de retrieval semantico quando houver
+  consumidor canonico;
+- `TurboQuant` pertence a uma camada ainda mais tardia de infraestrutura
+  inferencial e retrieval em escala, especialmente se o JARVIS precisar de
+  `long-context`, `voice/realtime` mais pesados ou indices vetoriais maiores;
+- nenhum dos dois substitui memoria canonica, `memory_registry` ou o nucleo
+  soberano.
 
 ### 8.3 LangSmith
 
@@ -328,6 +344,8 @@ Uma tecnologia pode entrar no sistema de quatro formas:
 - `LangSmith`: entrou como complemento controlado, mantendo a trilha local como fonte primária.
 - `LangGraph`: está em fluxo opcional e segue como candidato a absorção parcial futura.
 - `pgvector`: foi aprovado arquiteturalmente, mas continua deferido até existir consumidor semântico canônico.
+- `TurboQuant`: entra como referência de infraestrutura inferencial e retrieval,
+  mas continua sem consumidor concreto para absorção no ciclo atual.
 - `Hermes Agent`, `Graphiti`, `Zep`, `AutoGPT Platform`, `Mastra` e `Mem0`: seguem como estudo dirigido, sem promoção automática.
 
 ### 9.3 Relação com o programa e com as sprints
@@ -381,6 +399,8 @@ As famílias de estudo devem ser lidas assim:
 - `LangGraph`: referência principal para fluxo stateful, checkpoints, replay e handoffs coordenados;
 - `Hermes Agent`: referência de runtime persistente, memória viva, continuidade operacional e skills;
 - `Graphiti` e `Zep`: referências para memória relacional, temporal e contextual;
+- `TurboQuant`: referencia tardia de compressao vetorial para `KV cache`,
+  `long-context` e retrieval semantico em escala;
 - `AutoGPT Platform`: referência de automações compostas, blocos e agentes contínuos;
 - `Mastra`: referência de workflows tipados, `HITL`, snapshots e guardrails;
 - `Mem0`: referência de memória multicamada operacional;
@@ -445,6 +465,7 @@ Exemplos:
 - "`AutoGPT Platform` melhora a futura camada de automação contínua e workflows acionados por eventos?"
 - "`Mastra` melhora pause/resume, steps tipados ou trilhas de observabilidade do fluxo?"
 - "`Mem0` melhora a modelagem multicamada entre conversa, sessão, usuário e organização?"
+- "`TurboQuant` melhora gargalo real de `KV cache` ou retrieval vetorial em escala, e em qual fase isso passa a valer?"
 
 Se a lacuna não estiver clara, o estudo ainda não deve começar.
 

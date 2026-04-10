@@ -268,12 +268,27 @@ Absorver:
 - triggers e webhooks;
 - automacoes compostas.
 
+#### 15. `TurboQuant`
+
+Absorver:
+
+- compressao de `KV cache` para `long-context` e `realtime` futuros;
+- compressao vetorial para retrieval semantico em escala;
+- benchmark de `bitwidth x recall x latencia x memoria`.
+
+Leitura correta:
+
+- so faz sentido quando houver pressao real de memoria de inferencia ou
+  retrieval vetorial alem do que o baseline atual pede;
+- nao entra como resposta para memoria canonica, governanca ou gaps atuais do
+  nucleo.
+
 ### 4.3 Onda 3: referencias de produto e operacao tardia
 
 Estas tecnologias valem como referencia forte, mas so fazem sentido depois de o
 nucleo estar mais maduro.
 
-#### 15. `OpenClaw`
+#### 16. `OpenClaw`
 
 Absorver:
 
@@ -281,7 +296,7 @@ Absorver:
 - lifecycle de skills;
 - runtime operacional local-first.
 
-#### 16. `Manus`
+#### 17. `Manus`
 
 Absorver:
 
@@ -293,31 +308,31 @@ Absorver:
 
 Estas referencias devem ficar fora do backlog implementavel atual.
 
-#### 17. `TextGrad`
+#### 18. `TextGrad`
 
 Valor:
 
 - refinement loops textuais locais no laboratorio evolutivo.
 
-#### 18. `AFlow`
+#### 19. `AFlow`
 
 Valor:
 
 - busca sobre workflows via arvore/MCTS.
 
-#### 19. `EvoAgentX`
+#### 20. `EvoAgentX`
 
 Valor:
 
 - encadear gerar, avaliar e evoluir workflows.
 
-#### 20. `SEAL`
+#### 21. `SEAL`
 
 Valor:
 
 - horizonte de adaptacao persistente.
 
-#### 21. `Darwin Godel Machine`
+#### 22. `Darwin Godel Machine`
 
 Valor:
 
@@ -347,6 +362,7 @@ Regra:
 - context management e MCP patterns: `Qwen-Agent`
 - memoria temporal/graph: `Graphiti`, `Zep`
 - ownership/scoping: `Mem0`
+- compressao inferencial e vector retrieval: `TurboQuant`
 - coding specialist substrate: `OpenHands`
 - browser/computer substrate: `browser-use`, `Open Interpreter`
 - automacoes compostas: `AutoGPT Platform`
@@ -395,6 +411,9 @@ Leitura conjunta recomendada:
 - `docs/architecture/technology-study.md` para papel e classe de decisao
 - `docs/architecture/technology-capability-extraction-map.md` para o que vale
   extrair
+- `docs/architecture/turboquant-review.md` e outros reviews especificos quando
+  a tecnologia candidata nao for uma stack completa, e sim uma primitive
+  algoritmica ou infraestrutural
 - `docs/architecture/hermes-agent-repository-review.md` e outros reviews
   profundos para tecnologias candidatas
 - `docs/implementation/execution-backlog.md` para o lote micro executavel

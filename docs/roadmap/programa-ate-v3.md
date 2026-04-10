@@ -59,6 +59,17 @@ corrente do programa.
 
 ---
 
+## 3.1 Premissas arquiteturais transversais
+
+Ao longo de todas as fases, o programa deve preservar as seguintes premissas:
+
+- o JARVIS nao sera reduzido a uma LLM com tools nem a um runtime agentic generico;
+- modelos inferenciais, LLMs e runtimes auxiliares entram como substrato cognitivo ou operacional subordinado ao nucleo;
+- chat, voz, console, web, API e futuras superficies devem expor a mesma entidade, e nao agentes concorrentes;
+- o caminho ate `v3` inclui construir estado operacional mais rico do ecossistema, nao apenas memoria conversacional.
+
+---
+
 ## 4. Fases do programa
 
 ### 4.1 Pos-v1
@@ -151,6 +162,7 @@ Entra nesta fase:
 
 - persistencia profunda;
 - maturidade maior de governanca e avaliacao;
+- estado operacional mais rico do ecossistema, dos workflows, dos artefatos e das superficies ativas;
 - superficies mais amplas quando justificadas;
 - camadas evolutivas mais avancadas, ainda subordinadas a controle forte.
 
@@ -258,6 +270,13 @@ Ele define:
 - o que entra e o que fica fora de cada fase;
 - dependencias entre trilhas.
 
+O documento `docs/implementation/unified-gap-and-absorption-backlog.md` agora
+consolida o backlog macro do que ainda falta, separando gaps do sistema,
+traducao tecnologica, superficies, evolucao e pesquisa.
+
+O documento `docs/implementation/execution-backlog.md` continua como unica fila
+micro ativa.
+
 O documento `docs/implementation/v2-repository-hygiene-and-tools-review-cut.md` registra o ultimo recorte estrutural executado,
 ate que um novo recorte funcional seja formalmente aberto.
 
@@ -268,8 +287,11 @@ ate que um novo recorte funcional seja formalmente aberto.
 O sistema de planejamento oficial do JARVIS passa a ser:
 
 1. `HANDOFF.md` para estado atual, retomada e foco imediato;
-2. `docs/roadmap/programa-ate-v3.md` para direcao de medio e longo prazo;
-3. `docs/implementation/v2-repository-hygiene-and-tools-review-cut.md` para o ultimo recorte estrutural fechado, ate a abertura do proximo recorte funcional.
+2. `docs/implementation/execution-backlog.md` para a fila micro soberana ativa;
+3. `docs/implementation/unified-gap-and-absorption-backlog.md` para o mapa macro do que ainda falta no sistema;
+4. `docs/implementation/v2-adherence-snapshot.md` para a leitura viva do baseline atual;
+5. `docs/roadmap/programa-ate-v3.md` para direcao de medio e longo prazo;
+6. `docs/implementation/v2-repository-hygiene-and-tools-review-cut.md` para o ultimo recorte estrutural fechado, ate a abertura do proximo recorte funcional.
 
 Essa separacao existe para impedir que o `HANDOFF.md` vire roadmap macro e para evitar
 que o programa ate `v3` perca precisao operacional.

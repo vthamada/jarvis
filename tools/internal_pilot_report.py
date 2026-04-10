@@ -64,6 +64,7 @@ class PilotTraceSummary:
     adaptive_intervention_trigger: str | None
     adaptive_intervention_selected_action: str | None
     adaptive_intervention_effectiveness: str
+    adaptive_intervention_policy_status: str
     memory_causality_status: str
     primary_mind: str | None
     primary_route: str | None
@@ -198,6 +199,9 @@ def summarize_traces(
             adaptive_intervention_effectiveness=(
                 audit.adaptive_intervention_effectiveness
             ),
+            adaptive_intervention_policy_status=(
+                audit.adaptive_intervention_policy_status
+            ),
             memory_causality_status=audit.memory_causality_status,
             primary_mind=audit.primary_mind,
             primary_route=audit.primary_route,
@@ -259,6 +263,8 @@ def service_query(request_id: str):
 
 def _trace_status(audit) -> str:
     if audit.anomaly_flags or audit.continuity_anomaly_flags:
+        return "attention_required"
+    if audit.adaptive_intervention_policy_status == "attention_required":
         return "attention_required"
     if audit.adaptive_intervention_effectiveness in {"insufficient", "incomplete"}:
         return "attention_required"
@@ -405,6 +411,8 @@ def _render_summary(summary: PilotTraceSummary) -> str:
         f"{getattr(summary, 'adaptive_intervention_selected_action', None) or 'none'} "
         "adaptive_intervention_effectiveness="
         f"{getattr(summary, 'adaptive_intervention_effectiveness', 'not_applicable')} "
+        "adaptive_intervention_policy_status="
+        f"{getattr(summary, 'adaptive_intervention_policy_status', 'not_applicable')} "
         "adaptive_intervention_trigger="
         f"{getattr(summary, 'adaptive_intervention_trigger', None) or 'none'} "
         "memory_causality_status="

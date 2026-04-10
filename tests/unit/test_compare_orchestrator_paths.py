@@ -48,6 +48,9 @@ def make_result(  # type: ignore[no-untyped-def]
     metacognitive_guidance_status: str = "healthy",
     mind_disagreement_status: str = "not_applicable",
     mind_validation_checkpoint_status: str = "not_applicable",
+    adaptive_intervention_status: str = "not_applicable",
+    adaptive_intervention_effectiveness: str = "not_applicable",
+    adaptive_intervention_policy_status: str = "not_applicable",
     memory_causality_status: str = "causal_guidance",
     memory_lifecycle_status: str = "retained",
     memory_review_status: str = "stable",
@@ -122,6 +125,9 @@ def make_result(  # type: ignore[no-untyped-def]
         metacognitive_guidance_status=metacognitive_guidance_status,
         mind_disagreement_status=mind_disagreement_status,
         mind_validation_checkpoint_status=mind_validation_checkpoint_status,
+        adaptive_intervention_status=adaptive_intervention_status,
+        adaptive_intervention_effectiveness=adaptive_intervention_effectiveness,
+        adaptive_intervention_policy_status=adaptive_intervention_policy_status,
         memory_causality_status=memory_causality_status,
         primary_mind=primary_mind,
         primary_route=primary_route,
@@ -241,6 +247,7 @@ def test_compare_results_flags_release_signal_mismatch_fields() -> None:
             workflow_output_status="partial",
             mind_disagreement_status="validation_required",
             mind_validation_checkpoint_status="attention_required",
+            adaptive_intervention_policy_status="policy_aligned",
             memory_causality_status="attached_only",
             memory_corpus_status="review_recommended",
             memory_retention_pressure="high",
@@ -272,6 +279,7 @@ def test_compare_results_flags_release_signal_mismatch_fields() -> None:
         "memory_causality_status",
         "memory_corpus_status",
         "memory_retention_pressure",
+        "adaptive_intervention_policy_status",
         "dominant_tension",
         "arbitration_source",
         "primary_domain_driver",
@@ -337,6 +345,10 @@ def test_serialize_comparisons_reports_equivalent_verdict() -> None:
         == "not_applicable"
     )
     assert (
+        payload["scenario_results"][0]["baseline_adaptive_intervention_policy_assessment"]
+        == "not_applicable"
+    )
+    assert (
         payload["scenario_results"][0]["baseline_memory_corpus_assessment"] == "stable"
     )
     assert (
@@ -367,11 +379,43 @@ def test_serialize_comparisons_reports_equivalent_verdict() -> None:
         == "baseline_saudavel"
     )
     assert (
+        payload["comparison_summary"]["baseline_evaluation_matrix"]["strategy"][
+            "adaptive_intervention_policy"
+        ]
+        == "not_applicable"
+    )
+    assert (
         payload["comparison_summary"]["baseline_wave_two_readiness_matrix"][
             "openai_agents_sdk"
         ]["status"]
         == "ready_for_controlled_experiment"
     )
+
+
+def test_evaluation_matrix_marks_policy_review_recommended_when_effect_is_insufficient() -> None:
+    payload = serialize_comparisons(
+        compare_results(
+            [make_result(scenario_id="x", path_name="baseline")],
+            [
+                make_result(
+                    scenario_id="x",
+                    path_name="langgraph",
+                    adaptive_intervention_status="healthy",
+                    adaptive_intervention_effectiveness="insufficient",
+                    adaptive_intervention_policy_status="policy_aligned",
+                )
+            ],
+        ),
+        profile="development",
+        langgraph_status="available",
+    )
+
+    assert payload["comparison_summary"]["candidate_evaluation_matrix"]["strategy"][
+        "adaptive_intervention_policy"
+    ] == "review_recommended"
+    assert "adaptive_intervention_policy" in {
+        item["axis"] for item in payload["comparison_summary"]["candidate_refinement_vectors"]
+    }
 
 
 def test_render_text_reports_workflow_profile_status() -> None:
@@ -386,6 +430,7 @@ def test_render_text_reports_workflow_profile_status() -> None:
                     workflow_output_status="partial",
                     mind_disagreement_status="validation_required",
                     mind_validation_checkpoint_status="attention_required",
+                    adaptive_intervention_policy_status="policy_aligned",
                     memory_corpus_status="monitor",
                     memory_retention_pressure="moderate",
                     workflow_checkpoint_status="attention_required",
@@ -422,6 +467,13 @@ def test_render_text_reports_workflow_profile_status() -> None:
     )
     assert (
         "candidate_mind_validation_checkpoint_assessment=attention_required" in rendered
+    )
+    assert "candidate_adaptive_intervention_policy_status=policy_aligned" in rendered
+    assert (
+        "candidate_adaptive_intervention_policy_assessment=policy_aligned" in rendered
+    )
+    assert (
+        "candidate_adaptive_intervention_policy_decision=policy_aligned" in rendered
     )
     assert "baseline_memory_causality_status=causal_guidance" in rendered
     assert "candidate_memory_causality_status=causal_guidance" in rendered

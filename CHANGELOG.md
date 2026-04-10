@@ -1,5 +1,54 @@
 # CHANGELOG
 
+## 2026-04-10
+
+### Pesquisa e classificacao do TurboQuant
+
+- `docs/architecture/turboquant-review.md` agora registra a leitura aplicada do `TurboQuant` para o JARVIS, com fontes primarias, limites de uso e recomendacao de classificacao;
+- `docs/architecture/technology-study.md`, `docs/architecture/technology-capability-extraction-map.md` e `docs/architecture/technology-absorption-order.md` agora tratam `TurboQuant` como referencia de infraestrutura inferencial e retrieval vetorial, util para `KV cache`, `long-context` e busca vetorial em escala, mas fora do nucleo soberano;
+- `docs/implementation/unified-gap-and-absorption-backlog.md` agora o encaixa como `TA-008`, bloqueado por fase e por consumidor real, em vez de trata-lo como frente micro imediata.
+
+### Backlog unificado do que ainda falta no sistema
+
+- `docs/implementation/unified-gap-and-absorption-backlog.md` agora consolida em um unico artefato o que ainda falta no JARVIS, separando gaps do sistema, traducao tecnologica, superficies, evolucao, verticais `deferred` e pesquisa;
+- `docs/implementation/execution-backlog.md`, `docs/roadmap/programa-ate-v3.md` e `docs/implementation/v2-adherence-snapshot.md` agora apontam para esse backlog unificado como ponte formal entre direcao macro e a proxima repriorizacao micro;
+- `HANDOFF.md` foi sincronizado para registrar esse backlog macro unificado como parte do sistema vivo de planejamento e retomada do projeto.
+
+### Alinhamento documental da visao soberana do JARVIS
+
+- `documento_mestre_jarvis.md` agora explicita melhor tres pontos da visao arquitetural: LLMs e runtimes auxiliares como substrato cognitivo subordinado, multiplas superficies como manifestacoes da mesma entidade e estado operacional do ecossistema como parte do cerebro do sistema;
+- `docs/roadmap/programa-ate-v3.md` agora formaliza essas mesmas premissas como criterio transversal do programa ate `v3`, incluindo o enriquecimento futuro do estado operacional do ecossistema;
+- `docs/implementation/v2-adherence-snapshot.md` e `HANDOFF.md` foram sincronizados para registrar que essa clarificacao de visao permanece coerente com a trajetoria atual do runtime e com a fila micro ainda sem item `ready`.
+
+### Recuperacao do engineering gate apos o fechamento do lote MB-062 a MB-066
+
+- `engines/planning-engine/src/planning_engine/engine.py` deixou de reinterpretar `specialist_reevaluation` como validacao humana no plano refinado, preservando o carater governado interno dessa intervencao e destravando `governance`, piloto, benchmark e `langgraph_flow`;
+- `shared/domain_registry.py` voltou a preservar `workflow_steps`, `workflow_checkpoints` e `workflow_decision_points` em `specialist_route_payload`, evitando perda do contrato soberano de workflow nas rotas promovidas;
+- `tests/unit/test_domain_registry_workflows.py`, `engines/planning-engine/tests/test_planning_engine.py` e `services/orchestrator-service/tests/test_orchestrator_service.py` agora travam esses dois desvios como regressao;
+- `HANDOFF.md` foi sincronizado com o novo estado real do projeto: `python tools/engineering_gate.py --mode standard` voltou a passar no baseline completo.
+
+### MB-064 a MB-066 fechados na ultima milha e no loop evolutivo da politica soberana
+
+- `engines/synthesis-engine/src/synthesis_engine/engine.py` agora publica uma clausula bounded de `Intervencao adaptativa` na resposta final, explicitando por que o `workflow_profile` priorizou a acao escolhida e qual checkpoint/gate foram preservados;
+- `services/orchestrator-service/src/orchestrator_service/service.py` agora propaga esse mesmo resumo estruturado em `response_synthesized`, mantendo a ultima milha do runtime coerente com a prioridade soberana ja decidida no plano;
+- `evolution/evolution-lab/src/evolution_lab/service.py`, `tools/evolution_from_pilot.py` e `tools/compare_orchestrator_paths.py` agora tratam mismatch ou fechamento insuficiente dessa politica como insumo formal de `refinement_vectors`, `evaluation_matrix` e propostas sandbox por workflow;
+- `engines/synthesis-engine/tests/test_synthesis_engine.py`, `evolution/evolution-lab/tests/test_evolution_lab_service.py`, `tests/unit/test_compare_orchestrator_paths.py`, `tests/unit/test_evolution_from_pilot.py` e o teste focado em `services/orchestrator-service/tests/test_orchestrator_service.py` agora travam a nova gramatica declarativa e seu peso evolutivo;
+- `docs/implementation/execution-backlog.md`, `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para marcar `MB-064` a `MB-066` como concluidos e devolver a fila micro ao estado sem item `ready`.
+
+### MB-063 fechado na evidencia auditavel da politica soberana de intervencao
+
+- `services/observability-service/src/observability_service/service.py` agora calcula `adaptive_intervention_policy_status` a partir do `workflow_profile` soberano, distinguindo `policy_aligned`, `mandatory_override`, `attention_required` e `not_applicable` sem reabrir heuristica fora do registry;
+- `tools/internal_pilot_support.py`, `tools/internal_pilot_report.py`, `tools/compare_orchestrator_paths.py` e `tools/verify_release_signal_baseline.py` agora propagam esse novo sinal para piloto, comparadores e leitura de release, inclusive como campo de mismatch formal e decisao resumida;
+- `services/observability-service/tests/test_observability_service.py`, `tests/unit/test_internal_pilot_report.py` e `tests/unit/test_compare_orchestrator_paths.py` agora travam os casos de `policy_aligned`, `mandatory_override` e `attention_required`, alem da serializacao do novo campo nos artefatos comparativos;
+- `docs/implementation/execution-backlog.md`, `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para marcar `MB-063` como concluido e liberar `MB-064` como proximo item `ready`.
+
+### MB-062 fechado na prioridade soberana de intervencao por workflow
+
+- `shared/domain_registry.py` agora carrega prioridade soberana por `workflow_profile` para a escolha entre `memory_review_checkpoint` e `specialist_reevaluation`, sem mexer na precedencia absoluta de clarificacao e contencao segura;
+- `engines/planning-engine/src/planning_engine/engine.py` agora seleciona a intervencao adaptativa concorrente a partir desse guidance do registry, inclusive quando a revisao especializada reabre tensao no plano refinado;
+- `engines/planning-engine/tests/test_planning_engine.py` agora trava dois casos-chave: workflows analiticos priorizando reavaliacao especializada e workflows de readiness priorizando checkpoint de memoria quando ambos competem;
+- `docs/implementation/execution-backlog.md`, `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para abrir o lote `MB-062` a `MB-066`, marcar `MB-062` como concluido e deixar `MB-063` como proximo item `ready`.
+
 ## 2026-04-09
 
 ### MB-057 a MB-061 fechados na intervencao adaptativa governada do nucleo

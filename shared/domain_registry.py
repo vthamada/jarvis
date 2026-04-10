@@ -43,6 +43,10 @@ class WorkflowRuntimeGuidance:
     semantic_memory_role: str
     procedural_memory_role: str
     response_focus: str
+    adaptive_intervention_priority: tuple[str, ...] = (
+        "memory_review_checkpoint",
+        "specialist_reevaluation",
+    )
 
 
 def _load_registries(
@@ -149,6 +153,10 @@ DEFAULT_WORKFLOW_RUNTIME_GUIDANCE = WorkflowRuntimeGuidance(
     semantic_memory_role="framing do objetivo ativo",
     procedural_memory_role="continuidade segura da proxima acao",
     response_focus="leitura final coerente com o contrato da rota",
+    adaptive_intervention_priority=(
+        "memory_review_checkpoint",
+        "specialist_reevaluation",
+    ),
 )
 
 WORKFLOW_RUNTIME_GUIDANCE_REGISTRY: dict[str, WorkflowRuntimeGuidance] = {
@@ -158,6 +166,10 @@ WORKFLOW_RUNTIME_GUIDANCE_REGISTRY: dict[str, WorkflowRuntimeGuidance] = {
         semantic_memory_role="framing estrategico e comparacao de trade-offs",
         procedural_memory_role="continuidade do fio decisorio e criterio de progressao",
         response_focus="direcao recomendada, criterios e trade-offs dominantes",
+        adaptive_intervention_priority=(
+            "specialist_reevaluation",
+            "memory_review_checkpoint",
+        ),
     ),
     "structured_analysis_workflow": WorkflowRuntimeGuidance(
         planning_focus="enquadramento da pergunta, evidencia e interpretacao recomendada",
@@ -165,6 +177,10 @@ WORKFLOW_RUNTIME_GUIDANCE_REGISTRY: dict[str, WorkflowRuntimeGuidance] = {
         semantic_memory_role="enquadramento analitico e leitura de evidencia",
         procedural_memory_role="continuidade da trilha de analise e recomendacao",
         response_focus="achados estruturados, comparacao e interpretacao recomendada",
+        adaptive_intervention_priority=(
+            "specialist_reevaluation",
+            "memory_review_checkpoint",
+        ),
     ),
     "governance_boundary_workflow": WorkflowRuntimeGuidance(
         planning_focus="limites, condicoes e trilha de contencao governada",
@@ -172,6 +188,10 @@ WORKFLOW_RUNTIME_GUIDANCE_REGISTRY: dict[str, WorkflowRuntimeGuidance] = {
         semantic_memory_role="framing de limites, exposicao e contencao",
         procedural_memory_role="sequenciamento de contencao e validacao",
         response_focus="limites, condicoes e caminho governado",
+        adaptive_intervention_priority=(
+            "specialist_reevaluation",
+            "memory_review_checkpoint",
+        ),
     ),
     "software_change_workflow": WorkflowRuntimeGuidance(
         planning_focus="escopo da mudanca, impacto de contrato e direcao de patch",
@@ -179,6 +199,10 @@ WORKFLOW_RUNTIME_GUIDANCE_REGISTRY: dict[str, WorkflowRuntimeGuidance] = {
         semantic_memory_role="framing de impacto contratual e seguranca da mudanca",
         procedural_memory_role="sequenciamento do patch e checkpoints de implementacao",
         response_focus="impacto, risco de implementacao e direcao de patch",
+        adaptive_intervention_priority=(
+            "specialist_reevaluation",
+            "memory_review_checkpoint",
+        ),
     ),
     "operational_readiness_workflow": WorkflowRuntimeGuidance(
         planning_focus="checkpoints, dependencias e proxima acao operacional",
@@ -186,6 +210,10 @@ WORKFLOW_RUNTIME_GUIDANCE_REGISTRY: dict[str, WorkflowRuntimeGuidance] = {
         semantic_memory_role="framing de readiness e cobertura de checkpoints",
         procedural_memory_role="sequenciamento da proxima acao e continuidade operacional",
         response_focus="readiness, lacunas e proxima acao operacional",
+        adaptive_intervention_priority=(
+            "memory_review_checkpoint",
+            "specialist_reevaluation",
+        ),
     ),
     "decision_risk_workflow": WorkflowRuntimeGuidance(
         planning_focus="gate de decisao, reversibilidade e incerteza governada",
@@ -193,6 +221,10 @@ WORKFLOW_RUNTIME_GUIDANCE_REGISTRY: dict[str, WorkflowRuntimeGuidance] = {
         semantic_memory_role="framing de risco, impacto e reversibilidade",
         procedural_memory_role="sequenciamento do gate e da progressao segura",
         response_focus="risco, reversibilidade e gate seguro",
+        adaptive_intervention_priority=(
+            "specialist_reevaluation",
+            "memory_review_checkpoint",
+        ),
     ),
 }
 
@@ -399,6 +431,11 @@ def specialist_route_payload(
         "expected_deliverables": list(entry.expected_deliverables) if entry is not None else [],
         "telemetry_focus": list(entry.telemetry_focus) if entry is not None else [],
         "workflow_profile": entry.workflow_profile if entry is not None else None,
+        "workflow_steps": list(entry.workflow_steps) if entry is not None else [],
+        "workflow_checkpoints": list(entry.workflow_checkpoints) if entry is not None else [],
+        "workflow_decision_points": (
+            list(entry.workflow_decision_points) if entry is not None else []
+        ),
         "is_promoted": bool(entry is not None and is_promoted_specialist_route(route_name)),
         "eligible": route_is_specialist_eligible(route_name, canonical_type),
         "link_matches": (

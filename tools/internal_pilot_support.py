@@ -158,6 +158,7 @@ class PilotExecutionResult:
     adaptive_intervention_selected_action: str | None = None
     adaptive_intervention_expected_effect: str | None = None
     adaptive_intervention_effectiveness: str = "not_applicable"
+    adaptive_intervention_policy_status: str = "not_applicable"
     memory_corpus_status: str = "not_applicable"
     memory_retention_pressure: str | None = None
 
@@ -593,6 +594,9 @@ def run_pilot_scenarios(
                 ),
                 adaptive_intervention_effectiveness=(
                     audit.adaptive_intervention_effectiveness
+                ),
+                adaptive_intervention_policy_status=(
+                    audit.adaptive_intervention_policy_status
                 ),
                 memory_corpus_status=audit.memory_corpus_status,
                 memory_retention_pressure=audit.memory_retention_pressure,

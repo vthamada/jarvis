@@ -120,6 +120,9 @@ def test_evolution_lab_creates_proposal_from_flow_evaluation() -> None:
             axis_gate_status="attention_required",
             workflow_profile_status="maturation_recommended",
             workflow_output_status="partial",
+            adaptive_intervention_status="healthy",
+            adaptive_intervention_effectiveness="insufficient",
+            adaptive_intervention_policy_status="policy_aligned",
             memory_causality_status="attached_only",
             workflow_checkpoint_status="attention_required",
             workflow_resume_status="manual_resume_required",
@@ -150,6 +153,7 @@ def test_evolution_lab_creates_proposal_from_flow_evaluation() -> None:
     assert "alignment://axis-gate/attention_required" in proposal.source_signals
     assert "workflow://profile-status/maturation_recommended" in proposal.source_signals
     assert "workflow://output-status/partial" in proposal.source_signals
+    assert "runtime://adaptive-intervention-policy/policy_aligned" in proposal.source_signals
     assert "memory://causality/attached_only" in proposal.source_signals
     assert "workflow://checkpoint-status/attention_required" in proposal.source_signals
     assert "artifact://procedural-status/candidate" in proposal.source_signals
@@ -163,6 +167,7 @@ def test_evolution_lab_creates_proposal_from_flow_evaluation() -> None:
     assert proposal.refinement_vectors[0]["axis"] in {
         "workflow_output",
         "metacognitive_guidance",
+        "adaptive_intervention_policy",
         "memory_causality",
         "mind_composition",
         "mind_domain_specialist_chain",
@@ -172,6 +177,10 @@ def test_evolution_lab_creates_proposal_from_flow_evaluation() -> None:
     assert (
         proposal.evaluation_matrix["baseline_runtime"]["mind_composition"]
         == "maturation_recommended"
+    )
+    assert (
+        proposal.evaluation_matrix["baseline_runtime"]["adaptive_intervention_policy"]
+        == "review_recommended"
     )
     assert "wave_two_readiness_matrix" in proposal.strategy_context
     assert (
@@ -213,6 +222,9 @@ def test_evolution_lab_compares_flow_evaluations() -> None:
             axis_gate_status="attention_required",
             workflow_profile_status="maturation_recommended",
             workflow_output_status="partial",
+            adaptive_intervention_status="healthy",
+            adaptive_intervention_effectiveness="insufficient",
+            adaptive_intervention_policy_status="policy_aligned",
             memory_causality_status="attached_only",
             workflow_checkpoint_status="attention_required",
             workflow_resume_status="manual_resume_required",
@@ -243,6 +255,9 @@ def test_evolution_lab_compares_flow_evaluations() -> None:
             axis_gate_status="healthy",
             workflow_profile_status="healthy",
             workflow_output_status="coherent",
+            adaptive_intervention_status="healthy",
+            adaptive_intervention_effectiveness="effective",
+            adaptive_intervention_policy_status="policy_aligned",
             memory_causality_status="causal_guidance",
             workflow_checkpoint_status="healthy",
             workflow_resume_status="resume_available",
@@ -269,6 +284,7 @@ def test_evolution_lab_compares_flow_evaluations() -> None:
     assert comparison.metric_deltas["axis_gate"] > 0
     assert comparison.metric_deltas["workflow_profile"] > 0
     assert comparison.metric_deltas["workflow_output"] > 0
+    assert comparison.metric_deltas["adaptive_intervention_policy"] > 0
     assert comparison.metric_deltas["memory_causality"] > 0
     assert comparison.metric_deltas["workflow_checkpoint"] > 0
     assert comparison.metric_deltas["workflow_resume"] > 0
