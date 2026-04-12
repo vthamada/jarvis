@@ -89,6 +89,21 @@ class GovernanceService:
                 "input_type": contract.input_type.value,
                 "recommended_task_type": plan.recommended_task_type if plan else None,
                 "plan_summary": plan.plan_summary if plan else None,
+                "capability_decision_status": (
+                    plan.capability_decision_status if plan else None
+                ),
+                "capability_decision_selected_mode": (
+                    plan.capability_decision_selected_mode if plan else None
+                ),
+                "capability_decision_authorization_status": (
+                    plan.capability_decision_authorization_status if plan else None
+                ),
+                "capability_decision_tool_class": (
+                    plan.capability_decision_tool_class if plan else None
+                ),
+                "capability_decision_handoff_mode": (
+                    plan.capability_decision_handoff_mode if plan else None
+                ),
                 "continuity_replay_status": (
                     plan.continuity_replay_status if plan else None
                 ),
@@ -345,6 +360,13 @@ class GovernanceService:
             return "external_or_sensitive_change"
         if plan is None:
             return "analysis_or_guidance_only"
+        if plan.capability_decision_selected_mode == "core_with_local_operation":
+            return "local_safe_operation"
+        if plan.capability_decision_selected_mode in {
+            "clarification_only",
+            "contained_guidance",
+        }:
+            return "analysis_or_guidance_only"
         if plan.requires_human_validation:
             return "external_or_sensitive_change"
         if plan.recommended_task_type in {"draft_plan", "general_response"}:
@@ -495,4 +517,3 @@ class GovernanceService:
     @staticmethod
     def now() -> str:
         return datetime.now(UTC).isoformat()
-

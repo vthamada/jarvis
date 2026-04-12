@@ -31,7 +31,7 @@ Estado de referencia desta revisao:
 - data da fotografia: `2026-04-10`
 - ultimo recorte funcional fechado: `v2-native-memory-scope-hardening-cut`
 - ultimo recorte estrutural fechado: `v2-repository-hygiene-and-tools-review-cut`
-- passo funcional em andamento: lote `MB-062` a `MB-066` concluido (`MB-037` a `MB-040` concluidos; `MB-041` a `MB-046` concluidos; `MB-047` a `MB-051` concluidos; `MB-052` a `MB-056` concluidos; `MB-057` a `MB-061` concluidos; `MB-062` a `MB-066` concluidos; fila micro volta a ficar sem item `ready`)
+- passo funcional em andamento: lote `MB-062` a `MB-066` concluido e lote `MB-067` a `MB-071` concluido (`MB-037` a `MB-040` concluidos; `MB-041` a `MB-046` concluidos; `MB-047` a `MB-051` concluidos; `MB-052` a `MB-056` concluidos; `MB-057` a `MB-061` concluidos; `MB-062` a `MB-066` concluidos; `MB-067` a `MB-071` concluidos; fila micro sem item `ready`)
 
 Leitura executiva:
 
@@ -361,14 +361,16 @@ Foco:
 - ligar cada lacuna a fase, tecnologias relacionadas, janela de absorcao e
   possibilidade de slice micro.
 
-### Passo 3 - derivar o proximo lote micro a partir de um unico eixo priorizado
+### Passo 3 - executar o novo lote micro a partir do eixo priorizado
 
 Foco:
 
-- preferir itens que aumentem profundidade do nucleo no `v2 restante`, e nao
-  superficies amplas;
-- a ordem recomendada hoje comeca por `SG-001`, `SG-004`, `SG-005`, `SG-006` e
-  `EV-002` ou `EV-004`.
+- o eixo escolhido para a nova fila micro foi `SG-001`, reforcado por
+  `TA-001` e `TA-005`, por ser hoje o melhor ganho de profundidade do nucleo no
+  `v2 restante`;
+- esse eixo agora foi fechado como lote `MB-067` a `MB-071`, formalizando e
+  aplicando decisao soberana de capacidades, ferramentas e handoffs bounded por
+  request, com evidencia auditavel e uso evolutivo coerente no baseline.
 
 ### Passo 4 - manter frentes fora da fila micro ate mudanca explicita de fase
 
@@ -413,10 +415,13 @@ O lote `MB-057` a `MB-061` foi fechado exatamente para atacar esses tres pontos 
 `Protective intelligence` continua como eixo valido e estudado, mas em estado
 `deferred` ate que esse lote de maturacao do nucleo seja realmente fechado.
 
-O que resta agora esta melhor descrito como backlog macro de lacunas reais e
-traducao tecnologica disciplinada do que como fila micro implicita; por isso,
-`docs/implementation/unified-gap-and-absorption-backlog.md` passa a ser a ponte
-correta para a proxima repriorizacao.
+O que resta agora continua melhor descrito como backlog macro de lacunas reais
+e traducao tecnologica disciplinada; a ponte para abrir o lote de capacidades
+ja foi usada e o lote foi fechado. Por isso,
+`docs/implementation/unified-gap-and-absorption-backlog.md` segue como origem
+da proxima prioridade, enquanto `docs/implementation/execution-backlog.md`
+volta a esperar nova repriorizacao explicita, porque a fila micro ficou sem
+item `ready`.
 
 ---
 

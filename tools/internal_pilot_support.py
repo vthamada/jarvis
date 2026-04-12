@@ -152,6 +152,17 @@ class PilotExecutionResult:
     coverage_tags: list[str] = field(default_factory=list)
     mind_disagreement_status: str = "not_applicable"
     mind_validation_checkpoint_status: str = "not_applicable"
+    capability_decision_status: str = "not_applicable"
+    capability_decision_objective: str | None = None
+    capability_decision_reason: str | None = None
+    capability_decision_selected_mode: str | None = None
+    capability_authorization_status: str = "not_applicable"
+    capability_decision_tool_class: str | None = None
+    capability_decision_handoff_mode: str | None = None
+    capability_decision_eligible_capabilities: list[str] = field(default_factory=list)
+    capability_decision_selected_capabilities: list[str] = field(default_factory=list)
+    capability_effectiveness: str = "not_applicable"
+    handoff_adapter_status: str = "not_applicable"
     adaptive_intervention_status: str = "not_applicable"
     adaptive_intervention_reason: str | None = None
     adaptive_intervention_trigger: str | None = None
@@ -583,6 +594,21 @@ def run_pilot_scenarios(
                 coverage_tags=list(scenario.coverage_tags),
                 mind_disagreement_status=audit.mind_disagreement_status,
                 mind_validation_checkpoint_status=audit.mind_validation_checkpoint_status,
+                capability_decision_status=audit.capability_decision_status,
+                capability_decision_objective=audit.capability_decision_objective,
+                capability_decision_reason=audit.capability_decision_reason,
+                capability_decision_selected_mode=audit.capability_decision_selected_mode,
+                capability_authorization_status=audit.capability_authorization_status,
+                capability_decision_tool_class=audit.capability_decision_tool_class,
+                capability_decision_handoff_mode=audit.capability_decision_handoff_mode,
+                capability_decision_eligible_capabilities=list(
+                    audit.capability_decision_eligible_capabilities
+                ),
+                capability_decision_selected_capabilities=list(
+                    audit.capability_decision_selected_capabilities
+                ),
+                capability_effectiveness=audit.capability_effectiveness,
+                handoff_adapter_status=audit.handoff_adapter_status,
                 adaptive_intervention_status=audit.adaptive_intervention_status,
                 adaptive_intervention_reason=audit.adaptive_intervention_reason,
                 adaptive_intervention_trigger=audit.adaptive_intervention_trigger,

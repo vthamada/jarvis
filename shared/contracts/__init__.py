@@ -152,6 +152,16 @@ class DeliberativePlanContract:
     procedural_artifact_summary: str | None = None
     mind_disagreement_status: str | None = None
     mind_validation_checkpoints: list[str] = field(default_factory=list)
+    capability_decision_status: str | None = None
+    capability_decision_objective: str | None = None
+    capability_decision_reason: str | None = None
+    capability_decision_selected_mode: str | None = None
+    capability_decision_authorization_status: str | None = None
+    capability_decision_fallback_mode: str | None = None
+    capability_decision_tool_class: str | None = None
+    capability_decision_handoff_mode: str | None = None
+    capability_decision_eligible_capabilities: list[str] = field(default_factory=list)
+    capability_decision_selected_capabilities: list[str] = field(default_factory=list)
     adaptive_intervention_status: str | None = None
     adaptive_intervention_reason: str | None = None
     adaptive_intervention_trigger: str | None = None
@@ -325,6 +335,16 @@ class OperationDispatchContract:
     success_criteria: list[str] = field(default_factory=list)
     smallest_safe_next_action: str | None = None
     requires_human_validation: bool = False
+    capability_decision_status: str | None = None
+    capability_decision_objective: str | None = None
+    capability_decision_reason: str | None = None
+    capability_decision_selected_mode: str | None = None
+    capability_decision_authorization_status: str | None = None
+    capability_decision_fallback_mode: str | None = None
+    capability_decision_tool_class: str | None = None
+    capability_decision_handoff_mode: str | None = None
+    capability_decision_eligible_capabilities: list[str] = field(default_factory=list)
+    capability_decision_selected_capabilities: list[str] = field(default_factory=list)
     adaptive_intervention_status: str | None = None
     adaptive_intervention_reason: str | None = None
     adaptive_intervention_trigger: str | None = None

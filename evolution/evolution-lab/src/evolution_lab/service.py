@@ -97,6 +97,13 @@ class FlowEvaluationInput:
     procedural_artifact_status: str | None = None
     procedural_artifact_ref_count: int = 0
     procedural_artifact_version: int | None = None
+    capability_decision_status: str | None = None
+    capability_decision_selected_mode: str | None = None
+    capability_authorization_status: str | None = None
+    capability_decision_tool_class: str | None = None
+    capability_decision_handoff_mode: str | None = None
+    capability_effectiveness: str | None = None
+    handoff_adapter_status: str | None = None
 
 
 @dataclass(frozen=True)
@@ -341,6 +348,38 @@ class EvolutionLabService:
             source_signals.append(
                 "mind://validation-checkpoint/"
                 f"{evaluation.mind_validation_checkpoint_status}"
+            )
+        if evaluation.capability_decision_status:
+            source_signals.append(
+                f"runtime://capability-decision/{evaluation.capability_decision_status}"
+            )
+        if evaluation.capability_decision_selected_mode:
+            source_signals.append(
+                "runtime://capability-mode/"
+                f"{evaluation.capability_decision_selected_mode}"
+            )
+        if evaluation.capability_authorization_status:
+            source_signals.append(
+                "runtime://capability-authorization/"
+                f"{evaluation.capability_authorization_status}"
+            )
+        if evaluation.capability_decision_tool_class:
+            source_signals.append(
+                f"runtime://capability-tool-class/{evaluation.capability_decision_tool_class}"
+            )
+        if evaluation.capability_decision_handoff_mode:
+            source_signals.append(
+                "runtime://capability-handoff/"
+                f"{evaluation.capability_decision_handoff_mode}"
+            )
+        if evaluation.capability_effectiveness:
+            source_signals.append(
+                "runtime://capability-effectiveness/"
+                f"{evaluation.capability_effectiveness}"
+            )
+        if evaluation.handoff_adapter_status:
+            source_signals.append(
+                f"runtime://handoff-adapter/{evaluation.handoff_adapter_status}"
             )
         if evaluation.adaptive_intervention_status:
             source_signals.append(
@@ -600,6 +639,15 @@ class EvolutionLabService:
             "mind_disagreement": EvolutionLabService._mind_disagreement_score(
                 evaluation.mind_disagreement_status
             ),
+            "capability_decision": EvolutionLabService._status_score(
+                evaluation.capability_decision_status
+            ),
+            "capability_effectiveness": EvolutionLabService._capability_effectiveness_score(
+                evaluation.capability_effectiveness
+            ),
+            "handoff_adapter": EvolutionLabService._handoff_adapter_score(
+                evaluation.handoff_adapter_status
+            ),
             "adaptive_intervention": EvolutionLabService._adaptive_intervention_score(
                 evaluation.adaptive_intervention_status,
                 evaluation.adaptive_intervention_effectiveness,
@@ -794,6 +842,27 @@ class EvolutionLabService:
         return weights.get(status, 0.7 if status is None else 0.0)
 
     @staticmethod
+    def _capability_effectiveness_score(status: str | None) -> float:
+        weights = {
+            "effective": 1.0,
+            "not_applicable": 0.7,
+            "incomplete": 0.2,
+            "insufficient": 0.0,
+        }
+        return weights.get(status, 0.7 if status is None else 0.0)
+
+    @staticmethod
+    def _handoff_adapter_score(status: str | None) -> float:
+        weights = {
+            "healthy": 1.0,
+            "contained": 0.9,
+            "not_applicable": 0.7,
+            "incomplete": 0.2,
+            "attention_required": 0.0,
+        }
+        return weights.get(status, 0.7 if status is None else 0.0)
+
+    @staticmethod
     def _recomposition_coherence_score(evaluation: FlowEvaluationInput) -> float:
         if evaluation.cognitive_recomposition_applied:
             return (
@@ -831,6 +900,12 @@ class EvolutionLabService:
         }:
             return True
         if evaluation.mind_validation_checkpoint_status == "attention_required":
+            return True
+        if evaluation.capability_decision_status in {"incomplete", "attention_required"}:
+            return True
+        if evaluation.capability_effectiveness in {"insufficient", "incomplete"}:
+            return True
+        if evaluation.handoff_adapter_status in {"incomplete", "attention_required"}:
             return True
         if evaluation.adaptive_intervention_status == "attention_required":
             return True
@@ -881,6 +956,12 @@ class EvolutionLabService:
         }:
             return "moderate"
         if evaluation.mind_validation_checkpoint_status == "attention_required":
+            return "moderate"
+        if evaluation.capability_decision_status == "attention_required":
+            return "moderate"
+        if evaluation.handoff_adapter_status == "attention_required":
+            return "moderate"
+        if evaluation.capability_effectiveness in {"insufficient", "incomplete"}:
             return "moderate"
         if evaluation.adaptive_intervention_policy_status == "attention_required":
             return "moderate"
@@ -984,6 +1065,24 @@ class EvolutionLabService:
                 "p0",
                 "transformar a discordancia entre mentes em checkpoint governado do workflow ativo",
             )
+        if evaluation.capability_decision_status in {"incomplete", "attention_required"}:
+            add_vector(
+                "capability_decision",
+                "p0",
+                "formalizar o contrato soberano de capabilities, autorizacao e fallback sem lacunas observaveis",
+            )
+        if evaluation.capability_effectiveness in {"insufficient", "incomplete"}:
+            add_vector(
+                "capability_effectiveness",
+                "p0",
+                "alinhar capability mode, autorizacao e efeito final para preservar operacao bounded ou contencao coerente",
+            )
+        if evaluation.handoff_adapter_status in {"incomplete", "attention_required"}:
+            add_vector(
+                "handoff_adapter",
+                "p0",
+                "restaurar o adapter through_core_only para que handoffs sejam aprovados ou contidos com evidencias coerentes",
+            )
         if evaluation.adaptive_intervention_effectiveness in {"insufficient", "incomplete"}:
             add_vector(
                 "adaptive_intervention",
@@ -1067,6 +1166,13 @@ class EvolutionLabService:
                 "mind_validation_checkpoint": (
                     evaluation.mind_validation_checkpoint_status or "not_applicable"
                 ),
+                "capability_decision": (
+                    evaluation.capability_decision_status or "not_applicable"
+                ),
+                "capability_effectiveness": (
+                    evaluation.capability_effectiveness or "not_applicable"
+                ),
+                "handoff_adapter": evaluation.handoff_adapter_status or "not_applicable",
                 "adaptive_intervention": (
                     evaluation.adaptive_intervention_effectiveness
                     if evaluation.adaptive_intervention_status not in {None, "not_applicable"}

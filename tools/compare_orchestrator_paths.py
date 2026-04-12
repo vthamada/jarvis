@@ -93,6 +93,20 @@ def mind_validation_checkpoint_assessment(result: PilotExecutionResult) -> str:
     return result.mind_validation_checkpoint_status
 
 
+def capability_decision_assessment(result: PilotExecutionResult) -> str:
+    return result.capability_decision_status
+
+
+def capability_effectiveness_assessment(result: PilotExecutionResult) -> str:
+    if result.capability_decision_status in {None, "not_applicable"}:
+        return "not_applicable"
+    return result.capability_effectiveness
+
+
+def handoff_adapter_assessment(result: PilotExecutionResult) -> str:
+    return result.handoff_adapter_status
+
+
 def adaptive_intervention_assessment(result: PilotExecutionResult) -> str:
     if result.adaptive_intervention_status in {None, "not_applicable"}:
         return "not_applicable"
@@ -235,6 +249,33 @@ def refinement_vectors(result: PilotExecutionResult) -> list[dict[str, str]]:
             "mind_composition",
             "p0",
             "transformar a discordancia entre mentes em checkpoint governado do workflow ativo",
+        )
+    if result.capability_decision_status in {"incomplete", "attention_required"}:
+        add_vector(
+            "capability_decision",
+            "p0",
+            (
+                "formalizar o contrato soberano de capabilities, autorizacao "
+                "e fallback sem lacunas observaveis"
+            ),
+        )
+    if result.capability_effectiveness in {"insufficient", "incomplete"}:
+        add_vector(
+            "capability_effectiveness",
+            "p0",
+            (
+                "alinhar capability mode, autorizacao e efeito final para "
+                "preservar operacao bounded ou contencao coerente"
+            ),
+        )
+    if result.handoff_adapter_status in {"incomplete", "attention_required"}:
+        add_vector(
+            "handoff_adapter",
+            "p0",
+            (
+                "restaurar o adapter through_core_only para que handoffs sejam "
+                "aprovados ou contidos com evidencias coerentes"
+            ),
         )
     if result.adaptive_intervention_effectiveness in {"insufficient", "incomplete"}:
         add_vector(
@@ -682,6 +723,24 @@ def summarize_comparisons(
     candidate_mind_validation_checkpoint = [
         mind_validation_checkpoint_assessment(item) for item in available_candidates
     ]
+    baseline_capability_decision = [
+        capability_decision_assessment(item.baseline) for item in comparisons
+    ]
+    candidate_capability_decision = [
+        capability_decision_assessment(item) for item in available_candidates
+    ]
+    baseline_capability_effectiveness = [
+        capability_effectiveness_assessment(item.baseline) for item in comparisons
+    ]
+    candidate_capability_effectiveness = [
+        capability_effectiveness_assessment(item) for item in available_candidates
+    ]
+    baseline_handoff_adapter = [
+        handoff_adapter_assessment(item.baseline) for item in comparisons
+    ]
+    candidate_handoff_adapter = [
+        handoff_adapter_assessment(item) for item in available_candidates
+    ]
     baseline_adaptive_intervention = [
         adaptive_intervention_assessment(item.baseline) for item in comparisons
     ]
@@ -867,6 +926,24 @@ def summarize_comparisons(
         "candidate_mind_validation_checkpoint_decision": summarize_statuses(
             candidate_mind_validation_checkpoint
         ),
+        "baseline_capability_decision": summarize_statuses(
+            baseline_capability_decision
+        ),
+        "candidate_capability_decision": summarize_statuses(
+            candidate_capability_decision
+        ),
+        "baseline_capability_effectiveness_decision": summarize_statuses(
+            baseline_capability_effectiveness
+        ),
+        "candidate_capability_effectiveness_decision": summarize_statuses(
+            candidate_capability_effectiveness
+        ),
+        "baseline_handoff_adapter_decision": summarize_statuses(
+            baseline_handoff_adapter
+        ),
+        "candidate_handoff_adapter_decision": summarize_statuses(
+            candidate_handoff_adapter
+        ),
         "baseline_adaptive_intervention_decision": summarize_statuses(
             baseline_adaptive_intervention
         ),
@@ -894,6 +971,30 @@ def summarize_comparisons(
         "candidate_adaptive_intervention_mandatory_override_rate": status_rate(
             candidate_adaptive_intervention_policy,
             "mandatory_override",
+        ),
+        "baseline_capability_healthy_rate": status_rate(
+            baseline_capability_decision,
+            "healthy",
+        ),
+        "candidate_capability_healthy_rate": status_rate(
+            candidate_capability_decision,
+            "healthy",
+        ),
+        "baseline_capability_effective_rate": status_rate(
+            baseline_capability_effectiveness,
+            "effective",
+        ),
+        "candidate_capability_effective_rate": status_rate(
+            candidate_capability_effectiveness,
+            "effective",
+        ),
+        "baseline_handoff_adapter_healthy_rate": status_rate(
+            baseline_handoff_adapter,
+            "healthy",
+        ),
+        "candidate_handoff_adapter_healthy_rate": status_rate(
+            candidate_handoff_adapter,
+            "healthy",
         ),
         "baseline_memory_causality_decision": summarize_statuses(
             baseline_memory_causality
@@ -1259,6 +1360,40 @@ def compare_results(
                 != candidate.mind_validation_checkpoint_status
             ):
                 mismatch_fields.append("mind_validation_checkpoint_status")
+            if (
+                baseline.capability_decision_status
+                != candidate.capability_decision_status
+            ):
+                mismatch_fields.append("capability_decision_status")
+            if (
+                baseline.capability_decision_selected_mode
+                != candidate.capability_decision_selected_mode
+            ):
+                mismatch_fields.append("capability_decision_selected_mode")
+            if (
+                baseline.capability_authorization_status
+                != candidate.capability_authorization_status
+            ):
+                mismatch_fields.append("capability_authorization_status")
+            if (
+                baseline.capability_decision_tool_class
+                != candidate.capability_decision_tool_class
+            ):
+                mismatch_fields.append("capability_decision_tool_class")
+            if (
+                baseline.capability_decision_handoff_mode
+                != candidate.capability_decision_handoff_mode
+            ):
+                mismatch_fields.append("capability_decision_handoff_mode")
+            if (
+                baseline.capability_decision_selected_capabilities
+                != candidate.capability_decision_selected_capabilities
+            ):
+                mismatch_fields.append("capability_decision_selected_capabilities")
+            if baseline.capability_effectiveness != candidate.capability_effectiveness:
+                mismatch_fields.append("capability_effectiveness")
+            if baseline.handoff_adapter_status != candidate.handoff_adapter_status:
+                mismatch_fields.append("handoff_adapter_status")
             if baseline.memory_causality_status != candidate.memory_causality_status:
                 mismatch_fields.append("memory_causality_status")
             if baseline.memory_lifecycle_status != candidate.memory_lifecycle_status:
@@ -1535,6 +1670,26 @@ def render_text(payload: dict[str, object]) -> str:
                         f"{item['baseline_mind_validation_checkpoint_assessment']}"
                     ),
                     (
+                        "baseline_capability_decision_status="
+                        f"{item['baseline']['capability_decision_status']}"
+                    ),
+                    (
+                        "baseline_capability_mode="
+                        f"{item['baseline']['capability_decision_selected_mode'] or 'none'}"
+                    ),
+                    (
+                        "baseline_capability_authorization="
+                        f"{item['baseline']['capability_authorization_status']}"
+                    ),
+                    (
+                        "baseline_capability_effectiveness="
+                        f"{item['baseline_capability_effectiveness_assessment']}"
+                    ),
+                    (
+                        "baseline_handoff_adapter_assessment="
+                        f"{item['baseline_handoff_adapter_assessment']}"
+                    ),
+                    (
                         "baseline_adaptive_intervention_status="
                         f"{item['baseline']['adaptive_intervention_status']}"
                     ),
@@ -1683,6 +1838,36 @@ def render_text(payload: dict[str, object]) -> str:
                         f"{item['candidate_mind_validation_checkpoint_assessment']}"
                         if item["candidate_mind_validation_checkpoint_assessment"] is not None
                         else "candidate_mind_validation_checkpoint_assessment=n/a"
+                    ),
+                    (
+                        "candidate_capability_decision_status="
+                        f"{item['candidate']['capability_decision_status']}"
+                        if item["candidate"]
+                        else "candidate_capability_decision_status=n/a"
+                    ),
+                    (
+                        "candidate_capability_mode="
+                        f"{item['candidate']['capability_decision_selected_mode'] or 'none'}"
+                        if item["candidate"]
+                        else "candidate_capability_mode=n/a"
+                    ),
+                    (
+                        "candidate_capability_authorization="
+                        f"{item['candidate']['capability_authorization_status']}"
+                        if item["candidate"]
+                        else "candidate_capability_authorization=n/a"
+                    ),
+                    (
+                        "candidate_capability_effectiveness="
+                        f"{item['candidate_capability_effectiveness_assessment']}"
+                        if item["candidate_capability_effectiveness_assessment"] is not None
+                        else "candidate_capability_effectiveness=n/a"
+                    ),
+                    (
+                        "candidate_handoff_adapter_assessment="
+                        f"{item['candidate_handoff_adapter_assessment']}"
+                        if item["candidate_handoff_adapter_assessment"] is not None
+                        else "candidate_handoff_adapter_assessment=n/a"
                     ),
                     (
                         "candidate_adaptive_intervention_status="
@@ -1942,6 +2127,30 @@ def render_text(payload: dict[str, object]) -> str:
                 f"{summary['baseline_mind_validation_checkpoint_decision']}",
                 "candidate_mind_validation_checkpoint_decision="
                 f"{summary['candidate_mind_validation_checkpoint_decision']}",
+                "baseline_capability_decision="
+                f"{summary['baseline_capability_decision']}",
+                "candidate_capability_decision="
+                f"{summary['candidate_capability_decision']}",
+                "baseline_capability_effectiveness_decision="
+                f"{summary['baseline_capability_effectiveness_decision']}",
+                "candidate_capability_effectiveness_decision="
+                f"{summary['candidate_capability_effectiveness_decision']}",
+                "baseline_handoff_adapter_decision="
+                f"{summary['baseline_handoff_adapter_decision']}",
+                "candidate_handoff_adapter_decision="
+                f"{summary['candidate_handoff_adapter_decision']}",
+                "baseline_capability_healthy_rate="
+                f"{summary['baseline_capability_healthy_rate']}",
+                "candidate_capability_healthy_rate="
+                f"{summary['candidate_capability_healthy_rate']}",
+                "baseline_capability_effective_rate="
+                f"{summary['baseline_capability_effective_rate']}",
+                "candidate_capability_effective_rate="
+                f"{summary['candidate_capability_effective_rate']}",
+                "baseline_handoff_adapter_healthy_rate="
+                f"{summary['baseline_handoff_adapter_healthy_rate']}",
+                "candidate_handoff_adapter_healthy_rate="
+                f"{summary['candidate_handoff_adapter_healthy_rate']}",
                 "baseline_adaptive_intervention_decision="
                 f"{summary['baseline_adaptive_intervention_decision']}",
                 "candidate_adaptive_intervention_decision="
@@ -2098,6 +2307,15 @@ def serialize_comparisons(
                 "baseline_mind_validation_checkpoint_assessment": (
                     mind_validation_checkpoint_assessment(item.baseline)
                 ),
+                "baseline_capability_decision_assessment": capability_decision_assessment(
+                    item.baseline
+                ),
+                "baseline_capability_effectiveness_assessment": (
+                    capability_effectiveness_assessment(item.baseline)
+                ),
+                "baseline_handoff_adapter_assessment": handoff_adapter_assessment(
+                    item.baseline
+                ),
                 "baseline_adaptive_intervention_assessment": (
                     adaptive_intervention_assessment(item.baseline)
                 ),
@@ -2169,6 +2387,21 @@ def serialize_comparisons(
                 ),
                 "candidate_mind_validation_checkpoint_assessment": (
                     mind_validation_checkpoint_assessment(item.candidate)
+                    if item.candidate
+                    else None
+                ),
+                "candidate_capability_decision_assessment": (
+                    capability_decision_assessment(item.candidate)
+                    if item.candidate
+                    else None
+                ),
+                "candidate_capability_effectiveness_assessment": (
+                    capability_effectiveness_assessment(item.candidate)
+                    if item.candidate
+                    else None
+                ),
+                "candidate_handoff_adapter_assessment": (
+                    handoff_adapter_assessment(item.candidate)
                     if item.candidate
                     else None
                 ),

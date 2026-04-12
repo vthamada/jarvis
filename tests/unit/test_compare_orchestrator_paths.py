@@ -48,6 +48,14 @@ def make_result(  # type: ignore[no-untyped-def]
     metacognitive_guidance_status: str = "healthy",
     mind_disagreement_status: str = "not_applicable",
     mind_validation_checkpoint_status: str = "not_applicable",
+    capability_decision_status: str = "healthy",
+    capability_decision_selected_mode: str | None = "core_with_specialist_handoff",
+    capability_authorization_status: str = "authorized",
+    capability_decision_tool_class: str | None = None,
+    capability_decision_handoff_mode: str | None = "through_core_only",
+    capability_decision_selected_capabilities: list[str] | None = None,
+    capability_effectiveness: str = "effective",
+    handoff_adapter_status: str = "healthy",
     adaptive_intervention_status: str = "not_applicable",
     adaptive_intervention_effectiveness: str = "not_applicable",
     adaptive_intervention_policy_status: str = "not_applicable",
@@ -125,6 +133,17 @@ def make_result(  # type: ignore[no-untyped-def]
         metacognitive_guidance_status=metacognitive_guidance_status,
         mind_disagreement_status=mind_disagreement_status,
         mind_validation_checkpoint_status=mind_validation_checkpoint_status,
+        capability_decision_status=capability_decision_status,
+        capability_decision_selected_mode=capability_decision_selected_mode,
+        capability_authorization_status=capability_authorization_status,
+        capability_decision_tool_class=capability_decision_tool_class,
+        capability_decision_handoff_mode=capability_decision_handoff_mode,
+        capability_decision_selected_capabilities=(
+            capability_decision_selected_capabilities
+            or ["core_reasoning", "specialist_handoff"]
+        ),
+        capability_effectiveness=capability_effectiveness,
+        handoff_adapter_status=handoff_adapter_status,
         adaptive_intervention_status=adaptive_intervention_status,
         adaptive_intervention_effectiveness=adaptive_intervention_effectiveness,
         adaptive_intervention_policy_status=adaptive_intervention_policy_status,
@@ -294,6 +313,40 @@ def test_compare_results_flags_release_signal_mismatch_fields() -> None:
         "procedural_memory_hint",
         "semantic_memory_specialists",
         "procedural_memory_specialists",
+    ]
+
+
+def test_compare_results_flags_capability_mismatch_fields() -> None:
+    baseline = [make_result(scenario_id="x", path_name="baseline")]
+    candidate = [
+        make_result(
+            scenario_id="x",
+            path_name="langgraph",
+            capability_decision_status="attention_required",
+            capability_decision_selected_mode="core_with_local_operation",
+            capability_authorization_status="authorized_with_conditions",
+            capability_decision_tool_class="local_artifact_generation",
+            capability_decision_handoff_mode="none",
+            capability_decision_selected_capabilities=[
+                "core_reasoning",
+                "local_safe_operation",
+            ],
+            capability_effectiveness="insufficient",
+            handoff_adapter_status="not_applicable",
+        )
+    ]
+
+    comparisons = compare_results(baseline, candidate)
+
+    assert comparisons[0].mismatch_fields == [
+        "capability_decision_status",
+        "capability_decision_selected_mode",
+        "capability_authorization_status",
+        "capability_decision_tool_class",
+        "capability_decision_handoff_mode",
+        "capability_decision_selected_capabilities",
+        "capability_effectiveness",
+        "handoff_adapter_status",
     ]
 
 

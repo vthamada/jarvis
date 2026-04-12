@@ -145,6 +145,41 @@ def _evaluation_from_dict(payload: dict[str, object]) -> FlowEvaluationInput:
             if payload.get("mind_validation_checkpoint_status") is not None
             else "not_applicable"
         ),
+        capability_decision_status=(
+            str(payload["capability_decision_status"])
+            if payload.get("capability_decision_status") is not None
+            else "not_applicable"
+        ),
+        capability_decision_selected_mode=(
+            str(payload["capability_decision_selected_mode"])
+            if payload.get("capability_decision_selected_mode") is not None
+            else None
+        ),
+        capability_authorization_status=(
+            str(payload["capability_authorization_status"])
+            if payload.get("capability_authorization_status") is not None
+            else "not_applicable"
+        ),
+        capability_decision_tool_class=(
+            str(payload["capability_decision_tool_class"])
+            if payload.get("capability_decision_tool_class") is not None
+            else None
+        ),
+        capability_decision_handoff_mode=(
+            str(payload["capability_decision_handoff_mode"])
+            if payload.get("capability_decision_handoff_mode") is not None
+            else None
+        ),
+        capability_effectiveness=(
+            str(payload["capability_effectiveness"])
+            if payload.get("capability_effectiveness") is not None
+            else "not_applicable"
+        ),
+        handoff_adapter_status=(
+            str(payload["handoff_adapter_status"])
+            if payload.get("handoff_adapter_status") is not None
+            else "not_applicable"
+        ),
         adaptive_intervention_status=(
             str(payload["adaptive_intervention_status"])
             if payload.get("adaptive_intervention_status") is not None
@@ -552,6 +587,24 @@ def build_payload(args: Namespace) -> dict[str, object]:
                     "candidate_mind_disagreement_assessment": item.get(
                         "candidate_mind_disagreement_assessment"
                     ),
+                    "baseline_capability_decision_assessment": item.get(
+                        "baseline_capability_decision_assessment"
+                    ),
+                    "candidate_capability_decision_assessment": item.get(
+                        "candidate_capability_decision_assessment"
+                    ),
+                    "baseline_capability_effectiveness_assessment": item.get(
+                        "baseline_capability_effectiveness_assessment"
+                    ),
+                    "candidate_capability_effectiveness_assessment": item.get(
+                        "candidate_capability_effectiveness_assessment"
+                    ),
+                    "baseline_handoff_adapter_assessment": item.get(
+                        "baseline_handoff_adapter_assessment"
+                    ),
+                    "candidate_handoff_adapter_assessment": item.get(
+                        "candidate_handoff_adapter_assessment"
+                    ),
                     "baseline_memory_causality_assessment": item.get(
                         "baseline_memory_causality_assessment"
                     ),
@@ -658,6 +711,24 @@ def render_text(payload: dict[str, object]) -> str:
                         f"{item.get('baseline_mind_disagreement_assessment', 'n/a')}"
                         "->"
                         f"{item.get('candidate_mind_disagreement_assessment', 'n/a')}"
+                    ),
+                    (
+                        "capability_decision="
+                        f"{item.get('baseline_capability_decision_assessment', 'n/a')}"
+                        "->"
+                        f"{item.get('candidate_capability_decision_assessment', 'n/a')}"
+                    ),
+                    (
+                        "capability_effectiveness="
+                        f"{item.get('baseline_capability_effectiveness_assessment', 'n/a')}"
+                        "->"
+                        f"{item.get('candidate_capability_effectiveness_assessment', 'n/a')}"
+                    ),
+                    (
+                        "handoff_adapter="
+                        f"{item.get('baseline_handoff_adapter_assessment', 'n/a')}"
+                        "->"
+                        f"{item.get('candidate_handoff_adapter_assessment', 'n/a')}"
                     ),
                     (
                         "memory_causality="

@@ -69,6 +69,13 @@ def test_planning_engine_builds_structured_plan_with_continuity() -> None:
     assert "conflito_missao=nenhum" in plan.rationale
     assert "recomendacao_previa=retomar o escopo final antes da proxima acao" in plan.rationale
     assert plan.continuity_source == "active_mission"
+    assert plan.capability_decision_status == "resolved"
+    assert plan.capability_decision_selected_mode == "core_with_local_operation"
+    assert plan.capability_decision_authorization_status == "governance_review_required"
+    assert plan.capability_decision_tool_class == "local_artifact_generation"
+    assert plan.capability_decision_handoff_mode == "through_core_only"
+    assert "local_safe_operation" in plan.capability_decision_selected_capabilities
+    assert "specialist_handoff" in plan.capability_decision_selected_capabilities
 
 
 def test_planning_engine_marks_related_continuity_source_when_candidate_is_present() -> None:
@@ -108,6 +115,31 @@ def test_planning_engine_marks_related_continuity_source_when_candidate_is_prese
     assert "prioridade_relacionada=0.80" in plan.rationale
     assert "motivo_continuidade=missao relacionada mission-a venceu o ranking" in plan.rationale
     assert "ranking_continuidade=missao relacionada mission-a venceu o ranking" in plan.rationale
+
+
+def test_planning_engine_contains_capabilities_for_clarification_only() -> None:
+    engine = PlanningEngine()
+    plan = engine.build_task_plan(
+        PlanningContext(
+            intent="analysis",
+            query="Need help, but first clarify the target environment.",
+            recovered_context=[],
+            active_domains=["analysis"],
+            active_minds=["mente_analitica"],
+            knowledge_snippets=[],
+            risk_markers=[],
+            requires_clarification=True,
+            preferred_response_mode="analysis_only",
+            dominant_goal="esclarecer o pedido antes de qualquer execucao",
+        )
+    )
+
+    assert plan.capability_decision_status == "contained"
+    assert plan.capability_decision_selected_mode == "clarification_only"
+    assert plan.capability_decision_authorization_status == "clarification_required"
+    assert plan.capability_decision_handoff_mode == "none"
+    assert plan.capability_decision_tool_class is None
+    assert plan.capability_decision_selected_capabilities == ["core_reasoning"]
 
 
 def test_planning_engine_uses_memory_route_priority_and_mind_composition_guidance() -> None:
@@ -283,10 +315,42 @@ def test_planning_engine_reformulates_when_new_request_conflicts_with_active_mis
     assert plan.metacognitive_guidance_applied is True
     assert "containment_recommendation" in plan.metacognitive_effects
     assert plan.metacognitive_containment_recommendation is not None
+    assert plan.capability_decision_status == "contained"
+    assert plan.capability_decision_selected_mode == "contained_guidance"
+    assert plan.capability_decision_authorization_status == "human_validation_required"
+    assert plan.capability_decision_handoff_mode == "none"
     assert (
         "conflito_missao=pedido atual desloca o foco da missao ativa 'Plan milestone M3'"
         in plan.rationale
     )
+
+
+def test_planning_engine_prefers_specialist_handoff_for_guided_analysis() -> None:
+    engine = PlanningEngine()
+    plan = engine.build_task_plan(
+        PlanningContext(
+            intent="analysis",
+            query="Analyze the strongest pilot risk and explain the trade-offs.",
+            recovered_context=[],
+            active_domains=["analysis", "strategy"],
+            active_minds=["mente_analitica", "mente_critica"],
+            knowledge_snippets=["Preserve evidence-first reasoning."],
+            risk_markers=[],
+            requires_clarification=False,
+            preferred_response_mode="analysis_only",
+            dominant_goal="aprofundar a leitura analitica com apoio especialista",
+            route_workflow_profile="structured_analysis_workflow",
+            specialist_hints=["structured_analysis_specialist"],
+        )
+    )
+
+    assert plan.recommended_task_type == "produce_analysis_brief"
+    assert plan.capability_decision_status == "resolved"
+    assert plan.capability_decision_selected_mode == "core_with_specialist_handoff"
+    assert plan.capability_decision_authorization_status == "pre_authorized_internal"
+    assert plan.capability_decision_handoff_mode == "through_core_only"
+    assert plan.capability_decision_tool_class is None
+    assert "specialist_handoff" in plan.capability_decision_selected_capabilities
 
 
 def test_planning_engine_closes_active_loop_explicitly() -> None:

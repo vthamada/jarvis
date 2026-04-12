@@ -2,9 +2,9 @@
 
 ## Metadata
 
-- Atualizado em: 2026-04-10
+- Atualizado em: 2026-04-11
 - Branch: `main`
-- Commit de referência: `23f5059`
+- Commit de referência: `e36b9d8`
 - Artefato canônico do projeto: `documento_mestre_jarvis.md`
 - Estado do projeto: `v1` encerrado e congelado para uso controlado; primeiro ciclo do `pós-v1` encerrado; primeiro ciclo do `v1.5` encerrado; primeiro corte do `v2` encerrado; `v2-alignment-cycle` encerrado; próximo corte do `v2` aberto
 - Fila micro ativa: `docs/implementation/execution-backlog.md`
@@ -89,9 +89,9 @@ Leitura atualizada desta rodada:
   continuacao inercial de lotes ja concluidos;
 - `docs/implementation/unified-gap-and-absorption-backlog.md` passa a ser o
   mapa macro do que ainda falta no sistema;
-- a proxima fila micro deve nascer dali, sem abrir vertical nova por impulso.
+- a proxima fila micro nasce dali, sem abrir vertical nova por impulso.
 
-Consolidar o fechamento operacional do `v2` sobre um runtime já alinhado aos eixos do Documento-Mestre, fazendo os sinais causais já absorvidos virarem critério soberano de intervenção adaptativa antes de qualquer nova frente macro.
+Consolidar o fechamento operacional do `v2` sobre um runtime já alinhado aos eixos do Documento-Mestre, fazendo a decisao soberana de capacidades e ferramentas virar o proximo contrato executavel do nucleo antes de qualquer nova frente macro.
 
 ### Foco operacional atual
 
@@ -103,8 +103,9 @@ Atualizacao desta rodada:
 - usar `docs/implementation/unified-gap-and-absorption-backlog.md` como backlog
   macro do que ainda falta, separando gaps do nucleo, traducao tecnologica,
   superficies, evolucao, verticais `deferred` e pesquisa;
-- derivar o proximo lote micro a partir de itens que ainda aumentem
-  profundidade do nucleo no `v2 restante`, e nao de superficies amplas;
+- o lote `MB-067` a `MB-071` foi concluido e fechou a decisao soberana de
+  capacidades, ferramentas e handoffs bounded como baseline auditavel do
+  runtime;
 - tratar a Onda 2 apenas como experimento controlado guiado pela matriz de
   readiness ja existente;
 - manter `protective intelligence`, `voice/realtime`, memoria temporal forte,
@@ -140,7 +141,9 @@ Atualizacao desta rodada:
 - `MB-057` a `MB-061` foram concluidos e fecharam o lote de intervencao adaptativa governada do nucleo antes da sintese final;
 - `MB-057` e `MB-058` agora formalizam e aplicam `adaptive_intervention_*` em `planning`, `orchestrator`, dispatch, revisao especializada e fluxo opcional de `LangGraph`, sem bypassar governanca nem substituir a linha principal do plano;
 - `MB-059` e `MB-060` agora tornam a efetividade dessas intervencoes parte do baseline auditavel em `observability`, piloto, comparadores, `evolution-lab`, `evolution_from_pilot` e verificadores de release;
-- a fila micro volta a ficar sem item `ready`, e o proximo lote do nucleo precisa ser repriorizado explicitamente a partir desses sinais novos;
+- `MB-067` a `MB-071` foram concluidos e fecharam o lote do nucleo para decisao soberana de capacidades, ferramentas e handoffs bounded, derivado de `SG-001`, `TA-001` e `TA-005`;
+- `planning`, `orchestrator`, `governance`, `observability`, piloto, comparadores e `evolution-lab` agora tratam `capability_decision_*`, `capability_effectiveness` e `handoff_adapter_status` como slice baseline do runtime;
+- a fila micro voltou a ficar sem item `ready`; a proxima rodada correta e nova repriorizacao explicita a partir de `docs/implementation/unified-gap-and-absorption-backlog.md`;
 - so depois desse lote: reavaliar qual vertical derivada deve abrir a proxima frente macro; `protective intelligence` permanece mapeado, mas em `deferred` ate nova decisao explicita;
 - so entao: decidir se o `v3` deve abrir por essa frente, por outra vertical derivada ou por mais maturacao transversal.
 

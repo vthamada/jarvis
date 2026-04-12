@@ -324,6 +324,7 @@ class OrchestratorService:
                     "mind_validation_checkpoints": (
                         deliberative_plan.mind_validation_checkpoints
                     ),
+                    **self._capability_decision_event_payload(deliberative_plan),
                     "adaptive_intervention_status": (
                         deliberative_plan.adaptive_intervention_status
                     ),
@@ -505,6 +506,16 @@ class OrchestratorService:
                     "identity_signature": identity_profile.identity_signature,
                     "response_style": final_response_style,
                     "identity_guardrail": governance_check.context.get("identity_guardrail"),
+                    **self._capability_decision_event_payload(
+                        deliberative_plan,
+                        authorization_status=self._resolve_capability_authorization_status(
+                            plan=deliberative_plan,
+                            governance_decision=governance_decision,
+                            specialist_handoff_decision=(
+                                specialist_handoff_assessment.governance_decision
+                            ),
+                        ),
+                    ),
                 },
             )
         )
@@ -519,12 +530,19 @@ class OrchestratorService:
                 PermissionDecision.ALLOW_WITH_CONDITIONS,
             }
             and directive.should_execute_operation
+            and self._capability_allows_operation(deliberative_plan)
         ):
+            capability_authorization_status = self._resolve_capability_authorization_status(
+                plan=deliberative_plan,
+                governance_decision=governance_decision,
+                specialist_handoff_decision=specialist_handoff_assessment.governance_decision,
+            )
             operation_dispatch = self.build_operation_dispatch(
                 contract,
                 plan=deliberative_plan,
                 specialist_review=specialist_review,
                 mission_runtime_state=mission_runtime_state,
+                authorization_status=capability_authorization_status,
             )
             events.append(
                 self.make_event(
@@ -556,6 +574,7 @@ class OrchestratorService:
                         "workflow_resume_eligible": (
                             operation_dispatch.workflow_resume_eligible
                         ),
+                        **self._capability_decision_event_payload(operation_dispatch),
                         "adaptive_intervention_status": (
                             operation_dispatch.adaptive_intervention_status
                         ),
@@ -600,6 +619,7 @@ class OrchestratorService:
                         "workflow_decision_points": operation_dispatch.workflow_decision_points,
                         "workflow_resume_status": operation_dispatch.workflow_resume_status,
                         "workflow_resume_point": operation_dispatch.workflow_resume_point,
+                        **self._capability_decision_event_payload(operation_dispatch),
                         "adaptive_intervention_status": (
                             operation_dispatch.adaptive_intervention_status
                         ),
@@ -638,6 +658,7 @@ class OrchestratorService:
                         "workflow_resume_eligible": (
                             operation_dispatch.workflow_resume_eligible
                         ),
+                        **self._capability_decision_event_payload(operation_dispatch),
                         "adaptive_intervention_status": (
                             operation_dispatch.adaptive_intervention_status
                         ),
@@ -809,6 +830,16 @@ class OrchestratorService:
                     "mind_disagreement_status": deliberative_plan.mind_disagreement_status,
                     "mind_validation_checkpoints": (
                         deliberative_plan.mind_validation_checkpoints
+                    ),
+                    **self._capability_decision_event_payload(
+                        deliberative_plan,
+                        authorization_status=self._resolve_capability_authorization_status(
+                            plan=deliberative_plan,
+                            governance_decision=governance_decision,
+                            specialist_handoff_decision=(
+                                specialist_handoff_assessment.governance_decision
+                            ),
+                        ),
                     ),
                     "adaptive_intervention_status": (
                         deliberative_plan.adaptive_intervention_status
@@ -1061,6 +1092,16 @@ class OrchestratorService:
         knowledge_result: KnowledgeRetrievalResult | None,
         events: list[InternalEventEnvelope],
     ) -> tuple[SpecialistHandoffPlan, list[InternalEventEnvelope]]:
+        if not self._capability_allows_specialist_handoff(deliberative_plan):
+            return (
+                SpecialistHandoffPlan(
+                    specialist_hints=[],
+                    selections=[],
+                    invocations=[],
+                    boundary_summary="capability decision disabled specialist handoffs",
+                ),
+                list(events),
+            )
         shared_memory_contexts = self.memory_service.prepare_specialist_shared_memory(
             session_id=str(contract.session_id),
             specialist_hints=list(deliberative_plan.specialist_hints),
@@ -2026,6 +2067,7 @@ class OrchestratorService:
         plan: DeliberativePlanContract,
         specialist_review: SpecialistReview,
         mission_runtime_state: MissionRuntimeStateContract | None = None,
+        authorization_status: str | None = None,
     ) -> OperationDispatchContract:
         """Create the operational dispatch for an allowed request."""
 
@@ -2082,6 +2124,22 @@ class OrchestratorService:
             success_criteria=list(plan.success_criteria),
             smallest_safe_next_action=plan.smallest_safe_next_action,
             requires_human_validation=plan.requires_human_validation,
+            capability_decision_status=plan.capability_decision_status,
+            capability_decision_objective=plan.capability_decision_objective,
+            capability_decision_reason=plan.capability_decision_reason,
+            capability_decision_selected_mode=plan.capability_decision_selected_mode,
+            capability_decision_authorization_status=(
+                authorization_status or plan.capability_decision_authorization_status
+            ),
+            capability_decision_fallback_mode=plan.capability_decision_fallback_mode,
+            capability_decision_tool_class=plan.capability_decision_tool_class,
+            capability_decision_handoff_mode=plan.capability_decision_handoff_mode,
+            capability_decision_eligible_capabilities=list(
+                plan.capability_decision_eligible_capabilities
+            ),
+            capability_decision_selected_capabilities=list(
+                plan.capability_decision_selected_capabilities
+            ),
             adaptive_intervention_status=plan.adaptive_intervention_status,
             adaptive_intervention_reason=plan.adaptive_intervention_reason,
             adaptive_intervention_trigger=plan.adaptive_intervention_trigger,
@@ -2127,6 +2185,78 @@ class OrchestratorService:
             return {}
         initial_state = "resume_ready" if resume_status == "resume_available" else "pending"
         return {checkpoint: initial_state for checkpoint in workflow_checkpoints}
+
+    @staticmethod
+    def _capability_decision_event_payload(
+        source: DeliberativePlanContract | OperationDispatchContract,
+        *,
+        authorization_status: str | None = None,
+    ) -> dict[str, object]:
+        return {
+            "capability_decision_status": source.capability_decision_status,
+            "capability_decision_objective": source.capability_decision_objective,
+            "capability_decision_reason": source.capability_decision_reason,
+            "capability_decision_selected_mode": source.capability_decision_selected_mode,
+            "capability_decision_authorization_status": (
+                authorization_status or source.capability_decision_authorization_status
+            ),
+            "capability_decision_fallback_mode": source.capability_decision_fallback_mode,
+            "capability_decision_tool_class": source.capability_decision_tool_class,
+            "capability_decision_handoff_mode": source.capability_decision_handoff_mode,
+            "capability_decision_eligible_capabilities": list(
+                source.capability_decision_eligible_capabilities
+            ),
+            "capability_decision_selected_capabilities": list(
+                source.capability_decision_selected_capabilities
+            ),
+        }
+
+    @staticmethod
+    def _capability_allows_specialist_handoff(plan: DeliberativePlanContract) -> bool:
+        return plan.capability_decision_handoff_mode == "through_core_only"
+
+    @staticmethod
+    def _capability_allows_operation(plan: DeliberativePlanContract) -> bool:
+        return (
+            plan.capability_decision_selected_mode == "core_with_local_operation"
+            and "local_safe_operation"
+            in plan.capability_decision_selected_capabilities
+        )
+
+    @staticmethod
+    def _resolve_capability_authorization_status(
+        *,
+        plan: DeliberativePlanContract,
+        governance_decision: GovernanceDecisionContract,
+        specialist_handoff_decision: GovernanceDecisionContract | None = None,
+    ) -> str | None:
+        if governance_decision.decision == PermissionDecision.BLOCK:
+            return "blocked"
+        if governance_decision.decision == PermissionDecision.DEFER_FOR_VALIDATION:
+            return "deferred_for_validation"
+        if plan.capability_decision_selected_mode in {
+            "clarification_only",
+            "contained_guidance",
+        }:
+            return plan.capability_decision_authorization_status
+        if plan.capability_decision_selected_mode == "core_with_local_operation":
+            return (
+                "authorized_with_conditions"
+                if governance_decision.decision == PermissionDecision.ALLOW_WITH_CONDITIONS
+                else "authorized"
+            )
+        if (
+            plan.capability_decision_handoff_mode == "through_core_only"
+            and specialist_handoff_decision is not None
+        ):
+            if specialist_handoff_decision.decision == PermissionDecision.BLOCK:
+                return "blocked"
+            if specialist_handoff_decision.decision == PermissionDecision.DEFER_FOR_VALIDATION:
+                return "deferred_for_validation"
+            if specialist_handoff_decision.decision == PermissionDecision.ALLOW_WITH_CONDITIONS:
+                return "authorized_with_conditions"
+            return "authorized"
+        return plan.capability_decision_authorization_status
 
     @staticmethod
     def _build_workflow_profile(

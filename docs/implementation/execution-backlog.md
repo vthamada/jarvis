@@ -1198,6 +1198,91 @@ Escalar ao operador quando:
 - `modo_de_raciocinio_recomendado`: `medium`
 - `impacto_no_baseline`: o lote fecha com sintese, comparadores, loop evolutivo e docs vivos sincronizados em torno da prioridade soberana de intervencao por workflow.
 
+### MB-067
+
+- `id`: `MB-067`
+- `prioridade`: `P0`
+- `status`: `done`
+- `eixo_do_mestre`: `fluxo_principal`
+- `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
+- `micro_objetivo`: formalizar um contrato soberano de decisao de capacidades e ferramentas por request, derivado do estado executivo do runtime e nao de improviso local da LLM.
+- `justificativa_arquitetural`: depois de fechar a politica soberana de intervencao adaptativa por workflow, o proximo ganho real do nucleo e tornar explicita a decisao sobre capacidade, ferramenta, handoff e dispatch elegivel, sem deixar essa camada como parse implicito do plano ou da resposta.
+- `arquivos/servicos_principais`: `shared/contracts/__init__.py`, `shared/schemas/__init__.py`, `shared/domain_registry.py`, `engines/planning-engine`, `services/orchestrator-service`
+- `dependencias`: `MB-062`, `MB-063`, `MB-064`
+- `criterio_de_aceite`: `planning` e `orchestrator` passam a carregar um slice explicito de `capability_decision_*`, distinguindo pelo menos objetivo, elegibilidade, autorizacao, modo de execucao e fallback governado, sem bypassar registry, governanca ou memoria canonica.
+- `gate_minimo`: `pytest` direcionado dos engines/servicos tocados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `impacto_no_baseline`: a escolha de capacidade/ferramenta deixa de ser detalhe implicito do runtime e passa a existir como contrato soberano, pequeno e auditavel do fluxo principal.
+
+### MB-068
+
+- `id`: `MB-068`
+- `prioridade`: `P0`
+- `status`: `done`
+- `eixo_do_mestre`: `governanca`
+- `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
+- `micro_objetivo`: fazer `planning`, `orchestrator`, dispatch e governanca aplicarem esse contrato como politica soberana de elegibilidade, autorizacao e handoff bounded de capacidades.
+- `justificativa_arquitetural`: depois de formalizar o contrato, o passo seguinte e impedir que selecao de capacidade, uso de ferramenta ou handoff de borda virem decisao espalhada entre prompt, heuristica residual e adapters locais.
+- `arquivos/servicos_principais`: `engines/planning-engine`, `services/orchestrator-service`, `services/governance-service`, `operation_dispatch`
+- `dependencias`: `MB-067`
+- `criterio_de_aceite`: o runtime passa a escolher capacidade e handoff elegiveis por request com `reason`, `authorization_status`, `selected_mode` e `expected_effect`, sem abrir caminho paralelo fora do contrato soberano nem promover stack externa a cerebro do sistema.
+- `gate_minimo`: `pytest` direcionado dos engines/servicos tocados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `impacto_no_baseline`: capacidade e handoff de borda passam a responder a elegibilidade e autorizacao soberanas, em vez de depender de improviso residual do fluxo.
+
+### MB-069
+
+- `id`: `MB-069`
+- `prioridade`: `P1`
+- `status`: `done`
+- `eixo_do_mestre`: `observabilidade`
+- `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
+- `micro_objetivo`: tornar a decisao soberana de capacidade e ferramenta parte da evidencia auditavel do baseline, incluindo tracing, handoff e adaptadores de sessao nas bordas do fluxo.
+- `justificativa_arquitetural`: sem evidencia propria, essa camada correria o risco de virar opaca; o baseline precisa mostrar quando uma capacidade foi elegivel, autorizada, acionada, negada ou corretamente contida por workflow.
+- `arquivos/servicos_principais`: `services/observability-service`, `tools/internal_pilot_support.py`, `tools/internal_pilot_report.py`, `tools/compare_orchestrator_paths.py`, `tools/verify_release_signal_baseline.py`
+- `dependencias`: `MB-068`
+- `criterio_de_aceite`: auditoria, piloto e comparadores passam a expor pelo menos `capability_decision_status`, `capability_authorization_status`, `handoff_adapter_status` e `capability_effectiveness`, distinguindo uso coerente, uso excessivo, negacao correta e bypass indevido.
+- `gate_minimo`: `pytest` direcionado dos services/tools afetados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `impacto_no_baseline`: a decisao de capacidade/ferramenta deixa de ser telemetria lateral e passa a existir como evidencia formal e comparavel do runtime.
+
+### MB-070
+
+- `id`: `MB-070`
+- `prioridade`: `P1`
+- `status`: `done`
+- `eixo_do_mestre`: `evolucao`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: fazer `refinement_vectors`, `evaluation_matrix` e verificadores de release usarem efetividade e drift da politica soberana de capacidades como insumo do proximo refinamento do nucleo.
+- `justificativa_arquitetural`: depois de tornar a decisao observavel, o loop evolutivo precisa separar melhor quando o problema esta na elegibilidade da capacidade, na autorizacao, no tracing/handoff de borda ou no proprio desenho do workflow.
+- `arquivos/servicos_principais`: `evolution/evolution-lab`, `tools/evolution_from_pilot.py`, `tools/compare_orchestrator_paths.py`, `tools/verify_release_signal_baseline.py`
+- `dependencias`: `MB-069`
+- `criterio_de_aceite`: `evolution-lab`, comparadores e verificadores passam a registrar mismatch, inefetividade ou overreach da politica de capacidades em `refinement_vectors` e `evaluation_matrix`, sem automatizar promocao de mudanca ou stack externa.
+- `gate_minimo`: `pytest` direcionado dos tools/servicos tocados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `impacto_no_baseline`: a politica soberana de capacidades passa a influenciar de forma formal a priorizacao do proximo ganho causal do nucleo.
+
+### MB-071
+
+- `id`: `MB-071`
+- `prioridade`: `P1`
+- `status`: `done`
+- `eixo_do_mestre`: `docs/gates`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: fechar o lote de decisao soberana de capacidades com docs vivos, changelog e gate sincronizados ao novo estado real do baseline.
+- `justificativa_arquitetural`: esse lote muda a leitura do fluxo principal, da governanca de ferramentas e da evidencia comparativa; o fechamento precisa consolidar o contrato novo sem deixar backlog, handoff e snapshot em drift.
+- `arquivos/servicos_principais`: `docs/implementation/execution-backlog.md`, `HANDOFF.md`, `docs/implementation/v2-adherence-snapshot.md`, `CHANGELOG.md`
+- `dependencias`: `MB-067`, `MB-068`, `MB-069`, `MB-070`
+- `criterio_de_aceite`: o lote termina com docs vivos refletindo a decisao soberana de capacidades como baseline do nucleo, `CHANGELOG.md` sincronizado e gate minimo validado.
+- `gate_minimo`: `python tools/check_mojibake.py docs/implementation docs/operations HANDOFF.md CHANGELOG.md` e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `medium`
+- `impacto_no_baseline`: o lote fecha com backlog, handoff, snapshot e changelog coerentes com a nova gramatica soberana de capacidade, ferramenta e handoff bounded.
+
 ---
 
 ## 5. Regras de manutencao da fila
@@ -1232,5 +1317,7 @@ Estado atual da fila:
 - `MB-063` tambem foi concluido: `observability-service`, piloto, comparadores e leitura de release agora expõem `adaptive_intervention_policy_status`, distinguindo `policy_aligned`, `mandatory_override` e `attention_required` como evidencia auditavel por workflow;
 - `MB-064` a `MB-066` agora tambem foram concluidos: a sintese final e `response_synthesized` explicam a prioridade do workflow e o checkpoint/gate preservado, enquanto `evolution-lab`, `evolution_from_pilot.py` e `compare_orchestrator_paths.py` passaram a tratar a politica de intervencao como insumo formal de refinamento;
 - `docs/implementation/unified-gap-and-absorption-backlog.md` agora consolida o que ainda falta no sistema, integrando gaps do nucleo, traducao tecnologica, superficies, evolucao e pesquisa em um unico mapa macro para a proxima repriorizacao;
-- a fila micro volta a ficar sem item `ready` ate nova repriorizacao explicita do nucleo;
+- `MB-067` a `MB-071` foram concluidos e fecharam o lote do nucleo para decisao soberana de capacidades, ferramentas e handoffs bounded, derivado de `SG-001`, `TA-001` e `TA-005`;
+- `planning`, `orchestrator`, `governance`, `observability`, piloto, comparadores e `evolution-lab` agora carregam `capability_decision_*`, `capability_effectiveness` e `handoff_adapter_status` como baseline auditavel do runtime;
+- a fila micro volta a ficar sem item `ready`; a proxima rodada correta e nova repriorizacao explicita a partir do backlog macro unificado;
 - `protective intelligence foundation` continua `deferred` e a matriz da Onda 2 segue como insumo, nao como gatilho automatico para abrir nova vertical.

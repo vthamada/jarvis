@@ -103,6 +103,17 @@ class PilotTraceSummary:
     operation_status: str | None
     duration_seconds: float
     source_services: list[str]
+    capability_decision_status: str = "not_applicable"
+    capability_decision_objective: str | None = None
+    capability_decision_reason: str | None = None
+    capability_decision_selected_mode: str | None = None
+    capability_authorization_status: str = "not_applicable"
+    capability_decision_tool_class: str | None = None
+    capability_decision_handoff_mode: str | None = None
+    capability_decision_eligible_capabilities: list[str] | None = None
+    capability_decision_selected_capabilities: list[str] | None = None
+    capability_effectiveness: str = "not_applicable"
+    handoff_adapter_status: str = "not_applicable"
 
 
 def parse_args() -> Namespace:
@@ -190,6 +201,21 @@ def summarize_traces(
             metacognitive_guidance_status=audit.metacognitive_guidance_status,
             mind_disagreement_status=audit.mind_disagreement_status,
             mind_validation_checkpoint_status=audit.mind_validation_checkpoint_status,
+            capability_decision_status=audit.capability_decision_status,
+            capability_decision_objective=audit.capability_decision_objective,
+            capability_decision_reason=audit.capability_decision_reason,
+            capability_decision_selected_mode=audit.capability_decision_selected_mode,
+            capability_authorization_status=audit.capability_authorization_status,
+            capability_decision_tool_class=audit.capability_decision_tool_class,
+            capability_decision_handoff_mode=audit.capability_decision_handoff_mode,
+            capability_decision_eligible_capabilities=list(
+                audit.capability_decision_eligible_capabilities
+            ),
+            capability_decision_selected_capabilities=list(
+                audit.capability_decision_selected_capabilities
+            ),
+            capability_effectiveness=audit.capability_effectiveness,
+            handoff_adapter_status=audit.handoff_adapter_status,
             adaptive_intervention_status=audit.adaptive_intervention_status,
             adaptive_intervention_reason=audit.adaptive_intervention_reason,
             adaptive_intervention_trigger=audit.adaptive_intervention_trigger,
@@ -263,6 +289,12 @@ def service_query(request_id: str):
 
 def _trace_status(audit) -> str:
     if audit.anomaly_flags or audit.continuity_anomaly_flags:
+        return "attention_required"
+    if audit.capability_decision_status == "attention_required":
+        return "attention_required"
+    if audit.handoff_adapter_status == "attention_required":
+        return "attention_required"
+    if audit.capability_effectiveness in {"insufficient", "incomplete"}:
         return "attention_required"
     if audit.adaptive_intervention_policy_status == "attention_required":
         return "attention_required"
@@ -405,6 +437,24 @@ def _render_summary(summary: PilotTraceSummary) -> str:
         f"{getattr(summary, 'mind_disagreement_status', 'not_applicable')} "
         "mind_validation_checkpoint_status="
         f"{getattr(summary, 'mind_validation_checkpoint_status', 'not_applicable')} "
+        "capability_decision_status="
+        f"{getattr(summary, 'capability_decision_status', 'not_applicable')} "
+        "capability_decision_selected_mode="
+        f"{getattr(summary, 'capability_decision_selected_mode', None) or 'none'} "
+        "capability_authorization_status="
+        f"{getattr(summary, 'capability_authorization_status', 'not_applicable')} "
+        "capability_decision_tool_class="
+        f"{getattr(summary, 'capability_decision_tool_class', None) or 'none'} "
+        "capability_decision_handoff_mode="
+        f"{getattr(summary, 'capability_decision_handoff_mode', None) or 'none'} "
+        "capability_decision_selected_capabilities="
+        f"{','.join((
+            getattr(summary, 'capability_decision_selected_capabilities', []) or []
+        )) or 'none'} "
+        "capability_effectiveness="
+        f"{getattr(summary, 'capability_effectiveness', 'not_applicable')} "
+        "handoff_adapter_status="
+        f"{getattr(summary, 'handoff_adapter_status', 'not_applicable')} "
         "adaptive_intervention_status="
         f"{getattr(summary, 'adaptive_intervention_status', 'not_applicable')} "
         "adaptive_intervention_selected_action="

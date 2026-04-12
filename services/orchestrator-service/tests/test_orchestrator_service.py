@@ -89,6 +89,15 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     assert result.operation_result is not None
     assert result.operation_result.status == OperationStatus.COMPLETED
     assert result.operation_dispatch is not None
+    assert (
+        result.operation_dispatch.capability_decision_selected_mode
+        == "core_with_local_operation"
+    )
+    assert (
+        result.operation_dispatch.capability_decision_authorization_status
+        == "authorized_with_conditions"
+    )
+    assert result.operation_dispatch.capability_decision_tool_class == "local_artifact_generation"
     assert result.operation_dispatch.canonical_domain_hints
     assert result.operation_dispatch.primary_canonical_domain == "estrategia_e_pensamento_sistemico"
     assert result.operation_dispatch.workflow_expected_deliverables == [
@@ -128,6 +137,12 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     assert result.deliberative_plan.primary_route == "strategy"
     assert result.deliberative_plan.route_consumer_profile == "strategy_tradeoff_review"
     assert result.deliberative_plan.route_workflow_profile == "strategic_direction_workflow"
+    assert result.deliberative_plan.capability_decision_status == "resolved"
+    assert result.deliberative_plan.capability_decision_selected_mode == "core_with_local_operation"
+    assert (
+        result.deliberative_plan.capability_decision_authorization_status
+        == "governance_review_required"
+    )
     assert "tradeoff_map" in result.deliberative_plan.route_expected_deliverables
     assert "tradeoff_clarity" in result.deliberative_plan.route_telemetry_focus
     assert result.deliberative_plan.open_loops
@@ -188,6 +203,15 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     assert registry_event.payload["promoted_route_registry"]["strategy"]["eligible"] is True
     workflow_event = next(
         event for event in stored_events if event.event_name == "workflow_composed"
+    )
+    assert workflow_event.payload["capability_decision_status"] == "resolved"
+    assert (
+        workflow_event.payload["capability_decision_selected_mode"]
+        == "core_with_local_operation"
+    )
+    assert (
+        workflow_event.payload["capability_decision_authorization_status"]
+        == "authorized_with_conditions"
     )
     assert workflow_event.payload["workflow_profile"] == "strategic_direction_workflow"
     assert workflow_event.payload["workflow_domain_route"] == "strategy"
@@ -508,6 +532,14 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     assert response_event.payload["output_validation_retry_applied"] is False
     assert response_event.payload["workflow_output_status"] == "coherent"
     assert response_event.payload["workflow_output_errors"] == []
+    assert (
+        response_event.payload["capability_decision_selected_mode"]
+        == "core_with_local_operation"
+    )
+    assert (
+        response_event.payload["capability_decision_authorization_status"]
+        == "authorized_with_conditions"
+    )
     assert response_event.payload["primary_route"] == result.deliberative_plan.primary_route
     assert (
         response_event.payload["primary_canonical_domain"]
@@ -573,6 +605,20 @@ def test_orchestrator_service_requests_clarification_without_operation() -> None
     assert result.operation_dispatch is None
     assert result.operation_result is None
     assert result.deliberative_plan.recommended_task_type == "general_response"
+    assert result.deliberative_plan.capability_decision_selected_mode == "clarification_only"
+    assert (
+        result.deliberative_plan.capability_decision_authorization_status
+        == "clarification_required"
+    )
+    assert result.specialist_invocations == []
+    clarification_event = next(
+        event for event in result.events if event.event_name == "plan_governed"
+    )
+    assert clarification_event.payload["capability_decision_selected_mode"] == "clarification_only"
+    assert (
+        clarification_event.payload["capability_decision_authorization_status"]
+        == "clarification_required"
+    )
     assert "clarification_required" in [event.event_name for event in result.events]
 
 
@@ -863,10 +909,22 @@ def test_orchestrator_service_reformulates_conflicting_request_in_active_mission
     )
     assert result.deliberative_plan.continuity_action == "reformular"
     assert result.deliberative_plan.recommended_task_type == "general_response"
+    assert result.deliberative_plan.capability_decision_selected_mode == "contained_guidance"
+    assert (
+        result.deliberative_plan.capability_decision_authorization_status
+        == "human_validation_required"
+    )
     assert result.governance_decision.decision == PermissionDecision.DEFER_FOR_VALIDATION
     assert result.operation_result is None
     assert "tensiona a missao ativa" in result.response_text
-    assert "plan_governed" in [event.event_name for event in result.events]
+    plan_governed_event = next(
+        event for event in result.events if event.event_name == "plan_governed"
+    )
+    assert plan_governed_event.payload["capability_decision_selected_mode"] == "contained_guidance"
+    assert (
+        plan_governed_event.payload["capability_decision_authorization_status"]
+        == "deferred_for_validation"
+    )
 
 
 def test_orchestrator_service_closes_active_loop_explicitly() -> None:
@@ -1309,9 +1367,7 @@ def test_orchestrator_service_tracks_guided_strategy_specialist() -> None:
             session_id=SessionId("sess-strategy-domain"),
             channel=ChannelType.CHAT,
             input_type=InputType.TEXT,
-            content=(
-                "Plan the strategic direction, compare options and define the dominant criterion."
-            ),
+            content="Plan strategic options for the release.",
             timestamp="2026-03-27T01:20:00Z",
         )
     )

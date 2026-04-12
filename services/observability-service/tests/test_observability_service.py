@@ -350,6 +350,165 @@ def test_observability_service_audits_continuity_signals() -> None:
     assert audit.trace_complete is False
 
 
+def test_observability_service_audits_capability_decision_and_handoff_adapter() -> None:
+    temp_dir = runtime_dir("observability-capability")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    capability_payload = {
+        "capability_decision_status": "resolved",
+        "capability_decision_objective": "compare the strongest pilot signal safely",
+        "capability_decision_reason": "guided analysis keeps specialist review through core",
+        "capability_decision_selected_mode": "core_with_specialist_handoff",
+        "capability_decision_authorization_status": "authorized",
+        "capability_decision_fallback_mode": "core_guidance_without_handoff",
+        "capability_decision_tool_class": None,
+        "capability_decision_handoff_mode": "through_core_only",
+        "capability_decision_eligible_capabilities": [
+            "core_reasoning",
+            "specialist_handoff",
+        ],
+        "capability_decision_selected_capabilities": [
+            "core_reasoning",
+            "specialist_handoff",
+        ],
+    }
+    service.ingest_events(
+        [
+            InternalEventEnvelope(
+                event_id="evt-k1",
+                event_name="input_received",
+                timestamp="2026-03-21T00:00:00+00:00",
+                source_service="orchestrator-service",
+                payload={"content": "analyze the strongest pilot risk"},
+                request_id="req-capability",
+                session_id="sess-capability",
+                correlation_id="req-capability",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-k2",
+                event_name="memory_recovered",
+                timestamp="2026-03-21T00:00:01+00:00",
+                source_service="orchestrator-service",
+                payload={},
+                request_id="req-capability",
+                session_id="sess-capability",
+                correlation_id="req-capability",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-k3",
+                event_name="intent_classified",
+                timestamp="2026-03-21T00:00:02+00:00",
+                source_service="orchestrator-service",
+                payload={"intent": "analysis"},
+                request_id="req-capability",
+                session_id="sess-capability",
+                correlation_id="req-capability",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-k4",
+                event_name="context_composed",
+                timestamp="2026-03-21T00:00:03+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "active_minds": ["mente_analitica"],
+                    "primary_mind": "mente_analitica",
+                    "primary_route": "analysis",
+                    "primary_domain_driver": "dados_estatistica_e_inteligencia_analitica",
+                    "arbitration_source": "mind_registry",
+                },
+                request_id="req-capability",
+                session_id="sess-capability",
+                correlation_id="req-capability",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-k5",
+                event_name="plan_built",
+                timestamp="2026-03-21T00:00:04+00:00",
+                source_service="orchestrator-service",
+                payload=capability_payload,
+                request_id="req-capability",
+                session_id="sess-capability",
+                correlation_id="req-capability",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-k6",
+                event_name="continuity_decided",
+                timestamp="2026-03-21T00:00:05+00:00",
+                source_service="orchestrator-service",
+                payload={"continuity_action": "continuar"},
+                request_id="req-capability",
+                session_id="sess-capability",
+                correlation_id="req-capability",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-k7",
+                event_name="specialist_contracts_composed",
+                timestamp="2026-03-21T00:00:06+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "response_channel": "through_core",
+                    "tool_access_mode": "none",
+                    "invocation_ids": ["inv-1"],
+                },
+                request_id="req-capability",
+                session_id="sess-capability",
+                correlation_id="req-capability",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-k8",
+                event_name="specialist_handoff_governed",
+                timestamp="2026-03-21T00:00:07+00:00",
+                source_service="orchestrator-service",
+                payload={"decision": "allow", **capability_payload},
+                request_id="req-capability",
+                session_id="sess-capability",
+                correlation_id="req-capability",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-k9",
+                event_name="governance_checked",
+                timestamp="2026-03-21T00:00:08+00:00",
+                source_service="orchestrator-service",
+                payload={"decision": "allow"},
+                request_id="req-capability",
+                session_id="sess-capability",
+                correlation_id="req-capability",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-k10",
+                event_name="response_synthesized",
+                timestamp="2026-03-21T00:00:09+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    **capability_payload,
+                    "capability_decision_authorization_status": "authorized",
+                    "workflow_output_status": "coherent",
+                },
+                request_id="req-capability",
+                session_id="sess-capability",
+                correlation_id="req-capability",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-k11",
+                event_name="memory_recorded",
+                timestamp="2026-03-21T00:00:10+00:00",
+                source_service="orchestrator-service",
+                payload={},
+                request_id="req-capability",
+                session_id="sess-capability",
+                correlation_id="req-capability",
+            ),
+        ]
+    )
+
+    audit = service.audit_flow(ObservabilityQuery(request_id="req-capability"))
+
+    assert audit.capability_decision_status == "healthy"
+    assert audit.capability_decision_selected_mode == "core_with_specialist_handoff"
+    assert audit.capability_authorization_status == "authorized"
+    assert audit.handoff_adapter_status == "healthy"
+    assert audit.capability_effectiveness == "effective"
+
+
 def test_observability_service_audits_metacognitive_guidance() -> None:
     temp_dir = runtime_dir("observability-metacognition")
     service = ObservabilityService(database_path=str(temp_dir / "observability.db"))

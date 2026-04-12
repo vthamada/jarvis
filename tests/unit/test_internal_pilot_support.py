@@ -46,3 +46,5 @@ def test_run_pilot_scenarios_returns_structured_results() -> None:
     assert results[0].workflow_profile_matches_expectation is True
     assert results[0].specialist_subflow_status == "healthy"
     assert results[0].mission_runtime_state_status == "healthy"
+    assert results[0].capability_decision_status == "healthy"
+    assert results[0].capability_effectiveness == "effective"

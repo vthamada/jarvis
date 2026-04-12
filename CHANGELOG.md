@@ -1,5 +1,20 @@
 # CHANGELOG
 
+## 2026-04-11
+
+### Fechamento do lote de decisao soberana de capacidades
+
+- `shared/contracts/__init__.py`, `shared/schemas/__init__.py`, `engines/planning-engine`, `services/orchestrator-service` e `services/governance-service` agora formalizam e aplicam `capability_decision_*` como contrato soberano de elegibilidade, autorizacao, handoff bounded e fallback do runtime;
+- `services/observability-service`, `tools/internal_pilot_support.py`, `tools/internal_pilot_report.py`, `tools/compare_orchestrator_paths.py`, `tools/evolution_from_pilot.py` e `evolution/evolution-lab` agora expõem `capability_decision_status`, `capability_effectiveness` e `handoff_adapter_status` como evidencia auditavel e insumo de refinamento do baseline;
+- `docs/implementation/execution-backlog.md`, `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para fechar `MB-067` a `MB-071` e registrar que a fila micro voltou a ficar sem item `ready` ate nova repriorizacao explicita.
+
+### Repriorizacao do proximo lote micro para decisao soberana de capacidades
+
+- `docs/implementation/execution-backlog.md` agora abre `MB-067` a `MB-071` como o novo lote ativo do nucleo, com `MB-067` em `ready` e foco em transformar decisao de capacidade, ferramenta e handoff bounded em contrato soberano do runtime;
+- o novo lote traduz a prioridade macro `SG-001`, apoiada por `TA-001` e `TA-005`, em uma sequencia micro curta: contrato, aplicacao governada, observabilidade/tracing, uso evolutivo e fechamento documental;
+- `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para sair do estado "sem item ready" e registrar `MB-067` como o proximo passo correto do projeto;
+- `protective intelligence` permanece `deferred`, e a Onda 2 continua tratada apenas como experimento controlado, nao como gatilho automatico de nova frente macro.
+
 ## 2026-04-10
 
 ### Pesquisa e classificacao do TurboQuant

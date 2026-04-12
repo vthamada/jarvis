@@ -79,6 +79,17 @@ class FlowAudit:
     metacognitive_containment_recommendation: str | None
     mind_disagreement_status: str
     mind_validation_checkpoint_status: str
+    capability_decision_status: str
+    capability_decision_objective: str | None
+    capability_decision_reason: str | None
+    capability_decision_selected_mode: str | None
+    capability_authorization_status: str
+    capability_decision_tool_class: str | None
+    capability_decision_handoff_mode: str | None
+    capability_decision_eligible_capabilities: list[str]
+    capability_decision_selected_capabilities: list[str]
+    capability_effectiveness: str
+    handoff_adapter_status: str
     mind_domain_specialist_status: str
     mind_domain_specialist_chain_status: str
     mind_domain_specialist_chain: str | None
@@ -161,6 +172,9 @@ class FlowAudit:
             and self.contract_validation_status in {"coherent", "repaired", "not_applicable"}
             and self.output_validation_status in {"coherent", "repaired", "not_applicable"}
             and self.workflow_output_status in {"coherent", "not_applicable"}
+            and self.capability_decision_status in {"healthy", "not_applicable"}
+            and self.capability_effectiveness in {"effective", "not_applicable"}
+            and self.handoff_adapter_status in {"healthy", "not_applicable", "contained"}
             and self.adaptive_intervention_status in {"healthy", "not_applicable"}
             and self.adaptive_intervention_effectiveness
             in {"effective", "not_applicable"}
@@ -336,6 +350,17 @@ class ObservabilityService:
                 metacognitive_containment_recommendation=None,
                 mind_disagreement_status="incomplete",
                 mind_validation_checkpoint_status="incomplete",
+                capability_decision_status="incomplete",
+                capability_decision_objective=None,
+                capability_decision_reason=None,
+                capability_decision_selected_mode=None,
+                capability_authorization_status="incomplete",
+                capability_decision_tool_class=None,
+                capability_decision_handoff_mode=None,
+                capability_decision_eligible_capabilities=[],
+                capability_decision_selected_capabilities=[],
+                capability_effectiveness="incomplete",
+                handoff_adapter_status="incomplete",
                 event_names=[],
                 missing_required_events=list(required_events),
                 anomaly_flags=["no_events_found"],
@@ -1179,6 +1204,132 @@ class ObservabilityService:
             response_event=response_event,
             mind_disagreement_status=mind_disagreement_status,
         )
+        capability_source_event = (
+            response_event
+            if response_event
+            and (
+                response_event.payload.get("capability_decision_status") is not None
+                or response_event.payload.get("capability_decision_selected_mode") is not None
+            )
+            else (
+                operation_dispatched_event
+                if operation_dispatched_event
+                and (
+                    operation_dispatched_event.payload.get("capability_decision_status")
+                    is not None
+                    or operation_dispatched_event.payload.get(
+                        "capability_decision_selected_mode"
+                    )
+                    is not None
+                )
+                else (
+                    plan_governed_event
+                    if plan_governed_event
+                    and (
+                        plan_governed_event.payload.get("capability_decision_status")
+                        is not None
+                        or plan_governed_event.payload.get(
+                            "capability_decision_selected_mode"
+                        )
+                        is not None
+                    )
+                    else (
+                        plan_refined_event
+                        if plan_refined_event
+                        and (
+                            plan_refined_event.payload.get("capability_decision_status")
+                            is not None
+                            or plan_refined_event.payload.get(
+                                "capability_decision_selected_mode"
+                            )
+                            is not None
+                        )
+                        else plan_event
+                    )
+                )
+            )
+        )
+        capability_decision_status = self._capability_decision_status(
+            source_event=capability_source_event,
+        )
+        capability_decision_objective = (
+            str(capability_source_event.payload.get("capability_decision_objective"))
+            if capability_source_event
+            and capability_source_event.payload.get("capability_decision_objective")
+            is not None
+            else None
+        )
+        capability_decision_reason = (
+            str(capability_source_event.payload.get("capability_decision_reason"))
+            if capability_source_event
+            and capability_source_event.payload.get("capability_decision_reason") is not None
+            else None
+        )
+        capability_decision_selected_mode = (
+            str(capability_source_event.payload.get("capability_decision_selected_mode"))
+            if capability_source_event
+            and capability_source_event.payload.get("capability_decision_selected_mode")
+            is not None
+            else None
+        )
+        capability_authorization_status = (
+            str(
+                capability_source_event.payload.get(
+                    "capability_decision_authorization_status"
+                )
+            )
+            if capability_source_event
+            and capability_source_event.payload.get(
+                "capability_decision_authorization_status"
+            )
+            is not None
+            else "not_applicable"
+        )
+        capability_decision_tool_class = (
+            str(capability_source_event.payload.get("capability_decision_tool_class"))
+            if capability_source_event
+            and capability_source_event.payload.get("capability_decision_tool_class")
+            is not None
+            else None
+        )
+        capability_decision_handoff_mode = (
+            str(capability_source_event.payload.get("capability_decision_handoff_mode"))
+            if capability_source_event
+            and capability_source_event.payload.get("capability_decision_handoff_mode")
+            is not None
+            else None
+        )
+        capability_decision_eligible_capabilities = [
+            str(item)
+            for item in (
+                capability_source_event.payload.get(
+                    "capability_decision_eligible_capabilities",
+                    [],
+                )
+                if capability_source_event
+                else []
+            )
+        ]
+        capability_decision_selected_capabilities = [
+            str(item)
+            for item in (
+                capability_source_event.payload.get(
+                    "capability_decision_selected_capabilities",
+                    [],
+                )
+                if capability_source_event
+                else []
+            )
+        ]
+        handoff_adapter_status = self._handoff_adapter_status(
+            capability_decision_handoff_mode=capability_decision_handoff_mode,
+            capability_authorization_status=capability_authorization_status,
+            specialist_contract_event=specialist_contract_event,
+            specialist_handoff_event=self._first_event(events, "specialist_handoff_governed"),
+            specialist_handoff_blocked_event=self._first_event(
+                events, "specialist_handoff_blocked"
+            ),
+        )
         mind_domain_specialist_status = self._mind_domain_specialist_status(
             context_event=context_event,
             specialist_selection_event=specialist_selection_event,
@@ -1235,6 +1386,14 @@ class ObservabilityService:
         )
         specialist_sovereignty_status = self._specialist_sovereignty_status(
             specialist_contract_event=specialist_contract_event,
+        )
+        capability_effectiveness = self._capability_effectiveness(
+            capability_decision_status=capability_decision_status,
+            capability_decision_selected_mode=capability_decision_selected_mode,
+            capability_authorization_status=capability_authorization_status,
+            workflow_output_status=workflow_output_status,
+            operation_status=operation_status,
+            handoff_adapter_status=handoff_adapter_status,
         )
         adaptive_intervention_effectiveness = self._adaptive_intervention_effectiveness(
             adaptive_intervention_status=adaptive_intervention_status,
@@ -1296,6 +1455,21 @@ class ObservabilityService:
             ),
             mind_disagreement_status=mind_disagreement_status,
             mind_validation_checkpoint_status=mind_validation_checkpoint_status,
+            capability_decision_status=capability_decision_status,
+            capability_decision_objective=capability_decision_objective,
+            capability_decision_reason=capability_decision_reason,
+            capability_decision_selected_mode=capability_decision_selected_mode,
+            capability_authorization_status=capability_authorization_status,
+            capability_decision_tool_class=capability_decision_tool_class,
+            capability_decision_handoff_mode=capability_decision_handoff_mode,
+            capability_decision_eligible_capabilities=(
+                capability_decision_eligible_capabilities
+            ),
+            capability_decision_selected_capabilities=(
+                capability_decision_selected_capabilities
+            ),
+            capability_effectiveness=capability_effectiveness,
+            handoff_adapter_status=handoff_adapter_status,
             mind_domain_specialist_status=mind_domain_specialist_status,
             mind_domain_specialist_chain_status=mind_domain_specialist_chain_status,
             mind_domain_specialist_chain=mind_domain_specialist_chain,
@@ -1485,6 +1659,12 @@ class ObservabilityService:
             return "contain_response_and_recompose_with_last_valid_plan"
         if audit.governance_decision in {"block", "defer_for_validation"}:
             return "keep_contained_and_require_manual_review"
+        if audit.capability_decision_status == "attention_required":
+            return "review_capability_decision_contract_before_promoting_the_flow"
+        if audit.handoff_adapter_status == "attention_required":
+            return "review_specialist_handoff_adapter_before_promoting_the_flow"
+        if audit.capability_effectiveness == "insufficient":
+            return "review_capability_mode_authorization_and_execution_before_promoting_the_flow"
         if audit.adaptive_intervention_policy_status == "attention_required":
             return "review_workflow_adaptive_intervention_policy_before_promoting_the_flow"
         if audit.adaptive_intervention_effectiveness == "insufficient":
@@ -2317,6 +2497,180 @@ class ObservabilityService:
         if response_effects != plan_effects:
             return "attention_required"
         return "healthy" if plan_applied else "not_applicable"
+
+    @staticmethod
+    def _capability_decision_status(
+        *,
+        source_event: InternalEventEnvelope | None,
+    ) -> str:
+        if source_event is None:
+            return "not_applicable"
+        decision_status = source_event.payload.get("capability_decision_status")
+        selected_mode = source_event.payload.get("capability_decision_selected_mode")
+        authorization_status = source_event.payload.get(
+            "capability_decision_authorization_status"
+        )
+        objective = source_event.payload.get("capability_decision_objective")
+        reason = source_event.payload.get("capability_decision_reason")
+        fallback_mode = source_event.payload.get("capability_decision_fallback_mode")
+        tool_class = source_event.payload.get("capability_decision_tool_class")
+        handoff_mode = source_event.payload.get("capability_decision_handoff_mode")
+        eligible_capabilities = list(
+            source_event.payload.get("capability_decision_eligible_capabilities", [])
+        )
+        selected_capabilities = list(
+            source_event.payload.get("capability_decision_selected_capabilities", [])
+        )
+
+        if (
+            decision_status is None
+            and selected_mode is None
+            and authorization_status is None
+            and not eligible_capabilities
+            and not selected_capabilities
+        ):
+            return "not_applicable"
+
+        if decision_status not in {"resolved", "contained"}:
+            return "attention_required"
+        if not objective or reason is None:
+            return "attention_required"
+        if selected_mode not in {
+            "clarification_only",
+            "contained_guidance",
+            "core_guidance_only",
+            "core_with_specialist_handoff",
+            "core_with_local_operation",
+        }:
+            return "attention_required"
+        if authorization_status is None or fallback_mode is None:
+            return "attention_required"
+        if not eligible_capabilities or not selected_capabilities:
+            return "attention_required"
+        if "core_reasoning" not in selected_capabilities:
+            return "attention_required"
+        if any(item not in eligible_capabilities for item in selected_capabilities):
+            return "attention_required"
+        if selected_mode == "core_with_local_operation":
+            if tool_class is None:
+                return "attention_required"
+            if "local_safe_operation" not in selected_capabilities:
+                return "attention_required"
+        elif tool_class is not None:
+            return "attention_required"
+        if handoff_mode == "through_core_only":
+            if "specialist_handoff" not in selected_capabilities:
+                return "attention_required"
+        elif handoff_mode not in {None, "none"}:
+            return "attention_required"
+        return "healthy"
+
+    @staticmethod
+    def _handoff_adapter_status(
+        *,
+        capability_decision_handoff_mode: str | None,
+        capability_authorization_status: str,
+        specialist_contract_event: InternalEventEnvelope | None,
+        specialist_handoff_event: InternalEventEnvelope | None,
+        specialist_handoff_blocked_event: InternalEventEnvelope | None,
+    ) -> str:
+        handoff_disabled = capability_decision_handoff_mode in {None, "none"}
+        handoff_contained = capability_authorization_status in {
+            "blocked",
+            "deferred_for_validation",
+            "clarification_required",
+            "human_validation_required",
+        }
+
+        if handoff_disabled:
+            if specialist_contract_event is not None or specialist_handoff_event is not None:
+                return "attention_required"
+            if specialist_handoff_blocked_event is not None:
+                return "contained" if handoff_contained else "attention_required"
+            return "not_applicable"
+
+        if capability_decision_handoff_mode != "through_core_only":
+            return "attention_required"
+
+        if handoff_contained:
+            if specialist_contract_event is not None:
+                return "attention_required"
+            if specialist_handoff_blocked_event is not None:
+                return "contained"
+            if specialist_handoff_event is not None:
+                decision = specialist_handoff_event.payload.get("decision")
+                if decision in {"block", "defer_for_validation"}:
+                    return "contained"
+                return "attention_required"
+            return "contained"
+
+        if specialist_contract_event is None or specialist_handoff_event is None:
+            return "incomplete"
+        if specialist_contract_event.payload.get("response_channel") != "through_core":
+            return "attention_required"
+        if specialist_contract_event.payload.get("tool_access_mode") != "none":
+            return "attention_required"
+        if not specialist_contract_event.payload.get("invocation_ids"):
+            return "attention_required"
+        if specialist_handoff_event.payload.get("decision") not in {
+            "allow",
+            "allow_with_conditions",
+        }:
+            return "attention_required"
+        if specialist_handoff_blocked_event is not None:
+            return "attention_required"
+        return "healthy"
+
+    @staticmethod
+    def _capability_effectiveness(
+        *,
+        capability_decision_status: str,
+        capability_decision_selected_mode: str | None,
+        capability_authorization_status: str,
+        workflow_output_status: str,
+        operation_status: str | None,
+        handoff_adapter_status: str,
+    ) -> str:
+        if capability_decision_status == "not_applicable":
+            return "not_applicable"
+        if capability_decision_status != "healthy":
+            return "incomplete"
+        if workflow_output_status not in {"coherent", "not_applicable"}:
+            return "insufficient"
+
+        if capability_decision_selected_mode in {
+            "clarification_only",
+            "contained_guidance",
+        }:
+            return (
+                "effective"
+                if capability_authorization_status
+                in {
+                    "clarification_required",
+                    "human_validation_required",
+                    "blocked",
+                    "deferred_for_validation",
+                }
+                and operation_status is None
+                else "insufficient"
+            )
+        if capability_decision_selected_mode == "core_with_local_operation":
+            if capability_authorization_status in {"authorized", "authorized_with_conditions"}:
+                return "effective" if operation_status == "completed" else "insufficient"
+            return "effective" if operation_status is None else "insufficient"
+        if capability_decision_selected_mode == "core_with_specialist_handoff":
+            if capability_authorization_status in {"authorized", "authorized_with_conditions"}:
+                return (
+                    "effective" if handoff_adapter_status == "healthy" else "insufficient"
+                )
+            if capability_authorization_status in {"blocked", "deferred_for_validation"}:
+                return (
+                    "effective" if handoff_adapter_status == "contained" else "insufficient"
+                )
+            return "insufficient"
+        if capability_decision_selected_mode == "core_guidance_only":
+            return "effective" if operation_status is None else "insufficient"
+        return "insufficient"
 
     @staticmethod
     def _adaptive_intervention_status(

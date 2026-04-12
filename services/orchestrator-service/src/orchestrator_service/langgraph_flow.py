@@ -373,6 +373,18 @@ class LangGraphFlowRunner:
                     "governance_check_id": str(governance_check.governance_check_id),
                     "proposed_effect": governance_check.proposed_effect,
                     "decision": governance_decision.decision.value,
+                    **self.orchestrator._capability_decision_event_payload(
+                        deliberative_plan,
+                        authorization_status=(
+                            self.orchestrator._resolve_capability_authorization_status(
+                                plan=deliberative_plan,
+                                governance_decision=governance_decision,
+                                specialist_handoff_decision=state.get(
+                                    "specialist_handoff_decision"
+                                ),
+                            )
+                        ),
+                    ),
                 },
             )
         )
@@ -414,12 +426,21 @@ class LangGraphFlowRunner:
                 PermissionDecision.ALLOW_WITH_CONDITIONS,
             }
             and directive.should_execute_operation
+            and self.orchestrator._capability_allows_operation(deliberative_plan)
         ):
+            capability_authorization_status = (
+                self.orchestrator._resolve_capability_authorization_status(
+                    plan=deliberative_plan,
+                    governance_decision=governance_decision,
+                    specialist_handoff_decision=state.get("specialist_handoff_decision"),
+                )
+            )
             operation_dispatch = self.orchestrator.build_operation_dispatch(
                 contract,
                 plan=deliberative_plan,
                 specialist_review=specialist_review,
                 mission_runtime_state=mission_runtime_state,
+                authorization_status=capability_authorization_status,
             )
             events.append(
                 self.orchestrator.make_event(
@@ -442,6 +463,9 @@ class LangGraphFlowRunner:
                         "workflow_resume_status": operation_dispatch.workflow_resume_status,
                         "workflow_resume_eligible": (
                             operation_dispatch.workflow_resume_eligible
+                        ),
+                        **self.orchestrator._capability_decision_event_payload(
+                            operation_dispatch
                         ),
                         "adaptive_intervention_status": (
                             operation_dispatch.adaptive_intervention_status
@@ -479,6 +503,9 @@ class LangGraphFlowRunner:
                         "workflow_decision_points": operation_dispatch.workflow_decision_points,
                         "workflow_resume_status": operation_dispatch.workflow_resume_status,
                         "workflow_resume_point": operation_dispatch.workflow_resume_point,
+                        **self.orchestrator._capability_decision_event_payload(
+                            operation_dispatch
+                        ),
                         "adaptive_intervention_status": (
                             operation_dispatch.adaptive_intervention_status
                         ),
@@ -507,6 +534,9 @@ class LangGraphFlowRunner:
                         "workflow_resume_point": operation_dispatch.workflow_resume_point,
                         "workflow_resume_eligible": (
                             operation_dispatch.workflow_resume_eligible
+                        ),
+                        **self.orchestrator._capability_decision_event_payload(
+                            operation_dispatch
                         ),
                         "adaptive_intervention_status": (
                             operation_dispatch.adaptive_intervention_status
@@ -642,6 +672,18 @@ class LangGraphFlowRunner:
                     ),
                     "mind_validation_checkpoints": (
                         state["deliberative_plan"].mind_validation_checkpoints
+                    ),
+                    **self.orchestrator._capability_decision_event_payload(
+                        state["deliberative_plan"],
+                        authorization_status=(
+                            self.orchestrator._resolve_capability_authorization_status(
+                                plan=state["deliberative_plan"],
+                                governance_decision=state["governance_decision"],
+                                specialist_handoff_decision=state.get(
+                                    "specialist_handoff_decision"
+                                ),
+                            )
+                        ),
                     ),
                     "adaptive_intervention_status": (
                         state["deliberative_plan"].adaptive_intervention_status

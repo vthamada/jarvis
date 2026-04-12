@@ -73,6 +73,9 @@ def test_internal_pilot_report_summarizes_recent_request() -> None:
     assert summaries[0].workflow_profile_assessment == "not_applicable"
     assert summaries[0].workflow_output_status == "incomplete"
     assert summaries[0].workflow_output_assessment == "attention_required"
+    assert summaries[0].capability_decision_status == "not_applicable"
+    assert summaries[0].capability_effectiveness == "not_applicable"
+    assert summaries[0].handoff_adapter_status == "not_applicable"
     assert summaries[0].adaptive_intervention_policy_status == "not_applicable"
     assert summaries[0].memory_causality_status == "not_applicable"
     assert summaries[0].mind_domain_specialist_status == "incomplete"
@@ -125,6 +128,15 @@ def test_internal_pilot_report_renders_text() -> None:
                     "workflow_profile_assessment": "maturation_recommended",
                     "workflow_output_status": "partial",
                     "workflow_output_assessment": "maturation_recommended",
+                    "capability_decision_status": "healthy",
+                    "capability_decision_selected_mode": "core_with_specialist_handoff",
+                    "capability_authorization_status": "authorized",
+                    "capability_decision_selected_capabilities": [
+                        "core_reasoning",
+                        "specialist_handoff",
+                    ],
+                    "capability_effectiveness": "effective",
+                    "handoff_adapter_status": "healthy",
                     "adaptive_intervention_policy_status": "policy_aligned",
                     "memory_causality_status": "causal_guidance",
                     "dominant_tension": "equilibrar profundidade analitica com conclusao util",
@@ -170,6 +182,9 @@ def test_internal_pilot_report_renders_text() -> None:
     assert "axis_gate_status=partial" in rendered
     assert "expectation_status=continuity_progressing" in rendered
     assert "workflow_trace_status=healthy" in rendered
+    assert "capability_decision_status=healthy" in rendered
+    assert "capability_effectiveness=effective" in rendered
+    assert "handoff_adapter_status=healthy" in rendered
     assert "workflow_profile_status=maturation_recommended" in rendered
     assert "workflow_profile_assessment=maturation_recommended" in rendered
     assert "workflow_output_status=partial" in rendered

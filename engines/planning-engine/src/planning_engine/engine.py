@@ -194,6 +194,22 @@ class AdaptiveIntervention:
     requires_human_validation: bool = False
 
 
+@dataclass(frozen=True)
+class CapabilityDecision:
+    """Sovereign capability and handoff decision for the current request."""
+
+    status: str
+    objective: str | None
+    reason: str | None
+    selected_mode: str | None
+    authorization_status: str | None
+    fallback_mode: str | None
+    tool_class: str | None
+    handoff_mode: str | None
+    eligible_capabilities: list[str]
+    selected_capabilities: list[str]
+
+
 class PlanningEngine:
     """Build concise operational plans from intent, context, and knowledge."""
 
@@ -341,6 +357,14 @@ class PlanningEngine:
         requires_human_validation = (
             requires_human_validation or intervention_requires_human_validation
         )
+        capability_decision = self._capability_decision(
+            context,
+            goal=dominant_goal,
+            recommended_task_type=recommended_task_type,
+            requires_human_validation=requires_human_validation,
+            adaptive_intervention=adaptive_intervention,
+            specialist_hints=specialist_hints,
+        )
         plan_summary = self._build_summary(
             context,
             dominant_goal=dominant_goal,
@@ -361,6 +385,12 @@ class PlanningEngine:
                 "adaptive_intervention_effect="
                 f"{adaptive_intervention.expected_effect or 'none'}"
             )
+        if capability_decision.selected_mode:
+            plan_summary = (
+                f"{plan_summary}; capability_mode={capability_decision.selected_mode}; "
+                "capability_authorization="
+                f"{capability_decision.authorization_status or 'none'}"
+            )
         rationale = self._build_rationale(
             context,
             risks=risks,
@@ -379,6 +409,15 @@ class PlanningEngine:
             f"adaptive_intervention_trigger={adaptive_intervention.trigger or 'none'}; "
             "adaptive_intervention_expected_effect="
             f"{adaptive_intervention.expected_effect or 'none'}"
+        )
+        rationale = (
+            f"{rationale}; capability_mode={capability_decision.selected_mode or 'none'}; "
+            "capability_authorization="
+            f"{capability_decision.authorization_status or 'none'}; "
+            "capability_tool_class="
+            f"{capability_decision.tool_class or 'none'}; "
+            "capability_handoff_mode="
+            f"{capability_decision.handoff_mode or 'none'}"
         )
         plan = DeliberativePlanContract(
             plan_summary=plan_summary,
@@ -439,6 +478,22 @@ class PlanningEngine:
             procedural_artifact_summary=context.procedural_artifact_summary,
             mind_disagreement_status=mind_disagreement_status,
             mind_validation_checkpoints=mind_validation_checkpoints,
+            capability_decision_status=capability_decision.status,
+            capability_decision_objective=capability_decision.objective,
+            capability_decision_reason=capability_decision.reason,
+            capability_decision_selected_mode=capability_decision.selected_mode,
+            capability_decision_authorization_status=(
+                capability_decision.authorization_status
+            ),
+            capability_decision_fallback_mode=capability_decision.fallback_mode,
+            capability_decision_tool_class=capability_decision.tool_class,
+            capability_decision_handoff_mode=capability_decision.handoff_mode,
+            capability_decision_eligible_capabilities=list(
+                capability_decision.eligible_capabilities
+            ),
+            capability_decision_selected_capabilities=list(
+                capability_decision.selected_capabilities
+            ),
             adaptive_intervention_status=adaptive_intervention.status,
             adaptive_intervention_reason=adaptive_intervention.reason,
             adaptive_intervention_trigger=adaptive_intervention.trigger,
@@ -563,6 +618,17 @@ class PlanningEngine:
         requires_human_validation = (
             requires_human_validation or adaptive_requires_human_validation
         )
+        capability_decision = self._capability_decision_from_plan(
+            plan=plan,
+            recommended_task_type=plan.recommended_task_type,
+            requires_human_validation=requires_human_validation,
+            adaptive_intervention=adaptive_intervention,
+            specialist_hints=(
+                list(plan.specialist_hints)
+                if plan.specialist_hints
+                else [item.specialist_type for item in specialist_contributions]
+            ),
+        )
 
         resolution_summary = self._specialist_resolution_summary(
             specialist_contributions,
@@ -578,6 +644,22 @@ class PlanningEngine:
             specialist_resolution_summary=resolution_summary,
             open_loops=open_loop_hints[:3],
             smallest_safe_next_action=refined_next_action,
+            capability_decision_status=capability_decision.status,
+            capability_decision_objective=capability_decision.objective,
+            capability_decision_reason=capability_decision.reason,
+            capability_decision_selected_mode=capability_decision.selected_mode,
+            capability_decision_authorization_status=(
+                capability_decision.authorization_status
+            ),
+            capability_decision_fallback_mode=capability_decision.fallback_mode,
+            capability_decision_tool_class=capability_decision.tool_class,
+            capability_decision_handoff_mode=capability_decision.handoff_mode,
+            capability_decision_eligible_capabilities=list(
+                capability_decision.eligible_capabilities
+            ),
+            capability_decision_selected_capabilities=list(
+                capability_decision.selected_capabilities
+            ),
             adaptive_intervention_status=adaptive_intervention.status,
             adaptive_intervention_reason=adaptive_intervention.reason,
             adaptive_intervention_trigger=adaptive_intervention.trigger,
@@ -589,14 +671,20 @@ class PlanningEngine:
             cognitive_strategy_shift_trigger=strategy_shift.trigger,
             cognitive_strategy_shift_effects=list(strategy_shift.effects),
             rationale=(
-                f"{plan.rationale}; resolucao_especialistas={resolution_summary}; "
-                f"adaptive_intervention_status={adaptive_intervention.status}; "
-                f"adaptive_intervention_reason={adaptive_intervention.reason or 'none'}"
+                    f"{plan.rationale}; resolucao_especialistas={resolution_summary}; "
+                    f"adaptive_intervention_status={adaptive_intervention.status}; "
+                    f"adaptive_intervention_reason={adaptive_intervention.reason or 'none'}; "
+                    f"capability_mode={capability_decision.selected_mode or 'none'}; "
+                    "capability_authorization="
+                    f"{capability_decision.authorization_status or 'none'}"
                 if not strategy_shift.applied or not strategy_shift.summary
                 else (
                     f"{plan.rationale}; resolucao_especialistas={resolution_summary}; "
                     f"adaptive_intervention_status={adaptive_intervention.status}; "
                     f"adaptive_intervention_reason={adaptive_intervention.reason or 'none'}; "
+                    f"capability_mode={capability_decision.selected_mode or 'none'}; "
+                    "capability_authorization="
+                    f"{capability_decision.authorization_status or 'none'}; "
                     f"mudanca_estrategia_mid_flow={strategy_shift.trigger}:"
                     f"{strategy_shift.summary}"
                 )
@@ -722,6 +810,177 @@ class PlanningEngine:
                 else list(repaired_validation.errors)
             ),
             contract_validation_retry_applied=True,
+        )
+
+    def _capability_decision(
+        self,
+        context: PlanningContext,
+        *,
+        goal: str,
+        recommended_task_type: str,
+        requires_human_validation: bool,
+        adaptive_intervention: AdaptiveIntervention,
+        specialist_hints: list[str],
+    ) -> CapabilityDecision:
+        workflow_profile = context.route_workflow_profile or "default_workflow"
+        objective = context.route_consumer_objective or goal
+        eligible_capabilities = ["core_reasoning"]
+        if context.knowledge_snippets or context.active_domains:
+            eligible_capabilities.append("knowledge_retrieval")
+
+        specialist_handoff_eligible = bool(specialist_hints)
+        if specialist_handoff_eligible:
+            eligible_capabilities.append("specialist_handoff")
+
+        local_operation_eligible = (
+            context.preferred_response_mode == "plan_and_operate"
+            and recommended_task_type == "draft_plan"
+        )
+        if local_operation_eligible:
+            eligible_capabilities.append("local_safe_operation")
+
+        if adaptive_intervention.selected_action == "clarification_checkpoint":
+            return CapabilityDecision(
+                status="contained",
+                objective=objective,
+                reason=(
+                    f"workflow {workflow_profile} exige clarificacao soberana antes de "
+                    "qualquer handoff ou operacao local"
+                ),
+                selected_mode="clarification_only",
+                authorization_status="clarification_required",
+                fallback_mode="clarifying_guidance",
+                tool_class=None,
+                handoff_mode="none",
+                eligible_capabilities=eligible_capabilities,
+                selected_capabilities=["core_reasoning"],
+            )
+
+        if adaptive_intervention.selected_action == "safe_containment":
+            return CapabilityDecision(
+                status="contained",
+                objective=objective,
+                reason=(
+                    f"workflow {workflow_profile} preserva contencao governada ate "
+                    "confirmacao explicita da direcao segura"
+                ),
+                selected_mode="contained_guidance",
+                authorization_status="human_validation_required",
+                fallback_mode="safe_containment_response",
+                tool_class=None,
+                handoff_mode="none",
+                eligible_capabilities=eligible_capabilities,
+                selected_capabilities=["core_reasoning"],
+            )
+
+        selected_capabilities = ["core_reasoning"]
+        handoff_mode = "none"
+        tool_class = None
+        fallback_mode = "core_guidance_only"
+
+        if specialist_handoff_eligible:
+            selected_capabilities.append("specialist_handoff")
+            handoff_mode = "through_core_only"
+            fallback_mode = "core_guidance_without_handoff"
+
+        if requires_human_validation:
+            return CapabilityDecision(
+                status="resolved",
+                objective=objective,
+                reason=(
+                    f"workflow {workflow_profile} exige validacao humana; "
+                    "capacidades ficam contidas em guidance soberano"
+                ),
+                selected_mode=(
+                    "core_with_specialist_handoff"
+                    if specialist_handoff_eligible
+                    else "core_guidance_only"
+                ),
+                authorization_status="human_validation_required",
+                fallback_mode="analysis_only",
+                tool_class=None,
+                handoff_mode=handoff_mode,
+                eligible_capabilities=eligible_capabilities,
+                selected_capabilities=selected_capabilities,
+            )
+
+        if local_operation_eligible:
+            selected_capabilities.append("local_safe_operation")
+            return CapabilityDecision(
+                status="resolved",
+                objective=objective,
+                reason=(
+                    f"workflow {workflow_profile} e response mode plan and operate "
+                    "permitem operacao local bounded sob governanca"
+                ),
+                selected_mode="core_with_local_operation",
+                authorization_status="governance_review_required",
+                fallback_mode="core_guidance_without_operation",
+                tool_class="local_artifact_generation",
+                handoff_mode=handoff_mode,
+                eligible_capabilities=eligible_capabilities,
+                selected_capabilities=selected_capabilities,
+            )
+
+        return CapabilityDecision(
+            status="resolved",
+            objective=objective,
+            reason=(
+                f"workflow {workflow_profile} permanece em guidance soberano "
+                "sem operacao local adicional"
+            ),
+            selected_mode=(
+                "core_with_specialist_handoff"
+                if specialist_handoff_eligible
+                else "core_guidance_only"
+            ),
+            authorization_status=(
+                "pre_authorized_internal"
+                if specialist_handoff_eligible
+                else "pre_authorized"
+            ),
+            fallback_mode=fallback_mode,
+            tool_class=tool_class,
+            handoff_mode=handoff_mode,
+            eligible_capabilities=eligible_capabilities,
+            selected_capabilities=selected_capabilities,
+        )
+
+    def _capability_decision_from_plan(
+        self,
+        *,
+        plan: DeliberativePlanContract,
+        recommended_task_type: str,
+        requires_human_validation: bool,
+        adaptive_intervention: AdaptiveIntervention,
+        specialist_hints: list[str],
+    ) -> CapabilityDecision:
+        context = PlanningContext(
+            intent="refined_plan",
+            query=plan.goal,
+            recovered_context=[],
+            active_domains=list(plan.active_domains),
+            active_minds=list(plan.active_minds),
+            knowledge_snippets=[],
+            risk_markers=[],
+            requires_clarification=(
+                adaptive_intervention.selected_action == "clarification_checkpoint"
+            ),
+            preferred_response_mode=(
+                "plan_and_operate"
+                if recommended_task_type == "draft_plan"
+                else "analysis_only"
+            ),
+            route_consumer_objective=plan.route_consumer_objective,
+            route_workflow_profile=plan.route_workflow_profile,
+        )
+        return self._capability_decision(
+            context,
+            goal=plan.goal,
+            recommended_task_type=recommended_task_type,
+            requires_human_validation=requires_human_validation,
+            adaptive_intervention=adaptive_intervention,
+            specialist_hints=specialist_hints,
         )
 
     def _adaptive_intervention(
