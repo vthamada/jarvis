@@ -70,6 +70,10 @@ class FlowEvaluationInput:
     adaptive_intervention_effectiveness: str | None = None
     adaptive_intervention_policy_status: str | None = None
     memory_causality_status: str | None = None
+    memory_maintenance_status: str | None = None
+    memory_maintenance_effectiveness: str | None = None
+    context_compaction_status: str | None = None
+    cross_session_recall_status: str | None = None
     primary_mind: str | None = None
     primary_route: str | None = None
     dominant_tension: str | None = None
@@ -405,6 +409,23 @@ class EvolutionLabService:
             source_signals.append(
                 f"memory://causality/{evaluation.memory_causality_status}"
             )
+        if evaluation.memory_maintenance_status:
+            source_signals.append(
+                f"memory://maintenance/{evaluation.memory_maintenance_status}"
+            )
+        if evaluation.memory_maintenance_effectiveness:
+            source_signals.append(
+                "memory://maintenance-effectiveness/"
+                f"{evaluation.memory_maintenance_effectiveness}"
+            )
+        if evaluation.context_compaction_status:
+            source_signals.append(
+                f"memory://compaction/{evaluation.context_compaction_status}"
+            )
+        if evaluation.cross_session_recall_status:
+            source_signals.append(
+                f"memory://cross-session/{evaluation.cross_session_recall_status}"
+            )
         if evaluation.semantic_memory_source:
             source_signals.append(
                 f"memory://semantic-source/{evaluation.semantic_memory_source}"
@@ -662,6 +683,9 @@ class EvolutionLabService:
             "memory_causality": EvolutionLabService._memory_causality_score(
                 evaluation.memory_causality_status
             ),
+            "memory_maintenance": EvolutionLabService._memory_maintenance_score(
+                evaluation.memory_maintenance_effectiveness
+            ),
             "memory_lifecycle": EvolutionLabService._memory_lifecycle_score(
                 evaluation.memory_lifecycle_status
             ),
@@ -852,6 +876,16 @@ class EvolutionLabService:
         return weights.get(status, 0.7 if status is None else 0.0)
 
     @staticmethod
+    def _memory_maintenance_score(status: str | None) -> float:
+        weights = {
+            "effective": 1.0,
+            "not_applicable": 0.7,
+            "incomplete": 0.2,
+            "insufficient": 0.0,
+        }
+        return weights.get(status, 0.7 if status is None else 0.0)
+
+    @staticmethod
     def _handoff_adapter_score(status: str | None) -> float:
         weights = {
             "healthy": 1.0,
@@ -918,6 +952,8 @@ class EvolutionLabService:
             return True
         if evaluation.memory_causality_status in {"attached_only", "attention_required"}:
             return True
+        if evaluation.memory_maintenance_effectiveness in {"insufficient", "incomplete"}:
+            return True
         if evaluation.memory_lifecycle_status in {"review_recommended", "attention_required"}:
             return True
         if evaluation.memory_corpus_status in {"monitor", "review_recommended"}:
@@ -969,6 +1005,8 @@ class EvolutionLabService:
             return "moderate"
         if evaluation.memory_causality_status == "attention_required":
             return "moderate"
+        if evaluation.memory_maintenance_effectiveness in {"insufficient", "incomplete"}:
+            return "moderate"
         if evaluation.memory_lifecycle_status == "attention_required":
             return "moderate"
         if evaluation.memory_corpus_status == "review_recommended":
@@ -998,6 +1036,8 @@ class EvolutionLabService:
         if evaluation.workflow_output_status == "partial":
             return "low_to_moderate"
         if evaluation.memory_causality_status == "attached_only":
+            return "low_to_moderate"
+        if evaluation.memory_maintenance_effectiveness in {"insufficient", "incomplete"}:
             return "low_to_moderate"
         if evaluation.memory_lifecycle_status == "review_recommended":
             return "low_to_moderate"
@@ -1107,6 +1147,12 @@ class EvolutionLabService:
                 "p0",
                 "fazer semantic e procedural alterarem framing, continuidade e proxima acao de forma causal",
             )
+        if evaluation.memory_maintenance_effectiveness in {"insufficient", "incomplete"}:
+            add_vector(
+                "memory_maintenance",
+                "p0",
+                "alinhar review, compaction e recall cross-session para manter memoria viva bounded e auditavel",
+            )
         if evaluation.memory_lifecycle_status in {"review_recommended", "attention_required"}:
             add_vector(
                 "memory_lifecycle",
@@ -1187,6 +1233,14 @@ class EvolutionLabService:
                     evaluation
                 ),
                 "memory_causality": evaluation.memory_causality_status or "not_applicable",
+                "memory_maintenance": evaluation.memory_maintenance_status or "not_applicable",
+                "memory_maintenance_effectiveness": (
+                    evaluation.memory_maintenance_effectiveness or "not_applicable"
+                ),
+                "context_compaction": evaluation.context_compaction_status or "not_applicable",
+                "cross_session_recall": (
+                    evaluation.cross_session_recall_status or "not_applicable"
+                ),
                 "memory_lifecycle": evaluation.memory_lifecycle_status or "not_applicable",
                 "memory_corpus": evaluation.memory_corpus_status or "not_applicable",
                 "workflow_checkpoint": (

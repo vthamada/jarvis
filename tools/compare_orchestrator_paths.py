@@ -135,6 +135,10 @@ def memory_causality_assessment(result: PilotExecutionResult) -> str:
     return result.memory_causality_status
 
 
+def memory_maintenance_assessment(result: PilotExecutionResult) -> str:
+    return result.memory_maintenance_effectiveness
+
+
 def memory_lifecycle_assessment(result: PilotExecutionResult) -> str:
     return result.memory_lifecycle_status
 
@@ -311,6 +315,15 @@ def refinement_vectors(result: PilotExecutionResult) -> list[dict[str, str]]:
             (
                 "fazer semantic e procedural alterarem framing, continuidade "
                 "e proxima acao de forma causal"
+            ),
+        )
+    if result.memory_maintenance_effectiveness in {"insufficient", "incomplete"}:
+        add_vector(
+            "memory_maintenance",
+            "p0",
+            (
+                "alinhar review, compaction e recall cross-session para que memoria viva "
+                "permaneça bounded e auditavel"
             ),
         )
     if result.mind_domain_specialist_chain_status in {
@@ -1396,6 +1409,17 @@ def compare_results(
                 mismatch_fields.append("handoff_adapter_status")
             if baseline.memory_causality_status != candidate.memory_causality_status:
                 mismatch_fields.append("memory_causality_status")
+            if baseline.memory_maintenance_status != candidate.memory_maintenance_status:
+                mismatch_fields.append("memory_maintenance_status")
+            if baseline.context_compaction_status != candidate.context_compaction_status:
+                mismatch_fields.append("context_compaction_status")
+            if baseline.cross_session_recall_status != candidate.cross_session_recall_status:
+                mismatch_fields.append("cross_session_recall_status")
+            if (
+                baseline.memory_maintenance_effectiveness
+                != candidate.memory_maintenance_effectiveness
+            ):
+                mismatch_fields.append("memory_maintenance_effectiveness")
             if baseline.memory_lifecycle_status != candidate.memory_lifecycle_status:
                 mismatch_fields.append("memory_lifecycle_status")
             if baseline.memory_review_status != candidate.memory_review_status:
@@ -1714,6 +1738,22 @@ def render_text(payload: dict[str, object]) -> str:
                         f"{item['baseline']['memory_causality_status']}"
                     ),
                     (
+                        "baseline_memory_maintenance_status="
+                        f"{item['baseline']['memory_maintenance_status']}"
+                    ),
+                    (
+                        "baseline_context_compaction_status="
+                        f"{item['baseline']['context_compaction_status'] or 'none'}"
+                    ),
+                    (
+                        "baseline_cross_session_recall_status="
+                        f"{item['baseline']['cross_session_recall_status'] or 'none'}"
+                    ),
+                    (
+                        "baseline_memory_maintenance_assessment="
+                        f"{item['baseline_memory_maintenance_assessment']}"
+                    ),
+                    (
                         "baseline_memory_lifecycle_status="
                         f"{item['baseline']['memory_lifecycle_status']}"
                     ),
@@ -1904,6 +1944,30 @@ def render_text(payload: dict[str, object]) -> str:
                         f"{item['candidate']['memory_causality_status']}"
                         if item["candidate"]
                         else "candidate_memory_causality_status=n/a"
+                    ),
+                    (
+                        "candidate_memory_maintenance_status="
+                        f"{item['candidate']['memory_maintenance_status']}"
+                        if item["candidate"]
+                        else "candidate_memory_maintenance_status=n/a"
+                    ),
+                    (
+                        "candidate_context_compaction_status="
+                        f"{item['candidate']['context_compaction_status'] or 'none'}"
+                        if item["candidate"]
+                        else "candidate_context_compaction_status=n/a"
+                    ),
+                    (
+                        "candidate_cross_session_recall_status="
+                        f"{item['candidate']['cross_session_recall_status'] or 'none'}"
+                        if item["candidate"]
+                        else "candidate_cross_session_recall_status=n/a"
+                    ),
+                    (
+                        "candidate_memory_maintenance_assessment="
+                        f"{item['candidate_memory_maintenance_assessment']}"
+                        if item["candidate_memory_maintenance_assessment"] is not None
+                        else "candidate_memory_maintenance_assessment=n/a"
                     ),
                     (
                         "candidate_memory_lifecycle_status="
@@ -2325,6 +2389,9 @@ def serialize_comparisons(
                 "baseline_memory_causality_assessment": memory_causality_assessment(
                     item.baseline
                 ),
+                "baseline_memory_maintenance_assessment": memory_maintenance_assessment(
+                    item.baseline
+                ),
                 "baseline_memory_lifecycle_assessment": memory_lifecycle_assessment(
                     item.baseline
                 ),
@@ -2417,6 +2484,11 @@ def serialize_comparisons(
                 ),
                 "candidate_memory_causality_assessment": (
                     memory_causality_assessment(item.candidate) if item.candidate else None
+                ),
+                "candidate_memory_maintenance_assessment": (
+                    memory_maintenance_assessment(item.candidate)
+                    if item.candidate
+                    else None
                 ),
                 "candidate_memory_lifecycle_assessment": (
                     memory_lifecycle_assessment(item.candidate)

@@ -119,6 +119,11 @@ class FlowAudit:
     procedural_memory_lifecycle: str | None
     memory_lifecycle_status: str
     memory_review_status: str
+    memory_maintenance_status: str
+    memory_maintenance_reason: str | None
+    memory_maintenance_fallback_mode: str | None
+    context_compaction_status: str | None
+    cross_session_recall_status: str | None
     memory_consolidation_status: str
     memory_fixation_status: str
     memory_archive_status: str
@@ -127,6 +132,7 @@ class FlowAudit:
     procedural_artifact_version: int | None
     memory_corpus_status: str
     memory_retention_pressure: str | None
+    memory_maintenance_effectiveness: str
     semantic_memory_specialists: list[str]
     procedural_memory_specialists: list[str]
     event_names: list[str]
@@ -180,6 +186,7 @@ class FlowAudit:
             in {"effective", "not_applicable"}
             and self.adaptive_intervention_policy_status
             in {"policy_aligned", "mandatory_override", "not_applicable"}
+            and self.memory_maintenance_effectiveness in {"effective", "not_applicable"}
             and self.cognitive_strategy_shift_status in {"healthy", "not_applicable"}
             and self.specialist_subflow_status
             in {"healthy", "not_applicable", "contained"}
@@ -393,11 +400,17 @@ class ObservabilityService:
                 procedural_memory_lifecycle=None,
                 memory_lifecycle_status="incomplete",
                 memory_review_status="incomplete",
+                memory_maintenance_status="incomplete",
+                memory_maintenance_reason=None,
+                memory_maintenance_fallback_mode=None,
+                context_compaction_status=None,
+                cross_session_recall_status=None,
                 memory_consolidation_status="incomplete",
                 memory_fixation_status="incomplete",
                 memory_archive_status="incomplete",
                 memory_corpus_status="incomplete",
                 memory_retention_pressure=None,
+                memory_maintenance_effectiveness="incomplete",
                 semantic_memory_specialists=[],
                 procedural_memory_specialists=[],
                 continuity_action=None,
@@ -1016,6 +1029,87 @@ class ObservabilityService:
                 )
             )
         )
+        memory_maintenance_status = (
+            str(response_event.payload.get("memory_maintenance_status"))
+            if response_event
+            and response_event.payload.get("memory_maintenance_status") is not None
+            else (
+                str(plan_event.payload.get("memory_maintenance_status"))
+                if plan_event
+                and plan_event.payload.get("memory_maintenance_status") is not None
+                else (
+                    str(memory_recovered_event.payload.get("memory_maintenance_status"))
+                    if memory_recovered_event
+                    and memory_recovered_event.payload.get("memory_maintenance_status") is not None
+                    else "not_applicable"
+                )
+            )
+        )
+        memory_maintenance_reason = (
+            str(response_event.payload.get("memory_maintenance_reason"))
+            if response_event
+            and response_event.payload.get("memory_maintenance_reason") is not None
+            else (
+                str(plan_event.payload.get("memory_maintenance_reason"))
+                if plan_event
+                and plan_event.payload.get("memory_maintenance_reason") is not None
+                else (
+                    str(memory_recovered_event.payload.get("memory_maintenance_reason"))
+                    if memory_recovered_event
+                    and memory_recovered_event.payload.get("memory_maintenance_reason") is not None
+                    else None
+                )
+            )
+        )
+        memory_maintenance_fallback_mode = (
+            str(response_event.payload.get("memory_maintenance_fallback_mode"))
+            if response_event
+            and response_event.payload.get("memory_maintenance_fallback_mode") is not None
+            else (
+                str(plan_event.payload.get("memory_maintenance_fallback_mode"))
+                if plan_event
+                and plan_event.payload.get("memory_maintenance_fallback_mode") is not None
+                else (
+                    str(memory_recovered_event.payload.get("memory_maintenance_fallback_mode"))
+                    if memory_recovered_event
+                    and memory_recovered_event.payload.get("memory_maintenance_fallback_mode")
+                    is not None
+                    else None
+                )
+            )
+        )
+        context_compaction_status = (
+            str(response_event.payload.get("context_compaction_status"))
+            if response_event
+            and response_event.payload.get("context_compaction_status") is not None
+            else (
+                str(plan_event.payload.get("context_compaction_status"))
+                if plan_event
+                and plan_event.payload.get("context_compaction_status") is not None
+                else (
+                    str(memory_recovered_event.payload.get("context_compaction_status"))
+                    if memory_recovered_event
+                    and memory_recovered_event.payload.get("context_compaction_status") is not None
+                    else None
+                )
+            )
+        )
+        cross_session_recall_status = (
+            str(response_event.payload.get("cross_session_recall_status"))
+            if response_event
+            and response_event.payload.get("cross_session_recall_status") is not None
+            else (
+                str(plan_event.payload.get("cross_session_recall_status"))
+                if plan_event
+                and plan_event.payload.get("cross_session_recall_status") is not None
+                else (
+                    str(memory_recovered_event.payload.get("cross_session_recall_status"))
+                    if memory_recovered_event
+                    and memory_recovered_event.payload.get("cross_session_recall_status") is not None
+                    else None
+                )
+            )
+        )
         memory_consolidation_status = self._lifecycle_support_status(
             response_event=response_event,
             plan_event=plan_event,
@@ -1384,6 +1478,14 @@ class ObservabilityService:
         memory_corpus_status, memory_retention_pressure = self._memory_corpus_signals(
             shared_memory_event=shared_memory_event,
         )
+        memory_maintenance_effectiveness = self._memory_maintenance_effectiveness(
+            memory_maintenance_status=memory_maintenance_status,
+            memory_review_status=memory_review_status,
+            context_compaction_status=context_compaction_status,
+            cross_session_recall_status=cross_session_recall_status,
+            memory_retention_pressure=memory_retention_pressure,
+            workflow_output_status=workflow_output_status,
+        )
         specialist_sovereignty_status = self._specialist_sovereignty_status(
             specialist_contract_event=specialist_contract_event,
         )
@@ -1499,6 +1601,11 @@ class ObservabilityService:
             procedural_memory_lifecycle=procedural_memory_lifecycle,
             memory_lifecycle_status=memory_lifecycle_status,
             memory_review_status=memory_review_status,
+            memory_maintenance_status=memory_maintenance_status,
+            memory_maintenance_reason=memory_maintenance_reason,
+            memory_maintenance_fallback_mode=memory_maintenance_fallback_mode,
+            context_compaction_status=context_compaction_status,
+            cross_session_recall_status=cross_session_recall_status,
             memory_consolidation_status=memory_consolidation_status,
             memory_fixation_status=memory_fixation_status,
             memory_archive_status=memory_archive_status,
@@ -1561,6 +1668,7 @@ class ObservabilityService:
             ),
             memory_corpus_status=memory_corpus_status,
             memory_retention_pressure=memory_retention_pressure,
+            memory_maintenance_effectiveness=memory_maintenance_effectiveness,
             semantic_memory_specialists=semantic_memory_specialists,
             procedural_memory_specialists=procedural_memory_specialists,
             event_names=event_names,
@@ -2796,6 +2904,51 @@ class ObservabilityService:
                 return "effective"
             return "insufficient"
         return "effective" if workflow_output_status == "coherent" else "insufficient"
+
+    @staticmethod
+    def _memory_maintenance_effectiveness(
+        *,
+        memory_maintenance_status: str,
+        memory_review_status: str,
+        context_compaction_status: str | None,
+        cross_session_recall_status: str | None,
+        memory_retention_pressure: str | None,
+        workflow_output_status: str,
+    ) -> str:
+        if memory_maintenance_status == "not_applicable":
+            return "not_applicable"
+        if memory_maintenance_status == "incomplete":
+            return "incomplete"
+        if workflow_output_status not in {"coherent", "not_applicable"}:
+            return "insufficient"
+        if memory_maintenance_status == "contained_fallback":
+            return (
+                "effective"
+                if memory_review_status in {"attention_required", "review_recommended"}
+                and context_compaction_status in {"compressed_live_context", "seeded_live_context"}
+                else "insufficient"
+            )
+        if memory_maintenance_status == "review_required":
+            return (
+                "effective"
+                if memory_review_status in {"review_recommended", "attention_required"}
+                and memory_retention_pressure in {"moderate", "high"}
+                else "insufficient"
+            )
+        if memory_maintenance_status == "cross_session_recall_active":
+            return (
+                "effective"
+                if cross_session_recall_status == "active"
+                and context_compaction_status in {"compressed_live_context", "seeded_live_context"}
+                else "insufficient"
+            )
+        if memory_maintenance_status == "compaction_active":
+            return (
+                "effective"
+                if context_compaction_status in {"compressed_live_context", "seeded_live_context"}
+                else "insufficient"
+            )
+        return "effective"
 
     @staticmethod
     def _adaptive_intervention_policy_status(

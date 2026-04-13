@@ -324,6 +324,9 @@ class OrchestratorService:
                     "mind_validation_checkpoints": (
                         deliberative_plan.mind_validation_checkpoints
                     ),
+                    **self._memory_maintenance_event_payload(
+                        deliberative_plan=deliberative_plan
+                    ),
                     **self._capability_decision_event_payload(deliberative_plan),
                     "adaptive_intervention_status": (
                         deliberative_plan.adaptive_intervention_status
@@ -831,6 +834,9 @@ class OrchestratorService:
                     "mind_validation_checkpoints": (
                         deliberative_plan.mind_validation_checkpoints
                     ),
+                    **self._memory_maintenance_event_payload(
+                        deliberative_plan=deliberative_plan
+                    ),
                     **self._capability_decision_event_payload(
                         deliberative_plan,
                         authorization_status=self._resolve_capability_authorization_status(
@@ -958,14 +964,8 @@ class OrchestratorService:
                     "procedural_memory_hint": guided_memory_runtime_hints[
                         "procedural_memory_hint"
                     ],
-                    "context_compaction_status": self._extract_context_hint(
-                        memory_recovery_result.recovered_items,
-                        "context_compaction_status=",
-                    ),
-                    "cross_session_recall_status": self._extract_context_hint(
-                        memory_recovery_result.recovered_items,
-                        "cross_session_recall_status=",
-                    ),
+                    "context_compaction_status": deliberative_plan.context_compaction_status,
+                    "cross_session_recall_status": deliberative_plan.cross_session_recall_status,
                     "cross_session_recall_summary": self._extract_context_hint(
                         memory_recovery_result.recovered_items,
                         "cross_session_recall_summary=",
@@ -1030,6 +1030,9 @@ class OrchestratorService:
                     "procedural_memory_state": deliberative_plan.procedural_memory_state,
                     "memory_lifecycle_status": deliberative_plan.memory_lifecycle_status,
                     "memory_review_status": deliberative_plan.memory_review_status,
+                    **self._memory_maintenance_event_payload(
+                        deliberative_plan=deliberative_plan
+                    ),
                     "memory_consolidation_status": (
                         deliberative_plan.memory_consolidation_status
                     ),
@@ -2554,6 +2557,15 @@ class OrchestratorService:
             cross_session_recall_summary=self._extract_context_hint(
                 recovered, "cross_session_recall_summary="
             ),
+            memory_maintenance_status=self._extract_context_hint(
+                recovered, "memory_maintenance_status="
+            ),
+            memory_maintenance_reason=self._extract_context_hint(
+                recovered, "memory_maintenance_reason="
+            ),
+            memory_maintenance_fallback_mode=self._extract_context_hint(
+                recovered, "memory_maintenance_fallback_mode="
+            ),
             memory_priority_status=(
                 str(route_guidance.get("status"))
                 if route_guidance.get("status") is not None
@@ -2815,6 +2827,20 @@ class OrchestratorService:
         }
 
     @staticmethod
+    def _memory_maintenance_event_payload(
+        *, deliberative_plan: DeliberativePlanContract
+    ) -> dict[str, object]:
+        return {
+            "memory_maintenance_status": deliberative_plan.memory_maintenance_status,
+            "memory_maintenance_reason": deliberative_plan.memory_maintenance_reason,
+            "memory_maintenance_fallback_mode": (
+                deliberative_plan.memory_maintenance_fallback_mode
+            ),
+            "context_compaction_status": deliberative_plan.context_compaction_status,
+            "cross_session_recall_status": deliberative_plan.cross_session_recall_status,
+        }
+
+    @staticmethod
     def _guided_memory_runtime_hints(
         specialist_review: SpecialistReview,
         deliberative_plan: DeliberativePlanContract,
@@ -3063,6 +3089,18 @@ class OrchestratorService:
                     "cross_session_recall_summary": self._extract_context_hint(
                         memory_recovery_result.recovered_items,
                         "cross_session_recall_summary=",
+                    ),
+                    "memory_maintenance_status": self._extract_context_hint(
+                        memory_recovery_result.recovered_items,
+                        "memory_maintenance_status=",
+                    ),
+                    "memory_maintenance_reason": self._extract_context_hint(
+                        memory_recovery_result.recovered_items,
+                        "memory_maintenance_reason=",
+                    ),
+                    "memory_maintenance_fallback_mode": self._extract_context_hint(
+                        memory_recovery_result.recovered_items,
+                        "memory_maintenance_fallback_mode=",
                     ),
                     "user_scope_memory_refs": (
                         memory_recovery_result.user_scope_context.memory_refs

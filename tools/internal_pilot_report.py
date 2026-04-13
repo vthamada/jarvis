@@ -88,11 +88,17 @@ class PilotTraceSummary:
     procedural_memory_lifecycle: str | None
     memory_lifecycle_status: str
     memory_review_status: str
+    memory_maintenance_status: str
+    memory_maintenance_reason: str | None
+    memory_maintenance_fallback_mode: str | None
+    context_compaction_status: str | None
+    cross_session_recall_status: str | None
     procedural_artifact_status: str
     procedural_artifact_refs: list[str]
     procedural_artifact_version: int | None
     memory_corpus_status: str
     memory_retention_pressure: str | None
+    memory_maintenance_effectiveness: str
     semantic_memory_specialists: list[str]
     procedural_memory_specialists: list[str]
     continuity_trace_status: str
@@ -257,11 +263,17 @@ def summarize_traces(
             procedural_memory_lifecycle=audit.procedural_memory_lifecycle,
             memory_lifecycle_status=audit.memory_lifecycle_status,
             memory_review_status=audit.memory_review_status,
+            memory_maintenance_status=audit.memory_maintenance_status,
+            memory_maintenance_reason=audit.memory_maintenance_reason,
+            memory_maintenance_fallback_mode=audit.memory_maintenance_fallback_mode,
+            context_compaction_status=audit.context_compaction_status,
+            cross_session_recall_status=audit.cross_session_recall_status,
             procedural_artifact_status=audit.procedural_artifact_status,
             procedural_artifact_refs=list(audit.procedural_artifact_refs),
             procedural_artifact_version=audit.procedural_artifact_version,
             memory_corpus_status=audit.memory_corpus_status,
             memory_retention_pressure=audit.memory_retention_pressure,
+            memory_maintenance_effectiveness=audit.memory_maintenance_effectiveness,
             semantic_memory_specialists=list(audit.semantic_memory_specialists),
             procedural_memory_specialists=list(audit.procedural_memory_specialists),
             continuity_trace_status=audit.continuity_trace_status,
@@ -299,6 +311,8 @@ def _trace_status(audit) -> str:
     if audit.adaptive_intervention_policy_status == "attention_required":
         return "attention_required"
     if audit.adaptive_intervention_effectiveness in {"insufficient", "incomplete"}:
+        return "attention_required"
+    if audit.memory_maintenance_effectiveness in {"insufficient", "incomplete"}:
         return "attention_required"
     if audit.missing_required_events or audit.missing_continuity_signals:
         return "incomplete"
@@ -511,6 +525,14 @@ def _render_summary(summary: PilotTraceSummary) -> str:
         f"{getattr(summary, 'memory_lifecycle_status', 'not_applicable')} "
         "memory_review_status="
         f"{getattr(summary, 'memory_review_status', 'not_applicable')} "
+        "memory_maintenance_status="
+        f"{getattr(summary, 'memory_maintenance_status', 'not_applicable')} "
+        "memory_maintenance_fallback_mode="
+        f"{getattr(summary, 'memory_maintenance_fallback_mode', None) or 'none'} "
+        "context_compaction_status="
+        f"{getattr(summary, 'context_compaction_status', None) or 'none'} "
+        "cross_session_recall_status="
+        f"{getattr(summary, 'cross_session_recall_status', None) or 'none'} "
         "procedural_artifact_status="
         f"{getattr(summary, 'procedural_artifact_status', 'not_applicable')} "
         "procedural_artifact_refs="
@@ -521,6 +543,8 @@ def _render_summary(summary: PilotTraceSummary) -> str:
         f"{getattr(summary, 'memory_corpus_status', 'not_applicable')} "
         "memory_retention_pressure="
         f"{getattr(summary, 'memory_retention_pressure', None) or 'none'} "
+        "memory_maintenance_effectiveness="
+        f"{getattr(summary, 'memory_maintenance_effectiveness', 'not_applicable')} "
         "semantic_memory_specialists="
         f"{','.join(getattr(summary, 'semantic_memory_specialists', [])) or 'none'} "
         "procedural_memory_specialists="

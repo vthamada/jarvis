@@ -1283,6 +1283,176 @@ Escalar ao operador quando:
 - `modo_de_raciocinio_recomendado`: `medium`
 - `impacto_no_baseline`: o lote fecha com backlog, handoff, snapshot e changelog coerentes com a nova gramatica soberana de capacidade, ferramenta e handoff bounded.
 
+### MB-072
+
+- `id`: `MB-072`
+- `prioridade`: `P0`
+- `status`: `done`
+- `eixo_do_mestre`: `fluxo_principal`
+- `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
+- `micro_objetivo`: formalizar manutencao ativa de memoria viva por request, com contrato explicito para `memory_review`, compaction e recall cross-session governado.
+- `justificativa_arquitetural`: depois de fechar a gramatica soberana de capacidades, o proximo ganho causal do nucleo e endurecer o lifecycle vivo da memoria para que review, compactacao e recall deixem de ser heuristica residual e passem a responder ao estado real do runtime.
+- `arquivos/servicos_principais`: `memory-service`, `shared/memory_registry`, `engines/planning-engine`, `services/orchestrator-service`
+- `dependencias`: `MB-063`, `MB-064`, `MB-065`, `MB-066`
+- `criterio_de_aceite`: `memory-service`, `planning` e `orchestrator` passam a carregar um slice explicito de manutencao ativa de memoria, distinguindo pelo menos review necessario, compactacao aplicavel, recall cross-session e fallback contido, sem inflar janela, reabrir historico bruto ou bypassar memoria canonica.
+- `gate_minimo`: `pytest` direcionado dos services/engines tocados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `impacto_no_baseline`: review, compactacao e recall cross-session deixam de ser efeito lateral da memoria e passam a existir como contrato vivo e auditavel do fluxo principal.
+
+### MB-073
+
+- `id`: `MB-073`
+- `prioridade`: `P0`
+- `status`: `done`
+- `eixo_do_mestre`: `governanca`
+- `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
+- `micro_objetivo`: fazer recovery, packet guiado e reuse de memoria cross-session aplicarem essa manutencao viva como politica soberana do runtime.
+- `justificativa_arquitetural`: depois de formalizar o contrato de manutencao ativa, o passo seguinte e impedir que review de memoria, compaction e recall cross-session virem comportamento espalhado entre adapters, heuristicas locais e resumo contextual ad hoc.
+- `arquivos/servicos_principais`: `memory-service`, `shared/memory_registry`, `services/orchestrator-service`, `services/knowledge-service`
+- `dependencias`: `MB-072`
+- `criterio_de_aceite`: recovery, memoria guiada e reuse cross-session passam a responder a `memory_review`, compaction e recall soberanos por request, com efeito observavel em framing, continuidade, foco de especialista e proxima acao, sem quebrar escopo canonico.
+- `gate_minimo`: `pytest` direcionado dos services tocados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `impacto_no_baseline`: memoria viva deixa de ser apenas registro e passa a dirigir reuse e continuidade de forma mais governada, compacta e causal.
+
+### MB-074
+
+- `id`: `MB-074`
+- `prioridade`: `P1`
+- `status`: `done`
+- `eixo_do_mestre`: `observabilidade`
+- `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
+- `micro_objetivo`: tornar manutencao ativa de memoria viva parte da evidencia auditavel do baseline em tracing, piloto e comparadores.
+- `justificativa_arquitetural`: sem evidencia propria, review de memoria, compaction e recall cross-session 2.0 podem parecer melhoria sem prova; o baseline precisa mostrar quando memoria viva foi acionada, ficou estavel, entrou em pressao ou foi corretamente contida.
+- `arquivos/servicos_principais`: `services/observability-service`, `tools/internal_pilot_support.py`, `tools/internal_pilot_report.py`, `tools/compare_orchestrator_paths.py`
+- `dependencias`: `MB-073`
+- `criterio_de_aceite`: auditoria, piloto e comparadores passam a expor pelo menos `memory_review_status`, sinais de compaction, estado de recall cross-session e pressao de retencao ao longo do fluxo, distinguindo uso causal, uso superficial e drift de memoria viva.
+- `gate_minimo`: `pytest` direcionado dos services/tools afetados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `impacto_no_baseline`: a manutencao ativa de memoria deixa de ser telemetria lateral e passa a existir como evidencia formal e comparavel do runtime.
+
+### MB-075
+
+- `id`: `MB-075`
+- `prioridade`: `P1`
+- `status`: `done`
+- `eixo_do_mestre`: `evolucao`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: fazer `refinement_vectors`, `evaluation_matrix` e leitura de release usarem efetividade e drift da memoria viva como insumo do proximo refinamento do nucleo.
+- `justificativa_arquitetural`: depois de tornar memoria viva observavel, o loop evolutivo precisa separar melhor quando o problema esta em review, compactacao, reuse cross-session ou no proprio workflow que consome memoria.
+- `arquivos/servicos_principais`: `evolution/evolution-lab`, `tools/evolution_from_pilot.py`, `tools/compare_orchestrator_paths.py`, `tools/verify_release_signal_baseline.py`
+- `dependencias`: `MB-074`
+- `criterio_de_aceite`: `evolution-lab`, comparadores e verificadores passam a registrar mismatch, pressao ou inefetividade de memoria viva em `refinement_vectors` e `evaluation_matrix`, sem automatizar promocao de mudanca ou dependencia externa.
+- `gate_minimo`: `pytest` direcionado dos tools/servicos tocados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `impacto_no_baseline`: memoria viva passa a influenciar de forma formal a priorizacao do proximo ganho causal do nucleo.
+
+### MB-076
+
+- `id`: `MB-076`
+- `prioridade`: `P1`
+- `status`: `done`
+- `eixo_do_mestre`: `docs/gates`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: fechar o lote de memoria viva ativa com docs vivos, changelog e gate sincronizados ao novo estado real do baseline.
+- `justificativa_arquitetural`: esse lote muda a leitura do recovery, do reuse cross-session e da compactacao do contexto; o fechamento precisa consolidar o contrato novo sem deixar backlog, handoff e snapshot em drift.
+- `arquivos/servicos_principais`: `docs/implementation/execution-backlog.md`, `HANDOFF.md`, `docs/implementation/v2-adherence-snapshot.md`, `CHANGELOG.md`
+- `dependencias`: `MB-072`, `MB-073`, `MB-074`, `MB-075`
+- `criterio_de_aceite`: o lote termina com docs vivos refletindo memoria viva ativa como baseline do nucleo, `CHANGELOG.md` sincronizado e gate minimo validado.
+- `gate_minimo`: `python tools/check_mojibake.py docs/implementation docs/operations HANDOFF.md CHANGELOG.md` e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `medium`
+- `impacto_no_baseline`: o lote fecha com backlog, handoff, snapshot e changelog coerentes com a nova gramatica soberana de review, compaction e recall cross-session.
+
+### MB-077
+
+- `id`: `MB-077`
+- `prioridade`: `P0`
+- `status`: `ready`
+- `eixo_do_mestre`: `fluxo_principal`
+- `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
+- `micro_objetivo`: formalizar arbitragem mais declarativa de `mente -> dominio -> especialista` nos consumidores finais, com contrato explicito para cadeia autoritativa, override bounded e fallback governado.
+- `justificativa_arquitetural`: depois de fechar capacidade soberana e manutencao ativa de memoria, o proximo ganho causal do nucleo e remover a arbitragem residual implicita na ultima milha de `planning`, `synthesis` e consumo final do runtime.
+- `arquivos/servicos_principais`: `cognitive-engine`, `specialist-engine`, `engines/planning-engine`, `engines/synthesis-engine`, `services/orchestrator-service`
+- `dependencias`: `MB-071`, `MB-076`
+- `criterio_de_aceite`: `planning`, `synthesis`, `cognitive`, `specialist` e `orchestrator` passam a carregar um slice explicito de arbitragem `mind_domain_specialist`, distinguindo cadeia soberana, override permitido, degradacao bounded e fallback final, sem reintroduzir heuristica local nem quebrar governanca ou memoria canonica.
+- `gate_minimo`: `pytest` direcionado dos services/engines tocados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `impacto_no_baseline`: a cadeia `mente -> dominio -> especialista` deixa de depender de leitura implicita na ultima milha e passa a existir como contrato vivo e auditavel do fluxo principal.
+
+### MB-078
+
+- `id`: `MB-078`
+- `prioridade`: `P0`
+- `status`: `blocked`
+- `eixo_do_mestre`: `governanca`
+- `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
+- `micro_objetivo`: fazer consumidores finais, dispatch e framing aplicarem a arbitragem declarativa `mente -> dominio -> especialista` como politica soberana do runtime.
+- `justificativa_arquitetural`: depois de formalizar o contrato, o passo seguinte e impedir que a cadeia autoritativa de mente, dominio e especialista se fragmente entre adapters, framing final e leituras locais do consumidor.
+- `arquivos/servicos_principais`: `cognitive-engine`, `specialist-engine`, `engines/synthesis-engine`, `services/orchestrator-service`, `shared/domain_registry`
+- `dependencias`: `MB-077`
+- `criterio_de_aceite`: consumidores finais e fluxo de dispatch passam a responder ao contrato de arbitragem `mind_domain_specialist`, com efeito observavel em selecao, framing, continuidade e fallback final, sem bypassar rota promovida ou especialista canonico.
+- `gate_minimo`: `pytest` direcionado dos services/engines tocados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `impacto_no_baseline`: a arbitragem declarativa deixa de ser apenas inferida e passa a dirigir consumo final, framing e continuidade de forma mais governada.
+
+### MB-079
+
+- `id`: `MB-079`
+- `prioridade`: `P1`
+- `status`: `blocked`
+- `eixo_do_mestre`: `observabilidade`
+- `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
+- `micro_objetivo`: tornar a arbitragem declarativa `mente -> dominio -> especialista` parte da evidencia auditavel do baseline em tracing, piloto e comparadores.
+- `justificativa_arquitetural`: sem evidencia propria, a ultima milha da arbitragem pode parecer alinhada sem prova; o baseline precisa mostrar quando a cadeia ficou autoritativa, parcial, degradada ou em drift no consumidor final.
+- `arquivos/servicos_principais`: `services/observability-service`, `tools/internal_pilot_support.py`, `tools/internal_pilot_report.py`, `tools/compare_orchestrator_paths.py`
+- `dependencias`: `MB-078`
+- `criterio_de_aceite`: auditoria, piloto e comparadores passam a expor pelo menos `mind_domain_specialist_status`, efetividade da arbitragem final e mismatch entre cadeia autoritativa, framing e especialista efetivamente consumido ao longo do fluxo.
+- `gate_minimo`: `pytest` direcionado dos services/tools afetados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `impacto_no_baseline`: a arbitragem declarativa deixa de ser telemetria lateral e passa a existir como evidencia formal e comparavel do runtime.
+
+### MB-080
+
+- `id`: `MB-080`
+- `prioridade`: `P1`
+- `status`: `blocked`
+- `eixo_do_mestre`: `evolucao`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: fazer `refinement_vectors`, `evaluation_matrix` e leitura de release usarem efetividade e drift da arbitragem declarativa como insumo do proximo refinamento do nucleo.
+- `justificativa_arquitetural`: depois de tornar a arbitragem observavel, o loop evolutivo precisa separar melhor quando o problema esta na mente dominante, na rota de dominio, no especialista consumido ou no framing final.
+- `arquivos/servicos_principais`: `evolution/evolution-lab`, `tools/evolution_from_pilot.py`, `tools/compare_orchestrator_paths.py`, `tools/verify_release_signal_baseline.py`
+- `dependencias`: `MB-079`
+- `criterio_de_aceite`: `evolution-lab`, comparadores e verificadores passam a registrar mismatch, degradacao ou inefetividade da arbitragem declarativa em `refinement_vectors` e `evaluation_matrix`, sem automatizar promocao de mudanca ou dependencia externa.
+- `gate_minimo`: `pytest` direcionado dos tools/servicos tocados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `impacto_no_baseline`: a arbitragem `mente -> dominio -> especialista` passa a influenciar de forma formal a priorizacao do proximo ganho causal do nucleo.
+
+### MB-081
+
+- `id`: `MB-081`
+- `prioridade`: `P1`
+- `status`: `blocked`
+- `eixo_do_mestre`: `docs/gates`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: fechar o lote de arbitragem declarativa com docs vivos, changelog e gate sincronizados ao novo estado real do baseline.
+- `justificativa_arquitetural`: esse lote muda a leitura final do encadeamento `mente -> dominio -> especialista`; o fechamento precisa consolidar o contrato novo sem deixar backlog, handoff e snapshot em drift.
+- `arquivos/servicos_principais`: `docs/implementation/execution-backlog.md`, `HANDOFF.md`, `docs/implementation/v2-adherence-snapshot.md`, `CHANGELOG.md`
+- `dependencias`: `MB-077`, `MB-078`, `MB-079`, `MB-080`
+- `criterio_de_aceite`: o lote termina com docs vivos refletindo arbitragem declarativa como baseline do nucleo, `CHANGELOG.md` sincronizado e gate minimo validado.
+- `gate_minimo`: `python tools/check_mojibake.py docs/implementation docs/operations HANDOFF.md CHANGELOG.md` e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `medium`
+- `impacto_no_baseline`: o lote fecha com backlog, handoff, snapshot e changelog coerentes com a nova gramatica soberana da arbitragem `mente -> dominio -> especialista`.
+
 ---
 
 ## 5. Regras de manutencao da fila
@@ -1319,5 +1489,9 @@ Estado atual da fila:
 - `docs/implementation/unified-gap-and-absorption-backlog.md` agora consolida o que ainda falta no sistema, integrando gaps do nucleo, traducao tecnologica, superficies, evolucao e pesquisa em um unico mapa macro para a proxima repriorizacao;
 - `MB-067` a `MB-071` foram concluidos e fecharam o lote do nucleo para decisao soberana de capacidades, ferramentas e handoffs bounded, derivado de `SG-001`, `TA-001` e `TA-005`;
 - `planning`, `orchestrator`, `governance`, `observability`, piloto, comparadores e `evolution-lab` agora carregam `capability_decision_*`, `capability_effectiveness` e `handoff_adapter_status` como baseline auditavel do runtime;
-- a fila micro volta a ficar sem item `ready`; a proxima rodada correta e nova repriorizacao explicita a partir do backlog macro unificado;
+- `MB-072` a `MB-076` foram concluidos e fecharam o lote do nucleo para manutencao ativa de memoria viva, derivado de `SG-004` e `TA-003`;
+- `memory-service`, `planning`, `orchestrator`, `observability`, piloto, comparadores, `evolution-lab` e verificadores de release agora tratam `memory_maintenance_*`, compaction e recall cross-session como slice soberano, auditavel e refinavel do runtime;
+- `MB-077` a `MB-081` agora abrem o novo lote do nucleo para arbitragem mais declarativa de `mente -> dominio -> especialista`, derivado de `SG-005`;
+- `MB-077` e o item `ready` atual: ele formaliza `mind_domain_specialist_*`, override bounded e fallback governado como contrato soberano e auditavel do runtime;
+- `MB-078` a `MB-081` permanecem `blocked` apenas pela ordem de dependencia do novo lote;
 - `protective intelligence foundation` continua `deferred` e a matriz da Onda 2 segue como insumo, nao como gatilho automatico para abrir nova vertical.

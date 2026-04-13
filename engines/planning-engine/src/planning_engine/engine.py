@@ -10,7 +10,7 @@ from shared.contracts import (
     SpecialistContributionContract,
 )
 from shared.domain_registry import workflow_runtime_guidance
-from shared.memory_registry import guided_memory_decision
+from shared.memory_registry import guided_memory_decision, memory_maintenance_decision
 from shared.schemas import DELIBERATIVE_PLAN_SCHEMA
 from shared.specialist_registry import (
     GOVERNANCE_REVIEW_SPECIALIST,
@@ -145,6 +145,9 @@ class PlanningContext:
     context_live_summary: str | None = None
     cross_session_recall_status: str | None = None
     cross_session_recall_summary: str | None = None
+    memory_maintenance_status: str | None = None
+    memory_maintenance_reason: str | None = None
+    memory_maintenance_fallback_mode: str | None = None
     memory_priority_status: str | None = None
     memory_priority_domains: list[str] | None = None
     memory_priority_specialists: list[str] | None = None
@@ -317,10 +320,24 @@ class PlanningEngine:
             context=context,
             memory_decision=memory_decision,
         )
+        memory_maintenance = self._memory_maintenance_decision(
+            context,
+            memory_decision=memory_decision,
+        )
+        steps, constraints, success_criteria = self._apply_memory_maintenance_guidance(
+            steps=steps,
+            constraints=constraints,
+            success_criteria=success_criteria,
+            memory_maintenance=memory_maintenance,
+        )
         smallest_safe_next_action = self._apply_guided_memory_to_next_action(
             smallest_safe_next_action,
             context=context,
             memory_decision=memory_decision,
+        )
+        smallest_safe_next_action = self._apply_memory_maintenance_to_next_action(
+            smallest_safe_next_action,
+            memory_maintenance=memory_maintenance,
         )
         adaptive_intervention = self._adaptive_intervention(
             context,
@@ -373,6 +390,7 @@ class PlanningEngine:
             smallest_safe_next_action=smallest_safe_next_action,
             metacognitive_guidance=metacognitive_guidance,
             memory_decision=memory_decision,
+            memory_maintenance=memory_maintenance,
             continuity_action=continuity_action,
             continuity_reason=continuity_reason,
             continuity_source=continuity_source,
@@ -399,6 +417,7 @@ class PlanningEngine:
             dominant_tension=dominant_tension,
             metacognitive_guidance=metacognitive_guidance,
             memory_decision=memory_decision,
+            memory_maintenance=memory_maintenance,
             continuity_action=continuity_action,
             goal_conflict=goal_conflict,
             continuity_reason=continuity_reason,
@@ -469,6 +488,11 @@ class PlanningEngine:
             procedural_memory_state=memory_decision.procedural_memory_state,
             memory_lifecycle_status=memory_decision.lifecycle_status,
             memory_review_status=memory_decision.review_status,
+            memory_maintenance_status=memory_maintenance.status,
+            memory_maintenance_reason=memory_maintenance.reason,
+            memory_maintenance_fallback_mode=memory_maintenance.fallback_mode,
+            context_compaction_status=context.context_compaction_status,
+            cross_session_recall_status=context.cross_session_recall_status,
             memory_consolidation_status=memory_decision.consolidation_status,
             memory_fixation_status=memory_decision.fixation_status,
             memory_archive_status=memory_decision.archive_status,
@@ -1895,6 +1919,7 @@ class PlanningEngine:
         smallest_safe_next_action: str,
         metacognitive_guidance: MetacognitiveGuidance,
         memory_decision,
+        memory_maintenance,
         continuity_action: str,
         continuity_reason: str,
         continuity_source: str,
@@ -1941,6 +1966,8 @@ class PlanningEngine:
             f"{','.join(memory_decision.procedural_effects) or 'none'}; "
             f"memory_lifecycle={memory_decision.lifecycle_status}; "
             f"memory_review={memory_decision.review_status}; "
+            f"memory_maintenance={memory_maintenance.status}; "
+            f"memory_maintenance_fallback={memory_maintenance.fallback_mode}; "
             f"continuidade={continuity_action}; "
             f"fonte_continuidade={continuity_source}; "
             f"replay_status={context.continuity_replay_status or 'none'}; "
@@ -1962,6 +1989,7 @@ class PlanningEngine:
         dominant_tension: str,
         metacognitive_guidance: MetacognitiveGuidance,
         memory_decision,
+        memory_maintenance,
         continuity_action: str,
         goal_conflict: str | None,
         continuity_reason: str,
@@ -2064,6 +2092,8 @@ class PlanningEngine:
             f"procedural_memory_state={memory_decision.procedural_memory_state or 'none'}; "
             f"memory_lifecycle={memory_decision.lifecycle_status}; "
             f"memory_review={memory_decision.review_status}; "
+            f"memory_maintenance={memory_maintenance.status}; "
+            f"memory_maintenance_fallback={memory_maintenance.fallback_mode}; "
             f"memory_consolidation={memory_decision.consolidation_status}; "
             f"memory_fixation={memory_decision.fixation_status}; "
             f"memory_archive={memory_decision.archive_status}; "
@@ -2731,3 +2761,96 @@ class PlanningEngine:
                 updated_success.append(procedural_criterion)
 
         return updated_steps[:7], updated_constraints[:10], updated_success[:9]
+
+    def _memory_maintenance_decision(self, context: PlanningContext, *, memory_decision):
+        if (
+            context.memory_maintenance_status is not None
+            and context.memory_maintenance_reason is not None
+            and context.memory_maintenance_fallback_mode is not None
+        ):
+            effects: list[str] = []
+            if memory_decision.review_status in {"review_recommended", "attention_required"}:
+                effects.append("review")
+            if context.context_compaction_status in {
+                "compressed_live_context",
+                "seeded_live_context",
+            }:
+                effects.append("compaction")
+            if context.cross_session_recall_status in {"active", "seeded"}:
+                effects.append("cross_session_recall")
+            if context.memory_maintenance_status == "contained_fallback":
+                effects.append("contained_fallback")
+            return memory_maintenance_decision(
+                memory_review_status=memory_decision.review_status,
+                retention_pressure=context.memory_retention_pressure,
+                context_compaction_status=context.context_compaction_status,
+                cross_session_recall_status=context.cross_session_recall_status,
+            ).__class__(
+                status=context.memory_maintenance_status,
+                reason=context.memory_maintenance_reason,
+                fallback_mode=context.memory_maintenance_fallback_mode,
+                effects=tuple(dict.fromkeys(effects or ["monitoring"])),
+            )
+        return memory_maintenance_decision(
+            memory_review_status=memory_decision.review_status,
+            retention_pressure=context.memory_retention_pressure,
+            context_compaction_status=context.context_compaction_status,
+            cross_session_recall_status=context.cross_session_recall_status,
+        )
+
+    def _apply_memory_maintenance_guidance(
+        self,
+        *,
+        steps: list[str],
+        constraints: list[str],
+        success_criteria: list[str],
+        memory_maintenance,
+    ) -> tuple[list[str], list[str], list[str]]:
+        updated_steps = list(steps)
+        updated_constraints = list(constraints)
+        updated_success = list(success_criteria)
+
+        if memory_maintenance.status == "review_required":
+            review_step = "revisar memoria viva antes de expandir recall ou reuse cross-session"
+            review_constraint = (
+                "usar recall cross-session apenas por resumo soberano ate a revisao da memoria viva"
+            )
+            review_success = (
+                "memoria viva revisada sem inflar janela contextual nem reabrir historico bruto"
+            )
+            if review_step not in updated_steps:
+                updated_steps.insert(0, review_step)
+            if review_constraint not in updated_constraints:
+                updated_constraints.append(review_constraint)
+            if review_success not in updated_success:
+                updated_success.append(review_success)
+        elif memory_maintenance.status == "contained_fallback":
+            fallback_step = "conter reuse em resumo canonico compacto antes de prosseguir"
+            fallback_constraint = (
+                "nao reabrir historico bruto; operar apenas com resumo soberano e contexto minimo"
+            )
+            fallback_success = "fallback de memoria aplicado sem bypassar memoria canonica"
+            if fallback_step not in updated_steps:
+                updated_steps.insert(0, fallback_step)
+            if fallback_constraint not in updated_constraints:
+                updated_constraints.append(fallback_constraint)
+            if fallback_success not in updated_success:
+                updated_success.append(fallback_success)
+        elif memory_maintenance.status == "cross_session_recall_active":
+            recall_success = "recall cross-session aplicado apenas por resumo rastreavel"
+            if recall_success not in updated_success:
+                updated_success.append(recall_success)
+        elif memory_maintenance.status == "compaction_active":
+            compaction_constraint = "preservar contexto compacto sem inflar a janela de memoria"
+            if compaction_constraint not in updated_constraints:
+                updated_constraints.append(compaction_constraint)
+
+        return updated_steps[:7], updated_constraints[:10], updated_success[:9]
+
+    @staticmethod
+    def _apply_memory_maintenance_to_next_action(action: str, *, memory_maintenance) -> str:
+        if memory_maintenance.status == "review_required":
+            return f"{action}; revisar memoria viva antes de expandir o reuse"
+        if memory_maintenance.status == "contained_fallback":
+            return f"{action}; conter reuse em resumo canonico compacto"
+        return action

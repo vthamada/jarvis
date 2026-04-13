@@ -205,6 +205,26 @@ def _evaluation_from_dict(payload: dict[str, object]) -> FlowEvaluationInput:
             if payload.get("memory_causality_status") is not None
             else None
         ),
+        memory_maintenance_status=(
+            str(payload["memory_maintenance_status"])
+            if payload.get("memory_maintenance_status") is not None
+            else None
+        ),
+        memory_maintenance_effectiveness=(
+            str(payload["memory_maintenance_effectiveness"])
+            if payload.get("memory_maintenance_effectiveness") is not None
+            else None
+        ),
+        context_compaction_status=(
+            str(payload["context_compaction_status"])
+            if payload.get("context_compaction_status") is not None
+            else None
+        ),
+        cross_session_recall_status=(
+            str(payload["cross_session_recall_status"])
+            if payload.get("cross_session_recall_status") is not None
+            else None
+        ),
         primary_mind=(
             str(payload["primary_mind"])
             if payload.get("primary_mind") is not None
@@ -359,6 +379,8 @@ def build_payload(args: Namespace) -> dict[str, object]:
             and audit.adaptive_intervention_policy_status
             in {None, "policy_aligned", "mandatory_override", "not_applicable"}
             and audit.memory_causality_status in {None, "causal_guidance", "not_applicable"}
+            and audit.memory_maintenance_effectiveness
+            in {None, "effective", "not_applicable"}
             and audit.memory_lifecycle_status in {None, "retained", "promoted", "not_applicable"}
             and audit.memory_corpus_status in {None, "stable", "not_applicable"}
             and audit.mind_domain_specialist_status in {None, "aligned", "not_applicable"}
@@ -417,6 +439,10 @@ def build_payload(args: Namespace) -> dict[str, object]:
                     audit.adaptive_intervention_policy_status
                 ),
                 memory_causality_status=audit.memory_causality_status,
+                memory_maintenance_status=audit.memory_maintenance_status,
+                memory_maintenance_effectiveness=audit.memory_maintenance_effectiveness,
+                context_compaction_status=audit.context_compaction_status,
+                cross_session_recall_status=audit.cross_session_recall_status,
                 primary_mind=audit.primary_mind,
                 primary_route=audit.primary_route,
                 dominant_tension=audit.dominant_tension,

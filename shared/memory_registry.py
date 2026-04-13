@@ -85,6 +85,14 @@ class MemoryCorpusTelemetry:
 
 
 @dataclass(frozen=True)
+class MemoryMaintenanceDecision:
+    status: str
+    reason: str
+    fallback_mode: str
+    effects: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class ProceduralArtifactDecision:
     eligible: bool
     artifact_status: str
@@ -611,6 +619,60 @@ def memory_lifecycle_runtime_policy(
         allow_semantic_specialist=semantic_memory_state in {"fixed", "operational", None},
         allow_procedural_specialist=procedural_memory_state in {"fixed", "operational", None},
         allow_procedural_artifact_reuse=procedural_memory_state in {"fixed", "operational", None},
+    )
+
+
+def memory_maintenance_decision(
+    *,
+    memory_review_status: str | None,
+    retention_pressure: str | None,
+    context_compaction_status: str | None,
+    cross_session_recall_status: str | None,
+) -> MemoryMaintenanceDecision:
+    """Resolve the bounded live-memory maintenance posture for the current request."""
+
+    effects: list[str] = []
+    if memory_review_status in {"review_recommended", "attention_required"}:
+        effects.append("review")
+    if context_compaction_status in {"compressed_live_context", "seeded_live_context"}:
+        effects.append("compaction")
+    if cross_session_recall_status in {"active", "seeded"}:
+        effects.append("cross_session_recall")
+
+    if memory_review_status == "attention_required":
+        effects.append("contained_fallback")
+        return MemoryMaintenanceDecision(
+            status="contained_fallback",
+            reason="memory review requires containment before reuse expansion",
+            fallback_mode="freeze_to_canonical_summary",
+            effects=tuple(dict.fromkeys(effects)),
+        )
+    if memory_review_status == "review_recommended" or retention_pressure == "high":
+        return MemoryMaintenanceDecision(
+            status="review_required",
+            reason="memory pressure requires review before expanding reuse",
+            fallback_mode="review_before_reuse",
+            effects=tuple(dict.fromkeys(effects)),
+        )
+    if cross_session_recall_status == "active":
+        return MemoryMaintenanceDecision(
+            status="cross_session_recall_active",
+            reason="cross-session recall is active and remains bounded to sovereign summaries",
+            fallback_mode="summary_only_recall",
+            effects=tuple(dict.fromkeys(effects or ["cross_session_recall"])),
+        )
+    if context_compaction_status in {"compressed_live_context", "seeded_live_context"}:
+        return MemoryMaintenanceDecision(
+            status="compaction_active",
+            reason="live context was compacted to preserve bounded continuity",
+            fallback_mode="minimal_context_only",
+            effects=tuple(dict.fromkeys(effects or ["compaction"])),
+        )
+    return MemoryMaintenanceDecision(
+        status="stable",
+        reason="live memory is stable under the current bounded context",
+        fallback_mode="none",
+        effects=tuple(dict.fromkeys(effects or ["monitoring"])),
     )
 
 

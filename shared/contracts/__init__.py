@@ -143,6 +143,11 @@ class DeliberativePlanContract:
     procedural_memory_state: str | None = None
     memory_lifecycle_status: str | None = None
     memory_review_status: str | None = None
+    memory_maintenance_status: str | None = None
+    memory_maintenance_reason: str | None = None
+    memory_maintenance_fallback_mode: str | None = None
+    context_compaction_status: str | None = None
+    cross_session_recall_status: str | None = None
     memory_consolidation_status: str | None = None
     memory_fixation_status: str | None = None
     memory_archive_status: str | None = None
@@ -255,6 +260,11 @@ class SpecialistSharedMemoryContextContract:
     procedural_memory_state: str | None = None
     memory_lifecycle_status: str | None = None
     memory_review_status: str | None = None
+    memory_maintenance_status: str | None = None
+    memory_maintenance_reason: str | None = None
+    memory_maintenance_fallback_mode: str | None = None
+    context_compaction_status: str | None = None
+    cross_session_recall_status: str | None = None
     memory_consolidation_status: str | None = None
     memory_fixation_status: str | None = None
     memory_archive_status: str | None = None

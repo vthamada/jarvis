@@ -1,6 +1,28 @@
 # CHANGELOG
 
+## 2026-04-12
+
+### Repriorizacao do proximo lote micro para arbitragem declarativa
+
+- `docs/implementation/execution-backlog.md` agora abre `MB-077` a `MB-081` como o novo lote ativo do nucleo, com `MB-077` em `ready` e foco em arbitragem mais declarativa de `mente -> dominio -> especialista` nos consumidores finais;
+- o novo lote traduz a prioridade macro `SG-005` em uma sequencia micro curta: contrato, aplicacao governada, observabilidade/tracing, uso evolutivo e fechamento documental;
+- `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para sair do estado "sem item ready" e registrar `MB-077` como o proximo passo correto do projeto;
+- `protective intelligence` permanece `deferred`, e a Onda 2 continua tratada apenas como experimento controlado, nao como gatilho automatico de nova frente macro.
+
+### Fechamento do lote de memoria viva ativa
+
+- `shared/memory_registry.py`, `shared/contracts/__init__.py`, `shared/schemas/__init__.py`, `services/memory-service`, `engines/planning-engine` e `services/orchestrator-service` agora formalizam e aplicam `memory_maintenance_*`, compaction e recall cross-session como contrato soberano por request;
+- `services/observability-service`, `tools/internal_pilot_support.py`, `tools/internal_pilot_report.py`, `tools/compare_orchestrator_paths.py`, `tools/evolution_from_pilot.py`, `tools/verify_release_signal_baseline.py` e `evolution/evolution-lab` agora expoem efetividade de manutencao viva, compaction e recall cross-session como evidencia auditavel e insumo formal de refinamento;
+- `docs/implementation/execution-backlog.md`, `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para fechar `MB-072` a `MB-076` e registrar que a fila micro voltou a ficar sem item `ready` ate nova repriorizacao explicita.
+
 ## 2026-04-11
+
+### Repriorizacao do proximo lote micro para memoria viva ativa
+
+- `docs/implementation/execution-backlog.md` agora abre `MB-072` a `MB-076` como o novo lote ativo do nucleo, com `MB-072` em `ready` e foco em manutencao ativa de memoria viva, compaction e recall cross-session 2.0;
+- o novo lote traduz a prioridade macro `SG-004`, apoiada por `TA-003`, em uma sequencia micro curta: contrato, aplicacao governada, observabilidade/tracing, uso evolutivo e fechamento documental;
+- `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para sair do estado "sem item ready" e registrar `MB-072` como o proximo passo correto do projeto;
+- `protective intelligence` permanece `deferred`, e a Onda 2 continua tratada apenas como experimento controlado, nao como gatilho automatico de nova frente macro.
 
 ### Fechamento do lote de decisao soberana de capacidades
 

@@ -106,6 +106,12 @@ Atualizacao desta rodada:
 - o lote `MB-067` a `MB-071` foi concluido e fechou a decisao soberana de
   capacidades, ferramentas e handoffs bounded como baseline auditavel do
   runtime;
+- o lote `MB-072` a `MB-076` foi concluido e fechou manutencao ativa de memoria
+  viva, compaction e recall cross-session 2.0 como baseline auditavel do
+  runtime;
+- o proximo lote micro ja foi repriorizado como `MB-077` a `MB-081`, com
+  `MB-077` em `ready` e foco em arbitragem mais declarativa de
+  `mente -> dominio -> especialista` nos consumidores finais;
 - tratar a Onda 2 apenas como experimento controlado guiado pela matriz de
   readiness ja existente;
 - manter `protective intelligence`, `voice/realtime`, memoria temporal forte,
@@ -143,7 +149,11 @@ Atualizacao desta rodada:
 - `MB-059` e `MB-060` agora tornam a efetividade dessas intervencoes parte do baseline auditavel em `observability`, piloto, comparadores, `evolution-lab`, `evolution_from_pilot` e verificadores de release;
 - `MB-067` a `MB-071` foram concluidos e fecharam o lote do nucleo para decisao soberana de capacidades, ferramentas e handoffs bounded, derivado de `SG-001`, `TA-001` e `TA-005`;
 - `planning`, `orchestrator`, `governance`, `observability`, piloto, comparadores e `evolution-lab` agora tratam `capability_decision_*`, `capability_effectiveness` e `handoff_adapter_status` como slice baseline do runtime;
-- a fila micro voltou a ficar sem item `ready`; a proxima rodada correta e nova repriorizacao explicita a partir de `docs/implementation/unified-gap-and-absorption-backlog.md`;
+- `MB-072` a `MB-076` agora tambem foram concluidos e fecharam o lote do nucleo para manutencao ativa de memoria viva, derivado de `SG-004` e `TA-003`;
+- `memory-service`, `planning`, `orchestrator`, `observability`, piloto, comparadores, `evolution-lab` e verificadores de release agora tratam `memory_maintenance_*`, compaction e recall cross-session como slice baseline, auditavel e refinavel do runtime;
+- `MB-077` a `MB-081` agora abrem o novo lote do nucleo para arbitragem mais declarativa de `mente -> dominio -> especialista`, derivado de `SG-005`;
+- `MB-077` esta em `ready` para formalizar `mind_domain_specialist_*`, override bounded e fallback governado como contrato soberano e auditavel do runtime;
+- `MB-078` a `MB-081` ja estao encadeados como `blocked` pela ordem de dependencia do lote, cobrindo aplicacao governada, observabilidade, loop evolutivo e fechamento documental;
 - so depois desse lote: reavaliar qual vertical derivada deve abrir a proxima frente macro; `protective intelligence` permanece mapeado, mas em `deferred` ate nova decisao explicita;
 - so entao: decidir se o `v3` deve abrir por essa frente, por outra vertical derivada ou por mais maturacao transversal.
 
@@ -326,11 +336,11 @@ Regra de estudo externo no `v2`:
 Ordem recomendada:
 1. usar `docs/implementation/unified-gap-and-absorption-backlog.md` como mapa macro do que ainda falta, antes de abrir novo item `ready`;
 2. derivar o proximo lote micro do `execution-backlog` a partir de um eixo claro desse backlog macro, preferindo profundidade do nucleo no `v2 restante`;
-3. tratar `docs/implementation/v2-adherence-snapshot.md` como leitura oficial do baseline atual do `v2`, agora ja com o lote `MB-062` a `MB-066` fechado;
+3. tratar `docs/implementation/v2-adherence-snapshot.md` como leitura oficial do baseline atual do `v2`, agora ja com o lote `MB-072` a `MB-076` fechado;
 4. manter `HANDOFF.md`, `CHANGELOG.md` e o snapshot como docs vivos do baseline sem abrir outro corte documental por inercia;
 5. preservar `MB-023` a `MB-026` como baseline fechado e `MB-027` a `MB-031` como `deferred`, sem reabrir `protective intelligence` por impulso;
-6. tratar `MB-062` a `MB-066` como baseline ja fechado do lote de prioridade soberana por workflow, preservando a gramatica nova em `planning`, `synthesis`, `response_synthesized`, comparadores e loop evolutivo;
-7. manter a fila micro sem item `ready` ate nova repriorizacao explicita do operador, sem reabrir o lote por inercia local;
+6. tratar `MB-072` a `MB-076` como baseline ja fechado do lote de manutencao ativa de memoria viva, preservando `memory_maintenance_*`, compaction e recall cross-session como contrato soberano do runtime;
+7. tratar `MB-077` como o item `ready` atual da fila micro e preservar `MB-078` a `MB-081` como `blocked` apenas pela ordem de dependencia do lote;
 8. manter historico regeneravel em `docs/archive/implementation/` e `tools/archive/` sem reexpandir a raiz do repositorio;
 9. so abrir outra frente funcional ou novo lote micro quando essa repriorizacao explicita acontecer ou se a prioridade macro mudar.
 
@@ -342,7 +352,10 @@ Atualização desta rodada:
 - `MB-062` ja foi concluido e abriu o novo lote de prioridade soberana por workflow, fazendo `structured_analysis`, `strategy`, `software_change`, `governance`, `decision_risk` e `operational_readiness` deixarem de compartilhar a mesma precedencia fixa entre revisao de memoria e reavaliacao especializada;
 - `MB-063` agora tambem foi concluido: `observability-service`, `internal_pilot_report`, `compare_orchestrator_paths.py` e `verify_release_signal_baseline.py` passaram a publicar `adaptive_intervention_policy_status`, distinguindo `policy_aligned`, `mandatory_override` e `attention_required`;
 - `MB-064` a `MB-066` agora tambem foram concluidos: `synthesis` e `response_synthesized` passaram a expor a prioridade do workflow com checkpoint/gate preservado, enquanto `evolution-lab`, `evolution_from_pilot.py` e comparadores promovem a politica de intervencao a criterio formal de refinamento;
-- a fila micro volta a ficar sem item `ready`, aguardando apenas nova repriorizacao explicita do operador;
+- `MB-067` a `MB-071` tambem foram concluidos e fecharam o lote de decisao soberana de capacidades, ferramentas e handoffs bounded;
+- `MB-072` a `MB-076` agora tambem foram concluidos: `memory-service`, `planning`, `orchestrator`, `observability`, piloto, comparadores, `evolution-lab` e verificadores de release passaram a tratar `memory_maintenance_*`, compaction e recall cross-session como baseline auditavel e refinavel do runtime;
+- `MB-077` a `MB-081` agora abrem o novo lote do nucleo para arbitragem mais declarativa de `mente -> dominio -> especialista`, derivado de `SG-005`;
+- `MB-077` virou o item `ready` atual da fila, com foco em formalizar `mind_domain_specialist_*`, override bounded e fallback governado como contrato soberano do runtime;
 - a rodada seguinte recuperou o gate global: `planning-engine` deixou de promover `specialist_reevaluation` a validacao humana no plano refinado, `shared/domain_registry.py` voltou a preservar `workflow_steps`, `workflow_checkpoints` e `workflow_decision_points` em rotas promovidas, e `python tools/engineering_gate.py --mode standard` agora fecha sem falhas;
 - `documento_mestre_jarvis.md`, `docs/roadmap/programa-ate-v3.md` e `docs/implementation/v2-adherence-snapshot.md` agora deixam mais explicito que LLMs e runtimes agentic entram como substrato subordinado ao nucleo, que multiplas superficies expõem a mesma entidade e que o horizonte do `v3` inclui estado operacional mais rico do ecossistema;
 - `protective intelligence` segue preservada em `deferred`, e a matriz de readiness da Onda 2 continua apenas como insumo controlado do proximo refinamento do nucleo.

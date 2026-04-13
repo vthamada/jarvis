@@ -46,6 +46,7 @@ from shared.memory_registry import (
     memory_corpus_telemetry,
     memory_lifecycle_runtime_policy,
     memory_lifecycle_support_signals,
+    memory_maintenance_decision,
     organization_scope_guard_payload,
     procedural_artifact_decision,
     specialist_memory_policy_payload,
@@ -790,6 +791,20 @@ class MemoryService:
             if corpus_telemetry.retention_pressure == "high"
             else "active_guided"
         )
+        maintenance_review_status = (
+            "attention_required"
+            if latest_artifact is not None
+            and latest_artifact.get("artifact_status") == "archivable"
+            else "review_recommended"
+            if corpus_telemetry.corpus_status == "review_recommended"
+            else "stable"
+        )
+        memory_maintenance = memory_maintenance_decision(
+            memory_review_status=maintenance_review_status,
+            retention_pressure=corpus_telemetry.retention_pressure,
+            context_compaction_status=context_policy.compaction_status,
+            cross_session_recall_status=context_policy.cross_session_recall_status,
+        )
         if (
             latest_artifact is not None
             and latest_artifact.get("artifact_status") == "archivable"
@@ -839,6 +854,23 @@ class MemoryService:
             )
             if cross_session_summary:
                 plan_hints.append(f"cross_session_recall_summary={cross_session_summary}")
+        should_surface_memory_maintenance = memory_maintenance.status != "stable" or bool(
+            summary
+            or session_context
+            or continuity_hints
+            or cross_session_sources
+            or mission_hints
+            or user_hints
+        )
+        if should_surface_memory_maintenance:
+            plan_hints.extend(
+                [
+                    f"memory_maintenance_status={memory_maintenance.status}",
+                    f"memory_maintenance_reason={memory_maintenance.reason}",
+                    "memory_maintenance_fallback_mode="
+                    f"{memory_maintenance.fallback_mode}",
+                ]
+            )
         final_session_context: list[str] = []
         if (
             summary
@@ -864,10 +896,17 @@ class MemoryService:
                     f"user_scope={user_scope_label};"
                     f"continuity={continuity_label};"
                     f"cross_session={context_policy.cross_session_recall_status}",
+                    f"memory_maintenance_status={memory_maintenance.status}",
+                    "memory_maintenance_fallback_mode="
+                    f"{memory_maintenance.fallback_mode}",
                 ]
             )
             if summary:
                 final_session_context.insert(0, f"context_summary={summary}")
+            if cross_session_summary:
+                final_session_context.append(
+                    f"cross_session_recall_summary={cross_session_summary}"
+                )
             for item in [*live_turn_context, *trimmed_continuity_hints]:
                 if item not in final_session_context:
                     final_session_context.append(item)
@@ -880,6 +919,9 @@ class MemoryService:
                 "memory_recovery_mode=",
                 "memory_corpus_status=",
                 "memory_retention_pressure=",
+                "memory_maintenance_status=",
+                "memory_maintenance_reason=",
+                "memory_maintenance_fallback_mode=",
                 "cross_session_recall_status=",
                 "cross_session_recall_sources=",
                 "cross_session_recall_summary=",

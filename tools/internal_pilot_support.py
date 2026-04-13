@@ -127,6 +127,11 @@ class PilotExecutionResult:
     procedural_memory_lifecycle: str | None
     memory_lifecycle_status: str
     memory_review_status: str
+    memory_maintenance_status: str
+    memory_maintenance_reason: str | None
+    memory_maintenance_fallback_mode: str | None
+    context_compaction_status: str | None
+    cross_session_recall_status: str | None
     procedural_artifact_status: str
     procedural_artifact_refs: list[str]
     procedural_artifact_version: int | None
@@ -172,6 +177,7 @@ class PilotExecutionResult:
     adaptive_intervention_policy_status: str = "not_applicable"
     memory_corpus_status: str = "not_applicable"
     memory_retention_pressure: str | None = None
+    memory_maintenance_effectiveness: str = "not_applicable"
 
 
 def runtime_dir(name: str) -> Path:
@@ -559,6 +565,13 @@ def run_pilot_scenarios(
                 procedural_memory_lifecycle=audit.procedural_memory_lifecycle,
                 memory_lifecycle_status=audit.memory_lifecycle_status,
                 memory_review_status=audit.memory_review_status,
+                memory_maintenance_status=audit.memory_maintenance_status,
+                memory_maintenance_reason=audit.memory_maintenance_reason,
+                memory_maintenance_fallback_mode=(
+                    audit.memory_maintenance_fallback_mode
+                ),
+                context_compaction_status=audit.context_compaction_status,
+                cross_session_recall_status=audit.cross_session_recall_status,
                 procedural_artifact_status=audit.procedural_artifact_status,
                 procedural_artifact_refs=list(audit.procedural_artifact_refs),
                 procedural_artifact_version=audit.procedural_artifact_version,
@@ -626,6 +639,9 @@ def run_pilot_scenarios(
                 ),
                 memory_corpus_status=audit.memory_corpus_status,
                 memory_retention_pressure=audit.memory_retention_pressure,
+                memory_maintenance_effectiveness=(
+                    audit.memory_maintenance_effectiveness
+                ),
             )
         )
     return results

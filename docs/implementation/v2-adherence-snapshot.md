@@ -31,7 +31,7 @@ Estado de referencia desta revisao:
 - data da fotografia: `2026-04-10`
 - ultimo recorte funcional fechado: `v2-native-memory-scope-hardening-cut`
 - ultimo recorte estrutural fechado: `v2-repository-hygiene-and-tools-review-cut`
-- passo funcional em andamento: lote `MB-062` a `MB-066` concluido e lote `MB-067` a `MB-071` concluido (`MB-037` a `MB-040` concluidos; `MB-041` a `MB-046` concluidos; `MB-047` a `MB-051` concluidos; `MB-052` a `MB-056` concluidos; `MB-057` a `MB-061` concluidos; `MB-062` a `MB-066` concluidos; `MB-067` a `MB-071` concluidos; fila micro sem item `ready`)
+- passo funcional em andamento: lote `MB-062` a `MB-066` concluido, lote `MB-067` a `MB-071` concluido, lote `MB-072` a `MB-076` concluido e lote `MB-077` a `MB-081` aberto (`MB-037` a `MB-040` concluidos; `MB-041` a `MB-046` concluidos; `MB-047` a `MB-051` concluidos; `MB-052` a `MB-056` concluidos; `MB-057` a `MB-061` concluidos; `MB-062` a `MB-066` concluidos; `MB-067` a `MB-071` concluidos; `MB-072` a `MB-076` concluidos; `MB-077` em `ready`)
 
 Leitura executiva:
 
@@ -372,7 +372,20 @@ Foco:
   aplicando decisao soberana de capacidades, ferramentas e handoffs bounded por
   request, com evidencia auditavel e uso evolutivo coerente no baseline.
 
-### Passo 4 - manter frentes fora da fila micro ate mudanca explicita de fase
+### Passo 4 - executar o proximo lote micro no eixo de arbitragem declarativa
+
+Foco:
+
+- a nova prioridade micro passou a ser `SG-005`, por ser hoje o prolongamento
+  tecnicamente mais natural da consolidacao de capacidade soberana e memoria
+  viva no nucleo do
+  `v2 restante`;
+- esse eixo agora foi fatiado como lote `MB-077` a `MB-081`, com `MB-077` em
+  `ready` para formalizar arbitragem mais declarativa de
+  `mente -> dominio -> especialista` nos consumidores finais como contrato
+  soberano do runtime.
+
+### Passo 5 - manter frentes fora da fila micro ate mudanca explicita de fase
 
 Foco:
 
@@ -416,12 +429,11 @@ O lote `MB-057` a `MB-061` foi fechado exatamente para atacar esses tres pontos 
 `deferred` ate que esse lote de maturacao do nucleo seja realmente fechado.
 
 O que resta agora continua melhor descrito como backlog macro de lacunas reais
-e traducao tecnologica disciplinada; a ponte para abrir o lote de capacidades
-ja foi usada e o lote foi fechado. Por isso,
+e traducao tecnologica disciplinada; mas a ponte ja foi usada de novo para
+abrir o lote seguinte. Por isso,
 `docs/implementation/unified-gap-and-absorption-backlog.md` segue como origem
-da proxima prioridade, enquanto `docs/implementation/execution-backlog.md`
-volta a esperar nova repriorizacao explicita, porque a fila micro ficou sem
-item `ready`.
+da prioridade atual, enquanto `docs/implementation/execution-backlog.md`
+volta a ser a fila executavel concreta em `MB-077` a `MB-081`.
 
 ---
 

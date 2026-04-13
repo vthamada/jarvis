@@ -24,6 +24,10 @@ def _make_result(  # type: ignore[no-untyped-def]
     mind_disagreement_status: str = "not_applicable",
     mind_validation_checkpoint_status: str = "not_applicable",
     memory_causality_status: str = "causal_guidance",
+    memory_maintenance_status: str = "compaction_active",
+    memory_maintenance_effectiveness: str = "effective",
+    context_compaction_status: str | None = "compressed_live_context",
+    cross_session_recall_status: str | None = "active",
     memory_lifecycle_status: str = "retained",
     memory_review_status: str = "stable",
     memory_corpus_status: str = "stable",
@@ -100,6 +104,28 @@ def _make_result(  # type: ignore[no-untyped-def]
         adaptive_intervention_effectiveness=adaptive_intervention_effectiveness,
         adaptive_intervention_policy_status=adaptive_intervention_policy_status,
         memory_causality_status=memory_causality_status,
+        memory_maintenance_status=memory_maintenance_status,
+        memory_maintenance_reason=(
+            "memory pressure requires review before expanding reuse"
+            if memory_maintenance_status == "review_required"
+            else "live context was compacted to preserve bounded continuity"
+            if memory_maintenance_status == "compaction_active"
+            else "cross-session recall is active and remains bounded to sovereign summaries"
+            if memory_maintenance_status == "cross_session_recall_active"
+            else "live memory is stable under the current bounded context"
+        ),
+        memory_maintenance_fallback_mode=(
+            "review_before_reuse"
+            if memory_maintenance_status == "review_required"
+            else "minimal_context_only"
+            if memory_maintenance_status == "compaction_active"
+            else "summary_only_recall"
+            if memory_maintenance_status == "cross_session_recall_active"
+            else "none"
+        ),
+        memory_maintenance_effectiveness=memory_maintenance_effectiveness,
+        context_compaction_status=context_compaction_status,
+        cross_session_recall_status=cross_session_recall_status,
         primary_mind=primary_mind,
         primary_route=primary_route,
         dominant_tension=dominant_tension,
@@ -193,6 +219,12 @@ def _make_pilot_trace_summary() -> Any:
         adaptive_intervention_effectiveness="effective",
         adaptive_intervention_policy_status="policy_aligned",
         memory_causality_status="attached_only",
+        memory_maintenance_status="review_required",
+        memory_maintenance_reason="memory pressure requires review before expanding reuse",
+        memory_maintenance_fallback_mode="review_before_reuse",
+        memory_maintenance_effectiveness="effective",
+        context_compaction_status="compressed_live_context",
+        cross_session_recall_status="active",
         primary_mind="analise_estruturada",
         primary_route="analysis",
         dominant_tension="equilibrar profundidade analitica com conclusao util",
@@ -408,6 +440,10 @@ def main() -> None:
                     adaptive_intervention_effectiveness="effective",
                     adaptive_intervention_policy_status="policy_aligned",
                     memory_causality_status="attached_only",
+                    memory_maintenance_status="review_required",
+                    memory_maintenance_effectiveness="effective",
+                    context_compaction_status="compressed_live_context",
+                    cross_session_recall_status="active",
                     memory_lifecycle_status="review_recommended",
                     memory_review_status="review_recommended",
                     memory_corpus_status="review_recommended",
@@ -627,6 +663,18 @@ def main() -> None:
     _ensure(
         "adaptive_intervention_policy_status=policy_aligned" in pilot_text,
         "Pilot report text lost the adaptive intervention policy assessment.",
+    )
+    _ensure(
+        "memory_maintenance_status=review_required" in pilot_text,
+        "Pilot report text lost the live-memory maintenance status.",
+    )
+    _ensure(
+        "context_compaction_status=compressed_live_context" in pilot_text,
+        "Pilot report text lost the context compaction signal.",
+    )
+    _ensure(
+        "cross_session_recall_status=active" in pilot_text,
+        "Pilot report text lost the cross-session recall signal.",
     )
     _ensure(
         "procedural_artifact_status=candidate" in pilot_text,
