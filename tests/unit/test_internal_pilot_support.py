@@ -48,3 +48,4 @@ def test_run_pilot_scenarios_returns_structured_results() -> None:
     assert results[0].mission_runtime_state_status == "healthy"
     assert results[0].capability_decision_status == "healthy"
     assert results[0].capability_effectiveness == "effective"
+    assert results[0].mind_domain_specialist_effectiveness == "effective"

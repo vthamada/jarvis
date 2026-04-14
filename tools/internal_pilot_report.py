@@ -74,6 +74,8 @@ class PilotTraceSummary:
     mind_domain_specialist_status: str
     mind_domain_specialist_chain_status: str
     mind_domain_specialist_chain: str | None
+    mind_domain_specialist_effectiveness: str
+    mind_domain_specialist_mismatch_flags: list[str]
     cognitive_recomposition_applied: bool
     cognitive_recomposition_assessment: str
     cognitive_recomposition_reason: str | None
@@ -245,6 +247,12 @@ def summarize_traces(
                 audit.mind_domain_specialist_chain_status
             ),
             mind_domain_specialist_chain=audit.mind_domain_specialist_chain,
+            mind_domain_specialist_effectiveness=(
+                audit.mind_domain_specialist_effectiveness
+            ),
+            mind_domain_specialist_mismatch_flags=list(
+                audit.mind_domain_specialist_mismatch_flags
+            ),
             cognitive_recomposition_applied=audit.cognitive_recomposition_applied,
             cognitive_recomposition_assessment=_cognitive_recomposition_assessment(
                 applied=audit.cognitive_recomposition_applied,
@@ -313,6 +321,8 @@ def _trace_status(audit) -> str:
     if audit.adaptive_intervention_effectiveness in {"insufficient", "incomplete"}:
         return "attention_required"
     if audit.memory_maintenance_effectiveness in {"insufficient", "incomplete"}:
+        return "attention_required"
+    if audit.mind_domain_specialist_effectiveness in {"insufficient", "incomplete"}:
         return "attention_required"
     if audit.missing_required_events or audit.missing_continuity_signals:
         return "incomplete"
@@ -497,6 +507,10 @@ def _render_summary(summary: PilotTraceSummary) -> str:
         f"{getattr(summary, 'mind_domain_specialist_chain_status', 'not_applicable')} "
         "mind_domain_specialist_chain="
         f"{getattr(summary, 'mind_domain_specialist_chain', None) or 'none'} "
+        "mind_domain_specialist_effectiveness="
+        f"{getattr(summary, 'mind_domain_specialist_effectiveness', 'not_applicable')} "
+        "mind_domain_specialist_mismatch_flags="
+        f"{','.join(getattr(summary, 'mind_domain_specialist_mismatch_flags', [])) or 'none'} "
         "cognitive_recomposition_applied="
         f"{getattr(summary, 'cognitive_recomposition_applied', False)} "
         "cognitive_recomposition_assessment="

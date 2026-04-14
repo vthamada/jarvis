@@ -353,6 +353,45 @@ def test_planning_engine_prefers_specialist_handoff_for_guided_analysis() -> Non
     assert "specialist_handoff" in plan.capability_decision_selected_capabilities
 
 
+def test_planning_engine_materializes_mind_domain_specialist_contract() -> None:
+    engine = PlanningEngine()
+    plan = engine.build_task_plan(
+        PlanningContext(
+            intent="analysis",
+            query="Analyze the rollout trade-offs with explicit specialist guidance.",
+            recovered_context=[],
+            active_domains=["strategy", "analysis"],
+            active_minds=["mente_decisoria", "mente_analitica"],
+            knowledge_snippets=["Preserve the sovereign chain."],
+            risk_markers=[],
+            requires_clarification=False,
+            preferred_response_mode="analysis_only",
+            primary_mind="mente_decisoria",
+            primary_mind_family="estrategica_decisoria",
+            primary_domain_driver="estrategia_e_pensamento_sistemico",
+            arbitration_source="mind_registry",
+            primary_route="strategy",
+            specialist_hints=["structured_analysis_specialist"],
+            route_workflow_profile="strategic_direction_workflow",
+            dominant_goal="explicitar a direcao recomendada com criterio dominante",
+        )
+    )
+
+    assert plan.mind_domain_specialist_contract_status == "authoritative_chain"
+    assert plan.mind_domain_specialist_contract_summary is not None
+    assert plan.mind_domain_specialist_contract_chain == (
+        "mente_decisoria -> estrategia_e_pensamento_sistemico -> "
+        "strategy -> structured_analysis_specialist"
+    )
+    assert (
+        plan.mind_domain_specialist_active_specialist
+        == "structured_analysis_specialist"
+    )
+    assert plan.mind_domain_specialist_override_mode is None
+    assert plan.mind_domain_specialist_fallback_mode is None
+    assert "mind_domain_specialist_status=authoritative_chain" in plan.rationale
+
+
 def test_planning_engine_closes_active_loop_explicitly() -> None:
     engine = PlanningEngine()
     plan = engine.build_task_plan(

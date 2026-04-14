@@ -33,6 +33,8 @@ def make_pilot_result(  # type: ignore[no-untyped-def]
     mind_domain_specialist_status: str = "aligned",
     mind_domain_specialist_chain_status: str = "aligned",
     mind_domain_specialist_chain: str | None = None,
+    mind_domain_specialist_effectiveness: str = "effective",
+    mind_domain_specialist_mismatch_flags: list[str] | None = None,
     specialist_subflow_status: str = "healthy",
     specialist_subflow_runtime_mode: str | None = "native_pipeline",
     mission_runtime_state_status: str = "healthy",
@@ -107,6 +109,10 @@ def make_pilot_result(  # type: ignore[no-untyped-def]
                 f"{(primary_route or workflow_domain_route) or 'none'} -> "
                 "specialists[structured_analysis_specialist]"
             )
+        ),
+        mind_domain_specialist_effectiveness=mind_domain_specialist_effectiveness,
+        mind_domain_specialist_mismatch_flags=(
+            mind_domain_specialist_mismatch_flags or []
         ),
         cognitive_recomposition_applied=cognitive_recomposition_applied,
         cognitive_recomposition_reason=cognitive_recomposition_reason,

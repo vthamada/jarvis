@@ -78,6 +78,8 @@ def make_result(  # type: ignore[no-untyped-def]
     primary_domain_driver: str | None = "dados_estatistica_e_inteligencia_analitica",
     mind_domain_specialist_status: str = "aligned",
     mind_domain_specialist_chain_status: str = "aligned",
+    mind_domain_specialist_effectiveness: str = "effective",
+    mind_domain_specialist_mismatch_flags: list[str] | None = None,
     cognitive_recomposition_applied: bool = False,
     cognitive_recomposition_reason: str | None = None,
     cognitive_recomposition_trigger: str | None = None,
@@ -168,6 +170,10 @@ def make_result(  # type: ignore[no-untyped-def]
         mind_domain_specialist_chain=(
             f"{primary_mind or 'none'} -> {primary_domain_driver or 'none'} -> "
             f"{primary_route or 'none'} -> specialists[operational_planning_specialist]"
+        ),
+        mind_domain_specialist_effectiveness=mind_domain_specialist_effectiveness,
+        mind_domain_specialist_mismatch_flags=(
+            mind_domain_specialist_mismatch_flags or []
         ),
         cognitive_recomposition_applied=cognitive_recomposition_applied,
         cognitive_recomposition_reason=cognitive_recomposition_reason,
@@ -357,6 +363,25 @@ def test_compare_results_flags_capability_mismatch_fields() -> None:
         "capability_decision_selected_capabilities",
         "capability_effectiveness",
         "handoff_adapter_status",
+    ]
+
+
+def test_compare_results_flags_mind_domain_specialist_effectiveness_mismatch_fields() -> None:
+    baseline = [make_result(scenario_id="x", path_name="baseline")]
+    candidate = [
+        make_result(
+            scenario_id="x",
+            path_name="langgraph",
+            mind_domain_specialist_effectiveness="insufficient",
+            mind_domain_specialist_mismatch_flags=["dispatch_specialist_mismatch"],
+        )
+    ]
+
+    comparisons = compare_results(baseline, candidate)
+
+    assert comparisons[0].mismatch_fields == [
+        "mind_domain_specialist_effectiveness",
+        "mind_domain_specialist_mismatch_flags",
     ]
 
 
@@ -551,6 +576,10 @@ def test_render_text_reports_workflow_profile_status() -> None:
     assert "candidate_procedural_artifact_assessment=candidate" in rendered
     assert "baseline_mind_domain_specialist_status=aligned" in rendered
     assert "candidate_mind_domain_specialist_status=aligned" in rendered
+    assert "baseline_mind_domain_specialist_effectiveness=effective" in rendered
+    assert "candidate_mind_domain_specialist_effectiveness=effective" in rendered
+    assert "baseline_mind_domain_specialist_mismatch_flags=none" in rendered
+    assert "candidate_mind_domain_specialist_mismatch_flags=none" in rendered
     assert "baseline_specialist_subflow_status=healthy" in rendered
     assert "candidate_specialist_subflow_status=healthy" in rendered
     assert "baseline_mission_runtime_state_status=healthy" in rendered

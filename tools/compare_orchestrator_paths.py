@@ -167,10 +167,28 @@ def mind_domain_specialist_chain_assessment(result: PilotExecutionResult) -> str
     return result.mind_domain_specialist_chain_status
 
 
+def mind_domain_specialist_effectiveness_assessment(
+    result: PilotExecutionResult,
+) -> str:
+    return result.mind_domain_specialist_effectiveness
+
+
+def mind_domain_specialist_mismatch_assessment(
+    result: PilotExecutionResult,
+) -> str:
+    if result.mind_domain_specialist_mismatch_flags:
+        return "mismatch"
+    if result.mind_domain_specialist_effectiveness == "not_applicable":
+        return "not_applicable"
+    return "aligned"
+
+
 def mind_composition_assessment(result: PilotExecutionResult) -> str:
     if result.mind_domain_specialist_chain_status in {"attention_required", "mismatch"}:
         return "attention_required"
     if result.mind_domain_specialist_status in {"attention_required", "mismatch"}:
+        return "attention_required"
+    if result.mind_domain_specialist_effectiveness in {"insufficient", "incomplete"}:
         return "attention_required"
     if result.mind_validation_checkpoint_status == "attention_required":
         return "attention_required"
@@ -179,6 +197,8 @@ def mind_composition_assessment(result: PilotExecutionResult) -> str:
     if result.mind_domain_specialist_chain_status in {"incomplete", "evidence_partial"}:
         return "maturation_recommended"
     if result.mind_domain_specialist_status in {"incomplete", "evidence_partial"}:
+        return "maturation_recommended"
+    if result.mind_domain_specialist_effectiveness == "incomplete":
         return "maturation_recommended"
     if result.mind_disagreement_status == "validation_required":
         return "maturation_recommended"
@@ -338,6 +358,15 @@ def refinement_vectors(result: PilotExecutionResult) -> list[dict[str, str]]:
             (
                 "restaurar coerencia evidence-first entre mente primaria, "
                 "dominio e especialista guiado"
+            ),
+        )
+    if result.mind_domain_specialist_effectiveness in {"insufficient", "incomplete"}:
+        add_vector(
+            "mind_domain_specialist_effectiveness",
+            "p0" if result.mind_domain_specialist_effectiveness == "insufficient" else "p1",
+            (
+                "alinhar especialista efetivamente consumido, framing final e "
+                "modo de consumo da ultima milha ao contrato soberano"
             ),
         )
     if result.workflow_profile_status in {"maturation_recommended", "attention_required"}:
@@ -814,6 +843,22 @@ def summarize_comparisons(
     candidate_mind_domain_specialist_chain = [
         mind_domain_specialist_chain_assessment(item) for item in available_candidates
     ]
+    baseline_mind_domain_specialist_effectiveness = [
+        mind_domain_specialist_effectiveness_assessment(item.baseline)
+        for item in comparisons
+    ]
+    candidate_mind_domain_specialist_effectiveness = [
+        mind_domain_specialist_effectiveness_assessment(item)
+        for item in available_candidates
+    ]
+    baseline_mind_domain_specialist_mismatch = [
+        mind_domain_specialist_mismatch_assessment(item.baseline)
+        for item in comparisons
+    ]
+    candidate_mind_domain_specialist_mismatch = [
+        mind_domain_specialist_mismatch_assessment(item)
+        for item in available_candidates
+    ]
     baseline_specialist_subflow = [
         specialist_subflow_assessment(item.baseline) for item in comparisons
     ]
@@ -1136,6 +1181,26 @@ def summarize_comparisons(
         "candidate_mind_domain_specialist_chain_alignment_rate": status_rate(
             candidate_mind_domain_specialist_chain,
             "aligned",
+        ),
+        "baseline_mind_domain_specialist_effectiveness_decision": summarize_statuses(
+            baseline_mind_domain_specialist_effectiveness
+        ),
+        "candidate_mind_domain_specialist_effectiveness_decision": summarize_statuses(
+            candidate_mind_domain_specialist_effectiveness
+        ),
+        "baseline_mind_domain_specialist_effective_rate": status_rate(
+            baseline_mind_domain_specialist_effectiveness,
+            "effective",
+        ),
+        "candidate_mind_domain_specialist_effective_rate": status_rate(
+            candidate_mind_domain_specialist_effectiveness,
+            "effective",
+        ),
+        "baseline_mind_domain_specialist_mismatch_decision": summarize_statuses(
+            baseline_mind_domain_specialist_mismatch
+        ),
+        "candidate_mind_domain_specialist_mismatch_decision": summarize_statuses(
+            candidate_mind_domain_specialist_mismatch
         ),
         "baseline_specialist_subflow_decision": summarize_statuses(
             baseline_specialist_subflow
@@ -1485,6 +1550,16 @@ def compare_results(
                 != candidate.mind_domain_specialist_chain
             ):
                 mismatch_fields.append("mind_domain_specialist_chain")
+            if (
+                baseline.mind_domain_specialist_effectiveness
+                != candidate.mind_domain_specialist_effectiveness
+            ):
+                mismatch_fields.append("mind_domain_specialist_effectiveness")
+            if (
+                baseline.mind_domain_specialist_mismatch_flags
+                != candidate.mind_domain_specialist_mismatch_flags
+            ):
+                mismatch_fields.append("mind_domain_specialist_mismatch_flags")
             if baseline.specialist_subflow_status != candidate.specialist_subflow_status:
                 mismatch_fields.append("specialist_subflow_status")
             if (
@@ -1806,6 +1881,16 @@ def render_text(payload: dict[str, object]) -> str:
                         f"{item['baseline']['mind_domain_specialist_chain_status']}"
                     ),
                     (
+                        "baseline_mind_domain_specialist_effectiveness="
+                        f"{item['baseline']['mind_domain_specialist_effectiveness']}"
+                    ),
+                    (
+                        "baseline_mind_domain_specialist_mismatch_flags="
+                        f"{','.join(
+                            item['baseline']['mind_domain_specialist_mismatch_flags']
+                        ) or 'none'}"
+                    ),
+                    (
                         "baseline_specialist_subflow_status="
                         f"{item['baseline']['specialist_subflow_status']}"
                     ),
@@ -2048,6 +2133,20 @@ def render_text(payload: dict[str, object]) -> str:
                         else "candidate_mind_domain_specialist_chain_status=n/a"
                     ),
                     (
+                        "candidate_mind_domain_specialist_effectiveness="
+                        f"{item['candidate']['mind_domain_specialist_effectiveness']}"
+                        if item["candidate"]
+                        else "candidate_mind_domain_specialist_effectiveness=n/a"
+                    ),
+                    (
+                        "candidate_mind_domain_specialist_mismatch_flags="
+                        f"{','.join(
+                            item['candidate']['mind_domain_specialist_mismatch_flags']
+                        ) or 'none'}"
+                        if item["candidate"]
+                        else "candidate_mind_domain_specialist_mismatch_flags=n/a"
+                    ),
+                    (
                         "candidate_specialist_subflow_status="
                         f"{item['candidate']['specialist_subflow_status']}"
                         if item["candidate"]
@@ -2271,6 +2370,18 @@ def render_text(payload: dict[str, object]) -> str:
                 f"{summary['baseline_mind_domain_specialist_chain_alignment_rate']}",
                 "candidate_mind_domain_specialist_chain_alignment_rate="
                 f"{summary['candidate_mind_domain_specialist_chain_alignment_rate']}",
+                "baseline_mind_domain_specialist_effectiveness_decision="
+                f"{summary['baseline_mind_domain_specialist_effectiveness_decision']}",
+                "candidate_mind_domain_specialist_effectiveness_decision="
+                f"{summary['candidate_mind_domain_specialist_effectiveness_decision']}",
+                "baseline_mind_domain_specialist_effective_rate="
+                f"{summary['baseline_mind_domain_specialist_effective_rate']}",
+                "candidate_mind_domain_specialist_effective_rate="
+                f"{summary['candidate_mind_domain_specialist_effective_rate']}",
+                "baseline_mind_domain_specialist_mismatch_decision="
+                f"{summary['baseline_mind_domain_specialist_mismatch_decision']}",
+                "candidate_mind_domain_specialist_mismatch_decision="
+                f"{summary['candidate_mind_domain_specialist_mismatch_decision']}",
                 "baseline_specialist_subflow_decision="
                 f"{summary['baseline_specialist_subflow_decision']}",
                 "candidate_specialist_subflow_decision="
@@ -2407,6 +2518,12 @@ def serialize_comparisons(
                 "baseline_mind_domain_specialist_chain_assessment": (
                     mind_domain_specialist_chain_assessment(item.baseline)
                 ),
+                "baseline_mind_domain_specialist_effectiveness_assessment": (
+                    mind_domain_specialist_effectiveness_assessment(item.baseline)
+                ),
+                "baseline_mind_domain_specialist_mismatch_assessment": (
+                    mind_domain_specialist_mismatch_assessment(item.baseline)
+                ),
                 "baseline_specialist_subflow_assessment": specialist_subflow_assessment(
                     item.baseline
                 ),
@@ -2510,6 +2627,16 @@ def serialize_comparisons(
                 ),
                 "candidate_mind_domain_specialist_chain_assessment": (
                     mind_domain_specialist_chain_assessment(item.candidate)
+                    if item.candidate
+                    else None
+                ),
+                "candidate_mind_domain_specialist_effectiveness_assessment": (
+                    mind_domain_specialist_effectiveness_assessment(item.candidate)
+                    if item.candidate
+                    else None
+                ),
+                "candidate_mind_domain_specialist_mismatch_assessment": (
+                    mind_domain_specialist_mismatch_assessment(item.candidate)
                     if item.candidate
                     else None
                 ),

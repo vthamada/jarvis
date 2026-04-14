@@ -45,6 +45,8 @@ def _make_result(  # type: ignore[no-untyped-def]
     procedural_artifact_version: int | None = 1,
     mind_domain_specialist_status: str = "aligned",
     mind_domain_specialist_chain_status: str = "aligned",
+    mind_domain_specialist_effectiveness: str = "effective",
+    mind_domain_specialist_mismatch_flags: list[str] | None = None,
     cognitive_recomposition_applied: bool = False,
     cognitive_recomposition_reason: str | None = None,
     cognitive_recomposition_trigger: str | None = None,
@@ -136,6 +138,10 @@ def _make_result(  # type: ignore[no-untyped-def]
         mind_domain_specialist_chain=(
             f"{primary_mind or 'none'} -> {primary_domain_driver or 'none'} -> "
             f"{primary_route or 'none'} -> specialists[structured_analysis_specialist]"
+        ),
+        mind_domain_specialist_effectiveness=mind_domain_specialist_effectiveness,
+        mind_domain_specialist_mismatch_flags=(
+            mind_domain_specialist_mismatch_flags or []
         ),
         cognitive_recomposition_applied=cognitive_recomposition_applied,
         cognitive_recomposition_reason=cognitive_recomposition_reason,
@@ -236,6 +242,8 @@ def _make_pilot_trace_summary() -> Any:
             "analise_estruturada -> assistencia_pessoal_e_operacional -> analysis -> "
             "specialists[structured_analysis_specialist]"
         ),
+        mind_domain_specialist_effectiveness="insufficient",
+        mind_domain_specialist_mismatch_flags=["completed_specialist_mismatch"],
         cognitive_recomposition_applied=True,
         cognitive_recomposition_assessment="coherent",
         cognitive_recomposition_reason=(

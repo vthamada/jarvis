@@ -93,6 +93,8 @@ class FlowAudit:
     mind_domain_specialist_status: str
     mind_domain_specialist_chain_status: str
     mind_domain_specialist_chain: str | None
+    mind_domain_specialist_effectiveness: str
+    mind_domain_specialist_mismatch_flags: list[str]
     cognitive_recomposition_applied: bool
     cognitive_recomposition_reason: str | None
     cognitive_recomposition_trigger: str | None
@@ -181,6 +183,8 @@ class FlowAudit:
             and self.capability_decision_status in {"healthy", "not_applicable"}
             and self.capability_effectiveness in {"effective", "not_applicable"}
             and self.handoff_adapter_status in {"healthy", "not_applicable", "contained"}
+            and self.mind_domain_specialist_effectiveness
+            in {"effective", "not_applicable"}
             and self.adaptive_intervention_status in {"healthy", "not_applicable"}
             and self.adaptive_intervention_effectiveness
             in {"effective", "not_applicable"}
@@ -374,6 +378,8 @@ class ObservabilityService:
                 mind_domain_specialist_status="incomplete",
                 mind_domain_specialist_chain_status="incomplete",
                 mind_domain_specialist_chain=None,
+                mind_domain_specialist_effectiveness="incomplete",
+                mind_domain_specialist_mismatch_flags=[],
                 cognitive_recomposition_applied=False,
                 cognitive_recomposition_reason=None,
                 cognitive_recomposition_trigger=None,
@@ -1441,11 +1447,34 @@ class ObservabilityService:
         )
         mind_domain_specialist_chain = self._mind_domain_specialist_chain(
             response_event=response_event,
+            operation_dispatched_event=operation_dispatched_event,
             specialist_selection_event=specialist_selection_event,
             specialist_domain_event=specialist_domain_event,
             primary_mind=primary_mind,
             primary_domain_driver=primary_domain_driver,
             primary_route=primary_route,
+        )
+        mind_domain_specialist_mismatch_flags = (
+            self._mind_domain_specialist_mismatch_flags(
+                workflow_composed_event=workflow_composed_event,
+                operation_dispatched_event=operation_dispatched_event,
+                response_event=response_event,
+                specialist_selection_event=specialist_selection_event,
+                specialist_domain_event=specialist_domain_event,
+            )
+        )
+        mind_domain_specialist_effectiveness = (
+            self._mind_domain_specialist_effectiveness(
+                mind_domain_specialist_status=mind_domain_specialist_status,
+                mind_domain_specialist_chain_status=mind_domain_specialist_chain_status,
+                mind_domain_specialist_mismatch_flags=(
+                    mind_domain_specialist_mismatch_flags
+                ),
+                workflow_composed_event=workflow_composed_event,
+                response_event=response_event,
+                specialist_selection_event=specialist_selection_event,
+                specialist_domain_event=specialist_domain_event,
+            )
         )
         specialist_subflow_status = self._specialist_subflow_status(
             specialist_subflow_event=specialist_subflow_event,
@@ -1575,6 +1604,12 @@ class ObservabilityService:
             mind_domain_specialist_status=mind_domain_specialist_status,
             mind_domain_specialist_chain_status=mind_domain_specialist_chain_status,
             mind_domain_specialist_chain=mind_domain_specialist_chain,
+            mind_domain_specialist_effectiveness=(
+                mind_domain_specialist_effectiveness
+            ),
+            mind_domain_specialist_mismatch_flags=(
+                mind_domain_specialist_mismatch_flags
+            ),
             cognitive_recomposition_applied=cognitive_recomposition_applied,
             cognitive_recomposition_reason=cognitive_recomposition_reason,
             cognitive_recomposition_trigger=cognitive_recomposition_trigger,
@@ -3264,13 +3299,19 @@ class ObservabilityService:
     def _mind_domain_specialist_chain(
         *,
         response_event: InternalEventEnvelope | None,
+        operation_dispatched_event: InternalEventEnvelope | None,
         specialist_selection_event: InternalEventEnvelope | None,
         specialist_domain_event: InternalEventEnvelope | None,
         primary_mind: str | None,
         primary_domain_driver: str | None,
         primary_route: str | None,
     ) -> str | None:
-        for event in (response_event, specialist_selection_event, specialist_domain_event):
+        for event in (
+            response_event,
+            operation_dispatched_event,
+            specialist_selection_event,
+            specialist_domain_event,
+        ):
             if event is None:
                 continue
             chain = event.payload.get("mind_domain_specialist_chain")
@@ -3287,6 +3328,175 @@ class ObservabilityService:
             f"{primary_mind or 'none'} -> {primary_domain_driver or 'none'} -> "
             f"{primary_route or 'none'} -> specialists[{','.join(selected_specialists) or 'none'}]"
         )
+
+    @staticmethod
+    def _mind_domain_specialist_mismatch_flags(
+        *,
+        workflow_composed_event: InternalEventEnvelope | None,
+        operation_dispatched_event: InternalEventEnvelope | None,
+        response_event: InternalEventEnvelope | None,
+        specialist_selection_event: InternalEventEnvelope | None,
+        specialist_domain_event: InternalEventEnvelope | None,
+    ) -> list[str]:
+        contract_source = (
+            response_event
+            or operation_dispatched_event
+            or workflow_composed_event
+            or specialist_domain_event
+            or specialist_selection_event
+        )
+        if contract_source is None:
+            return []
+        contract_status = contract_source.payload.get(
+            "mind_domain_specialist_contract_status"
+        )
+        if contract_status in {None, "not_applicable"}:
+            return []
+
+        authoritative_specialist = contract_source.payload.get(
+            "mind_domain_specialist_active_specialist"
+        )
+        consumer_mode = (
+            response_event.payload.get("mind_domain_specialist_consumer_mode")
+            if response_event is not None
+            else (
+                operation_dispatched_event.payload.get(
+                    "mind_domain_specialist_consumer_mode"
+                )
+                if operation_dispatched_event is not None
+                else (
+                    workflow_composed_event.payload.get(
+                        "mind_domain_specialist_consumer_mode"
+                    )
+                    if workflow_composed_event is not None
+                    else None
+                )
+            )
+        )
+        framing_mode = (
+            response_event.payload.get("mind_domain_specialist_framing_mode")
+            if response_event is not None
+            else (
+                operation_dispatched_event.payload.get(
+                    "mind_domain_specialist_framing_mode"
+                )
+                if operation_dispatched_event is not None
+                else None
+            )
+        )
+        dispatch_specialists = [
+            str(item)
+            for item in (
+                operation_dispatched_event.payload.get("specialist_hints", [])
+                if operation_dispatched_event is not None
+                else []
+            )
+            if item
+        ]
+        completed_specialists = [
+            str(item)
+            for item in (
+                specialist_domain_event.payload.get("domain_specialists", [])
+                if specialist_domain_event is not None
+                else (
+                    specialist_selection_event.payload.get("domain_specialists", [])
+                    if specialist_selection_event is not None
+                    else []
+                )
+            )
+            if item
+        ]
+
+        flags: list[str] = []
+        if contract_status == "governed_fallback":
+            if consumer_mode not in {None, "core_only_fallback"}:
+                flags.append("fallback_consumer_mode_mismatch")
+            if framing_mode not in {None, "core_only_governed_fallback"}:
+                flags.append("fallback_framing_mode_mismatch")
+            if dispatch_specialists:
+                flags.append("fallback_dispatched_specialist")
+            return flags
+
+        if authoritative_specialist is None:
+            flags.append("authoritative_specialist_missing")
+            return flags
+        if dispatch_specialists and authoritative_specialist not in dispatch_specialists:
+            flags.append("dispatch_specialist_mismatch")
+        if completed_specialists and authoritative_specialist not in completed_specialists:
+            flags.append("completed_specialist_mismatch")
+
+        expected_consumer_mode = {
+            "authoritative_chain": "authoritative_specialist",
+            "bounded_override": "bounded_override_specialist",
+            "bounded_degradation": "degraded_specialist",
+        }.get(str(contract_status))
+        if expected_consumer_mode is not None and consumer_mode not in {
+            None,
+            expected_consumer_mode,
+        }:
+            flags.append("consumer_mode_mismatch")
+
+        expected_framing_mode = {
+            "authoritative_chain": "route_and_specialist_locked",
+            "bounded_override": "override_bounded_to_active_specialist",
+            "bounded_degradation": "core_mediated_degraded_specialist",
+        }.get(str(contract_status))
+        if expected_framing_mode is not None and framing_mode not in {
+            None,
+            expected_framing_mode,
+        }:
+            flags.append("framing_mode_mismatch")
+        return flags
+
+    @staticmethod
+    def _mind_domain_specialist_effectiveness(
+        *,
+        mind_domain_specialist_status: str,
+        mind_domain_specialist_chain_status: str,
+        mind_domain_specialist_mismatch_flags: list[str],
+        workflow_composed_event: InternalEventEnvelope | None,
+        response_event: InternalEventEnvelope | None,
+        specialist_selection_event: InternalEventEnvelope | None,
+        specialist_domain_event: InternalEventEnvelope | None,
+    ) -> str:
+        if (
+            workflow_composed_event is None
+            and response_event is None
+            and specialist_selection_event is None
+            and specialist_domain_event is None
+        ):
+            return "not_applicable"
+        contract_evidence = any(
+            event is not None
+            and event.payload.get("mind_domain_specialist_contract_status") is not None
+            for event in (
+                workflow_composed_event,
+                response_event,
+                specialist_selection_event,
+                specialist_domain_event,
+            )
+        )
+        if not contract_evidence:
+            return "not_applicable"
+        if mind_domain_specialist_status == "not_applicable":
+            return "not_applicable"
+        if mind_domain_specialist_status == "incomplete" or mind_domain_specialist_chain_status in {
+            "incomplete",
+            "evidence_partial",
+        }:
+            return "incomplete"
+        if mind_domain_specialist_mismatch_flags:
+            return "insufficient"
+        if mind_domain_specialist_status in {"mismatch", "attention_required"}:
+            return "insufficient"
+        if mind_domain_specialist_chain_status in {"mismatch", "attention_required"}:
+            return "insufficient"
+        if (
+            mind_domain_specialist_status == "aligned"
+            and mind_domain_specialist_chain_status == "aligned"
+        ):
+            return "effective"
+        return "incomplete"
 
     @staticmethod
     def _memory_alignment_status(

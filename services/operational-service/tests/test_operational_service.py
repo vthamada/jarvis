@@ -39,6 +39,20 @@ def test_operational_service_generates_text_artifact_for_supported_task() -> Non
             plan_rationale="contexto=nenhum; apoio=baseline local",
             specialist_summary="encadear o plano em etapas pequenas",
             specialist_findings=["open_loop: fechar checkpoint principal"],
+            mind_domain_specialist_contract_status="authoritative_chain",
+            mind_domain_specialist_contract_summary=(
+                "cadeia soberana autoritativa preserva mente_executiva -> "
+                "estrategia_e_pensamento_sistemico -> strategy -> "
+                "operational_planning_specialist"
+            ),
+            mind_domain_specialist_contract_chain=(
+                "mente_executiva -> estrategia_e_pensamento_sistemico -> strategy -> "
+                "operational_planning_specialist"
+            ),
+            mind_domain_specialist_active_specialist="operational_planning_specialist",
+            mind_domain_specialist_consumer_mode="authoritative_specialist",
+            mind_domain_specialist_framing_mode="route_and_specialist_locked",
+            mind_domain_specialist_continuity_mode="preserve_authoritative_chain",
             specialist_hints=["operational_planning_specialist"],
             workflow_profile="strategic_direction_workflow",
             workflow_domain_route="strategy",
@@ -98,6 +112,9 @@ def test_operational_service_generates_text_artifact_for_supported_task() -> Non
     assert "Workflow steps:" in content
     assert "Workflow governance: core_mediated" in content
     assert "Workflow decision points:" in content
+    assert "Mind-domain-specialist status: authoritative_chain" in content
+    assert "Mind-domain-specialist consumer mode: authoritative_specialist" in content
+    assert "Mind-domain-specialist framing mode: route_and_specialist_locked" in content
     assert "Ajuste interno" in content
     assert execution.operation_result.workflow_domain_route == "strategy"
     assert execution.operation_result.workflow_state == "completed"

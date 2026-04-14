@@ -43,6 +43,25 @@ def test_cognitive_engine_prioritizes_sensitive_primary_from_registry_policy() -
     assert snapshot.dominant_tension == "equilibrar solicitacao do usuario com limites normativos"
 
 
+def test_cognitive_engine_exposes_authoritative_mind_domain_specialist_contract() -> None:
+    engine = CognitiveEngine()
+    snapshot = engine.build_snapshot(
+        intent="analysis",
+        risk_markers=[],
+        retrieved_domains=["analysis"],
+    )
+
+    assert snapshot.mind_domain_specialist_contract_status == "authoritative_chain"
+    assert snapshot.mind_domain_specialist_contract_chain is not None
+    assert "mente_analitica" in snapshot.mind_domain_specialist_contract_chain
+    assert (
+        snapshot.mind_domain_specialist_active_specialist
+        == "structured_analysis_specialist"
+    )
+    assert snapshot.mind_domain_specialist_override_mode is None
+    assert snapshot.mind_domain_specialist_fallback_mode is None
+
+
 def test_cognitive_engine_prioritizes_registry_backed_specialist_hint() -> None:
     engine = CognitiveEngine()
     snapshot = engine.build_snapshot(
@@ -146,6 +165,11 @@ def test_cognitive_engine_applies_recomposition_on_specialist_route_impasse() ->
     assert snapshot.recomposition_trigger == "specialist_route_impasse"
     assert snapshot.recomposition_reason
     assert snapshot.arbitration_source == "mind_registry_recomposition"
+    assert snapshot.mind_domain_specialist_contract_status == "bounded_override"
+    assert (
+        snapshot.mind_domain_specialist_override_mode
+        == "mind_registry_recomposition"
+    )
     assert "mente_critica" in snapshot.supporting_minds
     assert "recomposicao_cognitiva=" in snapshot.deliberation_notes[-1]
 

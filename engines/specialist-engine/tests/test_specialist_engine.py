@@ -322,6 +322,8 @@ def test_specialist_engine_links_guided_analysis_domain_specialist_explicitly() 
         smallest_safe_next_action="comparar trade-offs centrais",
         continuity_action="continuar",
         open_loops=["consolidar criterio dominante"],
+        primary_mind="mente_analitica",
+        primary_domain_driver="dados_estatistica_e_inteligencia_analitica",
     )
 
     handoff_plan = engine.plan_handoffs(
@@ -394,10 +396,45 @@ def test_specialist_engine_links_guided_analysis_domain_specialist_explicitly() 
 
     assert handoff_plan.selections[0].linked_domain == "analysis"
     assert handoff_plan.selections[0].selection_mode == "guided"
+    assert handoff_plan.mind_domain_specialist_contract_status == "authoritative_chain"
+    assert handoff_plan.mind_domain_specialist_contract_chain is not None
     assert handoff_plan.invocations[0].role == "analise_estruturada_guided"
     assert review.contributions[0].role == "analise_estruturada_guided"
+    assert review.mind_domain_specialist_contract_status == "authoritative_chain"
+    assert review.mind_domain_specialist_contract_chain is not None
     assert "domain_guided_specialist" in review.contributions[0].output_hints
 
+
+
+def test_specialist_engine_respects_governed_fallback_contract() -> None:
+    engine = SpecialistEngine()
+    fallback_plan = sample_plan()
+    fallback_plan.mind_domain_specialist_contract_status = "governed_fallback"
+    fallback_plan.mind_domain_specialist_contract_fallback_mode = (
+        "core_guidance_without_handoff"
+    )
+
+    handoff_plan = engine.plan_handoffs(
+        intent="planning",
+        plan=fallback_plan,
+        knowledge_snippets=["Priorize clareza de objetivo."],
+        domain_specialist_routes=[
+            DomainSpecialistRouteContract(
+                domain_name="operational_readiness",
+                specialist_type="operational_planning_specialist",
+                specialist_mode="guided",
+                routing_reason="rota canonica operacional em modo guiado",
+            )
+        ],
+        session_id="sess-fallback",
+        mission_id="mission-fallback",
+        requested_by_service="orchestrator-service",
+    )
+
+    assert handoff_plan.selections[0].selection_status == "not_eligible"
+    assert "conteve a ultima milha no nucleo" in handoff_plan.selections[0].rationale
+    assert handoff_plan.invocations == []
+    assert handoff_plan.mind_domain_specialist_contract_status == "governed_fallback"
 
 
 def test_specialist_engine_links_guided_governance_domain_specialist_explicitly() -> None:

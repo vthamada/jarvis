@@ -4111,3 +4111,244 @@ def test_observability_service_flags_adaptive_intervention_policy_mismatch() -> 
 
     assert audit.adaptive_intervention_status == "healthy"
     assert audit.adaptive_intervention_policy_status == "attention_required"
+
+
+def test_observability_service_marks_mind_domain_specialist_effective(
+) -> None:
+    temp_dir = runtime_dir("observability-mds-effective")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service.ingest_events(
+        [
+            InternalEventEnvelope(
+                event_id="evt-mds-eff-1",
+                event_name="input_received",
+                timestamp="2026-04-14T00:00:00+00:00",
+                source_service="orchestrator-service",
+                payload={"content": "Analyze the release trade-offs."},
+                request_id="req-mds-effective",
+                session_id="sess-mds-effective",
+                correlation_id="req-mds-effective",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-mds-eff-2",
+                event_name="context_composed",
+                timestamp="2026-04-14T00:00:01+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "primary_mind": "mente_analitica",
+                    "primary_domain_driver": "dados_estatistica_e_inteligencia_analitica",
+                },
+                request_id="req-mds-effective",
+                session_id="sess-mds-effective",
+                correlation_id="req-mds-effective",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-mds-eff-3",
+                event_name="specialist_selection_decided",
+                timestamp="2026-04-14T00:00:02+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "domain_specialists": ["structured_analysis_specialist"],
+                    "primary_domain_driver_matches": {
+                        "structured_analysis_specialist": True
+                    },
+                    "mind_domain_specialist_contract_status": "authoritative_chain",
+                    "mind_domain_specialist_active_specialist": (
+                        "structured_analysis_specialist"
+                    ),
+                },
+                request_id="req-mds-effective",
+                session_id="sess-mds-effective",
+                correlation_id="req-mds-effective",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-mds-eff-4",
+                event_name="workflow_composed",
+                timestamp="2026-04-14T00:00:03+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "mind_domain_specialist_contract_status": "authoritative_chain",
+                    "mind_domain_specialist_active_specialist": (
+                        "structured_analysis_specialist"
+                    ),
+                    "mind_domain_specialist_consumer_mode": (
+                        "authoritative_specialist"
+                    ),
+                },
+                request_id="req-mds-effective",
+                session_id="sess-mds-effective",
+                correlation_id="req-mds-effective",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-mds-eff-5",
+                event_name="operation_dispatched",
+                timestamp="2026-04-14T00:00:04+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "specialist_hints": ["structured_analysis_specialist"],
+                    "mind_domain_specialist_contract_status": "authoritative_chain",
+                    "mind_domain_specialist_active_specialist": (
+                        "structured_analysis_specialist"
+                    ),
+                    "mind_domain_specialist_consumer_mode": (
+                        "authoritative_specialist"
+                    ),
+                    "mind_domain_specialist_framing_mode": (
+                        "route_and_specialist_locked"
+                    ),
+                },
+                request_id="req-mds-effective",
+                session_id="sess-mds-effective",
+                correlation_id="req-mds-effective",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-mds-eff-6",
+                event_name="domain_specialist_completed",
+                timestamp="2026-04-14T00:00:05+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "domain_specialists": ["structured_analysis_specialist"],
+                    "primary_domain_driver_matches": {
+                        "structured_analysis_specialist": True
+                    },
+                },
+                request_id="req-mds-effective",
+                session_id="sess-mds-effective",
+                correlation_id="req-mds-effective",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-mds-eff-7",
+                event_name="response_synthesized",
+                timestamp="2026-04-14T00:00:06+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "mind_domain_specialist_contract_status": "authoritative_chain",
+                    "mind_domain_specialist_chain_status": "aligned",
+                    "mind_domain_specialist_chain": (
+                        "mente_analitica -> dados_estatistica_e_inteligencia_analitica "
+                        "-> analysis -> structured_analysis_specialist"
+                    ),
+                    "mind_domain_specialist_active_specialist": (
+                        "structured_analysis_specialist"
+                    ),
+                    "mind_domain_specialist_consumer_mode": (
+                        "authoritative_specialist"
+                    ),
+                    "mind_domain_specialist_framing_mode": (
+                        "route_and_specialist_locked"
+                    ),
+                },
+                request_id="req-mds-effective",
+                session_id="sess-mds-effective",
+                correlation_id="req-mds-effective",
+            ),
+        ]
+    )
+
+    audit = service.audit_flow(ObservabilityQuery(request_id="req-mds-effective"))
+
+    assert audit.mind_domain_specialist_status == "aligned"
+    assert audit.mind_domain_specialist_chain_status == "aligned"
+    assert audit.mind_domain_specialist_effectiveness == "effective"
+    assert audit.mind_domain_specialist_mismatch_flags == []
+
+
+def test_observability_service_flags_mind_domain_specialist_final_consumption_mismatch() -> None:
+    temp_dir = runtime_dir("observability-mds-mismatch")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service.ingest_events(
+        [
+            InternalEventEnvelope(
+                event_id="evt-mds-mm-1",
+                event_name="input_received",
+                timestamp="2026-04-14T00:00:00+00:00",
+                source_service="orchestrator-service",
+                payload={"content": "Analyze the release trade-offs."},
+                request_id="req-mds-mismatch",
+                session_id="sess-mds-mismatch",
+                correlation_id="req-mds-mismatch",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-mds-mm-2",
+                event_name="context_composed",
+                timestamp="2026-04-14T00:00:01+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "primary_mind": "mente_analitica",
+                    "primary_domain_driver": "dados_estatistica_e_inteligencia_analitica",
+                },
+                request_id="req-mds-mismatch",
+                session_id="sess-mds-mismatch",
+                correlation_id="req-mds-mismatch",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-mds-mm-3",
+                event_name="specialist_selection_decided",
+                timestamp="2026-04-14T00:00:02+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "domain_specialists": ["structured_analysis_specialist"],
+                    "primary_domain_driver_matches": {
+                        "structured_analysis_specialist": True
+                    },
+                    "mind_domain_specialist_contract_status": "authoritative_chain",
+                    "mind_domain_specialist_active_specialist": (
+                        "structured_analysis_specialist"
+                    ),
+                },
+                request_id="req-mds-mismatch",
+                session_id="sess-mds-mismatch",
+                correlation_id="req-mds-mismatch",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-mds-mm-4",
+                event_name="operation_dispatched",
+                timestamp="2026-04-14T00:00:03+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "specialist_hints": ["operational_planning_specialist"],
+                    "mind_domain_specialist_contract_status": "authoritative_chain",
+                    "mind_domain_specialist_active_specialist": (
+                        "structured_analysis_specialist"
+                    ),
+                    "mind_domain_specialist_consumer_mode": (
+                        "authoritative_specialist"
+                    ),
+                    "mind_domain_specialist_framing_mode": (
+                        "route_and_specialist_locked"
+                    ),
+                },
+                request_id="req-mds-mismatch",
+                session_id="sess-mds-mismatch",
+                correlation_id="req-mds-mismatch",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-mds-mm-5",
+                event_name="response_synthesized",
+                timestamp="2026-04-14T00:00:04+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "mind_domain_specialist_contract_status": "authoritative_chain",
+                    "mind_domain_specialist_chain_status": "aligned",
+                    "mind_domain_specialist_active_specialist": (
+                        "structured_analysis_specialist"
+                    ),
+                    "mind_domain_specialist_consumer_mode": (
+                        "authoritative_specialist"
+                    ),
+                    "mind_domain_specialist_framing_mode": (
+                        "route_and_specialist_locked"
+                    ),
+                },
+                request_id="req-mds-mismatch",
+                session_id="sess-mds-mismatch",
+                correlation_id="req-mds-mismatch",
+            ),
+        ]
+    )
+
+    audit = service.audit_flow(ObservabilityQuery(request_id="req-mds-mismatch"))
+
+    assert audit.mind_domain_specialist_status == "aligned"
+    assert audit.mind_domain_specialist_effectiveness == "insufficient"
+    assert "dispatch_specialist_mismatch" in audit.mind_domain_specialist_mismatch_flags

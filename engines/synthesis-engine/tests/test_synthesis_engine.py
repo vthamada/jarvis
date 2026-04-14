@@ -280,6 +280,99 @@ def test_synthesis_engine_surfaces_memory_effects_and_evidence_first_chain() -> 
     assert "memoria procedural ancora a recomendacao final" in response
 
 
+def test_synthesis_engine_surfaces_explicit_mind_domain_specialist_contract() -> None:
+    engine = SynthesisEngine()
+    identity = IdentityEngine().get_profile()
+    plan = sample_plan()
+    plan.mind_domain_specialist_contract_status = "bounded_override"
+    plan.mind_domain_specialist_contract_summary = (
+        "cadeia soberana preservada com override bounded em "
+        "mind_registry_recomposition: mente_executiva -> "
+        "estrategia_e_pensamento_sistemico -> strategy -> "
+        "structured_analysis_specialist"
+    )
+    plan.mind_domain_specialist_contract_chain = (
+        "mente_executiva -> estrategia_e_pensamento_sistemico -> "
+        "strategy -> structured_analysis_specialist"
+    )
+    plan.mind_domain_specialist_active_specialist = "structured_analysis_specialist"
+    plan.mind_domain_specialist_override_mode = "mind_registry_recomposition"
+
+    response = engine.compose(
+        SynthesisInput(
+            intent="planning",
+            identity_profile=identity,
+            response_style="estruturado",
+            governance_decision=GovernanceDecisionContract(
+                decision_id=GovernanceDecisionId("decision-mds-contract"),
+                governance_check_id=GovernanceCheckId("check-mds-contract"),
+                risk_level=RiskLevel.LOW,
+                decision=PermissionDecision.ALLOW,
+                justification="ok",
+                timestamp="2026-03-18T00:00:00Z",
+            ),
+            recovered_context=[],
+            active_minds=["mente_executiva"],
+            active_domains=["strategy"],
+            knowledge_snippets=[],
+            deliberative_plan=plan,
+            specialist_contributions=[],
+            operation_result=None,
+            identity_mode="structured_planning",
+        )
+    )
+
+    assert "contrato mind domain specialist: bounded override" in response
+    assert "override bounded: mind registry recomposition" in response
+    assert (
+        "cadeia mente executiva -> estrategia e pensamento sistemico -> strategy -> "
+        "structured analysis specialist" in response
+    )
+
+
+def test_synthesis_engine_applies_governed_fallback_policy_to_continuity_and_recommendation(
+) -> None:
+    engine = SynthesisEngine()
+    identity = IdentityEngine().get_profile()
+    plan = sample_plan()
+    plan.mind_domain_specialist_contract_status = "governed_fallback"
+    plan.mind_domain_specialist_contract_summary = (
+        "cadeia soberana permaneceu contida no nucleo com fallback governado "
+        "na ultima milha"
+    )
+    plan.mind_domain_specialist_contract_fallback_mode = (
+        "core_guidance_without_handoff"
+    )
+
+    response = engine.compose(
+        SynthesisInput(
+            intent="planning",
+            identity_profile=identity,
+            response_style="estruturado",
+            governance_decision=GovernanceDecisionContract(
+                decision_id=GovernanceDecisionId("decision-mds-fallback"),
+                governance_check_id=GovernanceCheckId("check-mds-fallback"),
+                risk_level=RiskLevel.LOW,
+                decision=PermissionDecision.ALLOW,
+                justification="ok",
+                timestamp="2026-03-18T00:00:00Z",
+            ),
+            recovered_context=[],
+            active_minds=["mente_executiva"],
+            active_domains=["strategy"],
+            knowledge_snippets=[],
+            deliberative_plan=plan,
+            specialist_contributions=[],
+            operation_result=None,
+            identity_mode="structured_planning",
+        )
+    )
+
+    assert "continuidade permanece contida no nucleo sem novo handoff especializado" in response
+    assert "fechar pelo nucleo sem reacender handoff especializado" in response
+    assert "fallback governado no nucleo" in response
+
+
 def test_synthesis_engine_surfaces_reformulation_without_pipeline_listing() -> None:
     engine = SynthesisEngine()
     identity = IdentityEngine().get_profile()

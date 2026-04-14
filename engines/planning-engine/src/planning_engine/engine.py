@@ -11,6 +11,9 @@ from shared.contracts import (
 )
 from shared.domain_registry import workflow_runtime_guidance
 from shared.memory_registry import guided_memory_decision, memory_maintenance_decision
+from shared.mind_domain_specialist_contract import (
+    build_mind_domain_specialist_contract,
+)
 from shared.schemas import DELIBERATIVE_PLAN_SCHEMA
 from shared.specialist_registry import (
     GOVERNANCE_REVIEW_SPECIALIST,
@@ -382,6 +385,14 @@ class PlanningEngine:
             adaptive_intervention=adaptive_intervention,
             specialist_hints=specialist_hints,
         )
+        mind_domain_specialist_contract = self._mind_domain_specialist_contract(
+            primary_mind=context.primary_mind,
+            primary_domain_driver=context.primary_domain_driver,
+            primary_route=context.primary_route,
+            specialist_hints=specialist_hints,
+            arbitration_source=context.arbitration_source,
+            capability_handoff_mode=capability_decision.handoff_mode,
+        )
         plan_summary = self._build_summary(
             context,
             dominant_goal=dominant_goal,
@@ -408,6 +419,13 @@ class PlanningEngine:
                 f"{plan_summary}; capability_mode={capability_decision.selected_mode}; "
                 "capability_authorization="
                 f"{capability_decision.authorization_status or 'none'}"
+            )
+        if mind_domain_specialist_contract.summary:
+            plan_summary = (
+                f"{plan_summary}; mind_domain_specialist="
+                f"{mind_domain_specialist_contract.status}; "
+                f"mind_domain_specialist_fallback="
+                f"{mind_domain_specialist_contract.fallback_mode or 'none'}"
             )
         rationale = self._build_rationale(
             context,
@@ -438,6 +456,16 @@ class PlanningEngine:
             "capability_handoff_mode="
             f"{capability_decision.handoff_mode or 'none'}"
         )
+        rationale = (
+            f"{rationale}; mind_domain_specialist_status="
+            f"{mind_domain_specialist_contract.status}; "
+            "mind_domain_specialist_chain="
+            f"{mind_domain_specialist_contract.chain or 'none'}; "
+            "mind_domain_specialist_override_mode="
+            f"{mind_domain_specialist_contract.override_mode or 'none'}; "
+            "mind_domain_specialist_fallback_mode="
+            f"{mind_domain_specialist_contract.fallback_mode or 'none'}"
+        )
         plan = DeliberativePlanContract(
             plan_summary=plan_summary,
             goal=dominant_goal,
@@ -452,6 +480,24 @@ class PlanningEngine:
             primary_domain_driver=context.primary_domain_driver,
             arbitration_source=context.arbitration_source,
             primary_route=context.primary_route,
+            mind_domain_specialist_contract_status=(
+                mind_domain_specialist_contract.status
+            ),
+            mind_domain_specialist_contract_summary=(
+                mind_domain_specialist_contract.summary
+            ),
+            mind_domain_specialist_contract_chain=(
+                mind_domain_specialist_contract.chain
+            ),
+            mind_domain_specialist_active_specialist=(
+                mind_domain_specialist_contract.active_specialist
+            ),
+            mind_domain_specialist_override_mode=(
+                mind_domain_specialist_contract.override_mode
+            ),
+            mind_domain_specialist_fallback_mode=(
+                mind_domain_specialist_contract.fallback_mode
+            ),
             route_consumer_profile=context.route_consumer_profile,
             route_consumer_objective=context.route_consumer_objective,
             route_expected_deliverables=list(context.route_expected_deliverables or []),
@@ -653,6 +699,22 @@ class PlanningEngine:
                 else [item.specialist_type for item in specialist_contributions]
             ),
         )
+        mind_domain_specialist_contract = self._mind_domain_specialist_contract(
+            primary_mind=plan.primary_mind,
+            primary_domain_driver=plan.primary_domain_driver,
+            primary_route=plan.primary_route,
+            specialist_hints=(
+                [item.specialist_type for item in specialist_contributions]
+                if specialist_contributions
+                else (
+                    list(plan.specialist_hints)
+                    if plan.specialist_hints
+                    else [item.specialist_type for item in specialist_contributions]
+                )
+            ),
+            arbitration_source=plan.arbitration_source,
+            capability_handoff_mode=capability_decision.handoff_mode,
+        )
 
         resolution_summary = self._specialist_resolution_summary(
             specialist_contributions,
@@ -668,6 +730,24 @@ class PlanningEngine:
             specialist_resolution_summary=resolution_summary,
             open_loops=open_loop_hints[:3],
             smallest_safe_next_action=refined_next_action,
+            mind_domain_specialist_contract_status=(
+                mind_domain_specialist_contract.status
+            ),
+            mind_domain_specialist_contract_summary=(
+                mind_domain_specialist_contract.summary
+            ),
+            mind_domain_specialist_contract_chain=(
+                mind_domain_specialist_contract.chain
+            ),
+            mind_domain_specialist_active_specialist=(
+                mind_domain_specialist_contract.active_specialist
+            ),
+            mind_domain_specialist_override_mode=(
+                mind_domain_specialist_contract.override_mode
+            ),
+            mind_domain_specialist_fallback_mode=(
+                mind_domain_specialist_contract.fallback_mode
+            ),
             capability_decision_status=capability_decision.status,
             capability_decision_objective=capability_decision.objective,
             capability_decision_reason=capability_decision.reason,
@@ -696,6 +776,12 @@ class PlanningEngine:
             cognitive_strategy_shift_effects=list(strategy_shift.effects),
             rationale=(
                     f"{plan.rationale}; resolucao_especialistas={resolution_summary}; "
+                    "mind_domain_specialist_status="
+                    f"{mind_domain_specialist_contract.status}; "
+                    "mind_domain_specialist_override_mode="
+                    f"{mind_domain_specialist_contract.override_mode or 'none'}; "
+                    "mind_domain_specialist_fallback_mode="
+                    f"{mind_domain_specialist_contract.fallback_mode or 'none'}; "
                     f"adaptive_intervention_status={adaptive_intervention.status}; "
                     f"adaptive_intervention_reason={adaptive_intervention.reason or 'none'}; "
                     f"capability_mode={capability_decision.selected_mode or 'none'}; "
@@ -704,6 +790,12 @@ class PlanningEngine:
                 if not strategy_shift.applied or not strategy_shift.summary
                 else (
                     f"{plan.rationale}; resolucao_especialistas={resolution_summary}; "
+                    "mind_domain_specialist_status="
+                    f"{mind_domain_specialist_contract.status}; "
+                    "mind_domain_specialist_override_mode="
+                    f"{mind_domain_specialist_contract.override_mode or 'none'}; "
+                    "mind_domain_specialist_fallback_mode="
+                    f"{mind_domain_specialist_contract.fallback_mode or 'none'}; "
                     f"adaptive_intervention_status={adaptive_intervention.status}; "
                     f"adaptive_intervention_reason={adaptive_intervention.reason or 'none'}; "
                     f"capability_mode={capability_decision.selected_mode or 'none'}; "
@@ -1005,6 +1097,25 @@ class PlanningEngine:
             requires_human_validation=requires_human_validation,
             adaptive_intervention=adaptive_intervention,
             specialist_hints=specialist_hints,
+        )
+
+    @staticmethod
+    def _mind_domain_specialist_contract(
+        *,
+        primary_mind: str | None,
+        primary_domain_driver: str | None,
+        primary_route: str | None,
+        specialist_hints: list[str],
+        arbitration_source: str | None,
+        capability_handoff_mode: str | None,
+    ):
+        return build_mind_domain_specialist_contract(
+            primary_mind=primary_mind,
+            primary_domain_driver=primary_domain_driver,
+            primary_route=primary_route,
+            planned_specialists=list(specialist_hints),
+            arbitration_source=arbitration_source,
+            capability_handoff_mode=capability_handoff_mode,
         )
 
     def _adaptive_intervention(

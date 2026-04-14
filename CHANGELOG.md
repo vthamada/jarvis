@@ -1,5 +1,28 @@
 # CHANGELOG
 
+## 2026-04-14
+
+### MB-079 fechado na evidencia auditavel da arbitragem declarativa
+
+- `services/observability-service/src/observability_service/service.py` agora publica `mind_domain_specialist_effectiveness` e `mind_domain_specialist_mismatch_flags`, distinguindo quando a cadeia declarativa ficou efetiva, insuficiente, incompleta ou `not_applicable` sem penalizar traces legados sem contrato novo;
+- `tools/internal_pilot_support.py`, `tools/internal_pilot_report.py` e `tools/compare_orchestrator_paths.py` agora carregam esses mesmos sinais para piloto, relatorio textual e comparacao baseline/candidata, incluindo mismatch formal entre cadeia autoritativa, framing e especialista efetivamente consumido;
+- a superficie de testes de `observability`, `internal_pilot_support`, `internal_pilot_report`, `compare_orchestrator_paths` e `verify_active_cut_baseline` agora trava a nova gramatica de efetividade e mismatch da arbitragem final;
+- `docs/implementation/execution-backlog.md`, `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para marcar `MB-079` como concluido e `MB-080` como o item `ready` atual da fila micro.
+
+### MB-078 fechado na politica soberana de consumo final
+
+- `shared/mind_domain_specialist_contract.py` agora tambem deriva uma politica de runtime explicita para `mind_domain_specialist`, separando especialista efetivo, modo de consumo, framing e continuidade sem reabrir heuristica local;
+- `engines/specialist-engine`, `services/orchestrator-service`, `services/operational-service` e `engines/synthesis-engine` agora aplicam essa politica na selecao final, no `operation_dispatch`, no artefato operacional e na sintese final, priorizando o especialista canonico da rota promovida quando ele existe e contendo a ultima milha no nucleo quando o contrato pede fallback governado;
+- a superficie de testes de `specialist`, `operational-service`, `synthesis` e `orchestrator-service` agora trava esse comportamento como baseline da ultima milha do runtime;
+- `docs/implementation/execution-backlog.md`, `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para marcar `MB-078` como concluido e `MB-079` como o item `ready` atual da fila micro.
+
+### MB-077 fechado na ultima milha da arbitragem declarativa
+
+- `shared/mind_domain_specialist_contract.py`, `shared/contracts/__init__.py` e `shared/schemas/__init__.py` agora formalizam `mind_domain_specialist_contract_*` como slice soberano para cadeia autoritativa, override bounded e fallback governado;
+- `engines/cognitive-engine`, `engines/specialist-engine`, `engines/planning-engine`, `engines/synthesis-engine` e `services/orchestrator-service` agora carregam e propagam esse contrato explicito na ultima milha do runtime, sem reintroduzir heuristica local;
+- a superficie de testes de `cognitive`, `specialist`, `planning`, `synthesis` e `orchestrator-service` agora trava esse contrato novo em snapshot, handoff, plano, sintese e payloads de eventos;
+- `docs/implementation/execution-backlog.md`, `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para marcar `MB-077` como concluido e `MB-078` como o item `ready` atual da fila micro.
+
 ## 2026-04-12
 
 ### Repriorizacao do proximo lote micro para arbitragem declarativa

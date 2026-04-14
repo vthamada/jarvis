@@ -28,10 +28,10 @@ Leitura correta:
 
 Estado de referencia desta revisao:
 
-- data da fotografia: `2026-04-10`
+- data da fotografia: `2026-04-14`
 - ultimo recorte funcional fechado: `v2-native-memory-scope-hardening-cut`
 - ultimo recorte estrutural fechado: `v2-repository-hygiene-and-tools-review-cut`
-- passo funcional em andamento: lote `MB-062` a `MB-066` concluido, lote `MB-067` a `MB-071` concluido, lote `MB-072` a `MB-076` concluido e lote `MB-077` a `MB-081` aberto (`MB-037` a `MB-040` concluidos; `MB-041` a `MB-046` concluidos; `MB-047` a `MB-051` concluidos; `MB-052` a `MB-056` concluidos; `MB-057` a `MB-061` concluidos; `MB-062` a `MB-066` concluidos; `MB-067` a `MB-071` concluidos; `MB-072` a `MB-076` concluidos; `MB-077` em `ready`)
+- passo funcional em andamento: lote `MB-062` a `MB-066` concluido, lote `MB-067` a `MB-071` concluido, lote `MB-072` a `MB-076` concluido e lote `MB-077` a `MB-081` aberto (`MB-037` a `MB-040` concluidos; `MB-041` a `MB-046` concluidos; `MB-047` a `MB-051` concluidos; `MB-052` a `MB-056` concluidos; `MB-057` a `MB-061` concluidos; `MB-062` a `MB-066` concluidos; `MB-067` a `MB-071` concluidos; `MB-072` a `MB-076` concluidos; `MB-077` concluido; `MB-078` concluido; `MB-079` concluido; `MB-080` em `ready`)
 
 Leitura executiva:
 
@@ -62,6 +62,9 @@ Leitura executiva:
 - o piloto agora inclui cenarios deliberados para memoria causal (`guided_memory_followup`) e recomposicao cognitiva por `specialist_route_impasse` (`recomposition_impasse`), com leitura comparativa e textual coerente.
 - `compare_orchestrator_paths` agora marca drift explicito de `workflow_profile_status`, `memory_causality_status`, `dominant_tension`, `primary_domain_driver`, `mind_domain_specialist_status` e recomposicao cognitiva entre baseline e candidata.
 - `planning-engine`, `synthesis-engine` e `response_synthesized` agora tornam `dominant_tension`, `primary_domain_driver`, `workflow_response_focus` e recomposicao cognitiva mais declarativos no comportamento final do runtime.
+- `cognitive-engine`, `specialist-engine`, `planning-engine`, `synthesis-engine` e `orchestrator-service` agora carregam `mind_domain_specialist_contract_*`, distinguindo cadeia autoritativa, override bounded e fallback governado como contrato explicito da ultima milha do runtime.
+- `specialist-engine`, `operation_dispatch`, `operational-service`, `workflow_*` e `response_synthesized` agora aplicam esse contrato como politica viva: a rota promovida ativa prioriza o especialista canonico no consumo final quando ele existe, e a ultima milha fica contida no nucleo quando o contrato exige fallback governado.
+- `observability-service`, `internal_pilot_report`, `internal_pilot_support` e `compare_orchestrator_paths` agora tratam `mind_domain_specialist_effectiveness` e `mind_domain_specialist_mismatch_flags` como evidencia primaria da ultima milha, separando alinhamento efetivo de mismatch entre cadeia autoritativa, framing e especialista realmente consumido.
 - `verify_active_cut_baseline.py` agora combina contratos promovidos com um piloto focado que cobre as seis rotas promovidas, seus `workflow_profiles` e os sinais deliberados de memoria causal e recomposicao cognitiva.
 - `internal_pilot_support` agora declara `expected_route`, `expected_workflow_profile` e `coverage_tags` nos cenarios canonicos do piloto, tornando a cobertura por rota/workflow parte explicita do baseline ativo.
 - o baseline ativo agora tambem exige cenarios deliberados para `dominant_tension` e alinhamento `mente -> dominio -> especialista`, deixando esses sinais como readiness formal de robustez do `v2`.
@@ -380,10 +383,10 @@ Foco:
   tecnicamente mais natural da consolidacao de capacidade soberana e memoria
   viva no nucleo do
   `v2 restante`;
-- esse eixo agora foi fatiado como lote `MB-077` a `MB-081`, com `MB-077` em
-  `ready` para formalizar arbitragem mais declarativa de
-  `mente -> dominio -> especialista` nos consumidores finais como contrato
-  soberano do runtime.
+- esse eixo agora foi fatiado como lote `MB-077` a `MB-081`; `MB-077` ja foi
+  concluido, `MB-078` e `MB-079` tambem ja foram fechados, e `MB-080` esta em
+  `ready` para fazer a efetividade dessa arbitragem pesar no loop evolutivo e
+  na leitura de release do runtime.
 
 ### Passo 5 - manter frentes fora da fila micro ate mudanca explicita de fase
 

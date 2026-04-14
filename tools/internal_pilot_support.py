@@ -114,6 +114,8 @@ class PilotExecutionResult:
     mind_domain_specialist_status: str
     mind_domain_specialist_chain_status: str
     mind_domain_specialist_chain: str | None
+    mind_domain_specialist_effectiveness: str
+    mind_domain_specialist_mismatch_flags: list[str]
     cognitive_recomposition_applied: bool
     cognitive_recomposition_reason: str | None
     cognitive_recomposition_trigger: str | None
@@ -552,6 +554,12 @@ def run_pilot_scenarios(
                     audit.mind_domain_specialist_chain_status
                 ),
                 mind_domain_specialist_chain=audit.mind_domain_specialist_chain,
+                mind_domain_specialist_effectiveness=(
+                    audit.mind_domain_specialist_effectiveness
+                ),
+                mind_domain_specialist_mismatch_flags=list(
+                    audit.mind_domain_specialist_mismatch_flags
+                ),
                 cognitive_recomposition_applied=audit.cognitive_recomposition_applied,
                 cognitive_recomposition_reason=audit.cognitive_recomposition_reason,
                 cognitive_recomposition_trigger=audit.cognitive_recomposition_trigger,

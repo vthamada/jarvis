@@ -105,6 +105,23 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
         "decision_criteria",
         "recommended_direction",
     ]
+    assert (
+        result.operation_dispatch.mind_domain_specialist_contract_status
+        == "authoritative_chain"
+    )
+    assert (
+        result.operation_dispatch.mind_domain_specialist_consumer_mode
+        == "authoritative_specialist"
+    )
+    assert (
+        result.operation_dispatch.mind_domain_specialist_framing_mode
+        == "route_and_specialist_locked"
+    )
+    assert (
+        result.operation_dispatch.mind_domain_specialist_continuity_mode
+        == "preserve_authoritative_chain"
+    )
+    assert result.operation_dispatch.specialist_hints == ["structured_analysis_specialist"]
     assert result.operation_dispatch.workflow_telemetry_focus == [
         "tradeoff_clarity",
         "decision_trace",
@@ -216,6 +233,14 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     assert workflow_event.payload["workflow_profile"] == "strategic_direction_workflow"
     assert workflow_event.payload["workflow_domain_route"] == "strategy"
     assert workflow_event.payload["workflow_state"] == "composed"
+    assert (
+        workflow_event.payload["mind_domain_specialist_consumer_mode"]
+        == "authoritative_specialist"
+    )
+    assert (
+        workflow_event.payload["mind_domain_specialist_framing_mode"]
+        == "route_and_specialist_locked"
+    )
     assert workflow_event.payload["workflow_expected_deliverables"] == [
         "tradeoff_map",
         "decision_criteria",
@@ -284,6 +309,10 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     )
     assert specialist_selection_event.payload["registry_link_matches"][selected_specialist] is True
     assert specialist_selection_event.payload["registry_mode_matches"][selected_specialist] is True
+    assert (
+        specialist_selection_event.payload["mind_domain_specialist_contract_status"]
+        == "authoritative_chain"
+    )
     assert specialist_selection_event.payload["primary_route_matches"][selected_specialist] is True
     assert (
         specialist_selection_event.payload["primary_canonical_matches"][selected_specialist]
@@ -305,6 +334,10 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     assert specialist_handoff_event.payload["decision"] == PermissionDecision.ALLOW.value
     domain_specialist_event = next(
         event for event in stored_events if event.event_name == "domain_specialist_completed"
+    )
+    assert (
+        domain_specialist_event.payload["mind_domain_specialist_contract_status"]
+        == "authoritative_chain"
     )
     assert domain_specialist_event.payload["primary_route"] == "strategy"
     assert (
@@ -384,6 +417,11 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     context_event = next(event for event in stored_events if event.event_name == "context_composed")
     assert context_event.payload["arbitration_source"] == "mind_registry"
     assert context_event.payload["primary_mind_family"]
+    assert (
+        context_event.payload["mind_domain_specialist_contract_status"]
+        == "authoritative_chain"
+    )
+    assert context_event.payload["mind_domain_specialist_contract_chain"]
     assert len(context_event.payload["supporting_minds"]) <= (
         context_event.payload["supporting_mind_limit"]
     )
@@ -424,6 +462,14 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     assert plan_event.payload["contract_validation_status"] == "coherent"
     assert plan_event.payload["contract_validation_errors"] == []
     assert plan_event.payload["contract_validation_retry_applied"] is False
+    assert (
+        plan_event.payload["mind_domain_specialist_contract_status"]
+        == result.deliberative_plan.mind_domain_specialist_contract_status
+    )
+    assert (
+        plan_event.payload["mind_domain_specialist_contract_chain"]
+        == result.deliberative_plan.mind_domain_specialist_contract_chain
+    )
     assert plan_event.payload["primary_route"] == result.deliberative_plan.primary_route
     assert (
         plan_event.payload["primary_canonical_domain"]
@@ -455,6 +501,13 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
         "resume_available",
         "manual_resume_required",
     }
+    assert (
+        operation_dispatched_event.payload["mind_domain_specialist_consumer_mode"]
+        == "authoritative_specialist"
+    )
+    assert operation_dispatched_event.payload["specialist_hints"] == [
+        "structured_analysis_specialist"
+    ]
     assert operation_completed_event.payload["workflow_checkpoint_state"]
     assert operation_completed_event.payload["workflow_pending_checkpoints"] == []
     assert workflow_completed_event.payload["workflow_pending_checkpoints"] == []
@@ -522,6 +575,18 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     assert (
         response_event.payload["cognitive_strategy_shift_effects"]
         == result.deliberative_plan.cognitive_strategy_shift_effects
+    )
+    assert (
+        response_event.payload["mind_domain_specialist_contract_status"]
+        == result.deliberative_plan.mind_domain_specialist_contract_status
+    )
+    assert (
+        response_event.payload["mind_domain_specialist_consumer_mode"]
+        == "authoritative_specialist"
+    )
+    assert (
+        response_event.payload["mind_domain_specialist_framing_mode"]
+        == "route_and_specialist_locked"
     )
     assert response_event.payload["dominant_tension"] == result.deliberative_plan.dominant_tension
     assert response_event.payload["contract_validation_status"] == "coherent"
@@ -1378,20 +1443,23 @@ def test_orchestrator_service_tracks_guided_strategy_specialist() -> None:
     selection_event = next(
         event for event in stored_events if event.event_name == "specialist_selection_decided"
     )
-    assert "structured_analysis_specialist" in selection_event.payload["domain_specialists"]
-    assert "structured_analysis_specialist" in selection_event.payload["guided_specialists"]
-    assert selection_event.payload["domain_links"]["structured_analysis_specialist"] == "strategy"
+    assert "operational_planning_specialist" in selection_event.payload["domain_specialists"]
+    assert "operational_planning_specialist" in selection_event.payload["guided_specialists"]
+    assert (
+        selection_event.payload["domain_links"]["operational_planning_specialist"]
+        == "operational_readiness"
+    )
     shared_memory_event = next(
         event for event in stored_events if event.event_name == "specialist_shared_memory_linked"
     )
     assert (
-        shared_memory_event.payload["consumer_modes"]["structured_analysis_specialist"]
+        shared_memory_event.payload["consumer_modes"]["operational_planning_specialist"]
         == "domain_guided_memory_packet"
     )
     assert any(
-        invocation.specialist_type == "structured_analysis_specialist"
+        invocation.specialist_type == "operational_planning_specialist"
         and invocation.selection_mode == "guided"
-        and invocation.linked_domain == "strategy"
+        and invocation.linked_domain == "operational_readiness"
         for invocation in result.specialist_invocations
     )
 

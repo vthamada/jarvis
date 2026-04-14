@@ -112,6 +112,12 @@ class DeliberativePlanContract:
     primary_domain_driver: str | None = None
     arbitration_source: str | None = None
     primary_route: str | None = None
+    mind_domain_specialist_contract_status: str | None = None
+    mind_domain_specialist_contract_summary: str | None = None
+    mind_domain_specialist_contract_chain: str | None = None
+    mind_domain_specialist_active_specialist: str | None = None
+    mind_domain_specialist_override_mode: str | None = None
+    mind_domain_specialist_fallback_mode: str | None = None
     route_consumer_profile: str | None = None
     route_consumer_objective: str | None = None
     route_expected_deliverables: list[str] = field(default_factory=list)
@@ -342,6 +348,15 @@ class OperationDispatchContract:
     plan_rationale: str | None = None
     specialist_summary: str | None = None
     specialist_findings: list[str] = field(default_factory=list)
+    mind_domain_specialist_contract_status: str | None = None
+    mind_domain_specialist_contract_summary: str | None = None
+    mind_domain_specialist_contract_chain: str | None = None
+    mind_domain_specialist_active_specialist: str | None = None
+    mind_domain_specialist_override_mode: str | None = None
+    mind_domain_specialist_fallback_mode: str | None = None
+    mind_domain_specialist_consumer_mode: str | None = None
+    mind_domain_specialist_framing_mode: str | None = None
+    mind_domain_specialist_continuity_mode: str | None = None
     success_criteria: list[str] = field(default_factory=list)
     smallest_safe_next_action: str | None = None
     requires_human_validation: bool = False

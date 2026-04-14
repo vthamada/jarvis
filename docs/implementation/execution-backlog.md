@@ -1372,7 +1372,7 @@ Escalar ao operador quando:
 
 - `id`: `MB-077`
 - `prioridade`: `P0`
-- `status`: `ready`
+- `status`: `done`
 - `eixo_do_mestre`: `fluxo_principal`
 - `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
 - `micro_objetivo`: formalizar arbitragem mais declarativa de `mente -> dominio -> especialista` nos consumidores finais, com contrato explicito para cadeia autoritativa, override bounded e fallback governado.
@@ -1383,30 +1383,30 @@ Escalar ao operador quando:
 - `gate_minimo`: `pytest` direcionado dos services/engines tocados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `high`
-- `impacto_no_baseline`: a cadeia `mente -> dominio -> especialista` deixa de depender de leitura implicita na ultima milha e passa a existir como contrato vivo e auditavel do fluxo principal.
+- `impacto_no_baseline`: `cognitive`, `specialist`, `planning`, `synthesis` e `orchestrator` agora carregam `mind_domain_specialist_contract_*`, distinguindo cadeia autoritativa, override bounded e fallback governado como slice explicito do runtime.
 
 ### MB-078
 
 - `id`: `MB-078`
 - `prioridade`: `P0`
-- `status`: `blocked`
+- `status`: `done`
 - `eixo_do_mestre`: `governanca`
 - `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
 - `micro_objetivo`: fazer consumidores finais, dispatch e framing aplicarem a arbitragem declarativa `mente -> dominio -> especialista` como politica soberana do runtime.
 - `justificativa_arquitetural`: depois de formalizar o contrato, o passo seguinte e impedir que a cadeia autoritativa de mente, dominio e especialista se fragmente entre adapters, framing final e leituras locais do consumidor.
 - `arquivos/servicos_principais`: `cognitive-engine`, `specialist-engine`, `engines/synthesis-engine`, `services/orchestrator-service`, `shared/domain_registry`
-- `dependencias`: `MB-077`
+- `dependencias`: nenhuma
 - `criterio_de_aceite`: consumidores finais e fluxo de dispatch passam a responder ao contrato de arbitragem `mind_domain_specialist`, com efeito observavel em selecao, framing, continuidade e fallback final, sem bypassar rota promovida ou especialista canonico.
 - `gate_minimo`: `pytest` direcionado dos services/engines tocados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `high`
-- `impacto_no_baseline`: a arbitragem declarativa deixa de ser apenas inferida e passa a dirigir consumo final, framing e continuidade de forma mais governada.
+- `impacto_no_baseline`: `specialist-engine`, `operation_dispatch`, `operational-service`, `response_synthesized` e `workflow_*` agora aplicam `mind_domain_specialist` como politica soberana de selecao, consumo final, framing e fallback, priorizando o especialista canonico da rota ativa quando ele existe e contendo a ultima milha no nucleo quando o contrato pede fallback governado.
 
 ### MB-079
 
 - `id`: `MB-079`
 - `prioridade`: `P1`
-- `status`: `blocked`
+- `status`: `done`
 - `eixo_do_mestre`: `observabilidade`
 - `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
 - `micro_objetivo`: tornar a arbitragem declarativa `mente -> dominio -> especialista` parte da evidencia auditavel do baseline em tracing, piloto e comparadores.
@@ -1417,13 +1417,13 @@ Escalar ao operador quando:
 - `gate_minimo`: `pytest` direcionado dos services/tools afetados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `high`
-- `impacto_no_baseline`: a arbitragem declarativa deixa de ser telemetria lateral e passa a existir como evidencia formal e comparavel do runtime.
+- `impacto_no_baseline`: `observability`, piloto e comparadores agora expõem `mind_domain_specialist_effectiveness` e `mind_domain_specialist_mismatch_flags`, tornando a efetividade da arbitragem final e seus drifts parte formal e comparavel do baseline.
 
 ### MB-080
 
 - `id`: `MB-080`
 - `prioridade`: `P1`
-- `status`: `blocked`
+- `status`: `ready`
 - `eixo_do_mestre`: `evolucao`
 - `workflow_profile_afetado`: `nao_aplicavel`
 - `micro_objetivo`: fazer `refinement_vectors`, `evaluation_matrix` e leitura de release usarem efetividade e drift da arbitragem declarativa como insumo do proximo refinamento do nucleo.
@@ -1492,6 +1492,8 @@ Estado atual da fila:
 - `MB-072` a `MB-076` foram concluidos e fecharam o lote do nucleo para manutencao ativa de memoria viva, derivado de `SG-004` e `TA-003`;
 - `memory-service`, `planning`, `orchestrator`, `observability`, piloto, comparadores, `evolution-lab` e verificadores de release agora tratam `memory_maintenance_*`, compaction e recall cross-session como slice soberano, auditavel e refinavel do runtime;
 - `MB-077` a `MB-081` agora abrem o novo lote do nucleo para arbitragem mais declarativa de `mente -> dominio -> especialista`, derivado de `SG-005`;
-- `MB-077` e o item `ready` atual: ele formaliza `mind_domain_specialist_*`, override bounded e fallback governado como contrato soberano e auditavel do runtime;
-- `MB-078` a `MB-081` permanecem `blocked` apenas pela ordem de dependencia do novo lote;
+- `MB-077` agora foi concluido: `mind_domain_specialist_contract_*` passou a existir como contrato vivo em `cognitive`, `specialist`, `planning`, `synthesis` e `orchestrator`, distinguindo cadeia autoritativa, override bounded e fallback governado;
+- `MB-078` agora foi concluido: selecao, dispatch, artefato operacional e sintese final passaram a obedecer o contrato `mind_domain_specialist` como politica soberana de consumo final e fallback;
+- `MB-079` agora tambem foi concluido: `observability-service`, piloto e comparadores passaram a expor `mind_domain_specialist_effectiveness` e `mind_domain_specialist_mismatch_flags` como evidencia formal da arbitragem final;
+- `MB-080` virou o item `ready` atual do lote, e `MB-081` permanece `blocked` apenas pela ordem de dependencia;
 - `protective intelligence foundation` continua `deferred` e a matriz da Onda 2 segue como insumo, nao como gatilho automatico para abrir nova vertical.

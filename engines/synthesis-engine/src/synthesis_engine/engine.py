@@ -12,7 +12,10 @@ from shared.contracts import (
     OperationResultContract,
     SpecialistContributionContract,
 )
-from shared.domain_registry import workflow_runtime_guidance
+from shared.domain_registry import route_linked_specialist_type, workflow_runtime_guidance
+from shared.mind_domain_specialist_contract import (
+    build_mind_domain_specialist_runtime_policy,
+)
 from shared.types import PermissionDecision
 
 
@@ -459,32 +462,42 @@ class SynthesisEngine:
         plan = synthesis_input.deliberative_plan
         brief = synthesis_input.session_continuity_brief
         mode = synthesis_input.session_continuity_mode or (plan.continuity_action if plan else None)
+        policy_clause = self._mind_domain_specialist_policy_clause(
+            plan,
+            clause_type="continuity",
+        )
         if brief:
-            return brief
+            return f"{brief}; {policy_clause}" if policy_clause else brief
         if not plan or not mode:
             return None
         anchor_goal = synthesis_input.session_anchor_goal or plan.goal
         loop_focus = plan.open_loops[0] if plan.open_loops else None
         if mode == "retomar" and plan.continuity_target_goal:
-            return (
+            line = (
                 f"sessao retoma continuidade relacionada em '{plan.continuity_target_goal}'"
             )
+            return f"{line}; {policy_clause}" if policy_clause else line
         if mode == "encerrar":
             if loop_focus:
-                return (
+                line = (
                     f"sessao entra em fechamento controlado de '{anchor_goal}', "
                     f"encerrando '{loop_focus}'"
                 )
-            return f"sessao entra em fechamento controlado de '{anchor_goal}'"
+                return f"{line}; {policy_clause}" if policy_clause else line
+            line = f"sessao entra em fechamento controlado de '{anchor_goal}'"
+            return f"{line}; {policy_clause}" if policy_clause else line
         if mode == "reformular":
-            return f"sessao reformula o objetivo ativo '{anchor_goal}' de forma governada"
+            line = f"sessao reformula o objetivo ativo '{anchor_goal}' de forma governada"
+            return f"{line}; {policy_clause}" if policy_clause else line
         if mode == "continuar":
             if loop_focus:
-                return (
+                line = (
                     f"sessao segue ancorada em '{anchor_goal}', com continuidade ativa em "
                     f"'{loop_focus}'"
                 )
-            return f"sessao segue ancorada em '{anchor_goal}'"
+                return f"{line}; {policy_clause}" if policy_clause else line
+            line = f"sessao segue ancorada em '{anchor_goal}'"
+            return f"{line}; {policy_clause}" if policy_clause else line
         return None
 
     def _judgment_line(self, synthesis_input: SynthesisInput) -> str:
@@ -849,6 +862,12 @@ class SynthesisEngine:
                 f"{recommendation}; contencao preferencial: "
                 f"{plan.metacognitive_containment_recommendation}"
             )
+        policy_clause = self._mind_domain_specialist_policy_clause(
+            plan,
+            clause_type="recommendation",
+        )
+        if policy_clause:
+            recommendation = f"{recommendation}; {policy_clause}"
         return recommendation
 
     def _semantic_effect_clause(self, plan: DeliberativePlanContract) -> str | None:
@@ -989,6 +1008,12 @@ class SynthesisEngine:
         material_risks = [risk for risk in plan.risks if "sem risco material" not in risk.lower()]
         if material_risks:
             limits.append(material_risks[0])
+        policy_limit = self._mind_domain_specialist_policy_clause(
+            plan,
+            clause_type="limitation",
+        )
+        if policy_limit:
+            limits.append(policy_limit)
         return limits[0] if limits else None
 
     @staticmethod
@@ -1017,6 +1042,29 @@ class SynthesisEngine:
 
     @classmethod
     def _mind_domain_specialist_clause(cls, plan: DeliberativePlanContract) -> str | None:
+        contract_status = cls._present_contract_label(
+            plan.mind_domain_specialist_contract_status
+        )
+        contract_chain = cls._present_contract_label(
+            plan.mind_domain_specialist_contract_chain
+        )
+        contract_summary = plan.mind_domain_specialist_contract_summary
+        override_mode = cls._present_contract_label(
+            plan.mind_domain_specialist_override_mode
+        )
+        fallback_mode = cls._present_contract_label(
+            plan.mind_domain_specialist_fallback_mode
+        )
+        if contract_summary and contract_chain:
+            clause = (
+                f"contrato mind domain specialist: {contract_status or 'active'}; "
+                f"{contract_summary}; cadeia {contract_chain}"
+            )
+            if override_mode:
+                clause = f"{clause}; override bounded: {override_mode}"
+            if fallback_mode:
+                clause = f"{clause}; fallback governado: {fallback_mode}"
+            return clause
         if not plan.primary_mind or not plan.primary_domain_driver or not plan.primary_route:
             return None
         if not plan.specialist_hints:
@@ -1030,6 +1078,80 @@ class SynthesisEngine:
             f"{cls._present_contract_label(plan.primary_domain_driver)} -> "
             f"{cls._present_contract_label(plan.primary_route)} -> {specialist_label}"
         )
+
+    @classmethod
+    def _mind_domain_specialist_policy_clause(
+        cls,
+        plan: DeliberativePlanContract | None,
+        *,
+        clause_type: str,
+    ) -> str | None:
+        if plan is None:
+            return None
+        policy = build_mind_domain_specialist_runtime_policy(
+            contract_status=plan.mind_domain_specialist_contract_status,
+            active_specialist=plan.mind_domain_specialist_active_specialist,
+            planned_specialists=list(plan.specialist_hints),
+            authoritative_specialist_hint=(
+                route_linked_specialist_type(plan.primary_route)
+                if plan.primary_route
+                else None
+            ),
+            override_mode=plan.mind_domain_specialist_override_mode,
+            fallback_mode=plan.mind_domain_specialist_fallback_mode,
+        )
+        specialist = cls._present_contract_label(policy.authoritative_specialist)
+        fallback = cls._present_contract_label(policy.fallback_note)
+        if clause_type == "continuity":
+            if policy.continuity_mode == "preserve_authoritative_chain" and specialist:
+                return (
+                    f"continuidade preserva cadeia autoritativa ate {specialist}"
+                )
+            if (
+                policy.continuity_mode == "preserve_override_without_reopening_chain"
+                and specialist
+            ):
+                return (
+                    f"continuidade preserva override bounded em {specialist} "
+                    "sem reabrir a cadeia soberana"
+                )
+            if policy.continuity_mode == "continue_without_specialist_handoff":
+                return (
+                    "continuidade permanece contida no nucleo sem novo handoff "
+                    f"especializado{f' ({fallback})' if fallback else ''}"
+                )
+            if policy.continuity_mode == "contain_partial_chain" and specialist:
+                return (
+                    f"continuidade contem a cadeia parcial ate {specialist}"
+                )
+            return None
+        if clause_type == "recommendation":
+            if policy.consumer_mode == "authoritative_specialist" and specialist:
+                return f"consumo final deve permanecer ancorado em {specialist}"
+            if policy.consumer_mode == "bounded_override_specialist" and specialist:
+                return (
+                    f"framing final deve respeitar override bounded em {specialist}"
+                )
+            if policy.consumer_mode == "core_only_fallback":
+                return (
+                    "fechar pelo nucleo sem reacender handoff especializado"
+                    f"{f' ({fallback})' if fallback else ''}"
+                )
+            if policy.consumer_mode == "degraded_specialist" and specialist:
+                return (
+                    f"manter especialista bounded {specialist} sob mediacao do nucleo"
+                )
+            return None
+        if clause_type == "limitation":
+            if policy.consumer_mode == "core_only_fallback":
+                return (
+                    "a ultima milha permaneceu em fallback governado no nucleo"
+                    f"{f' ({fallback})' if fallback else ''}"
+                )
+            if policy.consumer_mode == "degraded_specialist":
+                return "a cadeia mente dominio especialista segue parcial na ultima milha"
+            return None
+        return None
 
     @staticmethod
     def _cross_session_recall_clause(

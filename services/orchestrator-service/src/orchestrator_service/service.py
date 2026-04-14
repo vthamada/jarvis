@@ -39,11 +39,15 @@ from shared.domain_registry import (
     promoted_specialist_route_payloads,
     resolve_primary_route,
     resolve_workflow_route,
+    route_linked_specialist_type,
     route_metadata_payload,
     specialist_route_payload,
     workflow_runtime_guidance,
 )
 from shared.events import InternalEventEnvelope
+from shared.mind_domain_specialist_contract import (
+    build_mind_domain_specialist_runtime_policy,
+)
 from shared.types import MissionStatus, OperationId, PermissionDecision, RequestId
 
 
@@ -251,6 +255,24 @@ class OrchestratorService:
                         cognitive_snapshot.recomposition_trigger
                     ),
                     "specialist_hints": cognitive_snapshot.specialist_hints,
+                    "mind_domain_specialist_contract_status": (
+                        cognitive_snapshot.mind_domain_specialist_contract_status
+                    ),
+                    "mind_domain_specialist_contract_summary": (
+                        cognitive_snapshot.mind_domain_specialist_contract_summary
+                    ),
+                    "mind_domain_specialist_contract_chain": (
+                        cognitive_snapshot.mind_domain_specialist_contract_chain
+                    ),
+                    "mind_domain_specialist_active_specialist": (
+                        cognitive_snapshot.mind_domain_specialist_active_specialist
+                    ),
+                    "mind_domain_specialist_override_mode": (
+                        cognitive_snapshot.mind_domain_specialist_override_mode
+                    ),
+                    "mind_domain_specialist_fallback_mode": (
+                        cognitive_snapshot.mind_domain_specialist_fallback_mode
+                    ),
                     "memory_priority_applied": cognitive_snapshot.memory_priority_applied,
                     "memory_priority_domains": cognitive_snapshot.memory_priority_domains,
                     "memory_priority_specialist_hints": (
@@ -406,6 +428,9 @@ class OrchestratorService:
                         f"{deliberative_plan.primary_mind or 'none'} -> "
                         f"{deliberative_plan.primary_domain_driver or 'none'} -> "
                         f"{deliberative_plan.primary_route or 'none'}"
+                    ),
+                    **self._mind_domain_specialist_contract_payload(
+                        deliberative_plan
                     ),
                     "specialist_hints": deliberative_plan.specialist_hints,
                     "continuity_action": deliberative_plan.continuity_action,
@@ -598,6 +623,9 @@ class OrchestratorService:
                         ),
                         "task_type": operation_dispatch.task_type,
                         "domain_hints": operation_dispatch.domain_hints,
+                        **self._mind_domain_specialist_contract_payload(
+                            operation_dispatch
+                        ),
                     },
                 )
             )
@@ -628,6 +656,9 @@ class OrchestratorService:
                         ),
                         "adaptive_intervention_selected_action": (
                             operation_dispatch.adaptive_intervention_selected_action
+                        ),
+                        **self._mind_domain_specialist_contract_payload(
+                            operation_dispatch
                         ),
                     },
                 )
@@ -681,6 +712,9 @@ class OrchestratorService:
                             operation_dispatch.adaptive_intervention_effects
                         ),
                         "specialist_hints": operation_dispatch.specialist_hints,
+                        **self._mind_domain_specialist_contract_payload(
+                            operation_dispatch
+                        ),
                     },
                 )
             )
@@ -717,6 +751,9 @@ class OrchestratorService:
                         "workflow_decisions": operation_result.workflow_decisions,
                         "workflow_resume_status": operation_result.workflow_resume_status,
                         "workflow_resume_point": operation_result.workflow_resume_point,
+                        **self._mind_domain_specialist_contract_payload(
+                            operation_dispatch
+                        ),
                     },
                 )
             )
@@ -751,6 +788,9 @@ class OrchestratorService:
                         ),
                         "workflow_resume_status": operation_result.workflow_resume_status,
                         "workflow_resume_point": operation_result.workflow_resume_point,
+                        **self._mind_domain_specialist_contract_payload(
+                            operation_dispatch
+                        ),
                     },
                 )
             )
@@ -820,6 +860,9 @@ class OrchestratorService:
                     "primary_domain_driver": deliberative_plan.primary_domain_driver,
                     "dominant_tension": deliberative_plan.dominant_tension,
                     "arbitration_source": deliberative_plan.arbitration_source,
+                    **self._mind_domain_specialist_contract_payload(
+                        operation_dispatch or deliberative_plan
+                    ),
                     "metacognitive_guidance_applied": (
                         deliberative_plan.metacognitive_guidance_applied
                     ),
@@ -1255,6 +1298,7 @@ class OrchestratorService:
                     "selection_rationales": {
                         item.specialist_type: item.rationale for item in handoff_plan.selections
                     },
+                    **self._mind_domain_specialist_contract_payload(handoff_plan),
                     "mind_domain_specialist_chain_status": chain_payload["status"],
                     "mind_domain_specialist_chain": chain_payload["chain"],
                 },
@@ -1694,6 +1738,24 @@ class OrchestratorService:
                 selections=handoff_plan.selections,
                 invocations=handoff_plan.invocations,
                 boundary_summary=handoff_plan.boundary_summary,
+                mind_domain_specialist_contract_status=(
+                    handoff_plan.mind_domain_specialist_contract_status
+                ),
+                mind_domain_specialist_contract_summary=(
+                    handoff_plan.mind_domain_specialist_contract_summary
+                ),
+                mind_domain_specialist_contract_chain=(
+                    handoff_plan.mind_domain_specialist_contract_chain
+                ),
+                mind_domain_specialist_active_specialist=(
+                    handoff_plan.mind_domain_specialist_active_specialist
+                ),
+                mind_domain_specialist_override_mode=(
+                    handoff_plan.mind_domain_specialist_override_mode
+                ),
+                mind_domain_specialist_fallback_mode=(
+                    handoff_plan.mind_domain_specialist_fallback_mode
+                ),
             )
             if handoff_plan.invocations:
                 updated_events.append(
@@ -1742,6 +1804,9 @@ class OrchestratorService:
                             if item.selection_mode in {"guided", "active"}
                         ],
                         "boundary_summary": specialist_review.boundary_summary,
+                        **self._mind_domain_specialist_contract_payload(
+                            specialist_review
+                        ),
                     },
                 )
             )
@@ -1788,6 +1853,9 @@ class OrchestratorService:
                             for output_hint in item.output_hints
                         ],
                         "summary": specialist_review.summary,
+                        **self._mind_domain_specialist_contract_payload(
+                            specialist_review
+                        ),
                     },
                 )
             )
@@ -1899,6 +1967,9 @@ class OrchestratorService:
                                 )
                                 for invocation in domain_invocation_index.values()
                             },
+                            **self._mind_domain_specialist_contract_payload(
+                                specialist_review
+                            ),
                         },
                     )
                 )
@@ -1969,6 +2040,9 @@ class OrchestratorService:
                             ),
                             "smallest_safe_next_action": (
                                 refined_plan.smallest_safe_next_action
+                            ),
+                            **self._mind_domain_specialist_contract_payload(
+                                refined_plan
                             ),
                         },
                     )
@@ -2105,6 +2179,18 @@ class OrchestratorService:
             workflow_checkpoints,
             resume_status=workflow_resume_status,
         )
+        mind_domain_specialist_policy = build_mind_domain_specialist_runtime_policy(
+            contract_status=plan.mind_domain_specialist_contract_status,
+            active_specialist=plan.mind_domain_specialist_active_specialist,
+            planned_specialists=list(plan.specialist_hints),
+            authoritative_specialist_hint=(
+                route_linked_specialist_type(plan.primary_route)
+                if plan.primary_route
+                else None
+            ),
+            override_mode=plan.mind_domain_specialist_override_mode,
+            fallback_mode=plan.mind_domain_specialist_fallback_mode,
+        )
         expected_output = (
             plan.route_expected_deliverables[0]
             if plan.route_expected_deliverables
@@ -2122,8 +2208,39 @@ class OrchestratorService:
             planned_steps=list(plan.steps),
             plan_risks=list(plan.risks),
             plan_rationale=plan.rationale,
-            specialist_summary=plan.specialist_resolution_summary or specialist_review.summary,
+            specialist_summary=self._mind_domain_specialist_dispatch_summary(
+                plan=plan,
+                specialist_review=specialist_review,
+                consumer_mode=mind_domain_specialist_policy.consumer_mode,
+            ),
             specialist_findings=list(specialist_review.findings),
+            mind_domain_specialist_contract_status=(
+                plan.mind_domain_specialist_contract_status
+            ),
+            mind_domain_specialist_contract_summary=(
+                plan.mind_domain_specialist_contract_summary
+            ),
+            mind_domain_specialist_contract_chain=(
+                plan.mind_domain_specialist_contract_chain
+            ),
+            mind_domain_specialist_active_specialist=(
+                plan.mind_domain_specialist_active_specialist
+            ),
+            mind_domain_specialist_override_mode=(
+                plan.mind_domain_specialist_override_mode
+            ),
+            mind_domain_specialist_fallback_mode=(
+                plan.mind_domain_specialist_fallback_mode
+            ),
+            mind_domain_specialist_consumer_mode=(
+                mind_domain_specialist_policy.consumer_mode
+            ),
+            mind_domain_specialist_framing_mode=(
+                mind_domain_specialist_policy.framing_mode
+            ),
+            mind_domain_specialist_continuity_mode=(
+                mind_domain_specialist_policy.continuity_mode
+            ),
             success_criteria=list(plan.success_criteria),
             smallest_safe_next_action=plan.smallest_safe_next_action,
             requires_human_validation=plan.requires_human_validation,
@@ -2158,7 +2275,7 @@ class OrchestratorService:
             domain_hints=list(plan.active_domains),
             canonical_domain_hints=list(plan.canonical_domains),
             primary_canonical_domain=plan.primary_canonical_domain,
-            specialist_hints=list(plan.specialist_hints),
+            specialist_hints=list(mind_domain_specialist_policy.effective_specialists),
             workflow_profile=workflow_profile,
             workflow_domain_route=workflow_domain_route,
             workflow_objective=plan.route_consumer_objective or plan.goal,
@@ -2213,6 +2330,74 @@ class OrchestratorService:
                 source.capability_decision_selected_capabilities
             ),
         }
+
+    @staticmethod
+    def _mind_domain_specialist_contract_payload(source: object) -> dict[str, object]:
+        return {
+            "mind_domain_specialist_contract_status": getattr(
+                source,
+                "mind_domain_specialist_contract_status",
+                None,
+            ),
+            "mind_domain_specialist_contract_summary": getattr(
+                source,
+                "mind_domain_specialist_contract_summary",
+                None,
+            ),
+            "mind_domain_specialist_contract_chain": getattr(
+                source,
+                "mind_domain_specialist_contract_chain",
+                None,
+            ),
+            "mind_domain_specialist_active_specialist": getattr(
+                source,
+                "mind_domain_specialist_active_specialist",
+                None,
+            ),
+            "mind_domain_specialist_override_mode": getattr(
+                source,
+                "mind_domain_specialist_override_mode",
+                None,
+            ),
+            "mind_domain_specialist_fallback_mode": getattr(
+                source,
+                "mind_domain_specialist_fallback_mode",
+                None,
+            ),
+            "mind_domain_specialist_consumer_mode": getattr(
+                source,
+                "mind_domain_specialist_consumer_mode",
+                None,
+            ),
+            "mind_domain_specialist_framing_mode": getattr(
+                source,
+                "mind_domain_specialist_framing_mode",
+                None,
+            ),
+            "mind_domain_specialist_continuity_mode": getattr(
+                source,
+                "mind_domain_specialist_continuity_mode",
+                None,
+            ),
+        }
+
+    @staticmethod
+    def _mind_domain_specialist_dispatch_summary(
+        *,
+        plan: DeliberativePlanContract,
+        specialist_review: SpecialistReview,
+        consumer_mode: str,
+    ) -> str | None:
+        base_summary = plan.specialist_resolution_summary or specialist_review.summary
+        contract_summary = plan.mind_domain_specialist_contract_summary
+        if consumer_mode == "core_only_fallback":
+            return (
+                contract_summary
+                or "fallback governado preservou o fechamento final no nucleo"
+            )
+        if contract_summary and base_summary:
+            return f"{contract_summary}; {base_summary}"
+        return contract_summary or base_summary
 
     @staticmethod
     def _capability_allows_specialist_handoff(plan: DeliberativePlanContract) -> bool:
@@ -3288,6 +3473,24 @@ class OrchestratorService:
             "specialist_hints": list(specialist_review.specialist_hints),
             "boundary_summary": specialist_review.boundary_summary,
             "specialist_summary": specialist_review.summary,
+            "mind_domain_specialist_contract_status": (
+                specialist_review.mind_domain_specialist_contract_status
+            ),
+            "mind_domain_specialist_contract_summary": (
+                specialist_review.mind_domain_specialist_contract_summary
+            ),
+            "mind_domain_specialist_contract_chain": (
+                specialist_review.mind_domain_specialist_contract_chain
+            ),
+            "mind_domain_specialist_active_specialist": (
+                specialist_review.mind_domain_specialist_active_specialist
+            ),
+            "mind_domain_specialist_override_mode": (
+                specialist_review.mind_domain_specialist_override_mode
+            ),
+            "mind_domain_specialist_fallback_mode": (
+                specialist_review.mind_domain_specialist_fallback_mode
+            ),
         }
 
     def _build_mission_runtime_state(

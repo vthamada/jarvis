@@ -17,8 +17,13 @@ from shared.contracts import (
 from shared.domain_registry import (
     canonical_domain_refs_for_name,
     route_is_specialist_eligible,
+    route_linked_specialist_type,
     specialist_eligible_route,
     specialist_route_payload,
+)
+from shared.mind_domain_specialist_contract import (
+    build_mind_domain_specialist_contract,
+    build_mind_domain_specialist_runtime_policy,
 )
 from shared.specialist_registry import (
     GOVERNANCE_REVIEW_SPECIALIST,
@@ -38,6 +43,12 @@ class SpecialistHandoffPlan:
     selections: list[SpecialistSelectionContract]
     invocations: list[SpecialistInvocationContract]
     boundary_summary: str
+    mind_domain_specialist_contract_status: str = "not_applicable"
+    mind_domain_specialist_contract_summary: str | None = None
+    mind_domain_specialist_contract_chain: str | None = None
+    mind_domain_specialist_active_specialist: str | None = None
+    mind_domain_specialist_override_mode: str | None = None
+    mind_domain_specialist_fallback_mode: str | None = None
 
 
 @dataclass(frozen=True)
@@ -51,6 +62,12 @@ class SpecialistReview:
     summary: str
     findings: list[str]
     boundary_summary: str
+    mind_domain_specialist_contract_status: str = "not_applicable"
+    mind_domain_specialist_contract_summary: str | None = None
+    mind_domain_specialist_contract_chain: str | None = None
+    mind_domain_specialist_active_specialist: str | None = None
+    mind_domain_specialist_override_mode: str | None = None
+    mind_domain_specialist_fallback_mode: str | None = None
 
 
 class SpecialistEngine:
@@ -151,6 +168,27 @@ class SpecialistEngine:
             invocations.append(invocation)
             selection.invocation_id = invocation.invocation_id
         boundary_summary = self._build_boundary_summary(invocations)
+        mind_domain_specialist_contract = build_mind_domain_specialist_contract(
+            primary_mind=normalized_plan.primary_mind,
+            primary_domain_driver=normalized_plan.primary_domain_driver,
+            primary_route=normalized_plan.primary_route,
+            planned_specialists=list(normalized_plan.specialist_hints),
+            selected_specialists=[
+                item.specialist_type
+                for item in selections
+                if item.selection_status == "selected"
+            ],
+            active_route=next(
+                (
+                    item.linked_domain
+                    for item in selections
+                    if item.selection_status == "selected" and item.linked_domain
+                ),
+                None,
+            ),
+            arbitration_source=normalized_plan.arbitration_source,
+            capability_handoff_mode=normalized_plan.capability_decision_handoff_mode,
+        )
         return SpecialistHandoffPlan(
             specialist_hints=[
                 item.specialist_type
@@ -160,6 +198,24 @@ class SpecialistEngine:
             selections=selections,
             invocations=invocations,
             boundary_summary=boundary_summary,
+            mind_domain_specialist_contract_status=(
+                mind_domain_specialist_contract.status
+            ),
+            mind_domain_specialist_contract_summary=(
+                mind_domain_specialist_contract.summary
+            ),
+            mind_domain_specialist_contract_chain=(
+                mind_domain_specialist_contract.chain
+            ),
+            mind_domain_specialist_active_specialist=(
+                mind_domain_specialist_contract.active_specialist
+            ),
+            mind_domain_specialist_override_mode=(
+                mind_domain_specialist_contract.override_mode
+            ),
+            mind_domain_specialist_fallback_mode=(
+                mind_domain_specialist_contract.fallback_mode
+            ),
         )
 
     def review_handoffs(
@@ -191,6 +247,25 @@ class SpecialistEngine:
             finding for contribution in contributions for finding in contribution.findings[:3]
         ]
         summary = self._build_summary(contributions)
+        mind_domain_specialist_contract = build_mind_domain_specialist_contract(
+            primary_mind=plan.primary_mind,
+            primary_domain_driver=plan.primary_domain_driver,
+            primary_route=plan.primary_route,
+            planned_specialists=list(plan.specialist_hints),
+            selected_specialists=[
+                item.specialist_type for item in contributions if item.specialist_type
+            ],
+            active_route=next(
+                (
+                    item.linked_domain
+                    for item in handoff_plan.invocations
+                    if item.linked_domain and item.specialist_type in invocation_index
+                ),
+                None,
+            ),
+            arbitration_source=plan.arbitration_source,
+            capability_handoff_mode=plan.capability_decision_handoff_mode,
+        )
         return SpecialistReview(
             specialist_hints=handoff_plan.specialist_hints,
             selections=handoff_plan.selections,
@@ -199,6 +274,24 @@ class SpecialistEngine:
             summary=summary,
             findings=findings,
             boundary_summary=handoff_plan.boundary_summary,
+            mind_domain_specialist_contract_status=(
+                mind_domain_specialist_contract.status
+            ),
+            mind_domain_specialist_contract_summary=(
+                mind_domain_specialist_contract.summary
+            ),
+            mind_domain_specialist_contract_chain=(
+                mind_domain_specialist_contract.chain
+            ),
+            mind_domain_specialist_active_specialist=(
+                mind_domain_specialist_contract.active_specialist
+            ),
+            mind_domain_specialist_override_mode=(
+                mind_domain_specialist_contract.override_mode
+            ),
+            mind_domain_specialist_fallback_mode=(
+                mind_domain_specialist_contract.fallback_mode
+            ),
         )
 
     @staticmethod
@@ -209,6 +302,18 @@ class SpecialistEngine:
         domain_specialist_routes: list[DomainSpecialistRouteContract],
     ) -> list[SpecialistSelectionContract]:
         selections: list[SpecialistSelectionContract] = []
+        runtime_policy = build_mind_domain_specialist_runtime_policy(
+            contract_status=plan.mind_domain_specialist_contract_status,
+            active_specialist=plan.mind_domain_specialist_active_specialist,
+            planned_specialists=list(plan.specialist_hints),
+            authoritative_specialist_hint=(
+                route_linked_specialist_type(plan.primary_route)
+                if plan.primary_route
+                else None
+            ),
+            override_mode=plan.mind_domain_specialist_override_mode,
+            fallback_mode=plan.mind_domain_specialist_fallback_mode,
+        )
         route_candidates_by_specialist: dict[str, list[DomainSpecialistRouteContract]] = {}
         for route in domain_specialist_routes:
             canonical_type = canonical_specialist_type(route.specialist_type)
@@ -264,6 +369,46 @@ class SpecialistEngine:
             "risco" in risk or "govern" in risk for risk in plan.risks
         )
         for specialist_hint in plan.specialist_hints:
+            if runtime_policy.consumer_mode == "core_only_fallback":
+                selections.append(
+                    SpecialistSelectionContract(
+                        specialist_type=specialist_hint,
+                        selection_status="not_eligible",
+                        selection_score=0.12,
+                        rationale=(
+                            "o contrato soberano conteve a ultima milha no nucleo via "
+                            f"{runtime_policy.fallback_note or 'fallback governado'}"
+                        ),
+                        linked_domain=None,
+                        selection_mode="standard",
+                    )
+                )
+                continue
+            if (
+                runtime_policy.authoritative_specialist is not None
+                and specialist_hint != runtime_policy.authoritative_specialist
+                and runtime_policy.consumer_mode
+                in {
+                    "authoritative_specialist",
+                    "bounded_override_specialist",
+                    "degraded_specialist",
+                }
+            ):
+                selections.append(
+                    SpecialistSelectionContract(
+                        specialist_type=specialist_hint,
+                        selection_status="not_eligible",
+                        selection_score=0.16,
+                        rationale=(
+                            "o contrato soberano fixou o consumo final em "
+                            f"{runtime_policy.authoritative_specialist} e evita "
+                            "disputa local de especialista na ultima milha"
+                        ),
+                        linked_domain=None,
+                        selection_mode="standard",
+                    )
+                )
+                continue
             route = canonical_route_for(specialist_hint)
             selection_mode = (
                 route.specialist_mode if route and route.specialist_mode else "standard"

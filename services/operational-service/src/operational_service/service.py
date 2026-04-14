@@ -167,6 +167,7 @@ class OperationalService:
         next_action = dispatch.smallest_safe_next_action or "preservar a menor proxima acao segura"
         workflow_lines = OperationalService._workflow_lines(dispatch)
         workflow_decisions = OperationalService._workflow_decision_line(dispatch)
+        arbitration_lines = OperationalService._mind_domain_specialist_lines(dispatch)
         return (
             f"Plano deliberativo para: {dispatch.task_goal}\n\n"
             f"Resumo: {dispatch.plan_summary or dispatch.task_plan}\n"
@@ -176,6 +177,7 @@ class OperationalService:
             f"Restricoes: {constraints}\n"
             f"Riscos: {risks}\n"
             f"Ajuste interno: {internal_alignment}\n"
+            f"{arbitration_lines}\n"
             f"{workflow_lines}\n"
             f"{workflow_decisions}\n"
             f"Etapas:\n{steps}\n"
@@ -191,6 +193,7 @@ class OperationalService:
         success = "; ".join(dispatch.success_criteria[:3]) or ("explicitar a melhor recomendacao")
         workflow_lines = OperationalService._workflow_lines(dispatch)
         workflow_decisions = OperationalService._workflow_decision_line(dispatch)
+        arbitration_lines = OperationalService._mind_domain_specialist_lines(dispatch)
         return (
             f"Analise deliberativa para: {dispatch.task_goal}\n\n"
             f"Resumo: {dispatch.plan_summary or dispatch.task_plan}\n"
@@ -199,6 +202,7 @@ class OperationalService:
             f"Criterios de sucesso: {success}\n"
             f"Ajuste interno: {dispatch.specialist_summary or 'sem ajuste interno adicional'}\n"
             f"Riscos mapeados: {risks}\n"
+            f"{arbitration_lines}\n"
             f"{workflow_lines}\n"
             f"{workflow_decisions}\n"
         )
@@ -207,6 +211,7 @@ class OperationalService:
     def _build_general_content(dispatch: OperationDispatchContract) -> str:
         workflow_lines = OperationalService._workflow_lines(dispatch)
         workflow_decisions = OperationalService._workflow_decision_line(dispatch)
+        arbitration_lines = OperationalService._mind_domain_specialist_lines(dispatch)
         return (
             f"Resposta deliberativa segura para: {dispatch.task_goal}\n\n"
             f"Resumo: {dispatch.plan_summary or dispatch.task_plan}\n"
@@ -214,9 +219,30 @@ class OperationalService:
             f"Proxima acao segura: "
             f"{dispatch.smallest_safe_next_action or 'preservar direcao segura'}\n"
             f"Ajuste interno: {dispatch.specialist_summary or 'sem ajuste interno adicional'}\n"
+            f"{arbitration_lines}\n"
             f"{workflow_lines}\n"
             f"{workflow_decisions}\n"
             "A saida foi produzida dentro do escopo local e reversivel do v1.\n"
+        )
+
+    @staticmethod
+    def _mind_domain_specialist_lines(dispatch: OperationDispatchContract) -> str:
+        status = dispatch.mind_domain_specialist_contract_status or "not_applicable"
+        summary = (
+            dispatch.mind_domain_specialist_contract_summary
+            or "contrato nao explicitado"
+        )
+        chain = dispatch.mind_domain_specialist_contract_chain or "none"
+        consumer_mode = dispatch.mind_domain_specialist_consumer_mode or "not_defined"
+        framing_mode = dispatch.mind_domain_specialist_framing_mode or "not_defined"
+        continuity_mode = dispatch.mind_domain_specialist_continuity_mode or "not_defined"
+        return (
+            f"Mind-domain-specialist status: {status}\n"
+            f"Mind-domain-specialist summary: {summary}\n"
+            f"Mind-domain-specialist chain: {chain}\n"
+            f"Mind-domain-specialist consumer mode: {consumer_mode}\n"
+            f"Mind-domain-specialist framing mode: {framing_mode}\n"
+            f"Mind-domain-specialist continuity mode: {continuity_mode}"
         )
 
 

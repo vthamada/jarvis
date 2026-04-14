@@ -79,6 +79,7 @@ def test_internal_pilot_report_summarizes_recent_request() -> None:
     assert summaries[0].adaptive_intervention_policy_status == "not_applicable"
     assert summaries[0].memory_causality_status == "not_applicable"
     assert summaries[0].mind_domain_specialist_status == "incomplete"
+    assert summaries[0].mind_domain_specialist_effectiveness == "not_applicable"
     assert summaries[0].cognitive_recomposition_applied is False
     assert summaries[0].cognitive_recomposition_assessment == "not_applicable"
     assert summaries[0].continuity_trace_status == "incomplete"
@@ -143,6 +144,8 @@ def test_internal_pilot_report_renders_text() -> None:
                     "arbitration_source": "mind_registry",
                     "primary_domain_driver": "dados_estatistica_e_inteligencia_analitica",
                     "mind_domain_specialist_status": "aligned",
+                    "mind_domain_specialist_effectiveness": "effective",
+                    "mind_domain_specialist_mismatch_flags": [],
                     "cognitive_recomposition_applied": False,
                     "cognitive_recomposition_assessment": "not_applicable",
                     "cognitive_recomposition_reason": None,
@@ -194,6 +197,8 @@ def test_internal_pilot_report_renders_text() -> None:
     assert "dominant_tension=equilibrar profundidade analitica com conclusao util" in rendered
     assert "primary_domain_driver=dados_estatistica_e_inteligencia_analitica" in rendered
     assert "mind_domain_specialist_status=aligned" in rendered
+    assert "mind_domain_specialist_effectiveness=effective" in rendered
+    assert "mind_domain_specialist_mismatch_flags=none" in rendered
     assert "cognitive_recomposition_assessment=not_applicable" in rendered
     assert "semantic_memory_focus=dados_estatistica_e_inteligencia_analitica" in rendered
     assert "procedural_memory_hint=preservar criterio de comparacao" in rendered

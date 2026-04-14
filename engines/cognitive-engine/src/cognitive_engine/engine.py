@@ -11,6 +11,9 @@ from shared.domain_registry import (
     route_is_specialist_eligible,
     route_linked_specialist_type,
 )
+from shared.mind_domain_specialist_contract import (
+    build_mind_domain_specialist_contract,
+)
 from shared.mind_registry import (
     arbitration_limits_for,
     build_arbitration_summary,
@@ -46,6 +49,12 @@ class CognitiveSnapshot:
     arbitration_source: str
     primary_mind_family: str
     primary_domain_driver: str | None
+    mind_domain_specialist_contract_status: str
+    mind_domain_specialist_contract_summary: str | None
+    mind_domain_specialist_contract_chain: str | None
+    mind_domain_specialist_active_specialist: str | None
+    mind_domain_specialist_override_mode: str | None
+    mind_domain_specialist_fallback_mode: str | None
     supporting_mind_limit: int
     suppressed_mind_limit: int
     recomposition_applied: bool
@@ -155,6 +164,12 @@ class CognitiveEngine:
             primary_domain_driver=dominant_domain_driver,
             memory_specialist_hints=memory_specialist_hints or [],
         )
+        mind_domain_specialist_contract = build_mind_domain_specialist_contract(
+            primary_mind=primary_mind,
+            primary_domain_driver=dominant_domain_driver,
+            planned_specialists=specialist_hints,
+            arbitration_source=arbitration_source,
+        )
         arbitration_summary = build_arbitration_summary(
             primary_mind=primary_mind,
             supporting_minds=supporting_minds,
@@ -162,6 +177,12 @@ class CognitiveEngine:
             dominant_tension=dominant_tension,
             domains=active_domains,
         )
+        if mind_domain_specialist_contract.summary:
+            arbitration_summary = (
+                f"{arbitration_summary}; "
+                f"mind_domain_specialist={mind_domain_specialist_contract.status}:"
+                f" {mind_domain_specialist_contract.summary}"
+            )
         if recomposition_applied and recomposition_reason and recomposition_trigger:
             arbitration_summary = (
                 f"{arbitration_summary}; recomposicao={recomposition_trigger}:"
@@ -212,6 +233,24 @@ class CognitiveEngine:
             arbitration_source=arbitration_source,
             primary_mind_family=primary_family,
             primary_domain_driver=dominant_domain_driver,
+            mind_domain_specialist_contract_status=(
+                mind_domain_specialist_contract.status
+            ),
+            mind_domain_specialist_contract_summary=(
+                mind_domain_specialist_contract.summary
+            ),
+            mind_domain_specialist_contract_chain=(
+                mind_domain_specialist_contract.chain
+            ),
+            mind_domain_specialist_active_specialist=(
+                mind_domain_specialist_contract.active_specialist
+            ),
+            mind_domain_specialist_override_mode=(
+                mind_domain_specialist_contract.override_mode
+            ),
+            mind_domain_specialist_fallback_mode=(
+                mind_domain_specialist_contract.fallback_mode
+            ),
             supporting_mind_limit=supporting_limit,
             suppressed_mind_limit=suppressed_limit,
             recomposition_applied=recomposition_applied,
