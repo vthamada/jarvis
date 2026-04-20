@@ -170,6 +170,9 @@ class PilotExecutionResult:
     capability_decision_selected_capabilities: list[str] = field(default_factory=list)
     capability_effectiveness: str = "not_applicable"
     handoff_adapter_status: str = "not_applicable"
+    request_identity_status: str = "not_applicable"
+    mission_policy_status: str = "not_applicable"
+    request_identity_mismatch_flags: list[str] = field(default_factory=list)
     adaptive_intervention_status: str = "not_applicable"
     adaptive_intervention_reason: str | None = None
     adaptive_intervention_trigger: str | None = None
@@ -630,6 +633,11 @@ def run_pilot_scenarios(
                 ),
                 capability_effectiveness=audit.capability_effectiveness,
                 handoff_adapter_status=audit.handoff_adapter_status,
+                request_identity_status=audit.request_identity_status,
+                mission_policy_status=audit.mission_policy_status,
+                request_identity_mismatch_flags=list(
+                    audit.request_identity_mismatch_flags
+                ),
                 adaptive_intervention_status=audit.adaptive_intervention_status,
                 adaptive_intervention_reason=audit.adaptive_intervention_reason,
                 adaptive_intervention_trigger=audit.adaptive_intervention_trigger,

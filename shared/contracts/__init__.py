@@ -173,6 +173,15 @@ class DeliberativePlanContract:
     capability_decision_handoff_mode: str | None = None
     capability_decision_eligible_capabilities: list[str] = field(default_factory=list)
     capability_decision_selected_capabilities: list[str] = field(default_factory=list)
+    request_identity_status: str | None = None
+    request_active_mission: str | None = None
+    request_executive_posture: str | None = None
+    request_authority_level: str | None = None
+    request_risk_profile: str | None = None
+    request_reversibility_mode: str | None = None
+    request_confirmation_mode: str | None = None
+    request_identity_summary: str | None = None
+    request_identity_policy_refs: list[str] = field(default_factory=list)
     adaptive_intervention_status: str | None = None
     adaptive_intervention_reason: str | None = None
     adaptive_intervention_trigger: str | None = None
@@ -370,6 +379,15 @@ class OperationDispatchContract:
     capability_decision_handoff_mode: str | None = None
     capability_decision_eligible_capabilities: list[str] = field(default_factory=list)
     capability_decision_selected_capabilities: list[str] = field(default_factory=list)
+    request_identity_status: str | None = None
+    request_active_mission: str | None = None
+    request_executive_posture: str | None = None
+    request_authority_level: str | None = None
+    request_risk_profile: str | None = None
+    request_reversibility_mode: str | None = None
+    request_confirmation_mode: str | None = None
+    request_identity_summary: str | None = None
+    request_identity_policy_refs: list[str] = field(default_factory=list)
     adaptive_intervention_status: str | None = None
     adaptive_intervention_reason: str | None = None
     adaptive_intervention_trigger: str | None = None

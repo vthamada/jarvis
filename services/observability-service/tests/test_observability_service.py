@@ -4352,3 +4352,200 @@ def test_observability_service_flags_mind_domain_specialist_final_consumption_mi
     assert audit.mind_domain_specialist_status == "aligned"
     assert audit.mind_domain_specialist_effectiveness == "insufficient"
     assert "dispatch_specialist_mismatch" in audit.mind_domain_specialist_mismatch_flags
+
+
+def test_observability_service_marks_request_identity_policy_aligned() -> None:
+    temp_dir = runtime_dir("observability-request-identity-aligned")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service.ingest_events(
+        [
+            InternalEventEnvelope(
+                event_id="evt-rip-1",
+                event_name="input_received",
+                timestamp="2026-04-20T00:00:00+00:00",
+                source_service="orchestrator-service",
+                payload={"content": "Plan the release milestone."},
+                request_id="req-rip-aligned",
+                session_id="sess-rip-aligned",
+                correlation_id="req-rip-aligned",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-rip-2",
+                event_name="plan_built",
+                timestamp="2026-04-20T00:00:01+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "request_identity_status": "resolved",
+                    "request_active_mission": "plan the release milestone safely",
+                    "request_executive_posture": "structured_planning",
+                    "request_authority_level": "bounded_execution",
+                    "request_risk_profile": "governed_caution",
+                    "request_reversibility_mode": "prefer_reversible_change",
+                    "request_confirmation_mode": "explicit_confirmation_required",
+                    "request_identity_summary": (
+                        "mission=plan the release milestone safely; "
+                        "authority=bounded_execution; "
+                        "confirmation=explicit_confirmation_required"
+                    ),
+                    "request_identity_policy_refs": [
+                        "policy://request-identity/default"
+                    ],
+                },
+                request_id="req-rip-aligned",
+                session_id="sess-rip-aligned",
+                correlation_id="req-rip-aligned",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-rip-3",
+                event_name="governance_checked",
+                timestamp="2026-04-20T00:00:02+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "decision": "allow_with_conditions",
+                    "request_identity_status": "resolved",
+                    "request_active_mission": "plan the release milestone safely",
+                    "request_executive_posture": "structured_planning",
+                    "request_authority_level": "bounded_execution",
+                    "request_risk_profile": "governed_caution",
+                    "request_reversibility_mode": "prefer_reversible_change",
+                    "request_confirmation_mode": "explicit_confirmation_required",
+                },
+                request_id="req-rip-aligned",
+                session_id="sess-rip-aligned",
+                correlation_id="req-rip-aligned",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-rip-4",
+                event_name="operation_dispatched",
+                timestamp="2026-04-20T00:00:03+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "request_identity_status": "resolved",
+                    "request_active_mission": "plan the release milestone safely",
+                    "request_executive_posture": "structured_planning",
+                    "request_authority_level": "bounded_execution",
+                    "request_risk_profile": "governed_caution",
+                    "request_reversibility_mode": "prefer_reversible_change",
+                    "request_confirmation_mode": "explicit_confirmation_required",
+                    "capability_decision_selected_mode": "core_with_local_operation",
+                },
+                request_id="req-rip-aligned",
+                session_id="sess-rip-aligned",
+                correlation_id="req-rip-aligned",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-rip-5",
+                event_name="response_synthesized",
+                timestamp="2026-04-20T00:00:04+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "request_identity_status": "resolved",
+                    "request_active_mission": "plan the release milestone safely",
+                    "request_executive_posture": "structured_planning",
+                    "request_authority_level": "bounded_execution",
+                    "request_risk_profile": "governed_caution",
+                    "request_reversibility_mode": "prefer_reversible_change",
+                    "request_confirmation_mode": "explicit_confirmation_required",
+                },
+                request_id="req-rip-aligned",
+                session_id="sess-rip-aligned",
+                correlation_id="req-rip-aligned",
+            ),
+        ]
+    )
+
+    audit = service.audit_flow(ObservabilityQuery(request_id="req-rip-aligned"))
+
+    assert audit.request_identity_status == "healthy"
+    assert audit.mission_policy_status == "policy_aligned"
+    assert audit.request_identity_mismatch_flags == []
+
+
+def test_observability_service_flags_request_identity_confirmation_mismatch() -> None:
+    temp_dir = runtime_dir("observability-request-identity-mismatch")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service.ingest_events(
+        [
+            InternalEventEnvelope(
+                event_id="evt-rip-mm-1",
+                event_name="input_received",
+                timestamp="2026-04-20T00:00:00+00:00",
+                source_service="orchestrator-service",
+                payload={"content": "Apply the change directly."},
+                request_id="req-rip-mismatch",
+                session_id="sess-rip-mismatch",
+                correlation_id="req-rip-mismatch",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-rip-mm-2",
+                event_name="plan_built",
+                timestamp="2026-04-20T00:00:01+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "request_identity_status": "resolved",
+                    "request_active_mission": "apply the change safely",
+                    "request_executive_posture": "structured_planning",
+                    "request_authority_level": "bounded_execution",
+                    "request_risk_profile": "governed_caution",
+                    "request_reversibility_mode": "prefer_reversible_change",
+                    "request_confirmation_mode": "explicit_confirmation_required",
+                },
+                request_id="req-rip-mismatch",
+                session_id="sess-rip-mismatch",
+                correlation_id="req-rip-mismatch",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-rip-mm-3",
+                event_name="governance_checked",
+                timestamp="2026-04-20T00:00:02+00:00",
+                source_service="orchestrator-service",
+                payload={"decision": "allow"},
+                request_id="req-rip-mismatch",
+                session_id="sess-rip-mismatch",
+                correlation_id="req-rip-mismatch",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-rip-mm-4",
+                event_name="operation_dispatched",
+                timestamp="2026-04-20T00:00:03+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "request_identity_status": "resolved",
+                    "request_active_mission": "apply the change safely",
+                    "request_executive_posture": "structured_planning",
+                    "request_authority_level": "bounded_execution",
+                    "request_risk_profile": "governed_caution",
+                    "request_reversibility_mode": "prefer_reversible_change",
+                    "request_confirmation_mode": "explicit_confirmation_required",
+                    "capability_decision_selected_mode": "core_with_local_operation",
+                },
+                request_id="req-rip-mismatch",
+                session_id="sess-rip-mismatch",
+                correlation_id="req-rip-mismatch",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-rip-mm-5",
+                event_name="response_synthesized",
+                timestamp="2026-04-20T00:00:04+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "request_identity_status": "resolved",
+                    "request_active_mission": "apply the change safely",
+                    "request_executive_posture": "structured_planning",
+                    "request_authority_level": "bounded_execution",
+                    "request_risk_profile": "governed_caution",
+                    "request_reversibility_mode": "prefer_reversible_change",
+                    "request_confirmation_mode": "explicit_confirmation_required",
+                },
+                request_id="req-rip-mismatch",
+                session_id="sess-rip-mismatch",
+                correlation_id="req-rip-mismatch",
+            ),
+        ]
+    )
+
+    audit = service.audit_flow(ObservabilityQuery(request_id="req-rip-mismatch"))
+
+    assert audit.request_identity_status == "healthy"
+    assert audit.mission_policy_status == "attention_required"
+    assert "confirmation_mode_mismatch" in audit.request_identity_mismatch_flags

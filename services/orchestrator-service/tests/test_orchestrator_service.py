@@ -97,6 +97,23 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
         result.operation_dispatch.capability_decision_authorization_status
         == "authorized_with_conditions"
     )
+    assert result.operation_dispatch.request_identity_status == "resolved"
+    assert result.operation_dispatch.request_active_mission
+    assert result.operation_dispatch.request_executive_posture == "structured_planning"
+    assert result.operation_dispatch.request_authority_level == "bounded_execution"
+    assert result.operation_dispatch.request_risk_profile == "governed_caution"
+    assert (
+        result.operation_dispatch.request_reversibility_mode
+        == "prefer_reversible_change"
+    )
+    assert (
+        result.operation_dispatch.request_confirmation_mode
+        == "explicit_confirmation_required"
+    )
+    assert result.operation_dispatch.request_identity_summary
+    assert result.operation_dispatch.request_identity_policy_refs == [
+        "policy://request-identity/default"
+    ]
     assert result.operation_dispatch.capability_decision_tool_class == "local_artifact_generation"
     assert result.operation_dispatch.canonical_domain_hints
     assert result.operation_dispatch.primary_canonical_domain == "estrategia_e_pensamento_sistemico"
@@ -160,6 +177,23 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
         result.deliberative_plan.capability_decision_authorization_status
         == "governance_review_required"
     )
+    assert result.deliberative_plan.request_identity_status == "resolved"
+    assert result.deliberative_plan.request_active_mission
+    assert result.deliberative_plan.request_executive_posture == "structured_planning"
+    assert result.deliberative_plan.request_authority_level == "bounded_execution"
+    assert result.deliberative_plan.request_risk_profile == "governed_caution"
+    assert (
+        result.deliberative_plan.request_reversibility_mode
+        == "prefer_reversible_change"
+    )
+    assert (
+        result.deliberative_plan.request_confirmation_mode
+        == "explicit_confirmation_required"
+    )
+    assert result.deliberative_plan.request_identity_summary
+    assert result.deliberative_plan.request_identity_policy_refs == [
+        "policy://request-identity/default"
+    ]
     assert "tradeoff_map" in result.deliberative_plan.route_expected_deliverables
     assert "tradeoff_clarity" in result.deliberative_plan.route_telemetry_focus
     assert result.deliberative_plan.open_loops
@@ -233,6 +267,23 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     assert workflow_event.payload["workflow_profile"] == "strategic_direction_workflow"
     assert workflow_event.payload["workflow_domain_route"] == "strategy"
     assert workflow_event.payload["workflow_state"] == "composed"
+    assert workflow_event.payload["request_identity_status"] == "resolved"
+    assert workflow_event.payload["request_active_mission"]
+    assert workflow_event.payload["request_executive_posture"] == "structured_planning"
+    assert workflow_event.payload["request_authority_level"] == "bounded_execution"
+    assert workflow_event.payload["request_risk_profile"] == "governed_caution"
+    assert (
+        workflow_event.payload["request_reversibility_mode"]
+        == "prefer_reversible_change"
+    )
+    assert (
+        workflow_event.payload["request_confirmation_mode"]
+        == "explicit_confirmation_required"
+    )
+    assert workflow_event.payload["request_identity_summary"]
+    assert workflow_event.payload["request_identity_policy_refs"] == [
+        "policy://request-identity/default"
+    ]
     assert (
         workflow_event.payload["mind_domain_specialist_consumer_mode"]
         == "authoritative_specialist"

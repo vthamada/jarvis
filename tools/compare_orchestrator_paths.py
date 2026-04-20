@@ -107,6 +107,23 @@ def handoff_adapter_assessment(result: PilotExecutionResult) -> str:
     return result.handoff_adapter_status
 
 
+def request_identity_assessment(result: PilotExecutionResult) -> str:
+    return result.request_identity_status
+
+
+def mission_policy_assessment(result: PilotExecutionResult) -> str:
+    return result.mission_policy_status
+
+
+def mission_policy_readiness(result: PilotExecutionResult) -> str:
+    status = result.mission_policy_status
+    if status in {None, "not_applicable"}:
+        return "not_applicable"
+    if result.request_identity_mismatch_flags:
+        return "attention_required"
+    return status
+
+
 def adaptive_intervention_assessment(result: PilotExecutionResult) -> str:
     if result.adaptive_intervention_status in {None, "not_applicable"}:
         return "not_applicable"
@@ -301,6 +318,24 @@ def refinement_vectors(result: PilotExecutionResult) -> list[dict[str, str]]:
                 "aprovados ou contidos com evidencias coerentes"
             ),
         )
+    if result.request_identity_status in {"incomplete", "attention_required"}:
+        add_vector(
+            "request_identity",
+            "p0",
+            (
+                "explicitar a missao ativa, postura executiva e autoridade bounded "
+                "como contrato soberano consistente no runtime"
+            ),
+        )
+    if mission_policy_readiness(result) == "attention_required":
+        add_vector(
+            "mission_policy",
+            "p0",
+            (
+                "realinhar confirmacao, reversibilidade e autonomia final ao contrato "
+                "de identidade executiva por request"
+            ),
+        )
     if result.adaptive_intervention_effectiveness in {"insufficient", "incomplete"}:
         add_vector(
             "adaptive_intervention",
@@ -470,6 +505,12 @@ def evaluation_matrix(
                     for result in workflow_results
                 ]
             ),
+            "request_identity": summarize_statuses(
+                [request_identity_assessment(result) for result in workflow_results]
+            ),
+            "mission_policy": summarize_statuses(
+                [mission_policy_readiness(result) for result in workflow_results]
+            ),
             "adaptive_intervention": summarize_statuses(
                 [adaptive_intervention_assessment(result) for result in workflow_results]
             ),
@@ -503,6 +544,18 @@ def evaluation_matrix(
             "mind_domain_specialist_chain": summarize_statuses(
                 [mind_domain_specialist_chain_assessment(result) for result in workflow_results]
             ),
+            "mind_domain_specialist_effectiveness": summarize_statuses(
+                [
+                    mind_domain_specialist_effectiveness_assessment(result)
+                    for result in workflow_results
+                ]
+            ),
+            "mind_domain_specialist_mismatch": summarize_statuses(
+                [
+                    mind_domain_specialist_mismatch_assessment(result)
+                    for result in workflow_results
+                ]
+            ),
             "priority_vectors": aggregate_refinement_vectors(workflow_results),
         }
     return matrix
@@ -515,6 +568,8 @@ WAVE_TWO_READINESS_REQUIREMENTS: dict[str, dict[str, set[str]]] = {
         "workflow_output": {"baseline_saudavel", "not_applicable"},
         "adaptive_intervention": {"effective", "not_applicable"},
         "mind_domain_specialist_chain": {"aligned", "not_applicable"},
+        "mind_domain_specialist_effectiveness": {"effective", "not_applicable"},
+        "mind_domain_specialist_mismatch": {"aligned", "not_applicable"},
     },
     "qwen_agent": {
         "workflow_profile": {"baseline_saudavel", "maturation_recommended", "not_applicable"},
@@ -1472,6 +1527,15 @@ def compare_results(
                 mismatch_fields.append("capability_effectiveness")
             if baseline.handoff_adapter_status != candidate.handoff_adapter_status:
                 mismatch_fields.append("handoff_adapter_status")
+            if baseline.request_identity_status != candidate.request_identity_status:
+                mismatch_fields.append("request_identity_status")
+            if baseline.mission_policy_status != candidate.mission_policy_status:
+                mismatch_fields.append("mission_policy_status")
+            if (
+                baseline.request_identity_mismatch_flags
+                != candidate.request_identity_mismatch_flags
+            ):
+                mismatch_fields.append("request_identity_mismatch_flags")
             if baseline.memory_causality_status != candidate.memory_causality_status:
                 mismatch_fields.append("memory_causality_status")
             if baseline.memory_maintenance_status != candidate.memory_maintenance_status:
@@ -1789,6 +1853,22 @@ def render_text(payload: dict[str, object]) -> str:
                         f"{item['baseline_handoff_adapter_assessment']}"
                     ),
                     (
+                        "baseline_request_identity_status="
+                        f"{item['baseline']['request_identity_status']}"
+                    ),
+                    (
+                        "baseline_request_identity_assessment="
+                        f"{item['baseline_request_identity_assessment']}"
+                    ),
+                    (
+                        "baseline_mission_policy_status="
+                        f"{item['baseline']['mission_policy_status']}"
+                    ),
+                    (
+                        "baseline_mission_policy_assessment="
+                        f"{item['baseline_mission_policy_assessment']}"
+                    ),
+                    (
                         "baseline_adaptive_intervention_status="
                         f"{item['baseline']['adaptive_intervention_status']}"
                     ),
@@ -1993,6 +2073,30 @@ def render_text(payload: dict[str, object]) -> str:
                         f"{item['candidate_handoff_adapter_assessment']}"
                         if item["candidate_handoff_adapter_assessment"] is not None
                         else "candidate_handoff_adapter_assessment=n/a"
+                    ),
+                    (
+                        "candidate_request_identity_status="
+                        f"{item['candidate']['request_identity_status']}"
+                        if item["candidate"]
+                        else "candidate_request_identity_status=n/a"
+                    ),
+                    (
+                        "candidate_request_identity_assessment="
+                        f"{item['candidate_request_identity_assessment']}"
+                        if item["candidate_request_identity_assessment"] is not None
+                        else "candidate_request_identity_assessment=n/a"
+                    ),
+                    (
+                        "candidate_mission_policy_status="
+                        f"{item['candidate']['mission_policy_status']}"
+                        if item["candidate"]
+                        else "candidate_mission_policy_status=n/a"
+                    ),
+                    (
+                        "candidate_mission_policy_assessment="
+                        f"{item['candidate_mission_policy_assessment']}"
+                        if item["candidate_mission_policy_assessment"] is not None
+                        else "candidate_mission_policy_assessment=n/a"
                     ),
                     (
                         "candidate_adaptive_intervention_status="
@@ -2491,6 +2595,12 @@ def serialize_comparisons(
                 "baseline_handoff_adapter_assessment": handoff_adapter_assessment(
                     item.baseline
                 ),
+                "baseline_request_identity_assessment": request_identity_assessment(
+                    item.baseline
+                ),
+                "baseline_mission_policy_assessment": mission_policy_assessment(
+                    item.baseline
+                ),
                 "baseline_adaptive_intervention_assessment": (
                     adaptive_intervention_assessment(item.baseline)
                 ),
@@ -2586,6 +2696,16 @@ def serialize_comparisons(
                 ),
                 "candidate_handoff_adapter_assessment": (
                     handoff_adapter_assessment(item.candidate)
+                    if item.candidate
+                    else None
+                ),
+                "candidate_request_identity_assessment": (
+                    request_identity_assessment(item.candidate)
+                    if item.candidate
+                    else None
+                ),
+                "candidate_mission_policy_assessment": (
+                    mission_policy_assessment(item.candidate)
                     if item.candidate
                     else None
                 ),

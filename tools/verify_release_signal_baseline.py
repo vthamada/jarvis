@@ -59,6 +59,9 @@ def _make_result(  # type: ignore[no-untyped-def]
     semantic_memory_focus: list[str] | None = None,
     procedural_memory_hint: str | None = "preservar criterio de comparacao mais recente",
     adaptive_intervention_policy_status: str = "not_applicable",
+    request_identity_status: str = "healthy",
+    mission_policy_status: str = "policy_aligned",
+    request_identity_mismatch_flags: list[str] | None = None,
 ) -> Any:
     from tools.internal_pilot_support import PilotExecutionResult
 
@@ -99,6 +102,9 @@ def _make_result(  # type: ignore[no-untyped-def]
         metacognitive_guidance_status=metacognitive_guidance_status,
         mind_disagreement_status=mind_disagreement_status,
         mind_validation_checkpoint_status=mind_validation_checkpoint_status,
+        request_identity_status=request_identity_status,
+        mission_policy_status=mission_policy_status,
+        request_identity_mismatch_flags=request_identity_mismatch_flags or [],
         adaptive_intervention_status=adaptive_intervention_status,
         adaptive_intervention_reason=adaptive_intervention_reason,
         adaptive_intervention_trigger=adaptive_intervention_trigger,
@@ -218,6 +224,9 @@ def _make_pilot_trace_summary() -> Any:
         metacognitive_guidance_status="healthy",
         mind_disagreement_status="validation_required",
         mind_validation_checkpoint_status="attention_required",
+        request_identity_status="healthy",
+        mission_policy_status="attention_required",
+        request_identity_mismatch_flags=["confirmation_mode_mismatch"],
         adaptive_intervention_status="healthy",
         adaptive_intervention_reason="discordancia entre mentes exigiu checkpoint governado",
         adaptive_intervention_trigger="mind_validation_required",
@@ -463,6 +472,10 @@ def main() -> None:
                     procedural_artifact_version=2,
                     mind_domain_specialist_status="mismatch",
                     mind_domain_specialist_chain_status="attention_required",
+                    mind_domain_specialist_effectiveness="insufficient",
+                    mind_domain_specialist_mismatch_flags=[
+                        "completed_specialist_mismatch"
+                    ],
                     cognitive_recomposition_applied=True,
                     cognitive_recomposition_reason=(
                         "primary domain driver has no matching guided specialist route"
@@ -550,6 +563,15 @@ def main() -> None:
         "Comparison summary lost the mind-domain-specialist chain release decision.",
     )
     _ensure(
+        summary["candidate_mind_domain_specialist_effectiveness_decision"]
+        == "insufficient",
+        "Comparison summary lost the mind-domain-specialist effectiveness release decision.",
+    )
+    _ensure(
+        summary["candidate_mind_domain_specialist_mismatch_decision"] == "mismatch",
+        "Comparison summary lost the mind-domain-specialist mismatch release decision.",
+    )
+    _ensure(
         scenario["candidate_workflow_output_assessment"] == "maturation_recommended",
         "Scenario comparison lost the workflow output assessment.",
     )
@@ -628,6 +650,7 @@ def main() -> None:
     _ensure(
         "candidate_refinement_axes=" in comparison_text
         and "mind_composition" in comparison_text
+        and "mind_domain_specialist_effectiveness" in comparison_text
         and "memory_corpus" in comparison_text
         and "workflow_profile" in comparison_text,
         "Comparison text lost the refinement vector summary.",
@@ -643,6 +666,16 @@ def main() -> None:
     _ensure(
         "candidate_memory_lifecycle_decision=review_recommended" in comparison_text,
         "Comparison text lost the memory lifecycle release line.",
+    )
+    _ensure(
+        "candidate_mind_domain_specialist_effectiveness_decision=insufficient"
+        in comparison_text,
+        "Comparison text lost the mind-domain-specialist effectiveness release line.",
+    )
+    _ensure(
+        "candidate_mind_domain_specialist_mismatch_decision=mismatch"
+        in comparison_text,
+        "Comparison text lost the mind-domain-specialist mismatch release line.",
     )
     _ensure(
         "cognitive_recomposition_assessment=coherent" in pilot_text,
@@ -683,6 +716,15 @@ def main() -> None:
     _ensure(
         "cross_session_recall_status=active" in pilot_text,
         "Pilot report text lost the cross-session recall signal.",
+    )
+    _ensure(
+        "mind_domain_specialist_effectiveness=insufficient" in pilot_text,
+        "Pilot report text lost the mind-domain-specialist effectiveness assessment.",
+    )
+    _ensure(
+        "mind_domain_specialist_mismatch_flags=completed_specialist_mismatch"
+        in pilot_text,
+        "Pilot report text lost the mind-domain-specialist mismatch assessment.",
     )
     _ensure(
         "procedural_artifact_status=candidate" in pilot_text,

@@ -20,6 +20,7 @@ from shared.specialist_registry import (
     OPERATIONAL_PLANNING_SPECIALIST,
     STRUCTURED_ANALYSIS_SPECIALIST,
 )
+from shared.state import SYSTEM_IDENTITY
 
 MISSION_SHIFT_KEYWORDS = (
     "new",
@@ -216,6 +217,21 @@ class CapabilityDecision:
     selected_capabilities: list[str]
 
 
+@dataclass(frozen=True)
+class RequestIdentityPolicy:
+    """Sovereign per-request identity and mission policy carried through the runtime."""
+
+    status: str
+    active_mission: str
+    executive_posture: str
+    authority_level: str
+    risk_profile: str
+    reversibility_mode: str
+    confirmation_mode: str
+    summary: str
+    policy_refs: list[str]
+
+
 class PlanningEngine:
     """Build concise operational plans from intent, context, and knowledge."""
 
@@ -385,6 +401,14 @@ class PlanningEngine:
             adaptive_intervention=adaptive_intervention,
             specialist_hints=specialist_hints,
         )
+        request_identity_policy = self._request_identity_policy(
+            context,
+            mission_goal=mission_goal,
+            recommended_task_type=recommended_task_type,
+            requires_human_validation=requires_human_validation,
+            capability_decision=capability_decision,
+            adaptive_intervention=adaptive_intervention,
+        )
         mind_domain_specialist_contract = self._mind_domain_specialist_contract(
             primary_mind=context.primary_mind,
             primary_domain_driver=context.primary_domain_driver,
@@ -420,6 +444,11 @@ class PlanningEngine:
                 "capability_authorization="
                 f"{capability_decision.authorization_status or 'none'}"
             )
+        plan_summary = (
+            f"{plan_summary}; request_identity={request_identity_policy.status}; "
+            f"request_authority={request_identity_policy.authority_level}; "
+            f"request_confirmation={request_identity_policy.confirmation_mode}"
+        )
         if mind_domain_specialist_contract.summary:
             plan_summary = (
                 f"{plan_summary}; mind_domain_specialist="
@@ -455,6 +484,13 @@ class PlanningEngine:
             f"{capability_decision.tool_class or 'none'}; "
             "capability_handoff_mode="
             f"{capability_decision.handoff_mode or 'none'}"
+        )
+        rationale = (
+            f"{rationale}; request_identity_status={request_identity_policy.status}; "
+            f"request_authority={request_identity_policy.authority_level}; "
+            f"request_risk={request_identity_policy.risk_profile}; "
+            f"request_reversibility={request_identity_policy.reversibility_mode}; "
+            f"request_confirmation={request_identity_policy.confirmation_mode}"
         )
         rationale = (
             f"{rationale}; mind_domain_specialist_status="
@@ -564,6 +600,15 @@ class PlanningEngine:
             capability_decision_selected_capabilities=list(
                 capability_decision.selected_capabilities
             ),
+            request_identity_status=request_identity_policy.status,
+            request_active_mission=request_identity_policy.active_mission,
+            request_executive_posture=request_identity_policy.executive_posture,
+            request_authority_level=request_identity_policy.authority_level,
+            request_risk_profile=request_identity_policy.risk_profile,
+            request_reversibility_mode=request_identity_policy.reversibility_mode,
+            request_confirmation_mode=request_identity_policy.confirmation_mode,
+            request_identity_summary=request_identity_policy.summary,
+            request_identity_policy_refs=list(request_identity_policy.policy_refs),
             adaptive_intervention_status=adaptive_intervention.status,
             adaptive_intervention_reason=adaptive_intervention.reason,
             adaptive_intervention_trigger=adaptive_intervention.trigger,
@@ -1098,6 +1143,120 @@ class PlanningEngine:
             adaptive_intervention=adaptive_intervention,
             specialist_hints=specialist_hints,
         )
+
+    def _request_identity_policy(
+        self,
+        context: PlanningContext,
+        *,
+        mission_goal: str,
+        recommended_task_type: str,
+        requires_human_validation: bool,
+        capability_decision: CapabilityDecision,
+        adaptive_intervention: AdaptiveIntervention,
+    ) -> RequestIdentityPolicy:
+        executive_posture = context.identity_mode or context.preferred_response_mode
+        active_mission = mission_goal or SYSTEM_IDENTITY.mission_statement
+        authority_level = self._request_authority_level(
+            recommended_task_type=recommended_task_type,
+            capability_decision=capability_decision,
+            adaptive_intervention=adaptive_intervention,
+        )
+        risk_profile = self._request_risk_profile(
+            context=context,
+            requires_human_validation=requires_human_validation,
+            adaptive_intervention=adaptive_intervention,
+            capability_decision=capability_decision,
+        )
+        reversibility_mode = self._request_reversibility_mode(
+            capability_decision=capability_decision,
+            requires_human_validation=requires_human_validation,
+        )
+        confirmation_mode = self._request_confirmation_mode(
+            capability_decision=capability_decision,
+            requires_human_validation=requires_human_validation,
+        )
+        summary = (
+            f"mission={active_mission}; posture={executive_posture}; "
+            f"authority={authority_level}; risk={risk_profile}; "
+            f"reversibility={reversibility_mode}; confirmation={confirmation_mode}"
+        )
+        return RequestIdentityPolicy(
+            status="resolved",
+            active_mission=active_mission,
+            executive_posture=executive_posture,
+            authority_level=authority_level,
+            risk_profile=risk_profile,
+            reversibility_mode=reversibility_mode,
+            confirmation_mode=confirmation_mode,
+            summary=summary,
+            policy_refs=["policy://request-identity/default"],
+        )
+
+    @staticmethod
+    def _request_authority_level(
+        *,
+        recommended_task_type: str,
+        capability_decision: CapabilityDecision,
+        adaptive_intervention: AdaptiveIntervention,
+    ) -> str:
+        if adaptive_intervention.selected_action == "clarification_checkpoint":
+            return "clarification_only"
+        if capability_decision.selected_mode == "contained_guidance":
+            return "contained_guidance"
+        if capability_decision.selected_mode == "core_with_local_operation":
+            return "bounded_execution"
+        if capability_decision.selected_mode == "core_with_specialist_handoff":
+            return "core_mediated_specialist"
+        if recommended_task_type == "produce_analysis_brief":
+            return "analysis_only"
+        return "bounded_guidance"
+
+    @staticmethod
+    def _request_risk_profile(
+        *,
+        context: PlanningContext,
+        requires_human_validation: bool,
+        adaptive_intervention: AdaptiveIntervention,
+        capability_decision: CapabilityDecision,
+    ) -> str:
+        if adaptive_intervention.selected_action in {
+            "clarification_checkpoint",
+            "safe_containment",
+        }:
+            return "contained_review"
+        if capability_decision.selected_mode == "core_with_local_operation":
+            return "governed_caution"
+        if requires_human_validation or context.risk_markers:
+            return "governed_caution"
+        return "bounded_confidence"
+
+    @staticmethod
+    def _request_reversibility_mode(
+        *,
+        capability_decision: CapabilityDecision,
+        requires_human_validation: bool,
+    ) -> str:
+        if requires_human_validation:
+            return "prefer_reversible_change"
+        if capability_decision.tool_class is not None:
+            return "prefer_reversible_change"
+        return "analysis_reversible"
+
+    @staticmethod
+    def _request_confirmation_mode(
+        *,
+        capability_decision: CapabilityDecision,
+        requires_human_validation: bool,
+    ) -> str:
+        if requires_human_validation or capability_decision.authorization_status in {
+            "human_validation_required",
+            "governance_review_required",
+            "clarification_required",
+        }:
+            return "explicit_confirmation_required"
+        if capability_decision.authorization_status == "authorized_with_conditions":
+            return "conditional_confirmation"
+        return "bounded_autonomy"
 
     @staticmethod
     def _mind_domain_specialist_contract(

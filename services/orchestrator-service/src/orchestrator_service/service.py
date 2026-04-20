@@ -350,6 +350,7 @@ class OrchestratorService:
                         deliberative_plan=deliberative_plan
                     ),
                     **self._capability_decision_event_payload(deliberative_plan),
+                    **self._request_identity_policy_payload(deliberative_plan),
                     "adaptive_intervention_status": (
                         deliberative_plan.adaptive_intervention_status
                     ),
@@ -518,6 +519,7 @@ class OrchestratorService:
                     if governance_check.risk_hint
                     else None,
                     "decision": governance_decision.decision.value,
+                    **self._request_identity_policy_payload(deliberative_plan),
                 },
             )
         )
@@ -544,6 +546,7 @@ class OrchestratorService:
                             ),
                         ),
                     ),
+                    **self._request_identity_policy_payload(deliberative_plan),
                 },
             )
         )
@@ -603,6 +606,7 @@ class OrchestratorService:
                             operation_dispatch.workflow_resume_eligible
                         ),
                         **self._capability_decision_event_payload(operation_dispatch),
+                        **self._request_identity_policy_payload(operation_dispatch),
                         "adaptive_intervention_status": (
                             operation_dispatch.adaptive_intervention_status
                         ),
@@ -651,6 +655,7 @@ class OrchestratorService:
                         "workflow_resume_status": operation_dispatch.workflow_resume_status,
                         "workflow_resume_point": operation_dispatch.workflow_resume_point,
                         **self._capability_decision_event_payload(operation_dispatch),
+                        **self._request_identity_policy_payload(operation_dispatch),
                         "adaptive_intervention_status": (
                             operation_dispatch.adaptive_intervention_status
                         ),
@@ -693,6 +698,7 @@ class OrchestratorService:
                             operation_dispatch.workflow_resume_eligible
                         ),
                         **self._capability_decision_event_payload(operation_dispatch),
+                        **self._request_identity_policy_payload(operation_dispatch),
                         "adaptive_intervention_status": (
                             operation_dispatch.adaptive_intervention_status
                         ),
@@ -890,6 +896,7 @@ class OrchestratorService:
                             ),
                         ),
                     ),
+                    **self._request_identity_policy_payload(deliberative_plan),
                     "adaptive_intervention_status": (
                         deliberative_plan.adaptive_intervention_status
                     ),
@@ -2260,6 +2267,15 @@ class OrchestratorService:
             capability_decision_selected_capabilities=list(
                 plan.capability_decision_selected_capabilities
             ),
+            request_identity_status=plan.request_identity_status,
+            request_active_mission=plan.request_active_mission,
+            request_executive_posture=plan.request_executive_posture,
+            request_authority_level=plan.request_authority_level,
+            request_risk_profile=plan.request_risk_profile,
+            request_reversibility_mode=plan.request_reversibility_mode,
+            request_confirmation_mode=plan.request_confirmation_mode,
+            request_identity_summary=plan.request_identity_summary,
+            request_identity_policy_refs=list(plan.request_identity_policy_refs),
             adaptive_intervention_status=plan.adaptive_intervention_status,
             adaptive_intervention_reason=plan.adaptive_intervention_reason,
             adaptive_intervention_trigger=plan.adaptive_intervention_trigger,
@@ -2329,6 +2345,22 @@ class OrchestratorService:
             "capability_decision_selected_capabilities": list(
                 source.capability_decision_selected_capabilities
             ),
+        }
+
+    @staticmethod
+    def _request_identity_policy_payload(
+        source: DeliberativePlanContract | OperationDispatchContract,
+    ) -> dict[str, object]:
+        return {
+            "request_identity_status": source.request_identity_status,
+            "request_active_mission": source.request_active_mission,
+            "request_executive_posture": source.request_executive_posture,
+            "request_authority_level": source.request_authority_level,
+            "request_risk_profile": source.request_risk_profile,
+            "request_reversibility_mode": source.request_reversibility_mode,
+            "request_confirmation_mode": source.request_confirmation_mode,
+            "request_identity_summary": source.request_identity_summary,
+            "request_identity_policy_refs": list(source.request_identity_policy_refs),
         }
 
     @staticmethod

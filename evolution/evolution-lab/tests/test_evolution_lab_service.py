@@ -123,6 +123,9 @@ def test_evolution_lab_creates_proposal_from_flow_evaluation() -> None:
             adaptive_intervention_status="healthy",
             adaptive_intervention_effectiveness="insufficient",
             adaptive_intervention_policy_status="policy_aligned",
+            request_identity_status="healthy",
+            mission_policy_status="attention_required",
+            request_identity_mismatch_flags=["confirmation_mode_mismatch"],
             memory_causality_status="attached_only",
             workflow_checkpoint_status="attention_required",
             workflow_resume_status="manual_resume_required",
@@ -133,6 +136,8 @@ def test_evolution_lab_creates_proposal_from_flow_evaluation() -> None:
             arbitration_source="mind_registry",
             primary_domain_driver="dados_estatistica_e_inteligencia_analitica",
             mind_domain_specialist_status="incomplete",
+            mind_domain_specialist_effectiveness="incomplete",
+            mind_domain_specialist_mismatch_flags=["dispatch_specialist_mismatch"],
             cognitive_recomposition_applied=True,
             cognitive_recomposition_reason=(
                 "primary domain driver has no matching guided specialist route"
@@ -154,6 +159,12 @@ def test_evolution_lab_creates_proposal_from_flow_evaluation() -> None:
     assert "workflow://profile-status/maturation_recommended" in proposal.source_signals
     assert "workflow://output-status/partial" in proposal.source_signals
     assert "runtime://adaptive-intervention-policy/policy_aligned" in proposal.source_signals
+    assert "runtime://request-identity/healthy" in proposal.source_signals
+    assert "runtime://mission-policy/attention_required" in proposal.source_signals
+    assert (
+        "runtime://request-identity-mismatch/confirmation_mode_mismatch"
+        in proposal.source_signals
+    )
     assert "memory://causality/attached_only" in proposal.source_signals
     assert "workflow://checkpoint-status/attention_required" in proposal.source_signals
     assert "artifact://procedural-status/candidate" in proposal.source_signals
@@ -162,6 +173,14 @@ def test_evolution_lab_creates_proposal_from_flow_evaluation() -> None:
         in proposal.source_signals
     )
     assert "alignment://mind-domain-specialist/incomplete" in proposal.source_signals
+    assert (
+        "alignment://mind-domain-specialist-effectiveness/incomplete"
+        in proposal.source_signals
+    )
+    assert (
+        "alignment://mind-domain-specialist-mismatch/dispatch_specialist_mismatch"
+        in proposal.source_signals
+    )
     assert "mind://recomposition/applied" in proposal.source_signals
     assert proposal.risk_hint == "moderate"
     assert proposal.refinement_vectors[0]["axis"] in {
@@ -171,16 +190,34 @@ def test_evolution_lab_creates_proposal_from_flow_evaluation() -> None:
         "memory_causality",
         "mind_composition",
         "mind_domain_specialist_chain",
+        "mind_domain_specialist_effectiveness",
         "workflow_checkpointing",
     }
     assert "baseline_runtime" in proposal.evaluation_matrix
     assert (
         proposal.evaluation_matrix["baseline_runtime"]["mind_composition"]
-        == "maturation_recommended"
+        == "attention_required"
     )
     assert (
         proposal.evaluation_matrix["baseline_runtime"]["adaptive_intervention_policy"]
         == "review_recommended"
+    )
+    assert (
+        proposal.evaluation_matrix["baseline_runtime"]["request_identity"] == "healthy"
+    )
+    assert (
+        proposal.evaluation_matrix["baseline_runtime"]["mission_policy"]
+        == "attention_required"
+    )
+    assert (
+        proposal.evaluation_matrix["baseline_runtime"][
+            "mind_domain_specialist_effectiveness"
+        ]
+        == "incomplete"
+    )
+    assert (
+        proposal.evaluation_matrix["baseline_runtime"]["mind_domain_specialist_mismatch"]
+        == "mismatch"
     )
     assert "wave_two_readiness_matrix" in proposal.strategy_context
     assert (
@@ -225,6 +262,9 @@ def test_evolution_lab_compares_flow_evaluations() -> None:
             adaptive_intervention_status="healthy",
             adaptive_intervention_effectiveness="insufficient",
             adaptive_intervention_policy_status="policy_aligned",
+            request_identity_status="healthy",
+            mission_policy_status="attention_required",
+            request_identity_mismatch_flags=["confirmation_mode_mismatch"],
             memory_causality_status="attached_only",
             workflow_checkpoint_status="attention_required",
             workflow_resume_status="manual_resume_required",
@@ -233,6 +273,8 @@ def test_evolution_lab_compares_flow_evaluations() -> None:
             procedural_artifact_version=2,
             primary_domain_driver="dados_estatistica_e_inteligencia_analitica",
             mind_domain_specialist_status="incomplete",
+            mind_domain_specialist_effectiveness="insufficient",
+            mind_domain_specialist_mismatch_flags=["completed_specialist_mismatch"],
             continuity_trace_status="attention_required",
             missing_continuity_signals=["memory_continuity_mode"],
             continuity_anomaly_flags=["retomar_missing_target_mission"],
@@ -258,6 +300,9 @@ def test_evolution_lab_compares_flow_evaluations() -> None:
             adaptive_intervention_status="healthy",
             adaptive_intervention_effectiveness="effective",
             adaptive_intervention_policy_status="policy_aligned",
+            request_identity_status="healthy",
+            mission_policy_status="policy_aligned",
+            request_identity_mismatch_flags=[],
             memory_causality_status="causal_guidance",
             workflow_checkpoint_status="healthy",
             workflow_resume_status="resume_available",
@@ -266,6 +311,7 @@ def test_evolution_lab_compares_flow_evaluations() -> None:
             procedural_artifact_version=3,
             primary_domain_driver="dados_estatistica_e_inteligencia_analitica",
             mind_domain_specialist_status="aligned",
+            mind_domain_specialist_effectiveness="effective",
             cognitive_recomposition_applied=True,
             cognitive_recomposition_reason=(
                 "primary domain driver has no matching guided specialist route"
@@ -285,8 +331,11 @@ def test_evolution_lab_compares_flow_evaluations() -> None:
     assert comparison.metric_deltas["workflow_profile"] > 0
     assert comparison.metric_deltas["workflow_output"] > 0
     assert comparison.metric_deltas["adaptive_intervention_policy"] > 0
+    assert comparison.metric_deltas["mission_policy"] > 0
     assert comparison.metric_deltas["memory_causality"] > 0
     assert comparison.metric_deltas["workflow_checkpoint"] > 0
     assert comparison.metric_deltas["workflow_resume"] > 0
     assert comparison.metric_deltas["procedural_artifact"] > 0
     assert comparison.metric_deltas["mind_domain_specialist"] > 0
+    assert comparison.metric_deltas["mind_domain_specialist_effectiveness"] > 0
+    assert comparison.metric_deltas["mind_domain_specialist_mismatch"] > 0

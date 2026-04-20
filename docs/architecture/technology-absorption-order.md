@@ -42,6 +42,9 @@ Regra permanente:
   delimitado;
 - nada externo assume identidade, memoria canonica, governanca final ou sintese
   soberana do nucleo.
+- a ordem de absorcao e viva: o estado da arte deve ser revisado periodicamente,
+  e novas tecnologias podem ser classificadas como referencia, experimento,
+  complemento controlado ou traducao promovivel conforme evidencia.
 
 ---
 
@@ -60,6 +63,8 @@ Uma tecnologia desce na ordem quando:
 - exige importar plataforma demais para colher valor pequeno;
 - pressupoe uma fase que o JARVIS ainda nao abriu;
 - traz mais superficie do que necessidade real.
+- parece novidade relevante, mas ainda nao mostrou ganho claro acima do baseline
+  ou das referencias ja classificadas.
 
 ---
 
@@ -428,6 +433,8 @@ O JARVIS nao precisa adotar mais tecnologia.
 Ele precisa:
 
 - absorver primeiro o que aumenta profundidade do nucleo;
+- manter radar vivo para novas tecnologias sem transformar novidade em permissao
+  de adocao apressada;
 - deixar produto, gateway e superfices amplas para depois;
 - usar algoritmos de autoaperfeicoamento como laboratorio, nao como permissao
   para desgovernar o sistema.

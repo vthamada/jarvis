@@ -81,6 +81,8 @@ class FlowEvaluationInput:
     primary_domain_driver: str | None = None
     mind_domain_specialist_status: str | None = None
     mind_domain_specialist_chain_status: str | None = None
+    mind_domain_specialist_effectiveness: str | None = None
+    mind_domain_specialist_mismatch_flags: list[str] = field(default_factory=list)
     semantic_memory_source: str | None = None
     procedural_memory_source: str | None = None
     semantic_memory_lifecycle: str | None = None
@@ -108,6 +110,9 @@ class FlowEvaluationInput:
     capability_decision_handoff_mode: str | None = None
     capability_effectiveness: str | None = None
     handoff_adapter_status: str | None = None
+    request_identity_status: str | None = None
+    mission_policy_status: str | None = None
+    request_identity_mismatch_flags: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -385,6 +390,18 @@ class EvolutionLabService:
             source_signals.append(
                 f"runtime://handoff-adapter/{evaluation.handoff_adapter_status}"
             )
+        if evaluation.request_identity_status:
+            source_signals.append(
+                f"runtime://request-identity/{evaluation.request_identity_status}"
+            )
+        if evaluation.mission_policy_status:
+            source_signals.append(
+                f"runtime://mission-policy/{evaluation.mission_policy_status}"
+            )
+        for mismatch_flag in evaluation.request_identity_mismatch_flags:
+            source_signals.append(
+                f"runtime://request-identity-mismatch/{mismatch_flag}"
+            )
         if evaluation.adaptive_intervention_status:
             source_signals.append(
                 "runtime://adaptive-intervention/"
@@ -473,6 +490,15 @@ class EvolutionLabService:
             source_signals.append(
                 "alignment://mind-domain-specialist-chain/"
                 f"{evaluation.mind_domain_specialist_chain_status}"
+            )
+        if evaluation.mind_domain_specialist_effectiveness:
+            source_signals.append(
+                "alignment://mind-domain-specialist-effectiveness/"
+                f"{evaluation.mind_domain_specialist_effectiveness}"
+            )
+        for mismatch_flag in evaluation.mind_domain_specialist_mismatch_flags:
+            source_signals.append(
+                f"alignment://mind-domain-specialist-mismatch/{mismatch_flag}"
             )
         if evaluation.cognitive_recomposition_applied:
             source_signals.append("mind://recomposition/applied")
@@ -669,6 +695,12 @@ class EvolutionLabService:
             "handoff_adapter": EvolutionLabService._handoff_adapter_score(
                 evaluation.handoff_adapter_status
             ),
+            "request_identity": EvolutionLabService._status_score(
+                evaluation.request_identity_status
+            ),
+            "mission_policy": EvolutionLabService._mission_policy_score(
+                EvolutionLabService._mission_policy_readiness(evaluation)
+            ),
             "adaptive_intervention": EvolutionLabService._adaptive_intervention_score(
                 evaluation.adaptive_intervention_status,
                 evaluation.adaptive_intervention_effectiveness,
@@ -709,6 +741,16 @@ class EvolutionLabService:
             "mind_domain_specialist_chain": (
                 EvolutionLabService._mind_domain_specialist_score(
                     evaluation.mind_domain_specialist_chain_status
+                )
+            ),
+            "mind_domain_specialist_effectiveness": (
+                EvolutionLabService._mind_domain_specialist_effectiveness_score(
+                    evaluation.mind_domain_specialist_effectiveness
+                )
+            ),
+            "mind_domain_specialist_mismatch": (
+                EvolutionLabService._mind_domain_specialist_mismatch_score(
+                    evaluation.mind_domain_specialist_mismatch_flags
                 )
             ),
             "cognitive_recomposition_coherence": (
@@ -843,6 +885,17 @@ class EvolutionLabService:
         return weights.get(status, 0.7 if status is None else 0.0)
 
     @staticmethod
+    def _mission_policy_score(status: str | None) -> float:
+        weights = {
+            "policy_aligned": 1.0,
+            "mandatory_override": 0.9,
+            "review_recommended": 0.6,
+            "attention_required": 0.0,
+            "not_applicable": 0.7,
+        }
+        return weights.get(status, 0.7 if status is None else 0.0)
+
+    @staticmethod
     def _procedural_artifact_score(status: str | None) -> float:
         weights = {
             "reusable": 1.0,
@@ -864,6 +917,28 @@ class EvolutionLabService:
             "mismatch": 0.0,
         }
         return weights.get(status, 0.7 if status is None else 0.0)
+
+    @staticmethod
+    def _mind_domain_specialist_effectiveness_score(status: str | None) -> float:
+        weights = {
+            "effective": 1.0,
+            "not_applicable": 0.7,
+            "incomplete": 0.2,
+            "insufficient": 0.0,
+        }
+        return weights.get(status, 0.7 if status is None else 0.0)
+
+    @staticmethod
+    def _mind_domain_specialist_mismatch_score(flags: list[str]) -> float:
+        return 1.0 if not flags else 0.0
+
+    @staticmethod
+    def _mind_domain_specialist_mismatch_assessment(evaluation: FlowEvaluationInput) -> str:
+        if evaluation.mind_domain_specialist_mismatch_flags:
+            return "mismatch"
+        if evaluation.mind_domain_specialist_effectiveness == "not_applicable":
+            return "not_applicable"
+        return "aligned"
 
     @staticmethod
     def _capability_effectiveness_score(status: str | None) -> float:
@@ -941,6 +1016,13 @@ class EvolutionLabService:
             return True
         if evaluation.handoff_adapter_status in {"incomplete", "attention_required"}:
             return True
+        if evaluation.request_identity_status in {"incomplete", "attention_required"}:
+            return True
+        if (
+            EvolutionLabService._mission_policy_readiness(evaluation)
+            in {"attention_required", "review_recommended"}
+        ):
+            return True
         if evaluation.adaptive_intervention_status == "attention_required":
             return True
         if (
@@ -978,6 +1060,13 @@ class EvolutionLabService:
             "mismatch",
         }:
             return True
+        if evaluation.mind_domain_specialist_effectiveness in {
+            "insufficient",
+            "incomplete",
+        }:
+            return True
+        if evaluation.mind_domain_specialist_mismatch_flags:
+            return True
         return EvolutionLabService._recomposition_coherence_score(evaluation) < 1.0
 
     @staticmethod
@@ -996,6 +1085,10 @@ class EvolutionLabService:
         if evaluation.capability_decision_status == "attention_required":
             return "moderate"
         if evaluation.handoff_adapter_status == "attention_required":
+            return "moderate"
+        if evaluation.request_identity_status == "attention_required":
+            return "moderate"
+        if EvolutionLabService._mission_policy_readiness(evaluation) == "attention_required":
             return "moderate"
         if evaluation.capability_effectiveness in {"insufficient", "incomplete"}:
             return "moderate"
@@ -1021,6 +1114,10 @@ class EvolutionLabService:
             "attention_required",
             "mismatch",
         }:
+            return "moderate"
+        if evaluation.mind_domain_specialist_effectiveness in {"insufficient", "incomplete"}:
+            return "moderate"
+        if evaluation.mind_domain_specialist_mismatch_flags:
             return "moderate"
         if evaluation.workflow_output_status == "misaligned":
             return "moderate"
@@ -1050,6 +1147,11 @@ class EvolutionLabService:
         if evaluation.mind_domain_specialist_status == "incomplete":
             return "low_to_moderate"
         if evaluation.mind_domain_specialist_chain_status in {"incomplete", "evidence_partial"}:
+            return "low_to_moderate"
+        if evaluation.mind_domain_specialist_effectiveness in {
+            "insufficient",
+            "incomplete",
+        }:
             return "low_to_moderate"
         if evaluation.missing_required_events or evaluation.missing_continuity_signals:
             return "low_to_moderate"
@@ -1123,6 +1225,21 @@ class EvolutionLabService:
                 "p0",
                 "restaurar o adapter through_core_only para que handoffs sejam aprovados ou contidos com evidencias coerentes",
             )
+        if evaluation.request_identity_status in {"incomplete", "attention_required"}:
+            add_vector(
+                "request_identity",
+                "p0",
+                "explicitar missao ativa, postura executiva e autoridade bounded como contrato soberano rastreavel",
+            )
+        mission_policy_readiness = EvolutionLabService._mission_policy_readiness(
+            evaluation
+        )
+        if mission_policy_readiness == "attention_required":
+            add_vector(
+                "mission_policy",
+                "p0",
+                "realinhar confirmacao, reversibilidade e autonomia final ao contrato de identidade por request",
+            )
         if evaluation.adaptive_intervention_effectiveness in {"insufficient", "incomplete"}:
             add_vector(
                 "adaptive_intervention",
@@ -1194,6 +1311,23 @@ class EvolutionLabService:
                 "p0",
                 "restaurar coerencia evidence-first entre mente primaria, dominio e especialista guiado",
             )
+        if evaluation.mind_domain_specialist_mismatch_flags:
+            add_vector(
+                "mind_domain_specialist_effectiveness",
+                "p0",
+                "eliminar mismatch entre cadeia autoritativa, framing final e especialista efetivamente consumido",
+            )
+        elif evaluation.mind_domain_specialist_effectiveness in {
+            "insufficient",
+            "incomplete",
+        }:
+            add_vector(
+                "mind_domain_specialist_effectiveness",
+                "p0"
+                if evaluation.mind_domain_specialist_effectiveness == "insufficient"
+                else "p1",
+                "fazer a arbitragem declarativa produzir consumo final coerente com a cadeia autoritativa e o fallback governado",
+            )
         return vectors
 
     @staticmethod
@@ -1219,6 +1353,12 @@ class EvolutionLabService:
                     evaluation.capability_effectiveness or "not_applicable"
                 ),
                 "handoff_adapter": evaluation.handoff_adapter_status or "not_applicable",
+                "request_identity": (
+                    evaluation.request_identity_status or "not_applicable"
+                ),
+                "mission_policy": EvolutionLabService._mission_policy_readiness(
+                    evaluation
+                ),
                 "adaptive_intervention": (
                     evaluation.adaptive_intervention_effectiveness
                     if evaluation.adaptive_intervention_status not in {None, "not_applicable"}
@@ -1250,6 +1390,23 @@ class EvolutionLabService:
                 "procedural_artifact": (
                     evaluation.procedural_artifact_status or "not_applicable"
                 ),
+                "mind_domain_specialist": (
+                    evaluation.mind_domain_specialist_status or "not_applicable"
+                ),
+                "mind_domain_specialist_chain": (
+                    evaluation.mind_domain_specialist_chain_status or "not_applicable"
+                ),
+                "mind_domain_specialist_effectiveness": (
+                    evaluation.mind_domain_specialist_effectiveness or "not_applicable"
+                ),
+                "mind_domain_specialist_mismatch": (
+                    EvolutionLabService._mind_domain_specialist_mismatch_assessment(
+                        evaluation
+                    )
+                ),
+                "mind_domain_specialist_mismatch_flags": list(
+                    evaluation.mind_domain_specialist_mismatch_flags
+                ),
             }
         }
 
@@ -1270,11 +1427,28 @@ class EvolutionLabService:
         return status
 
     @staticmethod
+    def _mission_policy_readiness(
+        evaluation: FlowEvaluationInput,
+    ) -> str:
+        status = evaluation.mission_policy_status
+        if status in {None, "not_applicable"}:
+            return "not_applicable"
+        if evaluation.request_identity_status in {"incomplete", "attention_required"}:
+            return "attention_required"
+        if evaluation.request_identity_mismatch_flags:
+            return "attention_required"
+        return status
+
+    @staticmethod
     def _mind_composition_assessment(evaluation: FlowEvaluationInput) -> str:
         if evaluation.mind_domain_specialist_chain_status in {
             "attention_required",
             "mismatch",
         }:
+            return "attention_required"
+        if evaluation.mind_domain_specialist_effectiveness == "insufficient":
+            return "attention_required"
+        if evaluation.mind_domain_specialist_mismatch_flags:
             return "attention_required"
         if evaluation.mind_domain_specialist_status in {"attention_required", "mismatch"}:
             return "attention_required"
@@ -1286,6 +1460,8 @@ class EvolutionLabService:
             "incomplete",
             "evidence_partial",
         }:
+            return "maturation_recommended"
+        if evaluation.mind_domain_specialist_effectiveness == "incomplete":
             return "maturation_recommended"
         if evaluation.mind_domain_specialist_status in {"incomplete", "evidence_partial"}:
             return "maturation_recommended"
@@ -1312,6 +1488,8 @@ class EvolutionLabService:
                 "workflow_output": {"coherent", "not_applicable"},
                 "adaptive_intervention": {"effective", "not_applicable"},
                 "mind_domain_specialist_chain": {"aligned", "not_applicable"},
+                "mind_domain_specialist_effectiveness": {"effective", "not_applicable"},
+                "mind_domain_specialist_mismatch": {"aligned", "not_applicable"},
             },
             "qwen_agent": {
                 "workflow_profile": {"healthy", "maturation_recommended", "not_applicable"},

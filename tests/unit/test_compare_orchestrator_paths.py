@@ -59,6 +59,9 @@ def make_result(  # type: ignore[no-untyped-def]
     adaptive_intervention_status: str = "not_applicable",
     adaptive_intervention_effectiveness: str = "not_applicable",
     adaptive_intervention_policy_status: str = "not_applicable",
+    request_identity_status: str = "healthy",
+    mission_policy_status: str = "policy_aligned",
+    request_identity_mismatch_flags: list[str] | None = None,
     memory_causality_status: str = "causal_guidance",
     memory_maintenance_status: str = "compaction_active",
     memory_maintenance_effectiveness: str = "effective",
@@ -153,6 +156,9 @@ def make_result(  # type: ignore[no-untyped-def]
         adaptive_intervention_status=adaptive_intervention_status,
         adaptive_intervention_effectiveness=adaptive_intervention_effectiveness,
         adaptive_intervention_policy_status=adaptive_intervention_policy_status,
+        request_identity_status=request_identity_status,
+        mission_policy_status=mission_policy_status,
+        request_identity_mismatch_flags=request_identity_mismatch_flags or [],
         memory_causality_status=memory_causality_status,
         memory_maintenance_status=memory_maintenance_status,
         memory_maintenance_reason="memory pressure requires review before expanding reuse",
@@ -366,6 +372,27 @@ def test_compare_results_flags_capability_mismatch_fields() -> None:
     ]
 
 
+def test_compare_results_flags_request_identity_policy_mismatch_fields() -> None:
+    baseline = [make_result(scenario_id="x", path_name="baseline")]
+    candidate = [
+        make_result(
+            scenario_id="x",
+            path_name="langgraph",
+            request_identity_status="attention_required",
+            mission_policy_status="attention_required",
+            request_identity_mismatch_flags=["confirmation_mode_mismatch"],
+        )
+    ]
+
+    comparisons = compare_results(baseline, candidate)
+
+    assert comparisons[0].mismatch_fields == [
+        "request_identity_status",
+        "mission_policy_status",
+        "request_identity_mismatch_flags",
+    ]
+
+
 def test_compare_results_flags_mind_domain_specialist_effectiveness_mismatch_fields() -> None:
     baseline = [make_result(scenario_id="x", path_name="baseline")]
     candidate = [
@@ -473,6 +500,30 @@ def test_serialize_comparisons_reports_equivalent_verdict() -> None:
         == "not_applicable"
     )
     assert (
+        payload["comparison_summary"]["baseline_evaluation_matrix"]["strategy"][
+            "request_identity"
+        ]
+        == "healthy"
+    )
+    assert (
+        payload["comparison_summary"]["baseline_evaluation_matrix"]["strategy"][
+            "mission_policy"
+        ]
+        == "policy_aligned"
+    )
+    assert (
+        payload["comparison_summary"]["baseline_evaluation_matrix"]["strategy"][
+            "mind_domain_specialist_effectiveness"
+        ]
+        == "effective"
+    )
+    assert (
+        payload["comparison_summary"]["baseline_evaluation_matrix"]["strategy"][
+            "mind_domain_specialist_mismatch"
+        ]
+        == "aligned"
+    )
+    assert (
         payload["comparison_summary"]["baseline_wave_two_readiness_matrix"][
             "openai_agents_sdk"
         ]["status"]
@@ -488,9 +539,18 @@ def test_evaluation_matrix_marks_policy_review_recommended_when_effect_is_insuff
                 make_result(
                     scenario_id="x",
                     path_name="langgraph",
+                    mind_domain_specialist_status="mismatch",
+                    mind_domain_specialist_chain_status="attention_required",
+                    mind_domain_specialist_effectiveness="insufficient",
+                    mind_domain_specialist_mismatch_flags=[
+                        "dispatch_specialist_mismatch"
+                    ],
                     adaptive_intervention_status="healthy",
                     adaptive_intervention_effectiveness="insufficient",
                     adaptive_intervention_policy_status="policy_aligned",
+                    request_identity_status="healthy",
+                    mission_policy_status="attention_required",
+                    request_identity_mismatch_flags=["confirmation_mode_mismatch"],
                 )
             ],
         ),
@@ -501,7 +561,25 @@ def test_evaluation_matrix_marks_policy_review_recommended_when_effect_is_insuff
     assert payload["comparison_summary"]["candidate_evaluation_matrix"]["strategy"][
         "adaptive_intervention_policy"
     ] == "review_recommended"
+    assert payload["comparison_summary"]["candidate_evaluation_matrix"]["strategy"][
+        "request_identity"
+    ] == "healthy"
+    assert payload["comparison_summary"]["candidate_evaluation_matrix"]["strategy"][
+        "mission_policy"
+    ] == "attention_required"
+    assert payload["comparison_summary"]["candidate_evaluation_matrix"]["strategy"][
+        "mind_domain_specialist_effectiveness"
+    ] == "insufficient"
+    assert payload["comparison_summary"]["candidate_evaluation_matrix"]["strategy"][
+        "mind_domain_specialist_mismatch"
+    ] == "mismatch"
     assert "adaptive_intervention_policy" in {
+        item["axis"] for item in payload["comparison_summary"]["candidate_refinement_vectors"]
+    }
+    assert "mission_policy" in {
+        item["axis"] for item in payload["comparison_summary"]["candidate_refinement_vectors"]
+    }
+    assert "mind_domain_specialist_effectiveness" in {
         item["axis"] for item in payload["comparison_summary"]["candidate_refinement_vectors"]
     }
 
@@ -563,6 +641,10 @@ def test_render_text_reports_workflow_profile_status() -> None:
     assert (
         "candidate_adaptive_intervention_policy_decision=policy_aligned" in rendered
     )
+    assert "baseline_request_identity_status=healthy" in rendered
+    assert "candidate_request_identity_status=healthy" in rendered
+    assert "baseline_mission_policy_status=policy_aligned" in rendered
+    assert "candidate_mission_policy_status=policy_aligned" in rendered
     assert "baseline_memory_causality_status=causal_guidance" in rendered
     assert "candidate_memory_causality_status=causal_guidance" in rendered
     assert "candidate_memory_corpus_status=monitor" in rendered

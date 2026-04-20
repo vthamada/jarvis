@@ -28,10 +28,10 @@ Leitura correta:
 
 Estado de referencia desta revisao:
 
-- data da fotografia: `2026-04-14`
+- data da fotografia: `2026-04-20`
 - ultimo recorte funcional fechado: `v2-native-memory-scope-hardening-cut`
 - ultimo recorte estrutural fechado: `v2-repository-hygiene-and-tools-review-cut`
-- passo funcional em andamento: lote `MB-062` a `MB-066` concluido, lote `MB-067` a `MB-071` concluido, lote `MB-072` a `MB-076` concluido e lote `MB-077` a `MB-081` aberto (`MB-037` a `MB-040` concluidos; `MB-041` a `MB-046` concluidos; `MB-047` a `MB-051` concluidos; `MB-052` a `MB-056` concluidos; `MB-057` a `MB-061` concluidos; `MB-062` a `MB-066` concluidos; `MB-067` a `MB-071` concluidos; `MB-072` a `MB-076` concluidos; `MB-077` concluido; `MB-078` concluido; `MB-079` concluido; `MB-080` em `ready`)
+- passo funcional em andamento: lote `MB-062` a `MB-066` concluido, lote `MB-067` a `MB-071` concluido, lote `MB-072` a `MB-076` concluido, lote `MB-077` a `MB-081` concluido, lote `MB-082` a `MB-086` concluido e lote `MB-087` a `MB-091` aberto com `MB-087` em `ready` (`MB-037` a `MB-040` concluidos; `MB-041` a `MB-046` concluidos; `MB-047` a `MB-051` concluidos; `MB-052` a `MB-056` concluidos; `MB-057` a `MB-061` concluidos; `MB-062` a `MB-066` concluidos; `MB-067` a `MB-071` concluidos; `MB-072` a `MB-076` concluidos; `MB-077` concluido; `MB-078` concluido; `MB-079` concluido; `MB-080` concluido; `MB-081` concluido; `MB-082` concluido; `MB-083` concluido; `MB-084` concluido; `MB-085` concluido; `MB-086` concluido`)
 
 Leitura executiva:
 
@@ -111,7 +111,7 @@ Em resumo:
 
 - a visao esta preservada;
 - o runtime esta coerente com a fase do programa;
-- o backlog correto agora e de maturacao disciplinada do nucleo, preparacao da autoevolucao governada e traducao disciplinada da Onda 1 de absorcao tecnologica, nao de abertura imediata de uma nova vertical.
+- o backlog correto agora e de evals expandidas, comparacao mais forte do baseline e lane controlada de experimentos da Onda 2, nao de abertura imediata de uma nova vertical.
 
 ---
 
@@ -375,18 +375,20 @@ Foco:
   aplicando decisao soberana de capacidades, ferramentas e handoffs bounded por
   request, com evidencia auditavel e uso evolutivo coerente no baseline.
 
-### Passo 4 - executar o proximo lote micro no eixo de arbitragem declarativa
+### Passo 4 - tratar a arbitragem declarativa como baseline fechado
 
 Foco:
 
-- a nova prioridade micro passou a ser `SG-005`, por ser hoje o prolongamento
-  tecnicamente mais natural da consolidacao de capacidade soberana e memoria
-  viva no nucleo do
-  `v2 restante`;
-- esse eixo agora foi fatiado como lote `MB-077` a `MB-081`; `MB-077` ja foi
-  concluido, `MB-078` e `MB-079` tambem ja foram fechados, e `MB-080` esta em
-  `ready` para fazer a efetividade dessa arbitragem pesar no loop evolutivo e
-  na leitura de release do runtime.
+- a prioridade micro `SG-005` foi integralmente fechada como lote `MB-077` a
+  `MB-081`, concluindo contrato, consumo final, evidencia auditavel, uso
+  evolutivo e fechamento documental da arbitragem declarativa;
+- `evolution-lab`, `evolution_from_pilot`, comparadores e verificadores de
+  release agora tratam efetividade e mismatch da arbitragem `mente -> dominio
+  -> especialista` como insumo formal de `refinement_vectors`,
+  `evaluation_matrix` e leitura de release;
+- o lote `MB-082` a `MB-086` foi fechado e a fila micro voltou a ficar sem item `ready`,
+  para formalizar identidade, missao e politica como checklist executiva por
+  request antes da proxima expansao de evals ou experimentos.
 
 ### Passo 5 - manter frentes fora da fila micro ate mudanca explicita de fase
 
@@ -436,7 +438,8 @@ e traducao tecnologica disciplinada; mas a ponte ja foi usada de novo para
 abrir o lote seguinte. Por isso,
 `docs/implementation/unified-gap-and-absorption-backlog.md` segue como origem
 da prioridade atual, enquanto `docs/implementation/execution-backlog.md`
-volta a ser a fila executavel concreta em `MB-077` a `MB-081`.
+registra agora o fechamento do lote `MB-082` a `MB-086`, deixando a fila micro sem item `ready`,
+formalizando `request_identity_policy` como o proximo passo correto do nucleo.
 
 ---
 

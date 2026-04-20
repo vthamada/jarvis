@@ -90,6 +90,9 @@ class FlowAudit:
     capability_decision_selected_capabilities: list[str]
     capability_effectiveness: str
     handoff_adapter_status: str
+    request_identity_status: str
+    mission_policy_status: str
+    request_identity_mismatch_flags: list[str]
     mind_domain_specialist_status: str
     mind_domain_specialist_chain_status: str
     mind_domain_specialist_chain: str | None
@@ -183,6 +186,10 @@ class FlowAudit:
             and self.capability_decision_status in {"healthy", "not_applicable"}
             and self.capability_effectiveness in {"effective", "not_applicable"}
             and self.handoff_adapter_status in {"healthy", "not_applicable", "contained"}
+            and self.request_identity_status in {"healthy", "not_applicable"}
+            and self.mission_policy_status
+            in {"policy_aligned", "mandatory_override", "not_applicable"}
+            and not self.request_identity_mismatch_flags
             and self.mind_domain_specialist_effectiveness
             in {"effective", "not_applicable"}
             and self.adaptive_intervention_status in {"healthy", "not_applicable"}
@@ -372,6 +379,9 @@ class ObservabilityService:
                 capability_decision_selected_capabilities=[],
                 capability_effectiveness="incomplete",
                 handoff_adapter_status="incomplete",
+                request_identity_status="incomplete",
+                mission_policy_status="incomplete",
+                request_identity_mismatch_flags=[],
                 event_names=[],
                 missing_required_events=list(required_events),
                 anomaly_flags=["no_events_found"],
@@ -1430,6 +1440,33 @@ class ObservabilityService:
                 events, "specialist_handoff_blocked"
             ),
         )
+        request_identity_source_event = (
+            response_event
+            if response_event
+            and response_event.payload.get("request_identity_status") is not None
+            else (
+                operation_dispatched_event
+                if operation_dispatched_event
+                and operation_dispatched_event.payload.get("request_identity_status")
+                is not None
+                else (
+                    plan_governed_event
+                    if plan_governed_event
+                    and plan_governed_event.payload.get("request_identity_status")
+                    is not None
+                    else plan_event
+                )
+            )
+        )
+        request_identity_status = self._request_identity_status(
+            source_event=request_identity_source_event,
+        )
+        request_identity_mismatch_flags = self._request_identity_mismatch_flags(
+            request_identity_source_event=request_identity_source_event,
+            governance_event=governance_event,
+            operation_dispatched_event=operation_dispatched_event,
+            response_event=response_event,
+        )
         mind_domain_specialist_status = self._mind_domain_specialist_status(
             context_event=context_event,
             specialist_selection_event=specialist_selection_event,
@@ -1549,6 +1586,12 @@ class ObservabilityService:
             workflow_resume_status=workflow_resume_status,
             continuity_action=continuity_action,
         )
+        mission_policy_status = self._mission_policy_status(
+            request_identity_status=request_identity_status,
+            request_identity_mismatch_flags=request_identity_mismatch_flags,
+            request_identity_source_event=request_identity_source_event,
+            governance_event=governance_event,
+        )
 
         return FlowAudit(
             request_id=first_event.request_id,
@@ -1601,6 +1644,9 @@ class ObservabilityService:
             ),
             capability_effectiveness=capability_effectiveness,
             handoff_adapter_status=handoff_adapter_status,
+            request_identity_status=request_identity_status,
+            mission_policy_status=mission_policy_status,
+            request_identity_mismatch_flags=request_identity_mismatch_flags,
             mind_domain_specialist_status=mind_domain_specialist_status,
             mind_domain_specialist_chain_status=mind_domain_specialist_chain_status,
             mind_domain_specialist_chain=mind_domain_specialist_chain,
@@ -2763,6 +2809,132 @@ class ObservabilityService:
         if specialist_handoff_blocked_event is not None:
             return "attention_required"
         return "healthy"
+
+    @staticmethod
+    def _request_identity_status(
+        *,
+        source_event: InternalEventEnvelope | None,
+    ) -> str:
+        if source_event is None:
+            return "not_applicable"
+        status = source_event.payload.get("request_identity_status")
+        active_mission = source_event.payload.get("request_active_mission")
+        executive_posture = source_event.payload.get("request_executive_posture")
+        authority_level = source_event.payload.get("request_authority_level")
+        risk_profile = source_event.payload.get("request_risk_profile")
+        reversibility_mode = source_event.payload.get("request_reversibility_mode")
+        confirmation_mode = source_event.payload.get("request_confirmation_mode")
+        summary = source_event.payload.get("request_identity_summary")
+        policy_refs = list(source_event.payload.get("request_identity_policy_refs", []))
+        if (
+            status is None
+            and active_mission is None
+            and executive_posture is None
+            and authority_level is None
+            and risk_profile is None
+            and reversibility_mode is None
+            and confirmation_mode is None
+            and summary is None
+            and not policy_refs
+        ):
+            return "not_applicable"
+        if status != "resolved":
+            return "attention_required"
+        if not active_mission or executive_posture is None or authority_level is None:
+            return "attention_required"
+        if risk_profile is None or reversibility_mode is None or confirmation_mode is None:
+            return "attention_required"
+        return "healthy"
+
+    @staticmethod
+    def _request_identity_mismatch_flags(
+        *,
+        request_identity_source_event: InternalEventEnvelope | None,
+        governance_event: InternalEventEnvelope | None,
+        operation_dispatched_event: InternalEventEnvelope | None,
+        response_event: InternalEventEnvelope | None,
+    ) -> list[str]:
+        if request_identity_source_event is None:
+            return []
+        payload = request_identity_source_event.payload
+        authority_level = payload.get("request_authority_level")
+        confirmation_mode = payload.get("request_confirmation_mode")
+        reversibility_mode = payload.get("request_reversibility_mode")
+        active_mission = payload.get("request_active_mission")
+        flags: list[str] = []
+
+        governance_decision = (
+            str(governance_event.payload.get("decision"))
+            if governance_event and governance_event.payload.get("decision") is not None
+            else None
+        )
+        dispatched_mode = (
+            str(operation_dispatched_event.payload.get("capability_decision_selected_mode"))
+            if operation_dispatched_event
+            and operation_dispatched_event.payload.get("capability_decision_selected_mode")
+            is not None
+            else None
+        )
+        response_mission = (
+            str(response_event.payload.get("request_active_mission"))
+            if response_event and response_event.payload.get("request_active_mission") is not None
+            else None
+        )
+
+        if (
+            authority_level == "analysis_only"
+            and dispatched_mode == "core_with_local_operation"
+        ):
+            flags.append("authority_level_mismatch")
+        if (
+            confirmation_mode == "explicit_confirmation_required"
+            and governance_decision == "allow"
+        ):
+            flags.append("confirmation_mode_mismatch")
+        if (
+            reversibility_mode == "prefer_reversible_change"
+            and dispatched_mode == "core_with_local_operation"
+            and governance_decision not in {"allow_with_conditions", "defer_for_validation"}
+        ):
+            flags.append("reversibility_mode_mismatch")
+        if active_mission and response_mission not in {None, str(active_mission)}:
+            flags.append("active_mission_mismatch")
+        return flags
+
+    @staticmethod
+    def _mission_policy_status(
+        *,
+        request_identity_status: str,
+        request_identity_mismatch_flags: list[str],
+        request_identity_source_event: InternalEventEnvelope | None,
+        governance_event: InternalEventEnvelope | None,
+    ) -> str:
+        if request_identity_status == "not_applicable":
+            return "not_applicable"
+        if request_identity_status != "healthy":
+            return "attention_required"
+        if request_identity_mismatch_flags:
+            return "attention_required"
+        if request_identity_source_event is None:
+            return "attention_required"
+        confirmation_mode = request_identity_source_event.payload.get(
+            "request_confirmation_mode"
+        )
+        governance_decision = (
+            str(governance_event.payload.get("decision"))
+            if governance_event and governance_event.payload.get("decision") is not None
+            else None
+        )
+        if confirmation_mode == "explicit_confirmation_required":
+            return (
+                "policy_aligned"
+                if governance_decision in {
+                    "allow_with_conditions",
+                    "defer_for_validation",
+                }
+                else "attention_required"
+            )
+        return "policy_aligned"
 
     @staticmethod
     def _capability_effectiveness(

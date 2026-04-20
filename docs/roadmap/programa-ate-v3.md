@@ -67,6 +67,9 @@ Ao longo de todas as fases, o programa deve preservar as seguintes premissas:
 - modelos inferenciais, LLMs e runtimes auxiliares entram como substrato cognitivo ou operacional subordinado ao nucleo;
 - chat, voz, console, web, API e futuras superficies devem expor a mesma entidade, e nao agentes concorrentes;
 - o caminho ate `v3` inclui construir estado operacional mais rico do ecossistema, nao apenas memoria conversacional.
+- `v1`, `v1.5`, `v2` e `v3` sao fases de maturacao do mesmo objetivo final: uma
+  entidade soberana, autoevolutiva, multissuperficie e capaz de absorver o
+  estado da arte sem terceirizar o cerebro do sistema.
 
 ---
 
@@ -217,6 +220,12 @@ Para absorver algo no nucleo, e obrigatorio demonstrar:
 - evidencia operacional ou experimental suficiente;
 - delimitacao clara do que entra agora e do que fica fora.
 
+Regra complementar:
+
+- o radar tecnologico permanece ativo em todas as fases;
+- o que muda entre fases nao e a permissao para estudar o estado da arte, e sim
+  o rigor necessario para traduzi-lo para o nucleo ou promove-lo no programa.
+
 Defaults atuais:
 
 - `PostgreSQL`: absorvido no baseline;
@@ -295,3 +304,6 @@ O sistema de planejamento oficial do JARVIS passa a ser:
 
 Essa separacao existe para impedir que o `HANDOFF.md` vire roadmap macro e para evitar
 que o programa ate `v3` perca precisao operacional.
+
+Ela tambem preserva uma regra de leitura importante: o conservadorismo do corte
+atual e contencao de fase, nao reducao da ambicao final do JARVIS.

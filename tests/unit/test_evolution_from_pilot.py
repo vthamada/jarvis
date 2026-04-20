@@ -51,6 +51,58 @@ def test_evaluation_from_dict_preserves_capability_signals() -> None:
     assert evaluation.handoff_adapter_status == "healthy"
 
 
+def test_evaluation_from_dict_preserves_mind_domain_specialist_effectiveness() -> None:
+    evaluation = _evaluation_from_dict(
+        {
+            "request_id": "req-3",
+            "session_id": "sess-3",
+            "mission_id": None,
+            "governance_decision": "allow",
+            "operation_status": "completed",
+            "total_events": 6,
+            "duration_seconds": 1.4,
+            "missing_required_events": [],
+            "anomaly_flags": [],
+            "mind_domain_specialist_status": "mismatch",
+            "mind_domain_specialist_chain_status": "attention_required",
+            "mind_domain_specialist_effectiveness": "insufficient",
+            "mind_domain_specialist_mismatch_flags": [
+                "dispatch_specialist_mismatch"
+            ],
+        }
+    )
+
+    assert evaluation.mind_domain_specialist_status == "mismatch"
+    assert evaluation.mind_domain_specialist_chain_status == "attention_required"
+    assert evaluation.mind_domain_specialist_effectiveness == "insufficient"
+    assert evaluation.mind_domain_specialist_mismatch_flags == [
+        "dispatch_specialist_mismatch"
+    ]
+
+
+def test_evaluation_from_dict_preserves_request_identity_policy_signals() -> None:
+    evaluation = _evaluation_from_dict(
+        {
+            "request_id": "req-4",
+            "session_id": "sess-4",
+            "mission_id": None,
+            "governance_decision": "allow_with_conditions",
+            "operation_status": "completed",
+            "total_events": 6,
+            "duration_seconds": 1.6,
+            "missing_required_events": [],
+            "anomaly_flags": [],
+            "request_identity_status": "healthy",
+            "mission_policy_status": "policy_aligned",
+            "request_identity_mismatch_flags": [],
+        }
+    )
+
+    assert evaluation.request_identity_status == "healthy"
+    assert evaluation.mission_policy_status == "policy_aligned"
+    assert evaluation.request_identity_mismatch_flags == []
+
+
 def test_render_text_reports_adaptive_intervention_policy_assessment() -> None:
     rendered = render_text(
         {
@@ -77,6 +129,10 @@ def test_render_text_reports_adaptive_intervention_policy_assessment() -> None:
                     "candidate_memory_causality_assessment": "causal_guidance",
                     "baseline_adaptive_intervention_policy_assessment": "policy_aligned",
                     "candidate_adaptive_intervention_policy_assessment": "review_recommended",
+                    "baseline_request_identity_assessment": "healthy",
+                    "candidate_request_identity_assessment": "healthy",
+                    "baseline_mission_policy_assessment": "policy_aligned",
+                    "candidate_mission_policy_assessment": "attention_required",
                     "baseline_memory_lifecycle_assessment": "retained",
                     "candidate_memory_lifecycle_assessment": "retained",
                     "baseline_memory_corpus_assessment": "stable",
@@ -91,6 +147,10 @@ def test_render_text_reports_adaptive_intervention_policy_assessment() -> None:
                     "candidate_mind_domain_specialist_assessment": "aligned",
                     "baseline_mind_domain_specialist_chain_assessment": "aligned",
                     "candidate_mind_domain_specialist_chain_assessment": "aligned",
+                    "baseline_mind_domain_specialist_effectiveness_assessment": "effective",
+                    "candidate_mind_domain_specialist_effectiveness_assessment": "insufficient",
+                    "baseline_mind_domain_specialist_mismatch_assessment": "aligned",
+                    "candidate_mind_domain_specialist_mismatch_assessment": "mismatch",
                     "baseline_cognitive_recomposition_assessment": "not_applicable",
                     "candidate_cognitive_recomposition_assessment": "not_applicable",
                 }
@@ -99,6 +159,10 @@ def test_render_text_reports_adaptive_intervention_policy_assessment() -> None:
     )
 
     assert "adaptive_intervention_policy=policy_aligned->review_recommended" in rendered
+    assert "request_identity=healthy->healthy" in rendered
+    assert "mission_policy=policy_aligned->attention_required" in rendered
     assert "capability_decision=healthy->attention_required" in rendered
     assert "capability_effectiveness=effective->insufficient" in rendered
     assert "handoff_adapter=healthy->contained" in rendered
+    assert "mind_domain_specialist_effectiveness=effective->insufficient" in rendered
+    assert "mind_domain_specialist_mismatch=aligned->mismatch" in rendered

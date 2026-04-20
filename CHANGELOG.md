@@ -1,5 +1,36 @@
 # CHANGELOG
 
+## 2026-04-20
+
+### Repriorizacao do proximo lote micro para evals expandidas e lane controlada da Onda 2
+
+- `docs/implementation/execution-backlog.md` agora abre `MB-087` a `MB-091` como o novo lote ativo, com `MB-087` em `ready` e foco em `EV-002` + `EV-004`;
+- o novo lote traduz a proxima prioridade macro em uma sequencia micro curta: gramatica de eval expandida, observabilidade/cobertura por eixo, lane controlada de experimentos, integracao com gates de release e fechamento documental;
+- `docs/implementation/unified-gap-and-absorption-backlog.md` agora promove `SG-006` a `resolved_in_baseline` e atualiza a ordem recomendada para puxar `EV-002` + `EV-004` antes de `EV-003`;
+- `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para sair do estado "sem item ready" e registrar `MB-087` como o proximo passo correto do projeto.
+
+### Fechamento do lote de identidade, missao e politica por request
+
+- `shared/contracts`, `shared/schemas`, `planning-engine`, `governance-service` e `orchestrator-service` agora tratam `request_identity_policy` como contrato soberano do runtime, distinguindo missao ativa, postura executiva, autoridade, risco, reversibilidade e confirmacao por request;
+- `observability-service`, `internal_pilot_support`, `internal_pilot_report`, `compare_orchestrator_paths`, `evolution-lab`, `evolution_from_pilot` e `verify_release_signal_baseline` agora auditam e refinam `request_identity_status`, `mission_policy_status` e `request_identity_mismatch_flags` como parte do baseline;
+- a superficie de testes do lote agora trava a nova gramatica de identidade/politica por request em `orchestrator`, `observability`, comparadores e `evolution-lab`;
+- `docs/implementation/execution-backlog.md`, `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para fechar `MB-082` a `MB-086` e registrar que a fila micro voltou a ficar sem item `ready`.
+
+### Repriorizacao do proximo lote micro para identidade, missao e politica por request
+
+- `docs/implementation/execution-backlog.md` agora abre `MB-082` a `MB-086` como o novo lote ativo do nucleo, com `MB-082` em `ready` e foco em formalizar `request_identity_policy` como contrato soberano do runtime;
+- o novo lote traduz a prioridade macro `SG-006` em uma sequencia micro curta: contrato, aplicacao governada, observabilidade/tracing, uso evolutivo e fechamento documental;
+- `docs/implementation/unified-gap-and-absorption-backlog.md` agora deixa explicito que `SG-001`, `SG-004`, `SG-005`, `TA-001`, `TA-003` e `TA-005` ja foram resolvidos no baseline e corrige a ordem recomendada da proxima fila micro para priorizar `SG-006`;
+- `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para sair do estado "sem item ready" e registrar `MB-082` como o proximo passo correto do projeto.
+
+## 2026-04-19
+
+### Fechamento do lote evolutivo da arbitragem declarativa
+
+- `evolution/evolution-lab/src/evolution_lab/service.py`, `tools/evolution_from_pilot.py`, `tools/compare_orchestrator_paths.py` e `tools/verify_release_signal_baseline.py` agora tratam `mind_domain_specialist_effectiveness` e `mind_domain_specialist_mismatch_flags` como insumo formal de `refinement_vectors`, `evaluation_matrix`, metric deltas e leitura de release;
+- a superficie de testes de `evolution-lab`, `evolution_from_pilot`, `compare_orchestrator_paths` e `verify_release_signal_baseline` agora trava a nova gramatica evolutiva da arbitragem declarativa, incluindo mismatch, inefetividade e readiness da matriz;
+- `docs/implementation/execution-backlog.md`, `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para fechar `MB-080` e `MB-081` e registrar que a fila micro voltou a ficar sem item `ready` ate nova repriorizacao explicita.
+
 ## 2026-04-14
 
 ### MB-079 fechado na evidencia auditavel da arbitragem declarativa

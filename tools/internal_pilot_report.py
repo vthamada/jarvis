@@ -122,6 +122,9 @@ class PilotTraceSummary:
     capability_decision_selected_capabilities: list[str] | None = None
     capability_effectiveness: str = "not_applicable"
     handoff_adapter_status: str = "not_applicable"
+    request_identity_status: str = "not_applicable"
+    mission_policy_status: str = "not_applicable"
+    request_identity_mismatch_flags: list[str] | None = None
 
 
 def parse_args() -> Namespace:
@@ -224,6 +227,11 @@ def summarize_traces(
             ),
             capability_effectiveness=audit.capability_effectiveness,
             handoff_adapter_status=audit.handoff_adapter_status,
+            request_identity_status=audit.request_identity_status,
+            mission_policy_status=audit.mission_policy_status,
+            request_identity_mismatch_flags=list(
+                audit.request_identity_mismatch_flags
+            ),
             adaptive_intervention_status=audit.adaptive_intervention_status,
             adaptive_intervention_reason=audit.adaptive_intervention_reason,
             adaptive_intervention_trigger=audit.adaptive_intervention_trigger,
@@ -313,6 +321,10 @@ def _trace_status(audit) -> str:
     if audit.capability_decision_status == "attention_required":
         return "attention_required"
     if audit.handoff_adapter_status == "attention_required":
+        return "attention_required"
+    if audit.request_identity_status == "attention_required":
+        return "attention_required"
+    if audit.mission_policy_status == "attention_required":
         return "attention_required"
     if audit.capability_effectiveness in {"insufficient", "incomplete"}:
         return "attention_required"
@@ -479,6 +491,12 @@ def _render_summary(summary: PilotTraceSummary) -> str:
         f"{getattr(summary, 'capability_effectiveness', 'not_applicable')} "
         "handoff_adapter_status="
         f"{getattr(summary, 'handoff_adapter_status', 'not_applicable')} "
+        "request_identity_status="
+        f"{getattr(summary, 'request_identity_status', 'not_applicable')} "
+        "mission_policy_status="
+        f"{getattr(summary, 'mission_policy_status', 'not_applicable')} "
+        "request_identity_mismatch_flags="
+        f"{','.join((getattr(summary, 'request_identity_mismatch_flags', []) or [])) or 'none'} "
         "adaptive_intervention_status="
         f"{getattr(summary, 'adaptive_intervention_status', 'not_applicable')} "
         "adaptive_intervention_selected_action="

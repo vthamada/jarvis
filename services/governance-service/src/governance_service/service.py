@@ -73,6 +73,8 @@ class GovernanceService:
         risk_hint = self.classify_risk(contract, intent)
         proposed_effect = self.proposed_effect(intent=intent, plan=plan)
         continuity_hint = self._continuity_hint(plan)
+        request_confirmation_mode = plan.request_confirmation_mode if plan else None
+        request_reversibility_mode = plan.request_reversibility_mode if plan else None
         identity_guardrail = self._identity_guardrail(
             intent=intent,
             proposed_effect=proposed_effect,
@@ -104,6 +106,29 @@ class GovernanceService:
                 "capability_decision_handoff_mode": (
                     plan.capability_decision_handoff_mode if plan else None
                 ),
+                "request_identity_status": (
+                    plan.request_identity_status if plan else None
+                ),
+                "request_active_mission": (
+                    plan.request_active_mission if plan else None
+                ),
+                "request_executive_posture": (
+                    plan.request_executive_posture if plan else None
+                ),
+                "request_authority_level": (
+                    plan.request_authority_level if plan else None
+                ),
+                "request_risk_profile": (
+                    plan.request_risk_profile if plan else None
+                ),
+                "request_reversibility_mode": request_reversibility_mode,
+                "request_confirmation_mode": request_confirmation_mode,
+                "request_identity_summary": (
+                    plan.request_identity_summary if plan else None
+                ),
+                "request_identity_policy_refs": (
+                    list(plan.request_identity_policy_refs) if plan else []
+                ),
                 "continuity_replay_status": (
                     plan.continuity_replay_status if plan else None
                 ),
@@ -119,11 +144,15 @@ class GovernanceService:
                 "identity_guardrail": identity_guardrail,
             },
             sensitivity="high" if risk_hint in {RiskLevel.HIGH, RiskLevel.CRITICAL} else "normal",
-            reversibility=("low" if proposed_effect == "external_or_sensitive_change" else "high"),
+            reversibility=self._reversibility_level(
+                proposed_effect=proposed_effect,
+                request_reversibility_mode=request_reversibility_mode,
+            ),
             mission_id=contract.mission_id,
             session_id=contract.session_id,
             proposed_effect=proposed_effect,
             risk_hint=risk_hint,
+            policy_hint=request_confirmation_mode,
             requested_by_service=requested_by_service,
             declared_risks=list(plan.risks) if plan else [],
             requires_human_validation=bool(plan.requires_human_validation) if plan else False,
@@ -278,6 +307,9 @@ class GovernanceService:
         open_loops = list(governance_check.open_loops)
         continuity_hint = governance_check.mission_continuity_hint or "sem_continuidade"
         decision_frame = governance_check.decision_frame or "analysis"
+        request_confirmation_mode = governance_check.context.get(
+            "request_confirmation_mode"
+        )
 
         if risk_level in {RiskLevel.HIGH, RiskLevel.CRITICAL}:
             decision = PermissionDecision.BLOCK
@@ -329,6 +361,10 @@ class GovernanceService:
                 "Manter trilha de eventos completa.",
                 "Restringir a artefatos locais e reversiveis.",
             ]
+            if request_confirmation_mode == "explicit_confirmation_required":
+                conditions.append(
+                    "Nao ampliar a autonomia sem confirmacao explicita do operador."
+                )
             if open_loops:
                 conditions.append(
                     "Fechar explicitamente o loop principal da missao nesta resposta."
@@ -460,6 +496,18 @@ class GovernanceService:
         if risk_level == RiskLevel.MODERATE:
             return True
         return decision_frame == "execution" and bool(open_loops)
+
+    @staticmethod
+    def _reversibility_level(
+        *,
+        proposed_effect: str,
+        request_reversibility_mode: str | None,
+    ) -> str:
+        if request_reversibility_mode == "prefer_reversible_change":
+            return "high"
+        if proposed_effect == "external_or_sensitive_change":
+            return "low"
+        return "high"
 
     def assess_memory_operation(
         self,

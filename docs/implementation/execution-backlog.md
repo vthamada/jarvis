@@ -1423,7 +1423,7 @@ Escalar ao operador quando:
 
 - `id`: `MB-080`
 - `prioridade`: `P1`
-- `status`: `ready`
+- `status`: `done`
 - `eixo_do_mestre`: `evolucao`
 - `workflow_profile_afetado`: `nao_aplicavel`
 - `micro_objetivo`: fazer `refinement_vectors`, `evaluation_matrix` e leitura de release usarem efetividade e drift da arbitragem declarativa como insumo do proximo refinamento do nucleo.
@@ -1440,7 +1440,7 @@ Escalar ao operador quando:
 
 - `id`: `MB-081`
 - `prioridade`: `P1`
-- `status`: `blocked`
+- `status`: `done`
 - `eixo_do_mestre`: `docs/gates`
 - `workflow_profile_afetado`: `nao_aplicavel`
 - `micro_objetivo`: fechar o lote de arbitragem declarativa com docs vivos, changelog e gate sincronizados ao novo estado real do baseline.
@@ -1452,6 +1452,176 @@ Escalar ao operador quando:
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `medium`
 - `impacto_no_baseline`: o lote fecha com backlog, handoff, snapshot e changelog coerentes com a nova gramatica soberana da arbitragem `mente -> dominio -> especialista`.
+
+### MB-082
+
+- `id`: `MB-082`
+- `prioridade`: `P0`
+- `status`: `completed`
+- `eixo_do_mestre`: `identidade`
+- `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
+- `micro_objetivo`: formalizar identidade, missao ativa e politica executiva por request como contrato soberano do runtime.
+- `justificativa_arquitetural`: depois de fechar capacidade soberana, memoria viva e arbitragem declarativa, o proximo ganho causal do nucleo e explicitar a preflight executiva que ancora quem o JARVIS e em cada request, qual missao esta ativa, qual autoridade esta em jogo e que limites politicos devem moldar o fluxo.
+- `arquivos/servicos_principais`: `engines/planning-engine`, `services/governance-service`, `services/orchestrator-service`, `shared/contracts`, `shared/schemas`
+- `dependencias`: `MB-071`, `MB-081`
+- `criterio_de_aceite`: `planning`, `governance` e `orchestrator` passam a carregar um slice explicito de `request_identity_policy`, distinguindo pelo menos missao ativa, postura executiva, autoridade, risco, reversibilidade e necessidade de confirmacao, sem expor internals na resposta final nem reintroduzir heuristica local espalhada.
+- `gate_minimo`: `pytest` direcionado dos services/engines tocados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `impacto_no_baseline`: identidade, missao e politica deixam de ser apenas pressuposto editorial e passam a existir como contrato auditavel do runtime por request.
+
+### MB-083
+
+- `id`: `MB-083`
+- `prioridade`: `P0`
+- `status`: `completed`
+- `eixo_do_mestre`: `governanca`
+- `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
+- `micro_objetivo`: fazer planejamento, governanca e dispatch aplicarem o contrato `request_identity_policy` como politica soberana do runtime.
+- `justificativa_arquitetural`: depois de formalizar o contrato, o passo seguinte e impedir que missao, identidade, confirmacao e limites de acao permaneçam distribuidos entre adapters, rationale textual e leitura implicita do fluxo.
+- `arquivos/servicos_principais`: `engines/planning-engine`, `services/governance-service`, `services/orchestrator-service`, `services/operational-service`
+- `dependencias`: `MB-082`
+- `criterio_de_aceite`: o runtime passa a responder ao contrato `request_identity_policy` em composicao de plano, checkpoint de governanca, despacho e ultima milha operacional, com efeito observavel em contencao, prioridade de acao e confirmacao exigida, sem bypassar memoria canonica ou politica de capacidade.
+- `gate_minimo`: `pytest` direcionado dos services/engines tocados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `impacto_no_baseline`: missao ativa, autoridade e politica executiva passam a moldar o fluxo principal como criterio soberano, nao apenas como contexto implicito.
+
+### MB-084
+
+- `id`: `MB-084`
+- `prioridade`: `P1`
+- `status`: `completed`
+- `eixo_do_mestre`: `observabilidade`
+- `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
+- `micro_objetivo`: tornar `request_identity_policy` parte da evidencia auditavel do baseline em tracing, piloto e comparadores.
+- `justificativa_arquitetural`: sem evidencia propria, o checklist executivo por request pode parecer alinhado sem prova; o baseline precisa mostrar quando a missao foi materializada, quando a politica executiva foi aplicada corretamente e quando houve drift entre intencao, risco e acao.
+- `arquivos/servicos_principais`: `services/observability-service`, `tools/internal_pilot_support.py`, `tools/internal_pilot_report.py`, `tools/compare_orchestrator_paths.py`
+- `dependencias`: `MB-083`
+- `criterio_de_aceite`: auditoria, piloto e comparadores passam a expor pelo menos `request_identity_status`, `mission_policy_status` e mismatch entre missao ativa, autoridade, confirmacao exigida e comportamento final do fluxo.
+- `gate_minimo`: `pytest` direcionado dos services/tools afetados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `impacto_no_baseline`: identidade e politica executiva deixam de ser somente leitura conceitual e passam a existir como evidencia comparavel do runtime.
+
+### MB-085
+
+- `id`: `MB-085`
+- `prioridade`: `P1`
+- `status`: `completed`
+- `eixo_do_mestre`: `evolucao`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: fazer `refinement_vectors`, `evaluation_matrix` e leitura de release usarem drift e efetividade de `request_identity_policy` como insumo do proximo refinamento do nucleo.
+- `justificativa_arquitetural`: depois de tornar o checklist executivo observavel, o loop evolutivo precisa separar melhor quando o problema esta em missao ativa mal materializada, politica executiva frouxa, confirmacao insuficiente ou contencao excessiva.
+- `arquivos/servicos_principais`: `evolution/evolution-lab`, `tools/evolution_from_pilot.py`, `tools/compare_orchestrator_paths.py`, `tools/verify_release_signal_baseline.py`
+- `dependencias`: `MB-084`
+- `criterio_de_aceite`: `evolution-lab`, comparadores e verificadores passam a registrar mismatch, inefetividade ou excesso de contencao de `request_identity_policy` em `refinement_vectors` e `evaluation_matrix`, sem automatizar promocao de mudanca ou abrir autoedicao do nucleo.
+- `gate_minimo`: `pytest` direcionado dos tools/servicos tocados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `impacto_no_baseline`: identidade, missao e politica executiva passam a influenciar formalmente a priorizacao do proximo ganho causal do nucleo.
+
+### MB-086
+
+- `id`: `MB-086`
+- `prioridade`: `P1`
+- `status`: `completed`
+- `eixo_do_mestre`: `docs/gates`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: fechar o lote de `request_identity_policy` com docs vivos, changelog e gate sincronizados ao novo estado real do baseline.
+- `justificativa_arquitetural`: esse lote muda a leitura de identidade, missao e politica por request; o fechamento precisa consolidar o contrato novo sem deixar backlog, handoff, snapshot e changelog em drift.
+- `arquivos/servicos_principais`: `docs/implementation/execution-backlog.md`, `HANDOFF.md`, `docs/implementation/v2-adherence-snapshot.md`, `CHANGELOG.md`
+- `dependencias`: `MB-082`, `MB-083`, `MB-084`, `MB-085`
+- `criterio_de_aceite`: o lote termina com docs vivos refletindo `request_identity_policy` como baseline do nucleo, `CHANGELOG.md` sincronizado e gate minimo validado.
+- `gate_minimo`: `python tools/check_mojibake.py docs/implementation docs/operations HANDOFF.md CHANGELOG.md` e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `medium`
+- `impacto_no_baseline`: o lote fecha com backlog, handoff, snapshot e changelog coerentes com a nova gramatica soberana de identidade, missao e politica por request.
+
+### MB-087
+
+- `id`: `MB-087`
+- `prioridade`: `P0`
+- `status`: `ready`
+- `eixo_do_mestre`: `evolucao`
+- `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
+- `micro_objetivo`: formalizar a gramatica soberana de `expanded_eval_scope` e `controlled_wave2_experiment` para capacidade, superficie e estado operacional do ecossistema, sem promover stack externa nem abrir superficie nova por inercia.
+- `justificativa_arquitetural`: depois de consolidar contratos causais do nucleo, o proximo risco deixa de ser falta de sinal local e passa a ser falta de leitura comparavel para novas capacidades e experimentos controlados; o baseline precisa saber o que esta avaliando, por que um experimento pode entrar e quando ele deve sair sem virar promocao automatica.
+- `arquivos/servicos_principais`: `tools/compare_orchestrator_paths.py`, `evolution/evolution-lab`, `tools/verify_release_signal_baseline.py`, `tools/internal_pilot_support.py`, `tools/internal_pilot_report.py`
+- `dependencias`: `MB-086`
+- `criterio_de_aceite`: comparadores, laboratorio e verificadores passam a compartilhar uma gramatica explicita para `expanded_eval_scope`, `wave2_candidate_class`, `experiment_entry_status`, `experiment_exit_status` e `promotion_readiness`, distinguindo capacidade, superficie e estado operacional sem reabrir heuristica solta.
+- `gate_minimo`: `pytest` direcionado dos tools/servicos afetados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `impacto_no_baseline`: o runtime passa a ter uma malha comparativa formal para dizer o que ainda e refinamento do nucleo e o que ja e experimento controlado de Onda 2.
+
+### MB-088
+
+- `id`: `MB-088`
+- `prioridade`: `P0`
+- `status`: `blocked`
+- `eixo_do_mestre`: `observabilidade`
+- `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
+- `micro_objetivo`: expandir tracing, piloto e comparadores para exporem cobertura e drift por `capability_surface_axis`, `ecosystem_state_axis` e `experiment_lane_status`.
+- `justificativa_arquitetural`: `EV-002` so faz sentido se a observabilidade passar a separar claramente o que hoje e baseline do nucleo, o que e area de avaliacao expandida e o que ainda esta fora de escopo por fase; sem esse recorte, a leitura de experimentos continua misturada com telemetria geral.
+- `arquivos/servicos_principais`: `services/observability-service`, `tools/internal_pilot_support.py`, `tools/internal_pilot_report.py`, `tools/compare_orchestrator_paths.py`
+- `dependencias`: `MB-087`
+- `criterio_de_aceite`: auditoria, piloto e comparadores passam a publicar pelo menos `expanded_eval_status`, `surface_axis_status`, `ecosystem_state_status` e `experiment_lane_status`, deixando explicito quando um fluxo esta fora da lane controlada, quando esta apto a entrar nela e quando ainda nao tem cobertura suficiente.
+- `gate_minimo`: `pytest` direcionado dos services/tools afetados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `impacto_no_baseline`: capacidade, superficie e estado operacional deixam de ser leitura lateral e viram evidencia auditavel do baseline comparativo.
+
+### MB-089
+
+- `id`: `MB-089`
+- `prioridade`: `P1`
+- `status`: `blocked`
+- `eixo_do_mestre`: `evolucao`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: materializar a lane controlada da Onda 2 em `evolution-lab` e comparadores, com criterio formal de entrada, permanencia e saida para referencias candidatas.
+- `justificativa_arquitetural`: `EV-004` existe para impedir hype e dispersao; o laboratorio precisa distinguir experimento elegivel, experimento em observacao, experimento reprovado e experimento ainda imaturo sem deixar isso virar promocao silenciosa de tecnologia externa.
+- `arquivos/servicos_principais`: `evolution/evolution-lab`, `tools/evolution_from_pilot.py`, `tools/compare_orchestrator_paths.py`
+- `dependencias`: `MB-088`
+- `criterio_de_aceite`: o laboratorio e os comparadores passam a emitir `experiment_lane_decision`, `entry_criteria_refs`, `exit_criteria_refs`, `promotion_blockers` e recomendacao bounded por candidato, mantendo a Onda 2 subordinada aos sinais do nucleo.
+- `gate_minimo`: `pytest` direcionado dos services/tools afetados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `impacto_no_baseline`: a Onda 2 deixa de ser so matriz passiva de readiness e passa a ter lane controlada, sem perder a soberania do nucleo.
+
+### MB-090
+
+- `id`: `MB-090`
+- `prioridade`: `P1`
+- `status`: `blocked`
+- `eixo_do_mestre`: `gates/release`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: ligar a nova gramatica de eval expandida e experimentos controlados aos verificadores de release e aos fechadores regeneraveis do corte.
+- `justificativa_arquitetural`: sem leitura de gate, a lane controlada continua sendo so artefato de laboratorio; o baseline precisa conseguir afirmar quando um experimento esta pronto para continuar como experimento, quando deve ser congelado e quando ainda nao pode contaminar a leitura de release.
+- `arquivos/servicos_principais`: `tools/verify_release_signal_baseline.py`, `tools/verify_active_cut_baseline.py`, `tools/close_alignment_cycle.py`, `tools/close_sovereign_alignment_cut.py`
+- `dependencias`: `MB-089`
+- `criterio_de_aceite`: verificadores e fechadores passam a registrar `expanded_eval_readiness`, `experiment_release_status`, `promotion_blockers` e `wave2_lane_health` sem transformar release em mecanismo de promocao automatica.
+- `gate_minimo`: `pytest` direcionado dos tools afetados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `impacto_no_baseline`: release e closure docs passam a distinguir maturacao do nucleo de experimento controlado de tecnologia externa.
+
+### MB-091
+
+- `id`: `MB-091`
+- `prioridade`: `P1`
+- `status`: `blocked`
+- `eixo_do_mestre`: `docs/gates`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: fechar o lote de evals expandidas e lane controlada da Onda 2 com docs vivos, changelog e gate sincronizados ao novo estado real do baseline.
+- `justificativa_arquitetural`: esse lote muda a leitura do que e baseline soberano, o que e experimento controlado e o que continua fora de fase; o fechamento precisa consolidar essa fronteira sem deixar backlog, handoff, snapshot e changelog em drift.
+- `arquivos/servicos_principais`: `docs/implementation/execution-backlog.md`, `docs/implementation/unified-gap-and-absorption-backlog.md`, `HANDOFF.md`, `docs/implementation/v2-adherence-snapshot.md`, `CHANGELOG.md`
+- `dependencias`: `MB-087`, `MB-088`, `MB-089`, `MB-090`
+- `criterio_de_aceite`: o lote termina com docs vivos refletindo `EV-002` e `EV-004` como baseline comparativo controlado, `CHANGELOG.md` sincronizado e gate minimo validado.
+- `gate_minimo`: `python tools/check_mojibake.py docs/implementation docs/operations HANDOFF.md CHANGELOG.md` e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `medium`
+- `impacto_no_baseline`: o lote fecha com a fronteira entre baseline soberano e experimento controlado formalizada nos docs vivos.
 
 ---
 
@@ -1491,9 +1661,12 @@ Estado atual da fila:
 - `planning`, `orchestrator`, `governance`, `observability`, piloto, comparadores e `evolution-lab` agora carregam `capability_decision_*`, `capability_effectiveness` e `handoff_adapter_status` como baseline auditavel do runtime;
 - `MB-072` a `MB-076` foram concluidos e fecharam o lote do nucleo para manutencao ativa de memoria viva, derivado de `SG-004` e `TA-003`;
 - `memory-service`, `planning`, `orchestrator`, `observability`, piloto, comparadores, `evolution-lab` e verificadores de release agora tratam `memory_maintenance_*`, compaction e recall cross-session como slice soberano, auditavel e refinavel do runtime;
-- `MB-077` a `MB-081` agora abrem o novo lote do nucleo para arbitragem mais declarativa de `mente -> dominio -> especialista`, derivado de `SG-005`;
+- `MB-077` a `MB-081` foram concluidos e fecharam o lote do nucleo para arbitragem mais declarativa de `mente -> dominio -> especialista`, derivado de `SG-005`;
 - `MB-077` agora foi concluido: `mind_domain_specialist_contract_*` passou a existir como contrato vivo em `cognitive`, `specialist`, `planning`, `synthesis` e `orchestrator`, distinguindo cadeia autoritativa, override bounded e fallback governado;
 - `MB-078` agora foi concluido: selecao, dispatch, artefato operacional e sintese final passaram a obedecer o contrato `mind_domain_specialist` como politica soberana de consumo final e fallback;
 - `MB-079` agora tambem foi concluido: `observability-service`, piloto e comparadores passaram a expor `mind_domain_specialist_effectiveness` e `mind_domain_specialist_mismatch_flags` como evidencia formal da arbitragem final;
-- `MB-080` virou o item `ready` atual do lote, e `MB-081` permanece `blocked` apenas pela ordem de dependencia;
+- `MB-080` e `MB-081` agora tambem foram concluidos: `evolution-lab`, `evolution_from_pilot`, comparadores e verificadores de release passaram a tratar efetividade e mismatch da arbitragem declarativa como insumo formal de `refinement_vectors`, `evaluation_matrix` e leitura de release;
+- `MB-082` a `MB-086` foram concluidos e fecharam o lote do nucleo para identidade, missao e politica por request, derivado de `SG-006`;
+- `planning`, `governance`, `orchestrator`, `observability`, piloto, comparadores, `evolution-lab` e verificadores de release agora tratam `request_identity_policy` como slice soberano, auditavel e refinavel do runtime;
+- `MB-087` a `MB-091` agora formam o lote ativo para `EV-002` + `EV-004`, com `MB-087` em `ready` para expandir evals e abrir a lane controlada de experimentos da Onda 2 sem perder soberania do nucleo;
 - `protective intelligence foundation` continua `deferred` e a matriz da Onda 2 segue como insumo, nao como gatilho automatico para abrir nova vertical.

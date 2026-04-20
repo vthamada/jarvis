@@ -180,6 +180,19 @@ def _evaluation_from_dict(payload: dict[str, object]) -> FlowEvaluationInput:
             if payload.get("handoff_adapter_status") is not None
             else "not_applicable"
         ),
+        request_identity_status=(
+            str(payload["request_identity_status"])
+            if payload.get("request_identity_status") is not None
+            else "not_applicable"
+        ),
+        mission_policy_status=(
+            str(payload["mission_policy_status"])
+            if payload.get("mission_policy_status") is not None
+            else "not_applicable"
+        ),
+        request_identity_mismatch_flags=list(
+            payload.get("request_identity_mismatch_flags", [])
+        ),
         adaptive_intervention_status=(
             str(payload["adaptive_intervention_status"])
             if payload.get("adaptive_intervention_status") is not None
@@ -259,6 +272,14 @@ def _evaluation_from_dict(payload: dict[str, object]) -> FlowEvaluationInput:
             str(payload["mind_domain_specialist_chain_status"])
             if payload.get("mind_domain_specialist_chain_status") is not None
             else None
+        ),
+        mind_domain_specialist_effectiveness=(
+            str(payload["mind_domain_specialist_effectiveness"])
+            if payload.get("mind_domain_specialist_effectiveness") is not None
+            else None
+        ),
+        mind_domain_specialist_mismatch_flags=list(
+            payload.get("mind_domain_specialist_mismatch_flags", [])
         ),
         semantic_memory_source=(
             str(payload["semantic_memory_source"])
@@ -386,6 +407,9 @@ def build_payload(args: Namespace) -> dict[str, object]:
             and audit.mind_domain_specialist_status in {None, "aligned", "not_applicable"}
             and audit.mind_domain_specialist_chain_status
             in {None, "aligned", "not_applicable"}
+            and audit.mind_domain_specialist_effectiveness
+            in {None, "effective", "not_applicable"}
+            and not audit.mind_domain_specialist_mismatch_flags
         ):
             continue
         proposal = evolution.create_proposal_from_flow_evaluation(
@@ -428,6 +452,11 @@ def build_payload(args: Namespace) -> dict[str, object]:
                 metacognitive_guidance_status=audit.metacognitive_guidance_status,
                 mind_disagreement_status=audit.mind_disagreement_status,
                 mind_validation_checkpoint_status=audit.mind_validation_checkpoint_status,
+                request_identity_status=audit.request_identity_status,
+                mission_policy_status=audit.mission_policy_status,
+                request_identity_mismatch_flags=list(
+                    audit.request_identity_mismatch_flags
+                ),
                 adaptive_intervention_status=audit.adaptive_intervention_status,
                 adaptive_intervention_selected_action=(
                     audit.adaptive_intervention_selected_action
@@ -451,6 +480,12 @@ def build_payload(args: Namespace) -> dict[str, object]:
                 mind_domain_specialist_status=audit.mind_domain_specialist_status,
                 mind_domain_specialist_chain_status=(
                     audit.mind_domain_specialist_chain_status
+                ),
+                mind_domain_specialist_effectiveness=(
+                    audit.mind_domain_specialist_effectiveness
+                ),
+                mind_domain_specialist_mismatch_flags=list(
+                    audit.mind_domain_specialist_mismatch_flags
                 ),
                 semantic_memory_source=audit.semantic_memory_source,
                 procedural_memory_source=audit.procedural_memory_source,
@@ -537,6 +572,18 @@ def build_payload(args: Namespace) -> dict[str, object]:
                         f"{item.get('candidate_adaptive_intervention_policy_assessment', 'n/a')}"
                     ),
                     (
+                        "request_identity="
+                        f"{item.get('baseline_request_identity_assessment', 'n/a')}"
+                        "->"
+                        f"{item.get('candidate_request_identity_assessment', 'n/a')}"
+                    ),
+                    (
+                        "mission_policy="
+                        f"{item.get('baseline_mission_policy_assessment', 'n/a')}"
+                        "->"
+                        f"{item.get('candidate_mission_policy_assessment', 'n/a')}"
+                    ),
+                    (
                         "memory_lifecycle="
                         f"{item.get('baseline_memory_lifecycle_assessment', 'n/a')}"
                         "->"
@@ -577,6 +624,24 @@ def build_payload(args: Namespace) -> dict[str, object]:
                         f"{item.get('baseline_mind_domain_specialist_chain_assessment', 'n/a')}"
                         "->"
                         f"{item.get('candidate_mind_domain_specialist_chain_assessment', 'n/a')}"
+                    ),
+                    (
+                        "mind_domain_specialist_effectiveness="
+                        f"{item.get(
+                            'baseline_mind_domain_specialist_effectiveness_assessment',
+                            'n/a',
+                        )}"
+                        "->"
+                        f"{item.get(
+                            'candidate_mind_domain_specialist_effectiveness_assessment',
+                            'n/a',
+                        )}"
+                    ),
+                    (
+                        "mind_domain_specialist_mismatch="
+                        f"{item.get('baseline_mind_domain_specialist_mismatch_assessment', 'n/a')}"
+                        "->"
+                        f"{item.get('candidate_mind_domain_specialist_mismatch_assessment', 'n/a')}"
                     ),
                     (
                         "cognitive_recomposition="
@@ -685,6 +750,18 @@ def build_payload(args: Namespace) -> dict[str, object]:
                     "candidate_mind_domain_specialist_chain_assessment": item.get(
                         "candidate_mind_domain_specialist_chain_assessment"
                     ),
+                    "baseline_mind_domain_specialist_effectiveness_assessment": item.get(
+                        "baseline_mind_domain_specialist_effectiveness_assessment"
+                    ),
+                    "candidate_mind_domain_specialist_effectiveness_assessment": item.get(
+                        "candidate_mind_domain_specialist_effectiveness_assessment"
+                    ),
+                    "baseline_mind_domain_specialist_mismatch_assessment": item.get(
+                        "baseline_mind_domain_specialist_mismatch_assessment"
+                    ),
+                    "candidate_mind_domain_specialist_mismatch_assessment": item.get(
+                        "candidate_mind_domain_specialist_mismatch_assessment"
+                    ),
                     "baseline_cognitive_recomposition_assessment": item.get(
                         "baseline_cognitive_recomposition_assessment"
                     ),
@@ -769,6 +846,18 @@ def render_text(payload: dict[str, object]) -> str:
                         f"{item.get('candidate_adaptive_intervention_policy_assessment', 'n/a')}"
                     ),
                     (
+                        "request_identity="
+                        f"{item.get('baseline_request_identity_assessment', 'n/a')}"
+                        "->"
+                        f"{item.get('candidate_request_identity_assessment', 'n/a')}"
+                    ),
+                    (
+                        "mission_policy="
+                        f"{item.get('baseline_mission_policy_assessment', 'n/a')}"
+                        "->"
+                        f"{item.get('candidate_mission_policy_assessment', 'n/a')}"
+                    ),
+                    (
                         "memory_lifecycle="
                         f"{item.get('baseline_memory_lifecycle_assessment', 'n/a')}"
                         "->"
@@ -809,6 +898,24 @@ def render_text(payload: dict[str, object]) -> str:
                         f"{item.get('baseline_mind_domain_specialist_chain_assessment', 'n/a')}"
                         "->"
                         f"{item.get('candidate_mind_domain_specialist_chain_assessment', 'n/a')}"
+                    ),
+                    (
+                        "mind_domain_specialist_effectiveness="
+                        f"{item.get(
+                            'baseline_mind_domain_specialist_effectiveness_assessment',
+                            'n/a',
+                        )}"
+                        "->"
+                        f"{item.get(
+                            'candidate_mind_domain_specialist_effectiveness_assessment',
+                            'n/a',
+                        )}"
+                    ),
+                    (
+                        "mind_domain_specialist_mismatch="
+                        f"{item.get('baseline_mind_domain_specialist_mismatch_assessment', 'n/a')}"
+                        "->"
+                        f"{item.get('candidate_mind_domain_specialist_mismatch_assessment', 'n/a')}"
                     ),
                     (
                         "cognitive_recomposition="

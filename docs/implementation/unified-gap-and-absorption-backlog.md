@@ -66,6 +66,7 @@ Hierarquia correta:
 | Status | Uso correto |
 | --- | --- |
 | `candidate_for_slicing` | pode virar lote micro quando houver repriorizacao explicita |
+| `resolved_in_baseline` | ja foi absorvido em lote micro concluido e agora faz parte do baseline |
 | `blocked_by_phase` | valido, mas ainda depende de fase ou dependencia macro |
 | `deferred` | mapeado, mas explicitamente fora do foco atual |
 | `research_only` | radar de pesquisa ou laboratorio, nao fila de implementacao |
@@ -84,9 +85,11 @@ Hierarquia correta:
 
 ## 4. Leitura executiva do estado atual
 
-- o baseline do `v2` esta endurecido ate o lote `MB-062` a `MB-066`, e o
-  `engineering_gate --mode standard` esta passando;
-- a fila micro voltou a ficar sem item `ready`;
+- o baseline do `v2` ja fechou os lotes `MB-067` a `MB-081`, cobrindo decisao
+  soberana de capacidades, manutencao ativa de memoria viva e arbitragem
+  declarativa `mente -> dominio -> especialista`;
+- a fila micro agora precisa abrir o proximo lote a partir de `SG-006`, em vez
+  de continuar apontando para eixos que ja viraram baseline;
 - o proximo passo correto nao e reabrir lote encerrado nem abrir vertical nova
   por impulso;
 - a proxima repriorizacao precisa sair de um mapa unico que conecte lacuna real
@@ -100,6 +103,13 @@ Regra pratica daqui para frente:
   depois;
 - manter autoevolucao forte e auto-modificacao como pesquisa.
 
+Leitura de horizonte:
+
+- esse backlog macro continua subordinado ao objetivo maior de construir uma
+  entidade soberana, ampla e autoevolutiva;
+- a contencao atual de autoevolucao forte e de superficies amplas e disciplina
+  de fase, nao recuo de visao.
+
 ---
 
 ## 5. Backlog unificado do que ainda falta
@@ -108,12 +118,12 @@ Regra pratica daqui para frente:
 
 | ID | Gap real | Camada JARVIS | Fase alvo | Tecnologias relacionadas | Janela de absorcao | Status | Slice micro |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `SG-001` | decisao soberana de capacidades e ferramentas | nucleo executivo, governanca, dispatch | `v2 restante` | `PydanticAI`, `Mastra`, `OpenAI Agents SDK`, `Qwen-Agent` | `onda_2_controlada` | `candidate_for_slicing` | `sim` |
+| `SG-001` | decisao soberana de capacidades e ferramentas | nucleo executivo, governanca, dispatch | `v2 restante` | `PydanticAI`, `Mastra`, `OpenAI Agents SDK`, `Qwen-Agent` | `onda_2_controlada` | `resolved_in_baseline` | `sim` |
 | `SG-002` | modelo de estado operacional do ecossistema | `orchestrator`, memoria, continuidade | `ponte v2 -> v3` | `LangGraph`, `Mastra`, `Manus` | `onda_3_tardia` | `blocked_by_phase` | `nao` |
 | `SG-003` | continuidade multissuperficie da mesma entidade | identidade, continuidade, surfaces | `ponte v2 -> v3` | `OpenClaw`, `OpenAI Agents SDK` | `onda_3_tardia` | `blocked_by_phase` | `nao` |
-| `SG-004` | manutencao ativa de memoria viva e memory review | `memory-service`, `memory_registry` | `v2 restante` | `Letta`, `Hermes Agent`, `Qwen-Agent` | `onda_1_residual` | `candidate_for_slicing` | `sim` |
-| `SG-005` | arbitragem mais declarativa de `mente -> dominio -> especialista` nos consumidores finais | cognicao, `planning`, `synthesis`, observabilidade | `v2 restante` | `Mastra`, `PydanticAI` | `nao_aplicavel` | `candidate_for_slicing` | `sim` |
-| `SG-006` | identidade, missao e politica como checklist executiva por request | identidade, nucleo executivo, governanca | `v2 restante` | `PydanticAI`, `Mastra`, `OpenAI Agents SDK` | `onda_2_controlada` | `candidate_for_slicing` | `sim` |
+| `SG-004` | manutencao ativa de memoria viva e memory review | `memory-service`, `memory_registry` | `v2 restante` | `Letta`, `Hermes Agent`, `Qwen-Agent` | `onda_1_residual` | `resolved_in_baseline` | `sim` |
+| `SG-005` | arbitragem mais declarativa de `mente -> dominio -> especialista` nos consumidores finais | cognicao, `planning`, `synthesis`, observabilidade | `v2 restante` | `Mastra`, `PydanticAI` | `nao_aplicavel` | `resolved_in_baseline` | `sim` |
+| `SG-006` | identidade, missao e politica como checklist executiva por request | identidade, nucleo executivo, governanca | `v2 restante` | `PydanticAI`, `Mastra`, `OpenAI Agents SDK` | `onda_2_controlada` | `resolved_in_baseline` | `sim` |
 
 Notas de traducao por gap:
 
@@ -132,19 +142,21 @@ Notas de traducao por gap:
 - `SG-005`: a cadeia `mente -> dominio -> especialista` ja ficou mais
   evidence-first, mas ainda pode virar criterio mais declarativo de acao,
   saida, validacao e delegacao.
-- `SG-006`: o runtime ja e coerente, mas ainda falta uma preflight executiva
-  mais explicita por request para identidade, missao ativa, autoridade, risco,
-  reversibilidade e governanca.
+- `SG-006`: o runtime agora ja materializa `request_identity_policy` como
+  preflight executiva por request para missao ativa, autoridade, risco,
+  reversibilidade, confirmacao e governanca; o que resta daqui em diante e uso
+  evolutivo e comparativo mais amplo desses sinais, nao falta de contrato
+  basico.
 
 ### 5.2 Technology absorption backlog
 
 | ID | Traducao disciplinada ainda faltante | Fortalece | Fase alvo | Tecnologias relacionadas | Janela de absorcao | Status | Slice micro |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `TA-001` | contratos tipados de capacidade e workflow alem do plano deliberativo atual | `SG-001`, `SG-005`, `SG-006` | `v2 restante` | `PydanticAI`, `Mastra`, `Microsoft Agent Framework` | `onda_1_residual` | `candidate_for_slicing` | `sim` |
+| `TA-001` | contratos tipados de capacidade e workflow alem do plano deliberativo atual | `SG-001`, `SG-005`, `SG-006` | `v2 restante` | `PydanticAI`, `Mastra`, `Microsoft Agent Framework` | `onda_1_residual` | `resolved_in_baseline` | `sim` |
 | `TA-002` | durable execution, resumabilidade e subfluxos stateful mais profundos | `SG-002` | `ponte v2 -> v3` | `LangGraph`, `Mastra` | `onda_1_residual` | `blocked_by_phase` | `nao` |
-| `TA-003` | compaction de contexto e recall cross-session 2.0 | `SG-004` | `v2 restante` | `Letta`, `Hermes Agent`, `Qwen-Agent` | `onda_1_residual` | `candidate_for_slicing` | `sim` |
+| `TA-003` | compaction de contexto e recall cross-session 2.0 | `SG-004` | `v2 restante` | `Letta`, `Hermes Agent`, `Qwen-Agent` | `onda_1_residual` | `resolved_in_baseline` | `sim` |
 | `TA-004` | memoria temporal, relacional e scoping mais rico | `SG-002`, `SG-004` | `ponte v2 -> v3` | `Graphiti`, `Zep`, `Mem0` | `onda_2_controlada` | `blocked_by_phase` | `nao` |
-| `TA-005` | handoffs, tracing e session adapters por borda de fluxo | `SG-001`, `SG-003`, `SG-006`, `EV-002` | `v2 restante` | `OpenAI Agents SDK` | `onda_2_controlada` | `candidate_for_slicing` | `sim` |
+| `TA-005` | handoffs, tracing e session adapters por borda de fluxo | `SG-001`, `SG-003`, `SG-006`, `EV-002` | `v2 restante` | `OpenAI Agents SDK` | `onda_2_controlada` | `resolved_in_baseline` | `sim` |
 | `TA-006` | substrate operacional para especialistas de software, browser e computer use | `SO-002`, `SO-003` | `ponte v2 -> v3` | `OpenHands`, `browser-use`, `Open Interpreter` | `onda_2_controlada` | `blocked_by_phase` | `nao` |
 | `TA-007` | gateway multicanal, lifecycle de skills e runtime operacional local-first | `SG-003`, `SO-001`, `SO-002` | `v3` | `OpenClaw` | `onda_3_tardia` | `deferred` | `nao` |
 | `TA-008` | compressao inferencial e retrieval vetorial para contexto longo e escala futura | `SG-002`, `SO-001`, `EV-004` | `ponte v2 -> v3` | `TurboQuant`, `pgvector` (futuro consumidor), `OpenAI Realtime / Voice` | `onda_2_controlada` | `blocked_by_phase` | `nao` |
@@ -220,7 +232,7 @@ Regra:
 
 | ID | Horizonte | Papel correto | Fase alvo | Tecnologias relacionadas | Janela de absorcao | Status |
 | --- | --- | --- | --- | --- | --- | --- |
-| `RH-001` | autoevolucao forte, self-modification e adaptacao persistente do nucleo | pesquisa e laboratorio, nao backlog implementavel | `pos-v3` | `SEAL`, `Darwin Godel Machine` | `onda_4_pesquisa` | `research_only` |
+| `RH-001` | autoevolucao forte, self-modification governada e adaptacao persistente do nucleo | horizonte estrutural oficial do sistema, mantido em pesquisa e laboratorio ate maturidade suficiente | `pos-v3` | `SEAL`, `Darwin Godel Machine` | `onda_4_pesquisa` | `research_only` |
 | `RH-002` | agent platform ampla, multicanal rica e autonomia de produto | referencia de longo prazo, nao fila atual | `v3+` | `Manus`, `OpenClaw`, `AutoGPT Platform` | `onda_3_tardia` | `research_only` |
 
 ---
@@ -241,14 +253,14 @@ ser:
 
 Ordem recomendada hoje:
 
-1. `SG-001` + `TA-001` + `TA-005`
-2. `SG-004` + `TA-003`
-3. `SG-005`
-4. `SG-006`
-5. `EV-002` + `EV-004`
+1. `EV-002` + `EV-004`
+2. `EV-003`
 
 Leitura correta:
 
+- `SG-001`, `SG-004`, `SG-005`, `SG-006`, `TA-001`, `TA-003` e `TA-005` ja
+  foram traduzidos em lotes micro concluidos e agora pertencem ao baseline, nao
+  a proxima puxada;
 - `SG-002`, `SG-003`, `TA-002`, `TA-004`, `SO-*` e `DV-001` ja sao
   relevantes, mas ainda nao sao a melhor puxada do `v2` atual;
 - `RH-*` permanece fora do backlog implementavel.
