@@ -54,6 +54,14 @@ def test_close_alignment_cycle_builds_next_v2_cut() -> None:
                 "candidate_cognitive_recomposition_decision": "coherent",
                 "baseline_cognitive_recomposition_coherent_rate": 0.0,
                 "candidate_cognitive_recomposition_coherent_rate": 0.5,
+                "baseline_expanded_eval_readiness": "baseline_only",
+                "candidate_expanded_eval_readiness": "candidate_ready",
+                "baseline_wave2_lane_health": "baseline_only",
+                "candidate_wave2_lane_health": "controlled_candidate",
+                "baseline_experiment_release_status": "hold_baseline",
+                "candidate_experiment_release_status": "hold_in_lane",
+                "baseline_promotion_blocker_rate": 0.0,
+                "candidate_promotion_blocker_rate": 0.0,
                 "decision": "candidate_ready_for_eval_gate",
             },
             },
@@ -274,6 +282,9 @@ def test_close_alignment_cycle_builds_next_v2_cut() -> None:
     assert payload["evidence_summary"]["candidate_memory_causality_decision"] == "causal_guidance"
     assert payload["evidence_summary"]["candidate_mind_domain_specialist_decision"] == "aligned"
     assert payload["evidence_summary"]["candidate_cognitive_recomposition_decision"] == "coherent"
+    assert payload["evidence_summary"]["candidate_expanded_eval_readiness"] == "candidate_ready"
+    assert payload["evidence_summary"]["candidate_wave2_lane_health"] == "controlled_candidate"
+    assert payload["evidence_summary"]["candidate_experiment_release_status"] == "hold_in_lane"
     assert payload["next_cut_scope"][0]["item_id"] == "v2-domain-specialists-beyond-shadow"
     assert payload["deferred_scope"][0]["item_id"] == "defer-wide-computer-use"
     assert payload["vision_scope"][0]["item_id"] == "vision-robust-ecosystem"
@@ -341,6 +352,14 @@ def test_close_alignment_cycle_renders_markdown() -> None:
             "candidate_cognitive_recomposition_decision": "coherent",
             "baseline_cognitive_recomposition_coherent_rate": 0.0,
             "candidate_cognitive_recomposition_coherent_rate": 0.5,
+            "baseline_expanded_eval_readiness": "baseline_only",
+            "candidate_expanded_eval_readiness": "candidate_ready",
+            "baseline_wave2_lane_health": "baseline_only",
+            "candidate_wave2_lane_health": "controlled_candidate",
+            "baseline_experiment_release_status": "hold_baseline",
+            "candidate_experiment_release_status": "hold_in_lane",
+            "baseline_promotion_blocker_rate": 0.0,
+            "candidate_promotion_blocker_rate": 0.0,
         },
         "next_cut_scope": [
             {
@@ -383,3 +402,6 @@ def test_close_alignment_cycle_renders_markdown() -> None:
     assert "candidate memory causality decision" in rendered
     assert "candidate mind-domain-specialist decision" in rendered
     assert "candidate cognitive recomposition decision" in rendered
+    assert "candidate expanded eval readiness" in rendered
+    assert "candidate wave2 lane health" in rendered
+    assert "candidate experiment release status" in rendered

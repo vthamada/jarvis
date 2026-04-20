@@ -219,7 +219,32 @@ def test_evolution_lab_creates_proposal_from_flow_evaluation() -> None:
         proposal.evaluation_matrix["baseline_runtime"]["mind_domain_specialist_mismatch"]
         == "mismatch"
     )
+    assert (
+        proposal.evaluation_matrix["baseline_runtime"]["expanded_eval"]
+        == "attention_required"
+    )
+    assert (
+        proposal.evaluation_matrix["baseline_runtime"]["surface_axis"]
+        == "attention_required"
+    )
+    assert (
+        proposal.evaluation_matrix["baseline_runtime"]["ecosystem_state"]
+        == "attention_required"
+    )
+    assert (
+        proposal.evaluation_matrix["baseline_runtime"]["experiment_lane"]
+        == "attention_required"
+    )
+    assert (
+        proposal.evaluation_matrix["baseline_runtime"]["promotion_readiness"]
+        == "blocked"
+    )
     assert "wave_two_readiness_matrix" in proposal.strategy_context
+    assert "controlled_wave2_experiment" in proposal.strategy_context
+    assert (
+        proposal.strategy_context["controlled_wave2_experiment"]["experiment_lane_status"]
+        == "attention_required"
+    )
     assert (
         proposal.strategy_context["wave_two_readiness_matrix"]["graphiti_zep"]["status"]
         == "stabilize_nucleus_first"

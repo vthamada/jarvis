@@ -173,6 +173,14 @@ class PilotExecutionResult:
     request_identity_status: str = "not_applicable"
     mission_policy_status: str = "not_applicable"
     request_identity_mismatch_flags: list[str] = field(default_factory=list)
+    expanded_eval_status: str = "not_applicable"
+    surface_axis_status: str = "not_applicable"
+    ecosystem_state_status: str = "not_applicable"
+    experiment_lane_status: str = "not_applicable"
+    wave2_candidate_class: str = "baseline_hardening"
+    experiment_entry_status: str = "not_applicable"
+    experiment_exit_status: str = "not_applicable"
+    promotion_readiness: str = "not_applicable"
     adaptive_intervention_status: str = "not_applicable"
     adaptive_intervention_reason: str | None = None
     adaptive_intervention_trigger: str | None = None
@@ -638,6 +646,14 @@ def run_pilot_scenarios(
                 request_identity_mismatch_flags=list(
                     audit.request_identity_mismatch_flags
                 ),
+                expanded_eval_status=audit.expanded_eval_status,
+                surface_axis_status=audit.surface_axis_status,
+                ecosystem_state_status=audit.ecosystem_state_status,
+                experiment_lane_status=audit.experiment_lane_status,
+                wave2_candidate_class=audit.wave2_candidate_class,
+                experiment_entry_status=audit.experiment_entry_status,
+                experiment_exit_status=audit.experiment_exit_status,
+                promotion_readiness=audit.promotion_readiness,
                 adaptive_intervention_status=audit.adaptive_intervention_status,
                 adaptive_intervention_reason=audit.adaptive_intervention_reason,
                 adaptive_intervention_trigger=audit.adaptive_intervention_trigger,

@@ -52,6 +52,14 @@ def make_pilot_result(  # type: ignore[no-untyped-def]
     procedural_artifact_refs: list[str] | None = None,
     procedural_artifact_version: int | None = 1,
     coverage_tags: list[str] | None = None,
+    expanded_eval_status: str = "not_applicable",
+    surface_axis_status: str = "not_applicable",
+    ecosystem_state_status: str = "not_applicable",
+    experiment_lane_status: str = "not_applicable",
+    wave2_candidate_class: str = "baseline_hardening",
+    experiment_entry_status: str = "baseline_only",
+    experiment_exit_status: str = "hold_baseline",
+    promotion_readiness: str = "not_applicable",
 ) -> PilotExecutionResult:
     return PilotExecutionResult(
         scenario_id=scenario_id,
@@ -155,6 +163,14 @@ def make_pilot_result(  # type: ignore[no-untyped-def]
         expected_workflow_profile=expected_workflow_profile,
         workflow_profile_matches_expectation=workflow_profile_matches_expectation,
         coverage_tags=coverage_tags or [],
+        expanded_eval_status=expanded_eval_status,
+        surface_axis_status=surface_axis_status,
+        ecosystem_state_status=ecosystem_state_status,
+        experiment_lane_status=experiment_lane_status,
+        wave2_candidate_class=wave2_candidate_class,
+        experiment_entry_status=experiment_entry_status,
+        experiment_exit_status=experiment_exit_status,
+        promotion_readiness=promotion_readiness,
     )
 
 
@@ -177,6 +193,14 @@ def test_verify_active_cut_baseline_reports_release_ready() -> None:
                 ],
                 mind_disagreement_status="validation_required",
                 mind_validation_checkpoint_status="healthy",
+                expanded_eval_status="candidate_ready",
+                surface_axis_status="candidate_ready",
+                ecosystem_state_status="candidate_ready",
+                experiment_lane_status="controlled_candidate",
+                wave2_candidate_class="surface_and_ecosystem",
+                experiment_entry_status="candidate_ready",
+                experiment_exit_status="hold_in_lane",
+                promotion_readiness="manual_review_only",
             ),
             make_pilot_result(
                 scenario_id="decision-risk",
@@ -259,6 +283,10 @@ def test_verify_active_cut_baseline_reports_release_ready() -> None:
     assert payload["summary"]["specialist_subflow_ready_scenarios"] == 2
     assert payload["summary"]["mission_runtime_state_ready_scenarios"] == 3
     assert payload["summary"]["cognitive_recomposition_ready_scenarios"] == 1
+    assert payload["summary"]["expanded_eval_ready_scenarios"] == 1
+    assert payload["summary"]["wave2_lane_healthy_scenarios"] == 1
+    assert payload["summary"]["promotion_blocker_scenarios"] == 0
+    assert payload["summary"]["experiment_release_hold_scenarios"] == 1
 
 
 def test_verify_active_cut_baseline_markdown_mentions_notes() -> None:
@@ -310,6 +338,10 @@ def test_verify_active_cut_baseline_markdown_mentions_notes() -> None:
     assert "dominant tension scenarios ready" in rendered
     assert "specialist subflow scenarios ready" in rendered
     assert "mission runtime state scenarios ready" in rendered
+    assert "expanded eval scenarios ready" in rendered
+    assert "controlled wave2 lane scenarios healthy" in rendered
+    assert "promotion blocker scenarios" in rendered
+    assert "experiment release hold scenarios" in rendered
 
 
 def test_verify_active_cut_baseline_requires_deliberate_cognitive_coverage() -> None:
@@ -323,6 +355,14 @@ def test_verify_active_cut_baseline_requires_deliberate_cognitive_coverage() -> 
                 expected_workflow_profile="structured_analysis_workflow",
                 workflow_profile_matches_expectation=True,
                 coverage_tags=["mind_disagreement"],
+                expanded_eval_status="attention_required",
+                surface_axis_status="attention_required",
+                ecosystem_state_status="attention_required",
+                experiment_lane_status="attention_required",
+                wave2_candidate_class="baseline_hardening",
+                experiment_entry_status="blocked_by_drift",
+                experiment_exit_status="freeze_and_review",
+                promotion_readiness="blocked",
             ),
             make_pilot_result(
                 scenario_id="decision-risk",
@@ -390,3 +430,6 @@ def test_verify_active_cut_baseline_requires_deliberate_cognitive_coverage() -> 
     assert payload["summary"]["mind_domain_specialist_ready_scenarios"] == 0
     assert payload["summary"]["memory_corpus_ready_scenarios"] == 0
     assert payload["summary"]["dominant_tension_ready_scenarios"] == 0
+    assert payload["summary"]["expanded_eval_ready_scenarios"] == 0
+    assert payload["summary"]["wave2_lane_healthy_scenarios"] == 0
+    assert payload["summary"]["promotion_blocker_scenarios"] == 1

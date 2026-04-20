@@ -4459,6 +4459,11 @@ def test_observability_service_marks_request_identity_policy_aligned() -> None:
     assert audit.request_identity_status == "healthy"
     assert audit.mission_policy_status == "policy_aligned"
     assert audit.request_identity_mismatch_flags == []
+    assert audit.expanded_eval_status == "attention_required"
+    assert audit.surface_axis_status == "attention_required"
+    assert audit.ecosystem_state_status == "attention_required"
+    assert audit.experiment_lane_status == "attention_required"
+    assert audit.promotion_readiness == "blocked"
 
 
 def test_observability_service_flags_request_identity_confirmation_mismatch() -> None:

@@ -54,6 +54,8 @@ Politicas obrigatorias:
 - `WIP limit`: no maximo `1` item em `in_progress`;
 - ordem de puxada: impacto arquitetural, reducao de heuristica local, evidencia/gates, depois refinamentos;
 - cada item precisa ser pequeno, reversivel e fechavel em uma rodada;
+- toda implementacao nova relevante deve nascer com bateria de testes que cubra
+  o slice local e o fluxo ponta a ponta afetado;
 - docs vivas entram na fila apenas quando refletem mudanca real de runtime, gate ou baseline;
 - nenhuma tarefa vaga entra em `ready`.
 
@@ -65,6 +67,9 @@ Um item so entra em `ready` quando:
 - aponta comportamento, contrato, gate ou artefato especifico;
 - tem `criterio_de_aceite`;
 - tem `gate_minimo`;
+- explicita a estrategia de validacao automatizada do slice, incluindo cobertura
+  ponta a ponta do fluxo afetado ou justificativa de fase quando isso ainda nao
+  for viavel;
 - nao depende de decisao macro ainda aberta.
 
 ### Definition of Done
@@ -73,6 +78,8 @@ Um item so entra em `done` quando:
 
 - implementacao principal foi concluida;
 - validacao minima definida no item passou;
+- a bateria de testes do comportamento novo cobre o slice local e o caminho
+  ponta a ponta afetado, ou a excecao de fase ficou registrada explicitamente;
 - docs vivas foram sincronizadas se a mudanca alterou estado real;
 - o impacto no baseline foi registrado em uma linha curta.
 
@@ -1542,7 +1549,7 @@ Escalar ao operador quando:
 
 - `id`: `MB-087`
 - `prioridade`: `P0`
-- `status`: `ready`
+- `status`: `completed`
 - `eixo_do_mestre`: `evolucao`
 - `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
 - `micro_objetivo`: formalizar a gramatica soberana de `expanded_eval_scope` e `controlled_wave2_experiment` para capacidade, superficie e estado operacional do ecossistema, sem promover stack externa nem abrir superficie nova por inercia.
@@ -1559,7 +1566,7 @@ Escalar ao operador quando:
 
 - `id`: `MB-088`
 - `prioridade`: `P0`
-- `status`: `blocked`
+- `status`: `completed`
 - `eixo_do_mestre`: `observabilidade`
 - `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
 - `micro_objetivo`: expandir tracing, piloto e comparadores para exporem cobertura e drift por `capability_surface_axis`, `ecosystem_state_axis` e `experiment_lane_status`.
@@ -1576,7 +1583,7 @@ Escalar ao operador quando:
 
 - `id`: `MB-089`
 - `prioridade`: `P1`
-- `status`: `blocked`
+- `status`: `completed`
 - `eixo_do_mestre`: `evolucao`
 - `workflow_profile_afetado`: `nao_aplicavel`
 - `micro_objetivo`: materializar a lane controlada da Onda 2 em `evolution-lab` e comparadores, com criterio formal de entrada, permanencia e saida para referencias candidatas.
@@ -1593,7 +1600,7 @@ Escalar ao operador quando:
 
 - `id`: `MB-090`
 - `prioridade`: `P1`
-- `status`: `blocked`
+- `status`: `completed`
 - `eixo_do_mestre`: `gates/release`
 - `workflow_profile_afetado`: `nao_aplicavel`
 - `micro_objetivo`: ligar a nova gramatica de eval expandida e experimentos controlados aos verificadores de release e aos fechadores regeneraveis do corte.
@@ -1610,7 +1617,7 @@ Escalar ao operador quando:
 
 - `id`: `MB-091`
 - `prioridade`: `P1`
-- `status`: `blocked`
+- `status`: `completed`
 - `eixo_do_mestre`: `docs/gates`
 - `workflow_profile_afetado`: `nao_aplicavel`
 - `micro_objetivo`: fechar o lote de evals expandidas e lane controlada da Onda 2 com docs vivos, changelog e gate sincronizados ao novo estado real do baseline.
@@ -1622,6 +1629,91 @@ Escalar ao operador quando:
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `medium`
 - `impacto_no_baseline`: o lote fecha com a fronteira entre baseline soberano e experimento controlado formalizada nos docs vivos.
+
+### MB-092
+
+- `id`: `MB-092`
+- `prioridade`: `P0`
+- `status`: `ready`
+- `eixo_do_mestre`: `evolucao`
+- `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
+- `micro_objetivo`: formalizar a gramatica soberana de compile/optimize loops governados para prompts, planos e workflows, sem abrir autoedicao solta nem promocao automatica de mudanca.
+- `justificativa_arquitetural`: depois de fechar evals expandidas e a lane controlada da Onda 2, o proximo ganho causal do baseline e transformar sinais comparativos e vetores de refinamento em contratos claros de oportunidade de otimizacao, bloqueio de seguranca e escopo elegivel, evitando que `EV-003` vire heuristica espalhada no laboratorio.
+- `arquivos/servicos_principais`: `evolution/evolution-lab`, `tools/evolution_from_pilot.py`, `tools/compare_orchestrator_paths.py`, `shared/contracts`, `shared/schemas`
+- `dependencias`: `MB-091`
+- `criterio_de_aceite`: `evolution-lab`, comparadores e artefatos de piloto passam a compartilhar um slice explicito para `optimization_scope`, `optimization_target_kind`, `optimization_candidate_status`, `optimization_safety_status` e `optimization_blockers`, distinguindo prompt, plano e workflow como alvos governados de refinamento sem autorizar mudanca automatica de producao.
+- `gate_minimo`: `pytest` direcionado dos services/tools afetados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `impacto_no_baseline`: o sistema passa a ter contrato soberano para dizer o que e oportunidade real de compile/optimize loop e o que ainda e ruido comparativo.
+
+### MB-093
+
+- `id`: `MB-093`
+- `prioridade`: `P0`
+- `status`: `blocked`
+- `eixo_do_mestre`: `evolucao`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: materializar `EV-003` em `evolution-lab` e `evolution_from_pilot`, fazendo traces, `evaluation_matrix` e `refinement_vectors` emitirem propostas bounded de otimizacao para prompts, planos e workflows.
+- `justificativa_arquitetural`: depois de formalizar o contrato, o loop evolutivo precisa deixar de apenas apontar drift e passar a produzir candidatos governados de refinamento, com alvo, justificativa, criterio de seguranca e evidencias minimas por workflow.
+- `arquivos/servicos_principais`: `evolution/evolution-lab`, `tools/evolution_from_pilot.py`, `tools/internal_pilot_support.py`
+- `dependencias`: `MB-092`
+- `criterio_de_aceite`: `evolution-lab` e `evolution_from_pilot` passam a emitir pelo menos propostas bounded por `prompt`, `plan` e `workflow`, com criterio de elegibilidade, blockers, refs de evidencia e recomendacao de acao sem autoaplicar mudanca no runtime.
+- `gate_minimo`: `pytest` direcionado dos services/tools afetados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `impacto_no_baseline`: o laboratorio deixa de ser apenas leitor de diferencas e passa a produzir candidatos governados de refinamento do nucleo.
+
+### MB-094
+
+- `id`: `MB-094`
+- `prioridade`: `P1`
+- `status`: `blocked`
+- `eixo_do_mestre`: `observabilidade`
+- `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
+- `micro_objetivo`: tornar oportunidades, blockers e seguranca de otimizacao parte explicita da evidencia auditavel em comparadores, relatorios e baseline ativo.
+- `justificativa_arquitetural`: sem observabilidade propria, compile/optimize loops ficam opacos e parecem autoaperfeicoamento sem prova; o baseline precisa mostrar onde ha oportunidade real, onde a seguranca bloqueia acao e onde o sinal ainda e insuficiente.
+- `arquivos/servicos_principais`: `tools/compare_orchestrator_paths.py`, `tools/internal_pilot_report.py`, `tools/verify_active_cut_baseline.py`, `services/observability-service`
+- `dependencias`: `MB-093`
+- `criterio_de_aceite`: comparadores, relatorios e auditoria passam a expor pelo menos `optimization_candidate_status`, `optimization_safety_status`, `optimization_target_kind` e `optimization_blockers`, deixando explicito quando o runtime esta pronto para refinar, quando deve apenas observar e quando precisa congelar.
+- `gate_minimo`: `pytest` direcionado dos services/tools afetados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `impacto_no_baseline`: oportunidades de refinamento passam a ser evidencia comparavel e auditavel, e nao apenas leitura interna do laboratorio.
+
+### MB-095
+
+- `id`: `MB-095`
+- `prioridade`: `P1`
+- `status`: `blocked`
+- `eixo_do_mestre`: `gates/release`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: ligar a nova gramatica de compile/optimize loops governados aos verificadores de release e aos fechadores regeneraveis do corte.
+- `justificativa_arquitetural`: `EV-003` precisa influenciar leitura de baseline sem virar mecanismo de promocao automatica; release e closure docs devem distinguir candidato de otimizacao, risco de seguranca e recomendacao de congelamento.
+- `arquivos/servicos_principais`: `tools/verify_release_signal_baseline.py`, `tools/verify_active_cut_baseline.py`, `tools/archive/close_alignment_cycle.py`, `tools/archive/close_sovereign_alignment_cut.py`
+- `dependencias`: `MB-094`
+- `criterio_de_aceite`: verificadores e fechadores passam a registrar `optimization_readiness`, `optimization_release_status`, `optimization_blockers` e `optimization_safety_status`, sem transformar gates em aplicadores automaticos de refinamento.
+- `gate_minimo`: `pytest` direcionado dos tools afetados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `impacto_no_baseline`: release e closure docs passam a distinguir drift, oportunidade governada de refinamento e bloqueio de seguranca no loop evolutivo.
+
+### MB-096
+
+- `id`: `MB-096`
+- `prioridade`: `P1`
+- `status`: `blocked`
+- `eixo_do_mestre`: `docs/gates`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: fechar o lote de compile/optimize loops governados com docs vivos, changelog e gate sincronizados ao novo estado real do baseline.
+- `justificativa_arquitetural`: esse lote muda a leitura do que o sistema ja consegue sugerir como refinamento governado do nucleo; o fechamento precisa consolidar essa fronteira sem deixar backlog, handoff, snapshot e changelog em drift.
+- `arquivos/servicos_principais`: `docs/implementation/execution-backlog.md`, `docs/implementation/unified-gap-and-absorption-backlog.md`, `HANDOFF.md`, `docs/implementation/v2-adherence-snapshot.md`, `CHANGELOG.md`
+- `dependencias`: `MB-092`, `MB-093`, `MB-094`, `MB-095`
+- `criterio_de_aceite`: o lote termina com docs vivos refletindo `EV-003` como baseline evolutivo governado, `CHANGELOG.md` sincronizado e gate minimo validado.
+- `gate_minimo`: `python tools/check_mojibake.py docs/implementation docs/operations HANDOFF.md CHANGELOG.md` e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `medium`
+- `impacto_no_baseline`: o lote fecha com a gramatica de compile/optimize loops governados materializada e documentada como parte do baseline evolutivo.
 
 ---
 
@@ -1668,5 +1760,8 @@ Estado atual da fila:
 - `MB-080` e `MB-081` agora tambem foram concluidos: `evolution-lab`, `evolution_from_pilot`, comparadores e verificadores de release passaram a tratar efetividade e mismatch da arbitragem declarativa como insumo formal de `refinement_vectors`, `evaluation_matrix` e leitura de release;
 - `MB-082` a `MB-086` foram concluidos e fecharam o lote do nucleo para identidade, missao e politica por request, derivado de `SG-006`;
 - `planning`, `governance`, `orchestrator`, `observability`, piloto, comparadores, `evolution-lab` e verificadores de release agora tratam `request_identity_policy` como slice soberano, auditavel e refinavel do runtime;
-- `MB-087` a `MB-091` agora formam o lote ativo para `EV-002` + `EV-004`, com `MB-087` em `ready` para expandir evals e abrir a lane controlada de experimentos da Onda 2 sem perder soberania do nucleo;
+- `MB-087` a `MB-091` foram concluidos e fecharam o lote de evals expandidas e lane controlada da Onda 2, derivado de `EV-002` + `EV-004`;
+- `observability`, piloto, comparadores, `evolution-lab`, verificadores de release e fechadores regeneraveis agora tratam `expanded_eval_*`, `surface_axis_*`, `ecosystem_state_*`, `experiment_lane_*`, `experiment_exit_*` e `promotion_readiness` como baseline comparativo controlado;
+- `MB-092` a `MB-096` agora formam o novo lote ativo da fila micro, derivado de `EV-003`, com `MB-092` em `ready`;
+- a proxima puxada correta do baseline passa a ser compile/optimize loops governados para prompts, planos e workflows, mantendo a Onda 2 como experimento controlado e sem abrir autoedicao do nucleo;
 - `protective intelligence foundation` continua `deferred` e a matriz da Onda 2 segue como insumo, nao como gatilho automatico para abrir nova vertical.

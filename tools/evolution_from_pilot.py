@@ -88,6 +88,16 @@ def _evaluation_from_dict(payload: dict[str, object]) -> FlowEvaluationInput:
             if payload.get("continuity_runtime_mode") is not None
             else None
         ),
+        specialist_subflow_status=(
+            str(payload["specialist_subflow_status"])
+            if payload.get("specialist_subflow_status") is not None
+            else None
+        ),
+        mission_runtime_state_status=(
+            str(payload["mission_runtime_state_status"])
+            if payload.get("mission_runtime_state_status") is not None
+            else None
+        ),
         registry_domains=list(payload.get("registry_domains", [])),
         shadow_specialists=list(payload.get("shadow_specialists", [])),
         domain_alignment_status=(
@@ -192,6 +202,46 @@ def _evaluation_from_dict(payload: dict[str, object]) -> FlowEvaluationInput:
         ),
         request_identity_mismatch_flags=list(
             payload.get("request_identity_mismatch_flags", [])
+        ),
+        expanded_eval_status=(
+            str(payload["expanded_eval_status"])
+            if payload.get("expanded_eval_status") is not None
+            else None
+        ),
+        surface_axis_status=(
+            str(payload["surface_axis_status"])
+            if payload.get("surface_axis_status") is not None
+            else None
+        ),
+        ecosystem_state_status=(
+            str(payload["ecosystem_state_status"])
+            if payload.get("ecosystem_state_status") is not None
+            else None
+        ),
+        experiment_lane_status=(
+            str(payload["experiment_lane_status"])
+            if payload.get("experiment_lane_status") is not None
+            else None
+        ),
+        wave2_candidate_class=(
+            str(payload["wave2_candidate_class"])
+            if payload.get("wave2_candidate_class") is not None
+            else None
+        ),
+        experiment_entry_status=(
+            str(payload["experiment_entry_status"])
+            if payload.get("experiment_entry_status") is not None
+            else None
+        ),
+        experiment_exit_status=(
+            str(payload["experiment_exit_status"])
+            if payload.get("experiment_exit_status") is not None
+            else None
+        ),
+        promotion_readiness=(
+            str(payload["promotion_readiness"])
+            if payload.get("promotion_readiness") is not None
+            else None
         ),
         adaptive_intervention_status=(
             str(payload["adaptive_intervention_status"])
@@ -426,6 +476,8 @@ def build_payload(args: Namespace) -> dict[str, object]:
                 continuity_action=audit.continuity_action,
                 continuity_source=audit.continuity_source,
                 continuity_runtime_mode=audit.continuity_runtime_mode,
+                specialist_subflow_status=audit.specialist_subflow_status,
+                mission_runtime_state_status=audit.mission_runtime_state_status,
                 registry_domains=list(audit.registry_domains),
                 shadow_specialists=list(audit.shadow_specialists),
                 domain_alignment_status=audit.domain_alignment_status,
@@ -457,6 +509,14 @@ def build_payload(args: Namespace) -> dict[str, object]:
                 request_identity_mismatch_flags=list(
                     audit.request_identity_mismatch_flags
                 ),
+                expanded_eval_status=audit.expanded_eval_status,
+                surface_axis_status=audit.surface_axis_status,
+                ecosystem_state_status=audit.ecosystem_state_status,
+                experiment_lane_status=audit.experiment_lane_status,
+                wave2_candidate_class=audit.wave2_candidate_class,
+                experiment_entry_status=audit.experiment_entry_status,
+                experiment_exit_status=audit.experiment_exit_status,
+                promotion_readiness=audit.promotion_readiness,
                 adaptive_intervention_status=audit.adaptive_intervention_status,
                 adaptive_intervention_selected_action=(
                     audit.adaptive_intervention_selected_action
@@ -582,6 +642,18 @@ def build_payload(args: Namespace) -> dict[str, object]:
                         f"{item.get('baseline_mission_policy_assessment', 'n/a')}"
                         "->"
                         f"{item.get('candidate_mission_policy_assessment', 'n/a')}"
+                    ),
+                    (
+                        "expanded_eval="
+                        f"{item.get('baseline_expanded_eval_assessment', 'n/a')}"
+                        "->"
+                        f"{item.get('candidate_expanded_eval_assessment', 'n/a')}"
+                    ),
+                    (
+                        "experiment_lane="
+                        f"{item.get('baseline_experiment_lane_assessment', 'n/a')}"
+                        "->"
+                        f"{item.get('candidate_experiment_lane_assessment', 'n/a')}"
                     ),
                     (
                         "memory_lifecycle="
@@ -856,6 +928,18 @@ def render_text(payload: dict[str, object]) -> str:
                         f"{item.get('baseline_mission_policy_assessment', 'n/a')}"
                         "->"
                         f"{item.get('candidate_mission_policy_assessment', 'n/a')}"
+                    ),
+                    (
+                        "expanded_eval="
+                        f"{item.get('baseline_expanded_eval_assessment', 'n/a')}"
+                        "->"
+                        f"{item.get('candidate_expanded_eval_assessment', 'n/a')}"
+                    ),
+                    (
+                        "experiment_lane="
+                        f"{item.get('baseline_experiment_lane_assessment', 'n/a')}"
+                        "->"
+                        f"{item.get('candidate_experiment_lane_assessment', 'n/a')}"
                     ),
                     (
                         "memory_lifecycle="

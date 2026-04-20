@@ -103,6 +103,39 @@ def test_evaluation_from_dict_preserves_request_identity_policy_signals() -> Non
     assert evaluation.request_identity_mismatch_flags == []
 
 
+def test_evaluation_from_dict_preserves_expanded_eval_signals() -> None:
+    evaluation = _evaluation_from_dict(
+        {
+            "request_id": "req-5",
+            "session_id": "sess-5",
+            "mission_id": None,
+            "governance_decision": "allow_with_conditions",
+            "operation_status": "completed",
+            "total_events": 6,
+            "duration_seconds": 1.6,
+            "missing_required_events": [],
+            "anomaly_flags": [],
+            "expanded_eval_status": "candidate_ready",
+            "surface_axis_status": "candidate_ready",
+            "ecosystem_state_status": "candidate_ready",
+            "experiment_lane_status": "controlled_candidate",
+            "wave2_candidate_class": "surface_and_ecosystem",
+            "experiment_entry_status": "candidate_ready",
+            "experiment_exit_status": "hold_in_lane",
+            "promotion_readiness": "manual_review_only",
+        }
+    )
+
+    assert evaluation.expanded_eval_status == "candidate_ready"
+    assert evaluation.surface_axis_status == "candidate_ready"
+    assert evaluation.ecosystem_state_status == "candidate_ready"
+    assert evaluation.experiment_lane_status == "controlled_candidate"
+    assert evaluation.wave2_candidate_class == "surface_and_ecosystem"
+    assert evaluation.experiment_entry_status == "candidate_ready"
+    assert evaluation.experiment_exit_status == "hold_in_lane"
+    assert evaluation.promotion_readiness == "manual_review_only"
+
+
 def test_render_text_reports_adaptive_intervention_policy_assessment() -> None:
     rendered = render_text(
         {
@@ -133,6 +166,10 @@ def test_render_text_reports_adaptive_intervention_policy_assessment() -> None:
                     "candidate_request_identity_assessment": "healthy",
                     "baseline_mission_policy_assessment": "policy_aligned",
                     "candidate_mission_policy_assessment": "attention_required",
+                    "baseline_expanded_eval_assessment": "candidate_ready",
+                    "candidate_expanded_eval_assessment": "attention_required",
+                    "baseline_experiment_lane_assessment": "controlled_candidate",
+                    "candidate_experiment_lane_assessment": "attention_required",
                     "baseline_memory_lifecycle_assessment": "retained",
                     "candidate_memory_lifecycle_assessment": "retained",
                     "baseline_memory_corpus_assessment": "stable",
@@ -161,6 +198,8 @@ def test_render_text_reports_adaptive_intervention_policy_assessment() -> None:
     assert "adaptive_intervention_policy=policy_aligned->review_recommended" in rendered
     assert "request_identity=healthy->healthy" in rendered
     assert "mission_policy=policy_aligned->attention_required" in rendered
+    assert "expanded_eval=candidate_ready->attention_required" in rendered
+    assert "experiment_lane=controlled_candidate->attention_required" in rendered
     assert "capability_decision=healthy->attention_required" in rendered
     assert "capability_effectiveness=effective->insufficient" in rendered
     assert "handoff_adapter=healthy->contained" in rendered

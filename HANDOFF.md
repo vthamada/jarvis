@@ -4,7 +4,7 @@
 
 - Atualizado em: 2026-04-20
 - Branch: `main`
-- Commit de referência: `f946e0b`
+- Commit de referência: `02ccc53`
 - Artefato canônico do projeto: `documento_mestre_jarvis.md`
 - Estado do projeto: `v1` encerrado e congelado para uso controlado; primeiro ciclo do `pós-v1` encerrado; primeiro ciclo do `v1.5` encerrado; primeiro corte do `v2` encerrado; `v2-alignment-cycle` encerrado; próximo corte do `v2` aberto
 - Fila micro ativa: `docs/implementation/execution-backlog.md`
@@ -93,10 +93,13 @@ Leitura atualizada desta rodada:
 - esse recorte continua subordinado ao objetivo maior de construir um JARVIS
   soberano, amplo e autoevolutivo, capaz de absorver o estado da arte sem
   terceirizar identidade, memoria ou governanca.
+- toda implementacao nova relevante deve agora carregar bateria de testes para
+  validar o slice local e o fluxo ponta a ponta afetado, como politica oficial
+  de robustez e resiliencia do repositorio.
 
-Consolidar o fechamento operacional do `v2` sobre um runtime já alinhado aos eixos do Documento-Mestre, transformando o proximo lote em malha comparativa mais forte para capacidades, superficies e estado operacional sem abrir nova frente macro por impulso.
+Consolidar o fechamento operacional do `v2` sobre um runtime já alinhado aos eixos do Documento-Mestre, preservando `EV-002` + `EV-004` como baseline comparativo controlado e evitando reabrir esse lote por inercia local.
 
-Abrir o proximo lote do nucleo em `EV-002` + `EV-004`, expandindo evals e sinais do baseline e materializando a lane controlada de experimentos da Onda 2 antes de qualquer movimento em superficies amplas, novas verticais ou autoevolucao mais forte.
+A fila micro ja foi reaberta em `docs/implementation/execution-backlog.md` com o lote `MB-092` a `MB-096`, deixando `MB-092` como o item `ready` atual para `EV-003`.
 
 ### Foco operacional atual
 
@@ -131,9 +134,19 @@ Atualizacao desta rodada:
   comparadores, `evolution-lab` e verificadores de release agora tratam
   `request_identity_policy` como contrato soberano, auditavel e refinavel do
   runtime;
-- `MB-087` a `MB-091` agora formam o lote ativo para `EV-002` + `EV-004`, com
-  `MB-087` em `ready` para formalizar a gramatica de eval expandida e a lane
-  controlada de experimentos da Onda 2;
+- `MB-087` a `MB-091` agora tambem foram concluidos e fecharam o lote de
+  `EV-002` + `EV-004` como baseline comparativo controlado;
+- `observability`, piloto, comparadores, `evolution-lab`, verificadores de
+  release e fechadores regeneraveis agora tratam `expanded_eval_*`,
+  `surface_axis_*`, `ecosystem_state_*`, `experiment_lane_*`,
+  `experiment_exit_*` e `promotion_readiness` como gramatica soberana de
+  eval expandida e lane controlada da Onda 2;
+- `MB-092` a `MB-096` agora formam o novo lote ativo da fila micro, derivado
+  de `EV-003`, com foco em compile/optimize loops governados para prompts,
+  planos e workflows;
+- a proxima puxada correta do baseline passa a ser formalizar contrato,
+  candidatos, evidencia auditavel e leitura de release para esse loop
+  evolutivo, sem autoedicao do nucleo e sem promocao automatica de refinamento;
 - tratar a Onda 2 apenas como experimento controlado guiado pela matriz de
   readiness ja existente, sem promocao automatica de referencia externa;
 - manter `protective intelligence`, `voice/realtime`, memoria temporal forte,
@@ -185,9 +198,10 @@ Atualizacao desta rodada:
   comparadores, `evolution-lab` e verificadores de release agora tratam
   `request_identity_policy` como contrato soberano, auditavel e refinavel do
   runtime;
-- `MB-087` a `MB-091` agora formam o lote ativo para `EV-002` + `EV-004`, com
-  `MB-087` em `ready` para formalizar a gramatica de eval expandida e a lane
-  controlada de experimentos da Onda 2;
+- `MB-087` a `MB-091` agora tambem foram concluidos e fecharam `EV-002` +
+  `EV-004` como baseline comparativo controlado;
+- `MB-092` a `MB-096` agora formam o novo lote ativo da fila micro para
+  `EV-003`, com `MB-092` em `ready`;
 - tratar a Onda 2 apenas como experimento controlado guiado pela matriz de
   readiness ja existente, sem promocao automatica de referencia externa;
 - so depois desse lote: reavaliar qual vertical derivada deve abrir a proxima frente macro; `protective intelligence` permanece mapeado, mas em `deferred` ate nova decisao explicita;
@@ -371,14 +385,14 @@ Regra de estudo externo no `v2`:
 
 Ordem recomendada:
 1. usar `docs/implementation/unified-gap-and-absorption-backlog.md` como mapa macro do que ainda falta, antes de abrir novo item `ready`;
-2. tratar `SG-006` como eixo agora fechado no baseline e usar o backlog macro
-   para definir a proxima puxada correta do `v2 restante`;
-3. reconhecer que `MB-082` a `MB-086` ja foram executados integralmente e que a
+2. tratar `SG-006`, `EV-002` e `EV-004` como eixos agora fechados no baseline e
+   usar o backlog macro para definir a proxima puxada correta do `v2 restante`;
+3. reconhecer que `MB-082` a `MB-091` ja foram executados integralmente e que a
    fila micro voltou a ficar sem item `ready`;
 4. manter `HANDOFF.md`, `CHANGELOG.md` e o snapshot como docs vivos do baseline sem abrir outro corte documental por inercia;
 5. preservar `MB-023` a `MB-026` como baseline fechado e `MB-027` a `MB-031` como `deferred`, sem reabrir `protective intelligence` por impulso;
 6. tratar `MB-072` a `MB-076` como baseline ja fechado do lote de manutencao ativa de memoria viva, preservando `memory_maintenance_*`, compaction e recall cross-session como contrato soberano do runtime;
-7. tratar `MB-082` a `MB-086` como o lote ativo do nucleo para identidade, missao e politica por request, sem reabrir lotes anteriores por inercia local;
+7. tratar `MB-082` a `MB-091` como lotes ja fechados do baseline atual, sem reabrir esse eixo por inercia local;
 8. manter historico regeneravel em `docs/archive/implementation/` e `tools/archive/` sem reexpandir a raiz do repositorio;
 9. so abrir outra frente funcional ou novo lote micro quando essa repriorizacao explicita acontecer ou se a prioridade macro mudar.
 
@@ -401,6 +415,13 @@ Atualização desta rodada:
 - `request_identity_policy` agora ja existe como contrato soberano do runtime,
   com evidencia auditavel, uso evolutivo e leitura de release integrados ao
   baseline;
+- `MB-087` a `MB-091` agora tambem foram concluidos e fecharam o lote de evals
+  expandidas e lane controlada da Onda 2, derivado de `EV-002` + `EV-004`;
+- `observability`, piloto, comparadores, `evolution-lab`, verificadores de
+  release e fechadores regeneraveis agora tratam `expanded_eval_*`,
+  `surface_axis_*`, `ecosystem_state_*`, `experiment_lane_*`,
+  `experiment_exit_*` e `promotion_readiness` como baseline comparativo
+  controlado do nucleo;
 - a rodada seguinte recuperou o gate global: `planning-engine` deixou de promover `specialist_reevaluation` a validacao humana no plano refinado, `shared/domain_registry.py` voltou a preservar `workflow_steps`, `workflow_checkpoints` e `workflow_decision_points` em rotas promovidas, e `python tools/engineering_gate.py --mode standard` agora fecha sem falhas;
 - `documento_mestre_jarvis.md`, `docs/roadmap/programa-ate-v3.md` e `docs/implementation/v2-adherence-snapshot.md` agora deixam mais explicito que LLMs e runtimes agentic entram como substrato subordinado ao nucleo, que multiplas superficies expõem a mesma entidade e que o horizonte do `v3` inclui estado operacional mais rico do ecossistema;
 - `protective intelligence` segue preservada em `deferred`, e a matriz de readiness da Onda 2 continua apenas como insumo controlado do proximo refinamento do nucleo.

@@ -524,6 +524,36 @@ def test_serialize_comparisons_reports_equivalent_verdict() -> None:
         == "aligned"
     )
     assert (
+        payload["comparison_summary"]["baseline_evaluation_matrix"]["strategy"][
+            "expanded_eval"
+        ]
+        == "candidate_ready"
+    )
+    assert (
+        payload["comparison_summary"]["baseline_evaluation_matrix"]["strategy"][
+            "surface_axis"
+        ]
+        == "candidate_ready"
+    )
+    assert (
+        payload["comparison_summary"]["baseline_evaluation_matrix"]["strategy"][
+            "ecosystem_state"
+        ]
+        == "candidate_ready"
+    )
+    assert (
+        payload["comparison_summary"]["baseline_evaluation_matrix"]["strategy"][
+            "experiment_lane"
+        ]
+        == "controlled_candidate"
+    )
+    assert (
+        payload["comparison_summary"]["baseline_evaluation_matrix"]["strategy"][
+            "promotion_readiness"
+        ]
+        == "manual_review_only"
+    )
+    assert (
         payload["comparison_summary"]["baseline_wave_two_readiness_matrix"][
             "openai_agents_sdk"
         ]["status"]
@@ -645,6 +675,16 @@ def test_render_text_reports_workflow_profile_status() -> None:
     assert "candidate_request_identity_status=healthy" in rendered
     assert "baseline_mission_policy_status=policy_aligned" in rendered
     assert "candidate_mission_policy_status=policy_aligned" in rendered
+    assert "baseline_expanded_eval_status=candidate_ready" in rendered
+    assert "candidate_expanded_eval_status=attention_required" in rendered
+    assert "baseline_surface_axis_status=candidate_ready" in rendered
+    assert "candidate_surface_axis_status=candidate_ready" in rendered
+    assert "baseline_ecosystem_state_status=candidate_ready" in rendered
+    assert "candidate_ecosystem_state_status=attention_required" in rendered
+    assert "baseline_experiment_lane_status=controlled_candidate" in rendered
+    assert "candidate_experiment_lane_status=attention_required" in rendered
+    assert "baseline_promotion_readiness=manual_review_only" in rendered
+    assert "candidate_promotion_readiness=blocked" in rendered
     assert "baseline_memory_causality_status=causal_guidance" in rendered
     assert "candidate_memory_causality_status=causal_guidance" in rendered
     assert "candidate_memory_corpus_status=monitor" in rendered
@@ -668,11 +708,16 @@ def test_render_text_reports_workflow_profile_status() -> None:
     assert "candidate_mission_runtime_state_status=healthy" in rendered
     assert "candidate_cognitive_recomposition_assessment=coherent" in rendered
     assert "candidate_cognitive_recomposition_decision=coherent" in rendered
-    assert (
-        "candidate_refinement_axes="
-        "mind_composition,memory_corpus,procedural_artifacts,workflow_checkpointing,"
-        "workflow_output,workflow_profile,workflow_resume"
-    ) in rendered
+    assert "candidate_refinement_axes=" in rendered
+    assert "controlled_wave2_experiment" in rendered
+    assert "expanded_eval_scope" in rendered
+    assert "mind_composition" in rendered
+    assert "memory_corpus" in rendered
+    assert "procedural_artifacts" in rendered
+    assert "workflow_checkpointing" in rendered
+    assert "workflow_output" in rendered
+    assert "workflow_profile" in rendered
+    assert "workflow_resume" in rendered
     assert "candidate_evaluation_matrix_workflows=strategy" in rendered
     assert "candidate_wave_two_readiness=" in rendered
 

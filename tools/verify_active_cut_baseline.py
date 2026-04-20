@@ -58,6 +58,12 @@ class ActiveCutBaselineSummary:
     specialist_subflow_ready_scenarios: int
     mission_runtime_state_target_scenarios: int
     mission_runtime_state_ready_scenarios: int
+    expanded_eval_target_scenarios: int
+    expanded_eval_ready_scenarios: int
+    wave2_lane_target_scenarios: int
+    wave2_lane_healthy_scenarios: int
+    promotion_blocker_scenarios: int
+    experiment_release_hold_scenarios: int
 
 
 def _promoted_workflow_profiles() -> set[str]:
@@ -131,6 +137,23 @@ def _build_targeted_pilot_summary(
     ]
     mission_runtime_state_targets = [
         item for item in pilot_results if "mission_runtime_state" in item.coverage_tags
+    ]
+    expanded_eval_targets = [
+        item
+        for item in pilot_results
+        if (
+            item.expanded_eval_status != "not_applicable"
+            or item.experiment_lane_status != "not_applicable"
+            or item.promotion_readiness != "not_applicable"
+        )
+    ]
+    wave2_lane_targets = [
+        item
+        for item in pilot_results
+        if (
+            item.experiment_lane_status != "not_applicable"
+            or item.promotion_readiness != "not_applicable"
+        )
     ]
     missing_routes = sorted(promoted_routes - matched_routes)
     missing_workflow_profiles = sorted(promoted_workflow_profiles - matched_workflows)
@@ -214,6 +237,35 @@ def _build_targeted_pilot_summary(
                 1
                 for item in mission_runtime_state_targets
                 if item.mission_runtime_state_status == "healthy"
+            ),
+            "expanded_eval_target_scenarios": len(expanded_eval_targets),
+            "expanded_eval_ready_scenarios": sum(
+                1
+                for item in expanded_eval_targets
+                if item.expanded_eval_status
+                in {
+                    "candidate_ready",
+                    "baseline_expanding",
+                    "baseline_only",
+                    "not_in_phase",
+                }
+            ),
+            "wave2_lane_target_scenarios": len(wave2_lane_targets),
+            "wave2_lane_healthy_scenarios": sum(
+                1
+                for item in wave2_lane_targets
+                if item.experiment_lane_status
+                in {"controlled_candidate", "baseline_only", "out_of_lane"}
+            ),
+            "promotion_blocker_scenarios": sum(
+                1
+                for item in wave2_lane_targets
+                if item.promotion_readiness == "blocked"
+            ),
+            "experiment_release_hold_scenarios": sum(
+                1
+                for item in wave2_lane_targets
+                if item.experiment_exit_status in {"hold_in_lane", "hold_baseline"}
             ),
         },
         [
@@ -371,6 +423,20 @@ def build_payload(
         mission_runtime_state_ready_scenarios=int(
             pilot_summary["mission_runtime_state_ready_scenarios"]
         ),
+        expanded_eval_target_scenarios=int(
+            pilot_summary["expanded_eval_target_scenarios"]
+        ),
+        expanded_eval_ready_scenarios=int(
+            pilot_summary["expanded_eval_ready_scenarios"]
+        ),
+        wave2_lane_target_scenarios=int(pilot_summary["wave2_lane_target_scenarios"]),
+        wave2_lane_healthy_scenarios=int(
+            pilot_summary["wave2_lane_healthy_scenarios"]
+        ),
+        promotion_blocker_scenarios=int(pilot_summary["promotion_blocker_scenarios"]),
+        experiment_release_hold_scenarios=int(
+            pilot_summary["experiment_release_hold_scenarios"]
+        ),
     )
     decision = "baseline_release_ready"
     if any(
@@ -393,6 +459,14 @@ def build_payload(
         or summary.cognitive_recomposition_ready_scenarios == 0
         or summary.specialist_subflow_ready_scenarios == 0
         or summary.mission_runtime_state_ready_scenarios == 0
+        or (
+            summary.expanded_eval_target_scenarios > 0
+            and summary.expanded_eval_ready_scenarios == 0
+        )
+        or (
+            summary.wave2_lane_target_scenarios > 0
+            and summary.wave2_lane_healthy_scenarios == 0
+        )
     ):
         decision = "baseline_requires_iteration"
 
@@ -429,6 +503,11 @@ def build_payload(
             (
                 "o baseline ativo precisa manter pelo menos um cenario deliberado "
                 "de subfluxo explicito de especialistas e um de mission runtime state"
+            ),
+            (
+                "quando houver eval expandida ou candidato de Onda 2 no piloto, "
+                "a lane controlada precisa permanecer auditavel como baseline_only, "
+                "out_of_lane ou controlled_candidate"
             ),
             *pilot_notes,
         ],
@@ -491,6 +570,16 @@ def render_text(payload: dict[str, object]) -> str:
                 "mission_runtime_state_ready="
                 f"{summary['mission_runtime_state_ready_scenarios']}/"
                 f"{summary['mission_runtime_state_target_scenarios']} "
+                "expanded_eval_ready="
+                f"{summary['expanded_eval_ready_scenarios']}/"
+                f"{summary['expanded_eval_target_scenarios']} "
+                "wave2_lane_healthy="
+                f"{summary['wave2_lane_healthy_scenarios']}/"
+                f"{summary['wave2_lane_target_scenarios']} "
+                "promotion_blockers="
+                f"{summary['promotion_blocker_scenarios']} "
+                "experiment_release_holds="
+                f"{summary['experiment_release_hold_scenarios']} "
                 "cognitive_recomposition_ready="
                 f"{summary['cognitive_recomposition_ready_scenarios']}/"
                 f"{summary['cognitive_recomposition_target_scenarios']}"
@@ -601,6 +690,24 @@ def render_markdown(payload: dict[str, object]) -> str:
             "- cognitive recomposition scenarios ready: "
             f"`{summary['cognitive_recomposition_ready_scenarios']}`/"
             f"`{summary['cognitive_recomposition_target_scenarios']}`"
+        ),
+        (
+            "- expanded eval scenarios ready: "
+            f"`{summary['expanded_eval_ready_scenarios']}`/"
+            f"`{summary['expanded_eval_target_scenarios']}`"
+        ),
+        (
+            "- controlled wave2 lane scenarios healthy: "
+            f"`{summary['wave2_lane_healthy_scenarios']}`/"
+            f"`{summary['wave2_lane_target_scenarios']}`"
+        ),
+        (
+            "- promotion blocker scenarios: "
+            f"`{summary['promotion_blocker_scenarios']}`"
+        ),
+        (
+            "- experiment release hold scenarios: "
+            f"`{summary['experiment_release_hold_scenarios']}`"
         ),
         "",
         "## Notes",

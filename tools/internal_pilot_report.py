@@ -125,6 +125,14 @@ class PilotTraceSummary:
     request_identity_status: str = "not_applicable"
     mission_policy_status: str = "not_applicable"
     request_identity_mismatch_flags: list[str] | None = None
+    expanded_eval_status: str = "not_applicable"
+    surface_axis_status: str = "not_applicable"
+    ecosystem_state_status: str = "not_applicable"
+    experiment_lane_status: str = "not_applicable"
+    wave2_candidate_class: str = "baseline_hardening"
+    experiment_entry_status: str = "not_applicable"
+    experiment_exit_status: str = "not_applicable"
+    promotion_readiness: str = "not_applicable"
 
 
 def parse_args() -> Namespace:
@@ -232,6 +240,14 @@ def summarize_traces(
             request_identity_mismatch_flags=list(
                 audit.request_identity_mismatch_flags
             ),
+            expanded_eval_status=audit.expanded_eval_status,
+            surface_axis_status=audit.surface_axis_status,
+            ecosystem_state_status=audit.ecosystem_state_status,
+            experiment_lane_status=audit.experiment_lane_status,
+            wave2_candidate_class=audit.wave2_candidate_class,
+            experiment_entry_status=audit.experiment_entry_status,
+            experiment_exit_status=audit.experiment_exit_status,
+            promotion_readiness=audit.promotion_readiness,
             adaptive_intervention_status=audit.adaptive_intervention_status,
             adaptive_intervention_reason=audit.adaptive_intervention_reason,
             adaptive_intervention_trigger=audit.adaptive_intervention_trigger,
@@ -325,6 +341,10 @@ def _trace_status(audit) -> str:
     if audit.request_identity_status == "attention_required":
         return "attention_required"
     if audit.mission_policy_status == "attention_required":
+        return "attention_required"
+    if audit.expanded_eval_status == "attention_required":
+        return "attention_required"
+    if audit.experiment_lane_status == "attention_required":
         return "attention_required"
     if audit.capability_effectiveness in {"insufficient", "incomplete"}:
         return "attention_required"
@@ -497,6 +517,22 @@ def _render_summary(summary: PilotTraceSummary) -> str:
         f"{getattr(summary, 'mission_policy_status', 'not_applicable')} "
         "request_identity_mismatch_flags="
         f"{','.join((getattr(summary, 'request_identity_mismatch_flags', []) or [])) or 'none'} "
+        "expanded_eval_status="
+        f"{getattr(summary, 'expanded_eval_status', 'not_applicable')} "
+        "surface_axis_status="
+        f"{getattr(summary, 'surface_axis_status', 'not_applicable')} "
+        "ecosystem_state_status="
+        f"{getattr(summary, 'ecosystem_state_status', 'not_applicable')} "
+        "experiment_lane_status="
+        f"{getattr(summary, 'experiment_lane_status', 'not_applicable')} "
+        "wave2_candidate_class="
+        f"{getattr(summary, 'wave2_candidate_class', 'baseline_hardening')} "
+        "experiment_entry_status="
+        f"{getattr(summary, 'experiment_entry_status', 'not_applicable')} "
+        "experiment_exit_status="
+        f"{getattr(summary, 'experiment_exit_status', 'not_applicable')} "
+        "promotion_readiness="
+        f"{getattr(summary, 'promotion_readiness', 'not_applicable')} "
         "adaptive_intervention_status="
         f"{getattr(summary, 'adaptive_intervention_status', 'not_applicable')} "
         "adaptive_intervention_selected_action="

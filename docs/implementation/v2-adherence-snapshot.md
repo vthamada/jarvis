@@ -31,7 +31,7 @@ Estado de referencia desta revisao:
 - data da fotografia: `2026-04-20`
 - ultimo recorte funcional fechado: `v2-native-memory-scope-hardening-cut`
 - ultimo recorte estrutural fechado: `v2-repository-hygiene-and-tools-review-cut`
-- passo funcional em andamento: lote `MB-062` a `MB-066` concluido, lote `MB-067` a `MB-071` concluido, lote `MB-072` a `MB-076` concluido, lote `MB-077` a `MB-081` concluido, lote `MB-082` a `MB-086` concluido e lote `MB-087` a `MB-091` aberto com `MB-087` em `ready` (`MB-037` a `MB-040` concluidos; `MB-041` a `MB-046` concluidos; `MB-047` a `MB-051` concluidos; `MB-052` a `MB-056` concluidos; `MB-057` a `MB-061` concluidos; `MB-062` a `MB-066` concluidos; `MB-067` a `MB-071` concluidos; `MB-072` a `MB-076` concluidos; `MB-077` concluido; `MB-078` concluido; `MB-079` concluido; `MB-080` concluido; `MB-081` concluido; `MB-082` concluido; `MB-083` concluido; `MB-084` concluido; `MB-085` concluido; `MB-086` concluido`)
+- passo funcional em andamento: lote `MB-062` a `MB-066` concluido, lote `MB-067` a `MB-071` concluido, lote `MB-072` a `MB-076` concluido, lote `MB-077` a `MB-081` concluido, lote `MB-082` a `MB-086` concluido, lote `MB-087` a `MB-091` concluido e lote `MB-092` a `MB-096` aberto com `MB-092` em `ready` (`MB-037` a `MB-040` concluidos; `MB-041` a `MB-046` concluidos; `MB-047` a `MB-051` concluidos; `MB-052` a `MB-056` concluidos; `MB-057` a `MB-061` concluidos; `MB-062` a `MB-066` concluidos; `MB-067` a `MB-071` concluidos; `MB-072` a `MB-076` concluidos; `MB-077` concluido; `MB-078` concluido; `MB-079` concluido; `MB-080` concluido; `MB-081` concluido; `MB-082` concluido; `MB-083` concluido; `MB-084` concluido; `MB-085` concluido; `MB-086` concluido; `MB-087` concluido; `MB-088` concluido; `MB-089` concluido; `MB-090` concluido; `MB-091` concluido`)
 
 Leitura executiva:
 
@@ -111,7 +111,7 @@ Em resumo:
 
 - a visao esta preservada;
 - o runtime esta coerente com a fase do programa;
-- o backlog correto agora e de evals expandidas, comparacao mais forte do baseline e lane controlada de experimentos da Onda 2, nao de abertura imediata de uma nova vertical.
+- o backlog correto agora e de compile/optimize loops governados para prompts, planos e workflows, mantendo evals expandidas e a lane controlada da Onda 2 como baseline comparativo ja fechado, e nao de abertura imediata de uma nova vertical.
 
 ---
 
@@ -386,9 +386,11 @@ Foco:
   release agora tratam efetividade e mismatch da arbitragem `mente -> dominio
   -> especialista` como insumo formal de `refinement_vectors`,
   `evaluation_matrix` e leitura de release;
-- o lote `MB-082` a `MB-086` foi fechado e a fila micro voltou a ficar sem item `ready`,
-  para formalizar identidade, missao e politica como checklist executiva por
-  request antes da proxima expansao de evals ou experimentos.
+- o lote `MB-082` a `MB-086` foi fechado e o lote `MB-087` a `MB-091` tambem ja
+  foi absorvido como baseline comparativo controlado para evals expandidas e
+  lane da Onda 2;
+- a fila micro voltou a ficar sem item `ready`, e a proxima puxada correta
+  agora exige repriorizacao explicita a partir do backlog macro.
 
 ### Passo 5 - manter frentes fora da fila micro ate mudanca explicita de fase
 
@@ -437,9 +439,10 @@ O que resta agora continua melhor descrito como backlog macro de lacunas reais
 e traducao tecnologica disciplinada; mas a ponte ja foi usada de novo para
 abrir o lote seguinte. Por isso,
 `docs/implementation/unified-gap-and-absorption-backlog.md` segue como origem
-da prioridade atual, enquanto `docs/implementation/execution-backlog.md`
-registra agora o fechamento do lote `MB-082` a `MB-086`, deixando a fila micro sem item `ready`,
-formalizando `request_identity_policy` como o proximo passo correto do nucleo.
+da proxima prioridade, enquanto `docs/implementation/execution-backlog.md`
+registra agora o fechamento dos lotes `MB-082` a `MB-091`, deixando a fila micro
+sem item `ready` e preservando `request_identity_policy`, evals expandidas e a
+lane controlada da Onda 2 como baseline do nucleo.
 
 ---
 

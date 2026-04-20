@@ -14,6 +14,7 @@ from observability_service.agentic import (
 )
 from observability_service.repository import ObservabilityRepository
 from shared.domain_registry import workflow_runtime_guidance
+from shared.eval_expansion import derive_expanded_eval_state
 from shared.events import InternalEventEnvelope
 
 
@@ -93,6 +94,14 @@ class FlowAudit:
     request_identity_status: str
     mission_policy_status: str
     request_identity_mismatch_flags: list[str]
+    expanded_eval_status: str
+    surface_axis_status: str
+    ecosystem_state_status: str
+    experiment_lane_status: str
+    wave2_candidate_class: str
+    experiment_entry_status: str
+    experiment_exit_status: str
+    promotion_readiness: str
     mind_domain_specialist_status: str
     mind_domain_specialist_chain_status: str
     mind_domain_specialist_chain: str | None
@@ -190,6 +199,16 @@ class FlowAudit:
             and self.mission_policy_status
             in {"policy_aligned", "mandatory_override", "not_applicable"}
             and not self.request_identity_mismatch_flags
+            and self.expanded_eval_status
+            in {"candidate_ready", "baseline_expanding", "not_in_phase"}
+            and self.surface_axis_status
+            in {"candidate_ready", "coverage_partial", "not_in_phase"}
+            and self.ecosystem_state_status
+            in {"candidate_ready", "coverage_partial", "not_in_phase"}
+            and self.experiment_lane_status
+            in {"controlled_candidate", "baseline_only", "out_of_lane"}
+            and self.promotion_readiness
+            in {"manual_review_only", "not_applicable", "blocked"}
             and self.mind_domain_specialist_effectiveness
             in {"effective", "not_applicable"}
             and self.adaptive_intervention_status in {"healthy", "not_applicable"}
@@ -382,6 +401,14 @@ class ObservabilityService:
                 request_identity_status="incomplete",
                 mission_policy_status="incomplete",
                 request_identity_mismatch_flags=[],
+                expanded_eval_status="attention_required",
+                surface_axis_status="attention_required",
+                ecosystem_state_status="attention_required",
+                experiment_lane_status="attention_required",
+                wave2_candidate_class="baseline_hardening",
+                experiment_entry_status="blocked_by_drift",
+                experiment_exit_status="freeze_and_review",
+                promotion_readiness="blocked",
                 event_names=[],
                 missing_required_events=list(required_events),
                 anomaly_flags=["no_events_found"],
@@ -1592,6 +1619,18 @@ class ObservabilityService:
             request_identity_source_event=request_identity_source_event,
             governance_event=governance_event,
         )
+        expanded_eval_state = derive_expanded_eval_state(
+            capability_decision_status=capability_decision_status,
+            capability_effectiveness=capability_effectiveness,
+            handoff_adapter_status=handoff_adapter_status,
+            request_identity_status=request_identity_status,
+            mission_policy_status=mission_policy_status,
+            continuity_trace_status=continuity_trace_status,
+            workflow_checkpoint_status=workflow_checkpoint_status,
+            workflow_resume_status=workflow_resume_status,
+            specialist_subflow_status=specialist_subflow_status,
+            mission_runtime_state_status=mission_runtime_state_status,
+        )
 
         return FlowAudit(
             request_id=first_event.request_id,
@@ -1647,6 +1686,14 @@ class ObservabilityService:
             request_identity_status=request_identity_status,
             mission_policy_status=mission_policy_status,
             request_identity_mismatch_flags=request_identity_mismatch_flags,
+            expanded_eval_status=expanded_eval_state["expanded_eval_status"],
+            surface_axis_status=expanded_eval_state["surface_axis_status"],
+            ecosystem_state_status=expanded_eval_state["ecosystem_state_status"],
+            experiment_lane_status=expanded_eval_state["experiment_lane_status"],
+            wave2_candidate_class=expanded_eval_state["wave2_candidate_class"],
+            experiment_entry_status=expanded_eval_state["experiment_entry_status"],
+            experiment_exit_status=expanded_eval_state["experiment_exit_status"],
+            promotion_readiness=expanded_eval_state["promotion_readiness"],
             mind_domain_specialist_status=mind_domain_specialist_status,
             mind_domain_specialist_chain_status=mind_domain_specialist_chain_status,
             mind_domain_specialist_chain=mind_domain_specialist_chain,

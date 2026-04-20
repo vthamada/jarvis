@@ -901,6 +901,11 @@ class MemoryService:
                     f"{memory_maintenance.fallback_mode}",
                 ]
             )
+            if context_policy.cross_session_recall_status != "not_applicable":
+                final_session_context.append(
+                    "cross_session_recall_status="
+                    f"{context_policy.cross_session_recall_status}"
+                )
             if summary:
                 final_session_context.insert(0, f"context_summary={summary}")
             if cross_session_summary:

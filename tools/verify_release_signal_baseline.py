@@ -227,6 +227,14 @@ def _make_pilot_trace_summary() -> Any:
         request_identity_status="healthy",
         mission_policy_status="attention_required",
         request_identity_mismatch_flags=["confirmation_mode_mismatch"],
+        expanded_eval_status="attention_required",
+        surface_axis_status="attention_required",
+        ecosystem_state_status="attention_required",
+        experiment_lane_status="attention_required",
+        wave2_candidate_class="baseline_hardening",
+        experiment_entry_status="blocked_by_drift",
+        experiment_exit_status="freeze_and_review",
+        promotion_readiness="blocked",
         adaptive_intervention_status="healthy",
         adaptive_intervention_reason="discordancia entre mentes exigiu checkpoint governado",
         adaptive_intervention_trigger="mind_validation_required",
@@ -382,6 +390,14 @@ def _make_closure_payload() -> dict[str, object]:
         "candidate_cognitive_recomposition_decision": "coherent",
         "baseline_cognitive_recomposition_coherent_rate": 0.0,
         "candidate_cognitive_recomposition_coherent_rate": 0.5,
+        "baseline_expanded_eval_readiness": "baseline_only",
+        "candidate_expanded_eval_readiness": "attention_required",
+        "baseline_wave2_lane_health": "baseline_only",
+        "candidate_wave2_lane_health": "attention_required",
+        "baseline_experiment_release_status": "hold_baseline",
+        "candidate_experiment_release_status": "freeze_and_review",
+        "baseline_promotion_blocker_rate": 0.0,
+        "candidate_promotion_blocker_rate": 1.0,
     }
     return {
         "cut_id": "v2-release-signals",
@@ -678,6 +694,14 @@ def main() -> None:
         "Comparison text lost the mind-domain-specialist mismatch release line.",
     )
     _ensure(
+        "candidate_expanded_eval_status=" in comparison_text,
+        "Comparison text lost the expanded eval release line.",
+    )
+    _ensure(
+        "candidate_experiment_lane_status=" in comparison_text,
+        "Comparison text lost the controlled experiment lane release line.",
+    )
+    _ensure(
         "cognitive_recomposition_assessment=coherent" in pilot_text,
         "Pilot report text lost the recomposition assessment.",
     )
@@ -727,6 +751,14 @@ def main() -> None:
         "Pilot report text lost the mind-domain-specialist mismatch assessment.",
     )
     _ensure(
+        "expanded_eval_status=attention_required" in pilot_text,
+        "Pilot report text lost the expanded eval assessment.",
+    )
+    _ensure(
+        "experiment_lane_status=attention_required" in pilot_text,
+        "Pilot report text lost the controlled experiment lane assessment.",
+    )
+    _ensure(
         "procedural_artifact_status=candidate" in pilot_text,
         "Pilot report text lost the procedural artifact assessment.",
     )
@@ -741,6 +773,14 @@ def main() -> None:
     _ensure(
         "candidate cognitive recomposition decision" in sovereign_markdown,
         "Sovereign closure markdown lost the recomposition section.",
+    )
+    _ensure(
+        "candidate expanded eval readiness" in alignment_markdown,
+        "Alignment closure markdown lost the expanded eval readiness section.",
+    )
+    _ensure(
+        "candidate wave2 lane health" in sovereign_markdown,
+        "Sovereign closure markdown lost the wave2 lane health section.",
     )
 
     print("[verify-release-signal-baseline] release signal grammar is coherent")

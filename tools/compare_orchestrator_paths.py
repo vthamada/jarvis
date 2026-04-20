@@ -12,6 +12,7 @@ from sys import path as sys_path
 ROOT = Path(__file__).resolve().parent.parent
 sys_path.insert(0, str(ROOT))
 
+from shared.eval_expansion import derive_expanded_eval_state
 from tools.internal_pilot_support import (
     PilotExecutionResult,
     result_to_dict,
@@ -122,6 +123,53 @@ def mission_policy_readiness(result: PilotExecutionResult) -> str:
     if result.request_identity_mismatch_flags:
         return "attention_required"
     return status
+
+
+def expanded_eval_state(result: PilotExecutionResult) -> dict[str, str]:
+    return derive_expanded_eval_state(
+        capability_decision_status=result.capability_decision_status,
+        capability_effectiveness=result.capability_effectiveness,
+        handoff_adapter_status=result.handoff_adapter_status,
+        request_identity_status=result.request_identity_status,
+        mission_policy_status=mission_policy_readiness(result),
+        continuity_trace_status=result.continuity_trace_status,
+        workflow_checkpoint_status=result.workflow_checkpoint_status,
+        workflow_resume_status=result.workflow_resume_status,
+        specialist_subflow_status=result.specialist_subflow_status,
+        mission_runtime_state_status=result.mission_runtime_state_status,
+    )
+
+
+def expanded_eval_assessment(result: PilotExecutionResult) -> str:
+    return expanded_eval_state(result)["expanded_eval_status"]
+
+
+def surface_axis_assessment(result: PilotExecutionResult) -> str:
+    return expanded_eval_state(result)["surface_axis_status"]
+
+
+def ecosystem_state_assessment(result: PilotExecutionResult) -> str:
+    return expanded_eval_state(result)["ecosystem_state_status"]
+
+
+def experiment_lane_assessment(result: PilotExecutionResult) -> str:
+    return expanded_eval_state(result)["experiment_lane_status"]
+
+
+def wave2_candidate_class_assessment(result: PilotExecutionResult) -> str:
+    return expanded_eval_state(result)["wave2_candidate_class"]
+
+
+def experiment_entry_assessment(result: PilotExecutionResult) -> str:
+    return expanded_eval_state(result)["experiment_entry_status"]
+
+
+def experiment_exit_assessment(result: PilotExecutionResult) -> str:
+    return expanded_eval_state(result)["experiment_exit_status"]
+
+
+def promotion_readiness_assessment(result: PilotExecutionResult) -> str:
+    return expanded_eval_state(result)["promotion_readiness"]
 
 
 def adaptive_intervention_assessment(result: PilotExecutionResult) -> str:
@@ -336,6 +384,34 @@ def refinement_vectors(result: PilotExecutionResult) -> list[dict[str, str]]:
                 "de identidade executiva por request"
             ),
         )
+    expanded_eval = expanded_eval_state(result)
+    if expanded_eval["expanded_eval_status"] == "attention_required":
+        add_vector(
+            "expanded_eval_scope",
+            "p0",
+            (
+                "restaurar a leitura comparativa entre baseline, superficie e estado "
+                "operacional antes de abrir qualquer lane experimental"
+            ),
+        )
+    elif expanded_eval["expanded_eval_status"] == "baseline_expanding":
+        add_vector(
+            "expanded_eval_scope",
+            "p1",
+            (
+                "consolidar cobertura de capacidade, superficie e estado operacional "
+                "para tirar a avaliacao expandida do modo parcial"
+            ),
+        )
+    if expanded_eval["experiment_lane_status"] == "attention_required":
+        add_vector(
+            "controlled_wave2_experiment",
+            "p0",
+            (
+                "conter a lane experimental ate os blockers de superficie e estado "
+                "operacional voltarem a um baseline comparavel"
+            ),
+        )
     if result.adaptive_intervention_effectiveness in {"insufficient", "incomplete"}:
         add_vector(
             "adaptive_intervention",
@@ -510,6 +586,30 @@ def evaluation_matrix(
             ),
             "mission_policy": summarize_statuses(
                 [mission_policy_readiness(result) for result in workflow_results]
+            ),
+            "expanded_eval": summarize_statuses(
+                [expanded_eval_assessment(result) for result in workflow_results]
+            ),
+            "surface_axis": summarize_statuses(
+                [surface_axis_assessment(result) for result in workflow_results]
+            ),
+            "ecosystem_state": summarize_statuses(
+                [ecosystem_state_assessment(result) for result in workflow_results]
+            ),
+            "experiment_lane": summarize_statuses(
+                [experiment_lane_assessment(result) for result in workflow_results]
+            ),
+            "wave2_candidate_class": summarize_statuses(
+                [wave2_candidate_class_assessment(result) for result in workflow_results]
+            ),
+            "experiment_entry": summarize_statuses(
+                [experiment_entry_assessment(result) for result in workflow_results]
+            ),
+            "experiment_exit": summarize_statuses(
+                [experiment_exit_assessment(result) for result in workflow_results]
+            ),
+            "promotion_readiness": summarize_statuses(
+                [promotion_readiness_assessment(result) for result in workflow_results]
             ),
             "adaptive_intervention": summarize_statuses(
                 [adaptive_intervention_assessment(result) for result in workflow_results]
@@ -1345,12 +1445,34 @@ def summarize_workflow_profile_assessments(assessments: list[str]) -> str:
 def summarize_statuses(statuses: list[str]) -> str:
     if not statuses:
         return "not_applicable"
+    if any(item == "freeze_and_review" for item in statuses):
+        return "freeze_and_review"
     if any(item == "resume_blocked" for item in statuses):
         return "resume_blocked"
     if any(item == "manual_resume_required" for item in statuses):
         return "manual_resume_required"
     if any(item == "attention_required" for item in statuses):
         return "attention_required"
+    if any(item == "candidate_ready" for item in statuses):
+        return "candidate_ready"
+    if any(item == "controlled_candidate" for item in statuses):
+        return "controlled_candidate"
+    if any(item == "manual_review_only" for item in statuses):
+        return "manual_review_only"
+    if any(item == "baseline_expanding" for item in statuses):
+        return "baseline_expanding"
+    if any(item == "coverage_partial" for item in statuses):
+        return "coverage_partial"
+    if any(item == "out_of_lane" for item in statuses):
+        return "out_of_lane"
+    if any(item == "blocked_by_drift" for item in statuses):
+        return "blocked_by_drift"
+    if any(item == "blocked_by_phase" for item in statuses):
+        return "blocked_by_phase"
+    if any(item == "hold_in_lane" for item in statuses):
+        return "hold_in_lane"
+    if any(item == "hold_baseline" for item in statuses):
+        return "hold_baseline"
     if any(item == "mandatory_override" for item in statuses):
         return "mandatory_override"
     if any(item == "policy_aligned" for item in statuses):
@@ -1401,6 +1523,14 @@ def summarize_statuses(statuses: list[str]) -> str:
         return "attached_only"
     if any(item == "aligned" for item in statuses):
         return "aligned"
+    if any(item == "surface_and_ecosystem" for item in statuses):
+        return "surface_and_ecosystem"
+    if any(item == "surface_contract" for item in statuses):
+        return "surface_contract"
+    if any(item == "ecosystem_state" for item in statuses):
+        return "ecosystem_state"
+    if any(item == "baseline_hardening" for item in statuses):
+        return "baseline_hardening"
     if any(item == "not_applicable" for item in statuses):
         return "not_applicable"
     return "incomplete"
@@ -1869,6 +1999,26 @@ def render_text(payload: dict[str, object]) -> str:
                         f"{item['baseline_mission_policy_assessment']}"
                     ),
                     (
+                        "baseline_expanded_eval_status="
+                        f"{item['baseline']['expanded_eval_status']}"
+                    ),
+                    (
+                        "baseline_surface_axis_status="
+                        f"{item['baseline']['surface_axis_status']}"
+                    ),
+                    (
+                        "baseline_ecosystem_state_status="
+                        f"{item['baseline']['ecosystem_state_status']}"
+                    ),
+                    (
+                        "baseline_experiment_lane_status="
+                        f"{item['baseline']['experiment_lane_status']}"
+                    ),
+                    (
+                        "baseline_promotion_readiness="
+                        f"{item['baseline']['promotion_readiness']}"
+                    ),
+                    (
                         "baseline_adaptive_intervention_status="
                         f"{item['baseline']['adaptive_intervention_status']}"
                     ),
@@ -2097,6 +2247,36 @@ def render_text(payload: dict[str, object]) -> str:
                         f"{item['candidate_mission_policy_assessment']}"
                         if item["candidate_mission_policy_assessment"] is not None
                         else "candidate_mission_policy_assessment=n/a"
+                    ),
+                    (
+                        "candidate_expanded_eval_status="
+                        f"{item['candidate']['expanded_eval_status']}"
+                        if item["candidate"]
+                        else "candidate_expanded_eval_status=n/a"
+                    ),
+                    (
+                        "candidate_surface_axis_status="
+                        f"{item['candidate']['surface_axis_status']}"
+                        if item["candidate"]
+                        else "candidate_surface_axis_status=n/a"
+                    ),
+                    (
+                        "candidate_ecosystem_state_status="
+                        f"{item['candidate']['ecosystem_state_status']}"
+                        if item["candidate"]
+                        else "candidate_ecosystem_state_status=n/a"
+                    ),
+                    (
+                        "candidate_experiment_lane_status="
+                        f"{item['candidate']['experiment_lane_status']}"
+                        if item["candidate"]
+                        else "candidate_experiment_lane_status=n/a"
+                    ),
+                    (
+                        "candidate_promotion_readiness="
+                        f"{item['candidate']['promotion_readiness']}"
+                        if item["candidate"]
+                        else "candidate_promotion_readiness=n/a"
                     ),
                     (
                         "candidate_adaptive_intervention_status="
@@ -2601,6 +2781,30 @@ def serialize_comparisons(
                 "baseline_mission_policy_assessment": mission_policy_assessment(
                     item.baseline
                 ),
+                "baseline_expanded_eval_assessment": expanded_eval_assessment(
+                    item.baseline
+                ),
+                "baseline_surface_axis_assessment": surface_axis_assessment(
+                    item.baseline
+                ),
+                "baseline_ecosystem_state_assessment": ecosystem_state_assessment(
+                    item.baseline
+                ),
+                "baseline_experiment_lane_assessment": experiment_lane_assessment(
+                    item.baseline
+                ),
+                "baseline_wave2_candidate_class_assessment": (
+                    wave2_candidate_class_assessment(item.baseline)
+                ),
+                "baseline_experiment_entry_assessment": experiment_entry_assessment(
+                    item.baseline
+                ),
+                "baseline_experiment_exit_assessment": experiment_exit_assessment(
+                    item.baseline
+                ),
+                "baseline_promotion_readiness_assessment": (
+                    promotion_readiness_assessment(item.baseline)
+                ),
                 "baseline_adaptive_intervention_assessment": (
                     adaptive_intervention_assessment(item.baseline)
                 ),
@@ -2709,6 +2913,38 @@ def serialize_comparisons(
                     if item.candidate
                     else None
                 ),
+                "candidate_expanded_eval_assessment": (
+                    expanded_eval_assessment(item.candidate) if item.candidate else None
+                ),
+                "candidate_surface_axis_assessment": (
+                    surface_axis_assessment(item.candidate) if item.candidate else None
+                ),
+                "candidate_ecosystem_state_assessment": (
+                    ecosystem_state_assessment(item.candidate) if item.candidate else None
+                ),
+                "candidate_experiment_lane_assessment": (
+                    experiment_lane_assessment(item.candidate) if item.candidate else None
+                ),
+                "candidate_wave2_candidate_class_assessment": (
+                    wave2_candidate_class_assessment(item.candidate)
+                    if item.candidate
+                    else None
+                ),
+                "candidate_experiment_entry_assessment": (
+                    experiment_entry_assessment(item.candidate)
+                    if item.candidate
+                    else None
+                ),
+                "candidate_experiment_exit_assessment": (
+                    experiment_exit_assessment(item.candidate)
+                    if item.candidate
+                    else None
+                ),
+                "candidate_promotion_readiness_assessment": (
+                    promotion_readiness_assessment(item.candidate)
+                    if item.candidate
+                    else None
+                ),
                 "candidate_adaptive_intervention_assessment": (
                     adaptive_intervention_assessment(item.candidate)
                     if item.candidate
@@ -2778,8 +3014,18 @@ def serialize_comparisons(
                 "candidate_refinement_vectors": (
                     refinement_vectors(item.candidate) if item.candidate else []
                 ),
-                "baseline": result_to_dict(item.baseline),
-                "candidate": result_to_dict(item.candidate) if item.candidate else None,
+                "baseline": {
+                    **result_to_dict(item.baseline),
+                    **expanded_eval_state(item.baseline),
+                },
+                "candidate": (
+                    {
+                        **result_to_dict(item.candidate),
+                        **expanded_eval_state(item.candidate),
+                    }
+                    if item.candidate
+                    else None
+                ),
             }
             for item in comparisons
         ],

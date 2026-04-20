@@ -49,6 +49,8 @@ Toda mudança relevante deve, no mínimo:
 - ter justificativa arquitetural clara;
 - respeitar os registries soberanos ativos;
 - incluir testes proporcionais ao risco;
+- incluir bateria de testes suficiente para validar o comportamento novo no
+  slice local e no fluxo ponta a ponta afetado;
 - manter documentação viva sincronizada quando mudar o estado real do projeto;
 - passar pelo gate automatizado adequado;
 - preservar governança, memória canônica e fronteiras do núcleo.
@@ -87,6 +89,9 @@ Uma mudança deve ser tratada como pronta quando, em proporção ao seu risco:
 - o contrato relevante está claro;
 - a implementação está integrada ao runtime correto;
 - há teste unitário ou de integração cobrindo o caso;
+- há bateria de testes ponta a ponta cobrindo o caminho principal afetado pela
+  mudança, ou justificativa explícita de por que isso ainda não é possível
+  nesta fase;
 - há observabilidade suficiente para auditar o comportamento;
 - a documentação viva foi sincronizada quando necessário;
 - o gate correspondente passou.
@@ -95,6 +100,7 @@ Para promoções de capability, o padrão sobe:
 
 - contrato
 - teste
+- bateria ponta a ponta do fluxo promovido
 - observabilidade
 - documentação
 - rollback claro
@@ -127,6 +133,9 @@ Qualquer agente que implemente mudanças neste repositório deve:
   suficiente para resolver o problema real;
 - evitar refactors amplos sem necessidade clara;
 - não promover capability sem teste, observabilidade e documentação;
+- tratar bateria de testes ponta a ponta como parte da implementação nova,
+  especialmente quando a mudança altera comportamento, contratos, integração
+  entre serviços ou leitura de release;
 - não deixar `HANDOFF.md` e documentos operacionais críticos em drift quando a
   mudança alterar o estado real do projeto;
 - não bypassar governança, memória canônica ou síntese soberana;

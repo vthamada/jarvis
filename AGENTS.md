@@ -17,6 +17,8 @@ Leitura correta:
 - não bypassar governança, memória canônica ou síntese final;
 - preferir mudanças pequenas, reversíveis e auditáveis quando suficientes;
 - não promover capability sem teste, observabilidade e documentação;
+- toda implementação nova relevante deve incluir bateria de testes que valide o
+  slice local e o fluxo ponta a ponta afetado;
 - não introduzir dependência central nova sem justificativa arquitetural clara;
 - tratar contratos compartilhados e eventos observáveis como interfaces estáveis;
 - sincronizar `HANDOFF.md` e documentação operacional quando a mudança alterar o

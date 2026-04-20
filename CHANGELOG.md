@@ -2,6 +2,27 @@
 
 ## 2026-04-20
 
+### Repriorizacao do proximo lote micro para compile/optimize loops governados
+
+- `docs/implementation/execution-backlog.md` agora abre `MB-092` a `MB-096` como o novo lote ativo, com `MB-092` em `ready` e foco em `EV-003`;
+- o novo lote traduz a proxima prioridade macro em uma sequencia micro curta: contrato soberano de otimizacao, candidatos bounded no laboratorio, evidencia auditavel, leitura de release e fechamento documental;
+- `docs/implementation/unified-gap-and-absorption-backlog.md` foi sincronizado para registrar que `EV-003` ja foi corretamente fatiado na fila micro, sem reabrir lotes resolvidos nem antecipar frentes fora de fase;
+- `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para sair do estado "sem item ready" e registrar `MB-092` como o proximo passo correto do projeto.
+
+### Politica explicita de bateria de testes ponta a ponta para mudancas novas
+
+- `docs/documentation/engineering-constitution.md` agora deixa explicito que toda mudanca relevante deve incluir bateria de testes suficiente para validar o slice local e o fluxo ponta a ponta afetado, elevando esse criterio tambem para `Definition of Done` e para promocoes de capability;
+- `AGENTS.md` agora torna essa expectativa obrigatoria para agentes implementadores, evitando que comportamento novo entre no baseline apenas com cobertura local fragmentada;
+- `docs/implementation/execution-backlog.md` agora exige estrategia de validacao automatizada ja na `Definition of Ready` e cobra cobertura ponta a ponta ou justificativa explicita de fase na `Definition of Done`;
+- `HANDOFF.md` foi sincronizado para registrar que robustez e resiliencia do repositorio agora dependem formalmente dessa bateria de testes para toda implementacao nova relevante.
+
+### Fechamento do lote de evals expandidas e lane controlada da Onda 2
+
+- `shared/eval_expansion.py`, `services/observability-service`, `tools/internal_pilot_support.py`, `tools/internal_pilot_report.py`, `tools/compare_orchestrator_paths.py`, `evolution/evolution-lab`, `tools/evolution_from_pilot.py` e `tools/verify_release_signal_baseline.py` agora compartilham a gramatica soberana de `expanded_eval_*`, `surface_axis_*`, `ecosystem_state_*`, `experiment_lane_*`, `experiment_exit_*` e `promotion_readiness`;
+- `tools/verify_active_cut_baseline.py`, `tools/archive/close_alignment_cycle.py` e `tools/archive/close_sovereign_alignment_cut.py` agora distinguem readiness de eval expandida, saude da lane controlada, status de release do experimento e blockers de promocao sem transformar release em mecanismo de promocao automatica;
+- a superficie de testes de comparadores, `observability`, `evolution-lab`, `evolution_from_pilot`, verificadores de release/baseline e fechadores regeneraveis agora trava essa nova fronteira entre baseline soberano e experimento controlado;
+- `docs/implementation/execution-backlog.md`, `docs/implementation/unified-gap-and-absorption-backlog.md`, `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para fechar `MB-087` a `MB-091`, promover `EV-002` e `EV-004` a `resolved_in_baseline` e registrar que a fila micro voltou a ficar sem item `ready`.
+
 ### Repriorizacao do proximo lote micro para evals expandidas e lane controlada da Onda 2
 
 - `docs/implementation/execution-backlog.md` agora abre `MB-087` a `MB-091` como o novo lote ativo, com `MB-087` em `ready` e foco em `EV-002` + `EV-004`;

@@ -88,12 +88,12 @@ Hierarquia correta:
 - o baseline do `v2` ja fechou os lotes `MB-067` a `MB-081`, cobrindo decisao
   soberana de capacidades, manutencao ativa de memoria viva e arbitragem
   declarativa `mente -> dominio -> especialista`;
-- a fila micro agora precisa abrir o proximo lote a partir de `SG-006`, em vez
-  de continuar apontando para eixos que ja viraram baseline;
+- a fila micro ja fechou `SG-006`, `EV-002` e `EV-004` como baseline
+  comparativo controlado, e o novo lote micro foi reaberto em cima de `EV-003`;
 - o proximo passo correto nao e reabrir lote encerrado nem abrir vertical nova
   por impulso;
-- a proxima repriorizacao precisa sair de um mapa unico que conecte lacuna real
-  do sistema, fase do programa e traducao tecnologica cabivel.
+- a puxada atual precisa manter compile/optimize loops subordinados a traces,
+  metricas, gates e bloqueios de seguranca, sem autoedicao solta do nucleo.
 
 Regra pratica daqui para frente:
 
@@ -204,9 +204,9 @@ Notas de leitura:
 | ID | Frente ainda faltante | Camada JARVIS | Fase alvo | Tecnologias relacionadas | Janela de absorcao | Status | Slice micro |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `EV-001` | repriorizacao explicita do proximo lote micro a partir deste mapa unificado | governanca de execucao | `agora` | `nenhuma` | `nao_aplicavel` | `candidate_for_slicing` | `sim` |
-| `EV-002` | expandir evals e sinais para capacidade, superficie e estado do ecossistema | `observability`, `evolution-lab`, gates | `v2 restante` | `DSPy`, `OpenAI Agents SDK`, `Mastra` | `onda_2_controlada` | `candidate_for_slicing` | `sim` |
+| `EV-002` | expandir evals e sinais para capacidade, superficie e estado do ecossistema | `observability`, `evolution-lab`, gates | `v2 restante` | `DSPy`, `OpenAI Agents SDK`, `Mastra` | `onda_2_controlada` | `resolved_in_baseline` | `sim` |
 | `EV-003` | compile e optimize loops governados para prompts, planos e workflows | `evolution-lab` | `v2 restante` | `DSPy/MIPROv2`, `TextGrad`, `AFlow`, `EvoAgentX` | `onda_1_residual` | `candidate_for_slicing` | `sim` |
-| `EV-004` | lane controlada de experimentos da Onda 2 com criterio de entrada e saida | comparadores, laboratorio, gates | `v2 restante` | `OpenAI Agents SDK`, `Qwen-Agent`, `Graphiti`, `Mem0`, `OpenHands`, `browser-use` | `onda_2_controlada` | `candidate_for_slicing` | `sim` |
+| `EV-004` | lane controlada de experimentos da Onda 2 com criterio de entrada e saida | comparadores, laboratorio, gates | `v2 restante` | `OpenAI Agents SDK`, `Qwen-Agent`, `Graphiti`, `Mem0`, `OpenHands`, `browser-use` | `onda_2_controlada` | `resolved_in_baseline` | `sim` |
 
 Notas de leitura:
 
@@ -253,14 +253,15 @@ ser:
 
 Ordem recomendada hoje:
 
-1. `EV-002` + `EV-004`
-2. `EV-003`
+1. `EV-003`
 
 Leitura correta:
 
-- `SG-001`, `SG-004`, `SG-005`, `SG-006`, `TA-001`, `TA-003` e `TA-005` ja
-  foram traduzidos em lotes micro concluidos e agora pertencem ao baseline, nao
-  a proxima puxada;
+- `SG-001`, `SG-004`, `SG-005`, `SG-006`, `TA-001`, `TA-003`, `TA-005`,
+  `EV-002` e `EV-004` ja foram traduzidos em lotes micro concluidos e agora
+  pertencem ao baseline, nao a proxima puxada;
+- `EV-003` ja foi corretamente fatiado no backlog micro como o lote `MB-092` a
+  `MB-096`, mantendo o recorte pequeno, reversivel e auditavel;
 - `SG-002`, `SG-003`, `TA-002`, `TA-004`, `SO-*` e `DV-001` ja sao
   relevantes, mas ainda nao sao a melhor puxada do `v2` atual;
 - `RH-*` permanece fora do backlog implementavel.

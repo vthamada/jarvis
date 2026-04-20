@@ -50,4 +50,4 @@ def test_console_chat_keeps_session_continuity() -> None:
     assert len(outputs) == 2
     assert "Leitura do objetivo" in outputs[0]
     assert "Julgamento" in outputs[1]
-    assert "missao ativa" in outputs[1]
+    assert "continuidade ativa" in outputs[1].lower()

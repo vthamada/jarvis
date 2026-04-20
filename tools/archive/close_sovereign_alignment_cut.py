@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from argparse import ArgumentParser, Namespace
+from collections import Counter
 from dataclasses import asdict, dataclass
 from json import dumps, loads
 from pathlib import Path
@@ -91,6 +92,14 @@ class CutEvidenceSummary:
     candidate_cognitive_recomposition_decision: str
     baseline_cognitive_recomposition_coherent_rate: float
     candidate_cognitive_recomposition_coherent_rate: float
+    baseline_expanded_eval_readiness: str
+    candidate_expanded_eval_readiness: str
+    baseline_wave2_lane_health: str
+    candidate_wave2_lane_health: str
+    baseline_experiment_release_status: str
+    candidate_experiment_release_status: str
+    baseline_promotion_blocker_rate: float
+    candidate_promotion_blocker_rate: float
 
 
 def parse_args() -> Namespace:
@@ -334,6 +343,28 @@ def _comparison_label(
 ) -> str:
     value = comparison_summary.get(key)
     return default if value is None else str(value)
+
+
+def _comparison_label_from_scenarios(
+    comparison_payload: dict[str, object],
+    comparison_summary: dict[str, object],
+    *,
+    summary_key: str,
+    scenario_key: str,
+    default: str = "not_applicable",
+) -> str:
+    value = comparison_summary.get(summary_key)
+    if value is not None:
+        return str(value)
+    scenario_results = comparison_payload.get("scenario_results", [])
+    labels = [
+        str(item[scenario_key])
+        for item in scenario_results
+        if isinstance(item, dict) and item.get(scenario_key) is not None
+    ]
+    if not labels:
+        return default
+    return Counter(labels).most_common(1)[0][0]
 
 
 def _comparison_rate(
@@ -628,6 +659,56 @@ def evidence_summary(
             scenario_key="candidate_cognitive_recomposition_assessment",
             target="coherent",
         ),
+        baseline_expanded_eval_readiness=_comparison_label_from_scenarios(
+            comparison_payload,
+            comparison_summary,
+            summary_key="baseline_expanded_eval_readiness",
+            scenario_key="baseline_expanded_eval_assessment",
+        ),
+        candidate_expanded_eval_readiness=_comparison_label_from_scenarios(
+            comparison_payload,
+            comparison_summary,
+            summary_key="candidate_expanded_eval_readiness",
+            scenario_key="candidate_expanded_eval_assessment",
+        ),
+        baseline_wave2_lane_health=_comparison_label_from_scenarios(
+            comparison_payload,
+            comparison_summary,
+            summary_key="baseline_wave2_lane_health",
+            scenario_key="baseline_experiment_lane_assessment",
+        ),
+        candidate_wave2_lane_health=_comparison_label_from_scenarios(
+            comparison_payload,
+            comparison_summary,
+            summary_key="candidate_wave2_lane_health",
+            scenario_key="candidate_experiment_lane_assessment",
+        ),
+        baseline_experiment_release_status=_comparison_label_from_scenarios(
+            comparison_payload,
+            comparison_summary,
+            summary_key="baseline_experiment_release_status",
+            scenario_key="baseline_experiment_exit_assessment",
+        ),
+        candidate_experiment_release_status=_comparison_label_from_scenarios(
+            comparison_payload,
+            comparison_summary,
+            summary_key="candidate_experiment_release_status",
+            scenario_key="candidate_experiment_exit_assessment",
+        ),
+        baseline_promotion_blocker_rate=_comparison_rate(
+            comparison_payload,
+            comparison_summary,
+            summary_key="baseline_promotion_blocker_rate",
+            scenario_key="baseline_promotion_readiness_assessment",
+            target="blocked",
+        ),
+        candidate_promotion_blocker_rate=_comparison_rate(
+            comparison_payload,
+            comparison_summary,
+            summary_key="candidate_promotion_blocker_rate",
+            scenario_key="candidate_promotion_readiness_assessment",
+            target="blocked",
+        ),
     )
 
 
@@ -734,6 +815,19 @@ def render_text(payload: dict[str, object]) -> str:
             f"candidate_decision={evidence['candidate_cognitive_recomposition_decision']} "
             f"candidate_coherent_rate={evidence['candidate_cognitive_recomposition_coherent_rate']}"
         ),
+        (
+            "expanded_eval="
+            f"baseline_readiness={evidence['baseline_expanded_eval_readiness']} "
+            f"candidate_readiness={evidence['candidate_expanded_eval_readiness']} "
+            f"baseline_lane={evidence['baseline_wave2_lane_health']} "
+            f"candidate_lane={evidence['candidate_wave2_lane_health']}"
+        ),
+        (
+            "experiment_release="
+            f"baseline_status={evidence['baseline_experiment_release_status']} "
+            f"candidate_status={evidence['candidate_experiment_release_status']} "
+            f"candidate_promotion_blocker_rate={evidence['candidate_promotion_blocker_rate']}"
+        ),
         "next_cut=" + ",".join(item["item_id"] for item in payload["next_cut_scope"]),
         "deferred=" + ",".join(item["item_id"] for item in payload["deferred_scope"]),
         "vision=" + ",".join(item["item_id"] for item in payload["vision_scope"]),
@@ -825,6 +919,38 @@ def render_markdown(payload: dict[str, object]) -> str:
         (
             "- candidate cognitive recomposition coherent rate: "
             f"`{evidence['candidate_cognitive_recomposition_coherent_rate']}`"
+        ),
+        (
+            "- baseline expanded eval readiness: "
+            f"`{evidence['baseline_expanded_eval_readiness']}`"
+        ),
+        (
+            "- candidate expanded eval readiness: "
+            f"`{evidence['candidate_expanded_eval_readiness']}`"
+        ),
+        (
+            "- baseline wave2 lane health: "
+            f"`{evidence['baseline_wave2_lane_health']}`"
+        ),
+        (
+            "- candidate wave2 lane health: "
+            f"`{evidence['candidate_wave2_lane_health']}`"
+        ),
+        (
+            "- baseline experiment release status: "
+            f"`{evidence['baseline_experiment_release_status']}`"
+        ),
+        (
+            "- candidate experiment release status: "
+            f"`{evidence['candidate_experiment_release_status']}`"
+        ),
+        (
+            "- baseline promotion blocker rate: "
+            f"`{evidence['baseline_promotion_blocker_rate']}`"
+        ),
+        (
+            "- candidate promotion blocker rate: "
+            f"`{evidence['candidate_promotion_blocker_rate']}`"
         ),
         "",
         "## Metas atendidas",

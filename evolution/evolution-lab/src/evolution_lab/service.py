@@ -11,6 +11,7 @@ from uuid import uuid4
 
 from evolution_lab.repository import EvolutionLabRepository
 from shared.contracts import EvolutionDecisionContract, EvolutionProposalContract
+from shared.eval_expansion import derive_expanded_eval_state
 from shared.types import EvolutionDecisionId, EvolutionProposalId
 
 DEFAULT_EVOLUTION_STRATEGY = "manual_variants"
@@ -52,6 +53,8 @@ class FlowEvaluationInput:
     continuity_action: str | None = None
     continuity_source: str | None = None
     continuity_runtime_mode: str | None = None
+    specialist_subflow_status: str | None = None
+    mission_runtime_state_status: str | None = None
     registry_domains: list[str] = field(default_factory=list)
     shadow_specialists: list[str] = field(default_factory=list)
     domain_alignment_status: str | None = None
@@ -113,6 +116,14 @@ class FlowEvaluationInput:
     request_identity_status: str | None = None
     mission_policy_status: str | None = None
     request_identity_mismatch_flags: list[str] = field(default_factory=list)
+    expanded_eval_status: str | None = None
+    surface_axis_status: str | None = None
+    ecosystem_state_status: str | None = None
+    experiment_lane_status: str | None = None
+    wave2_candidate_class: str | None = None
+    experiment_entry_status: str | None = None
+    experiment_exit_status: str | None = None
+    promotion_readiness: str | None = None
 
 
 @dataclass(frozen=True)
@@ -398,6 +409,28 @@ class EvolutionLabService:
             source_signals.append(
                 f"runtime://mission-policy/{evaluation.mission_policy_status}"
             )
+        expanded_eval_state = EvolutionLabService._expanded_eval_state(evaluation)
+        source_signals.append(
+            f"eval://expanded/{expanded_eval_state['expanded_eval_status']}"
+        )
+        source_signals.append(
+            f"eval://surface-axis/{expanded_eval_state['surface_axis_status']}"
+        )
+        source_signals.append(
+            f"eval://ecosystem-state/{expanded_eval_state['ecosystem_state_status']}"
+        )
+        source_signals.append(
+            f"experiment://lane/{expanded_eval_state['experiment_lane_status']}"
+        )
+        source_signals.append(
+            f"experiment://entry/{expanded_eval_state['experiment_entry_status']}"
+        )
+        source_signals.append(
+            f"experiment://exit/{expanded_eval_state['experiment_exit_status']}"
+        )
+        source_signals.append(
+            f"experiment://promotion/{expanded_eval_state['promotion_readiness']}"
+        )
         for mismatch_flag in evaluation.request_identity_mismatch_flags:
             source_signals.append(
                 f"runtime://request-identity-mismatch/{mismatch_flag}"
@@ -557,6 +590,7 @@ class EvolutionLabService:
                 "top_refinement_axis": (
                     refinement_vectors[0]["axis"] if refinement_vectors else "none"
                 ),
+                "controlled_wave2_experiment": expanded_eval_state,
                 "wave_two_readiness_matrix": wave_two_readiness,
                 "wave_two_ready_targets": [
                     technology
@@ -700,6 +734,26 @@ class EvolutionLabService:
             ),
             "mission_policy": EvolutionLabService._mission_policy_score(
                 EvolutionLabService._mission_policy_readiness(evaluation)
+            ),
+            "expanded_eval": EvolutionLabService._expanded_eval_score(
+                EvolutionLabService._expanded_eval_state(evaluation)[
+                    "expanded_eval_status"
+                ]
+            ),
+            "surface_axis": EvolutionLabService._expanded_eval_score(
+                EvolutionLabService._expanded_eval_state(evaluation)[
+                    "surface_axis_status"
+                ]
+            ),
+            "ecosystem_state": EvolutionLabService._expanded_eval_score(
+                EvolutionLabService._expanded_eval_state(evaluation)[
+                    "ecosystem_state_status"
+                ]
+            ),
+            "experiment_lane": EvolutionLabService._expanded_eval_score(
+                EvolutionLabService._expanded_eval_state(evaluation)[
+                    "experiment_lane_status"
+                ]
             ),
             "adaptive_intervention": EvolutionLabService._adaptive_intervention_score(
                 evaluation.adaptive_intervention_status,
@@ -896,6 +950,28 @@ class EvolutionLabService:
         return weights.get(status, 0.7 if status is None else 0.0)
 
     @staticmethod
+    def _expanded_eval_score(status: str | None) -> float:
+        weights = {
+            "candidate_ready": 1.0,
+            "controlled_candidate": 1.0,
+            "manual_review_only": 0.9,
+            "baseline_expanding": 0.7,
+            "coverage_partial": 0.6,
+            "baseline_only": 0.7,
+            "not_in_phase": 0.7,
+            "out_of_lane": 0.7,
+            "blocked": 0.3,
+            "blocked_by_phase": 0.5,
+            "blocked_by_drift": 0.0,
+            "hold_baseline": 0.7,
+            "hold_in_lane": 0.9,
+            "freeze_and_review": 0.0,
+            "attention_required": 0.0,
+            "not_applicable": 0.7,
+        }
+        return weights.get(status, 0.7 if status is None else 0.0)
+
+    @staticmethod
     def _procedural_artifact_score(status: str | None) -> float:
         weights = {
             "reusable": 1.0,
@@ -989,6 +1065,7 @@ class EvolutionLabService:
 
     @staticmethod
     def _requires_refinement(evaluation: FlowEvaluationInput) -> bool:
+        expanded_eval_state = EvolutionLabService._expanded_eval_state(evaluation)
         if evaluation.anomaly_flags or evaluation.missing_required_events:
             return True
         if evaluation.continuity_anomaly_flags or evaluation.missing_continuity_signals:
@@ -1022,6 +1099,10 @@ class EvolutionLabService:
             EvolutionLabService._mission_policy_readiness(evaluation)
             in {"attention_required", "review_recommended"}
         ):
+            return True
+        if expanded_eval_state["expanded_eval_status"] == "attention_required":
+            return True
+        if expanded_eval_state["experiment_lane_status"] == "attention_required":
             return True
         if evaluation.adaptive_intervention_status == "attention_required":
             return True
@@ -1071,6 +1152,7 @@ class EvolutionLabService:
 
     @staticmethod
     def _risk_hint_from_flow(evaluation: FlowEvaluationInput) -> str:
+        expanded_eval_state = EvolutionLabService._expanded_eval_state(evaluation)
         if evaluation.anomaly_flags or evaluation.continuity_anomaly_flags:
             return "moderate"
         if evaluation.metacognitive_guidance_status == "attention_required":
@@ -1089,6 +1171,10 @@ class EvolutionLabService:
         if evaluation.request_identity_status == "attention_required":
             return "moderate"
         if EvolutionLabService._mission_policy_readiness(evaluation) == "attention_required":
+            return "moderate"
+        if expanded_eval_state["expanded_eval_status"] == "attention_required":
+            return "moderate"
+        if expanded_eval_state["experiment_lane_status"] == "attention_required":
             return "moderate"
         if evaluation.capability_effectiveness in {"insufficient", "incomplete"}:
             return "moderate"
@@ -1132,6 +1218,8 @@ class EvolutionLabService:
             return "low_to_moderate"
         if evaluation.workflow_output_status == "partial":
             return "low_to_moderate"
+        if expanded_eval_state["expanded_eval_status"] == "baseline_expanding":
+            return "low_to_moderate"
         if evaluation.memory_causality_status == "attached_only":
             return "low_to_moderate"
         if evaluation.memory_maintenance_effectiveness in {"insufficient", "incomplete"}:
@@ -1171,6 +1259,7 @@ class EvolutionLabService:
     ) -> list[dict[str, str]]:
         workflow_profile = EvolutionLabService._workflow_key(evaluation)
         vectors: list[dict[str, str]] = []
+        expanded_eval_state = EvolutionLabService._expanded_eval_state(evaluation)
         adaptive_policy_readiness = (
             EvolutionLabService._adaptive_intervention_policy_readiness(evaluation)
         )
@@ -1239,6 +1328,24 @@ class EvolutionLabService:
                 "mission_policy",
                 "p0",
                 "realinhar confirmacao, reversibilidade e autonomia final ao contrato de identidade por request",
+            )
+        if expanded_eval_state["expanded_eval_status"] == "attention_required":
+            add_vector(
+                "expanded_eval_scope",
+                "p0",
+                "restaurar a leitura comparativa entre baseline, superficie e estado operacional antes de abrir a lane experimental",
+            )
+        elif expanded_eval_state["expanded_eval_status"] == "baseline_expanding":
+            add_vector(
+                "expanded_eval_scope",
+                "p1",
+                "consolidar a cobertura comparativa para capacidade, superficie e estado operacional",
+            )
+        if expanded_eval_state["experiment_lane_status"] == "attention_required":
+            add_vector(
+                "controlled_wave2_experiment",
+                "p0",
+                "conter a lane da Onda 2 ate os blockers voltarem a um baseline comparavel",
             )
         if evaluation.adaptive_intervention_effectiveness in {"insufficient", "incomplete"}:
             add_vector(
@@ -1335,6 +1442,7 @@ class EvolutionLabService:
         evaluation: FlowEvaluationInput,
     ) -> dict[str, dict[str, object]]:
         workflow = EvolutionLabService._workflow_key(evaluation)
+        expanded_eval_state = EvolutionLabService._expanded_eval_state(evaluation)
         return {
             workflow: {
                 "workflow_profile": evaluation.workflow_profile_status or "not_applicable",
@@ -1359,6 +1467,14 @@ class EvolutionLabService:
                 "mission_policy": EvolutionLabService._mission_policy_readiness(
                     evaluation
                 ),
+                "expanded_eval": expanded_eval_state["expanded_eval_status"],
+                "surface_axis": expanded_eval_state["surface_axis_status"],
+                "ecosystem_state": expanded_eval_state["ecosystem_state_status"],
+                "experiment_lane": expanded_eval_state["experiment_lane_status"],
+                "wave2_candidate_class": expanded_eval_state["wave2_candidate_class"],
+                "experiment_entry": expanded_eval_state["experiment_entry_status"],
+                "experiment_exit": expanded_eval_state["experiment_exit_status"],
+                "promotion_readiness": expanded_eval_state["promotion_readiness"],
                 "adaptive_intervention": (
                     evaluation.adaptive_intervention_effectiveness
                     if evaluation.adaptive_intervention_status not in {None, "not_applicable"}
@@ -1438,6 +1554,40 @@ class EvolutionLabService:
         if evaluation.request_identity_mismatch_flags:
             return "attention_required"
         return status
+
+    @staticmethod
+    def _expanded_eval_state(evaluation: FlowEvaluationInput) -> dict[str, str]:
+        state = derive_expanded_eval_state(
+            capability_decision_status=evaluation.capability_decision_status,
+            capability_effectiveness=evaluation.capability_effectiveness,
+            handoff_adapter_status=evaluation.handoff_adapter_status,
+            request_identity_status=evaluation.request_identity_status,
+            mission_policy_status=EvolutionLabService._mission_policy_readiness(
+                evaluation
+            ),
+            continuity_trace_status=evaluation.continuity_trace_status,
+            workflow_checkpoint_status=evaluation.workflow_checkpoint_status,
+            workflow_resume_status=evaluation.workflow_resume_status,
+            specialist_subflow_status=evaluation.specialist_subflow_status,
+            mission_runtime_state_status=evaluation.mission_runtime_state_status,
+        )
+        if evaluation.expanded_eval_status is not None:
+            state["expanded_eval_status"] = evaluation.expanded_eval_status
+        if evaluation.surface_axis_status is not None:
+            state["surface_axis_status"] = evaluation.surface_axis_status
+        if evaluation.ecosystem_state_status is not None:
+            state["ecosystem_state_status"] = evaluation.ecosystem_state_status
+        if evaluation.experiment_lane_status is not None:
+            state["experiment_lane_status"] = evaluation.experiment_lane_status
+        if evaluation.wave2_candidate_class is not None:
+            state["wave2_candidate_class"] = evaluation.wave2_candidate_class
+        if evaluation.experiment_entry_status is not None:
+            state["experiment_entry_status"] = evaluation.experiment_entry_status
+        if evaluation.experiment_exit_status is not None:
+            state["experiment_exit_status"] = evaluation.experiment_exit_status
+        if evaluation.promotion_readiness is not None:
+            state["promotion_readiness"] = evaluation.promotion_readiness
+        return state
 
     @staticmethod
     def _mind_composition_assessment(evaluation: FlowEvaluationInput) -> str:
