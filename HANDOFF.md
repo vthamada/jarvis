@@ -2,7 +2,7 @@
 
 ## Metadata
 
-- Atualizado em: 2026-04-20
+- Atualizado em: 2026-04-22
 - Branch: `main`
 - Commit de referência: `02ccc53`
 - Artefato canônico do projeto: `documento_mestre_jarvis.md`
@@ -99,7 +99,9 @@ Leitura atualizada desta rodada:
 
 Consolidar o fechamento operacional do `v2` sobre um runtime já alinhado aos eixos do Documento-Mestre, preservando `EV-002` + `EV-004` como baseline comparativo controlado e evitando reabrir esse lote por inercia local.
 
-A fila micro ja foi reaberta em `docs/implementation/execution-backlog.md` com o lote `MB-092` a `MB-096`, deixando `MB-092` como o item `ready` atual para `EV-003`.
+A fila micro ja fechou `MB-092` a `MB-096`, absorvendo `EV-003` como baseline
+evolutivo governado, e foi reaberta em cima de `SG-002` + `TA-002` com o lote
+`MB-097` a `MB-101`.
 
 ### Foco operacional atual
 
@@ -141,12 +143,21 @@ Atualizacao desta rodada:
   `surface_axis_*`, `ecosystem_state_*`, `experiment_lane_*`,
   `experiment_exit_*` e `promotion_readiness` como gramatica soberana de
   eval expandida e lane controlada da Onda 2;
-- `MB-092` a `MB-096` agora formam o novo lote ativo da fila micro, derivado
-  de `EV-003`, com foco em compile/optimize loops governados para prompts,
-  planos e workflows;
-- a proxima puxada correta do baseline passa a ser formalizar contrato,
-  candidatos, evidencia auditavel e leitura de release para esse loop
-  evolutivo, sem autoedicao do nucleo e sem promocao automatica de refinamento;
+- `MB-092` a `MB-096` agora tambem foram concluidos e fecharam `EV-003` como
+  baseline evolutivo governado;
+- `shared/optimization_state.py`, `evolution-lab`, comparadores, relatorios,
+  verificadores de baseline/release e fechadores regeneraveis agora tratam
+  `optimization_target_kind`, `optimization_candidate_status`,
+  `optimization_safety_status`, `optimization_readiness`,
+  `optimization_release_status` e `optimization_blockers` como gramatica
+  soberana de compile/optimize loops para prompts, planos e workflows;
+- `MB-097` a `MB-101` agora formam o novo lote ativo da fila micro, derivado
+  de `SG-002` + `TA-002`, com foco em um modelo soberano minimo de estado
+  operacional do ecossistema;
+- a proxima puxada correta do baseline passa a ser formalizar estado
+  operacional ativo, artefatos vivos, checkpoints abertos e presença por
+  superfície sem abrir ainda memoria temporal rica, continuidade
+  multissuperfície ou substrate operacional amplo;
 - tratar a Onda 2 apenas como experimento controlado guiado pela matriz de
   readiness ja existente, sem promocao automatica de referencia externa;
 - manter `protective intelligence`, `voice/realtime`, memoria temporal forte,
@@ -200,8 +211,8 @@ Atualizacao desta rodada:
   runtime;
 - `MB-087` a `MB-091` agora tambem foram concluidos e fecharam `EV-002` +
   `EV-004` como baseline comparativo controlado;
-- `MB-092` a `MB-096` agora formam o novo lote ativo da fila micro para
-  `EV-003`, com `MB-092` em `ready`;
+- `MB-097` a `MB-101` agora formam o novo lote ativo da fila micro para
+  `SG-002` + `TA-002`, com `MB-097` em `ready`;
 - tratar a Onda 2 apenas como experimento controlado guiado pela matriz de
   readiness ja existente, sem promocao automatica de referencia externa;
 - so depois desse lote: reavaliar qual vertical derivada deve abrir a proxima frente macro; `protective intelligence` permanece mapeado, mas em `deferred` ate nova decisao explicita;

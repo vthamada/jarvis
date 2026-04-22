@@ -638,6 +638,11 @@ class EvolutionProposalContract:
     requires_sandbox: bool = True
     proposed_tests: list[str] = field(default_factory=list)
     promotion_constraints: list[str] = field(default_factory=list)
+    optimization_scope: str | None = None
+    optimization_target_kind: str | None = None
+    optimization_candidate_status: str | None = None
+    optimization_safety_status: str | None = None
+    optimization_blockers: list[str] = field(default_factory=list)
     candidate_refs: list[str] = field(default_factory=list)
     refinement_vectors: list[dict[str, object]] = field(default_factory=list)
     evaluation_matrix: dict[str, dict[str, object]] = field(default_factory=dict)
@@ -658,6 +663,12 @@ class EvolutionDecisionContract:
     stability_score: float | None = None
     risk_score: float | None = None
     notes: list[str] = field(default_factory=list)
+    optimization_scope: str | None = None
+    optimization_target_kind: str | None = None
+    optimization_readiness: str | None = None
+    optimization_release_status: str | None = None
+    optimization_safety_status: str | None = None
+    optimization_blockers: list[str] = field(default_factory=list)
     baseline_label: str | None = None
     candidate_label: str | None = None
     selected_candidate_label: str | None = None

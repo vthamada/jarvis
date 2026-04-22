@@ -35,12 +35,17 @@ class EvolutionLabRepository:
                     requires_sandbox,
                     proposed_tests,
                     promotion_constraints,
+                    optimization_scope,
+                    optimization_target_kind,
+                    optimization_candidate_status,
+                    optimization_safety_status,
+                    optimization_blockers,
                     candidate_refs,
                     refinement_vectors,
                     evaluation_matrix,
                     selection_criteria,
                     strategy_context
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     str(proposal.evolution_proposal_id),
@@ -55,6 +60,11 @@ class EvolutionLabRepository:
                     int(proposal.requires_sandbox),
                     dumps(proposal.proposed_tests),
                     dumps(proposal.promotion_constraints),
+                    proposal.optimization_scope,
+                    proposal.optimization_target_kind,
+                    proposal.optimization_candidate_status,
+                    proposal.optimization_safety_status,
+                    dumps(proposal.optimization_blockers),
                     dumps(proposal.candidate_refs),
                     dumps(proposal.refinement_vectors),
                     dumps(proposal.evaluation_matrix),
@@ -79,6 +89,12 @@ class EvolutionLabRepository:
                     stability_score,
                     risk_score,
                     notes,
+                    optimization_scope,
+                    optimization_target_kind,
+                    optimization_readiness,
+                    optimization_release_status,
+                    optimization_safety_status,
+                    optimization_blockers,
                     baseline_label,
                     candidate_label,
                     selected_candidate_label,
@@ -86,7 +102,7 @@ class EvolutionLabRepository:
                     baseline_metrics,
                     candidate_metrics,
                     metric_deltas
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     str(decision.evolution_decision_id),
@@ -100,6 +116,12 @@ class EvolutionLabRepository:
                     decision.stability_score,
                     decision.risk_score,
                     dumps(decision.notes),
+                    decision.optimization_scope,
+                    decision.optimization_target_kind,
+                    decision.optimization_readiness,
+                    decision.optimization_release_status,
+                    decision.optimization_safety_status,
+                    dumps(decision.optimization_blockers),
                     decision.baseline_label,
                     decision.candidate_label,
                     decision.selected_candidate_label,
@@ -153,6 +175,11 @@ class EvolutionLabRepository:
                     requires_sandbox INTEGER NOT NULL,
                     proposed_tests TEXT NOT NULL,
                     promotion_constraints TEXT NOT NULL,
+                    optimization_scope TEXT,
+                    optimization_target_kind TEXT,
+                    optimization_candidate_status TEXT,
+                    optimization_safety_status TEXT,
+                    optimization_blockers TEXT NOT NULL DEFAULT '[]',
                     candidate_refs TEXT NOT NULL DEFAULT '[]',
                     refinement_vectors TEXT NOT NULL DEFAULT '[]',
                     evaluation_matrix TEXT NOT NULL DEFAULT '{}',
@@ -172,6 +199,12 @@ class EvolutionLabRepository:
                     stability_score REAL,
                     risk_score REAL,
                     notes TEXT NOT NULL,
+                    optimization_scope TEXT,
+                    optimization_target_kind TEXT,
+                    optimization_readiness TEXT,
+                    optimization_release_status TEXT,
+                    optimization_safety_status TEXT,
+                    optimization_blockers TEXT NOT NULL DEFAULT '[]',
                     baseline_label TEXT,
                     candidate_label TEXT,
                     selected_candidate_label TEXT,
@@ -181,6 +214,36 @@ class EvolutionLabRepository:
                     metric_deltas TEXT NOT NULL DEFAULT '{}'
                 );
                 """
+            )
+            self._ensure_column(
+                connection,
+                "evolution_proposals",
+                "optimization_scope",
+                "TEXT",
+            )
+            self._ensure_column(
+                connection,
+                "evolution_proposals",
+                "optimization_target_kind",
+                "TEXT",
+            )
+            self._ensure_column(
+                connection,
+                "evolution_proposals",
+                "optimization_candidate_status",
+                "TEXT",
+            )
+            self._ensure_column(
+                connection,
+                "evolution_proposals",
+                "optimization_safety_status",
+                "TEXT",
+            )
+            self._ensure_column(
+                connection,
+                "evolution_proposals",
+                "optimization_blockers",
+                "TEXT NOT NULL DEFAULT '[]'",
             )
             self._ensure_column(
                 connection,
@@ -211,6 +274,42 @@ class EvolutionLabRepository:
                 "evolution_proposals",
                 "strategy_context",
                 "TEXT NOT NULL DEFAULT '{}'",
+            )
+            self._ensure_column(
+                connection,
+                "evolution_decisions",
+                "optimization_scope",
+                "TEXT",
+            )
+            self._ensure_column(
+                connection,
+                "evolution_decisions",
+                "optimization_target_kind",
+                "TEXT",
+            )
+            self._ensure_column(
+                connection,
+                "evolution_decisions",
+                "optimization_readiness",
+                "TEXT",
+            )
+            self._ensure_column(
+                connection,
+                "evolution_decisions",
+                "optimization_release_status",
+                "TEXT",
+            )
+            self._ensure_column(
+                connection,
+                "evolution_decisions",
+                "optimization_safety_status",
+                "TEXT",
+            )
+            self._ensure_column(
+                connection,
+                "evolution_decisions",
+                "optimization_blockers",
+                "TEXT NOT NULL DEFAULT '[]'",
             )
             self._ensure_column(
                 connection,
@@ -275,6 +374,11 @@ class EvolutionLabRepository:
             requires_sandbox=bool(row["requires_sandbox"]),
             proposed_tests=loads(row["proposed_tests"]),
             promotion_constraints=loads(row["promotion_constraints"]),
+            optimization_scope=row["optimization_scope"],
+            optimization_target_kind=row["optimization_target_kind"],
+            optimization_candidate_status=row["optimization_candidate_status"],
+            optimization_safety_status=row["optimization_safety_status"],
+            optimization_blockers=loads(row["optimization_blockers"] or "[]"),
             candidate_refs=loads(row["candidate_refs"] or "[]"),
             refinement_vectors=loads(row["refinement_vectors"] or "[]"),
             evaluation_matrix=loads(row["evaluation_matrix"] or "{}"),
@@ -296,6 +400,12 @@ class EvolutionLabRepository:
             stability_score=row["stability_score"],
             risk_score=row["risk_score"],
             notes=loads(row["notes"]),
+            optimization_scope=row["optimization_scope"],
+            optimization_target_kind=row["optimization_target_kind"],
+            optimization_readiness=row["optimization_readiness"],
+            optimization_release_status=row["optimization_release_status"],
+            optimization_safety_status=row["optimization_safety_status"],
+            optimization_blockers=loads(row["optimization_blockers"] or "[]"),
             baseline_label=row["baseline_label"],
             candidate_label=row["candidate_label"],
             selected_candidate_label=row["selected_candidate_label"],

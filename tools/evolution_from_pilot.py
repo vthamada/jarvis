@@ -656,6 +656,24 @@ def build_payload(args: Namespace) -> dict[str, object]:
                         f"{item.get('candidate_experiment_lane_assessment', 'n/a')}"
                     ),
                     (
+                        "optimization_target="
+                        f"{item.get('baseline_optimization_target_kind_assessment', 'n/a')}"
+                        "->"
+                        f"{item.get('candidate_optimization_target_kind_assessment', 'n/a')}"
+                    ),
+                    (
+                        "optimization_readiness="
+                        f"{item.get('baseline_optimization_readiness_assessment', 'n/a')}"
+                        "->"
+                        f"{item.get('candidate_optimization_readiness_assessment', 'n/a')}"
+                    ),
+                    (
+                        "optimization_release="
+                        f"{item.get('baseline_optimization_release_assessment', 'n/a')}"
+                        "->"
+                        f"{item.get('candidate_optimization_release_assessment', 'n/a')}"
+                    ),
+                    (
                         "memory_lifecycle="
                         f"{item.get('baseline_memory_lifecycle_assessment', 'n/a')}"
                         "->"
@@ -1006,6 +1024,10 @@ def render_text(payload: dict[str, object]) -> str:
                         f"{item.get('baseline_cognitive_recomposition_assessment', 'n/a')}"
                         "->"
                         f"{item.get('candidate_cognitive_recomposition_assessment', 'n/a')}"
+                    ),
+                    (
+                        "optimization_blockers="
+                        f"{','.join(item.get('candidate_optimization_blockers', [])) or 'none'}"
                     ),
                     f"rollback_plan_ref={item['decision']['rollback_plan_ref']}",
                 ]

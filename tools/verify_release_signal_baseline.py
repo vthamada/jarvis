@@ -235,6 +235,16 @@ def _make_pilot_trace_summary() -> Any:
         experiment_entry_status="blocked_by_drift",
         experiment_exit_status="freeze_and_review",
         promotion_readiness="blocked",
+        optimization_target_kind="workflow",
+        optimization_candidate_status="blocked",
+        optimization_safety_status="blocked_by_safety",
+        optimization_readiness="blocked",
+        optimization_release_status="freeze_and_review",
+        optimization_blockers=[
+            "promotion_readiness_blocked",
+            "workflow_profile_not_ready",
+            "mission_policy_not_ready",
+        ],
         adaptive_intervention_status="healthy",
         adaptive_intervention_reason="discordancia entre mentes exigiu checkpoint governado",
         adaptive_intervention_trigger="mind_validation_required",
@@ -398,6 +408,16 @@ def _make_closure_payload() -> dict[str, object]:
         "candidate_experiment_release_status": "freeze_and_review",
         "baseline_promotion_blocker_rate": 0.0,
         "candidate_promotion_blocker_rate": 1.0,
+        "baseline_optimization_target_kind": "not_applicable",
+        "candidate_optimization_target_kind": "workflow",
+        "baseline_optimization_readiness": "hold_baseline",
+        "candidate_optimization_readiness": "blocked",
+        "baseline_optimization_release_status": "hold_baseline",
+        "candidate_optimization_release_status": "freeze_and_review",
+        "baseline_optimization_candidate_ready_rate": 0.0,
+        "candidate_optimization_candidate_ready_rate": 0.0,
+        "baseline_optimization_blocked_rate": 0.0,
+        "candidate_optimization_blocked_rate": 1.0,
     }
     return {
         "cut_id": "v2-release-signals",
@@ -702,6 +722,50 @@ def main() -> None:
         "Comparison text lost the controlled experiment lane release line.",
     )
     _ensure(
+        summary["candidate_optimization_target_kind_decision"] == "incomplete",
+        "Comparison summary lost the optimization target release decision.",
+    )
+    _ensure(
+        summary["candidate_optimization_readiness_decision"] == "blocked",
+        "Comparison summary lost the optimization readiness release decision.",
+    )
+    _ensure(
+        summary["candidate_optimization_release_decision"] == "freeze_and_review",
+        "Comparison summary lost the optimization release decision.",
+    )
+    _ensure(
+        scenario["candidate_optimization_target_kind_assessment"] == "plan",
+        "Scenario comparison lost the optimization target assessment.",
+    )
+    _ensure(
+        scenario["candidate_optimization_candidate_assessment"] == "blocked",
+        "Scenario comparison lost the optimization candidate assessment.",
+    )
+    _ensure(
+        scenario["candidate_optimization_safety_assessment"] == "blocked_by_safety",
+        "Scenario comparison lost the optimization safety assessment.",
+    )
+    _ensure(
+        scenario["candidate_optimization_readiness_assessment"] == "blocked",
+        "Scenario comparison lost the optimization readiness assessment.",
+    )
+    _ensure(
+        scenario["candidate_optimization_release_assessment"] == "freeze_and_review",
+        "Scenario comparison lost the optimization release assessment.",
+    )
+    _ensure(
+        "candidate_optimization_target_kind_decision=incomplete" in comparison_text,
+        "Comparison text lost the optimization target release line.",
+    )
+    _ensure(
+        "candidate_optimization_readiness_decision=blocked" in comparison_text,
+        "Comparison text lost the optimization readiness release line.",
+    )
+    _ensure(
+        "candidate_optimization_release_decision=freeze_and_review" in comparison_text,
+        "Comparison text lost the optimization release line.",
+    )
+    _ensure(
         "cognitive_recomposition_assessment=coherent" in pilot_text,
         "Pilot report text lost the recomposition assessment.",
     )
@@ -759,6 +823,22 @@ def main() -> None:
         "Pilot report text lost the controlled experiment lane assessment.",
     )
     _ensure(
+        "optimization_target_kind=workflow" in pilot_text,
+        "Pilot report text lost the optimization target assessment.",
+    )
+    _ensure(
+        "optimization_candidate_status=blocked" in pilot_text,
+        "Pilot report text lost the optimization candidate assessment.",
+    )
+    _ensure(
+        "optimization_safety_status=blocked_by_safety" in pilot_text,
+        "Pilot report text lost the optimization safety assessment.",
+    )
+    _ensure(
+        "optimization_release_status=freeze_and_review" in pilot_text,
+        "Pilot report text lost the optimization release assessment.",
+    )
+    _ensure(
         "procedural_artifact_status=candidate" in pilot_text,
         "Pilot report text lost the procedural artifact assessment.",
     )
@@ -779,8 +859,16 @@ def main() -> None:
         "Alignment closure markdown lost the expanded eval readiness section.",
     )
     _ensure(
+        "candidate optimization readiness" in alignment_markdown,
+        "Alignment closure markdown lost the optimization readiness section.",
+    )
+    _ensure(
         "candidate wave2 lane health" in sovereign_markdown,
         "Sovereign closure markdown lost the wave2 lane health section.",
+    )
+    _ensure(
+        "candidate optimization release status" in sovereign_markdown,
+        "Sovereign closure markdown lost the optimization release section.",
     )
 
     print("[verify-release-signal-baseline] release signal grammar is coherent")

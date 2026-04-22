@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## 2026-04-22
+
+### Repriorizacao explicita da ponte `v2 -> v3` para estado operacional do ecossistema
+
+- `docs/implementation/execution-backlog.md` agora abre `MB-097` a `MB-101` como o novo lote ativo, com `MB-097` em `ready` e foco em `SG-002` + `TA-002`;
+- o novo lote traduz a ponte `v2 -> v3` em um recorte pequeno: contrato soberano de estado operacional, aplicacao em continuidade/workflow lifecycle, evidencia auditavel, leitura de release e fechamento documental;
+- `docs/implementation/unified-gap-and-absorption-backlog.md` foi sincronizado para promover `SG-002` e `TA-002` a `candidate_for_slicing`, registrar `EV-003` como baseline fechado e ordenar `SG-003` + `SO-002` apenas depois do estado operacional minimo do ecossistema;
+- `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para sair do estado "sem item ready" e registrar `MB-097` como o proximo passo correto do projeto.
+
+### Fechamento do lote de compile/optimize loops governados
+
+- `shared/optimization_state.py`, `shared/contracts`, `shared/schemas` e `evolution/evolution-lab` agora tratam `optimization_target_kind`, `optimization_candidate_status`, `optimization_safety_status`, `optimization_readiness`, `optimization_release_status` e `optimization_blockers` como contrato soberano do baseline evolutivo;
+- `tools/compare_orchestrator_paths.py`, `tools/internal_pilot_report.py`, `tools/evolution_from_pilot.py`, `tools/verify_active_cut_baseline.py`, `tools/verify_release_signal_baseline.py`, `tools/archive/close_alignment_cycle.py` e `tools/archive/close_sovereign_alignment_cut.py` agora tornam oportunidades, bloqueios e seguranca de compile/optimize loops parte formal da leitura comparativa, do baseline ativo e dos artefatos regeneraveis de fechamento;
+- a superficie de testes do lote agora cobre `optimization_*` em `evolution-lab`, comparadores, relatorios, verificadores de baseline/release, fechadores regeneraveis e uma bateria sistêmica e2e da `JarvisConsole`;
+- `docs/implementation/execution-backlog.md`, `docs/implementation/unified-gap-and-absorption-backlog.md`, `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para fechar `MB-092` a `MB-096`, promover `EV-003` a `resolved_in_baseline` e registrar que a fila micro voltou a ficar sem item `ready`.
+
 ## 2026-04-20
 
 ### Repriorizacao do proximo lote micro para compile/optimize loops governados

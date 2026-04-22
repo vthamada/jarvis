@@ -20,6 +20,7 @@ for src_dir in SRC_DIRS:
 
 from observability_service.service import DEFAULT_REQUIRED_FLOW_EVENTS, ObservabilityService
 
+from shared.optimization_state import derive_optimization_state
 from tools.internal_pilot_support import axis_gate_status_from_statuses
 
 
@@ -133,6 +134,12 @@ class PilotTraceSummary:
     experiment_entry_status: str = "not_applicable"
     experiment_exit_status: str = "not_applicable"
     promotion_readiness: str = "not_applicable"
+    optimization_target_kind: str = "not_applicable"
+    optimization_candidate_status: str = "not_applicable"
+    optimization_safety_status: str = "not_applicable"
+    optimization_readiness: str = "not_applicable"
+    optimization_release_status: str = "not_applicable"
+    optimization_blockers: list[str] | None = None
 
 
 def parse_args() -> Namespace:
@@ -172,6 +179,22 @@ def summarize_traces(
     )
     return [
         PilotTraceSummary(
+            optimization_target_kind=_optimization_state(audit)[
+                "optimization_target_kind"
+            ],
+            optimization_candidate_status=_optimization_state(audit)[
+                "optimization_candidate_status"
+            ],
+            optimization_safety_status=_optimization_state(audit)[
+                "optimization_safety_status"
+            ],
+            optimization_readiness=_optimization_state(audit)[
+                "optimization_readiness"
+            ],
+            optimization_release_status=_optimization_state(audit)[
+                "optimization_release_status"
+            ],
+            optimization_blockers=list(_optimization_state(audit)["optimization_blockers"]),
             request_id=audit.request_id or "unknown",
             session_id=audit.session_id,
             mission_id=audit.mission_id,
@@ -345,6 +368,8 @@ def _trace_status(audit) -> str:
     if audit.expanded_eval_status == "attention_required":
         return "attention_required"
     if audit.experiment_lane_status == "attention_required":
+        return "attention_required"
+    if _optimization_state(audit)["optimization_candidate_status"] == "blocked":
         return "attention_required"
     if audit.capability_effectiveness in {"insufficient", "incomplete"}:
         return "attention_required"
@@ -533,6 +558,16 @@ def _render_summary(summary: PilotTraceSummary) -> str:
         f"{getattr(summary, 'experiment_exit_status', 'not_applicable')} "
         "promotion_readiness="
         f"{getattr(summary, 'promotion_readiness', 'not_applicable')} "
+        "optimization_target_kind="
+        f"{getattr(summary, 'optimization_target_kind', 'not_applicable')} "
+        "optimization_candidate_status="
+        f"{getattr(summary, 'optimization_candidate_status', 'not_applicable')} "
+        "optimization_safety_status="
+        f"{getattr(summary, 'optimization_safety_status', 'not_applicable')} "
+        "optimization_release_status="
+        f"{getattr(summary, 'optimization_release_status', 'not_applicable')} "
+        "optimization_blockers="
+        f"{','.join((getattr(summary, 'optimization_blockers', []) or [])) or 'none'} "
         "adaptive_intervention_status="
         f"{getattr(summary, 'adaptive_intervention_status', 'not_applicable')} "
         "adaptive_intervention_selected_action="
@@ -632,6 +667,30 @@ def render_text(summaries: list[PilotTraceSummary]) -> str:
     if not summaries:
         return "No internal pilot traces found."
     return "\n".join(_render_summary(s) for s in summaries)
+
+
+def _optimization_state(audit) -> dict[str, object]:
+    return derive_optimization_state(
+        refinement_vectors=[],
+        trace_status="attention_required"
+        if audit.anomaly_flags
+        or audit.missing_required_events
+        or audit.missing_continuity_signals
+        or audit.continuity_anomaly_flags
+        else "healthy",
+        request_identity_status=audit.request_identity_status,
+        mission_policy_status=audit.mission_policy_status,
+        capability_decision_status=audit.capability_decision_status,
+        handoff_adapter_status=audit.handoff_adapter_status,
+        expanded_eval_status=audit.expanded_eval_status,
+        experiment_lane_status=audit.experiment_lane_status,
+        promotion_readiness=audit.promotion_readiness,
+        adaptive_intervention_effectiveness=audit.adaptive_intervention_effectiveness,
+        memory_maintenance_effectiveness=audit.memory_maintenance_effectiveness,
+        mind_domain_specialist_effectiveness=audit.mind_domain_specialist_effectiveness,
+        workflow_profile_status=audit.workflow_profile_status,
+        workflow_output_status=audit.workflow_output_status,
+    )
 
 
 def main() -> None:

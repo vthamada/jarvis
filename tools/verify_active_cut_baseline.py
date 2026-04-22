@@ -8,6 +8,7 @@ from json import dumps
 from pathlib import Path
 
 from shared.domain_registry import PROMOTED_SPECIALIST_ROUTES, RUNTIME_ROUTE_REGISTRY
+from shared.optimization_state import derive_optimization_state
 from tools.archive.render_governed_benchmark_matrix import build_payload as build_benchmark_payload
 from tools.internal_pilot_support import (
     PilotExecutionResult,
@@ -60,10 +61,32 @@ class ActiveCutBaselineSummary:
     mission_runtime_state_ready_scenarios: int
     expanded_eval_target_scenarios: int
     expanded_eval_ready_scenarios: int
+    optimization_target_scenarios: int
+    optimization_ready_scenarios: int
+    optimization_blocked_scenarios: int
     wave2_lane_target_scenarios: int
     wave2_lane_healthy_scenarios: int
     promotion_blocker_scenarios: int
     experiment_release_hold_scenarios: int
+
+
+def _optimization_state(result: PilotExecutionResult) -> dict[str, object]:
+    return derive_optimization_state(
+        refinement_vectors=[],
+        trace_status=result.trace_status,
+        request_identity_status=result.request_identity_status,
+        mission_policy_status=result.mission_policy_status,
+        capability_decision_status=result.capability_decision_status,
+        handoff_adapter_status=result.handoff_adapter_status,
+        expanded_eval_status=result.expanded_eval_status,
+        experiment_lane_status=result.experiment_lane_status,
+        promotion_readiness=result.promotion_readiness,
+        adaptive_intervention_effectiveness=result.adaptive_intervention_effectiveness,
+        memory_maintenance_effectiveness=result.memory_maintenance_effectiveness,
+        mind_domain_specialist_effectiveness=result.mind_domain_specialist_effectiveness,
+        workflow_profile_status=result.workflow_profile_status,
+        workflow_output_status=result.workflow_output_status,
+    )
 
 
 def _promoted_workflow_profiles() -> set[str]:
@@ -146,6 +169,11 @@ def _build_targeted_pilot_summary(
             or item.experiment_lane_status != "not_applicable"
             or item.promotion_readiness != "not_applicable"
         )
+    ]
+    optimization_targets = [
+        item
+        for item in pilot_results
+        if _optimization_state(item)["optimization_target_kind"] != "not_applicable"
     ]
     wave2_lane_targets = [
         item
@@ -249,6 +277,18 @@ def _build_targeted_pilot_summary(
                     "baseline_only",
                     "not_in_phase",
                 }
+            ),
+            "optimization_target_scenarios": len(optimization_targets),
+            "optimization_ready_scenarios": sum(
+                1
+                for item in optimization_targets
+                if _optimization_state(item)["optimization_readiness"]
+                in {"candidate_ready", "observe_only", "hold_baseline"}
+            ),
+            "optimization_blocked_scenarios": sum(
+                1
+                for item in optimization_targets
+                if _optimization_state(item)["optimization_readiness"] == "blocked"
             ),
             "wave2_lane_target_scenarios": len(wave2_lane_targets),
             "wave2_lane_healthy_scenarios": sum(
@@ -429,6 +469,15 @@ def build_payload(
         expanded_eval_ready_scenarios=int(
             pilot_summary["expanded_eval_ready_scenarios"]
         ),
+        optimization_target_scenarios=int(
+            pilot_summary["optimization_target_scenarios"]
+        ),
+        optimization_ready_scenarios=int(
+            pilot_summary["optimization_ready_scenarios"]
+        ),
+        optimization_blocked_scenarios=int(
+            pilot_summary["optimization_blocked_scenarios"]
+        ),
         wave2_lane_target_scenarios=int(pilot_summary["wave2_lane_target_scenarios"]),
         wave2_lane_healthy_scenarios=int(
             pilot_summary["wave2_lane_healthy_scenarios"]
@@ -462,6 +511,10 @@ def build_payload(
         or (
             summary.expanded_eval_target_scenarios > 0
             and summary.expanded_eval_ready_scenarios == 0
+        )
+        or (
+            summary.optimization_target_scenarios > 0
+            and summary.optimization_ready_scenarios == 0
         )
         or (
             summary.wave2_lane_target_scenarios > 0
@@ -508,6 +561,11 @@ def build_payload(
                 "quando houver eval expandida ou candidato de Onda 2 no piloto, "
                 "a lane controlada precisa permanecer auditavel como baseline_only, "
                 "out_of_lane ou controlled_candidate"
+            ),
+            (
+                "quando houver oportunidade de compile/optimize loop, ela precisa "
+                "seguir sandbox-only, com readiness e bloqueios de seguranca "
+                "explicitamente auditaveis"
             ),
             *pilot_notes,
         ],
@@ -573,6 +631,11 @@ def render_text(payload: dict[str, object]) -> str:
                 "expanded_eval_ready="
                 f"{summary['expanded_eval_ready_scenarios']}/"
                 f"{summary['expanded_eval_target_scenarios']} "
+                "optimization_ready="
+                f"{summary['optimization_ready_scenarios']}/"
+                f"{summary['optimization_target_scenarios']} "
+                "optimization_blocked="
+                f"{summary['optimization_blocked_scenarios']} "
                 "wave2_lane_healthy="
                 f"{summary['wave2_lane_healthy_scenarios']}/"
                 f"{summary['wave2_lane_target_scenarios']} "
@@ -695,6 +758,15 @@ def render_markdown(payload: dict[str, object]) -> str:
             "- expanded eval scenarios ready: "
             f"`{summary['expanded_eval_ready_scenarios']}`/"
             f"`{summary['expanded_eval_target_scenarios']}`"
+        ),
+        (
+            "- optimization scenarios ready: "
+            f"`{summary['optimization_ready_scenarios']}`/"
+            f"`{summary['optimization_target_scenarios']}`"
+        ),
+        (
+            "- optimization blocked scenarios: "
+            f"`{summary['optimization_blocked_scenarios']}`"
         ),
         (
             "- controlled wave2 lane scenarios healthy: "

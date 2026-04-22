@@ -12,6 +12,7 @@ from uuid import uuid4
 from evolution_lab.repository import EvolutionLabRepository
 from shared.contracts import EvolutionDecisionContract, EvolutionProposalContract
 from shared.eval_expansion import derive_expanded_eval_state
+from shared.optimization_state import derive_optimization_state
 from shared.types import EvolutionDecisionId, EvolutionProposalId
 
 DEFAULT_EVOLUTION_STRATEGY = "manual_variants"
@@ -164,6 +165,11 @@ class EvolutionLabService:
         evaluation_matrix: dict[str, dict[str, object]] | None = None,
         selection_criteria: dict[str, object] | None = None,
         strategy_context: dict[str, object] | None = None,
+        optimization_scope: str | None = None,
+        optimization_target_kind: str | None = None,
+        optimization_candidate_status: str | None = None,
+        optimization_safety_status: str | None = None,
+        optimization_blockers: list[str] | None = None,
     ) -> EvolutionProposalContract:
         """Register a sandbox proposal for later comparison."""
 
@@ -191,6 +197,11 @@ class EvolutionLabService:
                 "rollback_plan_mandatory",
                 f"preferred_strategy={chosen_strategy}",
             ],
+            optimization_scope=optimization_scope,
+            optimization_target_kind=optimization_target_kind,
+            optimization_candidate_status=optimization_candidate_status,
+            optimization_safety_status=optimization_safety_status,
+            optimization_blockers=list(optimization_blockers or []),
             candidate_refs=list(candidate_refs or []),
             refinement_vectors=list(refinement_vectors or []),
             evaluation_matrix=dict(evaluation_matrix or {}),
@@ -230,17 +241,30 @@ class EvolutionLabService:
             metric_deltas=metric_deltas,
         )
         decision_name = (
-            "sandbox_candidate"
-            if improved >= degraded
-            and risk_score <= comparison.baseline_metrics.get("risk", risk_score)
-            and candidate_meets_selection
-            else "hold_baseline"
+            "hold_baseline"
+            if proposal.optimization_candidate_status == "blocked"
+            or proposal.optimization_safety_status == "blocked_by_safety"
+            else (
+                "sandbox_candidate"
+                if improved >= degraded
+                and risk_score <= comparison.baseline_metrics.get("risk", risk_score)
+                and candidate_meets_selection
+                else "hold_baseline"
+            )
+        )
+        optimization_state = dict(
+            proposal.strategy_context.get("optimization_state", {})
+            if isinstance(proposal.strategy_context, dict)
+            else {}
         )
         summary = (
             f"baseline={comparison.baseline_label}; candidate={comparison.candidate_label}; "
             f"strategy={chosen_strategy}; improved_metrics={improved}; degraded_metrics={degraded}; "
             f"stability={stability_score}; risk={risk_score}; "
-            f"selection_ok={candidate_meets_selection}"
+            f"selection_ok={candidate_meets_selection}; "
+            f"optimization_target={proposal.optimization_target_kind or 'not_applicable'}; "
+            f"optimization_readiness={optimization_state.get('optimization_readiness', 'not_applicable')}; "
+            f"optimization_release={optimization_state.get('optimization_release_status', 'not_applicable')}"
         )
         decision = EvolutionDecisionContract(
             evolution_decision_id=EvolutionDecisionId(f"evo-decision-{uuid4().hex[:8]}"),
@@ -258,7 +282,18 @@ class EvolutionLabService:
                 f"strategy={chosen_strategy}",
                 f"metric_deltas={metric_deltas}",
                 f"selection_criteria={selection_criteria}",
+                f"optimization_state={optimization_state}",
             ],
+            optimization_scope=proposal.optimization_scope,
+            optimization_target_kind=proposal.optimization_target_kind,
+            optimization_readiness=str(
+                optimization_state.get("optimization_readiness", "not_applicable")
+            ),
+            optimization_release_status=str(
+                optimization_state.get("optimization_release_status", "not_applicable")
+            ),
+            optimization_safety_status=proposal.optimization_safety_status,
+            optimization_blockers=list(proposal.optimization_blockers),
             baseline_label=comparison.baseline_label,
             candidate_label=comparison.candidate_label,
             selected_candidate_label=(
@@ -301,6 +336,10 @@ class EvolutionLabService:
         refinement_vectors = self._refinement_vectors_from_flow_evaluation(evaluation)
         evaluation_matrix = self._evaluation_matrix_from_flow_evaluation(evaluation)
         wave_two_readiness = self._wave_two_readiness_matrix_from_evaluation(evaluation)
+        optimization_state = self._optimization_state(
+            evaluation,
+            refinement_vectors=refinement_vectors,
+        )
         resolved_strategy = self.resolve_strategy_name(strategy_name)
         selection_criteria = self._selection_criteria(resolved_strategy)
         if refinement_vectors:
@@ -431,6 +470,27 @@ class EvolutionLabService:
         source_signals.append(
             f"experiment://promotion/{expanded_eval_state['promotion_readiness']}"
         )
+        source_signals.append(
+            f"optimization://scope/{optimization_state['optimization_scope']}"
+        )
+        source_signals.append(
+            "optimization://target/"
+            f"{optimization_state['optimization_target_kind']}"
+        )
+        source_signals.append(
+            "optimization://candidate/"
+            f"{optimization_state['optimization_candidate_status']}"
+        )
+        source_signals.append(
+            "optimization://safety/"
+            f"{optimization_state['optimization_safety_status']}"
+        )
+        source_signals.append(
+            "optimization://release/"
+            f"{optimization_state['optimization_release_status']}"
+        )
+        for blocker in optimization_state["optimization_blockers"]:
+            source_signals.append(f"optimization://blocker/{blocker}")
         for mismatch_flag in evaluation.request_identity_mismatch_flags:
             source_signals.append(
                 f"runtime://request-identity-mismatch/{mismatch_flag}"
@@ -573,6 +633,15 @@ class EvolutionLabService:
             risk_hint=self._risk_hint_from_flow(evaluation),
             proposed_tests=["python tools/go_live_internal_checklist.py --profile controlled"],
             strategy_name=strategy_name,
+            optimization_scope=str(optimization_state["optimization_scope"]),
+            optimization_target_kind=str(optimization_state["optimization_target_kind"]),
+            optimization_candidate_status=str(
+                optimization_state["optimization_candidate_status"]
+            ),
+            optimization_safety_status=str(
+                optimization_state["optimization_safety_status"]
+            ),
+            optimization_blockers=list(optimization_state["optimization_blockers"]),
             candidate_refs=(
                 [f"trace://{evaluation.request_id}"]
                 + (
@@ -590,6 +659,7 @@ class EvolutionLabService:
                 "top_refinement_axis": (
                     refinement_vectors[0]["axis"] if refinement_vectors else "none"
                 ),
+                "optimization_state": optimization_state,
                 "controlled_wave2_experiment": expanded_eval_state,
                 "wave_two_readiness_matrix": wave_two_readiness,
                 "wave_two_ready_targets": [
@@ -1443,6 +1513,12 @@ class EvolutionLabService:
     ) -> dict[str, dict[str, object]]:
         workflow = EvolutionLabService._workflow_key(evaluation)
         expanded_eval_state = EvolutionLabService._expanded_eval_state(evaluation)
+        optimization_state = EvolutionLabService._optimization_state(
+            evaluation,
+            refinement_vectors=EvolutionLabService._refinement_vectors_from_flow_evaluation(
+                evaluation
+            ),
+        )
         return {
             workflow: {
                 "workflow_profile": evaluation.workflow_profile_status or "not_applicable",
@@ -1475,6 +1551,18 @@ class EvolutionLabService:
                 "experiment_entry": expanded_eval_state["experiment_entry_status"],
                 "experiment_exit": expanded_eval_state["experiment_exit_status"],
                 "promotion_readiness": expanded_eval_state["promotion_readiness"],
+                "optimization_target_kind": optimization_state["optimization_target_kind"],
+                "optimization_candidate": optimization_state[
+                    "optimization_candidate_status"
+                ],
+                "optimization_safety": optimization_state["optimization_safety_status"],
+                "optimization_readiness": optimization_state["optimization_readiness"],
+                "optimization_release": optimization_state[
+                    "optimization_release_status"
+                ],
+                "optimization_blockers": list(
+                    optimization_state["optimization_blockers"]
+                ),
                 "adaptive_intervention": (
                     evaluation.adaptive_intervention_effectiveness
                     if evaluation.adaptive_intervention_status not in {None, "not_applicable"}
@@ -1588,6 +1676,45 @@ class EvolutionLabService:
         if evaluation.promotion_readiness is not None:
             state["promotion_readiness"] = evaluation.promotion_readiness
         return state
+
+    @staticmethod
+    def _optimization_state(
+        evaluation: FlowEvaluationInput,
+        *,
+        refinement_vectors: list[dict[str, object]],
+    ) -> dict[str, object]:
+        expanded_eval_state = EvolutionLabService._expanded_eval_state(evaluation)
+        return derive_optimization_state(
+            refinement_vectors=refinement_vectors,
+            trace_status=(
+                "attention_required"
+                if evaluation.anomaly_flags
+                or evaluation.missing_required_events
+                or evaluation.missing_continuity_signals
+                or evaluation.continuity_anomaly_flags
+                else "healthy"
+            ),
+            request_identity_status=evaluation.request_identity_status,
+            mission_policy_status=EvolutionLabService._mission_policy_readiness(
+                evaluation
+            ),
+            capability_decision_status=evaluation.capability_decision_status,
+            handoff_adapter_status=evaluation.handoff_adapter_status,
+            expanded_eval_status=expanded_eval_state["expanded_eval_status"],
+            experiment_lane_status=expanded_eval_state["experiment_lane_status"],
+            promotion_readiness=expanded_eval_state["promotion_readiness"],
+            adaptive_intervention_effectiveness=(
+                evaluation.adaptive_intervention_effectiveness
+            ),
+            memory_maintenance_effectiveness=(
+                evaluation.memory_maintenance_effectiveness
+            ),
+            mind_domain_specialist_effectiveness=(
+                evaluation.mind_domain_specialist_effectiveness
+            ),
+            workflow_profile_status=evaluation.workflow_profile_status,
+            workflow_output_status=evaluation.workflow_output_status,
+        )
 
     @staticmethod
     def _mind_composition_assessment(evaluation: FlowEvaluationInput) -> str:

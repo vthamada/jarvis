@@ -100,6 +100,16 @@ class CycleEvidenceSummary:
     candidate_experiment_release_status: str
     baseline_promotion_blocker_rate: float
     candidate_promotion_blocker_rate: float
+    baseline_optimization_target_kind: str
+    candidate_optimization_target_kind: str
+    baseline_optimization_readiness: str
+    candidate_optimization_readiness: str
+    baseline_optimization_release_status: str
+    candidate_optimization_release_status: str
+    baseline_optimization_candidate_ready_rate: float
+    candidate_optimization_candidate_ready_rate: float
+    baseline_optimization_blocked_rate: float
+    candidate_optimization_blocked_rate: float
 
 
 def parse_args() -> Namespace:
@@ -711,6 +721,70 @@ def evidence_summary(
             scenario_key="candidate_promotion_readiness_assessment",
             target="blocked",
         ),
+        baseline_optimization_target_kind=_comparison_label_from_scenarios(
+            comparison_payload,
+            comparison_summary,
+            summary_key="baseline_optimization_target_kind_decision",
+            scenario_key="baseline_optimization_target_kind_assessment",
+        ),
+        candidate_optimization_target_kind=_comparison_label_from_scenarios(
+            comparison_payload,
+            comparison_summary,
+            summary_key="candidate_optimization_target_kind_decision",
+            scenario_key="candidate_optimization_target_kind_assessment",
+        ),
+        baseline_optimization_readiness=_comparison_label_from_scenarios(
+            comparison_payload,
+            comparison_summary,
+            summary_key="baseline_optimization_readiness_decision",
+            scenario_key="baseline_optimization_readiness_assessment",
+        ),
+        candidate_optimization_readiness=_comparison_label_from_scenarios(
+            comparison_payload,
+            comparison_summary,
+            summary_key="candidate_optimization_readiness_decision",
+            scenario_key="candidate_optimization_readiness_assessment",
+        ),
+        baseline_optimization_release_status=_comparison_label_from_scenarios(
+            comparison_payload,
+            comparison_summary,
+            summary_key="baseline_optimization_release_decision",
+            scenario_key="baseline_optimization_release_assessment",
+        ),
+        candidate_optimization_release_status=_comparison_label_from_scenarios(
+            comparison_payload,
+            comparison_summary,
+            summary_key="candidate_optimization_release_decision",
+            scenario_key="candidate_optimization_release_assessment",
+        ),
+        baseline_optimization_candidate_ready_rate=_comparison_rate(
+            comparison_payload,
+            comparison_summary,
+            summary_key="baseline_optimization_candidate_ready_rate",
+            scenario_key="baseline_optimization_candidate_assessment",
+            target="candidate_ready",
+        ),
+        candidate_optimization_candidate_ready_rate=_comparison_rate(
+            comparison_payload,
+            comparison_summary,
+            summary_key="candidate_optimization_candidate_ready_rate",
+            scenario_key="candidate_optimization_candidate_assessment",
+            target="candidate_ready",
+        ),
+        baseline_optimization_blocked_rate=_comparison_rate(
+            comparison_payload,
+            comparison_summary,
+            summary_key="baseline_optimization_blocked_rate",
+            scenario_key="baseline_optimization_readiness_assessment",
+            target="blocked",
+        ),
+        candidate_optimization_blocked_rate=_comparison_rate(
+            comparison_payload,
+            comparison_summary,
+            summary_key="candidate_optimization_blocked_rate",
+            scenario_key="candidate_optimization_readiness_assessment",
+            target="blocked",
+        ),
     )
 
 
@@ -826,6 +900,17 @@ def render_text(payload: dict[str, object]) -> str:
             f"baseline_status={evidence['baseline_experiment_release_status']} "
             f"candidate_status={evidence['candidate_experiment_release_status']} "
             f"candidate_promotion_blocker_rate={evidence['candidate_promotion_blocker_rate']}"
+        ),
+        (
+            "optimization="
+            f"baseline_target={evidence['baseline_optimization_target_kind']} "
+            f"candidate_target={evidence['candidate_optimization_target_kind']} "
+            f"baseline_readiness={evidence['baseline_optimization_readiness']} "
+            f"candidate_readiness={evidence['candidate_optimization_readiness']} "
+            f"baseline_release={evidence['baseline_optimization_release_status']} "
+            f"candidate_release={evidence['candidate_optimization_release_status']} "
+            f"candidate_ready_rate={evidence['candidate_optimization_candidate_ready_rate']} "
+            f"candidate_blocked_rate={evidence['candidate_optimization_blocked_rate']}"
         ),
         "next_cut=" + ",".join(item["item_id"] for item in payload["next_cut_scope"]),
         "deferred=" + ",".join(item["item_id"] for item in payload["deferred_scope"]),
@@ -994,6 +1079,46 @@ def render_markdown(payload: dict[str, object]) -> str:
         (
             "- candidate promotion blocker rate: "
             f"`{evidence['candidate_promotion_blocker_rate']}`"
+        ),
+        (
+            "- baseline optimization target kind: "
+            f"`{evidence['baseline_optimization_target_kind']}`"
+        ),
+        (
+            "- candidate optimization target kind: "
+            f"`{evidence['candidate_optimization_target_kind']}`"
+        ),
+        (
+            "- baseline optimization readiness: "
+            f"`{evidence['baseline_optimization_readiness']}`"
+        ),
+        (
+            "- candidate optimization readiness: "
+            f"`{evidence['candidate_optimization_readiness']}`"
+        ),
+        (
+            "- baseline optimization release status: "
+            f"`{evidence['baseline_optimization_release_status']}`"
+        ),
+        (
+            "- candidate optimization release status: "
+            f"`{evidence['candidate_optimization_release_status']}`"
+        ),
+        (
+            "- baseline optimization candidate-ready rate: "
+            f"`{evidence['baseline_optimization_candidate_ready_rate']}`"
+        ),
+        (
+            "- candidate optimization candidate-ready rate: "
+            f"`{evidence['candidate_optimization_candidate_ready_rate']}`"
+        ),
+        (
+            "- baseline optimization blocked rate: "
+            f"`{evidence['baseline_optimization_blocked_rate']}`"
+        ),
+        (
+            "- candidate optimization blocked rate: "
+            f"`{evidence['candidate_optimization_blocked_rate']}`"
         ),
         "",
         "## Entra no proximo corte do v2",

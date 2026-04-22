@@ -119,7 +119,7 @@ Leitura de horizonte:
 | ID | Gap real | Camada JARVIS | Fase alvo | Tecnologias relacionadas | Janela de absorcao | Status | Slice micro |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `SG-001` | decisao soberana de capacidades e ferramentas | nucleo executivo, governanca, dispatch | `v2 restante` | `PydanticAI`, `Mastra`, `OpenAI Agents SDK`, `Qwen-Agent` | `onda_2_controlada` | `resolved_in_baseline` | `sim` |
-| `SG-002` | modelo de estado operacional do ecossistema | `orchestrator`, memoria, continuidade | `ponte v2 -> v3` | `LangGraph`, `Mastra`, `Manus` | `onda_3_tardia` | `blocked_by_phase` | `nao` |
+| `SG-002` | modelo de estado operacional do ecossistema | `orchestrator`, memoria, continuidade | `ponte v2 -> v3` | `LangGraph`, `Mastra`, `Manus` | `onda_3_tardia` | `candidate_for_slicing` | `sim` |
 | `SG-003` | continuidade multissuperficie da mesma entidade | identidade, continuidade, surfaces | `ponte v2 -> v3` | `OpenClaw`, `OpenAI Agents SDK` | `onda_3_tardia` | `blocked_by_phase` | `nao` |
 | `SG-004` | manutencao ativa de memoria viva e memory review | `memory-service`, `memory_registry` | `v2 restante` | `Letta`, `Hermes Agent`, `Qwen-Agent` | `onda_1_residual` | `resolved_in_baseline` | `sim` |
 | `SG-005` | arbitragem mais declarativa de `mente -> dominio -> especialista` nos consumidores finais | cognicao, `planning`, `synthesis`, observabilidade | `v2 restante` | `Mastra`, `PydanticAI` | `nao_aplicavel` | `resolved_in_baseline` | `sim` |
@@ -153,7 +153,7 @@ Notas de traducao por gap:
 | ID | Traducao disciplinada ainda faltante | Fortalece | Fase alvo | Tecnologias relacionadas | Janela de absorcao | Status | Slice micro |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `TA-001` | contratos tipados de capacidade e workflow alem do plano deliberativo atual | `SG-001`, `SG-005`, `SG-006` | `v2 restante` | `PydanticAI`, `Mastra`, `Microsoft Agent Framework` | `onda_1_residual` | `resolved_in_baseline` | `sim` |
-| `TA-002` | durable execution, resumabilidade e subfluxos stateful mais profundos | `SG-002` | `ponte v2 -> v3` | `LangGraph`, `Mastra` | `onda_1_residual` | `blocked_by_phase` | `nao` |
+| `TA-002` | durable execution, resumabilidade e subfluxos stateful mais profundos | `SG-002` | `ponte v2 -> v3` | `LangGraph`, `Mastra` | `onda_1_residual` | `candidate_for_slicing` | `sim` |
 | `TA-003` | compaction de contexto e recall cross-session 2.0 | `SG-004` | `v2 restante` | `Letta`, `Hermes Agent`, `Qwen-Agent` | `onda_1_residual` | `resolved_in_baseline` | `sim` |
 | `TA-004` | memoria temporal, relacional e scoping mais rico | `SG-002`, `SG-004` | `ponte v2 -> v3` | `Graphiti`, `Zep`, `Mem0` | `onda_2_controlada` | `blocked_by_phase` | `nao` |
 | `TA-005` | handoffs, tracing e session adapters por borda de fluxo | `SG-001`, `SG-003`, `SG-006`, `EV-002` | `v2 restante` | `OpenAI Agents SDK` | `onda_2_controlada` | `resolved_in_baseline` | `sim` |
@@ -205,7 +205,7 @@ Notas de leitura:
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `EV-001` | repriorizacao explicita do proximo lote micro a partir deste mapa unificado | governanca de execucao | `agora` | `nenhuma` | `nao_aplicavel` | `candidate_for_slicing` | `sim` |
 | `EV-002` | expandir evals e sinais para capacidade, superficie e estado do ecossistema | `observability`, `evolution-lab`, gates | `v2 restante` | `DSPy`, `OpenAI Agents SDK`, `Mastra` | `onda_2_controlada` | `resolved_in_baseline` | `sim` |
-| `EV-003` | compile e optimize loops governados para prompts, planos e workflows | `evolution-lab` | `v2 restante` | `DSPy/MIPROv2`, `TextGrad`, `AFlow`, `EvoAgentX` | `onda_1_residual` | `candidate_for_slicing` | `sim` |
+| `EV-003` | compile e optimize loops governados para prompts, planos e workflows | `evolution-lab` | `v2 restante` | `DSPy/MIPROv2`, `TextGrad`, `AFlow`, `EvoAgentX` | `onda_1_residual` | `resolved_in_baseline` | `sim` |
 | `EV-004` | lane controlada de experimentos da Onda 2 com criterio de entrada e saida | comparadores, laboratorio, gates | `v2 restante` | `OpenAI Agents SDK`, `Qwen-Agent`, `Graphiti`, `Mem0`, `OpenHands`, `browser-use` | `onda_2_controlada` | `resolved_in_baseline` | `sim` |
 
 Notas de leitura:
@@ -253,17 +253,25 @@ ser:
 
 Ordem recomendada hoje:
 
-1. `EV-003`
+1. `SG-002` + `TA-002`
+2. `SG-003` + `SO-002`
 
 Leitura correta:
 
 - `SG-001`, `SG-004`, `SG-005`, `SG-006`, `TA-001`, `TA-003`, `TA-005`,
   `EV-002` e `EV-004` ja foram traduzidos em lotes micro concluidos e agora
   pertencem ao baseline, nao a proxima puxada;
-- `EV-003` ja foi corretamente fatiado no backlog micro como o lote `MB-092` a
-  `MB-096`, mantendo o recorte pequeno, reversivel e auditavel;
+- `EV-003` ja foi corretamente fatiado e concluido no backlog micro como o
+  lote `MB-092` a `MB-096`, passando a fazer parte do baseline evolutivo
+  governado;
+- a repriorizacao explicita seguinte pode abrir a ponte `v2 -> v3` em cima de
+  `SG-002` + `TA-002`, desde que o recorte continue pequeno, reversivel e
+  auditavel, sem puxar ainda memoria temporal rica, multissuperficie ou
+  substrate operacional amplo;
 - `SG-002`, `SG-003`, `TA-002`, `TA-004`, `SO-*` e `DV-001` ja sao
   relevantes, mas ainda nao sao a melhor puxada do `v2` atual;
+- depois de abrir `SG-002` + `TA-002`, `SG-003` e `SO-002` passam a depender
+  da existencia de um estado operacional do ecossistema minimamente soberano;
 - `RH-*` permanece fora do backlog implementavel.
 
 ---

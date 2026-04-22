@@ -62,6 +62,16 @@ def test_close_sovereign_alignment_cut_builds_payload() -> None:
                 "candidate_experiment_release_status": "hold_in_lane",
                 "baseline_promotion_blocker_rate": 0.0,
                 "candidate_promotion_blocker_rate": 0.0,
+                "baseline_optimization_target_kind_decision": "not_applicable",
+                "candidate_optimization_target_kind_decision": "workflow",
+                "baseline_optimization_readiness_decision": "hold_baseline",
+                "candidate_optimization_readiness_decision": "candidate_ready",
+                "baseline_optimization_release_decision": "hold_baseline",
+                "candidate_optimization_release_decision": "hold_in_lane",
+                "baseline_optimization_candidate_ready_rate": 0.0,
+                "candidate_optimization_candidate_ready_rate": 0.5,
+                "baseline_optimization_blocked_rate": 0.0,
+                "candidate_optimization_blocked_rate": 0.0,
                 "decision": "candidate_ready_for_eval_gate",
             },
             },
@@ -354,6 +364,9 @@ def test_close_sovereign_alignment_cut_builds_payload() -> None:
     assert payload["evidence_summary"]["candidate_expanded_eval_readiness"] == "candidate_ready"
     assert payload["evidence_summary"]["candidate_wave2_lane_health"] == "controlled_candidate"
     assert payload["evidence_summary"]["candidate_experiment_release_status"] == "hold_in_lane"
+    assert payload["evidence_summary"]["candidate_optimization_target_kind"] == "workflow"
+    assert payload["evidence_summary"]["candidate_optimization_readiness"] == "candidate_ready"
+    assert payload["evidence_summary"]["candidate_optimization_release_status"] == "hold_in_lane"
     assert payload["next_cut_scope"][0]["item_id"] == "v2-domain-consumers-and-specialists"
 
 
@@ -427,6 +440,16 @@ def test_close_sovereign_alignment_cut_renders_markdown() -> None:
             "candidate_experiment_release_status": "hold_in_lane",
             "baseline_promotion_blocker_rate": 0.0,
             "candidate_promotion_blocker_rate": 0.0,
+            "baseline_optimization_target_kind": "not_applicable",
+            "candidate_optimization_target_kind": "workflow",
+            "baseline_optimization_readiness": "hold_baseline",
+            "candidate_optimization_readiness": "candidate_ready",
+            "baseline_optimization_release_status": "hold_baseline",
+            "candidate_optimization_release_status": "hold_in_lane",
+            "baseline_optimization_candidate_ready_rate": 0.0,
+            "candidate_optimization_candidate_ready_rate": 0.5,
+            "baseline_optimization_blocked_rate": 0.0,
+            "candidate_optimization_blocked_rate": 0.0,
         },
         "next_cut_scope": [
             {
@@ -472,3 +495,4 @@ def test_close_sovereign_alignment_cut_renders_markdown() -> None:
     assert "candidate expanded eval readiness" in rendered
     assert "candidate wave2 lane health" in rendered
     assert "candidate experiment release status" in rendered
+    assert "candidate optimization release status" in rendered

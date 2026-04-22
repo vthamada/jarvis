@@ -13,6 +13,7 @@ ROOT = Path(__file__).resolve().parent.parent
 sys_path.insert(0, str(ROOT))
 
 from shared.eval_expansion import derive_expanded_eval_state
+from shared.optimization_state import derive_optimization_state
 from tools.internal_pilot_support import (
     PilotExecutionResult,
     result_to_dict,
@@ -170,6 +171,47 @@ def experiment_exit_assessment(result: PilotExecutionResult) -> str:
 
 def promotion_readiness_assessment(result: PilotExecutionResult) -> str:
     return expanded_eval_state(result)["promotion_readiness"]
+
+
+def optimization_state(result: PilotExecutionResult) -> dict[str, object]:
+    return derive_optimization_state(
+        refinement_vectors=refinement_vectors(result),
+        trace_status=result.trace_status,
+        request_identity_status=result.request_identity_status,
+        mission_policy_status=mission_policy_readiness(result),
+        capability_decision_status=result.capability_decision_status,
+        handoff_adapter_status=result.handoff_adapter_status,
+        expanded_eval_status=expanded_eval_assessment(result),
+        experiment_lane_status=experiment_lane_assessment(result),
+        promotion_readiness=promotion_readiness_assessment(result),
+        adaptive_intervention_effectiveness=adaptive_intervention_assessment(result),
+        memory_maintenance_effectiveness=memory_maintenance_assessment(result),
+        mind_domain_specialist_effectiveness=(
+            mind_domain_specialist_effectiveness_assessment(result)
+        ),
+        workflow_profile_status=result.workflow_profile_status,
+        workflow_output_status=result.workflow_output_status,
+    )
+
+
+def optimization_target_kind_assessment(result: PilotExecutionResult) -> str:
+    return str(optimization_state(result)["optimization_target_kind"])
+
+
+def optimization_candidate_assessment(result: PilotExecutionResult) -> str:
+    return str(optimization_state(result)["optimization_candidate_status"])
+
+
+def optimization_safety_assessment(result: PilotExecutionResult) -> str:
+    return str(optimization_state(result)["optimization_safety_status"])
+
+
+def optimization_readiness_assessment(result: PilotExecutionResult) -> str:
+    return str(optimization_state(result)["optimization_readiness"])
+
+
+def optimization_release_assessment(result: PilotExecutionResult) -> str:
+    return str(optimization_state(result)["optimization_release_status"])
 
 
 def adaptive_intervention_assessment(result: PilotExecutionResult) -> str:
@@ -611,6 +653,31 @@ def evaluation_matrix(
             "promotion_readiness": summarize_statuses(
                 [promotion_readiness_assessment(result) for result in workflow_results]
             ),
+            "optimization_target_kind": summarize_statuses(
+                [
+                    optimization_target_kind_assessment(result)
+                    for result in workflow_results
+                ]
+            ),
+            "optimization_candidate": summarize_statuses(
+                [optimization_candidate_assessment(result) for result in workflow_results]
+            ),
+            "optimization_safety": summarize_statuses(
+                [optimization_safety_assessment(result) for result in workflow_results]
+            ),
+            "optimization_readiness": summarize_statuses(
+                [optimization_readiness_assessment(result) for result in workflow_results]
+            ),
+            "optimization_release": summarize_statuses(
+                [optimization_release_assessment(result) for result in workflow_results]
+            ),
+            "optimization_blockers": sorted(
+                {
+                    blocker
+                    for result in workflow_results
+                    for blocker in optimization_state(result)["optimization_blockers"]
+                }
+            ),
             "adaptive_intervention": summarize_statuses(
                 [adaptive_intervention_assessment(result) for result in workflow_results]
             ),
@@ -805,6 +872,16 @@ def summarize_comparisons(
             "candidate_memory_lifecycle_review_rate": 0.0,
             "baseline_memory_corpus_decision": "not_applicable",
             "candidate_memory_corpus_decision": "not_applicable",
+            "baseline_optimization_target_kind_decision": "not_applicable",
+            "candidate_optimization_target_kind_decision": "not_applicable",
+            "baseline_optimization_readiness_decision": "not_applicable",
+            "candidate_optimization_readiness_decision": "not_applicable",
+            "baseline_optimization_release_decision": "not_applicable",
+            "candidate_optimization_release_decision": "not_applicable",
+            "baseline_optimization_candidate_ready_rate": 0.0,
+            "candidate_optimization_candidate_ready_rate": 0.0,
+            "baseline_optimization_blocked_rate": 0.0,
+            "candidate_optimization_blocked_rate": 0.0,
             "baseline_workflow_checkpoint_decision": "not_applicable",
             "candidate_workflow_checkpoint_decision": "not_applicable",
             "baseline_workflow_checkpoint_healthy_rate": 0.0,
@@ -967,6 +1044,24 @@ def summarize_comparisons(
     ]
     candidate_memory_corpus = [
         memory_corpus_assessment(item) for item in available_candidates
+    ]
+    baseline_optimization_target_kind = [
+        optimization_target_kind_assessment(item.baseline) for item in comparisons
+    ]
+    candidate_optimization_target_kind = [
+        optimization_target_kind_assessment(item) for item in available_candidates
+    ]
+    baseline_optimization_readiness = [
+        optimization_readiness_assessment(item.baseline) for item in comparisons
+    ]
+    candidate_optimization_readiness = [
+        optimization_readiness_assessment(item) for item in available_candidates
+    ]
+    baseline_optimization_release = [
+        optimization_release_assessment(item.baseline) for item in comparisons
+    ]
+    candidate_optimization_release = [
+        optimization_release_assessment(item) for item in available_candidates
     ]
     baseline_workflow_checkpoint = [
         workflow_checkpoint_assessment(item.baseline) for item in comparisons
@@ -1258,6 +1353,40 @@ def summarize_comparisons(
         ),
         "candidate_memory_corpus_decision": summarize_statuses(
             candidate_memory_corpus
+        ),
+        "baseline_optimization_target_kind_decision": summarize_statuses(
+            baseline_optimization_target_kind
+        ),
+        "candidate_optimization_target_kind_decision": summarize_statuses(
+            candidate_optimization_target_kind
+        ),
+        "baseline_optimization_readiness_decision": summarize_statuses(
+            baseline_optimization_readiness
+        ),
+        "candidate_optimization_readiness_decision": summarize_statuses(
+            candidate_optimization_readiness
+        ),
+        "baseline_optimization_release_decision": summarize_statuses(
+            baseline_optimization_release
+        ),
+        "candidate_optimization_release_decision": summarize_statuses(
+            candidate_optimization_release
+        ),
+        "baseline_optimization_candidate_ready_rate": status_rate(
+            baseline_optimization_readiness,
+            "candidate_ready",
+        ),
+        "candidate_optimization_candidate_ready_rate": status_rate(
+            candidate_optimization_readiness,
+            "candidate_ready",
+        ),
+        "baseline_optimization_blocked_rate": status_rate(
+            baseline_optimization_readiness,
+            "blocked",
+        ),
+        "candidate_optimization_blocked_rate": status_rate(
+            candidate_optimization_readiness,
+            "blocked",
         ),
         "baseline_workflow_checkpoint_decision": summarize_statuses(
             baseline_workflow_checkpoint
@@ -2019,6 +2148,26 @@ def render_text(payload: dict[str, object]) -> str:
                         f"{item['baseline']['promotion_readiness']}"
                     ),
                     (
+                        "baseline_optimization_target_kind="
+                        f"{item['baseline_optimization_target_kind_assessment']}"
+                    ),
+                    (
+                        "baseline_optimization_candidate="
+                        f"{item['baseline_optimization_candidate_assessment']}"
+                    ),
+                    (
+                        "baseline_optimization_safety="
+                        f"{item['baseline_optimization_safety_assessment']}"
+                    ),
+                    (
+                        "baseline_optimization_release="
+                        f"{item['baseline_optimization_release_assessment']}"
+                    ),
+                    (
+                        "baseline_optimization_blockers="
+                        f"{','.join(item['baseline_optimization_blockers']) or 'none'}"
+                    ),
+                    (
                         "baseline_adaptive_intervention_status="
                         f"{item['baseline']['adaptive_intervention_status']}"
                     ),
@@ -2277,6 +2426,36 @@ def render_text(payload: dict[str, object]) -> str:
                         f"{item['candidate']['promotion_readiness']}"
                         if item["candidate"]
                         else "candidate_promotion_readiness=n/a"
+                    ),
+                    (
+                        "candidate_optimization_target_kind="
+                        f"{item['candidate_optimization_target_kind_assessment']}"
+                        if item["candidate_optimization_target_kind_assessment"] is not None
+                        else "candidate_optimization_target_kind=n/a"
+                    ),
+                    (
+                        "candidate_optimization_candidate="
+                        f"{item['candidate_optimization_candidate_assessment']}"
+                        if item["candidate_optimization_candidate_assessment"] is not None
+                        else "candidate_optimization_candidate=n/a"
+                    ),
+                    (
+                        "candidate_optimization_safety="
+                        f"{item['candidate_optimization_safety_assessment']}"
+                        if item["candidate_optimization_safety_assessment"] is not None
+                        else "candidate_optimization_safety=n/a"
+                    ),
+                    (
+                        "candidate_optimization_release="
+                        f"{item['candidate_optimization_release_assessment']}"
+                        if item["candidate_optimization_release_assessment"] is not None
+                        else "candidate_optimization_release=n/a"
+                    ),
+                    (
+                        "candidate_optimization_blockers="
+                        f"{','.join(item['candidate_optimization_blockers']) or 'none'}"
+                        if item["candidate"] is not None
+                        else "candidate_optimization_blockers=n/a"
                     ),
                     (
                         "candidate_adaptive_intervention_status="
@@ -2610,6 +2789,26 @@ def render_text(payload: dict[str, object]) -> str:
                 f"{summary['baseline_memory_corpus_decision']}",
                 "candidate_memory_corpus_decision="
                 f"{summary['candidate_memory_corpus_decision']}",
+                "baseline_optimization_target_kind_decision="
+                f"{summary['baseline_optimization_target_kind_decision']}",
+                "candidate_optimization_target_kind_decision="
+                f"{summary['candidate_optimization_target_kind_decision']}",
+                "baseline_optimization_readiness_decision="
+                f"{summary['baseline_optimization_readiness_decision']}",
+                "candidate_optimization_readiness_decision="
+                f"{summary['candidate_optimization_readiness_decision']}",
+                "baseline_optimization_release_decision="
+                f"{summary['baseline_optimization_release_decision']}",
+                "candidate_optimization_release_decision="
+                f"{summary['candidate_optimization_release_decision']}",
+                "baseline_optimization_candidate_ready_rate="
+                f"{summary['baseline_optimization_candidate_ready_rate']}",
+                "candidate_optimization_candidate_ready_rate="
+                f"{summary['candidate_optimization_candidate_ready_rate']}",
+                "baseline_optimization_blocked_rate="
+                f"{summary['baseline_optimization_blocked_rate']}",
+                "candidate_optimization_blocked_rate="
+                f"{summary['candidate_optimization_blocked_rate']}",
                 "baseline_workflow_checkpoint_decision="
                 f"{summary['baseline_workflow_checkpoint_decision']}",
                 "candidate_workflow_checkpoint_decision="
@@ -2805,6 +3004,24 @@ def serialize_comparisons(
                 "baseline_promotion_readiness_assessment": (
                     promotion_readiness_assessment(item.baseline)
                 ),
+                "baseline_optimization_target_kind_assessment": (
+                    optimization_target_kind_assessment(item.baseline)
+                ),
+                "baseline_optimization_candidate_assessment": (
+                    optimization_candidate_assessment(item.baseline)
+                ),
+                "baseline_optimization_safety_assessment": (
+                    optimization_safety_assessment(item.baseline)
+                ),
+                "baseline_optimization_readiness_assessment": (
+                    optimization_readiness_assessment(item.baseline)
+                ),
+                "baseline_optimization_release_assessment": (
+                    optimization_release_assessment(item.baseline)
+                ),
+                "baseline_optimization_blockers": list(
+                    optimization_state(item.baseline)["optimization_blockers"]
+                ),
                 "baseline_adaptive_intervention_assessment": (
                     adaptive_intervention_assessment(item.baseline)
                 ),
@@ -2944,6 +3161,36 @@ def serialize_comparisons(
                     promotion_readiness_assessment(item.candidate)
                     if item.candidate
                     else None
+                ),
+                "candidate_optimization_target_kind_assessment": (
+                    optimization_target_kind_assessment(item.candidate)
+                    if item.candidate
+                    else None
+                ),
+                "candidate_optimization_candidate_assessment": (
+                    optimization_candidate_assessment(item.candidate)
+                    if item.candidate
+                    else None
+                ),
+                "candidate_optimization_safety_assessment": (
+                    optimization_safety_assessment(item.candidate)
+                    if item.candidate
+                    else None
+                ),
+                "candidate_optimization_readiness_assessment": (
+                    optimization_readiness_assessment(item.candidate)
+                    if item.candidate
+                    else None
+                ),
+                "candidate_optimization_release_assessment": (
+                    optimization_release_assessment(item.candidate)
+                    if item.candidate
+                    else None
+                ),
+                "candidate_optimization_blockers": (
+                    list(optimization_state(item.candidate)["optimization_blockers"])
+                    if item.candidate
+                    else []
                 ),
                 "candidate_adaptive_intervention_assessment": (
                     adaptive_intervention_assessment(item.candidate)

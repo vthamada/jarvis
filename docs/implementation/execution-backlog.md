@@ -1634,7 +1634,7 @@ Escalar ao operador quando:
 
 - `id`: `MB-092`
 - `prioridade`: `P0`
-- `status`: `ready`
+- `status`: `concluido`
 - `eixo_do_mestre`: `evolucao`
 - `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
 - `micro_objetivo`: formalizar a gramatica soberana de compile/optimize loops governados para prompts, planos e workflows, sem abrir autoedicao solta nem promocao automatica de mudanca.
@@ -1651,7 +1651,7 @@ Escalar ao operador quando:
 
 - `id`: `MB-093`
 - `prioridade`: `P0`
-- `status`: `blocked`
+- `status`: `concluido`
 - `eixo_do_mestre`: `evolucao`
 - `workflow_profile_afetado`: `nao_aplicavel`
 - `micro_objetivo`: materializar `EV-003` em `evolution-lab` e `evolution_from_pilot`, fazendo traces, `evaluation_matrix` e `refinement_vectors` emitirem propostas bounded de otimizacao para prompts, planos e workflows.
@@ -1668,7 +1668,7 @@ Escalar ao operador quando:
 
 - `id`: `MB-094`
 - `prioridade`: `P1`
-- `status`: `blocked`
+- `status`: `concluido`
 - `eixo_do_mestre`: `observabilidade`
 - `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
 - `micro_objetivo`: tornar oportunidades, blockers e seguranca de otimizacao parte explicita da evidencia auditavel em comparadores, relatorios e baseline ativo.
@@ -1685,7 +1685,7 @@ Escalar ao operador quando:
 
 - `id`: `MB-095`
 - `prioridade`: `P1`
-- `status`: `blocked`
+- `status`: `concluido`
 - `eixo_do_mestre`: `gates/release`
 - `workflow_profile_afetado`: `nao_aplicavel`
 - `micro_objetivo`: ligar a nova gramatica de compile/optimize loops governados aos verificadores de release e aos fechadores regeneraveis do corte.
@@ -1702,7 +1702,7 @@ Escalar ao operador quando:
 
 - `id`: `MB-096`
 - `prioridade`: `P1`
-- `status`: `blocked`
+- `status`: `concluido`
 - `eixo_do_mestre`: `docs/gates`
 - `workflow_profile_afetado`: `nao_aplicavel`
 - `micro_objetivo`: fechar o lote de compile/optimize loops governados com docs vivos, changelog e gate sincronizados ao novo estado real do baseline.
@@ -1714,6 +1714,91 @@ Escalar ao operador quando:
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `medium`
 - `impacto_no_baseline`: o lote fecha com a gramatica de compile/optimize loops governados materializada e documentada como parte do baseline evolutivo.
+
+### MB-097
+
+- `id`: `MB-097`
+- `prioridade`: `P0`
+- `status`: `ready`
+- `eixo_do_mestre`: `estado_operacional`
+- `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
+- `micro_objetivo`: formalizar um contrato soberano minimo de estado operacional do ecossistema, distinguindo workflows ativos, artefatos vivos, checkpoints abertos, pendencias e superfícies associadas sem rebaixar isso a contexto textual solto.
+- `justificativa_arquitetural`: depois de fechar o baseline evolutivo do `v2 restante`, o proximo ganho causal real e dar ao runtime uma nocao mais explicita do estado operacional que ele esta coordenando; sem isso, o JARVIS continua forte em request-response, mas fraco em continuidade operacional mais ampla.
+- `arquivos/servicos_principais`: `services/orchestrator-service`, `services/operational-service`, `shared/contracts`, `shared/schemas`, `shared/events`
+- `dependencias`: `MB-096`
+- `criterio_de_aceite`: `orchestrator`, `operational-service` e contratos compartilhados passam a carregar pelo menos `ecosystem_state_status`, `active_work_items`, `active_artifact_refs`, `open_checkpoint_refs` e `surface_presence`, distinguindo ausencia de estado, estado parcial util e estado operacional coerente.
+- `gate_minimo`: `pytest` direcionado dos services/tools afetados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `impacto_no_baseline`: o runtime passa a ter gramática soberana mínima para representar o ecossistema operacional ativo em vez de tratá-lo como inferência dispersa.
+
+### MB-098
+
+- `id`: `MB-098`
+- `prioridade`: `P0`
+- `status`: `blocked`
+- `eixo_do_mestre`: `continuidade`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: aplicar o contrato de estado operacional do ecossistema em continuidade, memoria canonica e lifecycle de workflows ativos, sem abrir ainda memoria temporal/relacional rica.
+- `justificativa_arquitetural`: o contrato de estado so gera valor se afetar recovery, missao ativa, artefatos em curso e resumabilidade bounded; esse passo traduz `SG-002` em comportamento real sem saltar para `TA-004`.
+- `arquivos/servicos_principais`: `services/memory-service`, `shared/memory_registry.py`, `services/orchestrator-service`, `services/operational-service`
+- `dependencias`: `MB-097`
+- `criterio_de_aceite`: recovery, continuidade e workflow lifecycle passam a reconhecer work items e artefatos ativos do ecossistema como estado soberano, com retomada bounded e sem inventar memória temporal fora de fase.
+- `gate_minimo`: `pytest` direcionado dos services/tools afetados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `impacto_no_baseline`: continuidade deixa de depender apenas de missão e histórico conversacional e passa a enxergar estado operacional ativo do ecossistema.
+
+### MB-099
+
+- `id`: `MB-099`
+- `prioridade`: `P1`
+- `status`: `blocked`
+- `eixo_do_mestre`: `observabilidade`
+- `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
+- `micro_objetivo`: tornar o estado operacional do ecossistema auditavel em observabilidade, piloto, comparadores e baseline ativo.
+- `justificativa_arquitetural`: sem evidência formal, `SG-002` vira apenas payload novo no runtime; o baseline precisa mostrar quando há ecossistema ativo coerente, quando ele está parcial e quando o sistema ainda não sustenta continuidade operacional.
+- `arquivos/servicos_principais`: `services/observability-service`, `tools/internal_pilot_report.py`, `tools/compare_orchestrator_paths.py`, `tools/verify_active_cut_baseline.py`
+- `dependencias`: `MB-098`
+- `criterio_de_aceite`: comparadores, relatorios e baseline passam a expor `ecosystem_state_status`, cobertura de `active_work_items`, `active_artifact_refs`, `open_checkpoint_refs` e `surface_presence`, distinguindo `not_applicable`, `partial_operational_state` e `operational_state_attached`.
+- `gate_minimo`: `pytest` direcionado dos services/tools afetados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `impacto_no_baseline`: o estado operacional do ecossistema deixa de ser inferência local e vira sinal comparável do runtime.
+
+### MB-100
+
+- `id`: `MB-100`
+- `prioridade`: `P1`
+- `status`: `blocked`
+- `eixo_do_mestre`: `gates/release`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: ligar o novo estado operacional do ecossistema aos verificadores de release, `evolution-lab` e fechadores regeneraveis, sem transformar isso em promoção automática de v3.
+- `justificativa_arquitetural`: a ponte `v2 -> v3` precisa aparecer como readiness governada, não como mudança de fase implícita; os gates devem mostrar se o runtime já sustenta ecossistema operacional bounded ou se ainda precisa congelar.
+- `arquivos/servicos_principais`: `evolution/evolution-lab`, `tools/evolution_from_pilot.py`, `tools/verify_release_signal_baseline.py`, `tools/archive/close_alignment_cycle.py`, `tools/archive/close_sovereign_alignment_cut.py`
+- `dependencias`: `MB-099`
+- `criterio_de_aceite`: gates, laboratório e fechadores passam a registrar `ecosystem_state_status` e readiness de estado operacional sem confundir esse slice com abertura automática de multissuperfície ou autonomia ampla.
+- `gate_minimo`: `pytest` direcionado dos tools afetados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `impacto_no_baseline`: a ponte `v2 -> v3` ganha leitura formal e regenerável sem quebrar a contenção de fase.
+
+### MB-101
+
+- `id`: `MB-101`
+- `prioridade`: `P1`
+- `status`: `blocked`
+- `eixo_do_mestre`: `docs/gates`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: fechar o lote de estado operacional do ecossistema com docs vivos, changelog e gate sincronizados ao novo estado real do baseline.
+- `justificativa_arquitetural`: abrir a ponte `v2 -> v3` sem sincronizar backlog, snapshot e handoff gera drift semântico; o fechamento precisa explicitar que `SG-002` foi aberto como recorte bounded e que `SG-003`/`SO-002` continuam dependentes desse baseline.
+- `arquivos/servicos_principais`: `docs/implementation/execution-backlog.md`, `docs/implementation/unified-gap-and-absorption-backlog.md`, `HANDOFF.md`, `docs/implementation/v2-adherence-snapshot.md`, `CHANGELOG.md`
+- `dependencias`: `MB-097`, `MB-098`, `MB-099`, `MB-100`
+- `criterio_de_aceite`: o lote termina com docs vivos refletindo a abertura controlada da ponte `v2 -> v3`, `CHANGELOG.md` sincronizado e gate minimo validado.
+- `gate_minimo`: `python tools/check_mojibake.py docs/implementation docs/operations HANDOFF.md CHANGELOG.md` e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `medium`
+- `impacto_no_baseline`: a ponte para estado operacional do ecossistema fica registrada como novo lote ativo sem contaminar o backlog com frentes fora de fase.
 
 ---
 
@@ -1762,6 +1847,8 @@ Estado atual da fila:
 - `planning`, `governance`, `orchestrator`, `observability`, piloto, comparadores, `evolution-lab` e verificadores de release agora tratam `request_identity_policy` como slice soberano, auditavel e refinavel do runtime;
 - `MB-087` a `MB-091` foram concluidos e fecharam o lote de evals expandidas e lane controlada da Onda 2, derivado de `EV-002` + `EV-004`;
 - `observability`, piloto, comparadores, `evolution-lab`, verificadores de release e fechadores regeneraveis agora tratam `expanded_eval_*`, `surface_axis_*`, `ecosystem_state_*`, `experiment_lane_*`, `experiment_exit_*` e `promotion_readiness` como baseline comparativo controlado;
-- `MB-092` a `MB-096` agora formam o novo lote ativo da fila micro, derivado de `EV-003`, com `MB-092` em `ready`;
-- a proxima puxada correta do baseline passa a ser compile/optimize loops governados para prompts, planos e workflows, mantendo a Onda 2 como experimento controlado e sem abrir autoedicao do nucleo;
+- `MB-092` a `MB-096` foram concluidos e fecharam o lote de compile/optimize loops governados, derivado de `EV-003`;
+- `shared/optimization_state.py`, `evolution-lab`, comparadores, relatorios, verificadores de baseline/release e fechadores regeneraveis agora tratam `optimization_*` como slice soberano do baseline evolutivo;
+- `MB-097` a `MB-101` agora formam o novo lote ativo da fila micro, derivado de `SG-002` + `TA-002`, com `MB-097` em `ready`;
+- a proxima puxada correta do baseline passa a ser abrir um modelo soberano minimo de estado operacional do ecossistema, sem puxar ainda memoria temporal rica, multissuperficie ou substrate operacional amplo;
 - `protective intelligence foundation` continua `deferred` e a matriz da Onda 2 segue como insumo, nao como gatilho automatico para abrir nova vertical.

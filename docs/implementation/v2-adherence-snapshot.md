@@ -28,10 +28,10 @@ Leitura correta:
 
 Estado de referencia desta revisao:
 
-- data da fotografia: `2026-04-20`
+- data da fotografia: `2026-04-22`
 - ultimo recorte funcional fechado: `v2-native-memory-scope-hardening-cut`
 - ultimo recorte estrutural fechado: `v2-repository-hygiene-and-tools-review-cut`
-- passo funcional em andamento: lote `MB-062` a `MB-066` concluido, lote `MB-067` a `MB-071` concluido, lote `MB-072` a `MB-076` concluido, lote `MB-077` a `MB-081` concluido, lote `MB-082` a `MB-086` concluido, lote `MB-087` a `MB-091` concluido e lote `MB-092` a `MB-096` aberto com `MB-092` em `ready` (`MB-037` a `MB-040` concluidos; `MB-041` a `MB-046` concluidos; `MB-047` a `MB-051` concluidos; `MB-052` a `MB-056` concluidos; `MB-057` a `MB-061` concluidos; `MB-062` a `MB-066` concluidos; `MB-067` a `MB-071` concluidos; `MB-072` a `MB-076` concluidos; `MB-077` concluido; `MB-078` concluido; `MB-079` concluido; `MB-080` concluido; `MB-081` concluido; `MB-082` concluido; `MB-083` concluido; `MB-084` concluido; `MB-085` concluido; `MB-086` concluido; `MB-087` concluido; `MB-088` concluido; `MB-089` concluido; `MB-090` concluido; `MB-091` concluido`)
+- passo funcional em andamento: lote `MB-062` a `MB-066` concluido, lote `MB-067` a `MB-071` concluido, lote `MB-072` a `MB-076` concluido, lote `MB-077` a `MB-081` concluido, lote `MB-082` a `MB-086` concluido, lote `MB-087` a `MB-091` concluido, lote `MB-092` a `MB-096` concluido e lote `MB-097` a `MB-101` aberto com `MB-097` em `ready` (`MB-037` a `MB-040` concluidos; `MB-041` a `MB-046` concluidos; `MB-047` a `MB-051` concluidos; `MB-052` a `MB-056` concluidos; `MB-057` a `MB-061` concluidos; `MB-062` a `MB-066` concluidos; `MB-067` a `MB-071` concluidos; `MB-072` a `MB-076` concluidos; `MB-077` concluido; `MB-078` concluido; `MB-079` concluido; `MB-080` concluido; `MB-081` concluido; `MB-082` concluido; `MB-083` concluido; `MB-084` concluido; `MB-085` concluido; `MB-086` concluido; `MB-087` concluido; `MB-088` concluido; `MB-089` concluido; `MB-090` concluido; `MB-091` concluido; `MB-092` concluido; `MB-093` concluido; `MB-094` concluido; `MB-095` concluido; `MB-096` concluido`)
 
 Leitura executiva:
 
@@ -111,7 +111,13 @@ Em resumo:
 
 - a visao esta preservada;
 - o runtime esta coerente com a fase do programa;
-- o backlog correto agora e de compile/optimize loops governados para prompts, planos e workflows, mantendo evals expandidas e a lane controlada da Onda 2 como baseline comparativo ja fechado, e nao de abertura imediata de uma nova vertical.
+- `EV-003` agora tambem faz parte do baseline: compile/optimize loops
+  governados para prompts, planos e workflows passaram a existir como
+  gramatica soberana do runtime evolutivo, sem autoedicao do nucleo;
+- a proxima repriorizacao explicita abriu a ponte `v2 -> v3` em cima de
+  `SG-002` + `TA-002`, mas de forma bounded: o lote novo ataca apenas estado
+  operacional minimo do ecossistema, sem abrir ainda memoria temporal rica,
+  multissuperficie ou substrate operacional amplo.
 
 ---
 
