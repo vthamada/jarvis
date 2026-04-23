@@ -14,6 +14,8 @@ from memory_service.service import MemoryRecordResult, MemoryRecoveryResult, Mem
 from shared.contracts import (
     DeliberativePlanContract,
     InputContract,
+    OperationDispatchContract,
+    OperationResultContract,
     SpecialistContributionContract,
     SpecialistSharedMemoryContextContract,
 )
@@ -22,6 +24,8 @@ from shared.types import (
     ChannelType,
     InputType,
     MissionId,
+    OperationId,
+    OperationStatus,
     PermissionDecision,
     RequestId,
     SessionId,
@@ -194,6 +198,87 @@ def test_memory_service_builds_resumable_continuity_replay_state() -> None:
     assert replay.recovery_mode == "resume_active_mission"
     assert replay.resume_point.startswith("continuar:")
     assert replay.requires_manual_resume is False
+
+
+def test_memory_service_recovers_bounded_ecosystem_state_for_continuity() -> None:
+    temp_dir = runtime_dir("memory-ecosystem-state")
+    database_url = f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+    contract = InputContract(
+        request_id=RequestId("req-eco-1"),
+        session_id=SessionId("sess-eco"),
+        mission_id=MissionId("mission-eco"),
+        channel=ChannelType.CHAT,
+        input_type=InputType.TEXT,
+        content="Coordinate milestone M3.",
+        timestamp="2026-04-23T00:00:00Z",
+    )
+    service = MemoryService(database_url=database_url)
+    dispatch = sample_operation_dispatch(
+        request_id="req-eco-1",
+        session_id="sess-eco",
+        mission_id="mission-eco",
+    )
+    result = sample_operation_result(
+        operation_id="op-sample",
+        artifact_ref="runtime://artifact/milestone-plan.md",
+    )
+
+    service.record_turn(
+        contract,
+        intent="planning",
+        response_text="Milestone plan drafted.",
+        deliberative_plan=sample_plan(),
+        specialist_contributions=sample_specialist_contributions(),
+        governance_decision=PermissionDecision.ALLOW_WITH_CONDITIONS,
+        operation_dispatch=dispatch,
+        operation_result=result,
+    )
+
+    recovered = service.recover_for_input(
+        InputContract(
+            request_id=RequestId("req-eco-2"),
+            session_id=SessionId("sess-eco"),
+            mission_id=MissionId("mission-eco"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Continue milestone coordination.",
+            timestamp="2026-04-23T00:01:00Z",
+        )
+    )
+    replay = service.get_session_continuity_replay("sess-eco")
+    checkpoint = service.get_session_continuity_checkpoint("sess-eco")
+    mission_state = service.get_mission_state("mission-eco")
+
+    assert replay is not None
+    assert replay.ecosystem_state_status == "operational_state_attached"
+    assert replay.recovery_mode == "resume_operational_checkpoint"
+    assert replay.resume_point.startswith("ecosystem_checkpoint:")
+    assert checkpoint is not None
+    assert checkpoint.ecosystem_state_status == "operational_state_attached"
+    assert checkpoint.open_checkpoint_refs == [
+        "workflow_checkpoint:close_readiness_checkpoint:pending"
+    ]
+    assert mission_state is not None
+    assert mission_state.ecosystem_state_status == "operational_state_attached"
+    assert mission_state.active_work_items == ["mission_task:Plan milestone M3"]
+    assert "runtime://artifact/milestone-plan.md" in mission_state.active_artifact_refs
+    assert any(
+        item == "mission_ecosystem_state_status=operational_state_attached"
+        for item in recovered.recovered_items
+    )
+    assert any(
+        item.startswith("mission_active_work_items=mission_task:Plan milestone M3")
+        for item in recovered.recovered_items
+    )
+    assert any(
+        item.startswith("mission_active_artifact_refs=")
+        and "runtime://artifact/milestone-plan.md" in item
+        for item in recovered.recovered_items
+    )
+    assert any(
+        item.startswith("mission_open_checkpoint_refs=")
+        for item in recovered.recovered_items
+    )
 
 
 def test_memory_service_resolves_governed_continuity_pause() -> None:
@@ -924,6 +1009,66 @@ def test_memory_service_prefers_first_eligible_route_when_specialist_is_shared()
         "decision_trace",
         "domain_alignment",
     ]
+
+
+def sample_operation_dispatch(
+    *,
+    request_id: str,
+    session_id: str,
+    mission_id: str,
+) -> OperationDispatchContract:
+    return OperationDispatchContract(
+        operation_id=OperationId("op-sample"),
+        request_id=RequestId(request_id),
+        task_type="draft_plan",
+        task_goal="Coordinate milestone M3.",
+        task_plan="Draft milestone plan.",
+        constraints=["low-risk"],
+        expected_output="markdown plan",
+        plan_summary="decompor objetivo em etapas reversiveis",
+        session_id=SessionId(session_id),
+        mission_id=MissionId(mission_id),
+        workflow_profile="operational_readiness_workflow",
+        workflow_domain_route="operational_readiness",
+        workflow_steps=["map readiness", "close checkpoint"],
+        workflow_checkpoints=["capture_scope", "close_readiness_checkpoint"],
+        workflow_checkpoint_state={
+            "capture_scope": "completed",
+            "close_readiness_checkpoint": "pending",
+        },
+        workflow_resume_point="close_readiness_checkpoint",
+        workflow_resume_status="resume_available",
+        ecosystem_state_status="operational_state_attached",
+        active_work_items=["mission_task:Plan milestone M3"],
+        active_artifact_refs=["artifact://procedural/strategy/milestone-plan/v1"],
+        open_checkpoint_refs=[
+            "workflow_checkpoint:close_readiness_checkpoint:pending"
+        ],
+        surface_presence=["surface:chat", f"session:{session_id}", f"mission:{mission_id}"],
+        ecosystem_state_summary="work_items=1; artifacts=1; open_checkpoints=1; surfaces=3",
+    )
+
+
+def sample_operation_result(*, operation_id: str, artifact_ref: str) -> OperationResultContract:
+    return OperationResultContract(
+        operation_id=OperationId(operation_id),
+        status=OperationStatus.COMPLETED,
+        outputs=["Milestone plan created."],
+        timestamp="2026-04-23T00:00:00Z",
+        artifacts=[artifact_ref],
+        checkpoints=["workflow_state:completed"],
+        ecosystem_state_status="operational_state_attached",
+        active_work_items=["mission_task:Plan milestone M3"],
+        active_artifact_refs=[
+            "artifact://procedural/strategy/milestone-plan/v1",
+            artifact_ref,
+        ],
+        open_checkpoint_refs=[
+            "workflow_checkpoint:close_readiness_checkpoint:pending"
+        ],
+        surface_presence=["surface:chat", "session:sess-eco", "mission:mission-eco"],
+        ecosystem_state_summary="work_items=1; artifacts=2; open_checkpoints=1; surfaces=3",
+    )
 
 
 def test_memory_service_exposes_archivable_lifecycle_policy_for_stale_guided_memory() -> None:

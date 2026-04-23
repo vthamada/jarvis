@@ -23,6 +23,7 @@ from shared.contracts import (
     ContinuityPauseContract,
     ContinuityReplayContract,
     DeliberativePlanContract,
+    EcosystemOperationalStateContract,
     GovernanceCheckContract,
     GovernanceDecisionContract,
     InputContract,
@@ -605,6 +606,9 @@ class OrchestratorService:
                         "workflow_resume_eligible": (
                             operation_dispatch.workflow_resume_eligible
                         ),
+                        **self._ecosystem_operational_state_payload(
+                            operation_dispatch
+                        ),
                         **self._capability_decision_event_payload(operation_dispatch),
                         **self._request_identity_policy_payload(operation_dispatch),
                         "adaptive_intervention_status": (
@@ -635,6 +639,20 @@ class OrchestratorService:
             )
             events.append(
                 self.make_event(
+                    "ecosystem_state_declared",
+                    contract,
+                    {
+                        "operation_id": str(operation_dispatch.operation_id),
+                        "workflow_profile": operation_dispatch.workflow_profile,
+                        "workflow_domain_route": operation_dispatch.workflow_domain_route,
+                        **self._ecosystem_operational_state_payload(
+                            operation_dispatch
+                        ),
+                    },
+                )
+            )
+            events.append(
+                self.make_event(
                     "workflow_governance_declared",
                     contract,
                     {
@@ -654,6 +672,9 @@ class OrchestratorService:
                         "workflow_decision_points": operation_dispatch.workflow_decision_points,
                         "workflow_resume_status": operation_dispatch.workflow_resume_status,
                         "workflow_resume_point": operation_dispatch.workflow_resume_point,
+                        **self._ecosystem_operational_state_payload(
+                            operation_dispatch
+                        ),
                         **self._capability_decision_event_payload(operation_dispatch),
                         **self._request_identity_policy_payload(operation_dispatch),
                         "adaptive_intervention_status": (
@@ -696,6 +717,9 @@ class OrchestratorService:
                         "workflow_resume_point": operation_dispatch.workflow_resume_point,
                         "workflow_resume_eligible": (
                             operation_dispatch.workflow_resume_eligible
+                        ),
+                        **self._ecosystem_operational_state_payload(
+                            operation_dispatch
                         ),
                         **self._capability_decision_event_payload(operation_dispatch),
                         **self._request_identity_policy_payload(operation_dispatch),
@@ -757,6 +781,9 @@ class OrchestratorService:
                         "workflow_decisions": operation_result.workflow_decisions,
                         "workflow_resume_status": operation_result.workflow_resume_status,
                         "workflow_resume_point": operation_result.workflow_resume_point,
+                        **self._ecosystem_operational_state_payload(
+                            operation_result
+                        ),
                         **self._mind_domain_specialist_contract_payload(
                             operation_dispatch
                         ),
@@ -794,6 +821,9 @@ class OrchestratorService:
                         ),
                         "workflow_resume_status": operation_result.workflow_resume_status,
                         "workflow_resume_point": operation_result.workflow_resume_point,
+                        **self._ecosystem_operational_state_payload(
+                            operation_result
+                        ),
                         **self._mind_domain_specialist_contract_payload(
                             operation_dispatch
                         ),
@@ -1033,6 +1063,8 @@ class OrchestratorService:
             deliberative_plan=deliberative_plan,
             specialist_contributions=specialist_review.contributions,
             governance_decision=governance_decision.decision,
+            operation_dispatch=operation_dispatch,
+            operation_result=operation_result,
         )
         events.append(
             self.make_event(
@@ -1099,6 +1131,24 @@ class OrchestratorService:
                     ),
                     "procedural_artifact_summary": (
                         memory_record_result.procedural_artifact_summary
+                    ),
+                    "ecosystem_state_status": (
+                        operation_result.ecosystem_state_status if operation_result else None
+                    ),
+                    "active_work_items": (
+                        operation_result.active_work_items if operation_result else []
+                    ),
+                    "active_artifact_refs": (
+                        operation_result.active_artifact_refs if operation_result else []
+                    ),
+                    "open_checkpoint_refs": (
+                        operation_result.open_checkpoint_refs if operation_result else []
+                    ),
+                    "surface_presence": (
+                        operation_result.surface_presence if operation_result else []
+                    ),
+                    "ecosystem_state_summary": (
+                        operation_result.ecosystem_state_summary if operation_result else None
                     ),
                 },
             )
@@ -2133,6 +2183,12 @@ class OrchestratorService:
                     "active_task_count": len(mission_runtime_state.active_tasks),
                     "open_loop_count": len(mission_runtime_state.open_loops),
                     "last_recommendation": mission_runtime_state.last_recommendation,
+                    "ecosystem_state_status": mission_runtime_state.ecosystem_state_status,
+                    "active_work_items": mission_runtime_state.active_work_items,
+                    "active_artifact_refs": mission_runtime_state.active_artifact_refs,
+                    "open_checkpoint_refs": mission_runtime_state.open_checkpoint_refs,
+                    "surface_presence": mission_runtime_state.surface_presence,
+                    "ecosystem_state_summary": mission_runtime_state.ecosystem_state_summary,
                     "related_mission_id": (
                         str(mission_runtime_state.related_mission_id)
                         if mission_runtime_state.related_mission_id
@@ -2202,6 +2258,13 @@ class OrchestratorService:
             plan.route_expected_deliverables[0]
             if plan.route_expected_deliverables
             else "text_brief"
+        )
+        ecosystem_state = self._build_ecosystem_operational_state(
+            contract=contract,
+            plan=plan,
+            mission_runtime_state=mission_runtime_state,
+            workflow_profile=workflow_profile,
+            workflow_checkpoint_state=workflow_checkpoint_state,
         )
         return OperationDispatchContract(
             operation_id=OperationId(f"op-{uuid4().hex[:8]}"),
@@ -2308,8 +2371,101 @@ class OrchestratorService:
             workflow_resume_point=workflow_resume_point,
             workflow_resume_status=workflow_resume_status,
             workflow_resume_eligible=workflow_resume_eligible,
+            ecosystem_state_status=ecosystem_state.ecosystem_state_status,
+            active_work_items=list(ecosystem_state.active_work_items),
+            active_artifact_refs=list(ecosystem_state.active_artifact_refs),
+            open_checkpoint_refs=list(ecosystem_state.open_checkpoint_refs),
+            surface_presence=list(ecosystem_state.surface_presence),
+            ecosystem_state_summary=ecosystem_state.state_summary,
             priority_hint=contract.priority_hint,
         )
+
+    @staticmethod
+    def _build_ecosystem_operational_state(
+        *,
+        contract: InputContract,
+        plan: DeliberativePlanContract,
+        mission_runtime_state: MissionRuntimeStateContract | None,
+        workflow_profile: str | None,
+        workflow_checkpoint_state: dict[str, str],
+    ) -> EcosystemOperationalStateContract:
+        active_work_items = OrchestratorService._dedupe_texts(
+            [
+                *(mission_runtime_state.active_tasks if mission_runtime_state else []),
+                *(mission_runtime_state.open_loops if mission_runtime_state else []),
+                *plan.open_loops,
+                *(f"workflow_step:{item}" for item in plan.steps[:3]),
+            ]
+        )
+        active_artifact_refs = OrchestratorService._dedupe_texts(
+            [plan.procedural_artifact_ref] if plan.procedural_artifact_ref else []
+        )
+        open_checkpoint_refs = [
+            f"workflow_checkpoint:{checkpoint}:{status}"
+            for checkpoint, status in workflow_checkpoint_state.items()
+            if status != "completed"
+        ]
+        surface_presence = OrchestratorService._dedupe_texts(
+            [
+                f"surface:{contract.channel}",
+                f"session:{contract.session_id}",
+                f"mission:{contract.mission_id}" if contract.mission_id else None,
+                f"workflow:{workflow_profile}" if workflow_profile else None,
+            ]
+        )
+        status = OrchestratorService._ecosystem_state_status(
+            active_work_items=active_work_items,
+            active_artifact_refs=active_artifact_refs,
+            open_checkpoint_refs=open_checkpoint_refs,
+            surface_presence=surface_presence,
+        )
+        summary = (
+            f"work_items={len(active_work_items)}; "
+            f"artifacts={len(active_artifact_refs)}; "
+            f"open_checkpoints={len(open_checkpoint_refs)}; "
+            f"surfaces={len(surface_presence)}"
+        )
+        return EcosystemOperationalStateContract(
+            ecosystem_state_status=status,
+            active_work_items=active_work_items,
+            active_artifact_refs=active_artifact_refs,
+            open_checkpoint_refs=open_checkpoint_refs,
+            surface_presence=surface_presence,
+            state_summary=summary,
+        )
+
+    @staticmethod
+    def _ecosystem_state_status(
+        *,
+        active_work_items: list[str],
+        active_artifact_refs: list[str],
+        open_checkpoint_refs: list[str],
+        surface_presence: list[str],
+    ) -> str:
+        if not (
+            active_work_items
+            or active_artifact_refs
+            or open_checkpoint_refs
+            or surface_presence
+        ):
+            return "not_applicable"
+        if surface_presence and active_work_items and (
+            open_checkpoint_refs or active_artifact_refs
+        ):
+            return "operational_state_attached"
+        return "partial_operational_state"
+
+    @staticmethod
+    def _dedupe_texts(items: list[str | None]) -> list[str]:
+        deduped: list[str] = []
+        for item in items:
+            if item is None:
+                continue
+            value = str(item)
+            if not value or value in deduped:
+                continue
+            deduped.append(value)
+        return deduped
 
     @staticmethod
     def _initial_workflow_checkpoint_state(
@@ -2361,6 +2517,29 @@ class OrchestratorService:
             "request_confirmation_mode": source.request_confirmation_mode,
             "request_identity_summary": source.request_identity_summary,
             "request_identity_policy_refs": list(source.request_identity_policy_refs),
+        }
+
+    @staticmethod
+    def _ecosystem_operational_state_payload(source: object) -> dict[str, object]:
+        return {
+            "ecosystem_state_status": getattr(
+                source,
+                "ecosystem_state_status",
+                None,
+            ),
+            "active_work_items": list(getattr(source, "active_work_items", []) or []),
+            "active_artifact_refs": list(
+                getattr(source, "active_artifact_refs", []) or []
+            ),
+            "open_checkpoint_refs": list(
+                getattr(source, "open_checkpoint_refs", []) or []
+            ),
+            "surface_presence": list(getattr(source, "surface_presence", []) or []),
+            "ecosystem_state_summary": getattr(
+                source,
+                "ecosystem_state_summary",
+                None,
+            ),
         }
 
     @staticmethod
@@ -3344,6 +3523,12 @@ class OrchestratorService:
                         "resume_point": continuity_replay.resume_point,
                         "checkpoint_status": continuity_replay.checkpoint_status,
                         "requires_manual_resume": continuity_replay.requires_manual_resume,
+                        "ecosystem_state_status": continuity_replay.ecosystem_state_status,
+                        "active_work_items": continuity_replay.active_work_items,
+                        "active_artifact_refs": continuity_replay.active_artifact_refs,
+                        "open_checkpoint_refs": continuity_replay.open_checkpoint_refs,
+                        "surface_presence": continuity_replay.surface_presence,
+                        "ecosystem_state_summary": continuity_replay.ecosystem_state_summary,
                     },
                 )
             )
@@ -3397,6 +3582,12 @@ class OrchestratorService:
             "resume_point": continuity_replay.resume_point if continuity_replay else None,
             "requires_manual_resume": (
                 continuity_replay.requires_manual_resume if continuity_replay else False
+            ),
+            "ecosystem_state_status": (
+                continuity_replay.ecosystem_state_status if continuity_replay else None
+            ),
+            "ecosystem_state_summary": (
+                continuity_replay.ecosystem_state_summary if continuity_replay else None
             ),
             "continuity_recommendation": (
                 continuity_context.recommended_action if continuity_context else None
@@ -3598,6 +3789,32 @@ class OrchestratorService:
                 continuity_context.related_candidates[0].mission_goal
                 if continuity_context and continuity_context.related_candidates
                 else None
+            ),
+            ecosystem_state_status=(
+                mission_state.ecosystem_state_status if mission_state is not None else None
+            ),
+            active_work_items=(
+                list(mission_state.active_work_items)
+                if mission_state is not None
+                else []
+            ),
+            active_artifact_refs=(
+                list(mission_state.active_artifact_refs)
+                if mission_state is not None
+                else []
+            ),
+            open_checkpoint_refs=(
+                list(mission_state.open_checkpoint_refs)
+                if mission_state is not None
+                else []
+            ),
+            surface_presence=(
+                list(mission_state.surface_presence)
+                if mission_state is not None
+                else []
+            ),
+            ecosystem_state_summary=(
+                mission_state.ecosystem_state_summary if mission_state is not None else None
             ),
             runtime_mode=runtime_mode,
         )

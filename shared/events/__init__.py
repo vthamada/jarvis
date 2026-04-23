@@ -11,6 +11,7 @@ INTERNAL_EVENT_NAMES = (
     "knowledge_retrieved",
     "memory_recovered",
     "memory_recorded",
+    "ecosystem_state_declared",
     "operation_dispatched",
     "operation_completed",
     "governance_checked",

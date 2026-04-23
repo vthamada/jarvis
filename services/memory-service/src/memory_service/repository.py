@@ -67,6 +67,12 @@ class SessionContinuitySnapshot:
     related_mission_id: str | None
     related_goal: str | None
     updated_at: str
+    ecosystem_state_status: str | None = None
+    active_work_items: list[str] = field(default_factory=list)
+    active_artifact_refs: list[str] = field(default_factory=list)
+    open_checkpoint_refs: list[str] = field(default_factory=list)
+    surface_presence: list[str] = field(default_factory=list)
+    ecosystem_state_summary: str | None = None
 
 
 @dataclass(frozen=True)
@@ -83,6 +89,12 @@ class StoredContinuityCheckpoint:
     target_goal: str | None = None
     origin_request_id: str | None = None
     replay_summary: str | None = None
+    ecosystem_state_status: str | None = None
+    active_work_items: list[str] = field(default_factory=list)
+    active_artifact_refs: list[str] = field(default_factory=list)
+    open_checkpoint_refs: list[str] = field(default_factory=list)
+    surface_presence: list[str] = field(default_factory=list)
+    ecosystem_state_summary: str | None = None
 
 
 @dataclass(frozen=True)
@@ -406,9 +418,11 @@ class SqliteMemoryRepository(MemoryRepository):
                     mission_id, mission_goal, mission_status, checkpoints, active_tasks,
                     related_memories, related_artifacts, recent_plan_steps,
                     last_recommendation, semantic_brief, semantic_focus,
-                    identity_continuity_brief, open_loops, last_decision_frame, updated_at
+                    identity_continuity_brief, open_loops, last_decision_frame,
+                    ecosystem_state_status, active_work_items, active_artifact_refs,
+                    open_checkpoint_refs, surface_presence, ecosystem_state_summary, updated_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(mission_id) DO UPDATE SET
                     mission_goal = excluded.mission_goal,
                     mission_status = excluded.mission_status,
@@ -423,6 +437,12 @@ class SqliteMemoryRepository(MemoryRepository):
                     identity_continuity_brief = excluded.identity_continuity_brief,
                     open_loops = excluded.open_loops,
                     last_decision_frame = excluded.last_decision_frame,
+                    ecosystem_state_status = excluded.ecosystem_state_status,
+                    active_work_items = excluded.active_work_items,
+                    active_artifact_refs = excluded.active_artifact_refs,
+                    open_checkpoint_refs = excluded.open_checkpoint_refs,
+                    surface_presence = excluded.surface_presence,
+                    ecosystem_state_summary = excluded.ecosystem_state_summary,
                     updated_at = excluded.updated_at
                 """,
                 (
@@ -440,6 +460,12 @@ class SqliteMemoryRepository(MemoryRepository):
                     mission_state.identity_continuity_brief,
                     dumps(mission_state.open_loops),
                     mission_state.last_decision_frame,
+                    mission_state.ecosystem_state_status,
+                    dumps(mission_state.active_work_items),
+                    dumps(mission_state.active_artifact_refs),
+                    dumps(mission_state.open_checkpoint_refs),
+                    dumps(mission_state.surface_presence),
+                    mission_state.ecosystem_state_summary,
                     mission_state.updated_at,
                 ),
             )
@@ -451,9 +477,11 @@ class SqliteMemoryRepository(MemoryRepository):
                 """
                 INSERT INTO session_continuity (
                     session_id, continuity_brief, continuity_mode, anchor_mission_id,
-                    anchor_goal, related_mission_id, related_goal, updated_at
+                    anchor_goal, related_mission_id, related_goal, ecosystem_state_status,
+                    active_work_items, active_artifact_refs, open_checkpoint_refs,
+                    surface_presence, ecosystem_state_summary, updated_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(session_id) DO UPDATE SET
                     continuity_brief = excluded.continuity_brief,
                     continuity_mode = excluded.continuity_mode,
@@ -461,6 +489,12 @@ class SqliteMemoryRepository(MemoryRepository):
                     anchor_goal = excluded.anchor_goal,
                     related_mission_id = excluded.related_mission_id,
                     related_goal = excluded.related_goal,
+                    ecosystem_state_status = excluded.ecosystem_state_status,
+                    active_work_items = excluded.active_work_items,
+                    active_artifact_refs = excluded.active_artifact_refs,
+                    open_checkpoint_refs = excluded.open_checkpoint_refs,
+                    surface_presence = excluded.surface_presence,
+                    ecosystem_state_summary = excluded.ecosystem_state_summary,
                     updated_at = excluded.updated_at
                 """,
                 (
@@ -471,6 +505,12 @@ class SqliteMemoryRepository(MemoryRepository):
                     snapshot.anchor_goal,
                     snapshot.related_mission_id,
                     snapshot.related_goal,
+                    snapshot.ecosystem_state_status,
+                    dumps(snapshot.active_work_items),
+                    dumps(snapshot.active_artifact_refs),
+                    dumps(snapshot.open_checkpoint_refs),
+                    dumps(snapshot.surface_presence),
+                    snapshot.ecosystem_state_summary,
                     snapshot.updated_at,
                 ),
             )
@@ -481,7 +521,9 @@ class SqliteMemoryRepository(MemoryRepository):
             row = connection.execute(
                 """
                 SELECT session_id, continuity_brief, continuity_mode, anchor_mission_id,
-                       anchor_goal, related_mission_id, related_goal, updated_at
+                       anchor_goal, related_mission_id, related_goal, ecosystem_state_status,
+                       active_work_items, active_artifact_refs, open_checkpoint_refs,
+                       surface_presence, ecosystem_state_summary, updated_at
                 FROM session_continuity
                 WHERE session_id = ?
                 """,
@@ -497,6 +539,12 @@ class SqliteMemoryRepository(MemoryRepository):
             anchor_goal=row["anchor_goal"],
             related_mission_id=row["related_mission_id"],
             related_goal=row["related_goal"],
+            ecosystem_state_status=row["ecosystem_state_status"],
+            active_work_items=list(loads(row["active_work_items"] or "[]")),
+            active_artifact_refs=list(loads(row["active_artifact_refs"] or "[]")),
+            open_checkpoint_refs=list(loads(row["open_checkpoint_refs"] or "[]")),
+            surface_presence=list(loads(row["surface_presence"] or "[]")),
+            ecosystem_state_summary=row["ecosystem_state_summary"],
             updated_at=str(row["updated_at"]),
         )
 
@@ -510,9 +558,11 @@ class SqliteMemoryRepository(MemoryRepository):
                 INSERT INTO continuity_checkpoints (
                     session_id, checkpoint_id, continuity_action, checkpoint_status,
                     checkpoint_summary, mission_id, continuity_source, target_mission_id,
-                    target_goal, origin_request_id, replay_summary, updated_at
+                    target_goal, origin_request_id, replay_summary, ecosystem_state_status,
+                    active_work_items, active_artifact_refs, open_checkpoint_refs,
+                    surface_presence, ecosystem_state_summary, updated_at
                 )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(session_id) DO UPDATE SET
                     checkpoint_id = excluded.checkpoint_id,
                     continuity_action = excluded.continuity_action,
@@ -524,6 +574,12 @@ class SqliteMemoryRepository(MemoryRepository):
                     target_goal = excluded.target_goal,
                     origin_request_id = excluded.origin_request_id,
                     replay_summary = excluded.replay_summary,
+                    ecosystem_state_status = excluded.ecosystem_state_status,
+                    active_work_items = excluded.active_work_items,
+                    active_artifact_refs = excluded.active_artifact_refs,
+                    open_checkpoint_refs = excluded.open_checkpoint_refs,
+                    surface_presence = excluded.surface_presence,
+                    ecosystem_state_summary = excluded.ecosystem_state_summary,
                     updated_at = excluded.updated_at
                 """,
                 (
@@ -538,6 +594,12 @@ class SqliteMemoryRepository(MemoryRepository):
                     checkpoint.target_goal,
                     checkpoint.origin_request_id,
                     checkpoint.replay_summary,
+                    checkpoint.ecosystem_state_status,
+                    dumps(checkpoint.active_work_items),
+                    dumps(checkpoint.active_artifact_refs),
+                    dumps(checkpoint.open_checkpoint_refs),
+                    dumps(checkpoint.surface_presence),
+                    checkpoint.ecosystem_state_summary,
                     checkpoint.updated_at,
                 ),
             )
@@ -552,7 +614,9 @@ class SqliteMemoryRepository(MemoryRepository):
                 """
                 SELECT session_id, checkpoint_id, continuity_action, checkpoint_status,
                        checkpoint_summary, mission_id, continuity_source, target_mission_id,
-                       target_goal, origin_request_id, replay_summary, updated_at
+                       target_goal, origin_request_id, replay_summary, ecosystem_state_status,
+                       active_work_items, active_artifact_refs, open_checkpoint_refs,
+                       surface_presence, ecosystem_state_summary, updated_at
                 FROM continuity_checkpoints
                 WHERE session_id = ?
                 """,
@@ -572,6 +636,12 @@ class SqliteMemoryRepository(MemoryRepository):
             target_goal=row["target_goal"],
             origin_request_id=row["origin_request_id"],
             replay_summary=row["replay_summary"],
+            ecosystem_state_status=row["ecosystem_state_status"],
+            active_work_items=list(loads(row["active_work_items"] or "[]")),
+            active_artifact_refs=list(loads(row["active_artifact_refs"] or "[]")),
+            open_checkpoint_refs=list(loads(row["open_checkpoint_refs"] or "[]")),
+            surface_presence=list(loads(row["surface_presence"] or "[]")),
+            ecosystem_state_summary=row["ecosystem_state_summary"],
             updated_at=str(row["updated_at"]),
         )
 
@@ -820,7 +890,9 @@ class SqliteMemoryRepository(MemoryRepository):
                 SELECT mission_id, mission_goal, mission_status, checkpoints, active_tasks,
                        related_memories, related_artifacts, recent_plan_steps,
                        last_recommendation, semantic_brief, semantic_focus,
-                       identity_continuity_brief, open_loops, last_decision_frame, updated_at
+                       identity_continuity_brief, open_loops, last_decision_frame,
+                       ecosystem_state_status, active_work_items, active_artifact_refs,
+                       open_checkpoint_refs, surface_presence, ecosystem_state_summary, updated_at
                 FROM mission_states
                 WHERE mission_id = ?
                 """,
@@ -1055,6 +1127,12 @@ class SqliteMemoryRepository(MemoryRepository):
                     anchor_goal TEXT,
                     related_mission_id TEXT,
                     related_goal TEXT,
+                    ecosystem_state_status TEXT,
+                    active_work_items TEXT NOT NULL DEFAULT '[]',
+                    active_artifact_refs TEXT NOT NULL DEFAULT '[]',
+                    open_checkpoint_refs TEXT NOT NULL DEFAULT '[]',
+                    surface_presence TEXT NOT NULL DEFAULT '[]',
+                    ecosystem_state_summary TEXT,
                     updated_at TEXT NOT NULL
                 );
 
@@ -1070,6 +1148,12 @@ class SqliteMemoryRepository(MemoryRepository):
                     target_goal TEXT,
                     origin_request_id TEXT,
                     replay_summary TEXT,
+                    ecosystem_state_status TEXT,
+                    active_work_items TEXT NOT NULL DEFAULT '[]',
+                    active_artifact_refs TEXT NOT NULL DEFAULT '[]',
+                    open_checkpoint_refs TEXT NOT NULL DEFAULT '[]',
+                    surface_presence TEXT NOT NULL DEFAULT '[]',
+                    ecosystem_state_summary TEXT,
                     updated_at TEXT NOT NULL
                 );
 
@@ -1151,6 +1235,12 @@ class SqliteMemoryRepository(MemoryRepository):
                     identity_continuity_brief TEXT,
                     open_loops TEXT NOT NULL DEFAULT '[]',
                     last_decision_frame TEXT,
+                    ecosystem_state_status TEXT,
+                    active_work_items TEXT NOT NULL DEFAULT '[]',
+                    active_artifact_refs TEXT NOT NULL DEFAULT '[]',
+                    open_checkpoint_refs TEXT NOT NULL DEFAULT '[]',
+                    surface_presence TEXT NOT NULL DEFAULT '[]',
+                    ecosystem_state_summary TEXT,
                     updated_at TEXT NOT NULL
                 );
                 """
@@ -1174,6 +1264,84 @@ class SqliteMemoryRepository(MemoryRepository):
                 connection, "mission_states", "open_loops", "TEXT NOT NULL DEFAULT '[]'"
             )
             self._ensure_column(connection, "mission_states", "last_decision_frame", "TEXT")
+            self._ensure_column(connection, "mission_states", "ecosystem_state_status", "TEXT")
+            self._ensure_column(
+                connection, "mission_states", "active_work_items", "TEXT NOT NULL DEFAULT '[]'"
+            )
+            self._ensure_column(
+                connection,
+                "mission_states",
+                "active_artifact_refs",
+                "TEXT NOT NULL DEFAULT '[]'",
+            )
+            self._ensure_column(
+                connection,
+                "mission_states",
+                "open_checkpoint_refs",
+                "TEXT NOT NULL DEFAULT '[]'",
+            )
+            self._ensure_column(
+                connection, "mission_states", "surface_presence", "TEXT NOT NULL DEFAULT '[]'"
+            )
+            self._ensure_column(connection, "mission_states", "ecosystem_state_summary", "TEXT")
+            self._ensure_column(connection, "session_continuity", "ecosystem_state_status", "TEXT")
+            self._ensure_column(
+                connection,
+                "session_continuity",
+                "active_work_items",
+                "TEXT NOT NULL DEFAULT '[]'",
+            )
+            self._ensure_column(
+                connection,
+                "session_continuity",
+                "active_artifact_refs",
+                "TEXT NOT NULL DEFAULT '[]'",
+            )
+            self._ensure_column(
+                connection,
+                "session_continuity",
+                "open_checkpoint_refs",
+                "TEXT NOT NULL DEFAULT '[]'",
+            )
+            self._ensure_column(
+                connection,
+                "session_continuity",
+                "surface_presence",
+                "TEXT NOT NULL DEFAULT '[]'",
+            )
+            self._ensure_column(
+                connection, "session_continuity", "ecosystem_state_summary", "TEXT"
+            )
+            self._ensure_column(
+                connection, "continuity_checkpoints", "ecosystem_state_status", "TEXT"
+            )
+            self._ensure_column(
+                connection,
+                "continuity_checkpoints",
+                "active_work_items",
+                "TEXT NOT NULL DEFAULT '[]'",
+            )
+            self._ensure_column(
+                connection,
+                "continuity_checkpoints",
+                "active_artifact_refs",
+                "TEXT NOT NULL DEFAULT '[]'",
+            )
+            self._ensure_column(
+                connection,
+                "continuity_checkpoints",
+                "open_checkpoint_refs",
+                "TEXT NOT NULL DEFAULT '[]'",
+            )
+            self._ensure_column(
+                connection,
+                "continuity_checkpoints",
+                "surface_presence",
+                "TEXT NOT NULL DEFAULT '[]'",
+            )
+            self._ensure_column(
+                connection, "continuity_checkpoints", "ecosystem_state_summary", "TEXT"
+            )
             self._ensure_column(
                 connection,
                 "specialist_shared_memory",
@@ -1387,6 +1555,12 @@ class SqliteMemoryRepository(MemoryRepository):
             identity_continuity_brief=row["identity_continuity_brief"],
             open_loops=list(loads(row["open_loops"] or "[]")),
             last_decision_frame=row["last_decision_frame"],
+            ecosystem_state_status=row["ecosystem_state_status"],
+            active_work_items=list(loads(row["active_work_items"] or "[]")),
+            active_artifact_refs=list(loads(row["active_artifact_refs"] or "[]")),
+            open_checkpoint_refs=list(loads(row["open_checkpoint_refs"] or "[]")),
+            surface_presence=list(loads(row["surface_presence"] or "[]")),
+            ecosystem_state_summary=row["ecosystem_state_summary"],
             updated_at=str(row["updated_at"]),
         )
 
@@ -1630,9 +1804,14 @@ class PostgresMemoryRepository(MemoryRepository):
                     mission_id, mission_goal, mission_status, checkpoints, active_tasks,
                     related_memories, related_artifacts, recent_plan_steps,
                     last_recommendation, semantic_brief, semantic_focus,
-                    identity_continuity_brief, open_loops, last_decision_frame, updated_at
+                    identity_continuity_brief, open_loops, last_decision_frame,
+                    ecosystem_state_status, active_work_items, active_artifact_refs,
+                    open_checkpoint_refs, surface_presence, ecosystem_state_summary, updated_at
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                )
                 ON CONFLICT (mission_id) DO UPDATE SET
                     mission_goal = EXCLUDED.mission_goal,
                     mission_status = EXCLUDED.mission_status,
@@ -1647,6 +1826,12 @@ class PostgresMemoryRepository(MemoryRepository):
                     identity_continuity_brief = EXCLUDED.identity_continuity_brief,
                     open_loops = EXCLUDED.open_loops,
                     last_decision_frame = EXCLUDED.last_decision_frame,
+                    ecosystem_state_status = EXCLUDED.ecosystem_state_status,
+                    active_work_items = EXCLUDED.active_work_items,
+                    active_artifact_refs = EXCLUDED.active_artifact_refs,
+                    open_checkpoint_refs = EXCLUDED.open_checkpoint_refs,
+                    surface_presence = EXCLUDED.surface_presence,
+                    ecosystem_state_summary = EXCLUDED.ecosystem_state_summary,
                     updated_at = EXCLUDED.updated_at
                 """,
                 (
@@ -1664,6 +1849,12 @@ class PostgresMemoryRepository(MemoryRepository):
                     mission_state.identity_continuity_brief,
                     dumps(mission_state.open_loops),
                     mission_state.last_decision_frame,
+                    mission_state.ecosystem_state_status,
+                    dumps(mission_state.active_work_items),
+                    dumps(mission_state.active_artifact_refs),
+                    dumps(mission_state.open_checkpoint_refs),
+                    dumps(mission_state.surface_presence),
+                    mission_state.ecosystem_state_summary,
                     mission_state.updated_at,
                 ),
             )
@@ -1675,9 +1866,11 @@ class PostgresMemoryRepository(MemoryRepository):
                 """
                 INSERT INTO session_continuity (
                     session_id, continuity_brief, continuity_mode, anchor_mission_id,
-                    anchor_goal, related_mission_id, related_goal, updated_at
+                    anchor_goal, related_mission_id, related_goal, ecosystem_state_status,
+                    active_work_items, active_artifact_refs, open_checkpoint_refs,
+                    surface_presence, ecosystem_state_summary, updated_at
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (session_id) DO UPDATE SET
                     continuity_brief = EXCLUDED.continuity_brief,
                     continuity_mode = EXCLUDED.continuity_mode,
@@ -1685,6 +1878,12 @@ class PostgresMemoryRepository(MemoryRepository):
                     anchor_goal = EXCLUDED.anchor_goal,
                     related_mission_id = EXCLUDED.related_mission_id,
                     related_goal = EXCLUDED.related_goal,
+                    ecosystem_state_status = EXCLUDED.ecosystem_state_status,
+                    active_work_items = EXCLUDED.active_work_items,
+                    active_artifact_refs = EXCLUDED.active_artifact_refs,
+                    open_checkpoint_refs = EXCLUDED.open_checkpoint_refs,
+                    surface_presence = EXCLUDED.surface_presence,
+                    ecosystem_state_summary = EXCLUDED.ecosystem_state_summary,
                     updated_at = EXCLUDED.updated_at
                 """,
                 (
@@ -1695,6 +1894,12 @@ class PostgresMemoryRepository(MemoryRepository):
                     snapshot.anchor_goal,
                     snapshot.related_mission_id,
                     snapshot.related_goal,
+                    snapshot.ecosystem_state_status,
+                    dumps(snapshot.active_work_items),
+                    dumps(snapshot.active_artifact_refs),
+                    dumps(snapshot.open_checkpoint_refs),
+                    dumps(snapshot.surface_presence),
+                    snapshot.ecosystem_state_summary,
                     snapshot.updated_at,
                 ),
             )
@@ -1710,9 +1915,11 @@ class PostgresMemoryRepository(MemoryRepository):
                 INSERT INTO continuity_checkpoints (
                     session_id, checkpoint_id, continuity_action, checkpoint_status,
                     checkpoint_summary, mission_id, continuity_source, target_mission_id,
-                    target_goal, origin_request_id, replay_summary, updated_at
+                    target_goal, origin_request_id, replay_summary, ecosystem_state_status,
+                    active_work_items, active_artifact_refs, open_checkpoint_refs,
+                    surface_presence, ecosystem_state_summary, updated_at
                 )
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 ON CONFLICT (session_id) DO UPDATE SET
                     checkpoint_id = EXCLUDED.checkpoint_id,
                     continuity_action = EXCLUDED.continuity_action,
@@ -1724,6 +1931,12 @@ class PostgresMemoryRepository(MemoryRepository):
                     target_goal = EXCLUDED.target_goal,
                     origin_request_id = EXCLUDED.origin_request_id,
                     replay_summary = EXCLUDED.replay_summary,
+                    ecosystem_state_status = EXCLUDED.ecosystem_state_status,
+                    active_work_items = EXCLUDED.active_work_items,
+                    active_artifact_refs = EXCLUDED.active_artifact_refs,
+                    open_checkpoint_refs = EXCLUDED.open_checkpoint_refs,
+                    surface_presence = EXCLUDED.surface_presence,
+                    ecosystem_state_summary = EXCLUDED.ecosystem_state_summary,
                     updated_at = EXCLUDED.updated_at
                 """,
                 (
@@ -1738,6 +1951,12 @@ class PostgresMemoryRepository(MemoryRepository):
                     checkpoint.target_goal,
                     checkpoint.origin_request_id,
                     checkpoint.replay_summary,
+                    checkpoint.ecosystem_state_status,
+                    dumps(checkpoint.active_work_items),
+                    dumps(checkpoint.active_artifact_refs),
+                    dumps(checkpoint.open_checkpoint_refs),
+                    dumps(checkpoint.surface_presence),
+                    checkpoint.ecosystem_state_summary,
                     checkpoint.updated_at,
                 ),
             )
@@ -1748,7 +1967,9 @@ class PostgresMemoryRepository(MemoryRepository):
             cursor.execute(
                 """
                 SELECT session_id, continuity_brief, continuity_mode, anchor_mission_id,
-                       anchor_goal, related_mission_id, related_goal, updated_at
+                       anchor_goal, related_mission_id, related_goal, ecosystem_state_status,
+                       active_work_items, active_artifact_refs, open_checkpoint_refs,
+                       surface_presence, ecosystem_state_summary, updated_at
                 FROM session_continuity
                 WHERE session_id = %s
                 """,
@@ -1765,6 +1986,12 @@ class PostgresMemoryRepository(MemoryRepository):
             anchor_goal=row["anchor_goal"],
             related_mission_id=row["related_mission_id"],
             related_goal=row["related_goal"],
+            ecosystem_state_status=row["ecosystem_state_status"],
+            active_work_items=list(loads(row["active_work_items"] or "[]")),
+            active_artifact_refs=list(loads(row["active_artifact_refs"] or "[]")),
+            open_checkpoint_refs=list(loads(row["open_checkpoint_refs"] or "[]")),
+            surface_presence=list(loads(row["surface_presence"] or "[]")),
+            ecosystem_state_summary=row["ecosystem_state_summary"],
             updated_at=row["updated_at"],
         )
 
@@ -1777,7 +2004,9 @@ class PostgresMemoryRepository(MemoryRepository):
                 """
                 SELECT session_id, checkpoint_id, continuity_action, checkpoint_status,
                        checkpoint_summary, mission_id, continuity_source, target_mission_id,
-                       target_goal, origin_request_id, replay_summary, updated_at
+                       target_goal, origin_request_id, replay_summary, ecosystem_state_status,
+                       active_work_items, active_artifact_refs, open_checkpoint_refs,
+                       surface_presence, ecosystem_state_summary, updated_at
                 FROM continuity_checkpoints
                 WHERE session_id = %s
                 """,
@@ -1798,6 +2027,12 @@ class PostgresMemoryRepository(MemoryRepository):
             target_goal=row["target_goal"],
             origin_request_id=row["origin_request_id"],
             replay_summary=row["replay_summary"],
+            ecosystem_state_status=row["ecosystem_state_status"],
+            active_work_items=list(loads(row["active_work_items"] or "[]")),
+            active_artifact_refs=list(loads(row["active_artifact_refs"] or "[]")),
+            open_checkpoint_refs=list(loads(row["open_checkpoint_refs"] or "[]")),
+            surface_presence=list(loads(row["surface_presence"] or "[]")),
+            ecosystem_state_summary=row["ecosystem_state_summary"],
             updated_at=row["updated_at"],
         )
 
@@ -2158,7 +2393,9 @@ class PostgresMemoryRepository(MemoryRepository):
                 SELECT mission_id, mission_goal, mission_status, checkpoints, active_tasks,
                        related_memories, related_artifacts, recent_plan_steps,
                        last_recommendation, semantic_brief, semantic_focus,
-                       identity_continuity_brief, open_loops, last_decision_frame, updated_at
+                       identity_continuity_brief, open_loops, last_decision_frame,
+                       ecosystem_state_status, active_work_items, active_artifact_refs,
+                       open_checkpoint_refs, surface_presence, ecosystem_state_summary, updated_at
                 FROM mission_states
                 WHERE mission_id = %s
                 """,
@@ -2182,6 +2419,12 @@ class PostgresMemoryRepository(MemoryRepository):
             identity_continuity_brief=row["identity_continuity_brief"],
             open_loops=list(loads(row["open_loops"] or "[]")),
             last_decision_frame=row["last_decision_frame"],
+            ecosystem_state_status=row["ecosystem_state_status"],
+            active_work_items=list(loads(row["active_work_items"] or "[]")),
+            active_artifact_refs=list(loads(row["active_artifact_refs"] or "[]")),
+            open_checkpoint_refs=list(loads(row["open_checkpoint_refs"] or "[]")),
+            surface_presence=list(loads(row["surface_presence"] or "[]")),
+            ecosystem_state_summary=row["ecosystem_state_summary"],
             updated_at=row["updated_at"],
         )
 
@@ -2404,6 +2647,12 @@ class PostgresMemoryRepository(MemoryRepository):
                     anchor_goal TEXT,
                     related_mission_id TEXT,
                     related_goal TEXT,
+                    ecosystem_state_status TEXT,
+                    active_work_items TEXT NOT NULL DEFAULT '[]',
+                    active_artifact_refs TEXT NOT NULL DEFAULT '[]',
+                    open_checkpoint_refs TEXT NOT NULL DEFAULT '[]',
+                    surface_presence TEXT NOT NULL DEFAULT '[]',
+                    ecosystem_state_summary TEXT,
                     updated_at TEXT NOT NULL
                 )
                 """
@@ -2422,6 +2671,12 @@ class PostgresMemoryRepository(MemoryRepository):
                     target_goal TEXT,
                     origin_request_id TEXT,
                     replay_summary TEXT,
+                    ecosystem_state_status TEXT,
+                    active_work_items TEXT NOT NULL DEFAULT '[]',
+                    active_artifact_refs TEXT NOT NULL DEFAULT '[]',
+                    open_checkpoint_refs TEXT NOT NULL DEFAULT '[]',
+                    surface_presence TEXT NOT NULL DEFAULT '[]',
+                    ecosystem_state_summary TEXT,
                     updated_at TEXT NOT NULL
                 )
                 """
@@ -2491,6 +2746,12 @@ class PostgresMemoryRepository(MemoryRepository):
                     identity_continuity_brief TEXT,
                     open_loops TEXT NOT NULL DEFAULT '[]',
                     last_decision_frame TEXT,
+                    ecosystem_state_status TEXT,
+                    active_work_items TEXT NOT NULL DEFAULT '[]',
+                    active_artifact_refs TEXT NOT NULL DEFAULT '[]',
+                    open_checkpoint_refs TEXT NOT NULL DEFAULT '[]',
+                    surface_presence TEXT NOT NULL DEFAULT '[]',
+                    ecosystem_state_summary TEXT,
                     updated_at TEXT NOT NULL
                 )
                 """
@@ -2529,6 +2790,76 @@ class PostgresMemoryRepository(MemoryRepository):
             )
             cursor.execute(
                 "ALTER TABLE mission_states ADD COLUMN IF NOT EXISTS last_decision_frame TEXT"
+            )
+            cursor.execute(
+                "ALTER TABLE mission_states ADD COLUMN IF NOT EXISTS ecosystem_state_status TEXT"
+            )
+            cursor.execute(
+                "ALTER TABLE mission_states ADD COLUMN IF NOT EXISTS "
+                "active_work_items TEXT NOT NULL DEFAULT '[]'"
+            )
+            cursor.execute(
+                "ALTER TABLE mission_states ADD COLUMN IF NOT EXISTS "
+                "active_artifact_refs TEXT NOT NULL DEFAULT '[]'"
+            )
+            cursor.execute(
+                "ALTER TABLE mission_states ADD COLUMN IF NOT EXISTS "
+                "open_checkpoint_refs TEXT NOT NULL DEFAULT '[]'"
+            )
+            cursor.execute(
+                "ALTER TABLE mission_states ADD COLUMN IF NOT EXISTS "
+                "surface_presence TEXT NOT NULL DEFAULT '[]'"
+            )
+            cursor.execute(
+                "ALTER TABLE mission_states ADD COLUMN IF NOT EXISTS ecosystem_state_summary TEXT"
+            )
+            cursor.execute(
+                "ALTER TABLE session_continuity ADD COLUMN IF NOT EXISTS "
+                "ecosystem_state_status TEXT"
+            )
+            cursor.execute(
+                "ALTER TABLE session_continuity ADD COLUMN IF NOT EXISTS "
+                "active_work_items TEXT NOT NULL DEFAULT '[]'"
+            )
+            cursor.execute(
+                "ALTER TABLE session_continuity ADD COLUMN IF NOT EXISTS "
+                "active_artifact_refs TEXT NOT NULL DEFAULT '[]'"
+            )
+            cursor.execute(
+                "ALTER TABLE session_continuity ADD COLUMN IF NOT EXISTS "
+                "open_checkpoint_refs TEXT NOT NULL DEFAULT '[]'"
+            )
+            cursor.execute(
+                "ALTER TABLE session_continuity ADD COLUMN IF NOT EXISTS "
+                "surface_presence TEXT NOT NULL DEFAULT '[]'"
+            )
+            cursor.execute(
+                "ALTER TABLE session_continuity ADD COLUMN IF NOT EXISTS "
+                "ecosystem_state_summary TEXT"
+            )
+            cursor.execute(
+                "ALTER TABLE continuity_checkpoints ADD COLUMN IF NOT EXISTS "
+                "ecosystem_state_status TEXT"
+            )
+            cursor.execute(
+                "ALTER TABLE continuity_checkpoints ADD COLUMN IF NOT EXISTS "
+                "active_work_items TEXT NOT NULL DEFAULT '[]'"
+            )
+            cursor.execute(
+                "ALTER TABLE continuity_checkpoints ADD COLUMN IF NOT EXISTS "
+                "active_artifact_refs TEXT NOT NULL DEFAULT '[]'"
+            )
+            cursor.execute(
+                "ALTER TABLE continuity_checkpoints ADD COLUMN IF NOT EXISTS "
+                "open_checkpoint_refs TEXT NOT NULL DEFAULT '[]'"
+            )
+            cursor.execute(
+                "ALTER TABLE continuity_checkpoints ADD COLUMN IF NOT EXISTS "
+                "surface_presence TEXT NOT NULL DEFAULT '[]'"
+            )
+            cursor.execute(
+                "ALTER TABLE continuity_checkpoints ADD COLUMN IF NOT EXISTS "
+                "ecosystem_state_summary TEXT"
             )
             cursor.execute(
                 "ALTER TABLE specialist_shared_memory ADD COLUMN IF NOT EXISTS "
@@ -2695,5 +3026,11 @@ def continuity_checkpoint_to_contract(
         checkpoint_summary=checkpoint.checkpoint_summary,
         origin_request_id=checkpoint.origin_request_id,
         replay_summary=checkpoint.replay_summary,
+        ecosystem_state_status=checkpoint.ecosystem_state_status,
+        active_work_items=list(checkpoint.active_work_items),
+        active_artifact_refs=list(checkpoint.active_artifact_refs),
+        open_checkpoint_refs=list(checkpoint.open_checkpoint_refs),
+        surface_presence=list(checkpoint.surface_presence),
+        ecosystem_state_summary=checkpoint.ecosystem_state_summary,
         updated_at=checkpoint.updated_at,
     )

@@ -82,6 +82,17 @@ def test_operational_service_generates_text_artifact_for_supported_task() -> Non
                 "step_sequence_validated",
                 "next_action_governed",
             ],
+            ecosystem_state_status="operational_state_attached",
+            active_work_items=["mission_task:Plan milestone M3"],
+            active_artifact_refs=["artifact://procedural/strategy/milestone-plan/v1"],
+            open_checkpoint_refs=[
+                "workflow_checkpoint:goal_structured:pending",
+                "workflow_checkpoint:steps_sequenced:pending",
+            ],
+            surface_presence=["surface:chat", "session:sess-1"],
+            ecosystem_state_summary=(
+                "work_items=1; artifacts=1; open_checkpoints=2; surfaces=2"
+            ),
             success_criteria=["plano deve indicar a menor proxima acao segura"],
             smallest_safe_next_action="definir objetivo",
         )
@@ -115,6 +126,10 @@ def test_operational_service_generates_text_artifact_for_supported_task() -> Non
     assert "Mind-domain-specialist status: authoritative_chain" in content
     assert "Mind-domain-specialist consumer mode: authoritative_specialist" in content
     assert "Mind-domain-specialist framing mode: route_and_specialist_locked" in content
+    assert "Ecosystem state status: operational_state_attached" in content
+    assert "Active work items: mission_task:Plan milestone M3" in content
+    assert "Open checkpoint refs:" in content
+    assert "Surface presence: surface:chat; session:sess-1" in content
     assert "Ajuste interno" in content
     assert execution.operation_result.workflow_domain_route == "strategy"
     assert execution.operation_result.workflow_state == "completed"
@@ -131,6 +146,16 @@ def test_operational_service_generates_text_artifact_for_supported_task() -> Non
     assert "workflow_route:strategy" in execution.operation_result.checkpoints
     assert "workflow:goal_structured" in execution.operation_result.checkpoints
     assert "workflow_state:completed" in execution.operation_result.checkpoints
+    assert execution.operation_result.ecosystem_state_status == (
+        "operational_state_attached"
+    )
+    assert execution.operation_result.active_work_items == [
+        "mission_task:Plan milestone M3"
+    ]
+    assert "artifact://procedural/strategy/milestone-plan/v1" in (
+        execution.operation_result.active_artifact_refs
+    )
+    assert execution.operation_result.surface_presence == ["surface:chat", "session:sess-1"]
 
 
 def test_operational_service_fails_for_unsupported_task() -> None:

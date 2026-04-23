@@ -114,6 +114,15 @@ class ContextWindowPolicy:
     cross_session_recall_status: str
 
 
+@dataclass(frozen=True)
+class EcosystemContinuityPolicy:
+    ecosystem_state_status: str
+    recovery_mode: str
+    resume_priority: str
+    continuity_status: str
+    should_persist: bool
+
+
 DEFAULT_WORKFLOW_MEMORY_POLICY = WorkflowMemoryPolicy(workflow_profile=None)
 
 WORKFLOW_MEMORY_POLICIES: dict[str, WorkflowMemoryPolicy] = {
@@ -700,9 +709,9 @@ def context_window_policy(
         return ContextWindowPolicy(
             requested_limit=normalized_limit,
             live_turn_limit=min(2, normalized_limit),
-            continuity_hint_limit=7,
+            continuity_hint_limit=8,
             user_hint_limit=max(6, normalized_limit),
-            mission_hint_limit=9,
+            mission_hint_limit=10,
             plan_hint_limit=5,
             compaction_status="compressed_live_context",
             cross_session_recall_status="active",
@@ -711,9 +720,9 @@ def context_window_policy(
         return ContextWindowPolicy(
             requested_limit=normalized_limit,
             live_turn_limit=min(2, normalized_limit),
-            continuity_hint_limit=6,
+            continuity_hint_limit=7,
             user_hint_limit=max(5, normalized_limit),
-            mission_hint_limit=8,
+            mission_hint_limit=9,
             plan_hint_limit=4,
             compaction_status="seeded_live_context",
             cross_session_recall_status="seeded",
@@ -727,6 +736,66 @@ def context_window_policy(
         plan_hint_limit=2,
         compaction_status="minimal_live_context",
         cross_session_recall_status="not_applicable",
+    )
+
+
+def ecosystem_continuity_policy(
+    *,
+    ecosystem_state_status: str | None,
+    active_work_items: Sequence[str],
+    active_artifact_refs: Sequence[str],
+    open_checkpoint_refs: Sequence[str],
+    surface_presence: Sequence[str],
+) -> EcosystemContinuityPolicy:
+    """Classify whether bounded ecosystem state is recoverable in continuity."""
+
+    if ecosystem_state_status is None:
+        if active_work_items or active_artifact_refs or open_checkpoint_refs or surface_presence:
+            ecosystem_state_status = "partial_operational_state"
+        else:
+            ecosystem_state_status = "not_applicable"
+
+    if ecosystem_state_status == "not_applicable" and not (
+        active_work_items or active_artifact_refs or open_checkpoint_refs or surface_presence
+    ):
+        return EcosystemContinuityPolicy(
+            ecosystem_state_status="not_applicable",
+            recovery_mode="not_applicable",
+            resume_priority="none",
+            continuity_status="not_applicable",
+            should_persist=False,
+        )
+
+    if open_checkpoint_refs:
+        return EcosystemContinuityPolicy(
+            ecosystem_state_status=ecosystem_state_status,
+            recovery_mode="resume_operational_checkpoint",
+            resume_priority="open_checkpoint",
+            continuity_status="bounded_resume_available",
+            should_persist=True,
+        )
+    if active_work_items:
+        return EcosystemContinuityPolicy(
+            ecosystem_state_status=ecosystem_state_status,
+            recovery_mode="resume_active_work_item",
+            resume_priority="active_work_item",
+            continuity_status="bounded_work_item_context",
+            should_persist=True,
+        )
+    if active_artifact_refs:
+        return EcosystemContinuityPolicy(
+            ecosystem_state_status=ecosystem_state_status,
+            recovery_mode="resume_active_artifact",
+            resume_priority="active_artifact",
+            continuity_status="artifact_attached",
+            should_persist=True,
+        )
+    return EcosystemContinuityPolicy(
+        ecosystem_state_status=ecosystem_state_status,
+        recovery_mode="surface_context_only",
+        resume_priority="surface_presence",
+        continuity_status="surface_attached",
+        should_persist=bool(surface_presence),
     )
 
 

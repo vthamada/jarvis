@@ -59,6 +59,14 @@ Politicas obrigatorias:
 - docs vivas entram na fila apenas quando refletem mudanca real de runtime, gate ou baseline;
 - nenhuma tarefa vaga entra em `ready`.
 
+Politica de modelo recomendado:
+
+- novos itens com recomendacao explicita de modelo devem, por padrao, usar apenas `gpt-5.4`, `gpt-5.3-codex` ou `gpt-5.4-mini`, salvo repriorizacao tecnica deliberada;
+- `gpt-5.4` e o modelo preferencial para mudancas de alta ambiguidade arquitetural, contratos soberanos, memoria, governanca e decisoes sensiveis de nucleo;
+- `gpt-5.3-codex` e o modelo preferencial para implementacao agentic pesada no repositorio, mudancas multi-arquivo, ciclos de teste/correcao e trabalho coding-first;
+- `gpt-5.4-mini` e o modelo preferencial para docs, gates, sincronizacao documental, propagacoes mecanicas e tarefas de menor risco/menor custo;
+- o `modo_de_raciocinio_recomendado` continua mandatorio porque o modelo sozinho nao substitui calibracao de esforco.
+
 ### Definition of Ready
 
 Um item so entra em `ready` quando:
@@ -1645,6 +1653,7 @@ Escalar ao operador quando:
 - `gate_minimo`: `pytest` direcionado dos services/tools afetados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.4`
 - `impacto_no_baseline`: o sistema passa a ter contrato soberano para dizer o que e oportunidade real de compile/optimize loop e o que ainda e ruido comparativo.
 
 ### MB-093
@@ -1662,6 +1671,7 @@ Escalar ao operador quando:
 - `gate_minimo`: `pytest` direcionado dos services/tools afetados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.3-codex`
 - `impacto_no_baseline`: o laboratorio deixa de ser apenas leitor de diferencas e passa a produzir candidatos governados de refinamento do nucleo.
 
 ### MB-094
@@ -1679,6 +1689,7 @@ Escalar ao operador quando:
 - `gate_minimo`: `pytest` direcionado dos services/tools afetados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.3-codex`
 - `impacto_no_baseline`: oportunidades de refinamento passam a ser evidencia comparavel e auditavel, e nao apenas leitura interna do laboratorio.
 
 ### MB-095
@@ -1696,6 +1707,7 @@ Escalar ao operador quando:
 - `gate_minimo`: `pytest` direcionado dos tools afetados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.3-codex`
 - `impacto_no_baseline`: release e closure docs passam a distinguir drift, oportunidade governada de refinamento e bloqueio de seguranca no loop evolutivo.
 
 ### MB-096
@@ -1713,13 +1725,14 @@ Escalar ao operador quando:
 - `gate_minimo`: `python tools/check_mojibake.py docs/implementation docs/operations HANDOFF.md CHANGELOG.md` e `python tools/engineering_gate.py --mode standard`
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `medium`
+- `modelo_recomendado`: `gpt-5.4-mini`
 - `impacto_no_baseline`: o lote fecha com a gramatica de compile/optimize loops governados materializada e documentada como parte do baseline evolutivo.
 
 ### MB-097
 
 - `id`: `MB-097`
 - `prioridade`: `P0`
-- `status`: `ready`
+- `status`: `done`
 - `eixo_do_mestre`: `estado_operacional`
 - `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
 - `micro_objetivo`: formalizar um contrato soberano minimo de estado operacional do ecossistema, distinguindo workflows ativos, artefatos vivos, checkpoints abertos, pendencias e superfícies associadas sem rebaixar isso a contexto textual solto.
@@ -1730,13 +1743,14 @@ Escalar ao operador quando:
 - `gate_minimo`: `pytest` direcionado dos services/tools afetados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `high`
-- `impacto_no_baseline`: o runtime passa a ter gramática soberana mínima para representar o ecossistema operacional ativo em vez de tratá-lo como inferência dispersa.
+- `modelo_recomendado`: `gpt-5.4`
+- `impacto_no_baseline`: `OperationDispatchContract`, `OperationResultContract`, `orchestrator-service`, `operational-service` e eventos internos agora carregam `ecosystem_state_status`, `active_work_items`, `active_artifact_refs`, `open_checkpoint_refs` e `surface_presence` como gramatica minima de estado operacional do ecossistema.
 
 ### MB-098
 
 - `id`: `MB-098`
 - `prioridade`: `P0`
-- `status`: `blocked`
+- `status`: `done`
 - `eixo_do_mestre`: `continuidade`
 - `workflow_profile_afetado`: `nao_aplicavel`
 - `micro_objetivo`: aplicar o contrato de estado operacional do ecossistema em continuidade, memoria canonica e lifecycle de workflows ativos, sem abrir ainda memoria temporal/relacional rica.
@@ -1747,13 +1761,14 @@ Escalar ao operador quando:
 - `gate_minimo`: `pytest` direcionado dos services/tools afetados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.4`
 - `impacto_no_baseline`: continuidade deixa de depender apenas de missão e histórico conversacional e passa a enxergar estado operacional ativo do ecossistema.
 
 ### MB-099
 
 - `id`: `MB-099`
 - `prioridade`: `P1`
-- `status`: `blocked`
+- `status`: `ready`
 - `eixo_do_mestre`: `observabilidade`
 - `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
 - `micro_objetivo`: tornar o estado operacional do ecossistema auditavel em observabilidade, piloto, comparadores e baseline ativo.
@@ -1764,6 +1779,7 @@ Escalar ao operador quando:
 - `gate_minimo`: `pytest` direcionado dos services/tools afetados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.3-codex`
 - `impacto_no_baseline`: o estado operacional do ecossistema deixa de ser inferência local e vira sinal comparável do runtime.
 
 ### MB-100
@@ -1781,6 +1797,7 @@ Escalar ao operador quando:
 - `gate_minimo`: `pytest` direcionado dos tools afetados, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.3-codex`
 - `impacto_no_baseline`: a ponte `v2 -> v3` ganha leitura formal e regenerável sem quebrar a contenção de fase.
 
 ### MB-101
@@ -1798,6 +1815,7 @@ Escalar ao operador quando:
 - `gate_minimo`: `python tools/check_mojibake.py docs/implementation docs/operations HANDOFF.md CHANGELOG.md` e `python tools/engineering_gate.py --mode standard`
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `medium`
+- `modelo_recomendado`: `gpt-5.4-mini`
 - `impacto_no_baseline`: a ponte para estado operacional do ecossistema fica registrada como novo lote ativo sem contaminar o backlog com frentes fora de fase.
 
 ---
@@ -1849,6 +1867,7 @@ Estado atual da fila:
 - `observability`, piloto, comparadores, `evolution-lab`, verificadores de release e fechadores regeneraveis agora tratam `expanded_eval_*`, `surface_axis_*`, `ecosystem_state_*`, `experiment_lane_*`, `experiment_exit_*` e `promotion_readiness` como baseline comparativo controlado;
 - `MB-092` a `MB-096` foram concluidos e fecharam o lote de compile/optimize loops governados, derivado de `EV-003`;
 - `shared/optimization_state.py`, `evolution-lab`, comparadores, relatorios, verificadores de baseline/release e fechadores regeneraveis agora tratam `optimization_*` como slice soberano do baseline evolutivo;
-- `MB-097` a `MB-101` agora formam o novo lote ativo da fila micro, derivado de `SG-002` + `TA-002`, com `MB-097` em `ready`;
-- a proxima puxada correta do baseline passa a ser abrir um modelo soberano minimo de estado operacional do ecossistema, sem puxar ainda memoria temporal rica, multissuperficie ou substrate operacional amplo;
+- `MB-097` agora foi concluido: `OperationDispatchContract`, `OperationResultContract`, `orchestrator-service`, `operational-service` e eventos internos passaram a carregar estado operacional minimo do ecossistema;
+- `MB-098` agora tambem foi concluido: `memory-service`, `shared/memory_registry.py`, `orchestrator-service` e a malha de continuidade passaram a persistir e retomar `ecosystem_state_*` como estado bounded de missao, checkpoint e replay;
+- `MB-099` virou o item `ready` atual da fila micro para tornar esse estado auditavel em observabilidade, piloto, comparadores e baseline ativo, ainda sem abrir multissuperficie ampla ou substrate operacional fora de fase;
 - `protective intelligence foundation` continua `deferred` e a matriz da Onda 2 segue como insumo, nao como gatilho automatico para abrir nova vertical.

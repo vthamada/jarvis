@@ -343,6 +343,16 @@ class SpecialistContributionContract:
 
 
 @dataclass
+class EcosystemOperationalStateContract:
+    ecosystem_state_status: str
+    active_work_items: list[str] = field(default_factory=list)
+    active_artifact_refs: list[str] = field(default_factory=list)
+    open_checkpoint_refs: list[str] = field(default_factory=list)
+    surface_presence: list[str] = field(default_factory=list)
+    state_summary: str | None = None
+
+
+@dataclass
 class OperationDispatchContract:
     operation_id: OperationId
     request_id: RequestId
@@ -418,6 +428,12 @@ class OperationDispatchContract:
     workflow_resume_point: str | None = None
     workflow_resume_status: str | None = None
     workflow_resume_eligible: bool = False
+    ecosystem_state_status: str | None = None
+    active_work_items: list[str] = field(default_factory=list)
+    active_artifact_refs: list[str] = field(default_factory=list)
+    open_checkpoint_refs: list[str] = field(default_factory=list)
+    surface_presence: list[str] = field(default_factory=list)
+    ecosystem_state_summary: str | None = None
     deadline_hint: str | None = None
     priority_hint: str | None = None
     artifact_destination: str | None = None
@@ -440,6 +456,12 @@ class OperationResultContract:
     workflow_pending_checkpoints: list[str] = field(default_factory=list)
     workflow_resume_point: str | None = None
     workflow_resume_status: str | None = None
+    ecosystem_state_status: str | None = None
+    active_work_items: list[str] = field(default_factory=list)
+    active_artifact_refs: list[str] = field(default_factory=list)
+    open_checkpoint_refs: list[str] = field(default_factory=list)
+    surface_presence: list[str] = field(default_factory=list)
+    ecosystem_state_summary: str | None = None
     next_recommendation: str | None = None
     governance_flags: list[str] = field(default_factory=list)
     memory_record_hints: list[str] = field(default_factory=list)
@@ -522,6 +544,12 @@ class ContinuityCheckpointContract:
     target_goal: str | None = None
     origin_request_id: RequestId | None = None
     replay_summary: str | None = None
+    ecosystem_state_status: str | None = None
+    active_work_items: list[str] = field(default_factory=list)
+    active_artifact_refs: list[str] = field(default_factory=list)
+    open_checkpoint_refs: list[str] = field(default_factory=list)
+    surface_presence: list[str] = field(default_factory=list)
+    ecosystem_state_summary: str | None = None
 
 
 @dataclass
@@ -539,6 +567,12 @@ class ContinuityReplayContract:
     target_goal: str | None = None
     origin_request_id: RequestId | None = None
     replay_summary: str | None = None
+    ecosystem_state_status: str | None = None
+    active_work_items: list[str] = field(default_factory=list)
+    active_artifact_refs: list[str] = field(default_factory=list)
+    open_checkpoint_refs: list[str] = field(default_factory=list)
+    surface_presence: list[str] = field(default_factory=list)
+    ecosystem_state_summary: str | None = None
     requires_manual_resume: bool = False
 
 
@@ -578,6 +612,12 @@ class MissionStateContract:
     identity_continuity_brief: str | None = None
     open_loops: list[str] = field(default_factory=list)
     last_decision_frame: str | None = None
+    ecosystem_state_status: str | None = None
+    active_work_items: list[str] = field(default_factory=list)
+    active_artifact_refs: list[str] = field(default_factory=list)
+    open_checkpoint_refs: list[str] = field(default_factory=list)
+    surface_presence: list[str] = field(default_factory=list)
+    ecosystem_state_summary: str | None = None
     priority_level: str | None = None
     owner_context: str | None = None
     completion_criteria: list[str] = field(default_factory=list)
@@ -605,6 +645,12 @@ class MissionRuntimeStateContract:
     last_recommendation: str | None = None
     related_mission_id: MissionId | None = None
     related_mission_goal: str | None = None
+    ecosystem_state_status: str | None = None
+    active_work_items: list[str] = field(default_factory=list)
+    active_artifact_refs: list[str] = field(default_factory=list)
+    open_checkpoint_refs: list[str] = field(default_factory=list)
+    surface_presence: list[str] = field(default_factory=list)
+    ecosystem_state_summary: str | None = None
     runtime_mode: str | None = None
 
 

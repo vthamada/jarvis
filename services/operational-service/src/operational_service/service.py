@@ -83,6 +83,18 @@ class OperationalService:
             dispatch,
             successful=(status == OperationStatus.COMPLETED),
         )
+        active_artifact_refs = self._active_artifact_refs(dispatch, artifact_results)
+        open_checkpoint_refs = [
+            f"workflow_checkpoint:{checkpoint}:{checkpoint_status}"
+            for checkpoint, checkpoint_status in workflow_checkpoint_state.items()
+            if checkpoint_status != "completed"
+        ]
+        ecosystem_state_status = self._ecosystem_state_status(
+            active_work_items=dispatch.active_work_items,
+            active_artifact_refs=active_artifact_refs,
+            open_checkpoint_refs=open_checkpoint_refs,
+            surface_presence=dispatch.surface_presence,
+        )
         result = OperationResultContract(
             operation_id=dispatch.operation_id,
             status=status,
@@ -110,6 +122,17 @@ class OperationalService:
             workflow_pending_checkpoints=workflow_pending_checkpoints,
             workflow_resume_point=workflow_resume_point,
             workflow_resume_status=workflow_resume_status,
+            ecosystem_state_status=ecosystem_state_status,
+            active_work_items=list(dispatch.active_work_items),
+            active_artifact_refs=active_artifact_refs,
+            open_checkpoint_refs=open_checkpoint_refs,
+            surface_presence=list(dispatch.surface_presence),
+            ecosystem_state_summary=self._ecosystem_state_summary(
+                active_work_items=dispatch.active_work_items,
+                active_artifact_refs=active_artifact_refs,
+                open_checkpoint_refs=open_checkpoint_refs,
+                surface_presence=dispatch.surface_presence,
+            ),
             next_recommendation=(
                 "continue" if status == OperationStatus.COMPLETED else "review_dispatch"
             ),
@@ -168,6 +191,7 @@ class OperationalService:
         workflow_lines = OperationalService._workflow_lines(dispatch)
         workflow_decisions = OperationalService._workflow_decision_line(dispatch)
         arbitration_lines = OperationalService._mind_domain_specialist_lines(dispatch)
+        ecosystem_lines = OperationalService._ecosystem_state_lines(dispatch)
         return (
             f"Plano deliberativo para: {dispatch.task_goal}\n\n"
             f"Resumo: {dispatch.plan_summary or dispatch.task_plan}\n"
@@ -178,6 +202,7 @@ class OperationalService:
             f"Riscos: {risks}\n"
             f"Ajuste interno: {internal_alignment}\n"
             f"{arbitration_lines}\n"
+            f"{ecosystem_lines}\n"
             f"{workflow_lines}\n"
             f"{workflow_decisions}\n"
             f"Etapas:\n{steps}\n"
@@ -194,6 +219,7 @@ class OperationalService:
         workflow_lines = OperationalService._workflow_lines(dispatch)
         workflow_decisions = OperationalService._workflow_decision_line(dispatch)
         arbitration_lines = OperationalService._mind_domain_specialist_lines(dispatch)
+        ecosystem_lines = OperationalService._ecosystem_state_lines(dispatch)
         return (
             f"Analise deliberativa para: {dispatch.task_goal}\n\n"
             f"Resumo: {dispatch.plan_summary or dispatch.task_plan}\n"
@@ -203,6 +229,7 @@ class OperationalService:
             f"Ajuste interno: {dispatch.specialist_summary or 'sem ajuste interno adicional'}\n"
             f"Riscos mapeados: {risks}\n"
             f"{arbitration_lines}\n"
+            f"{ecosystem_lines}\n"
             f"{workflow_lines}\n"
             f"{workflow_decisions}\n"
         )
@@ -212,6 +239,7 @@ class OperationalService:
         workflow_lines = OperationalService._workflow_lines(dispatch)
         workflow_decisions = OperationalService._workflow_decision_line(dispatch)
         arbitration_lines = OperationalService._mind_domain_specialist_lines(dispatch)
+        ecosystem_lines = OperationalService._ecosystem_state_lines(dispatch)
         return (
             f"Resposta deliberativa segura para: {dispatch.task_goal}\n\n"
             f"Resumo: {dispatch.plan_summary or dispatch.task_plan}\n"
@@ -220,6 +248,7 @@ class OperationalService:
             f"{dispatch.smallest_safe_next_action or 'preservar direcao segura'}\n"
             f"Ajuste interno: {dispatch.specialist_summary or 'sem ajuste interno adicional'}\n"
             f"{arbitration_lines}\n"
+            f"{ecosystem_lines}\n"
             f"{workflow_lines}\n"
             f"{workflow_decisions}\n"
             "A saida foi produzida dentro do escopo local e reversivel do v1.\n"
@@ -243,6 +272,24 @@ class OperationalService:
             f"Mind-domain-specialist consumer mode: {consumer_mode}\n"
             f"Mind-domain-specialist framing mode: {framing_mode}\n"
             f"Mind-domain-specialist continuity mode: {continuity_mode}"
+        )
+
+
+    @staticmethod
+    def _ecosystem_state_lines(dispatch: OperationDispatchContract) -> str:
+        work_items = "; ".join(dispatch.active_work_items) or "none"
+        artifact_refs = "; ".join(dispatch.active_artifact_refs) or "none"
+        checkpoint_refs = "; ".join(dispatch.open_checkpoint_refs) or "none"
+        surface_presence = "; ".join(dispatch.surface_presence) or "none"
+        status = dispatch.ecosystem_state_status or "not_applicable"
+        summary = dispatch.ecosystem_state_summary or "state not summarized"
+        return (
+            f"Ecosystem state status: {status}\n"
+            f"Ecosystem state summary: {summary}\n"
+            f"Active work items: {work_items}\n"
+            f"Active artifact refs: {artifact_refs}\n"
+            f"Open checkpoint refs: {checkpoint_refs}\n"
+            f"Surface presence: {surface_presence}"
         )
 
 
@@ -320,6 +367,53 @@ class OperationalService:
         if resume_point or pending_checkpoints:
             return ("checkpointed_for_followup", resume_point)
         return ("completed_without_resume", None)
+
+    @staticmethod
+    def _active_artifact_refs(
+        dispatch: OperationDispatchContract,
+        artifact_results: list[ArtifactResultContract],
+    ) -> list[str]:
+        refs = list(dispatch.active_artifact_refs)
+        for artifact in artifact_results:
+            if artifact.location_ref and artifact.location_ref not in refs:
+                refs.append(artifact.location_ref)
+        return refs
+
+    @staticmethod
+    def _ecosystem_state_status(
+        *,
+        active_work_items: list[str],
+        active_artifact_refs: list[str],
+        open_checkpoint_refs: list[str],
+        surface_presence: list[str],
+    ) -> str:
+        if not (
+            active_work_items
+            or active_artifact_refs
+            or open_checkpoint_refs
+            or surface_presence
+        ):
+            return "not_applicable"
+        if surface_presence and active_work_items and (
+            active_artifact_refs or open_checkpoint_refs
+        ):
+            return "operational_state_attached"
+        return "partial_operational_state"
+
+    @staticmethod
+    def _ecosystem_state_summary(
+        *,
+        active_work_items: list[str],
+        active_artifact_refs: list[str],
+        open_checkpoint_refs: list[str],
+        surface_presence: list[str],
+    ) -> str:
+        return (
+            f"work_items={len(active_work_items)}; "
+            f"artifacts={len(active_artifact_refs)}; "
+            f"open_checkpoints={len(open_checkpoint_refs)}; "
+            f"surfaces={len(surface_presence)}"
+        )
 
     @staticmethod
     def _domain_line(domain_hints: list[str]) -> str:

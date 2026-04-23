@@ -2,7 +2,7 @@
 
 ## Metadata
 
-- Atualizado em: 2026-04-22
+- Atualizado em: 2026-04-23
 - Branch: `main`
 - Commit de referência: `02ccc53`
 - Artefato canônico do projeto: `documento_mestre_jarvis.md`
@@ -151,13 +151,17 @@ Atualizacao desta rodada:
   `optimization_safety_status`, `optimization_readiness`,
   `optimization_release_status` e `optimization_blockers` como gramatica
   soberana de compile/optimize loops para prompts, planos e workflows;
-- `MB-097` a `MB-101` agora formam o novo lote ativo da fila micro, derivado
-  de `SG-002` + `TA-002`, com foco em um modelo soberano minimo de estado
-  operacional do ecossistema;
-- a proxima puxada correta do baseline passa a ser formalizar estado
-  operacional ativo, artefatos vivos, checkpoints abertos e presença por
-  superfície sem abrir ainda memoria temporal rica, continuidade
-  multissuperfície ou substrate operacional amplo;
+- `MB-097` agora foi concluido: `OperationDispatchContract`,
+  `OperationResultContract`, `orchestrator-service`, `operational-service` e
+  eventos internos passaram a carregar estado operacional minimo do
+  ecossistema;
+- `MB-098` agora tambem foi concluido: `memory-service`,
+  `shared/memory_registry.py`, `orchestrator-service` e a malha de
+  continuidade passaram a persistir e retomar `ecosystem_state_*` como estado
+  bounded de missao, checkpoint e replay;
+- `MB-099` virou o item `ready` atual da fila micro para tornar esse estado
+  auditavel em observabilidade, piloto, comparadores e baseline ativo, ainda
+  sem abrir multissuperficie ampla ou substrate operacional fora de fase;
 - tratar a Onda 2 apenas como experimento controlado guiado pela matriz de
   readiness ja existente, sem promocao automatica de referencia externa;
 - manter `protective intelligence`, `voice/realtime`, memoria temporal forte,
@@ -211,8 +215,9 @@ Atualizacao desta rodada:
   runtime;
 - `MB-087` a `MB-091` agora tambem foram concluidos e fecharam `EV-002` +
   `EV-004` como baseline comparativo controlado;
-- `MB-097` a `MB-101` agora formam o novo lote ativo da fila micro para
-  `SG-002` + `TA-002`, com `MB-097` em `ready`;
+- `MB-097` e `MB-098` agora foram concluidos, e `MB-099` virou o item `ready`
+  da fila micro para tornar o estado operacional do ecossistema auditavel em
+  observabilidade, piloto, comparadores e baseline ativo;
 - tratar a Onda 2 apenas como experimento controlado guiado pela matriz de
   readiness ja existente, sem promocao automatica de referencia externa;
 - so depois desse lote: reavaliar qual vertical derivada deve abrir a proxima frente macro; `protective intelligence` permanece mapeado, mas em `deferred` ate nova decisao explicita;

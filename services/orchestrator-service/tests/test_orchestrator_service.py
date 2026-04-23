@@ -156,6 +156,16 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
         "clarificar trade-offs estratégicos, enquadramento de cenário e direção recomendada"
     )
     assert result.operation_dispatch.expected_output == "tradeoff_map"
+    assert result.operation_dispatch.ecosystem_state_status in {
+        "operational_state_attached",
+        "partial_operational_state",
+    }
+    assert result.operation_dispatch.active_work_items
+    assert result.operation_dispatch.open_checkpoint_refs
+    assert "surface:chat" in result.operation_dispatch.surface_presence
+    assert result.operation_result is not None
+    assert result.operation_result.ecosystem_state_status == "operational_state_attached"
+    assert result.operation_result.active_artifact_refs
     assert result.knowledge_result is not None
     assert result.artifact_results
     assert result.active_domains == ["strategy", "documentation", "observability"]
@@ -529,6 +539,9 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     workflow_composed_event = next(
         event for event in stored_events if event.event_name == "workflow_composed"
     )
+    ecosystem_state_event = next(
+        event for event in stored_events if event.event_name == "ecosystem_state_declared"
+    )
     operation_dispatched_event = next(
         event for event in stored_events if event.event_name == "operation_dispatched"
     )
@@ -539,6 +552,16 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
         event for event in stored_events if event.event_name == "workflow_completed"
     )
     assert workflow_composed_event.payload["workflow_checkpoint_state"]
+    assert workflow_composed_event.payload["ecosystem_state_status"] in {
+        "operational_state_attached",
+        "partial_operational_state",
+    }
+    assert workflow_composed_event.payload["active_work_items"]
+    assert workflow_composed_event.payload["open_checkpoint_refs"]
+    assert "surface:chat" in workflow_composed_event.payload["surface_presence"]
+    assert ecosystem_state_event.payload["ecosystem_state_status"] == (
+        workflow_composed_event.payload["ecosystem_state_status"]
+    )
     assert workflow_composed_event.payload["workflow_resume_status"] in {
         "fresh_start",
         "resume_available",
@@ -561,6 +584,10 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     ]
     assert operation_completed_event.payload["workflow_checkpoint_state"]
     assert operation_completed_event.payload["workflow_pending_checkpoints"] == []
+    assert operation_completed_event.payload["ecosystem_state_status"] == (
+        "operational_state_attached"
+    )
+    assert operation_completed_event.payload["active_artifact_refs"]
     assert workflow_completed_event.payload["workflow_pending_checkpoints"] == []
     assert workflow_completed_event.payload["workflow_resume_status"] in {
         "completed_without_resume",
@@ -909,6 +936,18 @@ def test_orchestrator_service_recovers_mission_continuity_across_instances() -> 
     assert any(
         item.startswith("continuity_resume_point=") for item in second_result.recovered_context
     )
+    assert any(
+        item == "mission_ecosystem_state_status=operational_state_attached"
+        for item in second_result.recovered_context
+    )
+    assert any(
+        item.startswith("mission_active_work_items=")
+        for item in second_result.recovered_context
+    )
+    assert any(
+        item.startswith("mission_active_artifact_refs=")
+        for item in second_result.recovered_context
+    )
     assert second_result.deliberative_plan.recommended_task_type == "produce_analysis_brief"
     assert second_result.operation_result is None
     assert second_result.specialist_review is not None
@@ -926,7 +965,8 @@ def test_orchestrator_service_recovers_mission_continuity_across_instances() -> 
         event for event in second_result.events if event.event_name == "continuity_replay_loaded"
     )
     assert replay_event.payload["replay_status"] == "resumable"
-    assert replay_event.payload["recovery_mode"] == "resume_active_mission"
+    assert replay_event.payload["recovery_mode"] == "resume_operational_checkpoint"
+    assert replay_event.payload["ecosystem_state_status"] == "operational_state_attached"
 
 
 def test_orchestrator_service_surfaces_related_mission_candidate_in_same_session() -> None:

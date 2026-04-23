@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## 2026-04-23
+
+### MB-098 fechou continuidade bounded do estado operacional
+
+- `services/memory-service`, `shared/memory_registry.py` e `services/memory-service/src/memory_service/repository.py` agora persistem `ecosystem_state_status`, `active_work_items`, `active_artifact_refs`, `open_checkpoint_refs` e `surface_presence` em `mission_state`, `session_continuity`, `continuity_checkpoint` e `continuity_replay`;
+- `services/memory-service` agora usa esse slice para recovery e retomada bounded, priorizando checkpoint operacional, work item ativo ou artefato vivo sem abrir memoria temporal rica fora de fase;
+- `services/orchestrator-service` agora injeta `operation_dispatch` e `operation_result` no `memory-service`, e passou a refletir esse estado em `memory_recorded`, `continuity_replay_loaded`, `continuity_subflow_completed` e `mission_runtime_state_declared`;
+- `docs/implementation/execution-backlog.md`, `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para marcar `MB-098` como concluido e `MB-099` como o item `ready` atual da fila micro.
+
+### MB-097 fechado no contrato minimo de estado operacional
+
+- `shared/contracts`, `shared/schemas` e `shared/events` agora formalizam `ecosystem_state_status`, `active_work_items`, `active_artifact_refs`, `open_checkpoint_refs` e `surface_presence` como gramatica minima de estado operacional do ecossistema;
+- `services/orchestrator-service` agora deriva esse estado a partir de missao, workflow, checkpoints e superficie ativa, propagando o payload por `workflow_composed`, `ecosystem_state_declared`, `operation_dispatched`, `operation_completed` e `workflow_completed`;
+- `services/operational-service` agora materializa o estado operacional no artefato produzido e no `OperationResultContract`, incluindo refs de artefatos gerados e checkpoints ainda abertos;
+- `docs/implementation/execution-backlog.md`, `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para marcar `MB-097` como concluido e `MB-098` como o item `ready` atual da fila micro.
+
 ## 2026-04-22
 
 ### Repriorizacao explicita da ponte `v2 -> v3` para estado operacional do ecossistema

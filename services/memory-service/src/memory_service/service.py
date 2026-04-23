@@ -22,12 +22,15 @@ from shared.contracts import (
     ContinuityPauseContract,
     ContinuityReplayContract,
     DeliberativePlanContract,
+    EcosystemOperationalStateContract,
     InputContract,
     MemoryRecordContract,
     MemoryRecoveryContract,
     MissionContinuityCandidateContract,
     MissionContinuityContextContract,
     MissionStateContract,
+    OperationDispatchContract,
+    OperationResultContract,
     SpecialistContributionContract,
     SpecialistSharedMemoryContextContract,
     UserScopeContextContract,
@@ -42,6 +45,7 @@ from shared.memory_registry import (
     SHARED_MEMORY_CLASSES,
     context_window_policy,
     default_priority_rules,
+    ecosystem_continuity_policy,
     guided_memory_decision,
     memory_corpus_telemetry,
     memory_lifecycle_runtime_policy,
@@ -161,6 +165,8 @@ class MemoryService:
         deliberative_plan: DeliberativePlanContract | None = None,
         specialist_contributions: list[SpecialistContributionContract] | None = None,
         governance_decision: PermissionDecision | None = None,
+        operation_dispatch: OperationDispatchContract | None = None,
+        operation_result: OperationResultContract | None = None,
     ) -> MemoryRecordResult:
         """Persist a minimal episodic entry and refresh contextual continuity."""
 
@@ -169,6 +175,11 @@ class MemoryService:
             PermissionDecision.BLOCK,
             PermissionDecision.DEFER_FOR_VALIDATION,
         }
+        ecosystem_state = self._resolve_ecosystem_state(
+            contract,
+            operation_dispatch=operation_dispatch,
+            operation_result=operation_result,
+        )
         open_loops = self._extract_open_loops(deliberative_plan, specialist_contributions)
         decision_frame = self._decision_frame(deliberative_plan)
         dominant_goal = deliberative_plan.goal if deliberative_plan else contract.content
@@ -211,6 +222,24 @@ class MemoryService:
                 "specialist_types": [
                     contribution.specialist_type for contribution in specialist_contributions
                 ],
+                "ecosystem_state_status": (
+                    ecosystem_state.ecosystem_state_status if ecosystem_state else None
+                ),
+                "active_work_items": (
+                    list(ecosystem_state.active_work_items) if ecosystem_state else []
+                ),
+                "active_artifact_refs": (
+                    list(ecosystem_state.active_artifact_refs) if ecosystem_state else []
+                ),
+                "open_checkpoint_refs": (
+                    list(ecosystem_state.open_checkpoint_refs) if ecosystem_state else []
+                ),
+                "surface_presence": (
+                    list(ecosystem_state.surface_presence) if ecosystem_state else []
+                ),
+                "ecosystem_state_summary": (
+                    ecosystem_state.state_summary if ecosystem_state else None
+                ),
             },
             timestamp=self.now(),
             session_id=contract.session_id,
@@ -240,6 +269,7 @@ class MemoryService:
             contract,
             deliberative_plan=deliberative_plan,
             governance_decision=governance_decision,
+            ecosystem_state=ecosystem_state,
         )
         if continuity_snapshot is not None:
             self.repository.upsert_session_continuity(continuity_snapshot)
@@ -249,6 +279,7 @@ class MemoryService:
                     deliberative_plan=deliberative_plan,
                     governance_decision=governance_decision,
                     continuity_snapshot=continuity_snapshot,
+                    ecosystem_state=ecosystem_state,
                 )
             )
         if contract.mission_id:
@@ -260,6 +291,7 @@ class MemoryService:
                 open_loops=open_loops,
                 decision_frame=decision_frame,
                 governance_decision=governance_decision,
+                ecosystem_state=ecosystem_state,
             )
             if mission_state is not None:
                 self.repository.upsert_mission_state(mission_state)
@@ -406,6 +438,12 @@ class MemoryService:
                 checkpoint.replay_summary,
                 resolution,
             ),
+            ecosystem_state_status=checkpoint.ecosystem_state_status,
+            active_work_items=list(checkpoint.active_work_items),
+            active_artifact_refs=list(checkpoint.active_artifact_refs),
+            open_checkpoint_refs=list(checkpoint.open_checkpoint_refs),
+            surface_presence=list(checkpoint.surface_presence),
+            ecosystem_state_summary=checkpoint.ecosystem_state_summary,
         )
         self.repository.upsert_continuity_checkpoint(updated_checkpoint)
         replay = self.get_session_continuity_replay(session_id)
@@ -536,6 +574,72 @@ class MemoryService:
             context.specialist_type = canonical
         return context
 
+    def _resolve_ecosystem_state(
+        self,
+        contract: InputContract,
+        *,
+        operation_dispatch: OperationDispatchContract | None,
+        operation_result: OperationResultContract | None,
+    ) -> EcosystemOperationalStateContract | None:
+        if operation_dispatch is None and operation_result is None:
+            return None
+        active_work_items = self._merge_unique_strings(
+            operation_result.active_work_items if operation_result else [],
+            operation_dispatch.active_work_items if operation_dispatch else [],
+        )
+        active_artifact_refs = self._merge_unique_strings(
+            operation_result.active_artifact_refs if operation_result else [],
+            operation_dispatch.active_artifact_refs if operation_dispatch else [],
+        )
+        open_checkpoint_refs = self._merge_unique_strings(
+            operation_result.open_checkpoint_refs if operation_result else [],
+            operation_dispatch.open_checkpoint_refs if operation_dispatch else [],
+        )
+        surface_presence = self._merge_unique_strings(
+            operation_result.surface_presence if operation_result else [],
+            operation_dispatch.surface_presence if operation_dispatch else [],
+        )
+        if not surface_presence:
+            surface_presence = [
+                f"surface:{contract.channel.value}",
+                f"session:{contract.session_id}",
+            ]
+            if contract.mission_id:
+                surface_presence.append(f"mission:{contract.mission_id}")
+        policy = ecosystem_continuity_policy(
+            ecosystem_state_status=(
+                operation_result.ecosystem_state_status
+                if operation_result and operation_result.ecosystem_state_status is not None
+                else operation_dispatch.ecosystem_state_status if operation_dispatch else None
+            ),
+            active_work_items=active_work_items,
+            active_artifact_refs=active_artifact_refs,
+            open_checkpoint_refs=open_checkpoint_refs,
+            surface_presence=surface_presence,
+        )
+        if not policy.should_persist:
+            return None
+        summary = (
+            operation_result.ecosystem_state_summary
+            if operation_result and operation_result.ecosystem_state_summary is not None
+            else operation_dispatch.ecosystem_state_summary
+            if operation_dispatch and operation_dispatch.ecosystem_state_summary is not None
+            else self._ecosystem_state_summary(
+                active_work_items=active_work_items,
+                active_artifact_refs=active_artifact_refs,
+                open_checkpoint_refs=open_checkpoint_refs,
+                surface_presence=surface_presence,
+            )
+        )
+        return EcosystemOperationalStateContract(
+            ecosystem_state_status=policy.ecosystem_state_status,
+            active_work_items=active_work_items,
+            active_artifact_refs=active_artifact_refs,
+            open_checkpoint_refs=open_checkpoint_refs,
+            surface_presence=surface_presence,
+            state_summary=summary,
+        )
+
     def _compose_recovered_items(
         self,
         contract: InputContract,
@@ -611,6 +715,36 @@ class MemoryService:
                 f"session_continuity_brief={session_continuity.continuity_brief}"
             )
             continuity_hints.append(f"session_continuity_mode={session_continuity.continuity_mode}")
+            if session_continuity.ecosystem_state_status:
+                continuity_hints.append(
+                    "ecosystem_state_status="
+                    f"{session_continuity.ecosystem_state_status}"
+                )
+            if session_continuity.ecosystem_state_summary:
+                continuity_hints.append(
+                    "ecosystem_state_summary="
+                    f"{session_continuity.ecosystem_state_summary}"
+                )
+            if session_continuity.active_work_items:
+                continuity_hints.append(
+                    "ecosystem_active_work_items="
+                    f"{';'.join(session_continuity.active_work_items[:3])}"
+                )
+            if session_continuity.active_artifact_refs:
+                continuity_hints.append(
+                    "ecosystem_active_artifact_refs="
+                    f"{';'.join(session_continuity.active_artifact_refs[:3])}"
+                )
+            if session_continuity.open_checkpoint_refs:
+                continuity_hints.append(
+                    "ecosystem_open_checkpoint_refs="
+                    f"{';'.join(session_continuity.open_checkpoint_refs[:3])}"
+                )
+            if session_continuity.surface_presence:
+                continuity_hints.append(
+                    "ecosystem_surface_presence="
+                    f"{';'.join(session_continuity.surface_presence[:3])}"
+                )
             if session_continuity.anchor_mission_id:
                 continuity_hints.append(
                     f"session_anchor_mission_id={session_continuity.anchor_mission_id}"
@@ -647,11 +781,21 @@ class MemoryService:
                 continuity_hints.append(
                     f"continuity_replay_summary={continuity_checkpoint.replay_summary}"
                 )
+            if continuity_checkpoint.open_checkpoint_refs:
+                continuity_hints.append(
+                    "continuity_open_checkpoint_refs="
+                    f"{';'.join(continuity_checkpoint.open_checkpoint_refs[:3])}"
+                )
         continuity_replay = self.get_session_continuity_replay(str(contract.session_id))
         if continuity_replay:
             continuity_hints.append(f"continuity_replay_status={continuity_replay.replay_status}")
             continuity_hints.append(f"continuity_recovery_mode={continuity_replay.recovery_mode}")
             continuity_hints.append(f"continuity_resume_point={continuity_replay.resume_point}")
+            if continuity_replay.ecosystem_state_status:
+                continuity_hints.append(
+                    "continuity_ecosystem_state_status="
+                    f"{continuity_replay.ecosystem_state_status}"
+                )
         continuity_pause = self.get_session_continuity_pause(str(contract.session_id))
         if continuity_pause:
             continuity_hints.append(f"continuity_pause_status={continuity_pause.pause_status}")
@@ -674,6 +818,29 @@ class MemoryService:
                     )
                 if mission_state.last_decision_frame:
                     mission_hints.append(f"last_decision_frame={mission_state.last_decision_frame}")
+                if mission_state.ecosystem_state_status:
+                    mission_hints.append(
+                        f"mission_ecosystem_state_status={mission_state.ecosystem_state_status}"
+                    )
+                if mission_state.active_work_items:
+                    mission_hints.append(
+                        "mission_active_work_items="
+                        f"{';'.join(mission_state.active_work_items[:3])}"
+                    )
+                if mission_state.active_artifact_refs:
+                    mission_hints.append(
+                        "mission_active_artifact_refs="
+                        f"{';'.join(mission_state.active_artifact_refs[:3])}"
+                    )
+                if mission_state.open_checkpoint_refs:
+                    mission_hints.append(
+                        "mission_open_checkpoint_refs="
+                        f"{';'.join(mission_state.open_checkpoint_refs[:3])}"
+                    )
+                if mission_state.ecosystem_state_summary:
+                    mission_hints.append(
+                        f"mission_ecosystem_state_summary={mission_state.ecosystem_state_summary}"
+                    )
                 if mission_state.semantic_focus:
                     mission_hints.append(
                         f"mission_focus={','.join(mission_state.semantic_focus[:3])}"
@@ -827,6 +994,12 @@ class MemoryService:
                 "continuity_replay_status=",
                 "continuity_recovery_mode=",
                 "continuity_resume_point=",
+                "ecosystem_state_status=",
+                "ecosystem_state_summary=",
+                "ecosystem_active_work_items=",
+                "ecosystem_active_artifact_refs=",
+                "ecosystem_open_checkpoint_refs=",
+                "ecosystem_surface_presence=",
                 "session_anchor_goal=",
                 "continuity_pause_status=",
             ),
@@ -960,6 +1133,8 @@ class MemoryService:
             sources.append("session_continuity")
         if mission_state is not None:
             sources.append("active_mission")
+            if mission_state.ecosystem_state_status not in {None, "not_applicable"}:
+                sources.append("ecosystem_state")
         if continuity_context and continuity_context.related_candidates:
             sources.append("related_mission")
         return sources
@@ -994,6 +1169,15 @@ class MemoryService:
         elif mission_state is not None and mission_state.semantic_brief:
             fragments.append(
                 f"mission={cls._shorten_memory_hint(mission_state.semantic_brief)}"
+            )
+        if (
+            mission_state is not None
+            and mission_state.ecosystem_state_status not in {None, "not_applicable"}
+            and mission_state.ecosystem_state_summary
+        ):
+            fragments.append(
+                "ecosystem="
+                f"{cls._shorten_memory_hint(mission_state.ecosystem_state_summary)}"
             )
         if not fragments:
             return None
@@ -1575,6 +1759,7 @@ class MemoryService:
         *,
         deliberative_plan: DeliberativePlanContract | None,
         governance_decision: PermissionDecision | None,
+        ecosystem_state: EcosystemOperationalStateContract | None,
     ) -> SessionContinuitySnapshot | None:
         if deliberative_plan is None:
             return None
@@ -1617,6 +1802,22 @@ class MemoryService:
             anchor_goal=anchor_goal,
             related_mission_id=related_mission_id,
             related_goal=related_goal,
+            ecosystem_state_status=(
+                ecosystem_state.ecosystem_state_status if ecosystem_state else None
+            ),
+            active_work_items=(
+                list(ecosystem_state.active_work_items) if ecosystem_state else []
+            ),
+            active_artifact_refs=(
+                list(ecosystem_state.active_artifact_refs) if ecosystem_state else []
+            ),
+            open_checkpoint_refs=(
+                list(ecosystem_state.open_checkpoint_refs) if ecosystem_state else []
+            ),
+            surface_presence=(
+                list(ecosystem_state.surface_presence) if ecosystem_state else []
+            ),
+            ecosystem_state_summary=(ecosystem_state.state_summary if ecosystem_state else None),
             updated_at=self.now(),
         )
 
@@ -1630,6 +1831,7 @@ class MemoryService:
         open_loops: list[str],
         decision_frame: str,
         governance_decision: PermissionDecision | None,
+        ecosystem_state: EcosystemOperationalStateContract | None,
     ) -> tuple[MissionStateContract | None, dict[str, object] | None]:
         mission_id = str(contract.mission_id)
         previous = self.repository.fetch_mission_state(mission_id)
@@ -1650,6 +1852,10 @@ class MemoryService:
         related_memories.append(str(memory_record_id))
         if accepted:
             active_tasks.append(intent)
+            if ecosystem_state:
+                for item in ecosystem_state.active_work_items:
+                    if item not in active_tasks:
+                        active_tasks.append(item)
             if deliberative_plan:
                 recent_plan_steps = list(deliberative_plan.steps[-3:])
                 for domain in deliberative_plan.active_domains:
@@ -1711,6 +1917,36 @@ class MemoryService:
             identity_continuity_brief=identity_continuity_brief,
             open_loops=persisted_open_loops,
             last_decision_frame=persisted_frame,
+            ecosystem_state_status=(
+                ecosystem_state.ecosystem_state_status
+                if ecosystem_state
+                else (previous.ecosystem_state_status if previous else None)
+            ),
+            active_work_items=(
+                list(ecosystem_state.active_work_items)
+                if ecosystem_state
+                else (list(previous.active_work_items) if previous else [])
+            ),
+            active_artifact_refs=(
+                list(ecosystem_state.active_artifact_refs)
+                if ecosystem_state
+                else (list(previous.active_artifact_refs) if previous else [])
+            ),
+            open_checkpoint_refs=(
+                list(ecosystem_state.open_checkpoint_refs)
+                if ecosystem_state
+                else (list(previous.open_checkpoint_refs) if previous else [])
+            ),
+            surface_presence=(
+                list(ecosystem_state.surface_presence)
+                if ecosystem_state
+                else (list(previous.surface_presence) if previous else [])
+            ),
+            ecosystem_state_summary=(
+                ecosystem_state.state_summary
+                if ecosystem_state
+                else (previous.ecosystem_state_summary if previous else None)
+            ),
             owner_context=contract.user_id or str(contract.session_id),
             updated_at=self.now(),
         )
@@ -1890,6 +2126,7 @@ class MemoryService:
         deliberative_plan: DeliberativePlanContract,
         governance_decision: PermissionDecision | None,
         continuity_snapshot: SessionContinuitySnapshot,
+        ecosystem_state: EcosystemOperationalStateContract | None,
     ) -> StoredContinuityCheckpoint:
         continuity_action = deliberative_plan.continuity_action or "continuar"
         checkpoint_status = self._continuity_checkpoint_status(
@@ -1917,6 +2154,22 @@ class MemoryService:
                 continuity_snapshot=continuity_snapshot,
                 checkpoint_status=checkpoint_status,
             ),
+            ecosystem_state_status=(
+                ecosystem_state.ecosystem_state_status if ecosystem_state else None
+            ),
+            active_work_items=(
+                list(ecosystem_state.active_work_items) if ecosystem_state else []
+            ),
+            active_artifact_refs=(
+                list(ecosystem_state.active_artifact_refs) if ecosystem_state else []
+            ),
+            open_checkpoint_refs=(
+                list(ecosystem_state.open_checkpoint_refs) if ecosystem_state else []
+            ),
+            surface_presence=(
+                list(ecosystem_state.surface_presence) if ecosystem_state else []
+            ),
+            ecosystem_state_summary=(ecosystem_state.state_summary if ecosystem_state else None),
             updated_at=self.now(),
         )
 
@@ -1927,17 +2180,42 @@ class MemoryService:
         continuity_snapshot: SessionContinuitySnapshot | None,
         mission_state: MissionStateContract | None,
     ) -> ContinuityReplayContract:
+        ecosystem_policy = ecosystem_continuity_policy(
+            ecosystem_state_status=checkpoint.ecosystem_state_status,
+            active_work_items=checkpoint.active_work_items,
+            active_artifact_refs=checkpoint.active_artifact_refs,
+            open_checkpoint_refs=checkpoint.open_checkpoint_refs,
+            surface_presence=checkpoint.surface_presence,
+        )
         replay_status = self._continuity_replay_status(checkpoint.checkpoint_status)
-        recovery_mode = self._continuity_recovery_mode(
+        base_recovery_mode = self._continuity_recovery_mode(
             continuity_action=checkpoint.continuity_action,
             target_mission_id=checkpoint.target_mission_id,
             checkpoint_status=checkpoint.checkpoint_status,
+        )
+        recovery_mode = (
+            ecosystem_policy.recovery_mode
+            if ecosystem_policy.should_persist
+            and checkpoint.checkpoint_status == "ready"
+            and ecosystem_policy.recovery_mode != "not_applicable"
+            else base_recovery_mode
         )
         resume_point = self._continuity_resume_point(
             checkpoint=checkpoint,
             continuity_snapshot=continuity_snapshot,
             mission_state=mission_state,
         )
+        ecosystem_resume_point = self._ecosystem_resume_point(
+            active_work_items=checkpoint.active_work_items,
+            active_artifact_refs=checkpoint.active_artifact_refs,
+            open_checkpoint_refs=checkpoint.open_checkpoint_refs,
+        )
+        if (
+            ecosystem_policy.should_persist
+            and checkpoint.checkpoint_status == "ready"
+            and ecosystem_resume_point is not None
+        ):
+            resume_point = ecosystem_resume_point
         return ContinuityReplayContract(
             checkpoint_id=checkpoint.checkpoint_id,
             session_id=SessionId(checkpoint.session_id),
@@ -1954,6 +2232,12 @@ class MemoryService:
             target_goal=checkpoint.target_goal,
             origin_request_id=self._request_id_or_none(checkpoint.origin_request_id),
             replay_summary=checkpoint.replay_summary,
+            ecosystem_state_status=checkpoint.ecosystem_state_status,
+            active_work_items=list(checkpoint.active_work_items),
+            active_artifact_refs=list(checkpoint.active_artifact_refs),
+            open_checkpoint_refs=list(checkpoint.open_checkpoint_refs),
+            surface_presence=list(checkpoint.surface_presence),
+            ecosystem_state_summary=checkpoint.ecosystem_state_summary,
             requires_manual_resume=replay_status != "resumable",
         )
 
@@ -2304,11 +2588,16 @@ class MemoryService:
     ) -> str:
         target_goal = plan.continuity_target_goal or continuity_snapshot.anchor_goal or plan.goal
         source = plan.continuity_source or "active_mission"
-        return (
+        summary = (
             f"request={contract.request_id}; status={checkpoint_status}; "
             f"acao={plan.continuity_action or 'continuar'}; "
             f"fonte={source}; alvo={target_goal}"
         )
+        if continuity_snapshot.ecosystem_state_summary:
+            summary = (
+                f"{summary}; ecosystem={continuity_snapshot.ecosystem_state_summary}"
+            )
+        return summary
 
     @staticmethod
     def _continuity_replay_status(checkpoint_status: str) -> str:
@@ -2377,8 +2666,47 @@ class MemoryService:
         )
 
     @staticmethod
+    def _ecosystem_resume_point(
+        *,
+        active_work_items: list[str],
+        active_artifact_refs: list[str],
+        open_checkpoint_refs: list[str],
+    ) -> str | None:
+        if open_checkpoint_refs:
+            return f"ecosystem_checkpoint:{open_checkpoint_refs[0]}"
+        if active_work_items:
+            return f"ecosystem_work_item:{active_work_items[0]}"
+        if active_artifact_refs:
+            return f"ecosystem_artifact:{active_artifact_refs[0]}"
+        return None
+
+    @staticmethod
     def _request_id_or_none(value: str | None) -> RequestId | None:
         return RequestId(value) if value else None
+
+    @staticmethod
+    def _merge_unique_strings(*groups: list[str]) -> list[str]:
+        merged: list[str] = []
+        for group in groups:
+            for item in group:
+                if item and item not in merged:
+                    merged.append(item)
+        return merged
+
+    @staticmethod
+    def _ecosystem_state_summary(
+        *,
+        active_work_items: list[str],
+        active_artifact_refs: list[str],
+        open_checkpoint_refs: list[str],
+        surface_presence: list[str],
+    ) -> str:
+        return (
+            f"work_items={len(active_work_items)}; "
+            f"artifacts={len(active_artifact_refs)}; "
+            f"open_checkpoints={len(open_checkpoint_refs)}; "
+            f"surfaces={len(surface_presence)}"
+        )
 
     @staticmethod
     def _extract_open_loops(
