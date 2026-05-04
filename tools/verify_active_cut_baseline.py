@@ -59,6 +59,13 @@ class ActiveCutBaselineSummary:
     specialist_subflow_ready_scenarios: int
     mission_runtime_state_target_scenarios: int
     mission_runtime_state_ready_scenarios: int
+    ecosystem_operational_target_scenarios: int
+    ecosystem_operational_attached_scenarios: int
+    ecosystem_operational_partial_scenarios: int
+    ecosystem_active_work_item_scenarios: int
+    ecosystem_active_artifact_scenarios: int
+    ecosystem_open_checkpoint_scenarios: int
+    ecosystem_surface_presence_scenarios: int
     expanded_eval_target_scenarios: int
     expanded_eval_ready_scenarios: int
     optimization_target_scenarios: int
@@ -170,6 +177,17 @@ def _build_targeted_pilot_summary(
             or item.promotion_readiness != "not_applicable"
         )
     ]
+    ecosystem_operational_targets = [
+        item
+        for item in pilot_results
+        if (
+            item.operational_ecosystem_state_status != "not_applicable"
+            or item.active_work_items
+            or item.active_artifact_refs
+            or item.open_checkpoint_refs
+            or item.surface_presence
+        )
+    ]
     optimization_targets = [
         item
         for item in pilot_results
@@ -265,6 +283,33 @@ def _build_targeted_pilot_summary(
                 1
                 for item in mission_runtime_state_targets
                 if item.mission_runtime_state_status == "healthy"
+            ),
+            "ecosystem_operational_target_scenarios": len(
+                ecosystem_operational_targets
+            ),
+            "ecosystem_operational_attached_scenarios": sum(
+                1
+                for item in ecosystem_operational_targets
+                if item.operational_ecosystem_state_status
+                == "operational_state_attached"
+            ),
+            "ecosystem_operational_partial_scenarios": sum(
+                1
+                for item in ecosystem_operational_targets
+                if item.operational_ecosystem_state_status
+                == "partial_operational_state"
+            ),
+            "ecosystem_active_work_item_scenarios": sum(
+                1 for item in ecosystem_operational_targets if item.active_work_items
+            ),
+            "ecosystem_active_artifact_scenarios": sum(
+                1 for item in ecosystem_operational_targets if item.active_artifact_refs
+            ),
+            "ecosystem_open_checkpoint_scenarios": sum(
+                1 for item in ecosystem_operational_targets if item.open_checkpoint_refs
+            ),
+            "ecosystem_surface_presence_scenarios": sum(
+                1 for item in ecosystem_operational_targets if item.surface_presence
             ),
             "expanded_eval_target_scenarios": len(expanded_eval_targets),
             "expanded_eval_ready_scenarios": sum(
@@ -463,6 +508,27 @@ def build_payload(
         mission_runtime_state_ready_scenarios=int(
             pilot_summary["mission_runtime_state_ready_scenarios"]
         ),
+        ecosystem_operational_target_scenarios=int(
+            pilot_summary["ecosystem_operational_target_scenarios"]
+        ),
+        ecosystem_operational_attached_scenarios=int(
+            pilot_summary["ecosystem_operational_attached_scenarios"]
+        ),
+        ecosystem_operational_partial_scenarios=int(
+            pilot_summary["ecosystem_operational_partial_scenarios"]
+        ),
+        ecosystem_active_work_item_scenarios=int(
+            pilot_summary["ecosystem_active_work_item_scenarios"]
+        ),
+        ecosystem_active_artifact_scenarios=int(
+            pilot_summary["ecosystem_active_artifact_scenarios"]
+        ),
+        ecosystem_open_checkpoint_scenarios=int(
+            pilot_summary["ecosystem_open_checkpoint_scenarios"]
+        ),
+        ecosystem_surface_presence_scenarios=int(
+            pilot_summary["ecosystem_surface_presence_scenarios"]
+        ),
         expanded_eval_target_scenarios=int(
             pilot_summary["expanded_eval_target_scenarios"]
         ),
@@ -508,6 +574,10 @@ def build_payload(
         or summary.cognitive_recomposition_ready_scenarios == 0
         or summary.specialist_subflow_ready_scenarios == 0
         or summary.mission_runtime_state_ready_scenarios == 0
+        or (
+            summary.ecosystem_operational_target_scenarios > 0
+            and summary.ecosystem_surface_presence_scenarios == 0
+        )
         or (
             summary.expanded_eval_target_scenarios > 0
             and summary.expanded_eval_ready_scenarios == 0
@@ -556,6 +626,10 @@ def build_payload(
             (
                 "o baseline ativo precisa manter pelo menos um cenario deliberado "
                 "de subfluxo explicito de especialistas e um de mission runtime state"
+            ),
+            (
+                "quando houver estado operacional de ecossistema, o baseline precisa "
+                "expor status bruto, work items, artefatos, checkpoints e superficies"
             ),
             (
                 "quando houver eval expandida ou candidato de Onda 2 no piloto, "
@@ -628,6 +702,19 @@ def render_text(payload: dict[str, object]) -> str:
                 "mission_runtime_state_ready="
                 f"{summary['mission_runtime_state_ready_scenarios']}/"
                 f"{summary['mission_runtime_state_target_scenarios']} "
+                "ecosystem_operational_attached="
+                f"{summary['ecosystem_operational_attached_scenarios']}/"
+                f"{summary['ecosystem_operational_target_scenarios']} "
+                "ecosystem_operational_partial="
+                f"{summary['ecosystem_operational_partial_scenarios']} "
+                "ecosystem_work_items="
+                f"{summary['ecosystem_active_work_item_scenarios']} "
+                "ecosystem_artifacts="
+                f"{summary['ecosystem_active_artifact_scenarios']} "
+                "ecosystem_checkpoints="
+                f"{summary['ecosystem_open_checkpoint_scenarios']} "
+                "ecosystem_surfaces="
+                f"{summary['ecosystem_surface_presence_scenarios']} "
                 "expanded_eval_ready="
                 f"{summary['expanded_eval_ready_scenarios']}/"
                 f"{summary['expanded_eval_target_scenarios']} "
@@ -748,6 +835,22 @@ def render_markdown(payload: dict[str, object]) -> str:
             "- mission runtime state scenarios ready: "
             f"`{summary['mission_runtime_state_ready_scenarios']}`/"
             f"`{summary['mission_runtime_state_target_scenarios']}`"
+        ),
+        (
+            "- ecosystem operational state attached: "
+            f"`{summary['ecosystem_operational_attached_scenarios']}`/"
+            f"`{summary['ecosystem_operational_target_scenarios']}`"
+        ),
+        (
+            "- ecosystem operational state partial: "
+            f"`{summary['ecosystem_operational_partial_scenarios']}`"
+        ),
+        (
+            "- ecosystem state coverage: "
+            f"work_items=`{summary['ecosystem_active_work_item_scenarios']}`, "
+            f"artifacts=`{summary['ecosystem_active_artifact_scenarios']}`, "
+            f"checkpoints=`{summary['ecosystem_open_checkpoint_scenarios']}`, "
+            f"surfaces=`{summary['ecosystem_surface_presence_scenarios']}`"
         ),
         (
             "- cognitive recomposition scenarios ready: "

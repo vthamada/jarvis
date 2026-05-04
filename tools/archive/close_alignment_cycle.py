@@ -94,6 +94,10 @@ class CycleEvidenceSummary:
     candidate_cognitive_recomposition_coherent_rate: float
     baseline_expanded_eval_readiness: str
     candidate_expanded_eval_readiness: str
+    baseline_operational_ecosystem_state_readiness: str
+    candidate_operational_ecosystem_state_readiness: str
+    baseline_operational_ecosystem_attached_rate: float
+    candidate_operational_ecosystem_attached_rate: float
     baseline_wave2_lane_health: str
     candidate_wave2_lane_health: str
     baseline_experiment_release_status: str
@@ -683,6 +687,36 @@ def evidence_summary(
             summary_key="candidate_expanded_eval_readiness",
             scenario_key="candidate_expanded_eval_assessment",
         ),
+        baseline_operational_ecosystem_state_readiness=(
+            _comparison_label_from_scenarios(
+                comparison_payload,
+                comparison_summary,
+                summary_key="baseline_operational_ecosystem_state_readiness",
+                scenario_key="baseline_operational_ecosystem_state_assessment",
+            )
+        ),
+        candidate_operational_ecosystem_state_readiness=(
+            _comparison_label_from_scenarios(
+                comparison_payload,
+                comparison_summary,
+                summary_key="candidate_operational_ecosystem_state_readiness",
+                scenario_key="candidate_operational_ecosystem_state_assessment",
+            )
+        ),
+        baseline_operational_ecosystem_attached_rate=_comparison_rate(
+            comparison_payload,
+            comparison_summary,
+            summary_key="baseline_operational_ecosystem_attached_rate",
+            scenario_key="baseline_operational_ecosystem_state_assessment",
+            target="operational_state_attached",
+        ),
+        candidate_operational_ecosystem_attached_rate=_comparison_rate(
+            comparison_payload,
+            comparison_summary,
+            summary_key="candidate_operational_ecosystem_attached_rate",
+            scenario_key="candidate_operational_ecosystem_state_assessment",
+            target="operational_state_attached",
+        ),
         baseline_wave2_lane_health=_comparison_label_from_scenarios(
             comparison_payload,
             comparison_summary,
@@ -892,6 +926,12 @@ def render_text(payload: dict[str, object]) -> str:
             "expanded_eval="
             f"baseline_readiness={evidence['baseline_expanded_eval_readiness']} "
             f"candidate_readiness={evidence['candidate_expanded_eval_readiness']} "
+            "baseline_operational_state="
+            f"{evidence.get('baseline_operational_ecosystem_state_readiness', 'not_applicable')} "
+            "candidate_operational_state="
+            f"{evidence.get('candidate_operational_ecosystem_state_readiness', 'not_applicable')} "
+            "candidate_operational_attached_rate="
+            f"{evidence.get('candidate_operational_ecosystem_attached_rate', 0.0)} "
             f"baseline_lane={evidence['baseline_wave2_lane_health']} "
             f"candidate_lane={evidence['candidate_wave2_lane_health']}"
         ),
@@ -1055,6 +1095,18 @@ def render_markdown(payload: dict[str, object]) -> str:
         (
             "- candidate expanded eval readiness: "
             f"`{evidence['candidate_expanded_eval_readiness']}`"
+        ),
+        (
+            "- baseline operational ecosystem state readiness: "
+            f"`{evidence.get('baseline_operational_ecosystem_state_readiness', 'not_applicable')}`"
+        ),
+        (
+            "- candidate operational ecosystem state readiness: "
+            f"`{evidence.get('candidate_operational_ecosystem_state_readiness', 'not_applicable')}`"
+        ),
+        (
+            "- candidate operational ecosystem attached rate: "
+            f"`{evidence.get('candidate_operational_ecosystem_attached_rate', 0.0)}`"
         ),
         (
             "- baseline wave2 lane health: "

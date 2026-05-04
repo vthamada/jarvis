@@ -97,6 +97,11 @@ class FlowAudit:
     expanded_eval_status: str
     surface_axis_status: str
     ecosystem_state_status: str
+    operational_ecosystem_state_status: str
+    active_work_items: list[str]
+    active_artifact_refs: list[str]
+    open_checkpoint_refs: list[str]
+    surface_presence: list[str]
     experiment_lane_status: str
     wave2_candidate_class: str
     experiment_entry_status: str
@@ -404,6 +409,11 @@ class ObservabilityService:
                 expanded_eval_status="attention_required",
                 surface_axis_status="attention_required",
                 ecosystem_state_status="attention_required",
+                operational_ecosystem_state_status="not_applicable",
+                active_work_items=[],
+                active_artifact_refs=[],
+                open_checkpoint_refs=[],
+                surface_presence=[],
                 experiment_lane_status="attention_required",
                 wave2_candidate_class="baseline_hardening",
                 experiment_entry_status="blocked_by_drift",
@@ -1631,6 +1641,20 @@ class ObservabilityService:
             specialist_subflow_status=specialist_subflow_status,
             mission_runtime_state_status=mission_runtime_state_status,
         )
+        ecosystem_state_source_event = self._first_payload_event(
+            events,
+            "ecosystem_state_status",
+        )
+        operational_ecosystem_state_status = (
+            str(ecosystem_state_source_event.payload.get("ecosystem_state_status"))
+            if ecosystem_state_source_event is not None
+            and ecosystem_state_source_event.payload.get("ecosystem_state_status") is not None
+            else "not_applicable"
+        )
+        active_work_items = self._dedupe_payload_list(events, "active_work_items")
+        active_artifact_refs = self._dedupe_payload_list(events, "active_artifact_refs")
+        open_checkpoint_refs = self._dedupe_payload_list(events, "open_checkpoint_refs")
+        surface_presence = self._dedupe_payload_list(events, "surface_presence")
 
         return FlowAudit(
             request_id=first_event.request_id,
@@ -1689,6 +1713,11 @@ class ObservabilityService:
             expanded_eval_status=expanded_eval_state["expanded_eval_status"],
             surface_axis_status=expanded_eval_state["surface_axis_status"],
             ecosystem_state_status=expanded_eval_state["ecosystem_state_status"],
+            operational_ecosystem_state_status=operational_ecosystem_state_status,
+            active_work_items=active_work_items,
+            active_artifact_refs=active_artifact_refs,
+            open_checkpoint_refs=open_checkpoint_refs,
+            surface_presence=surface_presence,
             experiment_lane_status=expanded_eval_state["experiment_lane_status"],
             wave2_candidate_class=expanded_eval_state["wave2_candidate_class"],
             experiment_entry_status=expanded_eval_state["experiment_entry_status"],
@@ -1924,6 +1953,32 @@ class ObservabilityService:
             if event.event_name == event_name:
                 return event
         return None
+
+    @staticmethod
+    def _first_payload_event(
+        events: list[InternalEventEnvelope],
+        field_name: str,
+    ) -> InternalEventEnvelope | None:
+        for event in events:
+            if event.payload.get(field_name) not in {None, ""}:
+                return event
+        return None
+
+    @staticmethod
+    def _dedupe_payload_list(
+        events: list[InternalEventEnvelope],
+        field_name: str,
+    ) -> list[str]:
+        values: list[str] = []
+        for event in events:
+            payload_value = event.payload.get(field_name, [])
+            if not isinstance(payload_value, list):
+                continue
+            for item in payload_value:
+                text = str(item).strip()
+                if text and text not in values:
+                    values.append(text)
+        return values
 
     @staticmethod
     def _continuity_trace_status(

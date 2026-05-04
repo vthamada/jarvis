@@ -180,6 +180,11 @@ def _make_result(  # type: ignore[no-untyped-def]
         missing_required_events=[],
         total_events=12,
         duration_seconds=2.0,
+        operational_ecosystem_state_status="operational_state_attached",
+        active_work_items=["workflow_step:review active ecosystem state"],
+        active_artifact_refs=["artifact://procedural/analysis/structured_analysis_workflow/v1"],
+        open_checkpoint_refs=["workflow_checkpoint:operator_review:pending"],
+        surface_presence=["surface:chat", "workflow:structured_analysis_workflow"],
         active_domains=["analysis"],
         specialist_hints=["structured_analysis_specialist"],
         response_preview="preview",
@@ -230,6 +235,11 @@ def _make_pilot_trace_summary() -> Any:
         expanded_eval_status="attention_required",
         surface_axis_status="attention_required",
         ecosystem_state_status="attention_required",
+        operational_ecosystem_state_status="partial_operational_state",
+        active_work_items=["workflow_step:review active ecosystem state"],
+        active_artifact_refs=[],
+        open_checkpoint_refs=["workflow_checkpoint:operator_review:pending"],
+        surface_presence=["surface:chat", "workflow:structured_analysis_workflow"],
         experiment_lane_status="attention_required",
         wave2_candidate_class="baseline_hardening",
         experiment_entry_status="blocked_by_drift",
@@ -402,6 +412,10 @@ def _make_closure_payload() -> dict[str, object]:
         "candidate_cognitive_recomposition_coherent_rate": 0.5,
         "baseline_expanded_eval_readiness": "baseline_only",
         "candidate_expanded_eval_readiness": "attention_required",
+        "baseline_operational_ecosystem_state_readiness": "operational_state_attached",
+        "candidate_operational_ecosystem_state_readiness": "operational_state_attached",
+        "baseline_operational_ecosystem_attached_rate": 1.0,
+        "candidate_operational_ecosystem_attached_rate": 1.0,
         "baseline_wave2_lane_health": "baseline_only",
         "candidate_wave2_lane_health": "attention_required",
         "baseline_experiment_release_status": "hold_baseline",
@@ -718,6 +732,26 @@ def main() -> None:
         "Comparison text lost the expanded eval release line.",
     )
     _ensure(
+        "candidate_operational_ecosystem_state_status=operational_state_attached"
+        in comparison_text,
+        "Comparison text lost the operational ecosystem state status.",
+    )
+    _ensure(
+        "candidate_active_work_items=workflow_step:review active ecosystem state"
+        in comparison_text,
+        "Comparison text lost active ecosystem work item coverage.",
+    )
+    _ensure(
+        "candidate_open_checkpoint_refs=workflow_checkpoint:operator_review:pending"
+        in comparison_text,
+        "Comparison text lost open ecosystem checkpoint coverage.",
+    )
+    _ensure(
+        "candidate_surface_presence=surface:chat,workflow:structured_analysis_workflow"
+        in comparison_text,
+        "Comparison text lost ecosystem surface presence coverage.",
+    )
+    _ensure(
         "candidate_experiment_lane_status=" in comparison_text,
         "Comparison text lost the controlled experiment lane release line.",
     )
@@ -819,6 +853,19 @@ def main() -> None:
         "Pilot report text lost the expanded eval assessment.",
     )
     _ensure(
+        "operational_ecosystem_state_status=partial_operational_state" in pilot_text,
+        "Pilot report text lost the operational ecosystem state status.",
+    )
+    _ensure(
+        "active_work_items=workflow_step:review active ecosystem state" in pilot_text,
+        "Pilot report text lost active ecosystem work item coverage.",
+    )
+    _ensure(
+        "open_checkpoint_refs=workflow_checkpoint:operator_review:pending"
+        in pilot_text,
+        "Pilot report text lost open ecosystem checkpoint coverage.",
+    )
+    _ensure(
         "experiment_lane_status=attention_required" in pilot_text,
         "Pilot report text lost the controlled experiment lane assessment.",
     )
@@ -869,6 +916,14 @@ def main() -> None:
     _ensure(
         "candidate optimization release status" in sovereign_markdown,
         "Sovereign closure markdown lost the optimization release section.",
+    )
+    _ensure(
+        "candidate operational ecosystem state readiness" in alignment_markdown,
+        "Alignment closure markdown lost the operational ecosystem state section.",
+    )
+    _ensure(
+        "candidate operational ecosystem state readiness" in sovereign_markdown,
+        "Sovereign closure markdown lost the operational ecosystem state section.",
     )
 
     print("[verify-release-signal-baseline] release signal grammar is coherent")

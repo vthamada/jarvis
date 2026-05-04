@@ -88,12 +88,14 @@ Hierarquia correta:
 - o baseline do `v2` ja fechou os lotes `MB-067` a `MB-081`, cobrindo decisao
   soberana de capacidades, manutencao ativa de memoria viva e arbitragem
   declarativa `mente -> dominio -> especialista`;
-- a fila micro ja fechou `SG-006`, `EV-002` e `EV-004` como baseline
-  comparativo controlado, e o novo lote micro foi reaberto em cima de `EV-003`;
+- a fila micro ja fechou `SG-006`, `EV-002`, `EV-004`, `EV-003` e o recorte
+  bounded de `SG-002` + `TA-002` como baseline operacional auditavel;
 - o proximo passo correto nao e reabrir lote encerrado nem abrir vertical nova
   por impulso;
-- a puxada atual precisa manter compile/optimize loops subordinados a traces,
-  metricas, gates e bloqueios de seguranca, sem autoedicao solta do nucleo.
+- a fila micro foi reaberta em cima de `SG-003` + `SO-002`, mas apenas como
+  contrato minimo de continuidade multissuperficie da mesma entidade;
+- voz/realtime, memoria temporal rica, projetos persistentes e substrate
+  operacional amplo continuam fora de fase.
 
 Regra pratica daqui para frente:
 
@@ -119,8 +121,8 @@ Leitura de horizonte:
 | ID | Gap real | Camada JARVIS | Fase alvo | Tecnologias relacionadas | Janela de absorcao | Status | Slice micro |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `SG-001` | decisao soberana de capacidades e ferramentas | nucleo executivo, governanca, dispatch | `v2 restante` | `PydanticAI`, `Mastra`, `OpenAI Agents SDK`, `Qwen-Agent` | `onda_2_controlada` | `resolved_in_baseline` | `sim` |
-| `SG-002` | modelo de estado operacional do ecossistema | `orchestrator`, memoria, continuidade | `ponte v2 -> v3` | `LangGraph`, `Mastra`, `Manus` | `onda_3_tardia` | `candidate_for_slicing` | `sim` |
-| `SG-003` | continuidade multissuperficie da mesma entidade | identidade, continuidade, surfaces | `ponte v2 -> v3` | `OpenClaw`, `OpenAI Agents SDK` | `onda_3_tardia` | `blocked_by_phase` | `nao` |
+| `SG-002` | modelo de estado operacional do ecossistema | `orchestrator`, memoria, continuidade | `ponte v2 -> v3` | `LangGraph`, `Mastra`, `Manus` | `onda_3_tardia` | `resolved_in_baseline` | `sim` |
+| `SG-003` | continuidade multissuperficie da mesma entidade | identidade, continuidade, surfaces | `ponte v2 -> v3` | `OpenClaw`, `OpenAI Agents SDK` | `onda_3_tardia` | `candidate_for_slicing` | `sim` |
 | `SG-004` | manutencao ativa de memoria viva e memory review | `memory-service`, `memory_registry` | `v2 restante` | `Letta`, `Hermes Agent`, `Qwen-Agent` | `onda_1_residual` | `resolved_in_baseline` | `sim` |
 | `SG-005` | arbitragem mais declarativa de `mente -> dominio -> especialista` nos consumidores finais | cognicao, `planning`, `synthesis`, observabilidade | `v2 restante` | `Mastra`, `PydanticAI` | `nao_aplicavel` | `resolved_in_baseline` | `sim` |
 | `SG-006` | identidade, missao e politica como checklist executiva por request | identidade, nucleo executivo, governanca | `v2 restante` | `PydanticAI`, `Mastra`, `OpenAI Agents SDK` | `onda_2_controlada` | `resolved_in_baseline` | `sim` |
@@ -153,7 +155,7 @@ Notas de traducao por gap:
 | ID | Traducao disciplinada ainda faltante | Fortalece | Fase alvo | Tecnologias relacionadas | Janela de absorcao | Status | Slice micro |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `TA-001` | contratos tipados de capacidade e workflow alem do plano deliberativo atual | `SG-001`, `SG-005`, `SG-006` | `v2 restante` | `PydanticAI`, `Mastra`, `Microsoft Agent Framework` | `onda_1_residual` | `resolved_in_baseline` | `sim` |
-| `TA-002` | durable execution, resumabilidade e subfluxos stateful mais profundos | `SG-002` | `ponte v2 -> v3` | `LangGraph`, `Mastra` | `onda_1_residual` | `candidate_for_slicing` | `sim` |
+| `TA-002` | durable execution, resumabilidade e subfluxos stateful mais profundos | `SG-002` | `ponte v2 -> v3` | `LangGraph`, `Mastra` | `onda_1_residual` | `resolved_in_baseline` | `sim` |
 | `TA-003` | compaction de contexto e recall cross-session 2.0 | `SG-004` | `v2 restante` | `Letta`, `Hermes Agent`, `Qwen-Agent` | `onda_1_residual` | `resolved_in_baseline` | `sim` |
 | `TA-004` | memoria temporal, relacional e scoping mais rico | `SG-002`, `SG-004` | `ponte v2 -> v3` | `Graphiti`, `Zep`, `Mem0` | `onda_2_controlada` | `blocked_by_phase` | `nao` |
 | `TA-005` | handoffs, tracing e session adapters por borda de fluxo | `SG-001`, `SG-003`, `SG-006`, `EV-002` | `v2 restante` | `OpenAI Agents SDK` | `onda_2_controlada` | `resolved_in_baseline` | `sim` |
@@ -189,7 +191,7 @@ Notas de leitura:
 | ID | Frente ainda faltante | Camada JARVIS | Fase alvo | Tecnologias relacionadas | Janela de absorcao | Status | Slice micro |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `SO-001` | voz e realtime como superficie subordinada | interfaces, identidade, continuidade | `v3` | `OpenClaw` como referencia tardia | `onda_3_tardia` | `deferred` | `nao` |
-| `SO-002` | contrato multissuperficie entre console, web, API e futuras interfaces | gateway, identidade, runtime operacional | `ponte v2 -> v3` | `OpenAI Agents SDK`, `OpenClaw` | `onda_3_tardia` | `blocked_by_phase` | `nao` |
+| `SO-002` | contrato multissuperficie entre console, web, API e futuras interfaces | gateway, identidade, runtime operacional | `ponte v2 -> v3` | `OpenAI Agents SDK`, `OpenClaw` | `onda_3_tardia` | `candidate_for_slicing` | `sim` |
 | `SO-003` | projetos persistentes, tarefas assincronas longas e artefatos ativos | estado operacional do ecossistema | `v3` | `Manus`, `LangGraph`, `Mastra` | `onda_3_tardia` | `deferred` | `nao` |
 
 Notas de leitura:
@@ -253,8 +255,8 @@ ser:
 
 Ordem recomendada hoje:
 
-1. `SG-002` + `TA-002`
-2. `SG-003` + `SO-002`
+1. executar o lote micro `MB-102` a `MB-106`, aberto a partir de `SG-003` + `SO-002`.
+2. manter `SO-003`, `TA-004`, `TA-006` e verticais `deferred` fora da fila ate haver decisao de fase.
 
 Leitura correta:
 
@@ -264,14 +266,14 @@ Leitura correta:
 - `EV-003` ja foi corretamente fatiado e concluido no backlog micro como o
   lote `MB-092` a `MB-096`, passando a fazer parte do baseline evolutivo
   governado;
-- a repriorizacao explicita seguinte pode abrir a ponte `v2 -> v3` em cima de
-  `SG-002` + `TA-002`, desde que o recorte continue pequeno, reversivel e
-  auditavel, sem puxar ainda memoria temporal rica, multissuperficie ou
-  substrate operacional amplo;
-- `SG-002`, `SG-003`, `TA-002`, `TA-004`, `SO-*` e `DV-001` ja sao
-  relevantes, mas ainda nao sao a melhor puxada do `v2` atual;
-- depois de abrir `SG-002` + `TA-002`, `SG-003` e `SO-002` passam a depender
-  da existencia de um estado operacional do ecossistema minimamente soberano;
+- `SG-002` + `TA-002` ja foram fatiados e concluidos no lote `MB-097` a
+  `MB-101`, criando estado operacional bounded, auditavel e regeneravel do
+  ecossistema;
+- `SG-003` + `SO-002` agora foram repriorizados como lote micro `MB-102` a
+  `MB-106`, limitado a contrato minimo de superficies e continuidade da mesma
+  entidade;
+- `TA-004`, `SO-003`, `TA-006` e `DV-001` continuam relevantes, mas ainda fora
+  da fila sem mudanca explicita de fase;
 - `RH-*` permanece fora do backlog implementavel.
 
 ---

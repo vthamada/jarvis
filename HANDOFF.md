@@ -2,7 +2,7 @@
 
 ## Metadata
 
-- Atualizado em: 2026-04-23
+- Atualizado em: 2026-05-04
 - Branch: `main`
 - Commit de referência: `02ccc53`
 - Artefato canônico do projeto: `documento_mestre_jarvis.md`
@@ -99,9 +99,10 @@ Leitura atualizada desta rodada:
 
 Consolidar o fechamento operacional do `v2` sobre um runtime já alinhado aos eixos do Documento-Mestre, preservando `EV-002` + `EV-004` como baseline comparativo controlado e evitando reabrir esse lote por inercia local.
 
-A fila micro ja fechou `MB-092` a `MB-096`, absorvendo `EV-003` como baseline
-evolutivo governado, e foi reaberta em cima de `SG-002` + `TA-002` com o lote
-`MB-097` a `MB-101`.
+A fila micro ja fechou `MB-097` a `MB-101`, absorvendo `SG-002` + `TA-002`
+como estado operacional bounded, auditavel e regeneravel do ecossistema.
+O proximo lote foi aberto como `MB-102` a `MB-106`, derivado de `SG-003` +
+`SO-002`, com `MB-102` em `ready`.
 
 ### Foco operacional atual
 
@@ -159,9 +160,16 @@ Atualizacao desta rodada:
   `shared/memory_registry.py`, `orchestrator-service` e a malha de
   continuidade passaram a persistir e retomar `ecosystem_state_*` como estado
   bounded de missao, checkpoint e replay;
-- `MB-099` virou o item `ready` atual da fila micro para tornar esse estado
-  auditavel em observabilidade, piloto, comparadores e baseline ativo, ainda
-  sem abrir multissuperficie ampla ou substrate operacional fora de fase;
+- `MB-099` a `MB-101` agora tambem foram concluidos: `observability`,
+  piloto, comparadores, baseline ativo, `evolution-lab`, verificadores de
+  release e fechadores regeneraveis passaram a expor readiness do estado
+  operacional do ecossistema sem abrir multissuperficie ampla ou substrate
+  operacional fora de fase;
+- `MB-102` a `MB-106` foram abertos como lote de continuidade
+  multissuperficie minima da mesma entidade, com `MB-102` em `ready`;
+- o lote novo deve permanecer contido em contrato de superficie, identidade
+  canonica, continuidade bounded e observabilidade; nao abrir voz/realtime,
+  web rica, API publica, memoria temporal rica ou substrate operacional amplo;
 - tratar a Onda 2 apenas como experimento controlado guiado pela matriz de
   readiness ja existente, sem promocao automatica de referencia externa;
 - manter `protective intelligence`, `voice/realtime`, memoria temporal forte,
@@ -215,9 +223,12 @@ Atualizacao desta rodada:
   runtime;
 - `MB-087` a `MB-091` agora tambem foram concluidos e fecharam `EV-002` +
   `EV-004` como baseline comparativo controlado;
-- `MB-097` e `MB-098` agora foram concluidos, e `MB-099` virou o item `ready`
-  da fila micro para tornar o estado operacional do ecossistema auditavel em
-  observabilidade, piloto, comparadores e baseline ativo;
+- `MB-097` a `MB-101` agora foram concluidos e fecharam o lote bounded de
+  estado operacional do ecossistema em runtime, memoria, observabilidade,
+  evolucao, release e documentacao;
+- `MB-102` a `MB-106` agora foram abertos para transformar `SG-003` + `SO-002`
+  em continuidade multissuperficie minima, sem abrir as frentes amplas ainda
+  marcadas como fora de fase;
 - tratar a Onda 2 apenas como experimento controlado guiado pela matriz de
   readiness ja existente, sem promocao automatica de referencia externa;
 - so depois desse lote: reavaliar qual vertical derivada deve abrir a proxima frente macro; `protective intelligence` permanece mapeado, mas em `deferred` ate nova decisao explicita;
@@ -388,7 +399,7 @@ Pendências principais desta fase:
 - tratar `MB-032` a `MB-036` como baseline ja fechado, sem reabrir o mesmo lote por inercia local;
 - tratar `MB-037` a `MB-040` como lote fechado, sem reabrir o mesmo trabalho por inercia local;
 - continuar refinando criterios de saida por `workflow_profile`, uso soberano de memoria e profundidade da cadeia `mente -> dominio -> especialista` apenas quando isso justificar um novo lote real;
-- nao existe neste momento pendencia tecnica material de robustez dentro do baseline atual do `v2`; o restante ja entra como maturacao incremental ou proxima frente macro.
+- a pendencia tecnica material agora aberta e `MB-102`: contrato minimo de identidade e continuidade por superficie, antes de qualquer runtime multicanal amplo.
 
 Regra de estudo externo no `v2`:
 
@@ -400,17 +411,13 @@ Regra de estudo externo no `v2`:
 ## Próximos passos imediatos
 
 Ordem recomendada:
-1. usar `docs/implementation/unified-gap-and-absorption-backlog.md` como mapa macro do que ainda falta, antes de abrir novo item `ready`;
-2. tratar `SG-006`, `EV-002` e `EV-004` como eixos agora fechados no baseline e
-   usar o backlog macro para definir a proxima puxada correta do `v2 restante`;
-3. reconhecer que `MB-082` a `MB-091` ja foram executados integralmente e que a
-   fila micro voltou a ficar sem item `ready`;
-4. manter `HANDOFF.md`, `CHANGELOG.md` e o snapshot como docs vivos do baseline sem abrir outro corte documental por inercia;
-5. preservar `MB-023` a `MB-026` como baseline fechado e `MB-027` a `MB-031` como `deferred`, sem reabrir `protective intelligence` por impulso;
-6. tratar `MB-072` a `MB-076` como baseline ja fechado do lote de manutencao ativa de memoria viva, preservando `memory_maintenance_*`, compaction e recall cross-session como contrato soberano do runtime;
-7. tratar `MB-082` a `MB-091` como lotes ja fechados do baseline atual, sem reabrir esse eixo por inercia local;
-8. manter historico regeneravel em `docs/archive/implementation/` e `tools/archive/` sem reexpandir a raiz do repositorio;
-9. so abrir outra frente funcional ou novo lote micro quando essa repriorizacao explicita acontecer ou se a prioridade macro mudar.
+1. puxar `MB-102` em `docs/implementation/execution-backlog.md`;
+2. implementar primeiro o contrato soberano de superficie, identidade canonica e continuidade minima, sem abrir voz/realtime, web rica, API publica ou gateway externo;
+3. depois seguir a dependencia natural `MB-103` -> `MB-104` -> `MB-105` -> `MB-106`;
+4. preservar `MB-023` a `MB-026` como baseline fechado e `MB-027` a `MB-031` como `deferred`, sem reabrir `protective intelligence` por impulso;
+5. tratar `MB-082` a `MB-101` como lotes ja fechados do baseline atual, sem reabrir esse eixo por inercia local;
+6. manter historico regeneravel em `docs/archive/implementation/` e `tools/archive/` sem reexpandir a raiz do repositorio;
+7. so abrir outra frente funcional depois de fechar `MB-102` a `MB-106` ou se a prioridade macro mudar explicitamente.
 
 Atualização desta rodada:
 

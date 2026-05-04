@@ -120,6 +120,11 @@ class FlowEvaluationInput:
     expanded_eval_status: str | None = None
     surface_axis_status: str | None = None
     ecosystem_state_status: str | None = None
+    operational_ecosystem_state_status: str | None = None
+    active_work_items: list[str] = field(default_factory=list)
+    active_artifact_refs: list[str] = field(default_factory=list)
+    open_checkpoint_refs: list[str] = field(default_factory=list)
+    surface_presence: list[str] = field(default_factory=list)
     experiment_lane_status: str | None = None
     wave2_candidate_class: str | None = None
     experiment_entry_status: str | None = None
@@ -458,6 +463,19 @@ class EvolutionLabService:
         source_signals.append(
             f"eval://ecosystem-state/{expanded_eval_state['ecosystem_state_status']}"
         )
+        if evaluation.operational_ecosystem_state_status:
+            source_signals.append(
+                "runtime://ecosystem-operational-state/"
+                f"{evaluation.operational_ecosystem_state_status}"
+            )
+        if evaluation.active_work_items:
+            source_signals.append("runtime://ecosystem-active-work-items/present")
+        if evaluation.active_artifact_refs:
+            source_signals.append("runtime://ecosystem-active-artifacts/present")
+        if evaluation.open_checkpoint_refs:
+            source_signals.append("runtime://ecosystem-open-checkpoints/present")
+        if evaluation.surface_presence:
+            source_signals.append("runtime://ecosystem-surface-presence/present")
         source_signals.append(
             f"experiment://lane/{expanded_eval_state['experiment_lane_status']}"
         )
@@ -1546,6 +1564,14 @@ class EvolutionLabService:
                 "expanded_eval": expanded_eval_state["expanded_eval_status"],
                 "surface_axis": expanded_eval_state["surface_axis_status"],
                 "ecosystem_state": expanded_eval_state["ecosystem_state_status"],
+                "operational_ecosystem_state": (
+                    evaluation.operational_ecosystem_state_status
+                    or "not_applicable"
+                ),
+                "active_work_items": len(evaluation.active_work_items),
+                "active_artifact_refs": len(evaluation.active_artifact_refs),
+                "open_checkpoint_refs": len(evaluation.open_checkpoint_refs),
+                "surface_presence": len(evaluation.surface_presence),
                 "experiment_lane": expanded_eval_state["experiment_lane_status"],
                 "wave2_candidate_class": expanded_eval_state["wave2_candidate_class"],
                 "experiment_entry": expanded_eval_state["experiment_entry_status"],

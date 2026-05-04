@@ -129,6 +129,11 @@ class PilotTraceSummary:
     expanded_eval_status: str = "not_applicable"
     surface_axis_status: str = "not_applicable"
     ecosystem_state_status: str = "not_applicable"
+    operational_ecosystem_state_status: str = "not_applicable"
+    active_work_items: list[str] | None = None
+    active_artifact_refs: list[str] | None = None
+    open_checkpoint_refs: list[str] | None = None
+    surface_presence: list[str] | None = None
     experiment_lane_status: str = "not_applicable"
     wave2_candidate_class: str = "baseline_hardening"
     experiment_entry_status: str = "not_applicable"
@@ -266,6 +271,13 @@ def summarize_traces(
             expanded_eval_status=audit.expanded_eval_status,
             surface_axis_status=audit.surface_axis_status,
             ecosystem_state_status=audit.ecosystem_state_status,
+            operational_ecosystem_state_status=(
+                audit.operational_ecosystem_state_status
+            ),
+            active_work_items=list(audit.active_work_items),
+            active_artifact_refs=list(audit.active_artifact_refs),
+            open_checkpoint_refs=list(audit.open_checkpoint_refs),
+            surface_presence=list(audit.surface_presence),
             experiment_lane_status=audit.experiment_lane_status,
             wave2_candidate_class=audit.wave2_candidate_class,
             experiment_entry_status=audit.experiment_entry_status,
@@ -548,6 +560,16 @@ def _render_summary(summary: PilotTraceSummary) -> str:
         f"{getattr(summary, 'surface_axis_status', 'not_applicable')} "
         "ecosystem_state_status="
         f"{getattr(summary, 'ecosystem_state_status', 'not_applicable')} "
+        "operational_ecosystem_state_status="
+        f"{getattr(summary, 'operational_ecosystem_state_status', 'not_applicable')} "
+        "active_work_items="
+        f"{','.join((getattr(summary, 'active_work_items', []) or [])) or 'none'} "
+        "active_artifact_refs="
+        f"{','.join((getattr(summary, 'active_artifact_refs', []) or [])) or 'none'} "
+        "open_checkpoint_refs="
+        f"{','.join((getattr(summary, 'open_checkpoint_refs', []) or [])) or 'none'} "
+        "surface_presence="
+        f"{','.join((getattr(summary, 'surface_presence', []) or [])) or 'none'} "
         "experiment_lane_status="
         f"{getattr(summary, 'experiment_lane_status', 'not_applicable')} "
         "wave2_candidate_class="

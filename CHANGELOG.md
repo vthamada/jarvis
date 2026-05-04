@@ -1,5 +1,21 @@
 # CHANGELOG
 
+## 2026-05-04
+
+### Repriorizacao do proximo lote micro para continuidade multissuperficie minima
+
+- `docs/implementation/execution-backlog.md` agora abre `MB-102` a `MB-106` como o novo lote ativo, com `MB-102` em `ready` e foco em `SG-003` + `SO-002`;
+- o novo lote traduz a ponte multissuperficie em um recorte pequeno: contrato soberano de identidade por superficie, propagacao pelo runtime atual, continuidade bounded, observabilidade/readiness e fechamento documental;
+- `docs/implementation/unified-gap-and-absorption-backlog.md` foi sincronizado para marcar `SG-003` e `SO-002` como candidatos fatiados, mantendo `SO-001`, `SO-003`, `TA-004`, `TA-006`, `OpenClaw`, voz/realtime, web rica e API publica fora de fase;
+- `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para registrar que a fila micro voltou a ter item `ready` sem abrir runtime multicanal amplo.
+
+### MB-099 a MB-101 fecharam readiness auditavel do estado operacional
+
+- `services/observability-service`, `tools/internal_pilot_support.py`, `tools/internal_pilot_report.py`, `tools/compare_orchestrator_paths.py` e `tools/verify_active_cut_baseline.py` agora expõem `operational_ecosystem_state_status`, work items, artefatos, checkpoints e presença de superfície como evidência comparável do baseline;
+- `evolution/evolution-lab`, `tools/evolution_from_pilot.py`, `tools/verify_release_signal_baseline.py`, `tools/archive/close_alignment_cycle.py` e `tools/archive/close_sovereign_alignment_cut.py` agora tratam readiness do estado operacional do ecossistema como sinal regenerável de release, sem promover multissuperfície, memória temporal rica ou autonomia ampla automaticamente;
+- a bateria focada cobre comparadores, baseline ativo, evolution-lab, evolution_from_pilot, observabilidade e verificador de release;
+- `docs/implementation/execution-backlog.md`, `docs/implementation/unified-gap-and-absorption-backlog.md`, `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para fechar `MB-097` a `MB-101` e registrar que a fila micro voltou a ficar sem item `ready`.
+
 ## 2026-04-23
 
 ### MB-098 fechou continuidade bounded do estado operacional

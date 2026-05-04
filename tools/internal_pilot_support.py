@@ -176,6 +176,11 @@ class PilotExecutionResult:
     expanded_eval_status: str = "not_applicable"
     surface_axis_status: str = "not_applicable"
     ecosystem_state_status: str = "not_applicable"
+    operational_ecosystem_state_status: str = "not_applicable"
+    active_work_items: list[str] = field(default_factory=list)
+    active_artifact_refs: list[str] = field(default_factory=list)
+    open_checkpoint_refs: list[str] = field(default_factory=list)
+    surface_presence: list[str] = field(default_factory=list)
     experiment_lane_status: str = "not_applicable"
     wave2_candidate_class: str = "baseline_hardening"
     experiment_entry_status: str = "not_applicable"
@@ -649,6 +654,13 @@ def run_pilot_scenarios(
                 expanded_eval_status=audit.expanded_eval_status,
                 surface_axis_status=audit.surface_axis_status,
                 ecosystem_state_status=audit.ecosystem_state_status,
+                operational_ecosystem_state_status=(
+                    audit.operational_ecosystem_state_status
+                ),
+                active_work_items=list(audit.active_work_items),
+                active_artifact_refs=list(audit.active_artifact_refs),
+                open_checkpoint_refs=list(audit.open_checkpoint_refs),
+                surface_presence=list(audit.surface_presence),
                 experiment_lane_status=audit.experiment_lane_status,
                 wave2_candidate_class=audit.wave2_candidate_class,
                 experiment_entry_status=audit.experiment_entry_status,

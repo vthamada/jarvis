@@ -1891,6 +1891,19 @@ def compare_results(
             ):
                 mismatch_fields.append("mission_runtime_state_status")
             if (
+                baseline.operational_ecosystem_state_status
+                != candidate.operational_ecosystem_state_status
+            ):
+                mismatch_fields.append("operational_ecosystem_state_status")
+            if baseline.active_work_items != candidate.active_work_items:
+                mismatch_fields.append("active_work_items")
+            if baseline.active_artifact_refs != candidate.active_artifact_refs:
+                mismatch_fields.append("active_artifact_refs")
+            if baseline.open_checkpoint_refs != candidate.open_checkpoint_refs:
+                mismatch_fields.append("open_checkpoint_refs")
+            if baseline.surface_presence != candidate.surface_presence:
+                mismatch_fields.append("surface_presence")
+            if (
                 baseline.cognitive_recomposition_applied
                 != candidate.cognitive_recomposition_applied
             ):
@@ -2138,6 +2151,26 @@ def render_text(payload: dict[str, object]) -> str:
                     (
                         "baseline_ecosystem_state_status="
                         f"{item['baseline']['ecosystem_state_status']}"
+                    ),
+                    (
+                        "baseline_operational_ecosystem_state_status="
+                        f"{item['baseline']['operational_ecosystem_state_status']}"
+                    ),
+                    (
+                        "baseline_active_work_items="
+                        f"{','.join(item['baseline']['active_work_items']) or 'none'}"
+                    ),
+                    (
+                        "baseline_active_artifact_refs="
+                        f"{','.join(item['baseline']['active_artifact_refs']) or 'none'}"
+                    ),
+                    (
+                        "baseline_open_checkpoint_refs="
+                        f"{','.join(item['baseline']['open_checkpoint_refs']) or 'none'}"
+                    ),
+                    (
+                        "baseline_surface_presence="
+                        f"{','.join(item['baseline']['surface_presence']) or 'none'}"
                     ),
                     (
                         "baseline_experiment_lane_status="
@@ -2414,6 +2447,36 @@ def render_text(payload: dict[str, object]) -> str:
                         f"{item['candidate']['ecosystem_state_status']}"
                         if item["candidate"]
                         else "candidate_ecosystem_state_status=n/a"
+                    ),
+                    (
+                        "candidate_operational_ecosystem_state_status="
+                        f"{item['candidate']['operational_ecosystem_state_status']}"
+                        if item["candidate"]
+                        else "candidate_operational_ecosystem_state_status=n/a"
+                    ),
+                    (
+                        "candidate_active_work_items="
+                        f"{','.join(item['candidate']['active_work_items']) or 'none'}"
+                        if item["candidate"]
+                        else "candidate_active_work_items=n/a"
+                    ),
+                    (
+                        "candidate_active_artifact_refs="
+                        f"{','.join(item['candidate']['active_artifact_refs']) or 'none'}"
+                        if item["candidate"]
+                        else "candidate_active_artifact_refs=n/a"
+                    ),
+                    (
+                        "candidate_open_checkpoint_refs="
+                        f"{','.join(item['candidate']['open_checkpoint_refs']) or 'none'}"
+                        if item["candidate"]
+                        else "candidate_open_checkpoint_refs=n/a"
+                    ),
+                    (
+                        "candidate_surface_presence="
+                        f"{','.join(item['candidate']['surface_presence']) or 'none'}"
+                        if item["candidate"]
+                        else "candidate_surface_presence=n/a"
                     ),
                     (
                         "candidate_experiment_lane_status="
@@ -3061,6 +3124,9 @@ def serialize_comparisons(
                 "baseline_mission_runtime_state_assessment": (
                     mission_runtime_state_assessment(item.baseline)
                 ),
+                "baseline_operational_ecosystem_state_assessment": (
+                    item.baseline.operational_ecosystem_state_status
+                ),
                 "baseline_cognitive_recomposition_assessment": (
                     cognitive_recomposition_assessment(item.baseline)
                 ),
@@ -3250,6 +3316,11 @@ def serialize_comparisons(
                 ),
                 "candidate_mission_runtime_state_assessment": (
                     mission_runtime_state_assessment(item.candidate)
+                    if item.candidate
+                    else None
+                ),
+                "candidate_operational_ecosystem_state_assessment": (
+                    item.candidate.operational_ecosystem_state_status
                     if item.candidate
                     else None
                 ),

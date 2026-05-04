@@ -1768,7 +1768,7 @@ Escalar ao operador quando:
 
 - `id`: `MB-099`
 - `prioridade`: `P1`
-- `status`: `ready`
+- `status`: `done`
 - `eixo_do_mestre`: `observabilidade`
 - `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
 - `micro_objetivo`: tornar o estado operacional do ecossistema auditavel em observabilidade, piloto, comparadores e baseline ativo.
@@ -1780,13 +1780,13 @@ Escalar ao operador quando:
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `high`
 - `modelo_recomendado`: `gpt-5.3-codex`
-- `impacto_no_baseline`: o estado operacional do ecossistema deixa de ser inferência local e vira sinal comparável do runtime.
+- `impacto_no_baseline`: `observability-service`, piloto, comparadores e baseline ativo agora expõem `operational_ecosystem_state_status`, `active_work_items`, `active_artifact_refs`, `open_checkpoint_refs` e `surface_presence` sem confundir esse slice com a eval expandida da Onda 2.
 
 ### MB-100
 
 - `id`: `MB-100`
 - `prioridade`: `P1`
-- `status`: `blocked`
+- `status`: `done`
 - `eixo_do_mestre`: `gates/release`
 - `workflow_profile_afetado`: `nao_aplicavel`
 - `micro_objetivo`: ligar o novo estado operacional do ecossistema aos verificadores de release, `evolution-lab` e fechadores regeneraveis, sem transformar isso em promoção automática de v3.
@@ -1798,13 +1798,13 @@ Escalar ao operador quando:
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `high`
 - `modelo_recomendado`: `gpt-5.3-codex`
-- `impacto_no_baseline`: a ponte `v2 -> v3` ganha leitura formal e regenerável sem quebrar a contenção de fase.
+- `impacto_no_baseline`: `evolution-lab`, `evolution_from_pilot`, verificador de release e fechadores regeneráveis agora registram readiness do estado operacional do ecossistema como evidência governada, sem promover multissuperfície ou autonomia ampla automaticamente.
 
 ### MB-101
 
 - `id`: `MB-101`
 - `prioridade`: `P1`
-- `status`: `blocked`
+- `status`: `done`
 - `eixo_do_mestre`: `docs/gates`
 - `workflow_profile_afetado`: `nao_aplicavel`
 - `micro_objetivo`: fechar o lote de estado operacional do ecossistema com docs vivos, changelog e gate sincronizados ao novo estado real do baseline.
@@ -1816,7 +1816,97 @@ Escalar ao operador quando:
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `medium`
 - `modelo_recomendado`: `gpt-5.4-mini`
-- `impacto_no_baseline`: a ponte para estado operacional do ecossistema fica registrada como novo lote ativo sem contaminar o backlog com frentes fora de fase.
+- `impacto_no_baseline`: o lote `MB-097` a `MB-101` fica fechado como ponte bounded de `SG-002` + `TA-002`; a repriorizacao macro seguinte abriu `SG-003`/`SO-002` apenas como contrato minimo em `MB-102` a `MB-106`.
+
+### MB-102
+
+- `id`: `MB-102`
+- `prioridade`: `P0`
+- `status`: `ready`
+- `eixo_do_mestre`: `identidade/superficies`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: formalizar um contrato soberano minimo de identidade e continuidade por superficie para console, API, web futura, voz futura e operadores humanos, sem criar gateways externos nem nova UI ampla.
+- `justificativa_arquitetural`: `SG-003` so deve abrir depois do estado operacional bounded existir; agora o proximo risco e a mesma entidade parecer diferente em cada canal. O primeiro passo precisa ser contrato, nao interface nova.
+- `arquivos/servicos_principais`: `shared/contracts`, `shared/schemas`, `shared/events`, `apps/jarvis_console`
+- `dependencias`: `MB-101`
+- `criterio_de_aceite`: contratos compartilhados passam a carregar pelo menos `surface_id`, `surface_kind`, `surface_session_id`, `surface_capability_scope`, `operator_identity_ref`, `canonical_user_ref` e `surface_continuity_status`, distinguindo `single_surface`, `linked_surface` e `surface_identity_conflict`.
+- `gate_minimo`: `pytest` direcionado de `shared`, `apps/jarvis_console` e `services/orchestrator-service`, `ruff` direcionado e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.4`
+- `impacto_no_baseline`: abre `SG-003` + `SO-002` como contrato minimo de continuidade multissuperficie sem promover voz, web rica ou runtime externo.
+
+### MB-103
+
+- `id`: `MB-103`
+- `prioridade`: `P0`
+- `status`: `blocked`
+- `eixo_do_mestre`: `orquestracao/superficies`
+- `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
+- `micro_objetivo`: aplicar o contrato de superficie no console atual, no input recebido e no `orchestrator-service`, fazendo a superficie ativa acompanhar request, dispatch, workflow e resposta final.
+- `justificativa_arquitetural`: o contrato de superficie so vira comportamento real quando o runtime consegue responder "de qual superficie veio, qual identidade canonica representa e qual continuidade ela pode compartilhar" sem heuristica local.
+- `arquivos/servicos_principais`: `apps/jarvis_console`, `services/orchestrator-service`, `engines/planning-engine`, `engines/synthesis-engine`, `shared/events`
+- `dependencias`: `MB-102`
+- `criterio_de_aceite`: eventos `input_received`, `workflow_composed`, `operation_dispatched`, `response_synthesized` e `memory_recorded` carregam o mesmo slice `surface_*`, preservando `through_core_only`, sem duplicar identidade entre console e futuras superficies.
+- `gate_minimo`: `pytest` direcionado de `apps/jarvis_console`, `services/orchestrator-service`, `engines/planning-engine`, `engines/synthesis-engine` e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.4`
+- `impacto_no_baseline`: a superficie deixa de ser apenas `channel` e passa a ser parte governada da identidade operacional do request.
+
+### MB-104
+
+- `id`: `MB-104`
+- `prioridade`: `P1`
+- `status`: `blocked`
+- `eixo_do_mestre`: `memoria/continuidade`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: persistir e recuperar continuidade de superficie em `memory-service`, `session_continuity`, checkpoints e replay, sem abrir memoria temporal rica nem grafo relacional amplo.
+- `justificativa_arquitetural`: multissuperficie segura depende de continuidade compartilhada, mas a fase atual ainda deve manter memoria bounded. O escopo e vincular superficies a sessao/missao canonica, nao reconstruir historico total.
+- `arquivos/servicos_principais`: `services/memory-service`, `shared/memory_registry.py`, `services/orchestrator-service`
+- `dependencias`: `MB-103`
+- `criterio_de_aceite`: continuidade e replay passam a registrar superficies vinculadas, superficie ativa, ultima superficie conhecida e conflito de identidade de superficie, com recovery bounded e sem expor estado de uma superficie a outra sem identidade canonica coerente.
+- `gate_minimo`: `pytest` direcionado de `services/memory-service`, `services/orchestrator-service`, `shared/memory_registry.py` e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.4`
+- `impacto_no_baseline`: continuidade passa a distinguir mesma entidade em multiplas superficies de simples troca de sessao.
+
+### MB-105
+
+- `id`: `MB-105`
+- `prioridade`: `P1`
+- `status`: `blocked`
+- `eixo_do_mestre`: `observabilidade/gates`
+- `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
+- `micro_objetivo`: tornar continuidade de superficie auditavel em observabilidade, piloto, comparadores, baseline ativo, `evolution-lab` e verificadores de release.
+- `justificativa_arquitetural`: sem evidencia formal, multissuperficie vira risco de identidade duplicada. Os gates precisam mostrar quando uma superficie esta isolada, vinculada ou em conflito antes de qualquer expansao de UI/canal.
+- `arquivos/servicos_principais`: `services/observability-service`, `tools/internal_pilot_support.py`, `tools/internal_pilot_report.py`, `tools/compare_orchestrator_paths.py`, `tools/verify_active_cut_baseline.py`, `evolution/evolution-lab`, `tools/evolution_from_pilot.py`, `tools/verify_release_signal_baseline.py`
+- `dependencias`: `MB-104`
+- `criterio_de_aceite`: auditoria, relatorios, comparadores e release passam a expor `surface_continuity_status`, `linked_surface_count`, `surface_identity_conflict_flags` e readiness de multissuperficie sem transformar isso em promocao automatica de voz, web ou API publica.
+- `gate_minimo`: `pytest` direcionado dos services/tools afetados, `python tools/verify_release_signal_baseline.py` e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: a ponte multissuperficie ganha leitura comparavel e gateada antes de virar interface ampla.
+
+### MB-106
+
+- `id`: `MB-106`
+- `prioridade`: `P1`
+- `status`: `blocked`
+- `eixo_do_mestre`: `docs/gates`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: fechar o lote de continuidade multissuperficie minima com docs vivos, changelog, snapshot e backlog macro sincronizados ao novo estado real.
+- `justificativa_arquitetural`: `SO-002` nao pode ficar ambiguo entre contrato de identidade e abertura ampla de produto; o fechamento precisa explicitar que o lote abriu apenas a camada soberana minima de superficies.
+- `arquivos/servicos_principais`: `docs/implementation/execution-backlog.md`, `docs/implementation/unified-gap-and-absorption-backlog.md`, `HANDOFF.md`, `docs/implementation/v2-adherence-snapshot.md`, `CHANGELOG.md`
+- `dependencias`: `MB-102`, `MB-103`, `MB-104`, `MB-105`
+- `criterio_de_aceite`: docs vivos refletem `SG-003` + `SO-002` como contrato minimo de continuidade multissuperficie, mantendo `SO-001`, `SO-003`, `TA-004`, `TA-006` e verticais `deferred` fora de fase ate nova decisao explicita.
+- `gate_minimo`: `python tools/check_mojibake.py .` e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `medium`
+- `modelo_recomendado`: `gpt-5.4-mini`
+- `impacto_no_baseline`: o lote termina com a identidade multissuperficie minima registrada como ponte governada para `v3`, sem contaminar a fila com interfaces amplas.
 
 ---
 
@@ -1869,5 +1959,7 @@ Estado atual da fila:
 - `shared/optimization_state.py`, `evolution-lab`, comparadores, relatorios, verificadores de baseline/release e fechadores regeneraveis agora tratam `optimization_*` como slice soberano do baseline evolutivo;
 - `MB-097` agora foi concluido: `OperationDispatchContract`, `OperationResultContract`, `orchestrator-service`, `operational-service` e eventos internos passaram a carregar estado operacional minimo do ecossistema;
 - `MB-098` agora tambem foi concluido: `memory-service`, `shared/memory_registry.py`, `orchestrator-service` e a malha de continuidade passaram a persistir e retomar `ecosystem_state_*` como estado bounded de missao, checkpoint e replay;
-- `MB-099` virou o item `ready` atual da fila micro para tornar esse estado auditavel em observabilidade, piloto, comparadores e baseline ativo, ainda sem abrir multissuperficie ampla ou substrate operacional fora de fase;
+- `MB-099` a `MB-101` foram concluidos e fecharam a leitura auditavel, evolutiva, regeneravel e documental desse estado operacional, ainda sem abrir multissuperficie ampla ou substrate operacional fora de fase;
+- `MB-102` a `MB-106` foram abertos como proximo lote micro em cima de `SG-003` + `SO-002`, com `MB-102` em `ready`, focando contrato minimo de continuidade multissuperficie da mesma entidade;
+- `SO-001`, `SO-003`, `TA-004`, `TA-006` e verticais `deferred` continuam fora da fila sem mudanca explicita de fase;
 - `protective intelligence foundation` continua `deferred` e a matriz da Onda 2 segue como insumo, nao como gatilho automatico para abrir nova vertical.

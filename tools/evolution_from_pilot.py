@@ -218,6 +218,23 @@ def _evaluation_from_dict(payload: dict[str, object]) -> FlowEvaluationInput:
             if payload.get("ecosystem_state_status") is not None
             else None
         ),
+        operational_ecosystem_state_status=(
+            str(payload["operational_ecosystem_state_status"])
+            if payload.get("operational_ecosystem_state_status") is not None
+            else None
+        ),
+        active_work_items=[
+            str(item) for item in (payload.get("active_work_items") or []) if item
+        ],
+        active_artifact_refs=[
+            str(item) for item in (payload.get("active_artifact_refs") or []) if item
+        ],
+        open_checkpoint_refs=[
+            str(item) for item in (payload.get("open_checkpoint_refs") or []) if item
+        ],
+        surface_presence=[
+            str(item) for item in (payload.get("surface_presence") or []) if item
+        ],
         experiment_lane_status=(
             str(payload["experiment_lane_status"])
             if payload.get("experiment_lane_status") is not None
@@ -512,6 +529,13 @@ def build_payload(args: Namespace) -> dict[str, object]:
                 expanded_eval_status=audit.expanded_eval_status,
                 surface_axis_status=audit.surface_axis_status,
                 ecosystem_state_status=audit.ecosystem_state_status,
+                operational_ecosystem_state_status=(
+                    audit.operational_ecosystem_state_status
+                ),
+                active_work_items=list(audit.active_work_items),
+                active_artifact_refs=list(audit.active_artifact_refs),
+                open_checkpoint_refs=list(audit.open_checkpoint_refs),
+                surface_presence=list(audit.surface_presence),
                 experiment_lane_status=audit.experiment_lane_status,
                 wave2_candidate_class=audit.wave2_candidate_class,
                 experiment_entry_status=audit.experiment_entry_status,
