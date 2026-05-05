@@ -132,7 +132,11 @@ class OrchestratorService:
             self.make_event(
                 "input_received",
                 contract,
-                {"content": contract.content, "channel": contract.channel.value},
+                {
+                    "content": contract.content,
+                    "channel": contract.channel.value,
+                    **self._surface_identity_payload(contract),
+                },
             )
         ]
         continuity_result = self._run_native_continuity_subflow(contract, events)
@@ -609,6 +613,7 @@ class OrchestratorService:
                         **self._ecosystem_operational_state_payload(
                             operation_dispatch
                         ),
+                        **self._surface_identity_payload(operation_dispatch),
                         **self._capability_decision_event_payload(operation_dispatch),
                         **self._request_identity_policy_payload(operation_dispatch),
                         "adaptive_intervention_status": (
@@ -675,6 +680,7 @@ class OrchestratorService:
                         **self._ecosystem_operational_state_payload(
                             operation_dispatch
                         ),
+                        **self._surface_identity_payload(operation_dispatch),
                         **self._capability_decision_event_payload(operation_dispatch),
                         **self._request_identity_policy_payload(operation_dispatch),
                         "adaptive_intervention_status": (
@@ -721,6 +727,7 @@ class OrchestratorService:
                         **self._ecosystem_operational_state_payload(
                             operation_dispatch
                         ),
+                        **self._surface_identity_payload(operation_dispatch),
                         **self._capability_decision_event_payload(operation_dispatch),
                         **self._request_identity_policy_payload(operation_dispatch),
                         "adaptive_intervention_status": (
@@ -927,6 +934,9 @@ class OrchestratorService:
                         ),
                     ),
                     **self._request_identity_policy_payload(deliberative_plan),
+                    **self._surface_identity_payload(
+                        operation_result or operation_dispatch or contract
+                    ),
                     "adaptive_intervention_status": (
                         deliberative_plan.adaptive_intervention_status
                     ),
@@ -1149,6 +1159,9 @@ class OrchestratorService:
                     ),
                     "ecosystem_state_summary": (
                         operation_result.ecosystem_state_summary if operation_result else None
+                    ),
+                    **self._surface_identity_payload(
+                        operation_result or operation_dispatch or contract
                     ),
                 },
             )
@@ -2189,6 +2202,15 @@ class OrchestratorService:
                     "open_checkpoint_refs": mission_runtime_state.open_checkpoint_refs,
                     "surface_presence": mission_runtime_state.surface_presence,
                     "ecosystem_state_summary": mission_runtime_state.ecosystem_state_summary,
+                    "linked_surface_ids": mission_runtime_state.linked_surface_ids,
+                    "active_surface_id": mission_runtime_state.active_surface_id,
+                    "last_surface_id": mission_runtime_state.last_surface_id,
+                    "surface_continuity_status": (
+                        mission_runtime_state.surface_continuity_status
+                    ),
+                    "surface_identity_conflict_flags": (
+                        mission_runtime_state.surface_identity_conflict_flags
+                    ),
                     "related_mission_id": (
                         str(mission_runtime_state.related_mission_id)
                         if mission_runtime_state.related_mission_id
@@ -2377,6 +2399,13 @@ class OrchestratorService:
             open_checkpoint_refs=list(ecosystem_state.open_checkpoint_refs),
             surface_presence=list(ecosystem_state.surface_presence),
             ecosystem_state_summary=ecosystem_state.state_summary,
+            surface_id=contract.surface_id,
+            surface_kind=contract.surface_kind,
+            surface_session_id=contract.surface_session_id,
+            surface_capability_scope=list(contract.surface_capability_scope),
+            operator_identity_ref=contract.operator_identity_ref,
+            canonical_user_ref=contract.canonical_user_ref,
+            surface_continuity_status=contract.surface_continuity_status,
             priority_hint=contract.priority_hint,
         )
 
@@ -2539,6 +2568,24 @@ class OrchestratorService:
                 source,
                 "ecosystem_state_summary",
                 None,
+            ),
+        }
+
+    @staticmethod
+    def _surface_identity_payload(source: object) -> dict[str, object]:
+        return {
+            "surface_id": getattr(source, "surface_id", None),
+            "surface_kind": getattr(source, "surface_kind", None),
+            "surface_session_id": getattr(source, "surface_session_id", None),
+            "surface_capability_scope": list(
+                getattr(source, "surface_capability_scope", []) or []
+            ),
+            "operator_identity_ref": getattr(source, "operator_identity_ref", None),
+            "canonical_user_ref": getattr(source, "canonical_user_ref", None),
+            "surface_continuity_status": getattr(
+                source,
+                "surface_continuity_status",
+                "single_surface",
             ),
         }
 
@@ -2995,6 +3042,13 @@ class OrchestratorService:
             procedural_artifact_summary=self._extract_context_hint(
                 recovered, "procedural_artifact_summary="
             ),
+            surface_id=contract.surface_id,
+            surface_kind=contract.surface_kind,
+            surface_session_id=contract.surface_session_id,
+            surface_capability_scope=list(contract.surface_capability_scope),
+            operator_identity_ref=contract.operator_identity_ref,
+            canonical_user_ref=contract.canonical_user_ref,
+            surface_continuity_status=contract.surface_continuity_status,
         )
 
     def _domain_registry_event_payload(
@@ -3202,6 +3256,27 @@ class OrchestratorService:
                 procedural_artifact_status=deliberative_plan.procedural_artifact_status,
                 procedural_artifact_ref=deliberative_plan.procedural_artifact_ref,
                 procedural_artifact_summary=deliberative_plan.procedural_artifact_summary,
+                surface_id=operation_result.surface_id if operation_result else None,
+                surface_kind=operation_result.surface_kind if operation_result else None,
+                surface_session_id=(
+                    operation_result.surface_session_id if operation_result else None
+                ),
+                surface_capability_scope=(
+                    list(operation_result.surface_capability_scope)
+                    if operation_result
+                    else []
+                ),
+                operator_identity_ref=(
+                    operation_result.operator_identity_ref if operation_result else None
+                ),
+                canonical_user_ref=(
+                    operation_result.canonical_user_ref if operation_result else None
+                ),
+                surface_continuity_status=(
+                    operation_result.surface_continuity_status
+                    if operation_result
+                    else None
+                ),
             )
         )
 
@@ -3529,6 +3604,15 @@ class OrchestratorService:
                         "open_checkpoint_refs": continuity_replay.open_checkpoint_refs,
                         "surface_presence": continuity_replay.surface_presence,
                         "ecosystem_state_summary": continuity_replay.ecosystem_state_summary,
+                        "linked_surface_ids": continuity_replay.linked_surface_ids,
+                        "active_surface_id": continuity_replay.active_surface_id,
+                        "last_surface_id": continuity_replay.last_surface_id,
+                        "surface_continuity_status": (
+                            continuity_replay.surface_continuity_status
+                        ),
+                        "surface_identity_conflict_flags": (
+                            continuity_replay.surface_identity_conflict_flags
+                        ),
                     },
                 )
             )
@@ -3588,6 +3672,25 @@ class OrchestratorService:
             ),
             "ecosystem_state_summary": (
                 continuity_replay.ecosystem_state_summary if continuity_replay else None
+            ),
+            "linked_surface_ids": (
+                continuity_replay.linked_surface_ids if continuity_replay else []
+            ),
+            "active_surface_id": (
+                continuity_replay.active_surface_id if continuity_replay else None
+            ),
+            "last_surface_id": (
+                continuity_replay.last_surface_id if continuity_replay else None
+            ),
+            "surface_continuity_status": (
+                continuity_replay.surface_continuity_status
+                if continuity_replay
+                else None
+            ),
+            "surface_identity_conflict_flags": (
+                continuity_replay.surface_identity_conflict_flags
+                if continuity_replay
+                else []
             ),
             "continuity_recommendation": (
                 continuity_context.recommended_action if continuity_context else None
@@ -3815,6 +3918,27 @@ class OrchestratorService:
             ),
             ecosystem_state_summary=(
                 mission_state.ecosystem_state_summary if mission_state is not None else None
+            ),
+            linked_surface_ids=(
+                list(mission_state.linked_surface_ids)
+                if mission_state is not None
+                else []
+            ),
+            active_surface_id=(
+                mission_state.active_surface_id if mission_state is not None else None
+            ),
+            last_surface_id=(
+                mission_state.last_surface_id if mission_state is not None else None
+            ),
+            surface_continuity_status=(
+                mission_state.surface_continuity_status
+                if mission_state is not None
+                else None
+            ),
+            surface_identity_conflict_flags=(
+                list(mission_state.surface_identity_conflict_flags)
+                if mission_state is not None
+                else []
             ),
             runtime_mode=runtime_mode,
         )

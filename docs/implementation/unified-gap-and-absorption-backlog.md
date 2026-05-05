@@ -66,7 +66,9 @@ Hierarquia correta:
 | Status | Uso correto |
 | --- | --- |
 | `candidate_for_slicing` | pode virar lote micro quando houver repriorizacao explicita |
+| `active_micro_slice` | ja virou fila micro ativa, mas ainda nao foi fechado como baseline |
 | `resolved_in_baseline` | ja foi absorvido em lote micro concluido e agora faz parte do baseline |
+| `resolved_minimum_baseline` | ponte minima ja absorvida, mas produto/canal amplo continua fora de fase |
 | `blocked_by_phase` | valido, mas ainda depende de fase ou dependencia macro |
 | `deferred` | mapeado, mas explicitamente fora do foco atual |
 | `research_only` | radar de pesquisa ou laboratorio, nao fila de implementacao |
@@ -92,8 +94,16 @@ Hierarquia correta:
   bounded de `SG-002` + `TA-002` como baseline operacional auditavel;
 - o proximo passo correto nao e reabrir lote encerrado nem abrir vertical nova
   por impulso;
-- a fila micro foi reaberta em cima de `SG-003` + `SO-002`, mas apenas como
-  contrato minimo de continuidade multissuperficie da mesma entidade;
+- a fila micro foi reaberta em cima de `SG-003` + `SO-002`, e o lote completo
+  (`MB-102` a `MB-106`) ja fechou contrato minimo de identidade por
+  superficie, propagacao pelo runtime atual e persistencia bounded de
+  continuidade, alem da leitura auditavel dessa continuidade em observabilidade,
+  piloto, comparadores, baseline ativo, `evolution-lab`, release e docs vivos;
+- a proxima fila micro foi aberta em cima de `EV-001`, com `MB-107` pronto
+  para registrar a decisao macro e `MB-108`/`MB-109` bloqueados ate essa
+  decisao virar lote tecnico concreto;
+- o proximo passo nao e abrir produto multicanal automaticamente; a fila atual
+  existe justamente para impedir que a proxima frente nasca por inercia;
 - voz/realtime, memoria temporal rica, projetos persistentes e substrate
   operacional amplo continuam fora de fase.
 
@@ -122,7 +132,7 @@ Leitura de horizonte:
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `SG-001` | decisao soberana de capacidades e ferramentas | nucleo executivo, governanca, dispatch | `v2 restante` | `PydanticAI`, `Mastra`, `OpenAI Agents SDK`, `Qwen-Agent` | `onda_2_controlada` | `resolved_in_baseline` | `sim` |
 | `SG-002` | modelo de estado operacional do ecossistema | `orchestrator`, memoria, continuidade | `ponte v2 -> v3` | `LangGraph`, `Mastra`, `Manus` | `onda_3_tardia` | `resolved_in_baseline` | `sim` |
-| `SG-003` | continuidade multissuperficie da mesma entidade | identidade, continuidade, surfaces | `ponte v2 -> v3` | `OpenClaw`, `OpenAI Agents SDK` | `onda_3_tardia` | `candidate_for_slicing` | `sim` |
+| `SG-003` | continuidade multissuperficie da mesma entidade | identidade, continuidade, surfaces | `ponte v2 -> v3` | `OpenClaw`, `OpenAI Agents SDK` | `onda_3_tardia` | `resolved_minimum_baseline` | `sim` |
 | `SG-004` | manutencao ativa de memoria viva e memory review | `memory-service`, `memory_registry` | `v2 restante` | `Letta`, `Hermes Agent`, `Qwen-Agent` | `onda_1_residual` | `resolved_in_baseline` | `sim` |
 | `SG-005` | arbitragem mais declarativa de `mente -> dominio -> especialista` nos consumidores finais | cognicao, `planning`, `synthesis`, observabilidade | `v2 restante` | `Mastra`, `PydanticAI` | `nao_aplicavel` | `resolved_in_baseline` | `sim` |
 | `SG-006` | identidade, missao e politica como checklist executiva por request | identidade, nucleo executivo, governanca | `v2 restante` | `PydanticAI`, `Mastra`, `OpenAI Agents SDK` | `onda_2_controlada` | `resolved_in_baseline` | `sim` |
@@ -135,9 +145,9 @@ Notas de traducao por gap:
 - `SG-002`: falta modelar de forma mais rica workflows ativos, artefatos,
   checkpoints, superficies, integracoes e pendencias como estado operacional do
   ecossistema, e nao apenas contexto de conversa ou missao.
-- `SG-003`: falta um contrato formal para chat, console, voz, web e API
-  exporem a mesma entidade com continuidade compartilhada, sem bifurcar
-  identidade.
+- `SG-003`: o contrato minimo ja existe para identidade de superficie,
+  propagacao, continuidade bounded e auditoria; ainda nao significa voz, web,
+  API publica ou gateway multicanal amplo.
 - `SG-004`: o lifecycle de memoria ja amadureceu, mas ainda falta manutencao
   ativa mais forte: consolidacao, review, compactacao, expiracao disciplinada e
   reuso governado ao longo do tempo.
@@ -191,7 +201,7 @@ Notas de leitura:
 | ID | Frente ainda faltante | Camada JARVIS | Fase alvo | Tecnologias relacionadas | Janela de absorcao | Status | Slice micro |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `SO-001` | voz e realtime como superficie subordinada | interfaces, identidade, continuidade | `v3` | `OpenClaw` como referencia tardia | `onda_3_tardia` | `deferred` | `nao` |
-| `SO-002` | contrato multissuperficie entre console, web, API e futuras interfaces | gateway, identidade, runtime operacional | `ponte v2 -> v3` | `OpenAI Agents SDK`, `OpenClaw` | `onda_3_tardia` | `candidate_for_slicing` | `sim` |
+| `SO-002` | contrato multissuperficie entre console, web, API e futuras interfaces | gateway, identidade, runtime operacional | `ponte v2 -> v3` | `OpenAI Agents SDK`, `OpenClaw` | `onda_3_tardia` | `resolved_minimum_baseline` | `sim` |
 | `SO-003` | projetos persistentes, tarefas assincronas longas e artefatos ativos | estado operacional do ecossistema | `v3` | `Manus`, `LangGraph`, `Mastra` | `onda_3_tardia` | `deferred` | `nao` |
 
 Notas de leitura:
@@ -205,7 +215,7 @@ Notas de leitura:
 
 | ID | Frente ainda faltante | Camada JARVIS | Fase alvo | Tecnologias relacionadas | Janela de absorcao | Status | Slice micro |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `EV-001` | repriorizacao explicita do proximo lote micro a partir deste mapa unificado | governanca de execucao | `agora` | `nenhuma` | `nao_aplicavel` | `candidate_for_slicing` | `sim` |
+| `EV-001` | repriorizacao explicita do proximo lote micro a partir deste mapa unificado | governanca de execucao | `agora` | `nenhuma` | `nao_aplicavel` | `active_micro_slice` | `sim` |
 | `EV-002` | expandir evals e sinais para capacidade, superficie e estado do ecossistema | `observability`, `evolution-lab`, gates | `v2 restante` | `DSPy`, `OpenAI Agents SDK`, `Mastra` | `onda_2_controlada` | `resolved_in_baseline` | `sim` |
 | `EV-003` | compile e optimize loops governados para prompts, planos e workflows | `evolution-lab` | `v2 restante` | `DSPy/MIPROv2`, `TextGrad`, `AFlow`, `EvoAgentX` | `onda_1_residual` | `resolved_in_baseline` | `sim` |
 | `EV-004` | lane controlada de experimentos da Onda 2 com criterio de entrada e saida | comparadores, laboratorio, gates | `v2 restante` | `OpenAI Agents SDK`, `Qwen-Agent`, `Graphiti`, `Mem0`, `OpenHands`, `browser-use` | `onda_2_controlada` | `resolved_in_baseline` | `sim` |
@@ -255,8 +265,10 @@ ser:
 
 Ordem recomendada hoje:
 
-1. executar o lote micro `MB-102` a `MB-106`, aberto a partir de `SG-003` + `SO-002`.
-2. manter `SO-003`, `TA-004`, `TA-006` e verticais `deferred` fora da fila ate haver decisao de fase.
+1. executar `MB-107` para registrar qual candidato macro vira o proximo lote tecnico.
+2. executar `MB-108` apenas depois dessa decisao, abrindo um lote micro curto com um unico item `ready`.
+3. executar `MB-109` para fechar a repriorizacao e sincronizar docs/gates.
+4. manter `SO-001`, `SO-003`, `TA-004`, `TA-006` e verticais `deferred` fora da fila ate haver decisao de fase.
 
 Leitura correta:
 
@@ -269,9 +281,13 @@ Leitura correta:
 - `SG-002` + `TA-002` ja foram fatiados e concluidos no lote `MB-097` a
   `MB-101`, criando estado operacional bounded, auditavel e regeneravel do
   ecossistema;
-- `SG-003` + `SO-002` agora foram repriorizados como lote micro `MB-102` a
-  `MB-106`, limitado a contrato minimo de superficies e continuidade da mesma
-  entidade;
+- `SG-003` + `SO-002` agora foram repriorizados e concluidos como lote micro
+  `MB-102` a `MB-106`; o baseline materializou contrato minimo, propagacao,
+  persistencia bounded, auditoria/readiness e fechamento documental da
+  continuidade da mesma entidade;
+- `EV-001` agora esta fatiado como fila micro `MB-107` a `MB-109`, com foco em
+  escolher e materializar a proxima fila tecnica sem antecipar frentes fora de
+  fase;
 - `TA-004`, `SO-003`, `TA-006` e `DV-001` continuam relevantes, mas ainda fora
   da fila sem mudanca explicita de fase;
 - `RH-*` permanece fora do backlog implementavel.

@@ -136,6 +136,33 @@ def test_evaluation_from_dict_preserves_expanded_eval_signals() -> None:
     assert evaluation.promotion_readiness == "manual_review_only"
 
 
+def test_evaluation_from_dict_preserves_surface_continuity_signals() -> None:
+    evaluation = _evaluation_from_dict(
+        {
+            "request_id": "req-6",
+            "session_id": "sess-6",
+            "mission_id": None,
+            "governance_decision": "allow_with_conditions",
+            "operation_status": "completed",
+            "total_events": 6,
+            "duration_seconds": 1.6,
+            "missing_required_events": [],
+            "anomaly_flags": [],
+            "surface_continuity_status": "linked_surface",
+            "linked_surface_count": 2,
+            "surface_identity_conflict_flags": ["operator_identity_ref_mismatch"],
+            "multi_surface_readiness": "attention_required",
+        }
+    )
+
+    assert evaluation.surface_continuity_status == "linked_surface"
+    assert evaluation.linked_surface_count == 2
+    assert evaluation.surface_identity_conflict_flags == [
+        "operator_identity_ref_mismatch"
+    ]
+    assert evaluation.multi_surface_readiness == "attention_required"
+
+
 def test_render_text_reports_adaptive_intervention_policy_assessment() -> None:
     rendered = render_text(
         {

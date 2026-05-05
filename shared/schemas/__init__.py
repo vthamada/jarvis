@@ -33,6 +33,32 @@ INPUT_SCHEMA = CanonicalSchema(
         "attachments",
         "locale",
         "priority_hint",
+        "surface_id",
+        "surface_kind",
+        "surface_session_id",
+        "surface_capability_scope",
+        "operator_identity_ref",
+        "canonical_user_ref",
+        "surface_continuity_status",
+    ),
+)
+
+SURFACE_IDENTITY_SCHEMA = CanonicalSchema(
+    name="SurfaceIdentitySchema",
+    contract_name="SurfaceIdentityContract",
+    required_fields=(
+        "surface_id",
+        "surface_kind",
+        "surface_session_id",
+    ),
+    optional_fields=(
+        "surface_capability_scope",
+        "operator_identity_ref",
+        "canonical_user_ref",
+        "surface_continuity_status",
+    ),
+    notes=(
+        "Minimum sovereign surface identity contract for bounded multisurface continuity.",
     ),
 )
 
@@ -176,6 +202,13 @@ OPERATION_DISPATCH_SCHEMA = CanonicalSchema(
         "open_checkpoint_refs",
         "surface_presence",
         "ecosystem_state_summary",
+        "surface_id",
+        "surface_kind",
+        "surface_session_id",
+        "surface_capability_scope",
+        "operator_identity_ref",
+        "canonical_user_ref",
+        "surface_continuity_status",
     ),
 )
 
@@ -193,6 +226,13 @@ OPERATION_RESULT_SCHEMA = CanonicalSchema(
         "open_checkpoint_refs",
         "surface_presence",
         "ecosystem_state_summary",
+        "surface_id",
+        "surface_kind",
+        "surface_session_id",
+        "surface_capability_scope",
+        "operator_identity_ref",
+        "canonical_user_ref",
+        "surface_continuity_status",
         "next_recommendation",
         "governance_flags",
         "memory_record_hints",
@@ -341,6 +381,11 @@ MISSION_STATE_SCHEMA = CanonicalSchema(
         "open_checkpoint_refs",
         "surface_presence",
         "ecosystem_state_summary",
+        "linked_surface_ids",
+        "active_surface_id",
+        "last_surface_id",
+        "surface_continuity_status",
+        "surface_identity_conflict_flags",
         "priority_level",
         "owner_context",
         "completion_criteria",

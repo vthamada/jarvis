@@ -2,7 +2,7 @@
 
 ## Metadata
 
-- Atualizado em: 2026-05-04
+- Atualizado em: 2026-05-05
 - Branch: `main`
 - Commit de referência: `02ccc53`
 - Artefato canônico do projeto: `documento_mestre_jarvis.md`
@@ -72,7 +72,7 @@ Leitura operacional correta desta rodada:
 - o baseline ativo agora tambem exige cenarios deliberados para `dominant_tension` e alinhamento `mente -> dominio -> especialista`, promovendo esses sinais a readiness formal de robustez do `v2`.
 - `close_domain_consumers_and_workflows_cut` agora carrega coverage de piloto, match de workflow e readiness dos sinais deliberados como parte da evidencia regeneravel do corte.
 - `master-summary` e `docs/archive/implementation/v2-domain-consumers-and-workflows-cut-closure.md` agora refletem que o baseline do corte combina contratos promovidos com cobertura deliberada do piloto, em vez de tratar isso como detalhe tecnico implícito.
-- o lote anterior do `execution-backlog` foi integralmente executado, incluindo `MB-020` a `MB-022`; esse fechamento permanece valido e o proximo item `ready` agora pertence ao novo lote de maturacao do nucleo.
+- o lote anterior do `execution-backlog` foi integralmente executado, incluindo `MB-020` a `MB-022`; esse fechamento permanece valido e a fila micro atual tambem voltou a ficar sem item `ready`.
 - o caminho padrao do `orchestrator-service` agora tambem fecha a continuidade como subfluxo explicito via `continuity_subflow_completed`, alinhado ao mesmo payload soberano usado pelo caminho opcional de `LangGraph`.
 - o lote `pre-v3 hardening` foi concluido em `docs/implementation/execution-backlog.md`, com `MB-023` a `MB-026` fechados; esse baseline permanece encerrado e nao deve ser reaberto por inercia.
 - o `orchestrator-service` agora fecha o lifecycle de especialistas como subfluxo explicito (`specialist_subflow_completed`) e tambem declara `mission_runtime_state` para requests com missao ativa, related mission e readiness de retomada.
@@ -89,7 +89,7 @@ Leitura atualizada desta rodada:
   continuacao inercial de lotes ja concluidos;
 - `docs/implementation/unified-gap-and-absorption-backlog.md` passa a ser o
   mapa macro do que ainda falta no sistema;
-- a proxima fila micro nasce dali, sem abrir vertical nova por impulso.
+- a fila micro atual nasceu dali, sem abrir vertical nova por impulso.
 - esse recorte continua subordinado ao objetivo maior de construir um JARVIS
   soberano, amplo e autoevolutivo, capaz de absorver o estado da arte sem
   terceirizar identidade, memoria ou governanca.
@@ -99,10 +99,16 @@ Leitura atualizada desta rodada:
 
 Consolidar o fechamento operacional do `v2` sobre um runtime já alinhado aos eixos do Documento-Mestre, preservando `EV-002` + `EV-004` como baseline comparativo controlado e evitando reabrir esse lote por inercia local.
 
-A fila micro ja fechou `MB-097` a `MB-101`, absorvendo `SG-002` + `TA-002`
-como estado operacional bounded, auditavel e regeneravel do ecossistema.
-O proximo lote foi aberto como `MB-102` a `MB-106`, derivado de `SG-003` +
-`SO-002`, com `MB-102` em `ready`.
+A fila micro ja fechou `MB-097` a `MB-106`: `SG-002` + `TA-002` entraram
+como estado operacional bounded, auditavel e regeneravel do ecossistema, e
+`SG-003` + `SO-002` agora tem contrato minimo de identidade por superficie
+propagado pelo runtime atual, persistido em continuidade bounded e auditavel
+em observabilidade, piloto, comparadores, baseline ativo, `evolution-lab` e
+release, com fechamento documental sincronizado.
+A fila micro agora foi reaberta em `MB-107` a `MB-109`, derivada de `EV-001`:
+`MB-107` esta `ready` para registrar a proxima decisao macro, enquanto
+`MB-108` e `MB-109` ficam bloqueados ate essa decisao virar lote tecnico
+concreto.
 
 ### Foco operacional atual
 
@@ -165,11 +171,26 @@ Atualizacao desta rodada:
   release e fechadores regeneraveis passaram a expor readiness do estado
   operacional do ecossistema sem abrir multissuperficie ampla ou substrate
   operacional fora de fase;
-- `MB-102` a `MB-106` foram abertos como lote de continuidade
-  multissuperficie minima da mesma entidade, com `MB-102` em `ready`;
-- o lote novo deve permanecer contido em contrato de superficie, identidade
-  canonica, continuidade bounded e observabilidade; nao abrir voz/realtime,
-  web rica, API publica, memoria temporal rica ou substrate operacional amplo;
+- `MB-102` foi concluido: `SurfaceIdentityContract`, `InputContract`,
+  `OperationDispatchContract`, `OperationResultContract`, schemas, eventos e
+  `apps/jarvis_console` agora carregam `surface_*`, operador e usuario
+  canonico como contrato minimo de identidade por superficie;
+- `MB-103` tambem foi concluido: console, eventos centrais do orquestrador,
+  fluxo opcional de `LangGraph`, contexto de `planning` e entrada de `synthesis`
+  carregam o mesmo slice, preservando `through_core_only`;
+- `MB-104` tambem foi concluido: `memory-service`, `session_continuity`,
+  `continuity_checkpoint`, `continuity_replay`, `mission_state` e
+  `mission_runtime_state` persistem e recuperam superficies vinculadas,
+  superficie ativa, ultima superficie conhecida e flags de conflito;
+- `MB-105` e `MB-106` foram concluidos: continuidade de superficie agora e
+  auditavel em observabilidade, piloto, comparadores e release, e o lote minimo
+  multissuperficie esta fechado nos docs vivos;
+- `MB-107` foi aberto como item `ready` da nova fila de repriorizacao
+  explicita, sem abrir voz/realtime, web rica, API publica, memoria temporal
+  rica ou substrate operacional amplo;
+- o proximo lote tecnico deve permanecer pequeno e subordinado ao nucleo; nao
+  abrir voz/realtime, web rica, API publica, memoria temporal rica ou substrate
+  operacional amplo sem decisao de fase;
 - tratar a Onda 2 apenas como experimento controlado guiado pela matriz de
   readiness ja existente, sem promocao automatica de referencia externa;
 - manter `protective intelligence`, `voice/realtime`, memoria temporal forte,
@@ -226,9 +247,9 @@ Atualizacao desta rodada:
 - `MB-097` a `MB-101` agora foram concluidos e fecharam o lote bounded de
   estado operacional do ecossistema em runtime, memoria, observabilidade,
   evolucao, release e documentacao;
-- `MB-102` a `MB-106` agora foram abertos para transformar `SG-003` + `SO-002`
-  em continuidade multissuperficie minima, sem abrir as frentes amplas ainda
-  marcadas como fora de fase;
+- `MB-102` a `MB-106` foram concluidos e fecharam contrato, propagacao runtime,
+  continuidade bounded, auditoria/readiness e documentacao da identidade minima
+  por superficie;
 - tratar a Onda 2 apenas como experimento controlado guiado pela matriz de
   readiness ja existente, sem promocao automatica de referencia externa;
 - so depois desse lote: reavaliar qual vertical derivada deve abrir a proxima frente macro; `protective intelligence` permanece mapeado, mas em `deferred` ate nova decisao explicita;
@@ -238,7 +259,7 @@ Regra operacional desta fase:
 
 - `HANDOFF.md` permanece macro e tatico;
 - a fila micro executavel agora vive exclusivamente em `docs/implementation/execution-backlog.md`;
-- o proximo item tecnico deve ser puxado dali, nao reconstruido localmente a partir deste handoff.
+- a proxima frente tecnica deve nascer de repriorizacao explicita no backlog macro, nao ser reconstruida localmente a partir deste handoff.
 
 Sistema oficial de planejamento desta fase:
 
@@ -399,7 +420,7 @@ Pendências principais desta fase:
 - tratar `MB-032` a `MB-036` como baseline ja fechado, sem reabrir o mesmo lote por inercia local;
 - tratar `MB-037` a `MB-040` como lote fechado, sem reabrir o mesmo trabalho por inercia local;
 - continuar refinando criterios de saida por `workflow_profile`, uso soberano de memoria e profundidade da cadeia `mente -> dominio -> especialista` apenas quando isso justificar um novo lote real;
-- a pendencia tecnica material agora aberta e `MB-102`: contrato minimo de identidade e continuidade por superficie, antes de qualquer runtime multicanal amplo.
+- a pendencia micro `ready` atual e `MB-107`: escolher o proximo candidato macro a partir do mapa unificado antes de abrir qualquer lote tecnico novo.
 
 Regra de estudo externo no `v2`:
 
@@ -411,13 +432,12 @@ Regra de estudo externo no `v2`:
 ## Próximos passos imediatos
 
 Ordem recomendada:
-1. puxar `MB-102` em `docs/implementation/execution-backlog.md`;
-2. implementar primeiro o contrato soberano de superficie, identidade canonica e continuidade minima, sem abrir voz/realtime, web rica, API publica ou gateway externo;
-3. depois seguir a dependencia natural `MB-103` -> `MB-104` -> `MB-105` -> `MB-106`;
+1. preservar `MB-102` a `MB-106` como lote fechado de continuidade multissuperficie minima;
+2. executar `MB-107` para registrar a proxima decisao macro a partir de `EV-001`;
+3. manter voz/realtime, web rica, API publica, gateway externo, memoria temporal rica e substrate operacional amplo fora de fase;
 4. preservar `MB-023` a `MB-026` como baseline fechado e `MB-027` a `MB-031` como `deferred`, sem reabrir `protective intelligence` por impulso;
-5. tratar `MB-082` a `MB-101` como lotes ja fechados do baseline atual, sem reabrir esse eixo por inercia local;
-6. manter historico regeneravel em `docs/archive/implementation/` e `tools/archive/` sem reexpandir a raiz do repositorio;
-7. so abrir outra frente funcional depois de fechar `MB-102` a `MB-106` ou se a prioridade macro mudar explicitamente.
+5. tratar `MB-082` a `MB-106` como lotes ja fechados do baseline atual, sem reabrir esse eixo por inercia local;
+6. manter historico regeneravel em `docs/archive/implementation/` e `tools/archive/` sem reexpandir a raiz do repositorio.
 
 Atualização desta rodada:
 

@@ -235,6 +235,22 @@ def _evaluation_from_dict(payload: dict[str, object]) -> FlowEvaluationInput:
         surface_presence=[
             str(item) for item in (payload.get("surface_presence") or []) if item
         ],
+        surface_continuity_status=(
+            str(payload["surface_continuity_status"])
+            if payload.get("surface_continuity_status") is not None
+            else None
+        ),
+        linked_surface_count=int(payload.get("linked_surface_count") or 0),
+        surface_identity_conflict_flags=[
+            str(item)
+            for item in (payload.get("surface_identity_conflict_flags") or [])
+            if item
+        ],
+        multi_surface_readiness=(
+            str(payload["multi_surface_readiness"])
+            if payload.get("multi_surface_readiness") is not None
+            else None
+        ),
         experiment_lane_status=(
             str(payload["experiment_lane_status"])
             if payload.get("experiment_lane_status") is not None
@@ -536,6 +552,12 @@ def build_payload(args: Namespace) -> dict[str, object]:
                 active_artifact_refs=list(audit.active_artifact_refs),
                 open_checkpoint_refs=list(audit.open_checkpoint_refs),
                 surface_presence=list(audit.surface_presence),
+                surface_continuity_status=audit.surface_continuity_status,
+                linked_surface_count=audit.linked_surface_count,
+                surface_identity_conflict_flags=list(
+                    audit.surface_identity_conflict_flags
+                ),
+                multi_surface_readiness=audit.multi_surface_readiness,
                 experiment_lane_status=audit.experiment_lane_status,
                 wave2_candidate_class=audit.wave2_candidate_class,
                 experiment_entry_status=audit.experiment_entry_status,

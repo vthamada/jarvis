@@ -1,6 +1,10 @@
-from shared.contracts import GovernanceDecisionContract, InputContract
+from shared.contracts import (
+    GovernanceDecisionContract,
+    InputContract,
+    SurfaceIdentityContract,
+)
 from shared.events import INTERNAL_EVENT_NAMES
-from shared.schemas import INPUT_SCHEMA
+from shared.schemas import INPUT_SCHEMA, SURFACE_IDENTITY_SCHEMA
 from shared.state import SYSTEM_IDENTITY
 from shared.types import (
     ChannelType,
@@ -30,6 +34,21 @@ def test_input_contract_can_be_instantiated() -> None:
     assert contract.content == "hello"
 
 
+def test_surface_identity_contract_declares_minimum_continuity_fields() -> None:
+    contract = SurfaceIdentityContract(
+        surface_id="surface://jarvis_console",
+        surface_kind="console",
+        surface_session_id="sess-1",
+        surface_capability_scope=["text_input", "core_orchestrated_response"],
+        operator_identity_ref="operator://local_console",
+        canonical_user_ref="user://local_operator",
+    )
+
+    assert contract.surface_continuity_status == "single_surface"
+    assert SURFACE_IDENTITY_SCHEMA.contract_name == "SurfaceIdentityContract"
+    assert "surface_id" in INPUT_SCHEMA.optional_fields
+
+
 def test_governance_decision_uses_canonical_enums() -> None:
     decision = GovernanceDecisionContract(
         decision_id=GovernanceDecisionId("decision-1"),
@@ -45,6 +64,7 @@ def test_governance_decision_uses_canonical_enums() -> None:
 def test_internal_event_names_include_governance_blocked() -> None:
     assert "governance_blocked" in INTERNAL_EVENT_NAMES
     assert "knowledge_retrieved" in INTERNAL_EVENT_NAMES
+    assert "surface_identity_declared" in INTERNAL_EVENT_NAMES
 
 
 def test_system_identity_has_core_principles() -> None:

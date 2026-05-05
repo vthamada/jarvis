@@ -62,6 +62,10 @@ def _make_result(  # type: ignore[no-untyped-def]
     request_identity_status: str = "healthy",
     mission_policy_status: str = "policy_aligned",
     request_identity_mismatch_flags: list[str] | None = None,
+    surface_continuity_status: str = "single_surface",
+    linked_surface_count: int = 1,
+    surface_identity_conflict_flags: list[str] | None = None,
+    multi_surface_readiness: str = "single_surface_ready",
 ) -> Any:
     from tools.internal_pilot_support import PilotExecutionResult
 
@@ -185,6 +189,10 @@ def _make_result(  # type: ignore[no-untyped-def]
         active_artifact_refs=["artifact://procedural/analysis/structured_analysis_workflow/v1"],
         open_checkpoint_refs=["workflow_checkpoint:operator_review:pending"],
         surface_presence=["surface:chat", "workflow:structured_analysis_workflow"],
+        surface_continuity_status=surface_continuity_status,
+        linked_surface_count=linked_surface_count,
+        surface_identity_conflict_flags=surface_identity_conflict_flags or [],
+        multi_surface_readiness=multi_surface_readiness,
         active_domains=["analysis"],
         specialist_hints=["structured_analysis_specialist"],
         response_preview="preview",
@@ -240,6 +248,10 @@ def _make_pilot_trace_summary() -> Any:
         active_artifact_refs=[],
         open_checkpoint_refs=["workflow_checkpoint:operator_review:pending"],
         surface_presence=["surface:chat", "workflow:structured_analysis_workflow"],
+        surface_continuity_status="linked_surface",
+        linked_surface_count=2,
+        surface_identity_conflict_flags=[],
+        multi_surface_readiness="observable_not_promoted",
         experiment_lane_status="attention_required",
         wave2_candidate_class="baseline_hardening",
         experiment_entry_status="blocked_by_drift",
@@ -752,6 +764,22 @@ def main() -> None:
         "Comparison text lost ecosystem surface presence coverage.",
     )
     _ensure(
+        "candidate_surface_continuity_status=single_surface" in comparison_text,
+        "Comparison text lost surface continuity status coverage.",
+    )
+    _ensure(
+        "candidate_linked_surface_count=1" in comparison_text,
+        "Comparison text lost linked surface count coverage.",
+    )
+    _ensure(
+        "candidate_surface_identity_conflict_flags=none" in comparison_text,
+        "Comparison text lost surface identity conflict coverage.",
+    )
+    _ensure(
+        "candidate_multi_surface_readiness=single_surface_ready" in comparison_text,
+        "Comparison text lost multi-surface readiness coverage.",
+    )
+    _ensure(
         "candidate_experiment_lane_status=" in comparison_text,
         "Comparison text lost the controlled experiment lane release line.",
     )
@@ -855,6 +883,22 @@ def main() -> None:
     _ensure(
         "operational_ecosystem_state_status=partial_operational_state" in pilot_text,
         "Pilot report text lost the operational ecosystem state status.",
+    )
+    _ensure(
+        "surface_continuity_status=linked_surface" in pilot_text,
+        "Pilot report text lost surface continuity status coverage.",
+    )
+    _ensure(
+        "linked_surface_count=2" in pilot_text,
+        "Pilot report text lost linked surface count coverage.",
+    )
+    _ensure(
+        "surface_identity_conflict_flags=none" in pilot_text,
+        "Pilot report text lost surface identity conflict coverage.",
+    )
+    _ensure(
+        "multi_surface_readiness=observable_not_promoted" in pilot_text,
+        "Pilot report text lost multi-surface readiness coverage.",
     )
     _ensure(
         "active_work_items=workflow_step:review active ecosystem state" in pilot_text,

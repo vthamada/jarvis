@@ -125,6 +125,10 @@ class FlowEvaluationInput:
     active_artifact_refs: list[str] = field(default_factory=list)
     open_checkpoint_refs: list[str] = field(default_factory=list)
     surface_presence: list[str] = field(default_factory=list)
+    surface_continuity_status: str | None = None
+    linked_surface_count: int = 0
+    surface_identity_conflict_flags: list[str] = field(default_factory=list)
+    multi_surface_readiness: str | None = None
     experiment_lane_status: str | None = None
     wave2_candidate_class: str | None = None
     experiment_entry_status: str | None = None
@@ -476,6 +480,22 @@ class EvolutionLabService:
             source_signals.append("runtime://ecosystem-open-checkpoints/present")
         if evaluation.surface_presence:
             source_signals.append("runtime://ecosystem-surface-presence/present")
+        if evaluation.surface_continuity_status:
+            source_signals.append(
+                "runtime://surface-continuity/"
+                f"{evaluation.surface_continuity_status}"
+            )
+        if evaluation.linked_surface_count:
+            source_signals.append(
+                f"runtime://linked-surface-count/{evaluation.linked_surface_count}"
+            )
+        if evaluation.surface_identity_conflict_flags:
+            source_signals.append("runtime://surface-identity-conflict/present")
+        if evaluation.multi_surface_readiness:
+            source_signals.append(
+                "runtime://multi-surface-readiness/"
+                f"{evaluation.multi_surface_readiness}"
+            )
         source_signals.append(
             f"experiment://lane/{expanded_eval_state['experiment_lane_status']}"
         )
@@ -1572,6 +1592,16 @@ class EvolutionLabService:
                 "active_artifact_refs": len(evaluation.active_artifact_refs),
                 "open_checkpoint_refs": len(evaluation.open_checkpoint_refs),
                 "surface_presence": len(evaluation.surface_presence),
+                "surface_continuity": (
+                    evaluation.surface_continuity_status or "not_applicable"
+                ),
+                "linked_surface_count": evaluation.linked_surface_count,
+                "surface_identity_conflicts": list(
+                    evaluation.surface_identity_conflict_flags
+                ),
+                "multi_surface_readiness": (
+                    evaluation.multi_surface_readiness or "not_applicable"
+                ),
                 "experiment_lane": expanded_eval_state["experiment_lane_status"],
                 "wave2_candidate_class": expanded_eval_state["wave2_candidate_class"],
                 "experiment_entry": expanded_eval_state["experiment_entry_status"],

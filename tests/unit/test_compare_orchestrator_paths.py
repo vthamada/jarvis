@@ -101,6 +101,10 @@ def make_result(  # type: ignore[no-untyped-def]
     continuity_trace_status: str = "healthy",
     continuity_anomaly_flags: list[str] | None = None,
     missing_continuity_signals: list[str] | None = None,
+    surface_continuity_status: str = "single_surface",
+    linked_surface_count: int = 1,
+    surface_identity_conflict_flags: list[str] | None = None,
+    multi_surface_readiness: str = "single_surface_ready",
     trace_status: str = "healthy",
     anomaly_flags: list[str] | None = None,
     missing_required_events: list[str] | None = None,
@@ -210,6 +214,10 @@ def make_result(  # type: ignore[no-untyped-def]
         continuity_trace_status=continuity_trace_status,
         missing_continuity_signals=missing_continuity_signals or [],
         continuity_anomaly_flags=continuity_anomaly_flags or [],
+        surface_continuity_status=surface_continuity_status,
+        linked_surface_count=linked_surface_count,
+        surface_identity_conflict_flags=surface_identity_conflict_flags or [],
+        multi_surface_readiness=multi_surface_readiness,
         trace_status=trace_status,
         anomaly_flags=anomaly_flags or [],
         missing_required_events=missing_required_events or [],
@@ -258,6 +266,29 @@ def test_compare_results_flags_continuity_mismatch_fields() -> None:
         "workflow_domain_route",
         "workflow_trace_status",
         "continuity_trace_status",
+    ]
+
+
+def test_compare_results_flags_surface_continuity_mismatch_fields() -> None:
+    baseline = [make_result(scenario_id="x", path_name="baseline")]
+    candidate = [
+        make_result(
+            scenario_id="x",
+            path_name="langgraph",
+            surface_continuity_status="conflict",
+            linked_surface_count=2,
+            surface_identity_conflict_flags=["canonical_user_ref_mismatch"],
+            multi_surface_readiness="attention_required",
+        )
+    ]
+
+    comparisons = compare_results(baseline, candidate)
+
+    assert comparisons[0].mismatch_fields == [
+        "surface_continuity_status",
+        "linked_surface_count",
+        "surface_identity_conflict_flags",
+        "multi_surface_readiness",
     ]
 
 
@@ -681,6 +712,14 @@ def test_render_text_reports_workflow_profile_status() -> None:
     assert "candidate_surface_axis_status=candidate_ready" in rendered
     assert "baseline_ecosystem_state_status=candidate_ready" in rendered
     assert "candidate_ecosystem_state_status=attention_required" in rendered
+    assert "baseline_surface_continuity_status=single_surface" in rendered
+    assert "baseline_linked_surface_count=1" in rendered
+    assert "baseline_surface_identity_conflict_flags=none" in rendered
+    assert "baseline_multi_surface_readiness=single_surface_ready" in rendered
+    assert "candidate_surface_continuity_status=single_surface" in rendered
+    assert "candidate_linked_surface_count=1" in rendered
+    assert "candidate_surface_identity_conflict_flags=none" in rendered
+    assert "candidate_multi_surface_readiness=single_surface_ready" in rendered
     assert "baseline_experiment_lane_status=controlled_candidate" in rendered
     assert "candidate_experiment_lane_status=attention_required" in rendered
     assert "baseline_promotion_readiness=manual_review_only" in rendered

@@ -253,15 +253,22 @@ def test_memory_service_recovers_bounded_ecosystem_state_for_continuity() -> Non
     assert replay.ecosystem_state_status == "operational_state_attached"
     assert replay.recovery_mode == "resume_operational_checkpoint"
     assert replay.resume_point.startswith("ecosystem_checkpoint:")
+    assert replay.linked_surface_ids == ["surface://jarvis_console"]
+    assert replay.active_surface_id == "surface://jarvis_console"
+    assert replay.surface_continuity_status == "single_surface"
+    assert replay.surface_identity_conflict_flags == []
     assert checkpoint is not None
     assert checkpoint.ecosystem_state_status == "operational_state_attached"
     assert checkpoint.open_checkpoint_refs == [
         "workflow_checkpoint:close_readiness_checkpoint:pending"
     ]
+    assert checkpoint.active_surface_id == "surface://jarvis_console"
     assert mission_state is not None
     assert mission_state.ecosystem_state_status == "operational_state_attached"
     assert mission_state.active_work_items == ["mission_task:Plan milestone M3"]
     assert "runtime://artifact/milestone-plan.md" in mission_state.active_artifact_refs
+    assert mission_state.linked_surface_ids == ["surface://jarvis_console"]
+    assert mission_state.active_surface_id == "surface://jarvis_console"
     assert any(
         item == "mission_ecosystem_state_status=operational_state_attached"
         for item in recovered.recovered_items
@@ -277,6 +284,10 @@ def test_memory_service_recovers_bounded_ecosystem_state_for_continuity() -> Non
     )
     assert any(
         item.startswith("mission_open_checkpoint_refs=")
+        for item in recovered.recovered_items
+    )
+    assert any(
+        item == "mission_active_surface_id=surface://jarvis_console"
         for item in recovered.recovered_items
     )
 
@@ -1046,6 +1057,13 @@ def sample_operation_dispatch(
         ],
         surface_presence=["surface:chat", f"session:{session_id}", f"mission:{mission_id}"],
         ecosystem_state_summary="work_items=1; artifacts=1; open_checkpoints=1; surfaces=3",
+        surface_id="surface://jarvis_console",
+        surface_kind="console",
+        surface_session_id=session_id,
+        surface_capability_scope=["text_input"],
+        operator_identity_ref="operator://local_console",
+        canonical_user_ref="user://local_operator",
+        surface_continuity_status="single_surface",
     )
 
 
@@ -1068,6 +1086,13 @@ def sample_operation_result(*, operation_id: str, artifact_ref: str) -> Operatio
         ],
         surface_presence=["surface:chat", "session:sess-eco", "mission:mission-eco"],
         ecosystem_state_summary="work_items=1; artifacts=2; open_checkpoints=1; surfaces=3",
+        surface_id="surface://jarvis_console",
+        surface_kind="console",
+        surface_session_id="sess-eco",
+        surface_capability_scope=["text_input"],
+        operator_identity_ref="operator://local_console",
+        canonical_user_ref="user://local_operator",
+        surface_continuity_status="single_surface",
     )
 
 

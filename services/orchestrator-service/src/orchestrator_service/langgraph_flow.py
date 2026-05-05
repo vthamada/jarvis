@@ -81,7 +81,11 @@ class LangGraphFlowRunner:
                     self.orchestrator.make_event(
                         "input_received",
                         contract,
-                        {"content": contract.content, "channel": contract.channel.value},
+                        {
+                            "content": contract.content,
+                            "channel": contract.channel.value,
+                            **self.orchestrator._surface_identity_payload(contract),
+                        },
                     )
                 ],
             }
@@ -464,6 +468,9 @@ class LangGraphFlowRunner:
                         "workflow_resume_eligible": (
                             operation_dispatch.workflow_resume_eligible
                         ),
+                        **self.orchestrator._surface_identity_payload(
+                            operation_dispatch
+                        ),
                         **self.orchestrator._capability_decision_event_payload(
                             operation_dispatch
                         ),
@@ -503,6 +510,9 @@ class LangGraphFlowRunner:
                         "workflow_decision_points": operation_dispatch.workflow_decision_points,
                         "workflow_resume_status": operation_dispatch.workflow_resume_status,
                         "workflow_resume_point": operation_dispatch.workflow_resume_point,
+                        **self.orchestrator._surface_identity_payload(
+                            operation_dispatch
+                        ),
                         **self.orchestrator._capability_decision_event_payload(
                             operation_dispatch
                         ),
@@ -534,6 +544,9 @@ class LangGraphFlowRunner:
                         "workflow_resume_point": operation_dispatch.workflow_resume_point,
                         "workflow_resume_eligible": (
                             operation_dispatch.workflow_resume_eligible
+                        ),
+                        **self.orchestrator._surface_identity_payload(
+                            operation_dispatch
                         ),
                         **self.orchestrator._capability_decision_event_payload(
                             operation_dispatch
@@ -661,6 +674,11 @@ class LangGraphFlowRunner:
                     ),
                     "workflow_output_status": synthesis_result.workflow_output_status,
                     "workflow_output_errors": synthesis_result.workflow_output_errors,
+                    **self.orchestrator._surface_identity_payload(
+                        state.get("operation_result")
+                        or state.get("operation_dispatch")
+                        or contract
+                    ),
                     "primary_mind": state["deliberative_plan"].primary_mind,
                     "primary_mind_family": state["deliberative_plan"].primary_mind_family,
                     "primary_domain_driver": (
@@ -722,6 +740,11 @@ class LangGraphFlowRunner:
                         if state["deliberative_plan"].continuity_target_mission_id
                         else None
                     ),
+                    **self.orchestrator._surface_identity_payload(
+                        state.get("operation_result")
+                        or state.get("operation_dispatch")
+                        or contract
+                    ),
                 },
             )
         )
@@ -752,6 +775,11 @@ class LangGraphFlowRunner:
                         str(state["deliberative_plan"].continuity_target_mission_id)
                         if state["deliberative_plan"].continuity_target_mission_id
                         else None
+                    ),
+                    **self.orchestrator._surface_identity_payload(
+                        state.get("operation_result")
+                        or state.get("operation_dispatch")
+                        or contract
                     ),
                 },
             )

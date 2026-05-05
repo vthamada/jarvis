@@ -134,6 +134,10 @@ class PilotTraceSummary:
     active_artifact_refs: list[str] | None = None
     open_checkpoint_refs: list[str] | None = None
     surface_presence: list[str] | None = None
+    surface_continuity_status: str = "not_applicable"
+    linked_surface_count: int = 0
+    surface_identity_conflict_flags: list[str] | None = None
+    multi_surface_readiness: str = "not_applicable"
     experiment_lane_status: str = "not_applicable"
     wave2_candidate_class: str = "baseline_hardening"
     experiment_entry_status: str = "not_applicable"
@@ -278,6 +282,12 @@ def summarize_traces(
             active_artifact_refs=list(audit.active_artifact_refs),
             open_checkpoint_refs=list(audit.open_checkpoint_refs),
             surface_presence=list(audit.surface_presence),
+            surface_continuity_status=audit.surface_continuity_status,
+            linked_surface_count=audit.linked_surface_count,
+            surface_identity_conflict_flags=list(
+                audit.surface_identity_conflict_flags
+            ),
+            multi_surface_readiness=audit.multi_surface_readiness,
             experiment_lane_status=audit.experiment_lane_status,
             wave2_candidate_class=audit.wave2_candidate_class,
             experiment_entry_status=audit.experiment_entry_status,
@@ -491,6 +501,14 @@ def _render_summary(summary: PilotTraceSummary) -> str:
         "mission_runtime_state_status="
         f"{mission_status or 'not_applicable'} "
         f"mission_runtime_state_assessment={mission_assessment} "
+        "surface_continuity_status="
+        f"{getattr(summary, 'surface_continuity_status', 'not_applicable')} "
+        "linked_surface_count="
+        f"{getattr(summary, 'linked_surface_count', 0)} "
+        "surface_identity_conflict_flags="
+        f"{','.join(getattr(summary, 'surface_identity_conflict_flags', []) or []) or 'none'} "
+        "multi_surface_readiness="
+        f"{getattr(summary, 'multi_surface_readiness', 'not_applicable')} "
         f"workflow_domain_route={getattr(summary, 'workflow_domain_route', None) or 'none'} "
         "registry_domains="
         f"{','.join(getattr(summary, 'registry_domains', [])) or 'none'} "

@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from os import getenv
 from pathlib import Path
 
@@ -183,6 +183,10 @@ class FlowAudit:
     operation_status: str | None
     duration_seconds: float
     source_services: list[str]
+    surface_continuity_status: str = "not_applicable"
+    linked_surface_count: int = 0
+    surface_identity_conflict_flags: list[str] = field(default_factory=list)
+    multi_surface_readiness: str = "not_applicable"
 
     @property
     def trace_complete(self) -> bool:
@@ -226,6 +230,8 @@ class FlowAudit:
             and self.specialist_subflow_status
             in {"healthy", "not_applicable", "contained"}
             and self.mission_runtime_state_status in {"healthy", "not_applicable"}
+            and not self.surface_identity_conflict_flags
+            and self.multi_surface_readiness != "attention_required"
         )
 
 
@@ -414,6 +420,10 @@ class ObservabilityService:
                 active_artifact_refs=[],
                 open_checkpoint_refs=[],
                 surface_presence=[],
+                surface_continuity_status="not_applicable",
+                linked_surface_count=0,
+                surface_identity_conflict_flags=[],
+                multi_surface_readiness="not_applicable",
                 experiment_lane_status="attention_required",
                 wave2_candidate_class="baseline_hardening",
                 experiment_entry_status="blocked_by_drift",
@@ -1655,6 +1665,28 @@ class ObservabilityService:
         active_artifact_refs = self._dedupe_payload_list(events, "active_artifact_refs")
         open_checkpoint_refs = self._dedupe_payload_list(events, "open_checkpoint_refs")
         surface_presence = self._dedupe_payload_list(events, "surface_presence")
+        surface_continuity_event = self._first_payload_event(
+            events,
+            "surface_continuity_status",
+        )
+        surface_continuity_status = (
+            str(surface_continuity_event.payload.get("surface_continuity_status"))
+            if surface_continuity_event is not None
+            and surface_continuity_event.payload.get("surface_continuity_status")
+            is not None
+            else "not_applicable"
+        )
+        linked_surface_ids = self._dedupe_payload_list(events, "linked_surface_ids")
+        surface_identity_conflict_flags = self._dedupe_payload_list(
+            events,
+            "surface_identity_conflict_flags",
+        )
+        linked_surface_count = len(linked_surface_ids)
+        multi_surface_readiness = self._multi_surface_readiness(
+            surface_continuity_status=surface_continuity_status,
+            linked_surface_count=linked_surface_count,
+            surface_identity_conflict_flags=surface_identity_conflict_flags,
+        )
 
         return FlowAudit(
             request_id=first_event.request_id,
@@ -1718,6 +1750,10 @@ class ObservabilityService:
             active_artifact_refs=active_artifact_refs,
             open_checkpoint_refs=open_checkpoint_refs,
             surface_presence=surface_presence,
+            surface_continuity_status=surface_continuity_status,
+            linked_surface_count=linked_surface_count,
+            surface_identity_conflict_flags=surface_identity_conflict_flags,
+            multi_surface_readiness=multi_surface_readiness,
             experiment_lane_status=expanded_eval_state["experiment_lane_status"],
             wave2_candidate_class=expanded_eval_state["wave2_candidate_class"],
             experiment_entry_status=expanded_eval_state["experiment_entry_status"],
@@ -1979,6 +2015,27 @@ class ObservabilityService:
                 if text and text not in values:
                     values.append(text)
         return values
+
+    @staticmethod
+    def _multi_surface_readiness(
+        *,
+        surface_continuity_status: str,
+        linked_surface_count: int,
+        surface_identity_conflict_flags: list[str],
+    ) -> str:
+        status = surface_continuity_status or "not_applicable"
+        if surface_identity_conflict_flags or "conflict" in status:
+            return "attention_required"
+        if status == "not_applicable" and linked_surface_count == 0:
+            return "not_applicable"
+        if linked_surface_count <= 1 and status in {
+            "single_surface",
+            "not_applicable",
+        }:
+            return "single_surface_ready"
+        if linked_surface_count > 1:
+            return "observable_not_promoted"
+        return "attention_required"
 
     @staticmethod
     def _continuity_trace_status(

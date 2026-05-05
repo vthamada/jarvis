@@ -78,6 +78,12 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
             input_type=InputType.TEXT,
             content="Please plan the first milestone.",
             timestamp="2026-03-17T00:00:00Z",
+            surface_id="surface://jarvis_console",
+            surface_kind="console",
+            surface_session_id="sess-1",
+            surface_capability_scope=["text_input"],
+            operator_identity_ref="operator://local_console",
+            canonical_user_ref="user://local_operator",
         )
     )
     assert isinstance(result, OrchestratorResponse)
@@ -114,6 +120,31 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     assert result.operation_dispatch.request_identity_policy_refs == [
         "policy://request-identity/default"
     ]
+    assert result.operation_dispatch.surface_id == "surface://jarvis_console"
+    assert result.operation_dispatch.surface_kind == "console"
+    assert result.operation_dispatch.surface_session_id == "sess-1"
+    assert result.operation_dispatch.surface_capability_scope == ["text_input"]
+    assert result.operation_dispatch.operator_identity_ref == "operator://local_console"
+    assert result.operation_dispatch.canonical_user_ref == "user://local_operator"
+    assert result.operation_dispatch.surface_continuity_status == "single_surface"
+    input_event = next(event for event in result.events if event.event_name == "input_received")
+    assert input_event.payload["surface_id"] == "surface://jarvis_console"
+    assert input_event.payload["surface_kind"] == "console"
+    assert input_event.payload["surface_continuity_status"] == "single_surface"
+    for event_name in {
+        "workflow_composed",
+        "operation_dispatched",
+        "response_synthesized",
+        "memory_recorded",
+    }:
+        event = next(event for event in result.events if event.event_name == event_name)
+        assert event.payload["surface_id"] == "surface://jarvis_console"
+        assert event.payload["surface_kind"] == "console"
+        assert event.payload["surface_session_id"] == "sess-1"
+        assert event.payload["operator_identity_ref"] == "operator://local_console"
+        assert event.payload["canonical_user_ref"] == "user://local_operator"
+        assert event.payload["surface_continuity_status"] == "single_surface"
+    assert result.operation_result.surface_id == "surface://jarvis_console"
     assert result.operation_dispatch.capability_decision_tool_class == "local_artifact_generation"
     assert result.operation_dispatch.canonical_domain_hints
     assert result.operation_dispatch.primary_canonical_domain == "estrategia_e_pensamento_sistemico"

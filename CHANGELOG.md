@@ -1,5 +1,49 @@
 # CHANGELOG
 
+## 2026-05-05
+
+### Proxima fila micro aberta por `EV-001`
+
+- `docs/implementation/execution-backlog.md` agora abre `MB-107` a `MB-109` como fila curta de repriorizacao, com `MB-107` em `ready`;
+- `docs/implementation/unified-gap-and-absorption-backlog.md` marca `EV-001` como `active_micro_slice`, deixando claro que a proxima implementacao tecnica ainda depende da decisao registrada;
+- `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para substituir o estado antigo de "sem item ready" pelo novo estado `MB-107 ready`;
+- voz/realtime, web rica, API publica, memoria temporal rica, substrate operacional amplo, verticais `deferred` e horizontes `research_only` continuam fora da fila por fase.
+
+### MB-106 fechou o lote minimo de continuidade multissuperficie
+
+- `docs/implementation/execution-backlog.md` marcou `MB-102` a `MB-106` como concluidos e, naquele fechamento, voltou ao estado sem item `ready`;
+- `docs/implementation/unified-gap-and-absorption-backlog.md` registra `SG-003` + `SO-002` como `resolved_minimum_baseline`, distinguindo contrato minimo de superficie de abertura ampla de produto;
+- `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para apontar que a proxima frente exigia nova repriorizacao explicita;
+- `SO-001`, `SO-003`, `TA-004`, `TA-006`, voz/realtime, web rica, API publica, memoria temporal rica e verticais `deferred` seguem fora de fase.
+
+### MB-105 tornou continuidade de superficie auditavel
+
+- `observability-service` agora deriva `surface_continuity_status`, `linked_surface_count`, `surface_identity_conflict_flags` e `multi_surface_readiness` a partir dos eventos do fluxo;
+- `internal_pilot_support`, `internal_pilot_report`, `compare_orchestrator_paths.py`, `verify_active_cut_baseline.py`, `evolution-lab`, `evolution_from_pilot.py` e `verify_release_signal_baseline.py` agora expoem esses sinais como evidencia comparavel de release;
+- a readiness multissuperficie permanece apenas auditavel (`single_surface_ready` ou `observable_not_promoted`) e nao promove voz, web, API publica ou gateway multicanal automaticamente;
+- `docs/implementation/execution-backlog.md`, `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para marcar `MB-105` como concluido antes do fechamento documental em `MB-106`.
+
+### MB-102 fechou contrato minimo de identidade por superficie
+
+- `shared/contracts`, `shared/schemas` e `shared/events` agora formalizam `SurfaceIdentityContract` e os campos `surface_id`, `surface_kind`, `surface_session_id`, `surface_capability_scope`, `operator_identity_ref`, `canonical_user_ref` e `surface_continuity_status` nos contratos de entrada e operacao;
+- `apps/jarvis_console` agora preenche a identidade minima da superficie console por request, com overrides opcionais para operador e usuario canonico sem abrir gateway externo ou nova UI ampla;
+- `orchestrator-service` passa a preservar esse payload em `input_received` e `OperationDispatchContract`, e `operational-service` o copia para `OperationResultContract`;
+- `docs/implementation/execution-backlog.md`, `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para marcar `MB-102` como concluido e `MB-103` como o item `ready` atual.
+
+### MB-103 propagou identidade de superficie pelo runtime atual
+
+- `orchestrator-service` e o fluxo opcional de `LangGraph` agora carregam `surface_*`, operador e usuario canonico em `workflow_composed`, `operation_dispatched`, `response_synthesized` e `memory_recorded`, alem de `input_received`;
+- `planning-engine` e `synthesis-engine` agora aceitam o slice minimo de identidade de superficie nos contextos internos, sem usar isso como permissao para abrir nova superficie ou bypassar o nucleo;
+- a bateria direcionada cobre shared, console, orchestrator, LangGraph, operational, planning e synthesis;
+- `docs/implementation/execution-backlog.md`, `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para marcar `MB-103` como concluido e `MB-104` como o item `ready` atual.
+
+### MB-104 persistiu continuidade bounded de superficie
+
+- `ContinuityCheckpointContract`, `ContinuityReplayContract`, `MissionStateContract` e `MissionRuntimeStateContract` agora carregam superficies vinculadas, superficie ativa, ultima superficie conhecida, status de continuidade de superficie e flags de conflito de identidade;
+- `memory-service` e seus repositórios SQLite/Postgres persistem esses sinais em `session_continuity`, `continuity_checkpoints` e `mission_states`, com recovery bounded em hints de sessão, missão, checkpoint e replay;
+- `orchestrator-service` passa a refletir esses sinais em `continuity_replay_loaded`, `continuity_subflow_completed` e `mission_runtime_state_declared`;
+- `docs/implementation/execution-backlog.md`, `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para marcar `MB-104` como concluido e `MB-105` como o item `ready` atual.
+
 ## 2026-05-04
 
 ### Repriorizacao do proximo lote micro para continuidade multissuperficie minima

@@ -28,10 +28,10 @@ Leitura correta:
 
 Estado de referencia desta revisao:
 
-- data da fotografia: `2026-04-23`
+- data da fotografia: `2026-05-05`
 - ultimo recorte funcional fechado: `v2-native-memory-scope-hardening-cut`
 - ultimo recorte estrutural fechado: `v2-repository-hygiene-and-tools-review-cut`
-- passo funcional em andamento: lote `MB-062` a `MB-066` concluido, lote `MB-067` a `MB-071` concluido, lote `MB-072` a `MB-076` concluido, lote `MB-077` a `MB-081` concluido, lote `MB-082` a `MB-086` concluido, lote `MB-087` a `MB-091` concluido, lote `MB-092` a `MB-096` concluido, lote `MB-097` a `MB-101` concluido e lote `MB-102` a `MB-106` aberto (`MB-102` em `ready`) para continuidade multissuperficie minima.
+- passo funcional em andamento: lote `MB-062` a `MB-066` concluido, lote `MB-067` a `MB-071` concluido, lote `MB-072` a `MB-076` concluido, lote `MB-077` a `MB-081` concluido, lote `MB-082` a `MB-086` concluido, lote `MB-087` a `MB-091` concluido, lote `MB-092` a `MB-096` concluido, lote `MB-097` a `MB-101` concluido, lote `MB-102` a `MB-106` concluido e nova fila de repriorizacao `MB-107` a `MB-109` aberta com `MB-107` em `ready`.
 
 Leitura executiva:
 
@@ -69,7 +69,12 @@ Leitura executiva:
 - `memory-service`, `shared/memory_registry.py`, `continuity_checkpoint`, `continuity_replay`, `mission_state` e `mission_runtime_state` agora persistem e retomam esse slice como estado soberano bounded de continuidade, sem abrir memoria temporal rica fora de fase.
 - `observability-service`, `internal_pilot_report`, `internal_pilot_support`, `compare_orchestrator_paths` e `verify_active_cut_baseline.py` agora expõem `operational_ecosystem_state_status`, cobertura de work items, artefatos, checkpoints e presença de superfície como evidência comparável do baseline.
 - `evolution-lab`, `evolution_from_pilot`, `verify_release_signal_baseline.py`, `close_alignment_cycle.py` e `close_sovereign_alignment_cut.py` agora registram readiness do estado operacional do ecossistema como sinal regenerável de release, sem promover multissuperfície ou autonomia ampla automaticamente.
-- o proximo lote micro aberto (`MB-102` a `MB-106`) foca `SG-003` + `SO-002` apenas como contrato minimo de continuidade multissuperficie da mesma entidade; voz/realtime, web rica, API publica, memoria temporal relacional e substrate operacional amplo continuam fora de fase.
+- `SurfaceIdentityContract`, `InputContract`, `OperationDispatchContract`, `OperationResultContract`, schemas, eventos e `apps/jarvis_console` agora carregam `surface_id`, `surface_kind`, `surface_session_id`, escopo de capacidade, operador, usuario canonico e `surface_continuity_status` como contrato minimo de identidade por superficie.
+- `orchestrator-service`, fluxo opcional de `LangGraph`, `planning` e `synthesis` agora propagam esse slice pelos eventos centrais e contextos internos do runtime atual, preservando `through_core_only`.
+- `memory-service`, `session_continuity`, `continuity_checkpoint`, `continuity_replay`, `mission_state` e `mission_runtime_state` agora persistem e recuperam superficies vinculadas, superficie ativa, ultima superficie conhecida e flags de conflito de identidade.
+- `observability-service`, `internal_pilot_report`, `internal_pilot_support`, `compare_orchestrator_paths`, `verify_active_cut_baseline.py`, `evolution-lab`, `evolution_from_pilot.py` e `verify_release_signal_baseline.py` agora expoem continuidade de superficie como status, contagem de superficies vinculadas, flags de conflito e readiness auditavel.
+- `MB-106` fechou documentalmente o lote minimo de continuidade multissuperficie; voz/realtime, web rica, API publica, memoria temporal relacional e substrate operacional amplo continuam fora de fase.
+- `MB-107` abriu a fila de repriorizacao explicita derivada de `EV-001`, para decidir a proxima frente tecnica antes de qualquer expansao de superficie, memoria temporal rica ou substrate operacional amplo.
 - `verify_active_cut_baseline.py` agora combina contratos promovidos com um piloto focado que cobre as seis rotas promovidas, seus `workflow_profiles` e os sinais deliberados de memoria causal e recomposicao cognitiva.
 - `internal_pilot_support` agora declara `expected_route`, `expected_workflow_profile` e `coverage_tags` nos cenarios canonicos do piloto, tornando a cobertura por rota/workflow parte explicita do baseline ativo.
 - o baseline ativo agora tambem exige cenarios deliberados para `dominant_tension` e alinhamento `mente -> dominio -> especialista`, deixando esses sinais como readiness formal de robustez do `v2`.
@@ -447,13 +452,13 @@ O lote `MB-057` a `MB-061` foi fechado exatamente para atacar esses tres pontos 
 `deferred` ate que esse lote de maturacao do nucleo seja realmente fechado.
 
 O que resta agora continua melhor descrito como backlog macro de lacunas reais
-e traducao tecnologica disciplinada; mas a ponte ja foi usada de novo para
-abrir o lote seguinte. Por isso,
-`docs/implementation/unified-gap-and-absorption-backlog.md` segue como origem
-da proxima prioridade, enquanto `docs/implementation/execution-backlog.md`
-registra agora o fechamento dos lotes `MB-082` a `MB-091`, deixando a fila micro
-sem item `ready` e preservando `request_identity_policy`, evals expandidas e a
-lane controlada da Onda 2 como baseline do nucleo.
+e traducao tecnologica disciplinada. A ponte minima de continuidade
+multissuperficie ja foi fechada no lote `MB-102` a `MB-106`; por isso,
+`docs/implementation/unified-gap-and-absorption-backlog.md` voltou a ser a
+origem da proxima prioridade e `docs/implementation/execution-backlog.md` abriu
+`MB-107` a `MB-109` como fila curta de repriorizacao. Essa fila preserva
+superficies amplas, voz, web, API publica, memoria temporal rica e substrate
+operacional amplo fora de fase ate haver decisao registrada.
 
 ---
 

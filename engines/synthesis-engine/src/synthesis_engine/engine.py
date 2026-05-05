@@ -49,6 +49,13 @@ class SynthesisInput:
     procedural_artifact_status: str | None = None
     procedural_artifact_ref: str | None = None
     procedural_artifact_summary: str | None = None
+    surface_id: str | None = None
+    surface_kind: str | None = None
+    surface_session_id: str | None = None
+    surface_capability_scope: list[str] = field(default_factory=list)
+    operator_identity_ref: str | None = None
+    canonical_user_ref: str | None = None
+    surface_continuity_status: str | None = None
 
 
 @dataclass(frozen=True)

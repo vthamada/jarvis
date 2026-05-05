@@ -60,6 +60,10 @@ def make_pilot_result(  # type: ignore[no-untyped-def]
     experiment_entry_status: str = "baseline_only",
     experiment_exit_status: str = "hold_baseline",
     promotion_readiness: str = "not_applicable",
+    surface_continuity_status: str = "single_surface",
+    linked_surface_count: int = 1,
+    surface_identity_conflict_flags: list[str] | None = None,
+    multi_surface_readiness: str = "single_surface_ready",
 ) -> PilotExecutionResult:
     return PilotExecutionResult(
         scenario_id=scenario_id,
@@ -171,6 +175,10 @@ def make_pilot_result(  # type: ignore[no-untyped-def]
         experiment_entry_status=experiment_entry_status,
         experiment_exit_status=experiment_exit_status,
         promotion_readiness=promotion_readiness,
+        surface_continuity_status=surface_continuity_status,
+        linked_surface_count=linked_surface_count,
+        surface_identity_conflict_flags=surface_identity_conflict_flags or [],
+        multi_surface_readiness=multi_surface_readiness,
     )
 
 
@@ -284,6 +292,9 @@ def test_verify_active_cut_baseline_reports_release_ready() -> None:
     assert payload["summary"]["mission_runtime_state_ready_scenarios"] == 3
     assert payload["summary"]["cognitive_recomposition_ready_scenarios"] == 1
     assert payload["summary"]["expanded_eval_ready_scenarios"] == 1
+    assert payload["summary"]["surface_continuity_target_scenarios"] == 7
+    assert payload["summary"]["surface_continuity_ready_scenarios"] == 7
+    assert payload["summary"]["surface_identity_conflict_scenarios"] == 0
     assert payload["summary"]["wave2_lane_healthy_scenarios"] == 1
     assert payload["summary"]["promotion_blocker_scenarios"] == 0
     assert payload["summary"]["experiment_release_hold_scenarios"] == 1
@@ -339,6 +350,8 @@ def test_verify_active_cut_baseline_markdown_mentions_notes() -> None:
     assert "specialist subflow scenarios ready" in rendered
     assert "mission runtime state scenarios ready" in rendered
     assert "expanded eval scenarios ready" in rendered
+    assert "surface continuity scenarios ready" in rendered
+    assert "surface identity conflict scenarios" in rendered
     assert "controlled wave2 lane scenarios healthy" in rendered
     assert "promotion blocker scenarios" in rendered
     assert "experiment release hold scenarios" in rendered

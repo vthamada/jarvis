@@ -1822,7 +1822,7 @@ Escalar ao operador quando:
 
 - `id`: `MB-102`
 - `prioridade`: `P0`
-- `status`: `ready`
+- `status`: `done`
 - `eixo_do_mestre`: `identidade/superficies`
 - `workflow_profile_afetado`: `nao_aplicavel`
 - `micro_objetivo`: formalizar um contrato soberano minimo de identidade e continuidade por superficie para console, API, web futura, voz futura e operadores humanos, sem criar gateways externos nem nova UI ampla.
@@ -1834,13 +1834,13 @@ Escalar ao operador quando:
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `high`
 - `modelo_recomendado`: `gpt-5.4`
-- `impacto_no_baseline`: abre `SG-003` + `SO-002` como contrato minimo de continuidade multissuperficie sem promover voz, web rica ou runtime externo.
+- `impacto_no_baseline`: `SurfaceIdentityContract`, `InputContract`, `OperationDispatchContract`, `OperationResultContract`, schemas, eventos e console agora carregam identidade minima de superficie (`surface_*`, operador e usuario canonico), sem promover voz, web rica, API publica ou gateway externo.
 
 ### MB-103
 
 - `id`: `MB-103`
 - `prioridade`: `P0`
-- `status`: `blocked`
+- `status`: `done`
 - `eixo_do_mestre`: `orquestracao/superficies`
 - `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
 - `micro_objetivo`: aplicar o contrato de superficie no console atual, no input recebido e no `orchestrator-service`, fazendo a superficie ativa acompanhar request, dispatch, workflow e resposta final.
@@ -1852,13 +1852,13 @@ Escalar ao operador quando:
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `high`
 - `modelo_recomendado`: `gpt-5.4`
-- `impacto_no_baseline`: a superficie deixa de ser apenas `channel` e passa a ser parte governada da identidade operacional do request.
+- `impacto_no_baseline`: `surface_*` agora acompanha console, `input_received`, `workflow_composed`, `operation_dispatched`, `response_synthesized`, `memory_recorded`, planning context e synthesis input no runtime atual, preservando `through_core_only`.
 
 ### MB-104
 
 - `id`: `MB-104`
 - `prioridade`: `P1`
-- `status`: `blocked`
+- `status`: `done`
 - `eixo_do_mestre`: `memoria/continuidade`
 - `workflow_profile_afetado`: `nao_aplicavel`
 - `micro_objetivo`: persistir e recuperar continuidade de superficie em `memory-service`, `session_continuity`, checkpoints e replay, sem abrir memoria temporal rica nem grafo relacional amplo.
@@ -1870,13 +1870,13 @@ Escalar ao operador quando:
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `high`
 - `modelo_recomendado`: `gpt-5.4`
-- `impacto_no_baseline`: continuidade passa a distinguir mesma entidade em multiplas superficies de simples troca de sessao.
+- `impacto_no_baseline`: `memory-service`, `session_continuity`, `continuity_checkpoint`, `continuity_replay`, `mission_state` e `mission_runtime_state` agora persistem e recuperam superficies vinculadas, superficie ativa, ultima superficie conhecida e flags de conflito de identidade.
 
 ### MB-105
 
 - `id`: `MB-105`
 - `prioridade`: `P1`
-- `status`: `blocked`
+- `status`: `done`
 - `eixo_do_mestre`: `observabilidade/gates`
 - `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
 - `micro_objetivo`: tornar continuidade de superficie auditavel em observabilidade, piloto, comparadores, baseline ativo, `evolution-lab` e verificadores de release.
@@ -1894,7 +1894,7 @@ Escalar ao operador quando:
 
 - `id`: `MB-106`
 - `prioridade`: `P1`
-- `status`: `blocked`
+- `status`: `done`
 - `eixo_do_mestre`: `docs/gates`
 - `workflow_profile_afetado`: `nao_aplicavel`
 - `micro_objetivo`: fechar o lote de continuidade multissuperficie minima com docs vivos, changelog, snapshot e backlog macro sincronizados ao novo estado real.
@@ -1906,7 +1906,61 @@ Escalar ao operador quando:
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `medium`
 - `modelo_recomendado`: `gpt-5.4-mini`
-- `impacto_no_baseline`: o lote termina com a identidade multissuperficie minima registrada como ponte governada para `v3`, sem contaminar a fila com interfaces amplas.
+- `impacto_no_baseline`: o lote termina com a identidade multissuperficie minima registrada como ponte governada para `v3`, sem contaminar a fila com interfaces amplas; a fila micro volta a ficar sem item `ready` ate nova repriorizacao explicita.
+
+### MB-107
+
+- `id`: `MB-107`
+- `prioridade`: `P0`
+- `status`: `ready`
+- `eixo_do_mestre`: `governanca/backlog`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: selecionar explicitamente o proximo candidato macro depois do fechamento `MB-102` a `MB-106`, usando `unified-gap-and-absorption-backlog.md` como fonte soberana e sem abrir superficie ampla por inercia.
+- `justificativa_arquitetural`: depois de um lote de ponte `v2 -> v3`, o risco principal e confundir maturidade minima de contrato com autorizacao para produto/canal amplo. A proxima fila tecnica precisa nascer de uma decisao pequena, registrada e reversivel.
+- `arquivos/servicos_principais`: `docs/implementation/unified-gap-and-absorption-backlog.md`, `docs/implementation/execution-backlog.md`, `HANDOFF.md`, `docs/implementation/v2-adherence-snapshot.md`, `CHANGELOG.md`
+- `dependencias`: `MB-106`
+- `criterio_de_aceite`: o backlog macro registra `EV-001` como recorte micro ativo, a fila micro explicita qual frente sera ou nao convertida em lote tecnico seguinte, e as exclusoes de fase (`SO-001`, `SO-003`, `TA-004`, `TA-006`, `DV-*`, `RH-*`) permanecem visiveis.
+- `gate_minimo`: `python tools/check_mojibake.py .` e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `medium`
+- `modelo_recomendado`: `gpt-5.4-mini`
+- `impacto_no_baseline`: abre a proxima fila micro como decisao governada de backlog, nao como implementacao funcional antecipada.
+
+### MB-108
+
+- `id`: `MB-108`
+- `prioridade`: `P0`
+- `status`: `blocked`
+- `eixo_do_mestre`: `governanca/backlog`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: transformar a decisao de `MB-107` em um lote tecnico curto, com itens reais, arquivos principais, criterios de aceite, gates e apenas um item `ready`.
+- `justificativa_arquitetural`: a repriorizacao so protege o nucleo se virar backlog executavel com contratos claros. Este item impede que a decisao macro fique solta ou que uma frente grande entre sem fatiamento.
+- `arquivos/servicos_principais`: `docs/implementation/execution-backlog.md`, `docs/implementation/unified-gap-and-absorption-backlog.md`, `HANDOFF.md`, `docs/implementation/v2-adherence-snapshot.md`, `CHANGELOG.md`
+- `dependencias`: `MB-107`
+- `criterio_de_aceite`: existe um novo lote tecnico numerado apos `MB-109`, com WIP `ready` unico, dependencias claras, modelos recomendados, modos de raciocinio, gates minimos e escopo limitado ao candidato escolhido em `MB-107`.
+- `gate_minimo`: `python tools/check_mojibake.py .` e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `medium`
+- `modelo_recomendado`: `gpt-5.4-mini`
+- `impacto_no_baseline`: converte decisao macro em plano micro implementavel sem mudar comportamento do runtime ainda.
+
+### MB-109
+
+- `id`: `MB-109`
+- `prioridade`: `P1`
+- `status`: `blocked`
+- `eixo_do_mestre`: `docs/gates`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: fechar documentalmente a fila de repriorizacao `MB-107` a `MB-109`, deixando o lote tecnico seguinte pronto para implementacao e o historico vivo sincronizado.
+- `justificativa_arquitetural`: cada troca de fila precisa preservar continuidade operacional para que o proximo agente saiba onde o sistema esta e por que frentes fora de fase continuam bloqueadas.
+- `arquivos/servicos_principais`: `docs/implementation/execution-backlog.md`, `docs/implementation/unified-gap-and-absorption-backlog.md`, `HANDOFF.md`, `docs/implementation/v2-adherence-snapshot.md`, `CHANGELOG.md`
+- `dependencias`: `MB-107`, `MB-108`
+- `criterio_de_aceite`: docs vivos registram a decisao, o lote tecnico aberto, o primeiro item `ready`, as exclusoes de fase e o gate executado; `EV-001` deixa de ser pendencia macro solta.
+- `gate_minimo`: `python tools/check_mojibake.py .` e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `medium`
+- `modelo_recomendado`: `gpt-5.4-mini`
+- `impacto_no_baseline`: a fila volta a carregar um proximo passo tecnico claro sem expandir superficie, memoria temporal rica ou substrate operacional amplo antes de fase.
 
 ---
 
@@ -1960,6 +2014,11 @@ Estado atual da fila:
 - `MB-097` agora foi concluido: `OperationDispatchContract`, `OperationResultContract`, `orchestrator-service`, `operational-service` e eventos internos passaram a carregar estado operacional minimo do ecossistema;
 - `MB-098` agora tambem foi concluido: `memory-service`, `shared/memory_registry.py`, `orchestrator-service` e a malha de continuidade passaram a persistir e retomar `ecosystem_state_*` como estado bounded de missao, checkpoint e replay;
 - `MB-099` a `MB-101` foram concluidos e fecharam a leitura auditavel, evolutiva, regeneravel e documental desse estado operacional, ainda sem abrir multissuperficie ampla ou substrate operacional fora de fase;
-- `MB-102` a `MB-106` foram abertos como proximo lote micro em cima de `SG-003` + `SO-002`, com `MB-102` em `ready`, focando contrato minimo de continuidade multissuperficie da mesma entidade;
+- `MB-102` agora foi concluido: contratos compartilhados, schemas, eventos e `apps/jarvis_console` passaram a carregar identidade minima de superficie, operador e usuario canonico como base soberana para continuidade multissuperficie;
+- `MB-103` agora tambem foi concluido: `surface_*` acompanha console, eventos centrais do orquestrador, dispatch, contexto de planning e synthesis input, preservando `through_core_only`;
+- `MB-104` agora tambem foi concluido: memoria, session continuity, checkpoints, replay e mission runtime state persistem e recuperam continuidade bounded de superficie;
+- `MB-105` agora tambem foi concluido: observabilidade, piloto, comparadores, baseline ativo, `evolution-lab` e verificadores de release expoem `surface_continuity_status`, `linked_surface_count`, `surface_identity_conflict_flags` e readiness multissuperficie sem promover nova UI, voz, web ou API publica;
+- `MB-106` agora tambem foi concluido: docs vivos, changelog, snapshot e backlog macro registram `SG-003` + `SO-002` como ponte minima de continuidade multissuperficie, sem abrir produto multicanal amplo;
+- `MB-107` agora abre a proxima fila micro como repriorizacao explicita baseada em `EV-001`, com `MB-108` e `MB-109` bloqueados ate a decisao ser registrada;
 - `SO-001`, `SO-003`, `TA-004`, `TA-006` e verticais `deferred` continuam fora da fila sem mudanca explicita de fase;
 - `protective intelligence foundation` continua `deferred` e a matriz da Onda 2 segue como insumo, nao como gatilho automatico para abrir nova vertical.

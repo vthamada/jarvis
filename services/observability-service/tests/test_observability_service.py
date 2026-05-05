@@ -211,6 +211,39 @@ def test_observability_service_audits_flow_for_missing_events_and_anomalies() ->
     assert audit.trace_complete is False
 
 
+def test_observability_service_audits_surface_continuity_signals() -> None:
+    temp_dir = runtime_dir("observability-surface")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service.ingest_events(
+        [
+            InternalEventEnvelope(
+                event_id="evt-surface-1",
+                event_name="mission_runtime_state_declared",
+                timestamp="2026-05-05T00:00:00+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "surface_continuity_status": "linked_surface",
+                    "linked_surface_ids": [
+                        "surface://jarvis_console",
+                        "surface://operator_web",
+                    ],
+                    "surface_identity_conflict_flags": [],
+                },
+                request_id="req-surface",
+                session_id="sess-surface",
+                correlation_id="req-surface",
+            ),
+        ]
+    )
+
+    audit = service.audit_flow(ObservabilityQuery(request_id="req-surface"))
+
+    assert audit.surface_continuity_status == "linked_surface"
+    assert audit.linked_surface_count == 2
+    assert audit.surface_identity_conflict_flags == []
+    assert audit.multi_surface_readiness == "observable_not_promoted"
+
+
 def test_observability_service_audits_continuity_signals() -> None:
     temp_dir = runtime_dir("observability-continuity")
     service = ObservabilityService(database_path=str(temp_dir / "observability.db"))

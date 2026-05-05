@@ -46,7 +46,12 @@ def test_internal_pilot_report_summarizes_recent_request() -> None:
                 event_name="operation_completed",
                 timestamp="2026-03-19T00:00:02+00:00",
                 source_service="orchestrator-service",
-                payload={"status": "completed"},
+                payload={
+                    "status": "completed",
+                    "surface_continuity_status": "single_surface",
+                    "linked_surface_ids": ["surface://jarvis_console"],
+                    "surface_identity_conflict_flags": [],
+                },
                 request_id="req-pilot",
                 session_id="sess-pilot",
                 correlation_id="req-pilot",
@@ -67,6 +72,10 @@ def test_internal_pilot_report_summarizes_recent_request() -> None:
     assert "response_continuity_action" in summaries[0].missing_continuity_signals
     assert summaries[0].specialist_subflow_status == "not_applicable"
     assert summaries[0].mission_runtime_state_status == "not_applicable"
+    assert summaries[0].surface_continuity_status == "single_surface"
+    assert summaries[0].linked_surface_count == 1
+    assert summaries[0].surface_identity_conflict_flags == []
+    assert summaries[0].multi_surface_readiness == "single_surface_ready"
     assert summaries[0].workflow_domain_route is None
     assert summaries[0].workflow_trace_status == "not_applicable"
     assert summaries[0].workflow_profile_status == "not_applicable"
@@ -138,6 +147,10 @@ def test_internal_pilot_report_renders_text() -> None:
                     ],
                     "capability_effectiveness": "effective",
                     "handoff_adapter_status": "healthy",
+                    "surface_continuity_status": "linked_surface",
+                    "linked_surface_count": 2,
+                    "surface_identity_conflict_flags": [],
+                    "multi_surface_readiness": "observable_not_promoted",
                     "adaptive_intervention_policy_status": "policy_aligned",
                     "memory_causality_status": "causal_guidance",
                     "dominant_tension": "equilibrar profundidade analitica com conclusao util",
@@ -181,6 +194,10 @@ def test_internal_pilot_report_renders_text() -> None:
     assert "specialist_subflow_status=healthy" in rendered
     assert "mission_runtime_state_status=healthy" in rendered
     assert "workflow_domain_route=strategy" in rendered
+    assert "surface_continuity_status=linked_surface" in rendered
+    assert "linked_surface_count=2" in rendered
+    assert "surface_identity_conflict_flags=none" in rendered
+    assert "multi_surface_readiness=observable_not_promoted" in rendered
     assert "mind_alignment_status=partial" in rendered
     assert "axis_gate_status=partial" in rendered
     assert "expectation_status=continuity_progressing" in rendered

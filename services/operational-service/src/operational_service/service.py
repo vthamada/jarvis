@@ -133,6 +133,13 @@ class OperationalService:
                 open_checkpoint_refs=open_checkpoint_refs,
                 surface_presence=dispatch.surface_presence,
             ),
+            surface_id=dispatch.surface_id,
+            surface_kind=dispatch.surface_kind,
+            surface_session_id=dispatch.surface_session_id,
+            surface_capability_scope=list(dispatch.surface_capability_scope),
+            operator_identity_ref=dispatch.operator_identity_ref,
+            canonical_user_ref=dispatch.canonical_user_ref,
+            surface_continuity_status=dispatch.surface_continuity_status,
             next_recommendation=(
                 "continue" if status == OperationStatus.COMPLETED else "review_dispatch"
             ),

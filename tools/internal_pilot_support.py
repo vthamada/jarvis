@@ -181,6 +181,10 @@ class PilotExecutionResult:
     active_artifact_refs: list[str] = field(default_factory=list)
     open_checkpoint_refs: list[str] = field(default_factory=list)
     surface_presence: list[str] = field(default_factory=list)
+    surface_continuity_status: str = "not_applicable"
+    linked_surface_count: int = 0
+    surface_identity_conflict_flags: list[str] = field(default_factory=list)
+    multi_surface_readiness: str = "not_applicable"
     experiment_lane_status: str = "not_applicable"
     wave2_candidate_class: str = "baseline_hardening"
     experiment_entry_status: str = "not_applicable"
@@ -661,6 +665,12 @@ def run_pilot_scenarios(
                 active_artifact_refs=list(audit.active_artifact_refs),
                 open_checkpoint_refs=list(audit.open_checkpoint_refs),
                 surface_presence=list(audit.surface_presence),
+                surface_continuity_status=audit.surface_continuity_status,
+                linked_surface_count=audit.linked_surface_count,
+                surface_identity_conflict_flags=list(
+                    audit.surface_identity_conflict_flags
+                ),
+                multi_surface_readiness=audit.multi_surface_readiness,
                 experiment_lane_status=audit.experiment_lane_status,
                 wave2_candidate_class=audit.wave2_candidate_class,
                 experiment_entry_status=audit.experiment_entry_status,

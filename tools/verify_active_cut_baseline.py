@@ -66,6 +66,9 @@ class ActiveCutBaselineSummary:
     ecosystem_active_artifact_scenarios: int
     ecosystem_open_checkpoint_scenarios: int
     ecosystem_surface_presence_scenarios: int
+    surface_continuity_target_scenarios: int
+    surface_continuity_ready_scenarios: int
+    surface_identity_conflict_scenarios: int
     expanded_eval_target_scenarios: int
     expanded_eval_ready_scenarios: int
     optimization_target_scenarios: int
@@ -186,6 +189,16 @@ def _build_targeted_pilot_summary(
             or item.active_artifact_refs
             or item.open_checkpoint_refs
             or item.surface_presence
+        )
+    ]
+    surface_continuity_targets = [
+        item
+        for item in pilot_results
+        if (
+            item.surface_continuity_status != "not_applicable"
+            or item.linked_surface_count > 0
+            or item.surface_identity_conflict_flags
+            or item.multi_surface_readiness != "not_applicable"
         )
     ]
     optimization_targets = [
@@ -310,6 +323,20 @@ def _build_targeted_pilot_summary(
             ),
             "ecosystem_surface_presence_scenarios": sum(
                 1 for item in ecosystem_operational_targets if item.surface_presence
+            ),
+            "surface_continuity_target_scenarios": len(surface_continuity_targets),
+            "surface_continuity_ready_scenarios": sum(
+                1
+                for item in surface_continuity_targets
+                if item.multi_surface_readiness
+                in {"single_surface_ready", "observable_not_promoted"}
+                and not item.surface_identity_conflict_flags
+            ),
+            "surface_identity_conflict_scenarios": sum(
+                1
+                for item in surface_continuity_targets
+                if item.surface_identity_conflict_flags
+                or item.multi_surface_readiness == "attention_required"
             ),
             "expanded_eval_target_scenarios": len(expanded_eval_targets),
             "expanded_eval_ready_scenarios": sum(
@@ -529,6 +556,15 @@ def build_payload(
         ecosystem_surface_presence_scenarios=int(
             pilot_summary["ecosystem_surface_presence_scenarios"]
         ),
+        surface_continuity_target_scenarios=int(
+            pilot_summary["surface_continuity_target_scenarios"]
+        ),
+        surface_continuity_ready_scenarios=int(
+            pilot_summary["surface_continuity_ready_scenarios"]
+        ),
+        surface_identity_conflict_scenarios=int(
+            pilot_summary["surface_identity_conflict_scenarios"]
+        ),
         expanded_eval_target_scenarios=int(
             pilot_summary["expanded_eval_target_scenarios"]
         ),
@@ -577,6 +613,13 @@ def build_payload(
         or (
             summary.ecosystem_operational_target_scenarios > 0
             and summary.ecosystem_surface_presence_scenarios == 0
+        )
+        or (
+            summary.surface_continuity_target_scenarios > 0
+            and (
+                summary.surface_continuity_ready_scenarios == 0
+                or summary.surface_identity_conflict_scenarios > 0
+            )
         )
         or (
             summary.expanded_eval_target_scenarios > 0
@@ -630,6 +673,11 @@ def build_payload(
             (
                 "quando houver estado operacional de ecossistema, o baseline precisa "
                 "expor status bruto, work items, artefatos, checkpoints e superficies"
+            ),
+            (
+                "quando houver continuidade de superficie, o baseline precisa "
+                "expor status, linked_surface_count, conflitos de identidade e "
+                "readiness sem promover novas interfaces automaticamente"
             ),
             (
                 "quando houver eval expandida ou candidato de Onda 2 no piloto, "
@@ -715,6 +763,11 @@ def render_text(payload: dict[str, object]) -> str:
                 f"{summary['ecosystem_open_checkpoint_scenarios']} "
                 "ecosystem_surfaces="
                 f"{summary['ecosystem_surface_presence_scenarios']} "
+                "surface_continuity_ready="
+                f"{summary['surface_continuity_ready_scenarios']}/"
+                f"{summary['surface_continuity_target_scenarios']} "
+                "surface_identity_conflicts="
+                f"{summary['surface_identity_conflict_scenarios']} "
                 "expanded_eval_ready="
                 f"{summary['expanded_eval_ready_scenarios']}/"
                 f"{summary['expanded_eval_target_scenarios']} "
@@ -851,6 +904,15 @@ def render_markdown(payload: dict[str, object]) -> str:
             f"artifacts=`{summary['ecosystem_active_artifact_scenarios']}`, "
             f"checkpoints=`{summary['ecosystem_open_checkpoint_scenarios']}`, "
             f"surfaces=`{summary['ecosystem_surface_presence_scenarios']}`"
+        ),
+        (
+            "- surface continuity scenarios ready: "
+            f"`{summary['surface_continuity_ready_scenarios']}`/"
+            f"`{summary['surface_continuity_target_scenarios']}`"
+        ),
+        (
+            "- surface identity conflict scenarios: "
+            f"`{summary['surface_identity_conflict_scenarios']}`"
         ),
         (
             "- cognitive recomposition scenarios ready: "

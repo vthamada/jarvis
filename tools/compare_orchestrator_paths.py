@@ -153,6 +153,10 @@ def ecosystem_state_assessment(result: PilotExecutionResult) -> str:
     return expanded_eval_state(result)["ecosystem_state_status"]
 
 
+def surface_continuity_assessment(result: PilotExecutionResult) -> str:
+    return result.multi_surface_readiness
+
+
 def experiment_lane_assessment(result: PilotExecutionResult) -> str:
     return expanded_eval_state(result)["experiment_lane_status"]
 
@@ -637,6 +641,12 @@ def evaluation_matrix(
             ),
             "ecosystem_state": summarize_statuses(
                 [ecosystem_state_assessment(result) for result in workflow_results]
+            ),
+            "surface_continuity": summarize_statuses(
+                [
+                    surface_continuity_assessment(result)
+                    for result in workflow_results
+                ]
             ),
             "experiment_lane": summarize_statuses(
                 [experiment_lane_assessment(result) for result in workflow_results]
@@ -1904,6 +1914,20 @@ def compare_results(
             if baseline.surface_presence != candidate.surface_presence:
                 mismatch_fields.append("surface_presence")
             if (
+                baseline.surface_continuity_status
+                != candidate.surface_continuity_status
+            ):
+                mismatch_fields.append("surface_continuity_status")
+            if baseline.linked_surface_count != candidate.linked_surface_count:
+                mismatch_fields.append("linked_surface_count")
+            if (
+                baseline.surface_identity_conflict_flags
+                != candidate.surface_identity_conflict_flags
+            ):
+                mismatch_fields.append("surface_identity_conflict_flags")
+            if baseline.multi_surface_readiness != candidate.multi_surface_readiness:
+                mismatch_fields.append("multi_surface_readiness")
+            if (
                 baseline.cognitive_recomposition_applied
                 != candidate.cognitive_recomposition_applied
             ):
@@ -2171,6 +2195,22 @@ def render_text(payload: dict[str, object]) -> str:
                     (
                         "baseline_surface_presence="
                         f"{','.join(item['baseline']['surface_presence']) or 'none'}"
+                    ),
+                    (
+                        "baseline_surface_continuity_status="
+                        f"{item['baseline']['surface_continuity_status']}"
+                    ),
+                    (
+                        "baseline_linked_surface_count="
+                        f"{item['baseline']['linked_surface_count']}"
+                    ),
+                    (
+                        "baseline_surface_identity_conflict_flags="
+                        f"{','.join(item['baseline']['surface_identity_conflict_flags']) or 'none'}"
+                    ),
+                    (
+                        "baseline_multi_surface_readiness="
+                        f"{item['baseline']['multi_surface_readiness']}"
                     ),
                     (
                         "baseline_experiment_lane_status="
@@ -2477,6 +2517,30 @@ def render_text(payload: dict[str, object]) -> str:
                         f"{','.join(item['candidate']['surface_presence']) or 'none'}"
                         if item["candidate"]
                         else "candidate_surface_presence=n/a"
+                    ),
+                    (
+                        "candidate_surface_continuity_status="
+                        f"{item['candidate']['surface_continuity_status']}"
+                        if item["candidate"]
+                        else "candidate_surface_continuity_status=n/a"
+                    ),
+                    (
+                        "candidate_linked_surface_count="
+                        f"{item['candidate']['linked_surface_count']}"
+                        if item["candidate"]
+                        else "candidate_linked_surface_count=n/a"
+                    ),
+                    (
+                        "candidate_surface_identity_conflict_flags="
+                        f"{','.join(item['candidate']['surface_identity_conflict_flags']) or 'none'}"  # noqa: E501
+                        if item["candidate"]
+                        else "candidate_surface_identity_conflict_flags=n/a"
+                    ),
+                    (
+                        "candidate_multi_surface_readiness="
+                        f"{item['candidate']['multi_surface_readiness']}"
+                        if item["candidate"]
+                        else "candidate_multi_surface_readiness=n/a"
                     ),
                     (
                         "candidate_experiment_lane_status="
