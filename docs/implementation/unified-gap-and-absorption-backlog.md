@@ -99,11 +99,14 @@ Hierarquia correta:
   superficie, propagacao pelo runtime atual e persistencia bounded de
   continuidade, alem da leitura auditavel dessa continuidade em observabilidade,
   piloto, comparadores, baseline ativo, `evolution-lab`, release e docs vivos;
-- a proxima fila micro foi aberta em cima de `EV-001`, com `MB-107` pronto
-  para registrar a decisao macro e `MB-108`/`MB-109` bloqueados ate essa
-  decisao virar lote tecnico concreto;
-- o proximo passo nao e abrir produto multicanal automaticamente; a fila atual
-  existe justamente para impedir que a proxima frente nasca por inercia;
+- a repriorizacao `EV-001` foi fechada em `MB-107` a `MB-109`, escolhendo
+  `SO-003` apenas como fundacao minima de continuidade de projetos/objetivos;
+- a proxima fila micro tecnica foi aberta em `MB-110` a `MB-114`, com
+  `MB-110` em `ready` para contratos de projeto, objetivo, work item,
+  checkpoint e artefato vivo;
+- o proximo passo nao e abrir produto multicanal ou automacao ampla
+  automaticamente; a fila atual existe para criar continuidade operacional
+  governada antes de qualquer autonomia mais forte;
 - voz/realtime, memoria temporal rica, projetos persistentes e substrate
   operacional amplo continuam fora de fase.
 
@@ -202,7 +205,7 @@ Notas de leitura:
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `SO-001` | voz e realtime como superficie subordinada | interfaces, identidade, continuidade | `v3` | `OpenClaw` como referencia tardia | `onda_3_tardia` | `deferred` | `nao` |
 | `SO-002` | contrato multissuperficie entre console, web, API e futuras interfaces | gateway, identidade, runtime operacional | `ponte v2 -> v3` | `OpenAI Agents SDK`, `OpenClaw` | `onda_3_tardia` | `resolved_minimum_baseline` | `sim` |
-| `SO-003` | projetos persistentes, tarefas assincronas longas e artefatos ativos | estado operacional do ecossistema | `v3` | `Manus`, `LangGraph`, `Mastra` | `onda_3_tardia` | `deferred` | `nao` |
+| `SO-003` | projetos persistentes, tarefas assincronas longas e artefatos ativos | estado operacional do ecossistema | `v3` | `Manus`, `LangGraph`, `Mastra` | `onda_3_tardia` | `active_minimum_micro_slice` | `sim` |
 
 Notas de leitura:
 
@@ -215,7 +218,7 @@ Notas de leitura:
 
 | ID | Frente ainda faltante | Camada JARVIS | Fase alvo | Tecnologias relacionadas | Janela de absorcao | Status | Slice micro |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| `EV-001` | repriorizacao explicita do proximo lote micro a partir deste mapa unificado | governanca de execucao | `agora` | `nenhuma` | `nao_aplicavel` | `active_micro_slice` | `sim` |
+| `EV-001` | repriorizacao explicita do proximo lote micro a partir deste mapa unificado | governanca de execucao | `agora` | `nenhuma` | `nao_aplicavel` | `resolved_in_baseline` | `sim` |
 | `EV-002` | expandir evals e sinais para capacidade, superficie e estado do ecossistema | `observability`, `evolution-lab`, gates | `v2 restante` | `DSPy`, `OpenAI Agents SDK`, `Mastra` | `onda_2_controlada` | `resolved_in_baseline` | `sim` |
 | `EV-003` | compile e optimize loops governados para prompts, planos e workflows | `evolution-lab` | `v2 restante` | `DSPy/MIPROv2`, `TextGrad`, `AFlow`, `EvoAgentX` | `onda_1_residual` | `resolved_in_baseline` | `sim` |
 | `EV-004` | lane controlada de experimentos da Onda 2 com criterio de entrada e saida | comparadores, laboratorio, gates | `v2 restante` | `OpenAI Agents SDK`, `Qwen-Agent`, `Graphiti`, `Mem0`, `OpenHands`, `browser-use` | `onda_2_controlada` | `resolved_in_baseline` | `sim` |
@@ -265,10 +268,9 @@ ser:
 
 Ordem recomendada hoje:
 
-1. executar `MB-107` para registrar qual candidato macro vira o proximo lote tecnico.
-2. executar `MB-108` apenas depois dessa decisao, abrindo um lote micro curto com um unico item `ready`.
-3. executar `MB-109` para fechar a repriorizacao e sincronizar docs/gates.
-4. manter `SO-001`, `SO-003`, `TA-004`, `TA-006` e verticais `deferred` fora da fila ate haver decisao de fase.
+1. executar `MB-110` para formalizar contratos minimos de projeto/objetivo/work item/checkpoint/artefato.
+2. depois seguir `MB-111` -> `MB-112` -> `MB-113` -> `MB-114` para runtime, memoria, observabilidade e fechamento documental.
+3. manter `SO-001`, `TA-004`, `TA-006` e verticais `deferred` fora da fila ate haver decisao de fase.
 
 Leitura correta:
 
@@ -285,11 +287,13 @@ Leitura correta:
   `MB-102` a `MB-106`; o baseline materializou contrato minimo, propagacao,
   persistencia bounded, auditoria/readiness e fechamento documental da
   continuidade da mesma entidade;
-- `EV-001` agora esta fatiado como fila micro `MB-107` a `MB-109`, com foco em
-  escolher e materializar a proxima fila tecnica sem antecipar frentes fora de
-  fase;
-- `TA-004`, `SO-003`, `TA-006` e `DV-001` continuam relevantes, mas ainda fora
-  da fila sem mudanca explicita de fase;
+- `EV-001` foi fechado como fila micro `MB-107` a `MB-109`, escolhendo
+  `SO-003` como recorte minimo de continuidade de projetos/objetivos;
+- `SO-003` agora esta fatiado como lote tecnico `MB-110` a `MB-114`, limitado
+  a contratos, propagacao runtime, persistencia bounded, auditoria/readiness e
+  fechamento documental;
+- `TA-004`, `TA-006` e `DV-001` continuam relevantes, mas ainda fora da fila
+  sem mudanca explicita de fase;
 - `RH-*` permanece fora do backlog implementavel.
 
 ---

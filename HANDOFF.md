@@ -105,10 +105,11 @@ como estado operacional bounded, auditavel e regeneravel do ecossistema, e
 propagado pelo runtime atual, persistido em continuidade bounded e auditavel
 em observabilidade, piloto, comparadores, baseline ativo, `evolution-lab` e
 release, com fechamento documental sincronizado.
-A fila micro agora foi reaberta em `MB-107` a `MB-109`, derivada de `EV-001`:
-`MB-107` esta `ready` para registrar a proxima decisao macro, enquanto
-`MB-108` e `MB-109` ficam bloqueados ate essa decisao virar lote tecnico
-concreto.
+A fila micro tambem fechou `MB-107` a `MB-109`, derivada de `EV-001`, e
+registrou `SO-003` como proxima frente tecnica apenas em recorte minimo.
+O lote ativo agora e `MB-110` a `MB-114`, com `MB-110` em `ready`, para
+fundacao soberana de projetos, objetivos persistentes, work items, checkpoints
+e artefatos vivos.
 
 ### Foco operacional atual
 
@@ -185,9 +186,12 @@ Atualizacao desta rodada:
 - `MB-105` e `MB-106` foram concluidos: continuidade de superficie agora e
   auditavel em observabilidade, piloto, comparadores e release, e o lote minimo
   multissuperficie esta fechado nos docs vivos;
-- `MB-107` foi aberto como item `ready` da nova fila de repriorizacao
-  explicita, sem abrir voz/realtime, web rica, API publica, memoria temporal
-  rica ou substrate operacional amplo;
+- `MB-107` a `MB-109` foram concluidos como repriorizacao explicita de
+  `EV-001`, escolhendo `SO-003` em recorte minimo;
+- `MB-110` foi aberto como item `ready` do lote de continuidade de
+  projetos/objetivos persistentes, sem abrir voz/realtime, web rica, API
+  publica, memoria temporal rica, autoexecucao longa ou substrate operacional
+  amplo;
 - o proximo lote tecnico deve permanecer pequeno e subordinado ao nucleo; nao
   abrir voz/realtime, web rica, API publica, memoria temporal rica ou substrate
   operacional amplo sem decisao de fase;
@@ -420,7 +424,7 @@ Pendências principais desta fase:
 - tratar `MB-032` a `MB-036` como baseline ja fechado, sem reabrir o mesmo lote por inercia local;
 - tratar `MB-037` a `MB-040` como lote fechado, sem reabrir o mesmo trabalho por inercia local;
 - continuar refinando criterios de saida por `workflow_profile`, uso soberano de memoria e profundidade da cadeia `mente -> dominio -> especialista` apenas quando isso justificar um novo lote real;
-- a pendencia micro `ready` atual e `MB-107`: escolher o proximo candidato macro a partir do mapa unificado antes de abrir qualquer lote tecnico novo.
+- a pendencia micro `ready` atual e `MB-110`: formalizar contratos minimos de projeto, objetivo, work item, checkpoint e artefato vivo antes de abrir propagacao runtime ou persistencia.
 
 Regra de estudo externo no `v2`:
 
@@ -433,11 +437,13 @@ Regra de estudo externo no `v2`:
 
 Ordem recomendada:
 1. preservar `MB-102` a `MB-106` como lote fechado de continuidade multissuperficie minima;
-2. executar `MB-107` para registrar a proxima decisao macro a partir de `EV-001`;
-3. manter voz/realtime, web rica, API publica, gateway externo, memoria temporal rica e substrate operacional amplo fora de fase;
-4. preservar `MB-023` a `MB-026` como baseline fechado e `MB-027` a `MB-031` como `deferred`, sem reabrir `protective intelligence` por impulso;
-5. tratar `MB-082` a `MB-106` como lotes ja fechados do baseline atual, sem reabrir esse eixo por inercia local;
-6. manter historico regeneravel em `docs/archive/implementation/` e `tools/archive/` sem reexpandir a raiz do repositorio.
+2. preservar `MB-107` a `MB-109` como repriorizacao fechada de `EV-001`;
+3. executar `MB-110` para abrir a fundacao minima de continuidade de projetos/objetivos persistentes;
+4. seguir `MB-111` -> `MB-112` -> `MB-113` -> `MB-114` depois de `MB-110`;
+5. manter voz/realtime, web rica, API publica, gateway externo, memoria temporal rica, autoexecucao longa e substrate operacional amplo fora de fase;
+6. preservar `MB-023` a `MB-026` como baseline fechado e `MB-027` a `MB-031` como `deferred`, sem reabrir `protective intelligence` por impulso;
+7. tratar `MB-082` a `MB-109` como lotes ja fechados do baseline atual, sem reabrir esse eixo por inercia local;
+8. manter historico regeneravel em `docs/archive/implementation/` e `tools/archive/` sem reexpandir a raiz do repositorio.
 
 Atualização desta rodada:
 

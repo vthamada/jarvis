@@ -2,6 +2,13 @@
 
 ## 2026-05-05
 
+### Decisao macro fechada para projetos e objetivos persistentes
+
+- `docs/implementation/execution-backlog.md` marcou `MB-107` a `MB-109` como concluidos e abriu `MB-110` a `MB-114`, com `MB-110` em `ready`;
+- a decisao registrada escolhe `SO-003` apenas como fundacao minima de continuidade de projetos/objetivos, work items, checkpoints e artefatos vivos;
+- `docs/implementation/unified-gap-and-absorption-backlog.md` agora trata `EV-001` como `resolved_in_baseline` e `SO-003` como `active_minimum_micro_slice`;
+- `HANDOFF.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para apontar `MB-110` como proximo item tecnico, mantendo voz/realtime, web rica, API publica, memoria temporal rica, autoexecucao longa e substrate operacional amplo fora de fase.
+
 ### Proxima fila micro aberta por `EV-001`
 
 - `docs/implementation/execution-backlog.md` agora abre `MB-107` a `MB-109` como fila curta de repriorizacao, com `MB-107` em `ready`;
