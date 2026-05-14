@@ -133,6 +133,15 @@ class OperationalService:
                 open_checkpoint_refs=open_checkpoint_refs,
                 surface_presence=dispatch.surface_presence,
             ),
+            project_ref=dispatch.project_ref,
+            objective_ref=dispatch.objective_ref,
+            work_item_refs=list(dispatch.work_item_refs),
+            checkpoint_refs=list(dispatch.checkpoint_refs),
+            artifact_refs=self._project_artifact_refs(dispatch, artifact_results),
+            objective_status=(
+                "completed" if status == OperationStatus.COMPLETED else dispatch.objective_status
+            ),
+            next_action_ref=dispatch.next_action_ref,
             surface_id=dispatch.surface_id,
             surface_kind=dispatch.surface_kind,
             surface_session_id=dispatch.surface_session_id,
@@ -199,6 +208,7 @@ class OperationalService:
         workflow_decisions = OperationalService._workflow_decision_line(dispatch)
         arbitration_lines = OperationalService._mind_domain_specialist_lines(dispatch)
         ecosystem_lines = OperationalService._ecosystem_state_lines(dispatch)
+        objective_lines = OperationalService._project_objective_lines(dispatch)
         return (
             f"Plano deliberativo para: {dispatch.task_goal}\n\n"
             f"Resumo: {dispatch.plan_summary or dispatch.task_plan}\n"
@@ -210,6 +220,7 @@ class OperationalService:
             f"Ajuste interno: {internal_alignment}\n"
             f"{arbitration_lines}\n"
             f"{ecosystem_lines}\n"
+            f"{objective_lines}\n"
             f"{workflow_lines}\n"
             f"{workflow_decisions}\n"
             f"Etapas:\n{steps}\n"
@@ -227,6 +238,7 @@ class OperationalService:
         workflow_decisions = OperationalService._workflow_decision_line(dispatch)
         arbitration_lines = OperationalService._mind_domain_specialist_lines(dispatch)
         ecosystem_lines = OperationalService._ecosystem_state_lines(dispatch)
+        objective_lines = OperationalService._project_objective_lines(dispatch)
         return (
             f"Analise deliberativa para: {dispatch.task_goal}\n\n"
             f"Resumo: {dispatch.plan_summary or dispatch.task_plan}\n"
@@ -237,6 +249,7 @@ class OperationalService:
             f"Riscos mapeados: {risks}\n"
             f"{arbitration_lines}\n"
             f"{ecosystem_lines}\n"
+            f"{objective_lines}\n"
             f"{workflow_lines}\n"
             f"{workflow_decisions}\n"
         )
@@ -247,6 +260,7 @@ class OperationalService:
         workflow_decisions = OperationalService._workflow_decision_line(dispatch)
         arbitration_lines = OperationalService._mind_domain_specialist_lines(dispatch)
         ecosystem_lines = OperationalService._ecosystem_state_lines(dispatch)
+        objective_lines = OperationalService._project_objective_lines(dispatch)
         return (
             f"Resposta deliberativa segura para: {dispatch.task_goal}\n\n"
             f"Resumo: {dispatch.plan_summary or dispatch.task_plan}\n"
@@ -256,6 +270,7 @@ class OperationalService:
             f"Ajuste interno: {dispatch.specialist_summary or 'sem ajuste interno adicional'}\n"
             f"{arbitration_lines}\n"
             f"{ecosystem_lines}\n"
+            f"{objective_lines}\n"
             f"{workflow_lines}\n"
             f"{workflow_decisions}\n"
             "A saida foi produzida dentro do escopo local e reversivel do v1.\n"
@@ -298,6 +313,35 @@ class OperationalService:
             f"Open checkpoint refs: {checkpoint_refs}\n"
             f"Surface presence: {surface_presence}"
         )
+
+    @staticmethod
+    def _project_objective_lines(dispatch: OperationDispatchContract) -> str:
+        work_items = "; ".join(dispatch.work_item_refs) or "none"
+        checkpoints = "; ".join(dispatch.checkpoint_refs) or "none"
+        artifacts = "; ".join(dispatch.artifact_refs) or "none"
+        return (
+            f"Project objective status: {dispatch.objective_status or 'not_applicable'}\n"
+            f"Project ref: {dispatch.project_ref or 'none'}\n"
+            f"Objective ref: {dispatch.objective_ref or 'none'}\n"
+            f"Work item refs: {work_items}\n"
+            f"Checkpoint refs: {checkpoints}\n"
+            f"Artifact refs: {artifacts}\n"
+            f"Next action ref: {dispatch.next_action_ref or 'none'}"
+        )
+
+    @staticmethod
+    def _project_artifact_refs(
+        dispatch: OperationDispatchContract,
+        artifacts: list[ArtifactResultContract],
+    ) -> list[str]:
+        refs: list[str] = []
+        for item in [
+            *list(dispatch.artifact_refs),
+            *(artifact.location_ref for artifact in artifacts if artifact.location_ref),
+        ]:
+            if item and item not in refs:
+                refs.append(item)
+        return refs
 
 
     @staticmethod

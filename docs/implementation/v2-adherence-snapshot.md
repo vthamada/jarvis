@@ -28,10 +28,10 @@ Leitura correta:
 
 Estado de referencia desta revisao:
 
-- data da fotografia: `2026-05-05`
+- data da fotografia: `2026-05-13`
 - ultimo recorte funcional fechado: `v2-native-memory-scope-hardening-cut`
 - ultimo recorte estrutural fechado: `v2-repository-hygiene-and-tools-review-cut`
-- passo funcional em andamento: lote `MB-062` a `MB-066` concluido, lote `MB-067` a `MB-071` concluido, lote `MB-072` a `MB-076` concluido, lote `MB-077` a `MB-081` concluido, lote `MB-082` a `MB-086` concluido, lote `MB-087` a `MB-091` concluido, lote `MB-092` a `MB-096` concluido, lote `MB-097` a `MB-101` concluido, lote `MB-102` a `MB-106` concluido, repriorizacao `MB-107` a `MB-109` concluida e lote `MB-110` a `MB-114` aberto com `MB-110` em `ready`.
+- passo funcional em andamento: lotes `MB-062` a `MB-114` concluidos ate o recorte minimo de continuidade de projetos/objetivos; nao ha novo item micro `ready` definido nesta fotografia.
 
 Leitura executiva:
 
@@ -43,6 +43,7 @@ Leitura executiva:
 - essa explicitude adicional do Mestre continua coerente com a trajetoria atual do runtime, embora a parte de superficies amplas e estado ambiental mais rico siga mais no horizonte do `v3` do que no baseline ativo;
 - a soberania de dominios avancou mais um passo: rotas promovidas agora ja aparecem como `promoted_route_registry` soberano nos eventos do runtime, reduzindo recomputacao local no orquestrador e melhorando auditoria de elegibilidade.
 - a malha dominio->especialista tambem avancou: packets guiados de memoria agora nascem da rota promovida elegivel do registry e sao validados contra o contrato canonico da rota antes da convocacao especializada.
+- a continuidade de projetos/objetivos agora existe como baseline minimo: `project_ref`, `objective_ref`, work items, checkpoints, artefatos, `objective_status` e `next_action_ref` atravessam runtime, memoria, replay, eventos e observabilidade sem abrir autonomia longa.
 - o contrato canonico da rota ativa passou a atravessar tambem o `planning` e a influenciar a `synthesis`, reduzindo a distancia entre memoria guiada disponivel e comportamento final do runtime.
 - esse contrato agora tambem molda passos, restricoes, criterios de sucesso e checkpoint/gate governado do plano, e ja aparece na leitura final como objetivo, entrega esperada, foco de leitura e workflow ativo da rota promovida.
 - esse mesmo slice soberano agora tambem atravessa `operation_dispatch`, `workflow_*` e `operation_completed`, e a observabilidade passou a marcar drift quando objetivo, entregaveis, foco de sucesso, foco final e telemetria deixam de bater entre composicao e execucao.
@@ -75,7 +76,7 @@ Leitura executiva:
 - `observability-service`, `internal_pilot_report`, `internal_pilot_support`, `compare_orchestrator_paths`, `verify_active_cut_baseline.py`, `evolution-lab`, `evolution_from_pilot.py` e `verify_release_signal_baseline.py` agora expoem continuidade de superficie como status, contagem de superficies vinculadas, flags de conflito e readiness auditavel.
 - `MB-106` fechou documentalmente o lote minimo de continuidade multissuperficie; voz/realtime, web rica, API publica, memoria temporal relacional e substrate operacional amplo continuam fora de fase.
 - `MB-107` a `MB-109` fecharam a repriorizacao explicita derivada de `EV-001`, escolhendo `SO-003` apenas como recorte minimo de continuidade de projetos/objetivos.
-- `MB-110` a `MB-114` agora abrem o lote minimo para contratos, runtime, memoria, observabilidade e fechamento documental de projetos, objetivos, work items, checkpoints e artefatos vivos, sem autoexecucao longa.
+- `MB-110` a `MB-114` fecharam o lote minimo para contratos, runtime, memoria, observabilidade e fechamento documental de projetos, objetivos, work items, checkpoints e artefatos vivos, sem autoexecucao longa.
 - `verify_active_cut_baseline.py` agora combina contratos promovidos com um piloto focado que cobre as seis rotas promovidas, seus `workflow_profiles` e os sinais deliberados de memoria causal e recomposicao cognitiva.
 - `internal_pilot_support` agora declara `expected_route`, `expected_workflow_profile` e `coverage_tags` nos cenarios canonicos do piloto, tornando a cobertura por rota/workflow parte explicita do baseline ativo.
 - o baseline ativo agora tambem exige cenarios deliberados para `dominant_tension` e alinhamento `mente -> dominio -> especialista`, deixando esses sinais como readiness formal de robustez do `v2`.
@@ -454,10 +455,10 @@ O lote `MB-057` a `MB-061` foi fechado exatamente para atacar esses tres pontos 
 
 O que resta agora continua melhor descrito como backlog macro de lacunas reais
 e traducao tecnologica disciplinada. A ponte minima de continuidade
-multissuperficie ja foi fechada no lote `MB-102` a `MB-106`, e a repriorizacao
-`MB-107` a `MB-109` escolheu `SO-003` em recorte minimo. O lote ativo
-`MB-110` a `MB-114` deve criar fundacao de projetos/objetivos persistentes,
-preservando superficies amplas, voz, web, API publica, memoria temporal rica,
+multissuperficie ja foi fechada no lote `MB-102` a `MB-106`, a repriorizacao
+`MB-107` a `MB-109` escolheu `SO-003` em recorte minimo e o lote `MB-110` a
+`MB-114` criou a fundacao de projetos/objetivos persistentes, preservando
+superficies amplas, voz, web, API publica, memoria temporal rica,
 autoexecucao longa e substrate operacional amplo fora de fase.
 
 ---

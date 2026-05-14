@@ -42,6 +42,17 @@ class SurfaceIdentityContract:
 
 
 @dataclass
+class ProjectObjectiveContinuityContract:
+    project_ref: str | None = None
+    objective_ref: str | None = None
+    work_item_refs: list[str] = field(default_factory=list)
+    checkpoint_refs: list[str] = field(default_factory=list)
+    artifact_refs: list[str] = field(default_factory=list)
+    objective_status: str = "active"
+    next_action_ref: str | None = None
+
+
+@dataclass
 class InputContract:
     request_id: RequestId
     session_id: SessionId
@@ -62,6 +73,13 @@ class InputContract:
     operator_identity_ref: str | None = None
     canonical_user_ref: str | None = None
     surface_continuity_status: str = "single_surface"
+    project_ref: str | None = None
+    objective_ref: str | None = None
+    work_item_refs: list[str] = field(default_factory=list)
+    checkpoint_refs: list[str] = field(default_factory=list)
+    artifact_refs: list[str] = field(default_factory=list)
+    objective_status: str = "active"
+    next_action_ref: str | None = None
 
 
 @dataclass
@@ -219,6 +237,13 @@ class DeliberativePlanContract:
     continuity_replay_status: str | None = None
     continuity_recovery_mode: str | None = None
     continuity_resume_point: str | None = None
+    project_ref: str | None = None
+    objective_ref: str | None = None
+    work_item_refs: list[str] = field(default_factory=list)
+    checkpoint_refs: list[str] = field(default_factory=list)
+    artifact_refs: list[str] = field(default_factory=list)
+    objective_status: str | None = None
+    next_action_ref: str | None = None
 
 
 @dataclass
@@ -452,6 +477,13 @@ class OperationDispatchContract:
     open_checkpoint_refs: list[str] = field(default_factory=list)
     surface_presence: list[str] = field(default_factory=list)
     ecosystem_state_summary: str | None = None
+    project_ref: str | None = None
+    objective_ref: str | None = None
+    work_item_refs: list[str] = field(default_factory=list)
+    checkpoint_refs: list[str] = field(default_factory=list)
+    artifact_refs: list[str] = field(default_factory=list)
+    objective_status: str | None = None
+    next_action_ref: str | None = None
     surface_id: str | None = None
     surface_kind: str | None = None
     surface_session_id: str | None = None
@@ -487,6 +519,13 @@ class OperationResultContract:
     open_checkpoint_refs: list[str] = field(default_factory=list)
     surface_presence: list[str] = field(default_factory=list)
     ecosystem_state_summary: str | None = None
+    project_ref: str | None = None
+    objective_ref: str | None = None
+    work_item_refs: list[str] = field(default_factory=list)
+    checkpoint_refs: list[str] = field(default_factory=list)
+    artifact_refs: list[str] = field(default_factory=list)
+    objective_status: str | None = None
+    next_action_ref: str | None = None
     surface_id: str | None = None
     surface_kind: str | None = None
     surface_session_id: str | None = None
@@ -582,6 +621,13 @@ class ContinuityCheckpointContract:
     open_checkpoint_refs: list[str] = field(default_factory=list)
     surface_presence: list[str] = field(default_factory=list)
     ecosystem_state_summary: str | None = None
+    project_ref: str | None = None
+    objective_ref: str | None = None
+    work_item_refs: list[str] = field(default_factory=list)
+    checkpoint_refs: list[str] = field(default_factory=list)
+    artifact_refs: list[str] = field(default_factory=list)
+    objective_status: str | None = None
+    next_action_ref: str | None = None
     linked_surface_ids: list[str] = field(default_factory=list)
     active_surface_id: str | None = None
     last_surface_id: str | None = None
@@ -610,6 +656,13 @@ class ContinuityReplayContract:
     open_checkpoint_refs: list[str] = field(default_factory=list)
     surface_presence: list[str] = field(default_factory=list)
     ecosystem_state_summary: str | None = None
+    project_ref: str | None = None
+    objective_ref: str | None = None
+    work_item_refs: list[str] = field(default_factory=list)
+    checkpoint_refs: list[str] = field(default_factory=list)
+    artifact_refs: list[str] = field(default_factory=list)
+    objective_status: str | None = None
+    next_action_ref: str | None = None
     linked_surface_ids: list[str] = field(default_factory=list)
     active_surface_id: str | None = None
     last_surface_id: str | None = None
@@ -660,6 +713,13 @@ class MissionStateContract:
     open_checkpoint_refs: list[str] = field(default_factory=list)
     surface_presence: list[str] = field(default_factory=list)
     ecosystem_state_summary: str | None = None
+    project_ref: str | None = None
+    objective_ref: str | None = None
+    work_item_refs: list[str] = field(default_factory=list)
+    checkpoint_refs: list[str] = field(default_factory=list)
+    artifact_refs: list[str] = field(default_factory=list)
+    objective_status: str | None = None
+    next_action_ref: str | None = None
     linked_surface_ids: list[str] = field(default_factory=list)
     active_surface_id: str | None = None
     last_surface_id: str | None = None
@@ -698,6 +758,13 @@ class MissionRuntimeStateContract:
     open_checkpoint_refs: list[str] = field(default_factory=list)
     surface_presence: list[str] = field(default_factory=list)
     ecosystem_state_summary: str | None = None
+    project_ref: str | None = None
+    objective_ref: str | None = None
+    work_item_refs: list[str] = field(default_factory=list)
+    checkpoint_refs: list[str] = field(default_factory=list)
+    artifact_refs: list[str] = field(default_factory=list)
+    objective_status: str | None = None
+    next_action_ref: str | None = None
     linked_surface_ids: list[str] = field(default_factory=list)
     active_surface_id: str | None = None
     last_surface_id: str | None = None

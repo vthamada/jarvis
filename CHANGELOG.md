@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## 2026-05-13
+
+### MB-110 a MB-114 fecham continuidade minima de projetos e objetivos
+
+- `shared/contracts`, `shared/schemas` e `shared/events` formalizam `ProjectObjectiveContinuityContract`, campos de projeto/objetivo nos contratos centrais e o evento `objective_state_declared`;
+- `orchestrator-service`, `planning-engine`, `synthesis-engine` e `operational-service` propagam `project_ref`, `objective_ref`, work items, checkpoints, artefatos, status do objetivo e proxima acao no fluxo atual;
+- `memory-service` persiste e recupera essa continuidade em sessao, missao, checkpoint e replay, sem abrir scheduler autonomo ou memoria temporal ampla;
+- `observability-service`, piloto interno, relatorio e comparador passam a expor `objective_continuity_status`, contagens de work items/checkpoints, estado de artefato e readiness de proxima acao.
+
 ## 2026-05-05
 
 ### Decisao macro fechada para projetos e objetivos persistentes

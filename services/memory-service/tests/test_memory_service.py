@@ -267,6 +267,10 @@ def test_memory_service_recovers_bounded_ecosystem_state_for_continuity() -> Non
     assert mission_state.ecosystem_state_status == "operational_state_attached"
     assert mission_state.active_work_items == ["mission_task:Plan milestone M3"]
     assert "runtime://artifact/milestone-plan.md" in mission_state.active_artifact_refs
+    assert mission_state.project_ref == "project://mission-eco"
+    assert mission_state.objective_ref == "objective://mission-eco"
+    assert mission_state.objective_status == "completed"
+    assert mission_state.next_action_ref == "next_action:close_readiness_checkpoint"
     assert mission_state.linked_surface_ids == ["surface://jarvis_console"]
     assert mission_state.active_surface_id == "surface://jarvis_console"
     assert any(
@@ -284,6 +288,18 @@ def test_memory_service_recovers_bounded_ecosystem_state_for_continuity() -> Non
     )
     assert any(
         item.startswith("mission_open_checkpoint_refs=")
+        for item in recovered.recovered_items
+    )
+    assert any(
+        item == "mission_objective_status=completed"
+        for item in recovered.recovered_items
+    )
+    assert any(
+        item == "mission_project_ref=project://mission-eco"
+        for item in recovered.recovered_items
+    )
+    assert any(
+        item.startswith("mission_work_item_refs=")
         for item in recovered.recovered_items
     )
     assert any(

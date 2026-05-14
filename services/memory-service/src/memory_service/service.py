@@ -66,6 +66,7 @@ from shared.types import (
     MemoryRecordId,
     MissionId,
     MissionStatus,
+    OperationStatus,
     PermissionDecision,
     RecoveryType,
     RequestId,
@@ -117,6 +118,17 @@ class SurfaceContinuityState:
     last_surface_id: str | None = None
     surface_continuity_status: str | None = None
     surface_identity_conflict_flags: list[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class ProjectObjectiveContinuityState:
+    project_ref: str | None = None
+    objective_ref: str | None = None
+    work_item_refs: list[str] = field(default_factory=list)
+    checkpoint_refs: list[str] = field(default_factory=list)
+    artifact_refs: list[str] = field(default_factory=list)
+    objective_status: str | None = None
+    next_action_ref: str | None = None
 
 
 class MemoryService:
@@ -194,6 +206,12 @@ class MemoryService:
             operation_dispatch=operation_dispatch,
             operation_result=operation_result,
         )
+        objective_state = self._resolve_project_objective_state(
+            contract,
+            operation_dispatch=operation_dispatch,
+            operation_result=operation_result,
+            ecosystem_state=ecosystem_state,
+        )
         open_loops = self._extract_open_loops(deliberative_plan, specialist_contributions)
         decision_frame = self._decision_frame(deliberative_plan)
         dominant_goal = deliberative_plan.goal if deliberative_plan else contract.content
@@ -261,6 +279,13 @@ class MemoryService:
                 "surface_identity_conflict_flags": list(
                     surface_state.surface_identity_conflict_flags
                 ),
+                "project_ref": objective_state.project_ref,
+                "objective_ref": objective_state.objective_ref,
+                "work_item_refs": list(objective_state.work_item_refs),
+                "checkpoint_refs": list(objective_state.checkpoint_refs),
+                "artifact_refs": list(objective_state.artifact_refs),
+                "objective_status": objective_state.objective_status,
+                "next_action_ref": objective_state.next_action_ref,
             },
             timestamp=self.now(),
             session_id=contract.session_id,
@@ -292,6 +317,7 @@ class MemoryService:
             governance_decision=governance_decision,
             ecosystem_state=ecosystem_state,
             surface_state=surface_state,
+            objective_state=objective_state,
         )
         if continuity_snapshot is not None:
             self.repository.upsert_session_continuity(continuity_snapshot)
@@ -303,6 +329,7 @@ class MemoryService:
                     continuity_snapshot=continuity_snapshot,
                     ecosystem_state=ecosystem_state,
                     surface_state=surface_state,
+                    objective_state=objective_state,
                 )
             )
         if contract.mission_id:
@@ -316,6 +343,7 @@ class MemoryService:
                 governance_decision=governance_decision,
                 ecosystem_state=ecosystem_state,
                 surface_state=surface_state,
+                objective_state=objective_state,
             )
             if mission_state is not None:
                 self.repository.upsert_mission_state(mission_state)
@@ -468,6 +496,13 @@ class MemoryService:
             open_checkpoint_refs=list(checkpoint.open_checkpoint_refs),
             surface_presence=list(checkpoint.surface_presence),
             ecosystem_state_summary=checkpoint.ecosystem_state_summary,
+            project_ref=checkpoint.project_ref,
+            objective_ref=checkpoint.objective_ref,
+            work_item_refs=list(checkpoint.work_item_refs),
+            checkpoint_refs=list(checkpoint.checkpoint_refs),
+            artifact_refs=list(checkpoint.artifact_refs),
+            objective_status=checkpoint.objective_status,
+            next_action_ref=checkpoint.next_action_ref,
             linked_surface_ids=list(checkpoint.linked_surface_ids),
             active_surface_id=checkpoint.active_surface_id,
             last_surface_id=checkpoint.last_surface_id,
@@ -723,6 +758,80 @@ class MemoryService:
             surface_identity_conflict_flags=conflict_flags,
         )
 
+    def _resolve_project_objective_state(
+        self,
+        contract: InputContract,
+        *,
+        operation_dispatch: OperationDispatchContract | None,
+        operation_result: OperationResultContract | None,
+        ecosystem_state: EcosystemOperationalStateContract | None,
+    ) -> ProjectObjectiveContinuityState:
+        mission_ref = str(contract.mission_id) if contract.mission_id else None
+        project_ref = self._first_text(
+            getattr(operation_result, "project_ref", None),
+            getattr(operation_dispatch, "project_ref", None),
+            contract.project_ref,
+            f"project://{mission_ref}" if mission_ref else None,
+        )
+        objective_ref = self._first_text(
+            getattr(operation_result, "objective_ref", None),
+            getattr(operation_dispatch, "objective_ref", None),
+            contract.objective_ref,
+            f"objective://{mission_ref}" if mission_ref else None,
+        )
+        work_item_refs = self._merge_unique_strings(
+            getattr(operation_result, "work_item_refs", []),
+            getattr(operation_dispatch, "work_item_refs", []),
+            contract.work_item_refs,
+            ecosystem_state.active_work_items if ecosystem_state else [],
+        )
+        checkpoint_refs = self._merge_unique_strings(
+            getattr(operation_result, "checkpoint_refs", []),
+            getattr(operation_dispatch, "checkpoint_refs", []),
+            contract.checkpoint_refs,
+            ecosystem_state.open_checkpoint_refs if ecosystem_state else [],
+        )
+        artifact_refs = self._merge_unique_strings(
+            getattr(operation_result, "artifact_refs", []),
+            getattr(operation_dispatch, "artifact_refs", []),
+            contract.artifact_refs,
+            ecosystem_state.active_artifact_refs if ecosystem_state else [],
+        )
+        objective_status = self._first_text(
+            getattr(operation_result, "objective_status", None),
+            "completed"
+            if operation_result is not None
+            and operation_result.status == OperationStatus.COMPLETED
+            else None,
+            getattr(operation_dispatch, "objective_status", None),
+            contract.objective_status,
+        )
+        next_action_ref = self._first_text(
+            getattr(operation_result, "next_action_ref", None),
+            getattr(operation_dispatch, "next_action_ref", None),
+            contract.next_action_ref,
+            self._next_action_from_checkpoint_refs(checkpoint_refs),
+        )
+        return ProjectObjectiveContinuityState(
+            project_ref=project_ref,
+            objective_ref=objective_ref,
+            work_item_refs=work_item_refs,
+            checkpoint_refs=checkpoint_refs,
+            artifact_refs=artifact_refs,
+            objective_status=objective_status,
+            next_action_ref=next_action_ref,
+        )
+
+    @staticmethod
+    def _next_action_from_checkpoint_refs(checkpoint_refs: list[str]) -> str | None:
+        if not checkpoint_refs:
+            return None
+        first = checkpoint_refs[0]
+        parts = first.split(":")
+        if len(parts) >= 2 and parts[0] == "workflow_checkpoint":
+            return f"next_action:{parts[1]}"
+        return f"next_action:{first}"
+
     @staticmethod
     def _first_text(*items: object | None) -> str | None:
         for item in items:
@@ -861,6 +970,30 @@ class MemoryService:
                     "surface_identity_conflict_flags="
                     f"{';'.join(session_continuity.surface_identity_conflict_flags[:3])}"
                 )
+            if session_continuity.project_ref:
+                continuity_hints.append(f"project_ref={session_continuity.project_ref}")
+            if session_continuity.objective_ref:
+                continuity_hints.append(f"objective_ref={session_continuity.objective_ref}")
+            if session_continuity.objective_status:
+                continuity_hints.append(
+                    f"objective_status={session_continuity.objective_status}"
+                )
+            if session_continuity.work_item_refs:
+                continuity_hints.append(
+                    f"work_item_refs={','.join(session_continuity.work_item_refs[:3])}"
+                )
+            if session_continuity.checkpoint_refs:
+                continuity_hints.append(
+                    f"checkpoint_refs={','.join(session_continuity.checkpoint_refs[:3])}"
+                )
+            if session_continuity.artifact_refs:
+                continuity_hints.append(
+                    f"artifact_refs={','.join(session_continuity.artifact_refs[:3])}"
+                )
+            if session_continuity.next_action_ref:
+                continuity_hints.append(
+                    f"next_action_ref={session_continuity.next_action_ref}"
+                )
             if session_continuity.anchor_mission_id:
                 continuity_hints.append(
                     f"session_anchor_mission_id={session_continuity.anchor_mission_id}"
@@ -912,6 +1045,15 @@ class MemoryService:
                     "continuity_surface_identity_conflict_flags="
                     f"{';'.join(continuity_checkpoint.surface_identity_conflict_flags[:3])}"
                 )
+            if continuity_checkpoint.objective_status:
+                continuity_hints.append(
+                    "continuity_objective_status="
+                    f"{continuity_checkpoint.objective_status}"
+                )
+            if continuity_checkpoint.next_action_ref:
+                continuity_hints.append(
+                    f"continuity_next_action_ref={continuity_checkpoint.next_action_ref}"
+                )
         continuity_replay = self.get_session_continuity_replay(str(contract.session_id))
         if continuity_replay:
             continuity_hints.append(f"continuity_replay_status={continuity_replay.replay_status}")
@@ -926,6 +1068,10 @@ class MemoryService:
                 continuity_hints.append(
                     "continuity_surface_continuity_status="
                     f"{continuity_replay.surface_continuity_status}"
+                )
+            if continuity_replay.objective_status:
+                continuity_hints.append(
+                    f"continuity_objective_status={continuity_replay.objective_status}"
                 )
         continuity_pause = self.get_session_continuity_pause(str(contract.session_id))
         if continuity_pause:
@@ -943,6 +1089,39 @@ class MemoryService:
                 if mission_state.semantic_brief:
                     mission_hints.append(f"mission_semantic_brief={mission_state.semantic_brief}")
                 mission_hints.append(f"mission_goal={mission_state.mission_goal}")
+                if mission_state.active_surface_id:
+                    mission_hints.append(
+                        f"mission_active_surface_id={mission_state.active_surface_id}"
+                    )
+                if mission_state.ecosystem_state_status:
+                    mission_hints.append(
+                        f"mission_ecosystem_state_status={mission_state.ecosystem_state_status}"
+                    )
+                if mission_state.active_work_items:
+                    mission_hints.append(
+                        "mission_active_work_items="
+                        f"{';'.join(mission_state.active_work_items[:3])}"
+                    )
+                if mission_state.active_artifact_refs:
+                    mission_hints.append(
+                        "mission_active_artifact_refs="
+                        f"{';'.join(mission_state.active_artifact_refs[:3])}"
+                    )
+                if mission_state.open_checkpoint_refs:
+                    mission_hints.append(
+                        "mission_open_checkpoint_refs="
+                        f"{';'.join(mission_state.open_checkpoint_refs[:3])}"
+                    )
+                if mission_state.objective_status:
+                    mission_hints.append(
+                        f"mission_objective_status={mission_state.objective_status}"
+                    )
+                if mission_state.project_ref:
+                    mission_hints.append(f"mission_project_ref={mission_state.project_ref}")
+                if mission_state.work_item_refs:
+                    mission_hints.append(
+                        f"mission_work_item_refs={','.join(mission_state.work_item_refs[:3])}"
+                    )
                 if mission_state.last_recommendation:
                     mission_hints.append(
                         f"mission_recommendation={mission_state.last_recommendation}"
@@ -980,6 +1159,25 @@ class MemoryService:
                 if mission_state.ecosystem_state_summary:
                     mission_hints.append(
                         f"mission_ecosystem_state_summary={mission_state.ecosystem_state_summary}"
+                    )
+                if mission_state.project_ref:
+                    mission_hints.append(f"mission_project_ref={mission_state.project_ref}")
+                if mission_state.objective_ref:
+                    mission_hints.append(
+                        f"mission_objective_ref={mission_state.objective_ref}"
+                    )
+                if mission_state.checkpoint_refs:
+                    mission_hints.append(
+                        "mission_checkpoint_refs="
+                        f"{','.join(mission_state.checkpoint_refs[:3])}"
+                    )
+                if mission_state.artifact_refs:
+                    mission_hints.append(
+                        f"mission_artifact_refs={','.join(mission_state.artifact_refs[:3])}"
+                    )
+                if mission_state.next_action_ref:
+                    mission_hints.append(
+                        f"mission_next_action_ref={mission_state.next_action_ref}"
                     )
                 if mission_state.linked_surface_ids:
                     mission_hints.append(
@@ -1163,6 +1361,13 @@ class MemoryService:
                 "ecosystem_active_artifact_refs=",
                 "ecosystem_open_checkpoint_refs=",
                 "ecosystem_surface_presence=",
+                "objective_status=",
+                "project_ref=",
+                "objective_ref=",
+                "work_item_refs=",
+                "checkpoint_refs=",
+                "artifact_refs=",
+                "next_action_ref=",
                 "linked_surface_ids=",
                 "active_surface_id=",
                 "last_surface_id=",
@@ -1929,6 +2134,7 @@ class MemoryService:
         governance_decision: PermissionDecision | None,
         ecosystem_state: EcosystemOperationalStateContract | None,
         surface_state: SurfaceContinuityState,
+        objective_state: ProjectObjectiveContinuityState,
     ) -> SessionContinuitySnapshot | None:
         if deliberative_plan is None:
             return None
@@ -1994,6 +2200,13 @@ class MemoryService:
             surface_identity_conflict_flags=list(
                 surface_state.surface_identity_conflict_flags
             ),
+            project_ref=objective_state.project_ref,
+            objective_ref=objective_state.objective_ref,
+            work_item_refs=list(objective_state.work_item_refs),
+            checkpoint_refs=list(objective_state.checkpoint_refs),
+            artifact_refs=list(objective_state.artifact_refs),
+            objective_status=objective_state.objective_status,
+            next_action_ref=objective_state.next_action_ref,
             updated_at=self.now(),
         )
 
@@ -2009,6 +2222,7 @@ class MemoryService:
         governance_decision: PermissionDecision | None,
         ecosystem_state: EcosystemOperationalStateContract | None,
         surface_state: SurfaceContinuityState,
+        objective_state: ProjectObjectiveContinuityState,
     ) -> tuple[MissionStateContract | None, dict[str, object] | None]:
         mission_id = str(contract.mission_id)
         previous = self.repository.fetch_mission_state(mission_id)
@@ -2124,6 +2338,29 @@ class MemoryService:
                 if ecosystem_state
                 else (previous.ecosystem_state_summary if previous else None)
             ),
+            project_ref=objective_state.project_ref
+            or (previous.project_ref if previous else None),
+            objective_ref=objective_state.objective_ref
+            or (previous.objective_ref if previous else None),
+            work_item_refs=(
+                list(objective_state.work_item_refs)
+                if objective_state.work_item_refs
+                else (list(previous.work_item_refs) if previous else [])
+            ),
+            checkpoint_refs=(
+                list(objective_state.checkpoint_refs)
+                if objective_state.checkpoint_refs
+                else (list(previous.checkpoint_refs) if previous else [])
+            ),
+            artifact_refs=(
+                list(objective_state.artifact_refs)
+                if objective_state.artifact_refs
+                else (list(previous.artifact_refs) if previous else [])
+            ),
+            objective_status=objective_state.objective_status
+            or (previous.objective_status if previous else None),
+            next_action_ref=objective_state.next_action_ref
+            or (previous.next_action_ref if previous else None),
             linked_surface_ids=(
                 list(surface_state.linked_surface_ids)
                 if surface_state.linked_surface_ids
@@ -2332,6 +2569,7 @@ class MemoryService:
         continuity_snapshot: SessionContinuitySnapshot,
         ecosystem_state: EcosystemOperationalStateContract | None,
         surface_state: SurfaceContinuityState,
+        objective_state: ProjectObjectiveContinuityState,
     ) -> StoredContinuityCheckpoint:
         continuity_action = deliberative_plan.continuity_action or "continuar"
         checkpoint_status = self._continuity_checkpoint_status(
@@ -2382,6 +2620,13 @@ class MemoryService:
             surface_identity_conflict_flags=list(
                 surface_state.surface_identity_conflict_flags
             ),
+            project_ref=objective_state.project_ref,
+            objective_ref=objective_state.objective_ref,
+            work_item_refs=list(objective_state.work_item_refs),
+            checkpoint_refs=list(objective_state.checkpoint_refs),
+            artifact_refs=list(objective_state.artifact_refs),
+            objective_status=objective_state.objective_status,
+            next_action_ref=objective_state.next_action_ref,
             updated_at=self.now(),
         )
 

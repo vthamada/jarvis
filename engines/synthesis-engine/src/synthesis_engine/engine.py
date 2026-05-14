@@ -49,6 +49,13 @@ class SynthesisInput:
     procedural_artifact_status: str | None = None
     procedural_artifact_ref: str | None = None
     procedural_artifact_summary: str | None = None
+    project_ref: str | None = None
+    objective_ref: str | None = None
+    work_item_refs: list[str] = field(default_factory=list)
+    checkpoint_refs: list[str] = field(default_factory=list)
+    artifact_refs: list[str] = field(default_factory=list)
+    objective_status: str | None = None
+    next_action_ref: str | None = None
     surface_id: str | None = None
     surface_kind: str | None = None
     surface_session_id: str | None = None

@@ -163,6 +163,13 @@ class PlanningContext:
     procedural_artifact_ref: str | None = None
     procedural_artifact_version: int | None = None
     procedural_artifact_summary: str | None = None
+    project_ref: str | None = None
+    objective_ref: str | None = None
+    work_item_refs: list[str] | None = None
+    checkpoint_refs: list[str] | None = None
+    artifact_refs: list[str] | None = None
+    objective_status: str | None = None
+    next_action_ref: str | None = None
     surface_id: str | None = None
     surface_kind: str | None = None
     surface_session_id: str | None = None
@@ -589,6 +596,13 @@ class PlanningEngine:
             procedural_artifact_ref=context.procedural_artifact_ref,
             procedural_artifact_version=context.procedural_artifact_version,
             procedural_artifact_summary=context.procedural_artifact_summary,
+            project_ref=context.project_ref,
+            objective_ref=context.objective_ref,
+            work_item_refs=list(context.work_item_refs or []),
+            checkpoint_refs=list(context.checkpoint_refs or []),
+            artifact_refs=list(context.artifact_refs or []),
+            objective_status=context.objective_status,
+            next_action_ref=context.next_action_ref,
             mind_disagreement_status=mind_disagreement_status,
             mind_validation_checkpoints=mind_validation_checkpoints,
             capability_decision_status=capability_decision.status,

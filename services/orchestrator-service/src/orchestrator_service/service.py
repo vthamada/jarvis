@@ -32,6 +32,7 @@ from shared.contracts import (
     MissionRuntimeStateContract,
     OperationDispatchContract,
     OperationResultContract,
+    ProjectObjectiveContinuityContract,
     SpecialistInvocationContract,
 )
 from shared.domain_registry import (
@@ -613,6 +614,7 @@ class OrchestratorService:
                         **self._ecosystem_operational_state_payload(
                             operation_dispatch
                         ),
+                        **self._project_objective_payload(operation_dispatch),
                         **self._surface_identity_payload(operation_dispatch),
                         **self._capability_decision_event_payload(operation_dispatch),
                         **self._request_identity_policy_payload(operation_dispatch),
@@ -658,6 +660,18 @@ class OrchestratorService:
             )
             events.append(
                 self.make_event(
+                    "objective_state_declared",
+                    contract,
+                    {
+                        "operation_id": str(operation_dispatch.operation_id),
+                        "workflow_profile": operation_dispatch.workflow_profile,
+                        "workflow_domain_route": operation_dispatch.workflow_domain_route,
+                        **self._project_objective_payload(operation_dispatch),
+                    },
+                )
+            )
+            events.append(
+                self.make_event(
                     "workflow_governance_declared",
                     contract,
                     {
@@ -680,6 +694,7 @@ class OrchestratorService:
                         **self._ecosystem_operational_state_payload(
                             operation_dispatch
                         ),
+                        **self._project_objective_payload(operation_dispatch),
                         **self._surface_identity_payload(operation_dispatch),
                         **self._capability_decision_event_payload(operation_dispatch),
                         **self._request_identity_policy_payload(operation_dispatch),
@@ -727,6 +742,7 @@ class OrchestratorService:
                         **self._ecosystem_operational_state_payload(
                             operation_dispatch
                         ),
+                        **self._project_objective_payload(operation_dispatch),
                         **self._surface_identity_payload(operation_dispatch),
                         **self._capability_decision_event_payload(operation_dispatch),
                         **self._request_identity_policy_payload(operation_dispatch),
@@ -791,6 +807,7 @@ class OrchestratorService:
                         **self._ecosystem_operational_state_payload(
                             operation_result
                         ),
+                        **self._project_objective_payload(operation_result),
                         **self._mind_domain_specialist_contract_payload(
                             operation_dispatch
                         ),
@@ -831,6 +848,7 @@ class OrchestratorService:
                         **self._ecosystem_operational_state_payload(
                             operation_result
                         ),
+                        **self._project_objective_payload(operation_result),
                         **self._mind_domain_specialist_contract_payload(
                             operation_dispatch
                         ),
@@ -936,6 +954,9 @@ class OrchestratorService:
                     **self._request_identity_policy_payload(deliberative_plan),
                     **self._surface_identity_payload(
                         operation_result or operation_dispatch or contract
+                    ),
+                    **self._project_objective_payload(
+                        operation_result or operation_dispatch or deliberative_plan
                     ),
                     "adaptive_intervention_status": (
                         deliberative_plan.adaptive_intervention_status
@@ -1159,6 +1180,9 @@ class OrchestratorService:
                     ),
                     "ecosystem_state_summary": (
                         operation_result.ecosystem_state_summary if operation_result else None
+                    ),
+                    **self._project_objective_payload(
+                        operation_result or operation_dispatch or deliberative_plan
                     ),
                     **self._surface_identity_payload(
                         operation_result or operation_dispatch or contract
@@ -2288,6 +2312,13 @@ class OrchestratorService:
             workflow_profile=workflow_profile,
             workflow_checkpoint_state=workflow_checkpoint_state,
         )
+        objective_state = self._build_project_objective_continuity_state(
+            contract=contract,
+            plan=plan,
+            mission_runtime_state=mission_runtime_state,
+            ecosystem_state=ecosystem_state,
+            workflow_checkpoint_state=workflow_checkpoint_state,
+        )
         return OperationDispatchContract(
             operation_id=OperationId(f"op-{uuid4().hex[:8]}"),
             request_id=RequestId(str(contract.request_id)),
@@ -2399,6 +2430,13 @@ class OrchestratorService:
             open_checkpoint_refs=list(ecosystem_state.open_checkpoint_refs),
             surface_presence=list(ecosystem_state.surface_presence),
             ecosystem_state_summary=ecosystem_state.state_summary,
+            project_ref=objective_state.project_ref,
+            objective_ref=objective_state.objective_ref,
+            work_item_refs=list(objective_state.work_item_refs),
+            checkpoint_refs=list(objective_state.checkpoint_refs),
+            artifact_refs=list(objective_state.artifact_refs),
+            objective_status=objective_state.objective_status,
+            next_action_ref=objective_state.next_action_ref,
             surface_id=contract.surface_id,
             surface_kind=contract.surface_kind,
             surface_session_id=contract.surface_session_id,
@@ -2462,6 +2500,89 @@ class OrchestratorService:
             surface_presence=surface_presence,
             state_summary=summary,
         )
+
+    @staticmethod
+    def _build_project_objective_continuity_state(
+        *,
+        contract: InputContract,
+        plan: DeliberativePlanContract,
+        mission_runtime_state: MissionRuntimeStateContract | None,
+        ecosystem_state: EcosystemOperationalStateContract,
+        workflow_checkpoint_state: dict[str, str],
+    ) -> ProjectObjectiveContinuityContract:
+        mission_key = str(contract.mission_id or contract.request_id)
+        project_ref = (
+            contract.project_ref
+            or plan.project_ref
+            or (mission_runtime_state.project_ref if mission_runtime_state else None)
+            or f"project:mission:{mission_key}"
+        )
+        objective_ref = (
+            contract.objective_ref
+            or plan.objective_ref
+            or (mission_runtime_state.objective_ref if mission_runtime_state else None)
+            or f"objective:mission:{mission_key}"
+        )
+        work_item_refs = OrchestratorService._dedupe_texts(
+            [
+                *list(contract.work_item_refs),
+                *list(plan.work_item_refs),
+                *(mission_runtime_state.work_item_refs if mission_runtime_state else []),
+                *ecosystem_state.active_work_items,
+            ]
+        )
+        checkpoint_refs = OrchestratorService._dedupe_texts(
+            [
+                *list(contract.checkpoint_refs),
+                *list(plan.checkpoint_refs),
+                *(mission_runtime_state.checkpoint_refs if mission_runtime_state else []),
+                *ecosystem_state.open_checkpoint_refs,
+            ]
+        )
+        artifact_refs = OrchestratorService._dedupe_texts(
+            [
+                *list(contract.artifact_refs),
+                *list(plan.artifact_refs),
+                *(mission_runtime_state.artifact_refs if mission_runtime_state else []),
+                *ecosystem_state.active_artifact_refs,
+            ]
+        )
+        status = (
+            contract.objective_status
+            or plan.objective_status
+            or (mission_runtime_state.objective_status if mission_runtime_state else None)
+            or "active"
+        )
+        if plan.requires_human_validation:
+            status = "requires_operator_decision"
+        next_action_ref = (
+            contract.next_action_ref
+            or plan.next_action_ref
+            or (mission_runtime_state.next_action_ref if mission_runtime_state else None)
+            or OrchestratorService._next_action_ref_from_plan(plan, workflow_checkpoint_state)
+        )
+        return ProjectObjectiveContinuityContract(
+            project_ref=project_ref,
+            objective_ref=objective_ref,
+            work_item_refs=work_item_refs,
+            checkpoint_refs=checkpoint_refs,
+            artifact_refs=artifact_refs,
+            objective_status=status,
+            next_action_ref=next_action_ref,
+        )
+
+    @staticmethod
+    def _next_action_ref_from_plan(
+        plan: DeliberativePlanContract,
+        workflow_checkpoint_state: dict[str, str],
+    ) -> str | None:
+        for checkpoint, status in workflow_checkpoint_state.items():
+            if status != "completed":
+                return f"next_action:{checkpoint}"
+        if plan.smallest_safe_next_action:
+            token = "_".join(plan.smallest_safe_next_action.lower().split())
+            return f"next_action:{token[:96]}"
+        return None
 
     @staticmethod
     def _ecosystem_state_status(
@@ -2569,6 +2690,18 @@ class OrchestratorService:
                 "ecosystem_state_summary",
                 None,
             ),
+        }
+
+    @staticmethod
+    def _project_objective_payload(source: object) -> dict[str, object]:
+        return {
+            "project_ref": getattr(source, "project_ref", None),
+            "objective_ref": getattr(source, "objective_ref", None),
+            "work_item_refs": list(getattr(source, "work_item_refs", []) or []),
+            "checkpoint_refs": list(getattr(source, "checkpoint_refs", []) or []),
+            "artifact_refs": list(getattr(source, "artifact_refs", []) or []),
+            "objective_status": getattr(source, "objective_status", None),
+            "next_action_ref": getattr(source, "next_action_ref", None),
         }
 
     @staticmethod
@@ -3042,6 +3175,63 @@ class OrchestratorService:
             procedural_artifact_summary=self._extract_context_hint(
                 recovered, "procedural_artifact_summary="
             ),
+            project_ref=contract.project_ref
+            or self._extract_context_hint(recovered, "mission_project_ref=")
+            or self._extract_context_hint(recovered, "project_ref="),
+            objective_ref=contract.objective_ref
+            or self._extract_context_hint(recovered, "mission_objective_ref=")
+            or self._extract_context_hint(recovered, "objective_ref="),
+            work_item_refs=self._dedupe_texts(
+                [
+                    *list(contract.work_item_refs),
+                    *self._extract_list_hint(
+                        recovered,
+                        "mission_work_item_refs=",
+                        separator=",",
+                    ),
+                    *self._extract_list_hint(
+                        recovered,
+                        "work_item_refs=",
+                        separator=",",
+                    ),
+                ]
+            ),
+            checkpoint_refs=self._dedupe_texts(
+                [
+                    *list(contract.checkpoint_refs),
+                    *self._extract_list_hint(
+                        recovered,
+                        "mission_checkpoint_refs=",
+                        separator=",",
+                    ),
+                    *self._extract_list_hint(
+                        recovered,
+                        "checkpoint_refs=",
+                        separator=",",
+                    ),
+                ]
+            ),
+            artifact_refs=self._dedupe_texts(
+                [
+                    *list(contract.artifact_refs),
+                    *self._extract_list_hint(
+                        recovered,
+                        "mission_artifact_refs=",
+                        separator=",",
+                    ),
+                    *self._extract_list_hint(
+                        recovered,
+                        "artifact_refs=",
+                        separator=",",
+                    ),
+                ]
+            ),
+            objective_status=contract.objective_status
+            or self._extract_context_hint(recovered, "mission_objective_status=")
+            or self._extract_context_hint(recovered, "objective_status="),
+            next_action_ref=contract.next_action_ref
+            or self._extract_context_hint(recovered, "mission_next_action_ref=")
+            or self._extract_context_hint(recovered, "next_action_ref="),
             surface_id=contract.surface_id,
             surface_kind=contract.surface_kind,
             surface_session_id=contract.surface_session_id,
@@ -3256,6 +3446,41 @@ class OrchestratorService:
                 procedural_artifact_status=deliberative_plan.procedural_artifact_status,
                 procedural_artifact_ref=deliberative_plan.procedural_artifact_ref,
                 procedural_artifact_summary=deliberative_plan.procedural_artifact_summary,
+                project_ref=(
+                    operation_result.project_ref
+                    if operation_result and operation_result.project_ref
+                    else deliberative_plan.project_ref
+                ),
+                objective_ref=(
+                    operation_result.objective_ref
+                    if operation_result and operation_result.objective_ref
+                    else deliberative_plan.objective_ref
+                ),
+                work_item_refs=list(
+                    operation_result.work_item_refs
+                    if operation_result and operation_result.work_item_refs
+                    else deliberative_plan.work_item_refs
+                ),
+                checkpoint_refs=list(
+                    operation_result.checkpoint_refs
+                    if operation_result and operation_result.checkpoint_refs
+                    else deliberative_plan.checkpoint_refs
+                ),
+                artifact_refs=list(
+                    operation_result.artifact_refs
+                    if operation_result and operation_result.artifact_refs
+                    else deliberative_plan.artifact_refs
+                ),
+                objective_status=(
+                    operation_result.objective_status
+                    if operation_result and operation_result.objective_status
+                    else deliberative_plan.objective_status
+                ),
+                next_action_ref=(
+                    operation_result.next_action_ref
+                    if operation_result and operation_result.next_action_ref
+                    else deliberative_plan.next_action_ref
+                ),
                 surface_id=operation_result.surface_id if operation_result else None,
                 surface_kind=operation_result.surface_kind if operation_result else None,
                 surface_session_id=(

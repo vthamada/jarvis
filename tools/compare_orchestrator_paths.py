@@ -157,6 +157,10 @@ def surface_continuity_assessment(result: PilotExecutionResult) -> str:
     return result.multi_surface_readiness
 
 
+def objective_continuity_assessment(result: PilotExecutionResult) -> str:
+    return result.objective_continuity_status
+
+
 def experiment_lane_assessment(result: PilotExecutionResult) -> str:
     return expanded_eval_state(result)["experiment_lane_status"]
 
@@ -645,6 +649,12 @@ def evaluation_matrix(
             "surface_continuity": summarize_statuses(
                 [
                     surface_continuity_assessment(result)
+                    for result in workflow_results
+                ]
+            ),
+            "objective_continuity": summarize_statuses(
+                [
+                    objective_continuity_assessment(result)
                     for result in workflow_results
                 ]
             ),
@@ -1927,6 +1937,22 @@ def compare_results(
                 mismatch_fields.append("surface_identity_conflict_flags")
             if baseline.multi_surface_readiness != candidate.multi_surface_readiness:
                 mismatch_fields.append("multi_surface_readiness")
+            if (
+                baseline.objective_continuity_status
+                != candidate.objective_continuity_status
+            ):
+                mismatch_fields.append("objective_continuity_status")
+            if baseline.active_work_item_count != candidate.active_work_item_count:
+                mismatch_fields.append("active_work_item_count")
+            if baseline.open_checkpoint_count != candidate.open_checkpoint_count:
+                mismatch_fields.append("open_checkpoint_count")
+            if (
+                baseline.artifact_continuity_status
+                != candidate.artifact_continuity_status
+            ):
+                mismatch_fields.append("artifact_continuity_status")
+            if baseline.next_action_status != candidate.next_action_status:
+                mismatch_fields.append("next_action_status")
             if (
                 baseline.cognitive_recomposition_applied
                 != candidate.cognitive_recomposition_applied

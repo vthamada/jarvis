@@ -13,6 +13,7 @@ INTERNAL_EVENT_NAMES = (
     "memory_recorded",
     "surface_identity_declared",
     "ecosystem_state_declared",
+    "objective_state_declared",
     "operation_dispatched",
     "operation_completed",
     "governance_checked",

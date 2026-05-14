@@ -194,9 +194,22 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     assert result.operation_dispatch.active_work_items
     assert result.operation_dispatch.open_checkpoint_refs
     assert "surface:chat" in result.operation_dispatch.surface_presence
+    assert result.operation_dispatch.project_ref == "project:mission:req-1"
+    assert result.operation_dispatch.objective_ref == "objective:mission:req-1"
+    assert result.operation_dispatch.work_item_refs
+    assert result.operation_dispatch.checkpoint_refs
+    assert result.operation_dispatch.objective_status in {
+        "active",
+        "requires_operator_decision",
+    }
+    assert result.operation_dispatch.next_action_ref
     assert result.operation_result is not None
     assert result.operation_result.ecosystem_state_status == "operational_state_attached"
     assert result.operation_result.active_artifact_refs
+    assert result.operation_result.project_ref == result.operation_dispatch.project_ref
+    assert result.operation_result.objective_ref == result.operation_dispatch.objective_ref
+    assert result.operation_result.work_item_refs == result.operation_dispatch.work_item_refs
+    assert result.operation_result.objective_status == "completed"
     assert result.knowledge_result is not None
     assert result.artifact_results
     assert result.active_domains == ["strategy", "documentation", "observability"]
@@ -573,6 +586,9 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     ecosystem_state_event = next(
         event for event in stored_events if event.event_name == "ecosystem_state_declared"
     )
+    objective_state_event = next(
+        event for event in stored_events if event.event_name == "objective_state_declared"
+    )
     operation_dispatched_event = next(
         event for event in stored_events if event.event_name == "operation_dispatched"
     )
@@ -593,6 +609,13 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     assert ecosystem_state_event.payload["ecosystem_state_status"] == (
         workflow_composed_event.payload["ecosystem_state_status"]
     )
+    assert objective_state_event.payload["objective_status"] == (
+        workflow_composed_event.payload["objective_status"]
+    )
+    assert objective_state_event.payload["project_ref"] == (
+        result.operation_dispatch.project_ref
+    )
+    assert operation_completed_event.payload["objective_status"] == "completed"
     assert workflow_composed_event.payload["workflow_resume_status"] in {
         "fresh_start",
         "resume_available",

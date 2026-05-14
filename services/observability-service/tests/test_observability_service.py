@@ -244,6 +244,41 @@ def test_observability_service_audits_surface_continuity_signals() -> None:
     assert audit.multi_surface_readiness == "observable_not_promoted"
 
 
+def test_observability_service_audits_project_objective_continuity_signals() -> None:
+    temp_dir = runtime_dir("observability-objective")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service.ingest_events(
+        [
+            InternalEventEnvelope(
+                event_id="evt-objective-1",
+                event_name="objective_state_declared",
+                timestamp="2026-05-13T00:00:00+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "project_ref": "project://jarvis",
+                    "objective_ref": "objective://jarvis/persistent-objectives",
+                    "work_item_refs": ["work-item://mb-110"],
+                    "checkpoint_refs": ["checkpoint://contract-ready"],
+                    "artifact_refs": ["artifact://plan.md"],
+                    "objective_status": "active",
+                    "next_action_ref": "next-action://define-contract",
+                },
+                request_id="req-objective",
+                session_id="sess-objective",
+                correlation_id="req-objective",
+            ),
+        ]
+    )
+
+    audit = service.audit_flow(ObservabilityQuery(request_id="req-objective"))
+
+    assert audit.objective_continuity_status == "active"
+    assert audit.active_work_item_count == 1
+    assert audit.open_checkpoint_count == 1
+    assert audit.artifact_continuity_status == "attached"
+    assert audit.next_action_status == "ready"
+
+
 def test_observability_service_audits_continuity_signals() -> None:
     temp_dir = runtime_dir("observability-continuity")
     service = ObservabilityService(database_path=str(temp_dir / "observability.db"))

@@ -101,14 +101,14 @@ Hierarquia correta:
   piloto, comparadores, baseline ativo, `evolution-lab`, release e docs vivos;
 - a repriorizacao `EV-001` foi fechada em `MB-107` a `MB-109`, escolhendo
   `SO-003` apenas como fundacao minima de continuidade de projetos/objetivos;
-- a proxima fila micro tecnica foi aberta em `MB-110` a `MB-114`, com
-  `MB-110` em `ready` para contratos de projeto, objetivo, work item,
-  checkpoint e artefato vivo;
+- a fila micro `MB-110` a `MB-114` foi fechada e absorveu o recorte minimo de
+  projetos/objetivos persistentes no runtime, memoria, replay, eventos,
+  observabilidade, piloto e comparadores;
 - o proximo passo nao e abrir produto multicanal ou automacao ampla
   automaticamente; a fila atual existe para criar continuidade operacional
   governada antes de qualquer autonomia mais forte;
-- voz/realtime, memoria temporal rica, projetos persistentes e substrate
-  operacional amplo continuam fora de fase.
+- voz/realtime, memoria temporal rica, produto multicanal, scheduler autonomo
+  e substrate operacional amplo continuam fora de fase.
 
 Regra pratica daqui para frente:
 
@@ -205,7 +205,7 @@ Notas de leitura:
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | `SO-001` | voz e realtime como superficie subordinada | interfaces, identidade, continuidade | `v3` | `OpenClaw` como referencia tardia | `onda_3_tardia` | `deferred` | `nao` |
 | `SO-002` | contrato multissuperficie entre console, web, API e futuras interfaces | gateway, identidade, runtime operacional | `ponte v2 -> v3` | `OpenAI Agents SDK`, `OpenClaw` | `onda_3_tardia` | `resolved_minimum_baseline` | `sim` |
-| `SO-003` | projetos persistentes, tarefas assincronas longas e artefatos ativos | estado operacional do ecossistema | `v3` | `Manus`, `LangGraph`, `Mastra` | `onda_3_tardia` | `active_minimum_micro_slice` | `sim` |
+| `SO-003` | projetos persistentes, tarefas assincronas longas e artefatos ativos | estado operacional do ecossistema | `v3` | `Manus`, `LangGraph`, `Mastra` | `onda_3_tardia` | `resolved_minimum_baseline` | `sim` |
 
 Notas de leitura:
 
@@ -268,8 +268,8 @@ ser:
 
 Ordem recomendada hoje:
 
-1. executar `MB-110` para formalizar contratos minimos de projeto/objetivo/work item/checkpoint/artefato.
-2. depois seguir `MB-111` -> `MB-112` -> `MB-113` -> `MB-114` para runtime, memoria, observabilidade e fechamento documental.
+1. tratar `MB-110` a `MB-114` como baseline minimo fechado de continuidade de projetos/objetivos.
+2. repriorizar explicitamente a proxima frente micro antes de puxar automacao longa, superficies amplas ou memoria temporal rica.
 3. manter `SO-001`, `TA-004`, `TA-006` e verticais `deferred` fora da fila ate haver decisao de fase.
 
 Leitura correta:
@@ -289,9 +289,9 @@ Leitura correta:
   continuidade da mesma entidade;
 - `EV-001` foi fechado como fila micro `MB-107` a `MB-109`, escolhendo
   `SO-003` como recorte minimo de continuidade de projetos/objetivos;
-- `SO-003` agora esta fatiado como lote tecnico `MB-110` a `MB-114`, limitado
-  a contratos, propagacao runtime, persistencia bounded, auditoria/readiness e
-  fechamento documental;
+- `SO-003` agora tem baseline minimo concluido em `MB-110` a `MB-114`,
+  limitado a contratos, propagacao runtime, persistencia bounded,
+  auditoria/readiness e fechamento documental;
 - `TA-004`, `TA-006` e `DV-001` continuam relevantes, mas ainda fora da fila
   sem mudanca explicita de fase;
 - `RH-*` permanece fora do backlog implementavel.

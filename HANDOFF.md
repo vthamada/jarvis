@@ -1,8 +1,20 @@
 # HANDOFF
 
+## Atualizacao 2026-05-13
+
+A rodada `MB-110` a `MB-114` foi implementada. O baseline agora possui
+continuidade minima de projetos/objetivos: contratos compartilhados, runtime,
+memoria, replay, eventos, observabilidade e relatorios carregam `project_ref`,
+`objective_ref`, work items, checkpoints, artefatos, `objective_status` e
+`next_action_ref`.
+
+Limite arquitetural preservado: isso nao abre scheduler autonomo, execucao
+longa, produto multicanal, browser/computer use ou memoria temporal ampla.
+Essas frentes seguem dependendo de nova repriorizacao explicita.
+
 ## Metadata
 
-- Atualizado em: 2026-05-05
+- Atualizado em: 2026-05-13
 - Branch: `main`
 - Commit de referência: `02ccc53`
 - Artefato canônico do projeto: `documento_mestre_jarvis.md`
@@ -107,9 +119,8 @@ em observabilidade, piloto, comparadores, baseline ativo, `evolution-lab` e
 release, com fechamento documental sincronizado.
 A fila micro tambem fechou `MB-107` a `MB-109`, derivada de `EV-001`, e
 registrou `SO-003` como proxima frente tecnica apenas em recorte minimo.
-O lote ativo agora e `MB-110` a `MB-114`, com `MB-110` em `ready`, para
-fundacao soberana de projetos, objetivos persistentes, work items, checkpoints
-e artefatos vivos.
+O lote `MB-110` a `MB-114` foi fechado como fundacao soberana de projetos,
+objetivos persistentes, work items, checkpoints e artefatos vivos.
 
 ### Foco operacional atual
 
@@ -188,7 +199,7 @@ Atualizacao desta rodada:
   multissuperficie esta fechado nos docs vivos;
 - `MB-107` a `MB-109` foram concluidos como repriorizacao explicita de
   `EV-001`, escolhendo `SO-003` em recorte minimo;
-- `MB-110` foi aberto como item `ready` do lote de continuidade de
+- `MB-110` a `MB-114` foram concluidos como lote de continuidade minima de
   projetos/objetivos persistentes, sem abrir voz/realtime, web rica, API
   publica, memoria temporal rica, autoexecucao longa ou substrate operacional
   amplo;
@@ -424,7 +435,7 @@ Pendências principais desta fase:
 - tratar `MB-032` a `MB-036` como baseline ja fechado, sem reabrir o mesmo lote por inercia local;
 - tratar `MB-037` a `MB-040` como lote fechado, sem reabrir o mesmo trabalho por inercia local;
 - continuar refinando criterios de saida por `workflow_profile`, uso soberano de memoria e profundidade da cadeia `mente -> dominio -> especialista` apenas quando isso justificar um novo lote real;
-- a pendencia micro `ready` atual e `MB-110`: formalizar contratos minimos de projeto, objetivo, work item, checkpoint e artefato vivo antes de abrir propagacao runtime ou persistencia.
+- nao ha novo item micro `ready` definido depois de `MB-110` a `MB-114`; a proxima frente deve ser repriorizada explicitamente antes de implementacao.
 
 Regra de estudo externo no `v2`:
 
@@ -438,8 +449,8 @@ Regra de estudo externo no `v2`:
 Ordem recomendada:
 1. preservar `MB-102` a `MB-106` como lote fechado de continuidade multissuperficie minima;
 2. preservar `MB-107` a `MB-109` como repriorizacao fechada de `EV-001`;
-3. executar `MB-110` para abrir a fundacao minima de continuidade de projetos/objetivos persistentes;
-4. seguir `MB-111` -> `MB-112` -> `MB-113` -> `MB-114` depois de `MB-110`;
+3. preservar `MB-110` a `MB-114` como lote fechado de continuidade minima de projetos/objetivos persistentes;
+4. definir explicitamente a proxima frente micro antes de puxar automacao ampla, superficies novas ou memoria temporal rica;
 5. manter voz/realtime, web rica, API publica, gateway externo, memoria temporal rica, autoexecucao longa e substrate operacional amplo fora de fase;
 6. preservar `MB-023` a `MB-026` como baseline fechado e `MB-027` a `MB-031` como `deferred`, sem reabrir `protective intelligence` por impulso;
 7. tratar `MB-082` a `MB-109` como lotes ja fechados do baseline atual, sem reabrir esse eixo por inercia local;

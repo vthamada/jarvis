@@ -1966,7 +1966,7 @@ Escalar ao operador quando:
 
 - `id`: `MB-110`
 - `prioridade`: `P0`
-- `status`: `ready`
+- `status`: `done`
 - `eixo_do_mestre`: `projetos/objetivos`
 - `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
 - `micro_objetivo`: formalizar contrato soberano minimo para projetos, objetivos persistentes, work items, checkpoints e artefatos vivos, sem abrir execucao autonoma longa nem produto multicanal amplo.
@@ -1978,13 +1978,14 @@ Escalar ao operador quando:
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `high`
 - `modelo_recomendado`: `gpt-5.4`
-- `impacto_no_baseline`: abre `SO-003` como fundacao de continuidade de projetos/objetivos, nao como autonomia ampla de produto.
+- `impacto_no_baseline`: `SO-003` agora tem contrato minimo em `shared/contracts`, `shared/schemas` e `shared/events`, incluindo `objective_state_declared`.
+- `evidencia_de_fechamento`: coberto por `tests/unit/test_shared_layer.py`, `services/orchestrator-service/tests/test_orchestrator_service.py`, `services/operational-service/tests/test_operational_service.py`.
 
 ### MB-111
 
 - `id`: `MB-111`
 - `prioridade`: `P0`
-- `status`: `blocked`
+- `status`: `done`
 - `eixo_do_mestre`: `orquestracao/projetos`
 - `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
 - `micro_objetivo`: propagar o contrato de projeto/objetivo pelo runtime atual, conectando input, workflow, dispatch, operacao, sintese e eventos sem criar scheduler autonomo.
@@ -1996,13 +1997,14 @@ Escalar ao operador quando:
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `high`
 - `modelo_recomendado`: `gpt-5.4`
-- `impacto_no_baseline`: projetos e objetivos deixam de ser inferencia externa e passam a atravessar o runtime como estado operacional governado.
+- `impacto_no_baseline`: projetos e objetivos atravessam input, planning, dispatch, operational result, synthesis input e eventos centrais sem scheduler autonomo.
+- `evidencia_de_fechamento`: `workflow_composed`, `objective_state_declared`, `operation_dispatched`, `operation_completed`, `workflow_completed`, `response_synthesized` e `memory_recorded` carregam o slice de continuidade.
 
 ### MB-112
 
 - `id`: `MB-112`
 - `prioridade`: `P1`
-- `status`: `blocked`
+- `status`: `done`
 - `eixo_do_mestre`: `memoria/projetos`
 - `workflow_profile_afetado`: `nao_aplicavel`
 - `micro_objetivo`: persistir e recuperar continuidade bounded de projetos/objetivos em memoria, checkpoints e replay, sem abrir memoria temporal rica, grafo relacional amplo ou agente de tarefas longas.
@@ -2014,31 +2016,33 @@ Escalar ao operador quando:
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `high`
 - `modelo_recomendado`: `gpt-5.4`
-- `impacto_no_baseline`: o JARVIS passa a ter base minima para retomar objetivos vivos, ainda sem memoria temporal ampla.
+- `impacto_no_baseline`: `memory-service` persiste e recupera projeto, objetivo, work items, checkpoints, artefatos, status e proxima acao em continuidade de sessao, estado de missao, checkpoint e replay.
+- `evidencia_de_fechamento`: `services/memory-service/tests/test_memory_service.py::test_memory_service_recovers_bounded_ecosystem_state_for_continuity`.
 
 ### MB-113
 
 - `id`: `MB-113`
 - `prioridade`: `P1`
-- `status`: `blocked`
+- `status`: `done`
 - `eixo_do_mestre`: `observabilidade/gates`
 - `workflow_profile_afetado`: `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`, `strategic_direction_workflow`, `operational_readiness_workflow`, `software_change_workflow`
 - `micro_objetivo`: tornar projetos/objetivos auditaveis em observabilidade, piloto, comparadores, baseline ativo, `evolution-lab` e release.
 - `justificativa_arquitetural`: sem evidencia comparavel, objetivos persistentes viram promessa invisivel. Os gates precisam mostrar cobertura, bloqueios, retomada e proxima acao antes de qualquer autonomia mais ampla.
 - `arquivos/servicos_principais`: `services/observability-service`, `tools/internal_pilot_support.py`, `tools/internal_pilot_report.py`, `tools/compare_orchestrator_paths.py`, `tools/verify_active_cut_baseline.py`, `evolution/evolution-lab`, `tools/evolution_from_pilot.py`, `tools/verify_release_signal_baseline.py`
 - `dependencias`: `MB-112`
-- `criterio_de_aceite`: auditoria, relatorios, comparadores e release expõem `objective_continuity_status`, `active_work_item_count`, `open_checkpoint_count`, `artifact_continuity_status`, `next_action_status` e blockers sem promover autoexecucao.
+- `criterio_de_aceite`: auditoria, relatorios, comparadores e release expoem `objective_continuity_status`, `active_work_item_count`, `open_checkpoint_count`, `artifact_continuity_status`, `next_action_status` e blockers sem promover autoexecucao.
 - `gate_minimo`: `pytest` direcionado dos services/tools afetados, `python tools/verify_release_signal_baseline.py` e `python tools/engineering_gate.py --mode standard`
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `high`
 - `modelo_recomendado`: `gpt-5.3-codex`
-- `impacto_no_baseline`: continuidade de projetos ganha leitura comparavel e gateada antes de virar autonomia operacional ampla.
+- `impacto_no_baseline`: continuidade de projetos ganha leitura auditavel por `objective_continuity_status`, contagens de work items/checkpoints, estado de artefato e prontidao de proxima acao.
+- `evidencia_de_fechamento`: `services/observability-service/tests/test_observability_service.py::test_observability_service_audits_project_objective_continuity_signals`, `tools/internal_pilot_support.py`, `tools/internal_pilot_report.py`, `tools/compare_orchestrator_paths.py`.
 
 ### MB-114
 
 - `id`: `MB-114`
 - `prioridade`: `P1`
-- `status`: `blocked`
+- `status`: `done`
 - `eixo_do_mestre`: `docs/gates`
 - `workflow_profile_afetado`: `nao_aplicavel`
 - `micro_objetivo`: fechar o lote minimo de projetos/objetivos persistentes com docs vivos, changelog, snapshot e backlog macro sincronizados ao novo estado real.
@@ -2050,7 +2054,8 @@ Escalar ao operador quando:
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `medium`
 - `modelo_recomendado`: `gpt-5.4-mini`
-- `impacto_no_baseline`: o lote termina com projetos/objetivos persistentes registrados como ponte governada para utilidade operacional, sem abrir autonomia ampla.
+- `impacto_no_baseline`: o lote fecha projetos/objetivos persistentes como ponte governada para utilidade operacional, sem abrir autonomia ampla.
+- `evidencia_de_fechamento`: backlog, handoff, snapshot, changelog e backlog macro sincronizados nesta rodada.
 
 ---
 
@@ -2110,6 +2115,6 @@ Estado atual da fila:
 - `MB-105` agora tambem foi concluido: observabilidade, piloto, comparadores, baseline ativo, `evolution-lab` e verificadores de release expoem `surface_continuity_status`, `linked_surface_count`, `surface_identity_conflict_flags` e readiness multissuperficie sem promover nova UI, voz, web ou API publica;
 - `MB-106` agora tambem foi concluido: docs vivos, changelog, snapshot e backlog macro registram `SG-003` + `SO-002` como ponte minima de continuidade multissuperficie, sem abrir produto multicanal amplo;
 - `MB-107` a `MB-109` agora foram concluidos como repriorizacao explicita baseada em `EV-001`, registrando `SO-003` como proxima frente tecnica apenas em recorte minimo;
-- `MB-110` a `MB-114` foram abertos como lote de continuidade de projetos/objetivos persistentes, com `MB-110` em `ready`;
+- `MB-110` a `MB-114` foram concluidos como lote de continuidade minima de projetos/objetivos persistentes;
 - `SO-001`, `TA-004`, `TA-006` e verticais `deferred` continuam fora da fila sem mudanca explicita de fase;
 - `protective intelligence foundation` continua `deferred` e a matriz da Onda 2 segue como insumo, nao como gatilho automatico para abrir nova vertical.

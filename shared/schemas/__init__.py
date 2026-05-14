@@ -40,6 +40,13 @@ INPUT_SCHEMA = CanonicalSchema(
         "operator_identity_ref",
         "canonical_user_ref",
         "surface_continuity_status",
+        "project_ref",
+        "objective_ref",
+        "work_item_refs",
+        "checkpoint_refs",
+        "artifact_refs",
+        "objective_status",
+        "next_action_ref",
     ),
 )
 
@@ -59,6 +66,25 @@ SURFACE_IDENTITY_SCHEMA = CanonicalSchema(
     ),
     notes=(
         "Minimum sovereign surface identity contract for bounded multisurface continuity.",
+    ),
+)
+
+PROJECT_OBJECTIVE_CONTINUITY_SCHEMA = CanonicalSchema(
+    name="ProjectObjectiveContinuitySchema",
+    contract_name="ProjectObjectiveContinuityContract",
+    required_fields=(),
+    optional_fields=(
+        "project_ref",
+        "objective_ref",
+        "work_item_refs",
+        "checkpoint_refs",
+        "artifact_refs",
+        "objective_status",
+        "next_action_ref",
+    ),
+    notes=(
+        "Minimum governed project/objective continuity contract; "
+        "not a scheduler or autonomous executor.",
     ),
 )
 
@@ -209,6 +235,13 @@ OPERATION_DISPATCH_SCHEMA = CanonicalSchema(
         "operator_identity_ref",
         "canonical_user_ref",
         "surface_continuity_status",
+        "project_ref",
+        "objective_ref",
+        "work_item_refs",
+        "checkpoint_refs",
+        "artifact_refs",
+        "objective_status",
+        "next_action_ref",
     ),
 )
 
@@ -233,6 +266,13 @@ OPERATION_RESULT_SCHEMA = CanonicalSchema(
         "operator_identity_ref",
         "canonical_user_ref",
         "surface_continuity_status",
+        "project_ref",
+        "objective_ref",
+        "work_item_refs",
+        "checkpoint_refs",
+        "artifact_refs",
+        "objective_status",
+        "next_action_ref",
         "next_recommendation",
         "governance_flags",
         "memory_record_hints",
@@ -347,6 +387,13 @@ DELIBERATIVE_PLAN_SCHEMA = CanonicalSchema(
         "continuity_replay_status",
         "continuity_recovery_mode",
         "continuity_resume_point",
+        "project_ref",
+        "objective_ref",
+        "work_item_refs",
+        "checkpoint_refs",
+        "artifact_refs",
+        "objective_status",
+        "next_action_ref",
         "contract_validation_status",
         "contract_validation_errors",
         "contract_validation_retry_applied",
@@ -386,6 +433,13 @@ MISSION_STATE_SCHEMA = CanonicalSchema(
         "last_surface_id",
         "surface_continuity_status",
         "surface_identity_conflict_flags",
+        "project_ref",
+        "objective_ref",
+        "work_item_refs",
+        "checkpoint_refs",
+        "artifact_refs",
+        "objective_status",
+        "next_action_ref",
         "priority_level",
         "owner_context",
         "completion_criteria",

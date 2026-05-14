@@ -187,6 +187,11 @@ class FlowAudit:
     linked_surface_count: int = 0
     surface_identity_conflict_flags: list[str] = field(default_factory=list)
     multi_surface_readiness: str = "not_applicable"
+    objective_continuity_status: str = "not_applicable"
+    active_work_item_count: int = 0
+    open_checkpoint_count: int = 0
+    artifact_continuity_status: str = "not_applicable"
+    next_action_status: str = "not_applicable"
 
     @property
     def trace_complete(self) -> bool:
@@ -232,6 +237,17 @@ class FlowAudit:
             and self.mission_runtime_state_status in {"healthy", "not_applicable"}
             and not self.surface_identity_conflict_flags
             and self.multi_surface_readiness != "attention_required"
+            and self.objective_continuity_status
+            in {
+                "active",
+                "blocked",
+                "completed",
+                "paused",
+                "requires_operator_decision",
+                "not_applicable",
+            }
+            and self.artifact_continuity_status != "attention_required"
+            and self.next_action_status != "attention_required"
         )
 
 
@@ -1687,6 +1703,32 @@ class ObservabilityService:
             linked_surface_count=linked_surface_count,
             surface_identity_conflict_flags=surface_identity_conflict_flags,
         )
+        objective_status_event = self._first_payload_event(events, "objective_status")
+        objective_continuity_status = (
+            str(objective_status_event.payload.get("objective_status"))
+            if objective_status_event is not None
+            and objective_status_event.payload.get("objective_status") is not None
+            else "not_applicable"
+        )
+        objective_work_items = self._dedupe_payload_list(events, "work_item_refs")
+        objective_checkpoints = self._dedupe_payload_list(events, "checkpoint_refs")
+        objective_artifacts = self._dedupe_payload_list(events, "artifact_refs")
+        if not objective_work_items:
+            objective_work_items = active_work_items
+        if not objective_checkpoints:
+            objective_checkpoints = open_checkpoint_refs
+        if not objective_artifacts:
+            objective_artifacts = active_artifact_refs
+        next_action_event = self._first_payload_event(events, "next_action_ref")
+        next_action_status = (
+            "ready"
+            if next_action_event is not None
+            and next_action_event.payload.get("next_action_ref")
+            else "not_applicable"
+        )
+        artifact_continuity_status = (
+            "attached" if objective_artifacts else "not_applicable"
+        )
 
         return FlowAudit(
             request_id=first_event.request_id,
@@ -1754,6 +1796,11 @@ class ObservabilityService:
             linked_surface_count=linked_surface_count,
             surface_identity_conflict_flags=surface_identity_conflict_flags,
             multi_surface_readiness=multi_surface_readiness,
+            objective_continuity_status=objective_continuity_status,
+            active_work_item_count=len(objective_work_items),
+            open_checkpoint_count=len(objective_checkpoints),
+            artifact_continuity_status=artifact_continuity_status,
+            next_action_status=next_action_status,
             experiment_lane_status=expanded_eval_state["experiment_lane_status"],
             wave2_candidate_class=expanded_eval_state["wave2_candidate_class"],
             experiment_entry_status=expanded_eval_state["experiment_entry_status"],

@@ -93,6 +93,13 @@ def test_operational_service_generates_text_artifact_for_supported_task() -> Non
             ecosystem_state_summary=(
                 "work_items=1; artifacts=1; open_checkpoints=2; surfaces=2"
             ),
+            project_ref="project://jarvis/persistent-objectives",
+            objective_ref="objective://jarvis/persistent-objectives/mb-110",
+            work_item_refs=["work-item://mb-110/contracts"],
+            checkpoint_refs=["checkpoint://mb-110/contract-ready"],
+            artifact_refs=["artifact://procedural/strategy/milestone-plan/v1"],
+            objective_status="active",
+            next_action_ref="next-action://mb-110/define-contract",
             success_criteria=["plano deve indicar a menor proxima acao segura"],
             smallest_safe_next_action="definir objetivo",
         )
@@ -130,6 +137,10 @@ def test_operational_service_generates_text_artifact_for_supported_task() -> Non
     assert "Active work items: mission_task:Plan milestone M3" in content
     assert "Open checkpoint refs:" in content
     assert "Surface presence: surface:chat; session:sess-1" in content
+    assert "Project objective status: active" in content
+    assert "Project ref: project://jarvis/persistent-objectives" in content
+    assert "Objective ref: objective://jarvis/persistent-objectives/mb-110" in content
+    assert "Next action ref: next-action://mb-110/define-contract" in content
     assert "Ajuste interno" in content
     assert execution.operation_result.workflow_domain_route == "strategy"
     assert execution.operation_result.workflow_state == "completed"
@@ -156,6 +167,14 @@ def test_operational_service_generates_text_artifact_for_supported_task() -> Non
         execution.operation_result.active_artifact_refs
     )
     assert execution.operation_result.surface_presence == ["surface:chat", "session:sess-1"]
+    assert execution.operation_result.project_ref == "project://jarvis/persistent-objectives"
+    assert execution.operation_result.objective_ref == (
+        "objective://jarvis/persistent-objectives/mb-110"
+    )
+    assert execution.operation_result.objective_status == "completed"
+    assert execution.operation_result.next_action_ref == (
+        "next-action://mb-110/define-contract"
+    )
 
 
 def test_operational_service_fails_for_unsupported_task() -> None:

@@ -1,10 +1,15 @@
 from shared.contracts import (
     GovernanceDecisionContract,
     InputContract,
+    ProjectObjectiveContinuityContract,
     SurfaceIdentityContract,
 )
 from shared.events import INTERNAL_EVENT_NAMES
-from shared.schemas import INPUT_SCHEMA, SURFACE_IDENTITY_SCHEMA
+from shared.schemas import (
+    INPUT_SCHEMA,
+    PROJECT_OBJECTIVE_CONTINUITY_SCHEMA,
+    SURFACE_IDENTITY_SCHEMA,
+)
 from shared.state import SYSTEM_IDENTITY
 from shared.types import (
     ChannelType,
@@ -49,6 +54,25 @@ def test_surface_identity_contract_declares_minimum_continuity_fields() -> None:
     assert "surface_id" in INPUT_SCHEMA.optional_fields
 
 
+def test_project_objective_continuity_contract_declares_minimum_fields() -> None:
+    contract = ProjectObjectiveContinuityContract(
+        project_ref="project://jarvis",
+        objective_ref="objective://jarvis/persistent-objectives",
+        work_item_refs=["work-item://mb-110"],
+        checkpoint_refs=["checkpoint://contract-ready"],
+        artifact_refs=["artifact://plan.md"],
+        objective_status="active",
+        next_action_ref="next-action://define-contract",
+    )
+
+    assert contract.objective_status == "active"
+    assert contract.work_item_refs == ["work-item://mb-110"]
+    assert PROJECT_OBJECTIVE_CONTINUITY_SCHEMA.contract_name == (
+        "ProjectObjectiveContinuityContract"
+    )
+    assert "project_ref" in INPUT_SCHEMA.optional_fields
+
+
 def test_governance_decision_uses_canonical_enums() -> None:
     decision = GovernanceDecisionContract(
         decision_id=GovernanceDecisionId("decision-1"),
@@ -65,6 +89,7 @@ def test_internal_event_names_include_governance_blocked() -> None:
     assert "governance_blocked" in INTERNAL_EVENT_NAMES
     assert "knowledge_retrieved" in INTERNAL_EVENT_NAMES
     assert "surface_identity_declared" in INTERNAL_EVENT_NAMES
+    assert "objective_state_declared" in INTERNAL_EVENT_NAMES
 
 
 def test_system_identity_has_core_principles() -> None:
