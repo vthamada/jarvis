@@ -12,12 +12,14 @@ from urllib.parse import urlparse
 
 from shared.contracts import (
     ContinuityCheckpointContract,
+    ExperienceRecordContract,
     MissionStateContract,
+    PostTaskReflectionContract,
     SpecialistSharedMemoryContextContract,
     UserScopeContextContract,
 )
 from shared.memory_registry import memory_lifecycle_support_signals
-from shared.types import MissionStatus
+from shared.types import MissionId, MissionStatus
 
 try:
     import psycopg
@@ -129,6 +131,12 @@ class StoredContinuityPauseResolution:
     resolved_at: str
     resolved_by: str | None = None
     resolution_note: str | None = None
+
+
+@dataclass(frozen=True)
+class StoredExperienceReflection:
+    experience: ExperienceRecordContract
+    reflection: PostTaskReflectionContract
 
 
 @dataclass(frozen=True)
@@ -258,7 +266,23 @@ class MemoryRepository(ABC):
     ) -> StoredContinuityPauseResolution | None:
         """Load the latest manual resolution attached to a continuity pause."""
 
-    @abstractmethod
+    def record_experience_reflection(
+        self,
+        record: StoredExperienceReflection,
+    ) -> None:
+        """Persist a bounded experience/reflection pair."""
+        raise NotImplementedError
+
+    def list_experience_reflections(
+        self,
+        *,
+        mission_id: str | None = None,
+        workflow_profile: str | None = None,
+        limit: int = 20,
+    ) -> list[StoredExperienceReflection]:
+        """Load recent bounded experience/reflection pairs."""
+        raise NotImplementedError
+
     def upsert_specialist_shared_memory(
         self,
         snapshot: StoredSpecialistSharedMemory,
@@ -853,6 +877,97 @@ class SqliteMemoryRepository(MemoryRepository):
             resolved_at=str(row["resolved_at"]),
         )
 
+    def record_experience_reflection(
+        self,
+        record: StoredExperienceReflection,
+    ) -> None:
+        experience = record.experience
+        reflection = record.reflection
+        with self._connect() as connection:
+            connection.execute(
+                """
+                INSERT OR REPLACE INTO experience_reflections (
+                    experience_id, reflection_id, mission_id, objective_ref, surface_id,
+                    workflow_profile, outcome_status, evidence_refs, signal_refs,
+                    failure_modes, decision_refs, learned_patterns, next_action_ref,
+                    source_kind, reusable_memory_status, experience_human_review_required,
+                    experience_automatic_promotion_allowed, experience_core_mutation_allowed,
+                    reflection_status, learning_candidate, recommendation,
+                    proposed_change_type, proposed_tests, blockers, rollback_plan_ref,
+                    risk_hint, reflection_human_review_required,
+                    reflection_automatic_promotion_allowed, reflection_core_mutation_allowed,
+                    timestamp
+                )
+                VALUES (
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?
+                )
+                """,
+                (
+                    experience.experience_id,
+                    reflection.reflection_id,
+                    str(experience.mission_id),
+                    experience.objective_ref,
+                    experience.surface_id,
+                    experience.workflow_profile,
+                    experience.outcome_status,
+                    dumps(experience.evidence_refs),
+                    dumps(experience.signal_refs),
+                    dumps(experience.failure_modes),
+                    dumps(experience.decision_refs),
+                    dumps(experience.learned_patterns),
+                    experience.next_action_ref,
+                    experience.source_kind,
+                    experience.reusable_memory_status,
+                    int(experience.human_review_required),
+                    int(experience.automatic_promotion_allowed),
+                    int(experience.core_mutation_allowed),
+                    reflection.reflection_status,
+                    reflection.learning_candidate,
+                    reflection.recommendation,
+                    reflection.proposed_change_type,
+                    dumps(reflection.proposed_tests),
+                    dumps(reflection.blockers),
+                    reflection.rollback_plan_ref,
+                    reflection.risk_hint,
+                    int(reflection.human_review_required),
+                    int(reflection.automatic_promotion_allowed),
+                    int(reflection.core_mutation_allowed),
+                    experience.timestamp,
+                ),
+            )
+            connection.commit()
+
+    def list_experience_reflections(
+        self,
+        *,
+        mission_id: str | None = None,
+        workflow_profile: str | None = None,
+        limit: int = 20,
+    ) -> list[StoredExperienceReflection]:
+        clauses: list[str] = []
+        params: list[object] = []
+        if mission_id:
+            clauses.append("mission_id = ?")
+            params.append(mission_id)
+        if workflow_profile:
+            clauses.append("workflow_profile = ?")
+            params.append(workflow_profile)
+        where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        params.append(limit)
+        with self._connect() as connection:
+            rows = connection.execute(
+                f"""
+                SELECT *
+                FROM experience_reflections
+                {where}
+                ORDER BY timestamp DESC
+                LIMIT ?
+                """,
+                tuple(params),
+            ).fetchall()
+        return [self._row_to_experience_reflection(row) for row in rows]
+
     def upsert_specialist_shared_memory(
         self,
         snapshot: StoredSpecialistSharedMemory,
@@ -1356,6 +1471,42 @@ class SqliteMemoryRepository(MemoryRepository):
                     resolved_at TEXT NOT NULL
                 );
 
+                CREATE TABLE IF NOT EXISTS experience_reflections (
+                    experience_id TEXT PRIMARY KEY,
+                    reflection_id TEXT NOT NULL,
+                    mission_id TEXT NOT NULL,
+                    objective_ref TEXT,
+                    surface_id TEXT,
+                    workflow_profile TEXT NOT NULL,
+                    outcome_status TEXT NOT NULL,
+                    evidence_refs TEXT NOT NULL DEFAULT '[]',
+                    signal_refs TEXT NOT NULL DEFAULT '[]',
+                    failure_modes TEXT NOT NULL DEFAULT '[]',
+                    decision_refs TEXT NOT NULL DEFAULT '[]',
+                    learned_patterns TEXT NOT NULL DEFAULT '[]',
+                    next_action_ref TEXT,
+                    source_kind TEXT NOT NULL,
+                    reusable_memory_status TEXT NOT NULL,
+                    experience_human_review_required INTEGER NOT NULL,
+                    experience_automatic_promotion_allowed INTEGER NOT NULL,
+                    experience_core_mutation_allowed INTEGER NOT NULL,
+                    reflection_status TEXT NOT NULL,
+                    learning_candidate TEXT NOT NULL,
+                    recommendation TEXT NOT NULL,
+                    proposed_change_type TEXT NOT NULL,
+                    proposed_tests TEXT NOT NULL DEFAULT '[]',
+                    blockers TEXT NOT NULL DEFAULT '[]',
+                    rollback_plan_ref TEXT,
+                    risk_hint TEXT,
+                    reflection_human_review_required INTEGER NOT NULL,
+                    reflection_automatic_promotion_allowed INTEGER NOT NULL,
+                    reflection_core_mutation_allowed INTEGER NOT NULL,
+                    timestamp TEXT NOT NULL
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_experience_reflections_mission_timestamp
+                ON experience_reflections (mission_id, timestamp);
+
                 CREATE TABLE IF NOT EXISTS specialist_shared_memory (
                     session_id TEXT NOT NULL,
                     specialist_type TEXT NOT NULL,
@@ -1775,6 +1926,52 @@ class SqliteMemoryRepository(MemoryRepository):
         )
 
     @staticmethod
+    def _row_to_experience_reflection(row: Row) -> StoredExperienceReflection:
+        evidence_refs = list(loads(row["evidence_refs"] or "[]"))
+        experience = ExperienceRecordContract(
+            experience_id=str(row["experience_id"]),
+            mission_id=MissionId(str(row["mission_id"])),
+            objective_ref=row["objective_ref"],
+            surface_id=row["surface_id"],
+            workflow_profile=str(row["workflow_profile"]),
+            outcome_status=str(row["outcome_status"]),
+            evidence_refs=evidence_refs,
+            signal_refs=list(loads(row["signal_refs"] or "[]")),
+            failure_modes=list(loads(row["failure_modes"] or "[]")),
+            decision_refs=list(loads(row["decision_refs"] or "[]")),
+            learned_patterns=list(loads(row["learned_patterns"] or "[]")),
+            next_action_ref=row["next_action_ref"],
+            source_kind=str(row["source_kind"]),
+            reusable_memory_status=str(row["reusable_memory_status"]),
+            human_review_required=bool(row["experience_human_review_required"]),
+            automatic_promotion_allowed=bool(
+                row["experience_automatic_promotion_allowed"]
+            ),
+            core_mutation_allowed=bool(row["experience_core_mutation_allowed"]),
+            timestamp=str(row["timestamp"]),
+        )
+        reflection = PostTaskReflectionContract(
+            reflection_id=str(row["reflection_id"]),
+            experience_id=str(row["experience_id"]),
+            reflection_status=str(row["reflection_status"]),
+            learning_candidate=str(row["learning_candidate"]),
+            recommendation=str(row["recommendation"]),
+            proposed_change_type=str(row["proposed_change_type"]),
+            evidence_refs=evidence_refs,
+            proposed_tests=list(loads(row["proposed_tests"] or "[]")),
+            blockers=list(loads(row["blockers"] or "[]")),
+            rollback_plan_ref=row["rollback_plan_ref"],
+            risk_hint=row["risk_hint"],
+            human_review_required=bool(row["reflection_human_review_required"]),
+            automatic_promotion_allowed=bool(
+                row["reflection_automatic_promotion_allowed"]
+            ),
+            core_mutation_allowed=bool(row["reflection_core_mutation_allowed"]),
+            timestamp=str(row["timestamp"]),
+        )
+        return StoredExperienceReflection(experience=experience, reflection=reflection)
+
+    @staticmethod
     def _row_to_mission_state(row: Row) -> MissionStateContract:
         return MissionStateContract(
             mission_id=row["mission_id"],
@@ -2057,13 +2254,15 @@ class PostgresMemoryRepository(MemoryRepository):
                     identity_continuity_brief, open_loops, last_decision_frame,
                     ecosystem_state_status, active_work_items, active_artifact_refs,
                     open_checkpoint_refs, surface_presence, ecosystem_state_summary,
+                    project_ref, objective_ref, work_item_refs, checkpoint_refs,
+                    artifact_refs, objective_status, next_action_ref,
                     linked_surface_ids, active_surface_id, last_surface_id,
                     surface_continuity_status, surface_identity_conflict_flags, updated_at
                 )
                 VALUES (
                     %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
                     %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
-                    %s, %s, %s, %s, %s
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
                 )
                 ON CONFLICT (mission_id) DO UPDATE SET
                     mission_goal = EXCLUDED.mission_goal,
@@ -2085,6 +2284,13 @@ class PostgresMemoryRepository(MemoryRepository):
                     open_checkpoint_refs = EXCLUDED.open_checkpoint_refs,
                     surface_presence = EXCLUDED.surface_presence,
                     ecosystem_state_summary = EXCLUDED.ecosystem_state_summary,
+                    project_ref = EXCLUDED.project_ref,
+                    objective_ref = EXCLUDED.objective_ref,
+                    work_item_refs = EXCLUDED.work_item_refs,
+                    checkpoint_refs = EXCLUDED.checkpoint_refs,
+                    artifact_refs = EXCLUDED.artifact_refs,
+                    objective_status = EXCLUDED.objective_status,
+                    next_action_ref = EXCLUDED.next_action_ref,
                     linked_surface_ids = EXCLUDED.linked_surface_ids,
                     active_surface_id = EXCLUDED.active_surface_id,
                     last_surface_id = EXCLUDED.last_surface_id,
@@ -2113,6 +2319,13 @@ class PostgresMemoryRepository(MemoryRepository):
                     dumps(mission_state.open_checkpoint_refs),
                     dumps(mission_state.surface_presence),
                     mission_state.ecosystem_state_summary,
+                    mission_state.project_ref,
+                    mission_state.objective_ref,
+                    dumps(mission_state.work_item_refs),
+                    dumps(mission_state.checkpoint_refs),
+                    dumps(mission_state.artifact_refs),
+                    mission_state.objective_status,
+                    mission_state.next_action_ref,
                     dumps(mission_state.linked_surface_ids),
                     mission_state.active_surface_id,
                     mission_state.last_surface_id,
@@ -2399,6 +2612,118 @@ class PostgresMemoryRepository(MemoryRepository):
             resolution_note=row["resolution_note"],
             resolved_at=row["resolved_at"],
         )
+
+    def record_experience_reflection(
+        self,
+        record: StoredExperienceReflection,
+    ) -> None:
+        experience = record.experience
+        reflection = record.reflection
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO experience_reflections (
+                    experience_id, reflection_id, mission_id, objective_ref, surface_id,
+                    workflow_profile, outcome_status, evidence_refs, signal_refs,
+                    failure_modes, decision_refs, learned_patterns, next_action_ref,
+                    source_kind, reusable_memory_status, experience_human_review_required,
+                    experience_automatic_promotion_allowed, experience_core_mutation_allowed,
+                    reflection_status, learning_candidate, recommendation,
+                    proposed_change_type, proposed_tests, blockers, rollback_plan_ref,
+                    risk_hint, reflection_human_review_required,
+                    reflection_automatic_promotion_allowed, reflection_core_mutation_allowed,
+                    timestamp
+                )
+                VALUES (
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                )
+                ON CONFLICT (experience_id) DO UPDATE SET
+                    reflection_id = EXCLUDED.reflection_id,
+                    workflow_profile = EXCLUDED.workflow_profile,
+                    outcome_status = EXCLUDED.outcome_status,
+                    evidence_refs = EXCLUDED.evidence_refs,
+                    signal_refs = EXCLUDED.signal_refs,
+                    failure_modes = EXCLUDED.failure_modes,
+                    decision_refs = EXCLUDED.decision_refs,
+                    learned_patterns = EXCLUDED.learned_patterns,
+                    next_action_ref = EXCLUDED.next_action_ref,
+                    reusable_memory_status = EXCLUDED.reusable_memory_status,
+                    reflection_status = EXCLUDED.reflection_status,
+                    learning_candidate = EXCLUDED.learning_candidate,
+                    recommendation = EXCLUDED.recommendation,
+                    proposed_change_type = EXCLUDED.proposed_change_type,
+                    proposed_tests = EXCLUDED.proposed_tests,
+                    blockers = EXCLUDED.blockers,
+                    rollback_plan_ref = EXCLUDED.rollback_plan_ref,
+                    risk_hint = EXCLUDED.risk_hint,
+                    timestamp = EXCLUDED.timestamp
+                """,
+                (
+                    experience.experience_id,
+                    reflection.reflection_id,
+                    str(experience.mission_id),
+                    experience.objective_ref,
+                    experience.surface_id,
+                    experience.workflow_profile,
+                    experience.outcome_status,
+                    dumps(experience.evidence_refs),
+                    dumps(experience.signal_refs),
+                    dumps(experience.failure_modes),
+                    dumps(experience.decision_refs),
+                    dumps(experience.learned_patterns),
+                    experience.next_action_ref,
+                    experience.source_kind,
+                    experience.reusable_memory_status,
+                    experience.human_review_required,
+                    experience.automatic_promotion_allowed,
+                    experience.core_mutation_allowed,
+                    reflection.reflection_status,
+                    reflection.learning_candidate,
+                    reflection.recommendation,
+                    reflection.proposed_change_type,
+                    dumps(reflection.proposed_tests),
+                    dumps(reflection.blockers),
+                    reflection.rollback_plan_ref,
+                    reflection.risk_hint,
+                    reflection.human_review_required,
+                    reflection.automatic_promotion_allowed,
+                    reflection.core_mutation_allowed,
+                    experience.timestamp,
+                ),
+            )
+            connection.commit()
+
+    def list_experience_reflections(
+        self,
+        *,
+        mission_id: str | None = None,
+        workflow_profile: str | None = None,
+        limit: int = 20,
+    ) -> list[StoredExperienceReflection]:
+        clauses: list[str] = []
+        params: list[object] = []
+        if mission_id:
+            clauses.append("mission_id = %s")
+            params.append(mission_id)
+        if workflow_profile:
+            clauses.append("workflow_profile = %s")
+            params.append(workflow_profile)
+        where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        params.append(limit)
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                f"""
+                SELECT *
+                FROM experience_reflections
+                {where}
+                ORDER BY timestamp DESC
+                LIMIT %s
+                """,
+                tuple(params),
+            )
+            rows = cursor.fetchall()
+        return [self._row_to_experience_reflection(row) for row in rows]
 
     def upsert_specialist_shared_memory(
         self,
@@ -2704,6 +3029,8 @@ class PostgresMemoryRepository(MemoryRepository):
                        identity_continuity_brief, open_loops, last_decision_frame,
                        ecosystem_state_status, active_work_items, active_artifact_refs,
                        open_checkpoint_refs, surface_presence, ecosystem_state_summary,
+                       project_ref, objective_ref, work_item_refs, checkpoint_refs,
+                       artifact_refs, objective_status, next_action_ref,
                        linked_surface_ids, active_surface_id, last_surface_id,
                        surface_continuity_status, surface_identity_conflict_flags, updated_at
                 FROM mission_states

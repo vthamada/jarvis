@@ -151,6 +151,26 @@ def test_internal_pilot_report_renders_text() -> None:
                     "linked_surface_count": 2,
                     "surface_identity_conflict_flags": [],
                     "multi_surface_readiness": "observable_not_promoted",
+                    "objective_consulted": True,
+                    "objective_transition_counts": {"pause": 1},
+                    "objective_utility_signals": [
+                        "objective_consulted",
+                        "objective_paused",
+                    ],
+                    "objective_missing_next_action": True,
+                    "objective_missing_artifact": False,
+                    "technology_absorption_readiness": "ready_for_manual_review",
+                    "technology_absorption_decision": "manual_promotion_review",
+                    "technology_absorption_lane_status": "controlled_candidate",
+                    "technology_absorption_promotion_readiness": "manual_review_only",
+                    "technology_absorption_blockers": [],
+                    "technology_absorption_candidate_refs": [
+                        "tech-candidate://openai-agents-sdk/handoff-adapters"
+                    ],
+                    "technology_absorption_signals": [
+                        "technology_candidate_observed",
+                        "technology_absorption_manual_review_required",
+                    ],
                     "adaptive_intervention_policy_status": "policy_aligned",
                     "memory_causality_status": "causal_guidance",
                     "dominant_tension": "equilibrar profundidade analitica com conclusao util",
@@ -198,6 +218,24 @@ def test_internal_pilot_report_renders_text() -> None:
     assert "linked_surface_count=2" in rendered
     assert "surface_identity_conflict_flags=none" in rendered
     assert "multi_surface_readiness=observable_not_promoted" in rendered
+    assert "objective_consulted=true" in rendered
+    assert "objective_transitions=pause:1" in rendered
+    assert "objective_utility_signals=objective_consulted,objective_paused" in rendered
+    assert "objective_missing_next_action=true" in rendered
+    assert "objective_missing_artifact=false" in rendered
+    assert "technology_absorption_readiness=ready_for_manual_review" in rendered
+    assert "technology_absorption_decision=manual_promotion_review" in rendered
+    assert "technology_absorption_lane_status=controlled_candidate" in rendered
+    assert "technology_absorption_promotion_readiness=manual_review_only" in rendered
+    assert "technology_absorption_blockers=none" in rendered
+    assert (
+        "technology_absorption_candidate_refs="
+        "tech-candidate://openai-agents-sdk/handoff-adapters"
+    ) in rendered
+    assert (
+        "technology_absorption_signals="
+        "technology_candidate_observed,technology_absorption_manual_review_required"
+    ) in rendered
     assert "mind_alignment_status=partial" in rendered
     assert "axis_gate_status=partial" in rendered
     assert "expectation_status=continuity_progressing" in rendered

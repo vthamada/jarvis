@@ -192,6 +192,23 @@ class FlowAudit:
     open_checkpoint_count: int = 0
     artifact_continuity_status: str = "not_applicable"
     next_action_status: str = "not_applicable"
+    objective_consulted: bool = False
+    objective_transition_counts: dict[str, int] = field(default_factory=dict)
+    objective_utility_signals: list[str] = field(default_factory=list)
+    objective_missing_next_action: bool = False
+    objective_missing_artifact: bool = False
+    technology_absorption_readiness: str = "not_applicable"
+    technology_absorption_decision: str = "not_applicable"
+    technology_absorption_lane_status: str = "not_applicable"
+    technology_absorption_promotion_readiness: str = "not_applicable"
+    technology_absorption_blockers: list[str] = field(default_factory=list)
+    technology_absorption_candidate_refs: list[str] = field(default_factory=list)
+    technology_absorption_signals: list[str] = field(default_factory=list)
+    experience_reflection_status: str = "not_applicable"
+    experience_reflection_change_type: str = "not_applicable"
+    experience_reflection_blockers: list[str] = field(default_factory=list)
+    experience_reflection_refs: list[str] = field(default_factory=list)
+    experience_reflection_signals: list[str] = field(default_factory=list)
 
     @property
     def trace_complete(self) -> bool:
@@ -248,6 +265,9 @@ class FlowAudit:
             }
             and self.artifact_continuity_status != "attention_required"
             and self.next_action_status != "attention_required"
+            and self.technology_absorption_decision
+            not in {"block_absorption", "attention_required"}
+            and self.experience_reflection_status not in {"blocked", "attention_required"}
         )
 
 
@@ -1729,6 +1749,94 @@ class ObservabilityService:
         artifact_continuity_status = (
             "attached" if objective_artifacts else "not_applicable"
         )
+        objective_consulted = any(
+            event.event_name == "objective_state_inspected"
+            or event.payload.get("objective_consulted") is True
+            for event in events
+        )
+        objective_transition_counts = self._objective_transition_counts(events)
+        objective_missing_next_action = (
+            objective_continuity_status
+            in {"active", "paused", "blocked", "requires_operator_decision"}
+            and next_action_status != "ready"
+        )
+        objective_missing_artifact = (
+            objective_continuity_status
+            in {"active", "paused", "blocked", "requires_operator_decision", "completed"}
+            and artifact_continuity_status != "attached"
+        )
+        objective_utility_signals = self._objective_utility_signals(
+            objective_consulted=objective_consulted,
+            transition_counts=objective_transition_counts,
+            missing_next_action=objective_missing_next_action,
+            missing_artifact=objective_missing_artifact,
+        )
+        technology_absorption_event = self._first_payload_event(
+            events,
+            "technology_absorption_readiness",
+        )
+        technology_absorption_readiness = self._payload_str(
+            technology_absorption_event,
+            "technology_absorption_readiness",
+            "not_applicable",
+        )
+        technology_absorption_decision = self._payload_str(
+            technology_absorption_event,
+            "technology_absorption_decision",
+            "not_applicable",
+        )
+        technology_absorption_lane_status = self._payload_str(
+            technology_absorption_event,
+            "technology_absorption_lane_status",
+            "not_applicable",
+        )
+        technology_absorption_promotion_readiness = self._payload_str(
+            technology_absorption_event,
+            "technology_absorption_promotion_readiness",
+            "not_applicable",
+        )
+        technology_absorption_blockers = self._dedupe_payload_list(
+            events,
+            "technology_absorption_blockers",
+        )
+        technology_absorption_candidate_refs = self._dedupe_payload_list(
+            events,
+            "technology_absorption_candidate_refs",
+        )
+        technology_absorption_signals = self._technology_absorption_signals(
+            readiness=technology_absorption_readiness,
+            decision=technology_absorption_decision,
+            blockers=technology_absorption_blockers,
+            candidate_refs=technology_absorption_candidate_refs,
+        )
+        experience_reflection_event = self._first_payload_event(
+            events,
+            "experience_reflection_status",
+        )
+        experience_reflection_status = self._payload_str(
+            experience_reflection_event,
+            "experience_reflection_status",
+            "not_applicable",
+        )
+        experience_reflection_change_type = self._payload_str(
+            experience_reflection_event,
+            "experience_reflection_change_type",
+            "not_applicable",
+        )
+        experience_reflection_blockers = self._dedupe_payload_list(
+            events,
+            "experience_reflection_blockers",
+        )
+        experience_reflection_refs = self._dedupe_payload_list(
+            events,
+            "experience_reflection_refs",
+        )
+        experience_reflection_signals = self._experience_reflection_signals(
+            status=experience_reflection_status,
+            change_type=experience_reflection_change_type,
+            blockers=experience_reflection_blockers,
+            refs=experience_reflection_refs,
+        )
 
         return FlowAudit(
             request_id=first_event.request_id,
@@ -1801,6 +1909,25 @@ class ObservabilityService:
             open_checkpoint_count=len(objective_checkpoints),
             artifact_continuity_status=artifact_continuity_status,
             next_action_status=next_action_status,
+            objective_consulted=objective_consulted,
+            objective_transition_counts=objective_transition_counts,
+            objective_utility_signals=objective_utility_signals,
+            objective_missing_next_action=objective_missing_next_action,
+            objective_missing_artifact=objective_missing_artifact,
+            technology_absorption_readiness=technology_absorption_readiness,
+            technology_absorption_decision=technology_absorption_decision,
+            technology_absorption_lane_status=technology_absorption_lane_status,
+            technology_absorption_promotion_readiness=(
+                technology_absorption_promotion_readiness
+            ),
+            technology_absorption_blockers=technology_absorption_blockers,
+            technology_absorption_candidate_refs=technology_absorption_candidate_refs,
+            technology_absorption_signals=technology_absorption_signals,
+            experience_reflection_status=experience_reflection_status,
+            experience_reflection_change_type=experience_reflection_change_type,
+            experience_reflection_blockers=experience_reflection_blockers,
+            experience_reflection_refs=experience_reflection_refs,
+            experience_reflection_signals=experience_reflection_signals,
             experiment_lane_status=expanded_eval_state["experiment_lane_status"],
             wave2_candidate_class=expanded_eval_state["wave2_candidate_class"],
             experiment_entry_status=expanded_eval_state["experiment_entry_status"],
@@ -2048,6 +2175,16 @@ class ObservabilityService:
         return None
 
     @staticmethod
+    def _payload_str(
+        event: InternalEventEnvelope | None,
+        field_name: str,
+        default: str,
+    ) -> str:
+        if event is None or event.payload.get(field_name) in {None, ""}:
+            return default
+        return str(event.payload[field_name])
+
+    @staticmethod
     def _dedupe_payload_list(
         events: list[InternalEventEnvelope],
         field_name: str,
@@ -2062,6 +2199,93 @@ class ObservabilityService:
                 if text and text not in values:
                     values.append(text)
         return values
+
+    @staticmethod
+    def _objective_transition_counts(
+        events: list[InternalEventEnvelope],
+    ) -> dict[str, int]:
+        counts = {
+            "resume": 0,
+            "pause": 0,
+            "block": 0,
+            "complete": 0,
+            "redefine-next-action": 0,
+        }
+        for event in events:
+            if event.event_name not in {"mission_updated", "governance_blocked"}:
+                continue
+            transition = event.payload.get("transition")
+            if isinstance(transition, str) and transition in counts:
+                counts[transition] += 1
+        return counts
+
+    @staticmethod
+    def _objective_utility_signals(
+        *,
+        objective_consulted: bool,
+        transition_counts: dict[str, int],
+        missing_next_action: bool,
+        missing_artifact: bool,
+    ) -> list[str]:
+        signals: list[str] = []
+        if objective_consulted:
+            signals.append("objective_consulted")
+        for transition, signal in (
+            ("resume", "objective_resumed"),
+            ("pause", "objective_paused"),
+            ("block", "objective_blocked"),
+            ("complete", "objective_completed"),
+            ("redefine-next-action", "objective_next_action_redefined"),
+        ):
+            if transition_counts.get(transition, 0) > 0:
+                signals.append(signal)
+        if missing_next_action:
+            signals.append("objective_missing_next_action")
+        if missing_artifact:
+            signals.append("objective_missing_artifact")
+        return signals
+
+    @staticmethod
+    def _technology_absorption_signals(
+        *,
+        readiness: str,
+        decision: str,
+        blockers: list[str],
+        candidate_refs: list[str],
+    ) -> list[str]:
+        signals: list[str] = []
+        if candidate_refs:
+            signals.append("technology_candidate_observed")
+        if readiness not in {"not_applicable", ""}:
+            signals.append(f"technology_absorption_readiness:{readiness}")
+        if decision not in {"not_applicable", ""}:
+            signals.append(f"technology_absorption_decision:{decision}")
+        if blockers:
+            signals.append("technology_absorption_blocked")
+        if decision == "manual_promotion_review":
+            signals.append("technology_absorption_manual_review_required")
+        return signals
+
+    @staticmethod
+    def _experience_reflection_signals(
+        *,
+        status: str,
+        change_type: str,
+        blockers: list[str],
+        refs: list[str],
+    ) -> list[str]:
+        signals: list[str] = []
+        if refs:
+            signals.append("experience_reflection_observed")
+        if status not in {"not_applicable", ""}:
+            signals.append(f"experience_reflection_status:{status}")
+        if change_type not in {"not_applicable", ""}:
+            signals.append(f"experience_reflection_change_type:{change_type}")
+        if blockers:
+            signals.append("experience_reflection_blocked")
+        if status in {"candidate", "manual_review"}:
+            signals.append("experience_reflection_manual_review_required")
+        return signals
 
     @staticmethod
     def _multi_surface_readiness(

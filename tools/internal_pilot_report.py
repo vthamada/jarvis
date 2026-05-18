@@ -143,6 +143,23 @@ class PilotTraceSummary:
     open_checkpoint_count: int = 0
     artifact_continuity_status: str = "not_applicable"
     next_action_status: str = "not_applicable"
+    objective_consulted: bool = False
+    objective_transition_counts: dict[str, int] | None = None
+    objective_utility_signals: list[str] | None = None
+    objective_missing_next_action: bool = False
+    objective_missing_artifact: bool = False
+    technology_absorption_readiness: str = "not_applicable"
+    technology_absorption_decision: str = "not_applicable"
+    technology_absorption_lane_status: str = "not_applicable"
+    technology_absorption_promotion_readiness: str = "not_applicable"
+    technology_absorption_blockers: list[str] | None = None
+    technology_absorption_candidate_refs: list[str] | None = None
+    technology_absorption_signals: list[str] | None = None
+    experience_reflection_status: str = "not_applicable"
+    experience_reflection_change_type: str = "not_applicable"
+    experience_reflection_blockers: list[str] | None = None
+    experience_reflection_refs: list[str] | None = None
+    experience_reflection_signals: list[str] | None = None
     experiment_lane_status: str = "not_applicable"
     wave2_candidate_class: str = "baseline_hardening"
     experiment_entry_status: str = "not_applicable"
@@ -298,6 +315,27 @@ def summarize_traces(
             open_checkpoint_count=audit.open_checkpoint_count,
             artifact_continuity_status=audit.artifact_continuity_status,
             next_action_status=audit.next_action_status,
+            objective_consulted=audit.objective_consulted,
+            objective_transition_counts=dict(audit.objective_transition_counts),
+            objective_utility_signals=list(audit.objective_utility_signals),
+            objective_missing_next_action=audit.objective_missing_next_action,
+            objective_missing_artifact=audit.objective_missing_artifact,
+            technology_absorption_readiness=audit.technology_absorption_readiness,
+            technology_absorption_decision=audit.technology_absorption_decision,
+            technology_absorption_lane_status=audit.technology_absorption_lane_status,
+            technology_absorption_promotion_readiness=(
+                audit.technology_absorption_promotion_readiness
+            ),
+            technology_absorption_blockers=list(audit.technology_absorption_blockers),
+            technology_absorption_candidate_refs=list(
+                audit.technology_absorption_candidate_refs
+            ),
+            technology_absorption_signals=list(audit.technology_absorption_signals),
+            experience_reflection_status=audit.experience_reflection_status,
+            experience_reflection_change_type=audit.experience_reflection_change_type,
+            experience_reflection_blockers=list(audit.experience_reflection_blockers),
+            experience_reflection_refs=list(audit.experience_reflection_refs),
+            experience_reflection_signals=list(audit.experience_reflection_signals),
             experiment_lane_status=audit.experiment_lane_status,
             wave2_candidate_class=audit.wave2_candidate_class,
             experiment_entry_status=audit.experiment_entry_status,
@@ -529,6 +567,40 @@ def _render_summary(summary: PilotTraceSummary) -> str:
         f"{getattr(summary, 'artifact_continuity_status', 'not_applicable')} "
         "next_action_status="
         f"{getattr(summary, 'next_action_status', 'not_applicable')} "
+        "objective_consulted="
+        f"{str(getattr(summary, 'objective_consulted', False)).lower()} "
+        "objective_transitions="
+        f"{_format_objective_transition_counts(summary)} "
+        "objective_utility_signals="
+        f"{','.join(getattr(summary, 'objective_utility_signals', []) or []) or 'none'} "
+        "objective_missing_next_action="
+        f"{str(getattr(summary, 'objective_missing_next_action', False)).lower()} "
+        "objective_missing_artifact="
+        f"{str(getattr(summary, 'objective_missing_artifact', False)).lower()} "
+        "technology_absorption_readiness="
+        f"{getattr(summary, 'technology_absorption_readiness', 'not_applicable')} "
+        "technology_absorption_decision="
+        f"{getattr(summary, 'technology_absorption_decision', 'not_applicable')} "
+        "technology_absorption_lane_status="
+        f"{getattr(summary, 'technology_absorption_lane_status', 'not_applicable')} "
+        "technology_absorption_promotion_readiness="
+        f"{getattr(summary, 'technology_absorption_promotion_readiness', 'not_applicable')} "
+        "technology_absorption_blockers="
+        f"{','.join(getattr(summary, 'technology_absorption_blockers', []) or []) or 'none'} "
+        "technology_absorption_candidate_refs="
+        f"{','.join(getattr(summary, 'technology_absorption_candidate_refs', []) or []) or 'none'} "
+        "technology_absorption_signals="
+        f"{','.join(getattr(summary, 'technology_absorption_signals', []) or []) or 'none'} "
+        "experience_reflection_status="
+        f"{getattr(summary, 'experience_reflection_status', 'not_applicable')} "
+        "experience_reflection_change_type="
+        f"{getattr(summary, 'experience_reflection_change_type', 'not_applicable')} "
+        "experience_reflection_blockers="
+        f"{','.join(getattr(summary, 'experience_reflection_blockers', []) or []) or 'none'} "
+        "experience_reflection_refs="
+        f"{','.join(getattr(summary, 'experience_reflection_refs', []) or []) or 'none'} "
+        "experience_reflection_signals="
+        f"{','.join(getattr(summary, 'experience_reflection_signals', []) or []) or 'none'} "
         f"workflow_domain_route={getattr(summary, 'workflow_domain_route', None) or 'none'} "
         "registry_domains="
         f"{','.join(getattr(summary, 'registry_domains', [])) or 'none'} "
@@ -721,6 +793,16 @@ def _render_summary(summary: PilotTraceSummary) -> str:
         f"source_services={','.join(summary.source_services) or 'none'} "
         f"duration_seconds={summary.duration_seconds}"
     )
+
+
+def _format_objective_transition_counts(summary: PilotTraceSummary) -> str:
+    counts = getattr(summary, "objective_transition_counts", None) or {}
+    rendered = [
+        f"{name}:{count}"
+        for name, count in sorted(counts.items())
+        if count
+    ]
+    return ",".join(rendered) or "none"
 
 
 def render_text(summaries: list[PilotTraceSummary]) -> str:

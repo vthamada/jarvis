@@ -28,10 +28,10 @@ Leitura correta:
 
 Estado de referencia desta revisao:
 
-- data da fotografia: `2026-05-13`
+- data da fotografia: `2026-05-17`
 - ultimo recorte funcional fechado: `v2-native-memory-scope-hardening-cut`
 - ultimo recorte estrutural fechado: `v2-repository-hygiene-and-tools-review-cut`
-- passo funcional em andamento: lotes `MB-062` a `MB-114` concluidos ate o recorte minimo de continuidade de projetos/objetivos; nao ha novo item micro `ready` definido nesta fotografia.
+- passo funcional em andamento: lotes `MB-062` a `MB-131` concluidos ate a primeira camada de experiencia/reflexao pos-tarefa governada; nao ha novo item `ready` sem repriorizacao explicita.
 
 Leitura executiva:
 
@@ -44,6 +44,20 @@ Leitura executiva:
 - a soberania de dominios avancou mais um passo: rotas promovidas agora ja aparecem como `promoted_route_registry` soberano nos eventos do runtime, reduzindo recomputacao local no orquestrador e melhorando auditoria de elegibilidade.
 - a malha dominio->especialista tambem avancou: packets guiados de memoria agora nascem da rota promovida elegivel do registry e sao validados contra o contrato canonico da rota antes da convocacao especializada.
 - a continuidade de projetos/objetivos agora existe como baseline minimo: `project_ref`, `objective_ref`, work items, checkpoints, artefatos, `objective_status` e `next_action_ref` atravessam runtime, memoria, replay, eventos e observabilidade sem abrir autonomia longa.
+- o console agora expoe esse estado por `objectives --mission-id ...` e permite transicoes bounded por `objective --mission-id ... --action ...`, sempre via governanca, memoria canonica e evento auditavel, sem transformar objetivos em scheduler autonomo.
+- a sintese final agora tambem expoe estado operacional bounded do objetivo ativo quando esse contexto existe, incluindo status, proxima acao, decisao pendente e artefato relevante, sem vazar detalhes internos de especialistas.
+- a observabilidade e os relatorios agora medem se essa camada esta sendo util: objetivo consultado, retomado, pausado, bloqueado, concluido, proxima acao redefinida, ausencia de proxima acao e ausencia de artefato.
+- a repriorizacao pos-objetivos escolheu estrutura evolutiva e absorcao tecnologica governada como proxima frente: candidatos tecnologicos agora possuem contrato minimo, classe de absorcao, papel subordinado, evidencias, testes, rollback e bloqueio explicito contra violacao da soberania do nucleo.
+- o `evolution-lab` agora consegue persistir esses candidatos como propostas `sandbox-only`, com matriz de absorcao, readiness, blockers e politica de promocao manual.
+- observabilidade, piloto, relatorio, comparador e console agora tornam esses candidatos visiveis ao operador sem permitir promocao, execucao automatica ou substituicao do nucleo.
+- a repriorizacao pos-`MB-125` escolheu experiencia operacional e reflexao
+  pos-tarefa governada como proxima frente; isso aproxima o sistema da visao
+  autoevolutiva por registros estruturados de missao, outcome, falhas,
+  decisoes, evidencias e aprendizados candidatos, ainda sem autoedicao ou
+  autopromocao.
+- `MB-127` a `MB-131` materializaram essa frente: contratos compartilhados,
+  memoria evolutiva bounded, propostas `sandbox-only`, observabilidade,
+  relatorio e console read-only, ainda sem promocao automatica.
 - o contrato canonico da rota ativa passou a atravessar tambem o `planning` e a influenciar a `synthesis`, reduzindo a distancia entre memoria guiada disponivel e comportamento final do runtime.
 - esse contrato agora tambem molda passos, restricoes, criterios de sucesso e checkpoint/gate governado do plano, e ja aparece na leitura final como objetivo, entrega esperada, foco de leitura e workflow ativo da rota promovida.
 - esse mesmo slice soberano agora tambem atravessa `operation_dispatch`, `workflow_*` e `operation_completed`, e a observabilidade passou a marcar drift quando objetivo, entregaveis, foco de sucesso, foco final e telemetria deixam de bater entre composicao e execucao.

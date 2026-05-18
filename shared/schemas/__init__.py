@@ -88,6 +88,93 @@ PROJECT_OBJECTIVE_CONTINUITY_SCHEMA = CanonicalSchema(
     ),
 )
 
+TECHNOLOGY_ABSORPTION_CANDIDATE_SCHEMA = CanonicalSchema(
+    name="TechnologyAbsorptionCandidateSchema",
+    contract_name="TechnologyAbsorptionCandidateContract",
+    required_fields=(
+        "candidate_ref",
+        "technology_name",
+        "absorption_class",
+        "target_gap_refs",
+        "hypothesis",
+        "expected_gain",
+    ),
+    optional_fields=(
+        "source_refs",
+        "evidence_refs",
+        "proposed_tests",
+        "risk_hint",
+        "status",
+        "decision",
+        "requested_core_role",
+        "sandbox_required",
+        "human_review_required",
+        "rollback_plan_ref",
+        "blockers",
+    ),
+    notes=(
+        "External technology enters first as reference, experiment or controlled "
+        "complement; promotion is manual and evidence-bound.",
+    ),
+)
+
+EXPERIENCE_RECORD_SCHEMA = CanonicalSchema(
+    name="ExperienceRecordSchema",
+    contract_name="ExperienceRecordContract",
+    required_fields=(
+        "experience_id",
+        "mission_id",
+        "workflow_profile",
+        "outcome_status",
+        "timestamp",
+    ),
+    optional_fields=(
+        "objective_ref",
+        "surface_id",
+        "evidence_refs",
+        "signal_refs",
+        "failure_modes",
+        "decision_refs",
+        "learned_patterns",
+        "next_action_ref",
+        "source_kind",
+        "reusable_memory_status",
+        "human_review_required",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Bounded operational experience record; not a self-modification permit.",
+    ),
+)
+
+POST_TASK_REFLECTION_SCHEMA = CanonicalSchema(
+    name="PostTaskReflectionSchema",
+    contract_name="PostTaskReflectionContract",
+    required_fields=(
+        "reflection_id",
+        "experience_id",
+        "reflection_status",
+        "learning_candidate",
+        "recommendation",
+        "timestamp",
+    ),
+    optional_fields=(
+        "proposed_change_type",
+        "evidence_refs",
+        "proposed_tests",
+        "blockers",
+        "rollback_plan_ref",
+        "risk_hint",
+        "human_review_required",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Post-task reflection feeds sandbox proposals and manual review only.",
+    ),
+)
+
 MEMORY_RECOVERY_SCHEMA = CanonicalSchema(
     name="MemoryRecoverySchema",
     contract_name="MemoryRecoveryContract",

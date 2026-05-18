@@ -10,9 +10,16 @@ from pathlib import Path
 from uuid import uuid4
 
 from evolution_lab.repository import EvolutionLabRepository
-from shared.contracts import EvolutionDecisionContract, EvolutionProposalContract
+from shared.contracts import (
+    EvolutionDecisionContract,
+    EvolutionProposalContract,
+    ExperienceRecordContract,
+    PostTaskReflectionContract,
+    TechnologyAbsorptionCandidateContract,
+)
 from shared.eval_expansion import derive_expanded_eval_state
 from shared.optimization_state import derive_optimization_state
+from shared.technology_absorption import derive_technology_absorption_state
 from shared.types import EvolutionDecisionId, EvolutionProposalId
 
 DEFAULT_EVOLUTION_STRATEGY = "manual_variants"
@@ -134,6 +141,53 @@ class FlowEvaluationInput:
     experiment_entry_status: str | None = None
     experiment_exit_status: str | None = None
     promotion_readiness: str | None = None
+
+
+@dataclass(frozen=True)
+class TechnologyAbsorptionInput:
+    """External technology candidate kept subordinate to the sovereign core."""
+
+    candidate_ref: str
+    technology_name: str
+    absorption_class: str
+    target_gap_refs: list[str]
+    hypothesis: str
+    expected_gain: str
+    source_refs: list[str] = field(default_factory=list)
+    evidence_refs: list[str] = field(default_factory=list)
+    proposed_tests: list[str] = field(default_factory=list)
+    risk_hint: str | None = None
+    status: str = "candidate"
+    requested_core_role: str = "subordinate"
+    rollback_plan_ref: str | None = None
+    blockers: list[str] = field(default_factory=list)
+    human_review_required: bool = True
+
+
+@dataclass(frozen=True)
+class PostTaskReflectionInput:
+    """Bounded post-task reflection used as sandbox-only evolution material."""
+
+    experience_id: str
+    mission_id: str
+    workflow_profile: str
+    outcome_status: str
+    learning_candidate: str
+    recommendation: str
+    evidence_refs: list[str] = field(default_factory=list)
+    signal_refs: list[str] = field(default_factory=list)
+    failure_modes: list[str] = field(default_factory=list)
+    decision_refs: list[str] = field(default_factory=list)
+    learned_patterns: list[str] = field(default_factory=list)
+    proposed_change_type: str = "memory"
+    proposed_tests: list[str] = field(default_factory=list)
+    rollback_plan_ref: str | None = None
+    risk_hint: str | None = None
+    objective_ref: str | None = None
+    surface_id: str | None = None
+    next_action_ref: str | None = None
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
 
 
 @dataclass(frozen=True)
@@ -706,6 +760,220 @@ class EvolutionLabService:
                     if payload.get("status") == "ready_for_controlled_experiment"
                 ],
             },
+        )
+
+    def create_proposal_from_technology_absorption_candidate(
+        self,
+        candidate: TechnologyAbsorptionInput,
+        *,
+        target_scope: str | None = None,
+        strategy_name: str | None = None,
+    ) -> EvolutionProposalContract:
+        """Create a sandbox-only proposal from a governed technology candidate."""
+
+        absorption_state = derive_technology_absorption_state(
+            absorption_class=candidate.absorption_class,
+            candidate_status=candidate.status,
+            requested_core_role=candidate.requested_core_role,
+            evidence_refs=candidate.evidence_refs,
+            proposed_tests=candidate.proposed_tests,
+            blockers=candidate.blockers,
+            human_review_required=candidate.human_review_required,
+            rollback_plan_ref=candidate.rollback_plan_ref,
+        )
+        contract = TechnologyAbsorptionCandidateContract(
+            candidate_ref=candidate.candidate_ref,
+            technology_name=candidate.technology_name,
+            absorption_class=candidate.absorption_class,
+            target_gap_refs=list(candidate.target_gap_refs),
+            hypothesis=candidate.hypothesis,
+            expected_gain=candidate.expected_gain,
+            source_refs=list(candidate.source_refs),
+            evidence_refs=list(candidate.evidence_refs),
+            proposed_tests=list(candidate.proposed_tests),
+            risk_hint=candidate.risk_hint,
+            status=candidate.status,
+            decision=str(absorption_state["absorption_decision"]),
+            requested_core_role=candidate.requested_core_role,
+            sandbox_required=bool(absorption_state["requires_sandbox"]),
+            human_review_required=bool(absorption_state["requires_human_review"]),
+            rollback_plan_ref=candidate.rollback_plan_ref,
+            blockers=list(absorption_state["blockers"]),
+        )
+        source_signals = [
+            f"technology://candidate/{contract.candidate_ref}",
+            f"technology://name/{self._signal_value(contract.technology_name)}",
+            f"technology://absorption-class/{contract.absorption_class}",
+            f"technology://status/{contract.status}",
+            f"technology://readiness/{absorption_state['absorption_readiness']}",
+            f"technology://decision/{absorption_state['absorption_decision']}",
+        ]
+        source_signals.extend(
+            f"technology://target-gap/{self._signal_value(ref)}"
+            for ref in contract.target_gap_refs
+        )
+        source_signals.extend(contract.source_refs)
+        source_signals.extend(contract.evidence_refs)
+        source_signals.extend(
+            f"technology://blocker/{blocker}" for blocker in contract.blockers
+        )
+
+        return self.create_proposal(
+            proposal_type="technology_absorption_candidate",
+            target_scope=target_scope or f"technology:{contract.technology_name}",
+            hypothesis=contract.hypothesis,
+            expected_gain=contract.expected_gain,
+            baseline_refs=[
+                "baseline://sovereign-core/current",
+                *[f"gap://{ref}" for ref in contract.target_gap_refs],
+            ],
+            source_signals=source_signals,
+            risk_hint=contract.risk_hint,
+            proposed_tests=contract.proposed_tests,
+            strategy_name=strategy_name,
+            candidate_refs=[contract.candidate_ref],
+            evaluation_matrix={
+                "technology_absorption": {
+                    "technology_name": contract.technology_name,
+                    "absorption_class": contract.absorption_class,
+                    "candidate_status": contract.status,
+                    "requested_core_role": contract.requested_core_role,
+                    "absorption_readiness": absorption_state["absorption_readiness"],
+                    "absorption_decision": absorption_state["absorption_decision"],
+                    "experiment_lane_status": absorption_state["experiment_lane_status"],
+                    "promotion_readiness": absorption_state["promotion_readiness"],
+                    "blockers": list(absorption_state["blockers"]),
+                }
+            },
+            strategy_context={
+                "technology_absorption_candidate": {
+                    "candidate_ref": contract.candidate_ref,
+                    "technology_name": contract.technology_name,
+                    "target_gap_refs": list(contract.target_gap_refs),
+                    "requires_sandbox": contract.sandbox_required,
+                    "requires_human_review": contract.human_review_required,
+                    "rollback_plan_ref": contract.rollback_plan_ref,
+                },
+                "technology_absorption_state": absorption_state,
+                "promotion_policy": {
+                    "automatic_promotion": False,
+                    "core_replacement_allowed": False,
+                    "manual_review_required": contract.human_review_required,
+                },
+            },
+        )
+
+    def create_proposal_from_post_task_reflection(
+        self,
+        reflection_input: PostTaskReflectionInput,
+        *,
+        target_scope: str | None = None,
+        strategy_name: str | None = None,
+    ) -> EvolutionProposalContract:
+        """Create a sandbox-only proposal from bounded post-task reflection."""
+
+        blockers = list(reflection_input.failure_modes)
+        if reflection_input.automatic_promotion_allowed:
+            blockers.append("automatic_promotion_not_allowed")
+        if reflection_input.core_mutation_allowed:
+            blockers.append("core_mutation_not_allowed")
+        if not reflection_input.evidence_refs:
+            blockers.append("evidence_required")
+        experience = ExperienceRecordContract(
+            experience_id=reflection_input.experience_id,
+            mission_id=reflection_input.mission_id,
+            workflow_profile=reflection_input.workflow_profile,
+            outcome_status=reflection_input.outcome_status,
+            timestamp=self.now(),
+            objective_ref=reflection_input.objective_ref,
+            surface_id=reflection_input.surface_id,
+            evidence_refs=list(reflection_input.evidence_refs),
+            signal_refs=list(reflection_input.signal_refs),
+            failure_modes=list(reflection_input.failure_modes),
+            decision_refs=list(reflection_input.decision_refs),
+            learned_patterns=list(reflection_input.learned_patterns),
+            next_action_ref=reflection_input.next_action_ref,
+            automatic_promotion_allowed=False,
+            core_mutation_allowed=False,
+        )
+        reflection = PostTaskReflectionContract(
+            reflection_id=f"reflection://{self._signal_value(experience.experience_id)}",
+            experience_id=experience.experience_id,
+            reflection_status="blocked" if blockers else "candidate",
+            learning_candidate=reflection_input.learning_candidate,
+            recommendation=reflection_input.recommendation,
+            proposed_change_type=reflection_input.proposed_change_type,
+            evidence_refs=list(reflection_input.evidence_refs),
+            proposed_tests=list(reflection_input.proposed_tests),
+            blockers=self._unique_values(blockers),
+            rollback_plan_ref=reflection_input.rollback_plan_ref,
+            risk_hint=reflection_input.risk_hint,
+            automatic_promotion_allowed=False,
+            core_mutation_allowed=False,
+            timestamp=self.now(),
+        )
+        source_signals = [
+            f"experience://mission/{self._signal_value(str(experience.mission_id))}",
+            f"experience://workflow/{self._signal_value(experience.workflow_profile)}",
+            f"experience://outcome/{self._signal_value(experience.outcome_status)}",
+            f"reflection://status/{reflection.reflection_status}",
+            f"reflection://change-type/{self._signal_value(reflection.proposed_change_type)}",
+        ]
+        source_signals.extend(experience.signal_refs)
+        source_signals.extend(experience.evidence_refs)
+        source_signals.extend(f"reflection://blocker/{item}" for item in reflection.blockers)
+
+        return self.create_proposal(
+            proposal_type="post_task_reflection_improvement",
+            target_scope=target_scope or f"workflow:{experience.workflow_profile}",
+            hypothesis=reflection.learning_candidate,
+            expected_gain=reflection.recommendation,
+            baseline_refs=[
+                "baseline://sovereign-core/current",
+                f"experience://{experience.experience_id}",
+            ],
+            source_signals=source_signals,
+            risk_hint=reflection.risk_hint,
+            proposed_tests=reflection.proposed_tests,
+            strategy_name=strategy_name,
+            candidate_refs=[experience.experience_id, reflection.reflection_id],
+            evaluation_matrix={
+                "post_task_reflection": {
+                    "workflow_profile": experience.workflow_profile,
+                    "outcome_status": experience.outcome_status,
+                    "reflection_status": reflection.reflection_status,
+                    "proposed_change_type": reflection.proposed_change_type,
+                    "blockers": list(reflection.blockers),
+                    "manual_review_required": reflection.human_review_required,
+                }
+            },
+            strategy_context={
+                "experience_record": {
+                    "experience_id": experience.experience_id,
+                    "mission_id": str(experience.mission_id),
+                    "objective_ref": experience.objective_ref,
+                    "surface_id": experience.surface_id,
+                    "reusable_memory_status": experience.reusable_memory_status,
+                },
+                "post_task_reflection": {
+                    "reflection_id": reflection.reflection_id,
+                    "learning_candidate": reflection.learning_candidate,
+                    "recommendation": reflection.recommendation,
+                    "rollback_plan_ref": reflection.rollback_plan_ref,
+                },
+                "promotion_policy": {
+                    "automatic_promotion": False,
+                    "core_mutation_allowed": False,
+                    "manual_review_required": True,
+                },
+            },
+            optimization_candidate_status=(
+                "blocked" if reflection.blockers else "candidate"
+            ),
+            optimization_safety_status=(
+                "blocked_by_safety" if reflection.blockers else "sandbox_only"
+            ),
+            optimization_blockers=list(reflection.blockers),
         )
 
     def compare_flow_evaluations(
@@ -1360,6 +1628,20 @@ class EvolutionLabService:
         if evaluation.registry_domains:
             return evaluation.registry_domains[0]
         return "baseline_runtime"
+
+    @staticmethod
+    def _signal_value(value: str) -> str:
+        return (
+            value.strip().lower().replace(" ", "-").replace("/", "-").replace(":", "-")
+        )
+
+    @staticmethod
+    def _unique_values(values: list[str]) -> list[str]:
+        unique: list[str] = []
+        for value in values:
+            if value and value not in unique:
+                unique.append(value)
+        return unique
 
     @staticmethod
     def _refinement_vectors_from_flow_evaluation(

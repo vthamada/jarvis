@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from os import getenv
 from uuid import uuid4
@@ -11,6 +11,7 @@ from memory_service.repository import (
     SessionContinuitySnapshot,
     StoredContinuityCheckpoint,
     StoredContinuityPauseResolution,
+    StoredExperienceReflection,
     StoredSpecialistSharedMemory,
     StoredTurn,
     StoredUserScopeSnapshot,
@@ -23,6 +24,7 @@ from shared.contracts import (
     ContinuityReplayContract,
     DeliberativePlanContract,
     EcosystemOperationalStateContract,
+    ExperienceRecordContract,
     InputContract,
     MemoryRecordContract,
     MemoryRecoveryContract,
@@ -31,6 +33,7 @@ from shared.contracts import (
     MissionStateContract,
     OperationDispatchContract,
     OperationResultContract,
+    PostTaskReflectionContract,
     SpecialistContributionContract,
     SpecialistSharedMemoryContextContract,
     UserScopeContextContract,
@@ -139,6 +142,61 @@ class MemoryService:
     def __init__(self, database_url: str | None = None) -> None:
         configured_url = database_url or getenv("DATABASE_URL")
         self.repository = build_memory_repository(configured_url)
+
+    def record_experience_reflection(
+        self,
+        *,
+        experience: ExperienceRecordContract,
+        reflection: PostTaskReflectionContract,
+    ) -> StoredExperienceReflection:
+        """Persist a bounded post-task experience/reflection pair."""
+
+        blockers = list(reflection.blockers)
+        if experience.automatic_promotion_allowed or reflection.automatic_promotion_allowed:
+            blockers.append("automatic_promotion_not_allowed")
+        if experience.core_mutation_allowed or reflection.core_mutation_allowed:
+            blockers.append("core_mutation_not_allowed")
+        if not experience.evidence_refs and not reflection.evidence_refs:
+            blockers.append("evidence_required")
+        sanitized_reflection = replace(
+            reflection,
+            blockers=self._merge_unique_strings(blockers, []),
+            human_review_required=True,
+            automatic_promotion_allowed=False,
+            core_mutation_allowed=False,
+        )
+        sanitized_experience = replace(
+            experience,
+            human_review_required=True,
+            automatic_promotion_allowed=False,
+            core_mutation_allowed=False,
+            reusable_memory_status=(
+                "blocked"
+                if "evidence_required" in sanitized_reflection.blockers
+                else experience.reusable_memory_status
+            ),
+        )
+        record = StoredExperienceReflection(
+            experience=sanitized_experience,
+            reflection=sanitized_reflection,
+        )
+        self.repository.record_experience_reflection(record)
+        return record
+
+    def list_experience_reflections(
+        self,
+        *,
+        mission_id: str | None = None,
+        workflow_profile: str | None = None,
+        limit: int = 20,
+    ) -> list[StoredExperienceReflection]:
+        """Return recent bounded experience/reflection records."""
+
+        return self.repository.list_experience_reflections(
+            mission_id=mission_id,
+            workflow_profile=workflow_profile,
+            limit=max(1, limit),
+        )
 
     def recover_for_input(self, contract: InputContract) -> MemoryRecoveryResult:
         """Recover contextual, episodic, and mission hints for the current session."""
@@ -402,6 +460,47 @@ class MemoryService:
         """Expose the latest mission snapshot for validation and orchestration."""
 
         return self.repository.fetch_mission_state(mission_id)
+
+    def transition_objective_state(
+        self,
+        *,
+        mission_id: str,
+        objective_status: str,
+        mission_status: MissionStatus,
+        transition_ref: str,
+        next_action_ref: str | None = None,
+    ) -> MissionStateContract | None:
+        """Persist a bounded operator transition over the canonical mission state."""
+
+        current = self.repository.fetch_mission_state(mission_id)
+        if current is None:
+            return None
+
+        checkpoint_refs = [
+            *list(current.checkpoint_refs),
+            transition_ref,
+        ][-5:]
+        checkpoints = [
+            *list(current.checkpoints),
+            f"objective_transition:{transition_ref}",
+        ][-5:]
+        updated = replace(
+            current,
+            mission_status=mission_status,
+            checkpoints=checkpoints,
+            checkpoint_refs=checkpoint_refs,
+            objective_status=objective_status,
+            next_action_ref=next_action_ref,
+            active_work_items=(
+                [] if mission_status == MissionStatus.COMPLETED else current.active_work_items
+            ),
+            open_checkpoint_refs=(
+                [] if mission_status == MissionStatus.COMPLETED else current.open_checkpoint_refs
+            ),
+            updated_at=self.now(),
+        )
+        self.repository.upsert_mission_state(updated)
+        return updated
 
     def get_session_continuity_checkpoint(
         self,

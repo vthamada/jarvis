@@ -2,7 +2,13 @@ from pathlib import Path
 from tempfile import gettempdir
 from uuid import uuid4
 
-from evolution_lab.service import ComparisonInput, EvolutionLabService, FlowEvaluationInput
+from evolution_lab.service import (
+    ComparisonInput,
+    EvolutionLabService,
+    FlowEvaluationInput,
+    PostTaskReflectionInput,
+    TechnologyAbsorptionInput,
+)
 
 
 def runtime_dir(name: str) -> Path:
@@ -95,6 +101,126 @@ def test_evolution_lab_holds_baseline_when_risk_increases() -> None:
     assert comparison.decision.rollback_plan_ref == "sandbox://rollback/current"
     assert "strategy://textgrad_like_refinement" in proposal.source_signals
     assert "strategy=textgrad_like_refinement" in comparison.decision.notes
+
+
+def test_evolution_lab_registers_governed_technology_absorption_candidate() -> None:
+    temp_dir = runtime_dir("evolution-lab-technology-absorption")
+    service = EvolutionLabService(database_path=str(temp_dir / "evolution.db"))
+
+    proposal = service.create_proposal_from_technology_absorption_candidate(
+        TechnologyAbsorptionInput(
+            candidate_ref="tech-candidate://openai-agents-sdk/handoff-adapters",
+            technology_name="OpenAI Agents SDK",
+            absorption_class="promotable_translation",
+            target_gap_refs=["TA-005"],
+            hypothesis="Handoff adapter semantics can improve bounded edge tracing.",
+            expected_gain="Clearer handoff evidence without replacing the core.",
+            source_refs=["source://technology-absorption-order/openai-agents-sdk"],
+            evidence_refs=["evidence://comparison/handoff-adapter"],
+            proposed_tests=["python tools/engineering_gate.py --mode standard"],
+            risk_hint="moderate",
+            status="validated",
+            requested_core_role="adapter",
+            rollback_plan_ref="rollback://sovereign-core/current",
+        ),
+        target_scope="orchestrator-service",
+    )
+
+    state = proposal.strategy_context["technology_absorption_state"]
+    matrix = proposal.evaluation_matrix["technology_absorption"]
+
+    assert proposal.proposal_type == "technology_absorption_candidate"
+    assert proposal.requires_sandbox is True
+    assert proposal.candidate_refs == [
+        "tech-candidate://openai-agents-sdk/handoff-adapters"
+    ]
+    assert state["absorption_decision"] == "manual_promotion_review"
+    assert state["promotion_readiness"] == "manual_review_only"
+    assert matrix["absorption_class"] == "promotable_translation"
+    assert matrix["blockers"] == []
+    assert "technology://readiness/ready_for_manual_review" in proposal.source_signals
+    assert proposal.strategy_context["promotion_policy"]["automatic_promotion"] is False
+    assert service.list_recent_proposals(limit=1)[0].target_scope == "orchestrator-service"
+
+
+def test_evolution_lab_blocks_technology_candidate_that_requests_core_role() -> None:
+    temp_dir = runtime_dir("evolution-lab-technology-blocked")
+    service = EvolutionLabService(database_path=str(temp_dir / "evolution.db"))
+
+    proposal = service.create_proposal_from_technology_absorption_candidate(
+        TechnologyAbsorptionInput(
+            candidate_ref="tech-candidate://external-core",
+            technology_name="External Core Runtime",
+            absorption_class="sandbox_experiment",
+            target_gap_refs=["RH-001"],
+            hypothesis="External runtime could replace central reasoning.",
+            expected_gain="Not accepted because it violates core sovereignty.",
+            evidence_refs=["evidence://claim"],
+            proposed_tests=["pytest tests/unit"],
+            requested_core_role="core_brain",
+            rollback_plan_ref="rollback://baseline",
+        )
+    )
+
+    state = proposal.strategy_context["technology_absorption_state"]
+    assert state["absorption_decision"] == "block_absorption"
+    assert state["promotion_readiness"] == "blocked"
+    assert "technology://blocker/core_sovereignty_violation" in proposal.source_signals
+    assert proposal.strategy_context["promotion_policy"]["core_replacement_allowed"] is False
+
+
+def test_evolution_lab_creates_sandbox_proposal_from_post_task_reflection() -> None:
+    temp_dir = runtime_dir("evolution-lab-reflection")
+    service = EvolutionLabService(database_path=str(temp_dir / "evolution.db"))
+
+    proposal = service.create_proposal_from_post_task_reflection(
+        PostTaskReflectionInput(
+            experience_id="experience://mission-reflection/001",
+            mission_id="mission-reflection",
+            workflow_profile="software_change_workflow",
+            outcome_status="completed",
+            learning_candidate="Contract-first slices reduced implementation drift.",
+            recommendation="Promote a bounded checklist only after tests.",
+            evidence_refs=["trace://req-reflection"],
+            signal_refs=["workflow_output_status:coherent"],
+            proposed_change_type="workflow",
+            proposed_tests=["python tools/engineering_gate.py --mode standard"],
+            rollback_plan_ref="rollback://workflow/current",
+        )
+    )
+
+    assert proposal.proposal_type == "post_task_reflection_improvement"
+    assert proposal.requires_sandbox is True
+    assert proposal.optimization_candidate_status == "candidate"
+    assert proposal.strategy_context["promotion_policy"]["automatic_promotion"] is False
+    assert proposal.strategy_context["promotion_policy"]["core_mutation_allowed"] is False
+    assert proposal.evaluation_matrix["post_task_reflection"]["reflection_status"] == (
+        "candidate"
+    )
+
+
+def test_evolution_lab_blocks_reflection_that_requests_autopromotion() -> None:
+    temp_dir = runtime_dir("evolution-lab-reflection-blocked")
+    service = EvolutionLabService(database_path=str(temp_dir / "evolution.db"))
+
+    proposal = service.create_proposal_from_post_task_reflection(
+        PostTaskReflectionInput(
+            experience_id="experience://mission-reflection-blocked/001",
+            mission_id="mission-reflection-blocked",
+            workflow_profile="strategic_direction_workflow",
+            outcome_status="partial",
+            learning_candidate="Mutate the core automatically.",
+            recommendation="Apply without human review.",
+            automatic_promotion_allowed=True,
+            core_mutation_allowed=True,
+        )
+    )
+
+    assert proposal.optimization_candidate_status == "blocked"
+    assert proposal.optimization_safety_status == "blocked_by_safety"
+    assert "automatic_promotion_not_allowed" in proposal.optimization_blockers
+    assert "core_mutation_not_allowed" in proposal.optimization_blockers
+    assert "evidence_required" in proposal.optimization_blockers
 
 
 def test_evolution_lab_creates_proposal_from_flow_evaluation() -> None:

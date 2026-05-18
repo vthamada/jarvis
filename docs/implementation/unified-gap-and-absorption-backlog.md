@@ -104,6 +104,27 @@ Hierarquia correta:
 - a fila micro `MB-110` a `MB-114` foi fechada e absorveu o recorte minimo de
   projetos/objetivos persistentes no runtime, memoria, replay, eventos,
   observabilidade, piloto e comparadores;
+- a fila micro `MB-115` a `MB-119` foi aberta para transformar esse recorte em
+  utilidade operacional para o operador; `MB-115` ja expoe estado de objetivo
+  no console em modo somente leitura, `MB-116` ja permite transicoes bounded
+  governadas de objetivo, `MB-117` ja leva esse estado para a sintese final,
+  `MB-118` ja mede sinais de utilidade operacional e `MB-119` fechou docs e
+  gates desse lote;
+- a repriorizacao pos-`MB-119` foi aberta em `MB-120` e escolheu estrutura
+  evolutiva + absorcao tecnologica governada como proxima frente; `MB-121` ja
+  criou contrato soberano minimo para candidatos tecnologicos e bloqueia
+  qualquer tentativa de tecnologia externa assumir papel de nucleo; `MB-122`
+  conectou esse contrato ao `evolution-lab` como proposta `sandbox-only`;
+  `MB-123` a `MB-125` fecharam observabilidade, leitura operacional no console e
+  docs vivos desse recorte;
+- a repriorizacao pos-`MB-125` foi aberta em `MB-126` e escolheu experiencia
+  operacional + reflexao pos-tarefa governada como proxima frente; o objetivo
+  e transformar missoes reais em materia-prima auditavel de evolucao, ainda sem
+  autoedicao, autopromocao, scheduler autonomo ou memoria temporal relacional
+  rica;
+- `MB-127` a `MB-131` fecharam esse recorte: contratos, memoria evolutiva
+  bounded, propostas `sandbox-only`, observabilidade, relatorio e console
+  read-only agora tratam reflexao pos-tarefa como baseline governado;
 - o proximo passo nao e abrir produto multicanal ou automacao ampla
   automaticamente; a fila atual existe para criar continuidade operacional
   governada antes de qualquer autonomia mais forte;
@@ -175,6 +196,7 @@ Notas de traducao por gap:
 | `TA-006` | substrate operacional para especialistas de software, browser e computer use | `SO-002`, `SO-003` | `ponte v2 -> v3` | `OpenHands`, `browser-use`, `Open Interpreter` | `onda_2_controlada` | `blocked_by_phase` | `nao` |
 | `TA-007` | gateway multicanal, lifecycle de skills e runtime operacional local-first | `SG-003`, `SO-001`, `SO-002` | `v3` | `OpenClaw` | `onda_3_tardia` | `deferred` | `nao` |
 | `TA-008` | compressao inferencial e retrieval vetorial para contexto longo e escala futura | `SG-002`, `SO-001`, `EV-004` | `ponte v2 -> v3` | `TurboQuant`, `pgvector` (futuro consumidor), `OpenAI Realtime / Voice` | `onda_2_controlada` | `blocked_by_phase` | `nao` |
+| `TA-009` | contrato soberano de candidatos tecnologicos com evidencia, sandbox, rollback e promocao manual | `EV-001`, `EV-003`, `EV-004` | `v2 restante` | todas as ondas de absorcao | `onda_1_residual` | `resolved_in_baseline` | `sim` |
 
 Notas de leitura:
 
@@ -198,6 +220,10 @@ Notas de leitura:
   `voice/realtime` ou retrieval vetorial alem do que o baseline atual pede;
   ate la, `TurboQuant` fica como referencia forte de infraestrutura, nao como
   frente micro.
+- `TA-009` e a ponte operacional para absorcao continua do estado da arte:
+  primeiro classifica candidatos como referencia, experimento, complemento ou
+  traducao promovivel; promocao continua manual, com evidencia, testes e
+  rollback.
 
 ### 5.3 Surfaces and operation
 
@@ -222,6 +248,8 @@ Notas de leitura:
 | `EV-002` | expandir evals e sinais para capacidade, superficie e estado do ecossistema | `observability`, `evolution-lab`, gates | `v2 restante` | `DSPy`, `OpenAI Agents SDK`, `Mastra` | `onda_2_controlada` | `resolved_in_baseline` | `sim` |
 | `EV-003` | compile e optimize loops governados para prompts, planos e workflows | `evolution-lab` | `v2 restante` | `DSPy/MIPROv2`, `TextGrad`, `AFlow`, `EvoAgentX` | `onda_1_residual` | `resolved_in_baseline` | `sim` |
 | `EV-004` | lane controlada de experimentos da Onda 2 com criterio de entrada e saida | comparadores, laboratorio, gates | `v2 restante` | `OpenAI Agents SDK`, `Qwen-Agent`, `Graphiti`, `Mem0`, `OpenHands`, `browser-use` | `onda_2_controlada` | `resolved_in_baseline` | `sim` |
+| `EV-005` | loop de absorcao tecnologica governada como candidato persistido, observado e operavel | contratos, `evolution-lab`, observabilidade, console | `v2 restante` | todas as ondas, com prioridade para Onda 1 residual e Onda 2 controlada | `onda_1_residual` | `resolved_in_baseline` | `sim` |
+| `EV-006` | experiencia operacional e reflexao pos-tarefa como materia-prima governada de evolucao | contratos, memoria evolutiva, `evolution-lab`, observabilidade, console | `v2 restante` | padroes de self-evolving agents e continual learning traduzidos sem self-modification | `onda_1_residual` | `resolved_in_baseline` | `sim` |
 
 Notas de leitura:
 
@@ -230,6 +258,12 @@ Notas de leitura:
 - `EV-003` deve continuar governado por datasets, traces e metricas, sem
   autoedicao solta de producao.
 - `EV-004` existe para impedir que a Onda 2 vire hype ou backlog disperso.
+- `EV-005` impede que a absorcao tecnologica viva apenas em docs: candidatos
+  devem ter contrato, laboratorio, evidencia, observabilidade e leitura humana
+  antes de qualquer promocao.
+- `EV-006` e o proximo passo da estrutura evolutiva: registrar experiencia,
+  refletir sobre outcome/falhas, propor melhorias sandbox-only e expor tudo ao
+  operador antes de qualquer mudanca no runtime.
 
 ### 5.5 Deferred verticals already mapped
 
@@ -268,9 +302,11 @@ ser:
 
 Ordem recomendada hoje:
 
-1. tratar `MB-110` a `MB-114` como baseline minimo fechado de continuidade de projetos/objetivos.
-2. repriorizar explicitamente a proxima frente micro antes de puxar automacao longa, superficies amplas ou memoria temporal rica.
-3. manter `SO-001`, `TA-004`, `TA-006` e verticais `deferred` fora da fila ate haver decisao de fase.
+1. tratar `MB-110` a `MB-125` como baseline fechado de objetivos persistentes,
+   utilidade operacional e absorcao tecnologica governada.
+2. abrir nova repriorizacao antes de puxar qualquer frente adicional.
+3. manter `SO-001`, `TA-004`, `TA-006` e verticais `deferred` fora da fila ate
+   haver decisao explicita de fase.
 
 Leitura correta:
 
@@ -292,6 +328,11 @@ Leitura correta:
 - `SO-003` agora tem baseline minimo concluido em `MB-110` a `MB-114`,
   limitado a contratos, propagacao runtime, persistencia bounded,
   auditoria/readiness e fechamento documental;
+- `EV-005` agora tem baseline concluido em `MB-120` a `MB-125`, limitado a
+  contrato soberano, `evolution-lab`, observabilidade, relatorio, comparador e
+  console read-only de candidatos tecnologicos;
+- `EV-006` foi concluido em `MB-126` a `MB-131`, com escopo estrito de
+  experiencia/reflexao pos-tarefa e sem self-modification forte;
 - `TA-004`, `TA-006` e `DV-001` continuam relevantes, mas ainda fora da fila
   sem mudanca explicita de fase;
 - `RH-*` permanece fora do backlog implementavel.

@@ -161,6 +161,24 @@ def objective_continuity_assessment(result: PilotExecutionResult) -> str:
     return result.objective_continuity_status
 
 
+def objective_utility_assessment(result: PilotExecutionResult) -> str:
+    if result.objective_utility_signals:
+        return "observable"
+    if result.objective_continuity_status != "not_applicable":
+        return "present_without_utility_signal"
+    return "not_applicable"
+
+
+def technology_absorption_assessment(result: PilotExecutionResult) -> str:
+    if result.technology_absorption_decision == "block_absorption":
+        return "blocked"
+    if result.technology_absorption_decision == "manual_promotion_review":
+        return "manual_review_only"
+    if result.technology_absorption_signals:
+        return "observable"
+    return "not_applicable"
+
+
 def experiment_lane_assessment(result: PilotExecutionResult) -> str:
     return expanded_eval_state(result)["experiment_lane_status"]
 
@@ -657,6 +675,12 @@ def evaluation_matrix(
                     objective_continuity_assessment(result)
                     for result in workflow_results
                 ]
+            ),
+            "objective_utility": summarize_statuses(
+                [objective_utility_assessment(result) for result in workflow_results]
+            ),
+            "technology_absorption": summarize_statuses(
+                [technology_absorption_assessment(result) for result in workflow_results]
             ),
             "experiment_lane": summarize_statuses(
                 [experiment_lane_assessment(result) for result in workflow_results]
@@ -1953,6 +1977,45 @@ def compare_results(
                 mismatch_fields.append("artifact_continuity_status")
             if baseline.next_action_status != candidate.next_action_status:
                 mismatch_fields.append("next_action_status")
+            if baseline.objective_consulted != candidate.objective_consulted:
+                mismatch_fields.append("objective_consulted")
+            if (
+                baseline.objective_transition_counts
+                != candidate.objective_transition_counts
+            ):
+                mismatch_fields.append("objective_transition_counts")
+            if baseline.objective_utility_signals != candidate.objective_utility_signals:
+                mismatch_fields.append("objective_utility_signals")
+            if (
+                baseline.objective_missing_next_action
+                != candidate.objective_missing_next_action
+            ):
+                mismatch_fields.append("objective_missing_next_action")
+            if (
+                baseline.objective_missing_artifact
+                != candidate.objective_missing_artifact
+            ):
+                mismatch_fields.append("objective_missing_artifact")
+            if (
+                baseline.technology_absorption_readiness
+                != candidate.technology_absorption_readiness
+            ):
+                mismatch_fields.append("technology_absorption_readiness")
+            if (
+                baseline.technology_absorption_decision
+                != candidate.technology_absorption_decision
+            ):
+                mismatch_fields.append("technology_absorption_decision")
+            if (
+                baseline.technology_absorption_blockers
+                != candidate.technology_absorption_blockers
+            ):
+                mismatch_fields.append("technology_absorption_blockers")
+            if (
+                baseline.technology_absorption_signals
+                != candidate.technology_absorption_signals
+            ):
+                mismatch_fields.append("technology_absorption_signals")
             if (
                 baseline.cognitive_recomposition_applied
                 != candidate.cognitive_recomposition_applied

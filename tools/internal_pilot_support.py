@@ -190,6 +190,18 @@ class PilotExecutionResult:
     open_checkpoint_count: int = 0
     artifact_continuity_status: str = "not_applicable"
     next_action_status: str = "not_applicable"
+    objective_consulted: bool = False
+    objective_transition_counts: dict[str, int] = field(default_factory=dict)
+    objective_utility_signals: list[str] = field(default_factory=list)
+    objective_missing_next_action: bool = False
+    objective_missing_artifact: bool = False
+    technology_absorption_readiness: str = "not_applicable"
+    technology_absorption_decision: str = "not_applicable"
+    technology_absorption_lane_status: str = "not_applicable"
+    technology_absorption_promotion_readiness: str = "not_applicable"
+    technology_absorption_blockers: list[str] = field(default_factory=list)
+    technology_absorption_candidate_refs: list[str] = field(default_factory=list)
+    technology_absorption_signals: list[str] = field(default_factory=list)
     experiment_lane_status: str = "not_applicable"
     wave2_candidate_class: str = "baseline_hardening"
     experiment_entry_status: str = "not_applicable"
@@ -681,6 +693,22 @@ def run_pilot_scenarios(
                 open_checkpoint_count=audit.open_checkpoint_count,
                 artifact_continuity_status=audit.artifact_continuity_status,
                 next_action_status=audit.next_action_status,
+                objective_consulted=audit.objective_consulted,
+                objective_transition_counts=dict(audit.objective_transition_counts),
+                objective_utility_signals=list(audit.objective_utility_signals),
+                objective_missing_next_action=audit.objective_missing_next_action,
+                objective_missing_artifact=audit.objective_missing_artifact,
+                technology_absorption_readiness=audit.technology_absorption_readiness,
+                technology_absorption_decision=audit.technology_absorption_decision,
+                technology_absorption_lane_status=audit.technology_absorption_lane_status,
+                technology_absorption_promotion_readiness=(
+                    audit.technology_absorption_promotion_readiness
+                ),
+                technology_absorption_blockers=list(audit.technology_absorption_blockers),
+                technology_absorption_candidate_refs=list(
+                    audit.technology_absorption_candidate_refs
+                ),
+                technology_absorption_signals=list(audit.technology_absorption_signals),
                 experiment_lane_status=audit.experiment_lane_status,
                 wave2_candidate_class=audit.wave2_candidate_class,
                 experiment_entry_status=audit.experiment_entry_status,

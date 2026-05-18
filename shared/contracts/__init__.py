@@ -53,6 +53,68 @@ class ProjectObjectiveContinuityContract:
 
 
 @dataclass
+class TechnologyAbsorptionCandidateContract:
+    candidate_ref: str
+    technology_name: str
+    absorption_class: str
+    target_gap_refs: list[str]
+    hypothesis: str
+    expected_gain: str
+    source_refs: list[str] = field(default_factory=list)
+    evidence_refs: list[str] = field(default_factory=list)
+    proposed_tests: list[str] = field(default_factory=list)
+    risk_hint: str | None = None
+    status: str = "candidate"
+    decision: str = "hold_in_lane"
+    requested_core_role: str = "subordinate"
+    sandbox_required: bool = True
+    human_review_required: bool = True
+    rollback_plan_ref: str | None = None
+    blockers: list[str] = field(default_factory=list)
+
+
+@dataclass
+class ExperienceRecordContract:
+    experience_id: str
+    mission_id: MissionId
+    workflow_profile: str
+    outcome_status: str
+    timestamp: Timestamp
+    objective_ref: str | None = None
+    surface_id: str | None = None
+    evidence_refs: list[str] = field(default_factory=list)
+    signal_refs: list[str] = field(default_factory=list)
+    failure_modes: list[str] = field(default_factory=list)
+    decision_refs: list[str] = field(default_factory=list)
+    learned_patterns: list[str] = field(default_factory=list)
+    next_action_ref: str | None = None
+    source_kind: str = "post_task_runtime"
+    reusable_memory_status: str = "bounded"
+    human_review_required: bool = True
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass
+class PostTaskReflectionContract:
+    reflection_id: str
+    experience_id: str
+    reflection_status: str
+    learning_candidate: str
+    recommendation: str
+    timestamp: Timestamp
+    proposed_change_type: str = "memory"
+    evidence_refs: list[str] = field(default_factory=list)
+    proposed_tests: list[str] = field(default_factory=list)
+    blockers: list[str] = field(default_factory=list)
+    rollback_plan_ref: str | None = None
+    risk_hint: str | None = None
+    human_review_required: bool = True
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass
 class InputContract:
     request_id: RequestId
     session_id: SessionId

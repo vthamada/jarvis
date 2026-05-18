@@ -30,6 +30,7 @@ from shared.contracts import (
     MemoryRecordContract,
     MemoryRecoveryContract,
     MissionRuntimeStateContract,
+    MissionStateContract,
     OperationDispatchContract,
     OperationResultContract,
     ProjectObjectiveContinuityContract,
@@ -50,7 +51,16 @@ from shared.events import InternalEventEnvelope
 from shared.mind_domain_specialist_contract import (
     build_mind_domain_specialist_runtime_policy,
 )
-from shared.types import MissionStatus, OperationId, PermissionDecision, RequestId
+from shared.types import (
+    ChannelType,
+    InputType,
+    MissionId,
+    MissionStatus,
+    OperationId,
+    PermissionDecision,
+    RequestId,
+    SessionId,
+)
 
 
 @dataclass
@@ -95,6 +105,23 @@ class ContinuitySubflowResult:
     events: list[InternalEventEnvelope]
 
 
+@dataclass
+class ObjectiveTransitionResult:
+    """Outcome of a bounded operator objective transition."""
+
+    mission_id: str
+    transition: str
+    status: str
+    previous_mission_status: str | None
+    previous_objective_status: str | None
+    objective_status: str | None
+    next_action_ref: str | None
+    governance_check: GovernanceCheckContract
+    governance_decision: GovernanceDecisionContract
+    mission_state: MissionStateContract | None
+    events: list[InternalEventEnvelope] = field(default_factory=list)
+
+
 class OrchestratorService:
     """Coordinate the current v1 flow across services and engines."""
 
@@ -125,6 +152,208 @@ class OrchestratorService:
         self.cognitive_engine = cognitive_engine or CognitiveEngine()
         self.specialist_engine = specialist_engine or SpecialistEngine()
         self.synthesis_engine = synthesis_engine or SynthesisEngine()
+
+    def transition_objective(
+        self,
+        *,
+        mission_id: str,
+        transition: str,
+        session_id: str,
+        next_action_ref: str | None = None,
+        operator_identity_ref: str | None = None,
+        canonical_user_ref: str | None = None,
+    ) -> ObjectiveTransitionResult:
+        """Apply a bounded operator transition through governance and memory."""
+
+        request_id = RequestId(f"req-objective-{uuid4().hex[:8]}")
+        contract = InputContract(
+            request_id=request_id,
+            session_id=SessionId(session_id),
+            mission_id=MissionId(mission_id),
+            channel=ChannelType.CONSOLE,
+            input_type=InputType.STRUCTURED_PAYLOAD,
+            content=f"objective_transition:{transition}",
+            timestamp=self.now(),
+            metadata={
+                "transition": transition,
+                "next_action_ref": next_action_ref,
+                "memory_write_mode": "through_core_only",
+            },
+            surface_id="surface://jarvis_console",
+            surface_kind="console",
+            surface_session_id=session_id,
+            surface_capability_scope=["objective_state_transition"],
+            operator_identity_ref=operator_identity_ref,
+            canonical_user_ref=canonical_user_ref,
+            surface_continuity_status="single_surface",
+        )
+        current_state = self.memory_service.get_mission_state(mission_id)
+        assessment = self.governance_service.assess_objective_transition(
+            contract=contract,
+            current_state=current_state,
+            requested_transition=transition,
+            requested_next_action_ref=next_action_ref,
+            requested_by_service=self.name,
+        )
+        events = [
+            self.make_event(
+                "governance_checked",
+                contract,
+                {
+                    "governance_check_id": str(
+                        assessment.governance_check.governance_check_id
+                    ),
+                    "subject_type": "objective_transition",
+                    "transition": transition,
+                    "decision": assessment.governance_decision.decision.value,
+                    "memory_write_mode": "through_core_only",
+                },
+            )
+        ]
+        if assessment.governance_decision.decision in {
+            PermissionDecision.BLOCK,
+            PermissionDecision.DEFER_FOR_VALIDATION,
+        }:
+            events.append(
+                self.make_event(
+                    "governance_blocked",
+                    contract,
+                    {
+                        "decision": assessment.governance_decision.decision.value,
+                        "reason": assessment.governance_decision.justification,
+                        "transition": transition,
+                    },
+                )
+            )
+            self.observability_service.ingest_events(events)
+            return ObjectiveTransitionResult(
+                mission_id=mission_id,
+                transition=transition,
+                status="blocked",
+                previous_mission_status=(
+                    current_state.mission_status.value if current_state else None
+                ),
+                previous_objective_status=(
+                    current_state.objective_status if current_state else None
+                ),
+                objective_status=current_state.objective_status if current_state else None,
+                next_action_ref=current_state.next_action_ref if current_state else None,
+                governance_check=assessment.governance_check,
+                governance_decision=assessment.governance_decision,
+                mission_state=current_state,
+                events=events,
+            )
+
+        target_status, target_mission_status, target_next_action = (
+            self._objective_transition_targets(
+                transition=transition,
+                current_state=current_state,
+                next_action_ref=next_action_ref,
+            )
+        )
+        transition_ref = f"objective_transition:{transition}:{uuid4().hex[:8]}"
+        updated_state = self.memory_service.transition_objective_state(
+            mission_id=mission_id,
+            objective_status=target_status,
+            mission_status=target_mission_status,
+            transition_ref=transition_ref,
+            next_action_ref=target_next_action,
+        )
+        events.append(
+            self.make_event(
+                "mission_updated",
+                contract,
+                {
+                    "transition": transition,
+                    "transition_ref": transition_ref,
+                    "previous_mission_status": (
+                        current_state.mission_status.value if current_state else None
+                    ),
+                    "previous_objective_status": (
+                        current_state.objective_status if current_state else None
+                    ),
+                    "objective_status": target_status,
+                    "next_action_ref": target_next_action,
+                    "memory_write_mode": "through_core_only",
+                    "reversible_checkpoint_ref": transition_ref,
+                },
+            )
+        )
+        self.observability_service.ingest_events(events)
+        return ObjectiveTransitionResult(
+            mission_id=mission_id,
+            transition=transition,
+            status="updated" if updated_state else "missing",
+            previous_mission_status=(
+                current_state.mission_status.value if current_state else None
+            ),
+            previous_objective_status=(
+                current_state.objective_status if current_state else None
+            ),
+            objective_status=updated_state.objective_status if updated_state else None,
+            next_action_ref=updated_state.next_action_ref if updated_state else None,
+            governance_check=assessment.governance_check,
+            governance_decision=assessment.governance_decision,
+            mission_state=updated_state,
+            events=events,
+        )
+
+    def inspect_objective_state(
+        self,
+        *,
+        mission_id: str,
+        session_id: str,
+        operator_identity_ref: str | None = None,
+        canonical_user_ref: str | None = None,
+    ) -> MissionStateContract | None:
+        """Read mission objective state and emit observability without mutating memory."""
+
+        contract = InputContract(
+            request_id=RequestId(f"req-objective-read-{uuid4().hex[:8]}"),
+            session_id=SessionId(session_id),
+            mission_id=MissionId(mission_id),
+            channel=ChannelType.CONSOLE,
+            input_type=InputType.STRUCTURED_PAYLOAD,
+            content="objective_state_inspection",
+            timestamp=self.now(),
+            metadata={"operation": "objective_state_inspection"},
+            surface_id="surface://jarvis_console",
+            surface_kind="console",
+            surface_session_id=session_id,
+            surface_capability_scope=["objective_state_read"],
+            operator_identity_ref=operator_identity_ref,
+            canonical_user_ref=canonical_user_ref,
+            surface_continuity_status="single_surface",
+        )
+        mission_state = self.memory_service.get_mission_state(mission_id)
+        payload: dict[str, object] = {
+            "objective_consulted": True,
+            "objective_found": mission_state is not None,
+            "mission_id": mission_id,
+            "memory_write_mode": "read_only",
+        }
+        if mission_state is not None:
+            payload.update(
+                {
+                    "project_ref": mission_state.project_ref,
+                    "objective_ref": mission_state.objective_ref,
+                    "work_item_refs": list(mission_state.work_item_refs),
+                    "checkpoint_refs": list(mission_state.checkpoint_refs),
+                    "artifact_refs": list(mission_state.artifact_refs),
+                    "objective_status": mission_state.objective_status,
+                    "next_action_ref": mission_state.next_action_ref,
+                }
+            )
+        self.observability_service.ingest_events(
+            [
+                self.make_event(
+                    "objective_state_inspected",
+                    contract,
+                    payload,
+                )
+            ]
+        )
+        return mission_state
 
     def handle_input(self, contract: InputContract) -> OrchestratorResponse:
         """Execute the orchestrated flow for a normalized input contract."""
@@ -897,6 +1126,7 @@ class OrchestratorService:
             deliberative_plan=deliberative_plan,
             specialist_review=specialist_review,
             operation_result=operation_result,
+            mission_runtime_state=mission_runtime_state,
         )
         response_text = synthesis_result.response_text
         events.append(
@@ -2226,6 +2456,13 @@ class OrchestratorService:
                     "open_checkpoint_refs": mission_runtime_state.open_checkpoint_refs,
                     "surface_presence": mission_runtime_state.surface_presence,
                     "ecosystem_state_summary": mission_runtime_state.ecosystem_state_summary,
+                    "project_ref": mission_runtime_state.project_ref,
+                    "objective_ref": mission_runtime_state.objective_ref,
+                    "work_item_refs": mission_runtime_state.work_item_refs,
+                    "checkpoint_refs": mission_runtime_state.checkpoint_refs,
+                    "artifact_refs": mission_runtime_state.artifact_refs,
+                    "objective_status": mission_runtime_state.objective_status,
+                    "next_action_ref": mission_runtime_state.next_action_ref,
                     "linked_surface_ids": mission_runtime_state.linked_surface_ids,
                     "active_surface_id": mission_runtime_state.active_surface_id,
                     "last_surface_id": mission_runtime_state.last_surface_id,
@@ -2931,6 +3168,40 @@ class OrchestratorService:
         )
 
     @staticmethod
+    def _objective_transition_targets(
+        *,
+        transition: str,
+        current_state: MissionStateContract | None,
+        next_action_ref: str | None,
+    ) -> tuple[str, MissionStatus, str | None]:
+        current_objective_status = (
+            current_state.objective_status if current_state else "active"
+        )
+        current_next_action_ref = current_state.next_action_ref if current_state else None
+        current_mission_status = (
+            current_state.mission_status if current_state else MissionStatus.ACTIVE
+        )
+        if transition == "resume":
+            return ("active", MissionStatus.ACTIVE, current_next_action_ref)
+        if transition == "pause":
+            return ("paused", MissionStatus.PAUSED, current_next_action_ref)
+        if transition == "block":
+            return ("blocked", MissionStatus.BLOCKED, current_next_action_ref)
+        if transition == "complete":
+            return ("completed", MissionStatus.COMPLETED, None)
+        if transition == "redefine-next-action":
+            return (
+                current_objective_status or "active",
+                current_mission_status,
+                next_action_ref,
+            )
+        return (
+            current_objective_status or "active",
+            current_mission_status,
+            current_next_action_ref,
+        )
+
+    @staticmethod
     def now() -> str:
         return datetime.now(UTC).isoformat()
 
@@ -3382,6 +3653,7 @@ class OrchestratorService:
         deliberative_plan: DeliberativePlanContract,
         specialist_review: SpecialistReview,
         operation_result: OperationResultContract | None,
+        mission_runtime_state: MissionRuntimeStateContract | None = None,
     ) -> SynthesisResult:
         identity_profile = self.identity_engine.get_profile()
         guided_memory_runtime_hints = self._guided_memory_runtime_hints(
@@ -3450,36 +3722,67 @@ class OrchestratorService:
                     operation_result.project_ref
                     if operation_result and operation_result.project_ref
                     else deliberative_plan.project_ref
+                    or (mission_runtime_state.project_ref if mission_runtime_state else None)
                 ),
                 objective_ref=(
                     operation_result.objective_ref
                     if operation_result and operation_result.objective_ref
                     else deliberative_plan.objective_ref
+                    or (mission_runtime_state.objective_ref if mission_runtime_state else None)
                 ),
                 work_item_refs=list(
                     operation_result.work_item_refs
                     if operation_result and operation_result.work_item_refs
                     else deliberative_plan.work_item_refs
+                    or (
+                        list(mission_runtime_state.work_item_refs)
+                        if mission_runtime_state
+                        else []
+                    )
                 ),
                 checkpoint_refs=list(
                     operation_result.checkpoint_refs
                     if operation_result and operation_result.checkpoint_refs
                     else deliberative_plan.checkpoint_refs
+                    or (
+                        list(mission_runtime_state.checkpoint_refs)
+                        if mission_runtime_state
+                        else []
+                    )
                 ),
                 artifact_refs=list(
                     operation_result.artifact_refs
                     if operation_result and operation_result.artifact_refs
                     else deliberative_plan.artifact_refs
+                    or (
+                        list(mission_runtime_state.artifact_refs)
+                        if mission_runtime_state
+                        else []
+                    )
                 ),
                 objective_status=(
-                    operation_result.objective_status
+                    mission_runtime_state.objective_status
+                    if mission_runtime_state
+                    and mission_runtime_state.objective_status
+                    in {"paused", "blocked", "requires_operator_decision"}
+                    else operation_result.objective_status
                     if operation_result and operation_result.objective_status
                     else deliberative_plan.objective_status
+                    or (
+                        mission_runtime_state.objective_status
+                        if mission_runtime_state
+                        else None
+                    )
                 ),
                 next_action_ref=(
                     operation_result.next_action_ref
                     if operation_result and operation_result.next_action_ref
                     else deliberative_plan.next_action_ref
+                    or (
+                        mission_runtime_state.next_action_ref
+                        if mission_runtime_state
+                        else None
+                    )
                 ),
                 surface_id=operation_result.surface_id if operation_result else None,
                 surface_kind=operation_result.surface_kind if operation_result else None,
@@ -4143,6 +4446,23 @@ class OrchestratorService:
             ),
             ecosystem_state_summary=(
                 mission_state.ecosystem_state_summary if mission_state is not None else None
+            ),
+            project_ref=mission_state.project_ref if mission_state is not None else None,
+            objective_ref=mission_state.objective_ref if mission_state is not None else None,
+            work_item_refs=(
+                list(mission_state.work_item_refs) if mission_state is not None else []
+            ),
+            checkpoint_refs=(
+                list(mission_state.checkpoint_refs) if mission_state is not None else []
+            ),
+            artifact_refs=(
+                list(mission_state.artifact_refs) if mission_state is not None else []
+            ),
+            objective_status=(
+                mission_state.objective_status if mission_state is not None else None
+            ),
+            next_action_ref=(
+                mission_state.next_action_ref if mission_state is not None else None
             ),
             linked_surface_ids=(
                 list(mission_state.linked_surface_ids)

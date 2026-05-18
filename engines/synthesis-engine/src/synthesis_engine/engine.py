@@ -181,6 +181,9 @@ class SynthesisEngine:
         artifact_line = self._procedural_artifact_line(synthesis_input)
         if artifact_line:
             parts.append(f"Artefato procedural: {artifact_line}.")
+        objective_line = self._objective_state_line(synthesis_input)
+        if objective_line:
+            parts.append(f"Estado do objetivo: {objective_line}.")
         limitation = self._limitation_line(synthesis_input)
         if limitation:
             parts.append(f"Limite atual: {limitation}.")
@@ -393,6 +396,79 @@ class SynthesisEngine:
         )
         return f"{status} ({artifact_ref}) | {summary}"
 
+    @classmethod
+    def _objective_state_line(cls, synthesis_input: SynthesisInput) -> str | None:
+        has_objective_state = any(
+            [
+                synthesis_input.project_ref,
+                synthesis_input.objective_ref,
+                synthesis_input.work_item_refs,
+                synthesis_input.checkpoint_refs,
+                synthesis_input.artifact_refs,
+                synthesis_input.objective_status,
+                synthesis_input.next_action_ref,
+            ]
+        )
+        if not has_objective_state:
+            return None
+
+        status = cls._safe_operational_value(
+            synthesis_input.objective_status or "active"
+        )
+        objective_ref = cls._safe_operational_value(synthesis_input.objective_ref)
+        next_action_ref = cls._safe_operational_value(synthesis_input.next_action_ref)
+        work_item_ref = cls._first_safe_ref(synthesis_input.work_item_refs)
+        checkpoint_ref = cls._first_safe_ref(synthesis_input.checkpoint_refs)
+        artifact_ref = cls._first_safe_ref(synthesis_input.artifact_refs) or (
+            cls._safe_operational_value(synthesis_input.procedural_artifact_ref)
+        )
+        decision_pending = cls._objective_decision_pending_clause(status)
+
+        parts = [f"status {status}"]
+        if objective_ref:
+            parts.insert(0, f"objetivo {objective_ref}")
+        if next_action_ref:
+            parts.append(f"proxima acao {next_action_ref}")
+        if decision_pending:
+            parts.append(decision_pending)
+        if artifact_ref:
+            parts.append(f"artefato relevante {artifact_ref}")
+        if work_item_ref:
+            parts.append(f"work item ativo {work_item_ref}")
+        if checkpoint_ref:
+            parts.append(f"checkpoint aberto {checkpoint_ref}")
+        return "; ".join(parts)
+
+    @staticmethod
+    def _objective_decision_pending_clause(status: str | None) -> str | None:
+        if status == "requires_operator_decision":
+            return "decisao pendente validar direcao do operador"
+        if status == "paused":
+            return "decisao pendente retomar ou redefinir proxima acao"
+        if status == "blocked":
+            return "decisao pendente remover bloqueio antes de prosseguir"
+        return None
+
+    @classmethod
+    def _first_safe_ref(cls, values: list[str]) -> str | None:
+        for value in values:
+            safe = cls._safe_operational_value(value)
+            if safe:
+                return safe
+        return None
+
+    @staticmethod
+    def _safe_operational_value(value: object | None) -> str | None:
+        if value is None:
+            return None
+        sanitized = "".join(
+            character if ord(character) >= 32 and ord(character) != 127 else " "
+            for character in str(value)
+        ).strip()
+        if not sanitized:
+            return None
+        return sanitized[:160]
+
     def _compose_governed_response(self, synthesis_input: SynthesisInput) -> str:
         goal_line = self._goal_line(synthesis_input)
         plan = synthesis_input.deliberative_plan
@@ -461,6 +537,9 @@ class SynthesisEngine:
             response = (
                 f"{response}. Intervencao adaptativa: {adaptive_intervention_line}"
             )
+        objective_line = self._objective_state_line(synthesis_input)
+        if objective_line:
+            response = f"{response}. Estado do objetivo: {objective_line}"
         limitation = self._limitation_line(synthesis_input)
         if limitation:
             response = f"{response}. Limite atual: {limitation}"

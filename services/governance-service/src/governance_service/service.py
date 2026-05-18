@@ -11,6 +11,7 @@ from shared.contracts import (
     GovernanceCheckContract,
     GovernanceDecisionContract,
     InputContract,
+    MissionStateContract,
     SpecialistInvocationContract,
     SpecialistSelectionContract,
 )
@@ -18,6 +19,7 @@ from shared.types import (
     GovernanceCheckId,
     GovernanceDecisionId,
     MemoryClass,
+    MissionStatus,
     PermissionDecision,
     RiskLevel,
 )
@@ -165,6 +167,128 @@ class GovernanceService:
             governance_check=governance_check,
             governance_decision=governance_decision,
         )
+
+    def assess_objective_transition(
+        self,
+        *,
+        contract: InputContract,
+        current_state: MissionStateContract | None,
+        requested_transition: str,
+        requested_next_action_ref: str | None,
+        requested_by_service: str,
+    ) -> GovernanceAssessment:
+        """Govern bounded operator-driven objective state changes."""
+
+        current_status = (
+            current_state.mission_status.value if current_state is not None else None
+        )
+        current_objective_status = (
+            current_state.objective_status if current_state is not None else None
+        )
+        governance_check = GovernanceCheckContract(
+            governance_check_id=GovernanceCheckId(f"gov-check-{uuid4().hex[:8]}"),
+            subject_type="objective_transition",
+            subject_action=requested_transition,
+            scope="mission",
+            context={
+                "mission_id": str(contract.mission_id) if contract.mission_id else None,
+                "current_mission_status": current_status,
+                "current_objective_status": current_objective_status,
+                "requested_next_action_ref": requested_next_action_ref,
+                "memory_write_mode": "through_core_only",
+                "operator_identity_ref": contract.operator_identity_ref,
+                "canonical_user_ref": contract.canonical_user_ref,
+            },
+            sensitivity="normal",
+            reversibility="high",
+            mission_id=contract.mission_id,
+            session_id=contract.session_id,
+            proposed_effect="objective_state_transition",
+            risk_hint=RiskLevel.LOW,
+            requested_by_service=requested_by_service,
+            requires_human_validation=False,
+            decision_frame="objective_transition",
+            mission_continuity_hint="operator_bounded_transition",
+        )
+
+        decision = PermissionDecision.ALLOW_WITH_CONDITIONS
+        justification = (
+            "Transicao operacional bounded permitida pelo nucleo com memoria canonica."
+        )
+        conditions = [
+            "Persistir somente via memoria canonica.",
+            "Registrar evento auditavel com estado anterior e novo.",
+            "Manter especialistas e automacoes fora da escrita direta.",
+        ]
+        requires_audit = True
+        requires_rollback_plan = False
+        containment_hint = None
+        policy_refs = ["policy://objective-transition/bounded-core-write"]
+
+        if current_state is None:
+            decision = PermissionDecision.BLOCK
+            justification = "Missao inexistente nao pode receber transicao operacional."
+            conditions = ["Criar ou recuperar estado canonico da missao antes da transicao."]
+            requires_rollback_plan = True
+            containment_hint = "block_missing_mission_state"
+            policy_refs = ["policy://objective-transition/missing-state"]
+        elif (
+            requested_transition == "resume"
+            and current_state.mission_status
+            in {MissionStatus.COMPLETED, MissionStatus.CANCELED}
+        ):
+            decision = PermissionDecision.BLOCK
+            justification = "Missao finalizada nao pode ser retomada por comando bounded."
+            conditions = ["Abrir nova missao ou revisao explicita em vez de reativar estado final."]
+            requires_rollback_plan = True
+            containment_hint = "block_terminal_resume"
+            policy_refs = ["policy://objective-transition/terminal-state"]
+        elif requested_transition == "redefine-next-action" and not requested_next_action_ref:
+            decision = PermissionDecision.BLOCK
+            justification = "Redefinir proxima acao exige referencia explicita."
+            conditions = ["Informar --next-action-ref com uma referencia bounded."]
+            requires_rollback_plan = True
+            containment_hint = "block_missing_next_action_ref"
+            policy_refs = ["policy://objective-transition/missing-next-action"]
+        elif requested_next_action_ref and not self._is_bounded_reference(
+            requested_next_action_ref
+        ):
+            decision = PermissionDecision.BLOCK
+            justification = "Referencia de proxima acao fora do formato bounded permitido."
+            conditions = [
+                "Usar referencia curta com letras, numeros, dois-pontos, barra, "
+                "ponto, hifen ou underscore."
+            ]
+            requires_rollback_plan = True
+            containment_hint = "block_unbounded_next_action_ref"
+            policy_refs = ["policy://objective-transition/unbounded-reference"]
+
+        governance_decision = GovernanceDecisionContract(
+            decision_id=GovernanceDecisionId(f"gov-decision-{uuid4().hex[:8]}"),
+            governance_check_id=governance_check.governance_check_id,
+            risk_level=governance_check.risk_hint or RiskLevel.LOW,
+            decision=decision,
+            justification=justification,
+            timestamp=self.now(),
+            conditions=conditions,
+            requires_audit=requires_audit,
+            requires_rollback_plan=requires_rollback_plan,
+            containment_hint=containment_hint,
+            policy_refs=policy_refs,
+        )
+        return GovernanceAssessment(
+            governance_check=governance_check,
+            governance_decision=governance_decision,
+        )
+
+    @staticmethod
+    def _is_bounded_reference(value: str) -> bool:
+        if not value or len(value) > 160:
+            return False
+        allowed = set(
+            "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:/._-"
+        )
+        return all(character in allowed for character in value)
 
     def assess_specialist_handoff(
         self,

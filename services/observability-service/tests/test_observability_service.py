@@ -211,6 +211,90 @@ def test_observability_service_audits_flow_for_missing_events_and_anomalies() ->
     assert audit.trace_complete is False
 
 
+def test_observability_service_audits_technology_absorption_signals() -> None:
+    temp_dir = runtime_dir("observability-technology-absorption")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service.ingest_events(
+        [
+            InternalEventEnvelope(
+                event_id="evt-tech-1",
+                event_name="technology_absorption_candidate_declared",
+                timestamp="2026-05-17T00:00:00+00:00",
+                source_service="evolution-lab",
+                payload={
+                    "technology_absorption_readiness": "ready_for_manual_review",
+                    "technology_absorption_decision": "manual_promotion_review",
+                    "technology_absorption_lane_status": "controlled_candidate",
+                    "technology_absorption_promotion_readiness": "manual_review_only",
+                    "technology_absorption_blockers": [],
+                    "technology_absorption_candidate_refs": [
+                        "tech-candidate://openai-agents-sdk/handoff-adapters"
+                    ],
+                },
+                request_id="req-tech",
+                session_id="sess-tech",
+                correlation_id="req-tech",
+            )
+        ]
+    )
+
+    audit = service.audit_flow(ObservabilityQuery(request_id="req-tech"))
+
+    assert audit.technology_absorption_readiness == "ready_for_manual_review"
+    assert audit.technology_absorption_decision == "manual_promotion_review"
+    assert audit.technology_absorption_promotion_readiness == "manual_review_only"
+    assert audit.technology_absorption_candidate_refs == [
+        "tech-candidate://openai-agents-sdk/handoff-adapters"
+    ]
+    assert "technology_candidate_observed" in audit.technology_absorption_signals
+    assert (
+        "technology_absorption_manual_review_required"
+        in audit.technology_absorption_signals
+    )
+
+
+def test_observability_service_audits_experience_reflection_signals() -> None:
+    temp_dir = runtime_dir("observability-experience-reflection")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service.ingest_events(
+        [
+            InternalEventEnvelope(
+                event_id="evt-er-1",
+                event_name="post_task_reflection_declared",
+                timestamp="2026-05-17T00:00:00+00:00",
+                source_service="evolution-lab",
+                payload={
+                    "experience_reflection_status": "candidate",
+                    "experience_reflection_change_type": "workflow",
+                    "experience_reflection_refs": [
+                        "experience://mission-er/001",
+                        "reflection://mission-er/001",
+                    ],
+                    "experience_reflection_blockers": [],
+                },
+                request_id="req-er",
+                session_id="sess-er",
+                mission_id="mission-er",
+                correlation_id="req-er",
+            )
+        ]
+    )
+
+    audit = service.audit_flow(ObservabilityQuery(request_id="req-er"))
+
+    assert audit.experience_reflection_status == "candidate"
+    assert audit.experience_reflection_change_type == "workflow"
+    assert audit.experience_reflection_refs == [
+        "experience://mission-er/001",
+        "reflection://mission-er/001",
+    ]
+    assert "experience_reflection_observed" in audit.experience_reflection_signals
+    assert (
+        "experience_reflection_manual_review_required"
+        in audit.experience_reflection_signals
+    )
+
+
 def test_observability_service_audits_surface_continuity_signals() -> None:
     temp_dir = runtime_dir("observability-surface")
     service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
@@ -277,6 +361,59 @@ def test_observability_service_audits_project_objective_continuity_signals() -> 
     assert audit.open_checkpoint_count == 1
     assert audit.artifact_continuity_status == "attached"
     assert audit.next_action_status == "ready"
+
+
+def test_observability_service_audits_objective_operational_utility_signals() -> None:
+    temp_dir = runtime_dir("observability-objective-utility")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service.ingest_events(
+        [
+            InternalEventEnvelope(
+                event_id="evt-objective-read",
+                event_name="objective_state_inspected",
+                timestamp="2026-05-16T00:00:00+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "objective_consulted": True,
+                    "objective_found": True,
+                    "objective_status": "paused",
+                    "work_item_refs": ["work-item://mb-118"],
+                    "checkpoint_refs": ["checkpoint://operator-review"],
+                    "artifact_refs": [],
+                    "next_action_ref": None,
+                },
+                request_id="req-objective-utility",
+                session_id="sess-objective-utility",
+                correlation_id="req-objective-utility",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-objective-pause",
+                event_name="mission_updated",
+                timestamp="2026-05-16T00:00:01+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "transition": "pause",
+                    "objective_status": "paused",
+                    "next_action_ref": None,
+                    "artifact_refs": [],
+                },
+                request_id="req-objective-utility",
+                session_id="sess-objective-utility",
+                correlation_id="req-objective-utility",
+            ),
+        ]
+    )
+
+    audit = service.audit_flow(ObservabilityQuery(request_id="req-objective-utility"))
+
+    assert audit.objective_consulted is True
+    assert audit.objective_transition_counts["pause"] == 1
+    assert audit.objective_missing_next_action is True
+    assert audit.objective_missing_artifact is True
+    assert "objective_consulted" in audit.objective_utility_signals
+    assert "objective_paused" in audit.objective_utility_signals
+    assert "objective_missing_next_action" in audit.objective_utility_signals
+    assert "objective_missing_artifact" in audit.objective_utility_signals
 
 
 def test_observability_service_audits_continuity_signals() -> None:

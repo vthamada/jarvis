@@ -27,13 +27,31 @@ Leitura correta:
 - os estudos externos são insumos de tradução disciplinada, não autorização para
   substituir o cérebro soberano do sistema.
 
-Estado atual em 2026-05-13:
+Estado atual em 2026-05-17:
 
 - o projeto já possui partes da fundação evolutiva em `evolution-lab`,
   observabilidade, comparadores, verificadores de baseline/release, memória
   guiada, gates e registros de refinamento;
-- o lote técnico ativo do backlog é `MB-110` a `MB-114`, focado em continuidade
-  mínima de projetos/objetivos persistentes;
+- os lotes `MB-110` a `MB-119` fecharam a continuidade minima e a primeira
+  camada utilizavel de projetos/objetivos para operador humano;
+- o lote ativo agora e `MB-120` a `MB-125`, focado em estrutura evolutiva e
+  absorcao tecnologica governada;
+- `MB-121` ja materializou o contrato minimo de candidato tecnologico:
+  tecnologia externa entra como referencia, experimento, complemento controlado
+  ou traducao promovivel, sempre subordinada ao nucleo e sem promocao automatica;
+- `MB-122` conectou esse contrato ao `evolution-lab`, mantendo candidatos
+  tecnologicos como propostas `sandbox-only` ate revisao humana baseada em
+  evidencia;
+- `MB-123` a `MB-125` fecharam a primeira camada operacional dessa absorcao:
+  observabilidade, relatorio, comparador e console tornam candidatos visiveis
+  sem promover, executar ou substituir o nucleo.
+- `MB-126` abriu a proxima repriorizacao evolutiva: experiencia operacional e
+  reflexao pos-tarefa governada. A intencao e transformar missoes reais em
+  registros estruturados de outcome, falhas, decisoes, evidencias e aprendizados
+  candidatos, ainda sem self-modification, autopromocao ou alteracao de pesos.
+- `MB-127` a `MB-131` fecharam esse recorte, levando
+  `experience_record`/`post_task_reflection` para contratos, memoria evolutiva
+  bounded, `evolution-lab`, observabilidade, relatorio e console read-only.
 - este documento deve alimentar próximas repriorizações, mas não muda sozinho a
   fila ativa.
 
@@ -1058,11 +1076,12 @@ A estratégia correta é:
 
 Próxima tradução prática recomendada:
 
-1. concluir a fundação de projetos/objetivos persistentes do lote `MB-110` a
-   `MB-114`;
-2. depois avaliar se a próxima frente deve ser `experience_record` e reflexão
-   pós-tarefa;
-3. só então considerar skill mining, workflow evolution mais forte ou adaptação
-   de roteamento;
-4. manter fine-tuning, LoRA, self-edits persistentes e autoevolução profunda do
+1. consolidar captura de experiencias pos-tarefa como memoria evolutiva;
+2. gerar propostas de melhoria a partir de observabilidade;
+3. usar o `evolution-lab` para comparar candidatos de prompt, plano, workflow e
+   roteamento;
+4. registrar candidatos tecnologicos externos primeiro como referencia,
+   experimento, complemento controlado ou traducao promovivel, com evidencia,
+   testes, sandbox e rollback antes de qualquer revisao manual;
+5. manter fine-tuning, LoRA, self-edits persistentes e autoevolução profunda do
    núcleo como pesquisa até haver evidência, sandbox e rollback suficientes.

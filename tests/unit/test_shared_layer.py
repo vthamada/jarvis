@@ -1,14 +1,20 @@
 from shared.contracts import (
+    ExperienceRecordContract,
     GovernanceDecisionContract,
     InputContract,
+    PostTaskReflectionContract,
     ProjectObjectiveContinuityContract,
     SurfaceIdentityContract,
+    TechnologyAbsorptionCandidateContract,
 )
 from shared.events import INTERNAL_EVENT_NAMES
 from shared.schemas import (
+    EXPERIENCE_RECORD_SCHEMA,
     INPUT_SCHEMA,
+    POST_TASK_REFLECTION_SCHEMA,
     PROJECT_OBJECTIVE_CONTINUITY_SCHEMA,
     SURFACE_IDENTITY_SCHEMA,
+    TECHNOLOGY_ABSORPTION_CANDIDATE_SCHEMA,
 )
 from shared.state import SYSTEM_IDENTITY
 from shared.types import (
@@ -73,6 +79,24 @@ def test_project_objective_continuity_contract_declares_minimum_fields() -> None
     assert "project_ref" in INPUT_SCHEMA.optional_fields
 
 
+def test_technology_absorption_candidate_contract_is_subordinate_by_default() -> None:
+    contract = TechnologyAbsorptionCandidateContract(
+        candidate_ref="tech-candidate://openai-agents-sdk/handoff-adapters",
+        technology_name="OpenAI Agents SDK",
+        absorption_class="sandbox_experiment",
+        target_gap_refs=["TA-005"],
+        hypothesis="Handoff adapter semantics can improve edge tracing.",
+        expected_gain="Clearer bounded handoff evidence without replacing the core.",
+    )
+
+    assert contract.requested_core_role == "subordinate"
+    assert contract.sandbox_required is True
+    assert contract.human_review_required is True
+    assert TECHNOLOGY_ABSORPTION_CANDIDATE_SCHEMA.contract_name == (
+        "TechnologyAbsorptionCandidateContract"
+    )
+
+
 def test_governance_decision_uses_canonical_enums() -> None:
     decision = GovernanceDecisionContract(
         decision_id=GovernanceDecisionId("decision-1"),
@@ -90,6 +114,33 @@ def test_internal_event_names_include_governance_blocked() -> None:
     assert "knowledge_retrieved" in INTERNAL_EVENT_NAMES
     assert "surface_identity_declared" in INTERNAL_EVENT_NAMES
     assert "objective_state_declared" in INTERNAL_EVENT_NAMES
+    assert "objective_state_inspected" in INTERNAL_EVENT_NAMES
+    assert "technology_absorption_candidate_declared" in INTERNAL_EVENT_NAMES
+    assert "experience_record_declared" in INTERNAL_EVENT_NAMES
+    assert "post_task_reflection_declared" in INTERNAL_EVENT_NAMES
+
+
+def test_experience_reflection_contracts_are_shared_schemas() -> None:
+    experience = ExperienceRecordContract(
+        experience_id="experience://mission-1/001",
+        mission_id="mission-1",
+        workflow_profile="software_change_workflow",
+        outcome_status="completed",
+        timestamp="2026-05-17T00:00:00Z",
+    )
+    reflection = PostTaskReflectionContract(
+        reflection_id="reflection://mission-1/001",
+        experience_id=experience.experience_id,
+        reflection_status="candidate",
+        learning_candidate="contract-first implementation",
+        recommendation="keep proposal in sandbox",
+        timestamp="2026-05-17T00:00:01Z",
+    )
+
+    assert experience.automatic_promotion_allowed is False
+    assert reflection.core_mutation_allowed is False
+    assert EXPERIENCE_RECORD_SCHEMA.contract_name == "ExperienceRecordContract"
+    assert POST_TASK_REFLECTION_SCHEMA.contract_name == "PostTaskReflectionContract"
 
 
 def test_system_identity_has_core_principles() -> None:

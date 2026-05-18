@@ -1,5 +1,75 @@
 # HANDOFF
 
+## Atualizacao 2026-05-17
+
+O corte pos-`MB-125` foi repriorizado em `MB-126`: a proxima frente ativa e
+experiencia operacional + reflexao pos-tarefa governada. O objetivo e fazer o
+JARVIS registrar missoes reais, outcomes, falhas, decisoes, evidencias e
+aprendizados candidatos como materia-prima auditavel de autoevolucao.
+
+`MB-127` a `MB-131` foram concluidos: contratos compartilhados, memoria
+evolutiva bounded, proposta `sandbox-only` no `evolution-lab`, observabilidade,
+relatorio e console read-only agora tratam experiencia/reflexao pos-tarefa como
+materia-prima governada de autoevolucao.
+
+Nao ha novo item `ready` depois de `MB-131`; a proxima implementacao deve nascer
+de nova repriorizacao explicita.
+
+Limites preservados: isso nao abre self-modification, autopromocao, alteracao de
+pesos, scheduler autonomo, voz, web, API publica, browser/computer use amplo,
+`TA-004` ou `TA-006`. Toda melhoria derivada de reflexao continua exigindo
+evidencia, testes, rollback e revisao humana.
+
+O corte pos-`MB-119` foi repriorizado em `MB-120`: a proxima frente ativa e
+estrutura evolutiva + absorcao tecnologica governada. Isso nao abre scheduler
+autonomo, voz, web, API publica, browser/computer use amplo ou autopromocao.
+
+`MB-121` foi concluido: `shared/contracts`, `shared/schemas` e
+`shared/technology_absorption.py` agora definem o contrato minimo de candidato
+tecnologico e sua gramatica de readiness. Tecnologia externa so entra como
+referencia, experimento, complemento controlado ou traducao promovivel; tentativa
+de assumir papel de nucleo e bloqueada; revisao manual exige evidencia, testes e
+rollback.
+
+`MB-122` tambem foi concluido: o `evolution-lab` agora registra candidatos
+tecnologicos como propostas `sandbox-only`, com readiness, blockers, matriz de
+avaliacao e politica explicita contra promocao automatica.
+
+`MB-123` a `MB-125` tambem foram concluidos: observabilidade, piloto interno,
+relatorio, comparador e console agora expoem sinais e candidatos de absorcao
+tecnologica governada. O console possui `technology-candidates --evolution-db
+... --limit ...` em modo read-only.
+
+Esse lote foi fechado por `MB-125`; a repriorizacao seguinte ja foi registrada
+em `MB-126`, e foi fechada ate `MB-131`. Autoedicao,
+autopromocao, alteracao de pesos, voz, web, API publica, browser/computer use
+amplo e scheduler autonomo continuam fora de fase.
+
+O lote `MB-115` a `MB-119` foi aberto para transformar a fundacao de
+projetos/objetivos em utilidade operacional para o operador humano.
+`MB-115` foi concluido: o console agora possui `objectives --mission-id ...`
+para consultar o estado persistido de projeto/objetivo, status, work items,
+checkpoints, artefatos e proxima acao.
+
+`MB-116` tambem foi concluido: o console agora possui comando operacional
+bounded para retomar, pausar, bloquear, concluir e redefinir a proxima acao de
+um objetivo, sempre por governanca, memoria canonica e evento auditavel.
+
+`MB-117` tambem foi concluido: a sintese final agora expoe estado operacional
+bounded do objetivo ativo quando esse contexto existe, incluindo status,
+proxima acao, decisao pendente e artefato relevante, sem vazar detalhes internos
+de especialistas nem promover autoexecucao.
+
+`MB-118` tambem foi concluido: observabilidade, piloto interno, relatorio e
+comparador agora expoem sinais de utilidade operacional de objetivos, incluindo
+consulta, retomada, pausa, bloqueio, conclusao, redefinicao de proxima acao,
+ausencia de proxima acao e ausencia de artefato.
+
+`MB-119` foi concluido como fechamento documental do lote. Nao ha novo item
+`ready` depois desta rodada; a proxima implementacao deve nascer de nova
+repriorizacao explicita. Voz, web, API publica, browser/computer use amplo,
+scheduler autonomo e memoria temporal rica continuam fora de fase.
+
 ## Atualizacao 2026-05-13
 
 A rodada `MB-110` a `MB-114` foi implementada. O baseline agora possui
@@ -14,7 +84,7 @@ Essas frentes seguem dependendo de nova repriorizacao explicita.
 
 ## Metadata
 
-- Atualizado em: 2026-05-13
+- Atualizado em: 2026-05-17
 - Branch: `main`
 - Commit de referência: `02ccc53`
 - Artefato canônico do projeto: `documento_mestre_jarvis.md`
@@ -435,7 +505,7 @@ Pendências principais desta fase:
 - tratar `MB-032` a `MB-036` como baseline ja fechado, sem reabrir o mesmo lote por inercia local;
 - tratar `MB-037` a `MB-040` como lote fechado, sem reabrir o mesmo trabalho por inercia local;
 - continuar refinando criterios de saida por `workflow_profile`, uso soberano de memoria e profundidade da cadeia `mente -> dominio -> especialista` apenas quando isso justificar um novo lote real;
-- nao ha novo item micro `ready` definido depois de `MB-110` a `MB-114`; a proxima frente deve ser repriorizada explicitamente antes de implementacao.
+- repriorizar explicitamente a proxima frente antes de abrir novo item micro `ready`.
 
 Regra de estudo externo no `v2`:
 
@@ -447,14 +517,11 @@ Regra de estudo externo no `v2`:
 ## Próximos passos imediatos
 
 Ordem recomendada:
-1. preservar `MB-102` a `MB-106` como lote fechado de continuidade multissuperficie minima;
-2. preservar `MB-107` a `MB-109` como repriorizacao fechada de `EV-001`;
-3. preservar `MB-110` a `MB-114` como lote fechado de continuidade minima de projetos/objetivos persistentes;
-4. definir explicitamente a proxima frente micro antes de puxar automacao ampla, superficies novas ou memoria temporal rica;
-5. manter voz/realtime, web rica, API publica, gateway externo, memoria temporal rica, autoexecucao longa e substrate operacional amplo fora de fase;
-6. preservar `MB-023` a `MB-026` como baseline fechado e `MB-027` a `MB-031` como `deferred`, sem reabrir `protective intelligence` por impulso;
-7. tratar `MB-082` a `MB-109` como lotes ja fechados do baseline atual, sem reabrir esse eixo por inercia local;
-8. manter historico regeneravel em `docs/archive/implementation/` e `tools/archive/` sem reexpandir a raiz do repositorio.
+1. preservar `MB-102` a `MB-125` como baseline fechado de superficies minimas, objetivos persistentes, utilidade operacional e absorcao tecnologica governada;
+2. preservar `MB-126` a `MB-131` como baseline fechado de experiencia/reflexao pos-tarefa governada;
+3. manter voz/realtime, web rica, API publica, gateway externo, memoria temporal rica, autoexecucao longa e substrate operacional amplo fora de fase;
+4. preservar `MB-023` a `MB-026` como baseline fechado e `MB-027` a `MB-031` como `deferred`, sem reabrir `protective intelligence` por impulso;
+5. manter historico regeneravel em `docs/archive/implementation/` e `tools/archive/` sem reexpandir a raiz do repositorio.
 
 Atualização desta rodada:
 

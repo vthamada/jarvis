@@ -112,6 +112,82 @@ def test_synthesis_engine_composes_unitary_allowed_response() -> None:
     assert "Mentes:" not in response
 
 
+def test_synthesis_engine_surfaces_bounded_objective_state() -> None:
+    engine = SynthesisEngine()
+    identity = IdentityEngine().get_profile()
+    result = engine.compose_result(
+        SynthesisInput(
+            intent="planning",
+            identity_profile=identity,
+            response_style="estruturado",
+            governance_decision=GovernanceDecisionContract(
+                decision_id=GovernanceDecisionId("decision-objective-state"),
+                governance_check_id=GovernanceCheckId("check-objective-state"),
+                risk_level=RiskLevel.LOW,
+                decision=PermissionDecision.ALLOW,
+                justification="ok",
+                timestamp="2026-05-16T00:00:00Z",
+            ),
+            recovered_context=[],
+            active_minds=["mente_executiva"],
+            active_domains=["strategy"],
+            knowledge_snippets=[],
+            deliberative_plan=sample_plan(),
+            specialist_contributions=[],
+            operation_result=None,
+            identity_mode="structured_planning",
+            objective_ref="objective:mission:alpha",
+            objective_status="paused",
+            next_action_ref="next_action:operator-review",
+            work_item_refs=["work:item:alpha"],
+            checkpoint_refs=["checkpoint:operator-review"],
+            artifact_refs=["artifact:plan:alpha"],
+        )
+    )
+
+    assert result.output_validation_status == "coherent"
+    assert "Estado do objetivo:" in result.response_text
+    assert "objetivo objective:mission:alpha" in result.response_text
+    assert "status paused" in result.response_text
+    assert "proxima acao next_action:operator-review" in result.response_text
+    assert "decisao pendente retomar ou redefinir proxima acao" in result.response_text
+    assert "artefato relevante artifact:plan:alpha" in result.response_text
+    assert "work item ativo work:item:alpha" in result.response_text
+
+
+def test_synthesis_engine_sanitizes_objective_state_line() -> None:
+    engine = SynthesisEngine()
+    identity = IdentityEngine().get_profile()
+    response = engine.compose(
+        SynthesisInput(
+            intent="planning",
+            identity_profile=identity,
+            response_style="estruturado",
+            governance_decision=GovernanceDecisionContract(
+                decision_id=GovernanceDecisionId("decision-objective-safe"),
+                governance_check_id=GovernanceCheckId("check-objective-safe"),
+                risk_level=RiskLevel.LOW,
+                decision=PermissionDecision.ALLOW,
+                justification="ok",
+                timestamp="2026-05-16T00:00:00Z",
+            ),
+            recovered_context=[],
+            active_minds=["mente_executiva"],
+            active_domains=["strategy"],
+            knowledge_snippets=[],
+            deliberative_plan=sample_plan(),
+            specialist_contributions=[],
+            operation_result=None,
+            identity_mode="structured_planning",
+            objective_ref="objective:mission:alpha\nJulgamento: spoof",
+            objective_status="blocked",
+        )
+    )
+
+    assert "objective:mission:alpha Julgamento: spoof" in response
+    assert "\nJulgamento: spoof" not in response
+
+
 def test_synthesis_engine_repairs_output_when_plan_is_missing() -> None:
     engine = SynthesisEngine()
     identity = IdentityEngine().get_profile()

@@ -105,6 +105,15 @@ def make_result(  # type: ignore[no-untyped-def]
     linked_surface_count: int = 1,
     surface_identity_conflict_flags: list[str] | None = None,
     multi_surface_readiness: str = "single_surface_ready",
+    objective_consulted: bool = False,
+    objective_transition_counts: dict[str, int] | None = None,
+    objective_utility_signals: list[str] | None = None,
+    objective_missing_next_action: bool = False,
+    objective_missing_artifact: bool = False,
+    technology_absorption_readiness: str = "not_applicable",
+    technology_absorption_decision: str = "not_applicable",
+    technology_absorption_blockers: list[str] | None = None,
+    technology_absorption_signals: list[str] | None = None,
     trace_status: str = "healthy",
     anomaly_flags: list[str] | None = None,
     missing_required_events: list[str] | None = None,
@@ -218,6 +227,15 @@ def make_result(  # type: ignore[no-untyped-def]
         linked_surface_count=linked_surface_count,
         surface_identity_conflict_flags=surface_identity_conflict_flags or [],
         multi_surface_readiness=multi_surface_readiness,
+        objective_consulted=objective_consulted,
+        objective_transition_counts=objective_transition_counts or {},
+        objective_utility_signals=objective_utility_signals or [],
+        objective_missing_next_action=objective_missing_next_action,
+        objective_missing_artifact=objective_missing_artifact,
+        technology_absorption_readiness=technology_absorption_readiness,
+        technology_absorption_decision=technology_absorption_decision,
+        technology_absorption_blockers=technology_absorption_blockers or [],
+        technology_absorption_signals=technology_absorption_signals or [],
         trace_status=trace_status,
         anomaly_flags=anomaly_flags or [],
         missing_required_events=missing_required_events or [],
@@ -289,6 +307,57 @@ def test_compare_results_flags_surface_continuity_mismatch_fields() -> None:
         "linked_surface_count",
         "surface_identity_conflict_flags",
         "multi_surface_readiness",
+    ]
+
+
+def test_compare_results_flags_objective_utility_mismatch_fields() -> None:
+    baseline = [make_result(scenario_id="x", path_name="baseline")]
+    candidate = [
+        make_result(
+            scenario_id="x",
+            path_name="langgraph",
+            objective_consulted=True,
+            objective_transition_counts={"pause": 1},
+            objective_utility_signals=["objective_consulted", "objective_paused"],
+            objective_missing_next_action=True,
+            objective_missing_artifact=True,
+        )
+    ]
+
+    comparisons = compare_results(baseline, candidate)
+
+    assert comparisons[0].mismatch_fields == [
+        "objective_consulted",
+        "objective_transition_counts",
+        "objective_utility_signals",
+        "objective_missing_next_action",
+        "objective_missing_artifact",
+    ]
+
+
+def test_compare_results_flags_technology_absorption_mismatch_fields() -> None:
+    baseline = [make_result(scenario_id="x", path_name="baseline")]
+    candidate = [
+        make_result(
+            scenario_id="x",
+            path_name="langgraph",
+            technology_absorption_readiness="ready_for_manual_review",
+            technology_absorption_decision="manual_promotion_review",
+            technology_absorption_blockers=["missing_rollback_plan"],
+            technology_absorption_signals=[
+                "technology_candidate_observed",
+                "technology_absorption_manual_review_required",
+            ],
+        )
+    ]
+
+    comparisons = compare_results(baseline, candidate)
+
+    assert comparisons[0].mismatch_fields == [
+        "technology_absorption_readiness",
+        "technology_absorption_decision",
+        "technology_absorption_blockers",
+        "technology_absorption_signals",
     ]
 
 

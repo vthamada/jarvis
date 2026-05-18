@@ -1,5 +1,66 @@
 # CHANGELOG
 
+## 2026-05-17
+
+### MB-126 abre experiencia e reflexao pos-tarefa governada
+
+- `docs/implementation/execution-backlog.md` abriu o lote `MB-126` a `MB-131`, com `MB-127` como proximo item `ready`;
+- a repriorizacao escolhe `experience_record` e `post_task_reflection` como proxima materia-prima soberana de autoevolucao;
+- `docs/implementation/unified-gap-and-absorption-backlog.md` registra `EV-006` como `active_micro_slice`;
+- limites preservados: sem self-modification, autopromocao, alteracao de pesos, scheduler autonomo, voz, web, API publica, `TA-004` ou `TA-006`.
+
+### MB-127 a MB-131 fecham experiencia e reflexao pos-tarefa
+
+- `shared/contracts`, `shared/schemas` e `shared/events` agora formalizam `ExperienceRecordContract`, `PostTaskReflectionContract`, `experience_record_declared` e `post_task_reflection_declared`;
+- `memory-service` persiste e recupera reflexoes pos-tarefa como memoria evolutiva bounded, bloqueando registros sem evidencia ou tentativa de autopromocao/mutacao do nucleo;
+- `evolution-lab` cria propostas `post_task_reflection_improvement` em modo `sandbox-only`, com blockers, rollback, testes e revisao manual;
+- `observability-service`, `internal_pilot_report` e `jarvis-console experience-reflections` tornam esses registros visiveis sem promover nem executar mudancas.
+
+## 2026-05-16
+
+### MB-120 e MB-121 abrem absorcao tecnologica governada
+
+- `docs/implementation/execution-backlog.md` abriu a nova frente `MB-120` a `MB-125`, focada em estrutura evolutiva e absorcao tecnologica governada;
+- `shared/contracts` e `shared/schemas` agora formalizam `TechnologyAbsorptionCandidateContract`;
+- `shared/technology_absorption.py` classifica candidatos como referencia, experimento, complemento controlado ou traducao promovivel, bloqueando violacao da soberania do nucleo e exigindo evidencia, testes e rollback para revisao manual.
+
+### MB-122 conecta absorcao tecnologica ao evolution-lab
+
+- `evolution-lab` agora cria proposta `technology_absorption_candidate` a partir de candidato tecnologico governado;
+- a proposta preserva `sandbox-only`, readiness, bloqueadores, matriz de avaliacao, refs de evidencia e politica explicita contra promocao automatica;
+- candidatos que tentam assumir papel de nucleo ficam bloqueados por `core_sovereignty_violation`.
+
+### MB-123 a MB-125 fecham a primeira camada operacional de absorcao tecnologica
+
+- `observability-service`, piloto interno, relatorio e comparador agora expoem readiness, decisao, blockers, refs e sinais de absorcao tecnologica governada;
+- `apps/jarvis_console` ganhou `technology-candidates --evolution-db ... --limit ...` para consulta read-only de candidatos recentes do `evolution-lab`;
+- docs vivos fecham o lote mantendo autoedicao, autopromocao, alteracao de pesos, novas superficies e autonomia ampla fora de fase.
+
+### MB-118 e MB-119 fecham utilidade operacional de objetivos
+
+- `observability-service` agora audita sinais de utilidade de objetivos: consulta, transicoes de retomada/pausa/bloqueio/conclusao/redefinicao, falta de proxima acao e falta de artefato;
+- `internal_pilot_support.py`, `internal_pilot_report.py` e `compare_orchestrator_paths.py` propagam esses sinais para relatorios e comparacao de caminhos;
+- `shared/events` formaliza `objective_state_inspected`, usado pelo console para registrar consulta read-only sem escrever memoria;
+- `docs/implementation/execution-backlog.md`, `HANDOFF.md`, `v2-adherence-snapshot.md` e backlog macro fecham o lote `MB-115` a `MB-119`, mantendo scheduler autonomo, voz, web, API publica e browser/computer use amplo fora de fase.
+
+### MB-117 leva estado de objetivo para a sintese final
+
+- `synthesis-engine` agora inclui `Estado do objetivo` na resposta final quando ha projeto/objetivo ativo, com status, proxima acao, decisao pendente e artefato relevante;
+- `orchestrator-service` passou a propagar o estado operacional de projeto/objetivo do `MissionRuntimeStateContract` ate a sintese e eventos de runtime;
+- o texto renderizado e sanitizado para evitar injecao de linhas ou controle via referencias persistidas.
+
+### MB-116 adiciona conducao governada de objetivos no console
+
+- `apps/jarvis_console` ganhou o comando `objective --mission-id ... --action ...` para `resume`, `pause`, `block`, `complete` e `redefine-next-action`;
+- as transicoes passam por `orchestrator-service` e `governance-service`, persistem somente via `memory-service` e emitem evento auditavel `mission_updated`;
+- transicoes inseguras, como retomar missao finalizada, sao bloqueadas por governanca e nao alteram o estado canonico.
+
+### MB-115 abre utilidade operacional de objetivos no console
+
+- `docs/implementation/execution-backlog.md` abriu o lote `MB-115` a `MB-119`, com `MB-115` concluido e `MB-116` como proximo item `ready`;
+- `apps/jarvis_console` ganhou o comando `objectives --mission-id ...` para mostrar estado persistido de projeto/objetivo, status, work items, checkpoints, artefatos e proxima acao;
+- a consulta e somente leitura: nao executa acao, nao escreve memoria e usa a API canonica do `memory-service`.
+
 ## 2026-05-13
 
 ### MB-110 a MB-114 fecham continuidade minima de projetos e objetivos
