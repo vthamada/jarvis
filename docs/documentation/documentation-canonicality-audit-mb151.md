@@ -300,3 +300,81 @@ Out of scope:
 `MB-151` is closed as a documentation audit and reprioritization item. It did
 not implement runtime functionality and did not execute broad documentation
 cleanup.
+
+## Appendix A -- Complete Reviewed Document Inventory
+
+| Document | Category | Recommended status | Recommended action | Risk | Human decision required? | Notes |
+| -------- | -------- | ------------------ | ------------------ | ---- | ------------------------ | ----- |
+| `docs/future/architecture/voice-runtime.md` | future architecture | human_decision_required | needs_human_review | high | yes | Future voice/realtime material remains out of current phase. |
+| `docs/future/architecture/specialists-v2.md` | future architecture | human_decision_required | needs_human_review | high | yes | Specialist evolution can affect core routing and must stay gated. |
+| `docs/adr/adr-001-absorcao-parcial-de-langgraph-no-nucleo.md` | ADR | canonical_active | keep_as_is | high | yes | Immutable decision record for governed LangGraph absorption. |
+| `docs/operations/operator-learning-loop.md` | operations | operational_active | keep_as_is | medium | no | Primary runbook for the current operator learning loop. |
+| `docs/operations/incident-response.md` | operations | update_required | update | medium | no | Useful runbook, but should reflect post-`MB-150` signals. |
+| `docs/operations/chat-transition-template.md` | operations | update_required | update | medium | no | Active handoff template should mention post-`MB-150` baseline and MB-152. |
+| `docs/operations/release-and-change-management.md` | operations | update_required | update | medium | no | Release guidance should reflect current gates and learning loop evidence. |
+| `docs/operations/v1-operational-baseline.md` | operations | archive_candidate | move_to_archive | medium | no | Historical baseline; preserve only after backlink map. |
+| `docs/roadmap/v1-roadmap.md` | roadmap | archive_candidate | move_to_archive | medium | no | Historical roadmap; should not guide active execution. |
+| `docs/roadmap/programa-de-excelencia.md` | roadmap | update_required | update | high | yes | Strategic roadmap; update only without changing phase direction. |
+| `docs/roadmap/programa-ate-v3.md` | roadmap | update_required | update | high | yes | Primary active roadmap; sensitive to phase decisions. |
+| `docs/executive/master-summary.md` | executive | merge_candidate | update | high | yes | Executive state appears stale; should be synced from active snapshot/backlog. |
+| `docs/documentation/engineering-constitution.md` | documentation | canonical_active | keep_as_is | high | no | Engineering guardrail document used by agents and gates. |
+| `docs/documentation/matriz-de-aderencia-mestre.md` | documentation | canonical_active | needs_human_review | high | yes | Bridge between master vision and implementation; avoid casual rewrites. |
+| `docs/documentation/repository-map-and-consistency-audit.md` | documentation | merge_candidate | update | medium | no | Older repository audit should be reconciled with MB-151/MB-152. |
+| `docs/architecture/protective-intelligence-architecture.md` | architecture | human_decision_required | needs_human_review | high | yes | Valid deferred vertical; do not promote by cleanup. |
+| `docs/architecture/mem0-repository-review.md` | architecture/research | historical_keep | mark_historical | low | no | Technology review supporting absorption decisions. |
+| `docs/architecture/hermes-agent-repository-review.md` | architecture/research | historical_keep | mark_historical | low | no | Technology review supporting absorption decisions. |
+| `docs/architecture/evolution-lab.md` | architecture | update_required | update | medium | no | Active architecture doc should reflect reviewed learning feedback loop. |
+| `docs/architecture/ecosystem-verticals-map.md` | architecture | update_required | update | high | yes | Vertical map is sensitive to deferred/active boundaries. |
+| `docs/architecture/documento_evolutivo_jarvis.md` | architecture | update_required | needs_human_review | high | yes | Evolution document should align with master vision and current baseline. |
+| `docs/architecture/technology-repository-review-framework.md` | architecture | canonical_active | keep_as_is | medium | no | Active framework for reviewing external repositories. |
+| `docs/architecture/technology-capability-extraction-map.md` | architecture | canonical_active | keep_as_is | medium | no | Active map for extracting capabilities from technology references. |
+| `docs/architecture/technology-absorption-order.md` | architecture | canonical_active | keep_as_is | medium | no | Active order for disciplined technology absorption. |
+| `docs/architecture/turboquant-review.md` | architecture/research | historical_keep | mark_historical | low | no | Technology review; keep as supporting evidence. |
+| `docs/architecture/technology-study.md` | architecture/research | merge_candidate | merge_into | medium | no | Useful study overlaps with active absorption docs; wait for backlinks. |
+| `docs/architecture/visao_ajuste_arquitetural_jarvis.md` | architecture | human_decision_required | needs_human_review | high | yes | Architecture adjustment material can affect canonical hierarchy. |
+| `docs/implementation/v2-repository-hygiene-tool-decisions.md` | implementation/history | archive_candidate | move_to_archive | low | no | Closed hygiene decision artifact; preserve traceability. |
+| `docs/implementation/v2-repository-hygiene-inventory.md` | implementation/history | archive_candidate | move_to_archive | low | no | Closed inventory; archive only after backlink map. |
+| `docs/implementation/v2-repository-hygiene-doc-decisions.md` | implementation/history | archive_candidate | move_to_archive | low | no | Closed documentation decision artifact. |
+| `docs/implementation/v2-repository-hygiene-and-tools-review-cut.md` | implementation/history | archive_candidate | move_to_archive | medium | no | Historical cut; may still be referenced by audits. |
+| `docs/implementation/v2-repository-hygiene-and-tools-review-cut-closure.md` | implementation/history | archive_candidate | move_to_archive | medium | no | Historical closure; preserve evidence. |
+| `docs/implementation/v2-native-memory-scope-hardening-cut-closure.md` | implementation/history | archive_candidate | move_to_archive | medium | no | Historical closure for memory hardening. |
+| `docs/implementation/v2-adherence-snapshot.md` | implementation | implementation_active | update | medium | no | Active snapshot; keep current with MB-151/MB-152. |
+| `docs/implementation/unified-gap-and-absorption-backlog.md` | implementation | implementation_active | update | medium | no | Active macro gap map; keep separate from micro queue. |
+| `docs/implementation/service-breakdown.md` | implementation | update_required | update | medium | no | Service map should reflect current post-`MB-150` capabilities. |
+| `docs/implementation/pre-v3-protective-intelligence-foundation-cut.md` | implementation/deferred | human_decision_required | needs_human_review | high | yes | Deferred vertical cut; do not activate without phase decision. |
+| `docs/implementation/implementation-strategy.md` | implementation/history | merge_candidate | merge_into | medium | no | Useful strategy content should not compete with active queue. |
+| `docs/implementation/execution-backlog.md` | implementation | implementation_active | keep_as_is | high | no | Canonical micro execution queue; MB-152 remains only ready item. |
+| `docs/archive/executive/v1-scope-summary.md` | archive | historical_keep | keep_as_is | low | no | Preserved executive history. |
+| `docs/archive/operations/internal-pilot-plan.md` | archive | historical_keep | keep_as_is | low | no | Historical pilot plan; useful for traceability. |
+| `docs/archive/documentation/estrutura_de_documentos_derivados.md` | archive | historical_keep | keep_as_is | low | no | Historical documentation structure reference. |
+| `docs/archive/documentation/auditoria-primaria-documento-mestre.md` | archive | historical_keep | keep_as_is | medium | no | Preserved master-document audit history. |
+| `docs/archive/implementation/v2-sprint-cycle.md` | archive | historical_keep | keep_as_is | low | no | Closed sprint cycle history. |
+| `docs/archive/implementation/v2-sovereign-alignment-cut.md` | archive | historical_keep | keep_as_is | low | no | Closed sovereign alignment cut. |
+| `docs/archive/implementation/v2-sovereign-alignment-cut-closure.md` | archive | historical_keep | keep_as_is | low | no | Closure evidence for sovereign alignment cut. |
+| `docs/archive/implementation/v2-native-memory-scope-hardening-cut.md` | archive | historical_keep | keep_as_is | low | no | Historical memory hardening cut. |
+| `docs/archive/implementation/v2-memory-gap-evidence-protocol.md` | archive | historical_keep | keep_as_is | low | no | Historical evidence protocol. |
+| `docs/archive/implementation/v2-memory-gap-evidence-cut.md` | archive | historical_keep | keep_as_is | low | no | Historical memory evidence cut. |
+| `docs/archive/implementation/v2-memory-gap-evidence-cut-closure.md` | archive | historical_keep | keep_as_is | low | no | Closure evidence for memory gap cut. |
+| `docs/archive/implementation/v2-memory-gap-decision.md` | archive | historical_keep | keep_as_is | low | no | Historical memory gap decision. |
+| `docs/archive/implementation/v2-memory-gap-baseline-evidence.md` | archive | historical_keep | keep_as_is | low | no | Historical baseline evidence. |
+| `docs/archive/implementation/v2-governed-benchmark-scenario-specs.md` | archive | historical_keep | keep_as_is | low | no | Historical benchmark scenario specs. |
+| `docs/archive/implementation/v2-governed-benchmark-matrix.md` | archive | historical_keep | keep_as_is | low | no | Historical benchmark matrix. |
+| `docs/archive/implementation/v2-governed-benchmark-execution-plan.md` | archive | historical_keep | keep_as_is | low | no | Historical benchmark execution plan. |
+| `docs/archive/implementation/v2-governed-benchmark-execution-cut.md` | archive | historical_keep | keep_as_is | low | no | Historical benchmark execution cut. |
+| `docs/archive/implementation/v2-governed-benchmark-execution-cut-closure.md` | archive | historical_keep | keep_as_is | low | no | Historical benchmark closure. |
+| `docs/archive/implementation/v2-governed-benchmark-decisions.md` | archive | historical_keep | keep_as_is | low | no | Historical benchmark decisions. |
+| `docs/archive/implementation/v2-domain-consumers-and-workflows-cut.md` | archive | historical_keep | keep_as_is | low | no | Historical domain/workflow cut. |
+| `docs/archive/implementation/v2-domain-consumers-and-workflows-cut-closure.md` | archive | historical_keep | keep_as_is | low | no | Historical domain/workflow closure. |
+| `docs/archive/implementation/v2-cycle-closure.md` | archive | historical_keep | keep_as_is | low | no | Closed V2 cycle record. |
+| `docs/archive/implementation/v2-alignment-cycle.md` | archive | historical_keep | keep_as_is | low | no | Historical alignment cycle. |
+| `docs/archive/implementation/v1-5-sprint-cycle.md` | archive | historical_keep | keep_as_is | low | no | Historical V1.5 sprint cycle. |
+| `docs/archive/implementation/v1-5-cycle-closure.md` | archive | historical_keep | keep_as_is | low | no | Historical V1.5 closure. |
+| `docs/archive/implementation/sprint-1-plan.md` | archive | historical_keep | keep_as_is | low | no | Early sprint plan history. |
+| `docs/archive/implementation/post-v1-sprint-cycle.md` | archive | historical_keep | keep_as_is | low | no | Historical post-V1 sprint cycle. |
+| `docs/archive/implementation/post-v1-cycle-closure.md` | archive | historical_keep | keep_as_is | low | no | Historical post-V1 closure. |
+| `docs/archive/implementation/first-milestone-plan.md` | archive | historical_keep | keep_as_is | low | no | First milestone history. |
+| `AGENTS.md` | root/governance | canonical_active | keep_as_is | high | no | Agent operating rules and gate requirements. |
+| `CHANGELOG.md` | root/operations | operational_active | update | medium | no | Active change log; keep synchronized with backlog state. |
+| `HANDOFF.md` | root/operations | operational_active | update | medium | no | Active resumption document; keep synchronized with MB state. |
+| `README.md` | root/operations | update_required | update | medium | no | Entry point should reflect current post-`MB-150` state. |
+| `documento_mestre_jarvis.md` | root/canonical | canonical_active | needs_human_review | high | yes | Sovereign constitutional source; do not change in cleanup pass. |
