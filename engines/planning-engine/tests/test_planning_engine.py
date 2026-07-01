@@ -78,6 +78,76 @@ def test_planning_engine_builds_structured_plan_with_continuity() -> None:
     assert "specialist_handoff" in plan.capability_decision_selected_capabilities
 
 
+def test_planning_engine_applies_bounded_reflection_influence() -> None:
+    engine = PlanningEngine()
+    plan = engine.build_task_plan(
+        PlanningContext(
+            intent="planning",
+            query="Plan milestone M4",
+            recovered_context=[],
+            active_domains=["strategy"],
+            active_minds=["mente_executiva"],
+            knowledge_snippets=[],
+            risk_markers=[],
+            requires_clarification=False,
+            preferred_response_mode="plan_and_operate",
+            primary_route="strategy",
+            route_workflow_profile="strategic_direction_workflow",
+            reflection_influence_status="applied",
+            reflection_influence_refs=["reflection://mission-a/req-1"],
+            reflection_influence_summary=(
+                "keep the observed pattern as reviewable learning material"
+            ),
+        )
+    )
+
+    assert plan.reflection_influence_status == "applied"
+    assert plan.reflection_influence_refs == ["reflection://mission-a/req-1"]
+    assert plan.reflection_influence_summary == (
+        "keep the observed pattern as reviewable learning material"
+    )
+    assert "reflection_influence=applied" in plan.plan_summary
+    assert "reflection_influence_status=applied" in plan.rationale
+    assert any("reflexao pos-tarefa relevante" in step for step in plan.steps)
+    assert any("nao promover mudanca sem revisao humana" in item for item in plan.constraints)
+
+
+def test_planning_engine_applies_reviewed_learning_influence() -> None:
+    engine = PlanningEngine()
+    plan = engine.build_task_plan(
+        PlanningContext(
+            intent="planning",
+            query="Plan milestone M5",
+            recovered_context=[],
+            active_domains=["software_development"],
+            active_minds=["mente_executiva"],
+            knowledge_snippets=[],
+            risk_markers=[],
+            requires_clarification=False,
+            preferred_response_mode="plan_and_operate",
+            primary_route="software_development",
+            route_workflow_profile="software_change_workflow",
+            reviewed_learning_influence_status="applied",
+            reviewed_learning_influence_refs=[
+                "reviewed-learning-guidance://review-1"
+            ],
+            reviewed_learning_influence_summary=(
+                "prefer small reversible patches with direct tests"
+            ),
+            reviewed_learning_influence_reason="workflow_match+route_match",
+        )
+    )
+
+    assert plan.reviewed_learning_influence_status == "applied"
+    assert plan.reviewed_learning_influence_refs == [
+        "reviewed-learning-guidance://review-1"
+    ]
+    assert "reviewed_learning_influence=applied" in plan.plan_summary
+    assert "reviewed_learning_influence_status=applied" in plan.rationale
+    assert any("aprendizado revisado por humano" in step for step in plan.steps)
+    assert any("sem release gate" in item for item in plan.constraints)
+
+
 def test_planning_engine_marks_related_continuity_source_when_candidate_is_present() -> None:
     engine = PlanningEngine()
     plan = engine.build_task_plan(

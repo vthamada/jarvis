@@ -179,6 +179,37 @@ def technology_absorption_assessment(result: PilotExecutionResult) -> str:
     return "not_applicable"
 
 
+def reflection_assisted_assessment(result: PilotExecutionResult) -> str:
+    status = result.reflection_assisted_eval_status
+    if status == "reflection_assisted" and result.reflection_influence_refs:
+        return "reflection_assisted"
+    if status == "reflection_signal_incomplete":
+        return "incomplete"
+    if status == "reflection_review_required":
+        return "review_required"
+    return "baseline_no_reflection"
+
+
+def reviewed_learning_assessment(result: PilotExecutionResult) -> str:
+    status = result.reviewed_learning_assisted_eval_status
+    if status == "reviewed_learning_assisted" and result.reviewed_learning_influence_refs:
+        return "reviewed_learning_assisted"
+    if status == "reviewed_learning_signal_incomplete":
+        return "incomplete"
+    if status == "reviewed_learning_review_required":
+        return "review_required"
+    return "baseline_no_reviewed_learning"
+
+
+def evolution_review_assessment(result: PilotExecutionResult) -> str:
+    status = result.evolution_review_decision_status
+    if status in {"approved", "rejected", "sandboxed", "needs_review", "rolled_back"}:
+        return status
+    if result.evolution_review_limits:
+        return "review_limited"
+    return "not_applicable"
+
+
 def experiment_lane_assessment(result: PilotExecutionResult) -> str:
     return expanded_eval_state(result)["experiment_lane_status"]
 
@@ -682,6 +713,9 @@ def evaluation_matrix(
             "technology_absorption": summarize_statuses(
                 [technology_absorption_assessment(result) for result in workflow_results]
             ),
+            "evolution_review": summarize_statuses(
+                [evolution_review_assessment(result) for result in workflow_results]
+            ),
             "experiment_lane": summarize_statuses(
                 [experiment_lane_assessment(result) for result in workflow_results]
             ),
@@ -916,6 +950,25 @@ def summarize_comparisons(
             "candidate_memory_lifecycle_review_rate": 0.0,
             "baseline_memory_corpus_decision": "not_applicable",
             "candidate_memory_corpus_decision": "not_applicable",
+            "baseline_reflection_assisted_decision": "not_applicable",
+            "candidate_reflection_assisted_decision": "not_applicable",
+            "baseline_reflection_assisted_rate": 0.0,
+            "candidate_reflection_assisted_rate": 0.0,
+            "baseline_reflection_baseline_rate": 0.0,
+            "candidate_reflection_baseline_rate": 0.0,
+            "baseline_reviewed_learning_decision": "not_applicable",
+            "candidate_reviewed_learning_decision": "not_applicable",
+            "baseline_reviewed_learning_assisted_rate": 0.0,
+            "candidate_reviewed_learning_assisted_rate": 0.0,
+            "baseline_reviewed_learning_baseline_rate": 0.0,
+            "candidate_reviewed_learning_baseline_rate": 0.0,
+            "reviewed_learning_release_conclusion": (
+                "no_promotion_without_release_gate"
+            ),
+            "baseline_evolution_review_decision": "not_applicable",
+            "candidate_evolution_review_decision": "not_applicable",
+            "baseline_evolution_reviewed_rate": 0.0,
+            "candidate_evolution_reviewed_rate": 0.0,
             "baseline_optimization_target_kind_decision": "not_applicable",
             "candidate_optimization_target_kind_decision": "not_applicable",
             "baseline_optimization_readiness_decision": "not_applicable",
@@ -1088,6 +1141,24 @@ def summarize_comparisons(
     ]
     candidate_memory_corpus = [
         memory_corpus_assessment(item) for item in available_candidates
+    ]
+    baseline_reflection_assisted = [
+        reflection_assisted_assessment(item.baseline) for item in comparisons
+    ]
+    candidate_reflection_assisted = [
+        reflection_assisted_assessment(item) for item in available_candidates
+    ]
+    baseline_reviewed_learning = [
+        reviewed_learning_assessment(item.baseline) for item in comparisons
+    ]
+    candidate_reviewed_learning = [
+        reviewed_learning_assessment(item) for item in available_candidates
+    ]
+    baseline_evolution_review = [
+        evolution_review_assessment(item.baseline) for item in comparisons
+    ]
+    candidate_evolution_review = [
+        evolution_review_assessment(item) for item in available_candidates
     ]
     baseline_optimization_target_kind = [
         optimization_target_kind_assessment(item.baseline) for item in comparisons
@@ -1398,6 +1469,63 @@ def summarize_comparisons(
         "candidate_memory_corpus_decision": summarize_statuses(
             candidate_memory_corpus
         ),
+        "baseline_reflection_assisted_decision": summarize_statuses(
+            baseline_reflection_assisted
+        ),
+        "candidate_reflection_assisted_decision": summarize_statuses(
+            candidate_reflection_assisted
+        ),
+        "baseline_reflection_assisted_rate": status_rate(
+            baseline_reflection_assisted,
+            "reflection_assisted",
+        ),
+        "candidate_reflection_assisted_rate": status_rate(
+            candidate_reflection_assisted,
+            "reflection_assisted",
+        ),
+        "baseline_reflection_baseline_rate": status_rate(
+            baseline_reflection_assisted,
+            "baseline_no_reflection",
+        ),
+        "candidate_reflection_baseline_rate": status_rate(
+            candidate_reflection_assisted,
+            "baseline_no_reflection",
+        ),
+        "baseline_reviewed_learning_decision": summarize_statuses(
+            baseline_reviewed_learning
+        ),
+        "candidate_reviewed_learning_decision": summarize_statuses(
+            candidate_reviewed_learning
+        ),
+        "baseline_reviewed_learning_assisted_rate": status_rate(
+            baseline_reviewed_learning,
+            "reviewed_learning_assisted",
+        ),
+        "candidate_reviewed_learning_assisted_rate": status_rate(
+            candidate_reviewed_learning,
+            "reviewed_learning_assisted",
+        ),
+        "baseline_reviewed_learning_baseline_rate": status_rate(
+            baseline_reviewed_learning,
+            "baseline_no_reviewed_learning",
+        ),
+        "candidate_reviewed_learning_baseline_rate": status_rate(
+            candidate_reviewed_learning,
+            "baseline_no_reviewed_learning",
+        ),
+        "reviewed_learning_release_conclusion": (
+            "no_promotion_without_release_gate"
+        ),
+        "baseline_evolution_review_decision": summarize_statuses(
+            baseline_evolution_review
+        ),
+        "candidate_evolution_review_decision": summarize_statuses(
+            candidate_evolution_review
+        ),
+        "baseline_evolution_reviewed_rate": 1.0
+        - status_rate(baseline_evolution_review, "not_applicable"),
+        "candidate_evolution_reviewed_rate": 1.0
+        - status_rate(candidate_evolution_review, "not_applicable"),
         "baseline_optimization_target_kind_decision": summarize_statuses(
             baseline_optimization_target_kind
         ),
@@ -1630,8 +1758,18 @@ def summarize_statuses(statuses: list[str]) -> str:
         return "candidate_ready"
     if any(item == "controlled_candidate" for item in statuses):
         return "controlled_candidate"
+    if any(item == "reviewed_learning_assisted" for item in statuses):
+        return "reviewed_learning_assisted"
+    if any(item == "reflection_assisted" for item in statuses):
+        return "reflection_assisted"
     if any(item == "manual_review_only" for item in statuses):
         return "manual_review_only"
+    if any(item == "review_required" for item in statuses):
+        return "review_required"
+    if any(item == "baseline_no_reflection" for item in statuses):
+        return "baseline_no_reflection"
+    if any(item == "baseline_no_reviewed_learning" for item in statuses):
+        return "baseline_no_reviewed_learning"
     if any(item == "baseline_expanding" for item in statuses):
         return "baseline_expanding"
     if any(item == "coverage_partial" for item in statuses):
@@ -1662,6 +1800,18 @@ def summarize_statuses(statuses: list[str]) -> str:
         return "validation_required"
     if any(item == "review_recommended" for item in statuses):
         return "review_recommended"
+    if any(item == "approved" for item in statuses):
+        return "approved"
+    if any(item == "sandboxed" for item in statuses):
+        return "sandboxed"
+    if any(item == "needs_review" for item in statuses):
+        return "needs_review"
+    if any(item == "rejected" for item in statuses):
+        return "rejected"
+    if any(item == "rolled_back" for item in statuses):
+        return "rolled_back"
+    if any(item == "review_limited" for item in statuses):
+        return "review_limited"
     if any(item == "monitor" for item in statuses):
         return "monitor"
     if any(item == "candidate" for item in statuses):
@@ -2016,6 +2166,67 @@ def compare_results(
                 != candidate.technology_absorption_signals
             ):
                 mismatch_fields.append("technology_absorption_signals")
+            if (
+                baseline.reflection_influence_status
+                != candidate.reflection_influence_status
+            ):
+                mismatch_fields.append("reflection_influence_status")
+            if baseline.reflection_influence_refs != candidate.reflection_influence_refs:
+                mismatch_fields.append("reflection_influence_refs")
+            if (
+                baseline.reflection_assisted_eval_status
+                != candidate.reflection_assisted_eval_status
+            ):
+                mismatch_fields.append("reflection_assisted_eval_status")
+            if (
+                baseline.reviewed_learning_influence_status
+                != candidate.reviewed_learning_influence_status
+            ):
+                mismatch_fields.append("reviewed_learning_influence_status")
+            if (
+                baseline.reviewed_learning_influence_refs
+                != candidate.reviewed_learning_influence_refs
+            ):
+                mismatch_fields.append("reviewed_learning_influence_refs")
+            if (
+                baseline.reviewed_learning_influence_reason
+                != candidate.reviewed_learning_influence_reason
+            ):
+                mismatch_fields.append("reviewed_learning_influence_reason")
+            if (
+                baseline.reviewed_learning_assisted_eval_status
+                != candidate.reviewed_learning_assisted_eval_status
+            ):
+                mismatch_fields.append("reviewed_learning_assisted_eval_status")
+            if (
+                baseline.evolution_review_decision_status
+                != candidate.evolution_review_decision_status
+            ):
+                mismatch_fields.append("evolution_review_decision_status")
+            if baseline.evolution_review_decision != candidate.evolution_review_decision:
+                mismatch_fields.append("evolution_review_decision")
+            if (
+                baseline.evolution_review_proposal_id
+                != candidate.evolution_review_proposal_id
+            ):
+                mismatch_fields.append("evolution_review_proposal_id")
+            if (
+                baseline.evolution_review_operator_ref
+                != candidate.evolution_review_operator_ref
+            ):
+                mismatch_fields.append("evolution_review_operator_ref")
+            if (
+                baseline.evolution_review_evidence_refs
+                != candidate.evolution_review_evidence_refs
+            ):
+                mismatch_fields.append("evolution_review_evidence_refs")
+            if (
+                baseline.evolution_review_rollback_plan_ref
+                != candidate.evolution_review_rollback_plan_ref
+            ):
+                mismatch_fields.append("evolution_review_rollback_plan_ref")
+            if baseline.evolution_review_limits != candidate.evolution_review_limits:
+                mismatch_fields.append("evolution_review_limits")
             if (
                 baseline.cognitive_recomposition_applied
                 != candidate.cognitive_recomposition_applied
@@ -3005,6 +3216,40 @@ def render_text(payload: dict[str, object]) -> str:
                 f"{summary['baseline_memory_corpus_decision']}",
                 "candidate_memory_corpus_decision="
                 f"{summary['candidate_memory_corpus_decision']}",
+                "baseline_reflection_assisted_decision="
+                f"{summary['baseline_reflection_assisted_decision']}",
+                "candidate_reflection_assisted_decision="
+                f"{summary['candidate_reflection_assisted_decision']}",
+                "baseline_reflection_assisted_rate="
+                f"{summary['baseline_reflection_assisted_rate']}",
+                "candidate_reflection_assisted_rate="
+                f"{summary['candidate_reflection_assisted_rate']}",
+                "baseline_reflection_baseline_rate="
+                f"{summary['baseline_reflection_baseline_rate']}",
+                "candidate_reflection_baseline_rate="
+                f"{summary['candidate_reflection_baseline_rate']}",
+                "baseline_reviewed_learning_decision="
+                f"{summary['baseline_reviewed_learning_decision']}",
+                "candidate_reviewed_learning_decision="
+                f"{summary['candidate_reviewed_learning_decision']}",
+                "baseline_reviewed_learning_assisted_rate="
+                f"{summary['baseline_reviewed_learning_assisted_rate']}",
+                "candidate_reviewed_learning_assisted_rate="
+                f"{summary['candidate_reviewed_learning_assisted_rate']}",
+                "baseline_reviewed_learning_baseline_rate="
+                f"{summary['baseline_reviewed_learning_baseline_rate']}",
+                "candidate_reviewed_learning_baseline_rate="
+                f"{summary['candidate_reviewed_learning_baseline_rate']}",
+                "reviewed_learning_release_conclusion="
+                f"{summary['reviewed_learning_release_conclusion']}",
+                "baseline_evolution_review_decision="
+                f"{summary['baseline_evolution_review_decision']}",
+                "candidate_evolution_review_decision="
+                f"{summary['candidate_evolution_review_decision']}",
+                "baseline_evolution_reviewed_rate="
+                f"{summary['baseline_evolution_reviewed_rate']}",
+                "candidate_evolution_reviewed_rate="
+                f"{summary['candidate_evolution_reviewed_rate']}",
                 "baseline_optimization_target_kind_decision="
                 f"{summary['baseline_optimization_target_kind_decision']}",
                 "candidate_optimization_target_kind_decision="
@@ -3256,6 +3501,15 @@ def serialize_comparisons(
                 "baseline_memory_corpus_assessment": memory_corpus_assessment(
                     item.baseline
                 ),
+                "baseline_reflection_assisted_assessment": (
+                    reflection_assisted_assessment(item.baseline)
+                ),
+                "baseline_reviewed_learning_assessment": (
+                    reviewed_learning_assessment(item.baseline)
+                ),
+                "baseline_evolution_review_assessment": evolution_review_assessment(
+                    item.baseline
+                ),
                 "baseline_procedural_artifact_assessment": procedural_artifact_assessment(
                     item.baseline
                 ),
@@ -3436,6 +3690,21 @@ def serialize_comparisons(
                 ),
                 "candidate_memory_corpus_assessment": (
                     memory_corpus_assessment(item.candidate) if item.candidate else None
+                ),
+                "candidate_reflection_assisted_assessment": (
+                    reflection_assisted_assessment(item.candidate)
+                    if item.candidate
+                    else None
+                ),
+                "candidate_reviewed_learning_assessment": (
+                    reviewed_learning_assessment(item.candidate)
+                    if item.candidate
+                    else None
+                ),
+                "candidate_evolution_review_assessment": (
+                    evolution_review_assessment(item.candidate)
+                    if item.candidate
+                    else None
                 ),
                 "candidate_procedural_artifact_assessment": (
                     procedural_artifact_assessment(item.candidate)

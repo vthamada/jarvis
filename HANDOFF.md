@@ -2,6 +2,94 @@
 
 ## Atualizacao 2026-05-17
 
+O corte pos-`MB-131` foi repriorizado em `MB-132`: a proxima frente ativa e o
+baseline do `Operator Learning Loop`. O objetivo e fechar o ciclo real
+`usar -> registrar -> refletir -> propor -> revisar -> medir`, partindo de
+missoes governadas do operador, sem abrir produto multicanal, voz, realtime,
+browser/computer use amplo, scheduler autonomo, autopromocao ou self-modification.
+
+`MB-133` foi concluido: o fluxo normal do `orchestrator-service` agora gera
+automaticamente `experience_record` recuperavel em memoria evolutiva bounded,
+com rota, workflow, mente primaria, dominio primario, especialista usado,
+resumo de plano, resumo de execucao, outcome, sinais, checkpoints e evidencia.
+
+`MB-134` tambem foi concluido: toda experiencia gerada pelo fluxo normal agora
+gera `post_task_reflection` bounded, com evidencia, testes sugeridos, rollback,
+revisao humana obrigatoria, `automatic_promotion_allowed=false` e
+`core_mutation_allowed=false`.
+
+`MB-135` foi concluido: reflexoes anteriores relevantes agora podem influenciar
+planning/synthesis de forma filtrada por workflow, rota e dominio, com
+`reflection_influence_status`, refs auditaveis e sintese final explicita. Isso
+nao promove mudanca automaticamente.
+
+`MB-136` foi concluido: `evolution-lab` agora expoe uma fila humana read-only
+de revisao evolutiva derivada de propostas sandbox, com estados explicitos,
+blockers, testes, rollback e promocao bloqueada sem gate humano. O console
+possui `evolution-review-queue --evolution-db ... --limit ...`. `MB-137` e o
+item seguinte do lote para eval/piloto baseline vs reflection-assisted.
+
+`MB-137` foi concluido: observabilidade, piloto interno, relatorio e comparador
+agora exibem `reflection_influence_status`, refs e
+`reflection_assisted_eval_status`, permitindo comparar baseline sem reflexao
+versus execucao reflection-assisted sem tratar ganho local como autopromocao.
+
+`MB-138` foi concluido: o console agora possui `mission-cycle --mission-id ...`
+em modo read-only para mostrar missao, objetivo, rota, workflow, plano,
+checkpoints, memoria usada, especialista, experiencia, reflexao, proposta
+evolutiva, status de revisao e proximo passo. `MB-139` e o proximo item
+`ready` para demonstrar o workflow pratico ponta a ponta.
+
+`MB-139` foi concluido: o console agora possui
+`mission-workflow "..." --mission-id ...`, que executa uma missao governada,
+registra experiencia/reflexao, cria proposta sandbox no `evolution-lab`, mostra
+o ciclo completo e encerra como `closed_with_human_review_pending`.
+
+`MB-140` foi concluido: `docs/operations/operator-learning-loop.md` documenta
+como iniciar missao, ver ciclo, consultar reflexoes, revisar propostas e
+interpretar o relatorio. O lote `MB-132` a `MB-140` esta fechado; nao ha novo
+item tecnico `ready` sem repriorizacao explicita baseada em evidencias de uso
+humano.
+
+Repriorizacao fechada: `MB-141` a `MB-145` formam o lote `Human Evolution
+Review Controls`. O objetivo e transformar propostas evolutivas pendentes em
+decisoes humanas auditaveis (`approve`, `reject`, `sandbox`, `needs_review`,
+`rollback`), com evidencia, testes, rollback e bloqueio de autopromocao.
+
+`MB-142` a `MB-145` foram concluidos: existe contrato compartilhado de decisao
+humana, o `evolution-lab` registra transicoes revisaveis com historico,
+evidencia, testes e rollback, o console expoe `evolution-review`, e
+observabilidade/relatorios/comparador propagam status, proposta, operador,
+evidencias, rollback e limites (`automatic_promotion_blocked`,
+`core_mutation_blocked`). O lote `Human Evolution Review Controls` esta fechado;
+nao ha novo item tecnico `ready` apos `MB-145` sem nova repriorizacao explicita
+baseada em uso humano real.
+
+Nova repriorizacao aberta: `MB-146` a `MB-150` formam o lote `Reviewed Learning
+Feedback Loop`. O objetivo e permitir que decisoes humanas revisadas virem
+guidance bounded, filtrado por rota/workflow/dominio, influenciem
+planning/synthesis de forma auditavel e sejam medidas contra baseline sem
+autopromocao.
+
+`MB-146` e `MB-147` foram concluidos: o backlog foi aberto e
+`ReviewedLearningGuidanceContract` agora existe em contratos/schemas/eventos,
+com derivacao no `evolution-lab` apenas para decisoes humanas `approved` ou
+`sandboxed`. O guidance preserva `automatic_promotion_allowed=false` e
+`core_mutation_allowed=false`.
+
+`MB-148` foi concluido: `reviewed_learning_guidance` agora pode influenciar
+planning/synthesis de forma filtrada por rota, workflow e dominio, com refs,
+motivo, status de influencia e bloqueio de promocao automatica.
+
+`MB-149` e `MB-150` foram concluidos: observabilidade, piloto interno,
+relatorio e comparador agora medem baseline vs reviewed-learning-assisted com
+status, refs, motivo, taxas e conclusao `no_promotion_without_release_gate`.
+O console (`mission-cycle`/`mission-workflow`) e a documentacao operacional
+mostram quando guidance revisado influenciou a missao, por que foi usado ou
+bloqueado e qual limite de release permanece ativo. O lote `MB-146` a `MB-150`
+esta fechado; nao ha novo item tecnico `ready` sem nova repriorizacao
+explicita.
+
 O corte pos-`MB-125` foi repriorizado em `MB-126`: a proxima frente ativa e
 experiencia operacional + reflexao pos-tarefa governada. O objetivo e fazer o
 JARVIS registrar missoes reais, outcomes, falhas, decisoes, evidencias e

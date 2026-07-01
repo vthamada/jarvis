@@ -2,17 +2,27 @@
 from tempfile import gettempdir
 from uuid import uuid4
 
-from evolution_lab.service import EvolutionLabService, TechnologyAbsorptionInput
+from evolution_lab.service import (
+    EvolutionLabService,
+    PostTaskReflectionInput,
+    TechnologyAbsorptionInput,
+)
 from memory_service.service import MemoryService
 
 from apps.jarvis_console.cli import (
     JarvisConsole,
     build_parser,
+    render_evolution_review_queue,
     render_experience_reflections,
+    render_mission_cycle,
     render_objective_state,
     render_response,
     run_chat_command,
+    run_evolution_review_command,
+    run_evolution_review_queue_command,
     run_experience_reflections_command,
+    run_mission_cycle_command,
+    run_mission_workflow_command,
     run_objective_command,
     run_objectives_command,
     run_technology_candidates_command,
@@ -139,6 +149,279 @@ def test_console_technology_candidates_shows_recent_absorption_candidate() -> No
     assert "core_replacement_allowed=False" in outputs[0]
 
 
+def test_console_evolution_review_queue_shows_human_review_items() -> None:
+    temp_dir = runtime_dir("console-review-queue")
+    evolution_db = temp_dir / "evolution.db"
+    service = EvolutionLabService(database_path=str(evolution_db))
+    service.create_proposal_from_post_task_reflection(
+        PostTaskReflectionInput(
+            experience_id="experience://mission-review/001",
+            mission_id="mission-review",
+            workflow_profile="software_change_workflow",
+            outcome_status="completed",
+            learning_candidate="bounded review improved workflow reliability",
+            recommendation="keep proposal in human review before promotion",
+            evidence_refs=["trace://req-review"],
+            proposed_tests=["python tools/engineering_gate.py --mode standard"],
+            rollback_plan_ref="rollback://workflow/current",
+        )
+    )
+    args = build_parser().parse_args(
+        [
+            "evolution-review-queue",
+            "--evolution-db",
+            str(evolution_db),
+            "--limit",
+            "5",
+        ]
+    )
+
+    outputs = run_evolution_review_queue_command(args)
+
+    assert "proposal_type=post_task_reflection_improvement" in outputs[0]
+    assert "review_status=needs_review" in outputs[0]
+    assert "requires_human_review=True" in outputs[0]
+    assert "automatic_promotion=False" in outputs[0]
+    assert "rollback_plan_ref=rollback://workflow/current" in outputs[0]
+
+
+def test_console_evolution_review_queue_handles_empty_items() -> None:
+    assert render_evolution_review_queue([]) == "No evolution review items found."
+
+
+def test_console_evolution_review_approves_with_evidence_and_rollback() -> None:
+    temp_dir = runtime_dir("console-review-decision")
+    evolution_db = temp_dir / "evolution.db"
+    service = EvolutionLabService(database_path=str(evolution_db))
+    proposal = service.create_proposal_from_post_task_reflection(
+        PostTaskReflectionInput(
+            experience_id="experience://mission-review-decision/001",
+            mission_id="mission-review-decision",
+            workflow_profile="software_change_workflow",
+            outcome_status="completed",
+            learning_candidate="human review can approve bounded sandbox learning",
+            recommendation="approve only with evidence and rollback",
+            evidence_refs=["trace://req-review-decision"],
+            proposed_tests=["python tools/engineering_gate.py --mode standard"],
+            rollback_plan_ref="rollback://workflow/current",
+        )
+    )
+    args = build_parser().parse_args(
+        [
+            "evolution-review",
+            "--evolution-db",
+            str(evolution_db),
+            "--proposal-id",
+            str(proposal.evolution_proposal_id),
+            "--action",
+            "approve",
+            "--evidence-ref",
+            "trace://req-review-decision",
+            "--proposed-test",
+            "python tools/engineering_gate.py --mode standard",
+            "--rollback-plan-ref",
+            "rollback://workflow/current",
+            "--risk-acceptance",
+            "bounded_sandbox_only",
+        ]
+    )
+
+    outputs = run_evolution_review_command(args)
+
+    assert "decision=approve" in outputs[0]
+    assert "review_status=approved" in outputs[0]
+    assert "automatic_promotion=False" in outputs[0]
+    assert "core_mutation_allowed=False" in outputs[0]
+    assert "rollback_plan_ref=rollback://workflow/current" in outputs[0]
+
+
+def test_console_evolution_review_blocks_approval_without_required_evidence() -> None:
+    temp_dir = runtime_dir("console-review-decision-blocked")
+    evolution_db = temp_dir / "evolution.db"
+    service = EvolutionLabService(database_path=str(evolution_db))
+    proposal = service.create_proposal_from_post_task_reflection(
+        PostTaskReflectionInput(
+            experience_id="experience://mission-review-decision-blocked/001",
+            mission_id="mission-review-decision-blocked",
+            workflow_profile="software_change_workflow",
+            outcome_status="completed",
+            learning_candidate="approval without evidence should stay in review",
+            recommendation="keep pending",
+        )
+    )
+    args = build_parser().parse_args(
+        [
+            "evolution-review",
+            "--evolution-db",
+            str(evolution_db),
+            "--proposal-id",
+            str(proposal.evolution_proposal_id),
+            "--action",
+            "approve",
+        ]
+    )
+
+    outputs = run_evolution_review_command(args)
+
+    assert "decision=approve" in outputs[0]
+    assert "review_status=needs_review" in outputs[0]
+    assert "evidence_required_for_human_approval" in outputs[0]
+    assert "automatic_promotion=False" in outputs[0]
+
+
+def test_console_mission_cycle_shows_operator_learning_loop() -> None:
+    temp_dir = runtime_dir("console-mission-cycle")
+    memory_db = temp_dir / "memory.db"
+    evolution_db = temp_dir / "evolution.db"
+    console = JarvisConsole.build(runtime_dir=temp_dir)
+    mission_id = "mission-console-cycle"
+    response = console.ask(
+        "Plan the controlled rollout.",
+        session_id="sess-console-cycle",
+        mission_id=mission_id,
+    )
+    assert response.experience_record is not None
+    assert response.post_task_reflection is not None
+    EvolutionLabService(database_path=str(evolution_db)).create_proposal_from_post_task_reflection(
+        PostTaskReflectionInput(
+            experience_id=response.experience_record.experience_id,
+            mission_id=mission_id,
+            workflow_profile=response.experience_record.workflow_profile,
+            outcome_status=response.experience_record.outcome_status,
+            learning_candidate=response.post_task_reflection.learning_candidate,
+            recommendation=response.post_task_reflection.recommendation,
+            evidence_refs=list(response.post_task_reflection.evidence_refs),
+            proposed_tests=list(response.post_task_reflection.proposed_tests),
+            rollback_plan_ref=response.post_task_reflection.rollback_plan_ref,
+        )
+    )
+    args = build_parser().parse_args(
+        [
+            "mission-cycle",
+            "--mission-id",
+            mission_id,
+            "--memory-db",
+            str(memory_db),
+            "--evolution-db",
+            str(evolution_db),
+        ]
+    )
+
+    outputs = run_mission_cycle_command(console, args)
+
+    assert "operator_learning_loop=read_only" in outputs[0]
+    assert "mission_id=mission-console-cycle" in outputs[0]
+    assert "objective_status=completed" in outputs[0]
+    assert "route=strategy" in outputs[0]
+    assert "plan_summary=" in outputs[0]
+    assert "specialist_used=structured_analysis_specialist" in outputs[0]
+    assert "experience_id=experience://mission-console-cycle/" in outputs[0]
+    assert "reflection_status=candidate" in outputs[0]
+    assert "reviewed_learning_influence_status=no_relevant_guidance" in outputs[0]
+    assert "reviewed_learning_influence_reason=no_scope_match" in outputs[0]
+    assert (
+        "reviewed_learning_assisted_eval_status=baseline_no_reviewed_learning"
+        in outputs[0]
+    )
+    assert (
+        "reviewed_learning_release_conclusion=no_promotion_without_release_gate"
+        in outputs[0]
+    )
+    assert "review_status=needs_review" in outputs[0]
+    assert "automatic_promotion=False" in outputs[0]
+    assert "next_operator_step=review_evolution_proposal" in outputs[0]
+
+
+def test_console_mission_cycle_handles_empty_records() -> None:
+    rendered = render_mission_cycle(
+        mission_id="missing-mission",
+        mission_state=None,
+        records=[],
+        review_items=[],
+    )
+
+    assert rendered == "No mission cycle found for mission_id=missing-mission"
+
+
+def test_console_mission_cycle_shows_reviewed_learning_influence() -> None:
+    flow_audit = type(
+        "FlowAuditStub",
+        (),
+        {
+            "reviewed_learning_influence_status": "applied",
+            "reviewed_learning_influence_refs": [
+                "reviewed-learning://guidance/001"
+            ],
+            "reviewed_learning_influence_reason": "workflow_match",
+            "reviewed_learning_assisted_eval_status": "reviewed_learning_assisted",
+            "reviewed_learning_release_conclusion": (
+                "no_promotion_without_release_gate"
+            ),
+        },
+    )()
+
+    rendered = render_mission_cycle(
+        mission_id="mission-reviewed-learning",
+        mission_state=MissionStateContract(
+            mission_id=MissionId("mission-reviewed-learning"),
+            mission_goal="Validate reviewed learning guidance",
+            mission_status=MissionStatus.ACTIVE,
+            checkpoints=[],
+            updated_at="2026-05-17T00:00:00Z",
+        ),
+        records=[],
+        review_items=[],
+        flow_audit=flow_audit,
+    )
+
+    assert "reviewed_learning_influence_status=applied" in rendered
+    assert (
+        "reviewed_learning_influence_refs=reviewed-learning://guidance/001"
+        in rendered
+    )
+    assert "reviewed_learning_influence_reason=workflow_match" in rendered
+    assert (
+        "reviewed_learning_assisted_eval_status=reviewed_learning_assisted"
+        in rendered
+    )
+    assert (
+        "reviewed_learning_release_conclusion=no_promotion_without_release_gate"
+        in rendered
+    )
+
+
+def test_console_mission_workflow_runs_governed_loop_end_to_end() -> None:
+    temp_dir = runtime_dir("console-mission-workflow")
+    evolution_db = temp_dir / "evolution.db"
+    console = JarvisConsole.build(runtime_dir=temp_dir)
+    args = build_parser().parse_args(
+        [
+            "mission-workflow",
+            "Plan the controlled rollout.",
+            "--session-id",
+            "sess-console-workflow",
+            "--mission-id",
+            "mission-console-workflow",
+            "--evolution-db",
+            str(evolution_db),
+        ]
+    )
+
+    outputs = run_mission_workflow_command(console, args)
+
+    assert "mission_workflow_status=closed_with_human_review_pending" in outputs[0]
+    assert "governance_decision=allow_with_conditions" in outputs[0]
+    assert "mission_started=mission-console-workflow" in outputs[0]
+    assert "plan_status=created" in outputs[0]
+    assert "execution_status=completed" in outputs[0]
+    assert "experience_recorded=True" in outputs[0]
+    assert "post_task_reflection_recorded=True" in outputs[0]
+    assert "evolution_proposal_id=evo-proposal-" in outputs[0]
+    assert "review_status=needs_review" in outputs[0]
+    assert "operator_learning_loop=read_only" in outputs[0]
+    assert "next_operator_step=review_evolution_proposal" in outputs[0]
+
+
 def test_console_experience_reflections_shows_recent_records() -> None:
     temp_dir = runtime_dir("console-experience-reflections")
     memory_db = temp_dir / "memory.db"
@@ -183,6 +466,43 @@ def test_console_experience_reflections_shows_recent_records() -> None:
 
 def test_console_experience_reflections_handles_empty_records() -> None:
     assert render_experience_reflections([]) == "No experience reflections found."
+
+
+def test_console_experience_reflections_shows_pending_reflection() -> None:
+    temp_dir = runtime_dir("console-experience-pending")
+    memory_db = temp_dir / "memory.db"
+    service = MemoryService(database_url=f"sqlite:///{memory_db.as_posix()}")
+    service.record_experience(
+        experience=ExperienceRecordContract(
+            experience_id="experience://mission-console-pending/req-1",
+            mission_id=MissionId("mission-console-pending"),
+            workflow_profile="strategic_direction_workflow",
+            outcome_status="completed",
+            user_intent="planning",
+            route="strategy",
+            primary_mind="mente_executiva",
+            primary_domain_driver="estrategia_e_pensamento_sistemico",
+            specialist_used=["structured_analysis_specialist"],
+            evidence_refs=["trace://request/req-1"],
+            timestamp="2026-05-17T00:00:00Z",
+        )
+    )
+    args = build_parser().parse_args(
+        [
+            "experience-reflections",
+            "--memory-db",
+            str(memory_db),
+            "--mission-id",
+            "mission-console-pending",
+        ]
+    )
+
+    outputs = run_experience_reflections_command(args)
+
+    assert "experience_id=experience://mission-console-pending/req-1" in outputs[0]
+    assert "route=strategy" in outputs[0]
+    assert "specialist_used=structured_analysis_specialist" in outputs[0]
+    assert "reflection_status=pending" in outputs[0]
 
 
 def test_console_objectives_sanitizes_control_characters_in_persisted_state() -> None:

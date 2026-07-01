@@ -295,6 +295,151 @@ def test_observability_service_audits_experience_reflection_signals() -> None:
     )
 
 
+def test_observability_service_audits_reflection_influence_signals() -> None:
+    temp_dir = runtime_dir("observability-reflection-influence")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service.ingest_events(
+        [
+            InternalEventEnvelope(
+                event_id="evt-ri-1",
+                event_name="plan_built",
+                timestamp="2026-03-19T00:00:00+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "reflection_influence_status": "applied",
+                    "reflection_influence_refs": ["reflection://mission-ri/001"],
+                    "reflection_influence_summary": "usar criterio anterior",
+                },
+                request_id="req-ri",
+                session_id="sess-ri",
+                mission_id="mission-ri",
+                correlation_id="req-ri",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-ri-2",
+                event_name="response_synthesized",
+                timestamp="2026-03-19T00:00:01+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "reflection_influence_status": "applied",
+                    "reflection_influence_refs": ["reflection://mission-ri/001"],
+                },
+                request_id="req-ri",
+                session_id="sess-ri",
+                mission_id="mission-ri",
+                correlation_id="req-ri",
+            ),
+        ]
+    )
+
+    audit = service.audit_flow(ObservabilityQuery(request_id="req-ri"))
+
+    assert audit.reflection_influence_status == "applied"
+    assert audit.reflection_influence_refs == ["reflection://mission-ri/001"]
+    assert audit.reflection_influence_summary == "usar criterio anterior"
+    assert audit.reflection_assisted_eval_status == "reflection_assisted"
+
+
+def test_observability_service_audits_reviewed_learning_influence_signals() -> None:
+    temp_dir = runtime_dir("observability-reviewed-learning")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service.ingest_events(
+        [
+            InternalEventEnvelope(
+                event_id="evt-rl-1",
+                event_name="plan_built",
+                timestamp="2026-05-17T00:00:00+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "reviewed_learning_influence_status": "applied",
+                    "reviewed_learning_influence_refs": [
+                        "reviewed-learning://guidance/001"
+                    ],
+                    "reviewed_learning_influence_summary": (
+                        "preservar decisao revisada"
+                    ),
+                    "reviewed_learning_influence_reason": "workflow_match",
+                },
+                request_id="req-rl",
+                session_id="sess-rl",
+                mission_id="mission-rl",
+                correlation_id="req-rl",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-rl-2",
+                event_name="response_synthesized",
+                timestamp="2026-05-17T00:00:01+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "reviewed_learning_influence_status": "applied",
+                    "reviewed_learning_influence_refs": [
+                        "reviewed-learning://guidance/001"
+                    ],
+                },
+                request_id="req-rl",
+                session_id="sess-rl",
+                mission_id="mission-rl",
+                correlation_id="req-rl",
+            ),
+        ]
+    )
+
+    audit = service.audit_flow(ObservabilityQuery(request_id="req-rl"))
+
+    assert audit.reviewed_learning_influence_status == "applied"
+    assert audit.reviewed_learning_influence_refs == [
+        "reviewed-learning://guidance/001"
+    ]
+    assert audit.reviewed_learning_influence_summary == "preservar decisao revisada"
+    assert audit.reviewed_learning_influence_reason == "workflow_match"
+    assert audit.reviewed_learning_assisted_eval_status == (
+        "reviewed_learning_assisted"
+    )
+    assert audit.reviewed_learning_release_conclusion == (
+        "no_promotion_without_release_gate"
+    )
+
+
+def test_observability_service_audits_evolution_review_decision() -> None:
+    temp_dir = runtime_dir("observability-evolution-review")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service.ingest_events(
+        [
+            InternalEventEnvelope(
+                event_id="evt-review-1",
+                event_name="evolution_review_decision_declared",
+                timestamp="2026-05-17T00:00:00+00:00",
+                source_service="evolution-lab",
+                payload={
+                    "evolution_review_decision_status": "approved",
+                    "evolution_review_decision": "approve",
+                    "evolution_proposal_id": "proposal-123",
+                    "operator_ref": "operator://human",
+                    "evolution_review_evidence_refs": ["evidence://eval/123"],
+                    "rollback_plan_ref": "rollback://proposal-123",
+                    "automatic_promotion_allowed": False,
+                    "core_mutation_allowed": False,
+                },
+                request_id="req-review",
+                session_id="sess-review",
+                mission_id="mission-review",
+                correlation_id="req-review",
+            )
+        ]
+    )
+
+    audit = service.audit_flow(ObservabilityQuery(request_id="req-review"))
+
+    assert audit.evolution_review_decision_status == "approved"
+    assert audit.evolution_review_decision == "approve"
+    assert audit.evolution_review_proposal_id == "proposal-123"
+    assert audit.evolution_review_operator_ref == "operator://human"
+    assert audit.evolution_review_evidence_refs == ["evidence://eval/123"]
+    assert audit.evolution_review_rollback_plan_ref == "rollback://proposal-123"
+    assert "automatic_promotion_blocked" in audit.evolution_review_limits
+    assert "core_mutation_blocked" in audit.evolution_review_limits
+
+
 def test_observability_service_audits_surface_continuity_signals() -> None:
     temp_dir = runtime_dir("observability-surface")
     service = ObservabilityService(database_path=str(temp_dir / "observability.db"))

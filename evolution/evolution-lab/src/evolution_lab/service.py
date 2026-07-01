@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from os import getenv
 from pathlib import Path
@@ -13,8 +13,11 @@ from evolution_lab.repository import EvolutionLabRepository
 from shared.contracts import (
     EvolutionDecisionContract,
     EvolutionProposalContract,
+    EvolutionReviewDecisionContract,
+    EvolutionReviewQueueItemContract,
     ExperienceRecordContract,
     PostTaskReflectionContract,
+    ReviewedLearningGuidanceContract,
     TechnologyAbsorptionCandidateContract,
 )
 from shared.eval_expansion import derive_expanded_eval_state
@@ -28,6 +31,25 @@ SUPPORTED_EVOLUTION_STRATEGIES = (
     "mipro_like_search",
     "textgrad_like_refinement",
 )
+EVOLUTION_REVIEW_STATUSES = (
+    "observed",
+    "candidate",
+    "needs_review",
+    "approved",
+    "rejected",
+    "sandboxed",
+    "promoted",
+    "rolled_back",
+)
+EVOLUTION_REVIEW_ACTIONS = {
+    "approve": "approved",
+    "reject": "rejected",
+    "sandbox": "sandboxed",
+    "needs_review": "needs_review",
+    "rollback": "rolled_back",
+}
+RISKY_REVIEW_ACTIONS = {"approve", "sandbox"}
+REVIEWED_LEARNING_GUIDANCE_STATUSES = {"approved", "sandboxed"}
 
 
 @dataclass(frozen=True)
@@ -241,6 +263,14 @@ class EvolutionLabService:
         signals = list(source_signals or [])
         if strategy_signal not in signals:
             signals.append(strategy_signal)
+        blockers = list(optimization_blockers or [])
+        review_context = self._review_context(
+            status="needs_review",
+            blockers=blockers,
+            rollback_plan_ref=None,
+        )
+        merged_strategy_context = dict(strategy_context or {})
+        merged_strategy_context.setdefault("evolution_review", review_context)
 
         proposal = EvolutionProposalContract(
             evolution_proposal_id=EvolutionProposalId(f"evo-proposal-{uuid4().hex[:8]}"),
@@ -264,12 +294,12 @@ class EvolutionLabService:
             optimization_target_kind=optimization_target_kind,
             optimization_candidate_status=optimization_candidate_status,
             optimization_safety_status=optimization_safety_status,
-            optimization_blockers=list(optimization_blockers or []),
+            optimization_blockers=blockers,
             candidate_refs=list(candidate_refs or []),
             refinement_vectors=list(refinement_vectors or []),
             evaluation_matrix=dict(evaluation_matrix or {}),
             selection_criteria=dict(selection_criteria or {}),
-            strategy_context=dict(strategy_context or {}),
+            strategy_context=merged_strategy_context,
         )
         self.repository.record_proposal(proposal)
         return proposal
@@ -966,6 +996,11 @@ class EvolutionLabService:
                     "core_mutation_allowed": False,
                     "manual_review_required": True,
                 },
+                "evolution_review": self._review_context(
+                    status="needs_review",
+                    blockers=list(reflection.blockers),
+                    rollback_plan_ref=reflection.rollback_plan_ref,
+                ),
             },
             optimization_candidate_status=(
                 "blocked" if reflection.blockers else "candidate"
@@ -1020,10 +1055,136 @@ class EvolutionLabService:
 
         return self.repository.list_proposals(limit=limit)
 
+    def list_human_review_queue(
+        self,
+        limit: int = 20,
+    ) -> list[EvolutionReviewQueueItemContract]:
+        """Return reviewable evolution proposals without promoting anything."""
+
+        proposals = self.repository.list_proposals(limit=limit)
+        return [self._proposal_to_review_item(proposal) for proposal in proposals]
+
     def list_recent_decisions(self, limit: int = 20) -> list[EvolutionDecisionContract]:
         """Return recent evolution decisions for local review."""
 
         return self.repository.list_decisions(limit=limit)
+
+    def review_proposal(
+        self,
+        *,
+        evolution_proposal_id: str,
+        action: str,
+        operator_ref: str,
+        evidence_refs: list[str] | None = None,
+        proposed_tests: list[str] | None = None,
+        rollback_plan_ref: str | None = None,
+        risk_acceptance: str | None = None,
+        review_notes: list[str] | None = None,
+    ) -> EvolutionReviewDecisionContract:
+        """Record a human review decision without automatic promotion."""
+
+        proposal = self.repository.fetch_proposal(evolution_proposal_id)
+        if proposal is None:
+            raise ValueError(f"unknown evolution proposal: {evolution_proposal_id}")
+        normalized_action = action.replace("-", "_")
+        if normalized_action not in EVOLUTION_REVIEW_ACTIONS:
+            raise ValueError(f"unsupported evolution review action: {action}")
+
+        safe_evidence_refs = self._unique_values(list(evidence_refs or []))
+        safe_tests = self._unique_values(list(proposed_tests or proposal.proposed_tests))
+        safe_notes = list(review_notes or [])
+        safe_rollback_ref = rollback_plan_ref or self._proposal_rollback_plan_ref(proposal)
+        blockers = self._review_action_blockers(
+            action=normalized_action,
+            evidence_refs=safe_evidence_refs,
+            proposed_tests=safe_tests,
+            rollback_plan_ref=safe_rollback_ref,
+        )
+        review_status = (
+            "needs_review"
+            if blockers and normalized_action in RISKY_REVIEW_ACTIONS
+            else EVOLUTION_REVIEW_ACTIONS[normalized_action]
+        )
+        decision = EvolutionReviewDecisionContract(
+            review_decision_id=(
+                f"review-decision://{proposal.evolution_proposal_id}/{uuid4().hex[:8]}"
+            ),
+            evolution_proposal_id=proposal.evolution_proposal_id,
+            review_status=review_status,
+            decision=normalized_action,
+            operator_ref=operator_ref,
+            evidence_refs=safe_evidence_refs,
+            proposed_tests=safe_tests,
+            rollback_plan_ref=safe_rollback_ref,
+            risk_acceptance=risk_acceptance,
+            review_notes=safe_notes + blockers,
+            timestamp=self.now(),
+            automatic_promotion_allowed=False,
+            core_mutation_allowed=False,
+        )
+        self.repository.record_proposal(
+            replace(
+                proposal,
+                strategy_context=self._strategy_context_with_review_decision(
+                    proposal=proposal,
+                    decision=decision,
+                    blockers=blockers,
+                ),
+            )
+        )
+        self.repository.record_decision(
+            self._review_decision_to_evolution_decision(
+                proposal=proposal,
+                decision=decision,
+                blockers=blockers,
+            )
+        )
+        return decision
+
+    def derive_reviewed_learning_guidance(
+        self,
+        decision: EvolutionReviewDecisionContract,
+        *,
+        expires_at: str | None = None,
+    ) -> ReviewedLearningGuidanceContract:
+        """Derive bounded runtime guidance from an approved human review."""
+
+        if decision.review_status not in REVIEWED_LEARNING_GUIDANCE_STATUSES:
+            raise ValueError(
+                "reviewed learning guidance requires approved or sandboxed review"
+            )
+        if decision.automatic_promotion_allowed or decision.core_mutation_allowed:
+            raise ValueError("review decision cannot authorize autonomous mutation")
+        proposal = self.repository.fetch_proposal(str(decision.evolution_proposal_id))
+        if proposal is None:
+            raise ValueError(
+                f"unknown evolution proposal: {decision.evolution_proposal_id}"
+            )
+        route, workflow_profile, domain = self._reviewed_guidance_scope(proposal)
+        guidance_summary = self._reviewed_guidance_summary(proposal)
+        return ReviewedLearningGuidanceContract(
+            guidance_id=(
+                "reviewed-learning-guidance://"
+                f"{self._signal_value(decision.review_decision_id)}"
+            ),
+            source_review_decision_id=decision.review_decision_id,
+            evolution_proposal_id=proposal.evolution_proposal_id,
+            review_status=decision.review_status,
+            route=route,
+            workflow_profile=workflow_profile,
+            domain=domain,
+            guidance_summary=guidance_summary,
+            allowed_usage=self._reviewed_guidance_allowed_usage(decision.review_status),
+            evidence_refs=self._unique_values(
+                [*decision.evidence_refs, *proposal.baseline_refs]
+            ),
+            rollback_plan_ref=decision.rollback_plan_ref
+            or self._proposal_rollback_plan_ref(proposal),
+            timestamp=self.now(),
+            expires_at=expires_at,
+            automatic_promotion_allowed=False,
+            core_mutation_allowed=False,
+        )
 
     def preferred_strategy(self) -> str:
         """Return the current sandbox-first evolution strategy."""
@@ -1041,6 +1202,236 @@ class EvolutionLabService:
         if strategy_name in SUPPORTED_EVOLUTION_STRATEGIES:
             return str(strategy_name)
         return self.preferred_strategy()
+
+    @staticmethod
+    def _review_context(
+        *,
+        status: str,
+        blockers: list[str],
+        rollback_plan_ref: str | None,
+    ) -> dict[str, object]:
+        safe_status = status if status in EVOLUTION_REVIEW_STATUSES else "needs_review"
+        return {
+            "review_status": safe_status,
+            "allowed_statuses": list(EVOLUTION_REVIEW_STATUSES),
+            "requires_human_review": True,
+            "promotion_blocked_without_gate": True,
+            "blockers": list(blockers),
+            "rollback_plan_ref": rollback_plan_ref,
+        }
+
+    @staticmethod
+    def _proposal_to_review_item(
+        proposal: EvolutionProposalContract,
+    ) -> EvolutionReviewQueueItemContract:
+        review = dict(proposal.strategy_context.get("evolution_review", {}))
+        blockers = list(review.get("blockers", proposal.optimization_blockers))
+        status = str(review.get("review_status") or "needs_review")
+        if status not in EVOLUTION_REVIEW_STATUSES:
+            status = "needs_review"
+        rollback_plan_ref = review.get("rollback_plan_ref")
+        return EvolutionReviewQueueItemContract(
+            review_item_id=f"review://{proposal.evolution_proposal_id}",
+            evolution_proposal_id=proposal.evolution_proposal_id,
+            proposal_type=proposal.proposal_type,
+            review_status=status,
+            review_reason=(
+                "manual review required before promotion or runtime change"
+            ),
+            requires_human_review=bool(review.get("requires_human_review", True)),
+            requires_sandbox=proposal.requires_sandbox,
+            risk_hint=proposal.risk_hint,
+            target_scope=proposal.target_scope,
+            candidate_refs=list(proposal.candidate_refs),
+            blockers=blockers,
+            proposed_tests=list(proposal.proposed_tests),
+            rollback_plan_ref=(
+                str(rollback_plan_ref) if rollback_plan_ref is not None else None
+            ),
+        )
+
+    @staticmethod
+    def _proposal_rollback_plan_ref(
+        proposal: EvolutionProposalContract,
+    ) -> str | None:
+        review = dict(proposal.strategy_context.get("evolution_review", {}))
+        rollback_plan_ref = review.get("rollback_plan_ref")
+        return str(rollback_plan_ref) if rollback_plan_ref is not None else None
+
+    @staticmethod
+    def _reviewed_guidance_scope(
+        proposal: EvolutionProposalContract,
+    ) -> tuple[str, str, str]:
+        reflection_matrix = dict(proposal.evaluation_matrix.get("post_task_reflection", {}))
+        workflow_profile = str(
+            reflection_matrix.get("workflow_profile")
+            or EvolutionLabService._scope_value(proposal.target_scope, "workflow")
+            or "unknown_workflow"
+        )
+        route = str(
+            EvolutionLabService._source_signal_value(
+                proposal.source_signals,
+                "domain://primary-route/",
+            )
+            or EvolutionLabService._scope_value(proposal.target_scope, "route")
+            or workflow_profile
+            or "unknown_route"
+        )
+        domain = str(
+            EvolutionLabService._source_signal_value(
+                proposal.source_signals,
+                "domain://primary-driver/",
+            )
+            or EvolutionLabService._source_signal_value(
+                proposal.source_signals,
+                "domain://registry/",
+            )
+            or route
+            or "unknown_domain"
+        )
+        return route, workflow_profile, domain
+
+    @staticmethod
+    def _reviewed_guidance_summary(proposal: EvolutionProposalContract) -> str:
+        reflection = dict(proposal.strategy_context.get("post_task_reflection", {}))
+        recommendation = reflection.get("recommendation")
+        learning_candidate = reflection.get("learning_candidate")
+        return str(recommendation or learning_candidate or proposal.expected_gain)
+
+    @staticmethod
+    def _reviewed_guidance_allowed_usage(review_status: str) -> list[str]:
+        if review_status == "sandboxed":
+            return [
+                "sandbox_planning_context",
+                "sandbox_synthesis_context",
+                "evaluation_context",
+            ]
+        return [
+            "planning_context",
+            "synthesis_context",
+            "evaluation_context",
+        ]
+
+    @staticmethod
+    def _scope_value(target_scope: str | None, prefix: str) -> str | None:
+        if target_scope is None:
+            return None
+        marker = f"{prefix}:"
+        if target_scope.startswith(marker):
+            return target_scope[len(marker) :]
+        return None
+
+    @staticmethod
+    def _source_signal_value(signals: list[str], prefix: str) -> str | None:
+        for signal in signals:
+            if signal.startswith(prefix):
+                return signal[len(prefix) :]
+        return None
+
+    @staticmethod
+    def _review_action_blockers(
+        *,
+        action: str,
+        evidence_refs: list[str],
+        proposed_tests: list[str],
+        rollback_plan_ref: str | None,
+    ) -> list[str]:
+        blockers: list[str] = []
+        if action in RISKY_REVIEW_ACTIONS:
+            if not evidence_refs:
+                blockers.append("evidence_required_for_human_approval")
+            if not proposed_tests:
+                blockers.append("tests_required_for_human_approval")
+            if not rollback_plan_ref:
+                blockers.append("rollback_required_for_human_approval")
+        if action == "rollback" and not rollback_plan_ref:
+            blockers.append("rollback_plan_required")
+        return blockers
+
+    @staticmethod
+    def _strategy_context_with_review_decision(
+        *,
+        proposal: EvolutionProposalContract,
+        decision: EvolutionReviewDecisionContract,
+        blockers: list[str],
+    ) -> dict[str, object]:
+        context = dict(proposal.strategy_context)
+        review = dict(context.get("evolution_review", {}))
+        history = list(review.get("review_history", []))
+        history.append(
+            {
+                "review_decision_id": decision.review_decision_id,
+                "review_status": decision.review_status,
+                "decision": decision.decision,
+                "operator_ref": decision.operator_ref,
+                "evidence_refs": list(decision.evidence_refs),
+                "proposed_tests": list(decision.proposed_tests),
+                "rollback_plan_ref": decision.rollback_plan_ref,
+                "risk_acceptance": decision.risk_acceptance,
+                "review_notes": list(decision.review_notes),
+                "timestamp": decision.timestamp,
+                "automatic_promotion_allowed": False,
+                "core_mutation_allowed": False,
+            }
+        )
+        review.update(
+            {
+                "review_status": decision.review_status,
+                "last_decision": decision.decision,
+                "last_operator_ref": decision.operator_ref,
+                "last_review_decision_id": decision.review_decision_id,
+                "last_reviewed_at": decision.timestamp,
+                "blockers": list(blockers),
+                "rollback_plan_ref": decision.rollback_plan_ref,
+                "requires_human_review": True,
+                "promotion_blocked_without_gate": True,
+                "automatic_promotion_allowed": False,
+                "core_mutation_allowed": False,
+                "review_history": history,
+            }
+        )
+        context["evolution_review"] = review
+        return context
+
+    def _review_decision_to_evolution_decision(
+        self,
+        *,
+        proposal: EvolutionProposalContract,
+        decision: EvolutionReviewDecisionContract,
+        blockers: list[str],
+    ) -> EvolutionDecisionContract:
+        return EvolutionDecisionContract(
+            evolution_decision_id=EvolutionDecisionId(f"evo-decision-{uuid4().hex[:8]}"),
+            evolution_proposal_id=proposal.evolution_proposal_id,
+            decision=f"human_{decision.decision}",
+            comparison_summary=(
+                f"human_review_status={decision.review_status}; "
+                f"action={decision.decision}; blockers={','.join(blockers) or 'none'}"
+            ),
+            timestamp=decision.timestamp,
+            promoted_to=None,
+            rollback_plan_ref=decision.rollback_plan_ref,
+            governance_refs=[
+                f"human_review://{decision.operator_ref}",
+                f"review_decision://{decision.review_decision_id}",
+            ],
+            notes=[
+                *decision.review_notes,
+                "automatic_promotion_allowed=False",
+                "core_mutation_allowed=False",
+            ],
+            optimization_scope=proposal.optimization_scope,
+            optimization_target_kind=proposal.optimization_target_kind,
+            optimization_safety_status=proposal.optimization_safety_status,
+            optimization_blockers=list(proposal.optimization_blockers) + blockers,
+            baseline_label="current_baseline",
+            candidate_label=str(proposal.evolution_proposal_id),
+            selected_candidate_label=(
+                str(proposal.evolution_proposal_id)
+                if decision.review_status in {"approved", "sandboxed"}
+                else None
+            ),
+        )
 
     @staticmethod
     def _metrics_from_flow_evaluation(evaluation: FlowEvaluationInput) -> dict[str, float]:

@@ -160,6 +160,23 @@ class PilotTraceSummary:
     experience_reflection_blockers: list[str] | None = None
     experience_reflection_refs: list[str] | None = None
     experience_reflection_signals: list[str] | None = None
+    reflection_influence_status: str = "not_applicable"
+    reflection_influence_refs: list[str] | None = None
+    reflection_influence_summary: str | None = None
+    reflection_assisted_eval_status: str = "baseline_no_reflection"
+    reviewed_learning_influence_status: str = "not_applicable"
+    reviewed_learning_influence_refs: list[str] | None = None
+    reviewed_learning_influence_summary: str | None = None
+    reviewed_learning_influence_reason: str | None = None
+    reviewed_learning_assisted_eval_status: str = "baseline_no_reviewed_learning"
+    reviewed_learning_release_conclusion: str = "no_promotion_without_release_gate"
+    evolution_review_decision_status: str = "not_applicable"
+    evolution_review_decision: str = "not_applicable"
+    evolution_review_proposal_id: str | None = None
+    evolution_review_operator_ref: str | None = None
+    evolution_review_evidence_refs: list[str] | None = None
+    evolution_review_rollback_plan_ref: str | None = None
+    evolution_review_limits: list[str] | None = None
     experiment_lane_status: str = "not_applicable"
     wave2_candidate_class: str = "baseline_hardening"
     experiment_entry_status: str = "not_applicable"
@@ -336,6 +353,37 @@ def summarize_traces(
             experience_reflection_blockers=list(audit.experience_reflection_blockers),
             experience_reflection_refs=list(audit.experience_reflection_refs),
             experience_reflection_signals=list(audit.experience_reflection_signals),
+            reflection_influence_status=audit.reflection_influence_status,
+            reflection_influence_refs=list(audit.reflection_influence_refs),
+            reflection_influence_summary=audit.reflection_influence_summary,
+            reflection_assisted_eval_status=audit.reflection_assisted_eval_status,
+            reviewed_learning_influence_status=(
+                audit.reviewed_learning_influence_status
+            ),
+            reviewed_learning_influence_refs=list(
+                audit.reviewed_learning_influence_refs
+            ),
+            reviewed_learning_influence_summary=(
+                audit.reviewed_learning_influence_summary
+            ),
+            reviewed_learning_influence_reason=(
+                audit.reviewed_learning_influence_reason
+            ),
+            reviewed_learning_assisted_eval_status=(
+                audit.reviewed_learning_assisted_eval_status
+            ),
+            reviewed_learning_release_conclusion=(
+                audit.reviewed_learning_release_conclusion
+            ),
+            evolution_review_decision_status=audit.evolution_review_decision_status,
+            evolution_review_decision=audit.evolution_review_decision,
+            evolution_review_proposal_id=audit.evolution_review_proposal_id,
+            evolution_review_operator_ref=audit.evolution_review_operator_ref,
+            evolution_review_evidence_refs=list(audit.evolution_review_evidence_refs),
+            evolution_review_rollback_plan_ref=(
+                audit.evolution_review_rollback_plan_ref
+            ),
+            evolution_review_limits=list(audit.evolution_review_limits),
             experiment_lane_status=audit.experiment_lane_status,
             wave2_candidate_class=audit.wave2_candidate_class,
             experiment_entry_status=audit.experiment_entry_status,
@@ -529,6 +577,16 @@ def _render_summary(summary: PilotTraceSummary) -> str:
     subflow_assessment = _specialist_subflow_assessment(subflow_status)
     mission_status = getattr(summary, "mission_runtime_state_status", None)
     mission_assessment = _mission_runtime_state_assessment(mission_status)
+    reviewed_learning_eval_status = getattr(
+        summary,
+        "reviewed_learning_assisted_eval_status",
+        "baseline_no_reviewed_learning",
+    )
+    reviewed_learning_release = getattr(
+        summary,
+        "reviewed_learning_release_conclusion",
+        "no_promotion_without_release_gate",
+    )
     return (
         f"request_id={summary.request_id} "
         f"session_id={summary.session_id} "
@@ -601,6 +659,36 @@ def _render_summary(summary: PilotTraceSummary) -> str:
         f"{','.join(getattr(summary, 'experience_reflection_refs', []) or []) or 'none'} "
         "experience_reflection_signals="
         f"{','.join(getattr(summary, 'experience_reflection_signals', []) or []) or 'none'} "
+        "reflection_influence_status="
+        f"{getattr(summary, 'reflection_influence_status', 'not_applicable')} "
+        "reflection_influence_refs="
+        f"{','.join(getattr(summary, 'reflection_influence_refs', []) or []) or 'none'} "
+        "reflection_assisted_eval_status="
+        f"{getattr(summary, 'reflection_assisted_eval_status', 'baseline_no_reflection')} "
+        "reviewed_learning_influence_status="
+        f"{getattr(summary, 'reviewed_learning_influence_status', 'not_applicable')} "
+        "reviewed_learning_influence_refs="
+        f"{','.join(getattr(summary, 'reviewed_learning_influence_refs', []) or []) or 'none'} "
+        "reviewed_learning_influence_reason="
+        f"{getattr(summary, 'reviewed_learning_influence_reason', None) or 'none'} "
+        "reviewed_learning_assisted_eval_status="
+        f"{reviewed_learning_eval_status} "
+        "reviewed_learning_release_conclusion="
+        f"{reviewed_learning_release} "
+        "evolution_review_decision_status="
+        f"{getattr(summary, 'evolution_review_decision_status', 'not_applicable')} "
+        "evolution_review_decision="
+        f"{getattr(summary, 'evolution_review_decision', 'not_applicable')} "
+        "evolution_review_proposal_id="
+        f"{getattr(summary, 'evolution_review_proposal_id', None) or 'none'} "
+        "evolution_review_operator_ref="
+        f"{getattr(summary, 'evolution_review_operator_ref', None) or 'none'} "
+        "evolution_review_evidence_refs="
+        f"{','.join(getattr(summary, 'evolution_review_evidence_refs', []) or []) or 'none'} "
+        "evolution_review_rollback_plan_ref="
+        f"{getattr(summary, 'evolution_review_rollback_plan_ref', None) or 'none'} "
+        "evolution_review_limits="
+        f"{','.join(getattr(summary, 'evolution_review_limits', []) or []) or 'none'} "
         f"workflow_domain_route={getattr(summary, 'workflow_domain_route', None) or 'none'} "
         "registry_domains="
         f"{','.join(getattr(summary, 'registry_domains', [])) or 'none'} "

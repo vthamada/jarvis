@@ -155,6 +155,82 @@ def test_synthesis_engine_surfaces_bounded_objective_state() -> None:
     assert "work item ativo work:item:alpha" in result.response_text
 
 
+def test_synthesis_engine_surfaces_reflection_influence() -> None:
+    engine = SynthesisEngine()
+    identity = IdentityEngine().get_profile()
+    result = engine.compose_result(
+        SynthesisInput(
+            intent="planning",
+            identity_profile=identity,
+            response_style="estruturado",
+            governance_decision=GovernanceDecisionContract(
+                decision_id=GovernanceDecisionId("decision-reflection"),
+                governance_check_id=GovernanceCheckId("check-reflection"),
+                risk_level=RiskLevel.LOW,
+                decision=PermissionDecision.ALLOW,
+                justification="ok",
+                timestamp="2026-03-18T00:00:00Z",
+            ),
+            recovered_context=[],
+            active_minds=["mente_executiva"],
+            active_domains=["strategy"],
+            knowledge_snippets=[],
+            deliberative_plan=sample_plan(),
+            specialist_contributions=[],
+            operation_result=None,
+            reflection_influence_status="applied",
+            reflection_influence_refs=["reflection://mission-a/req-1"],
+            reflection_influence_summary="keep the observed pattern bounded",
+        )
+    )
+
+    assert result.output_validation_status == "coherent"
+    assert "Reflexao aplicada" in result.response_text
+    assert "reflection://mission-a/req-1" in result.response_text
+    assert "sem promocao automatica" in result.response_text
+
+
+def test_synthesis_engine_surfaces_reviewed_learning_influence() -> None:
+    engine = SynthesisEngine()
+    identity = IdentityEngine().get_profile()
+    result = engine.compose_result(
+        SynthesisInput(
+            intent="planning",
+            identity_profile=identity,
+            response_style="estruturado",
+            governance_decision=GovernanceDecisionContract(
+                decision_id=GovernanceDecisionId("decision-reviewed-learning"),
+                governance_check_id=GovernanceCheckId("check-reviewed-learning"),
+                risk_level=RiskLevel.LOW,
+                decision=PermissionDecision.ALLOW,
+                justification="ok",
+                timestamp="2026-03-18T00:00:00Z",
+            ),
+            recovered_context=[],
+            active_minds=["mente_executiva"],
+            active_domains=["software_development"],
+            knowledge_snippets=[],
+            deliberative_plan=sample_plan(),
+            specialist_contributions=[],
+            operation_result=None,
+            reviewed_learning_influence_status="applied",
+            reviewed_learning_influence_refs=[
+                "reviewed-learning-guidance://review-1"
+            ],
+            reviewed_learning_influence_summary=(
+                "prefer small reversible patches with direct tests"
+            ),
+            reviewed_learning_influence_reason="workflow_match+route_match",
+        )
+    )
+
+    assert result.output_validation_status == "coherent"
+    assert "Aprendizado revisado" in result.response_text
+    assert "reviewed-learning-guidance://review-1" in result.response_text
+    assert "workflow_match+route_match" in result.response_text
+    assert "sem promocao automatica" in result.response_text
+
+
 def test_synthesis_engine_sanitizes_objective_state_line() -> None:
     engine = SynthesisEngine()
     identity = IdentityEngine().get_profile()

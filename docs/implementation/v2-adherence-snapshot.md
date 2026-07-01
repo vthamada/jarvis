@@ -31,7 +31,7 @@ Estado de referencia desta revisao:
 - data da fotografia: `2026-05-17`
 - ultimo recorte funcional fechado: `v2-native-memory-scope-hardening-cut`
 - ultimo recorte estrutural fechado: `v2-repository-hygiene-and-tools-review-cut`
-- passo funcional em andamento: lotes `MB-062` a `MB-131` concluidos ate a primeira camada de experiencia/reflexao pos-tarefa governada; nao ha novo item `ready` sem repriorizacao explicita.
+- passo funcional em andamento: lotes `MB-062` a `MB-150` concluidos ate leitura operacional e medicao de aprendizado revisado; nao ha novo item tecnico `ready` sem repriorizacao explicita.
 
 Leitura executiva:
 
@@ -58,6 +58,61 @@ Leitura executiva:
 - `MB-127` a `MB-131` materializaram essa frente: contratos compartilhados,
   memoria evolutiva bounded, propostas `sandbox-only`, observabilidade,
   relatorio e console read-only, ainda sem promocao automatica.
+- `MB-132` abriu a repriorizacao seguinte em torno do `Operator Learning Loop`:
+  o foco deixa de ser criar infraestrutura isolada e passa a fechar o ciclo
+  `usar -> registrar -> refletir -> propor -> revisar -> medir` em uma missao
+  governada do operador, mantendo autopromocao, voz, realtime, UI rica,
+  scheduler autonomo e browser/computer use amplo fora de fase.
+- `MB-133` materializou o primeiro passo tecnico desse loop: cada fluxo real
+  governado do `orchestrator-service` agora registra automaticamente
+  `ExperienceRecordContract` em memoria evolutiva bounded, com sinais de rota,
+  workflow, mente, dominio, especialista, plano, execucao, outcome, checkpoints
+  e evidencias.
+- `MB-134` adicionou reflexao automatica bounded sobre essa experiencia,
+  sempre com revisao humana, evidencia, testes sugeridos, rollback e bloqueio
+  de autopromocao/mutacao do nucleo; influencia causal em planejamento/sintese
+  continua reservada para `MB-135`.
+- `MB-135` fechou a primeira influencia causal bounded: o runtime busca
+  reflexoes relevantes por workflow, rota e dominio, registra
+  `reflection_influence_status`, carrega refs auditaveis no plano e torna a
+  influencia visivel na sintese final, sem injecao indiscriminada nem promocao
+  automatica.
+- `MB-136` criou uma fila humana read-only de revisao evolutiva no
+  `evolution-lab` e no console, derivada de propostas sandbox, com estados,
+  blockers, testes, rollback e promocao bloqueada sem gate humano.
+- `MB-137` adicionou evidencia comparativa baseline vs reflection-assisted em
+  observabilidade, piloto interno, relatorio e comparador, mantendo qualquer
+  ganho local fora de promocao automatica.
+- `MB-138` expos esse ciclo no console por `mission-cycle --mission-id ...`,
+  agregando missao, objetivo, plano, experiencia, reflexao, proposta evolutiva
+  e status de revisao em modo read-only.
+- `MB-139` adicionou `mission-workflow "..." --mission-id ...`, executando uma
+  missao governada ponta a ponta ate proposta sandbox e revisao humana pendente.
+- `MB-140` fechou a documentacao operacional em
+  `docs/operations/operator-learning-loop.md`; o proximo corte deve nascer de
+  repriorizacao explicita.
+- `MB-141` a `MB-145` foram fechados como lote de controles humanos de revisao
+  evolutiva, para aprovar, rejeitar, sandboxar, devolver para revisao ou
+  rollbackar propostas sem autopromocao.
+- `MB-142` a `MB-145` fecharam esse recorte: contrato compartilhado de decisao
+  humana, transicoes no `evolution-lab`, comando `evolution-review` no console,
+  observabilidade, relatorio, comparador e docs agora propagam proposta,
+  operador, evidencias, rollback, status final e limites de revisao.
+- `MB-146` abriu a repriorizacao seguinte: o foco passa a ser transformar
+  decisoes humanas aprovadas ou sandboxadas em guidance bounded, filtravel e
+  mensuravel para planejamento/sintese, mantendo autopromocao, self-modification
+  e alteracao de pesos fora de fase.
+- `MB-147` formalizou `ReviewedLearningGuidanceContract`, schema e evento
+  canonico, e adicionou derivacao no `evolution-lab` somente para revisoes
+  `approved` ou `sandboxed`, mantendo flags de autopromocao e mutacao do nucleo
+  bloqueadas.
+- `MB-148` conectou esse guidance revisado a memoria, orquestracao, planning e
+  synthesis com filtro por rota, workflow e dominio, refs auditaveis, motivo de
+  aplicacao ou bloqueio e sem promocao automatica.
+- `MB-149` e `MB-150` fecharam a medicao e leitura operacional do feedback de
+  aprendizado revisado: observabilidade, piloto, relatorio, comparador,
+  console e documentacao agora mostram baseline vs reviewed-learning-assisted,
+  refs, motivo, taxas e conclusao `no_promotion_without_release_gate`.
 - o contrato canonico da rota ativa passou a atravessar tambem o `planning` e a influenciar a `synthesis`, reduzindo a distancia entre memoria guiada disponivel e comportamento final do runtime.
 - esse contrato agora tambem molda passos, restricoes, criterios de sucesso e checkpoint/gate governado do plano, e ja aparece na leitura final como objetivo, entrega esperada, foco de leitura e workflow ativo da rota promovida.
 - esse mesmo slice soberano agora tambem atravessa `operation_dispatch`, `workflow_*` e `operation_completed`, e a observabilidade passou a marcar drift quando objetivo, entregaveis, foco de sucesso, foco final e telemetria deixam de bater entre composicao e execucao.

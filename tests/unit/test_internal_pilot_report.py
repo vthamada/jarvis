@@ -171,6 +171,32 @@ def test_internal_pilot_report_renders_text() -> None:
                         "technology_candidate_observed",
                         "technology_absorption_manual_review_required",
                     ],
+                    "reflection_influence_status": "applied",
+                    "reflection_influence_refs": ["reflection://mission-x/001"],
+                    "reflection_influence_summary": "usar criterio anterior",
+                    "reflection_assisted_eval_status": "reflection_assisted",
+                    "reviewed_learning_influence_status": "applied",
+                    "reviewed_learning_influence_refs": [
+                        "reviewed-learning://guidance/001"
+                    ],
+                    "reviewed_learning_influence_summary": "preservar decisao humana",
+                    "reviewed_learning_influence_reason": "workflow_match",
+                    "reviewed_learning_assisted_eval_status": (
+                        "reviewed_learning_assisted"
+                    ),
+                    "reviewed_learning_release_conclusion": (
+                        "no_promotion_without_release_gate"
+                    ),
+                    "evolution_review_decision_status": "approved",
+                    "evolution_review_decision": "approve",
+                    "evolution_review_proposal_id": "proposal-123",
+                    "evolution_review_operator_ref": "operator://human",
+                    "evolution_review_evidence_refs": ["evidence://eval/123"],
+                    "evolution_review_rollback_plan_ref": "rollback://proposal-123",
+                    "evolution_review_limits": [
+                        "automatic_promotion_blocked",
+                        "core_mutation_blocked",
+                    ],
                     "adaptive_intervention_policy_status": "policy_aligned",
                     "memory_causality_status": "causal_guidance",
                     "dominant_tension": "equilibrar profundidade analitica com conclusao util",
@@ -235,6 +261,30 @@ def test_internal_pilot_report_renders_text() -> None:
     assert (
         "technology_absorption_signals="
         "technology_candidate_observed,technology_absorption_manual_review_required"
+    ) in rendered
+    assert "reflection_influence_status=applied" in rendered
+    assert "reflection_influence_refs=reflection://mission-x/001" in rendered
+    assert "reflection_assisted_eval_status=reflection_assisted" in rendered
+    assert "reviewed_learning_influence_status=applied" in rendered
+    assert (
+        "reviewed_learning_influence_refs=reviewed-learning://guidance/001"
+    ) in rendered
+    assert "reviewed_learning_influence_reason=workflow_match" in rendered
+    assert (
+        "reviewed_learning_assisted_eval_status=reviewed_learning_assisted"
+    ) in rendered
+    assert (
+        "reviewed_learning_release_conclusion=no_promotion_without_release_gate"
+    ) in rendered
+    assert "evolution_review_decision_status=approved" in rendered
+    assert "evolution_review_decision=approve" in rendered
+    assert "evolution_review_proposal_id=proposal-123" in rendered
+    assert "evolution_review_operator_ref=operator://human" in rendered
+    assert "evolution_review_evidence_refs=evidence://eval/123" in rendered
+    assert "evolution_review_rollback_plan_ref=rollback://proposal-123" in rendered
+    assert (
+        "evolution_review_limits="
+        "automatic_promotion_blocked,core_mutation_blocked"
     ) in rendered
     assert "mind_alignment_status=partial" in rendered
     assert "axis_gate_status=partial" in rendered

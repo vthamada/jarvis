@@ -145,6 +145,21 @@ class EvolutionLabRepository:
             ).fetchall()
         return [self._proposal_from_row(row) for row in rows]
 
+    def fetch_proposal(
+        self,
+        evolution_proposal_id: str,
+    ) -> EvolutionProposalContract | None:
+        with self._connect() as connection:
+            row = connection.execute(
+                """
+                SELECT *
+                FROM evolution_proposals
+                WHERE evolution_proposal_id = ?
+                """,
+                (evolution_proposal_id,),
+            ).fetchone()
+        return None if row is None else self._proposal_from_row(row)
+
     def list_decisions(self, limit: int = 20) -> list[EvolutionDecisionContract]:
         with self._connect() as connection:
             rows = connection.execute(

@@ -2,6 +2,102 @@
 
 ## 2026-05-17
 
+### MB-132 abre o Operator Learning Loop
+
+- `docs/implementation/execution-backlog.md` abriu o lote `MB-132` a `MB-140`, com `MB-133` como proximo item tecnico `ready`;
+- a repriorizacao escolhe fechar o ciclo `usar -> registrar -> refletir -> propor -> revisar -> medir` em missao governada do operador;
+- `docs/implementation/unified-gap-and-absorption-backlog.md` registra `EV-007` como `active_micro_slice`;
+- limites preservados: sem voz, realtime, UI rica, browser/computer use amplo, scheduler autonomo, autopromocao, alteracao de pesos, self-modification ou novas verticais.
+
+### MB-133 gera experience_record automatico
+
+- `ExperienceRecordContract` agora carrega campos operacionais opcionais como intencao, rota, mente primaria, dominio primario, especialista usado, resumo de plano, resumo de execucao, outcome, erros, ferramentas, checkpoints e feedback;
+- `memory-service` passou a persistir experiencia antes de existir reflexao, mantendo revisao humana, evidencia obrigatoria, sem autopromocao e sem mutacao do nucleo;
+- `orchestrator-service` agora registra automaticamente `experience_record_declared` ao final do fluxo governado e retorna o contrato em `OrchestratorResponse`;
+- `jarvis-console experience-reflections` exibe experiencias com reflexao pendente sem tratar isso como aprendizado promovido.
+
+### MB-134 gera post_task_reflection bounded
+
+- `orchestrator-service` agora gera `post_task_reflection_declared` automaticamente a partir do `experience_record` persistido;
+- a reflexao carrega evidencia, testes sugeridos, rollback e revisao humana obrigatoria;
+- `automatic_promotion_allowed` e `core_mutation_allowed` permanecem falsos, mantendo influencia causal e fila humana para proximos MBs.
+
+### MB-135 aplica reflexao relevante em planning/synthesis
+
+- `planning-engine` agora recebe `reflection_influence_status`, refs e resumo de reflexoes relevantes filtradas por workflow, rota e dominio;
+- `orchestrator-service` registra a influencia em `plan_built` e `response_synthesized`;
+- `synthesis-engine` expoe `Reflexao aplicada` quando a influencia foi usada, sempre com leitura bounded e sem promocao automatica.
+
+### MB-136 cria fila humana de revisao evolutiva
+
+- `shared/contracts` e `shared/schemas` agora formalizam `EvolutionReviewQueueItemContract`;
+- `evolution-lab` expoe `list_human_review_queue()` sobre propostas sandbox, com estados de revisao, blockers, testes e rollback;
+- `apps/jarvis_console` ganhou `evolution-review-queue --evolution-db ... --limit ...` em modo read-only, sem promocao automatica.
+
+### MB-137 mede baseline vs reflection-assisted
+
+- `observability-service` agora audita `reflection_influence_status`, refs e `reflection_assisted_eval_status`;
+- `internal_pilot_support.py` e `internal_pilot_report.py` propagam o sinal para o piloto e relatorio textual/JSON;
+- `compare_orchestrator_paths.py` compara baseline sem reflexao contra execucao reflection-assisted, registrando diferenca sem promover mudanca automaticamente.
+
+### MB-138 expoe ciclo de aprendizado no console
+
+- `apps/jarvis_console` ganhou `mission-cycle --mission-id ...` em modo read-only;
+- o comando agrega missao, objetivo, rota, workflow, plano, checkpoints, memoria usada, especialista, experiencia, reflexao, proposta evolutiva, status de revisao e proximo passo;
+- o ciclo permanece sem autoexecucao e sem promocao automatica.
+
+### MB-139 adiciona workflow pratico de missao
+
+- `apps/jarvis_console` ganhou `mission-workflow "..." --mission-id ...`;
+- o comando executa uma missao governada, usa o registro automatico de experiencia/reflexao, cria proposta evolutiva sandbox e exibe o ciclo pelo console;
+- o fechamento permanece `closed_with_human_review_pending`, sem aprovar, promover ou executar mutacao autonoma.
+
+### MB-140 fecha documentacao operacional do loop
+
+- `docs/operations/operator-learning-loop.md` documenta como iniciar missao, ver ciclo, consultar reflexoes e revisar propostas;
+- `execution-backlog.md`, `HANDOFF.md`, snapshot e backlog macro foram sincronizados para fechar `MB-132` a `MB-140`;
+- nao ha novo item tecnico `ready` depois do fechamento; a proxima fila deve nascer de repriorizacao explicita baseada em uso humano.
+
+### MB-141 abre controles humanos de revisao evolutiva
+
+- `docs/implementation/execution-backlog.md` abriu o lote `MB-141` a `MB-145`, com `MB-141` como unico item `ready`;
+- o novo recorte transforma propostas evolutivas pendentes em decisoes humanas auditaveis;
+- limites preservados: sem autopromocao, sem self-modification, sem alteracao de pesos e sem promocao sem evidencia, testes e rollback.
+
+### MB-142 a MB-145 fecham decisao humana auditavel
+
+- `shared/contracts`, `shared/schemas` e `shared/events` formalizam `EvolutionReviewDecisionContract` e `evolution_review_decision_declared`;
+- `evolution-lab` agora registra `approve`, `reject`, `sandbox`, `needs_review` e `rollback` com evidencia, testes, rollback, historico e bloqueio de autopromocao;
+- `apps/jarvis_console` ganhou `evolution-review --proposal-id ... --action ...` para decisao humana segura sem editar armazenamento diretamente;
+- `observability-service`, `internal_pilot_report` e `compare_orchestrator_paths` propagam status, decisao, proposta, operador, evidencia, rollback e limites de revisao humana;
+- `docs/operations/operator-learning-loop.md`, `execution-backlog.md` e `HANDOFF.md` foram sincronizados; nao ha novo item tecnico `ready` apos `MB-145`.
+
+### MB-146 abre feedback de aprendizado revisado
+
+- `docs/implementation/execution-backlog.md` abriu o lote `MB-146` a `MB-150`, com `MB-146` como unico item tecnico `ready`;
+- o novo recorte transforma decisoes humanas aprovadas ou sandboxadas em guidance bounded, filtravel e mensuravel para planejamento/sintese;
+- `docs/implementation/unified-gap-and-absorption-backlog.md` registrou `EV-009` como slice ativo no inicio do lote;
+- limites preservados: sem autopromocao, sem self-modification, sem alteracao de pesos e sem deploy automatico por aprovacao humana.
+
+### MB-147 formaliza reviewed learning guidance
+
+- `shared/contracts`, `shared/schemas` e `shared/events` agora formalizam `ReviewedLearningGuidanceContract` e `reviewed_learning_guidance_declared`;
+- `evolution-lab` deriva guidance revisado apenas de decisoes humanas `approved` ou `sandboxed`;
+- guidance revisado carrega rota, workflow, dominio, resumo, usos permitidos, evidencias, rollback e flags de seguranca bloqueando autopromocao e mutacao do nucleo;
+- `MB-148` passa a ser o unico item tecnico `ready`.
+
+### MB-148 conecta guidance revisado ao runtime
+
+- `reviewed_learning_guidance` agora pode ser persistido em memoria e recuperado pelo `orchestrator-service` com filtro por rota, workflow e dominio;
+- `planning-engine` e `synthesis-engine` recebem influencia revisada apenas como guidance bounded, com refs, motivo e status auditaveis;
+- a fila micro foi atualizada naquele ponto: `MB-149` passou a medir baseline vs reviewed-learning-assisted antes da leitura operacional em `MB-150`.
+
+### MB-149 e MB-150 fecham feedback de aprendizado revisado
+
+- `observability-service`, piloto interno, relatorio e comparador agora expõem `reviewed_learning_influence_status`, refs, motivo, taxa baseline/assisted e `reviewed_learning_release_conclusion=no_promotion_without_release_gate`;
+- `apps/jarvis_console mission-cycle` e `mission-workflow` mostram quando guidance revisado influenciou a missao, quando foi bloqueado por escopo e qual limite de release permanece ativo;
+- `docs/operations/operator-learning-loop.md`, backlog micro, snapshot, backlog macro e handoff foram sincronizados; o lote `MB-146` a `MB-150` fica fechado sem novo item tecnico `ready`.
+
 ### MB-126 abre experiencia e reflexao pos-tarefa governada
 
 - `docs/implementation/execution-backlog.md` abriu o lote `MB-126` a `MB-131`, com `MB-127` como proximo item `ready`;

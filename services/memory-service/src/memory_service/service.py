@@ -12,6 +12,7 @@ from memory_service.repository import (
     StoredContinuityCheckpoint,
     StoredContinuityPauseResolution,
     StoredExperienceReflection,
+    StoredReviewedLearningGuidance,
     StoredSpecialistSharedMemory,
     StoredTurn,
     StoredUserScopeSnapshot,
@@ -34,6 +35,7 @@ from shared.contracts import (
     OperationDispatchContract,
     OperationResultContract,
     PostTaskReflectionContract,
+    ReviewedLearningGuidanceContract,
     SpecialistContributionContract,
     SpecialistSharedMemoryContextContract,
     UserScopeContextContract,
@@ -183,6 +185,34 @@ class MemoryService:
         self.repository.record_experience_reflection(record)
         return record
 
+    def record_experience(
+        self,
+        *,
+        experience: ExperienceRecordContract,
+    ) -> StoredExperienceReflection:
+        """Persist a bounded post-task experience before reflection exists."""
+
+        reusable_status = experience.reusable_memory_status
+        failure_modes = list(experience.failure_modes)
+        if experience.automatic_promotion_allowed:
+            failure_modes.append("automatic_promotion_not_allowed")
+        if experience.core_mutation_allowed:
+            failure_modes.append("core_mutation_not_allowed")
+        if not experience.evidence_refs:
+            failure_modes.append("evidence_required")
+            reusable_status = "blocked"
+        sanitized_experience = replace(
+            experience,
+            failure_modes=self._merge_unique_strings(failure_modes, []),
+            human_review_required=True,
+            automatic_promotion_allowed=False,
+            core_mutation_allowed=False,
+            reusable_memory_status=reusable_status,
+        )
+        record = StoredExperienceReflection(experience=sanitized_experience)
+        self.repository.record_experience(sanitized_experience)
+        return record
+
     def list_experience_reflections(
         self,
         *,
@@ -195,6 +225,48 @@ class MemoryService:
         return self.repository.list_experience_reflections(
             mission_id=mission_id,
             workflow_profile=workflow_profile,
+            limit=max(1, limit),
+        )
+
+    def record_reviewed_learning_guidance(
+        self,
+        guidance: ReviewedLearningGuidanceContract,
+    ) -> StoredReviewedLearningGuidance:
+        """Persist human-reviewed learning guidance with safety invariants."""
+
+        if guidance.automatic_promotion_allowed:
+            raise ValueError("reviewed learning guidance cannot allow autopromotion")
+        if guidance.core_mutation_allowed:
+            raise ValueError("reviewed learning guidance cannot mutate the core")
+        if not guidance.evidence_refs:
+            raise ValueError("reviewed learning guidance requires evidence_refs")
+        if not guidance.rollback_plan_ref:
+            raise ValueError("reviewed learning guidance requires rollback_plan_ref")
+        safe_guidance = replace(
+            guidance,
+            automatic_promotion_allowed=False,
+            core_mutation_allowed=False,
+            evidence_refs=self._merge_unique_strings(guidance.evidence_refs, []),
+            allowed_usage=self._merge_unique_strings(guidance.allowed_usage, []),
+        )
+        record = StoredReviewedLearningGuidance(guidance=safe_guidance)
+        self.repository.record_reviewed_learning_guidance(record)
+        return record
+
+    def list_reviewed_learning_guidance(
+        self,
+        *,
+        route: str | None = None,
+        workflow_profile: str | None = None,
+        domain: str | None = None,
+        limit: int = 20,
+    ) -> list[StoredReviewedLearningGuidance]:
+        """Return recent human-reviewed learning guidance."""
+
+        return self.repository.list_reviewed_learning_guidance(
+            route=route,
+            workflow_profile=workflow_profile,
+            domain=domain,
             limit=max(1, limit),
         )
 

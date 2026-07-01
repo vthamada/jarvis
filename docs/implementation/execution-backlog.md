@@ -2382,7 +2382,385 @@ Escalar ao operador quando:
 - `impacto_no_baseline`: fecha a primeira camada de experiencia operacional como insumo governado de autoevolucao.
 - `evidencia_de_fechamento`: `python tools/check_mojibake.py .` e `python tools/engineering_gate.py --mode standard`.
 
+### MB-132
+
+- `id`: `MB-132`
+- `prioridade`: `P0`
+- `status`: `done`
+- `eixo_do_mestre`: `operacao/evolucao`
+- `workflow_profile_afetado`: `operational_readiness_workflow`, `strategic_direction_workflow`, `software_change_workflow`, `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`
+- `micro_objetivo`: abrir a repriorizacao explicita pos-`MB-131`, escolhendo o marco `Operator Learning Loop` como proxima frente micro.
+- `justificativa_arquitetural`: o baseline ja possui contratos, memoria evolutiva, laboratorio, observabilidade e console read-only para experiencia/reflexao, mas ainda falta fechar o ciclo real `usar -> registrar -> refletir -> propor -> revisar -> medir` em fluxo governado de operador.
+- `arquivos/servicos_principais`: `docs/implementation/execution-backlog.md`, `docs/implementation/unified-gap-and-absorption-backlog.md`, `docs/implementation/v2-adherence-snapshot.md`, `HANDOFF.md`, `CHANGELOG.md`
+- `dependencias`: `MB-131`
+- `criterio_de_aceite`: fila micro registra objetivos, nao objetivos, criterios de sucesso, limites de fase e lote pequeno `MB-133` a `MB-140`, sem abrir voz, realtime, UI rica, browser/computer use amplo, scheduler autonomo, autopromocao, alteracao de pesos, novas verticais ou produto multicanal.
+- `gate_minimo`: `python tools/check_mojibake.py .` e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `medium`
+- `modelo_recomendado`: `gpt-5.4`
+- `impacto_no_baseline`: a proxima rodada passa a mirar uso operacional humano com aprendizado governado, nao nova infraestrutura solta.
+- `evidencia_de_fechamento`: lote `MB-132` a `MB-140` aberto com `MB-133` como proximo item `ready`; `.venv\Scripts\python.exe tools\check_mojibake.py .`, `.venv\Scripts\python.exe -m pytest tests\unit\test_experience_reflection.py` e `.venv\Scripts\python.exe tools\engineering_gate.py --mode standard`.
+
+### MB-133
+
+- `id`: `MB-133`
+- `prioridade`: `P0`
+- `status`: `done`
+- `eixo_do_mestre`: `operacao/memoria/evolucao`
+- `workflow_profile_afetado`: `operational_readiness_workflow`, `strategic_direction_workflow`, `software_change_workflow`, `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`
+- `micro_objetivo`: gerar automaticamente um `experience_record` ao final de uma missao/request real governado no fluxo normal do `orchestrator-service`.
+- `justificativa_arquitetural`: experiencia nao pode depender de registro manual se o sistema deve aprender com uso real; o fechamento do fluxo ja possui plano, rota, workflow, governanca, especialistas, operacao, sintese e memoria gravada.
+- `arquivos/servicos_principais`: `services/orchestrator-service`, `services/memory-service`, `shared/contracts`, `shared/schemas`, `shared/events`, `tests`
+- `dependencias`: `MB-132`
+- `criterio_de_aceite`: todo fluxo governado elegivel grava `ExperienceRecordContract` com `mission_id`, `user_intent`, rota/workflow, `primary_mind`, `primary_domain_driver`, especialista usado, resumo de plano, resumo de execucao, outcome, erros, ferramentas/sinais usados, checkpoints e feedback quando existir, preservando `human_review_required`, sem autopromocao e sem mutacao do nucleo.
+- `gate_minimo`: `pytest services/orchestrator-service/tests services/memory-service/tests tests/unit/test_experience_reflection.py` e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: missoes reais passam a produzir materia-prima evolutiva automaticamente.
+- `evidencia_de_fechamento`: `services/orchestrator-service/tests/test_orchestrator_service.py::test_orchestrator_service_handles_unitary_deliberative_planning`, `tests/unit/test_experience_reflection.py::test_memory_service_persists_experience_before_reflection`, `apps/jarvis_console/tests/test_console.py::test_console_experience_reflections_shows_pending_reflection`.
+
+### MB-134
+
+- `id`: `MB-134`
+- `prioridade`: `P0`
+- `status`: `done`
+- `eixo_do_mestre`: `evolucao/reflexao`
+- `workflow_profile_afetado`: `operational_readiness_workflow`, `strategic_direction_workflow`, `software_change_workflow`, `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`
+- `micro_objetivo`: gerar automaticamente `post_task_reflection` bounded a partir de experiencias relevantes do fluxo real.
+- `justificativa_arquitetural`: reflexao pos-tarefa deve ser o primeiro mecanismo de aprendizado governado, mas nao pode promover mudanca, editar core ou alterar pesos.
+- `arquivos/servicos_principais`: `services/orchestrator-service`, `services/memory-service`, `evolution/evolution-lab`, `tests`
+- `dependencias`: `MB-133`
+- `criterio_de_aceite`: cada experiencia elegivel gera `PostTaskReflectionContract` estruturado, com evidencia, recomendacao bounded, testes sugeridos, rollback quando aplicavel, blockers e status de revisao humana; registros sem evidencia ficam bloqueados.
+- `gate_minimo`: `pytest services/orchestrator-service/tests services/memory-service/tests evolution/evolution-lab/tests tests/unit/test_experience_reflection.py` e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: o ciclo deixa de apenas registrar uso e passa a refletir sobre outcome/falhas de forma auditavel.
+- `evidencia_de_fechamento`: `services/orchestrator-service/tests/test_orchestrator_service.py::test_orchestrator_service_handles_unitary_deliberative_planning`, `tests/unit/test_experience_reflection.py`, `services/memory-service/tests`, `evolution/evolution-lab/tests`.
+
+### MB-135
+
+- `id`: `MB-135`
+- `prioridade`: `P0`
+- `status`: `done`
+- `eixo_do_mestre`: `planejamento/sintese/evolucao`
+- `workflow_profile_afetado`: `operational_readiness_workflow`, `strategic_direction_workflow`, `software_change_workflow`, `structured_analysis_workflow`, `decision_risk_workflow`, `governance_boundary_workflow`
+- `micro_objetivo`: permitir que reflexoes anteriores influenciem planejamento e sintese de forma governada, filtrada e auditavel.
+- `justificativa_arquitetural`: aprendizado so vira utilidade quando melhora decisoes futuras, mas reflexoes nao podem ser injetadas indiscriminadamente nem substituir memoria canonica.
+- `arquivos/servicos_principais`: `services/memory-service`, `services/orchestrator-service`, `engines/planning-engine`, `engines/synthesis-engine`, `services/observability-service`, `tests`
+- `dependencias`: `MB-134`
+- `criterio_de_aceite`: o runtime busca apenas reflexoes relevantes por rota, dominio e workflow, registra `reflection_influence_status`, evidencia quais reflexoes foram usadas e preserva fallback quando nao houver match seguro.
+- `gate_minimo`: `pytest services/orchestrator-service/tests engines/planning-engine/tests engines/synthesis-engine/tests services/observability-service/tests tests/unit` e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: reflexoes passam de arquivo consultavel para apoio causal bounded ao fluxo.
+- `evidencia_de_fechamento`: `services/orchestrator-service/tests/test_orchestrator_service.py::test_orchestrator_service_applies_relevant_post_task_reflection`, `engines/planning-engine/tests/test_planning_engine.py::test_planning_engine_applies_bounded_reflection_influence`, `engines/synthesis-engine/tests/test_synthesis_engine.py::test_synthesis_engine_surfaces_reflection_influence`.
+
+### MB-136
+
+- `id`: `MB-136`
+- `prioridade`: `P1`
+- `status`: `done`
+- `eixo_do_mestre`: `governanca/evolucao`
+- `workflow_profile_afetado`: `governance_boundary_workflow`, `operational_readiness_workflow`, `software_change_workflow`
+- `micro_objetivo`: criar fila humana de revisao evolutiva para propostas geradas por reflexao.
+- `justificativa_arquitetural`: proposta evolutiva sem fila humana explicita fica escondida no laboratorio; revisao humana e gate sao fronteiras de soberania.
+- `arquivos/servicos_principais`: `evolution/evolution-lab`, `apps/jarvis_console`, `shared/contracts`, `tests`
+- `dependencias`: `MB-134`
+- `criterio_de_aceite`: propostas entram em estados `observed`, `candidate`, `needs_review`, `approved`, `rejected`, `sandboxed`, `promoted` ou `rolled_back`; nenhuma proposta de risco passa de revisao sem decisao humana/gate.
+- `gate_minimo`: `pytest evolution/evolution-lab/tests apps/jarvis_console/tests tests/unit` e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: evolucao derivada de reflexao fica operavel por humano, nao apenas persistida.
+- `evidencia_de_fechamento`: `evolution/evolution-lab/tests/test_evolution_lab_service.py::test_evolution_lab_creates_sandbox_proposal_from_post_task_reflection`, `apps/jarvis_console/tests/test_console.py::test_console_evolution_review_queue_shows_human_review_items`, `tests/unit/test_shared_layer.py::test_experience_reflection_contracts_are_shared_schemas`.
+
+### MB-137
+
+- `id`: `MB-137`
+- `prioridade`: `P1`
+- `status`: `done`
+- `eixo_do_mestre`: `evals/evolucao`
+- `workflow_profile_afetado`: `operational_readiness_workflow`, `strategic_direction_workflow`, `software_change_workflow`
+- `micro_objetivo`: criar eval/piloto que compara comportamento baseline versus reflection-assisted.
+- `justificativa_arquitetural`: reflexao so deve amadurecer quando houver evidencia de ganho em planejamento, sintese ou decisao.
+- `arquivos/servicos_principais`: `tools/internal_pilot_support.py`, `tools/internal_pilot_report.py`, `tools/compare_orchestrator_paths.py`, `services/observability-service`, `tests`
+- `dependencias`: `MB-135`
+- `criterio_de_aceite`: piloto registra cenarios com e sem reflexao relevante, mede diferenca de plano/sintese/decisao e documenta limitacoes sem tratar melhoria local como autopromocao.
+- `gate_minimo`: `pytest tests/unit services/observability-service/tests` e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `medium`
+- `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: o loop passa a medir se aprendizado melhora comportamento futuro.
+- `evidencia_de_fechamento`: `services/observability-service/tests/test_observability_service.py::test_observability_service_audits_reflection_influence_signals`, `tests/unit/test_internal_pilot_report.py::test_internal_pilot_report_renders_text`, `tests/unit/test_compare_orchestrator_paths.py::test_compare_results_flags_reflection_assisted_mismatch_fields`.
+
+### MB-138
+
+- `id`: `MB-138`
+- `prioridade`: `P1`
+- `status`: `done`
+- `eixo_do_mestre`: `operacao/console`
+- `workflow_profile_afetado`: `operational_readiness_workflow`
+- `micro_objetivo`: melhorar o console textual para mostrar o ciclo de missao, experiencia, reflexao, proposta evolutiva e status de revisao.
+- `justificativa_arquitetural`: o operador precisa enxergar o ciclo completo sem abrir banco, debug ou logs internos.
+- `arquivos/servicos_principais`: `apps/jarvis_console`, `services/memory-service`, `evolution/evolution-lab`, `tests`
+- `dependencias`: `MB-136`, `MB-137`
+- `criterio_de_aceite`: console mostra missao, objetivo, rota, plano, checkpoints, memoria usada, especialista usado, experiencia, reflexao, proposta evolutiva, status de revisao e proximos passos, em modo seguro e sanitizado.
+- `gate_minimo`: `pytest apps/jarvis_console/tests services/memory-service/tests evolution/evolution-lab/tests` e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `medium`
+- `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: o aprendizado operacional vira visivel e utilizavel pelo operador humano.
+- `evidencia_de_fechamento`: `apps/jarvis_console/tests/test_console.py::test_console_mission_cycle_shows_operator_learning_loop`.
+
+### MB-139
+
+- `id`: `MB-139`
+- `prioridade`: `P1`
+- `status`: `done`
+- `eixo_do_mestre`: `operacao/workflow`
+- `workflow_profile_afetado`: `operational_readiness_workflow`, `strategic_direction_workflow`, `software_change_workflow`
+- `micro_objetivo`: criar workflow pratico ponta a ponta de missao: iniciar missao, entender objetivo, planejar, executar/simular, registrar experiencia, refletir, propor aprendizado, revisar e encerrar.
+- `justificativa_arquitetural`: o sistema precisa demonstrar utilidade operacional real antes de abrir superficies mais ricas ou autonomia ampla.
+- `arquivos/servicos_principais`: `apps/jarvis_console`, `services/orchestrator-service`, `services/memory-service`, `evolution/evolution-lab`, `tests`
+- `dependencias`: `MB-138`
+- `criterio_de_aceite`: um cenario governado real ou simulado demonstra o ciclo completo sem autopromocao, sem scheduler autonomo e com evidencia recuperavel no console.
+- `gate_minimo`: `pytest apps/jarvis_console/tests services/orchestrator-service/tests tests/unit` e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: o JARVIS passa de infraestrutura de aprendizado para loop operacional demonstravel.
+- `evidencia_de_fechamento`: `apps/jarvis_console/tests/test_console.py::test_console_mission_workflow_runs_governed_loop_end_to_end`.
+
+### MB-140
+
+- `id`: `MB-140`
+- `prioridade`: `P1`
+- `status`: `done`
+- `eixo_do_mestre`: `docs/gates`
+- `workflow_profile_afetado`: `nao_aplicavel`
+- `micro_objetivo`: fechar documentalmente o baseline do `Operator Learning Loop` com docs operacionais de uso humano real.
+- `justificativa_arquitetural`: o operador precisa saber como iniciar missao, revisar reflexao, revisar proposta evolutiva, interpretar relatorio e fechar ciclo.
+- `arquivos/servicos_principais`: `docs/operations`, `docs/implementation/*`, `docs/architecture/*`, `HANDOFF.md`, `CHANGELOG.md`
+- `dependencias`: `MB-139`
+- `criterio_de_aceite`: documentacao operacional, backlog, snapshot, handoff e changelog registram o ciclo completo, evidencias, limites conhecidos e proximo item `ready` recomendado.
+- `gate_minimo`: `python tools/check_mojibake.py .` e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `medium`
+- `modelo_recomendado`: `gpt-5.4-mini`
+- `impacto_no_baseline`: fecha a primeira camada utilizavel de aprendizado humano-governado do sistema.
+- `evidencia_de_fechamento`: `docs/operations/operator-learning-loop.md`, `HANDOFF.md`, `CHANGELOG.md`, `v2-adherence-snapshot.md` e backlog macro sincronizados apos demonstracao ponta a ponta.
+
 ---
+
+Estado apos `MB-140`: o baseline do `Operator Learning Loop` esta fechado.
+A nova fila tecnica abre o recorte `Human Evolution Review Controls`: transformar
+propostas evolutivas pendentes em decisoes humanas auditaveis, sem autopromocao
+e sem mutacao autonoma do nucleo.
+
+### MB-141
+
+- `id`: `MB-141`
+- `prioridade`: `P0`
+- `status`: `done`
+- `eixo_do_mestre`: `governanca/evolucao`
+- `workflow_profile_afetado`: `governance_boundary_workflow`, `operational_readiness_workflow`, `software_change_workflow`
+- `micro_objetivo`: abrir a repriorizacao explicita pos-`MB-140`, escolhendo controles humanos de revisao evolutiva como proximo recorte.
+- `justificativa_arquitetural`: o loop operacional ja gera experiencia, reflexao e proposta, mas ainda termina com revisao pendente. O proximo gargalo de utilidade e permitir que o operador decida, registre evidencia e mantenha rollback sem abrir autopromocao.
+- `arquivos/servicos_principais`: `docs/implementation/execution-backlog.md`, `docs/implementation/unified-gap-and-absorption-backlog.md`, `HANDOFF.md`, `docs/implementation/v2-adherence-snapshot.md`, `CHANGELOG.md`
+- `dependencias`: `MB-140`
+- `criterio_de_aceite`: existe novo lote micro `MB-141` a `MB-145`, com limites de fase explicitos e foco em decisao humana auditavel sobre propostas evolutivas.
+- `gate_minimo`: `python tools/check_mojibake.py .` e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `medium`
+- `modelo_recomendado`: `gpt-5.4-mini`
+- `impacto_no_baseline`: inicia o fechamento da lacuna entre proposta evolutiva pendente e decisao humana governada.
+- `evidencia_de_fechamento`: backlog micro, backlog macro, handoff, snapshot e changelog sincronizados.
+
+### MB-142
+
+- `id`: `MB-142`
+- `prioridade`: `P0`
+- `status`: `done`
+- `eixo_do_mestre`: `contratos/evolucao`
+- `workflow_profile_afetado`: `governance_boundary_workflow`
+- `micro_objetivo`: formalizar contrato compartilhado de decisao humana sobre proposta evolutiva.
+- `justificativa_arquitetural`: aprovar, rejeitar, sandboxar ou devolver proposta para revisao precisa virar contrato estavel, nao metadata solta no laboratorio.
+- `arquivos/servicos_principais`: `shared/contracts`, `shared/schemas`, `shared/events`, `tests/unit`
+- `dependencias`: `MB-141`
+- `criterio_de_aceite`: existe contrato tipado para `evolution_review_decision`, com `proposal_id`, `review_status`, `decision`, `operator_ref`, `evidence_refs`, `proposed_tests`, `rollback_plan_ref`, `risk_acceptance`, `timestamp` e bloqueio explicito de promocao automatica.
+- `gate_minimo`: `pytest tests/unit/test_shared_layer.py` e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: decisoes humanas de evolucao passam a ter contrato soberano e auditavel.
+- `evidencia_de_fechamento`: teste compartilhado cobrindo schema, evento e defaults seguros.
+
+### MB-143
+
+- `id`: `MB-143`
+- `prioridade`: `P0`
+- `status`: `done`
+- `eixo_do_mestre`: `evolution-lab/governanca`
+- `workflow_profile_afetado`: `governance_boundary_workflow`, `software_change_workflow`
+- `micro_objetivo`: implementar transicoes humanas no `evolution-lab` para propostas em fila.
+- `justificativa_arquitetural`: a fila read-only prova existencia de propostas, mas o operador ainda nao consegue fechar o ciclo de revisao sem editar armazenamento ou docs manualmente.
+- `arquivos/servicos_principais`: `evolution/evolution-lab`, `shared/contracts`, `tests`
+- `dependencias`: `MB-142`
+- `criterio_de_aceite`: `evolution-lab` aceita decisoes `approve`, `reject`, `sandbox`, `needs_review` e `rollback`, persiste historico de decisao, exige evidencia/testes/rollback quando houver risco e bloqueia `promoted` sem gate humano explicito.
+- `gate_minimo`: `pytest evolution/evolution-lab/tests tests/unit` e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: propostas deixam de ser apenas pendentes e passam a ter ciclo humano reversivel.
+- `evidencia_de_fechamento`: testes do `evolution-lab` cobrindo approve/reject/sandbox/rollback e bloqueio de promocao sem gate.
+
+### MB-144
+
+- `id`: `MB-144`
+- `prioridade`: `P1`
+- `status`: `done`
+- `eixo_do_mestre`: `operacao/console`
+- `workflow_profile_afetado`: `governance_boundary_workflow`, `operational_readiness_workflow`
+- `micro_objetivo`: expor no console comandos seguros para revisar propostas evolutivas.
+- `justificativa_arquitetural`: o operador precisa fechar a revisao pelo mesmo canal textual em que enxerga missao, reflexao e fila, sem acesso direto ao banco.
+- `arquivos/servicos_principais`: `apps/jarvis_console`, `evolution/evolution-lab`, `tests`
+- `dependencias`: `MB-143`
+- `criterio_de_aceite`: console possui comando `evolution-review --proposal-id ... --action approve|reject|sandbox|needs-review|rollback`, exige evidencia quando aplicavel, mostra status final, blockers, rollback e `automatic_promotion=False`.
+- `gate_minimo`: `pytest apps/jarvis_console/tests evolution/evolution-lab/tests` e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `medium`
+- `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: o operador passa a revisar aprendizado pelo console sem promover mudanca sozinho.
+- `evidencia_de_fechamento`: teste de console aprovando/rejeitando proposta em modo governado e auditavel.
+
+### MB-145
+
+- `id`: `MB-145`
+- `prioridade`: `P1`
+- `status`: `done`
+- `eixo_do_mestre`: `observabilidade/docs`
+- `workflow_profile_afetado`: `governance_boundary_workflow`, `operational_readiness_workflow`, `software_change_workflow`
+- `micro_objetivo`: auditar e documentar o fechamento humano de revisao evolutiva.
+- `justificativa_arquitetural`: decisoes humanas so fortalecem o sistema se virarem evidencia comparavel em observabilidade, piloto, relatorios e docs operacionais.
+- `arquivos/servicos_principais`: `services/observability-service`, `tools/internal_pilot_report.py`, `tools/compare_orchestrator_paths.py`, `docs/operations`, `HANDOFF.md`, `CHANGELOG.md`
+- `dependencias`: `MB-144`
+- `criterio_de_aceite`: eventos e relatorios mostram decisao humana de revisao, proposta afetada, evidencia, rollback, status final e limites; docs explicam como aprovar/rejeitar/sandboxar sem autopromocao.
+- `gate_minimo`: `pytest services/observability-service/tests tests/unit apps/jarvis_console/tests` e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `medium`
+- `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: fecha o ciclo `propor -> revisar` com evidencia humana auditavel.
+- `evidencia_de_fechamento`: observabilidade, relatorios, docs e handoff sincronizados com o novo estado real.
+
+Estado apos `MB-145`: o lote `Human Evolution Review Controls` esta fechado.
+Nao ha novo item tecnico `ready`; o proximo lote deve nascer de repriorizacao
+explicita baseada em uso humano real do ciclo `usar -> registrar -> refletir ->
+propor -> revisar -> medir`.
+
+## 4.23 Repriorizacao pos-MB-145: Reviewed Learning Feedback Loop
+
+O lote `MB-146` a `MB-150` abre o recorte `Reviewed Learning Feedback Loop`.
+Objetivo: fazer decisoes humanas revisadas voltarem ao runtime como orientacao
+bounded, filtrada, observavel e mensuravel, sem autopromocao, sem mutacao de
+nucleo e sem transformar aprovacao humana em deploy automatico.
+
+### MB-146
+
+- `id`: `MB-146`
+- `prioridade`: `P0`
+- `status`: `done`
+- `eixo_do_mestre`: `evolucao/medicao`
+- `workflow_profile_afetado`: `governance_boundary_workflow`, `operational_readiness_workflow`, `software_change_workflow`
+- `micro_objetivo`: abrir a repriorizacao explicita pos-`MB-145`, escolhendo feedback de aprendizado revisado como proximo recorte.
+- `justificativa_arquitetural`: o sistema ja registra experiencia, reflexao, proposta e decisao humana. O gargalo agora e medir se aprendizados revisados melhoram decisoes futuras sem liberar autopromocao.
+- `arquivos/servicos_principais`: `docs/implementation/execution-backlog.md`, `docs/implementation/unified-gap-and-absorption-backlog.md`, `HANDOFF.md`, `docs/implementation/v2-adherence-snapshot.md`, `CHANGELOG.md`
+- `dependencias`: `MB-145`
+- `criterio_de_aceite`: existe novo lote micro `MB-146` a `MB-150`, com limites de fase explicitos e foco em influencia governada de aprendizado revisado.
+- `gate_minimo`: `python tools/check_mojibake.py .` e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `medium`
+- `modelo_recomendado`: `gpt-5.4-mini`
+- `impacto_no_baseline`: inicia a ponte entre revisao humana e melhoria mensuravel do runtime.
+- `evidencia_de_fechamento`: backlog micro, backlog macro, handoff, snapshot e changelog sincronizados.
+
+### MB-147
+
+- `id`: `MB-147`
+- `prioridade`: `P0`
+- `status`: `done`
+- `eixo_do_mestre`: `contratos/evolucao`
+- `workflow_profile_afetado`: `governance_boundary_workflow`, `software_change_workflow`
+- `micro_objetivo`: formalizar contrato de `reviewed_learning_guidance` derivado de decisoes humanas aprovadas ou sandboxadas.
+- `justificativa_arquitetural`: decisoes humanas nao devem entrar no planejamento como texto solto; precisam virar guidance tipado, filtravel e com limites de uso.
+- `arquivos/servicos_principais`: `shared/contracts`, `shared/schemas`, `shared/events`, `evolution/evolution-lab`, `tests/unit`
+- `dependencias`: `MB-146`
+- `criterio_de_aceite`: existe contrato tipado com `guidance_id`, `source_review_decision_id`, `evolution_proposal_id`, `review_status`, `route`, `workflow_profile`, `domain`, `guidance_summary`, `allowed_usage`, `evidence_refs`, `rollback_plan_ref`, `expires_at` opcional e flags `automatic_promotion_allowed=false`, `core_mutation_allowed=false`.
+- `gate_minimo`: `pytest tests/unit/test_shared_layer.py evolution/evolution-lab/tests` e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: aprendizado revisado passa a ter forma canonica antes de influenciar qualquer decisao.
+- `evidencia_de_fechamento`: testes de contrato, schema, evento e derivacao no `evolution-lab`.
+
+### MB-148
+
+- `id`: `MB-148`
+- `prioridade`: `P0`
+- `status`: `done`
+- `eixo_do_mestre`: `runtime/planning/synthesis`
+- `workflow_profile_afetado`: `governance_boundary_workflow`, `operational_readiness_workflow`, `software_change_workflow`
+- `micro_objetivo`: permitir que `reviewed_learning_guidance` influencie planejamento e sintese de forma filtrada, auditavel e bounded.
+- `justificativa_arquitetural`: a utilidade do loop depende de o sistema aprender com revisoes humanas, mas somente quando rota, workflow e dominio forem relevantes e sem substituir governanca ou memoria canonica.
+- `arquivos/servicos_principais`: `services/orchestrator-service`, `engines/planning-engine`, `engines/synthesis-engine`, `services/memory-service`, `tests`
+- `dependencias`: `MB-147`
+- `criterio_de_aceite`: planning/synthesis recebem guidance revisado apenas quando relevante por rota/workflow/dominio, registram `reviewed_learning_influence_status`, refs usadas, motivo de aplicacao ou bloqueio, e nunca promovem mudanca automaticamente.
+- `gate_minimo`: `pytest services/orchestrator-service/tests engines/planning-engine/tests engines/synthesis-engine/tests services/memory-service/tests` e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: decisoes revisadas passam a influenciar comportamento futuro sob governanca e telemetria.
+- `evidencia_de_fechamento`: `reviewed_learning_guidance` agora atravessa memoria, orquestracao, planning e synthesis com filtros por rota/workflow/dominio, refs auditaveis, bloqueio de escopo e testes de guidance relevante/irrelevante; validado por `pytest tests/unit/test_experience_reflection.py engines/planning-engine/tests/test_planning_engine.py engines/synthesis-engine/tests/test_synthesis_engine.py services/orchestrator-service/tests/test_orchestrator_service.py -q`.
+
+### MB-149
+
+- `id`: `MB-149`
+- `prioridade`: `P1`
+- `status`: `done`
+- `eixo_do_mestre`: `observabilidade/evals`
+- `workflow_profile_afetado`: `governance_boundary_workflow`, `operational_readiness_workflow`, `software_change_workflow`
+- `micro_objetivo`: medir baseline versus execucao assistida por aprendizado revisado.
+- `justificativa_arquitetural`: uma revisao humana so deve virar aprendizado confiavel se houver evidencia comparativa de melhora ou ausencia de regressao.
+- `arquivos/servicos_principais`: `services/observability-service`, `tools/internal_pilot_support.py`, `tools/internal_pilot_report.py`, `tools/compare_orchestrator_paths.py`, `tests`
+- `dependencias`: `MB-148`
+- `criterio_de_aceite`: relatorios e comparadores exibem `reviewed_learning_influence_status`, refs, taxa de uso, divergencias entre baseline e assisted, regressions/blockers e conclusao `no_promotion_without_release_gate`.
+- `gate_minimo`: `pytest services/observability-service/tests tests/unit/test_internal_pilot_report.py tests/unit/test_compare_orchestrator_paths.py` e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `medium`
+- `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: o ciclo `revisar -> medir` passa a ter evidencia operacional comparavel.
+- `evidencia_de_fechamento`: observabilidade, piloto interno, relatorio e comparador agora carregam `reviewed_learning_influence_status`, refs, motivo, taxa assisted/baseline e conclusao `no_promotion_without_release_gate`; validado por `pytest services/observability-service/tests/test_observability_service.py tests/unit/test_internal_pilot_report.py tests/unit/test_compare_orchestrator_paths.py -q`.
+
+### MB-150
+
+- `id`: `MB-150`
+- `prioridade`: `P1`
+- `status`: `done`
+- `eixo_do_mestre`: `operacao/docs`
+- `workflow_profile_afetado`: `governance_boundary_workflow`, `operational_readiness_workflow`
+- `micro_objetivo`: expor ao operador a influencia de aprendizado revisado e documentar como interpretar resultados.
+- `justificativa_arquitetural`: o operador precisa ver quando um aprendizado revisado foi usado, por que foi usado, quais evidencias sustentam isso e qual proximo passo seguro.
+- `arquivos/servicos_principais`: `apps/jarvis_console`, `docs/operations/operator-learning-loop.md`, `HANDOFF.md`, `CHANGELOG.md`, `tests`
+- `dependencias`: `MB-149`
+- `criterio_de_aceite`: console mostra guidance revisado usado, refs, status de influencia, medicao baseline vs assisted, limites de promocao e proximo passo humano; docs explicam o fluxo `revisar -> influenciar -> medir`.
+- `gate_minimo`: `pytest apps/jarvis_console/tests tests/unit` e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `medium`
+- `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: fecha a leitura operacional do feedback de aprendizado revisado sem abrir autoevolucao profunda.
+- `evidencia_de_fechamento`: `mission-cycle` e `mission-workflow` agora mostram influencia de aprendizado revisado, refs, motivo, medicao assisted/baseline e limite de release; `docs/operations/operator-learning-loop.md`, handoff, snapshot e changelog foram sincronizados.
 
 ## 5. Regras de manutencao da fila
 
@@ -2458,6 +2836,13 @@ Estado atual da fila:
 - `MB-129` agora foi concluido: `evolution-lab` transforma reflexoes pos-tarefa em propostas `post_task_reflection_improvement` `sandbox-only`, bloqueando autopromocao e mutacao do nucleo;
 - `MB-130` agora foi concluido: observabilidade, relatorio e console read-only expoem sinais e registros de experiencia/reflexao pos-tarefa;
 - `MB-131` agora foi concluido: docs vivos registram o fechamento da primeira camada de experiencia/reflexao pos-tarefa governada;
-- nao ha novo item `ready` apos o fechamento de `MB-131`; a proxima rodada exige nova repriorizacao explicita;
+- `MB-132` a `MB-140` foram concluidos como baseline do `Operator Learning Loop`;
+- `MB-141` a `MB-145` foram concluidos como controles humanos de revisao evolutiva;
+- `MB-146` abriu o lote `Reviewed Learning Feedback Loop`;
+- `MB-147` formalizou o contrato de `reviewed_learning_guidance` e sua derivacao no `evolution-lab`;
+- `MB-148` conectou `reviewed_learning_guidance` ao runtime de memoria, planejamento e sintese com filtros de escopo;
+- `MB-149` fechou medicao baseline vs reviewed-learning-assisted em observabilidade, piloto, relatorio e comparador;
+- `MB-150` fechou a leitura operacional no console e na documentacao;
+- nao ha novo item tecnico `ready` apos `MB-150`; a proxima rodada exige repriorizacao explicita;
 - `SO-001`, `TA-004`, `TA-006` e verticais `deferred` continuam fora da fila sem mudanca explicita de fase;
 - `protective intelligence foundation` continua `deferred` e a matriz da Onda 2 segue como insumo, nao como gatilho automatico para abrir nova vertical.

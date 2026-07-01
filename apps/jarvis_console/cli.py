@@ -13,9 +13,9 @@ from apps.jarvis_console.bootstrap import ROOT, ensure_src_paths
 
 ensure_src_paths()
 
-from evolution_lab.service import EvolutionLabService
+from evolution_lab.service import EvolutionLabService, PostTaskReflectionInput
 from memory_service.service import MemoryService
-from observability_service.service import ObservabilityService
+from observability_service.service import ObservabilityQuery, ObservabilityService
 from operational_service.service import OperationalService
 from orchestrator_service.service import (
     ObjectiveTransitionResult,
@@ -176,6 +176,55 @@ def build_parser() -> ArgumentParser:
     reflections_parser.add_argument("--workflow-profile")
     reflections_parser.add_argument("--limit", type=int, default=5)
 
+    review_parser = subparsers.add_parser(
+        "evolution-review-queue",
+        help="Show human-review evolution proposals without promoting them.",
+    )
+    review_parser.add_argument("--evolution-db")
+    review_parser.add_argument("--limit", type=int, default=5)
+
+    review_decision_parser = subparsers.add_parser(
+        "evolution-review",
+        help="Apply a human review decision to an evolution proposal.",
+    )
+    review_decision_parser.add_argument("--evolution-db")
+    review_decision_parser.add_argument("--proposal-id", required=True)
+    review_decision_parser.add_argument(
+        "--action",
+        required=True,
+        choices=["approve", "reject", "sandbox", "needs-review", "rollback"],
+    )
+    review_decision_parser.add_argument(
+        "--operator-ref",
+        default=DEFAULT_OPERATOR_IDENTITY_REF,
+    )
+    review_decision_parser.add_argument("--evidence-ref", action="append", default=[])
+    review_decision_parser.add_argument("--proposed-test", action="append", default=[])
+    review_decision_parser.add_argument("--rollback-plan-ref")
+    review_decision_parser.add_argument("--risk-acceptance")
+    review_decision_parser.add_argument("--note", action="append", default=[])
+
+    mission_cycle_parser = subparsers.add_parser(
+        "mission-cycle",
+        help="Show a read-only operator learning loop for one mission.",
+    )
+    mission_cycle_parser.add_argument("--mission-id", required=True)
+    mission_cycle_parser.add_argument("--memory-db")
+    mission_cycle_parser.add_argument("--evolution-db")
+    mission_cycle_parser.add_argument("--workflow-profile")
+    mission_cycle_parser.add_argument("--limit", type=int, default=5)
+
+    mission_workflow_parser = subparsers.add_parser(
+        "mission-workflow",
+        help="Run a governed mission and show the operator learning loop.",
+    )
+    mission_workflow_parser.add_argument("prompt")
+    mission_workflow_parser.add_argument("--session-id", default="console-mission-workflow")
+    mission_workflow_parser.add_argument("--mission-id", required=True)
+    mission_workflow_parser.add_argument("--evolution-db")
+    mission_workflow_parser.add_argument("--operator-identity-ref")
+    mission_workflow_parser.add_argument("--canonical-user-ref")
+
     return parser
 
 
@@ -298,25 +347,264 @@ def render_experience_reflections(records: list[object]) -> str:
     for record in records:
         experience = getattr(record, "experience")
         reflection = getattr(record, "reflection")
+        primary_domain_driver = getattr(experience, "primary_domain_driver", None)
+        specialist_used = list(getattr(experience, "specialist_used", []))
+        reflection_status = reflection.reflection_status if reflection else "pending"
+        proposed_change_type = (
+            reflection.proposed_change_type if reflection else None
+        )
+        learning_candidate = reflection.learning_candidate if reflection else None
+        recommendation = reflection.recommendation if reflection else None
+        blockers = list(reflection.blockers) if reflection else []
+        automatic_promotion = (
+            reflection.automatic_promotion_allowed if reflection else False
+        )
+        core_mutation_allowed = (
+            reflection.core_mutation_allowed if reflection else False
+        )
         lines.extend(
             [
                 f"experience_id={safe_console_value(experience.experience_id)}",
                 f"mission_id={safe_console_value(experience.mission_id)}",
                 f"workflow_profile={safe_console_value(experience.workflow_profile)}",
                 f"outcome_status={safe_console_value(experience.outcome_status)}",
-                f"reflection_status={safe_console_value(reflection.reflection_status)}",
-                f"proposed_change_type={safe_console_value(reflection.proposed_change_type)}",
-                f"learning_candidate={safe_console_value(reflection.learning_candidate)}",
-                f"recommendation={safe_console_value(reflection.recommendation)}",
-                f"blockers={safe_console_list(list(reflection.blockers))}",
-                f"automatic_promotion={safe_console_value(reflection.automatic_promotion_allowed)}",
-                f"core_mutation_allowed={safe_console_value(reflection.core_mutation_allowed)}",
+                f"user_intent={safe_console_value(getattr(experience, 'user_intent', None))}",
+                f"route={safe_console_value(getattr(experience, 'route', None))}",
+                f"primary_mind={safe_console_value(getattr(experience, 'primary_mind', None))}",
+                f"primary_domain_driver={safe_console_value(primary_domain_driver)}",
+                f"specialist_used={safe_console_list(specialist_used)}",
+                f"reflection_status={safe_console_value(reflection_status)}",
+                f"proposed_change_type={safe_console_value(proposed_change_type)}",
+                f"learning_candidate={safe_console_value(learning_candidate)}",
+                f"recommendation={safe_console_value(recommendation)}",
+                f"blockers={safe_console_list(blockers)}",
+                f"automatic_promotion={safe_console_value(automatic_promotion)}",
+                f"core_mutation_allowed={safe_console_value(core_mutation_allowed)}",
                 "---",
             ]
         )
     if lines and lines[-1] == "---":
         lines.pop()
     return "\n".join(lines)
+
+
+def render_evolution_review_queue(items: list[object]) -> str:
+    if not items:
+        return "No evolution review items found."
+    lines: list[str] = []
+    for item in items:
+        requires_human_review = safe_console_value(
+            getattr(item, "requires_human_review", None)
+        )
+        requires_sandbox = safe_console_value(getattr(item, "requires_sandbox", None))
+        lines.extend(
+            [
+                f"review_item_id={safe_console_value(getattr(item, 'review_item_id', None))}",
+                f"proposal_id={safe_console_value(getattr(item, 'evolution_proposal_id', None))}",
+                f"proposal_type={safe_console_value(getattr(item, 'proposal_type', None))}",
+                f"review_status={safe_console_value(getattr(item, 'review_status', None))}",
+                f"review_reason={safe_console_value(getattr(item, 'review_reason', None))}",
+                f"requires_human_review={requires_human_review}",
+                f"requires_sandbox={requires_sandbox}",
+                f"target_scope={safe_console_value(getattr(item, 'target_scope', None))}",
+                f"candidate_refs={safe_console_list(list(getattr(item, 'candidate_refs', [])))}",
+                f"blockers={safe_console_list(list(getattr(item, 'blockers', [])))}",
+                f"proposed_tests={safe_console_list(list(getattr(item, 'proposed_tests', [])))}",
+                f"rollback_plan_ref={safe_console_value(getattr(item, 'rollback_plan_ref', None))}",
+                "automatic_promotion=False",
+                "---",
+            ]
+        )
+    if lines and lines[-1] == "---":
+        lines.pop()
+    return "\n".join(lines)
+
+
+def render_evolution_review_decision(decision: object) -> str:
+    review_decision_id = safe_console_value(
+        getattr(decision, "review_decision_id", None)
+    )
+    proposal_id = safe_console_value(getattr(decision, "evolution_proposal_id", None))
+    evidence_refs = safe_console_list(list(getattr(decision, "evidence_refs", [])))
+    proposed_tests = safe_console_list(list(getattr(decision, "proposed_tests", [])))
+    rollback_plan_ref = safe_console_value(
+        getattr(decision, "rollback_plan_ref", None)
+    )
+    return "\n".join(
+        [
+            f"review_decision_id={review_decision_id}",
+            f"proposal_id={proposal_id}",
+            f"decision={safe_console_value(getattr(decision, 'decision', None))}",
+            f"review_status={safe_console_value(getattr(decision, 'review_status', None))}",
+            f"operator_ref={safe_console_value(getattr(decision, 'operator_ref', None))}",
+            f"evidence_refs={evidence_refs}",
+            f"proposed_tests={proposed_tests}",
+            f"rollback_plan_ref={rollback_plan_ref}",
+            f"risk_acceptance={safe_console_value(getattr(decision, 'risk_acceptance', None))}",
+            f"review_notes={safe_console_list(list(getattr(decision, 'review_notes', [])))}",
+            "automatic_promotion=False",
+            "core_mutation_allowed=False",
+        ]
+    )
+
+
+def render_mission_cycle(
+    *,
+    mission_id: str,
+    mission_state: MissionStateContract | None,
+    records: list[object],
+    review_items: list[object],
+    flow_audit: object | None = None,
+) -> str:
+    if mission_state is None and not records and not review_items:
+        return f"No mission cycle found for mission_id={safe_console_value(mission_id)}"
+
+    latest_record = records[0] if records else None
+    experience = getattr(latest_record, "experience", None)
+    reflection = getattr(latest_record, "reflection", None)
+    matching_review_items = _matching_review_items(
+        review_items=review_items,
+        experience=experience,
+        reflection=reflection,
+    )
+    primary_review = matching_review_items[0] if matching_review_items else None
+    reflection_status = safe_console_value(
+        getattr(reflection, "reflection_status", "pending")
+    )
+    next_step = _mission_cycle_next_step(
+        mission_state=mission_state,
+        reflection=reflection,
+        review_item=primary_review,
+    )
+    reviewed_learning_status = safe_console_value(
+        getattr(flow_audit, "reviewed_learning_influence_status", "not_applicable")
+    )
+    reviewed_learning_refs = safe_console_list(
+        list(getattr(flow_audit, "reviewed_learning_influence_refs", []))
+    )
+    reviewed_learning_reason = safe_console_value(
+        getattr(flow_audit, "reviewed_learning_influence_reason", None)
+    )
+    reviewed_learning_eval_status = safe_console_value(
+        getattr(
+            flow_audit,
+            "reviewed_learning_assisted_eval_status",
+            "baseline_no_reviewed_learning",
+        )
+    )
+    reviewed_learning_release = safe_console_value(
+        getattr(
+            flow_audit,
+            "reviewed_learning_release_conclusion",
+            "no_promotion_without_release_gate",
+        )
+    )
+    lines = [
+        "operator_learning_loop=read_only",
+        f"mission_id={safe_console_value(mission_id)}",
+        f"mission_goal={safe_console_value(getattr(mission_state, 'mission_goal', None))}",
+        f"objective_status={safe_console_value(getattr(mission_state, 'objective_status', None))}",
+        f"next_action_ref={safe_console_value(getattr(mission_state, 'next_action_ref', None))}",
+        f"route={safe_console_value(getattr(experience, 'route', None))}",
+        f"workflow_profile={safe_console_value(getattr(experience, 'workflow_profile', None))}",
+        f"plan_summary={safe_console_value(getattr(experience, 'plan_summary', None))}",
+        f"execution_summary={safe_console_value(getattr(experience, 'execution_summary', None))}",
+        f"checkpoints={safe_console_list(list(getattr(experience, 'checkpoints', [])))}",
+        f"memory_used={safe_console_list(list(getattr(experience, 'evidence_refs', [])))}",
+        f"specialist_used={safe_console_list(list(getattr(experience, 'specialist_used', [])))}",
+        f"experience_id={safe_console_value(getattr(experience, 'experience_id', None))}",
+        f"experience_outcome={safe_console_value(getattr(experience, 'outcome_status', None))}",
+        f"reflection_id={safe_console_value(getattr(reflection, 'reflection_id', None))}",
+        f"reflection_status={reflection_status}",
+        f"learning_candidate={safe_console_value(getattr(reflection, 'learning_candidate', None))}",
+        f"recommendation={safe_console_value(getattr(reflection, 'recommendation', None))}",
+        f"reviewed_learning_influence_status={reviewed_learning_status}",
+        f"reviewed_learning_influence_refs={reviewed_learning_refs}",
+        f"reviewed_learning_influence_reason={reviewed_learning_reason}",
+        f"reviewed_learning_assisted_eval_status={reviewed_learning_eval_status}",
+        f"reviewed_learning_release_conclusion={reviewed_learning_release}",
+        f"proposal_id={safe_console_value(getattr(primary_review, 'evolution_proposal_id', None))}",
+        f"review_status={safe_console_value(getattr(primary_review, 'review_status', None))}",
+        f"review_blockers={safe_console_list(list(getattr(primary_review, 'blockers', [])))}",
+        "automatic_promotion=False",
+        f"next_operator_step={safe_console_value(next_step)}",
+    ]
+    return "\n".join(lines)
+
+
+def _matching_review_items(
+    *,
+    review_items: list[object],
+    experience: object | None,
+    reflection: object | None,
+) -> list[object]:
+    refs = {
+        str(value)
+        for value in [
+            getattr(experience, "experience_id", None),
+            getattr(reflection, "reflection_id", None),
+        ]
+        if value is not None
+    }
+    if not refs:
+        return []
+    return [
+        item
+        for item in review_items
+        if refs.intersection(str(ref) for ref in getattr(item, "candidate_refs", []))
+    ]
+
+
+def _mission_cycle_next_step(
+    *,
+    mission_state: MissionStateContract | None,
+    reflection: object | None,
+    review_item: object | None,
+) -> str:
+    if review_item is not None:
+        return "review_evolution_proposal"
+    if reflection is not None:
+        return "create_or_link_evolution_review"
+    if mission_state is not None:
+        return safe_console_value(mission_state.next_action_ref)
+    return "start_governed_mission"
+
+
+def render_mission_workflow_report(
+    *,
+    response: OrchestratorResponse,
+    proposal: object | None,
+    cycle_report: str,
+) -> str:
+    proposal_id = safe_console_value(
+        getattr(proposal, "evolution_proposal_id", None)
+    )
+    mission_id = safe_console_value(
+        getattr(getattr(response, "experience_record", None), "mission_id", None)
+    )
+    operation_status = getattr(getattr(response, "operation_result", None), "status", None)
+    execution_status = safe_console_value(
+        getattr(operation_status, "value", operation_status)
+    )
+    reflection_recorded = safe_console_value(response.post_task_reflection is not None)
+    return "\n".join(
+        [
+            "mission_workflow_status=closed_with_human_review_pending",
+            f"request_id={safe_console_value(response.request_id)}",
+            f"governance_decision={safe_console_value(response.governance_decision.decision.value)}",
+            f"mission_started={mission_id}",
+            f"intent={safe_console_value(response.intent)}",
+            "plan_status=created",
+            f"execution_status={execution_status}",
+            f"experience_recorded={safe_console_value(response.experience_record is not None)}",
+            f"post_task_reflection_recorded={reflection_recorded}",
+            f"evolution_proposal_id={proposal_id}",
+            "review_status=needs_review" if proposal is not None else "review_status=pending",
+            "automatic_promotion=False",
+            "---",
+            cycle_report,
+        ]
+    )
 
 
 def run_ask_command(console: JarvisConsole, args: Namespace) -> list[str]:
@@ -397,19 +685,140 @@ def run_technology_candidates_command(args: Namespace) -> list[str]:
     return [render_technology_absorption_candidates(proposals)]
 
 
-def run_experience_reflections_command(args: Namespace) -> list[str]:
+def _memory_service_from_args(args: Namespace) -> MemoryService:
     memory_db = (
         Path(args.memory_db)
         if args.memory_db
         else ROOT / ".jarvis_runtime" / "memory.db"
     )
-    service = MemoryService(database_url=f"sqlite:///{memory_db.as_posix()}")
+    return MemoryService(database_url=f"sqlite:///{memory_db.as_posix()}")
+
+
+def _evolution_service_from_args(args: Namespace) -> EvolutionLabService:
+    evolution_db = (
+        Path(args.evolution_db)
+        if args.evolution_db
+        else ROOT / ".jarvis_runtime" / "evolution.db"
+    )
+    return EvolutionLabService(database_path=str(evolution_db))
+
+
+def run_experience_reflections_command(args: Namespace) -> list[str]:
+    service = _memory_service_from_args(args)
     records = service.list_experience_reflections(
         mission_id=args.mission_id,
         workflow_profile=args.workflow_profile,
         limit=max(1, args.limit),
     )
     return [render_experience_reflections(records)]
+
+
+def run_mission_cycle_command(console: JarvisConsole, args: Namespace) -> list[str]:
+    mission_state = console.get_objective_state(mission_id=args.mission_id)
+    memory_service = _memory_service_from_args(args)
+    evolution_service = _evolution_service_from_args(args)
+    records = memory_service.list_experience_reflections(
+        mission_id=args.mission_id,
+        workflow_profile=args.workflow_profile,
+        limit=max(1, args.limit),
+    )
+    review_items = evolution_service.list_human_review_queue(limit=max(1, args.limit))
+    flow_audit = console.orchestrator.observability_service.audit_flow(
+        ObservabilityQuery(mission_id=args.mission_id, limit=100)
+    )
+    return [
+        render_mission_cycle(
+            mission_id=args.mission_id,
+            mission_state=mission_state,
+            records=records,
+            review_items=review_items,
+            flow_audit=flow_audit,
+        )
+    ]
+
+
+def run_mission_workflow_command(console: JarvisConsole, args: Namespace) -> list[str]:
+    response = console.ask(
+        args.prompt,
+        session_id=args.session_id,
+        mission_id=args.mission_id,
+        operator_identity_ref=args.operator_identity_ref,
+        canonical_user_ref=args.canonical_user_ref,
+    )
+    evolution_service = _evolution_service_from_args(args)
+    proposal = _create_review_proposal_from_response(evolution_service, response)
+    records = console.orchestrator.memory_service.list_experience_reflections(
+        mission_id=args.mission_id,
+        workflow_profile=(
+            response.experience_record.workflow_profile
+            if response.experience_record is not None
+            else None
+        ),
+        limit=5,
+    )
+    review_items = evolution_service.list_human_review_queue(limit=5)
+    flow_audit = console.orchestrator.observability_service.audit_flow(
+        ObservabilityQuery(request_id=str(response.request_id), limit=100)
+    )
+    cycle_report = render_mission_cycle(
+        mission_id=args.mission_id,
+        mission_state=console.get_objective_state(mission_id=args.mission_id),
+        records=records,
+        review_items=review_items,
+        flow_audit=flow_audit,
+    )
+    return [
+        render_mission_workflow_report(
+            response=response,
+            proposal=proposal,
+            cycle_report=cycle_report,
+        )
+    ]
+
+
+def _create_review_proposal_from_response(
+    evolution_service: EvolutionLabService,
+    response: OrchestratorResponse,
+) -> object | None:
+    experience = response.experience_record
+    reflection = response.post_task_reflection
+    if experience is None or reflection is None:
+        return None
+    return evolution_service.create_proposal_from_post_task_reflection(
+        PostTaskReflectionInput(
+            experience_id=experience.experience_id,
+            mission_id=str(experience.mission_id),
+            workflow_profile=experience.workflow_profile,
+            outcome_status=experience.outcome_status,
+            learning_candidate=reflection.learning_candidate,
+            recommendation=reflection.recommendation,
+            evidence_refs=list(reflection.evidence_refs),
+            proposed_tests=list(reflection.proposed_tests),
+            rollback_plan_ref=reflection.rollback_plan_ref,
+            proposed_change_type=reflection.proposed_change_type,
+        )
+    )
+
+
+def run_evolution_review_queue_command(args: Namespace) -> list[str]:
+    service = _evolution_service_from_args(args)
+    items = service.list_human_review_queue(limit=max(1, args.limit))
+    return [render_evolution_review_queue(items)]
+
+
+def run_evolution_review_command(args: Namespace) -> list[str]:
+    service = _evolution_service_from_args(args)
+    decision = service.review_proposal(
+        evolution_proposal_id=args.proposal_id,
+        action=args.action,
+        operator_ref=args.operator_ref,
+        evidence_refs=list(args.evidence_ref),
+        proposed_tests=list(args.proposed_test),
+        rollback_plan_ref=args.rollback_plan_ref,
+        risk_acceptance=args.risk_acceptance,
+        review_notes=list(args.note),
+    )
+    return [render_evolution_review_decision(decision)]
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -420,6 +829,14 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "ask"
         else run_experience_reflections_command(args)
         if args.command == "experience-reflections"
+        else run_evolution_review_queue_command(args)
+        if args.command == "evolution-review-queue"
+        else run_evolution_review_command(args)
+        if args.command == "evolution-review"
+        else run_mission_cycle_command(console, args)
+        if args.command == "mission-cycle"
+        else run_mission_workflow_command(console, args)
+        if args.command == "mission-workflow"
         else run_technology_candidates_command(args)
         if args.command == "technology-candidates"
         else run_objective_command(console, args)
@@ -434,6 +851,10 @@ def main(argv: list[str] | None = None) -> int:
         "objectives",
         "technology-candidates",
         "experience-reflections",
+        "evolution-review-queue",
+        "evolution-review",
+        "mission-cycle",
+        "mission-workflow",
     }:
         print(outputs[0])
     elif args.message:

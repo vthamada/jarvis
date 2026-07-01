@@ -43,6 +43,13 @@ class SynthesisInput:
     context_live_summary: str | None = None
     cross_session_recall_status: str | None = None
     cross_session_recall_summary: str | None = None
+    reflection_influence_status: str | None = None
+    reflection_influence_refs: list[str] = field(default_factory=list)
+    reflection_influence_summary: str | None = None
+    reviewed_learning_influence_status: str | None = None
+    reviewed_learning_influence_refs: list[str] = field(default_factory=list)
+    reviewed_learning_influence_summary: str | None = None
+    reviewed_learning_influence_reason: str | None = None
     guided_memory_specialists: list[str] = field(default_factory=list)
     semantic_memory_focus: list[str] = field(default_factory=list)
     procedural_memory_hint: str | None = None
@@ -184,6 +191,14 @@ class SynthesisEngine:
         objective_line = self._objective_state_line(synthesis_input)
         if objective_line:
             parts.append(f"Estado do objetivo: {objective_line}.")
+        reflection_line = self._reflection_influence_line(synthesis_input)
+        if reflection_line:
+            parts.append(f"Reflexao aplicada: {reflection_line}.")
+        reviewed_learning_line = self._reviewed_learning_influence_line(
+            synthesis_input
+        )
+        if reviewed_learning_line:
+            parts.append(f"Aprendizado revisado: {reviewed_learning_line}.")
         limitation = self._limitation_line(synthesis_input)
         if limitation:
             parts.append(f"Limite atual: {limitation}.")
@@ -448,6 +463,51 @@ class SynthesisEngine:
         if status == "blocked":
             return "decisao pendente remover bloqueio antes de prosseguir"
         return None
+
+    @classmethod
+    def _reflection_influence_line(
+        cls,
+        synthesis_input: SynthesisInput,
+    ) -> str | None:
+        status = synthesis_input.reflection_influence_status
+        if status != "applied":
+            return None
+        summary = cls._safe_operational_value(
+            synthesis_input.reflection_influence_summary
+        )
+        ref = cls._first_safe_ref(synthesis_input.reflection_influence_refs)
+        parts = [f"status {status}"]
+        if ref:
+            parts.append(f"ref {ref}")
+        if summary:
+            parts.append(summary)
+        parts.append("sem promocao automatica")
+        return "; ".join(parts)
+
+    @classmethod
+    def _reviewed_learning_influence_line(
+        cls,
+        synthesis_input: SynthesisInput,
+    ) -> str | None:
+        status = synthesis_input.reviewed_learning_influence_status
+        if status != "applied":
+            return None
+        summary = cls._safe_operational_value(
+            synthesis_input.reviewed_learning_influence_summary
+        )
+        ref = cls._first_safe_ref(synthesis_input.reviewed_learning_influence_refs)
+        reason = cls._safe_operational_value(
+            synthesis_input.reviewed_learning_influence_reason
+        )
+        parts = [f"status {status}"]
+        if ref:
+            parts.append(f"ref {ref}")
+        if summary:
+            parts.append(summary)
+        if reason:
+            parts.append(f"motivo {reason}")
+        parts.append("sem promocao automatica")
+        return "; ".join(parts)
 
     @classmethod
     def _first_safe_ref(cls, values: list[str]) -> str | None:

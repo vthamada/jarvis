@@ -194,9 +194,20 @@ def test_evolution_lab_creates_sandbox_proposal_from_post_task_reflection() -> N
     assert proposal.optimization_candidate_status == "candidate"
     assert proposal.strategy_context["promotion_policy"]["automatic_promotion"] is False
     assert proposal.strategy_context["promotion_policy"]["core_mutation_allowed"] is False
+    assert proposal.strategy_context["evolution_review"]["review_status"] == "needs_review"
+    assert (
+        proposal.strategy_context["evolution_review"]["promotion_blocked_without_gate"]
+        is True
+    )
     assert proposal.evaluation_matrix["post_task_reflection"]["reflection_status"] == (
         "candidate"
     )
+    review_items = service.list_human_review_queue(limit=5)
+    assert review_items[0].review_status == "needs_review"
+    assert review_items[0].requires_human_review is True
+    assert review_items[0].requires_sandbox is True
+    assert review_items[0].rollback_plan_ref == "rollback://workflow/current"
+    assert "experience://mission-reflection/001" in review_items[0].candidate_refs
 
 
 def test_evolution_lab_blocks_reflection_that_requests_autopromotion() -> None:
@@ -221,6 +232,150 @@ def test_evolution_lab_blocks_reflection_that_requests_autopromotion() -> None:
     assert "automatic_promotion_not_allowed" in proposal.optimization_blockers
     assert "core_mutation_not_allowed" in proposal.optimization_blockers
     assert "evidence_required" in proposal.optimization_blockers
+
+
+def test_evolution_lab_records_human_review_decision_for_proposal() -> None:
+    temp_dir = runtime_dir("evolution-lab-human-review")
+    service = EvolutionLabService(database_path=str(temp_dir / "evolution.db"))
+    proposal = service.create_proposal_from_post_task_reflection(
+        PostTaskReflectionInput(
+            experience_id="experience://mission-human-review/001",
+            mission_id="mission-human-review",
+            workflow_profile="software_change_workflow",
+            outcome_status="completed",
+            learning_candidate="Reviewable learning should be approved by a human.",
+            recommendation="Sandbox the change before any promotion.",
+            evidence_refs=["trace://req-human-review"],
+            proposed_tests=["python tools/engineering_gate.py --mode standard"],
+            rollback_plan_ref="rollback://workflow/current",
+        )
+    )
+
+    decision = service.review_proposal(
+        evolution_proposal_id=str(proposal.evolution_proposal_id),
+        action="approve",
+        operator_ref="operator://local_console",
+        evidence_refs=["trace://req-human-review"],
+        proposed_tests=["python tools/engineering_gate.py --mode standard"],
+        rollback_plan_ref="rollback://workflow/current",
+        risk_acceptance="bounded_sandbox_only",
+    )
+    review_items = service.list_human_review_queue(limit=5)
+    recent_decisions = service.list_recent_decisions(limit=5)
+
+    assert decision.review_status == "approved"
+    assert decision.automatic_promotion_allowed is False
+    assert decision.core_mutation_allowed is False
+    assert review_items[0].review_status == "approved"
+    assert review_items[0].rollback_plan_ref == "rollback://workflow/current"
+    assert recent_decisions[0].decision == "human_approve"
+    assert recent_decisions[0].promoted_to is None
+
+
+def test_evolution_lab_derives_reviewed_learning_guidance_from_human_review() -> None:
+    temp_dir = runtime_dir("evolution-lab-reviewed-guidance")
+    service = EvolutionLabService(database_path=str(temp_dir / "evolution.db"))
+    proposal = service.create_proposal_from_post_task_reflection(
+        PostTaskReflectionInput(
+            experience_id="experience://mission-reviewed-guidance/001",
+            mission_id="mission-reviewed-guidance",
+            workflow_profile="software_change_workflow",
+            outcome_status="completed",
+            learning_candidate="Prefer small reviewed code changes.",
+            recommendation="Use reviewed learning as planning guidance only.",
+            evidence_refs=["trace://req-reviewed-guidance"],
+            proposed_tests=["python tools/engineering_gate.py --mode standard"],
+            rollback_plan_ref="rollback://workflow/reviewed-guidance",
+        )
+    )
+    decision = service.review_proposal(
+        evolution_proposal_id=str(proposal.evolution_proposal_id),
+        action="sandbox",
+        operator_ref="operator://local_console",
+        evidence_refs=["trace://req-reviewed-guidance"],
+        proposed_tests=["python tools/engineering_gate.py --mode standard"],
+        rollback_plan_ref="rollback://workflow/reviewed-guidance",
+    )
+
+    guidance = service.derive_reviewed_learning_guidance(decision)
+
+    assert guidance.source_review_decision_id == decision.review_decision_id
+    assert guidance.evolution_proposal_id == proposal.evolution_proposal_id
+    assert guidance.review_status == "sandboxed"
+    assert guidance.workflow_profile == "software_change_workflow"
+    assert guidance.route == "software_change_workflow"
+    assert guidance.domain == "software_change_workflow"
+    assert guidance.guidance_summary == "Use reviewed learning as planning guidance only."
+    assert guidance.allowed_usage == [
+        "sandbox_planning_context",
+        "sandbox_synthesis_context",
+        "evaluation_context",
+    ]
+    assert "trace://req-reviewed-guidance" in guidance.evidence_refs
+    assert "baseline://sovereign-core/current" in guidance.evidence_refs
+    assert guidance.rollback_plan_ref == "rollback://workflow/reviewed-guidance"
+    assert guidance.automatic_promotion_allowed is False
+    assert guidance.core_mutation_allowed is False
+
+
+def test_evolution_lab_blocks_human_approval_without_required_evidence() -> None:
+    temp_dir = runtime_dir("evolution-lab-human-review-blocked")
+    service = EvolutionLabService(database_path=str(temp_dir / "evolution.db"))
+    proposal = service.create_proposal_from_post_task_reflection(
+        PostTaskReflectionInput(
+            experience_id="experience://mission-human-review-blocked/001",
+            mission_id="mission-human-review-blocked",
+            workflow_profile="software_change_workflow",
+            outcome_status="completed",
+            learning_candidate="Unsafe approval without evidence.",
+            recommendation="Should remain in review.",
+        )
+    )
+
+    decision = service.review_proposal(
+        evolution_proposal_id=str(proposal.evolution_proposal_id),
+        action="approve",
+        operator_ref="operator://local_console",
+    )
+    review_items = service.list_human_review_queue(limit=5)
+
+    assert decision.review_status == "needs_review"
+    assert "evidence_required_for_human_approval" in decision.review_notes
+    assert "tests_required_for_human_approval" in decision.review_notes
+    assert "rollback_required_for_human_approval" in decision.review_notes
+    assert review_items[0].review_status == "needs_review"
+    assert set(review_items[0].blockers) == {
+        "evidence_required_for_human_approval",
+        "tests_required_for_human_approval",
+        "rollback_required_for_human_approval",
+    }
+
+
+def test_evolution_lab_blocks_guidance_from_unapproved_review() -> None:
+    temp_dir = runtime_dir("evolution-lab-reviewed-guidance-blocked")
+    service = EvolutionLabService(database_path=str(temp_dir / "evolution.db"))
+    proposal = service.create_proposal_from_post_task_reflection(
+        PostTaskReflectionInput(
+            experience_id="experience://mission-reviewed-guidance-blocked/001",
+            mission_id="mission-reviewed-guidance-blocked",
+            workflow_profile="software_change_workflow",
+            outcome_status="completed",
+            learning_candidate="Insufficient review should not influence runtime.",
+            recommendation="Keep this learning out of planning.",
+        )
+    )
+    decision = service.review_proposal(
+        evolution_proposal_id=str(proposal.evolution_proposal_id),
+        action="needs-review",
+        operator_ref="operator://local_console",
+    )
+
+    try:
+        service.derive_reviewed_learning_guidance(decision)
+    except ValueError as exc:
+        assert "approved or sandboxed" in str(exc)
+    else:
+        raise AssertionError("unapproved review must not produce guidance")
 
 
 def test_evolution_lab_creates_proposal_from_flow_evaluation() -> None:

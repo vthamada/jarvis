@@ -125,6 +125,38 @@ Hierarquia correta:
 - `MB-127` a `MB-131` fecharam esse recorte: contratos, memoria evolutiva
   bounded, propostas `sandbox-only`, observabilidade, relatorio e console
   read-only agora tratam reflexao pos-tarefa como baseline governado;
+- a repriorizacao pos-`MB-131` foi aberta em `MB-132` e escolheu o
+  `Operator Learning Loop` como proxima frente: o foco agora e fechar o ciclo
+  real `usar -> registrar -> refletir -> propor -> revisar -> medir`, fazendo
+  missoes governadas gerarem experiencia, reflexao, proposta evolutiva,
+  revisao humana e medicao de ganho sem autopromocao;
+- `MB-133` fechou o primeiro passo tecnico desse loop: missoes/requests
+  governados agora geram `experience_record` automatico no `orchestrator-service`
+  e persistido pelo `memory-service`, ainda sem gerar reflexao automatica;
+- `MB-134` fechou o segundo passo tecnico: cada experiencia automatica agora
+  gera `post_task_reflection` bounded e persistida, sem autopromocao, sem
+  mutacao de nucleo e sem influencia causal ainda;
+- `MB-135` fechou a primeira influencia causal bounded: reflexoes relevantes
+  agora podem influenciar planejamento e sintese quando batem por workflow,
+  rota e dominio, com refs auditaveis e sem promocao automatica;
+- `MB-136` criou a fila humana read-only de revisao evolutiva sobre propostas
+  sandbox, com estados, blockers, testes e rollback visiveis ao operador;
+- `MB-137` adicionou eval/piloto baseline vs reflection-assisted em
+  observabilidade, relatorio e comparador, sem autopromocao;
+- `MB-138` expos o ciclo no console por `mission-cycle`, agregando missao,
+  objetivo, experiencia, reflexao, proposta evolutiva e revisao em modo
+  read-only;
+- `MB-139` adicionou `mission-workflow`, demonstrando execucao governada,
+  experiencia/reflexao automatica, proposta sandbox e revisao humana pendente;
+- `MB-140` fechou a documentacao operacional do loop em
+  `docs/operations/operator-learning-loop.md`;
+- `MB-141` a `MB-145` fecharam `EV-008`: o operador agora pode aprovar,
+  rejeitar, sandboxar, devolver proposta para revisao ou rollbackar proposta
+  evolutiva com contrato, evidencia, testes, rollback, observabilidade e
+  bloqueio explicito de autopromocao;
+- a repriorizacao pos-`MB-145` abre `EV-009` como feedback de aprendizado
+  revisado: decisoes humanas aprovadas ou sandboxadas podem virar guidance
+  bounded, filtrado e mensuravel para planejamento/sintese, sem autopromocao;
 - o proximo passo nao e abrir produto multicanal ou automacao ampla
   automaticamente; a fila atual existe para criar continuidade operacional
   governada antes de qualquer autonomia mais forte;
@@ -250,6 +282,9 @@ Notas de leitura:
 | `EV-004` | lane controlada de experimentos da Onda 2 com criterio de entrada e saida | comparadores, laboratorio, gates | `v2 restante` | `OpenAI Agents SDK`, `Qwen-Agent`, `Graphiti`, `Mem0`, `OpenHands`, `browser-use` | `onda_2_controlada` | `resolved_in_baseline` | `sim` |
 | `EV-005` | loop de absorcao tecnologica governada como candidato persistido, observado e operavel | contratos, `evolution-lab`, observabilidade, console | `v2 restante` | todas as ondas, com prioridade para Onda 1 residual e Onda 2 controlada | `onda_1_residual` | `resolved_in_baseline` | `sim` |
 | `EV-006` | experiencia operacional e reflexao pos-tarefa como materia-prima governada de evolucao | contratos, memoria evolutiva, `evolution-lab`, observabilidade, console | `v2 restante` | padroes de self-evolving agents e continual learning traduzidos sem self-modification | `onda_1_residual` | `resolved_in_baseline` | `sim` |
+| `EV-007` | Operator Learning Loop como ciclo real de uso humano e aprendizado governado | `orchestrator`, memoria evolutiva, `evolution-lab`, console, evals | `v2 restante` | padroes de lifelong learning e reflection-assisted agents traduzidos como fluxo auditavel | `onda_1_residual` | `resolved_in_baseline` | `sim` |
+| `EV-008` | controles humanos de revisao evolutiva para fechar propostas pendentes | `evolution-lab`, console, observabilidade, docs | `v2 restante` | padroes de human-in-the-loop governance e release gates traduzidos como decisao auditavel | `onda_1_residual` | `resolved_in_baseline` | `sim` |
+| `EV-009` | feedback de aprendizado revisado influenciando decisoes futuras de forma bounded | contratos, `orchestrator`, planning, synthesis, observabilidade, console | `v2 restante` | padroes de learning feedback loops e human-reviewed memory traduzidos como guidance auditavel | `onda_1_residual` | `resolved_in_baseline` | `sim` |
 
 Notas de leitura:
 
@@ -264,6 +299,18 @@ Notas de leitura:
 - `EV-006` e o proximo passo da estrutura evolutiva: registrar experiencia,
   refletir sobre outcome/falhas, propor melhorias sandbox-only e expor tudo ao
   operador antes de qualquer mudanca no runtime.
+- `EV-007` fecha o ciclo operacional em torno do humano: usar, registrar,
+  refletir, propor, revisar e medir. Ele nao abre voz, realtime, UI rica,
+  scheduler autonomo, browser/computer use amplo ou autoevolucao profunda.
+- `EV-008` transformou revisao pendente em decisao humana auditavel, mantendo
+  promocao automatica e mutacao de nucleo bloqueadas.
+- `EV-009` e o proximo passo correto apos a decisao humana: aplicar somente
+  aprendizados revisados, relevantes e bounded como guidance, medir impacto e
+  continuar bloqueando qualquer promocao sem release gate.
+- `MB-147` formalizou o contrato desse guidance, `MB-148` conectou sua
+  influencia runtime em memoria, planning e synthesis, e `MB-149`/`MB-150`
+  fecharam medicao comparativa e leitura operacional; `EV-009` agora faz parte
+  do baseline resolvido, sem autopromocao.
 
 ### 5.5 Deferred verticals already mapped
 
@@ -333,8 +380,20 @@ Leitura correta:
   console read-only de candidatos tecnologicos;
 - `EV-006` foi concluido em `MB-126` a `MB-131`, com escopo estrito de
   experiencia/reflexao pos-tarefa e sem self-modification forte;
+- `EV-007` foi fatiado em `MB-132` a `MB-140`; `MB-133` ja automatizou
+  `experience_record` no fluxo real, `MB-134` ja automatizou
+  `post_task_reflection` bounded, `MB-135` ja adicionou influencia governada em
+  planejamento/sintese, `MB-136` ja criou a fila humana read-only de revisao
+  evolutiva, `MB-137` ja adicionou eval/piloto baseline vs reflection-assisted,
+  `MB-138` ja expos o ciclo no console e `MB-139` ja adicionou workflow pratico
+  ponta a ponta; `MB-140` ja fechou a documentacao operacional, sem novo item
+  tecnico `ready` automatico;
 - `TA-004`, `TA-006` e `DV-001` continuam relevantes, mas ainda fora da fila
   sem mudanca explicita de fase;
+- `EV-008` foi fechado como lote `MB-141` a `MB-145`; nao ha novo item tecnico
+  `ready` sem repriorizacao explicita;
+- `EV-009` foi fechado como lote `MB-146` a `MB-150`; nao ha novo item tecnico
+  `ready` sem repriorizacao explicita;
 - `RH-*` permanece fora do backlog implementavel.
 
 ---

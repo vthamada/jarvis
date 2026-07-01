@@ -209,6 +209,23 @@ class FlowAudit:
     experience_reflection_blockers: list[str] = field(default_factory=list)
     experience_reflection_refs: list[str] = field(default_factory=list)
     experience_reflection_signals: list[str] = field(default_factory=list)
+    reflection_influence_status: str = "not_applicable"
+    reflection_influence_refs: list[str] = field(default_factory=list)
+    reflection_influence_summary: str | None = None
+    reflection_assisted_eval_status: str = "baseline_no_reflection"
+    reviewed_learning_influence_status: str = "not_applicable"
+    reviewed_learning_influence_refs: list[str] = field(default_factory=list)
+    reviewed_learning_influence_summary: str | None = None
+    reviewed_learning_influence_reason: str | None = None
+    reviewed_learning_assisted_eval_status: str = "baseline_no_reviewed_learning"
+    reviewed_learning_release_conclusion: str = "no_promotion_without_release_gate"
+    evolution_review_decision_status: str = "not_applicable"
+    evolution_review_decision: str = "not_applicable"
+    evolution_review_proposal_id: str | None = None
+    evolution_review_operator_ref: str | None = None
+    evolution_review_evidence_refs: list[str] = field(default_factory=list)
+    evolution_review_rollback_plan_ref: str | None = None
+    evolution_review_limits: list[str] = field(default_factory=list)
 
     @property
     def trace_complete(self) -> bool:
@@ -268,6 +285,15 @@ class FlowAudit:
             and self.technology_absorption_decision
             not in {"block_absorption", "attention_required"}
             and self.experience_reflection_status not in {"blocked", "attention_required"}
+            and self.evolution_review_decision_status
+            in {
+                "not_applicable",
+                "approved",
+                "rejected",
+                "sandboxed",
+                "needs_review",
+                "rolled_back",
+            }
         )
 
 
@@ -1837,6 +1863,94 @@ class ObservabilityService:
             blockers=experience_reflection_blockers,
             refs=experience_reflection_refs,
         )
+        reflection_influence_event = self._first_payload_event(
+            events,
+            "reflection_influence_status",
+        )
+        reflection_influence_status = self._payload_str(
+            reflection_influence_event,
+            "reflection_influence_status",
+            "not_applicable",
+        )
+        reflection_influence_refs = self._dedupe_payload_list(
+            events,
+            "reflection_influence_refs",
+        )
+        reflection_influence_summary = self._payload_str(
+            reflection_influence_event,
+            "reflection_influence_summary",
+            None,
+        )
+        reflection_assisted_eval_status = self._reflection_assisted_eval_status(
+            status=reflection_influence_status,
+            refs=reflection_influence_refs,
+        )
+        reviewed_learning_influence_event = self._first_payload_event(
+            events,
+            "reviewed_learning_influence_status",
+        )
+        reviewed_learning_influence_status = self._payload_str(
+            reviewed_learning_influence_event,
+            "reviewed_learning_influence_status",
+            "not_applicable",
+        )
+        reviewed_learning_influence_refs = self._dedupe_payload_list(
+            events,
+            "reviewed_learning_influence_refs",
+        )
+        reviewed_learning_influence_summary = self._payload_str(
+            reviewed_learning_influence_event,
+            "reviewed_learning_influence_summary",
+            None,
+        )
+        reviewed_learning_influence_reason = self._payload_str(
+            reviewed_learning_influence_event,
+            "reviewed_learning_influence_reason",
+            None,
+        )
+        reviewed_learning_assisted_eval_status = (
+            self._reviewed_learning_assisted_eval_status(
+                status=reviewed_learning_influence_status,
+                refs=reviewed_learning_influence_refs,
+            )
+        )
+        evolution_review_event = self._first_payload_event(
+            events,
+            "evolution_review_decision_status",
+        )
+        evolution_review_decision_status = self._payload_str(
+            evolution_review_event,
+            "evolution_review_decision_status",
+            "not_applicable",
+        )
+        evolution_review_decision = self._payload_str(
+            evolution_review_event,
+            "evolution_review_decision",
+            "not_applicable",
+        )
+        evolution_review_proposal_id = self._payload_optional_str(
+            evolution_review_event,
+            "evolution_proposal_id",
+        )
+        evolution_review_operator_ref = self._payload_optional_str(
+            evolution_review_event,
+            "operator_ref",
+        )
+        evolution_review_evidence_refs = self._dedupe_payload_list(
+            events,
+            "evolution_review_evidence_refs",
+        )
+        evolution_review_rollback_plan_ref = self._payload_optional_str(
+            evolution_review_event,
+            "rollback_plan_ref",
+        )
+        evolution_review_limits = self._evolution_review_limits(
+            event=evolution_review_event,
+            existing_limits=self._dedupe_payload_list(
+                events,
+                "evolution_review_limits",
+            ),
+        )
 
         return FlowAudit(
             request_id=first_event.request_id,
@@ -1928,6 +2042,27 @@ class ObservabilityService:
             experience_reflection_blockers=experience_reflection_blockers,
             experience_reflection_refs=experience_reflection_refs,
             experience_reflection_signals=experience_reflection_signals,
+            reflection_influence_status=reflection_influence_status,
+            reflection_influence_refs=reflection_influence_refs,
+            reflection_influence_summary=reflection_influence_summary,
+            reflection_assisted_eval_status=reflection_assisted_eval_status,
+            reviewed_learning_influence_status=reviewed_learning_influence_status,
+            reviewed_learning_influence_refs=reviewed_learning_influence_refs,
+            reviewed_learning_influence_summary=reviewed_learning_influence_summary,
+            reviewed_learning_influence_reason=reviewed_learning_influence_reason,
+            reviewed_learning_assisted_eval_status=(
+                reviewed_learning_assisted_eval_status
+            ),
+            reviewed_learning_release_conclusion=(
+                "no_promotion_without_release_gate"
+            ),
+            evolution_review_decision_status=evolution_review_decision_status,
+            evolution_review_decision=evolution_review_decision,
+            evolution_review_proposal_id=evolution_review_proposal_id,
+            evolution_review_operator_ref=evolution_review_operator_ref,
+            evolution_review_evidence_refs=evolution_review_evidence_refs,
+            evolution_review_rollback_plan_ref=evolution_review_rollback_plan_ref,
+            evolution_review_limits=evolution_review_limits,
             experiment_lane_status=expanded_eval_state["experiment_lane_status"],
             wave2_candidate_class=expanded_eval_state["wave2_candidate_class"],
             experiment_entry_status=expanded_eval_state["experiment_entry_status"],
@@ -2185,6 +2320,15 @@ class ObservabilityService:
         return str(event.payload[field_name])
 
     @staticmethod
+    def _payload_optional_str(
+        event: InternalEventEnvelope | None,
+        field_name: str,
+    ) -> str | None:
+        if event is None or event.payload.get(field_name) in {None, ""}:
+            return None
+        return str(event.payload[field_name])
+
+    @staticmethod
     def _dedupe_payload_list(
         events: list[InternalEventEnvelope],
         field_name: str,
@@ -2199,6 +2343,21 @@ class ObservabilityService:
                 if text and text not in values:
                     values.append(text)
         return values
+
+    @staticmethod
+    def _evolution_review_limits(
+        *,
+        event: InternalEventEnvelope | None,
+        existing_limits: list[str],
+    ) -> list[str]:
+        limits = list(existing_limits)
+        if event is None:
+            return limits
+        if event.payload.get("automatic_promotion_allowed") is False:
+            limits.append("automatic_promotion_blocked")
+        if event.payload.get("core_mutation_allowed") is False:
+            limits.append("core_mutation_blocked")
+        return list(dict.fromkeys(limits))
 
     @staticmethod
     def _objective_transition_counts(
@@ -2286,6 +2445,39 @@ class ObservabilityService:
         if status in {"candidate", "manual_review"}:
             signals.append("experience_reflection_manual_review_required")
         return signals
+
+    @staticmethod
+    def _reflection_assisted_eval_status(
+        *,
+        status: str,
+        refs: list[str],
+    ) -> str:
+        if status == "applied" and refs:
+            return "reflection_assisted"
+        if status == "applied":
+            return "reflection_signal_incomplete"
+        if status in {"not_applicable", "no_relevant_reflection", "no_workflow_profile", ""}:
+            return "baseline_no_reflection"
+        return "reflection_review_required"
+
+    @staticmethod
+    def _reviewed_learning_assisted_eval_status(
+        *,
+        status: str,
+        refs: list[str],
+    ) -> str:
+        if status == "applied" and refs:
+            return "reviewed_learning_assisted"
+        if status == "applied":
+            return "reviewed_learning_signal_incomplete"
+        if status in {
+            "not_applicable",
+            "no_relevant_guidance",
+            "no_workflow_profile",
+            "",
+        }:
+            return "baseline_no_reviewed_learning"
+        return "reviewed_learning_review_required"
 
     @staticmethod
     def _multi_surface_readiness(

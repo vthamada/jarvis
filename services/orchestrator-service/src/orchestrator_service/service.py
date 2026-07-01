@@ -24,6 +24,7 @@ from shared.contracts import (
     ContinuityReplayContract,
     DeliberativePlanContract,
     EcosystemOperationalStateContract,
+    ExperienceRecordContract,
     GovernanceCheckContract,
     GovernanceDecisionContract,
     InputContract,
@@ -33,6 +34,7 @@ from shared.contracts import (
     MissionStateContract,
     OperationDispatchContract,
     OperationResultContract,
+    PostTaskReflectionContract,
     ProjectObjectiveContinuityContract,
     SpecialistInvocationContract,
 )
@@ -92,6 +94,8 @@ class OrchestratorResponse:
     specialist_review: SpecialistReview | None = None
     operation_dispatch: OperationDispatchContract | None = None
     operation_result: OperationResultContract | None = None
+    experience_record: ExperienceRecordContract | None = None
+    post_task_reflection: PostTaskReflectionContract | None = None
     events: list[InternalEventEnvelope] = field(default_factory=list)
 
 
@@ -650,6 +654,30 @@ class OrchestratorService:
                     ),
                     "memory_fixation_status": deliberative_plan.memory_fixation_status,
                     "memory_archive_status": deliberative_plan.memory_archive_status,
+                    "reflection_influence_status": (
+                        deliberative_plan.reflection_influence_status
+                    ),
+                    "reflection_influence_refs": (
+                        deliberative_plan.reflection_influence_refs
+                    ),
+                    "reflection_influence_summary": (
+                        deliberative_plan.reflection_influence_summary
+                    ),
+                    "reflection_influence_workflow_profile": (
+                        deliberative_plan.reflection_influence_workflow_profile
+                    ),
+                    "reviewed_learning_influence_status": (
+                        deliberative_plan.reviewed_learning_influence_status
+                    ),
+                    "reviewed_learning_influence_refs": (
+                        deliberative_plan.reviewed_learning_influence_refs
+                    ),
+                    "reviewed_learning_influence_summary": (
+                        deliberative_plan.reviewed_learning_influence_summary
+                    ),
+                    "reviewed_learning_influence_reason": (
+                        deliberative_plan.reviewed_learning_influence_reason
+                    ),
                     "procedural_artifact_status": (
                         deliberative_plan.procedural_artifact_status
                     ),
@@ -1311,6 +1339,27 @@ class OrchestratorService:
                         memory_recovery_result.recovered_items,
                         "cross_session_recall_summary=",
                     ),
+                    "reflection_influence_status": (
+                        deliberative_plan.reflection_influence_status
+                    ),
+                    "reflection_influence_refs": (
+                        deliberative_plan.reflection_influence_refs
+                    ),
+                    "reflection_influence_summary": (
+                        deliberative_plan.reflection_influence_summary
+                    ),
+                    "reviewed_learning_influence_status": (
+                        deliberative_plan.reviewed_learning_influence_status
+                    ),
+                    "reviewed_learning_influence_refs": (
+                        deliberative_plan.reviewed_learning_influence_refs
+                    ),
+                    "reviewed_learning_influence_summary": (
+                        deliberative_plan.reviewed_learning_influence_summary
+                    ),
+                    "reviewed_learning_influence_reason": (
+                        deliberative_plan.reviewed_learning_influence_reason
+                    ),
                     "mind_domain_specialist_chain_status": chain_payload["status"],
                     "mind_domain_specialist_chain": chain_payload["chain"],
                 },
@@ -1420,6 +1469,73 @@ class OrchestratorService:
                 },
             )
         )
+        experience_record = self._record_operator_experience(
+            contract=contract,
+            directive=directive,
+            deliberative_plan=deliberative_plan,
+            governance_decision=governance_decision,
+            specialist_review=specialist_review,
+            operation_result=operation_result,
+            synthesis_result=synthesis_result,
+            memory_record_id=str(memory_record_result.record_contract.memory_record_id),
+        )
+        events.append(
+            self.make_event(
+                "experience_record_declared",
+                contract,
+                {
+                    "experience_id": experience_record.experience_id,
+                    "mission_id": str(experience_record.mission_id),
+                    "workflow_profile": experience_record.workflow_profile,
+                    "outcome_status": experience_record.outcome_status,
+                    "route": experience_record.route,
+                    "primary_mind": experience_record.primary_mind,
+                    "primary_domain_driver": experience_record.primary_domain_driver,
+                    "specialist_used": experience_record.specialist_used,
+                    "plan_summary": experience_record.plan_summary,
+                    "execution_summary": experience_record.execution_summary,
+                    "outcome": experience_record.outcome,
+                    "errors": experience_record.errors,
+                    "tools_used": experience_record.tools_used,
+                    "checkpoints": experience_record.checkpoints,
+                    "user_feedback": experience_record.user_feedback,
+                    "evidence_refs": experience_record.evidence_refs,
+                    "reusable_memory_status": experience_record.reusable_memory_status,
+                    "human_review_required": experience_record.human_review_required,
+                    "automatic_promotion_allowed": (
+                        experience_record.automatic_promotion_allowed
+                    ),
+                    "core_mutation_allowed": experience_record.core_mutation_allowed,
+                },
+            )
+        )
+        post_task_reflection = self._record_post_task_reflection(
+            experience_record=experience_record,
+        )
+        events.append(
+            self.make_event(
+                "post_task_reflection_declared",
+                contract,
+                {
+                    "reflection_id": post_task_reflection.reflection_id,
+                    "experience_id": post_task_reflection.experience_id,
+                    "reflection_status": post_task_reflection.reflection_status,
+                    "learning_candidate": post_task_reflection.learning_candidate,
+                    "recommendation": post_task_reflection.recommendation,
+                    "proposed_change_type": post_task_reflection.proposed_change_type,
+                    "evidence_refs": post_task_reflection.evidence_refs,
+                    "proposed_tests": post_task_reflection.proposed_tests,
+                    "blockers": post_task_reflection.blockers,
+                    "rollback_plan_ref": post_task_reflection.rollback_plan_ref,
+                    "risk_hint": post_task_reflection.risk_hint,
+                    "human_review_required": post_task_reflection.human_review_required,
+                    "automatic_promotion_allowed": (
+                        post_task_reflection.automatic_promotion_allowed
+                    ),
+                    "core_mutation_allowed": post_task_reflection.core_mutation_allowed,
+                },
+            )
+        )
         self.observability_service.ingest_events(events)
 
         return self._build_response_from_state(
@@ -1440,6 +1556,8 @@ class OrchestratorService:
                 "specialist_handoff_decision": (specialist_handoff_assessment.governance_decision),
                 "operation_dispatch": operation_dispatch,
                 "operation_result": operation_result,
+                "experience_record": experience_record,
+                "post_task_reflection": post_task_reflection,
                 "events": events,
                 "response_text": response_text,
             }
@@ -3234,6 +3352,24 @@ class OrchestratorService:
                 canonical_domains=canonical_domains,
             )
         )
+        route_workflow_profile = (
+            str(primary_route_data.get("workflow_profile"))
+            if primary_route_data.get("workflow_profile") is not None
+            else None
+        )
+        reflection_influence = self._reflection_influence_payload(
+            mission_id=str(contract.mission_id) if contract.mission_id else None,
+            workflow_profile=route_workflow_profile,
+            primary_route=primary_route_name,
+            primary_domain_driver=cognitive_snapshot.primary_domain_driver
+            or primary_canonical_domain,
+        )
+        reviewed_learning_influence = self._reviewed_learning_influence_payload(
+            workflow_profile=route_workflow_profile,
+            primary_route=primary_route_name,
+            primary_domain_driver=cognitive_snapshot.primary_domain_driver
+            or primary_canonical_domain,
+        )
         route_guidance = memory_route_guidance or {}
         return PlanningContext(
             intent=directive.intent,
@@ -3257,11 +3393,7 @@ class OrchestratorService:
                 primary_route_data.get("expected_deliverables", [])
             ),
             route_telemetry_focus=list(primary_route_data.get("telemetry_focus", [])),
-            route_workflow_profile=(
-                str(primary_route_data.get("workflow_profile"))
-                if primary_route_data.get("workflow_profile") is not None
-                else None
-            ),
+            route_workflow_profile=route_workflow_profile,
             route_workflow_steps=list(primary_route_data.get("workflow_steps", [])),
             route_workflow_checkpoints=list(
                 primary_route_data.get("workflow_checkpoints", [])
@@ -3404,6 +3536,22 @@ class OrchestratorService:
             cross_session_recall_summary=self._extract_context_hint(
                 recovered, "cross_session_recall_summary="
             ),
+            reflection_influence_status=str(reflection_influence["status"]),
+            reflection_influence_refs=list(reflection_influence["refs"]),
+            reflection_influence_summary=reflection_influence["summary"],
+            reflection_influence_workflow_profile=route_workflow_profile,
+            reviewed_learning_influence_status=str(
+                reviewed_learning_influence["status"]
+            ),
+            reviewed_learning_influence_refs=list(
+                reviewed_learning_influence["refs"]
+            ),
+            reviewed_learning_influence_summary=reviewed_learning_influence[
+                "summary"
+            ],
+            reviewed_learning_influence_reason=reviewed_learning_influence[
+                "reason"
+            ],
             memory_maintenance_status=self._extract_context_hint(
                 recovered, "memory_maintenance_status="
             ),
@@ -3511,6 +3659,142 @@ class OrchestratorService:
             canonical_user_ref=contract.canonical_user_ref,
             surface_continuity_status=contract.surface_continuity_status,
         )
+
+    def _reflection_influence_payload(
+        self,
+        *,
+        mission_id: str | None,
+        workflow_profile: str | None,
+        primary_route: str | None,
+        primary_domain_driver: str | None,
+    ) -> dict[str, object]:
+        if not workflow_profile:
+            return {"status": "no_workflow_profile", "refs": [], "summary": None}
+        records = self.memory_service.list_experience_reflections(
+            mission_id=mission_id,
+            workflow_profile=workflow_profile,
+            limit=8,
+        )
+        if not records:
+            records = self.memory_service.list_experience_reflections(
+                workflow_profile=workflow_profile,
+                limit=8,
+            )
+        relevant_refs: list[str] = []
+        recommendations: list[str] = []
+        for record in records:
+            reflection = record.reflection
+            experience = record.experience
+            if reflection is None:
+                continue
+            if reflection.automatic_promotion_allowed or reflection.core_mutation_allowed:
+                continue
+            if reflection.reflection_status not in {"candidate", "reviewed"}:
+                continue
+            route_matches = bool(primary_route and experience.route == primary_route)
+            domain_matches = bool(
+                primary_domain_driver
+                and experience.primary_domain_driver == primary_domain_driver
+            )
+            if not (route_matches or domain_matches):
+                continue
+            relevant_refs.append(reflection.reflection_id)
+            recommendations.append(reflection.recommendation)
+            if len(relevant_refs) >= 3:
+                break
+        if not relevant_refs:
+            return {"status": "no_relevant_reflection", "refs": [], "summary": None}
+        summary = "; ".join(recommendations[:2])
+        return {"status": "applied", "refs": relevant_refs, "summary": summary}
+
+    def _reviewed_learning_influence_payload(
+        self,
+        *,
+        workflow_profile: str | None,
+        primary_route: str | None,
+        primary_domain_driver: str | None,
+    ) -> dict[str, object]:
+        if not workflow_profile:
+            return {
+                "status": "no_workflow_profile",
+                "refs": [],
+                "summary": None,
+                "reason": "missing_workflow_profile",
+            }
+        candidates = self.memory_service.list_reviewed_learning_guidance(
+            workflow_profile=workflow_profile,
+            limit=8,
+        )
+        if not candidates and primary_route:
+            candidates = self.memory_service.list_reviewed_learning_guidance(
+                route=primary_route,
+                limit=8,
+            )
+        if not candidates and primary_domain_driver:
+            candidates = self.memory_service.list_reviewed_learning_guidance(
+                domain=primary_domain_driver,
+                limit=8,
+            )
+        relevant_refs: list[str] = []
+        summaries: list[str] = []
+        reasons: list[str] = []
+        for record in candidates:
+            guidance = record.guidance
+            if guidance.automatic_promotion_allowed or guidance.core_mutation_allowed:
+                continue
+            if not guidance.evidence_refs or not guidance.rollback_plan_ref:
+                continue
+            if "planning_context" not in guidance.allowed_usage and (
+                "sandbox_planning_context" not in guidance.allowed_usage
+            ):
+                continue
+            workflow_matches = guidance.workflow_profile == workflow_profile
+            route_matches = bool(primary_route and guidance.route == primary_route)
+            domain_matches = bool(
+                primary_domain_driver and guidance.domain == primary_domain_driver
+            )
+            if not (workflow_matches or route_matches or domain_matches):
+                continue
+            relevant_refs.append(guidance.guidance_id)
+            summaries.append(guidance.guidance_summary)
+            reasons.append(
+                self._reviewed_learning_match_reason(
+                    workflow_matches=workflow_matches,
+                    route_matches=route_matches,
+                    domain_matches=domain_matches,
+                )
+            )
+            if len(relevant_refs) >= 3:
+                break
+        if not relevant_refs:
+            return {
+                "status": "no_relevant_guidance",
+                "refs": [],
+                "summary": None,
+                "reason": "no_scope_match",
+            }
+        return {
+            "status": "applied",
+            "refs": relevant_refs,
+            "summary": "; ".join(summaries[:2]),
+            "reason": ",".join(reasons[:3]),
+        }
+
+    @staticmethod
+    def _reviewed_learning_match_reason(
+        *,
+        workflow_matches: bool,
+        route_matches: bool,
+        domain_matches: bool,
+    ) -> str:
+        matches: list[str] = []
+        if workflow_matches:
+            matches.append("workflow_match")
+        if route_matches:
+            matches.append("route_match")
+        if domain_matches:
+            matches.append("domain_match")
+        return "+".join(matches) or "unknown_match"
 
     def _domain_registry_event_payload(
         self,
@@ -3705,6 +3989,27 @@ class OrchestratorService:
                 cross_session_recall_summary=self._extract_context_hint(
                     memory_recovery_result.recovered_items,
                     "cross_session_recall_summary=",
+                ),
+                reflection_influence_status=(
+                    deliberative_plan.reflection_influence_status
+                ),
+                reflection_influence_refs=list(
+                    deliberative_plan.reflection_influence_refs
+                ),
+                reflection_influence_summary=(
+                    deliberative_plan.reflection_influence_summary
+                ),
+                reviewed_learning_influence_status=(
+                    deliberative_plan.reviewed_learning_influence_status
+                ),
+                reviewed_learning_influence_refs=list(
+                    deliberative_plan.reviewed_learning_influence_refs
+                ),
+                reviewed_learning_influence_summary=(
+                    deliberative_plan.reviewed_learning_influence_summary
+                ),
+                reviewed_learning_influence_reason=(
+                    deliberative_plan.reviewed_learning_influence_reason
                 ),
                 guided_memory_specialists=guided_memory_runtime_hints[
                     "guided_memory_specialists"
@@ -4636,6 +4941,173 @@ class OrchestratorService:
             "summary": summary,
         }
 
+    def _record_operator_experience(
+        self,
+        *,
+        contract: InputContract,
+        directive: ExecutiveDirective,
+        deliberative_plan: DeliberativePlanContract,
+        governance_decision: GovernanceDecisionContract,
+        specialist_review: SpecialistReview,
+        operation_result: OperationResultContract | None,
+        synthesis_result: SynthesisResult,
+        memory_record_id: str,
+    ) -> ExperienceRecordContract:
+        """Persist the governed runtime experience produced by one operator turn."""
+
+        mission_id = (
+            contract.mission_id
+            or deliberative_plan.continuity_target_mission_id
+            or MissionId(f"mission:{contract.request_id}")
+        )
+        specialist_used = [
+            contribution.specialist_type
+            for contribution in specialist_review.contributions
+        ]
+        tools_used = [
+            item
+            for item in [
+                deliberative_plan.capability_decision_tool_class,
+                deliberative_plan.capability_decision_selected_mode,
+            ]
+            if item
+        ]
+        checkpoints = [
+            *deliberative_plan.route_workflow_checkpoints,
+            *(operation_result.checkpoints if operation_result else []),
+            *(operation_result.workflow_pending_checkpoints if operation_result else []),
+        ]
+        errors = list(synthesis_result.output_validation_errors)
+        errors.extend(synthesis_result.workflow_output_errors)
+        if operation_result and operation_result.status.value != "completed":
+            errors.append(f"operation_status:{operation_result.status.value}")
+        if governance_decision.decision in {
+            PermissionDecision.BLOCK,
+            PermissionDecision.DEFER_FOR_VALIDATION,
+        }:
+            errors.append(f"governance_decision:{governance_decision.decision.value}")
+
+        outcome_status = (
+            "completed"
+            if operation_result and operation_result.status.value == "completed"
+            else "governed"
+            if governance_decision.decision == PermissionDecision.ALLOW_WITH_CONDITIONS
+            else governance_decision.decision.value
+        )
+        operation_summary = (
+            f"operation {operation_result.status.value} with "
+            f"{len(operation_result.artifacts)} artifact(s)"
+            if operation_result
+            else f"governance {governance_decision.decision.value}"
+        )
+        workflow_profile = (
+            deliberative_plan.route_workflow_profile
+            or (operation_result.workflow_profile if operation_result else None)
+            or "unclassified_workflow"
+        )
+        experience = ExperienceRecordContract(
+            experience_id=f"experience://{mission_id}/{contract.request_id}",
+            mission_id=MissionId(str(mission_id)),
+            workflow_profile=workflow_profile,
+            outcome_status=outcome_status,
+            timestamp=self.now(),
+            user_intent=directive.intent,
+            route=deliberative_plan.primary_route,
+            primary_mind=deliberative_plan.primary_mind,
+            primary_domain_driver=deliberative_plan.primary_domain_driver,
+            specialist_used=self._dedupe_strings(specialist_used),
+            plan_summary=deliberative_plan.plan_summary,
+            execution_summary=operation_summary,
+            outcome=synthesis_result.workflow_output_status,
+            errors=self._dedupe_strings(errors),
+            tools_used=self._dedupe_strings(tools_used),
+            checkpoints=self._dedupe_strings(checkpoints),
+            user_feedback=(
+                str(contract.metadata.get("user_feedback"))
+                if contract.metadata.get("user_feedback")
+                else None
+            ),
+            objective_ref=(
+                operation_result.objective_ref
+                if operation_result and operation_result.objective_ref
+                else deliberative_plan.objective_ref
+            ),
+            surface_id=contract.surface_id,
+            evidence_refs=[
+                f"trace://request/{contract.request_id}",
+                f"memory://record/{memory_record_id}",
+            ],
+            signal_refs=[
+                f"workflow_profile:{workflow_profile}",
+                f"route:{deliberative_plan.primary_route or 'none'}",
+                f"governance_decision:{governance_decision.decision.value}",
+                f"workflow_output_status:{synthesis_result.workflow_output_status}",
+            ],
+            failure_modes=self._dedupe_strings(errors),
+            decision_refs=[str(governance_decision.decision_id)],
+            learned_patterns=[],
+            next_action_ref=(
+                operation_result.next_action_ref
+                if operation_result and operation_result.next_action_ref
+                else deliberative_plan.next_action_ref
+            ),
+        )
+        return self.memory_service.record_experience(experience=experience).experience
+
+    def _record_post_task_reflection(
+        self,
+        *,
+        experience_record: ExperienceRecordContract,
+    ) -> PostTaskReflectionContract:
+        """Create a bounded reflection from an already persisted experience."""
+
+        has_errors = bool(experience_record.errors or experience_record.failure_modes)
+        blockers = []
+        if not experience_record.evidence_refs:
+            blockers.append("evidence_required")
+        reflection = PostTaskReflectionContract(
+            reflection_id=(
+                f"reflection://{experience_record.mission_id}/"
+                f"{experience_record.experience_id.rsplit('/', 1)[-1]}"
+            ),
+            experience_id=experience_record.experience_id,
+            reflection_status="candidate" if not blockers else "blocked",
+            learning_candidate=(
+                "runtime should preserve bounded recovery for observed failure modes"
+                if has_errors
+                else "runtime path produced a reusable governed experience pattern"
+            ),
+            recommendation=(
+                "review failure signals before changing workflow behavior"
+                if has_errors
+                else "keep the observed pattern as reviewable learning material"
+            ),
+            proposed_change_type="workflow" if has_errors else "memory",
+            evidence_refs=list(experience_record.evidence_refs),
+            proposed_tests=[
+                "python tools/engineering_gate.py --mode standard",
+            ],
+            blockers=blockers,
+            rollback_plan_ref="rollback://operator-learning-loop/no-runtime-change",
+            risk_hint="low",
+            timestamp=self.now(),
+            human_review_required=True,
+            automatic_promotion_allowed=False,
+            core_mutation_allowed=False,
+        )
+        return self.memory_service.record_experience_reflection(
+            experience=experience_record,
+            reflection=reflection,
+        ).reflection
+
+    @staticmethod
+    def _dedupe_strings(values: list[str]) -> list[str]:
+        deduped: list[str] = []
+        for value in values:
+            if value and value not in deduped:
+                deduped.append(value)
+        return deduped
+
     @staticmethod
     def _build_response_from_state(state: dict[str, object]) -> OrchestratorResponse:
         contract = state["contract"]
@@ -4673,5 +5145,7 @@ class OrchestratorService:
             specialist_review=specialist_review,
             operation_dispatch=state["operation_dispatch"],
             operation_result=state["operation_result"],
+            experience_record=state.get("experience_record"),
+            post_task_reflection=state.get("post_task_reflection"),
             events=state["events"],
         )

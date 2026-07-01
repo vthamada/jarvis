@@ -129,6 +129,18 @@ EXPERIENCE_RECORD_SCHEMA = CanonicalSchema(
         "timestamp",
     ),
     optional_fields=(
+        "user_intent",
+        "route",
+        "primary_mind",
+        "primary_domain_driver",
+        "specialist_used",
+        "plan_summary",
+        "execution_summary",
+        "outcome",
+        "errors",
+        "tools_used",
+        "checkpoints",
+        "user_feedback",
         "objective_ref",
         "surface_id",
         "evidence_refs",
@@ -172,6 +184,84 @@ POST_TASK_REFLECTION_SCHEMA = CanonicalSchema(
     ),
     notes=(
         "Post-task reflection feeds sandbox proposals and manual review only.",
+    ),
+)
+
+EVOLUTION_REVIEW_QUEUE_ITEM_SCHEMA = CanonicalSchema(
+    name="EvolutionReviewQueueItemSchema",
+    contract_name="EvolutionReviewQueueItemContract",
+    required_fields=(
+        "review_item_id",
+        "evolution_proposal_id",
+        "proposal_type",
+        "review_status",
+        "review_reason",
+        "requires_human_review",
+        "requires_sandbox",
+    ),
+    optional_fields=(
+        "risk_hint",
+        "target_scope",
+        "candidate_refs",
+        "blockers",
+        "proposed_tests",
+        "rollback_plan_ref",
+    ),
+    notes=(
+        "Human review queue view over sandbox evolution proposals; not a promotion permit.",
+    ),
+)
+
+EVOLUTION_REVIEW_DECISION_SCHEMA = CanonicalSchema(
+    name="EvolutionReviewDecisionSchema",
+    contract_name="EvolutionReviewDecisionContract",
+    required_fields=(
+        "review_decision_id",
+        "evolution_proposal_id",
+        "review_status",
+        "decision",
+        "operator_ref",
+        "timestamp",
+    ),
+    optional_fields=(
+        "evidence_refs",
+        "proposed_tests",
+        "rollback_plan_ref",
+        "risk_acceptance",
+        "review_notes",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Human evolution review decision; does not authorize automatic promotion.",
+    ),
+)
+
+REVIEWED_LEARNING_GUIDANCE_SCHEMA = CanonicalSchema(
+    name="ReviewedLearningGuidanceSchema",
+    contract_name="ReviewedLearningGuidanceContract",
+    required_fields=(
+        "guidance_id",
+        "source_review_decision_id",
+        "evolution_proposal_id",
+        "review_status",
+        "route",
+        "workflow_profile",
+        "domain",
+        "guidance_summary",
+        "allowed_usage",
+        "evidence_refs",
+        "rollback_plan_ref",
+        "timestamp",
+    ),
+    optional_fields=(
+        "expires_at",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Human-reviewed learning guidance for bounded planning/synthesis use; "
+        "not a promotion permit.",
     ),
 )
 
@@ -430,6 +520,14 @@ DELIBERATIVE_PLAN_SCHEMA = CanonicalSchema(
         "memory_consolidation_status",
         "memory_fixation_status",
         "memory_archive_status",
+        "reflection_influence_status",
+        "reflection_influence_refs",
+        "reflection_influence_summary",
+        "reflection_influence_workflow_profile",
+        "reviewed_learning_influence_status",
+        "reviewed_learning_influence_refs",
+        "reviewed_learning_influence_summary",
+        "reviewed_learning_influence_reason",
         "procedural_artifact_status",
         "procedural_artifact_ref",
         "procedural_artifact_version",

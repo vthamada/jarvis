@@ -149,6 +149,14 @@ class PlanningContext:
     context_live_summary: str | None = None
     cross_session_recall_status: str | None = None
     cross_session_recall_summary: str | None = None
+    reflection_influence_status: str | None = None
+    reflection_influence_refs: list[str] | None = None
+    reflection_influence_summary: str | None = None
+    reflection_influence_workflow_profile: str | None = None
+    reviewed_learning_influence_status: str | None = None
+    reviewed_learning_influence_refs: list[str] | None = None
+    reviewed_learning_influence_summary: str | None = None
+    reviewed_learning_influence_reason: str | None = None
     memory_maintenance_status: str | None = None
     memory_maintenance_reason: str | None = None
     memory_maintenance_fallback_mode: str | None = None
@@ -353,6 +361,18 @@ class PlanningEngine:
             context=context,
             memory_decision=memory_decision,
         )
+        steps, constraints, success_criteria = self._apply_reflection_influence(
+            steps=steps,
+            constraints=constraints,
+            success_criteria=success_criteria,
+            context=context,
+        )
+        steps, constraints, success_criteria = self._apply_reviewed_learning_influence(
+            steps=steps,
+            constraints=constraints,
+            success_criteria=success_criteria,
+            context=context,
+        )
         memory_maintenance = self._memory_maintenance_decision(
             context,
             memory_decision=memory_decision,
@@ -458,6 +478,16 @@ class PlanningEngine:
                 "capability_authorization="
                 f"{capability_decision.authorization_status or 'none'}"
             )
+        if context.reflection_influence_status:
+            plan_summary = (
+                f"{plan_summary}; reflection_influence="
+                f"{context.reflection_influence_status}"
+            )
+        if context.reviewed_learning_influence_status:
+            plan_summary = (
+                f"{plan_summary}; reviewed_learning_influence="
+                f"{context.reviewed_learning_influence_status}"
+            )
         plan_summary = (
             f"{plan_summary}; request_identity={request_identity_policy.status}; "
             f"request_authority={request_identity_policy.authority_level}; "
@@ -498,6 +528,20 @@ class PlanningEngine:
             f"{capability_decision.tool_class or 'none'}; "
             "capability_handoff_mode="
             f"{capability_decision.handoff_mode or 'none'}"
+        )
+        rationale = (
+            f"{rationale}; reflection_influence_status="
+            f"{context.reflection_influence_status or 'not_evaluated'}; "
+            "reflection_influence_refs="
+            f"{','.join(context.reflection_influence_refs or []) or 'none'}"
+        )
+        rationale = (
+            f"{rationale}; reviewed_learning_influence_status="
+            f"{context.reviewed_learning_influence_status or 'not_evaluated'}; "
+            "reviewed_learning_influence_refs="
+            f"{','.join(context.reviewed_learning_influence_refs or []) or 'none'}; "
+            "reviewed_learning_influence_reason="
+            f"{context.reviewed_learning_influence_reason or 'none'}"
         )
         rationale = (
             f"{rationale}; request_identity_status={request_identity_policy.status}; "
@@ -592,6 +636,24 @@ class PlanningEngine:
             memory_consolidation_status=memory_decision.consolidation_status,
             memory_fixation_status=memory_decision.fixation_status,
             memory_archive_status=memory_decision.archive_status,
+            reflection_influence_status=context.reflection_influence_status,
+            reflection_influence_refs=list(context.reflection_influence_refs or []),
+            reflection_influence_summary=context.reflection_influence_summary,
+            reflection_influence_workflow_profile=(
+                context.reflection_influence_workflow_profile
+            ),
+            reviewed_learning_influence_status=(
+                context.reviewed_learning_influence_status
+            ),
+            reviewed_learning_influence_refs=list(
+                context.reviewed_learning_influence_refs or []
+            ),
+            reviewed_learning_influence_summary=(
+                context.reviewed_learning_influence_summary
+            ),
+            reviewed_learning_influence_reason=(
+                context.reviewed_learning_influence_reason
+            ),
             procedural_artifact_status=context.procedural_artifact_status,
             procedural_artifact_ref=context.procedural_artifact_ref,
             procedural_artifact_version=context.procedural_artifact_version,
@@ -3051,6 +3113,74 @@ class PlanningEngine:
             if procedural_criterion not in updated_success:
                 updated_success.append(procedural_criterion)
 
+        return updated_steps[:7], updated_constraints[:10], updated_success[:9]
+
+    def _apply_reflection_influence(
+        self,
+        *,
+        steps: list[str],
+        constraints: list[str],
+        success_criteria: list[str],
+        context: PlanningContext,
+    ) -> tuple[list[str], list[str], list[str]]:
+        updated_steps = list(steps)
+        updated_constraints = list(constraints)
+        updated_success = list(success_criteria)
+        if context.reflection_influence_status != "applied":
+            return updated_steps, updated_constraints, updated_success
+
+        summary = context.reflection_influence_summary or "bounded prior reflection"
+        step = f"considerar reflexao pos-tarefa relevante antes da proxima acao: {summary}"
+        constraint = (
+            "usar reflexao anterior apenas como influencia bounded; nao promover "
+            "mudanca sem revisao humana"
+        )
+        success = (
+            "plano deve registrar quando a reflexao anterior influenciou a decisao"
+        )
+        if step not in updated_steps:
+            updated_steps.insert(0, step)
+        if constraint not in updated_constraints:
+            updated_constraints.append(constraint)
+        if success not in updated_success:
+            updated_success.append(success)
+        return updated_steps[:7], updated_constraints[:10], updated_success[:9]
+
+    def _apply_reviewed_learning_influence(
+        self,
+        *,
+        steps: list[str],
+        constraints: list[str],
+        success_criteria: list[str],
+        context: PlanningContext,
+    ) -> tuple[list[str], list[str], list[str]]:
+        updated_steps = list(steps)
+        updated_constraints = list(constraints)
+        updated_success = list(success_criteria)
+        if context.reviewed_learning_influence_status != "applied":
+            return updated_steps, updated_constraints, updated_success
+
+        summary = (
+            context.reviewed_learning_influence_summary
+            or "human-reviewed learning guidance"
+        )
+        step = (
+            "considerar aprendizado revisado por humano antes da proxima acao: "
+            f"{summary}"
+        )
+        constraint = (
+            "usar aprendizado revisado apenas como guidance bounded; nao promover "
+            "mudanca sem release gate"
+        )
+        success = (
+            "plano deve registrar quando aprendizado revisado influenciou a decisao"
+        )
+        if step not in updated_steps:
+            updated_steps.insert(0, step)
+        if constraint not in updated_constraints:
+            updated_constraints.append(constraint)
+        if success not in updated_success:
+            updated_success.append(success)
         return updated_steps[:7], updated_constraints[:10], updated_success[:9]
 
     def _memory_maintenance_decision(self, context: PlanningContext, *, memory_decision):

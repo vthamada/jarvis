@@ -80,6 +80,18 @@ class ExperienceRecordContract:
     workflow_profile: str
     outcome_status: str
     timestamp: Timestamp
+    user_intent: str | None = None
+    route: str | None = None
+    primary_mind: str | None = None
+    primary_domain_driver: str | None = None
+    specialist_used: list[str] = field(default_factory=list)
+    plan_summary: str | None = None
+    execution_summary: str | None = None
+    outcome: str | None = None
+    errors: list[str] = field(default_factory=list)
+    tools_used: list[str] = field(default_factory=list)
+    checkpoints: list[str] = field(default_factory=list)
+    user_feedback: str | None = None
     objective_ref: str | None = None
     surface_id: str | None = None
     evidence_refs: list[str] = field(default_factory=list)
@@ -255,6 +267,14 @@ class DeliberativePlanContract:
     memory_consolidation_status: str | None = None
     memory_fixation_status: str | None = None
     memory_archive_status: str | None = None
+    reflection_influence_status: str | None = None
+    reflection_influence_refs: list[str] = field(default_factory=list)
+    reflection_influence_summary: str | None = None
+    reflection_influence_workflow_profile: str | None = None
+    reviewed_learning_influence_status: str | None = None
+    reviewed_learning_influence_refs: list[str] = field(default_factory=list)
+    reviewed_learning_influence_summary: str | None = None
+    reviewed_learning_influence_reason: str | None = None
     procedural_artifact_status: str | None = None
     procedural_artifact_ref: str | None = None
     procedural_artifact_version: int | None = None
@@ -875,6 +895,59 @@ class EvolutionProposalContract:
     evaluation_matrix: dict[str, dict[str, object]] = field(default_factory=dict)
     selection_criteria: dict[str, object] = field(default_factory=dict)
     strategy_context: dict[str, object] = field(default_factory=dict)
+
+
+@dataclass
+class EvolutionReviewQueueItemContract:
+    review_item_id: str
+    evolution_proposal_id: EvolutionProposalId
+    proposal_type: str
+    review_status: str
+    review_reason: str
+    requires_human_review: bool
+    requires_sandbox: bool
+    risk_hint: str | None = None
+    target_scope: str | None = None
+    candidate_refs: list[str] = field(default_factory=list)
+    blockers: list[str] = field(default_factory=list)
+    proposed_tests: list[str] = field(default_factory=list)
+    rollback_plan_ref: str | None = None
+
+
+@dataclass
+class EvolutionReviewDecisionContract:
+    review_decision_id: str
+    evolution_proposal_id: EvolutionProposalId
+    review_status: str
+    decision: str
+    operator_ref: str
+    timestamp: Timestamp
+    evidence_refs: list[str] = field(default_factory=list)
+    proposed_tests: list[str] = field(default_factory=list)
+    rollback_plan_ref: str | None = None
+    risk_acceptance: str | None = None
+    review_notes: list[str] = field(default_factory=list)
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass
+class ReviewedLearningGuidanceContract:
+    guidance_id: str
+    source_review_decision_id: str
+    evolution_proposal_id: EvolutionProposalId
+    review_status: str
+    route: str
+    workflow_profile: str
+    domain: str
+    guidance_summary: str
+    allowed_usage: list[str]
+    evidence_refs: list[str]
+    rollback_plan_ref: str | None
+    timestamp: Timestamp
+    expires_at: Timestamp | None = None
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
 
 
 @dataclass

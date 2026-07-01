@@ -1,18 +1,25 @@
 from shared.contracts import (
+    EvolutionReviewDecisionContract,
+    EvolutionReviewQueueItemContract,
     ExperienceRecordContract,
     GovernanceDecisionContract,
     InputContract,
     PostTaskReflectionContract,
     ProjectObjectiveContinuityContract,
+    ReviewedLearningGuidanceContract,
     SurfaceIdentityContract,
     TechnologyAbsorptionCandidateContract,
 )
 from shared.events import INTERNAL_EVENT_NAMES
 from shared.schemas import (
+    DELIBERATIVE_PLAN_SCHEMA,
+    EVOLUTION_REVIEW_DECISION_SCHEMA,
+    EVOLUTION_REVIEW_QUEUE_ITEM_SCHEMA,
     EXPERIENCE_RECORD_SCHEMA,
     INPUT_SCHEMA,
     POST_TASK_REFLECTION_SCHEMA,
     PROJECT_OBJECTIVE_CONTINUITY_SCHEMA,
+    REVIEWED_LEARNING_GUIDANCE_SCHEMA,
     SURFACE_IDENTITY_SCHEMA,
     TECHNOLOGY_ABSORPTION_CANDIDATE_SCHEMA,
 )
@@ -118,6 +125,8 @@ def test_internal_event_names_include_governance_blocked() -> None:
     assert "technology_absorption_candidate_declared" in INTERNAL_EVENT_NAMES
     assert "experience_record_declared" in INTERNAL_EVENT_NAMES
     assert "post_task_reflection_declared" in INTERNAL_EVENT_NAMES
+    assert "evolution_review_decision_declared" in INTERNAL_EVENT_NAMES
+    assert "reviewed_learning_guidance_declared" in INTERNAL_EVENT_NAMES
 
 
 def test_experience_reflection_contracts_are_shared_schemas() -> None:
@@ -140,7 +149,61 @@ def test_experience_reflection_contracts_are_shared_schemas() -> None:
     assert experience.automatic_promotion_allowed is False
     assert reflection.core_mutation_allowed is False
     assert EXPERIENCE_RECORD_SCHEMA.contract_name == "ExperienceRecordContract"
+    assert "user_intent" in EXPERIENCE_RECORD_SCHEMA.optional_fields
+    assert "route" in EXPERIENCE_RECORD_SCHEMA.optional_fields
+    assert "specialist_used" in EXPERIENCE_RECORD_SCHEMA.optional_fields
     assert POST_TASK_REFLECTION_SCHEMA.contract_name == "PostTaskReflectionContract"
+    assert "reflection_influence_status" in DELIBERATIVE_PLAN_SCHEMA.optional_fields
+    assert "reflection_influence_refs" in DELIBERATIVE_PLAN_SCHEMA.optional_fields
+    review_item = EvolutionReviewQueueItemContract(
+        review_item_id="review://proposal-1",
+        evolution_proposal_id="proposal-1",
+        proposal_type="post_task_reflection_improvement",
+        review_status="needs_review",
+        review_reason="manual review required before promotion or runtime change",
+        requires_human_review=True,
+        requires_sandbox=True,
+    )
+    assert review_item.review_status == "needs_review"
+    assert EVOLUTION_REVIEW_QUEUE_ITEM_SCHEMA.contract_name == (
+        "EvolutionReviewQueueItemContract"
+    )
+    review_decision = EvolutionReviewDecisionContract(
+        review_decision_id="review-decision://proposal-1/001",
+        evolution_proposal_id="proposal-1",
+        review_status="approved",
+        decision="approve",
+        operator_ref="operator://local_console",
+        timestamp="2026-05-17T00:00:02Z",
+        evidence_refs=["trace://req-1"],
+        proposed_tests=["python tools/engineering_gate.py --mode standard"],
+        rollback_plan_ref="rollback://workflow/current",
+    )
+    assert review_decision.automatic_promotion_allowed is False
+    assert review_decision.core_mutation_allowed is False
+    assert EVOLUTION_REVIEW_DECISION_SCHEMA.contract_name == (
+        "EvolutionReviewDecisionContract"
+    )
+    guidance = ReviewedLearningGuidanceContract(
+        guidance_id="reviewed-learning-guidance://proposal-1/001",
+        source_review_decision_id=review_decision.review_decision_id,
+        evolution_proposal_id=review_decision.evolution_proposal_id,
+        review_status=review_decision.review_status,
+        route="strategy",
+        workflow_profile="strategy_workflow",
+        domain="business_strategy",
+        guidance_summary="prefer evidence-backed rollout plans",
+        allowed_usage=["planning_context", "synthesis_context"],
+        evidence_refs=["trace://req-1"],
+        rollback_plan_ref="rollback://workflow/current",
+        timestamp="2026-05-17T00:00:03Z",
+    )
+    assert guidance.automatic_promotion_allowed is False
+    assert guidance.core_mutation_allowed is False
+    assert REVIEWED_LEARNING_GUIDANCE_SCHEMA.contract_name == (
+        "ReviewedLearningGuidanceContract"
+    )
+    assert "allowed_usage" in REVIEWED_LEARNING_GUIDANCE_SCHEMA.required_fields
 
 
 def test_system_identity_has_core_principles() -> None:

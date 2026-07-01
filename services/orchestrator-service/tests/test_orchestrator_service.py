@@ -10,7 +10,13 @@ from orchestrator_service.service import OrchestratorResponse, OrchestratorServi
 from specialist_engine.engine import SpecialistReview
 from synthesis_engine.engine import SynthesisResult
 
-from shared.contracts import DeliberativePlanContract, InputContract
+from shared.contracts import (
+    DeliberativePlanContract,
+    ExperienceRecordContract,
+    InputContract,
+    PostTaskReflectionContract,
+    ReviewedLearningGuidanceContract,
+)
 from shared.types import (
     ChannelType,
     InputType,
@@ -255,6 +261,41 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     assert result.specialist_boundary_summary is not None
     assert result.deliberative_plan.specialist_resolution_summary is not None
     assert "Contribuicoes especialistas" not in result.response_text
+    assert result.experience_record is not None
+    assert result.experience_record.mission_id == MissionId("mission:req-1")
+    assert result.experience_record.user_intent == "planning"
+    assert result.experience_record.route == "strategy"
+    assert result.experience_record.workflow_profile == "strategic_direction_workflow"
+    assert result.experience_record.primary_mind == result.deliberative_plan.primary_mind
+    assert (
+        result.experience_record.primary_domain_driver
+        == "estrategia_e_pensamento_sistemico"
+    )
+    assert result.experience_record.specialist_used == [
+        "structured_analysis_specialist"
+    ]
+    assert result.experience_record.plan_summary == result.deliberative_plan.plan_summary
+    assert result.experience_record.execution_summary.startswith("operation completed")
+    assert result.experience_record.outcome == "coherent"
+    assert "local_artifact_generation" in result.experience_record.tools_used
+    assert result.experience_record.checkpoints
+    assert result.experience_record.evidence_refs == [
+        "trace://request/req-1",
+        f"memory://record/{result.memory_record.memory_record_id}",
+    ]
+    stored_experiences = service.memory_service.list_experience_reflections(
+        mission_id="mission:req-1"
+    )
+    assert stored_experiences[0].experience.experience_id == (
+        "experience://mission:req-1/req-1"
+    )
+    assert stored_experiences[0].reflection is not None
+    assert stored_experiences[0].reflection.reflection_status == "candidate"
+    assert stored_experiences[0].reflection.human_review_required is True
+    assert stored_experiences[0].reflection.automatic_promotion_allowed is False
+    assert stored_experiences[0].reflection.core_mutation_allowed is False
+    assert result.post_task_reflection is not None
+    assert result.post_task_reflection.experience_id == result.experience_record.experience_id
     stored_events = observability.list_recent_events(
         ObservabilityQuery(request_id="req-1", limit=50)
     )
@@ -274,6 +315,21 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     assert "specialists_completed" in event_names
     assert "plan_refined" in event_names
     assert "plan_governed" in event_names
+    assert "experience_record_declared" in event_names
+    assert "post_task_reflection_declared" in event_names
+    experience_event = next(
+        event for event in stored_events if event.event_name == "experience_record_declared"
+    )
+    assert experience_event.payload["experience_id"] == "experience://mission:req-1/req-1"
+    assert experience_event.payload["automatic_promotion_allowed"] is False
+    assert experience_event.payload["core_mutation_allowed"] is False
+    reflection_event = next(
+        event for event in stored_events if event.event_name == "post_task_reflection_declared"
+    )
+    assert reflection_event.payload["reflection_status"] == "candidate"
+    assert reflection_event.payload["human_review_required"] is True
+    assert reflection_event.payload["automatic_promotion_allowed"] is False
+    assert reflection_event.payload["core_mutation_allowed"] is False
     assert result.specialist_handoff_check is not None
     assert result.specialist_handoff_decision is not None
     assert result.specialist_handoff_decision.decision == PermissionDecision.ALLOW
@@ -306,6 +362,69 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
         == "structured_analysis_specialist"
     )
     assert registry_event.payload["promoted_route_registry"]["strategy"]["eligible"] is True
+
+
+def test_orchestrator_service_applies_relevant_post_task_reflection() -> None:
+    temp_dir = runtime_dir("orchestrator-reflection-influence")
+    observability = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service = OrchestratorService(
+        governance_service=GovernanceService(),
+        memory_service=MemoryService(
+            database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+        ),
+        operational_service=OperationalService(artifact_dir=str(temp_dir / "artifacts")),
+        observability_service=observability,
+    )
+    service.memory_service.record_experience_reflection(
+        experience=ExperienceRecordContract(
+            experience_id="experience://mission-reflection/seed",
+            mission_id=MissionId("mission-reflection"),
+            workflow_profile="strategic_direction_workflow",
+            outcome_status="completed",
+            route="strategy",
+            primary_domain_driver="estrategia_e_pensamento_sistemico",
+            evidence_refs=["trace://request/seed"],
+            timestamp="2026-05-17T00:00:00Z",
+        ),
+        reflection=PostTaskReflectionContract(
+            reflection_id="reflection://mission-reflection/seed",
+            experience_id="experience://mission-reflection/seed",
+            reflection_status="candidate",
+            learning_candidate="prior planning worked when review stayed bounded",
+            recommendation="keep the observed pattern as reviewable learning material",
+            evidence_refs=["trace://request/seed"],
+            timestamp="2026-05-17T00:00:01Z",
+        ),
+    )
+
+    result = service.handle_input(
+        InputContract(
+            request_id=RequestId("req-reflection"),
+            session_id=SessionId("sess-reflection"),
+            mission_id=MissionId("mission-reflection"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Please plan the next milestone.",
+            timestamp="2026-05-17T00:01:00Z",
+        )
+    )
+
+    assert result.deliberative_plan.reflection_influence_status == "applied"
+    assert result.deliberative_plan.reflection_influence_refs == [
+        "reflection://mission-reflection/seed"
+    ]
+    assert "reflection_influence=applied" in result.deliberative_plan.plan_summary
+    assert "Reflexao aplicada" in result.response_text
+    assert "sem promocao automatica" in result.response_text
+    stored_events = observability.list_recent_events(
+        ObservabilityQuery(request_id="req-reflection", limit=80)
+    )
+    plan_event = next(event for event in stored_events if event.event_name == "plan_built")
+    assert plan_event.payload["reflection_influence_status"] == "applied"
+    response_event = next(
+        event for event in stored_events if event.event_name == "response_synthesized"
+    )
+    assert response_event.payload["reflection_influence_status"] == "applied"
     workflow_event = next(
         event for event in stored_events if event.event_name == "workflow_composed"
     )
@@ -774,6 +893,116 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     assert memory_event.payload["procedural_artifact_refs"]
     assert memory_event.payload["procedural_artifact_version"] == 1
     assert memory_event.payload["procedural_artifact_summary"] is not None
+
+
+def test_orchestrator_service_applies_relevant_reviewed_learning_guidance() -> None:
+    temp_dir = runtime_dir("orchestrator-reviewed-learning")
+    observability = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service = OrchestratorService(
+        governance_service=GovernanceService(),
+        memory_service=MemoryService(
+            database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+        ),
+        operational_service=OperationalService(artifact_dir=str(temp_dir / "artifacts")),
+        observability_service=observability,
+    )
+    service.memory_service.record_reviewed_learning_guidance(
+        ReviewedLearningGuidanceContract(
+            guidance_id="reviewed-learning-guidance://strategy/seed",
+            source_review_decision_id="review-decision://proposal-reviewed/001",
+            evolution_proposal_id="proposal-reviewed",
+            review_status="approved",
+            route="strategy",
+            workflow_profile="strategic_direction_workflow",
+            domain="estrategia_e_pensamento_sistemico",
+            guidance_summary="prefer bounded milestone plans with direct evidence",
+            allowed_usage=["planning_context", "synthesis_context"],
+            evidence_refs=["trace://request/reviewed-seed"],
+            rollback_plan_ref="rollback://proposal-reviewed",
+            timestamp="2026-05-17T00:00:02Z",
+        )
+    )
+
+    result = service.handle_input(
+        InputContract(
+            request_id=RequestId("req-reviewed-learning"),
+            session_id=SessionId("sess-reviewed-learning"),
+            mission_id=MissionId("mission-reviewed-learning"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Please plan the next milestone.",
+            timestamp="2026-05-17T00:01:00Z",
+        )
+    )
+
+    assert result.deliberative_plan.reviewed_learning_influence_status == "applied"
+    assert result.deliberative_plan.reviewed_learning_influence_refs == [
+        "reviewed-learning-guidance://strategy/seed"
+    ]
+    assert "reviewed_learning_influence=applied" in (
+        result.deliberative_plan.plan_summary
+    )
+    assert "Aprendizado revisado" in result.response_text
+    stored_events = observability.list_recent_events(
+        ObservabilityQuery(request_id="req-reviewed-learning", limit=80)
+    )
+    plan_event = next(event for event in stored_events if event.event_name == "plan_built")
+    assert plan_event.payload["reviewed_learning_influence_status"] == "applied"
+    assert plan_event.payload["reviewed_learning_influence_refs"] == [
+        "reviewed-learning-guidance://strategy/seed"
+    ]
+    response_event = next(
+        event for event in stored_events if event.event_name == "response_synthesized"
+    )
+    assert response_event.payload["reviewed_learning_influence_status"] == "applied"
+
+
+def test_orchestrator_service_blocks_reviewed_learning_guidance_outside_scope() -> None:
+    temp_dir = runtime_dir("orchestrator-reviewed-learning-outside-scope")
+    observability = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service = OrchestratorService(
+        governance_service=GovernanceService(),
+        memory_service=MemoryService(
+            database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+        ),
+        operational_service=OperationalService(artifact_dir=str(temp_dir / "artifacts")),
+        observability_service=observability,
+    )
+    service.memory_service.record_reviewed_learning_guidance(
+        ReviewedLearningGuidanceContract(
+            guidance_id="reviewed-learning-guidance://analysis/seed",
+            source_review_decision_id="review-decision://proposal-analysis/001",
+            evolution_proposal_id="proposal-analysis",
+            review_status="approved",
+            route="analysis",
+            workflow_profile="structured_analysis_workflow",
+            domain="dados_estatistica_e_inteligencia_analitica",
+            guidance_summary="analysis guidance must not leak into strategy planning",
+            allowed_usage=["planning_context", "synthesis_context"],
+            evidence_refs=["trace://request/analysis-seed"],
+            rollback_plan_ref="rollback://proposal-analysis",
+            timestamp="2026-05-17T00:00:02Z",
+        )
+    )
+
+    result = service.handle_input(
+        InputContract(
+            request_id=RequestId("req-reviewed-learning-blocked"),
+            session_id=SessionId("sess-reviewed-learning-blocked"),
+            mission_id=MissionId("mission-reviewed-learning-blocked"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Please plan the next milestone.",
+            timestamp="2026-05-17T00:01:00Z",
+        )
+    )
+
+    assert (
+        result.deliberative_plan.reviewed_learning_influence_status
+        == "no_relevant_guidance"
+    )
+    assert result.deliberative_plan.reviewed_learning_influence_refs == []
+    assert "Aprendizado revisado" not in result.response_text
 
 
 def test_orchestrator_service_requests_clarification_without_operation() -> None:

@@ -202,6 +202,23 @@ class PilotExecutionResult:
     technology_absorption_blockers: list[str] = field(default_factory=list)
     technology_absorption_candidate_refs: list[str] = field(default_factory=list)
     technology_absorption_signals: list[str] = field(default_factory=list)
+    reflection_influence_status: str = "not_applicable"
+    reflection_influence_refs: list[str] = field(default_factory=list)
+    reflection_influence_summary: str | None = None
+    reflection_assisted_eval_status: str = "baseline_no_reflection"
+    reviewed_learning_influence_status: str = "not_applicable"
+    reviewed_learning_influence_refs: list[str] = field(default_factory=list)
+    reviewed_learning_influence_summary: str | None = None
+    reviewed_learning_influence_reason: str | None = None
+    reviewed_learning_assisted_eval_status: str = "baseline_no_reviewed_learning"
+    reviewed_learning_release_conclusion: str = "no_promotion_without_release_gate"
+    evolution_review_decision_status: str = "not_applicable"
+    evolution_review_decision: str = "not_applicable"
+    evolution_review_proposal_id: str | None = None
+    evolution_review_operator_ref: str | None = None
+    evolution_review_evidence_refs: list[str] = field(default_factory=list)
+    evolution_review_rollback_plan_ref: str | None = None
+    evolution_review_limits: list[str] = field(default_factory=list)
     experiment_lane_status: str = "not_applicable"
     wave2_candidate_class: str = "baseline_hardening"
     experiment_entry_status: str = "not_applicable"
@@ -709,6 +726,41 @@ def run_pilot_scenarios(
                     audit.technology_absorption_candidate_refs
                 ),
                 technology_absorption_signals=list(audit.technology_absorption_signals),
+                reflection_influence_status=audit.reflection_influence_status,
+                reflection_influence_refs=list(audit.reflection_influence_refs),
+                reflection_influence_summary=audit.reflection_influence_summary,
+                reflection_assisted_eval_status=audit.reflection_assisted_eval_status,
+                reviewed_learning_influence_status=(
+                    audit.reviewed_learning_influence_status
+                ),
+                reviewed_learning_influence_refs=list(
+                    audit.reviewed_learning_influence_refs
+                ),
+                reviewed_learning_influence_summary=(
+                    audit.reviewed_learning_influence_summary
+                ),
+                reviewed_learning_influence_reason=(
+                    audit.reviewed_learning_influence_reason
+                ),
+                reviewed_learning_assisted_eval_status=(
+                    audit.reviewed_learning_assisted_eval_status
+                ),
+                reviewed_learning_release_conclusion=(
+                    audit.reviewed_learning_release_conclusion
+                ),
+                evolution_review_decision_status=(
+                    audit.evolution_review_decision_status
+                ),
+                evolution_review_decision=audit.evolution_review_decision,
+                evolution_review_proposal_id=audit.evolution_review_proposal_id,
+                evolution_review_operator_ref=audit.evolution_review_operator_ref,
+                evolution_review_evidence_refs=list(
+                    audit.evolution_review_evidence_refs
+                ),
+                evolution_review_rollback_plan_ref=(
+                    audit.evolution_review_rollback_plan_ref
+                ),
+                evolution_review_limits=list(audit.evolution_review_limits),
                 experiment_lane_status=audit.experiment_lane_status,
                 wave2_candidate_class=audit.wave2_candidate_class,
                 experiment_entry_status=audit.experiment_entry_status,

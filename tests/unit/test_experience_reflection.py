@@ -4,7 +4,11 @@ from uuid import uuid4
 
 from memory_service.service import MemoryService
 
-from shared.contracts import ExperienceRecordContract, PostTaskReflectionContract
+from shared.contracts import (
+    ExperienceRecordContract,
+    PostTaskReflectionContract,
+    ReviewedLearningGuidanceContract,
+)
 from shared.types import MissionId
 
 
@@ -83,6 +87,41 @@ def test_memory_service_persists_bounded_experience_reflection() -> None:
     )
 
 
+def test_memory_service_persists_experience_before_reflection() -> None:
+    temp_dir = runtime_dir("memory-experience-only")
+    service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
+    experience = ExperienceRecordContract(
+        experience_id="experience://mission-auto/req-1",
+        mission_id=MissionId("mission-auto"),
+        workflow_profile="strategic_direction_workflow",
+        outcome_status="completed",
+        user_intent="planning",
+        route="strategy",
+        primary_mind="mente_executiva",
+        primary_domain_driver="estrategia_e_pensamento_sistemico",
+        specialist_used=["structured_analysis_specialist"],
+        plan_summary="decompor objetivo em etapas reversiveis",
+        execution_summary="operation completed with 1 artifact(s)",
+        outcome="coherent",
+        tools_used=["local_artifact_generation"],
+        checkpoints=["scenario framed"],
+        evidence_refs=["trace://request/req-1"],
+        signal_refs=["workflow_output_status:coherent"],
+        timestamp="2026-05-17T00:00:00Z",
+    )
+
+    stored = service.record_experience(experience=experience)
+    records = service.list_experience_reflections(mission_id="mission-auto")
+
+    assert stored.reflection is None
+    assert records[0].reflection is None
+    assert records[0].experience.user_intent == "planning"
+    assert records[0].experience.route == "strategy"
+    assert records[0].experience.specialist_used == ["structured_analysis_specialist"]
+    assert records[0].experience.automatic_promotion_allowed is False
+    assert records[0].experience.core_mutation_allowed is False
+
+
 def test_memory_service_blocks_experience_reflection_without_evidence_or_manual_review() -> None:
     temp_dir = runtime_dir("memory-experience-blocked")
     service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
@@ -117,3 +156,38 @@ def test_memory_service_blocks_experience_reflection_without_evidence_or_manual_
     assert "automatic_promotion_not_allowed" in stored.reflection.blockers
     assert "core_mutation_not_allowed" in stored.reflection.blockers
     assert "evidence_required" in stored.reflection.blockers
+
+
+def test_memory_service_persists_reviewed_learning_guidance() -> None:
+    temp_dir = runtime_dir("memory-reviewed-guidance")
+    service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
+    guidance = ReviewedLearningGuidanceContract(
+        guidance_id="reviewed-learning-guidance://review-1",
+        source_review_decision_id="review-decision://proposal-1/001",
+        evolution_proposal_id="proposal-1",
+        review_status="approved",
+        route="software_development",
+        workflow_profile="software_change_workflow",
+        domain="engenharia_de_software",
+        guidance_summary="prefer small reversible patches with direct tests",
+        allowed_usage=["planning_context", "synthesis_context"],
+        evidence_refs=["trace://req-reviewed"],
+        rollback_plan_ref="rollback://proposal-1",
+        timestamp="2026-05-17T00:00:02Z",
+    )
+
+    stored = service.record_reviewed_learning_guidance(guidance)
+    records = service.list_reviewed_learning_guidance(
+        route="software_development",
+        workflow_profile="software_change_workflow",
+        domain="engenharia_de_software",
+    )
+
+    assert stored.guidance.automatic_promotion_allowed is False
+    assert stored.guidance.core_mutation_allowed is False
+    assert records[0].guidance.guidance_id == guidance.guidance_id
+    assert records[0].guidance.guidance_summary == guidance.guidance_summary
+    assert records[0].guidance.allowed_usage == [
+        "planning_context",
+        "synthesis_context",
+    ]

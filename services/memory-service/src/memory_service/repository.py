@@ -15,6 +15,7 @@ from shared.contracts import (
     ExperienceRecordContract,
     MissionStateContract,
     PostTaskReflectionContract,
+    ReviewedLearningGuidanceContract,
     SpecialistSharedMemoryContextContract,
     UserScopeContextContract,
 )
@@ -136,7 +137,12 @@ class StoredContinuityPauseResolution:
 @dataclass(frozen=True)
 class StoredExperienceReflection:
     experience: ExperienceRecordContract
-    reflection: PostTaskReflectionContract
+    reflection: PostTaskReflectionContract | None = None
+
+
+@dataclass(frozen=True)
+class StoredReviewedLearningGuidance:
+    guidance: ReviewedLearningGuidanceContract
 
 
 @dataclass(frozen=True)
@@ -273,6 +279,10 @@ class MemoryRepository(ABC):
         """Persist a bounded experience/reflection pair."""
         raise NotImplementedError
 
+    def record_experience(self, experience: ExperienceRecordContract) -> None:
+        """Persist a bounded experience before reflection exists."""
+        self.record_experience_reflection(StoredExperienceReflection(experience=experience))
+
     def list_experience_reflections(
         self,
         *,
@@ -281,6 +291,24 @@ class MemoryRepository(ABC):
         limit: int = 20,
     ) -> list[StoredExperienceReflection]:
         """Load recent bounded experience/reflection pairs."""
+        raise NotImplementedError
+
+    def record_reviewed_learning_guidance(
+        self,
+        record: StoredReviewedLearningGuidance,
+    ) -> None:
+        """Persist human-reviewed learning guidance."""
+        raise NotImplementedError
+
+    def list_reviewed_learning_guidance(
+        self,
+        *,
+        route: str | None = None,
+        workflow_profile: str | None = None,
+        domain: str | None = None,
+        limit: int = 20,
+    ) -> list[StoredReviewedLearningGuidance]:
+        """Load recent human-reviewed learning guidance."""
         raise NotImplementedError
 
     def upsert_specialist_shared_memory(
@@ -888,8 +916,11 @@ class SqliteMemoryRepository(MemoryRepository):
                 """
                 INSERT OR REPLACE INTO experience_reflections (
                     experience_id, reflection_id, mission_id, objective_ref, surface_id,
-                    workflow_profile, outcome_status, evidence_refs, signal_refs,
-                    failure_modes, decision_refs, learned_patterns, next_action_ref,
+                    workflow_profile, outcome_status, user_intent, route, primary_mind,
+                    primary_domain_driver, specialist_used, plan_summary, execution_summary,
+                    outcome, errors, tools_used, checkpoints, user_feedback,
+                    evidence_refs, signal_refs, failure_modes, decision_refs,
+                    learned_patterns, next_action_ref,
                     source_kind, reusable_memory_status, experience_human_review_required,
                     experience_automatic_promotion_allowed, experience_core_mutation_allowed,
                     reflection_status, learning_candidate, recommendation,
@@ -899,18 +930,31 @@ class SqliteMemoryRepository(MemoryRepository):
                     timestamp
                 )
                 VALUES (
-                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                    ?, ?, ?, ?, ?, ?, ?, ?, ?
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
                 )
                 """,
                 (
                     experience.experience_id,
-                    reflection.reflection_id,
+                    reflection.reflection_id if reflection else None,
                     str(experience.mission_id),
                     experience.objective_ref,
                     experience.surface_id,
                     experience.workflow_profile,
                     experience.outcome_status,
+                    experience.user_intent,
+                    experience.route,
+                    experience.primary_mind,
+                    experience.primary_domain_driver,
+                    dumps(experience.specialist_used),
+                    experience.plan_summary,
+                    experience.execution_summary,
+                    experience.outcome,
+                    dumps(experience.errors),
+                    dumps(experience.tools_used),
+                    dumps(experience.checkpoints),
+                    experience.user_feedback,
                     dumps(experience.evidence_refs),
                     dumps(experience.signal_refs),
                     dumps(experience.failure_modes),
@@ -922,17 +966,17 @@ class SqliteMemoryRepository(MemoryRepository):
                     int(experience.human_review_required),
                     int(experience.automatic_promotion_allowed),
                     int(experience.core_mutation_allowed),
-                    reflection.reflection_status,
-                    reflection.learning_candidate,
-                    reflection.recommendation,
-                    reflection.proposed_change_type,
-                    dumps(reflection.proposed_tests),
-                    dumps(reflection.blockers),
-                    reflection.rollback_plan_ref,
-                    reflection.risk_hint,
-                    int(reflection.human_review_required),
-                    int(reflection.automatic_promotion_allowed),
-                    int(reflection.core_mutation_allowed),
+                    reflection.reflection_status if reflection else None,
+                    reflection.learning_candidate if reflection else None,
+                    reflection.recommendation if reflection else None,
+                    reflection.proposed_change_type if reflection else None,
+                    dumps(reflection.proposed_tests if reflection else []),
+                    dumps(reflection.blockers if reflection else []),
+                    reflection.rollback_plan_ref if reflection else None,
+                    reflection.risk_hint if reflection else None,
+                    int(reflection.human_review_required) if reflection else None,
+                    int(reflection.automatic_promotion_allowed) if reflection else None,
+                    int(reflection.core_mutation_allowed) if reflection else None,
                     experience.timestamp,
                 ),
             )
@@ -967,6 +1011,76 @@ class SqliteMemoryRepository(MemoryRepository):
                 tuple(params),
             ).fetchall()
         return [self._row_to_experience_reflection(row) for row in rows]
+
+    def record_reviewed_learning_guidance(
+        self,
+        record: StoredReviewedLearningGuidance,
+    ) -> None:
+        guidance = record.guidance
+        with self._connect() as connection:
+            connection.execute(
+                """
+                INSERT OR REPLACE INTO reviewed_learning_guidance (
+                    guidance_id, source_review_decision_id, evolution_proposal_id,
+                    review_status, route, workflow_profile, domain, guidance_summary,
+                    allowed_usage, evidence_refs, rollback_plan_ref, timestamp,
+                    expires_at, automatic_promotion_allowed, core_mutation_allowed
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    guidance.guidance_id,
+                    guidance.source_review_decision_id,
+                    str(guidance.evolution_proposal_id),
+                    guidance.review_status,
+                    guidance.route,
+                    guidance.workflow_profile,
+                    guidance.domain,
+                    guidance.guidance_summary,
+                    dumps(guidance.allowed_usage),
+                    dumps(guidance.evidence_refs),
+                    guidance.rollback_plan_ref,
+                    guidance.timestamp,
+                    guidance.expires_at,
+                    int(guidance.automatic_promotion_allowed),
+                    int(guidance.core_mutation_allowed),
+                ),
+            )
+            connection.commit()
+
+    def list_reviewed_learning_guidance(
+        self,
+        *,
+        route: str | None = None,
+        workflow_profile: str | None = None,
+        domain: str | None = None,
+        limit: int = 20,
+    ) -> list[StoredReviewedLearningGuidance]:
+        clauses: list[str] = []
+        params: list[object] = []
+        if route:
+            clauses.append("route = ?")
+            params.append(route)
+        if workflow_profile:
+            clauses.append("workflow_profile = ?")
+            params.append(workflow_profile)
+        if domain:
+            clauses.append("domain = ?")
+            params.append(domain)
+        where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        params.append(limit)
+        with self._connect() as connection:
+            rows = connection.execute(
+                f"""
+                SELECT *
+                FROM reviewed_learning_guidance
+                {where}
+                ORDER BY timestamp DESC
+                LIMIT ?
+                """,
+                tuple(params),
+            ).fetchall()
+        return [self._row_to_reviewed_learning_guidance(row) for row in rows]
 
     def upsert_specialist_shared_memory(
         self,
@@ -1473,12 +1587,24 @@ class SqliteMemoryRepository(MemoryRepository):
 
                 CREATE TABLE IF NOT EXISTS experience_reflections (
                     experience_id TEXT PRIMARY KEY,
-                    reflection_id TEXT NOT NULL,
+                    reflection_id TEXT,
                     mission_id TEXT NOT NULL,
                     objective_ref TEXT,
                     surface_id TEXT,
                     workflow_profile TEXT NOT NULL,
                     outcome_status TEXT NOT NULL,
+                    user_intent TEXT,
+                    route TEXT,
+                    primary_mind TEXT,
+                    primary_domain_driver TEXT,
+                    specialist_used TEXT NOT NULL DEFAULT '[]',
+                    plan_summary TEXT,
+                    execution_summary TEXT,
+                    outcome TEXT,
+                    errors TEXT NOT NULL DEFAULT '[]',
+                    tools_used TEXT NOT NULL DEFAULT '[]',
+                    checkpoints TEXT NOT NULL DEFAULT '[]',
+                    user_feedback TEXT,
                     evidence_refs TEXT NOT NULL DEFAULT '[]',
                     signal_refs TEXT NOT NULL DEFAULT '[]',
                     failure_modes TEXT NOT NULL DEFAULT '[]',
@@ -1490,22 +1616,43 @@ class SqliteMemoryRepository(MemoryRepository):
                     experience_human_review_required INTEGER NOT NULL,
                     experience_automatic_promotion_allowed INTEGER NOT NULL,
                     experience_core_mutation_allowed INTEGER NOT NULL,
-                    reflection_status TEXT NOT NULL,
-                    learning_candidate TEXT NOT NULL,
-                    recommendation TEXT NOT NULL,
-                    proposed_change_type TEXT NOT NULL,
+                    reflection_status TEXT,
+                    learning_candidate TEXT,
+                    recommendation TEXT,
+                    proposed_change_type TEXT,
                     proposed_tests TEXT NOT NULL DEFAULT '[]',
                     blockers TEXT NOT NULL DEFAULT '[]',
                     rollback_plan_ref TEXT,
                     risk_hint TEXT,
-                    reflection_human_review_required INTEGER NOT NULL,
-                    reflection_automatic_promotion_allowed INTEGER NOT NULL,
-                    reflection_core_mutation_allowed INTEGER NOT NULL,
+                    reflection_human_review_required INTEGER,
+                    reflection_automatic_promotion_allowed INTEGER,
+                    reflection_core_mutation_allowed INTEGER,
                     timestamp TEXT NOT NULL
                 );
 
                 CREATE INDEX IF NOT EXISTS idx_experience_reflections_mission_timestamp
                 ON experience_reflections (mission_id, timestamp);
+
+                CREATE TABLE IF NOT EXISTS reviewed_learning_guidance (
+                    guidance_id TEXT PRIMARY KEY,
+                    source_review_decision_id TEXT NOT NULL,
+                    evolution_proposal_id TEXT NOT NULL,
+                    review_status TEXT NOT NULL,
+                    route TEXT NOT NULL,
+                    workflow_profile TEXT NOT NULL,
+                    domain TEXT NOT NULL,
+                    guidance_summary TEXT NOT NULL,
+                    allowed_usage TEXT NOT NULL DEFAULT '[]',
+                    evidence_refs TEXT NOT NULL DEFAULT '[]',
+                    rollback_plan_ref TEXT,
+                    timestamp TEXT NOT NULL,
+                    expires_at TEXT,
+                    automatic_promotion_allowed INTEGER NOT NULL,
+                    core_mutation_allowed INTEGER NOT NULL
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_reviewed_learning_guidance_scope_timestamp
+                ON reviewed_learning_guidance (workflow_profile, route, domain, timestamp);
 
                 CREATE TABLE IF NOT EXISTS specialist_shared_memory (
                     session_id TEXT NOT NULL,
@@ -1935,6 +2082,18 @@ class SqliteMemoryRepository(MemoryRepository):
             surface_id=row["surface_id"],
             workflow_profile=str(row["workflow_profile"]),
             outcome_status=str(row["outcome_status"]),
+            user_intent=row["user_intent"],
+            route=row["route"],
+            primary_mind=row["primary_mind"],
+            primary_domain_driver=row["primary_domain_driver"],
+            specialist_used=list(loads(row["specialist_used"] or "[]")),
+            plan_summary=row["plan_summary"],
+            execution_summary=row["execution_summary"],
+            outcome=row["outcome"],
+            errors=list(loads(row["errors"] or "[]")),
+            tools_used=list(loads(row["tools_used"] or "[]")),
+            checkpoints=list(loads(row["checkpoints"] or "[]")),
+            user_feedback=row["user_feedback"],
             evidence_refs=evidence_refs,
             signal_refs=list(loads(row["signal_refs"] or "[]")),
             failure_modes=list(loads(row["failure_modes"] or "[]")),
@@ -1950,6 +2109,8 @@ class SqliteMemoryRepository(MemoryRepository):
             core_mutation_allowed=bool(row["experience_core_mutation_allowed"]),
             timestamp=str(row["timestamp"]),
         )
+        if row["reflection_id"] is None:
+            return StoredExperienceReflection(experience=experience, reflection=None)
         reflection = PostTaskReflectionContract(
             reflection_id=str(row["reflection_id"]),
             experience_id=str(row["experience_id"]),
@@ -1970,6 +2131,32 @@ class SqliteMemoryRepository(MemoryRepository):
             timestamp=str(row["timestamp"]),
         )
         return StoredExperienceReflection(experience=experience, reflection=reflection)
+
+    @staticmethod
+    def _row_to_reviewed_learning_guidance(
+        row: Row,
+    ) -> StoredReviewedLearningGuidance:
+        return StoredReviewedLearningGuidance(
+            guidance=ReviewedLearningGuidanceContract(
+                guidance_id=str(row["guidance_id"]),
+                source_review_decision_id=str(row["source_review_decision_id"]),
+                evolution_proposal_id=str(row["evolution_proposal_id"]),
+                review_status=str(row["review_status"]),
+                route=str(row["route"]),
+                workflow_profile=str(row["workflow_profile"]),
+                domain=str(row["domain"]),
+                guidance_summary=str(row["guidance_summary"]),
+                allowed_usage=list(loads(row["allowed_usage"] or "[]")),
+                evidence_refs=list(loads(row["evidence_refs"] or "[]")),
+                rollback_plan_ref=row["rollback_plan_ref"],
+                timestamp=str(row["timestamp"]),
+                expires_at=row["expires_at"],
+                automatic_promotion_allowed=bool(
+                    row["automatic_promotion_allowed"]
+                ),
+                core_mutation_allowed=bool(row["core_mutation_allowed"]),
+            )
+        )
 
     @staticmethod
     def _row_to_mission_state(row: Row) -> MissionStateContract:
@@ -2624,8 +2811,11 @@ class PostgresMemoryRepository(MemoryRepository):
                 """
                 INSERT INTO experience_reflections (
                     experience_id, reflection_id, mission_id, objective_ref, surface_id,
-                    workflow_profile, outcome_status, evidence_refs, signal_refs,
-                    failure_modes, decision_refs, learned_patterns, next_action_ref,
+                    workflow_profile, outcome_status, user_intent, route, primary_mind,
+                    primary_domain_driver, specialist_used, plan_summary, execution_summary,
+                    outcome, errors, tools_used, checkpoints, user_feedback,
+                    evidence_refs, signal_refs, failure_modes, decision_refs, learned_patterns,
+                    next_action_ref,
                     source_kind, reusable_memory_status, experience_human_review_required,
                     experience_automatic_promotion_allowed, experience_core_mutation_allowed,
                     reflection_status, learning_candidate, recommendation,
@@ -2636,12 +2826,25 @@ class PostgresMemoryRepository(MemoryRepository):
                 )
                 VALUES (
                     %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
-                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
                 )
                 ON CONFLICT (experience_id) DO UPDATE SET
                     reflection_id = EXCLUDED.reflection_id,
                     workflow_profile = EXCLUDED.workflow_profile,
                     outcome_status = EXCLUDED.outcome_status,
+                    user_intent = EXCLUDED.user_intent,
+                    route = EXCLUDED.route,
+                    primary_mind = EXCLUDED.primary_mind,
+                    primary_domain_driver = EXCLUDED.primary_domain_driver,
+                    specialist_used = EXCLUDED.specialist_used,
+                    plan_summary = EXCLUDED.plan_summary,
+                    execution_summary = EXCLUDED.execution_summary,
+                    outcome = EXCLUDED.outcome,
+                    errors = EXCLUDED.errors,
+                    tools_used = EXCLUDED.tools_used,
+                    checkpoints = EXCLUDED.checkpoints,
+                    user_feedback = EXCLUDED.user_feedback,
                     evidence_refs = EXCLUDED.evidence_refs,
                     signal_refs = EXCLUDED.signal_refs,
                     failure_modes = EXCLUDED.failure_modes,
@@ -2661,12 +2864,24 @@ class PostgresMemoryRepository(MemoryRepository):
                 """,
                 (
                     experience.experience_id,
-                    reflection.reflection_id,
+                    reflection.reflection_id if reflection else None,
                     str(experience.mission_id),
                     experience.objective_ref,
                     experience.surface_id,
                     experience.workflow_profile,
                     experience.outcome_status,
+                    experience.user_intent,
+                    experience.route,
+                    experience.primary_mind,
+                    experience.primary_domain_driver,
+                    dumps(experience.specialist_used),
+                    experience.plan_summary,
+                    experience.execution_summary,
+                    experience.outcome,
+                    dumps(experience.errors),
+                    dumps(experience.tools_used),
+                    dumps(experience.checkpoints),
+                    experience.user_feedback,
                     dumps(experience.evidence_refs),
                     dumps(experience.signal_refs),
                     dumps(experience.failure_modes),
@@ -2678,17 +2893,17 @@ class PostgresMemoryRepository(MemoryRepository):
                     experience.human_review_required,
                     experience.automatic_promotion_allowed,
                     experience.core_mutation_allowed,
-                    reflection.reflection_status,
-                    reflection.learning_candidate,
-                    reflection.recommendation,
-                    reflection.proposed_change_type,
-                    dumps(reflection.proposed_tests),
-                    dumps(reflection.blockers),
-                    reflection.rollback_plan_ref,
-                    reflection.risk_hint,
-                    reflection.human_review_required,
-                    reflection.automatic_promotion_allowed,
-                    reflection.core_mutation_allowed,
+                    reflection.reflection_status if reflection else None,
+                    reflection.learning_candidate if reflection else None,
+                    reflection.recommendation if reflection else None,
+                    reflection.proposed_change_type if reflection else None,
+                    dumps(reflection.proposed_tests if reflection else []),
+                    dumps(reflection.blockers if reflection else []),
+                    reflection.rollback_plan_ref if reflection else None,
+                    reflection.risk_hint if reflection else None,
+                    reflection.human_review_required if reflection else None,
+                    reflection.automatic_promotion_allowed if reflection else None,
+                    reflection.core_mutation_allowed if reflection else None,
                     experience.timestamp,
                 ),
             )
@@ -2724,6 +2939,94 @@ class PostgresMemoryRepository(MemoryRepository):
             )
             rows = cursor.fetchall()
         return [self._row_to_experience_reflection(row) for row in rows]
+
+    def record_reviewed_learning_guidance(
+        self,
+        record: StoredReviewedLearningGuidance,
+    ) -> None:
+        guidance = record.guidance
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO reviewed_learning_guidance (
+                    guidance_id, source_review_decision_id, evolution_proposal_id,
+                    review_status, route, workflow_profile, domain, guidance_summary,
+                    allowed_usage, evidence_refs, rollback_plan_ref, timestamp,
+                    expires_at, automatic_promotion_allowed, core_mutation_allowed
+                )
+                VALUES (
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                )
+                ON CONFLICT (guidance_id) DO UPDATE SET
+                    source_review_decision_id = EXCLUDED.source_review_decision_id,
+                    evolution_proposal_id = EXCLUDED.evolution_proposal_id,
+                    review_status = EXCLUDED.review_status,
+                    route = EXCLUDED.route,
+                    workflow_profile = EXCLUDED.workflow_profile,
+                    domain = EXCLUDED.domain,
+                    guidance_summary = EXCLUDED.guidance_summary,
+                    allowed_usage = EXCLUDED.allowed_usage,
+                    evidence_refs = EXCLUDED.evidence_refs,
+                    rollback_plan_ref = EXCLUDED.rollback_plan_ref,
+                    timestamp = EXCLUDED.timestamp,
+                    expires_at = EXCLUDED.expires_at,
+                    automatic_promotion_allowed = EXCLUDED.automatic_promotion_allowed,
+                    core_mutation_allowed = EXCLUDED.core_mutation_allowed
+                """,
+                (
+                    guidance.guidance_id,
+                    guidance.source_review_decision_id,
+                    str(guidance.evolution_proposal_id),
+                    guidance.review_status,
+                    guidance.route,
+                    guidance.workflow_profile,
+                    guidance.domain,
+                    guidance.guidance_summary,
+                    dumps(guidance.allowed_usage),
+                    dumps(guidance.evidence_refs),
+                    guidance.rollback_plan_ref,
+                    guidance.timestamp,
+                    guidance.expires_at,
+                    guidance.automatic_promotion_allowed,
+                    guidance.core_mutation_allowed,
+                ),
+            )
+            connection.commit()
+
+    def list_reviewed_learning_guidance(
+        self,
+        *,
+        route: str | None = None,
+        workflow_profile: str | None = None,
+        domain: str | None = None,
+        limit: int = 20,
+    ) -> list[StoredReviewedLearningGuidance]:
+        clauses: list[str] = []
+        params: list[object] = []
+        if route:
+            clauses.append("route = %s")
+            params.append(route)
+        if workflow_profile:
+            clauses.append("workflow_profile = %s")
+            params.append(workflow_profile)
+        if domain:
+            clauses.append("domain = %s")
+            params.append(domain)
+        where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        params.append(limit)
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                f"""
+                SELECT *
+                FROM reviewed_learning_guidance
+                {where}
+                ORDER BY timestamp DESC
+                LIMIT %s
+                """,
+                tuple(params),
+            )
+            rows = cursor.fetchall()
+        return [self._row_to_reviewed_learning_guidance(row) for row in rows]
 
     def upsert_specialist_shared_memory(
         self,
@@ -3333,6 +3636,33 @@ class PostgresMemoryRepository(MemoryRepository):
                     surface_identity_conflict_flags TEXT NOT NULL DEFAULT '[]',
                     updated_at TEXT NOT NULL
                 )
+                """
+            )
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS reviewed_learning_guidance (
+                    guidance_id TEXT PRIMARY KEY,
+                    source_review_decision_id TEXT NOT NULL,
+                    evolution_proposal_id TEXT NOT NULL,
+                    review_status TEXT NOT NULL,
+                    route TEXT NOT NULL,
+                    workflow_profile TEXT NOT NULL,
+                    domain TEXT NOT NULL,
+                    guidance_summary TEXT NOT NULL,
+                    allowed_usage TEXT NOT NULL DEFAULT '[]',
+                    evidence_refs TEXT NOT NULL DEFAULT '[]',
+                    rollback_plan_ref TEXT,
+                    timestamp TEXT NOT NULL,
+                    expires_at TEXT,
+                    automatic_promotion_allowed BOOLEAN NOT NULL,
+                    core_mutation_allowed BOOLEAN NOT NULL
+                )
+                """
+            )
+            cursor.execute(
+                """
+                CREATE INDEX IF NOT EXISTS idx_reviewed_learning_guidance_scope_timestamp
+                ON reviewed_learning_guidance (workflow_profile, route, domain, timestamp)
                 """
             )
             cursor.execute(

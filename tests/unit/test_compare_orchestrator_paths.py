@@ -114,6 +114,23 @@ def make_result(  # type: ignore[no-untyped-def]
     technology_absorption_decision: str = "not_applicable",
     technology_absorption_blockers: list[str] | None = None,
     technology_absorption_signals: list[str] | None = None,
+    reflection_influence_status: str = "not_applicable",
+    reflection_influence_refs: list[str] | None = None,
+    reflection_influence_summary: str | None = None,
+    reflection_assisted_eval_status: str = "baseline_no_reflection",
+    reviewed_learning_influence_status: str = "not_applicable",
+    reviewed_learning_influence_refs: list[str] | None = None,
+    reviewed_learning_influence_summary: str | None = None,
+    reviewed_learning_influence_reason: str | None = None,
+    reviewed_learning_assisted_eval_status: str = "baseline_no_reviewed_learning",
+    reviewed_learning_release_conclusion: str = "no_promotion_without_release_gate",
+    evolution_review_decision_status: str = "not_applicable",
+    evolution_review_decision: str = "not_applicable",
+    evolution_review_proposal_id: str | None = None,
+    evolution_review_operator_ref: str | None = None,
+    evolution_review_evidence_refs: list[str] | None = None,
+    evolution_review_rollback_plan_ref: str | None = None,
+    evolution_review_limits: list[str] | None = None,
     trace_status: str = "healthy",
     anomaly_flags: list[str] | None = None,
     missing_required_events: list[str] | None = None,
@@ -236,6 +253,23 @@ def make_result(  # type: ignore[no-untyped-def]
         technology_absorption_decision=technology_absorption_decision,
         technology_absorption_blockers=technology_absorption_blockers or [],
         technology_absorption_signals=technology_absorption_signals or [],
+        reflection_influence_status=reflection_influence_status,
+        reflection_influence_refs=reflection_influence_refs or [],
+        reflection_influence_summary=reflection_influence_summary,
+        reflection_assisted_eval_status=reflection_assisted_eval_status,
+        reviewed_learning_influence_status=reviewed_learning_influence_status,
+        reviewed_learning_influence_refs=reviewed_learning_influence_refs or [],
+        reviewed_learning_influence_summary=reviewed_learning_influence_summary,
+        reviewed_learning_influence_reason=reviewed_learning_influence_reason,
+        reviewed_learning_assisted_eval_status=reviewed_learning_assisted_eval_status,
+        reviewed_learning_release_conclusion=reviewed_learning_release_conclusion,
+        evolution_review_decision_status=evolution_review_decision_status,
+        evolution_review_decision=evolution_review_decision,
+        evolution_review_proposal_id=evolution_review_proposal_id,
+        evolution_review_operator_ref=evolution_review_operator_ref,
+        evolution_review_evidence_refs=evolution_review_evidence_refs or [],
+        evolution_review_rollback_plan_ref=evolution_review_rollback_plan_ref,
+        evolution_review_limits=evolution_review_limits or [],
         trace_status=trace_status,
         anomaly_flags=anomaly_flags or [],
         missing_required_events=missing_required_events or [],
@@ -359,6 +393,130 @@ def test_compare_results_flags_technology_absorption_mismatch_fields() -> None:
         "technology_absorption_blockers",
         "technology_absorption_signals",
     ]
+
+
+def test_compare_results_flags_reflection_assisted_mismatch_fields() -> None:
+    baseline = [make_result(scenario_id="x", path_name="baseline")]
+    candidate = [
+        make_result(
+            scenario_id="x",
+            path_name="reflection-assisted",
+            reflection_influence_status="applied",
+            reflection_influence_refs=["reflection://mission-x/001"],
+            reflection_influence_summary="usar criterio anterior",
+            reflection_assisted_eval_status="reflection_assisted",
+        )
+    ]
+
+    comparisons = compare_results(baseline, candidate)
+    payload = serialize_comparisons(
+        comparisons,
+        profile="development",
+        langgraph_status="available",
+    )
+
+    assert comparisons[0].mismatch_fields == [
+        "reflection_influence_status",
+        "reflection_influence_refs",
+        "reflection_assisted_eval_status",
+    ]
+    assert (
+        payload["scenario_results"][0]["candidate_reflection_assisted_assessment"]
+        == "reflection_assisted"
+    )
+    assert (
+        payload["comparison_summary"]["candidate_reflection_assisted_decision"]
+        == "reflection_assisted"
+    )
+    assert payload["comparison_summary"]["candidate_reflection_assisted_rate"] == 1.0
+
+
+def test_compare_results_flags_reviewed_learning_mismatch_fields() -> None:
+    baseline = [make_result(scenario_id="x", path_name="baseline")]
+    candidate = [
+        make_result(
+            scenario_id="x",
+            path_name="reviewed-learning-assisted",
+            reviewed_learning_influence_status="applied",
+            reviewed_learning_influence_refs=["reviewed-learning://guidance/001"],
+            reviewed_learning_influence_summary="preservar decisao revisada",
+            reviewed_learning_influence_reason="workflow_match",
+            reviewed_learning_assisted_eval_status="reviewed_learning_assisted",
+        )
+    ]
+
+    comparisons = compare_results(baseline, candidate)
+    payload = serialize_comparisons(
+        comparisons,
+        profile="development",
+        langgraph_status="available",
+    )
+
+    assert comparisons[0].mismatch_fields == [
+        "reviewed_learning_influence_status",
+        "reviewed_learning_influence_refs",
+        "reviewed_learning_influence_reason",
+        "reviewed_learning_assisted_eval_status",
+    ]
+    assert (
+        payload["scenario_results"][0]["candidate_reviewed_learning_assessment"]
+        == "reviewed_learning_assisted"
+    )
+    assert (
+        payload["comparison_summary"]["candidate_reviewed_learning_decision"]
+        == "reviewed_learning_assisted"
+    )
+    assert payload["comparison_summary"]["candidate_reviewed_learning_assisted_rate"] == 1.0
+    assert (
+        payload["comparison_summary"]["reviewed_learning_release_conclusion"]
+        == "no_promotion_without_release_gate"
+    )
+
+
+def test_compare_results_flags_evolution_review_mismatch_fields() -> None:
+    baseline = [make_result(scenario_id="x", path_name="baseline")]
+    candidate = [
+        make_result(
+            scenario_id="x",
+            path_name="human-review",
+            evolution_review_decision_status="approved",
+            evolution_review_decision="approve",
+            evolution_review_proposal_id="proposal-123",
+            evolution_review_operator_ref="operator://human",
+            evolution_review_evidence_refs=["evidence://eval/123"],
+            evolution_review_rollback_plan_ref="rollback://proposal-123",
+            evolution_review_limits=[
+                "automatic_promotion_blocked",
+                "core_mutation_blocked",
+            ],
+        )
+    ]
+
+    comparisons = compare_results(baseline, candidate)
+    payload = serialize_comparisons(
+        comparisons,
+        profile="development",
+        langgraph_status="available",
+    )
+
+    assert comparisons[0].mismatch_fields == [
+        "evolution_review_decision_status",
+        "evolution_review_decision",
+        "evolution_review_proposal_id",
+        "evolution_review_operator_ref",
+        "evolution_review_evidence_refs",
+        "evolution_review_rollback_plan_ref",
+        "evolution_review_limits",
+    ]
+    assert (
+        payload["scenario_results"][0]["candidate_evolution_review_assessment"]
+        == "approved"
+    )
+    assert (
+        payload["comparison_summary"]["candidate_evolution_review_decision"]
+        == "approved"
+    )
+    assert payload["comparison_summary"]["candidate_evolution_reviewed_rate"] == 1.0
 
 
 def test_compare_results_flags_axis_alignment_mismatch_fields() -> None:
