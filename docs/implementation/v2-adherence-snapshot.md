@@ -31,7 +31,7 @@ Estado de referencia desta revisao:
 - data da fotografia: `2026-05-17`
 - ultimo recorte funcional fechado: `v2-native-memory-scope-hardening-cut`
 - ultimo recorte estrutural fechado: `v2-repository-hygiene-and-tools-review-cut`
-- passo funcional em andamento: lotes `MB-062` a `MB-150` concluidos ate leitura operacional e medicao de aprendizado revisado; nao ha novo item tecnico `ready` sem repriorizacao explicita.
+- passo funcional em andamento: lotes `MB-062` a `MB-150` concluidos ate leitura operacional e medicao de aprendizado revisado; `MB-151` foi fechado como auditoria documental governada oficial; `MB-152` e o unico item `ready` para mapa de backlinks e sincronizacao segura de docs ativos.
 
 Leitura executiva:
 
@@ -113,6 +113,13 @@ Leitura executiva:
   aprendizado revisado: observabilidade, piloto, relatorio, comparador,
   console e documentacao agora mostram baseline vs reviewed-learning-assisted,
   refs, motivo, taxas e conclusao `no_promotion_without_release_gate`.
+- `MB-151` foi fechado como auditoria documental governada oficial em
+  `docs/documentation/documentation-canonicality-audit-mb151.md`: 73 documentos
+  foram revisados sem mover, deletar, renomear, mesclar ou remover arquivos.
+- `MB-152` foi aberto como unico item `ready`: gerar mapa de backlinks e
+  sincronizar somente documentos ativos defasados, mantendo moves, deletes,
+  merges sensiveis, Documento-Mestre, arquitetura e novas funcionalidades fora
+  de escopo.
 - o contrato canonico da rota ativa passou a atravessar tambem o `planning` e a influenciar a `synthesis`, reduzindo a distancia entre memoria guiada disponivel e comportamento final do runtime.
 - esse contrato agora tambem molda passos, restricoes, criterios de sucesso e checkpoint/gate governado do plano, e ja aparece na leitura final como objetivo, entrega esperada, foco de leitura e workflow ativo da rota promovida.
 - esse mesmo slice soberano agora tambem atravessa `operation_dispatch`, `workflow_*` e `operation_completed`, e a observabilidade passou a marcar drift quando objetivo, entregaveis, foco de sucesso, foco final e telemetria deixam de bater entre composicao e execucao.

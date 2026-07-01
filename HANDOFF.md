@@ -90,6 +90,15 @@ bloqueado e qual limite de release permanece ativo. O lote `MB-146` a `MB-150`
 esta fechado; nao ha novo item tecnico `ready` sem nova repriorizacao
 explicita.
 
+`MB-151` foi concluido como auditoria documental governada oficial. A auditoria
+esta registrada em
+`docs/documentation/documentation-canonicality-audit-mb151.md`, revisou 73
+documentos e nao moveu, deletou, renomeou, mesclou ou removeu arquivos.
+`MB-152` e o unico item `ready`: gerar mapa de backlinks e sincronizar somente
+documentos ativos defasados, sem executar limpeza documental ampla. `SO-001`,
+`TA-004`, `TA-006`, `TA-008`, `DV-001` e `RH-*` continuam fora da fila ate
+decisao explicita de fase.
+
 O corte pos-`MB-125` foi repriorizado em `MB-126`: a proxima frente ativa e
 experiencia operacional + reflexao pos-tarefa governada. O objetivo e fazer o
 JARVIS registrar missoes reais, outcomes, falhas, decisoes, evidencias e
@@ -540,7 +549,10 @@ Hoje o repositório contém:
 - `evolution-lab` persistindo proposals e decisões `sandbox-only`;
 - `tools/validate_baseline.py`, `tools/go_live_internal_checklist.py`, `tools/run_internal_pilot.py`, `tools/compare_orchestrator_paths.py`, `tools/evolution_from_pilot.py`, `tools/archive/close_stateful_runtime_cycle.py` e `tools/archive/close_alignment_cycle.py` operacionais;
 - estudo tecnológico consolidado em `docs/architecture/technology-study.md`;
-- sistema documental em duas camadas ativas para programa e sprint cycle.
+- sistema documental em duas camadas ativas para programa e sprint cycle;
+- auditoria documental oficial `MB-151` em
+  `docs/documentation/documentation-canonicality-audit-mb151.md`, com `MB-152`
+  aberto para mapa de backlinks e sincronizacao segura de documentos ativos.
 
 ### Baseline materializado
 

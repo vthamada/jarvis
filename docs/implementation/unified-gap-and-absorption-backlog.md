@@ -311,6 +311,13 @@ Notas de leitura:
   influencia runtime em memoria, planning e synthesis, e `MB-149`/`MB-150`
   fecharam medicao comparativa e leitura operacional; `EV-009` agora faz parte
   do baseline resolvido, sem autopromocao.
+- `MB-151` foi fechado como auditoria documental governada oficial: ele
+  transformou a repriorizacao pos-`MB-150` em inventario, classificacao,
+  clusters, riscos e recomendacao de proximo recorte, sem executar limpeza
+  documental ampla nem abrir nova funcionalidade.
+- `MB-152` foi aberto no backlog micro como unico item `ready`: gerar mapa de
+  backlinks e sincronizar documentos ativos defasados antes de qualquer
+  movimento, delete ou merge sensivel.
 
 ### 5.5 Deferred verticals already mapped
 
@@ -394,6 +401,10 @@ Leitura correta:
   `ready` sem repriorizacao explicita;
 - `EV-009` foi fechado como lote `MB-146` a `MB-150`; nao ha novo item tecnico
   `ready` sem repriorizacao explicita;
+- `MB-151` foi fechado como auditoria/repriorizacao documental, nao como lote
+  tecnico de implementacao funcional;
+- `MB-152` esta aberto como unico item `ready` para mapa de backlinks e
+  sincronizacao segura de documentos ativos defasados;
 - `RH-*` permanece fora do backlog implementavel.
 
 ---

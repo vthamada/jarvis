@@ -98,6 +98,14 @@
 - `apps/jarvis_console mission-cycle` e `mission-workflow` mostram quando guidance revisado influenciou a missao, quando foi bloqueado por escopo e qual limite de release permanece ativo;
 - `docs/operations/operator-learning-loop.md`, backlog micro, snapshot, backlog macro e handoff foram sincronizados; o lote `MB-146` a `MB-150` fica fechado sem novo item tecnico `ready`.
 
+### MB-151 fecha auditoria documental governada
+
+- criado `docs/documentation/documentation-canonicality-audit-mb151.md` como registro oficial da auditoria documental pos-`MB-150`;
+- a auditoria revisou 73 documentos, classificou documentos canonicos, operacionais, de implementacao, defasados, candidatos a merge/archive, documentos com decisao humana obrigatoria e riscos de execucao;
+- nenhum documento foi movido, deletado, renomeado, mesclado ou removido nesta rodada;
+- `docs/implementation/execution-backlog.md` agora marca `MB-151` como concluido e abre `MB-152 -- Documentation Backlink Map & Safe Active Docs Sync` como unico item `ready`;
+- `HANDOFF.md`, `docs/implementation/unified-gap-and-absorption-backlog.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para registrar que `MB-151` foi auditoria/repriorizacao documental, nao implementacao funcional.
+
 ### MB-126 abre experiencia e reflexao pos-tarefa governada
 
 - `docs/implementation/execution-backlog.md` abriu o lote `MB-126` a `MB-131`, com `MB-127` como proximo item `ready`;

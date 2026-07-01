@@ -2762,6 +2762,57 @@ nucleo e sem transformar aprovacao humana em deploy automatico.
 - `impacto_no_baseline`: fecha a leitura operacional do feedback de aprendizado revisado sem abrir autoevolucao profunda.
 - `evidencia_de_fechamento`: `mission-cycle` e `mission-workflow` agora mostram influencia de aprendizado revisado, refs, motivo, medicao assisted/baseline e limite de release; `docs/operations/operator-learning-loop.md`, handoff, snapshot e changelog foram sincronizados.
 
+Estado apos `MB-150`: o lote `Reviewed Learning Feedback Loop` esta fechado.
+Nao ha novo item tecnico implementavel sem repriorizacao explicita a partir do
+backlog macro.
+
+## 4.24 Repriorizacao pos-MB-150: Auditoria documental governada
+
+Este lote fecha a primeira decisao curta apos o ciclo `usar -> registrar ->
+refletir -> propor -> revisar -> influenciar -> medir`: antes de abrir nova
+funcionalidade, o repositorio precisa estabilizar a camada documental ativa,
+identificar documentos canonicos, operacionais, historicos e defasados, e
+preparar uma segunda passada segura com mapa de backlinks.
+
+### MB-151
+
+- `id`: `MB-151`
+- `prioridade`: `P0`
+- `status`: `done`
+- `eixo_do_mestre`: `governanca/documentacao`
+- `workflow_profile_afetado`: `governance_boundary_workflow`, `operational_readiness_workflow`
+- `micro_objetivo`: oficializar a auditoria documental governada pos-`MB-150`, sem executar limpeza ampla, e definir o proximo recorte seguro.
+- `justificativa_arquitetural`: o repositorio acumulou documentos canonicos, operacionais, historicos e defasados; antes de mover, mesclar, arquivar ou remover qualquer arquivo, a governanca exige inventario, classificacao, clusters, riscos e decisao humana onde houver sensibilidade.
+- `arquivos/servicos_principais`: `docs/documentation/documentation-canonicality-audit-mb151.md`, `docs/implementation/execution-backlog.md`, `docs/implementation/unified-gap-and-absorption-backlog.md`, `docs/implementation/v2-adherence-snapshot.md`, `HANDOFF.md`, `CHANGELOG.md`
+- `dependencias`: `MB-150`
+- `criterio_de_aceite`: auditoria salva como documento oficial; backlog registra `MB-151` como fechado; nenhum arquivo foi movido, deletado, renomeado ou mesclado; documentos locais ficam consistentes com a auditoria; `MB-152` e aberto como unico item `ready`.
+- `gate_minimo`: `python tools/check_mojibake.py .` e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `medium`
+- `modelo_recomendado`: `gpt-5.4`
+- `impacto_no_baseline`: transforma a auditoria documental em evidencia oficial, preservando soberania do Documento-Mestre e evitando limpeza documental sem mapa de referencias.
+- `evidencia_de_fechamento`: `docs/documentation/documentation-canonicality-audit-mb151.md` registra 73 documentos revisados, canonicos ativos, operacionais ativos, implementacao ativa, documentos defasados, candidatos a merge/archive, ausencia de candidato seguro a remocao, documentos com decisao humana, clusters, riscos e `MB-152` como proximo recorte.
+
+### MB-152
+
+- `id`: `MB-152`
+- `prioridade`: `P0`
+- `status`: `ready`
+- `eixo_do_mestre`: `governanca/documentacao`
+- `workflow_profile_afetado`: `governance_boundary_workflow`, `operational_readiness_workflow`
+- `micro_objetivo`: gerar mapa de backlinks e sincronizar somente documentos ativos defasados, sem mover, deletar ou mesclar documentos nesta rodada.
+- `justificativa_arquitetural`: a auditoria `MB-151` identificou documentos ativos defasados e historicos fora de archive, mas tambem registrou risco de quebrar referencias e perder rastreabilidade; a segunda passada segura precisa mapear backlinks antes de qualquer reorganizacao fisica.
+- `arquivos/servicos_principais`: `docs/documentation/documentation-canonicality-audit-mb151.md`, `docs/documentation/repository-map-and-consistency-audit.md`, `README.md`, `docs/operations/chat-transition-template.md`, `docs/operations/release-and-change-management.md`, `docs/operations/incident-response.md`, `docs/executive/master-summary.md`, `docs/implementation/execution-backlog.md`, `docs/implementation/unified-gap-and-absorption-backlog.md`, `docs/implementation/v2-adherence-snapshot.md`, `HANDOFF.md`, `CHANGELOG.md`
+- `dependencias`: `MB-151`
+- `criterio_de_aceite`: existe mapa de backlinks para documentos auditados; apenas documentos ativos defasados sao sincronizados; nenhum arquivo e movido, deletado ou mesclado; documentos historicos sao marcados apenas quando seguro; documentos sensiveis permanecem separados; um plano posterior explicita moves/archive; gate padrao passa.
+- `gate_minimo`: `python tools/check_mojibake.py .` e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `medium`
+- `modelo_recomendado`: `gpt-5.4`
+- `impacto_no_baseline`: reduz risco documental antes de qualquer limpeza, mantendo rastreabilidade e evitando contradicao com o Documento-Mestre.
+- `fora_de_escopo`: deletar documentos; mover documentos para archive; mesclar documentos canonicos; alterar Documento-Mestre; alterar arquitetura; abrir funcionalidade; voz/realtime/browser/computer use/SecurityOS.
+- `evidencia_de_fechamento`: pendente; este e o unico item `ready`.
+
 ## 5. Regras de manutencao da fila
 
 - o proximo item puxado deve ser o primeiro `ready` de maior prioridade sem dependencia aberta;
@@ -2843,6 +2894,7 @@ Estado atual da fila:
 - `MB-148` conectou `reviewed_learning_guidance` ao runtime de memoria, planejamento e sintese com filtros de escopo;
 - `MB-149` fechou medicao baseline vs reviewed-learning-assisted em observabilidade, piloto, relatorio e comparador;
 - `MB-150` fechou a leitura operacional no console e na documentacao;
-- nao ha novo item tecnico `ready` apos `MB-150`; a proxima rodada exige repriorizacao explicita;
+- `MB-151` foi concluido como auditoria documental governada oficial, sem mover, deletar, renomear, mesclar ou remover arquivos;
+- `MB-152` foi aberto como unico item `ready` para gerar mapa de backlinks e sincronizar documentos ativos defasados com seguranca;
 - `SO-001`, `TA-004`, `TA-006` e verticais `deferred` continuam fora da fila sem mudanca explicita de fase;
 - `protective intelligence foundation` continua `deferred` e a matriz da Onda 2 segue como insumo, nao como gatilho automatico para abrir nova vertical.
