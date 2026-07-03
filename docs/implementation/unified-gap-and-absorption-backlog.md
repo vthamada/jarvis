@@ -324,6 +324,26 @@ Notas de leitura:
   historicos de implementacao foram movidos para
   `docs/archive/implementation/`, backlinks literais foram reescritos, nenhum
   documento foi deletado e nenhum merge destrutivo foi executado.
+- `MB-154` foi fechado como `Implementation Master Map`: a visao de
+  implementacao agora esta decomposta por trilhas de capacidade, status,
+  dependencias, fases e proximos slices em
+  `docs/implementation/implementation-master-map.md`.
+- `MB-155` foi fechado como baseline minimo de dashboard textual do operador:
+  o console agora agrega missao, objetivo, work items, checkpoints, artefatos,
+  experiencia/reflexao, fila evolutiva e aprendizado revisado em modo read-only.
+- `MB-156` foi fechado como ciclo governado minimo de work items: o operador
+  pode criar, consultar, pausar, bloquear, concluir e redefinir proxima acao de
+  work item por console, com governanca, memoria canonica e eventos auditaveis.
+- `MB-157` foi fechado como lifecycle minimo de artefatos vivos: o operador
+  pode registrar, consultar, ativar, arquivar, substituir e rollbackar refs de
+  artefato bounded sem mutacao fisica de arquivos.
+- `MB-158` foi fechado como metricas compactas de utilidade operacional:
+  observabilidade e dashboard agora expoem status, score e sinais de utilidade
+  do operador sem promover aprendizado ou release automaticamente.
+- `MB-159` foi fechado como raciocinio minimo de objetivos de horizonte longo:
+  estrategia read-only deriva de estado de missao, work items, artefatos,
+  checkpoints, anchors de memoria e proxima acao auditavel, sem scheduler
+  autonomo.
 
 ### 5.5 Deferred verticals already mapped
 
@@ -351,19 +371,22 @@ Regra:
 Quando o `execution-backlog` estiver sem item `ready`, a puxada correta passa a
 ser:
 
-1. escolher um `SG` ou `EV` em `candidate_for_slicing` que aumente profundidade
-   do nucleo;
-2. conectar esse item a um ou dois `TA` que traduzam apenas o padrao externo
+1. consultar `docs/implementation/implementation-master-map.md` para escolher
+   uma capacidade e sua dependencia correta;
+2. confirmar se a capacidade deriva de `SG`, `TA`, `SO`, `EV`, `DV` ou `RH`
+   sem violar fase;
+3. conectar esse item a um ou dois `TA` somente quando houver padrao externo
    necessario;
-3. abrir um lote micro curto, reversivel e auditavel em
+4. abrir um lote micro curto, reversivel e auditavel em
    `docs/implementation/execution-backlog.md`;
-4. manter `SO`, `DV` e `RH` fora da fila micro, salvo mudanca explicita de
+5. manter `SO`, `DV` e `RH` fora da fila micro, salvo mudanca explicita de
    fase.
 
 Ordem recomendada hoje:
 
-1. tratar `MB-110` a `MB-125` como baseline fechado de objetivos persistentes,
-   utilidade operacional e absorcao tecnologica governada.
+1. tratar `MB-110` a `MB-159` como baseline fechado de objetivos persistentes,
+   utilidade operacional, absorcao tecnologica governada, aprendizado revisado,
+   higiene documental e horizonte longo minimo.
 2. abrir nova repriorizacao antes de puxar qualquer frente adicional.
 3. manter `SO-001`, `TA-004`, `TA-006` e verticais `deferred` fora da fila ate
    haver decisao explicita de fase.
@@ -413,8 +436,19 @@ Leitura correta:
   documentos ativos defasados;
 - `MB-153` foi fechado como primeiro archive fisico conservador de documentos
   historicos de implementacao;
-- nao ha novo item `ready`; move/archive adicional ou merge sensivel deve
-  exigir decisao humana explicita e plano separado;
+- `MB-154` foi fechado como mapa mestre completo de implementacao;
+- `MB-155` foi fechado como dashboard textual minimo do operador, movendo
+  `OP-006` para `minimum_baseline`;
+- `MB-156` foi fechado como ciclo governado minimo de work items, movendo
+  `OP-004` para `minimum_baseline`;
+- `MB-157` foi fechado como lifecycle minimo de artefatos vivos, movendo
+  `OP-005` e `ACT-004` para `minimum_baseline`;
+- `MB-158` foi fechado como metricas compactas de utilidade operacional, movendo
+  `OBS-005` para `minimum_baseline`;
+- `MB-159` foi fechado como raciocinio minimo de objetivos de horizonte longo,
+  movendo `COG-010` para um baseline minimo operacional;
+- nao ha item `ready` atual; a proxima fila micro deve nascer de repriorizacao
+  explicita pelo mapa mestre de implementacao;
 - `RH-*` permanece fora do backlog implementavel.
 
 ---

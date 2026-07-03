@@ -197,6 +197,9 @@ class FlowAudit:
     objective_utility_signals: list[str] = field(default_factory=list)
     objective_missing_next_action: bool = False
     objective_missing_artifact: bool = False
+    operator_usefulness_status: str = "insufficient_signal"
+    operator_usefulness_score: int = 0
+    operator_usefulness_signals: list[str] = field(default_factory=list)
     technology_absorption_readiness: str = "not_applicable"
     technology_absorption_decision: str = "not_applicable"
     technology_absorption_lane_status: str = "not_applicable"
@@ -1797,6 +1800,49 @@ class ObservabilityService:
             missing_next_action=objective_missing_next_action,
             missing_artifact=objective_missing_artifact,
         )
+        early_experience_reflection_event = self._first_payload_event(
+            events,
+            "experience_reflection_status",
+        )
+        early_reviewed_learning_event = self._first_payload_event(
+            events,
+            "reviewed_learning_influence_status",
+        )
+        operator_usefulness_signals = self._operator_usefulness_signals(
+            objective_consulted=objective_consulted,
+            active_work_item_count=len(objective_work_items),
+            artifact_attached=artifact_continuity_status == "attached",
+            next_action_ready=next_action_status == "ready",
+            memory_causality_status=memory_causality_status,
+            experience_reflection_status=self._payload_str(
+                early_experience_reflection_event,
+                "experience_reflection_status",
+                "not_applicable",
+            ),
+            reviewed_learning_assisted_eval_status=(
+                self._reviewed_learning_assisted_eval_status(
+                    status=self._payload_str(
+                        early_reviewed_learning_event,
+                        "reviewed_learning_influence_status",
+                        "not_applicable",
+                    ),
+                    refs=self._dedupe_payload_list(
+                        events,
+                        "reviewed_learning_influence_refs",
+                    ),
+                )
+            ),
+            missing_next_action=objective_missing_next_action,
+            missing_artifact=objective_missing_artifact,
+        )
+        operator_usefulness_score = self._operator_usefulness_score(
+            operator_usefulness_signals
+        )
+        operator_usefulness_status = self._operator_usefulness_status(
+            score=operator_usefulness_score,
+            missing_next_action=objective_missing_next_action,
+            missing_artifact=objective_missing_artifact,
+        )
         technology_absorption_event = self._first_payload_event(
             events,
             "technology_absorption_readiness",
@@ -2028,6 +2074,9 @@ class ObservabilityService:
             objective_utility_signals=objective_utility_signals,
             objective_missing_next_action=objective_missing_next_action,
             objective_missing_artifact=objective_missing_artifact,
+            operator_usefulness_status=operator_usefulness_status,
+            operator_usefulness_score=operator_usefulness_score,
+            operator_usefulness_signals=operator_usefulness_signals,
             technology_absorption_readiness=technology_absorption_readiness,
             technology_absorption_decision=technology_absorption_decision,
             technology_absorption_lane_status=technology_absorption_lane_status,
@@ -2403,6 +2452,58 @@ class ObservabilityService:
         if missing_artifact:
             signals.append("objective_missing_artifact")
         return signals
+
+    @staticmethod
+    def _operator_usefulness_signals(
+        *,
+        objective_consulted: bool,
+        active_work_item_count: int,
+        artifact_attached: bool,
+        next_action_ready: bool,
+        memory_causality_status: str,
+        experience_reflection_status: str,
+        reviewed_learning_assisted_eval_status: str,
+        missing_next_action: bool,
+        missing_artifact: bool,
+    ) -> list[str]:
+        signals: list[str] = []
+        if objective_consulted:
+            signals.append("operator_checked_state")
+        if active_work_item_count > 0:
+            signals.append("operator_has_work_items")
+        if artifact_attached:
+            signals.append("operator_has_artifacts")
+        if next_action_ready:
+            signals.append("operator_has_next_action")
+        if memory_causality_status == "causal_guidance":
+            signals.append("operator_memory_reused")
+        if experience_reflection_status not in {"not_applicable", ""}:
+            signals.append("operator_learning_recorded")
+        if reviewed_learning_assisted_eval_status == "reviewed_learning_assisted":
+            signals.append("operator_reviewed_learning_used")
+        if missing_next_action:
+            signals.append("operator_missing_next_action")
+        if missing_artifact:
+            signals.append("operator_missing_artifact")
+        return signals
+
+    @staticmethod
+    def _operator_usefulness_score(signals: list[str]) -> int:
+        negative = {"operator_missing_next_action", "operator_missing_artifact"}
+        return max(0, len([item for item in signals if item not in negative]))
+
+    @staticmethod
+    def _operator_usefulness_status(
+        *,
+        score: int,
+        missing_next_action: bool,
+        missing_artifact: bool,
+    ) -> str:
+        if score >= 4 and not missing_next_action and not missing_artifact:
+            return "useful"
+        if score >= 2:
+            return "partial"
+        return "insufficient_signal"
 
     @staticmethod
     def _technology_absorption_signals(

@@ -153,6 +153,10 @@ def test_synthesis_engine_surfaces_bounded_objective_state() -> None:
     assert "decisao pendente retomar ou redefinir proxima acao" in result.response_text
     assert "artefato relevante artifact:plan:alpha" in result.response_text
     assert "work item ativo work:item:alpha" in result.response_text
+    assert "Estrategia de horizonte longo:" in result.response_text
+    assert "modo read_only_no_scheduler" in result.response_text
+    assert "proxima acao auditavel next_action:operator-review" in result.response_text
+    assert "sem scheduler autonomo" in result.response_text
 
 
 def test_synthesis_engine_surfaces_reflection_influence() -> None:

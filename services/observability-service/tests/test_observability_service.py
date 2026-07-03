@@ -559,6 +559,12 @@ def test_observability_service_audits_objective_operational_utility_signals() ->
     assert "objective_paused" in audit.objective_utility_signals
     assert "objective_missing_next_action" in audit.objective_utility_signals
     assert "objective_missing_artifact" in audit.objective_utility_signals
+    assert audit.operator_usefulness_status == "partial"
+    assert audit.operator_usefulness_score == 2
+    assert "operator_checked_state" in audit.operator_usefulness_signals
+    assert "operator_has_work_items" in audit.operator_usefulness_signals
+    assert "operator_missing_next_action" in audit.operator_usefulness_signals
+    assert "operator_missing_artifact" in audit.operator_usefulness_signals
 
 
 def test_observability_service_audits_continuity_signals() -> None:

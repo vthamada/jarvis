@@ -53,6 +53,33 @@ class ProjectObjectiveContinuityContract:
 
 
 @dataclass
+class WorkItemStateContract:
+    work_item_ref: str
+    work_item_status: str
+    mission_id: MissionId
+    transition: str | None = None
+    next_action_ref: str | None = None
+    checkpoint_refs: list[str] = field(default_factory=list)
+    memory_write_mode: str = "through_core_only"
+
+
+@dataclass
+class ArtifactLifecycleStateContract:
+    artifact_ref: str
+    artifact_status: str
+    mission_id: MissionId
+    transition: str | None = None
+    artifact_version: int | None = None
+    owner_mission_id: MissionId | None = None
+    objective_ref: str | None = None
+    work_item_ref: str | None = None
+    replacement_artifact_ref: str | None = None
+    rollback_plan_ref: str | None = None
+    checkpoint_refs: list[str] = field(default_factory=list)
+    memory_write_mode: str = "through_core_only"
+
+
+@dataclass
 class TechnologyAbsorptionCandidateContract:
     candidate_ref: str
     technology_name: str
@@ -810,6 +837,21 @@ class MissionStateContract:
     priority_level: str | None = None
     owner_context: str | None = None
     completion_criteria: list[str] = field(default_factory=list)
+
+
+@dataclass
+class LongHorizonGoalStrategyContract:
+    mission_id: MissionId
+    strategy_status: str
+    strategy_summary: str
+    milestone_refs: list[str] = field(default_factory=list)
+    risk_refs: list[str] = field(default_factory=list)
+    memory_anchor_refs: list[str] = field(default_factory=list)
+    next_action_ref: str | None = None
+    evidence_refs: list[str] = field(default_factory=list)
+    memory_write_mode: str = "read_only"
+    autonomous_scheduling_allowed: bool = False
+    generated_from_state_refs: list[str] = field(default_factory=list)
 
 
 @dataclass

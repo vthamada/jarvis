@@ -40,6 +40,196 @@ def test_orchestrator_service_name() -> None:
     assert OrchestratorService.name == "orchestrator-service"
 
 
+def test_orchestrator_transitions_work_item_through_governed_core() -> None:
+    temp_dir = runtime_dir("orchestrator-work-item")
+    service = OrchestratorService(
+        memory_service=MemoryService(
+            database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+        ),
+        operational_service=OperationalService(
+            artifact_dir=str(temp_dir / "artifacts")
+        ),
+        observability_service=ObservabilityService(
+            database_path=str(temp_dir / "observability.db")
+        ),
+    )
+    mission_id = "mission-orchestrator-work-item"
+    service.handle_input(
+        InputContract(
+            request_id=RequestId("req-orchestrator-work-item"),
+            session_id=SessionId("sess-orchestrator-work-item"),
+            mission_id=MissionId(mission_id),
+            channel=ChannelType.CONSOLE,
+            input_type=InputType.TEXT,
+            content="Plan the controlled rollout.",
+            timestamp="2026-05-18T00:00:00Z",
+        )
+    )
+
+    created = service.transition_work_item(
+        mission_id=mission_id,
+        work_item_ref="work-item://mission-orchestrator-work-item/validate-plan",
+        transition="create",
+        session_id="sess-orchestrator-work-item",
+        next_action_ref="next_action:validate-plan",
+    )
+    completed = service.transition_work_item(
+        mission_id=mission_id,
+        work_item_ref="work-item://mission-orchestrator-work-item/validate-plan",
+        transition="complete",
+        session_id="sess-orchestrator-work-item",
+    )
+    mission_state = service.memory_service.get_mission_state(mission_id)
+    event_names = [
+        event.event_name for event in service.observability_service.list_recent_events()
+    ]
+
+    assert created.status == "updated"
+    assert created.governance_decision.decision == PermissionDecision.ALLOW_WITH_CONDITIONS
+    assert created.work_item_state is not None
+    assert created.work_item_state.work_item_status == "active"
+    assert completed.status == "updated"
+    assert completed.work_item_state is not None
+    assert completed.work_item_state.work_item_status == "completed"
+    assert mission_state is not None
+    assert (
+        "work-item://mission-orchestrator-work-item/validate-plan"
+        in mission_state.work_item_refs
+    )
+    assert (
+        "work-item://mission-orchestrator-work-item/validate-plan"
+        not in mission_state.active_work_items
+    )
+    assert "work_item_state_changed" in event_names
+    assert "mission_updated" in event_names
+
+
+def test_orchestrator_transitions_artifact_lifecycle_through_governed_core() -> None:
+    temp_dir = runtime_dir("orchestrator-artifact-lifecycle")
+    service = OrchestratorService(
+        memory_service=MemoryService(
+            database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+        ),
+        operational_service=OperationalService(
+            artifact_dir=str(temp_dir / "artifacts")
+        ),
+        observability_service=ObservabilityService(
+            database_path=str(temp_dir / "observability.db")
+        ),
+    )
+    mission_id = "mission-orchestrator-artifact"
+    service.handle_input(
+        InputContract(
+            request_id=RequestId("req-orchestrator-artifact"),
+            session_id=SessionId("sess-orchestrator-artifact"),
+            mission_id=MissionId(mission_id),
+            channel=ChannelType.CONSOLE,
+            input_type=InputType.TEXT,
+            content="Plan the controlled rollout.",
+            timestamp="2026-05-18T00:00:00Z",
+        )
+    )
+
+    registered = service.transition_artifact_lifecycle(
+        mission_id=mission_id,
+        artifact_ref="artifact://mission-orchestrator-artifact/plan/v1",
+        transition="register",
+        session_id="sess-orchestrator-artifact",
+        artifact_version=1,
+        rollback_plan_ref="rollback://mission-orchestrator-artifact/plan/v1",
+    )
+    replaced = service.transition_artifact_lifecycle(
+        mission_id=mission_id,
+        artifact_ref="artifact://mission-orchestrator-artifact/plan/v1",
+        transition="replace",
+        session_id="sess-orchestrator-artifact",
+        artifact_version=2,
+        replacement_artifact_ref="artifact://mission-orchestrator-artifact/plan/v2",
+        rollback_plan_ref="rollback://mission-orchestrator-artifact/plan/v1",
+    )
+    mission_state = service.memory_service.get_mission_state(mission_id)
+    event_names = [
+        event.event_name for event in service.observability_service.list_recent_events()
+    ]
+
+    assert registered.status == "updated"
+    assert registered.governance_decision.decision == PermissionDecision.ALLOW_WITH_CONDITIONS
+    assert registered.artifact_state is not None
+    assert registered.artifact_state.artifact_status == "active"
+    assert replaced.status == "updated"
+    assert replaced.artifact_state is not None
+    assert replaced.artifact_state.replacement_artifact_ref == (
+        "artifact://mission-orchestrator-artifact/plan/v2"
+    )
+    assert mission_state is not None
+    assert "artifact://mission-orchestrator-artifact/plan/v2" in mission_state.artifact_refs
+    assert (
+        "artifact://mission-orchestrator-artifact/plan/v2"
+        in mission_state.active_artifact_refs
+    )
+    assert (
+        "artifact://mission-orchestrator-artifact/plan/v1"
+        not in mission_state.active_artifact_refs
+    )
+    assert "artifact_lifecycle_state_changed" in event_names
+    assert "mission_updated" in event_names
+
+
+def test_orchestrator_inspects_long_horizon_goal_strategy_read_only() -> None:
+    temp_dir = runtime_dir("orchestrator-long-horizon")
+    service = OrchestratorService(
+        memory_service=MemoryService(
+            database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+        ),
+        operational_service=OperationalService(
+            artifact_dir=str(temp_dir / "artifacts")
+        ),
+        observability_service=ObservabilityService(
+            database_path=str(temp_dir / "observability.db")
+        ),
+    )
+    mission_id = "mission-orchestrator-long-horizon"
+    service.handle_input(
+        InputContract(
+            request_id=RequestId("req-orchestrator-long-horizon"),
+            session_id=SessionId("sess-orchestrator-long-horizon"),
+            mission_id=MissionId(mission_id),
+            channel=ChannelType.CONSOLE,
+            input_type=InputType.TEXT,
+            content="Plan the controlled rollout.",
+            timestamp="2026-05-20T00:00:00Z",
+        )
+    )
+    service.transition_work_item(
+        mission_id=mission_id,
+        work_item_ref="work-item://mission-orchestrator-long-horizon/validate-plan",
+        transition="create",
+        session_id="sess-orchestrator-long-horizon",
+        next_action_ref="next_action:operator-review",
+    )
+    service.transition_artifact_lifecycle(
+        mission_id=mission_id,
+        artifact_ref="artifact://mission-orchestrator-long-horizon/plan/v1",
+        transition="register",
+        session_id="sess-orchestrator-long-horizon",
+        artifact_version=1,
+    )
+
+    result = service.inspect_long_horizon_goal_strategy(
+        mission_id=mission_id,
+        session_id="sess-orchestrator-long-horizon",
+    )
+
+    assert result.status == "ready"
+    assert result.strategy is not None
+    assert result.strategy.memory_write_mode == "read_only"
+    assert result.strategy.autonomous_scheduling_allowed is False
+    assert result.strategy.next_action_ref == "next_action:operator-review"
+    assert result.events[0].event_name == "long_horizon_goal_strategy_declared"
+    assert result.events[0].payload["memory_write_mode"] == "read_only"
+    assert result.events[0].payload["autonomous_scheduling_allowed"] is False
+
+
 def test_orchestrator_service_surfaces_adaptive_intervention_payload_from_synthesis() -> None:
     payload = OrchestratorService._adaptive_intervention_response_payload(
         synthesis_result=SynthesisResult(

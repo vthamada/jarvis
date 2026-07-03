@@ -11,21 +11,32 @@ from memory_service.service import MemoryService
 
 from apps.jarvis_console.cli import (
     JarvisConsole,
+    LongHorizonGoalStrategyResult,
     build_parser,
+    render_artifacts_state,
     render_evolution_review_queue,
     render_experience_reflections,
+    render_goal_strategy,
     render_mission_cycle,
     render_objective_state,
+    render_operator_dashboard,
     render_response,
+    render_work_items_state,
+    run_artifact_command,
+    run_artifacts_command,
     run_chat_command,
     run_evolution_review_command,
     run_evolution_review_queue_command,
     run_experience_reflections_command,
+    run_goal_strategy_command,
     run_mission_cycle_command,
     run_mission_workflow_command,
     run_objective_command,
     run_objectives_command,
+    run_operator_dashboard_command,
     run_technology_candidates_command,
+    run_work_item_command,
+    run_work_items_command,
 )
 from shared.contracts import (
     ExperienceRecordContract,
@@ -108,6 +119,68 @@ def test_console_objectives_handles_missing_mission_without_side_effects() -> No
     rendered = render_objective_state(None, mission_id="missing-mission")
 
     assert rendered == "No objective state found for mission_id=missing-mission"
+
+
+def test_console_goal_strategy_shows_read_only_long_horizon_state() -> None:
+    console = JarvisConsole.build(runtime_dir=runtime_dir("console-goal-strategy"))
+    mission_id = "mission-console-goal-strategy"
+    work_item_ref = "work-item://mission-console-goal-strategy/validate-plan"
+    artifact_ref = "artifact://mission-console-goal-strategy/plan/v1"
+    console.ask(
+        "Plan the controlled rollout.",
+        session_id="sess-console-goal-strategy",
+        mission_id=mission_id,
+    )
+    console.transition_work_item(
+        mission_id=mission_id,
+        work_item_ref=work_item_ref,
+        transition="create",
+        session_id="sess-console-goal-strategy",
+        next_action_ref="next_action:operator-review",
+    )
+    console.transition_artifact_lifecycle(
+        mission_id=mission_id,
+        artifact_ref=artifact_ref,
+        transition="register",
+        session_id="sess-console-goal-strategy",
+        artifact_version=1,
+    )
+    args = build_parser().parse_args(
+        [
+            "goal-strategy",
+            "--mission-id",
+            mission_id,
+            "--session-id",
+            "sess-console-goal-strategy",
+        ]
+    )
+
+    outputs = run_goal_strategy_command(console, args)
+
+    assert f"mission_id={mission_id}" in outputs[0]
+    assert "strategy_status=ready" in outputs[0]
+    assert work_item_ref in outputs[0]
+    assert artifact_ref in outputs[0]
+    assert "next_action_ref=next_action:operator-review" in outputs[0]
+    assert "memory_write_mode=read_only" in outputs[0]
+    assert "autonomous_scheduling_allowed=False" in outputs[0]
+    event_names = [
+        event.event_name
+        for event in console.orchestrator.observability_service.list_recent_events()
+    ]
+    assert "long_horizon_goal_strategy_declared" in event_names
+
+
+def test_console_goal_strategy_handles_missing_mission() -> None:
+    rendered = render_goal_strategy(
+        LongHorizonGoalStrategyResult(
+            mission_id="missing-mission",
+            status="missing",
+            strategy=None,
+        )
+    )
+
+    assert rendered == "No goal strategy found for mission_id=missing-mission"
 
 
 def test_console_technology_candidates_shows_recent_absorption_candidate() -> None:
@@ -390,6 +463,81 @@ def test_console_mission_cycle_shows_reviewed_learning_influence() -> None:
     )
 
 
+def test_console_operator_dashboard_shows_daily_state_for_mission() -> None:
+    temp_dir = runtime_dir("console-operator-dashboard")
+    memory_db = temp_dir / "memory.db"
+    evolution_db = temp_dir / "evolution.db"
+    console = JarvisConsole.build(runtime_dir=temp_dir)
+    mission_id = "mission-console-dashboard"
+    response = console.ask(
+        "Plan the controlled rollout.",
+        session_id="sess-console-dashboard",
+        mission_id=mission_id,
+    )
+    assert response.experience_record is not None
+    assert response.post_task_reflection is not None
+    EvolutionLabService(database_path=str(evolution_db)).create_proposal_from_post_task_reflection(
+        PostTaskReflectionInput(
+            experience_id=response.experience_record.experience_id,
+            mission_id=mission_id,
+            workflow_profile=response.experience_record.workflow_profile,
+            outcome_status=response.experience_record.outcome_status,
+            learning_candidate=response.post_task_reflection.learning_candidate,
+            recommendation=response.post_task_reflection.recommendation,
+            evidence_refs=list(response.post_task_reflection.evidence_refs),
+            proposed_tests=list(response.post_task_reflection.proposed_tests),
+            rollback_plan_ref=response.post_task_reflection.rollback_plan_ref,
+        )
+    )
+    args = build_parser().parse_args(
+        [
+            "operator-dashboard",
+            "--mission-id",
+            mission_id,
+            "--memory-db",
+            str(memory_db),
+            "--evolution-db",
+            str(evolution_db),
+        ]
+    )
+
+    outputs = run_operator_dashboard_command(console, args)
+
+    assert "operator_dashboard=read_only" in outputs[0]
+    assert "dashboard_scope=mission" in outputs[0]
+    assert "mission_id=mission-console-dashboard" in outputs[0]
+    assert "objective_status=completed" in outputs[0]
+    assert "next_action_ref=next_action:" in outputs[0]
+    assert "latest_experience_id=experience://mission-console-dashboard/" in outputs[0]
+    assert "latest_reflection_status=candidate" in outputs[0]
+    assert "pending_review_count=1" in outputs[0]
+    assert "pending_review_proposal_ids=evo-proposal-" in outputs[0]
+    assert "reviewed_learning_influence_status=no_relevant_guidance" in outputs[0]
+    assert (
+        "reviewed_learning_assisted_eval_status=baseline_no_reviewed_learning"
+        in outputs[0]
+    )
+    assert "operator_usefulness_status=" in outputs[0]
+    assert "operator_usefulness_score=" in outputs[0]
+    assert "operator_usefulness_signals=" in outputs[0]
+    assert "automatic_promotion=False" in outputs[0]
+    assert "next_operator_step=review_evolution_proposal" in outputs[0]
+
+
+def test_console_operator_dashboard_handles_empty_global_state() -> None:
+    rendered = render_operator_dashboard(
+        mission_id=None,
+        mission_state=None,
+        records=[],
+        review_items=[],
+    )
+
+    assert "operator_dashboard=read_only" in rendered
+    assert "dashboard_scope=global" in rendered
+    assert "pending_review_count=0" in rendered
+    assert "next_operator_step=start_governed_mission" in rendered
+
+
 def test_console_mission_workflow_runs_governed_loop_end_to_end() -> None:
     temp_dir = runtime_dir("console-mission-workflow")
     evolution_db = temp_dir / "evolution.db"
@@ -521,6 +669,244 @@ def test_console_objectives_sanitizes_control_characters_in_persisted_state() ->
     assert "mission_goal=Goal objective_status=spoofed" in rendered
     assert "\nobjective_status=spoofed" not in rendered
     assert "work_item_refs=item spoofed" in rendered
+
+
+def test_console_work_item_cycle_updates_state_through_governed_core() -> None:
+    console = JarvisConsole.build(runtime_dir=runtime_dir("console-work-item-cycle"))
+    mission_id = "mission-console-work-item-cycle"
+    work_item_ref = "work-item://mission-console-work-item-cycle/validate-plan"
+    console.ask(
+        "Plan the controlled rollout.",
+        session_id="sess-console-work-item-cycle",
+        mission_id=mission_id,
+    )
+    parser = build_parser()
+    create_args = parser.parse_args(
+        [
+            "work-item",
+            "--mission-id",
+            mission_id,
+            "--session-id",
+            "sess-console-work-item-cycle",
+            "--action",
+            "create",
+            "--work-item-ref",
+            work_item_ref,
+            "--next-action-ref",
+            "next_action:validate-plan",
+        ]
+    )
+    list_args = parser.parse_args(["work-items", "--mission-id", mission_id])
+    complete_args = parser.parse_args(
+        [
+            "work-item",
+            "--mission-id",
+            mission_id,
+            "--session-id",
+            "sess-console-work-item-cycle",
+            "--action",
+            "complete",
+            "--work-item-ref",
+            work_item_ref,
+        ]
+    )
+
+    created = run_work_item_command(console, create_args)
+    listed = run_work_items_command(console, list_args)
+    completed = run_work_item_command(console, complete_args)
+    listed_after_completion = run_work_items_command(console, list_args)
+    mission_state = console.get_objective_state(mission_id=mission_id)
+
+    assert "transition_status=updated" in created[0]
+    assert "governance_decision=allow_with_conditions" in created[0]
+    assert "work_item_status=active" in created[0]
+    assert "next_action_ref=next_action:validate-plan" in created[0]
+    assert f"work_item_ref={work_item_ref}" in listed[0]
+    assert "work_item_status=active" in listed[0]
+    assert "transition_status=updated" in completed[0]
+    assert "work_item_status=completed" in completed[0]
+    assert "event_names=governance_checked,work_item_state_changed,mission_updated" in completed[0]
+    assert "work_item_status=completed" in listed_after_completion[0]
+    assert mission_state is not None
+    assert work_item_ref in mission_state.work_item_refs
+    assert work_item_ref not in mission_state.active_work_items
+
+
+def test_console_work_item_blocks_unbounded_ref() -> None:
+    console = JarvisConsole.build(runtime_dir=runtime_dir("console-work-item-block"))
+    mission_id = "mission-console-work-item-block"
+    console.ask(
+        "Plan the controlled rollout.",
+        session_id="sess-console-work-item-block",
+        mission_id=mission_id,
+    )
+    args = build_parser().parse_args(
+        [
+            "work-item",
+            "--mission-id",
+            mission_id,
+            "--session-id",
+            "sess-console-work-item-block",
+            "--action",
+            "create",
+            "--work-item-ref",
+            "work-item://unsafe\nspoof",
+        ]
+    )
+
+    outputs = run_work_item_command(console, args)
+    mission_state = console.get_objective_state(mission_id=mission_id)
+
+    assert "transition_status=blocked" in outputs[0]
+    assert "governance_decision=block" in outputs[0]
+    assert mission_state is not None
+    assert "work-item://unsafe\nspoof" not in mission_state.work_item_refs
+
+
+def test_console_work_items_handles_empty_state() -> None:
+    rendered = render_work_items_state(
+        MissionStateContract(
+            mission_id=MissionId("mission-work-items-empty"),
+            mission_goal="Goal",
+            mission_status=MissionStatus.ACTIVE,
+            checkpoints=[],
+            updated_at="2026-05-18T00:00:00Z",
+        ),
+        mission_id="mission-work-items-empty",
+    )
+
+    assert rendered == "No work items found for mission_id=mission-work-items-empty"
+
+
+def test_console_artifact_lifecycle_updates_state_through_governed_core() -> None:
+    console = JarvisConsole.build(runtime_dir=runtime_dir("console-artifact-cycle"))
+    mission_id = "mission-console-artifact-cycle"
+    artifact_v1 = "artifact://mission-console-artifact-cycle/plan/v1"
+    artifact_v2 = "artifact://mission-console-artifact-cycle/plan/v2"
+    console.ask(
+        "Plan the controlled rollout.",
+        session_id="sess-console-artifact-cycle",
+        mission_id=mission_id,
+    )
+    parser = build_parser()
+    register_args = parser.parse_args(
+        [
+            "artifact",
+            "--mission-id",
+            mission_id,
+            "--session-id",
+            "sess-console-artifact-cycle",
+            "--action",
+            "register",
+            "--artifact-ref",
+            artifact_v1,
+            "--artifact-version",
+            "1",
+            "--work-item-ref",
+            "work-item://mission-console-artifact-cycle/validate-plan",
+            "--rollback-plan-ref",
+            "rollback://mission-console-artifact-cycle/plan/v1",
+        ]
+    )
+    replace_args = parser.parse_args(
+        [
+            "artifact",
+            "--mission-id",
+            mission_id,
+            "--session-id",
+            "sess-console-artifact-cycle",
+            "--action",
+            "replace",
+            "--artifact-ref",
+            artifact_v1,
+            "--artifact-version",
+            "2",
+            "--replacement-artifact-ref",
+            artifact_v2,
+            "--rollback-plan-ref",
+            "rollback://mission-console-artifact-cycle/plan/v1",
+        ]
+    )
+    list_args = parser.parse_args(["artifacts", "--mission-id", mission_id])
+
+    registered = run_artifact_command(console, register_args)
+    replaced = run_artifact_command(console, replace_args)
+    listed = run_artifacts_command(console, list_args)
+    mission_state = console.get_objective_state(mission_id=mission_id)
+
+    assert "transition_status=updated" in registered[0]
+    assert "governance_decision=allow_with_conditions" in registered[0]
+    assert "artifact_status=active" in registered[0]
+    assert "artifact_version=1" in registered[0]
+    assert "rollback_plan_ref=rollback://mission-console-artifact-cycle/plan/v1" in registered[0]
+    assert "transition_status=updated" in replaced[0]
+    assert f"replacement_artifact_ref={artifact_v2}" in replaced[0]
+    assert "artifact_lifecycle_state_changed" in replaced[0]
+    assert f"artifact_ref={artifact_v1}" in listed[0]
+    assert f"artifact_ref={artifact_v2}" in listed[0]
+    assert mission_state is not None
+    assert artifact_v2 in mission_state.artifact_refs
+    assert artifact_v2 in mission_state.active_artifact_refs
+    assert artifact_v1 not in mission_state.active_artifact_refs
+
+
+def test_console_artifact_blocks_missing_replacement_ref() -> None:
+    console = JarvisConsole.build(runtime_dir=runtime_dir("console-artifact-block"))
+    mission_id = "mission-console-artifact-block"
+    artifact_v1 = "artifact://mission-console-artifact-block/plan/v1"
+    console.ask(
+        "Plan the controlled rollout.",
+        session_id="sess-console-artifact-block",
+        mission_id=mission_id,
+    )
+    parser = build_parser()
+    register_args = parser.parse_args(
+        [
+            "artifact",
+            "--mission-id",
+            mission_id,
+            "--session-id",
+            "sess-console-artifact-block",
+            "--action",
+            "register",
+            "--artifact-ref",
+            artifact_v1,
+        ]
+    )
+    replace_args = parser.parse_args(
+        [
+            "artifact",
+            "--mission-id",
+            mission_id,
+            "--session-id",
+            "sess-console-artifact-block",
+            "--action",
+            "replace",
+            "--artifact-ref",
+            artifact_v1,
+        ]
+    )
+
+    run_artifact_command(console, register_args)
+    outputs = run_artifact_command(console, replace_args)
+
+    assert "transition_status=blocked" in outputs[0]
+    assert "governance_decision=block" in outputs[0]
+
+
+def test_console_artifacts_handles_empty_state() -> None:
+    rendered = render_artifacts_state(
+        MissionStateContract(
+            mission_id=MissionId("mission-artifacts-empty"),
+            mission_goal="Goal",
+            mission_status=MissionStatus.ACTIVE,
+            checkpoints=[],
+            updated_at="2026-05-18T00:00:00Z",
+        ),
+        mission_id="mission-artifacts-empty",
+    )
+
+    assert rendered == "No artifacts found for mission_id=mission-artifacts-empty"
 
 
 def test_console_objective_pause_updates_state_through_governed_core() -> None:

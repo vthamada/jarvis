@@ -31,7 +31,7 @@ Estado de referencia desta revisao:
 - data da fotografia: `2026-05-17`
 - ultimo recorte funcional fechado: `v2-native-memory-scope-hardening-cut`
 - ultimo recorte estrutural fechado: `v2-repository-hygiene-and-tools-review-cut`
-- passo funcional em andamento: lotes `MB-062` a `MB-150` concluidos ate leitura operacional e medicao de aprendizado revisado; `MB-151` foi fechado como auditoria documental governada oficial; `MB-152` foi fechado como mapa de backlinks e sincronizacao segura de docs ativos; `MB-153` foi fechado como archive fisico conservador de historico de implementacao; nao ha novo item `ready`.
+- passo funcional em andamento: lotes `MB-062` a `MB-150` concluidos ate leitura operacional e medicao de aprendizado revisado; `MB-151` foi fechado como auditoria documental governada oficial; `MB-152` foi fechado como mapa de backlinks e sincronizacao segura de docs ativos; `MB-153` foi fechado como archive fisico conservador de historico de implementacao; `MB-154` foi fechado como mapa mestre de implementacao; `MB-155` foi fechado como dashboard textual minimo do operador; `MB-156` foi fechado como ciclo governado minimo de work items; `MB-157` foi fechado como lifecycle minimo de artefatos vivos; `MB-158` foi fechado como metricas de utilidade operacional; `MB-159` foi fechado como raciocinio minimo de objetivos de horizonte longo; nao ha item `ready` atual.
 
 Leitura executiva:
 
@@ -126,8 +126,30 @@ Leitura executiva:
   historicos de implementacao foram movidos para
   `docs/archive/implementation/`, backlinks foram reescritos, nenhum documento
   foi deletado e nenhum merge destrutivo foi executado.
-- nao ha novo item `ready`; qualquer archive/move adicional ou merge sensivel
-  deve nascer de decisao humana explicita e plano separado.
+- `MB-154` foi fechado em `docs/implementation/implementation-master-map.md`:
+  o sistema agora possui mapa completo de capacidades, status, dependencias,
+  fases e proximo lote recomendado, acima da fila micro.
+- `MB-155` foi fechado como baseline minimo de dashboard textual do operador
+  em `apps/jarvis_console operator-dashboard`, consolidando missao, objetivo,
+  work items, checkpoints, artefatos, ultima experiencia/reflexao, fila
+  evolutiva e sinais de aprendizado revisado sem escrever memoria nem promover
+  propostas.
+- `MB-156` foi fechado como ciclo governado minimo de work items: `work-item`
+  aplica criacao, retomada, pausa, bloqueio, conclusao e redefinicao de proxima
+  acao via governanca, memoria canonica e eventos auditaveis, enquanto
+  `work-items` consulta o estado em modo read-only.
+- `MB-157` foi fechado como lifecycle minimo de artefatos vivos: `artifact`
+  registra, ativa, arquiva, substitui e rollbacka refs bounded de artefato com
+  versao, owner mission, objetivo, work item e rollback metadata, enquanto
+  `artifacts` consulta o estado em modo read-only.
+- `MB-158` foi fechado como metricas compactas de utilidade operacional:
+  `FlowAudit` calcula `operator_usefulness_status`, score e sinais, e
+  `operator-dashboard` mostra a leitura ao operador sem promover release ou
+  autonomia.
+- `MB-159` foi fechado como raciocinio minimo de objetivos de horizonte longo:
+  `LongHorizonGoalStrategyContract`, memoria, orquestrador, sintese e console
+  agora expõem estrategia read-only com marcos, riscos, anchors de memoria,
+  evidencias e proxima acao auditavel, sem scheduler autonomo.
 - o contrato canonico da rota ativa passou a atravessar tambem o `planning` e a influenciar a `synthesis`, reduzindo a distancia entre memoria guiada disponivel e comportamento final do runtime.
 - esse contrato agora tambem molda passos, restricoes, criterios de sucesso e checkpoint/gate governado do plano, e ja aparece na leitura final como objetivo, entrega esperada, foco de leitura e workflow ativo da rota promovida.
 - esse mesmo slice soberano agora tambem atravessa `operation_dispatch`, `workflow_*` e `operation_completed`, e a observabilidade passou a marcar drift quando objetivo, entregaveis, foco de sucesso, foco final e telemetria deixam de bater entre composicao e execucao.

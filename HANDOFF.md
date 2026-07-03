@@ -109,6 +109,51 @@ backlinks, ausencia de delecao e ausencia de merge destrutivo. Documentos
 referenciados pelo Documento-Mestre, como `docs/operations/v1-operational-baseline.md`
 e `docs/roadmap/v1-roadmap.md`, permaneceram no lugar.
 
+`MB-154` foi concluido como mapa mestre de implementacao:
+`docs/implementation/implementation-master-map.md` decompoe o caminho completo
+do JARVIS em trilhas de capacidade, status, dependencias, fases e proximos
+slices. Ele nao substitui o Documento-Mestre nem o `execution-backlog.md`; ele
+passa a ser a fonte para escolher o proximo lote micro. Nao ha item `ready`
+automatico. O proximo candidato recomendado e o lote `MB-155` a `MB-159`,
+focado em utilidade operacional do operador.
+
+`MB-155` foi concluido como baseline minimo de dashboard textual do operador.
+O console agora possui `operator-dashboard`, que agrega missao, objetivo, work
+items, checkpoints, artefatos, ultima experiencia/reflexao, fila evolutiva,
+sinais de aprendizado revisado e proximo passo em modo read-only. O dashboard
+nao escreve memoria, nao promove proposta e nao cria fonte paralela de estado.
+
+`MB-156` tambem foi concluido: work items agora possuem ciclo operacional
+minimo governado por `work-item` e consulta por `work-items`, passando por
+governanca, memoria canonica e eventos auditaveis. Isso nao cria scheduler,
+atribuicao automatica ou armazenamento paralelo de tarefas.
+
+`MB-157` foi concluido: artefatos vivos agora possuem lifecycle minimo por
+`artifact` e consulta por `artifacts`, com refs bounded, versao, owner mission,
+objetivo, work item, substituicao e rollback metadata. A transicao atualiza
+somente estado canonico e eventos auditaveis; nao le, move, deleta nem edita
+arquivos reais.
+
+`MB-158` foi concluido: `FlowAudit` agora calcula
+`operator_usefulness_status`, `operator_usefulness_score` e
+`operator_usefulness_signals`, e `operator-dashboard` mostra esses sinais ao
+operador. As metricas combinam objetivo consultado, work items, artefatos,
+proxima acao, memoria causal, experiencia/reflexao e aprendizado revisado, sem
+promover release ou autonomia.
+
+`MB-159` foi concluido: `LongHorizonGoalStrategyContract`,
+`MemoryService.build_long_horizon_goal_strategy()`,
+`OrchestratorService.inspect_long_horizon_goal_strategy()`, evento
+`long_horizon_goal_strategy_declared`, sintese final e comando `goal-strategy`
+agora mostram estrategia minima de horizonte longo em modo read-only, derivada
+de estado de missao, work items, artefatos, checkpoints, anchors de memoria e
+proxima acao auditavel. Isso nao cria scheduler autonomo, nao executa passos
+entre sessoes e nao promove memoria/proposta automaticamente.
+
+O lote `MB-155` a `MB-159` esta fechado. Nao ha item `ready` atual; a proxima
+implementacao deve nascer de repriorizacao explicita a partir de
+`docs/implementation/implementation-master-map.md`.
+
 O corte pos-`MB-125` foi repriorizado em `MB-126`: a proxima frente ativa e
 experiencia operacional + reflexao pos-tarefa governada. O objetivo e fazer o
 JARVIS registrar missoes reais, outcomes, falhas, decisoes, evidencias e
@@ -568,6 +613,9 @@ Hoje o repositório contém:
 - archive fisico conservador `MB-153` em
   `docs/documentation/documentation-cleanup-mb153.md`, limitado a historico de
   implementacao ja mapeado.
+- mapa mestre de implementacao `MB-154` em
+  `docs/implementation/implementation-master-map.md`, usado para derivar
+  proximos lotes sem repriorizacao cega.
 
 ### Baseline materializado
 

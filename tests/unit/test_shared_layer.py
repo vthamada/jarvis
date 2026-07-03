@@ -1,27 +1,33 @@
 from shared.contracts import (
+    ArtifactLifecycleStateContract,
     EvolutionReviewDecisionContract,
     EvolutionReviewQueueItemContract,
     ExperienceRecordContract,
     GovernanceDecisionContract,
     InputContract,
+    LongHorizonGoalStrategyContract,
     PostTaskReflectionContract,
     ProjectObjectiveContinuityContract,
     ReviewedLearningGuidanceContract,
     SurfaceIdentityContract,
     TechnologyAbsorptionCandidateContract,
+    WorkItemStateContract,
 )
 from shared.events import INTERNAL_EVENT_NAMES
 from shared.schemas import (
+    ARTIFACT_LIFECYCLE_STATE_SCHEMA,
     DELIBERATIVE_PLAN_SCHEMA,
     EVOLUTION_REVIEW_DECISION_SCHEMA,
     EVOLUTION_REVIEW_QUEUE_ITEM_SCHEMA,
     EXPERIENCE_RECORD_SCHEMA,
     INPUT_SCHEMA,
+    LONG_HORIZON_GOAL_STRATEGY_SCHEMA,
     POST_TASK_REFLECTION_SCHEMA,
     PROJECT_OBJECTIVE_CONTINUITY_SCHEMA,
     REVIEWED_LEARNING_GUIDANCE_SCHEMA,
     SURFACE_IDENTITY_SCHEMA,
     TECHNOLOGY_ABSORPTION_CANDIDATE_SCHEMA,
+    WORK_ITEM_STATE_SCHEMA,
 )
 from shared.state import SYSTEM_IDENTITY
 from shared.types import (
@@ -122,11 +128,69 @@ def test_internal_event_names_include_governance_blocked() -> None:
     assert "surface_identity_declared" in INTERNAL_EVENT_NAMES
     assert "objective_state_declared" in INTERNAL_EVENT_NAMES
     assert "objective_state_inspected" in INTERNAL_EVENT_NAMES
+    assert "long_horizon_goal_strategy_declared" in INTERNAL_EVENT_NAMES
+    assert "work_item_state_changed" in INTERNAL_EVENT_NAMES
+    assert "artifact_lifecycle_state_changed" in INTERNAL_EVENT_NAMES
     assert "technology_absorption_candidate_declared" in INTERNAL_EVENT_NAMES
     assert "experience_record_declared" in INTERNAL_EVENT_NAMES
     assert "post_task_reflection_declared" in INTERNAL_EVENT_NAMES
     assert "evolution_review_decision_declared" in INTERNAL_EVENT_NAMES
     assert "reviewed_learning_guidance_declared" in INTERNAL_EVENT_NAMES
+
+
+def test_work_item_state_contract_is_shared_schema() -> None:
+    contract = WorkItemStateContract(
+        work_item_ref="work-item://mission-1/validate-plan",
+        work_item_status="active",
+        mission_id="mission-1",
+        transition="create",
+        next_action_ref="next_action:validate-plan",
+        checkpoint_refs=["work_item_transition:create:work-item://mission-1/validate-plan:1"],
+    )
+
+    assert contract.memory_write_mode == "through_core_only"
+    assert WORK_ITEM_STATE_SCHEMA.contract_name == "WorkItemStateContract"
+    assert "work_item_status" in WORK_ITEM_STATE_SCHEMA.required_fields
+
+
+def test_artifact_lifecycle_state_contract_is_shared_schema() -> None:
+    contract = ArtifactLifecycleStateContract(
+        artifact_ref="artifact://mission-1/plan/v1",
+        artifact_status="active",
+        mission_id="mission-1",
+        transition="register",
+        artifact_version=1,
+        owner_mission_id="mission-1",
+        objective_ref="objective://mission-1",
+        work_item_ref="work-item://mission-1/validate-plan",
+        rollback_plan_ref="rollback://mission-1/plan/v1",
+    )
+
+    assert contract.memory_write_mode == "through_core_only"
+    assert ARTIFACT_LIFECYCLE_STATE_SCHEMA.contract_name == (
+        "ArtifactLifecycleStateContract"
+    )
+    assert "artifact_status" in ARTIFACT_LIFECYCLE_STATE_SCHEMA.required_fields
+
+
+def test_long_horizon_goal_strategy_contract_is_read_only_schema() -> None:
+    contract = LongHorizonGoalStrategyContract(
+        mission_id="mission-long-horizon",
+        strategy_status="ready",
+        strategy_summary="status=ready; mode=read_only_no_scheduler",
+        milestone_refs=["work-item://mission-long-horizon/validate-plan"],
+        risk_refs=["open_loop:validate operator direction"],
+        memory_anchor_refs=["semantic_focus:strategy"],
+        next_action_ref="next_action:operator-review",
+        evidence_refs=["artifact://mission-long-horizon/plan/v1"],
+    )
+
+    assert contract.memory_write_mode == "read_only"
+    assert contract.autonomous_scheduling_allowed is False
+    assert LONG_HORIZON_GOAL_STRATEGY_SCHEMA.contract_name == (
+        "LongHorizonGoalStrategyContract"
+    )
+    assert "strategy_status" in LONG_HORIZON_GOAL_STRATEGY_SCHEMA.required_fields
 
 
 def test_experience_reflection_contracts_are_shared_schemas() -> None:

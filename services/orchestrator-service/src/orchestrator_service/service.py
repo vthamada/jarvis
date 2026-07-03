@@ -19,6 +19,7 @@ from specialist_engine.engine import SpecialistEngine, SpecialistHandoffPlan, Sp
 from synthesis_engine.engine import SynthesisEngine, SynthesisInput, SynthesisResult
 
 from shared.contracts import (
+    ArtifactLifecycleStateContract,
     ArtifactResultContract,
     ContinuityPauseContract,
     ContinuityReplayContract,
@@ -28,6 +29,7 @@ from shared.contracts import (
     GovernanceCheckContract,
     GovernanceDecisionContract,
     InputContract,
+    LongHorizonGoalStrategyContract,
     MemoryRecordContract,
     MemoryRecoveryContract,
     MissionRuntimeStateContract,
@@ -37,6 +39,7 @@ from shared.contracts import (
     PostTaskReflectionContract,
     ProjectObjectiveContinuityContract,
     SpecialistInvocationContract,
+    WorkItemStateContract,
 )
 from shared.domain_registry import (
     primary_canonical_domain_for_name,
@@ -123,6 +126,49 @@ class ObjectiveTransitionResult:
     governance_check: GovernanceCheckContract
     governance_decision: GovernanceDecisionContract
     mission_state: MissionStateContract | None
+    events: list[InternalEventEnvelope] = field(default_factory=list)
+
+
+@dataclass
+class WorkItemTransitionResult:
+    """Outcome of a bounded operator work item transition."""
+
+    mission_id: str
+    work_item_ref: str | None
+    transition: str
+    status: str
+    previous_work_item_status: str | None
+    work_item_state: WorkItemStateContract | None
+    next_action_ref: str | None
+    governance_check: GovernanceCheckContract
+    governance_decision: GovernanceDecisionContract
+    mission_state: MissionStateContract | None
+    events: list[InternalEventEnvelope] = field(default_factory=list)
+
+
+@dataclass
+class ArtifactLifecycleTransitionResult:
+    """Outcome of a bounded operator artifact lifecycle transition."""
+
+    mission_id: str
+    artifact_ref: str | None
+    transition: str
+    status: str
+    previous_artifact_status: str | None
+    artifact_state: ArtifactLifecycleStateContract | None
+    governance_check: GovernanceCheckContract
+    governance_decision: GovernanceDecisionContract
+    mission_state: MissionStateContract | None
+    events: list[InternalEventEnvelope] = field(default_factory=list)
+
+
+@dataclass
+class LongHorizonGoalStrategyResult:
+    """Read-only long-horizon strategy inspection result."""
+
+    mission_id: str
+    status: str
+    strategy: LongHorizonGoalStrategyContract | None
     events: list[InternalEventEnvelope] = field(default_factory=list)
 
 
@@ -302,6 +348,333 @@ class OrchestratorService:
             events=events,
         )
 
+    def transition_work_item(
+        self,
+        *,
+        mission_id: str,
+        work_item_ref: str | None,
+        transition: str,
+        session_id: str,
+        next_action_ref: str | None = None,
+        operator_identity_ref: str | None = None,
+        canonical_user_ref: str | None = None,
+    ) -> WorkItemTransitionResult:
+        """Apply a bounded operator work item transition through governance."""
+
+        request_id = RequestId(f"req-work-item-{uuid4().hex[:8]}")
+        contract = InputContract(
+            request_id=request_id,
+            session_id=SessionId(session_id),
+            mission_id=MissionId(mission_id),
+            channel=ChannelType.CONSOLE,
+            input_type=InputType.STRUCTURED_PAYLOAD,
+            content=f"work_item_transition:{transition}",
+            timestamp=self.now(),
+            metadata={
+                "transition": transition,
+                "work_item_ref": work_item_ref,
+                "next_action_ref": next_action_ref,
+                "memory_write_mode": "through_core_only",
+            },
+            surface_id="surface://jarvis_console",
+            surface_kind="console",
+            surface_session_id=session_id,
+            surface_capability_scope=["work_item_state_transition"],
+            operator_identity_ref=operator_identity_ref,
+            canonical_user_ref=canonical_user_ref,
+            surface_continuity_status="single_surface",
+        )
+        current_state = self.memory_service.get_mission_state(mission_id)
+        previous_status = self._work_item_status_from_state(
+            current_state,
+            work_item_ref,
+        )
+        assessment = self.governance_service.assess_work_item_transition(
+            contract=contract,
+            current_state=current_state,
+            requested_transition=transition,
+            requested_work_item_ref=work_item_ref,
+            requested_next_action_ref=next_action_ref,
+            requested_by_service=self.name,
+        )
+        events = [
+            self.make_event(
+                "governance_checked",
+                contract,
+                {
+                    "governance_check_id": str(
+                        assessment.governance_check.governance_check_id
+                    ),
+                    "subject_type": "work_item_transition",
+                    "transition": transition,
+                    "work_item_ref": work_item_ref,
+                    "decision": assessment.governance_decision.decision.value,
+                    "memory_write_mode": "through_core_only",
+                },
+            )
+        ]
+        if assessment.governance_decision.decision in {
+            PermissionDecision.BLOCK,
+            PermissionDecision.DEFER_FOR_VALIDATION,
+        }:
+            events.append(
+                self.make_event(
+                    "governance_blocked",
+                    contract,
+                    {
+                        "decision": assessment.governance_decision.decision.value,
+                        "reason": assessment.governance_decision.justification,
+                        "transition": transition,
+                        "work_item_ref": work_item_ref,
+                    },
+                )
+            )
+            self.observability_service.ingest_events(events)
+            return WorkItemTransitionResult(
+                mission_id=mission_id,
+                work_item_ref=work_item_ref,
+                transition=transition,
+                status="blocked",
+                previous_work_item_status=previous_status,
+                work_item_state=None,
+                next_action_ref=current_state.next_action_ref if current_state else None,
+                governance_check=assessment.governance_check,
+                governance_decision=assessment.governance_decision,
+                mission_state=current_state,
+                events=events,
+            )
+
+        work_item_status = self._work_item_transition_target_status(transition)
+        transition_ref = (
+            f"work_item_transition:{transition}:{work_item_ref}:{uuid4().hex[:8]}"
+        )
+        updated_state = self.memory_service.transition_work_item_state(
+            mission_id=mission_id,
+            work_item_ref=str(work_item_ref),
+            work_item_status=work_item_status,
+            transition_ref=transition_ref,
+            next_action_ref=next_action_ref,
+        )
+        work_item_state = (
+            WorkItemStateContract(
+                work_item_ref=str(work_item_ref),
+                work_item_status=work_item_status,
+                mission_id=MissionId(mission_id),
+                transition=transition,
+                next_action_ref=updated_state.next_action_ref if updated_state else None,
+                checkpoint_refs=(
+                    list(updated_state.checkpoint_refs) if updated_state else []
+                ),
+            )
+            if updated_state is not None and work_item_ref is not None
+            else None
+        )
+        event_payload = {
+            "transition": transition,
+            "transition_ref": transition_ref,
+            "work_item_ref": work_item_ref,
+            "previous_work_item_status": previous_status,
+            "work_item_status": work_item_status,
+            "next_action_ref": updated_state.next_action_ref if updated_state else None,
+            "active_work_items": (
+                list(updated_state.active_work_items) if updated_state else []
+            ),
+            "work_item_refs": list(updated_state.work_item_refs) if updated_state else [],
+            "memory_write_mode": "through_core_only",
+            "reversible_checkpoint_ref": transition_ref,
+        }
+        events.extend(
+            [
+                self.make_event("work_item_state_changed", contract, event_payload),
+                self.make_event("mission_updated", contract, event_payload),
+            ]
+        )
+        self.observability_service.ingest_events(events)
+        return WorkItemTransitionResult(
+            mission_id=mission_id,
+            work_item_ref=work_item_ref,
+            transition=transition,
+            status="updated" if updated_state else "missing",
+            previous_work_item_status=previous_status,
+            work_item_state=work_item_state,
+            next_action_ref=updated_state.next_action_ref if updated_state else None,
+            governance_check=assessment.governance_check,
+            governance_decision=assessment.governance_decision,
+            mission_state=updated_state,
+            events=events,
+        )
+
+    def transition_artifact_lifecycle(
+        self,
+        *,
+        mission_id: str,
+        artifact_ref: str | None,
+        transition: str,
+        session_id: str,
+        artifact_version: int | None = None,
+        work_item_ref: str | None = None,
+        replacement_artifact_ref: str | None = None,
+        rollback_plan_ref: str | None = None,
+        operator_identity_ref: str | None = None,
+        canonical_user_ref: str | None = None,
+    ) -> ArtifactLifecycleTransitionResult:
+        """Apply a bounded artifact lifecycle transition through governance."""
+
+        request_id = RequestId(f"req-artifact-{uuid4().hex[:8]}")
+        contract = InputContract(
+            request_id=request_id,
+            session_id=SessionId(session_id),
+            mission_id=MissionId(mission_id),
+            channel=ChannelType.CONSOLE,
+            input_type=InputType.STRUCTURED_PAYLOAD,
+            content=f"artifact_lifecycle_transition:{transition}",
+            timestamp=self.now(),
+            metadata={
+                "transition": transition,
+                "artifact_ref": artifact_ref,
+                "artifact_version": artifact_version,
+                "work_item_ref": work_item_ref,
+                "replacement_artifact_ref": replacement_artifact_ref,
+                "rollback_plan_ref": rollback_plan_ref,
+                "memory_write_mode": "through_core_only",
+            },
+            surface_id="surface://jarvis_console",
+            surface_kind="console",
+            surface_session_id=session_id,
+            surface_capability_scope=["artifact_lifecycle_transition"],
+            operator_identity_ref=operator_identity_ref,
+            canonical_user_ref=canonical_user_ref,
+            surface_continuity_status="single_surface",
+        )
+        current_state = self.memory_service.get_mission_state(mission_id)
+        previous_status = self._artifact_status_from_state(current_state, artifact_ref)
+        assessment = self.governance_service.assess_artifact_lifecycle_transition(
+            contract=contract,
+            current_state=current_state,
+            requested_transition=transition,
+            requested_artifact_ref=artifact_ref,
+            requested_replacement_artifact_ref=replacement_artifact_ref,
+            requested_rollback_plan_ref=rollback_plan_ref,
+            requested_by_service=self.name,
+        )
+        events = [
+            self.make_event(
+                "governance_checked",
+                contract,
+                {
+                    "governance_check_id": str(
+                        assessment.governance_check.governance_check_id
+                    ),
+                    "subject_type": "artifact_lifecycle_transition",
+                    "transition": transition,
+                    "artifact_ref": artifact_ref,
+                    "decision": assessment.governance_decision.decision.value,
+                    "memory_write_mode": "through_core_only",
+                },
+            )
+        ]
+        if assessment.governance_decision.decision in {
+            PermissionDecision.BLOCK,
+            PermissionDecision.DEFER_FOR_VALIDATION,
+        }:
+            events.append(
+                self.make_event(
+                    "governance_blocked",
+                    contract,
+                    {
+                        "decision": assessment.governance_decision.decision.value,
+                        "reason": assessment.governance_decision.justification,
+                        "transition": transition,
+                        "artifact_ref": artifact_ref,
+                    },
+                )
+            )
+            self.observability_service.ingest_events(events)
+            return ArtifactLifecycleTransitionResult(
+                mission_id=mission_id,
+                artifact_ref=artifact_ref,
+                transition=transition,
+                status="blocked",
+                previous_artifact_status=previous_status,
+                artifact_state=None,
+                governance_check=assessment.governance_check,
+                governance_decision=assessment.governance_decision,
+                mission_state=current_state,
+                events=events,
+            )
+
+        artifact_status = self._artifact_transition_target_status(transition)
+        transition_ref = (
+            f"artifact_lifecycle_transition:{transition}:{artifact_ref}:"
+            f"{uuid4().hex[:8]}"
+        )
+        updated_state = self.memory_service.transition_artifact_lifecycle_state(
+            mission_id=mission_id,
+            artifact_ref=str(artifact_ref),
+            artifact_status=artifact_status,
+            transition_ref=transition_ref,
+            replacement_artifact_ref=replacement_artifact_ref,
+        )
+        artifact_state = (
+            ArtifactLifecycleStateContract(
+                artifact_ref=str(artifact_ref),
+                artifact_status=artifact_status,
+                mission_id=MissionId(mission_id),
+                transition=transition,
+                artifact_version=artifact_version,
+                owner_mission_id=MissionId(mission_id),
+                objective_ref=updated_state.objective_ref if updated_state else None,
+                work_item_ref=work_item_ref,
+                replacement_artifact_ref=replacement_artifact_ref,
+                rollback_plan_ref=rollback_plan_ref,
+                checkpoint_refs=(
+                    list(updated_state.checkpoint_refs) if updated_state else []
+                ),
+            )
+            if updated_state is not None and artifact_ref is not None
+            else None
+        )
+        event_payload = {
+            "transition": transition,
+            "transition_ref": transition_ref,
+            "artifact_ref": artifact_ref,
+            "artifact_status": artifact_status,
+            "artifact_version": artifact_version,
+            "work_item_ref": work_item_ref,
+            "replacement_artifact_ref": replacement_artifact_ref,
+            "rollback_plan_ref": rollback_plan_ref,
+            "previous_artifact_status": previous_status,
+            "active_artifact_refs": (
+                list(updated_state.active_artifact_refs) if updated_state else []
+            ),
+            "artifact_refs": list(updated_state.artifact_refs) if updated_state else [],
+            "memory_write_mode": "through_core_only",
+            "reversible_checkpoint_ref": transition_ref,
+        }
+        events.extend(
+            [
+                self.make_event(
+                    "artifact_lifecycle_state_changed",
+                    contract,
+                    event_payload,
+                ),
+                self.make_event("mission_updated", contract, event_payload),
+            ]
+        )
+        self.observability_service.ingest_events(events)
+        return ArtifactLifecycleTransitionResult(
+            mission_id=mission_id,
+            artifact_ref=artifact_ref,
+            transition=transition,
+            status="updated" if updated_state else "missing",
+            previous_artifact_status=previous_status,
+            artifact_state=artifact_state,
+            governance_check=assessment.governance_check,
+            governance_decision=assessment.governance_decision,
+            mission_state=updated_state,
+            events=events,
+        )
+
     def inspect_objective_state(
         self,
         *,
@@ -358,6 +731,74 @@ class OrchestratorService:
             ]
         )
         return mission_state
+
+    def inspect_long_horizon_goal_strategy(
+        self,
+        *,
+        mission_id: str,
+        session_id: str,
+        operator_identity_ref: str | None = None,
+        canonical_user_ref: str | None = None,
+    ) -> LongHorizonGoalStrategyResult:
+        """Read the long-horizon strategy view without scheduling or mutating state."""
+
+        contract = InputContract(
+            request_id=RequestId(f"req-goal-strategy-{uuid4().hex[:8]}"),
+            session_id=SessionId(session_id),
+            mission_id=MissionId(mission_id),
+            channel=ChannelType.CONSOLE,
+            input_type=InputType.STRUCTURED_PAYLOAD,
+            content="long_horizon_goal_strategy_inspection",
+            timestamp=self.now(),
+            metadata={
+                "operation": "long_horizon_goal_strategy_inspection",
+                "memory_write_mode": "read_only",
+                "autonomous_scheduling_allowed": False,
+            },
+            surface_id="surface://jarvis_console",
+            surface_kind="console",
+            surface_session_id=session_id,
+            surface_capability_scope=["long_horizon_goal_strategy_read"],
+            operator_identity_ref=operator_identity_ref,
+            canonical_user_ref=canonical_user_ref,
+            surface_continuity_status="single_surface",
+        )
+        strategy = self.memory_service.build_long_horizon_goal_strategy(mission_id)
+        payload: dict[str, object] = {
+            "mission_id": mission_id,
+            "strategy_found": strategy is not None,
+            "memory_write_mode": "read_only",
+            "autonomous_scheduling_allowed": False,
+        }
+        if strategy is not None:
+            payload.update(
+                {
+                    "strategy_status": strategy.strategy_status,
+                    "strategy_summary": strategy.strategy_summary,
+                    "milestone_refs": list(strategy.milestone_refs),
+                    "risk_refs": list(strategy.risk_refs),
+                    "memory_anchor_refs": list(strategy.memory_anchor_refs),
+                    "next_action_ref": strategy.next_action_ref,
+                    "evidence_refs": list(strategy.evidence_refs),
+                    "generated_from_state_refs": list(
+                        strategy.generated_from_state_refs
+                    ),
+                }
+            )
+        events = [
+            self.make_event(
+                "long_horizon_goal_strategy_declared",
+                contract,
+                payload,
+            )
+        ]
+        self.observability_service.ingest_events(events)
+        return LongHorizonGoalStrategyResult(
+            mission_id=mission_id,
+            status="ready" if strategy is not None else "missing",
+            strategy=strategy,
+            events=events,
+        )
 
     def handle_input(self, contract: InputContract) -> OrchestratorResponse:
         """Execute the orchestrated flow for a normalized input contract."""
@@ -3318,6 +3759,75 @@ class OrchestratorService:
             current_mission_status,
             current_next_action_ref,
         )
+
+    @staticmethod
+    def _work_item_transition_target_status(transition: str) -> str:
+        if transition in {"create", "resume", "redefine-next-action"}:
+            return "active"
+        if transition == "pause":
+            return "paused"
+        if transition == "block":
+            return "blocked"
+        if transition == "complete":
+            return "completed"
+        return "active"
+
+    @staticmethod
+    def _work_item_status_from_state(
+        mission_state: MissionStateContract | None,
+        work_item_ref: str | None,
+    ) -> str | None:
+        if mission_state is None or work_item_ref is None:
+            return None
+        if work_item_ref in mission_state.active_work_items:
+            return "active"
+        for checkpoint_ref in reversed(mission_state.checkpoint_refs):
+            for transition, status in {
+                "complete": "completed",
+                "block": "blocked",
+                "pause": "paused",
+                "create": "active",
+                "resume": "active",
+                "redefine-next-action": "active",
+            }.items():
+                marker = f"work_item_transition:{transition}:{work_item_ref}:"
+                if marker in checkpoint_ref:
+                    return status
+        if work_item_ref in mission_state.work_item_refs:
+            return "inactive"
+        return None
+
+    @staticmethod
+    def _artifact_transition_target_status(transition: str) -> str:
+        if transition in {"register", "activate", "replace", "rollback"}:
+            return "active"
+        if transition == "archive":
+            return "archived"
+        return "active"
+
+    @staticmethod
+    def _artifact_status_from_state(
+        mission_state: MissionStateContract | None,
+        artifact_ref: str | None,
+    ) -> str | None:
+        if mission_state is None or artifact_ref is None:
+            return None
+        if artifact_ref in mission_state.active_artifact_refs:
+            return "active"
+        for checkpoint_ref in reversed(mission_state.checkpoint_refs):
+            for transition, status in {
+                "archive": "archived",
+                "register": "active",
+                "activate": "active",
+                "replace": "active",
+                "rollback": "active",
+            }.items():
+                marker = f"artifact_lifecycle_transition:{transition}:{artifact_ref}:"
+                if marker in checkpoint_ref:
+                    return status
+        if artifact_ref in mission_state.artifact_refs:
+            return "inactive"
+        return None
 
     @staticmethod
     def now() -> str:

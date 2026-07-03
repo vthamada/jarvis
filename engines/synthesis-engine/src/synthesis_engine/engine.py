@@ -191,6 +191,9 @@ class SynthesisEngine:
         objective_line = self._objective_state_line(synthesis_input)
         if objective_line:
             parts.append(f"Estado do objetivo: {objective_line}.")
+        long_horizon_line = self._long_horizon_goal_strategy_line(synthesis_input)
+        if long_horizon_line:
+            parts.append(f"Estrategia de horizonte longo: {long_horizon_line}.")
         reflection_line = self._reflection_influence_line(synthesis_input)
         if reflection_line:
             parts.append(f"Reflexao aplicada: {reflection_line}.")
@@ -463,6 +466,44 @@ class SynthesisEngine:
         if status == "blocked":
             return "decisao pendente remover bloqueio antes de prosseguir"
         return None
+
+    @classmethod
+    def _long_horizon_goal_strategy_line(
+        cls,
+        synthesis_input: SynthesisInput,
+    ) -> str | None:
+        has_long_horizon_state = any(
+            [
+                synthesis_input.objective_ref,
+                synthesis_input.work_item_refs,
+                synthesis_input.checkpoint_refs,
+                synthesis_input.artifact_refs,
+                synthesis_input.next_action_ref,
+            ]
+        )
+        if not has_long_horizon_state:
+            return None
+
+        next_action_ref = cls._safe_operational_value(synthesis_input.next_action_ref)
+        work_item_ref = cls._first_safe_ref(synthesis_input.work_item_refs)
+        checkpoint_ref = cls._first_safe_ref(synthesis_input.checkpoint_refs)
+        artifact_ref = cls._first_safe_ref(synthesis_input.artifact_refs)
+        objective_ref = cls._safe_operational_value(synthesis_input.objective_ref)
+        parts = ["modo read_only_no_scheduler"]
+        if objective_ref:
+            parts.append(f"ancora objetivo {objective_ref}")
+        if work_item_ref:
+            parts.append(f"marco {work_item_ref}")
+        if checkpoint_ref:
+            parts.append(f"evidencia {checkpoint_ref}")
+        if artifact_ref:
+            parts.append(f"artefato {artifact_ref}")
+        if next_action_ref:
+            parts.append(f"proxima acao auditavel {next_action_ref}")
+        else:
+            parts.append("proxima acao pendente de decisao humana")
+        parts.append("sem scheduler autonomo")
+        return "; ".join(parts)
 
     @classmethod
     def _reflection_influence_line(

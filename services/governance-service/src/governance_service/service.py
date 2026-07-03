@@ -281,6 +281,285 @@ class GovernanceService:
             governance_decision=governance_decision,
         )
 
+    def assess_work_item_transition(
+        self,
+        *,
+        contract: InputContract,
+        current_state: MissionStateContract | None,
+        requested_transition: str,
+        requested_work_item_ref: str | None,
+        requested_next_action_ref: str | None,
+        requested_by_service: str,
+    ) -> GovernanceAssessment:
+        """Govern bounded operator-driven work item state changes."""
+
+        current_status = (
+            current_state.mission_status.value if current_state is not None else None
+        )
+        existing_refs = set(current_state.work_item_refs if current_state else [])
+        active_refs = set(current_state.active_work_items if current_state else [])
+        governance_check = GovernanceCheckContract(
+            governance_check_id=GovernanceCheckId(f"gov-check-{uuid4().hex[:8]}"),
+            subject_type="work_item_transition",
+            subject_action=requested_transition,
+            scope="mission",
+            context={
+                "mission_id": str(contract.mission_id) if contract.mission_id else None,
+                "current_mission_status": current_status,
+                "requested_work_item_ref": requested_work_item_ref,
+                "requested_next_action_ref": requested_next_action_ref,
+                "existing_work_item_count": len(existing_refs),
+                "active_work_item_count": len(active_refs),
+                "memory_write_mode": "through_core_only",
+                "operator_identity_ref": contract.operator_identity_ref,
+                "canonical_user_ref": contract.canonical_user_ref,
+            },
+            sensitivity="normal",
+            reversibility="high",
+            mission_id=contract.mission_id,
+            session_id=contract.session_id,
+            proposed_effect="work_item_state_transition",
+            risk_hint=RiskLevel.LOW,
+            requested_by_service=requested_by_service,
+            requires_human_validation=False,
+            decision_frame="work_item_transition",
+            mission_continuity_hint="operator_bounded_work_item_transition",
+        )
+
+        decision = PermissionDecision.ALLOW_WITH_CONDITIONS
+        justification = (
+            "Transicao bounded de work item permitida via nucleo e memoria canonica."
+        )
+        conditions = [
+            "Persistir somente via MissionStateContract canonico.",
+            "Registrar evento auditavel com work item, transicao e checkpoint.",
+            "Nao executar ou agendar o work item automaticamente.",
+        ]
+        requires_rollback_plan = False
+        containment_hint = None
+        policy_refs = ["policy://work-item-transition/bounded-core-write"]
+
+        if current_state is None:
+            decision = PermissionDecision.BLOCK
+            justification = "Missao inexistente nao pode receber work item."
+            conditions = ["Criar ou recuperar estado canonico da missao antes da transicao."]
+            requires_rollback_plan = True
+            containment_hint = "block_missing_mission_state"
+            policy_refs = ["policy://work-item-transition/missing-state"]
+        elif current_state.mission_status in {MissionStatus.COMPLETED, MissionStatus.CANCELED}:
+            decision = PermissionDecision.BLOCK
+            justification = "Missao finalizada nao pode receber mutacao de work item."
+            conditions = ["Abrir nova missao ou revisao explicita antes de alterar tarefas."]
+            requires_rollback_plan = True
+            containment_hint = "block_terminal_mission"
+            policy_refs = ["policy://work-item-transition/terminal-state"]
+        elif not requested_work_item_ref:
+            decision = PermissionDecision.BLOCK
+            justification = "Transicao de work item exige referencia explicita."
+            conditions = ["Informar --work-item-ref com referencia bounded."]
+            requires_rollback_plan = True
+            containment_hint = "block_missing_work_item_ref"
+            policy_refs = ["policy://work-item-transition/missing-work-item-ref"]
+        elif not self._is_bounded_reference(requested_work_item_ref):
+            decision = PermissionDecision.BLOCK
+            justification = "Referencia de work item fora do formato bounded permitido."
+            conditions = [
+                "Usar referencia curta com letras, numeros, dois-pontos, barra, "
+                "ponto, hifen ou underscore."
+            ]
+            requires_rollback_plan = True
+            containment_hint = "block_unbounded_work_item_ref"
+            policy_refs = ["policy://work-item-transition/unbounded-reference"]
+        elif requested_next_action_ref and not self._is_bounded_reference(
+            requested_next_action_ref
+        ):
+            decision = PermissionDecision.BLOCK
+            justification = "Referencia de proxima acao fora do formato bounded permitido."
+            conditions = [
+                "Usar referencia curta com letras, numeros, dois-pontos, barra, "
+                "ponto, hifen ou underscore."
+            ]
+            requires_rollback_plan = True
+            containment_hint = "block_unbounded_next_action_ref"
+            policy_refs = ["policy://work-item-transition/unbounded-next-action"]
+        elif requested_transition == "create" and requested_work_item_ref in existing_refs:
+            decision = PermissionDecision.BLOCK
+            justification = "Work item ja existe na missao canonica."
+            conditions = ["Usar resume, pause, block, complete ou redefinir proxima acao."]
+            requires_rollback_plan = True
+            containment_hint = "block_duplicate_work_item"
+            policy_refs = ["policy://work-item-transition/duplicate-ref"]
+        elif requested_transition != "create" and requested_work_item_ref not in existing_refs:
+            decision = PermissionDecision.BLOCK
+            justification = "Work item inexistente nao pode receber transicao."
+            conditions = ["Criar o work item antes de atualizar seu estado."]
+            requires_rollback_plan = True
+            containment_hint = "block_missing_work_item"
+            policy_refs = ["policy://work-item-transition/missing-work-item"]
+        elif requested_transition == "redefine-next-action" and not requested_next_action_ref:
+            decision = PermissionDecision.BLOCK
+            justification = "Redefinir proxima acao exige referencia explicita."
+            conditions = ["Informar --next-action-ref com uma referencia bounded."]
+            requires_rollback_plan = True
+            containment_hint = "block_missing_next_action_ref"
+            policy_refs = ["policy://work-item-transition/missing-next-action"]
+
+        governance_decision = GovernanceDecisionContract(
+            decision_id=GovernanceDecisionId(f"gov-decision-{uuid4().hex[:8]}"),
+            governance_check_id=governance_check.governance_check_id,
+            risk_level=governance_check.risk_hint or RiskLevel.LOW,
+            decision=decision,
+            justification=justification,
+            timestamp=self.now(),
+            conditions=conditions,
+            requires_audit=True,
+            requires_rollback_plan=requires_rollback_plan,
+            containment_hint=containment_hint,
+            policy_refs=policy_refs,
+        )
+        return GovernanceAssessment(
+            governance_check=governance_check,
+            governance_decision=governance_decision,
+        )
+
+    def assess_artifact_lifecycle_transition(
+        self,
+        *,
+        contract: InputContract,
+        current_state: MissionStateContract | None,
+        requested_transition: str,
+        requested_artifact_ref: str | None,
+        requested_replacement_artifact_ref: str | None,
+        requested_rollback_plan_ref: str | None,
+        requested_by_service: str,
+    ) -> GovernanceAssessment:
+        """Govern bounded operator-driven artifact lifecycle changes."""
+
+        existing_refs = set(current_state.artifact_refs if current_state else [])
+        active_refs = set(current_state.active_artifact_refs if current_state else [])
+        governance_check = GovernanceCheckContract(
+            governance_check_id=GovernanceCheckId(f"gov-check-{uuid4().hex[:8]}"),
+            subject_type="artifact_lifecycle_transition",
+            subject_action=requested_transition,
+            scope="mission",
+            context={
+                "mission_id": str(contract.mission_id) if contract.mission_id else None,
+                "requested_artifact_ref": requested_artifact_ref,
+                "requested_replacement_artifact_ref": requested_replacement_artifact_ref,
+                "requested_rollback_plan_ref": requested_rollback_plan_ref,
+                "existing_artifact_count": len(existing_refs),
+                "active_artifact_count": len(active_refs),
+                "memory_write_mode": "through_core_only",
+            },
+            sensitivity="normal",
+            reversibility="high",
+            mission_id=contract.mission_id,
+            session_id=contract.session_id,
+            proposed_effect="artifact_lifecycle_transition",
+            risk_hint=RiskLevel.LOW,
+            requested_by_service=requested_by_service,
+            requires_human_validation=False,
+            decision_frame="artifact_lifecycle_transition",
+            mission_continuity_hint="operator_bounded_artifact_transition",
+        )
+
+        decision = PermissionDecision.ALLOW_WITH_CONDITIONS
+        justification = "Transicao bounded de artefato permitida via memoria canonica."
+        conditions = [
+            "Persistir somente via MissionStateContract canonico.",
+            "Registrar evento auditavel com artefato, transicao e checkpoint.",
+            "Nao ler, mover, deletar ou editar arquivos reais nesta transicao.",
+        ]
+        requires_rollback_plan = False
+        containment_hint = None
+        policy_refs = ["policy://artifact-lifecycle/bounded-core-write"]
+
+        if current_state is None:
+            decision = PermissionDecision.BLOCK
+            justification = "Missao inexistente nao pode receber artefato."
+            conditions = ["Criar ou recuperar estado canonico da missao antes da transicao."]
+            requires_rollback_plan = True
+            containment_hint = "block_missing_mission_state"
+            policy_refs = ["policy://artifact-lifecycle/missing-state"]
+        elif current_state.mission_status in {MissionStatus.COMPLETED, MissionStatus.CANCELED}:
+            decision = PermissionDecision.BLOCK
+            justification = "Missao finalizada nao pode receber mutacao de artefato."
+            conditions = ["Abrir nova missao ou revisao explicita antes de alterar artefatos."]
+            requires_rollback_plan = True
+            containment_hint = "block_terminal_mission"
+            policy_refs = ["policy://artifact-lifecycle/terminal-state"]
+        elif not requested_artifact_ref:
+            decision = PermissionDecision.BLOCK
+            justification = "Transicao de artefato exige referencia explicita."
+            conditions = ["Informar --artifact-ref com referencia bounded."]
+            requires_rollback_plan = True
+            containment_hint = "block_missing_artifact_ref"
+            policy_refs = ["policy://artifact-lifecycle/missing-artifact-ref"]
+        elif not self._is_bounded_reference(requested_artifact_ref):
+            decision = PermissionDecision.BLOCK
+            justification = "Referencia de artefato fora do formato bounded permitido."
+            conditions = ["Usar uma referencia curta e bounded, como artifact://..."]
+            requires_rollback_plan = True
+            containment_hint = "block_unbounded_artifact_ref"
+            policy_refs = ["policy://artifact-lifecycle/unbounded-reference"]
+        elif requested_replacement_artifact_ref and not self._is_bounded_reference(
+            requested_replacement_artifact_ref
+        ):
+            decision = PermissionDecision.BLOCK
+            justification = "Referencia de substituicao fora do formato bounded permitido."
+            conditions = ["Usar uma referencia curta e bounded, como artifact://..."]
+            requires_rollback_plan = True
+            containment_hint = "block_unbounded_replacement_ref"
+            policy_refs = ["policy://artifact-lifecycle/unbounded-replacement"]
+        elif requested_rollback_plan_ref and not self._is_bounded_reference(
+            requested_rollback_plan_ref
+        ):
+            decision = PermissionDecision.BLOCK
+            justification = "Referencia de rollback fora do formato bounded permitido."
+            conditions = ["Usar uma referencia curta e bounded, como rollback://..."]
+            requires_rollback_plan = True
+            containment_hint = "block_unbounded_rollback_ref"
+            policy_refs = ["policy://artifact-lifecycle/unbounded-rollback"]
+        elif requested_transition == "register" and requested_artifact_ref in existing_refs:
+            decision = PermissionDecision.BLOCK
+            justification = "Artefato ja existe na missao canonica."
+            conditions = ["Usar activate, archive, replace ou rollback."]
+            requires_rollback_plan = True
+            containment_hint = "block_duplicate_artifact"
+            policy_refs = ["policy://artifact-lifecycle/duplicate-ref"]
+        elif requested_transition != "register" and requested_artifact_ref not in existing_refs:
+            decision = PermissionDecision.BLOCK
+            justification = "Artefato inexistente nao pode receber transicao."
+            conditions = ["Registrar o artefato antes de atualizar seu estado."]
+            requires_rollback_plan = True
+            containment_hint = "block_missing_artifact"
+            policy_refs = ["policy://artifact-lifecycle/missing-artifact"]
+        elif requested_transition == "replace" and not requested_replacement_artifact_ref:
+            decision = PermissionDecision.BLOCK
+            justification = "Substituir artefato exige referencia de substituicao."
+            conditions = ["Informar --replacement-artifact-ref."]
+            requires_rollback_plan = True
+            containment_hint = "block_missing_replacement_ref"
+            policy_refs = ["policy://artifact-lifecycle/missing-replacement"]
+
+        governance_decision = GovernanceDecisionContract(
+            decision_id=GovernanceDecisionId(f"gov-decision-{uuid4().hex[:8]}"),
+            governance_check_id=governance_check.governance_check_id,
+            risk_level=governance_check.risk_hint or RiskLevel.LOW,
+            decision=decision,
+            justification=justification,
+            timestamp=self.now(),
+            conditions=conditions,
+            requires_audit=True,
+            requires_rollback_plan=requires_rollback_plan,
+            containment_hint=containment_hint,
+            policy_refs=policy_refs,
+        )
+        return GovernanceAssessment(
+            governance_check=governance_check,
+            governance_decision=governance_decision,
+        )
+
     @staticmethod
     def _is_bounded_reference(value: str) -> bool:
         if not value or len(value) > 160:

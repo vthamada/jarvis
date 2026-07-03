@@ -88,6 +88,30 @@ PROJECT_OBJECTIVE_CONTINUITY_SCHEMA = CanonicalSchema(
     ),
 )
 
+LONG_HORIZON_GOAL_STRATEGY_SCHEMA = CanonicalSchema(
+    name="LongHorizonGoalStrategySchema",
+    contract_name="LongHorizonGoalStrategyContract",
+    required_fields=(
+        "mission_id",
+        "strategy_status",
+        "strategy_summary",
+    ),
+    optional_fields=(
+        "milestone_refs",
+        "risk_refs",
+        "memory_anchor_refs",
+        "next_action_ref",
+        "evidence_refs",
+        "memory_write_mode",
+        "autonomous_scheduling_allowed",
+        "generated_from_state_refs",
+    ),
+    notes=(
+        "Read-only long-horizon strategy view derived from mission state; "
+        "not a scheduler or autonomous execution permit.",
+    ),
+)
+
 TECHNOLOGY_ABSORPTION_CANDIDATE_SCHEMA = CanonicalSchema(
     name="TechnologyAbsorptionCandidateSchema",
     contract_name="TechnologyAbsorptionCandidateContract",
@@ -628,6 +652,43 @@ MISSION_STATE_SCHEMA = CanonicalSchema(
         "priority_level",
         "owner_context",
         "completion_criteria",
+    ),
+)
+
+WORK_ITEM_STATE_SCHEMA = CanonicalSchema(
+    name="WorkItemStateSchema",
+    contract_name="WorkItemStateContract",
+    required_fields=(
+        "work_item_ref",
+        "work_item_status",
+        "mission_id",
+    ),
+    optional_fields=(
+        "transition",
+        "next_action_ref",
+        "checkpoint_refs",
+        "memory_write_mode",
+    ),
+)
+
+ARTIFACT_LIFECYCLE_STATE_SCHEMA = CanonicalSchema(
+    name="ArtifactLifecycleStateSchema",
+    contract_name="ArtifactLifecycleStateContract",
+    required_fields=(
+        "artifact_ref",
+        "artifact_status",
+        "mission_id",
+    ),
+    optional_fields=(
+        "transition",
+        "artifact_version",
+        "owner_mission_id",
+        "objective_ref",
+        "work_item_ref",
+        "replacement_artifact_ref",
+        "rollback_plan_ref",
+        "checkpoint_refs",
+        "memory_write_mode",
     ),
 )
 

@@ -18,12 +18,15 @@ from memory_service.service import MemoryService
 from observability_service.service import ObservabilityQuery, ObservabilityService
 from operational_service.service import OperationalService
 from orchestrator_service.service import (
+    ArtifactLifecycleTransitionResult,
+    LongHorizonGoalStrategyResult,
     ObjectiveTransitionResult,
     OrchestratorResponse,
     OrchestratorService,
+    WorkItemTransitionResult,
 )
 
-from shared.contracts import InputContract, MissionStateContract
+from shared.contracts import InputContract, LongHorizonGoalStrategyContract, MissionStateContract
 from shared.types import ChannelType, InputType, MissionId, RequestId, SessionId
 
 CONSOLE_SURFACE_ID = "surface://jarvis_console"
@@ -118,6 +121,69 @@ class JarvisConsole:
             canonical_user_ref=canonical_user_ref or DEFAULT_CANONICAL_USER_REF,
         )
 
+    def transition_work_item(
+        self,
+        *,
+        mission_id: str,
+        work_item_ref: str | None,
+        transition: str,
+        session_id: str,
+        next_action_ref: str | None = None,
+        operator_identity_ref: str | None = None,
+        canonical_user_ref: str | None = None,
+    ) -> WorkItemTransitionResult:
+        return self.orchestrator.transition_work_item(
+            mission_id=mission_id,
+            work_item_ref=work_item_ref,
+            transition=transition,
+            session_id=session_id,
+            next_action_ref=next_action_ref,
+            operator_identity_ref=operator_identity_ref or DEFAULT_OPERATOR_IDENTITY_REF,
+            canonical_user_ref=canonical_user_ref or DEFAULT_CANONICAL_USER_REF,
+        )
+
+    def transition_artifact_lifecycle(
+        self,
+        *,
+        mission_id: str,
+        artifact_ref: str | None,
+        transition: str,
+        session_id: str,
+        artifact_version: int | None = None,
+        work_item_ref: str | None = None,
+        replacement_artifact_ref: str | None = None,
+        rollback_plan_ref: str | None = None,
+        operator_identity_ref: str | None = None,
+        canonical_user_ref: str | None = None,
+    ) -> ArtifactLifecycleTransitionResult:
+        return self.orchestrator.transition_artifact_lifecycle(
+            mission_id=mission_id,
+            artifact_ref=artifact_ref,
+            transition=transition,
+            session_id=session_id,
+            artifact_version=artifact_version,
+            work_item_ref=work_item_ref,
+            replacement_artifact_ref=replacement_artifact_ref,
+            rollback_plan_ref=rollback_plan_ref,
+            operator_identity_ref=operator_identity_ref or DEFAULT_OPERATOR_IDENTITY_REF,
+            canonical_user_ref=canonical_user_ref or DEFAULT_CANONICAL_USER_REF,
+        )
+
+    def inspect_goal_strategy(
+        self,
+        *,
+        mission_id: str,
+        session_id: str,
+        operator_identity_ref: str | None = None,
+        canonical_user_ref: str | None = None,
+    ) -> LongHorizonGoalStrategyResult:
+        return self.orchestrator.inspect_long_horizon_goal_strategy(
+            mission_id=mission_id,
+            session_id=session_id,
+            operator_identity_ref=operator_identity_ref or DEFAULT_OPERATOR_IDENTITY_REF,
+            canonical_user_ref=canonical_user_ref or DEFAULT_CANONICAL_USER_REF,
+        )
+
 
 def build_parser() -> ArgumentParser:
     parser = ArgumentParser(description="Run the minimal JARVIS console.")
@@ -145,6 +211,15 @@ def build_parser() -> ArgumentParser:
     )
     objectives_parser.add_argument("--mission-id", required=True)
 
+    goal_strategy_parser = subparsers.add_parser(
+        "goal-strategy",
+        help="Show read-only long-horizon strategy for a mission.",
+    )
+    goal_strategy_parser.add_argument("--mission-id", required=True)
+    goal_strategy_parser.add_argument("--session-id", default="console-goal-strategy")
+    goal_strategy_parser.add_argument("--operator-identity-ref")
+    goal_strategy_parser.add_argument("--canonical-user-ref")
+
     objective_parser = subparsers.add_parser(
         "objective",
         help="Apply a bounded operator transition to a mission objective.",
@@ -159,6 +234,60 @@ def build_parser() -> ArgumentParser:
     objective_parser.add_argument("--next-action-ref")
     objective_parser.add_argument("--operator-identity-ref")
     objective_parser.add_argument("--canonical-user-ref")
+
+    work_items_parser = subparsers.add_parser(
+        "work-items",
+        help="Show governed work items for a mission.",
+    )
+    work_items_parser.add_argument("--mission-id", required=True)
+
+    work_item_parser = subparsers.add_parser(
+        "work-item",
+        help="Apply a bounded operator transition to a mission work item.",
+    )
+    work_item_parser.add_argument("--mission-id", required=True)
+    work_item_parser.add_argument("--session-id", default="console-work-item")
+    work_item_parser.add_argument(
+        "--action",
+        required=True,
+        choices=[
+            "create",
+            "resume",
+            "pause",
+            "block",
+            "complete",
+            "redefine-next-action",
+        ],
+    )
+    work_item_parser.add_argument("--work-item-ref", required=True)
+    work_item_parser.add_argument("--next-action-ref")
+    work_item_parser.add_argument("--operator-identity-ref")
+    work_item_parser.add_argument("--canonical-user-ref")
+
+    artifacts_parser = subparsers.add_parser(
+        "artifacts",
+        help="Show governed living artifacts for a mission.",
+    )
+    artifacts_parser.add_argument("--mission-id", required=True)
+
+    artifact_parser = subparsers.add_parser(
+        "artifact",
+        help="Apply a bounded lifecycle transition to a mission artifact.",
+    )
+    artifact_parser.add_argument("--mission-id", required=True)
+    artifact_parser.add_argument("--session-id", default="console-artifact")
+    artifact_parser.add_argument(
+        "--action",
+        required=True,
+        choices=["register", "activate", "archive", "replace", "rollback"],
+    )
+    artifact_parser.add_argument("--artifact-ref", required=True)
+    artifact_parser.add_argument("--artifact-version", type=int)
+    artifact_parser.add_argument("--work-item-ref")
+    artifact_parser.add_argument("--replacement-artifact-ref")
+    artifact_parser.add_argument("--rollback-plan-ref")
+    artifact_parser.add_argument("--operator-identity-ref")
+    artifact_parser.add_argument("--canonical-user-ref")
 
     technology_parser = subparsers.add_parser(
         "technology-candidates",
@@ -213,6 +342,16 @@ def build_parser() -> ArgumentParser:
     mission_cycle_parser.add_argument("--evolution-db")
     mission_cycle_parser.add_argument("--workflow-profile")
     mission_cycle_parser.add_argument("--limit", type=int, default=5)
+
+    dashboard_parser = subparsers.add_parser(
+        "operator-dashboard",
+        help="Show a read-only daily operator dashboard.",
+    )
+    dashboard_parser.add_argument("--mission-id")
+    dashboard_parser.add_argument("--memory-db")
+    dashboard_parser.add_argument("--evolution-db")
+    dashboard_parser.add_argument("--workflow-profile")
+    dashboard_parser.add_argument("--limit", type=int, default=5)
 
     mission_workflow_parser = subparsers.add_parser(
         "mission-workflow",
@@ -295,6 +434,205 @@ def render_objective_transition(result: ObjectiveTransitionResult) -> str:
             f"previous_objective_status={safe_console_value(result.previous_objective_status)}",
             f"objective_status={safe_console_value(result.objective_status)}",
             f"next_action_ref={safe_console_value(result.next_action_ref)}",
+            "memory_write_mode=through_core_only",
+            f"event_names={safe_console_list([event.event_name for event in result.events])}",
+        ]
+    )
+
+
+def render_goal_strategy(result: LongHorizonGoalStrategyResult) -> str:
+    strategy = result.strategy
+    if strategy is None:
+        return f"No goal strategy found for mission_id={result.mission_id}"
+    return render_goal_strategy_contract(strategy, status=result.status)
+
+
+def render_goal_strategy_contract(
+    strategy: LongHorizonGoalStrategyContract,
+    *,
+    status: str,
+) -> str:
+    return "\n".join(
+        [
+            f"mission_id={safe_console_value(strategy.mission_id)}",
+            f"inspection_status={safe_console_value(status)}",
+            f"strategy_status={safe_console_value(strategy.strategy_status)}",
+            f"strategy_summary={safe_console_value(strategy.strategy_summary)}",
+            f"milestone_refs={safe_console_list(strategy.milestone_refs)}",
+            f"risk_refs={safe_console_list(strategy.risk_refs)}",
+            f"memory_anchor_refs={safe_console_list(strategy.memory_anchor_refs)}",
+            f"next_action_ref={safe_console_value(strategy.next_action_ref)}",
+            f"evidence_refs={safe_console_list(strategy.evidence_refs)}",
+            f"generated_from_state_refs={safe_console_list(strategy.generated_from_state_refs)}",
+            f"memory_write_mode={safe_console_value(strategy.memory_write_mode)}",
+            "autonomous_scheduling_allowed=False",
+        ]
+    )
+
+
+def work_item_status_from_state(
+    mission_state: MissionStateContract | None,
+    work_item_ref: str,
+) -> str:
+    if mission_state is None:
+        return "missing"
+    if work_item_ref in mission_state.active_work_items:
+        return "active"
+    for checkpoint_ref in reversed(mission_state.checkpoint_refs):
+        for transition, status in {
+            "complete": "completed",
+            "block": "blocked",
+            "pause": "paused",
+            "create": "active",
+            "resume": "active",
+            "redefine-next-action": "active",
+        }.items():
+            marker = f"work_item_transition:{transition}:{work_item_ref}:"
+            if marker in checkpoint_ref:
+                return status
+    return "inactive" if work_item_ref in mission_state.work_item_refs else "missing"
+
+
+def render_work_items_state(
+    mission_state: MissionStateContract | None,
+    *,
+    mission_id: str,
+) -> str:
+    if mission_state is None:
+        return f"No work items found for mission_id={safe_console_value(mission_id)}"
+    work_item_refs = list(mission_state.work_item_refs)
+    if not work_item_refs:
+        return f"No work items found for mission_id={safe_console_value(mission_id)}"
+    lines = [
+        f"mission_id={safe_console_value(mission_state.mission_id)}",
+        f"objective_status={safe_console_value(mission_state.objective_status)}",
+        f"next_action_ref={safe_console_value(mission_state.next_action_ref)}",
+    ]
+    for work_item_ref in work_item_refs:
+        lines.extend(
+            [
+                "---",
+                f"work_item_ref={safe_console_value(work_item_ref)}",
+                "work_item_status="
+                + safe_console_value(
+                    work_item_status_from_state(mission_state, work_item_ref)
+                ),
+                f"is_active={safe_console_value(work_item_ref in mission_state.active_work_items)}",
+            ]
+        )
+    return "\n".join(lines)
+
+
+def render_work_item_transition(result: WorkItemTransitionResult) -> str:
+    work_item_state = result.work_item_state
+    mission_state = result.mission_state
+    return "\n".join(
+        [
+            f"mission_id={safe_console_value(result.mission_id)}",
+            f"work_item_ref={safe_console_value(result.work_item_ref)}",
+            f"transition={safe_console_value(result.transition)}",
+            f"transition_status={safe_console_value(result.status)}",
+            f"governance_decision={safe_console_value(result.governance_decision.decision)}",
+            "previous_work_item_status="
+            + safe_console_value(result.previous_work_item_status),
+            "work_item_status="
+            + safe_console_value(
+                getattr(work_item_state, "work_item_status", None)
+            ),
+            f"next_action_ref={safe_console_value(result.next_action_ref)}",
+            "active_work_items="
+            + safe_console_list(list(getattr(mission_state, "active_work_items", []))),
+            "work_item_refs="
+            + safe_console_list(list(getattr(mission_state, "work_item_refs", []))),
+            "memory_write_mode=through_core_only",
+            f"event_names={safe_console_list([event.event_name for event in result.events])}",
+        ]
+    )
+
+
+def artifact_status_from_state(
+    mission_state: MissionStateContract | None,
+    artifact_ref: str,
+) -> str:
+    if mission_state is None:
+        return "missing"
+    if artifact_ref in mission_state.active_artifact_refs:
+        return "active"
+    for checkpoint_ref in reversed(mission_state.checkpoint_refs):
+        for transition, status in {
+            "archive": "archived",
+            "register": "active",
+            "activate": "active",
+            "replace": "active",
+            "rollback": "active",
+        }.items():
+            marker = f"artifact_lifecycle_transition:{transition}:{artifact_ref}:"
+            if marker in checkpoint_ref:
+                return status
+    return "inactive" if artifact_ref in mission_state.artifact_refs else "missing"
+
+
+def render_artifacts_state(
+    mission_state: MissionStateContract | None,
+    *,
+    mission_id: str,
+) -> str:
+    if mission_state is None:
+        return f"No artifacts found for mission_id={safe_console_value(mission_id)}"
+    artifact_refs = list(mission_state.artifact_refs)
+    if not artifact_refs:
+        return f"No artifacts found for mission_id={safe_console_value(mission_id)}"
+    lines = [
+        f"mission_id={safe_console_value(mission_state.mission_id)}",
+        f"objective_ref={safe_console_value(mission_state.objective_ref)}",
+        f"objective_status={safe_console_value(mission_state.objective_status)}",
+    ]
+    for artifact_ref in artifact_refs:
+        lines.extend(
+            [
+                "---",
+                f"artifact_ref={safe_console_value(artifact_ref)}",
+                "artifact_status="
+                + safe_console_value(artifact_status_from_state(mission_state, artifact_ref)),
+                "is_active="
+                + safe_console_value(artifact_ref in mission_state.active_artifact_refs),
+            ]
+        )
+    return "\n".join(lines)
+
+
+def render_artifact_transition(result: ArtifactLifecycleTransitionResult) -> str:
+    artifact_state = result.artifact_state
+    mission_state = result.mission_state
+    return "\n".join(
+        [
+            f"mission_id={safe_console_value(result.mission_id)}",
+            f"artifact_ref={safe_console_value(result.artifact_ref)}",
+            f"transition={safe_console_value(result.transition)}",
+            f"transition_status={safe_console_value(result.status)}",
+            f"governance_decision={safe_console_value(result.governance_decision.decision)}",
+            "previous_artifact_status="
+            + safe_console_value(result.previous_artifact_status),
+            "artifact_status="
+            + safe_console_value(
+                getattr(artifact_state, "artifact_status", None)
+            ),
+            "artifact_version="
+            + safe_console_value(getattr(artifact_state, "artifact_version", None)),
+            "work_item_ref="
+            + safe_console_value(getattr(artifact_state, "work_item_ref", None)),
+            "replacement_artifact_ref="
+            + safe_console_value(
+                getattr(artifact_state, "replacement_artifact_ref", None)
+            ),
+            "rollback_plan_ref="
+            + safe_console_value(getattr(artifact_state, "rollback_plan_ref", None)),
+            "active_artifact_refs="
+            + safe_console_list(
+                list(getattr(mission_state, "active_artifact_refs", []))
+            ),
+            "artifact_refs="
+            + safe_console_list(list(getattr(mission_state, "artifact_refs", []))),
             "memory_write_mode=through_core_only",
             f"event_names={safe_console_list([event.event_name for event in result.events])}",
         ]
@@ -570,6 +908,134 @@ def _mission_cycle_next_step(
     return "start_governed_mission"
 
 
+def render_operator_dashboard(
+    *,
+    mission_id: str | None,
+    mission_state: MissionStateContract | None,
+    records: list[object],
+    review_items: list[object],
+    flow_audit: object | None = None,
+) -> str:
+    latest_record = records[0] if records else None
+    experience = getattr(latest_record, "experience", None)
+    reflection = getattr(latest_record, "reflection", None)
+    matching_review_items = _matching_review_items(
+        review_items=review_items,
+        experience=experience,
+        reflection=reflection,
+    )
+    pending_review_items = [
+        item
+        for item in review_items
+        if getattr(item, "review_status", None)
+        in {"observed", "candidate", "needs_review", "sandboxed"}
+    ]
+    primary_review = (
+        matching_review_items[0]
+        if matching_review_items
+        else pending_review_items[0]
+        if pending_review_items
+        else None
+    )
+    next_step = _mission_cycle_next_step(
+        mission_state=mission_state,
+        reflection=reflection,
+        review_item=primary_review,
+    )
+    if mission_state is None and reflection is None and primary_review is None:
+        next_step = "start_governed_mission"
+
+    dashboard_scope = "mission" if mission_id else "global"
+    reviewed_learning_status = safe_console_value(
+        getattr(flow_audit, "reviewed_learning_influence_status", "not_applicable")
+    )
+    reviewed_learning_eval_status = safe_console_value(
+        getattr(
+            flow_audit,
+            "reviewed_learning_assisted_eval_status",
+            "baseline_no_reviewed_learning",
+        )
+    )
+    reviewed_learning_release = safe_console_value(
+        getattr(
+            flow_audit,
+            "reviewed_learning_release_conclusion",
+            "no_promotion_without_release_gate",
+        )
+    )
+    mission_goal = safe_console_value(getattr(mission_state, "mission_goal", None))
+    objective_status = safe_console_value(
+        getattr(mission_state, "objective_status", None)
+    )
+    next_action_ref = safe_console_value(
+        getattr(mission_state, "next_action_ref", None)
+    )
+    active_work_items = safe_console_list(
+        list(getattr(mission_state, "active_work_items", []))
+    )
+    open_checkpoint_refs = safe_console_list(
+        list(getattr(mission_state, "open_checkpoint_refs", []))
+    )
+    artifact_refs = safe_console_list(
+        list(getattr(mission_state, "artifact_refs", []))
+    )
+    latest_experience_id = safe_console_value(
+        getattr(experience, "experience_id", None)
+    )
+    latest_experience_outcome = safe_console_value(
+        getattr(experience, "outcome_status", None)
+    )
+    latest_reflection_id = safe_console_value(
+        getattr(reflection, "reflection_id", None)
+    )
+    latest_reflection_status = safe_console_value(
+        getattr(reflection, "reflection_status", None)
+    )
+    operator_usefulness_status = safe_console_value(
+        getattr(flow_audit, "operator_usefulness_status", "insufficient_signal")
+    )
+    operator_usefulness_score = safe_console_value(
+        getattr(flow_audit, "operator_usefulness_score", 0)
+    )
+    operator_usefulness_signals = safe_console_list(
+        list(getattr(flow_audit, "operator_usefulness_signals", []))
+    )
+
+    return "\n".join(
+        [
+            "operator_dashboard=read_only",
+            f"dashboard_scope={dashboard_scope}",
+            f"mission_id={safe_console_value(mission_id)}",
+            f"mission_goal={mission_goal}",
+            f"objective_status={objective_status}",
+            f"next_action_ref={next_action_ref}",
+            f"active_work_items={active_work_items}",
+            f"open_checkpoint_refs={open_checkpoint_refs}",
+            f"artifact_refs={artifact_refs}",
+            f"latest_experience_id={latest_experience_id}",
+            f"latest_experience_outcome={latest_experience_outcome}",
+            f"latest_reflection_id={latest_reflection_id}",
+            f"latest_reflection_status={latest_reflection_status}",
+            f"pending_review_count={len(pending_review_items)}",
+            "pending_review_proposal_ids="
+            + safe_console_list(
+                [
+                    getattr(item, "evolution_proposal_id", None)
+                    for item in pending_review_items
+                ]
+            ),
+            f"reviewed_learning_influence_status={reviewed_learning_status}",
+            f"reviewed_learning_assisted_eval_status={reviewed_learning_eval_status}",
+            f"reviewed_learning_release_conclusion={reviewed_learning_release}",
+            f"operator_usefulness_status={operator_usefulness_status}",
+            f"operator_usefulness_score={operator_usefulness_score}",
+            f"operator_usefulness_signals={operator_usefulness_signals}",
+            "automatic_promotion=False",
+            f"next_operator_step={safe_console_value(next_step)}",
+        ]
+    )
+
+
 def render_mission_workflow_report(
     *,
     response: OrchestratorResponse,
@@ -674,6 +1140,65 @@ def run_objective_command(console: JarvisConsole, args: Namespace) -> list[str]:
     return [render_objective_transition(result)]
 
 
+def run_goal_strategy_command(console: JarvisConsole, args: Namespace) -> list[str]:
+    result = console.inspect_goal_strategy(
+        mission_id=args.mission_id,
+        session_id=args.session_id,
+        operator_identity_ref=args.operator_identity_ref,
+        canonical_user_ref=args.canonical_user_ref,
+    )
+    return [render_goal_strategy(result)]
+
+
+def run_work_items_command(console: JarvisConsole, args: Namespace) -> list[str]:
+    mission_state = console.get_objective_state(mission_id=args.mission_id)
+    return [
+        render_work_items_state(
+            mission_state,
+            mission_id=args.mission_id,
+        )
+    ]
+
+
+def run_work_item_command(console: JarvisConsole, args: Namespace) -> list[str]:
+    result = console.transition_work_item(
+        mission_id=args.mission_id,
+        work_item_ref=args.work_item_ref,
+        transition=args.action,
+        session_id=args.session_id,
+        next_action_ref=args.next_action_ref,
+        operator_identity_ref=args.operator_identity_ref,
+        canonical_user_ref=args.canonical_user_ref,
+    )
+    return [render_work_item_transition(result)]
+
+
+def run_artifacts_command(console: JarvisConsole, args: Namespace) -> list[str]:
+    mission_state = console.get_objective_state(mission_id=args.mission_id)
+    return [
+        render_artifacts_state(
+            mission_state,
+            mission_id=args.mission_id,
+        )
+    ]
+
+
+def run_artifact_command(console: JarvisConsole, args: Namespace) -> list[str]:
+    result = console.transition_artifact_lifecycle(
+        mission_id=args.mission_id,
+        artifact_ref=args.artifact_ref,
+        transition=args.action,
+        session_id=args.session_id,
+        artifact_version=args.artifact_version,
+        work_item_ref=args.work_item_ref,
+        replacement_artifact_ref=args.replacement_artifact_ref,
+        rollback_plan_ref=args.rollback_plan_ref,
+        operator_identity_ref=args.operator_identity_ref,
+        canonical_user_ref=args.canonical_user_ref,
+    )
+    return [render_artifact_transition(result)]
+
+
 def run_technology_candidates_command(args: Namespace) -> list[str]:
     evolution_db = (
         Path(args.evolution_db)
@@ -728,6 +1253,38 @@ def run_mission_cycle_command(console: JarvisConsole, args: Namespace) -> list[s
     )
     return [
         render_mission_cycle(
+            mission_id=args.mission_id,
+            mission_state=mission_state,
+            records=records,
+            review_items=review_items,
+            flow_audit=flow_audit,
+        )
+    ]
+
+
+def run_operator_dashboard_command(console: JarvisConsole, args: Namespace) -> list[str]:
+    mission_state = (
+        console.get_objective_state(mission_id=args.mission_id)
+        if args.mission_id
+        else None
+    )
+    memory_service = _memory_service_from_args(args)
+    evolution_service = _evolution_service_from_args(args)
+    records = memory_service.list_experience_reflections(
+        mission_id=args.mission_id,
+        workflow_profile=args.workflow_profile,
+        limit=max(1, args.limit),
+    )
+    review_items = evolution_service.list_human_review_queue(limit=max(1, args.limit))
+    flow_audit = (
+        console.orchestrator.observability_service.audit_flow(
+            ObservabilityQuery(mission_id=args.mission_id, limit=100)
+        )
+        if args.mission_id
+        else None
+    )
+    return [
+        render_operator_dashboard(
             mission_id=args.mission_id,
             mission_state=mission_state,
             records=records,
@@ -835,10 +1392,22 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "evolution-review"
         else run_mission_cycle_command(console, args)
         if args.command == "mission-cycle"
+        else run_operator_dashboard_command(console, args)
+        if args.command == "operator-dashboard"
         else run_mission_workflow_command(console, args)
         if args.command == "mission-workflow"
         else run_technology_candidates_command(args)
         if args.command == "technology-candidates"
+        else run_work_item_command(console, args)
+        if args.command == "work-item"
+        else run_work_items_command(console, args)
+        if args.command == "work-items"
+        else run_artifact_command(console, args)
+        if args.command == "artifact"
+        else run_artifacts_command(console, args)
+        if args.command == "artifacts"
+        else run_goal_strategy_command(console, args)
+        if args.command == "goal-strategy"
         else run_objective_command(console, args)
         if args.command == "objective"
         else run_objectives_command(console, args)
@@ -849,11 +1418,17 @@ def main(argv: list[str] | None = None) -> int:
         "ask",
         "objective",
         "objectives",
+        "work-item",
+        "work-items",
+        "artifact",
+        "artifacts",
+        "goal-strategy",
         "technology-candidates",
         "experience-reflections",
         "evolution-review-queue",
         "evolution-review",
         "mission-cycle",
+        "operator-dashboard",
         "mission-workflow",
     }:
         print(outputs[0])

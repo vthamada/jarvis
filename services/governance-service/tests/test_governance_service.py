@@ -3,6 +3,7 @@ from governance_service.service import GovernanceAssessment, GovernanceService
 from shared.contracts import (
     DeliberativePlanContract,
     InputContract,
+    MissionStateContract,
     SpecialistBoundaryContract,
     SpecialistInvocationContract,
     SpecialistSelectionContract,
@@ -11,6 +12,8 @@ from shared.types import (
     ChannelType,
     InputType,
     MemoryClass,
+    MissionId,
+    MissionStatus,
     PermissionDecision,
     RequestId,
     RiskLevel,
@@ -137,6 +140,127 @@ def test_governance_service_conditions_local_safe_operations_that_close_loop() -
     assert result.governance_decision.requires_audit is True
     assert result.governance_decision.conditions
     assert result.governance_check.open_loops == ["alinhar checkpoint principal"]
+
+
+def test_governance_allows_bounded_work_item_creation() -> None:
+    service = GovernanceService()
+    result = service.assess_work_item_transition(
+        contract=InputContract(
+            request_id=RequestId("req-work-item-create"),
+            session_id=SessionId("sess-work-item-create"),
+            mission_id=MissionId("mission-work-item-create"),
+            channel=ChannelType.CONSOLE,
+            input_type=InputType.STRUCTURED_PAYLOAD,
+            content="work_item_transition:create",
+            timestamp="2026-05-18T00:00:00Z",
+        ),
+        current_state=MissionStateContract(
+            mission_id=MissionId("mission-work-item-create"),
+            mission_goal="Plan rollout",
+            mission_status=MissionStatus.ACTIVE,
+            checkpoints=[],
+            updated_at="2026-05-18T00:00:00Z",
+        ),
+        requested_transition="create",
+        requested_work_item_ref="work-item://mission-work-item-create/validate-plan",
+        requested_next_action_ref=None,
+        requested_by_service="orchestrator-service",
+    )
+
+    assert result.governance_decision.decision == PermissionDecision.ALLOW_WITH_CONDITIONS
+    assert result.governance_check.subject_type == "work_item_transition"
+    assert result.governance_check.context["memory_write_mode"] == "through_core_only"
+
+
+def test_governance_blocks_work_item_transition_with_unbounded_ref() -> None:
+    service = GovernanceService()
+    result = service.assess_work_item_transition(
+        contract=InputContract(
+            request_id=RequestId("req-work-item-block"),
+            session_id=SessionId("sess-work-item-block"),
+            mission_id=MissionId("mission-work-item-block"),
+            channel=ChannelType.CONSOLE,
+            input_type=InputType.STRUCTURED_PAYLOAD,
+            content="work_item_transition:create",
+            timestamp="2026-05-18T00:00:00Z",
+        ),
+        current_state=MissionStateContract(
+            mission_id=MissionId("mission-work-item-block"),
+            mission_goal="Plan rollout",
+            mission_status=MissionStatus.ACTIVE,
+            checkpoints=[],
+            updated_at="2026-05-18T00:00:00Z",
+        ),
+        requested_transition="create",
+        requested_work_item_ref="work-item://unsafe\nspoof",
+        requested_next_action_ref=None,
+        requested_by_service="orchestrator-service",
+    )
+
+    assert result.governance_decision.decision == PermissionDecision.BLOCK
+    assert result.governance_decision.containment_hint == "block_unbounded_work_item_ref"
+
+
+def test_governance_allows_bounded_artifact_registration() -> None:
+    service = GovernanceService()
+    result = service.assess_artifact_lifecycle_transition(
+        contract=InputContract(
+            request_id=RequestId("req-artifact-register"),
+            session_id=SessionId("sess-artifact-register"),
+            mission_id=MissionId("mission-artifact-register"),
+            channel=ChannelType.CONSOLE,
+            input_type=InputType.STRUCTURED_PAYLOAD,
+            content="artifact_lifecycle_transition:register",
+            timestamp="2026-05-18T00:00:00Z",
+        ),
+        current_state=MissionStateContract(
+            mission_id=MissionId("mission-artifact-register"),
+            mission_goal="Plan rollout",
+            mission_status=MissionStatus.ACTIVE,
+            checkpoints=[],
+            updated_at="2026-05-18T00:00:00Z",
+        ),
+        requested_transition="register",
+        requested_artifact_ref="artifact://mission-artifact-register/plan/v1",
+        requested_replacement_artifact_ref=None,
+        requested_rollback_plan_ref="rollback://mission-artifact-register/plan/v1",
+        requested_by_service="orchestrator-service",
+    )
+
+    assert result.governance_decision.decision == PermissionDecision.ALLOW_WITH_CONDITIONS
+    assert result.governance_check.subject_type == "artifact_lifecycle_transition"
+    assert result.governance_check.context["memory_write_mode"] == "through_core_only"
+
+
+def test_governance_blocks_artifact_replacement_without_replacement_ref() -> None:
+    service = GovernanceService()
+    result = service.assess_artifact_lifecycle_transition(
+        contract=InputContract(
+            request_id=RequestId("req-artifact-replace-block"),
+            session_id=SessionId("sess-artifact-replace-block"),
+            mission_id=MissionId("mission-artifact-replace-block"),
+            channel=ChannelType.CONSOLE,
+            input_type=InputType.STRUCTURED_PAYLOAD,
+            content="artifact_lifecycle_transition:replace",
+            timestamp="2026-05-18T00:00:00Z",
+        ),
+        current_state=MissionStateContract(
+            mission_id=MissionId("mission-artifact-replace-block"),
+            mission_goal="Plan rollout",
+            mission_status=MissionStatus.ACTIVE,
+            checkpoints=[],
+            updated_at="2026-05-18T00:00:00Z",
+            artifact_refs=["artifact://mission-artifact-replace-block/plan/v1"],
+        ),
+        requested_transition="replace",
+        requested_artifact_ref="artifact://mission-artifact-replace-block/plan/v1",
+        requested_replacement_artifact_ref=None,
+        requested_rollback_plan_ref=None,
+        requested_by_service="orchestrator-service",
+    )
+
+    assert result.governance_decision.decision == PermissionDecision.BLOCK
+    assert result.governance_decision.containment_hint == "block_missing_replacement_ref"
 
 
 def test_governance_service_defers_when_reframing_goal_with_open_loop() -> None:

@@ -27,6 +27,7 @@ from shared.contracts import (
     EcosystemOperationalStateContract,
     ExperienceRecordContract,
     InputContract,
+    LongHorizonGoalStrategyContract,
     MemoryRecordContract,
     MemoryRecoveryContract,
     MissionContinuityCandidateContract,
@@ -533,6 +534,83 @@ class MemoryService:
 
         return self.repository.fetch_mission_state(mission_id)
 
+    def build_long_horizon_goal_strategy(
+        self,
+        mission_id: str,
+    ) -> LongHorizonGoalStrategyContract | None:
+        """Derive a read-only long-horizon strategy from canonical mission state."""
+
+        mission_state = self.repository.fetch_mission_state(mission_id)
+        if mission_state is None:
+            return None
+
+        milestone_refs = self._merge_unique_strings(
+            list(mission_state.work_item_refs),
+            list(mission_state.checkpoint_refs),
+        )[:8]
+        risk_refs = self._merge_unique_strings(
+            [f"open_loop:{item}" for item in mission_state.open_loops],
+            (
+                [f"objective_status:{mission_state.objective_status}"]
+                if mission_state.objective_status
+                in {"blocked", "paused", "requires_operator_decision"}
+                else []
+            ),
+        )[:6]
+        memory_anchor_refs = self._merge_unique_strings(
+            list(mission_state.related_memories),
+            [f"semantic_focus:{item}" for item in mission_state.semantic_focus],
+            (
+                [f"project_ref:{mission_state.project_ref}"]
+                if mission_state.project_ref
+                else []
+            ),
+            (
+                [f"objective_ref:{mission_state.objective_ref}"]
+                if mission_state.objective_ref
+                else []
+            ),
+        )[:8]
+        evidence_refs = self._merge_unique_strings(
+            list(mission_state.artifact_refs),
+            list(mission_state.active_artifact_refs),
+            list(mission_state.checkpoint_refs),
+            list(mission_state.open_checkpoint_refs),
+        )[:8]
+        generated_from_state_refs = self._merge_unique_strings(
+            [f"mission:{mission_state.mission_id}"],
+            (
+                [f"objective:{mission_state.objective_ref}"]
+                if mission_state.objective_ref
+                else []
+            ),
+            milestone_refs,
+            evidence_refs,
+        )[:10]
+        strategy_status = self._long_horizon_strategy_status(
+            mission_state=mission_state,
+            milestone_refs=milestone_refs,
+            memory_anchor_refs=memory_anchor_refs,
+            evidence_refs=evidence_refs,
+        )
+        strategy_summary = self._long_horizon_strategy_summary(
+            mission_state=mission_state,
+            strategy_status=strategy_status,
+            milestone_refs=milestone_refs,
+            risk_refs=risk_refs,
+        )
+        return LongHorizonGoalStrategyContract(
+            mission_id=MissionId(mission_id),
+            strategy_status=strategy_status,
+            strategy_summary=strategy_summary,
+            milestone_refs=milestone_refs,
+            risk_refs=risk_refs,
+            memory_anchor_refs=memory_anchor_refs,
+            next_action_ref=mission_state.next_action_ref,
+            evidence_refs=evidence_refs,
+            generated_from_state_refs=generated_from_state_refs,
+        )
+
     def transition_objective_state(
         self,
         *,
@@ -569,6 +647,108 @@ class MemoryService:
             open_checkpoint_refs=(
                 [] if mission_status == MissionStatus.COMPLETED else current.open_checkpoint_refs
             ),
+            updated_at=self.now(),
+        )
+        self.repository.upsert_mission_state(updated)
+        return updated
+
+    def transition_work_item_state(
+        self,
+        *,
+        mission_id: str,
+        work_item_ref: str,
+        work_item_status: str,
+        transition_ref: str,
+        next_action_ref: str | None = None,
+    ) -> MissionStateContract | None:
+        """Persist a bounded work item transition in the canonical mission state."""
+
+        current = self.repository.fetch_mission_state(mission_id)
+        if current is None:
+            return None
+
+        work_item_refs = self._merge_unique_strings(
+            list(current.work_item_refs),
+            [work_item_ref],
+        )
+        active_work_items = list(current.active_work_items)
+        if work_item_status == "active":
+            active_work_items = self._merge_unique_strings(
+                active_work_items,
+                [work_item_ref],
+            )
+        else:
+            active_work_items = [
+                item for item in active_work_items if item != work_item_ref
+            ]
+        checkpoint_refs = [
+            *list(current.checkpoint_refs),
+            transition_ref,
+        ][-5:]
+        checkpoints = [
+            *list(current.checkpoints),
+            f"work_item_transition:{transition_ref}",
+        ][-5:]
+        updated = replace(
+            current,
+            checkpoints=checkpoints,
+            checkpoint_refs=checkpoint_refs,
+            work_item_refs=work_item_refs,
+            active_work_items=active_work_items,
+            next_action_ref=next_action_ref or current.next_action_ref,
+            updated_at=self.now(),
+        )
+        self.repository.upsert_mission_state(updated)
+        return updated
+
+    def transition_artifact_lifecycle_state(
+        self,
+        *,
+        mission_id: str,
+        artifact_ref: str,
+        artifact_status: str,
+        transition_ref: str,
+        replacement_artifact_ref: str | None = None,
+    ) -> MissionStateContract | None:
+        """Persist a bounded artifact lifecycle transition in mission state."""
+
+        current = self.repository.fetch_mission_state(mission_id)
+        if current is None:
+            return None
+
+        artifact_refs = self._merge_unique_strings(
+            list(current.artifact_refs),
+            [artifact_ref],
+            [replacement_artifact_ref] if replacement_artifact_ref else [],
+        )
+        active_artifact_refs = list(current.active_artifact_refs)
+        if artifact_status == "active":
+            active_artifact_refs = self._merge_unique_strings(
+                active_artifact_refs,
+                [replacement_artifact_ref or artifact_ref],
+            )
+            if replacement_artifact_ref:
+                active_artifact_refs = [
+                    item for item in active_artifact_refs if item != artifact_ref
+                ]
+        else:
+            active_artifact_refs = [
+                item for item in active_artifact_refs if item != artifact_ref
+            ]
+        checkpoint_refs = [
+            *list(current.checkpoint_refs),
+            transition_ref,
+        ][-5:]
+        checkpoints = [
+            *list(current.checkpoints),
+            f"artifact_lifecycle_transition:{transition_ref}",
+        ][-5:]
+        updated = replace(
+            current,
+            checkpoints=checkpoints,
+            checkpoint_refs=checkpoint_refs,
+            artifact_refs=artifact_refs,
+            active_artifact_refs=active_artifact_refs,
             updated_at=self.now(),
         )
         self.repository.upsert_mission_state(updated)
@@ -3327,6 +3507,51 @@ class MemoryService:
                 if item and item not in merged:
                     merged.append(item)
         return merged
+
+    @staticmethod
+    def _long_horizon_strategy_status(
+        *,
+        mission_state: MissionStateContract,
+        milestone_refs: list[str],
+        memory_anchor_refs: list[str],
+        evidence_refs: list[str],
+    ) -> str:
+        if (
+            mission_state.next_action_ref
+            and milestone_refs
+            and memory_anchor_refs
+            and evidence_refs
+        ):
+            return "ready"
+        if any(
+            [
+                mission_state.next_action_ref,
+                milestone_refs,
+                memory_anchor_refs,
+                evidence_refs,
+                mission_state.open_loops,
+                mission_state.last_recommendation,
+            ]
+        ):
+            return "partial"
+        return "insufficient_state"
+
+    @classmethod
+    def _long_horizon_strategy_summary(
+        cls,
+        *,
+        mission_state: MissionStateContract,
+        strategy_status: str,
+        milestone_refs: list[str],
+        risk_refs: list[str],
+    ) -> str:
+        goal = cls._shorten_memory_hint(mission_state.mission_goal, limit=120)
+        next_action = mission_state.next_action_ref or "missing_next_action"
+        return (
+            f"status={strategy_status}; goal={goal}; "
+            f"milestones={len(milestone_refs)}; risks={len(risk_refs)}; "
+            f"next_action={next_action}; mode=read_only_no_scheduler"
+        )
 
     @staticmethod
     def _ecosystem_state_summary(

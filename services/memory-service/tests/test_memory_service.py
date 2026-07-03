@@ -79,6 +79,145 @@ def test_memory_service_name() -> None:
     assert MemoryService.name == "memory-service"
 
 
+def test_memory_service_transitions_work_item_in_canonical_mission_state() -> None:
+    temp_dir = runtime_dir("memory-work-item-transition")
+    service = MemoryService(
+        database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+    )
+    contract = InputContract(
+        request_id=RequestId("req-work-item-memory"),
+        session_id=SessionId("sess-work-item-memory"),
+        mission_id=MissionId("mission-work-item-memory"),
+        channel=ChannelType.CHAT,
+        input_type=InputType.TEXT,
+        content="Plan the controlled rollout.",
+        timestamp="2026-05-18T00:00:00Z",
+    )
+    service.record_turn(
+        contract,
+        intent="planning",
+        response_text="Plan ready.",
+        deliberative_plan=sample_plan(),
+        governance_decision=PermissionDecision.ALLOW_WITH_CONDITIONS,
+    )
+
+    created = service.transition_work_item_state(
+        mission_id="mission-work-item-memory",
+        work_item_ref="work-item://mission-work-item-memory/validate-plan",
+        work_item_status="active",
+        transition_ref=(
+            "work_item_transition:create:"
+            "work-item://mission-work-item-memory/validate-plan:abc12345"
+        ),
+        next_action_ref="next_action:validate-plan",
+    )
+    paused = service.transition_work_item_state(
+        mission_id="mission-work-item-memory",
+        work_item_ref="work-item://mission-work-item-memory/validate-plan",
+        work_item_status="paused",
+        transition_ref=(
+            "work_item_transition:pause:"
+            "work-item://mission-work-item-memory/validate-plan:def67890"
+        ),
+    )
+
+    assert created is not None
+    assert created.next_action_ref == "next_action:validate-plan"
+    assert "work-item://mission-work-item-memory/validate-plan" in created.work_item_refs
+    assert (
+        "work-item://mission-work-item-memory/validate-plan"
+        in created.active_work_items
+    )
+    assert paused is not None
+    assert "work-item://mission-work-item-memory/validate-plan" in paused.work_item_refs
+    assert (
+        "work-item://mission-work-item-memory/validate-plan"
+        not in paused.active_work_items
+    )
+    assert any(
+        ref.startswith("work_item_transition:pause:")
+        for ref in paused.checkpoint_refs
+    )
+
+
+def test_memory_service_transitions_artifact_lifecycle_in_mission_state() -> None:
+    temp_dir = runtime_dir("memory-artifact-lifecycle")
+    service = MemoryService(
+        database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+    )
+    contract = InputContract(
+        request_id=RequestId("req-artifact-memory"),
+        session_id=SessionId("sess-artifact-memory"),
+        mission_id=MissionId("mission-artifact-memory"),
+        channel=ChannelType.CHAT,
+        input_type=InputType.TEXT,
+        content="Plan the controlled rollout.",
+        timestamp="2026-05-18T00:00:00Z",
+    )
+    service.record_turn(
+        contract,
+        intent="planning",
+        response_text="Plan ready.",
+        deliberative_plan=sample_plan(),
+        governance_decision=PermissionDecision.ALLOW_WITH_CONDITIONS,
+    )
+
+    registered = service.transition_artifact_lifecycle_state(
+        mission_id="mission-artifact-memory",
+        artifact_ref="artifact://mission-artifact-memory/plan/v1",
+        artifact_status="active",
+        transition_ref=(
+            "artifact_lifecycle_transition:register:"
+            "artifact://mission-artifact-memory/plan/v1:abc12345"
+        ),
+    )
+    replaced = service.transition_artifact_lifecycle_state(
+        mission_id="mission-artifact-memory",
+        artifact_ref="artifact://mission-artifact-memory/plan/v1",
+        artifact_status="active",
+        transition_ref=(
+            "artifact_lifecycle_transition:replace:"
+            "artifact://mission-artifact-memory/plan/v1:def67890"
+        ),
+        replacement_artifact_ref="artifact://mission-artifact-memory/plan/v2",
+    )
+    archived = service.transition_artifact_lifecycle_state(
+        mission_id="mission-artifact-memory",
+        artifact_ref="artifact://mission-artifact-memory/plan/v2",
+        artifact_status="archived",
+        transition_ref=(
+            "artifact_lifecycle_transition:archive:"
+            "artifact://mission-artifact-memory/plan/v2:fedcba98"
+        ),
+    )
+
+    assert registered is not None
+    assert "artifact://mission-artifact-memory/plan/v1" in registered.artifact_refs
+    assert (
+        "artifact://mission-artifact-memory/plan/v1"
+        in registered.active_artifact_refs
+    )
+    assert replaced is not None
+    assert "artifact://mission-artifact-memory/plan/v2" in replaced.artifact_refs
+    assert (
+        "artifact://mission-artifact-memory/plan/v2"
+        in replaced.active_artifact_refs
+    )
+    assert (
+        "artifact://mission-artifact-memory/plan/v1"
+        not in replaced.active_artifact_refs
+    )
+    assert archived is not None
+    assert (
+        "artifact://mission-artifact-memory/plan/v2"
+        not in archived.active_artifact_refs
+    )
+    assert any(
+        ref.startswith("artifact_lifecycle_transition:archive:")
+        for ref in archived.checkpoint_refs
+    )
+
+
 def test_memory_service_recovers_empty_context_for_new_session() -> None:
     temp_dir = runtime_dir("memory-empty")
     service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
@@ -421,6 +560,51 @@ def test_memory_service_recovers_mission_hints_in_continuity_priority_order() ->
     assert recovered.mission_hints[1].startswith("open_loops=")
     assert any(item.startswith("mission_goal=") for item in recovered.mission_hints)
     assert any(item.startswith("mission_recommendation=") for item in recovered.mission_hints)
+
+
+def test_memory_service_derives_long_horizon_goal_strategy_read_only() -> None:
+    temp_dir = runtime_dir("memory-long-horizon")
+    service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
+    mission_id = "mission-long-horizon"
+    service.record_turn(
+        InputContract(
+            request_id=RequestId("req-long-horizon"),
+            session_id=SessionId("sess-long-horizon"),
+            mission_id=MissionId(mission_id),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Plan the long horizon rollout.",
+            timestamp="2026-05-20T00:00:00Z",
+        ),
+        intent="planning",
+        response_text="Long horizon rollout plan drafted.",
+        deliberative_plan=sample_plan(),
+        specialist_contributions=sample_specialist_contributions(),
+    )
+    service.transition_work_item_state(
+        mission_id=mission_id,
+        work_item_ref="work-item://mission-long-horizon/validate-plan",
+        work_item_status="active",
+        transition_ref="work_item_transition:create:long-horizon",
+        next_action_ref="next_action:operator-review",
+    )
+    service.transition_artifact_lifecycle_state(
+        mission_id=mission_id,
+        artifact_ref="artifact://mission-long-horizon/plan/v1",
+        artifact_status="active",
+        transition_ref="artifact_lifecycle_transition:register:long-horizon",
+    )
+
+    strategy = service.build_long_horizon_goal_strategy(mission_id)
+
+    assert strategy is not None
+    assert strategy.strategy_status == "ready"
+    assert "mode=read_only_no_scheduler" in strategy.strategy_summary
+    assert "work-item://mission-long-horizon/validate-plan" in strategy.milestone_refs
+    assert "artifact://mission-long-horizon/plan/v1" in strategy.evidence_refs
+    assert strategy.next_action_ref == "next_action:operator-review"
+    assert strategy.memory_write_mode == "read_only"
+    assert strategy.autonomous_scheduling_allowed is False
 
 
 def test_memory_service_detects_related_mission_continuity_within_same_session() -> None:

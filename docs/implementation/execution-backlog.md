@@ -2833,6 +2833,154 @@ preparar uma segunda passada segura com mapa de backlinks.
 - `fora_de_escopo`: deletar documentos; mover docs referenciados pelo Documento-Mestre; mesclar documentos canonicos; alterar arquitetura; abrir funcionalidade.
 - `evidencia_de_fechamento`: `docs/documentation/documentation-cleanup-mb153.md` lista seis moves para `docs/archive/implementation/`, registra ausencia de delecao, ausencia de merge destrutivo e validacao de backlinks antigos.
 
+### MB-154
+
+- `id`: `MB-154`
+- `prioridade`: `P0`
+- `status`: `done`
+- `eixo_do_mestre`: `governanca/planejamento`, `arquitetura/evolucao`
+- `workflow_profile_afetado`: `governance_boundary_workflow`, `operational_readiness_workflow`
+- `micro_objetivo`: criar um mapa mestre de implementacao que decompoe a visao do JARVIS em capacidades, status, dependencias, fases e proximos slices, evitando repriorizacao cega a cada lote.
+- `justificativa_arquitetural`: o backlog micro executa cortes pequenos com seguranca, mas a visao do JARVIS exige uma decomposicao completa de produto/capacidades para enxergar o caminho total sem transformar cada decisao em nova descoberta local.
+- `arquivos/servicos_principais`: `docs/implementation/implementation-master-map.md`, `docs/implementation/execution-backlog.md`, `docs/implementation/unified-gap-and-absorption-backlog.md`, `docs/implementation/v2-adherence-snapshot.md`, `HANDOFF.md`, `CHANGELOG.md`
+- `dependencias`: `MB-153`
+- `criterio_de_aceite`: existe documento ativo acima da fila micro com trilhas de capacidade, status, dependencias, fases, gaps de maior valor, regra de derivacao de MBs e sugestao de proximo lote; o documento nao substitui Documento-Mestre nem `execution-backlog`; gate padrao passa.
+- `gate_minimo`: `python tools/check_mojibake.py .` e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.4`
+- `impacto_no_baseline`: o planejamento deixa de depender apenas de repriorizacao incremental e passa a ter um mapa completo de implementacao orientado por capacidades.
+- `fora_de_escopo`: implementar funcionalidade nova; abrir voz/realtime/browser/computer use; alterar Documento-Mestre; alterar arquitetura runtime; promover capacidades deferred.
+- `evidencia_de_fechamento`: `docs/implementation/implementation-master-map.md` registra tracks `OP`, `COG`, `MEM`, `EVL`, `ACT`, `SPC`, `KNW`, `OBS`, `GOV`, `SFC` e `DOC`, identifica gaps de maior valor e recomenda o lote `MB-155` a `MB-159` como proximo candidato, sem coloca-lo automaticamente em `ready`.
+
+## 4.25 Lote pos-MB-154: Operator Product Utility Baseline
+
+Este lote deriva explicitamente de
+`docs/implementation/implementation-master-map.md` e prioriza utilidade diaria
+do operador antes de abrir capacidades especulativas.
+
+Escopo permitido:
+
+- dashboard textual do operador;
+- ciclo governado de work items;
+- lifecycle minimo de artefatos;
+- metricas de utilidade operacional;
+- raciocinio de objetivos de horizonte longo.
+
+Fora de escopo:
+
+- voz/realtime;
+- UI rica;
+- browser/computer use amplo;
+- scheduler autonomo;
+- integracoes externas amplas;
+- SecurityOS/protective intelligence vertical;
+- autopromocao evolutiva;
+- self-modification ou alteracao de pesos.
+
+### MB-155
+
+- `id`: `MB-155`
+- `prioridade`: `P0`
+- `status`: `done`
+- `eixo_do_mestre`: `superficies/operador`, `observabilidade`, `continuidade`
+- `map_ids`: `OP-006`, `SFC-003`, `OBS-005`
+- `workflow_profile_afetado`: `operational_readiness_workflow`
+- `micro_objetivo`: criar baseline minimo de dashboard textual do operador para consultar missao, objetivo, proximas acoes, experiencia/reflexao, fila evolutiva e sinais de aprendizado revisado em uma unica leitura.
+- `justificativa_arquitetural`: o sistema ja registra, reflete, revisa, influencia e mede, mas o operador ainda precisa de uma tela textual unica para entender o estado diario sem navegar comandos separados.
+- `arquivos/servicos_principais`: `apps/jarvis_console/cli.py`, `apps/jarvis_console/tests/test_console.py`, `docs/implementation/implementation-master-map.md`, `docs/implementation/execution-backlog.md`, `docs/implementation/unified-gap-and-absorption-backlog.md`, `docs/implementation/v2-adherence-snapshot.md`, `HANDOFF.md`, `CHANGELOG.md`
+- `dependencias`: `MB-154`
+- `criterio_de_aceite`: existe comando read-only `operator-dashboard` que agrega estado de missao/objetivo, work items, checkpoints, artefatos, ultima experiencia/reflexao, propostas em revisao, aprendizado revisado e proximo passo do operador; nao escreve memoria, nao promove proposta e nao cria fonte paralela de estado.
+- `gate_minimo`: `pytest apps/jarvis_console/tests/test_console.py` e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `medium`
+- `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: o operador passa a ter um painel CLI minimo para iniciar o dia ou retomar missao com leitura consolidada do ciclo governado.
+- `fora_de_escopo`: criar UI rica; listar todas as missoes sem indice canonico; alterar contratos compartilhados; criar scheduler; criar nova persistencia; promover aprendizado automaticamente.
+- `evidencia_de_fechamento`: `apps/jarvis_console operator-dashboard` renderiza dashboard read-only para escopo de missao ou global; testes cobrem missao com experiencia/reflexao/proposta pendente e estado global vazio.
+
+### MB-156
+
+- `id`: `MB-156`
+- `prioridade`: `P0`
+- `status`: `done`
+- `eixo_do_mestre`: `continuidade/objetivos`, `governanca`, `operacao`
+- `map_ids`: `OP-004`, `COG-010`, `GOV-007`
+- `workflow_profile_afetado`: `operational_readiness_workflow`, `decision_risk_workflow`
+- `micro_objetivo`: tornar work items objetos operacionais governados no console, com criacao, atualizacao de status e fechamento passando por governanca e memoria canonica.
+- `justificativa_arquitetural`: work items ja existem como refs em `MissionStateContract`, mas ainda nao sao conduzidos como objetos operacionais de primeira classe pelo operador.
+- `arquivos/servicos_principais`: `shared/contracts`, `shared/schemas`, `shared/events`, `services/memory-service`, `services/orchestrator-service`, `apps/jarvis_console`, `tests`
+- `dependencias`: `MB-155`
+- `criterio_de_aceite`: o operador consegue criar, consultar, pausar/bloquear/concluir e redefinir proxima acao de work item por comando governado; eventos auditaveis e estado de missao refletem a mudanca; transicoes inseguras sao bloqueadas.
+- `gate_minimo`: testes unitarios/direcionados do console, memoria/orquestrador afetados e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: work items deixam de ser apenas refs passivos e passam a ter ciclo operacional minimo governado por console, governanca, memoria canonica e eventos auditaveis.
+- `fora_de_escopo`: scheduler autonomo; atribuicao automatica de tarefas; integracoes externas; UI rica; mover work items para armazenamento paralelo fora da memoria canonica.
+- `evidencia_de_fechamento`: `work-item` cria, pausa, bloqueia, conclui e redefine proxima acao de work item via `orchestrator-service`; `work-items` consulta o estado; `MemoryService.transition_work_item_state()` atualiza `MissionStateContract`; `work_item_state_changed` e `mission_updated` registram a transicao.
+
+### MB-157
+
+- `id`: `MB-157`
+- `prioridade`: `P0`
+- `status`: `done`
+- `eixo_do_mestre`: `artefatos`, `memoria`, `operacao`
+- `map_ids`: `OP-005`, `ACT-004`, `MEM-006`
+- `workflow_profile_afetado`: `operational_readiness_workflow`, `software_change_workflow`
+- `micro_objetivo`: criar registry minimo de lifecycle de artefatos vivos com refs, versoes, status, missao proprietaria, objetivo relacionado e metadados de substituicao/rollback.
+- `justificativa_arquitetural`: artefatos ja aparecem no estado operacional, mas ainda faltam identidade duravel e lifecycle governado para uso diario.
+- `arquivos/servicos_principais`: `shared/contracts`, `services/memory-service`, `services/operational-service`, `apps/jarvis_console`, `tests`
+- `dependencias`: `MB-156`
+- `criterio_de_aceite`: artefatos podem ser registrados, consultados e vinculados a missao/objetivo/work item sem quebrar governanca nem criar escrita fora do core.
+- `gate_minimo`: testes direcionados de contratos/memoria/console e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: artefatos vivos passam a ter lifecycle minimo governado por console, governanca, memoria canonica e eventos auditaveis, sem file adapter nem mutacao fisica de arquivos.
+- `fora_de_escopo`: ler, mover, deletar ou editar arquivos reais; versionamento rico; registry externo; lifecycle multicanal; promocao automatica.
+- `evidencia_de_fechamento`: `artifact` registra, ativa, arquiva, substitui e rollbacka refs de artefato bounded; `artifacts` consulta estado read-only; `ArtifactLifecycleStateContract` e `artifact_lifecycle_state_changed` registram a transicao; `MemoryService.transition_artifact_lifecycle_state()` atualiza `MissionStateContract`.
+
+### MB-158
+
+- `id`: `MB-158`
+- `prioridade`: `P1`
+- `status`: `done`
+- `eixo_do_mestre`: `observabilidade`, `produto_operador`, `evolucao`
+- `map_ids`: `OBS-005`, `OBS-009`, `EVL-005`
+- `workflow_profile_afetado`: `operational_readiness_workflow`
+- `micro_objetivo`: medir utilidade operacional do JARVIS para o operador a partir de missoes retomadas, work items fechados, memoria reutilizada, repeticao reduzida e impacto de aprendizado revisado.
+- `justificativa_arquitetural`: o sistema precisa medir valor diario real, nao apenas saude de infraestrutura.
+- `arquivos/servicos_principais`: `services/observability-service`, `tools/internal_pilot_report.py`, `tools/compare_orchestrator_paths.py`, `apps/jarvis_console`, `tests`
+- `dependencias`: `MB-156`, `MB-157`
+- `criterio_de_aceite`: relatorios e dashboard expoem metricas compactas de utilidade, com limitacoes claras e sem tratar ganho local como promocao automatica.
+- `gate_minimo`: testes direcionados de observabilidade/relatorios/console e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `medium`
+- `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: observabilidade e dashboard passam a expor `operator_usefulness_status`, `operator_usefulness_score` e `operator_usefulness_signals`, medindo valor operacional sem tratar sinal local como promocao automatica.
+- `evidencia_de_fechamento`: `FlowAudit` calcula sinais compactos de utilidade a partir de objetivo consultado, work items, artefatos, proxima acao, memoria causal, experiencia/reflexao e aprendizado revisado; `operator-dashboard` exibe esses campos.
+
+### MB-159
+
+- `id`: `MB-159`
+- `prioridade`: `P1`
+- `status`: `done`
+- `eixo_do_mestre`: `planejamento`, `memoria`, `continuidade`
+- `map_ids`: `COG-010`, `MEM-005`, `MEM-006`
+- `workflow_profile_afetado`: `strategic_direction_workflow`, `operational_readiness_workflow`
+- `micro_objetivo`: adicionar raciocinio minimo de objetivo de horizonte longo com estrategia, marcos, riscos, anchors de memoria e evolucao da proxima acao entre sessoes.
+- `justificativa_arquitetural`: a visao do JARVIS exige ajudar em objetivos persistentes, mas isso deve nascer sobre work items, artefatos e metricas, nao como planejamento abstrato solto.
+- `arquivos/servicos_principais`: `engines/planning-engine`, `services/memory-service`, `services/orchestrator-service`, `engines/synthesis-engine`, `apps/jarvis_console`, `tests`
+- `dependencias`: `MB-156`, `MB-157`, `MB-158`
+- `criterio_de_aceite`: planejamento/sintese conseguem mostrar estrategia de horizonte longo ligada a memoria e estado operacional, com proximas acoes auditaveis e sem scheduler autonomo.
+- `gate_minimo`: testes direcionados de planning/memoria/orquestracao/sintese/console e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.4`
+- `impacto_no_baseline`: o sistema passa a derivar uma estrategia minima de horizonte longo a partir de `MissionStateContract`, work items, artefatos, checkpoints, anchors de memoria e proxima acao auditavel, sem scheduler autonomo.
+- `evidencia_de_fechamento`: `LongHorizonGoalStrategyContract`, `LONG_HORIZON_GOAL_STRATEGY_SCHEMA`, evento `long_horizon_goal_strategy_declared`, `MemoryService.build_long_horizon_goal_strategy()`, `OrchestratorService.inspect_long_horizon_goal_strategy()`, comando `goal-strategy` e sintese final mostram a leitura read-only de estrategia de horizonte longo.
+
 ## 5. Regras de manutencao da fila
 
 - o proximo item puxado deve ser o primeiro `ready` de maior prioridade sem dependencia aberta;
@@ -2917,6 +3065,12 @@ Estado atual da fila:
 - `MB-151` foi concluido como auditoria documental governada oficial, sem mover, deletar, renomear, mesclar ou remover arquivos;
 - `MB-152` foi concluido como mapa de backlinks e sincronizacao segura de documentos ativos defasados, sem mover, deletar, renomear ou mesclar documentos;
 - `MB-153` foi concluido como primeiro archive fisico conservador: seis documentos historicos de implementacao foram movidos para `docs/archive/implementation/`, backlinks literais foram reescritos e nenhum documento foi deletado ou mesclado destrutivamente;
-- nao ha novo item `ready`; o proximo movimento documental ou funcional deve nascer de decisao humana explicita e plano separado;
+- `MB-154` foi concluido como `Implementation Master Map`, consolidando tudo que precisa ser implementado em trilhas, capacidades, status, dependencias, fases e proximos candidatos;
+- `MB-155` foi concluido como baseline minimo de dashboard textual do operador por `operator-dashboard`;
+- `MB-156` foi concluido como ciclo governado minimo de work items por console, governanca, memoria canonica e eventos auditaveis;
+- `MB-157` foi concluido como lifecycle minimo de artefatos vivos por console, governanca, memoria canonica e eventos auditaveis;
+- `MB-158` foi concluido como metricas compactas de utilidade operacional em observabilidade e dashboard;
+- `MB-159` foi concluido como raciocinio minimo de objetivos de horizonte longo, fechando o lote `MB-155` a `MB-159`;
+- nao ha item `ready` atual; a proxima puxada deve nascer de repriorizacao explicita a partir de `docs/implementation/implementation-master-map.md`;
 - `SO-001`, `TA-004`, `TA-006` e verticais `deferred` continuam fora da fila sem mudanca explicita de fase;
 - `protective intelligence foundation` continua `deferred` e a matriz da Onda 2 segue como insumo, nao como gatilho automatico para abrir nova vertical.

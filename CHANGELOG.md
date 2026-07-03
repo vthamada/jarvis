@@ -121,6 +121,55 @@
 - nenhum documento foi deletado e nenhum merge destrutivo foi executado;
 - `docs/operations/v1-operational-baseline.md`, `docs/roadmap/v1-roadmap.md`, documentos canonicos, ADRs, roadmap ativo, future architecture e protective intelligence permaneceram no lugar por exigirem rastreabilidade ou decisao humana especifica.
 
+### MB-154 cria mapa mestre de implementacao
+
+- criado `docs/implementation/implementation-master-map.md` como decomposicao completa de capacidades, status, dependencias, fases e proximos slices do JARVIS;
+- o mapa separa trilhas de operador, nucleo cognitivo, memoria, evolucao, acoes/tools, especialistas, conhecimento, observabilidade, governanca, superficies e documentacao;
+- `docs/implementation/execution-backlog.md`, `docs/implementation/unified-gap-and-absorption-backlog.md`, `docs/implementation/v2-adherence-snapshot.md` e `HANDOFF.md` foram sincronizados para usar o mapa como fonte de derivacao de novos MBs;
+- nenhum item novo foi colocado automaticamente como `ready`; o proximo lote recomendado e `MB-155` a `MB-159`, focado em utilidade operacional do operador.
+
+### MB-155 cria dashboard textual do operador
+
+- `apps/jarvis_console` ganhou `operator-dashboard` em modo read-only para consolidar missao, objetivo, work items, checkpoints, artefatos, ultima experiencia/reflexao, propostas em revisao e sinais de aprendizado revisado;
+- o dashboard usa memoria, observabilidade e `evolution-lab` existentes, sem criar persistencia paralela, sem escrever memoria e sem promover propostas;
+- `docs/implementation/implementation-master-map.md` marca `OP-006` como `minimum_baseline`;
+- `docs/implementation/execution-backlog.md` abriu o lote `MB-155` a `MB-159`, fechou `MB-155` e deixou `MB-156` como unico item `ready` para ciclo governado de work items.
+
+### MB-156 cria ciclo governado de work items
+
+- `shared/contracts`, `shared/schemas` e `shared/events` agora incluem `WorkItemStateContract`, schema e evento `work_item_state_changed`;
+- `governance-service`, `memory-service` e `orchestrator-service` aplicam transicoes bounded de work item por missao, com bloqueio de refs inseguras, duplicidade, missao inexistente ou terminal;
+- `apps/jarvis_console` ganhou `work-item` para criar, retomar, pausar, bloquear, concluir e redefinir proxima acao, e `work-items` para consulta read-only;
+- `docs/implementation/implementation-master-map.md` marca `OP-004` como `minimum_baseline`;
+- `docs/implementation/execution-backlog.md` fechou `MB-156` e deixou `MB-157` como unico item `ready` para lifecycle minimo de artefatos vivos.
+
+### MB-157 cria lifecycle minimo de artefatos vivos
+
+- `shared/contracts`, `shared/schemas` e `shared/events` agora incluem `ArtifactLifecycleStateContract`, schema e evento `artifact_lifecycle_state_changed`;
+- `governance-service`, `memory-service` e `orchestrator-service` aplicam transicoes bounded de artefato por missao, com refs, versao, owner mission, objetivo, work item, substituicao e rollback metadata;
+- `apps/jarvis_console` ganhou `artifact` para registrar, ativar, arquivar, substituir e rollbackar refs de artefato, e `artifacts` para consulta read-only;
+- a transicao nao le, move, deleta nem edita arquivos reais; ela atualiza apenas estado canonico e eventos auditaveis;
+- `docs/implementation/implementation-master-map.md` marca `OP-005` e `ACT-004` como `minimum_baseline`;
+- `docs/implementation/execution-backlog.md` fechou `MB-157` e deixou `MB-158` como unico item `ready` para metricas de utilidade operacional.
+
+### MB-158 adiciona metricas de utilidade operacional
+
+- `observability-service` agora calcula `operator_usefulness_status`, `operator_usefulness_score` e `operator_usefulness_signals` em `FlowAudit`;
+- os sinais combinam objetivo consultado, work items, artefatos, proxima acao, memoria causal, experiencia/reflexao e aprendizado revisado;
+- `apps/jarvis_console operator-dashboard` exibe essas metricas para o operador;
+- as metricas medem utilidade operacional, mas nao promovem aprendizado, nao liberam release e nao criam autonomia adicional;
+- `docs/implementation/implementation-master-map.md` marca `OBS-005` como `minimum_baseline`;
+- `docs/implementation/execution-backlog.md` fechou `MB-158` e deixou `MB-159` como unico item `ready` para raciocinio minimo de objetivos de horizonte longo.
+
+### MB-159 adiciona estrategia minima de horizonte longo
+
+- `shared/contracts`, `shared/schemas` e `shared/events` agora incluem `LongHorizonGoalStrategyContract`, `LONG_HORIZON_GOAL_STRATEGY_SCHEMA` e `long_horizon_goal_strategy_declared`;
+- `memory-service` deriva estrategia read-only de horizonte longo a partir de `MissionStateContract`, work items, artefatos, checkpoints, anchors de memoria, riscos e proxima acao;
+- `orchestrator-service` expoe `inspect_long_horizon_goal_strategy()` com evento auditavel e `memory_write_mode=read_only`;
+- `synthesis-engine` mostra `Estrategia de horizonte longo` quando ha estado operacional suficiente, deixando explicito `read_only_no_scheduler`;
+- `apps/jarvis_console goal-strategy` mostra a leitura ao operador sem escrever memoria, sem executar passos e sem scheduler autonomo;
+- `docs/implementation/execution-backlog.md` fechou `MB-159` e o lote `MB-155` a `MB-159`; nao ha item `ready` atual sem nova repriorizacao explicita.
+
 ### MB-126 abre experiencia e reflexao pos-tarefa governada
 
 - `docs/implementation/execution-backlog.md` abriu o lote `MB-126` a `MB-131`, com `MB-127` como proximo item `ready`;
