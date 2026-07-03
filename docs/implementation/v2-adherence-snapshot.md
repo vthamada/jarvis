@@ -31,7 +31,7 @@ Estado de referencia desta revisao:
 - data da fotografia: `2026-05-17`
 - ultimo recorte funcional fechado: `v2-native-memory-scope-hardening-cut`
 - ultimo recorte estrutural fechado: `v2-repository-hygiene-and-tools-review-cut`
-- passo funcional em andamento: lotes `MB-062` a `MB-150` concluidos ate leitura operacional e medicao de aprendizado revisado; `MB-151` foi fechado como auditoria documental governada oficial; `MB-152` foi fechado como mapa de backlinks e sincronizacao segura de docs ativos; `MB-153` foi fechado como archive fisico conservador de historico de implementacao; `MB-154` foi fechado como mapa mestre de implementacao; `MB-155` foi fechado como dashboard textual minimo do operador; `MB-156` foi fechado como ciclo governado minimo de work items; `MB-157` foi fechado como lifecycle minimo de artefatos vivos; `MB-158` foi fechado como metricas de utilidade operacional; `MB-159` foi fechado como raciocinio minimo de objetivos de horizonte longo; nao ha item `ready` atual.
+- passo funcional em andamento: lotes `MB-062` a `MB-150` concluidos ate leitura operacional e medicao de aprendizado revisado; `MB-151` foi fechado como auditoria documental governada oficial; `MB-152` foi fechado como mapa de backlinks e sincronizacao segura de docs ativos; `MB-153` foi fechado como archive fisico conservador de historico de implementacao; `MB-154` foi fechado como mapa mestre de implementacao; `MB-155` foi fechado como dashboard textual minimo do operador; `MB-156` foi fechado como ciclo governado minimo de work items; `MB-157` foi fechado como lifecycle minimo de artefatos vivos; `MB-158` foi fechado como metricas de utilidade operacional; `MB-159` foi fechado como raciocinio minimo de objetivos de horizonte longo; `MB-160` abriu a fila maior `MB-161` a `MB-174`; `MB-161` e o unico item tecnico `ready`.
 
 Leitura executiva:
 
@@ -150,6 +150,11 @@ Leitura executiva:
   `LongHorizonGoalStrategyContract`, memoria, orquestrador, sintese e console
   agora expõem estrategia read-only com marcos, riscos, anchors de memoria,
   evidencias e proxima acao auditavel, sem scheduler autonomo.
+- `MB-160` foi fechado como repriorizacao pos-`MB-159` a partir de
+  `docs/implementation/implementation-master-map.md`: a fila maior
+  `MB-161` a `MB-174` prioriza memoria causal, autonomia runtime, promocao
+  governada, cockpit, feedback, dominios/evals, proveniencia e readiness;
+  `MB-161` e o unico item tecnico `ready`.
 - o contrato canonico da rota ativa passou a atravessar tambem o `planning` e a influenciar a `synthesis`, reduzindo a distancia entre memoria guiada disponivel e comportamento final do runtime.
 - esse contrato agora tambem molda passos, restricoes, criterios de sucesso e checkpoint/gate governado do plano, e ja aparece na leitura final como objetivo, entrega esperada, foco de leitura e workflow ativo da rota promovida.
 - esse mesmo slice soberano agora tambem atravessa `operation_dispatch`, `workflow_*` e `operation_completed`, e a observabilidade passou a marcar drift quando objetivo, entregaveis, foco de sucesso, foco final e telemetria deixam de bater entre composicao e execucao.

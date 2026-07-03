@@ -2981,6 +2981,319 @@ Fora de escopo:
 - `impacto_no_baseline`: o sistema passa a derivar uma estrategia minima de horizonte longo a partir de `MissionStateContract`, work items, artefatos, checkpoints, anchors de memoria e proxima acao auditavel, sem scheduler autonomo.
 - `evidencia_de_fechamento`: `LongHorizonGoalStrategyContract`, `LONG_HORIZON_GOAL_STRATEGY_SCHEMA`, evento `long_horizon_goal_strategy_declared`, `MemoryService.build_long_horizon_goal_strategy()`, `OrchestratorService.inspect_long_horizon_goal_strategy()`, comando `goal-strategy` e sintese final mostram a leitura read-only de estrategia de horizonte longo.
 
+## 4.26 Lote pos-MB-159: Core Usefulness Expansion Queue
+
+Este lote deriva explicitamente de
+`docs/implementation/implementation-master-map.md` depois do fechamento de
+`MB-159`. A fila e maior para dar visao de caminho, mas preserva `WIP limit = 1`:
+apenas `MB-161` entra como `ready`; os demais ficam `blocked` por ordem e
+dependencia.
+
+Tese da repriorizacao:
+
+- o gargalo atual nao e criar mais infraestrutura solta;
+- o proximo valor esta em tornar memoria, governanca, evolucao, cockpit,
+  dominios e qualidade mais causais e utilizaveis pelo operador;
+- capacidades deferred continuam fora da fase.
+
+Escopo permitido:
+
+- influencia semantica/procedural de memoria com evidencias;
+- auditoria de memoria usada e nao usada;
+- autonomia como contrato runtime governado;
+- checklist e gate de promocao sandbox-to-release;
+- cockpit textual do operador;
+- feedback explicito do operador;
+- onboarding de dominios e evals por dominio;
+- proveniencia/freshness de conhecimento;
+- dashboard de regressao/readiness.
+
+Fora de escopo:
+
+- voz/realtime;
+- UI rica;
+- browser/computer use amplo;
+- scheduler autonomo;
+- file adapter amplo;
+- API publica/web;
+- SecurityOS/protective intelligence vertical;
+- integracoes externas amplas;
+- auto-promocao evolutiva;
+- self-modification ou alteracao de pesos.
+
+### MB-160
+
+- `id`: `MB-160`
+- `prioridade`: `P0`
+- `status`: `done`
+- `eixo_do_mestre`: `governanca/planejamento`, `documentacao`, `execucao`
+- `map_ids`: `DOC-002`, `DOC-003`, `DOC-004`, `DOC-007`
+- `workflow_profile_afetado`: `governance_boundary_workflow`, `operational_readiness_workflow`
+- `micro_objetivo`: repriorizar a fila pos-`MB-159` a partir do mapa mestre, criando uma fila maior de implementacao sem abrir capacidades fora de fase.
+- `justificativa_arquitetural`: o `implementation-master-map` agora permite enxergar o caminho completo; a fila micro precisa capturar um horizonte maior sem abandonar WIP controlado.
+- `arquivos/servicos_principais`: `docs/implementation/implementation-master-map.md`, `docs/implementation/execution-backlog.md`, `docs/implementation/unified-gap-and-absorption-backlog.md`, `docs/implementation/v2-adherence-snapshot.md`, `HANDOFF.md`, `CHANGELOG.md`
+- `dependencias`: `MB-159`
+- `criterio_de_aceite`: existe fila `MB-160` a `MB-174`, derivada dos gaps de maior valor, com status, dependencias, criterios de aceite, gates e apenas um item tecnico `ready`.
+- `gate_minimo`: `python tools/check_mojibake.py .` e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.4`
+- `impacto_no_baseline`: o projeto passa de repriorizacao lote-a-lote para uma fila maior, rastreavel e ainda executavel com WIP 1.
+- `fora_de_escopo`: implementar funcionalidade; alterar Documento-Mestre; abrir voz/realtime/browser/computer use; promover capabilities deferred.
+- `evidencia_de_fechamento`: este lote registra `MB-161` como unico item tecnico `ready` e `MB-162` a `MB-174` como `blocked` por dependencia/ordem.
+
+### MB-161
+
+- `id`: `MB-161`
+- `prioridade`: `P0`
+- `status`: `ready`
+- `eixo_do_mestre`: `memoria`, `planejamento`, `sintese`, `observabilidade`
+- `map_ids`: `MEM-005`, `COG-007`, `OBS-005`
+- `workflow_profile_afetado`: `strategic_direction_workflow`, `operational_readiness_workflow`
+- `micro_objetivo`: tornar a influencia de memoria semantica mais causal, com anchors de evidencia, motivos de relevancia e motivos auditaveis de nao uso.
+- `justificativa_arquitetural`: memoria ja aparece no runtime, mas ainda precisa explicar de forma mais forte por que influenciou ou nao influenciou plano/sintese.
+- `arquivos/servicos_principais`: `services/memory-service`, `engines/planning-engine`, `engines/synthesis-engine`, `services/orchestrator-service`, `services/observability-service`, `apps/jarvis_console`, `tests`
+- `dependencias`: `MB-160`
+- `criterio_de_aceite`: planning/synthesis recebem e exibem anchors semanticos relevantes, refs de evidencia e razoes de uso/nao uso; observabilidade registra o sinal; testes cobrem memoria, planning/synthesis e console/dashboard afetado.
+- `gate_minimo`: testes direcionados de memoria/planning/synthesis/observabilidade/console e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.3-codex`
+
+### MB-162
+
+- `id`: `MB-162`
+- `prioridade`: `P0`
+- `status`: `blocked`
+- `eixo_do_mestre`: `memoria`, `artefatos`, `evolucao`
+- `map_ids`: `MEM-006`, `ACT-004`, `EVL-007`
+- `workflow_profile_afetado`: `operational_readiness_workflow`, `software_change_workflow`
+- `micro_objetivo`: criar baseline de memoria procedural/playbooks derivados de procedimentos repetidos, artefatos e reflexoes revisadas, sem promocao automatica.
+- `justificativa_arquitetural`: o JARVIS precisa reaproveitar modos de trabalho, nao apenas fatos semanticos, mas isso deve nascer como candidato governado.
+- `arquivos/servicos_principais`: `services/memory-service`, `evolution/evolution-lab`, `services/orchestrator-service`, `apps/jarvis_console`, `tests`
+- `dependencias`: `MB-161`
+- `criterio_de_aceite`: procedimentos recorrentes podem ser registrados como candidatos bounded com evidencia, rollback e revisao humana; nenhum playbook vira regra ativa sem gate.
+- `gate_minimo`: testes direcionados de memoria/evolution-lab/console e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.3-codex`
+
+### MB-163
+
+- `id`: `MB-163`
+- `prioridade`: `P0`
+- `status`: `blocked`
+- `eixo_do_mestre`: `memoria`, `observabilidade`, `produto_operador`
+- `map_ids`: `MEM-005`, `MEM-006`, `OP-006`, `OBS-005`
+- `workflow_profile_afetado`: `operational_readiness_workflow`
+- `micro_objetivo`: expor ao operador quais memorias e procedimentos influenciaram a missao, por que foram selecionados e quais foram ignorados.
+- `justificativa_arquitetural`: memoria causal so e confiavel se o operador conseguir auditar uso, nao uso e relevancia.
+- `arquivos/servicos_principais`: `services/observability-service`, `services/memory-service`, `apps/jarvis_console`, `tests`
+- `dependencias`: `MB-161`, `MB-162`
+- `criterio_de_aceite`: console/dashboard mostra memoria usada, memoria ignorada, razoes e evidencias sem escrever memoria nem alterar decisao final.
+- `gate_minimo`: testes direcionados de observabilidade/console e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `medium`
+- `modelo_recomendado`: `gpt-5.3-codex`
+
+### MB-164
+
+- `id`: `MB-164`
+- `prioridade`: `P0`
+- `status`: `blocked`
+- `eixo_do_mestre`: `governanca`, `soberania`, `politica_runtime`
+- `map_ids`: `GOV-007`, `COG-001`, `ACT-002`
+- `workflow_profile_afetado`: `governance_boundary_workflow`, `decision_risk_workflow`
+- `micro_objetivo`: formalizar `autonomy_ladder` como contrato compartilhado runtime, com niveis, limites, confirmacoes humanas e capacidade maxima permitida por request/missao.
+- `justificativa_arquitetural`: autonomia nao pode permanecer apenas como texto; o runtime precisa carregar explicitamente o nivel permitido.
+- `arquivos/servicos_principais`: `shared/contracts`, `shared/schemas`, `shared/events`, `services/governance-service`, `services/orchestrator-service`, `tests`
+- `dependencias`: `MB-163`
+- `criterio_de_aceite`: existe contrato/schema/evento de autonomia; requests e missoes podem declarar nivel permitido; nenhum nivel concede autopromocao ou bypass de governanca.
+- `gate_minimo`: testes direcionados de shared/governance/orchestrator e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.4`
+
+### MB-165
+
+- `id`: `MB-165`
+- `prioridade`: `P0`
+- `status`: `blocked`
+- `eixo_do_mestre`: `governanca`, `operacao`, `ferramentas`
+- `map_ids`: `GOV-007`, `GOV-005`, `ACT-002`, `ACT-003`
+- `workflow_profile_afetado`: `governance_boundary_workflow`, `operational_readiness_workflow`
+- `micro_objetivo`: aplicar a autonomia permitida em governanca, dispatch operacional e console, bloqueando acoes acima do nivel autorizado.
+- `justificativa_arquitetural`: contrato de autonomia so tem valor se afetar autorizacao real de capacidade e operacao.
+- `arquivos/servicos_principais`: `services/governance-service`, `services/orchestrator-service`, `services/operational-service`, `apps/jarvis_console`, `tests`
+- `dependencias`: `MB-164`
+- `criterio_de_aceite`: decisoes e eventos mostram nivel de autonomia, limite aplicado, motivo de allow/block/defer e acao exigida do operador.
+- `gate_minimo`: testes direcionados de governanca/orquestracao/operacional/console e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.3-codex`
+
+### MB-166
+
+- `id`: `MB-166`
+- `prioridade`: `P1`
+- `status`: `blocked`
+- `eixo_do_mestre`: `evolucao`, `release`, `governanca`
+- `map_ids`: `EVL-006`, `GOV-009`, `DOC-010`
+- `workflow_profile_afetado`: `governance_boundary_workflow`, `operational_readiness_workflow`
+- `micro_objetivo`: definir checklist executavel de promocao sandbox-to-release para aprendizados revisados e candidatos evolutivos.
+- `justificativa_arquitetural`: o sistema ja cria propostas e guidance, mas precisa de caminho explicito, testavel e reversivel para promocao futura.
+- `arquivos/servicos_principais`: `evolution/evolution-lab`, `tools`, `docs/operations`, `shared/contracts`, `tests`
+- `dependencias`: `MB-165`
+- `criterio_de_aceite`: checklist inclui evidencia, testes, rollback, gate, escopo e aprovacao humana; propostas continuam sem promocao automatica.
+- `gate_minimo`: testes direcionados de evolution-lab/tools e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.4`
+
+### MB-167
+
+- `id`: `MB-167`
+- `prioridade`: `P1`
+- `status`: `blocked`
+- `eixo_do_mestre`: `evolucao`, `release`, `observabilidade`
+- `map_ids`: `EVL-006`, `GOV-009`, `OBS-004`
+- `workflow_profile_afetado`: `governance_boundary_workflow`
+- `micro_objetivo`: tornar o checklist de promocao verificavel por runtime/tools, com eventos observaveis e conclusao explicita de release.
+- `justificativa_arquitetural`: promocao governada precisa produzir evidencia auditavel, nao depender de leitura manual solta.
+- `arquivos/servicos_principais`: `evolution/evolution-lab`, `services/observability-service`, `tools/verify_release_signal_baseline.py`, `tools/engineering_gate.py`, `tests`
+- `dependencias`: `MB-166`
+- `criterio_de_aceite`: release/promotion check retorna status, blockers, evidencias e decisao; falhas bloqueiam promocao.
+- `gate_minimo`: testes direcionados de evolution/observability/tools e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.3-codex`
+
+### MB-168
+
+- `id`: `MB-168`
+- `prioridade`: `P1`
+- `status`: `blocked`
+- `eixo_do_mestre`: `superficies/operador`, `continuidade`, `governanca`
+- `map_ids`: `SFC-003`, `OP-003`, `OP-006`, `OP-010`
+- `workflow_profile_afetado`: `operational_readiness_workflow`
+- `micro_objetivo`: expandir cockpit textual do operador para objetivos, work items, artefatos, revisoes, autonomia, memorias usadas e proximas decisoes em uma visao consolidada.
+- `justificativa_arquitetural`: o operador precisa de um cockpit pratico antes de qualquer UI rica ou superficie nova.
+- `arquivos/servicos_principais`: `apps/jarvis_console`, `services/orchestrator-service`, `services/observability-service`, `services/memory-service`, `tests`
+- `dependencias`: `MB-163`, `MB-165`, `MB-167`
+- `criterio_de_aceite`: comando de cockpit mostra estado consolidado read-only, limites, decisoes pendentes e proximo passo; nao escreve memoria nem executa tarefa.
+- `gate_minimo`: testes direcionados de console/orchestrator/observability e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `medium`
+- `modelo_recomendado`: `gpt-5.3-codex`
+
+### MB-169
+
+- `id`: `MB-169`
+- `prioridade`: `P1`
+- `status`: `blocked`
+- `eixo_do_mestre`: `sintese`, `produto_operador`, `continuidade`
+- `map_ids`: `OP-008`, `OBS-005`, `COG-010`
+- `workflow_profile_afetado`: `strategic_direction_workflow`, `operational_readiness_workflow`
+- `micro_objetivo`: gerar relatorio humano compacto de progresso de missao/projeto a partir de estado canonico, experiencia/reflexao, artefatos e estrategia de horizonte longo.
+- `justificativa_arquitetural`: utilidade diaria exige resumo legivel de andamento, riscos e proximas acoes, nao apenas eventos brutos.
+- `arquivos/servicos_principais`: `engines/synthesis-engine`, `services/orchestrator-service`, `apps/jarvis_console`, `services/observability-service`, `tests`
+- `dependencias`: `MB-168`
+- `criterio_de_aceite`: relatorio mostra progresso, pendencias, riscos, artefatos, memoria influente, aprendizados e proxima acao auditavel.
+- `gate_minimo`: testes direcionados de synthesis/orchestrator/console e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `medium`
+- `modelo_recomendado`: `gpt-5.3-codex`
+
+### MB-170
+
+- `id`: `MB-170`
+- `prioridade`: `P1`
+- `status`: `blocked`
+- `eixo_do_mestre`: `experiencia`, `feedback`, `evolucao`
+- `map_ids`: `OP-007`, `MEM-003`, `EVL-002`, `OBS-009`
+- `workflow_profile_afetado`: `operational_readiness_workflow`
+- `micro_objetivo`: capturar feedback explicito do operador apos missoes e injeta-lo em experiencia/reflexao bounded.
+- `justificativa_arquitetural`: aprendizado sem feedback humano explicito fica dependente demais de inferencia operacional.
+- `arquivos/servicos_principais`: `apps/jarvis_console`, `services/memory-service`, `evolution/evolution-lab`, `services/orchestrator-service`, `tests`
+- `dependencias`: `MB-169`
+- `criterio_de_aceite`: operador consegue registrar feedback estruturado; experiencia/reflexao carrega o sinal; proposta evolutiva continua em revisao humana.
+- `gate_minimo`: testes direcionados de console/memory/evolution/orchestrator e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `medium`
+- `modelo_recomendado`: `gpt-5.3-codex`
+
+### MB-171
+
+- `id`: `MB-171`
+- `prioridade`: `P1`
+- `status`: `blocked`
+- `eixo_do_mestre`: `dominios`, `especialistas`, `conhecimento`, `evals`
+- `map_ids`: `SPC-006`, `KNW-007`, `OBS-006`
+- `workflow_profile_afetado`: `governance_boundary_workflow`, `domain_onboarding_workflow`
+- `micro_objetivo`: criar protocolo minimo de onboarding de dominio com criterios, registro, knowledge pack, rota, especialista, testes e evals.
+- `justificativa_arquitetural`: novos dominios nao podem entrar como conteudo solto; precisam de contrato, teste e rota governada.
+- `arquivos/servicos_principais`: `shared/domain_registry.py`, `shared/specialist_registry.py`, `knowledge-service`, `docs/architecture`, `tests`
+- `dependencias`: `MB-170`
+- `criterio_de_aceite`: existe protocolo e baseline de validacao para novo dominio sem promover especialista profundo automaticamente.
+- `gate_minimo`: testes direcionados de registry/knowledge e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.4`
+
+### MB-172
+
+- `id`: `MB-172`
+- `prioridade`: `P1`
+- `status`: `blocked`
+- `eixo_do_mestre`: `evals`, `dominios`, `qualidade`
+- `map_ids`: `OBS-006`, `SPC-006`, `KNW-004`
+- `workflow_profile_afetado`: `domain_onboarding_workflow`
+- `micro_objetivo`: criar baseline de eval pack por dominio/rota promovida, reutilizavel para validar respostas, memoria e especialista.
+- `justificativa_arquitetural`: dominios so devem escalar se houver medicao minima de qualidade e regressao.
+- `arquivos/servicos_principais`: `tools`, `tests`, `shared/domain_registry.py`, `services/observability-service`, `docs/operations`
+- `dependencias`: `MB-171`
+- `criterio_de_aceite`: existe padrao de eval pack e pelo menos um pacote baseline exercitando rota/dominio sem depender de rede externa.
+- `gate_minimo`: testes direcionados de tools/observability e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `medium`
+- `modelo_recomendado`: `gpt-5.3-codex`
+
+### MB-173
+
+- `id`: `MB-173`
+- `prioridade`: `P2`
+- `status`: `blocked`
+- `eixo_do_mestre`: `conhecimento`, `sintese`, `governanca`
+- `map_ids`: `KNW-003`, `KNW-004`, `KNW-008`
+- `workflow_profile_afetado`: `research_synthesis_workflow`, `strategic_direction_workflow`
+- `micro_objetivo`: fortalecer proveniencia, freshness e conflito/incerteza em respostas baseadas em conhecimento.
+- `justificativa_arquitetural`: um assistente de dominios amplos precisa indicar de onde vem a informacao, validade temporal e conflitos.
+- `arquivos/servicos_principais`: `services/knowledge-service`, `engines/synthesis-engine`, `services/governance-service`, `tests`
+- `dependencias`: `MB-172`
+- `criterio_de_aceite`: respostas com conhecimento carregam source refs, freshness status e incertezas quando aplicavel; ausencia de fonte fica visivel.
+- `gate_minimo`: testes direcionados de knowledge/synthesis/governance e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `medium`
+- `modelo_recomendado`: `gpt-5.3-codex`
+
+### MB-174
+
+- `id`: `MB-174`
+- `prioridade`: `P2`
+- `status`: `blocked`
+- `eixo_do_mestre`: `observabilidade`, `qualidade`, `documentacao`
+- `map_ids`: `OBS-007`, `OBS-008`, `DOC-010`
+- `workflow_profile_afetado`: `operational_readiness_workflow`, `governance_boundary_workflow`
+- `micro_objetivo`: consolidar dashboard de regressao/readiness por capacidade, incluindo sinais de testes, gates, docs stale e status drift.
+- `justificativa_arquitetural`: uma fila maior exige leitura de saude acumulada para evitar regressao silenciosa.
+- `arquivos/servicos_principais`: `tools`, `services/observability-service`, `docs/implementation`, `apps/jarvis_console`, `tests`
+- `dependencias`: `MB-173`
+- `criterio_de_aceite`: existe relatorio/CLI compacto de readiness por capacidade e drift documental/status, com gate padrao passando.
+- `gate_minimo`: testes direcionados de tools/observability/console e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `medium`
+- `modelo_recomendado`: `gpt-5.3-codex`
+
 ## 5. Regras de manutencao da fila
 
 - o proximo item puxado deve ser o primeiro `ready` de maior prioridade sem dependencia aberta;
@@ -3071,6 +3384,7 @@ Estado atual da fila:
 - `MB-157` foi concluido como lifecycle minimo de artefatos vivos por console, governanca, memoria canonica e eventos auditaveis;
 - `MB-158` foi concluido como metricas compactas de utilidade operacional em observabilidade e dashboard;
 - `MB-159` foi concluido como raciocinio minimo de objetivos de horizonte longo, fechando o lote `MB-155` a `MB-159`;
-- nao ha item `ready` atual; a proxima puxada deve nascer de repriorizacao explicita a partir de `docs/implementation/implementation-master-map.md`;
+- `MB-160` foi concluido como repriorizacao pos-`MB-159` a partir de `docs/implementation/implementation-master-map.md`, abrindo a fila maior `MB-161` a `MB-174`;
+- `MB-161` e o unico item tecnico `ready` atual, focado em anchors de evidencia para memoria semantica; `MB-162` a `MB-174` permanecem `blocked` por dependencia/ordem;
 - `SO-001`, `TA-004`, `TA-006` e verticais `deferred` continuam fora da fila sem mudanca explicita de fase;
 - `protective intelligence foundation` continua `deferred` e a matriz da Onda 2 segue como insumo, nao como gatilho automatico para abrir nova vertical.

@@ -170,6 +170,14 @@
 - `apps/jarvis_console goal-strategy` mostra a leitura ao operador sem escrever memoria, sem executar passos e sem scheduler autonomo;
 - `docs/implementation/execution-backlog.md` fechou `MB-159` e o lote `MB-155` a `MB-159`; nao ha item `ready` atual sem nova repriorizacao explicita.
 
+### MB-160 reprioriza fila maior pos-MB-159
+
+- `docs/implementation/implementation-master-map.md` ganhou a fila sugerida `MB-160` a `MB-174`, derivada dos maiores gaps atuais;
+- `docs/implementation/execution-backlog.md` materializa a fila `Core Usefulness Expansion Queue`, com `MB-160` fechado como repriorizacao e `MB-161` como unico item tecnico `ready`;
+- `MB-162` a `MB-174` ficam `blocked` por dependencia/ordem, preservando `WIP limit = 1`;
+- a fila prioriza memoria causal, autonomia runtime, promocao sandbox-to-release, cockpit do operador, feedback, dominios/evals, proveniencia de conhecimento e readiness/regressao;
+- capacidades fora de fase continuam excluidas: voz/realtime, UI rica, browser/computer use amplo, scheduler autonomo, SecurityOS, integracoes externas amplas, autopromocao e self-modification.
+
 ### MB-126 abre experiencia e reflexao pos-tarefa governada
 
 - `docs/implementation/execution-backlog.md` abriu o lote `MB-126` a `MB-131`, com `MB-127` como proximo item `ready`;

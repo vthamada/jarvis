@@ -408,7 +408,126 @@ Status: closed as minimum baseline through `LongHorizonGoalStrategyContract`,
 `long_horizon_goal_strategy_declared`, synthesis output and
 `apps/jarvis_console goal-strategy`.
 
-## 11. What Must Not Be Pulled Next By Inertia
+## 11. Suggested MB-160 To MB-174 Queue
+
+This queue is the next larger implementation line derived from the current
+highest-value gaps. It keeps the phase inside `v2_core_depth`: deepen memory,
+governance, operator usefulness, release discipline, domain onboarding and
+quality signals before opening broad surfaces or autonomous tooling.
+
+Execution rule: only the first technical item should be `ready` at a time in
+`execution-backlog.md`. The queue is larger for visibility, not for parallel
+WIP.
+
+### MB-160 -- Reprioritize From Implementation Master Map
+
+Map IDs: `DOC-002`, `DOC-003`, `DOC-004`, `DOC-007`.
+
+Goal: convert the post-`MB-159` state into a larger ordered queue without
+opening deferred capabilities.
+
+Status: closed as planning/reprioritization documentation.
+
+### MB-161 -- Semantic Memory Evidence Anchors
+
+Map IDs: `MEM-005`, `COG-007`, `OBS-005`.
+
+Goal: make semantic memory influence planning and synthesis with explicit
+evidence anchors, relevance reasons and auditable non-use reasons.
+
+Status: next recommended ready item.
+
+### MB-162 -- Procedural Memory Playbook Baseline
+
+Map IDs: `MEM-006`, `ACT-004`, `EVL-007`.
+
+Goal: turn repeated procedures, artifacts and reviewed reflections into bounded
+playbook candidates without automatic promotion.
+
+### MB-163 -- Memory Influence Audit Surface
+
+Map IDs: `MEM-005`, `MEM-006`, `OP-006`, `OBS-005`.
+
+Goal: expose which memories/procedures influenced a mission, why they were
+selected and what was ignored.
+
+### MB-164 -- Runtime Autonomy Ladder Contract
+
+Map IDs: `GOV-007`, `COG-001`, `ACT-002`.
+
+Goal: make autonomy levels a runtime contract rather than documentation-only
+policy.
+
+### MB-165 -- Autonomy Enforcement In Governance And Dispatch
+
+Map IDs: `GOV-007`, `GOV-005`, `ACT-002`, `ACT-003`.
+
+Goal: enforce autonomy level limits in governance, operation dispatch and
+console-visible decisions.
+
+### MB-166 -- Sandbox-To-Release Promotion Checklist
+
+Map IDs: `EVL-006`, `GOV-009`, `DOC-010`.
+
+Goal: define the explicit promotion checklist for reviewed learning and
+sandbox candidates, including tests, rollback and release gates.
+
+### MB-167 -- Promotion Gate Runtime Enforcement
+
+Map IDs: `EVL-006`, `GOV-009`, `OBS-004`.
+
+Goal: make the promotion checklist executable through evolution/release
+services and observable events.
+
+### MB-168 -- Operator Cockpit Expansion
+
+Map IDs: `SFC-003`, `OP-003`, `OP-006`, `OP-010`.
+
+Goal: expand the CLI cockpit for objectives, work items, artifacts, reviews,
+autonomy state and next operator decisions in one governed view.
+
+### MB-169 -- Human-Readable Progress Report
+
+Map IDs: `OP-008`, `OBS-005`, `COG-010`.
+
+Goal: generate a compact mission/project progress report from canonical state,
+experience, reflection, artifacts and long-horizon strategy.
+
+### MB-170 -- Operator Feedback Loop
+
+Map IDs: `OP-007`, `MEM-003`, `EVL-002`, `OBS-009`.
+
+Goal: capture explicit operator feedback after missions and feed it into
+bounded experience/reflection records.
+
+### MB-171 -- Domain Onboarding Protocol
+
+Map IDs: `SPC-006`, `KNW-007`, `OBS-006`.
+
+Goal: define the minimum protocol to promote a new domain: registry entry,
+knowledge pack, route, specialist, tests and evals.
+
+### MB-172 -- Domain-Specific Eval Pack Baseline
+
+Map IDs: `OBS-006`, `SPC-006`, `KNW-004`.
+
+Goal: create the first reusable eval pack pattern for promoted routes/domains.
+
+### MB-173 -- Knowledge Provenance And Freshness
+
+Map IDs: `KNW-003`, `KNW-004`, `KNW-008`.
+
+Goal: strengthen source provenance, freshness status and uncertainty/conflict
+signals in knowledge-backed answers.
+
+### MB-174 -- Regression And Readiness Dashboard
+
+Map IDs: `OBS-007`, `OBS-008`, `DOC-010`.
+
+Goal: consolidate capability readiness, regression signals and stale-doc/status
+drift into a compact CLI/report.
+
+## 12. What Must Not Be Pulled Next By Inertia
 
 Do not open these without explicit phase decision:
 
@@ -424,7 +543,7 @@ Do not open these without explicit phase decision:
 - model weight changes;
 - autonomous promotion of evolution proposals.
 
-## 12. Maintenance Policy
+## 13. Maintenance Policy
 
 This map should be updated when:
 

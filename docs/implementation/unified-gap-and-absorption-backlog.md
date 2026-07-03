@@ -344,6 +344,10 @@ Notas de leitura:
   estrategia read-only deriva de estado de missao, work items, artefatos,
   checkpoints, anchors de memoria e proxima acao auditavel, sem scheduler
   autonomo.
+- `MB-160` foi fechado como repriorizacao pos-`MB-159` a partir do
+  `implementation-master-map`, abrindo uma fila maior `MB-161` a `MB-174`;
+  `MB-161` e o unico item tecnico `ready` e `MB-162` a `MB-174` permanecem
+  bloqueados por dependencia/ordem.
 
 ### 5.5 Deferred verticals already mapped
 
@@ -387,7 +391,7 @@ Ordem recomendada hoje:
 1. tratar `MB-110` a `MB-159` como baseline fechado de objetivos persistentes,
    utilidade operacional, absorcao tecnologica governada, aprendizado revisado,
    higiene documental e horizonte longo minimo.
-2. abrir nova repriorizacao antes de puxar qualquer frente adicional.
+2. executar `MB-161` como primeiro item tecnico da fila maior pos-`MB-160`.
 3. manter `SO-001`, `TA-004`, `TA-006` e verticais `deferred` fora da fila ate
    haver decisao explicita de fase.
 
@@ -447,8 +451,9 @@ Leitura correta:
   `OBS-005` para `minimum_baseline`;
 - `MB-159` foi fechado como raciocinio minimo de objetivos de horizonte longo,
   movendo `COG-010` para um baseline minimo operacional;
-- nao ha item `ready` atual; a proxima fila micro deve nascer de repriorizacao
-  explicita pelo mapa mestre de implementacao;
+- `MB-160` abriu a fila maior `MB-161` a `MB-174`, priorizando memoria causal,
+  autonomia runtime, promocao governada, cockpit, feedback, dominios/evals,
+  proveniencia e readiness; `MB-161` e o unico item `ready`;
 - `RH-*` permanece fora do backlog implementavel.
 
 ---

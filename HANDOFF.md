@@ -150,9 +150,20 @@ de estado de missao, work items, artefatos, checkpoints, anchors de memoria e
 proxima acao auditavel. Isso nao cria scheduler autonomo, nao executa passos
 entre sessoes e nao promove memoria/proposta automaticamente.
 
-O lote `MB-155` a `MB-159` esta fechado. Nao ha item `ready` atual; a proxima
-implementacao deve nascer de repriorizacao explicita a partir de
-`docs/implementation/implementation-master-map.md`.
+O lote `MB-155` a `MB-159` esta fechado. A repriorizacao seguinte deve partir
+de `docs/implementation/implementation-master-map.md`.
+
+`MB-160` foi concluido como essa repriorizacao explicita: o
+`execution-backlog.md` agora carrega uma fila maior `MB-161` a `MB-174`,
+derivada do mapa mestre. A tese da fila e aprofundar utilidade operacional do
+nucleo antes de abrir superficies ou automacoes fora de fase: memoria causal,
+autonomia runtime, promocao sandbox-to-release, cockpit do operador, feedback,
+dominios/evals, proveniencia de conhecimento e readiness/regressao.
+
+`MB-161` e o unico item tecnico `ready` atual. O objetivo e tornar a influencia
+de memoria semantica mais causal, com anchors de evidencia, motivos de
+relevancia e motivos auditaveis de nao uso. `MB-162` a `MB-174` permanecem
+`blocked` por dependencia/ordem.
 
 O corte pos-`MB-125` foi repriorizado em `MB-126`: a proxima frente ativa e
 experiencia operacional + reflexao pos-tarefa governada. O objetivo e fazer o
