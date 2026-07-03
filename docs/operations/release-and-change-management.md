@@ -1,5 +1,17 @@
 # Release And Change Management
 
+## Current documentation baseline
+
+After `MB-152`, documentation cleanup is treated as controlled change. The
+current documentation audit artifacts are:
+
+- `docs/documentation/documentation-canonicality-audit-mb151.md`
+- `docs/documentation/documentation-backlink-map-mb152.md`
+
+No documentation move, delete, rename or merge should be treated as routine if
+the backlink map shows active references or if the document is canonical,
+operational, architectural or tied to governance.
+
 ## 1. Objetivo
 
 Este documento operacionaliza a política de **releases, versionamento e mudança controlada** do JARVIS.

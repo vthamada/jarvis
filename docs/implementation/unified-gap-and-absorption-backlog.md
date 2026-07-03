@@ -315,9 +315,15 @@ Notas de leitura:
   transformou a repriorizacao pos-`MB-150` em inventario, classificacao,
   clusters, riscos e recomendacao de proximo recorte, sem executar limpeza
   documental ampla nem abrir nova funcionalidade.
-- `MB-152` foi aberto no backlog micro como unico item `ready`: gerar mapa de
-  backlinks e sincronizar documentos ativos defasados antes de qualquer
-  movimento, delete ou merge sensivel.
+- `MB-152` foi fechado no backlog micro: o mapa de backlinks dos 73 documentos
+  auditados foi criado em
+  `docs/documentation/documentation-backlink-map-mb152.md`, documentos ativos
+  defasados foram sincronizados de forma limitada e nenhum movimento, delete,
+  rename ou merge sensivel foi executado.
+- `MB-153` foi fechado como archive fisico conservador: seis documentos
+  historicos de implementacao foram movidos para
+  `docs/archive/implementation/`, backlinks literais foram reescritos, nenhum
+  documento foi deletado e nenhum merge destrutivo foi executado.
 
 ### 5.5 Deferred verticals already mapped
 
@@ -403,8 +409,12 @@ Leitura correta:
   `ready` sem repriorizacao explicita;
 - `MB-151` foi fechado como auditoria/repriorizacao documental, nao como lote
   tecnico de implementacao funcional;
-- `MB-152` esta aberto como unico item `ready` para mapa de backlinks e
-  sincronizacao segura de documentos ativos defasados;
+- `MB-152` foi fechado como mapa de backlinks e sincronizacao segura de
+  documentos ativos defasados;
+- `MB-153` foi fechado como primeiro archive fisico conservador de documentos
+  historicos de implementacao;
+- nao ha novo item `ready`; move/archive adicional ou merge sensivel deve
+  exigir decisao humana explicita e plano separado;
 - `RH-*` permanece fora do backlog implementavel.
 
 ---

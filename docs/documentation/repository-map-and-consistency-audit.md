@@ -1,5 +1,20 @@
 # Repository Map And Consistency Audit
 
+## MB-152 synchronization note
+
+This document remains useful as historical repository map and consistency
+baseline from `2026-04-02`, but it is no longer the most current source for
+documentation canonicality. For the post-`MB-150` documentation state, use:
+
+- `docs/documentation/documentation-canonicality-audit-mb151.md`
+- `docs/documentation/documentation-backlink-map-mb152.md`
+- `docs/documentation/documentation-cleanup-mb153.md`
+
+No file was moved, deleted, renamed or merged by `MB-151` or `MB-152`.
+`MB-153` moved only selected implementation-history documents to
+`docs/archive/implementation/` and rewrote their Markdown backlinks. It did not
+delete documents or execute destructive content merges.
+
 ## 1. Objetivo
 
 Este documento cruza a superficie viva de `docs/`, `tools/` e das demais pastas do repositorio
@@ -27,12 +42,12 @@ para responder quatro perguntas:
 | `docs/documentation/matriz-de-aderencia-mestre.md` | ponte entre Documento-Mestre e backlog real | ativo |
 | `docs/documentation/repository-map-and-consistency-audit.md` | mapa do repositorio e auditoria de consistencia | ativo |
 | `docs/implementation/v2-adherence-snapshot.md` | snapshot funcional mais importante do baseline atual | ativo |
-| `docs/implementation/v2-native-memory-scope-hardening-cut-closure.md` | fechamento formal funcional mais recente | ativo |
-| `docs/implementation/v2-repository-hygiene-and-tools-review-cut.md` | ultimo recorte estrutural executado | ativo |
-| `docs/implementation/v2-repository-hygiene-and-tools-review-cut-closure.md` | fechamento formal do ultimo recorte estrutural | ativo |
-| `docs/implementation/v2-repository-hygiene-inventory.md` | inventario regeneravel da revisao estrutural | ativo |
-| `docs/implementation/v2-repository-hygiene-doc-decisions.md` | classificacao regeneravel dos docs de implementacao | ativo |
-| `docs/implementation/v2-repository-hygiene-tool-decisions.md` | classificacao regeneravel dos entrypoints de `tools/` | ativo |
+| `docs/archive/implementation/v2-native-memory-scope-hardening-cut-closure.md` | fechamento formal funcional historico | historico arquivado |
+| `docs/archive/implementation/v2-repository-hygiene-and-tools-review-cut.md` | recorte estrutural historico | historico arquivado |
+| `docs/archive/implementation/v2-repository-hygiene-and-tools-review-cut-closure.md` | fechamento formal do recorte estrutural historico | historico arquivado |
+| `docs/archive/implementation/v2-repository-hygiene-inventory.md` | inventario regeneravel da revisao estrutural historica | historico arquivado |
+| `docs/archive/implementation/v2-repository-hygiene-doc-decisions.md` | classificacao historica dos docs de implementacao | historico arquivado |
+| `docs/archive/implementation/v2-repository-hygiene-tool-decisions.md` | classificacao historica dos entrypoints de `tools/` | historico arquivado |
 | `docs/operations/release-and-change-management.md` | operacao e mudanca controlada | ativo |
 | `docs/operations/incident-response.md` | resposta a incidentes | ativo |
 | `docs/operations/v1-operational-baseline.md` | baseline operacional minimo ainda referenciado | ativo |

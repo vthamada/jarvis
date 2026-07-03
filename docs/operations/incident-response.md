@@ -1,5 +1,17 @@
 # Incident Response
 
+## Current documentation baseline
+
+After `MB-152`, documentation loss, broken documentation references and
+accidental promotion of historical/deferred documents should be treated as
+documentation-control incidents when they affect operation, governance, release
+evidence or the active backlog.
+
+Use these records before any cleanup response:
+
+- `docs/documentation/documentation-canonicality-audit-mb151.md`
+- `docs/documentation/documentation-backlink-map-mb152.md`
+
 ## 1. Objetivo
 
 Este documento define a resposta operacional mínima a incidentes do JARVIS no contexto de `v1` e de produção controlada.
@@ -147,4 +159,3 @@ Usar em conjunto com:
 - `CHANGELOG.md`
 
 O Documento-Mestre continua sendo a referência normativa.
-

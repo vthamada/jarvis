@@ -103,8 +103,23 @@
 - criado `docs/documentation/documentation-canonicality-audit-mb151.md` como registro oficial da auditoria documental pos-`MB-150`;
 - a auditoria revisou 73 documentos, classificou documentos canonicos, operacionais, de implementacao, defasados, candidatos a merge/archive, documentos com decisao humana obrigatoria e riscos de execucao;
 - nenhum documento foi movido, deletado, renomeado, mesclado ou removido nesta rodada;
-- `docs/implementation/execution-backlog.md` agora marca `MB-151` como concluido e abre `MB-152 -- Documentation Backlink Map & Safe Active Docs Sync` como unico item `ready`;
+- `docs/implementation/execution-backlog.md` marcou `MB-151` como concluido e abriu `MB-152 -- Documentation Backlink Map & Safe Active Docs Sync` como proximo recorte naquele momento;
 - `HANDOFF.md`, `docs/implementation/unified-gap-and-absorption-backlog.md` e `docs/implementation/v2-adherence-snapshot.md` foram sincronizados para registrar que `MB-151` foi auditoria/repriorizacao documental, nao implementacao funcional.
+
+### MB-152 fecha mapa de backlinks e sincronizacao documental segura
+
+- criado `docs/documentation/documentation-backlink-map-mb152.md` com mapa de backlinks dos 73 documentos auditados no `MB-151`;
+- `README.md`, `docs/executive/master-summary.md`, `docs/documentation/repository-map-and-consistency-audit.md`, `docs/operations/chat-transition-template.md`, `docs/operations/release-and-change-management.md`, `docs/operations/incident-response.md`, `docs/operations/v1-operational-baseline.md` e `docs/roadmap/v1-roadmap.md` foram sincronizados de forma limitada;
+- `docs/implementation/execution-backlog.md` marca `MB-152` como concluido e registra que nao ha novo item `ready`;
+- nenhum documento foi movido, deletado, renomeado ou mesclado; qualquer move/archive futuro exige decisao humana explicita e plano separado.
+
+### MB-153 executa archive fisico conservador de documentos historicos
+
+- criado `docs/documentation/documentation-cleanup-mb153.md` para registrar a limpeza fisica conservadora;
+- seis documentos historicos de implementacao foram movidos de `docs/implementation/` para `docs/archive/implementation/`;
+- backlinks literais para esses seis documentos foram reescritos para os novos caminhos arquivados;
+- nenhum documento foi deletado e nenhum merge destrutivo foi executado;
+- `docs/operations/v1-operational-baseline.md`, `docs/roadmap/v1-roadmap.md`, documentos canonicos, ADRs, roadmap ativo, future architecture e protective intelligence permaneceram no lugar por exigirem rastreabilidade ou decisao humana especifica.
 
 ### MB-126 abre experiencia e reflexao pos-tarefa governada
 

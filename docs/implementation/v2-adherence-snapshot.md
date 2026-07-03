@@ -31,7 +31,7 @@ Estado de referencia desta revisao:
 - data da fotografia: `2026-05-17`
 - ultimo recorte funcional fechado: `v2-native-memory-scope-hardening-cut`
 - ultimo recorte estrutural fechado: `v2-repository-hygiene-and-tools-review-cut`
-- passo funcional em andamento: lotes `MB-062` a `MB-150` concluidos ate leitura operacional e medicao de aprendizado revisado; `MB-151` foi fechado como auditoria documental governada oficial; `MB-152` e o unico item `ready` para mapa de backlinks e sincronizacao segura de docs ativos.
+- passo funcional em andamento: lotes `MB-062` a `MB-150` concluidos ate leitura operacional e medicao de aprendizado revisado; `MB-151` foi fechado como auditoria documental governada oficial; `MB-152` foi fechado como mapa de backlinks e sincronizacao segura de docs ativos; `MB-153` foi fechado como archive fisico conservador de historico de implementacao; nao ha novo item `ready`.
 
 Leitura executiva:
 
@@ -116,10 +116,18 @@ Leitura executiva:
 - `MB-151` foi fechado como auditoria documental governada oficial em
   `docs/documentation/documentation-canonicality-audit-mb151.md`: 73 documentos
   foram revisados sem mover, deletar, renomear, mesclar ou remover arquivos.
-- `MB-152` foi aberto como unico item `ready`: gerar mapa de backlinks e
-  sincronizar somente documentos ativos defasados, mantendo moves, deletes,
-  merges sensiveis, Documento-Mestre, arquitetura e novas funcionalidades fora
-  de escopo.
+- `MB-152` foi fechado em
+  `docs/documentation/documentation-backlink-map-mb152.md`: o mapa de backlinks
+  cobre os 73 documentos auditados, sincroniza somente documentos ativos
+  defasados e preserva moves, deletes, merges sensiveis, Documento-Mestre,
+  arquitetura e novas funcionalidades fora de escopo.
+- `MB-153` foi fechado em
+  `docs/documentation/documentation-cleanup-mb153.md`: seis documentos
+  historicos de implementacao foram movidos para
+  `docs/archive/implementation/`, backlinks foram reescritos, nenhum documento
+  foi deletado e nenhum merge destrutivo foi executado.
+- nao ha novo item `ready`; qualquer archive/move adicional ou merge sensivel
+  deve nascer de decisao humana explicita e plano separado.
 - o contrato canonico da rota ativa passou a atravessar tambem o `planning` e a influenciar a `synthesis`, reduzindo a distancia entre memoria guiada disponivel e comportamento final do runtime.
 - esse contrato agora tambem molda passos, restricoes, criterios de sucesso e checkpoint/gate governado do plano, e ja aparece na leitura final como objetivo, entrega esperada, foco de leitura e workflow ativo da rota promovida.
 - esse mesmo slice soberano agora tambem atravessa `operation_dispatch`, `workflow_*` e `operation_completed`, e a observabilidade passou a marcar drift quando objetivo, entregaveis, foco de sucesso, foco final e telemetria deixam de bater entre composicao e execucao.

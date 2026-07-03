@@ -110,12 +110,12 @@ No merge should be executed before `MB-152` produces a backlink map.
 
 ## Archive Candidates
 
-- `docs/implementation/v2-native-memory-scope-hardening-cut-closure.md`
-- `docs/implementation/v2-repository-hygiene-and-tools-review-cut.md`
-- `docs/implementation/v2-repository-hygiene-and-tools-review-cut-closure.md`
-- `docs/implementation/v2-repository-hygiene-doc-decisions.md`
-- `docs/implementation/v2-repository-hygiene-inventory.md`
-- `docs/implementation/v2-repository-hygiene-tool-decisions.md`
+- `docs/archive/implementation/v2-native-memory-scope-hardening-cut-closure.md`
+- `docs/archive/implementation/v2-repository-hygiene-and-tools-review-cut.md`
+- `docs/archive/implementation/v2-repository-hygiene-and-tools-review-cut-closure.md`
+- `docs/archive/implementation/v2-repository-hygiene-doc-decisions.md`
+- `docs/archive/implementation/v2-repository-hygiene-inventory.md`
+- `docs/archive/implementation/v2-repository-hygiene-tool-decisions.md`
 - `docs/implementation/implementation-strategy.md`
 - `docs/implementation/pre-v3-protective-intelligence-foundation-cut.md`
 - `docs/operations/v1-operational-baseline.md`
@@ -192,11 +192,11 @@ Decision: preserve `v1-roadmap.md` as historical once references are mapped.
 
 Primary historical set:
 
-- `docs/implementation/v2-repository-hygiene-and-tools-review-cut.md`
-- `docs/implementation/v2-repository-hygiene-and-tools-review-cut-closure.md`
-- `docs/implementation/v2-repository-hygiene-inventory.md`
-- `docs/implementation/v2-repository-hygiene-doc-decisions.md`
-- `docs/implementation/v2-repository-hygiene-tool-decisions.md`
+- `docs/archive/implementation/v2-repository-hygiene-and-tools-review-cut.md`
+- `docs/archive/implementation/v2-repository-hygiene-and-tools-review-cut-closure.md`
+- `docs/archive/implementation/v2-repository-hygiene-inventory.md`
+- `docs/archive/implementation/v2-repository-hygiene-doc-decisions.md`
+- `docs/archive/implementation/v2-repository-hygiene-tool-decisions.md`
 
 Decision: archive candidates, but only after backlink map.
 
@@ -275,6 +275,10 @@ Proposed target structure, not executed in `MB-151`:
 
 `MB-152 -- Documentation Backlink Map & Safe Active Docs Sync`
 
+Post-`MB-152` note: this recommendation was executed in
+`docs/documentation/documentation-backlink-map-mb152.md`. The historical
+recommendation remains here to preserve the `MB-151` audit trail.
+
 Scope:
 
 - generate a backlink map for documentation references;
@@ -332,18 +336,18 @@ cleanup.
 | `docs/architecture/turboquant-review.md` | architecture/research | historical_keep | mark_historical | low | no | Technology review; keep as supporting evidence. |
 | `docs/architecture/technology-study.md` | architecture/research | merge_candidate | merge_into | medium | no | Useful study overlaps with active absorption docs; wait for backlinks. |
 | `docs/architecture/visao_ajuste_arquitetural_jarvis.md` | architecture | human_decision_required | needs_human_review | high | yes | Architecture adjustment material can affect canonical hierarchy. |
-| `docs/implementation/v2-repository-hygiene-tool-decisions.md` | implementation/history | archive_candidate | move_to_archive | low | no | Closed hygiene decision artifact; preserve traceability. |
-| `docs/implementation/v2-repository-hygiene-inventory.md` | implementation/history | archive_candidate | move_to_archive | low | no | Closed inventory; archive only after backlink map. |
-| `docs/implementation/v2-repository-hygiene-doc-decisions.md` | implementation/history | archive_candidate | move_to_archive | low | no | Closed documentation decision artifact. |
-| `docs/implementation/v2-repository-hygiene-and-tools-review-cut.md` | implementation/history | archive_candidate | move_to_archive | medium | no | Historical cut; may still be referenced by audits. |
-| `docs/implementation/v2-repository-hygiene-and-tools-review-cut-closure.md` | implementation/history | archive_candidate | move_to_archive | medium | no | Historical closure; preserve evidence. |
-| `docs/implementation/v2-native-memory-scope-hardening-cut-closure.md` | implementation/history | archive_candidate | move_to_archive | medium | no | Historical closure for memory hardening. |
+| `docs/archive/implementation/v2-repository-hygiene-tool-decisions.md` | implementation/history | archive_candidate | move_to_archive | low | no | Closed hygiene decision artifact; preserve traceability. |
+| `docs/archive/implementation/v2-repository-hygiene-inventory.md` | implementation/history | archive_candidate | move_to_archive | low | no | Closed inventory; archive only after backlink map. |
+| `docs/archive/implementation/v2-repository-hygiene-doc-decisions.md` | implementation/history | archive_candidate | move_to_archive | low | no | Closed documentation decision artifact. |
+| `docs/archive/implementation/v2-repository-hygiene-and-tools-review-cut.md` | implementation/history | archive_candidate | move_to_archive | medium | no | Historical cut; may still be referenced by audits. |
+| `docs/archive/implementation/v2-repository-hygiene-and-tools-review-cut-closure.md` | implementation/history | archive_candidate | move_to_archive | medium | no | Historical closure; preserve evidence. |
+| `docs/archive/implementation/v2-native-memory-scope-hardening-cut-closure.md` | implementation/history | archive_candidate | move_to_archive | medium | no | Historical closure for memory hardening. |
 | `docs/implementation/v2-adherence-snapshot.md` | implementation | implementation_active | update | medium | no | Active snapshot; keep current with MB-151/MB-152. |
 | `docs/implementation/unified-gap-and-absorption-backlog.md` | implementation | implementation_active | update | medium | no | Active macro gap map; keep separate from micro queue. |
 | `docs/implementation/service-breakdown.md` | implementation | update_required | update | medium | no | Service map should reflect current post-`MB-150` capabilities. |
 | `docs/implementation/pre-v3-protective-intelligence-foundation-cut.md` | implementation/deferred | human_decision_required | needs_human_review | high | yes | Deferred vertical cut; do not activate without phase decision. |
 | `docs/implementation/implementation-strategy.md` | implementation/history | merge_candidate | merge_into | medium | no | Useful strategy content should not compete with active queue. |
-| `docs/implementation/execution-backlog.md` | implementation | implementation_active | keep_as_is | high | no | Canonical micro execution queue; MB-152 remains only ready item. |
+| `docs/implementation/execution-backlog.md` | implementation | implementation_active | keep_as_is | high | no | Canonical micro execution queue; MB-152 was the next ready item at MB-151 closure. |
 | `docs/archive/executive/v1-scope-summary.md` | archive | historical_keep | keep_as_is | low | no | Preserved executive history. |
 | `docs/archive/operations/internal-pilot-plan.md` | archive | historical_keep | keep_as_is | low | no | Historical pilot plan; useful for traceability. |
 | `docs/archive/documentation/estrutura_de_documentos_derivados.md` | archive | historical_keep | keep_as_is | low | no | Historical documentation structure reference. |

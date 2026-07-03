@@ -124,7 +124,7 @@ Entregas esperadas:
 Leitura de fechamento:
 
 - `tools/close_native_memory_scope_hardening_cut.py` agora fecha formalmente o recorte com artefato regeneravel em `.jarvis_runtime/v2_native_memory_scope_hardening_cut/`;
-- `docs/implementation/v2-native-memory-scope-hardening-cut-closure.md` passou a registrar a decisao formal `complete_v2_native_memory_scope_hardening_cut`;
+- `docs/archive/implementation/v2-native-memory-scope-hardening-cut-closure.md` passou a registrar a decisao formal `complete_v2_native_memory_scope_hardening_cut`;
 - o recorte fechou sem dependencia externa nova, com `user scope` nativo, recorrencia soberana de especialistas e `organization scope` explicitamente bloqueado;
 - `Mem0` continua fora do baseline central e qualquer nova frente de memoria fica condicionada a nova evidencia local;
 - a recomendacao imediata passa a ser revisao estrutural de docs e tools antes da abertura de outro corte funcional.

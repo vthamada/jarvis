@@ -2785,7 +2785,7 @@ preparar uma segunda passada segura com mapa de backlinks.
 - `justificativa_arquitetural`: o repositorio acumulou documentos canonicos, operacionais, historicos e defasados; antes de mover, mesclar, arquivar ou remover qualquer arquivo, a governanca exige inventario, classificacao, clusters, riscos e decisao humana onde houver sensibilidade.
 - `arquivos/servicos_principais`: `docs/documentation/documentation-canonicality-audit-mb151.md`, `docs/implementation/execution-backlog.md`, `docs/implementation/unified-gap-and-absorption-backlog.md`, `docs/implementation/v2-adherence-snapshot.md`, `HANDOFF.md`, `CHANGELOG.md`
 - `dependencias`: `MB-150`
-- `criterio_de_aceite`: auditoria salva como documento oficial; backlog registra `MB-151` como fechado; nenhum arquivo foi movido, deletado, renomeado ou mesclado; documentos locais ficam consistentes com a auditoria; `MB-152` e aberto como unico item `ready`.
+- `criterio_de_aceite`: auditoria salva como documento oficial; backlog registra `MB-151` como fechado; nenhum arquivo foi movido, deletado, renomeado ou mesclado; documentos locais ficam consistentes com a auditoria; `MB-152` foi aberto como proximo recorte naquele momento.
 - `gate_minimo`: `python tools/check_mojibake.py .` e `python tools/engineering_gate.py --mode standard`
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `medium`
@@ -2797,7 +2797,7 @@ preparar uma segunda passada segura com mapa de backlinks.
 
 - `id`: `MB-152`
 - `prioridade`: `P0`
-- `status`: `ready`
+- `status`: `done`
 - `eixo_do_mestre`: `governanca/documentacao`
 - `workflow_profile_afetado`: `governance_boundary_workflow`, `operational_readiness_workflow`
 - `micro_objetivo`: gerar mapa de backlinks e sincronizar somente documentos ativos defasados, sem mover, deletar ou mesclar documentos nesta rodada.
@@ -2811,7 +2811,27 @@ preparar uma segunda passada segura com mapa de backlinks.
 - `modelo_recomendado`: `gpt-5.4`
 - `impacto_no_baseline`: reduz risco documental antes de qualquer limpeza, mantendo rastreabilidade e evitando contradicao com o Documento-Mestre.
 - `fora_de_escopo`: deletar documentos; mover documentos para archive; mesclar documentos canonicos; alterar Documento-Mestre; alterar arquitetura; abrir funcionalidade; voz/realtime/browser/computer use/SecurityOS.
-- `evidencia_de_fechamento`: pendente; este e o unico item `ready`.
+- `evidencia_de_fechamento`: `docs/documentation/documentation-backlink-map-mb152.md` registra backlinks dos 73 documentos auditados, identifica documentos de alto acoplamento, preserva documentos sensiveis, sincroniza apenas docs ativos defasados e explicita plano posterior para moves/archive sem executar limpeza fisica.
+
+### MB-153
+
+- `id`: `MB-153`
+- `prioridade`: `P0`
+- `status`: `done`
+- `eixo_do_mestre`: `governanca/documentacao`
+- `workflow_profile_afetado`: `governance_boundary_workflow`, `operational_readiness_workflow`
+- `micro_objetivo`: executar o primeiro archive fisico conservador de documentos historicos de implementacao, reescrevendo backlinks e preservando rastreabilidade.
+- `justificativa_arquitetural`: depois de `MB-151` e `MB-152`, alguns documentos historicos de implementacao ja tinham classificacao, backlink map e baixo risco suficiente para sair da superficie ativa sem perda de historico; delecao e merge destrutivo continuavam sem base segura.
+- `arquivos/servicos_principais`: `docs/documentation/documentation-cleanup-mb153.md`, `docs/archive/implementation/*`, `README.md`, `HANDOFF.md`, `CHANGELOG.md`, `docs/implementation/execution-backlog.md`, `docs/implementation/unified-gap-and-absorption-backlog.md`, `docs/implementation/v2-adherence-snapshot.md`
+- `dependencias`: `MB-152`
+- `criterio_de_aceite`: apenas archive candidates historicos e nao sensiveis sao movidos; backlinks literais sao reescritos; nenhum documento e deletado; nenhum merge destrutivo e executado; documentos referenciados pelo Documento-Mestre permanecem no lugar; gate padrao passa.
+- `gate_minimo`: `python tools/check_mojibake.py .` e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `medium`
+- `modelo_recomendado`: `gpt-5.4`
+- `impacto_no_baseline`: reduz a superficie ativa de implementacao sem quebrar referencias nem perder historico, mantendo docs sensiveis e canonicos intactos.
+- `fora_de_escopo`: deletar documentos; mover docs referenciados pelo Documento-Mestre; mesclar documentos canonicos; alterar arquitetura; abrir funcionalidade.
+- `evidencia_de_fechamento`: `docs/documentation/documentation-cleanup-mb153.md` lista seis moves para `docs/archive/implementation/`, registra ausencia de delecao, ausencia de merge destrutivo e validacao de backlinks antigos.
 
 ## 5. Regras de manutencao da fila
 
@@ -2895,6 +2915,8 @@ Estado atual da fila:
 - `MB-149` fechou medicao baseline vs reviewed-learning-assisted em observabilidade, piloto, relatorio e comparador;
 - `MB-150` fechou a leitura operacional no console e na documentacao;
 - `MB-151` foi concluido como auditoria documental governada oficial, sem mover, deletar, renomear, mesclar ou remover arquivos;
-- `MB-152` foi aberto como unico item `ready` para gerar mapa de backlinks e sincronizar documentos ativos defasados com seguranca;
+- `MB-152` foi concluido como mapa de backlinks e sincronizacao segura de documentos ativos defasados, sem mover, deletar, renomear ou mesclar documentos;
+- `MB-153` foi concluido como primeiro archive fisico conservador: seis documentos historicos de implementacao foram movidos para `docs/archive/implementation/`, backlinks literais foram reescritos e nenhum documento foi deletado ou mesclado destrutivamente;
+- nao ha novo item `ready`; o proximo movimento documental ou funcional deve nascer de decisao humana explicita e plano separado;
 - `SO-001`, `TA-004`, `TA-006` e verticais `deferred` continuam fora da fila sem mudanca explicita de fase;
 - `protective intelligence foundation` continua `deferred` e a matriz da Onda 2 segue como insumo, nao como gatilho automatico para abrir nova vertical.

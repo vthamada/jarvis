@@ -1,5 +1,21 @@
 # JARVIS
 
+Leitura atual pos-`MB-152`:
+
+- o baseline funcional avancou ate o ciclo governado `usar -> registrar ->
+  refletir -> propor -> revisar -> influenciar -> medir`;
+- `MB-151` fechou a auditoria documental oficial em
+  `docs/documentation/documentation-canonicality-audit-mb151.md`;
+- `MB-152` gerou o mapa de backlinks em
+  `docs/documentation/documentation-backlink-map-mb152.md` e sincronizou apenas
+  documentos ativos defasados;
+- `MB-153` executou o primeiro archive fisico conservador em
+  `docs/documentation/documentation-cleanup-mb153.md`, movendo apenas historico
+  de implementacao para `docs/archive/implementation/`;
+- nenhum documento foi deletado ou mesclado destrutivamente por `MB-151`,
+  `MB-152` ou `MB-153`;
+- a fila micro ativa continua em `docs/implementation/execution-backlog.md`.
+
 JARVIS é um sistema cognitivo unificado, stateful, governado e orientado à continuidade operacional.
 
 Este repositório materializa o baseline encerrado do `v1` e a abertura disciplinada do `pós-v1`, sempre guiado por `documento_mestre_jarvis.md` e pelos derivados técnicos em `docs/`.
@@ -171,12 +187,12 @@ Arquivos principais:
 - `docs/archive/implementation/v2-memory-gap-baseline-evidence.md`
 - `docs/archive/implementation/v2-memory-gap-evidence-cut-closure.md`
 - `docs/archive/implementation/v2-native-memory-scope-hardening-cut.md`
-- `docs/implementation/v2-native-memory-scope-hardening-cut-closure.md`
-- `docs/implementation/v2-repository-hygiene-and-tools-review-cut.md`
-- `docs/implementation/v2-repository-hygiene-inventory.md`
-- `docs/implementation/v2-repository-hygiene-doc-decisions.md`
-- `docs/implementation/v2-repository-hygiene-tool-decisions.md`
-- `docs/implementation/v2-repository-hygiene-and-tools-review-cut-closure.md`
+- `docs/archive/implementation/v2-native-memory-scope-hardening-cut-closure.md`
+- `docs/archive/implementation/v2-repository-hygiene-and-tools-review-cut.md`
+- `docs/archive/implementation/v2-repository-hygiene-inventory.md`
+- `docs/archive/implementation/v2-repository-hygiene-doc-decisions.md`
+- `docs/archive/implementation/v2-repository-hygiene-tool-decisions.md`
+- `docs/archive/implementation/v2-repository-hygiene-and-tools-review-cut-closure.md`
 - `docs/archive/implementation/v2-domain-consumers-and-workflows-cut.md`
 - `docs/archive/implementation/v2-governed-benchmark-matrix.md`
 - `docs/archive/implementation/v2-sovereign-alignment-cut-closure.md`
@@ -192,12 +208,12 @@ Leitura recomendada do estado atual:
 3. `docs/roadmap/programa-ate-v3.md`
 4. `docs/archive/implementation/v2-memory-gap-evidence-cut-closure.md`
 5. `docs/archive/implementation/v2-native-memory-scope-hardening-cut.md`
-6. `docs/implementation/v2-native-memory-scope-hardening-cut-closure.md`
-7. `docs/implementation/v2-repository-hygiene-and-tools-review-cut.md`
-8. `docs/implementation/v2-repository-hygiene-inventory.md`
-9. `docs/implementation/v2-repository-hygiene-doc-decisions.md`
-10. `docs/implementation/v2-repository-hygiene-tool-decisions.md`
-11. `docs/implementation/v2-repository-hygiene-and-tools-review-cut-closure.md`
+6. `docs/archive/implementation/v2-native-memory-scope-hardening-cut-closure.md`
+7. `docs/archive/implementation/v2-repository-hygiene-and-tools-review-cut.md`
+8. `docs/archive/implementation/v2-repository-hygiene-inventory.md`
+9. `docs/archive/implementation/v2-repository-hygiene-doc-decisions.md`
+10. `docs/archive/implementation/v2-repository-hygiene-tool-decisions.md`
+11. `docs/archive/implementation/v2-repository-hygiene-and-tools-review-cut-closure.md`
 12. `docs/archive/implementation/v2-memory-gap-decision.md`
 13. `docs/archive/implementation/v2-memory-gap-baseline-evidence.md`
 14. `docs/documentation/matriz-de-aderencia-mestre.md`

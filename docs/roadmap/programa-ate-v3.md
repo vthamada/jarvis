@@ -11,7 +11,7 @@ Leitura correta:
 
 - este documento e o contrato de direcao do programa;
 - o detalhamento executável do recorte implementável atual fica em
-  `docs/implementation/v2-repository-hygiene-and-tools-review-cut.md`,
+  `docs/archive/implementation/v2-repository-hygiene-and-tools-review-cut.md`,
   agora com o recorte estrutural concluido e a proxima abertura funcional ainda pendente de selecao;
 - o `HANDOFF.md` continua tatico-operacional.
 
@@ -286,7 +286,7 @@ traducao tecnologica, superficies, evolucao e pesquisa.
 O documento `docs/implementation/execution-backlog.md` continua como unica fila
 micro ativa.
 
-O documento `docs/implementation/v2-repository-hygiene-and-tools-review-cut.md` registra o ultimo recorte estrutural executado,
+O documento `docs/archive/implementation/v2-repository-hygiene-and-tools-review-cut.md` registra o ultimo recorte estrutural executado,
 ate que um novo recorte funcional seja formalmente aberto.
 
 ---
@@ -300,7 +300,7 @@ O sistema de planejamento oficial do JARVIS passa a ser:
 3. `docs/implementation/unified-gap-and-absorption-backlog.md` para o mapa macro do que ainda falta no sistema;
 4. `docs/implementation/v2-adherence-snapshot.md` para a leitura viva do baseline atual;
 5. `docs/roadmap/programa-ate-v3.md` para direcao de medio e longo prazo;
-6. `docs/implementation/v2-repository-hygiene-and-tools-review-cut.md` para o ultimo recorte estrutural fechado, ate a abertura do proximo recorte funcional.
+6. `docs/archive/implementation/v2-repository-hygiene-and-tools-review-cut.md` para o ultimo recorte estrutural fechado, ate a abertura do proximo recorte funcional.
 
 Essa separacao existe para impedir que o `HANDOFF.md` vire roadmap macro e para evitar
 que o programa ate `v3` perca precisao operacional.

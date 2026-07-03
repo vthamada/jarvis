@@ -1,5 +1,17 @@
 # V1 Operational Baseline
 
+Historical status after `MB-152`:
+
+- this document preserves the closed `v1` operational baseline as historical
+  context;
+- it is not the active operational baseline for the post-`MB-150` operator
+  learning loop;
+- current documentation canonicality and backlinks are tracked in
+  `docs/documentation/documentation-canonicality-audit-mb151.md` and
+  `docs/documentation/documentation-backlink-map-mb152.md`;
+- do not move this file to archive until backlinks are rewritten in a separate
+  approved cleanup MB.
+
 ## 1. Objetivo
 
 Este documento consolida o baseline operacional encerrado do `v1` do JARVIS para uso controlado.

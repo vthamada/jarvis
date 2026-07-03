@@ -94,10 +94,20 @@ explicita.
 esta registrada em
 `docs/documentation/documentation-canonicality-audit-mb151.md`, revisou 73
 documentos e nao moveu, deletou, renomeou, mesclou ou removeu arquivos.
-`MB-152` e o unico item `ready`: gerar mapa de backlinks e sincronizar somente
-documentos ativos defasados, sem executar limpeza documental ampla. `SO-001`,
-`TA-004`, `TA-006`, `TA-008`, `DV-001` e `RH-*` continuam fora da fila ate
-decisao explicita de fase.
+`MB-152` tambem foi concluido: o mapa de backlinks esta em
+`docs/documentation/documentation-backlink-map-mb152.md` e apenas documentos
+ativos defasados foram sincronizados. Nenhum documento foi movido, deletado,
+renomeado ou mesclado. Nao ha novo item `ready`; qualquer move/archive deve
+nascer de decisao humana explicita e plano separado. `SO-001`, `TA-004`,
+`TA-006`, `TA-008`, `DV-001` e `RH-*` continuam fora da fila ate decisao
+explicita de fase.
+
+`MB-153` foi concluido como primeiro archive fisico conservador:
+`docs/documentation/documentation-cleanup-mb153.md` registra seis moves de
+historico de implementacao para `docs/archive/implementation/`, rewrite de
+backlinks, ausencia de delecao e ausencia de merge destrutivo. Documentos
+referenciados pelo Documento-Mestre, como `docs/operations/v1-operational-baseline.md`
+e `docs/roadmap/v1-roadmap.md`, permaneceram no lugar.
 
 O corte pos-`MB-125` foi repriorizado em `MB-126`: a proxima frente ativa e
 experiencia operacional + reflexao pos-tarefa governada. O objetivo e fazer o
@@ -453,12 +463,12 @@ Sistema oficial de planejamento desta fase:
 - `docs/archive/implementation/v2-cycle-closure.md` como fechamento formal do primeiro corte do `v2`;
 - `docs/archive/implementation/v2-alignment-cycle.md` como histórico fechado do ciclo anterior;
 - `docs/archive/implementation/v2-native-memory-scope-hardening-cut.md` como ultimo recorte funcional executado do baseline nativo atual;
-- `docs/implementation/v2-native-memory-scope-hardening-cut-closure.md` como fechamento formal regeneravel do ultimo recorte funcional;
-- `docs/implementation/v2-repository-hygiene-and-tools-review-cut.md` como ultimo recorte estrutural executado;
-- `docs/implementation/v2-repository-hygiene-inventory.md` como inventario regeneravel da revisao estrutural ativa;
-- `docs/implementation/v2-repository-hygiene-doc-decisions.md` como decisao regeneravel de classificacao dos docs ativos;
-- `docs/implementation/v2-repository-hygiene-tool-decisions.md` como decisao regeneravel de classificacao dos entrypoints de `tools/`;
-- `docs/implementation/v2-repository-hygiene-and-tools-review-cut-closure.md` como fechamento formal regeneravel da revisao estrutural mais recente;
+- `docs/archive/implementation/v2-native-memory-scope-hardening-cut-closure.md` como fechamento formal regeneravel do ultimo recorte funcional;
+- `docs/archive/implementation/v2-repository-hygiene-and-tools-review-cut.md` como ultimo recorte estrutural executado;
+- `docs/archive/implementation/v2-repository-hygiene-inventory.md` como inventario regeneravel da revisao estrutural ativa;
+- `docs/archive/implementation/v2-repository-hygiene-doc-decisions.md` como decisao regeneravel de classificacao dos docs ativos;
+- `docs/archive/implementation/v2-repository-hygiene-tool-decisions.md` como decisao regeneravel de classificacao dos entrypoints de `tools/`;
+- `docs/archive/implementation/v2-repository-hygiene-and-tools-review-cut-closure.md` como fechamento formal regeneravel da revisao estrutural mais recente;
 - `docs/archive/implementation/v2-sovereign-alignment-cut.md` como histórico de transição do corte anterior;
 - `docs/archive/implementation/v2-domain-consumers-and-workflows-cut-closure.md` como fechamento formal regenerável do corte anterior imediato;
 - `docs/documentation/matriz-de-aderencia-mestre.md` como ponte entre visão canônica e backlog real.
@@ -551,8 +561,13 @@ Hoje o repositório contém:
 - estudo tecnológico consolidado em `docs/architecture/technology-study.md`;
 - sistema documental em duas camadas ativas para programa e sprint cycle;
 - auditoria documental oficial `MB-151` em
-  `docs/documentation/documentation-canonicality-audit-mb151.md`, com `MB-152`
-  aberto para mapa de backlinks e sincronizacao segura de documentos ativos.
+  `docs/documentation/documentation-canonicality-audit-mb151.md`;
+- mapa de backlinks e sincronizacao segura `MB-152` em
+  `docs/documentation/documentation-backlink-map-mb152.md`, sem limpeza fisica
+  de documentos.
+- archive fisico conservador `MB-153` em
+  `docs/documentation/documentation-cleanup-mb153.md`, limitado a historico de
+  implementacao ja mapeado.
 
 ### Baseline materializado
 
@@ -783,11 +798,11 @@ python tools/engineering_gate.py --mode standard
 - a Sprint 2 foi concluida com `docs/archive/implementation/v2-governed-benchmark-scenario-specs.md` como artefato regeneravel de scenario specs e fronteiras sandbox;
 - a Sprint 3 foi concluida com `docs/archive/implementation/v2-governed-benchmark-decisions.md` como decisao formal por tecnologia e racional curto contra o baseline do JARVIS;
 - a Sprint 4 do corte anterior foi concluida com `docs/archive/implementation/v2-governed-benchmark-execution-cut-closure.md` como fechamento humano do recorte e `tools/archive/close_governed_benchmark_execution_cut.py` como fechador regeneravel;
-- a Sprint 4 do `v2-native-memory-scope-hardening-cut` foi concluida com fechamento formal regeneravel em `docs/implementation/v2-native-memory-scope-hardening-cut-closure.md`;
+- a Sprint 4 do `v2-native-memory-scope-hardening-cut` foi concluida com fechamento formal regeneravel em `docs/archive/implementation/v2-native-memory-scope-hardening-cut-closure.md`;
 - o recorte estrutural `v2-repository-hygiene-and-tools-review-cut` foi concluido com limpeza segura da superficie ativa de `docs/` e `tools/`;
-- a Sprint 1 desse corte foi concluida com inventario regeneravel em `docs/implementation/v2-repository-hygiene-inventory.md`;
-- a Sprint 2 desse corte foi concluida com decisao regeneravel de classificacao dos docs ativos em `docs/implementation/v2-repository-hygiene-doc-decisions.md`;
-- a Sprint 3 desse corte foi concluida com decisao regeneravel de classificacao dos entrypoints da raiz de `tools/` em `docs/implementation/v2-repository-hygiene-tool-decisions.md`;
-- a Sprint 4 desse corte foi concluida com migracao dos `archive candidates` e fechamento formal em `docs/implementation/v2-repository-hygiene-and-tools-review-cut-closure.md`;
+- a Sprint 1 desse corte foi concluida com inventario regeneravel em `docs/archive/implementation/v2-repository-hygiene-inventory.md`;
+- a Sprint 2 desse corte foi concluida com decisao regeneravel de classificacao dos docs ativos em `docs/archive/implementation/v2-repository-hygiene-doc-decisions.md`;
+- a Sprint 3 desse corte foi concluida com decisao regeneravel de classificacao dos entrypoints da raiz de `tools/` em `docs/archive/implementation/v2-repository-hygiene-tool-decisions.md`;
+- a Sprint 4 desse corte foi concluida com migracao dos `archive candidates` e fechamento formal em `docs/archive/implementation/v2-repository-hygiene-and-tools-review-cut-closure.md`;
 - a proxima frente imediata passa a ser a selecao disciplinada do proximo recorte funcional, sem reabrir ruido estrutural.
 - a camada de revisao profunda de repositorio para tecnologias externas foi formalizada em `docs/architecture/technology-repository-review-framework.md`, com primeira aplicacao em `docs/architecture/mem0-repository-review.md`; ela apoia decisao arquitetural, mas nao altera a prioridade funcional do backlog.

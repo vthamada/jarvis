@@ -1,5 +1,21 @@
 # Master Summary
 
+## Current reading after MB-152
+
+The latest closed functional baseline is the governed operator learning loop:
+`usar -> registrar -> refletir -> propor -> revisar -> influenciar -> medir`.
+
+`MB-151` closed the official documentation canonicality audit in
+`docs/documentation/documentation-canonicality-audit-mb151.md`.
+
+`MB-152` produced the documentation backlink map in
+`docs/documentation/documentation-backlink-map-mb152.md` and synchronized only
+safe active documentation. No document was moved, deleted, renamed or merged.
+
+The historical `v1`, `pos-v1`, `v1.5` and early `v2` material remains useful as
+traceability, but it must not override the active micro queue in
+`docs/implementation/execution-backlog.md`.
+
 ## 1. Objetivo
 
 Este documento resume o projeto JARVIS para leitura executiva, preservando alinhamento com o Documento-Mestre sem reproduzi-lo integralmente.
@@ -109,7 +125,7 @@ Leitura curta do momento:
 - Sprint 5 do `v2` foi concluída com evals de aderência do recorte de especialistas;
 - Sprint 6 do `v2` foi concluída com fechamento formal do primeiro corte do ciclo;
 - o ultimo recorte funcional concluido do programa agora e `docs/archive/implementation/v2-native-memory-scope-hardening-cut.md`, fechado para endurecer o baseline nativo antes de qualquer reabertura externa;
-- o ultimo recorte estrutural concluido do programa agora e `docs/implementation/v2-repository-hygiene-and-tools-review-cut.md`, fechado para reduzir a superficie ativa do repositorio;
+- o ultimo recorte estrutural concluido do programa agora e `docs/archive/implementation/v2-repository-hygiene-and-tools-review-cut.md`, fechado para reduzir a superficie ativa do repositorio;
 - a Sprint 1 desse recorte foi concluida com inventario regeneravel da superficie estrutural do repositorio;
 - a Sprint 2 desse recorte foi concluida com decisao regeneravel de classificacao dos docs ativos de `docs/implementation`;
 - a Sprint 3 desse recorte foi concluida com decisao regeneravel de classificacao dos entrypoints da raiz de `tools/`;
@@ -150,8 +166,8 @@ O projeto deve evitar:
 
 O próximo passo executivo mais racional é:
 
-- usar `docs/implementation/v2-native-memory-scope-hardening-cut-closure.md` como fechamento formal mais recente do eixo de memoria nativa;
-- usar `docs/implementation/v2-repository-hygiene-and-tools-review-cut-closure.md` como fechamento estrutural mais recente;
+- usar `docs/archive/implementation/v2-native-memory-scope-hardening-cut-closure.md` como fechamento formal mais recente do eixo de memoria nativa;
+- usar `docs/archive/implementation/v2-repository-hygiene-and-tools-review-cut-closure.md` como fechamento estrutural mais recente;
 - selecionar agora o proximo recorte funcional com base em `docs/implementation/v2-adherence-snapshot.md`, sem reabrir ruido estrutural;
 - usar o fechamento regeneravel do `v2-domain-consumers-and-workflows-cut` como leitura executiva minima de cobertura por rota, workflow e sinais deliberados antes de qualquer benchmark novo;
 - manter `Mastra` e `AutoGPT Platform` apenas como referencia e `Mem0` como candidata condicional de reabertura futura;

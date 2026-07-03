@@ -3,6 +3,17 @@
 Este arquivo existe para facilitar a troca de conversa sem perder foco,
 prioridade ou contexto operacional do JARVIS.
 
+Estado documental atual pos-`MB-152`:
+
+- `MB-151` fechou a auditoria documental oficial em
+  `docs/documentation/documentation-canonicality-audit-mb151.md`;
+- `MB-152` gerou o mapa de backlinks em
+  `docs/documentation/documentation-backlink-map-mb152.md`;
+- nenhuma retomada deve mover, deletar, renomear ou mesclar documentos sem
+  plano explicito e aprovacao humana;
+- a fila micro vigente continua sendo
+  `docs/implementation/execution-backlog.md`.
+
 Uso correto:
 
 - usar quando um lote foi fechado e a proxima rodada vai abrir novo recorte;

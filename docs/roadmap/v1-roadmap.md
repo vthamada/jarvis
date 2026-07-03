@@ -1,5 +1,11 @@
 # V1 Roadmap
 
+Historical status after `MB-152`:
+
+- this roadmap remains a historical reference for the closed `v1` phase;
+- it must not be used as the active execution queue;
+- do not move this file until a separate archive/move plan updates backlinks.
+
 ## 1. Objetivo
 
 Este documento preserva o roadmap do `v1` do JARVIS em nivel tatico como referencia historica.
