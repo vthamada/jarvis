@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import uuid4
 
+from shared.autonomy_ladder import capability_mode_exceeds_autonomy_limit
 from shared.contracts import (
     DeliberativePlanContract,
     GovernanceCheckContract,
@@ -748,6 +749,7 @@ class GovernanceService:
         request_confirmation_mode = governance_check.context.get(
             "request_confirmation_mode"
         )
+        autonomy_violation = self._autonomy_ladder_violation(governance_check)
 
         if risk_level in {RiskLevel.HIGH, RiskLevel.CRITICAL}:
             decision = PermissionDecision.BLOCK
@@ -757,6 +759,35 @@ class GovernanceService:
             requires_audit = True
             requires_rollback_plan = True
             containment_hint = "block_direct_execution"
+        elif autonomy_violation == "forbidden_autonomy_claim":
+            decision = PermissionDecision.BLOCK
+            justification = (
+                "O contrato de autonomia tentou permitir autopromocao ou mutacao "
+                "do nucleo, o que e proibido."
+            )
+            conditions = [
+                "Manter automatic_promotion_allowed=false.",
+                "Manter core_mutation_allowed=false.",
+            ]
+            policy_refs = ["policy://autonomy-ladder/forbidden-claim"]
+            requires_audit = True
+            requires_rollback_plan = True
+            containment_hint = "block_forbidden_autonomy_claim"
+        elif autonomy_violation == "capability_above_autonomy_limit":
+            decision = PermissionDecision.DEFER_FOR_VALIDATION
+            justification = (
+                "A capability selecionada excede o nivel maximo de autonomia "
+                "permitido para a request/missao."
+            )
+            conditions = [
+                "Rebaixar a capability ao max_autonomy_capability_mode.",
+                "Solicitar confirmacao humana antes de qualquer execucao acima do limite.",
+                "Registrar o limite aplicado em eventos e console.",
+            ]
+            policy_refs = ["policy://autonomy-ladder/enforce-max-capability"]
+            requires_audit = True
+            requires_rollback_plan = True
+            containment_hint = "defer_capability_above_autonomy_limit"
         elif self._should_defer(governance_check, proposed_effect, open_loops, continuity_hint):
             decision = PermissionDecision.DEFER_FOR_VALIDATION
             if continuity_hint == "checkpoint_contido":
@@ -827,6 +858,22 @@ class GovernanceService:
             containment_hint=containment_hint,
             policy_refs=policy_refs,
         )
+
+    @staticmethod
+    def _autonomy_ladder_violation(
+        governance_check: GovernanceCheckContract,
+    ) -> str | None:
+        context = governance_check.context
+        if context.get("autonomy_automatic_promotion_allowed") is True:
+            return "forbidden_autonomy_claim"
+        if context.get("autonomy_core_mutation_allowed") is True:
+            return "forbidden_autonomy_claim"
+        if capability_mode_exceeds_autonomy_limit(
+            selected_mode=str(context.get("capability_decision_selected_mode") or ""),
+            max_capability_mode=str(context.get("max_autonomy_capability_mode") or ""),
+        ):
+            return "capability_above_autonomy_limit"
+        return None
 
     @staticmethod
     def proposed_effect(intent: str, plan: DeliberativePlanContract | None) -> str:

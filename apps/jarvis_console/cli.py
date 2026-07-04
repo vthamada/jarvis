@@ -1092,6 +1092,24 @@ def render_operator_dashboard(
     memory_influence_evidence_refs = safe_console_list(
         list(getattr(flow_audit, "memory_influence_evidence_refs", []))
     )
+    effective_autonomy_level = safe_console_value(
+        getattr(flow_audit, "effective_autonomy_level", None)
+    )
+    autonomy_ladder_status = safe_console_value(
+        getattr(flow_audit, "autonomy_ladder_status", None)
+    )
+    max_autonomy_capability_mode = safe_console_value(
+        getattr(flow_audit, "max_autonomy_capability_mode", None)
+    )
+    autonomy_human_confirmation_required = safe_console_value(
+        getattr(flow_audit, "autonomy_human_confirmation_required", True)
+    )
+    autonomy_confirmation_mode = safe_console_value(
+        getattr(flow_audit, "autonomy_confirmation_mode", None)
+    )
+    autonomy_blocked_runtime_actions = safe_console_list(
+        list(getattr(flow_audit, "autonomy_blocked_runtime_actions", []))
+    )
 
     return "\n".join(
         [
@@ -1127,6 +1145,13 @@ def render_operator_dashboard(
             f"memory_influence_ignored_refs={memory_influence_ignored_refs}",
             f"memory_influence_reasons={memory_influence_reasons}",
             f"memory_influence_evidence_refs={memory_influence_evidence_refs}",
+            f"effective_autonomy_level={effective_autonomy_level}",
+            f"autonomy_ladder_status={autonomy_ladder_status}",
+            f"max_autonomy_capability_mode={max_autonomy_capability_mode}",
+            "autonomy_human_confirmation_required="
+            f"{autonomy_human_confirmation_required}",
+            f"autonomy_confirmation_mode={autonomy_confirmation_mode}",
+            f"autonomy_blocked_runtime_actions={autonomy_blocked_runtime_actions}",
             f"operator_usefulness_status={operator_usefulness_status}",
             f"operator_usefulness_score={operator_usefulness_score}",
             f"operator_usefulness_signals={operator_usefulness_signals}",

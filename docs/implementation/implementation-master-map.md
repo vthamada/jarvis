@@ -225,7 +225,7 @@ Goal: preserve control while increasing autonomy.
 | `GOV-004` | Policy for memory mutation | `partial_runtime` | Explicit memory governance by class and risk | Memory registry | candidate |
 | `GOV-005` | Tool permission model | `minimum_baseline` | Per-adapter scopes and confirmations | ACT tracks | candidate |
 | `GOV-006` | Incident response for documentation/runtime | `minimum_baseline` | Practical incident drills and recovery | Operations docs | later |
-| `GOV-007` | Autonomy ladder enforcement | `partial_runtime_contract` | Runtime-enforced autonomy levels | Mission policy | high-priority |
+| `GOV-007` | Autonomy ladder enforcement | `partial_runtime_enforced` | Runtime-enforced autonomy levels | Mission policy | high-priority |
 | `GOV-008` | Secrets and sensitive data policy | `partial_runtime` | Stronger local rules and tests | Security | later |
 | `GOV-009` | Release promotion workflow | `minimum_baseline` | Explicit promote/reject/sandbox pipeline | Evolution, gates | high-priority |
 | `GOV-010` | Protective intelligence controls | `deferred_by_phase` | SecurityOS-like vertical only after core readiness | DV-001 | not now |
@@ -470,6 +470,8 @@ Map IDs: `GOV-007`, `GOV-005`, `ACT-002`, `ACT-003`.
 
 Goal: enforce autonomy level limits in governance, operation dispatch and
 console-visible decisions.
+
+Status: closed in `MB-165`; next execution item is `MB-166`.
 
 ### MB-166 -- Sandbox-To-Release Promotion Checklist
 

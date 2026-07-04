@@ -187,6 +187,38 @@ def test_governance_service_carries_autonomy_ladder_context() -> None:
     assert result.governance_check.context["autonomy_core_mutation_allowed"] is False
 
 
+def test_governance_service_defers_capability_above_autonomy_limit() -> None:
+    service = GovernanceService()
+    plan = low_risk_plan()
+    plan.capability_decision_selected_mode = "core_with_local_operation"
+    plan.capability_decision_authorization_status = "authorized_with_conditions"
+    plan.effective_autonomy_level = "assist_only"
+    plan.max_autonomy_level = "assist_only"
+    plan.max_autonomy_capability_mode = "contained_guidance"
+    plan.autonomy_ladder_status = "within_limit"
+    result = service.assess_request(
+        InputContract(
+            request_id=RequestId("req-autonomy-defer"),
+            session_id=SessionId("sess-autonomy-defer"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Execute the local operation.",
+            timestamp="2026-07-04T00:00:00Z",
+        ),
+        intent="planning",
+        requested_by_service="orchestrator-service",
+        plan=plan,
+    )
+
+    assert result.governance_decision.decision == PermissionDecision.DEFER_FOR_VALIDATION
+    assert result.governance_decision.containment_hint == (
+        "defer_capability_above_autonomy_limit"
+    )
+    assert "policy://autonomy-ladder/enforce-max-capability" in (
+        result.governance_decision.policy_refs
+    )
+
+
 def test_governance_allows_bounded_work_item_creation() -> None:
     service = GovernanceService()
     result = service.assess_work_item_transition(

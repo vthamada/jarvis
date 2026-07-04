@@ -18,8 +18,15 @@ bloqueio explicito de autopromocao/core mutation. O contrato atravessa
 `InputContract`, plano, governanca, dispatch e eventos do orquestrador, mas
 ainda nao aplica enforcement amplo.
 
-`MB-165` e o unico item tecnico `ready`: aplicar os limites de autonomia em
-governanca, dispatch operacional e console, com allow/block/defer auditavel.
+`MB-165` foi concluido: governanca agora bloqueia claims proibidos de autonomia
+e defere capability acima de `max_autonomy_capability_mode`; `operational-service`
+falha dispatch acima do limite sem gerar artefato; observabilidade e
+`operator-dashboard` mostram nivel efetivo, status do ladder, limite aplicado,
+confirmacao humana e acoes bloqueadas.
+
+`MB-166` e o unico item tecnico `ready`: definir checklist sandbox-to-release
+para aprendizados revisados e candidatos evolutivos, mantendo evidencia, testes,
+rollback e aprovacao humana como fronteira.
 
 ## Atualizacao 2026-05-17
 
@@ -193,9 +200,9 @@ refs de artefato/reflexao, testes, rollback, revisao humana obrigatoria,
 `automatic_promotion_allowed=false`, `core_mutation_allowed=false` e
 `memory_write_mode=through_core_only`. `memory-service` persiste/lista esses
 candidatos, `evolution-lab` cria proposta sandbox-only a partir deles e o
-console possui `procedural-playbooks` read-only. `MB-163` e `MB-164` tambem
-foram concluidos; `MB-165` e o unico item tecnico `ready`, focado em enforcement
-runtime do `autonomy_ladder`.
+console possui `procedural-playbooks` read-only. `MB-163`, `MB-164` e `MB-165`
+tambem foram concluidos; `MB-166` e o unico item tecnico `ready`, focado no
+checklist sandbox-to-release governado.
 
 O corte pos-`MB-125` foi repriorizado em `MB-126`: a proxima frente ativa e
 experiencia operacional + reflexao pos-tarefa governada. O objetivo e fazer o

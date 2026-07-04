@@ -3126,7 +3126,7 @@ Fora de escopo:
 
 - `id`: `MB-165`
 - `prioridade`: `P0`
-- `status`: `ready`
+- `status`: `done`
 - `eixo_do_mestre`: `governanca`, `operacao`, `ferramentas`
 - `map_ids`: `GOV-007`, `GOV-005`, `ACT-002`, `ACT-003`
 - `workflow_profile_afetado`: `governance_boundary_workflow`, `operational_readiness_workflow`
@@ -3139,12 +3139,14 @@ Fora de escopo:
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `high`
 - `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: governanca agora bloqueia claims proibidos de autonomia e defere capability acima de `max_autonomy_capability_mode`; `operational-service` falha dispatch acima do limite sem gerar artefato; `observability-service` e `jarvis-console operator-dashboard` mostram nivel efetivo, status do ladder, limite aplicado, confirmacao humana e acoes bloqueadas.
+- `evidencia_de_fechamento`: `pytest services/governance-service/tests/test_governance_service.py services/orchestrator-service/tests/test_orchestrator_service.py services/operational-service/tests/test_operational_service.py services/observability-service/tests/test_observability_service.py apps/jarvis_console/tests/test_console.py` passou com 130 testes.
 
 ### MB-166
 
 - `id`: `MB-166`
 - `prioridade`: `P1`
-- `status`: `blocked`
+- `status`: `ready`
 - `eixo_do_mestre`: `evolucao`, `release`, `governanca`
 - `map_ids`: `EVL-006`, `GOV-009`, `DOC-010`
 - `workflow_profile_afetado`: `governance_boundary_workflow`, `operational_readiness_workflow`
@@ -3397,6 +3399,7 @@ Estado atual da fila:
 - `MB-162` foi concluido como baseline governado de candidatos de playbook procedural;
 - `MB-163` foi concluido como superficie auditavel de influencia de memoria em observabilidade e dashboard textual;
 - `MB-164` foi concluido como contrato runtime compartilhado de `autonomy_ladder`, sem enforcement amplo ainda;
-- `MB-165` e o unico item tecnico `ready` atual, focado em aplicar limites de autonomia em governanca, dispatch operacional e console; `MB-166` a `MB-174` permanecem `blocked` por dependencia/ordem;
+- `MB-165` foi concluido como enforcement minimo de `autonomy_ladder` em governanca, dispatch operacional, observabilidade e console;
+- `MB-166` e o unico item tecnico `ready` atual, focado em checklist sandbox-to-release para aprendizados/candidatos revisados; `MB-167` a `MB-174` permanecem `blocked` por dependencia/ordem;
 - `SO-001`, `TA-004`, `TA-006` e verticais `deferred` continuam fora da fila sem mudanca explicita de fase;
 - `protective intelligence foundation` continua `deferred` e a matriz da Onda 2 segue como insumo, nao como gatilho automatico para abrir nova vertical.

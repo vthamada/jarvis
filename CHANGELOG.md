@@ -27,6 +27,12 @@
 - `InputContract`, `DeliberativePlanContract`, `OperationDispatchContract`, governanca e eventos do orquestrador agora propagam o ladder sem aplicar enforcement amplo;
 - todos os niveis preservam `automatic_promotion_allowed=false` e `core_mutation_allowed=false`; `execution-backlog.md` fechou `MB-164` e abriu `MB-165` como unico item tecnico `ready`.
 
+### MB-165 aplica enforcement minimo do autonomy ladder
+
+- `governance-service` bloqueia claims proibidos de autonomia e defere capability acima de `max_autonomy_capability_mode`;
+- `operational-service` falha dispatch acima do limite sem gerar artefato, com `governance_flags` e recomendacao de confirmacao humana;
+- `observability-service` e `jarvis-console operator-dashboard` mostram nivel efetivo, status do ladder, limite aplicado, confirmacao humana e acoes bloqueadas; `execution-backlog.md` fechou `MB-165` e abriu `MB-166` como unico item tecnico `ready`.
+
 ## 2026-05-17
 
 ### MB-132 abre o Operator Learning Loop

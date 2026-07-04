@@ -350,7 +350,8 @@ Notas de leitura:
   `MB-162` foi fechado como candidatos bounded de playbook procedural;
   `MB-163` foi fechado como superficie auditavel de influencia de memoria;
   `MB-164` foi fechado como contrato runtime de `autonomy_ladder`;
-  `MB-165` e o unico item tecnico `ready` e `MB-166` a `MB-174` permanecem
+  `MB-165` foi fechado como enforcement minimo do `autonomy_ladder`;
+  `MB-166` e o unico item tecnico `ready` e `MB-167` a `MB-174` permanecem
   bloqueados por dependencia/ordem.
 
 ### 5.5 Deferred verticals already mapped
@@ -395,7 +396,7 @@ Ordem recomendada hoje:
 1. tratar `MB-110` a `MB-159` como baseline fechado de objetivos persistentes,
    utilidade operacional, absorcao tecnologica governada, aprendizado revisado,
    higiene documental e horizonte longo minimo.
-2. executar `MB-165` como proximo item tecnico da fila maior pos-`MB-160`.
+2. executar `MB-166` como proximo item tecnico da fila maior pos-`MB-160`.
 3. manter `SO-001`, `TA-004`, `TA-006` e verticais `deferred` fora da fila ate
    haver decisao explicita de fase.
 
@@ -457,8 +458,8 @@ Leitura correta:
   movendo `COG-010` para um baseline minimo operacional;
 - `MB-160` abriu a fila maior `MB-161` a `MB-174`, priorizando memoria causal,
   autonomia runtime, promocao governada, cockpit, feedback, dominios/evals,
-  proveniencia e readiness; `MB-161`, `MB-162`, `MB-163` e `MB-164` foram
-  fechados e `MB-165` e o unico item `ready`;
+  proveniencia e readiness; `MB-161`, `MB-162`, `MB-163`, `MB-164` e `MB-165`
+  foram fechados e `MB-166` e o unico item `ready`;
 - `RH-*` permanece fora do backlog implementavel.
 
 ---

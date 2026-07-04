@@ -534,6 +534,12 @@ def test_console_operator_dashboard_shows_daily_state_for_mission() -> None:
     assert "memory_influence_ignored_refs=" in outputs[0]
     assert "memory_influence_reasons=" in outputs[0]
     assert "memory_influence_evidence_refs=" in outputs[0]
+    assert "effective_autonomy_level=" in outputs[0]
+    assert "autonomy_ladder_status=" in outputs[0]
+    assert "max_autonomy_capability_mode=" in outputs[0]
+    assert "autonomy_human_confirmation_required=" in outputs[0]
+    assert "autonomy_confirmation_mode=" in outputs[0]
+    assert "autonomy_blocked_runtime_actions=" in outputs[0]
     assert "automatic_promotion=False" in outputs[0]
     assert "next_operator_step=review_evolution_proposal" in outputs[0]
 

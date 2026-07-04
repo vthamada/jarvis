@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from uuid import uuid4
 
+from shared.autonomy_ladder import capability_mode_exceeds_autonomy_limit
 from shared.contracts import (
     ArtifactResultContract,
     OperationDispatchContract,
@@ -39,7 +40,21 @@ class OperationalService:
         """Execute a low-risk operation using a deterministic local policy."""
 
         artifact_results: list[ArtifactResultContract] = []
-        if dispatch.task_type == "draft_plan":
+        autonomy_violation = capability_mode_exceeds_autonomy_limit(
+            selected_mode=dispatch.capability_decision_selected_mode,
+            max_capability_mode=dispatch.max_autonomy_capability_mode,
+        )
+        governance_flags: list[str] = []
+        errors: list[str] = []
+        if autonomy_violation:
+            content = (
+                "Dispatch bloqueado: capability acima do limite de autonomia "
+                "permitido."
+            )
+            status = OperationStatus.FAILED
+            governance_flags.append("autonomy_capability_above_limit")
+            errors.append("capability_above_autonomy_limit")
+        elif dispatch.task_type == "draft_plan":
             content = self._build_plan_content(dispatch)
             status = OperationStatus.COMPLETED
         elif dispatch.task_type == "produce_analysis_brief":
@@ -100,6 +115,7 @@ class OperationalService:
             status=status,
             outputs=outputs,
             timestamp=self.now(),
+            errors=errors,
             artifacts=[
                 artifact.location_ref for artifact in artifact_results if artifact.location_ref
             ],
@@ -150,8 +166,15 @@ class OperationalService:
             canonical_user_ref=dispatch.canonical_user_ref,
             surface_continuity_status=dispatch.surface_continuity_status,
             next_recommendation=(
-                "continue" if status == OperationStatus.COMPLETED else "review_dispatch"
+                "continue"
+                if status == OperationStatus.COMPLETED
+                else (
+                    "request_human_confirmation"
+                    if autonomy_violation
+                    else "review_dispatch"
+                )
             ),
+            governance_flags=governance_flags,
             memory_record_hints=(
                 ["artifact_generated", dispatch.plan_summary or "plan_executed"]
                 if artifact_results

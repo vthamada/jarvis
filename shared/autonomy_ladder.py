@@ -73,6 +73,13 @@ AUTONOMY_LEVEL_POLICIES = {
     },
 }
 
+CAPABILITY_MODE_ORDER = {
+    "clarification_only": 0,
+    "contained_guidance": 0,
+    "core_with_specialist_handoff": 1,
+    "core_with_local_operation": 2,
+}
+
 
 def derive_autonomy_ladder(
     *,
@@ -156,3 +163,17 @@ def _min_level(requested_level: str, max_level: str) -> str:
     requested_index = AUTONOMY_LEVEL_ORDER.index(requested_level)
     max_index = AUTONOMY_LEVEL_ORDER.index(max_level)
     return AUTONOMY_LEVEL_ORDER[min(requested_index, max_index)]
+
+
+def capability_mode_exceeds_autonomy_limit(
+    *,
+    selected_mode: str | None,
+    max_capability_mode: str | None,
+) -> bool:
+    """Return whether a selected capability mode exceeds autonomy limits."""
+
+    if not selected_mode or not max_capability_mode:
+        return False
+    selected_rank = CAPABILITY_MODE_ORDER.get(selected_mode, 0)
+    max_rank = CAPABILITY_MODE_ORDER.get(max_capability_mode, 0)
+    return selected_rank > max_rank

@@ -20,6 +20,36 @@ def test_operational_service_name() -> None:
     assert OperationalService.name == "operational-service"
 
 
+def test_operational_service_blocks_dispatch_above_autonomy_limit() -> None:
+    temp_dir = runtime_dir("operational-autonomy-block")
+    service = OperationalService(artifact_dir=str(temp_dir))
+    execution = service.execute(
+        OperationDispatchContract(
+            operation_id=OperationId("op-autonomy-block"),
+            request_id=RequestId("req-autonomy-block"),
+            session_id=SessionId("sess-autonomy-block"),
+            task_type="draft_plan",
+            task_goal="Execute local operation",
+            task_plan="attempt operation above autonomy limit",
+            constraints=["bounded"],
+            expected_output="text_brief",
+            capability_decision_selected_mode="core_with_local_operation",
+            max_autonomy_capability_mode="contained_guidance",
+            effective_autonomy_level="assist_only",
+        )
+    )
+
+    assert execution.operation_result.status == OperationStatus.FAILED
+    assert execution.artifact_results == []
+    assert "capability_above_autonomy_limit" in execution.operation_result.errors
+    assert "autonomy_capability_above_limit" in (
+        execution.operation_result.governance_flags
+    )
+    assert execution.operation_result.next_recommendation == (
+        "request_human_confirmation"
+    )
+
+
 def test_operational_service_generates_text_artifact_for_supported_task() -> None:
     temp_dir = runtime_dir("operational-artifact")
     service = OperationalService(artifact_dir=str(temp_dir))

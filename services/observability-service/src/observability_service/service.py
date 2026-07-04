@@ -89,6 +89,12 @@ class FlowAudit:
     capability_decision_handoff_mode: str | None
     capability_decision_eligible_capabilities: list[str]
     capability_decision_selected_capabilities: list[str]
+    effective_autonomy_level: str | None
+    autonomy_ladder_status: str | None
+    max_autonomy_capability_mode: str | None
+    autonomy_human_confirmation_required: bool
+    autonomy_confirmation_mode: str | None
+    autonomy_blocked_runtime_actions: list[str]
     capability_effectiveness: str
     handoff_adapter_status: str
     request_identity_status: str
@@ -480,6 +486,12 @@ class ObservabilityService:
                 capability_decision_handoff_mode=None,
                 capability_decision_eligible_capabilities=[],
                 capability_decision_selected_capabilities=[],
+                effective_autonomy_level=None,
+                autonomy_ladder_status=None,
+                max_autonomy_capability_mode=None,
+                autonomy_human_confirmation_required=True,
+                autonomy_confirmation_mode=None,
+                autonomy_blocked_runtime_actions=[],
                 capability_effectiveness="incomplete",
                 handoff_adapter_status="incomplete",
                 request_identity_status="incomplete",
@@ -1546,6 +1558,52 @@ class ObservabilityService:
             is not None
             else "not_applicable"
         )
+        effective_autonomy_level = (
+            str(capability_source_event.payload.get("effective_autonomy_level"))
+            if capability_source_event
+            and capability_source_event.payload.get("effective_autonomy_level")
+            is not None
+            else None
+        )
+        autonomy_ladder_status = (
+            str(capability_source_event.payload.get("autonomy_ladder_status"))
+            if capability_source_event
+            and capability_source_event.payload.get("autonomy_ladder_status")
+            is not None
+            else None
+        )
+        max_autonomy_capability_mode = (
+            str(capability_source_event.payload.get("max_autonomy_capability_mode"))
+            if capability_source_event
+            and capability_source_event.payload.get("max_autonomy_capability_mode")
+            is not None
+            else None
+        )
+        autonomy_human_confirmation_required = bool(
+            capability_source_event.payload.get(
+                "autonomy_human_confirmation_required",
+                True,
+            )
+        ) if capability_source_event else True
+        autonomy_confirmation_mode = (
+            str(capability_source_event.payload.get("autonomy_confirmation_mode"))
+            if capability_source_event
+            and capability_source_event.payload.get("autonomy_confirmation_mode")
+            is not None
+            else None
+        )
+        autonomy_blocked_runtime_actions = (
+            [
+                str(item)
+                for item in capability_source_event.payload.get(
+                    "autonomy_blocked_runtime_actions",
+                    [],
+                )
+                if item
+            ]
+            if capability_source_event
+            else []
+        )
         capability_decision_tool_class = (
             str(capability_source_event.payload.get("capability_decision_tool_class"))
             if capability_source_event
@@ -2194,6 +2252,12 @@ class ObservabilityService:
             capability_decision_selected_capabilities=(
                 capability_decision_selected_capabilities
             ),
+            effective_autonomy_level=effective_autonomy_level,
+            autonomy_ladder_status=autonomy_ladder_status,
+            max_autonomy_capability_mode=max_autonomy_capability_mode,
+            autonomy_human_confirmation_required=autonomy_human_confirmation_required,
+            autonomy_confirmation_mode=autonomy_confirmation_mode,
+            autonomy_blocked_runtime_actions=autonomy_blocked_runtime_actions,
             capability_effectiveness=capability_effectiveness,
             handoff_adapter_status=handoff_adapter_status,
             request_identity_status=request_identity_status,
