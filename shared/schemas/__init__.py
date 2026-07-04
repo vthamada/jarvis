@@ -211,6 +211,38 @@ POST_TASK_REFLECTION_SCHEMA = CanonicalSchema(
     ),
 )
 
+PROCEDURAL_PLAYBOOK_CANDIDATE_SCHEMA = CanonicalSchema(
+    name="ProceduralPlaybookCandidateSchema",
+    contract_name="ProceduralPlaybookCandidateContract",
+    required_fields=(
+        "playbook_candidate_id",
+        "procedure_name",
+        "workflow_profile",
+        "bounded_steps",
+        "evidence_refs",
+        "timestamp",
+    ),
+    optional_fields=(
+        "route",
+        "domain",
+        "source_artifact_refs",
+        "source_reflection_refs",
+        "proposed_tests",
+        "rollback_plan_ref",
+        "risk_hint",
+        "review_status",
+        "blockers",
+        "human_review_required",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+        "memory_write_mode",
+    ),
+    notes=(
+        "Bounded procedural playbook candidate; never an active rule without "
+        "human review and release gate.",
+    ),
+)
+
 EVOLUTION_REVIEW_QUEUE_ITEM_SCHEMA = CanonicalSchema(
     name="EvolutionReviewQueueItemSchema",
     contract_name="EvolutionReviewQueueItemContract",

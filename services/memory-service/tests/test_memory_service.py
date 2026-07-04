@@ -16,6 +16,7 @@ from shared.contracts import (
     InputContract,
     OperationDispatchContract,
     OperationResultContract,
+    ProceduralPlaybookCandidateContract,
     SpecialistContributionContract,
     SpecialistSharedMemoryContextContract,
 )
@@ -825,6 +826,61 @@ def test_memory_service_builds_guided_domain_memory_packet_for_promoted_speciali
     assert persisted.procedural_artifact_refs == guided.procedural_artifact_refs
     assert persisted.procedural_artifact_version == guided.procedural_artifact_version
     assert persisted.procedural_artifact_summary == guided.procedural_artifact_summary
+
+
+def test_memory_service_records_bounded_procedural_playbook_candidate() -> None:
+    temp_dir = runtime_dir("memory-procedural-playbook")
+    service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
+
+    record = service.record_procedural_playbook_candidate(
+        ProceduralPlaybookCandidateContract(
+            playbook_candidate_id="playbook-candidate://software-change/001",
+            procedure_name="bounded patch review",
+            workflow_profile="software_change_workflow",
+            route="software_engineering",
+            domain="engenharia_de_software",
+            bounded_steps=[
+                "collect evidence",
+                "run targeted tests",
+                "prepare rollback",
+            ],
+            evidence_refs=["trace://req-playbook"],
+            source_artifact_refs=["artifact://procedural/software/v1"],
+            source_reflection_refs=["reflection://mission/001"],
+            proposed_tests=["pytest services/memory-service/tests"],
+            rollback_plan_ref="rollback://playbook/001",
+            timestamp="2026-07-04T00:00:00Z",
+        )
+    )
+    blocked = service.record_procedural_playbook_candidate(
+        ProceduralPlaybookCandidateContract(
+            playbook_candidate_id="playbook-candidate://software-change/blocked",
+            procedure_name="unsafe patch review",
+            workflow_profile="software_change_workflow",
+            bounded_steps=["skip evidence"],
+            evidence_refs=[],
+            timestamp="2026-07-04T00:01:00Z",
+            automatic_promotion_allowed=True,
+        )
+    )
+
+    assert record.candidate.review_status == "candidate"
+    assert record.candidate.automatic_promotion_allowed is False
+    assert record.candidate.core_mutation_allowed is False
+    assert blocked.candidate.review_status == "needs_review"
+    assert "evidence_required" in blocked.candidate.blockers
+    assert "rollback_plan_required" in blocked.candidate.blockers
+    assert "automatic_promotion_not_allowed" in blocked.candidate.blockers
+
+    records = service.list_procedural_playbook_candidates(
+        workflow_profile="software_change_workflow",
+        limit=5,
+    )
+    assert [item.candidate.playbook_candidate_id for item in records] == [
+        "playbook-candidate://software-change/blocked",
+        "playbook-candidate://software-change/001",
+    ]
+    assert records[1].candidate.memory_write_mode == "through_core_only"
 
 
 def test_memory_service_persists_session_continuity_for_governed_reformulation() -> None:

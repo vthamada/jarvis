@@ -15,6 +15,7 @@ from shared.contracts import (
     ExperienceRecordContract,
     MissionStateContract,
     PostTaskReflectionContract,
+    ProceduralPlaybookCandidateContract,
     ReviewedLearningGuidanceContract,
     SpecialistSharedMemoryContextContract,
     UserScopeContextContract,
@@ -143,6 +144,11 @@ class StoredExperienceReflection:
 @dataclass(frozen=True)
 class StoredReviewedLearningGuidance:
     guidance: ReviewedLearningGuidanceContract
+
+
+@dataclass(frozen=True)
+class StoredProceduralPlaybookCandidate:
+    candidate: ProceduralPlaybookCandidateContract
 
 
 @dataclass(frozen=True)
@@ -309,6 +315,23 @@ class MemoryRepository(ABC):
         limit: int = 20,
     ) -> list[StoredReviewedLearningGuidance]:
         """Load recent human-reviewed learning guidance."""
+        raise NotImplementedError
+
+    def record_procedural_playbook_candidate(
+        self,
+        record: StoredProceduralPlaybookCandidate,
+    ) -> None:
+        """Persist a bounded procedural playbook candidate."""
+        raise NotImplementedError
+
+    def list_procedural_playbook_candidates(
+        self,
+        *,
+        workflow_profile: str | None = None,
+        review_status: str | None = None,
+        limit: int = 20,
+    ) -> list[StoredProceduralPlaybookCandidate]:
+        """Load recent bounded procedural playbook candidates."""
         raise NotImplementedError
 
     def upsert_specialist_shared_memory(
@@ -1082,6 +1105,78 @@ class SqliteMemoryRepository(MemoryRepository):
             ).fetchall()
         return [self._row_to_reviewed_learning_guidance(row) for row in rows]
 
+    def record_procedural_playbook_candidate(
+        self,
+        record: StoredProceduralPlaybookCandidate,
+    ) -> None:
+        candidate = record.candidate
+        with self._connect() as connection:
+            connection.execute(
+                """
+                INSERT OR REPLACE INTO procedural_playbook_candidates (
+                    playbook_candidate_id, procedure_name, workflow_profile, route,
+                    domain, bounded_steps, evidence_refs, source_artifact_refs,
+                    source_reflection_refs, proposed_tests, rollback_plan_ref,
+                    risk_hint, review_status, blockers, human_review_required,
+                    automatic_promotion_allowed, core_mutation_allowed,
+                    memory_write_mode, timestamp
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    candidate.playbook_candidate_id,
+                    candidate.procedure_name,
+                    candidate.workflow_profile,
+                    candidate.route,
+                    candidate.domain,
+                    dumps(candidate.bounded_steps),
+                    dumps(candidate.evidence_refs),
+                    dumps(candidate.source_artifact_refs),
+                    dumps(candidate.source_reflection_refs),
+                    dumps(candidate.proposed_tests),
+                    candidate.rollback_plan_ref,
+                    candidate.risk_hint,
+                    candidate.review_status,
+                    dumps(candidate.blockers),
+                    int(candidate.human_review_required),
+                    int(candidate.automatic_promotion_allowed),
+                    int(candidate.core_mutation_allowed),
+                    candidate.memory_write_mode,
+                    candidate.timestamp,
+                ),
+            )
+            connection.commit()
+
+    def list_procedural_playbook_candidates(
+        self,
+        *,
+        workflow_profile: str | None = None,
+        review_status: str | None = None,
+        limit: int = 20,
+    ) -> list[StoredProceduralPlaybookCandidate]:
+        clauses: list[str] = []
+        params: list[object] = []
+        if workflow_profile:
+            clauses.append("workflow_profile = ?")
+            params.append(workflow_profile)
+        if review_status:
+            clauses.append("review_status = ?")
+            params.append(review_status)
+        where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        params.append(limit)
+        with self._connect() as connection:
+            rows = connection.execute(
+                f"""
+                SELECT *
+                FROM procedural_playbook_candidates
+                {where}
+                ORDER BY timestamp DESC
+                LIMIT ?
+                """,
+                tuple(params),
+            ).fetchall()
+        return [self._row_to_procedural_playbook_candidate(row) for row in rows]
+
     def upsert_specialist_shared_memory(
         self,
         snapshot: StoredSpecialistSharedMemory,
@@ -1654,6 +1749,31 @@ class SqliteMemoryRepository(MemoryRepository):
                 CREATE INDEX IF NOT EXISTS idx_reviewed_learning_guidance_scope_timestamp
                 ON reviewed_learning_guidance (workflow_profile, route, domain, timestamp);
 
+                CREATE TABLE IF NOT EXISTS procedural_playbook_candidates (
+                    playbook_candidate_id TEXT PRIMARY KEY,
+                    procedure_name TEXT NOT NULL,
+                    workflow_profile TEXT NOT NULL,
+                    route TEXT,
+                    domain TEXT,
+                    bounded_steps TEXT NOT NULL DEFAULT '[]',
+                    evidence_refs TEXT NOT NULL DEFAULT '[]',
+                    source_artifact_refs TEXT NOT NULL DEFAULT '[]',
+                    source_reflection_refs TEXT NOT NULL DEFAULT '[]',
+                    proposed_tests TEXT NOT NULL DEFAULT '[]',
+                    rollback_plan_ref TEXT,
+                    risk_hint TEXT,
+                    review_status TEXT NOT NULL,
+                    blockers TEXT NOT NULL DEFAULT '[]',
+                    human_review_required INTEGER NOT NULL,
+                    automatic_promotion_allowed INTEGER NOT NULL,
+                    core_mutation_allowed INTEGER NOT NULL,
+                    memory_write_mode TEXT NOT NULL,
+                    timestamp TEXT NOT NULL
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_procedural_playbook_candidates_scope_timestamp
+                ON procedural_playbook_candidates (workflow_profile, review_status, timestamp);
+
                 CREATE TABLE IF NOT EXISTS specialist_shared_memory (
                     session_id TEXT NOT NULL,
                     specialist_type TEXT NOT NULL,
@@ -2155,6 +2275,40 @@ class SqliteMemoryRepository(MemoryRepository):
                     row["automatic_promotion_allowed"]
                 ),
                 core_mutation_allowed=bool(row["core_mutation_allowed"]),
+            )
+        )
+
+    @staticmethod
+    def _row_to_procedural_playbook_candidate(
+        row: Row,
+    ) -> StoredProceduralPlaybookCandidate:
+        return StoredProceduralPlaybookCandidate(
+            candidate=ProceduralPlaybookCandidateContract(
+                playbook_candidate_id=str(row["playbook_candidate_id"]),
+                procedure_name=str(row["procedure_name"]),
+                workflow_profile=str(row["workflow_profile"]),
+                route=row["route"],
+                domain=row["domain"],
+                bounded_steps=list(loads(row["bounded_steps"] or "[]")),
+                evidence_refs=list(loads(row["evidence_refs"] or "[]")),
+                source_artifact_refs=list(
+                    loads(row["source_artifact_refs"] or "[]")
+                ),
+                source_reflection_refs=list(
+                    loads(row["source_reflection_refs"] or "[]")
+                ),
+                proposed_tests=list(loads(row["proposed_tests"] or "[]")),
+                rollback_plan_ref=row["rollback_plan_ref"],
+                risk_hint=row["risk_hint"],
+                review_status=str(row["review_status"]),
+                blockers=list(loads(row["blockers"] or "[]")),
+                human_review_required=bool(row["human_review_required"]),
+                automatic_promotion_allowed=bool(
+                    row["automatic_promotion_allowed"]
+                ),
+                core_mutation_allowed=bool(row["core_mutation_allowed"]),
+                memory_write_mode=str(row["memory_write_mode"]),
+                timestamp=str(row["timestamp"]),
             )
         )
 
@@ -3028,6 +3182,101 @@ class PostgresMemoryRepository(MemoryRepository):
             rows = cursor.fetchall()
         return [self._row_to_reviewed_learning_guidance(row) for row in rows]
 
+    def record_procedural_playbook_candidate(
+        self,
+        record: StoredProceduralPlaybookCandidate,
+    ) -> None:
+        candidate = record.candidate
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO procedural_playbook_candidates (
+                    playbook_candidate_id, procedure_name, workflow_profile, route,
+                    domain, bounded_steps, evidence_refs, source_artifact_refs,
+                    source_reflection_refs, proposed_tests, rollback_plan_ref,
+                    risk_hint, review_status, blockers, human_review_required,
+                    automatic_promotion_allowed, core_mutation_allowed,
+                    memory_write_mode, timestamp
+                )
+                VALUES (
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                    %s, %s, %s, %s, %s
+                )
+                ON CONFLICT (playbook_candidate_id) DO UPDATE SET
+                    procedure_name = EXCLUDED.procedure_name,
+                    workflow_profile = EXCLUDED.workflow_profile,
+                    route = EXCLUDED.route,
+                    domain = EXCLUDED.domain,
+                    bounded_steps = EXCLUDED.bounded_steps,
+                    evidence_refs = EXCLUDED.evidence_refs,
+                    source_artifact_refs = EXCLUDED.source_artifact_refs,
+                    source_reflection_refs = EXCLUDED.source_reflection_refs,
+                    proposed_tests = EXCLUDED.proposed_tests,
+                    rollback_plan_ref = EXCLUDED.rollback_plan_ref,
+                    risk_hint = EXCLUDED.risk_hint,
+                    review_status = EXCLUDED.review_status,
+                    blockers = EXCLUDED.blockers,
+                    human_review_required = EXCLUDED.human_review_required,
+                    automatic_promotion_allowed = EXCLUDED.automatic_promotion_allowed,
+                    core_mutation_allowed = EXCLUDED.core_mutation_allowed,
+                    memory_write_mode = EXCLUDED.memory_write_mode,
+                    timestamp = EXCLUDED.timestamp
+                """,
+                (
+                    candidate.playbook_candidate_id,
+                    candidate.procedure_name,
+                    candidate.workflow_profile,
+                    candidate.route,
+                    candidate.domain,
+                    dumps(candidate.bounded_steps),
+                    dumps(candidate.evidence_refs),
+                    dumps(candidate.source_artifact_refs),
+                    dumps(candidate.source_reflection_refs),
+                    dumps(candidate.proposed_tests),
+                    candidate.rollback_plan_ref,
+                    candidate.risk_hint,
+                    candidate.review_status,
+                    dumps(candidate.blockers),
+                    candidate.human_review_required,
+                    candidate.automatic_promotion_allowed,
+                    candidate.core_mutation_allowed,
+                    candidate.memory_write_mode,
+                    candidate.timestamp,
+                ),
+            )
+            connection.commit()
+
+    def list_procedural_playbook_candidates(
+        self,
+        *,
+        workflow_profile: str | None = None,
+        review_status: str | None = None,
+        limit: int = 20,
+    ) -> list[StoredProceduralPlaybookCandidate]:
+        clauses: list[str] = []
+        params: list[object] = []
+        if workflow_profile:
+            clauses.append("workflow_profile = %s")
+            params.append(workflow_profile)
+        if review_status:
+            clauses.append("review_status = %s")
+            params.append(review_status)
+        where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        params.append(limit)
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                f"""
+                SELECT *
+                FROM procedural_playbook_candidates
+                {where}
+                ORDER BY timestamp DESC
+                LIMIT %s
+                """,
+                tuple(params),
+            )
+            rows = cursor.fetchall()
+        return [self._row_to_procedural_playbook_candidate(row) for row in rows]
+
     def upsert_specialist_shared_memory(
         self,
         snapshot: StoredSpecialistSharedMemory,
@@ -3663,6 +3912,37 @@ class PostgresMemoryRepository(MemoryRepository):
                 """
                 CREATE INDEX IF NOT EXISTS idx_reviewed_learning_guidance_scope_timestamp
                 ON reviewed_learning_guidance (workflow_profile, route, domain, timestamp)
+                """
+            )
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS procedural_playbook_candidates (
+                    playbook_candidate_id TEXT PRIMARY KEY,
+                    procedure_name TEXT NOT NULL,
+                    workflow_profile TEXT NOT NULL,
+                    route TEXT,
+                    domain TEXT,
+                    bounded_steps TEXT NOT NULL DEFAULT '[]',
+                    evidence_refs TEXT NOT NULL DEFAULT '[]',
+                    source_artifact_refs TEXT NOT NULL DEFAULT '[]',
+                    source_reflection_refs TEXT NOT NULL DEFAULT '[]',
+                    proposed_tests TEXT NOT NULL DEFAULT '[]',
+                    rollback_plan_ref TEXT,
+                    risk_hint TEXT,
+                    review_status TEXT NOT NULL,
+                    blockers TEXT NOT NULL DEFAULT '[]',
+                    human_review_required BOOLEAN NOT NULL,
+                    automatic_promotion_allowed BOOLEAN NOT NULL,
+                    core_mutation_allowed BOOLEAN NOT NULL,
+                    memory_write_mode TEXT NOT NULL,
+                    timestamp TEXT NOT NULL
+                )
+                """
+            )
+            cursor.execute(
+                """
+                CREATE INDEX IF NOT EXISTS idx_procedural_playbook_candidates_scope_timestamp
+                ON procedural_playbook_candidates (workflow_profile, review_status, timestamp)
                 """
             )
             cursor.execute(

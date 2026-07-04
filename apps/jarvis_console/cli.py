@@ -184,6 +184,23 @@ class JarvisConsole:
             canonical_user_ref=canonical_user_ref or DEFAULT_CANONICAL_USER_REF,
         )
 
+    def list_procedural_playbook_candidates(
+        self,
+        *,
+        memory_db: str | None = None,
+        workflow_profile: str | None = None,
+        review_status: str | None = None,
+        limit: int = 5,
+    ) -> list[object]:
+        service = self.memory_service
+        if memory_db:
+            service = MemoryService(database_url=f"sqlite:///{Path(memory_db).as_posix()}")
+        return service.list_procedural_playbook_candidates(
+            workflow_profile=workflow_profile,
+            review_status=review_status,
+            limit=limit,
+        )
+
 
 def build_parser() -> ArgumentParser:
     parser = ArgumentParser(description="Run the minimal JARVIS console.")
@@ -304,6 +321,15 @@ def build_parser() -> ArgumentParser:
     reflections_parser.add_argument("--mission-id")
     reflections_parser.add_argument("--workflow-profile")
     reflections_parser.add_argument("--limit", type=int, default=5)
+
+    playbooks_parser = subparsers.add_parser(
+        "procedural-playbooks",
+        help="Show bounded procedural playbook candidates without activating them.",
+    )
+    playbooks_parser.add_argument("--memory-db")
+    playbooks_parser.add_argument("--workflow-profile")
+    playbooks_parser.add_argument("--review-status")
+    playbooks_parser.add_argument("--limit", type=int, default=5)
 
     review_parser = subparsers.add_parser(
         "evolution-review-queue",
@@ -727,6 +753,39 @@ def render_experience_reflections(records: list[object]) -> str:
                 f"blockers={safe_console_list(blockers)}",
                 f"automatic_promotion={safe_console_value(automatic_promotion)}",
                 f"core_mutation_allowed={safe_console_value(core_mutation_allowed)}",
+                "---",
+            ]
+        )
+    if lines and lines[-1] == "---":
+        lines.pop()
+    return "\n".join(lines)
+
+
+def render_procedural_playbook_candidates(records: list[object]) -> str:
+    if not records:
+        return "No procedural playbook candidates found."
+    lines: list[str] = []
+    for record in records:
+        candidate = getattr(record, "candidate", record)
+        lines.extend(
+            [
+                f"playbook_candidate_id={safe_console_value(candidate.playbook_candidate_id)}",
+                f"procedure_name={safe_console_value(candidate.procedure_name)}",
+                f"workflow_profile={safe_console_value(candidate.workflow_profile)}",
+                f"route={safe_console_value(candidate.route)}",
+                f"domain={safe_console_value(candidate.domain)}",
+                f"review_status={safe_console_value(candidate.review_status)}",
+                f"bounded_steps={safe_console_list(list(candidate.bounded_steps))}",
+                f"evidence_refs={safe_console_list(list(candidate.evidence_refs))}",
+                f"source_artifact_refs={safe_console_list(list(candidate.source_artifact_refs))}",
+                f"source_reflection_refs={safe_console_list(list(candidate.source_reflection_refs))}",
+                f"proposed_tests={safe_console_list(list(candidate.proposed_tests))}",
+                f"rollback_plan_ref={safe_console_value(candidate.rollback_plan_ref)}",
+                f"blockers={safe_console_list(list(candidate.blockers))}",
+                f"human_review_required={safe_console_value(candidate.human_review_required)}",
+                f"automatic_promotion={safe_console_value(candidate.automatic_promotion_allowed)}",
+                f"core_mutation_allowed={safe_console_value(candidate.core_mutation_allowed)}",
+                f"memory_write_mode={safe_console_value(candidate.memory_write_mode)}",
                 "---",
             ]
         )
@@ -1263,6 +1322,16 @@ def run_experience_reflections_command(args: Namespace) -> list[str]:
     return [render_experience_reflections(records)]
 
 
+def run_procedural_playbooks_command(args: Namespace) -> list[str]:
+    service = _memory_service_from_args(args)
+    records = service.list_procedural_playbook_candidates(
+        workflow_profile=args.workflow_profile,
+        review_status=args.review_status,
+        limit=max(1, args.limit),
+    )
+    return [render_procedural_playbook_candidates(records)]
+
+
 def run_mission_cycle_command(console: JarvisConsole, args: Namespace) -> list[str]:
     mission_state = console.get_objective_state(mission_id=args.mission_id)
     memory_service = _memory_service_from_args(args)
@@ -1411,6 +1480,8 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "ask"
         else run_experience_reflections_command(args)
         if args.command == "experience-reflections"
+        else run_procedural_playbooks_command(args)
+        if args.command == "procedural-playbooks"
         else run_evolution_review_queue_command(args)
         if args.command == "evolution-review-queue"
         else run_evolution_review_command(args)
@@ -1450,6 +1521,7 @@ def main(argv: list[str] | None = None) -> int:
         "goal-strategy",
         "technology-candidates",
         "experience-reflections",
+        "procedural-playbooks",
         "evolution-review-queue",
         "evolution-review",
         "mission-cycle",

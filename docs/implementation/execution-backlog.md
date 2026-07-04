@@ -3066,7 +3066,7 @@ Fora de escopo:
 
 - `id`: `MB-162`
 - `prioridade`: `P0`
-- `status`: `ready`
+- `status`: `done`
 - `eixo_do_mestre`: `memoria`, `artefatos`, `evolucao`
 - `map_ids`: `MEM-006`, `ACT-004`, `EVL-007`
 - `workflow_profile_afetado`: `operational_readiness_workflow`, `software_change_workflow`
@@ -3079,12 +3079,14 @@ Fora de escopo:
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `high`
 - `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: memoria procedural agora possui candidato de playbook bounded persistente, com passos limitados, evidencias, artefatos/reflexoes fonte, testes propostos, rollback, revisao humana e bloqueio de autopromocao/core mutation; evolution-lab transforma o candidato em proposta sandbox-only e console mostra a fila read-only.
+- `evidencia_de_fechamento`: `pytest tests/unit/test_shared_layer.py services/memory-service/tests/test_memory_service.py evolution/evolution-lab/tests/test_evolution_lab_service.py apps/jarvis_console/tests/test_console.py` passou com 98 testes.
 
 ### MB-163
 
 - `id`: `MB-163`
 - `prioridade`: `P0`
-- `status`: `blocked`
+- `status`: `ready`
 - `eixo_do_mestre`: `memoria`, `observabilidade`, `produto_operador`
 - `map_ids`: `MEM-005`, `MEM-006`, `OP-006`, `OBS-005`
 - `workflow_profile_afetado`: `operational_readiness_workflow`
@@ -3388,6 +3390,7 @@ Estado atual da fila:
 - `MB-159` foi concluido como raciocinio minimo de objetivos de horizonte longo, fechando o lote `MB-155` a `MB-159`;
 - `MB-160` foi concluido como repriorizacao pos-`MB-159` a partir de `docs/implementation/implementation-master-map.md`, abrindo a fila maior `MB-161` a `MB-174`;
 - `MB-161` foi concluido como anchors de evidencia para memoria semantica em planning/synthesis/observabilidade/console;
-- `MB-162` e o unico item tecnico `ready` atual, focado em baseline governado de memoria procedural/playbooks; `MB-163` a `MB-174` permanecem `blocked` por dependencia/ordem;
+- `MB-162` foi concluido como baseline governado de candidatos de playbook procedural;
+- `MB-163` e o unico item tecnico `ready` atual, focado em superficie de auditoria de influencia de memoria; `MB-164` a `MB-174` permanecem `blocked` por dependencia/ordem;
 - `SO-001`, `TA-004`, `TA-006` e verticais `deferred` continuam fora da fila sem mudanca explicita de fase;
 - `protective intelligence foundation` continua `deferred` e a matriz da Onda 2 segue como insumo, nao como gatilho automatico para abrir nova vertical.

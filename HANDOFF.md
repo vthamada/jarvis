@@ -163,10 +163,17 @@ dominios/evals, proveniencia de conhecimento e readiness/regressao.
 `MB-161` foi concluido: a influencia de memoria semantica agora carrega
 `semantic_memory_anchor_refs`, `semantic_memory_evidence_refs`,
 `semantic_memory_use_reason` e `semantic_memory_non_use_reason` no plano,
-sintese, eventos, observabilidade e console/dashboard. `MB-162` e o unico item
-tecnico `ready` atual para criar baseline governado de memoria
-procedural/playbooks; `MB-163` a `MB-174` permanecem `blocked` por
-dependencia/ordem.
+sintese, eventos, observabilidade e console/dashboard. Esse fechamento abriu
+`MB-162` naquele momento como proximo item tecnico.
+
+`MB-162` foi concluido: `ProceduralPlaybookCandidateContract` agora formaliza
+candidatos bounded de playbook procedural com passos limitados, evidencias,
+refs de artefato/reflexao, testes, rollback, revisao humana obrigatoria,
+`automatic_promotion_allowed=false`, `core_mutation_allowed=false` e
+`memory_write_mode=through_core_only`. `memory-service` persiste/lista esses
+candidatos, `evolution-lab` cria proposta sandbox-only a partir deles e o
+console possui `procedural-playbooks` read-only. `MB-163` e o unico item
+tecnico `ready`, focado em superficie de auditoria de influencia de memoria.
 
 O corte pos-`MB-125` foi repriorizado em `MB-126`: a proxima frente ativa e
 experiencia operacional + reflexao pos-tarefa governada. O objetivo e fazer o

@@ -8,6 +8,7 @@ from shared.contracts import (
     InputContract,
     LongHorizonGoalStrategyContract,
     PostTaskReflectionContract,
+    ProceduralPlaybookCandidateContract,
     ProjectObjectiveContinuityContract,
     ReviewedLearningGuidanceContract,
     SurfaceIdentityContract,
@@ -24,6 +25,7 @@ from shared.schemas import (
     INPUT_SCHEMA,
     LONG_HORIZON_GOAL_STRATEGY_SCHEMA,
     POST_TASK_REFLECTION_SCHEMA,
+    PROCEDURAL_PLAYBOOK_CANDIDATE_SCHEMA,
     PROJECT_OBJECTIVE_CONTINUITY_SCHEMA,
     REVIEWED_LEARNING_GUIDANCE_SCHEMA,
     SURFACE_IDENTITY_SCHEMA,
@@ -244,6 +246,28 @@ def test_deliberative_plan_schema_declares_semantic_memory_evidence_fields() -> 
     assert "semantic_memory_evidence_refs" in DELIBERATIVE_PLAN_SCHEMA.optional_fields
     assert "semantic_memory_use_reason" in DELIBERATIVE_PLAN_SCHEMA.optional_fields
     assert "semantic_memory_non_use_reason" in DELIBERATIVE_PLAN_SCHEMA.optional_fields
+
+
+def test_procedural_playbook_candidate_contract_is_bounded_schema() -> None:
+    candidate = ProceduralPlaybookCandidateContract(
+        playbook_candidate_id="playbook-candidate://workflow/001",
+        procedure_name="bounded release checklist",
+        workflow_profile="software_change_workflow",
+        bounded_steps=["collect evidence", "run tests", "prepare rollback"],
+        evidence_refs=["trace://req-1"],
+        rollback_plan_ref="rollback://playbook/001",
+        timestamp="2026-07-04T00:00:00Z",
+    )
+
+    assert candidate.human_review_required is True
+    assert candidate.automatic_promotion_allowed is False
+    assert candidate.core_mutation_allowed is False
+    assert candidate.memory_write_mode == "through_core_only"
+    assert PROCEDURAL_PLAYBOOK_CANDIDATE_SCHEMA.contract_name == (
+        "ProceduralPlaybookCandidateContract"
+    )
+    assert "bounded_steps" in PROCEDURAL_PLAYBOOK_CANDIDATE_SCHEMA.required_fields
+    assert "rollback_plan_ref" in PROCEDURAL_PLAYBOOK_CANDIDATE_SCHEMA.optional_fields
     assert "reflection_influence_refs" in DELIBERATIVE_PLAN_SCHEMA.optional_fields
     review_item = EvolutionReviewQueueItemContract(
         review_item_id="review://proposal-1",

@@ -8,6 +8,13 @@
 - `planning-engine`, `synthesis-engine`, `orchestrator-service`, `observability-service` e `jarvis-console` agora propagam e exibem anchors/evidencias/motivos de uso ou nao uso da memoria semantica;
 - `execution-backlog.md` fechou `MB-161` e abriu `MB-162` como unico item tecnico `ready`, mantendo `MB-163` a `MB-174` bloqueados por dependencia/ordem.
 
+### MB-162 cria baseline de candidatos de playbook procedural
+
+- `ProceduralPlaybookCandidateContract` e schema canonico formalizam candidatos bounded com passos, evidencias, refs de artefato/reflexao, testes, rollback e revisao humana;
+- `memory-service` persiste e lista candidatos de playbook procedural com bloqueio de autopromocao e mutacao do core;
+- `evolution-lab` transforma candidato em proposta `procedural_playbook_candidate` sandbox-only, e `jarvis-console procedural-playbooks` mostra a fila read-only;
+- `execution-backlog.md` fechou `MB-162` e abriu `MB-163` como unico item tecnico `ready`.
+
 ## 2026-05-17
 
 ### MB-132 abre o Operator Learning Loop

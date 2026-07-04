@@ -154,6 +154,29 @@ class PostTaskReflectionContract:
 
 
 @dataclass
+class ProceduralPlaybookCandidateContract:
+    playbook_candidate_id: str
+    procedure_name: str
+    workflow_profile: str
+    bounded_steps: list[str]
+    evidence_refs: list[str]
+    timestamp: Timestamp
+    route: str | None = None
+    domain: str | None = None
+    source_artifact_refs: list[str] = field(default_factory=list)
+    source_reflection_refs: list[str] = field(default_factory=list)
+    proposed_tests: list[str] = field(default_factory=list)
+    rollback_plan_ref: str | None = None
+    risk_hint: str | None = None
+    review_status: str = "candidate"
+    blockers: list[str] = field(default_factory=list)
+    human_review_required: bool = True
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+    memory_write_mode: str = "through_core_only"
+
+
+@dataclass
 class InputContract:
     request_id: RequestId
     session_id: SessionId

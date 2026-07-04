@@ -34,6 +34,7 @@ from apps.jarvis_console.cli import (
     run_objective_command,
     run_objectives_command,
     run_operator_dashboard_command,
+    run_procedural_playbooks_command,
     run_technology_candidates_command,
     run_work_item_command,
     run_work_items_command,
@@ -42,6 +43,7 @@ from shared.contracts import (
     ExperienceRecordContract,
     MissionStateContract,
     PostTaskReflectionContract,
+    ProceduralPlaybookCandidateContract,
 )
 from shared.types import MissionId, MissionStatus
 
@@ -622,6 +624,45 @@ def test_console_experience_reflections_shows_recent_records() -> None:
 
 def test_console_experience_reflections_handles_empty_records() -> None:
     assert render_experience_reflections([]) == "No experience reflections found."
+
+
+def test_console_procedural_playbooks_shows_bounded_candidates() -> None:
+    temp_dir = runtime_dir("console-procedural-playbooks")
+    memory_db = temp_dir / "memory.db"
+    service = MemoryService(database_url=f"sqlite:///{memory_db.as_posix()}")
+    service.record_procedural_playbook_candidate(
+        ProceduralPlaybookCandidateContract(
+            playbook_candidate_id="playbook-candidate://console/001",
+            procedure_name="bounded console review",
+            workflow_profile="software_change_workflow",
+            bounded_steps=["collect evidence", "run gate"],
+            evidence_refs=["trace://console-playbook"],
+            proposed_tests=["python tools/engineering_gate.py --mode standard"],
+            rollback_plan_ref="rollback://console-playbook",
+            timestamp="2026-07-04T00:00:00Z",
+        )
+    )
+    args = build_parser().parse_args(
+        [
+            "procedural-playbooks",
+            "--memory-db",
+            str(memory_db),
+            "--workflow-profile",
+            "software_change_workflow",
+        ]
+    )
+
+    outputs = run_procedural_playbooks_command(args)
+    rendered = outputs[0]
+
+    assert "playbook_candidate_id=playbook-candidate://console/001" in rendered
+    assert "procedure_name=bounded console review" in rendered
+    assert "review_status=candidate" in rendered
+    assert "evidence_refs=trace://console-playbook" in rendered
+    assert "rollback_plan_ref=rollback://console-playbook" in rendered
+    assert "human_review_required=True" in rendered
+    assert "automatic_promotion=False" in rendered
+    assert "core_mutation_allowed=False" in rendered
 
 
 def test_console_experience_reflections_shows_pending_reflection() -> None:

@@ -10,6 +10,8 @@ from evolution_lab.service import (
     TechnologyAbsorptionInput,
 )
 
+from shared.contracts import ProceduralPlaybookCandidateContract
+
 
 def runtime_dir(name: str) -> Path:
     base_dir = Path(gettempdir()) / "jarvis-tests"
@@ -316,6 +318,52 @@ def test_evolution_lab_derives_reviewed_learning_guidance_from_human_review() ->
     assert guidance.rollback_plan_ref == "rollback://workflow/reviewed-guidance"
     assert guidance.automatic_promotion_allowed is False
     assert guidance.core_mutation_allowed is False
+
+
+def test_evolution_lab_creates_sandbox_proposal_from_procedural_playbook_candidate() -> None:
+    temp_dir = runtime_dir("evolution-lab-procedural-playbook")
+    service = EvolutionLabService(database_path=str(temp_dir / "evolution.db"))
+
+    proposal = service.create_proposal_from_procedural_playbook_candidate(
+        ProceduralPlaybookCandidateContract(
+            playbook_candidate_id="playbook-candidate://software-change/001",
+            procedure_name="bounded patch review",
+            workflow_profile="software_change_workflow",
+            route="software_engineering",
+            domain="engenharia_de_software",
+            bounded_steps=[
+                "collect evidence",
+                "run targeted tests",
+                "prepare rollback",
+            ],
+            evidence_refs=["trace://req-playbook"],
+            source_artifact_refs=["artifact://procedural/software/v1"],
+            source_reflection_refs=["reflection://mission/001"],
+            proposed_tests=["pytest services/memory-service/tests"],
+            rollback_plan_ref="rollback://playbook/001",
+            timestamp="2026-07-04T00:00:00Z",
+        )
+    )
+
+    assert proposal.proposal_type == "procedural_playbook_candidate"
+    assert proposal.optimization_candidate_status == "candidate"
+    assert proposal.optimization_safety_status == "sandbox_only"
+    assert proposal.evaluation_matrix["procedural_playbook_candidate"][
+        "manual_review_required"
+    ] is True
+    assert (
+        proposal.strategy_context["promotion_policy"]["manual_review_required"]
+        is True
+    )
+    assert (
+        proposal.strategy_context["promotion_policy"]["automatic_promotion"]
+        is False
+    )
+    assert (
+        proposal.strategy_context["promotion_policy"]["release_gate_required"]
+        is True
+    )
+    assert "playbook://promotion/manual_review_required" in proposal.source_signals
 
 
 def test_evolution_lab_blocks_human_approval_without_required_evidence() -> None:

@@ -444,7 +444,7 @@ Map IDs: `MEM-006`, `ACT-004`, `EVL-007`.
 Goal: turn repeated procedures, artifacts and reviewed reflections into bounded
 playbook candidates without automatic promotion.
 
-Status: next recommended ready item after `MB-161`.
+Status: closed in `MB-162`; next execution item is `MB-163`.
 
 ### MB-163 -- Memory Influence Audit Surface
 
@@ -452,6 +452,8 @@ Map IDs: `MEM-005`, `MEM-006`, `OP-006`, `OBS-005`.
 
 Goal: expose which memories/procedures influenced a mission, why they were
 selected and what was ignored.
+
+Status: next recommended ready item after `MB-162`.
 
 ### MB-164 -- Runtime Autonomy Ladder Contract
 

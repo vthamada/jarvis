@@ -17,6 +17,7 @@ from shared.contracts import (
     EvolutionReviewQueueItemContract,
     ExperienceRecordContract,
     PostTaskReflectionContract,
+    ProceduralPlaybookCandidateContract,
     ReviewedLearningGuidanceContract,
     TechnologyAbsorptionCandidateContract,
 )
@@ -1009,6 +1010,94 @@ class EvolutionLabService:
                 "blocked_by_safety" if reflection.blockers else "sandbox_only"
             ),
             optimization_blockers=list(reflection.blockers),
+        )
+
+    def create_proposal_from_procedural_playbook_candidate(
+        self,
+        candidate: ProceduralPlaybookCandidateContract,
+        *,
+        target_scope: str | None = None,
+        strategy_name: str | None = None,
+    ) -> EvolutionProposalContract:
+        """Create a sandbox-only proposal from a procedural playbook candidate."""
+
+        blockers = list(candidate.blockers)
+        if candidate.automatic_promotion_allowed:
+            blockers.append("automatic_promotion_not_allowed")
+        if candidate.core_mutation_allowed:
+            blockers.append("core_mutation_not_allowed")
+        if not candidate.evidence_refs:
+            blockers.append("evidence_required")
+        if not candidate.rollback_plan_ref:
+            blockers.append("rollback_plan_required")
+        if candidate.review_status not in {"candidate", "needs_review"}:
+            blockers.append("manual_review_required_before_promotion")
+        bounded_steps = list(candidate.bounded_steps)[:8]
+        source_signals = [
+            f"playbook://candidate/{self._signal_value(candidate.playbook_candidate_id)}",
+            f"playbook://workflow/{self._signal_value(candidate.workflow_profile)}",
+            f"playbook://status/{candidate.review_status}",
+            "playbook://promotion/manual_review_required",
+        ]
+        source_signals.extend(candidate.evidence_refs)
+        source_signals.extend(candidate.source_artifact_refs)
+        source_signals.extend(candidate.source_reflection_refs)
+        source_signals.extend(f"playbook://blocker/{item}" for item in blockers)
+
+        return self.create_proposal(
+            proposal_type="procedural_playbook_candidate",
+            target_scope=target_scope or f"workflow:{candidate.workflow_profile}",
+            hypothesis=(
+                f"candidate procedural playbook for {candidate.procedure_name}"
+            ),
+            expected_gain="reuse bounded procedure after human review and release gate",
+            baseline_refs=[
+                "baseline://sovereign-core/current",
+                *candidate.source_artifact_refs,
+                *candidate.source_reflection_refs,
+            ],
+            source_signals=self._unique_values(source_signals),
+            risk_hint=candidate.risk_hint,
+            proposed_tests=list(candidate.proposed_tests),
+            strategy_name=strategy_name,
+            candidate_refs=[candidate.playbook_candidate_id],
+            evaluation_matrix={
+                "procedural_playbook_candidate": {
+                    "procedure_name": candidate.procedure_name,
+                    "workflow_profile": candidate.workflow_profile,
+                    "route": candidate.route,
+                    "domain": candidate.domain,
+                    "bounded_step_count": len(bounded_steps),
+                    "review_status": candidate.review_status,
+                    "blockers": self._unique_values(blockers),
+                    "manual_review_required": True,
+                }
+            },
+            strategy_context={
+                "procedural_playbook_candidate": {
+                    "playbook_candidate_id": candidate.playbook_candidate_id,
+                    "procedure_name": candidate.procedure_name,
+                    "bounded_steps": bounded_steps,
+                    "rollback_plan_ref": candidate.rollback_plan_ref,
+                    "memory_write_mode": candidate.memory_write_mode,
+                },
+                "promotion_policy": {
+                    "automatic_promotion": False,
+                    "core_mutation_allowed": False,
+                    "manual_review_required": True,
+                    "release_gate_required": True,
+                },
+                "evolution_review": self._review_context(
+                    status="needs_review",
+                    blockers=self._unique_values(blockers),
+                    rollback_plan_ref=candidate.rollback_plan_ref,
+                ),
+            },
+            optimization_candidate_status="blocked" if blockers else "candidate",
+            optimization_safety_status=(
+                "blocked_by_safety" if blockers else "sandbox_only"
+            ),
+            optimization_blockers=self._unique_values(blockers),
         )
 
     def compare_flow_evaluations(

@@ -12,6 +12,7 @@ from memory_service.repository import (
     StoredContinuityCheckpoint,
     StoredContinuityPauseResolution,
     StoredExperienceReflection,
+    StoredProceduralPlaybookCandidate,
     StoredReviewedLearningGuidance,
     StoredSpecialistSharedMemory,
     StoredTurn,
@@ -36,6 +37,7 @@ from shared.contracts import (
     OperationDispatchContract,
     OperationResultContract,
     PostTaskReflectionContract,
+    ProceduralPlaybookCandidateContract,
     ReviewedLearningGuidanceContract,
     SpecialistContributionContract,
     SpecialistSharedMemoryContextContract,
@@ -268,6 +270,67 @@ class MemoryService:
             route=route,
             workflow_profile=workflow_profile,
             domain=domain,
+            limit=max(1, limit),
+        )
+
+    def record_procedural_playbook_candidate(
+        self,
+        candidate: ProceduralPlaybookCandidateContract,
+    ) -> StoredProceduralPlaybookCandidate:
+        """Persist a bounded procedural playbook candidate for human review."""
+
+        blockers = list(candidate.blockers)
+        if candidate.automatic_promotion_allowed:
+            blockers.append("automatic_promotion_not_allowed")
+        if candidate.core_mutation_allowed:
+            blockers.append("core_mutation_not_allowed")
+        if not candidate.evidence_refs:
+            blockers.append("evidence_required")
+        if not candidate.rollback_plan_ref:
+            blockers.append("rollback_plan_required")
+        if not candidate.bounded_steps:
+            blockers.append("bounded_steps_required")
+        review_status = (
+            "needs_review"
+            if blockers or candidate.review_status not in {"candidate", "needs_review"}
+            else candidate.review_status
+        )
+        safe_candidate = replace(
+            candidate,
+            bounded_steps=self._merge_unique_strings(candidate.bounded_steps, [])[:8],
+            evidence_refs=self._merge_unique_strings(candidate.evidence_refs, []),
+            source_artifact_refs=self._merge_unique_strings(
+                candidate.source_artifact_refs,
+                [],
+            ),
+            source_reflection_refs=self._merge_unique_strings(
+                candidate.source_reflection_refs,
+                [],
+            ),
+            proposed_tests=self._merge_unique_strings(candidate.proposed_tests, []),
+            review_status=review_status,
+            blockers=self._merge_unique_strings(blockers, []),
+            human_review_required=True,
+            automatic_promotion_allowed=False,
+            core_mutation_allowed=False,
+            memory_write_mode="through_core_only",
+        )
+        record = StoredProceduralPlaybookCandidate(candidate=safe_candidate)
+        self.repository.record_procedural_playbook_candidate(record)
+        return record
+
+    def list_procedural_playbook_candidates(
+        self,
+        *,
+        workflow_profile: str | None = None,
+        review_status: str | None = None,
+        limit: int = 20,
+    ) -> list[StoredProceduralPlaybookCandidate]:
+        """Return recent bounded procedural playbook candidates."""
+
+        return self.repository.list_procedural_playbook_candidates(
+            workflow_profile=workflow_profile,
+            review_status=review_status,
             limit=max(1, limit),
         )
 
