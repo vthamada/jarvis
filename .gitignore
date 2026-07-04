@@ -21,6 +21,7 @@ npm-debug.log*
 .env.local
 .jarvis_runtime/
 .test_runtime/
+.research/
 
 # Editors / OS
 .DS_Store
