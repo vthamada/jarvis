@@ -3555,6 +3555,16 @@ def test_observability_service_tracks_memory_causality_status() -> None:
                     "semantic_memory_focus": [
                         "dados_estatistica_e_inteligencia_analitica"
                     ],
+                    "semantic_memory_anchor_refs": [
+                        "memory://mission/mission-memory-causality/semantic"
+                    ],
+                    "semantic_memory_evidence_refs": [
+                        "memory://mission/mission-memory-causality/semantic#evidence",
+                        "workflow://structured_analysis_workflow",
+                    ],
+                    "semantic_memory_use_reason": (
+                        "matched active_mission to structured_analysis_workflow/analysis"
+                    ),
                     "procedural_memory_hint": "preservar a moldura de comparacao mais recente",
                 },
                 request_id="req-memory-causality",
@@ -3578,6 +3588,16 @@ def test_observability_service_tracks_memory_causality_status() -> None:
 
     assert audit.memory_causality_status == "causal_guidance"
     assert audit.semantic_memory_focus == ["dados_estatistica_e_inteligencia_analitica"]
+    assert audit.semantic_memory_anchor_refs == [
+        "memory://mission/mission-memory-causality/semantic"
+    ]
+    assert "workflow://structured_analysis_workflow" in (
+        audit.semantic_memory_evidence_refs
+    )
+    assert audit.semantic_memory_use_reason == (
+        "matched active_mission to structured_analysis_workflow/analysis"
+    )
+    assert audit.semantic_memory_non_use_reason is None
     assert (
         audit.procedural_memory_hint
         == "preservar a moldura de comparacao mais recente"

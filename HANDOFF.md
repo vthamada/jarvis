@@ -160,10 +160,13 @@ nucleo antes de abrir superficies ou automacoes fora de fase: memoria causal,
 autonomia runtime, promocao sandbox-to-release, cockpit do operador, feedback,
 dominios/evals, proveniencia de conhecimento e readiness/regressao.
 
-`MB-161` e o unico item tecnico `ready` atual. O objetivo e tornar a influencia
-de memoria semantica mais causal, com anchors de evidencia, motivos de
-relevancia e motivos auditaveis de nao uso. `MB-162` a `MB-174` permanecem
-`blocked` por dependencia/ordem.
+`MB-161` foi concluido: a influencia de memoria semantica agora carrega
+`semantic_memory_anchor_refs`, `semantic_memory_evidence_refs`,
+`semantic_memory_use_reason` e `semantic_memory_non_use_reason` no plano,
+sintese, eventos, observabilidade e console/dashboard. `MB-162` e o unico item
+tecnico `ready` atual para criar baseline governado de memoria
+procedural/playbooks; `MB-163` a `MB-174` permanecem `blocked` por
+dependencia/ordem.
 
 O corte pos-`MB-125` foi repriorizado em `MB-126`: a proxima frente ativa e
 experiencia operacional + reflexao pos-tarefa governada. O objetivo e fazer o

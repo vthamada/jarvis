@@ -3046,7 +3046,7 @@ Fora de escopo:
 
 - `id`: `MB-161`
 - `prioridade`: `P0`
-- `status`: `ready`
+- `status`: `done`
 - `eixo_do_mestre`: `memoria`, `planejamento`, `sintese`, `observabilidade`
 - `map_ids`: `MEM-005`, `COG-007`, `OBS-005`
 - `workflow_profile_afetado`: `strategic_direction_workflow`, `operational_readiness_workflow`
@@ -3059,12 +3059,14 @@ Fora de escopo:
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `high`
 - `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: memoria semantica agora carrega refs de ancora, refs de evidencia e motivo auditavel de uso ou nao uso em planning, synthesis, eventos, observabilidade e console/dashboard.
+- `evidencia_de_fechamento`: `pytest tests/unit/test_shared_layer.py engines/planning-engine/tests/test_planning_engine.py engines/synthesis-engine/tests/test_synthesis_engine.py services/orchestrator-service/tests/test_orchestrator_service.py services/observability-service/tests/test_observability_service.py apps/jarvis_console/tests/test_console.py` passou com 160 testes.
 
 ### MB-162
 
 - `id`: `MB-162`
 - `prioridade`: `P0`
-- `status`: `blocked`
+- `status`: `ready`
 - `eixo_do_mestre`: `memoria`, `artefatos`, `evolucao`
 - `map_ids`: `MEM-006`, `ACT-004`, `EVL-007`
 - `workflow_profile_afetado`: `operational_readiness_workflow`, `software_change_workflow`
@@ -3385,6 +3387,7 @@ Estado atual da fila:
 - `MB-158` foi concluido como metricas compactas de utilidade operacional em observabilidade e dashboard;
 - `MB-159` foi concluido como raciocinio minimo de objetivos de horizonte longo, fechando o lote `MB-155` a `MB-159`;
 - `MB-160` foi concluido como repriorizacao pos-`MB-159` a partir de `docs/implementation/implementation-master-map.md`, abrindo a fila maior `MB-161` a `MB-174`;
-- `MB-161` e o unico item tecnico `ready` atual, focado em anchors de evidencia para memoria semantica; `MB-162` a `MB-174` permanecem `blocked` por dependencia/ordem;
+- `MB-161` foi concluido como anchors de evidencia para memoria semantica em planning/synthesis/observabilidade/console;
+- `MB-162` e o unico item tecnico `ready` atual, focado em baseline governado de memoria procedural/playbooks; `MB-163` a `MB-174` permanecem `blocked` por dependencia/ordem;
 - `SO-001`, `TA-004`, `TA-006` e verticais `deferred` continuam fora da fila sem mudanca explicita de fase;
 - `protective intelligence foundation` continua `deferred` e a matriz da Onda 2 segue como insumo, nao como gatilho automatico para abrir nova vertical.

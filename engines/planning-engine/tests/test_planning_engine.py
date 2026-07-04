@@ -658,6 +658,7 @@ def test_planning_engine_adds_priority_and_recommendation_memory_guidance() -> N
             risk_markers=[],
             requires_clarification=False,
             preferred_response_mode="plan_and_operate",
+            mission_id="mission-semantic-evidence",
             canonical_domains=["estrategia_e_pensamento_sistemico"],
             primary_canonical_domain="estrategia_e_pensamento_sistemico",
             primary_route="strategy",
@@ -675,6 +676,19 @@ def test_planning_engine_adds_priority_and_recommendation_memory_guidance() -> N
 
     assert "priority" in plan.semantic_memory_effects
     assert "recommendation" in plan.semantic_memory_effects
+    assert plan.semantic_memory_anchor_refs == [
+        "memory://mission/mission-semantic-evidence/semantic"
+    ]
+    assert "memory://mission/mission-semantic-evidence/semantic#evidence" in (
+        plan.semantic_memory_evidence_refs
+    )
+    assert "workflow://strategic_direction_workflow" in (
+        plan.semantic_memory_evidence_refs
+    )
+    assert plan.semantic_memory_use_reason is not None
+    assert plan.semantic_memory_non_use_reason is None
+    assert "semantic_memory_anchor_refs=" in plan.plan_summary
+    assert "semantic_memory_use_reason=" in plan.rationale
     assert "priority" in plan.procedural_memory_effects
     assert "recommendation" in plan.procedural_memory_effects
     assert any("priorizar a leitura semantica" in step for step in plan.steps)
@@ -757,6 +771,37 @@ def test_planning_engine_refines_plan_and_consolidates_specialists() -> None:
     assert any("checkpoint intermediario" in step for step in refined.steps)
     assert any("criterio dominante" in criterion for criterion in refined.success_criteria)
     assert "resolucao_especialistas=" in refined.rationale
+
+
+def test_planning_engine_records_semantic_memory_non_use_reason() -> None:
+    engine = PlanningEngine()
+    plan = engine.build_task_plan(
+        PlanningContext(
+            intent="analysis",
+            query="Analyze a fresh request.",
+            recovered_context=[],
+            active_domains=["analysis"],
+            active_minds=["mente_analitica"],
+            knowledge_snippets=[],
+            risk_markers=[],
+            requires_clarification=False,
+            preferred_response_mode="analysis_only",
+            primary_route="analysis",
+            route_workflow_profile="structured_analysis_workflow",
+        )
+    )
+
+    assert plan.semantic_memory_source is None
+    assert plan.semantic_memory_anchor_refs == []
+    assert plan.semantic_memory_evidence_refs == [
+        "workflow://structured_analysis_workflow",
+        "route://analysis",
+    ]
+    assert plan.semantic_memory_use_reason is None
+    assert plan.semantic_memory_non_use_reason == "no_semantic_anchor_recovered"
+    assert "semantic_memory_non_use_reason=no_semantic_anchor_recovered" in (
+        plan.rationale
+    )
 
 
 def test_planning_engine_applies_mid_flow_cognitive_strategy_shift_when_impasse_persists() -> None:

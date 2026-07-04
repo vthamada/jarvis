@@ -131,6 +131,10 @@ class FlowAudit:
     semantic_memory_source: str | None
     procedural_memory_source: str | None
     semantic_memory_focus: list[str]
+    semantic_memory_anchor_refs: list[str]
+    semantic_memory_evidence_refs: list[str]
+    semantic_memory_use_reason: str | None
+    semantic_memory_non_use_reason: str | None
     procedural_memory_hint: str | None
     semantic_memory_effects: list[str]
     procedural_memory_effects: list[str]
@@ -521,6 +525,10 @@ class ObservabilityService:
                 semantic_memory_source=None,
                 procedural_memory_source=None,
                 semantic_memory_focus=[],
+                semantic_memory_anchor_refs=[],
+                semantic_memory_evidence_refs=[],
+                semantic_memory_use_reason=None,
+                semantic_memory_non_use_reason=None,
                 procedural_memory_hint=None,
                 semantic_memory_effects=[],
                 procedural_memory_effects=[],
@@ -1067,6 +1075,29 @@ class ObservabilityService:
                 and plan_event.payload.get("semantic_memory_source") is not None
                 else None
             )
+        )
+        semantic_memory_anchor_refs = self._dedupe_payload_list(
+            events,
+            "semantic_memory_anchor_refs",
+        )
+        semantic_memory_evidence_refs = self._dedupe_payload_list(
+            events,
+            "semantic_memory_evidence_refs",
+        )
+        semantic_memory_reason_event = self._first_payload_event(
+            events,
+            "semantic_memory_use_reason",
+        ) or self._first_payload_event(
+            events,
+            "semantic_memory_non_use_reason",
+        )
+        semantic_memory_use_reason = self._payload_optional_str(
+            semantic_memory_reason_event,
+            "semantic_memory_use_reason",
+        )
+        semantic_memory_non_use_reason = self._payload_optional_str(
+            semantic_memory_reason_event,
+            "semantic_memory_non_use_reason",
         )
         procedural_memory_source = (
             str(response_event.payload.get("procedural_memory_source"))
@@ -2145,6 +2176,10 @@ class ObservabilityService:
             semantic_memory_source=semantic_memory_source,
             procedural_memory_source=procedural_memory_source,
             semantic_memory_focus=semantic_memory_focus,
+            semantic_memory_anchor_refs=semantic_memory_anchor_refs,
+            semantic_memory_evidence_refs=semantic_memory_evidence_refs,
+            semantic_memory_use_reason=semantic_memory_use_reason,
+            semantic_memory_non_use_reason=semantic_memory_non_use_reason,
             procedural_memory_hint=procedural_memory_hint,
             semantic_memory_effects=semantic_memory_effects,
             procedural_memory_effects=procedural_memory_effects,

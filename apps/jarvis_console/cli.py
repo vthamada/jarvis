@@ -370,11 +370,20 @@ def build_parser() -> ArgumentParser:
 def render_response(response: OrchestratorResponse, *, debug: bool) -> str:
     lines = [response.response_text]
     if debug:
+        plan = response.deliberative_plan
         lines.extend(
             [
                 f"request_id={response.request_id}",
                 f"decision={response.governance_decision.decision.value}",
-                f"continuity={response.deliberative_plan.continuity_action or 'none'}",
+                f"continuity={plan.continuity_action or 'none'}",
+                "semantic_memory_anchor_refs="
+                + safe_console_list(plan.semantic_memory_anchor_refs),
+                "semantic_memory_evidence_refs="
+                + safe_console_list(plan.semantic_memory_evidence_refs),
+                "semantic_memory_use_reason="
+                + safe_console_value(plan.semantic_memory_use_reason),
+                "semantic_memory_non_use_reason="
+                + safe_console_value(plan.semantic_memory_non_use_reason),
             ]
         )
     return "\n".join(lines)
@@ -1000,6 +1009,18 @@ def render_operator_dashboard(
     operator_usefulness_signals = safe_console_list(
         list(getattr(flow_audit, "operator_usefulness_signals", []))
     )
+    semantic_memory_anchor_refs = safe_console_list(
+        list(getattr(flow_audit, "semantic_memory_anchor_refs", []))
+    )
+    semantic_memory_evidence_refs = safe_console_list(
+        list(getattr(flow_audit, "semantic_memory_evidence_refs", []))
+    )
+    semantic_memory_use_reason = safe_console_value(
+        getattr(flow_audit, "semantic_memory_use_reason", None)
+    )
+    semantic_memory_non_use_reason = safe_console_value(
+        getattr(flow_audit, "semantic_memory_non_use_reason", None)
+    )
 
     return "\n".join(
         [
@@ -1027,6 +1048,10 @@ def render_operator_dashboard(
             f"reviewed_learning_influence_status={reviewed_learning_status}",
             f"reviewed_learning_assisted_eval_status={reviewed_learning_eval_status}",
             f"reviewed_learning_release_conclusion={reviewed_learning_release}",
+            f"semantic_memory_anchor_refs={semantic_memory_anchor_refs}",
+            f"semantic_memory_evidence_refs={semantic_memory_evidence_refs}",
+            f"semantic_memory_use_reason={semantic_memory_use_reason}",
+            f"semantic_memory_non_use_reason={semantic_memory_non_use_reason}",
             f"operator_usefulness_status={operator_usefulness_status}",
             f"operator_usefulness_score={operator_usefulness_score}",
             f"operator_usefulness_signals={operator_usefulness_signals}",

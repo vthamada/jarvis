@@ -284,6 +284,10 @@ class DeliberativePlanContract:
     procedural_memory_lifecycle: str | None = None
     semantic_memory_state: str | None = None
     procedural_memory_state: str | None = None
+    semantic_memory_anchor_refs: list[str] = field(default_factory=list)
+    semantic_memory_evidence_refs: list[str] = field(default_factory=list)
+    semantic_memory_use_reason: str | None = None
+    semantic_memory_non_use_reason: str | None = None
     memory_lifecycle_status: str | None = None
     memory_review_status: str | None = None
     memory_maintenance_status: str | None = None

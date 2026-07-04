@@ -1,5 +1,6 @@
 from shared.contracts import (
     ArtifactLifecycleStateContract,
+    DeliberativePlanContract,
     EvolutionReviewDecisionContract,
     EvolutionReviewQueueItemContract,
     ExperienceRecordContract,
@@ -218,6 +219,31 @@ def test_experience_reflection_contracts_are_shared_schemas() -> None:
     assert "specialist_used" in EXPERIENCE_RECORD_SCHEMA.optional_fields
     assert POST_TASK_REFLECTION_SCHEMA.contract_name == "PostTaskReflectionContract"
     assert "reflection_influence_status" in DELIBERATIVE_PLAN_SCHEMA.optional_fields
+
+
+def test_deliberative_plan_schema_declares_semantic_memory_evidence_fields() -> None:
+    plan = DeliberativePlanContract(
+        plan_summary="objetivo=test; semantic_memory_anchor_refs=memory://mission/1/semantic",
+        goal="test",
+        steps=["avaliar"],
+        active_domains=["strategy"],
+        active_minds=["mente_executiva"],
+        constraints=["bounded"],
+        risks=["none"],
+        recommended_task_type="analysis",
+        requires_human_validation=False,
+        rationale="semantic_memory_use_reason=matched active_mission",
+        semantic_memory_anchor_refs=["memory://mission/1/semantic"],
+        semantic_memory_evidence_refs=["memory://mission/1/semantic#evidence"],
+        semantic_memory_use_reason="matched active_mission to workflow",
+    )
+
+    assert plan.semantic_memory_anchor_refs == ["memory://mission/1/semantic"]
+    assert plan.semantic_memory_non_use_reason is None
+    assert "semantic_memory_anchor_refs" in DELIBERATIVE_PLAN_SCHEMA.optional_fields
+    assert "semantic_memory_evidence_refs" in DELIBERATIVE_PLAN_SCHEMA.optional_fields
+    assert "semantic_memory_use_reason" in DELIBERATIVE_PLAN_SCHEMA.optional_fields
+    assert "semantic_memory_non_use_reason" in DELIBERATIVE_PLAN_SCHEMA.optional_fields
     assert "reflection_influence_refs" in DELIBERATIVE_PLAN_SCHEMA.optional_fields
     review_item = EvolutionReviewQueueItemContract(
         review_item_id="review://proposal-1",

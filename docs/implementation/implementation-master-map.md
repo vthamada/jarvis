@@ -435,7 +435,7 @@ Map IDs: `MEM-005`, `COG-007`, `OBS-005`.
 Goal: make semantic memory influence planning and synthesis with explicit
 evidence anchors, relevance reasons and auditable non-use reasons.
 
-Status: next recommended ready item.
+Status: closed in `MB-161`; next execution item is `MB-162`.
 
 ### MB-162 -- Procedural Memory Playbook Baseline
 
@@ -443,6 +443,8 @@ Map IDs: `MEM-006`, `ACT-004`, `EVL-007`.
 
 Goal: turn repeated procedures, artifacts and reviewed reflections into bounded
 playbook candidates without automatic promotion.
+
+Status: next recommended ready item after `MB-161`.
 
 ### MB-163 -- Memory Influence Audit Surface
 

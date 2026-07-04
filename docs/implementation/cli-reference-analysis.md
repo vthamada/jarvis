@@ -413,8 +413,9 @@ Goal: preserve CLI UX and machine-readable contracts against regression.
 
 ## Integration With Existing Backlog
 
-The current active micro queue says `MB-161` is the only ready item. This CLI
-research should not displace `MB-161` automatically.
+At the time this analysis was created, the active micro queue kept `MB-161` as
+the only ready item. After `MB-161` closed, this CLI research still should not
+displace the ordered queue automatically; it should feed the CLI-related MBs.
 
 Best fit for adoption:
 
@@ -425,8 +426,8 @@ Best fit for adoption:
 
 Recommended next decision:
 
-- Keep `MB-161` as the current ready implementation unless the operator
-  explicitly reprioritizes toward CLI hardening.
+- Keep following the ordered micro queue unless the operator explicitly
+  reprioritizes toward CLI hardening.
 - When CLI hardening is pulled, start with `CLI-001` and `CLI-002`; do not jump
   directly to TUI or broad cockpit expansion.
 

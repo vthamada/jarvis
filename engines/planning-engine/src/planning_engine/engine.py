@@ -95,6 +95,7 @@ class PlanningContext:
     risk_markers: list[str]
     requires_clarification: bool
     preferred_response_mode: str
+    mission_id: str | None = None
     canonical_domains: list[str] | None = None
     primary_canonical_domain: str | None = None
     primary_route: str | None = None
@@ -354,6 +355,19 @@ class PlanningEngine:
             context,
             continuity_source=continuity_source,
         )
+        semantic_memory_anchor_refs = self._semantic_memory_anchor_refs(context)
+        semantic_memory_evidence_refs = self._semantic_memory_evidence_refs(
+            context,
+            anchor_refs=semantic_memory_anchor_refs,
+        )
+        semantic_memory_use_reason = self._semantic_memory_use_reason(
+            context,
+            memory_decision=memory_decision,
+        )
+        semantic_memory_non_use_reason = self._semantic_memory_non_use_reason(
+            context,
+            memory_decision=memory_decision,
+        )
         steps, constraints, success_criteria = self._apply_memory_causality_guidance(
             steps=steps,
             constraints=constraints,
@@ -463,6 +477,10 @@ class PlanningEngine:
             continuity_action=continuity_action,
             continuity_reason=continuity_reason,
             continuity_source=continuity_source,
+            semantic_memory_anchor_refs=semantic_memory_anchor_refs,
+            semantic_memory_evidence_refs=semantic_memory_evidence_refs,
+            semantic_memory_use_reason=semantic_memory_use_reason,
+            semantic_memory_non_use_reason=semantic_memory_non_use_reason,
         )
         if adaptive_intervention.applied:
             plan_summary = (
@@ -512,6 +530,10 @@ class PlanningEngine:
             continuity_action=continuity_action,
             goal_conflict=goal_conflict,
             continuity_reason=continuity_reason,
+            semantic_memory_anchor_refs=semantic_memory_anchor_refs,
+            semantic_memory_evidence_refs=semantic_memory_evidence_refs,
+            semantic_memory_use_reason=semantic_memory_use_reason,
+            semantic_memory_non_use_reason=semantic_memory_non_use_reason,
         )
         rationale = (
             f"{rationale}; adaptive_intervention_status={adaptive_intervention.status}; "
@@ -626,6 +648,10 @@ class PlanningEngine:
             procedural_memory_lifecycle=memory_decision.procedural_lifecycle,
             semantic_memory_state=memory_decision.semantic_memory_state,
             procedural_memory_state=memory_decision.procedural_memory_state,
+            semantic_memory_anchor_refs=semantic_memory_anchor_refs,
+            semantic_memory_evidence_refs=semantic_memory_evidence_refs,
+            semantic_memory_use_reason=semantic_memory_use_reason,
+            semantic_memory_non_use_reason=semantic_memory_non_use_reason,
             memory_lifecycle_status=memory_decision.lifecycle_status,
             memory_review_status=memory_decision.review_status,
             memory_maintenance_status=memory_maintenance.status,
@@ -2276,6 +2302,10 @@ class PlanningEngine:
         continuity_action: str,
         continuity_reason: str,
         continuity_source: str,
+        semantic_memory_anchor_refs: list[str],
+        semantic_memory_evidence_refs: list[str],
+        semantic_memory_use_reason: str | None,
+        semantic_memory_non_use_reason: str | None,
     ) -> str:
         guidance = workflow_runtime_guidance(context.route_workflow_profile)
         mode = context.identity_mode or context.preferred_response_mode
@@ -2295,6 +2325,8 @@ class PlanningEngine:
         procedural_anchor = self._procedural_memory_anchor(context) or "none"
         procedural_artifact_status = context.procedural_artifact_status or "none"
         procedural_artifact_ref = context.procedural_artifact_ref or "none"
+        semantic_anchor_ref_text = ",".join(semantic_memory_anchor_refs) or "none"
+        semantic_evidence_ref_text = ",".join(semantic_memory_evidence_refs) or "none"
         return (
             f"objetivo={dominant_goal}; missao_ativa={mission_goal}; modo={mode}; "
             f"mente_primaria={primary_mind}; familia_primaria={primary_mind_family}; "
@@ -2306,6 +2338,11 @@ class PlanningEngine:
             f"memory_priority_specialists={memory_priority_specialists}; "
             f"memory_priority_sources={memory_priority_sources}; "
             f"semantic_memory_anchor={semantic_anchor}; "
+            f"semantic_memory_anchor_refs={semantic_anchor_ref_text}; "
+            f"semantic_memory_evidence_refs={semantic_evidence_ref_text}; "
+            f"semantic_memory_use_reason={semantic_memory_use_reason or 'none'}; "
+            "semantic_memory_non_use_reason="
+            f"{semantic_memory_non_use_reason or 'none'}; "
             f"procedural_memory_anchor={procedural_anchor}; "
             f"semantic_memory_source={memory_decision.semantic_source or 'none'}; "
             f"procedural_memory_source={memory_decision.procedural_source or 'none'}; "
@@ -2346,6 +2383,10 @@ class PlanningEngine:
         continuity_action: str,
         goal_conflict: str | None,
         continuity_reason: str,
+        semantic_memory_anchor_refs: list[str],
+        semantic_memory_evidence_refs: list[str],
+        semantic_memory_use_reason: str | None,
+        semantic_memory_non_use_reason: str | None,
     ) -> str:
         context_hint = self._select_context_hint(context.recovered_context)
         knowledge_hint = (
@@ -2392,6 +2433,8 @@ class PlanningEngine:
         primary_domain_driver = context.primary_domain_driver or "none"
         arbitration_source = context.arbitration_source or "none"
         semantic_anchor = self._semantic_memory_anchor(context) or "none"
+        semantic_anchor_ref_text = ",".join(semantic_memory_anchor_refs) or "none"
+        semantic_evidence_ref_text = ",".join(semantic_memory_evidence_refs) or "none"
         procedural_anchor = self._procedural_memory_anchor(context) or "none"
         procedural_artifact_status = context.procedural_artifact_status or "none"
         procedural_artifact_ref = context.procedural_artifact_ref or "none"
@@ -2428,6 +2471,11 @@ class PlanningEngine:
             f"memory_priority_sources={memory_priority_sources}; "
             f"memory_priority_summary={memory_priority_summary}; "
             f"semantic_memory_anchor={semantic_anchor}; "
+            f"semantic_memory_anchor_refs={semantic_anchor_ref_text}; "
+            f"semantic_memory_evidence_refs={semantic_evidence_ref_text}; "
+            f"semantic_memory_use_reason={semantic_memory_use_reason or 'none'}; "
+            "semantic_memory_non_use_reason="
+            f"{semantic_memory_non_use_reason or 'none'}; "
             f"procedural_memory_anchor={procedural_anchor}; "
             f"semantic_memory_source={memory_decision.semantic_source or 'none'}; "
             f"procedural_memory_source={memory_decision.procedural_source or 'none'}; "
@@ -2902,6 +2950,80 @@ class PlanningEngine:
         if context.related_mission_goal:
             return context.related_mission_goal
         return context.mission_semantic_brief
+
+    @staticmethod
+    def _semantic_memory_anchor_refs(context: PlanningContext) -> list[str]:
+        refs: list[str] = []
+        if context.mission_focus or context.mission_semantic_brief:
+            mission_ref = context.mission_id or "active"
+            refs.append(f"memory://mission/{mission_ref}/semantic")
+        if context.related_mission_id and (
+            context.related_mission_goal
+            or context.related_continuity_reason
+            or context.related_open_loops
+        ):
+            refs.append(f"memory://mission/{context.related_mission_id}/semantic")
+        if (
+            context.user_scope_status not in {None, "not_applicable", "incomplete"}
+            and (
+                context.user_domain_focus
+                or context.user_continuity_preference
+                or context.primary_canonical_domain
+            )
+        ):
+            refs.append("memory://user-scope/semantic")
+        return list(dict.fromkeys(refs))
+
+    @staticmethod
+    def _semantic_memory_evidence_refs(
+        context: PlanningContext,
+        *,
+        anchor_refs: list[str],
+    ) -> list[str]:
+        refs = [f"{ref}#evidence" for ref in anchor_refs]
+        if context.route_workflow_profile:
+            refs.append(f"workflow://{context.route_workflow_profile}")
+        if context.primary_route:
+            refs.append(f"route://{context.primary_route}")
+        if context.primary_canonical_domain:
+            refs.append(f"domain://{context.primary_canonical_domain}")
+        return list(dict.fromkeys(refs))
+
+    def _semantic_memory_use_reason(
+        self,
+        context: PlanningContext,
+        *,
+        memory_decision,
+    ) -> str | None:
+        if not memory_decision.semantic_source:
+            return None
+        anchor = self._semantic_memory_anchor(context)
+        if not anchor:
+            return None
+        workflow = context.route_workflow_profile or "unscoped_workflow"
+        route = context.primary_route or context.primary_canonical_domain or "unscoped_route"
+        return (
+            f"matched {memory_decision.semantic_source} to {workflow}/{route} "
+            f"with anchor {anchor}"
+        )
+
+    def _semantic_memory_non_use_reason(
+        self,
+        context: PlanningContext,
+        *,
+        memory_decision,
+    ) -> str | None:
+        if memory_decision.semantic_source:
+            return None
+        if not self._semantic_memory_anchor(context):
+            return "no_semantic_anchor_recovered"
+        if not (
+            context.primary_route
+            or context.primary_canonical_domain
+            or context.route_workflow_profile
+        ):
+            return "semantic_anchor_without_route_domain_or_workflow_match"
+        return "semantic_memory_evaluated_but_not_selected"
 
     def _semantic_memory_step(
         self,

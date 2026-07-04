@@ -1088,6 +1088,18 @@ class OrchestratorService:
                     ),
                     "semantic_memory_state": deliberative_plan.semantic_memory_state,
                     "procedural_memory_state": deliberative_plan.procedural_memory_state,
+                    "semantic_memory_anchor_refs": (
+                        deliberative_plan.semantic_memory_anchor_refs
+                    ),
+                    "semantic_memory_evidence_refs": (
+                        deliberative_plan.semantic_memory_evidence_refs
+                    ),
+                    "semantic_memory_use_reason": (
+                        deliberative_plan.semantic_memory_use_reason
+                    ),
+                    "semantic_memory_non_use_reason": (
+                        deliberative_plan.semantic_memory_non_use_reason
+                    ),
                     "memory_lifecycle_status": deliberative_plan.memory_lifecycle_status,
                     "memory_review_status": deliberative_plan.memory_review_status,
                     "memory_consolidation_status": (
@@ -1727,6 +1739,18 @@ class OrchestratorService:
                     ),
                     "semantic_memory_state": deliberative_plan.semantic_memory_state,
                     "procedural_memory_state": deliberative_plan.procedural_memory_state,
+                    "semantic_memory_anchor_refs": (
+                        deliberative_plan.semantic_memory_anchor_refs
+                    ),
+                    "semantic_memory_evidence_refs": (
+                        deliberative_plan.semantic_memory_evidence_refs
+                    ),
+                    "semantic_memory_use_reason": (
+                        deliberative_plan.semantic_memory_use_reason
+                    ),
+                    "semantic_memory_non_use_reason": (
+                        deliberative_plan.semantic_memory_non_use_reason
+                    ),
                     "memory_lifecycle_status": deliberative_plan.memory_lifecycle_status,
                     "memory_review_status": deliberative_plan.memory_review_status,
                     "memory_consolidation_status": (
@@ -1861,6 +1885,18 @@ class OrchestratorService:
                     ),
                     "semantic_memory_state": deliberative_plan.semantic_memory_state,
                     "procedural_memory_state": deliberative_plan.procedural_memory_state,
+                    "semantic_memory_anchor_refs": (
+                        deliberative_plan.semantic_memory_anchor_refs
+                    ),
+                    "semantic_memory_evidence_refs": (
+                        deliberative_plan.semantic_memory_evidence_refs
+                    ),
+                    "semantic_memory_use_reason": (
+                        deliberative_plan.semantic_memory_use_reason
+                    ),
+                    "semantic_memory_non_use_reason": (
+                        deliberative_plan.semantic_memory_non_use_reason
+                    ),
                     "memory_lifecycle_status": deliberative_plan.memory_lifecycle_status,
                     "memory_review_status": deliberative_plan.memory_review_status,
                     **self._memory_maintenance_event_payload(
@@ -3004,6 +3040,18 @@ class OrchestratorService:
                     "primary_domain_driver": deliberative_plan.primary_domain_driver,
                     "semantic_memory_source": deliberative_plan.semantic_memory_source,
                     "procedural_memory_source": deliberative_plan.procedural_memory_source,
+                    "semantic_memory_anchor_refs": (
+                        deliberative_plan.semantic_memory_anchor_refs
+                    ),
+                    "semantic_memory_evidence_refs": (
+                        deliberative_plan.semantic_memory_evidence_refs
+                    ),
+                    "semantic_memory_use_reason": (
+                        deliberative_plan.semantic_memory_use_reason
+                    ),
+                    "semantic_memory_non_use_reason": (
+                        deliberative_plan.semantic_memory_non_use_reason
+                    ),
                     "memory_lifecycle_status": deliberative_plan.memory_lifecycle_status,
                     "memory_review_status": deliberative_plan.memory_review_status,
                     "active_task_count": len(mission_runtime_state.active_tasks),
@@ -3886,6 +3934,7 @@ class OrchestratorService:
             query=contract.content,
             recovered_context=recovered,
             active_domains=cognitive_snapshot.active_domains,
+            mission_id=str(contract.mission_id) if contract.mission_id else None,
             canonical_domains=canonical_domains,
             primary_canonical_domain=primary_canonical_domain,
             primary_route=primary_route_name,
@@ -4527,6 +4576,18 @@ class OrchestratorService:
                 semantic_memory_focus=guided_memory_runtime_hints[
                     "semantic_memory_focus"
                 ],
+                semantic_memory_anchor_refs=list(
+                    deliberative_plan.semantic_memory_anchor_refs
+                ),
+                semantic_memory_evidence_refs=list(
+                    deliberative_plan.semantic_memory_evidence_refs
+                ),
+                semantic_memory_use_reason=(
+                    deliberative_plan.semantic_memory_use_reason
+                ),
+                semantic_memory_non_use_reason=(
+                    deliberative_plan.semantic_memory_non_use_reason
+                ),
                 procedural_memory_hint=guided_memory_runtime_hints[
                     "procedural_memory_hint"
                 ],

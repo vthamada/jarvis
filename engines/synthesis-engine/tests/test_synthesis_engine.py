@@ -735,6 +735,13 @@ def test_synthesis_engine_uses_guided_semantic_and_procedural_memory_hints() -> 
         "artifact://procedural/strategy/strategic_direction_workflow/v1"
     )
     plan.procedural_artifact_summary = "procedimento guiado para revisao de trade-offs"
+    plan.semantic_memory_anchor_refs = ["memory://mission/mission-synthesis/semantic"]
+    plan.semantic_memory_evidence_refs = [
+        "memory://mission/mission-synthesis/semantic#evidence"
+    ]
+    plan.semantic_memory_use_reason = (
+        "matched active_mission to strategic_direction_workflow/strategy"
+    )
     response = engine.compose(
         SynthesisInput(
             intent="planning",
@@ -765,9 +772,22 @@ def test_synthesis_engine_uses_guided_semantic_and_procedural_memory_hints() -> 
             session_anchor_goal="Plan milestone M3",
             guided_memory_specialists=["structured_analysis_specialist"],
             semantic_memory_focus=["estrategia_e_pensamento_sistemico", "strategy"],
+            semantic_memory_anchor_refs=[
+                "memory://mission/mission-synthesis/semantic"
+            ],
+            semantic_memory_evidence_refs=[
+                "memory://mission/mission-synthesis/semantic#evidence"
+            ],
+            semantic_memory_use_reason=(
+                "matched active_mission to strategic_direction_workflow/strategy"
+            ),
             procedural_memory_hint="manter o ultimo fio de recomendacao governada",
         )
     )
+    assert "Memoria semantica: status used" in response
+    assert "anchor memory://mission/mission-synthesis/semantic" in response
+    assert "evidence memory://mission/mission-synthesis/semantic#evidence" in response
+    assert "matched active_mission to strategic_direction_workflow/strategy" in response
     assert (
         "memoria guiada reforca framing estrategico e comparacao de trade-offs em "
         "estrategia_e_pensamento_sistemico, strategy" in response

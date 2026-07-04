@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 2026-07-04
+
+### MB-161 fecha anchors de evidencia de memoria semantica
+
+- `shared/contracts` e `shared/schemas` adicionaram `semantic_memory_anchor_refs`, `semantic_memory_evidence_refs`, `semantic_memory_use_reason` e `semantic_memory_non_use_reason` ao plano deliberativo;
+- `planning-engine`, `synthesis-engine`, `orchestrator-service`, `observability-service` e `jarvis-console` agora propagam e exibem anchors/evidencias/motivos de uso ou nao uso da memoria semantica;
+- `execution-backlog.md` fechou `MB-161` e abriu `MB-162` como unico item tecnico `ready`, mantendo `MB-163` a `MB-174` bloqueados por dependencia/ordem.
+
 ## 2026-05-17
 
 ### MB-132 abre o Operator Learning Loop

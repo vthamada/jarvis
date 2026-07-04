@@ -889,6 +889,19 @@ def test_orchestrator_service_applies_relevant_post_task_reflection() -> None:
         plan_event.payload["primary_canonical_domain"]
         == result.deliberative_plan.primary_canonical_domain
     )
+    assert plan_event.payload["semantic_memory_anchor_refs"] == (
+        result.deliberative_plan.semantic_memory_anchor_refs
+    )
+    assert plan_event.payload["semantic_memory_evidence_refs"] == (
+        result.deliberative_plan.semantic_memory_evidence_refs
+    )
+    assert plan_event.payload["semantic_memory_use_reason"] == (
+        result.deliberative_plan.semantic_memory_use_reason
+    )
+    assert plan_event.payload["semantic_memory_non_use_reason"] == (
+        result.deliberative_plan.semantic_memory_non_use_reason
+    )
+    assert result.deliberative_plan.semantic_memory_evidence_refs
     workflow_composed_event = next(
         event for event in stored_events if event.event_name == "workflow_composed"
     )
@@ -1057,6 +1070,16 @@ def test_orchestrator_service_applies_relevant_post_task_reflection() -> None:
     )
     assert response_event.payload["workflow_response_focus"]
     assert response_event.payload["guided_memory_specialists"]
+    assert response_event.payload["semantic_memory_anchor_refs"] == (
+        result.deliberative_plan.semantic_memory_anchor_refs
+    )
+    assert response_event.payload["semantic_memory_evidence_refs"] == (
+        result.deliberative_plan.semantic_memory_evidence_refs
+    )
+    assert response_event.payload["semantic_memory_use_reason"] == (
+        result.deliberative_plan.semantic_memory_use_reason
+    )
+    assert "Memoria semantica:" in result.response_text
     if result.deliberative_plan.adaptive_intervention_selected_action:
         assert response_event.payload["adaptive_intervention_workflow_priority_summary"]
         assert (
@@ -1079,6 +1102,9 @@ def test_orchestrator_service_applies_relevant_post_task_reflection() -> None:
     assert continuity_event.payload["continuity_action"] == "continuar"
     assert response_event.payload["continuity_action"] == "continuar"
     assert memory_event.payload["continuity_mode"] == "continuar"
+    assert memory_event.payload["semantic_memory_anchor_refs"] == (
+        result.deliberative_plan.semantic_memory_anchor_refs
+    )
     assert memory_event.payload["procedural_artifact_status"] == "candidate"
     assert memory_event.payload["procedural_artifact_refs"]
     assert memory_event.payload["procedural_artifact_version"] == 1

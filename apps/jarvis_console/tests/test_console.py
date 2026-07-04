@@ -67,6 +67,10 @@ def test_console_ask_returns_orchestrated_response() -> None:
     assert "Leitura do objetivo" in response.response_text
     assert "request_id=" in rendered
     assert "decision=" in rendered
+    assert "semantic_memory_anchor_refs=" in rendered
+    assert "semantic_memory_evidence_refs=" in rendered
+    assert "semantic_memory_use_reason=" in rendered
+    assert "semantic_memory_non_use_reason=" in rendered
     assert response.operation_dispatch is not None
     assert response.operation_dispatch.surface_id == "surface://jarvis_console"
     assert response.operation_dispatch.surface_kind == "console"
@@ -520,6 +524,10 @@ def test_console_operator_dashboard_shows_daily_state_for_mission() -> None:
     assert "operator_usefulness_status=" in outputs[0]
     assert "operator_usefulness_score=" in outputs[0]
     assert "operator_usefulness_signals=" in outputs[0]
+    assert "semantic_memory_anchor_refs=" in outputs[0]
+    assert "semantic_memory_evidence_refs=" in outputs[0]
+    assert "semantic_memory_use_reason=" in outputs[0]
+    assert "semantic_memory_non_use_reason=" in outputs[0]
     assert "automatic_promotion=False" in outputs[0]
     assert "next_operator_step=review_evolution_proposal" in outputs[0]
 

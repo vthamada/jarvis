@@ -52,6 +52,10 @@ class SynthesisInput:
     reviewed_learning_influence_reason: str | None = None
     guided_memory_specialists: list[str] = field(default_factory=list)
     semantic_memory_focus: list[str] = field(default_factory=list)
+    semantic_memory_anchor_refs: list[str] = field(default_factory=list)
+    semantic_memory_evidence_refs: list[str] = field(default_factory=list)
+    semantic_memory_use_reason: str | None = None
+    semantic_memory_non_use_reason: str | None = None
     procedural_memory_hint: str | None = None
     procedural_artifact_status: str | None = None
     procedural_artifact_ref: str | None = None
@@ -194,6 +198,9 @@ class SynthesisEngine:
         long_horizon_line = self._long_horizon_goal_strategy_line(synthesis_input)
         if long_horizon_line:
             parts.append(f"Estrategia de horizonte longo: {long_horizon_line}.")
+        semantic_memory_line = self._semantic_memory_evidence_line(synthesis_input)
+        if semantic_memory_line:
+            parts.append(f"Memoria semantica: {semantic_memory_line}.")
         reflection_line = self._reflection_influence_line(synthesis_input)
         if reflection_line:
             parts.append(f"Reflexao aplicada: {reflection_line}.")
@@ -548,6 +555,45 @@ class SynthesisEngine:
         if reason:
             parts.append(f"motivo {reason}")
         parts.append("sem promocao automatica")
+        return "; ".join(parts)
+
+    @classmethod
+    def _semantic_memory_evidence_line(
+        cls,
+        synthesis_input: SynthesisInput,
+    ) -> str | None:
+        plan = synthesis_input.deliberative_plan
+        if plan is None:
+            return None
+        anchor_ref = cls._first_safe_ref(
+            synthesis_input.semantic_memory_anchor_refs
+            or plan.semantic_memory_anchor_refs
+        )
+        evidence_ref = cls._first_safe_ref(
+            synthesis_input.semantic_memory_evidence_refs
+            or plan.semantic_memory_evidence_refs
+        )
+        use_reason = cls._safe_operational_value(
+            synthesis_input.semantic_memory_use_reason
+            or plan.semantic_memory_use_reason
+        )
+        non_use_reason = cls._safe_operational_value(
+            synthesis_input.semantic_memory_non_use_reason
+            or plan.semantic_memory_non_use_reason
+        )
+        if not any([anchor_ref, evidence_ref, use_reason, non_use_reason]):
+            return None
+        status = "used" if use_reason else "not_used"
+        parts = [f"status {status}"]
+        if anchor_ref:
+            parts.append(f"anchor {anchor_ref}")
+        if evidence_ref:
+            parts.append(f"evidence {evidence_ref}")
+        if use_reason:
+            parts.append(f"motivo {use_reason}")
+        if non_use_reason:
+            parts.append(f"motivo_nao_uso {non_use_reason}")
+        parts.append("auditavel")
         return "; ".join(parts)
 
     @classmethod
