@@ -3106,7 +3106,7 @@ Fora de escopo:
 
 - `id`: `MB-164`
 - `prioridade`: `P0`
-- `status`: `ready`
+- `status`: `done`
 - `eixo_do_mestre`: `governanca`, `soberania`, `politica_runtime`
 - `map_ids`: `GOV-007`, `COG-001`, `ACT-002`
 - `workflow_profile_afetado`: `governance_boundary_workflow`, `decision_risk_workflow`
@@ -3119,12 +3119,14 @@ Fora de escopo:
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `high`
 - `modelo_recomendado`: `gpt-5.4`
+- `impacto_no_baseline`: `AutonomyLadderContract`, schema e evento `autonomy_ladder_declared` formalizam niveis runtime de autonomia; `InputContract`, plano, governanca, dispatch e eventos agora carregam requested/max/effective level, status de downgrade, confirmacao humana, acoes permitidas/bloqueadas e bloqueio explicito de autopromocao/core mutation.
+- `evidencia_de_fechamento`: `pytest tests/unit/test_shared_layer.py services/governance-service/tests/test_governance_service.py services/orchestrator-service/tests/test_orchestrator_service.py` passou com 61 testes.
 
 ### MB-165
 
 - `id`: `MB-165`
 - `prioridade`: `P0`
-- `status`: `blocked`
+- `status`: `ready`
 - `eixo_do_mestre`: `governanca`, `operacao`, `ferramentas`
 - `map_ids`: `GOV-007`, `GOV-005`, `ACT-002`, `ACT-003`
 - `workflow_profile_afetado`: `governance_boundary_workflow`, `operational_readiness_workflow`
@@ -3394,6 +3396,7 @@ Estado atual da fila:
 - `MB-161` foi concluido como anchors de evidencia para memoria semantica em planning/synthesis/observabilidade/console;
 - `MB-162` foi concluido como baseline governado de candidatos de playbook procedural;
 - `MB-163` foi concluido como superficie auditavel de influencia de memoria em observabilidade e dashboard textual;
-- `MB-164` e o unico item tecnico `ready` atual, focado em contrato runtime de `autonomy_ladder`; `MB-165` a `MB-174` permanecem `blocked` por dependencia/ordem;
+- `MB-164` foi concluido como contrato runtime compartilhado de `autonomy_ladder`, sem enforcement amplo ainda;
+- `MB-165` e o unico item tecnico `ready` atual, focado em aplicar limites de autonomia em governanca, dispatch operacional e console; `MB-166` a `MB-174` permanecem `blocked` por dependencia/ordem;
 - `SO-001`, `TA-004`, `TA-006` e verticais `deferred` continuam fora da fila sem mudanca explicita de fase;
 - `protective intelligence foundation` continua `deferred` e a matriz da Onda 2 segue como insumo, nao como gatilho automatico para abrir nova vertical.

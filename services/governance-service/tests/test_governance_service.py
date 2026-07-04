@@ -142,6 +142,51 @@ def test_governance_service_conditions_local_safe_operations_that_close_loop() -
     assert result.governance_check.open_loops == ["alinhar checkpoint principal"]
 
 
+def test_governance_service_carries_autonomy_ladder_context() -> None:
+    service = GovernanceService()
+    plan = low_risk_plan()
+    plan.requested_autonomy_level = "supervised_external_action"
+    plan.max_autonomy_level = "confirm_before_action"
+    plan.effective_autonomy_level = "confirm_before_action"
+    plan.autonomy_ladder_status = "downgraded_to_max"
+    plan.max_autonomy_capability_mode = "core_with_specialist_handoff"
+    plan.autonomy_human_confirmation_required = True
+    plan.autonomy_confirmation_mode = "explicit"
+    plan.autonomy_blocked_runtime_actions = [
+        "execute_without_confirmation",
+        "automatic_promotion",
+        "core_mutation",
+    ]
+    plan.autonomy_policy_refs = ["policy://autonomy-ladder/runtime-contract"]
+    result = service.assess_request(
+        InputContract(
+            request_id=RequestId("req-autonomy-governance"),
+            session_id=SessionId("sess-autonomy-governance"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Prepare the governed rollout.",
+            timestamp="2026-07-04T00:00:00Z",
+        ),
+        intent="planning",
+        requested_by_service="orchestrator-service",
+        plan=plan,
+    )
+
+    assert result.governance_check.context["effective_autonomy_level"] == (
+        "confirm_before_action"
+    )
+    assert result.governance_check.context["autonomy_ladder_status"] == (
+        "downgraded_to_max"
+    )
+    assert "automatic_promotion" in (
+        result.governance_check.context["autonomy_blocked_runtime_actions"]
+    )
+    assert result.governance_check.context[
+        "autonomy_automatic_promotion_allowed"
+    ] is False
+    assert result.governance_check.context["autonomy_core_mutation_allowed"] is False
+
+
 def test_governance_allows_bounded_work_item_creation() -> None:
     service = GovernanceService()
     result = service.assess_work_item_transition(

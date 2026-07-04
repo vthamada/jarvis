@@ -225,7 +225,7 @@ Goal: preserve control while increasing autonomy.
 | `GOV-004` | Policy for memory mutation | `partial_runtime` | Explicit memory governance by class and risk | Memory registry | candidate |
 | `GOV-005` | Tool permission model | `minimum_baseline` | Per-adapter scopes and confirmations | ACT tracks | candidate |
 | `GOV-006` | Incident response for documentation/runtime | `minimum_baseline` | Practical incident drills and recovery | Operations docs | later |
-| `GOV-007` | Autonomy ladder enforcement | `documentation_only` | Runtime-enforced autonomy levels | Mission policy | high-priority |
+| `GOV-007` | Autonomy ladder enforcement | `partial_runtime_contract` | Runtime-enforced autonomy levels | Mission policy | high-priority |
 | `GOV-008` | Secrets and sensitive data policy | `partial_runtime` | Stronger local rules and tests | Security | later |
 | `GOV-009` | Release promotion workflow | `minimum_baseline` | Explicit promote/reject/sandbox pipeline | Evolution, gates | high-priority |
 | `GOV-010` | Protective intelligence controls | `deferred_by_phase` | SecurityOS-like vertical only after core readiness | DV-001 | not now |
@@ -461,6 +461,8 @@ Map IDs: `GOV-007`, `COG-001`, `ACT-002`.
 
 Goal: make autonomy levels a runtime contract rather than documentation-only
 policy.
+
+Status: closed in `MB-164`; next execution item is `MB-165`.
 
 ### MB-165 -- Autonomy Enforcement In Governance And Dispatch
 

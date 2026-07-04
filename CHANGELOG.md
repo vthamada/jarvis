@@ -21,6 +21,12 @@
 - `jarvis-console operator-dashboard` exibe a influencia de memoria em modo read-only para o operador auditar o que guiou a missao;
 - a mudanca nao escreve memoria, nao promove playbooks e nao altera a decisao final; `execution-backlog.md` fechou `MB-163` e abriu `MB-164` como unico item tecnico `ready`.
 
+### MB-164 formaliza autonomy ladder runtime
+
+- `AutonomyLadderContract`, schema e evento `autonomy_ladder_declared` definem requested/max/effective autonomy level, status de limite, confirmacao humana e acoes permitidas/bloqueadas;
+- `InputContract`, `DeliberativePlanContract`, `OperationDispatchContract`, governanca e eventos do orquestrador agora propagam o ladder sem aplicar enforcement amplo;
+- todos os niveis preservam `automatic_promotion_allowed=false` e `core_mutation_allowed=false`; `execution-backlog.md` fechou `MB-164` e abriu `MB-165` como unico item tecnico `ready`.
+
 ## 2026-05-17
 
 ### MB-132 abre o Operator Learning Loop

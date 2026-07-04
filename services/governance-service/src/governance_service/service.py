@@ -131,6 +131,41 @@ class GovernanceService:
                 "request_identity_policy_refs": (
                     list(plan.request_identity_policy_refs) if plan else []
                 ),
+                "requested_autonomy_level": (
+                    plan.requested_autonomy_level if plan else None
+                ),
+                "max_autonomy_level": plan.max_autonomy_level if plan else None,
+                "effective_autonomy_level": (
+                    plan.effective_autonomy_level if plan else None
+                ),
+                "autonomy_ladder_status": (
+                    plan.autonomy_ladder_status if plan else None
+                ),
+                "max_autonomy_capability_mode": (
+                    plan.max_autonomy_capability_mode if plan else None
+                ),
+                "autonomy_human_confirmation_required": (
+                    plan.autonomy_human_confirmation_required if plan else None
+                ),
+                "autonomy_confirmation_mode": (
+                    plan.autonomy_confirmation_mode if plan else None
+                ),
+                "autonomy_allowed_runtime_actions": (
+                    list(plan.autonomy_allowed_runtime_actions) if plan else []
+                ),
+                "autonomy_blocked_runtime_actions": (
+                    list(plan.autonomy_blocked_runtime_actions) if plan else []
+                ),
+                "autonomy_policy_refs": (
+                    list(plan.autonomy_policy_refs) if plan else []
+                ),
+                "autonomy_summary": plan.autonomy_summary if plan else None,
+                "autonomy_automatic_promotion_allowed": (
+                    plan.autonomy_automatic_promotion_allowed if plan else False
+                ),
+                "autonomy_core_mutation_allowed": (
+                    plan.autonomy_core_mutation_allowed if plan else False
+                ),
                 "continuity_replay_status": (
                     plan.continuity_replay_status if plan else None
                 ),

@@ -204,6 +204,27 @@ class InputContract:
     artifact_refs: list[str] = field(default_factory=list)
     objective_status: str = "active"
     next_action_ref: str | None = None
+    requested_autonomy_level: str | None = None
+    max_autonomy_level: str | None = None
+    autonomy_confirmation_mode: str | None = None
+    autonomy_policy_refs: list[str] = field(default_factory=list)
+
+
+@dataclass
+class AutonomyLadderContract:
+    requested_autonomy_level: str
+    max_autonomy_level: str
+    effective_autonomy_level: str
+    autonomy_ladder_status: str
+    max_capability_mode: str
+    human_confirmation_required: bool
+    human_confirmation_mode: str
+    allowed_runtime_actions: list[str] = field(default_factory=list)
+    blocked_runtime_actions: list[str] = field(default_factory=list)
+    policy_refs: list[str] = field(default_factory=list)
+    summary: str | None = None
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
 
 
 @dataclass
@@ -354,6 +375,19 @@ class DeliberativePlanContract:
     request_confirmation_mode: str | None = None
     request_identity_summary: str | None = None
     request_identity_policy_refs: list[str] = field(default_factory=list)
+    requested_autonomy_level: str | None = None
+    max_autonomy_level: str | None = None
+    effective_autonomy_level: str | None = None
+    autonomy_ladder_status: str | None = None
+    max_autonomy_capability_mode: str | None = None
+    autonomy_human_confirmation_required: bool = True
+    autonomy_confirmation_mode: str | None = None
+    autonomy_allowed_runtime_actions: list[str] = field(default_factory=list)
+    autonomy_blocked_runtime_actions: list[str] = field(default_factory=list)
+    autonomy_policy_refs: list[str] = field(default_factory=list)
+    autonomy_summary: str | None = None
+    autonomy_automatic_promotion_allowed: bool = False
+    autonomy_core_mutation_allowed: bool = False
     adaptive_intervention_status: str | None = None
     adaptive_intervention_reason: str | None = None
     adaptive_intervention_trigger: str | None = None
@@ -577,6 +611,19 @@ class OperationDispatchContract:
     request_confirmation_mode: str | None = None
     request_identity_summary: str | None = None
     request_identity_policy_refs: list[str] = field(default_factory=list)
+    requested_autonomy_level: str | None = None
+    max_autonomy_level: str | None = None
+    effective_autonomy_level: str | None = None
+    autonomy_ladder_status: str | None = None
+    max_autonomy_capability_mode: str | None = None
+    autonomy_human_confirmation_required: bool = True
+    autonomy_confirmation_mode: str | None = None
+    autonomy_allowed_runtime_actions: list[str] = field(default_factory=list)
+    autonomy_blocked_runtime_actions: list[str] = field(default_factory=list)
+    autonomy_policy_refs: list[str] = field(default_factory=list)
+    autonomy_summary: str | None = None
+    autonomy_automatic_promotion_allowed: bool = False
+    autonomy_core_mutation_allowed: bool = False
     adaptive_intervention_status: str | None = None
     adaptive_intervention_reason: str | None = None
     adaptive_intervention_trigger: str | None = None

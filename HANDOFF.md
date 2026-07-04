@@ -11,9 +11,15 @@ auditar o que influenciou a missao, o que foi ignorado e quais evidencias
 sustentam a leitura. Nao houve escrita de memoria, promocao de playbook ou
 alteracao de decisao final.
 
-`MB-164` e o unico item tecnico `ready`: formalizar `autonomy_ladder` como
-contrato runtime compartilhado, preservando governanca, soberania do core e
-bloqueio de autopromocao.
+`MB-164` foi concluido: `AutonomyLadderContract`, schema e evento
+`autonomy_ladder_declared` agora formalizam requested/max/effective autonomy
+level, downgrade por limite, confirmacao humana, acoes permitidas/bloqueadas e
+bloqueio explicito de autopromocao/core mutation. O contrato atravessa
+`InputContract`, plano, governanca, dispatch e eventos do orquestrador, mas
+ainda nao aplica enforcement amplo.
+
+`MB-165` e o unico item tecnico `ready`: aplicar os limites de autonomia em
+governanca, dispatch operacional e console, com allow/block/defer auditavel.
 
 ## Atualizacao 2026-05-17
 
@@ -187,9 +193,9 @@ refs de artefato/reflexao, testes, rollback, revisao humana obrigatoria,
 `automatic_promotion_allowed=false`, `core_mutation_allowed=false` e
 `memory_write_mode=through_core_only`. `memory-service` persiste/lista esses
 candidatos, `evolution-lab` cria proposta sandbox-only a partir deles e o
-console possui `procedural-playbooks` read-only. `MB-163` tambem foi concluido;
-`MB-164` e o unico item tecnico `ready`, focado em contrato runtime de
-`autonomy_ladder`.
+console possui `procedural-playbooks` read-only. `MB-163` e `MB-164` tambem
+foram concluidos; `MB-165` e o unico item tecnico `ready`, focado em enforcement
+runtime do `autonomy_ladder`.
 
 O corte pos-`MB-125` foi repriorizado em `MB-126`: a proxima frente ativa e
 experiencia operacional + reflexao pos-tarefa governada. O objetivo e fazer o

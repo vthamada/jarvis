@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, TypedDict
 
+from shared.autonomy_ladder import derive_autonomy_ladder
 from shared.types import PermissionDecision
 
 if TYPE_CHECKING:
@@ -232,7 +233,22 @@ class LangGraphFlowRunner:
                 knowledge_result=knowledge_result,
             )
         )
+        autonomy_ladder = derive_autonomy_ladder(
+            contract=contract,
+            plan=deliberative_plan,
+        )
+        self.orchestrator._apply_autonomy_ladder_to_plan(
+            plan=deliberative_plan,
+            autonomy_ladder=autonomy_ladder,
+        )
         events = list(state["events"])
+        events.append(
+            self.orchestrator.make_event(
+                "autonomy_ladder_declared",
+                contract,
+                self.orchestrator._autonomy_ladder_payload(autonomy_ladder),
+            )
+        )
         events.append(
             self.orchestrator.make_event(
                 "plan_built",
@@ -250,6 +266,9 @@ class LangGraphFlowRunner:
                     "recommended_task_type": deliberative_plan.recommended_task_type,
                     "requires_human_validation": deliberative_plan.requires_human_validation,
                     "steps": deliberative_plan.steps,
+                    **self.orchestrator._autonomy_ladder_plan_payload(
+                        deliberative_plan
+                    ),
                     "adaptive_intervention_status": (
                         deliberative_plan.adaptive_intervention_status
                     ),
@@ -389,6 +408,9 @@ class LangGraphFlowRunner:
                             )
                         ),
                     ),
+                    **self.orchestrator._autonomy_ladder_plan_payload(
+                        deliberative_plan
+                    ),
                 },
             )
         )
@@ -480,6 +502,9 @@ class LangGraphFlowRunner:
                         **self.orchestrator._capability_decision_event_payload(
                             operation_dispatch
                         ),
+                        **self.orchestrator._autonomy_ladder_plan_payload(
+                            operation_dispatch
+                        ),
                         "adaptive_intervention_status": (
                             operation_dispatch.adaptive_intervention_status
                         ),
@@ -540,6 +565,9 @@ class LangGraphFlowRunner:
                             operation_dispatch
                         ),
                         **self.orchestrator._capability_decision_event_payload(
+                            operation_dispatch
+                        ),
+                        **self.orchestrator._autonomy_ladder_plan_payload(
                             operation_dispatch
                         ),
                         "adaptive_intervention_status": (

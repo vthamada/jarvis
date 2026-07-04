@@ -18,9 +18,11 @@ from planning_engine.engine import PlanningContext, PlanningEngine
 from specialist_engine.engine import SpecialistEngine, SpecialistHandoffPlan, SpecialistReview
 from synthesis_engine.engine import SynthesisEngine, SynthesisInput, SynthesisResult
 
+from shared.autonomy_ladder import derive_autonomy_ladder
 from shared.contracts import (
     ArtifactLifecycleStateContract,
     ArtifactResultContract,
+    AutonomyLadderContract,
     ContinuityPauseContract,
     ContinuityReplayContract,
     DeliberativePlanContract,
@@ -810,6 +812,12 @@ class OrchestratorService:
                 {
                     "content": contract.content,
                     "channel": contract.channel.value,
+                    "requested_autonomy_level": contract.requested_autonomy_level,
+                    "max_autonomy_level": contract.max_autonomy_level,
+                    "autonomy_confirmation_mode": (
+                        contract.autonomy_confirmation_mode
+                    ),
+                    "autonomy_policy_refs": list(contract.autonomy_policy_refs),
                     **self._surface_identity_payload(contract),
                 },
             )
@@ -993,6 +1001,21 @@ class OrchestratorService:
                 memory_route_guidance=memory_route_guidance,
             )
         )
+        autonomy_ladder = derive_autonomy_ladder(
+            contract=contract,
+            plan=deliberative_plan,
+        )
+        self._apply_autonomy_ladder_to_plan(
+            plan=deliberative_plan,
+            autonomy_ladder=autonomy_ladder,
+        )
+        events.append(
+            self.make_event(
+                "autonomy_ladder_declared",
+                contract,
+                self._autonomy_ladder_payload(autonomy_ladder),
+            )
+        )
         events.append(
             self.make_event(
                 "plan_built",
@@ -1031,6 +1054,7 @@ class OrchestratorService:
                     ),
                     **self._capability_decision_event_payload(deliberative_plan),
                     **self._request_identity_policy_payload(deliberative_plan),
+                    **self._autonomy_ladder_plan_payload(deliberative_plan),
                     "adaptive_intervention_status": (
                         deliberative_plan.adaptive_intervention_status
                     ),
@@ -1236,6 +1260,7 @@ class OrchestratorService:
                     else None,
                     "decision": governance_decision.decision.value,
                     **self._request_identity_policy_payload(deliberative_plan),
+                    **self._autonomy_ladder_plan_payload(deliberative_plan),
                 },
             )
         )
@@ -1263,6 +1288,7 @@ class OrchestratorService:
                         ),
                     ),
                     **self._request_identity_policy_payload(deliberative_plan),
+                    **self._autonomy_ladder_plan_payload(deliberative_plan),
                 },
             )
         )
@@ -1328,6 +1354,7 @@ class OrchestratorService:
                         **self._surface_identity_payload(operation_dispatch),
                         **self._capability_decision_event_payload(operation_dispatch),
                         **self._request_identity_policy_payload(operation_dispatch),
+                        **self._autonomy_ladder_plan_payload(operation_dispatch),
                         "adaptive_intervention_status": (
                             operation_dispatch.adaptive_intervention_status
                         ),
@@ -1408,6 +1435,7 @@ class OrchestratorService:
                         **self._surface_identity_payload(operation_dispatch),
                         **self._capability_decision_event_payload(operation_dispatch),
                         **self._request_identity_policy_payload(operation_dispatch),
+                        **self._autonomy_ladder_plan_payload(operation_dispatch),
                         "adaptive_intervention_status": (
                             operation_dispatch.adaptive_intervention_status
                         ),
@@ -1456,6 +1484,7 @@ class OrchestratorService:
                         **self._surface_identity_payload(operation_dispatch),
                         **self._capability_decision_event_payload(operation_dispatch),
                         **self._request_identity_policy_payload(operation_dispatch),
+                        **self._autonomy_ladder_plan_payload(operation_dispatch),
                         "adaptive_intervention_status": (
                             operation_dispatch.adaptive_intervention_status
                         ),
@@ -3236,6 +3265,27 @@ class OrchestratorService:
             request_confirmation_mode=plan.request_confirmation_mode,
             request_identity_summary=plan.request_identity_summary,
             request_identity_policy_refs=list(plan.request_identity_policy_refs),
+            requested_autonomy_level=plan.requested_autonomy_level,
+            max_autonomy_level=plan.max_autonomy_level,
+            effective_autonomy_level=plan.effective_autonomy_level,
+            autonomy_ladder_status=plan.autonomy_ladder_status,
+            max_autonomy_capability_mode=plan.max_autonomy_capability_mode,
+            autonomy_human_confirmation_required=(
+                plan.autonomy_human_confirmation_required
+            ),
+            autonomy_confirmation_mode=plan.autonomy_confirmation_mode,
+            autonomy_allowed_runtime_actions=list(
+                plan.autonomy_allowed_runtime_actions
+            ),
+            autonomy_blocked_runtime_actions=list(
+                plan.autonomy_blocked_runtime_actions
+            ),
+            autonomy_policy_refs=list(plan.autonomy_policy_refs),
+            autonomy_summary=plan.autonomy_summary,
+            autonomy_automatic_promotion_allowed=(
+                plan.autonomy_automatic_promotion_allowed
+            ),
+            autonomy_core_mutation_allowed=plan.autonomy_core_mutation_allowed,
             adaptive_intervention_status=plan.adaptive_intervention_status,
             adaptive_intervention_reason=plan.adaptive_intervention_reason,
             adaptive_intervention_trigger=plan.adaptive_intervention_trigger,
@@ -3512,6 +3562,90 @@ class OrchestratorService:
             "request_identity_summary": source.request_identity_summary,
             "request_identity_policy_refs": list(source.request_identity_policy_refs),
         }
+
+    @staticmethod
+    def _autonomy_ladder_payload(
+        autonomy_ladder: AutonomyLadderContract,
+    ) -> dict[str, object]:
+        return {
+            "requested_autonomy_level": autonomy_ladder.requested_autonomy_level,
+            "max_autonomy_level": autonomy_ladder.max_autonomy_level,
+            "effective_autonomy_level": autonomy_ladder.effective_autonomy_level,
+            "autonomy_ladder_status": autonomy_ladder.autonomy_ladder_status,
+            "max_autonomy_capability_mode": autonomy_ladder.max_capability_mode,
+            "autonomy_human_confirmation_required": (
+                autonomy_ladder.human_confirmation_required
+            ),
+            "autonomy_confirmation_mode": autonomy_ladder.human_confirmation_mode,
+            "autonomy_allowed_runtime_actions": list(
+                autonomy_ladder.allowed_runtime_actions
+            ),
+            "autonomy_blocked_runtime_actions": list(
+                autonomy_ladder.blocked_runtime_actions
+            ),
+            "autonomy_policy_refs": list(autonomy_ladder.policy_refs),
+            "autonomy_summary": autonomy_ladder.summary,
+            "autonomy_automatic_promotion_allowed": (
+                autonomy_ladder.automatic_promotion_allowed
+            ),
+            "autonomy_core_mutation_allowed": autonomy_ladder.core_mutation_allowed,
+        }
+
+    @staticmethod
+    def _autonomy_ladder_plan_payload(
+        source: DeliberativePlanContract | OperationDispatchContract,
+    ) -> dict[str, object]:
+        return {
+            "requested_autonomy_level": source.requested_autonomy_level,
+            "max_autonomy_level": source.max_autonomy_level,
+            "effective_autonomy_level": source.effective_autonomy_level,
+            "autonomy_ladder_status": source.autonomy_ladder_status,
+            "max_autonomy_capability_mode": source.max_autonomy_capability_mode,
+            "autonomy_human_confirmation_required": (
+                source.autonomy_human_confirmation_required
+            ),
+            "autonomy_confirmation_mode": source.autonomy_confirmation_mode,
+            "autonomy_allowed_runtime_actions": list(
+                source.autonomy_allowed_runtime_actions
+            ),
+            "autonomy_blocked_runtime_actions": list(
+                source.autonomy_blocked_runtime_actions
+            ),
+            "autonomy_policy_refs": list(source.autonomy_policy_refs),
+            "autonomy_summary": source.autonomy_summary,
+            "autonomy_automatic_promotion_allowed": (
+                source.autonomy_automatic_promotion_allowed
+            ),
+            "autonomy_core_mutation_allowed": source.autonomy_core_mutation_allowed,
+        }
+
+    @staticmethod
+    def _apply_autonomy_ladder_to_plan(
+        *,
+        plan: DeliberativePlanContract,
+        autonomy_ladder: AutonomyLadderContract,
+    ) -> None:
+        plan.requested_autonomy_level = autonomy_ladder.requested_autonomy_level
+        plan.max_autonomy_level = autonomy_ladder.max_autonomy_level
+        plan.effective_autonomy_level = autonomy_ladder.effective_autonomy_level
+        plan.autonomy_ladder_status = autonomy_ladder.autonomy_ladder_status
+        plan.max_autonomy_capability_mode = autonomy_ladder.max_capability_mode
+        plan.autonomy_human_confirmation_required = (
+            autonomy_ladder.human_confirmation_required
+        )
+        plan.autonomy_confirmation_mode = autonomy_ladder.human_confirmation_mode
+        plan.autonomy_allowed_runtime_actions = list(
+            autonomy_ladder.allowed_runtime_actions
+        )
+        plan.autonomy_blocked_runtime_actions = list(
+            autonomy_ladder.blocked_runtime_actions
+        )
+        plan.autonomy_policy_refs = list(autonomy_ladder.policy_refs)
+        plan.autonomy_summary = autonomy_ladder.summary
+        plan.autonomy_automatic_promotion_allowed = (
+            autonomy_ladder.automatic_promotion_allowed
+        )
+        plan.autonomy_core_mutation_allowed = autonomy_ladder.core_mutation_allowed
 
     @staticmethod
     def _ecosystem_operational_state_payload(source: object) -> dict[str, object]:

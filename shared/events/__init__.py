@@ -23,6 +23,7 @@ INTERNAL_EVENT_NAMES = (
     "post_task_reflection_declared",
     "evolution_review_decision_declared",
     "reviewed_learning_guidance_declared",
+    "autonomy_ladder_declared",
     "operation_dispatched",
     "operation_completed",
     "governance_checked",

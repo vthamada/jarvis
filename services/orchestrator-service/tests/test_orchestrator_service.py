@@ -40,6 +40,60 @@ def test_orchestrator_service_name() -> None:
     assert OrchestratorService.name == "orchestrator-service"
 
 
+def test_orchestrator_declares_and_propagates_autonomy_ladder() -> None:
+    temp_dir = runtime_dir("orchestrator-autonomy-ladder")
+    service = OrchestratorService(
+        memory_service=MemoryService(
+            database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+        ),
+        operational_service=OperationalService(
+            artifact_dir=str(temp_dir / "artifacts")
+        ),
+        observability_service=ObservabilityService(
+            database_path=str(temp_dir / "observability.db")
+        ),
+    )
+
+    result = service.handle_input(
+        InputContract(
+            request_id=RequestId("req-orchestrator-autonomy"),
+            session_id=SessionId("sess-orchestrator-autonomy"),
+            mission_id=MissionId("mission-orchestrator-autonomy"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Plan the governed rollout before any external action.",
+            timestamp="2026-07-04T00:00:00Z",
+            requested_autonomy_level="supervised_external_action",
+            max_autonomy_level="confirm_before_action",
+            autonomy_confirmation_mode="explicit",
+            autonomy_policy_refs=["policy://operator/max-confirm-before-action"],
+        )
+    )
+    event_by_name = {event.event_name: event for event in result.events}
+
+    assert result.deliberative_plan.requested_autonomy_level == (
+        "supervised_external_action"
+    )
+    assert result.deliberative_plan.effective_autonomy_level == (
+        "confirm_before_action"
+    )
+    assert result.deliberative_plan.autonomy_ladder_status == "downgraded_to_max"
+    assert result.deliberative_plan.autonomy_automatic_promotion_allowed is False
+    assert result.deliberative_plan.autonomy_core_mutation_allowed is False
+    assert result.operation_dispatch is not None
+    assert result.operation_dispatch.effective_autonomy_level == (
+        "confirm_before_action"
+    )
+    autonomy_event = event_by_name["autonomy_ladder_declared"]
+    assert autonomy_event.payload["effective_autonomy_level"] == (
+        "confirm_before_action"
+    )
+    assert autonomy_event.payload["autonomy_ladder_status"] == "downgraded_to_max"
+    assert autonomy_event.payload["autonomy_automatic_promotion_allowed"] is False
+    plan_event = event_by_name["plan_built"]
+    assert plan_event.payload["max_autonomy_level"] == "confirm_before_action"
+
+
 def test_orchestrator_transitions_work_item_through_governed_core() -> None:
     temp_dir = runtime_dir("orchestrator-work-item")
     service = OrchestratorService(

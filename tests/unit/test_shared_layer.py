@@ -1,5 +1,6 @@
 from shared.contracts import (
     ArtifactLifecycleStateContract,
+    AutonomyLadderContract,
     DeliberativePlanContract,
     EvolutionReviewDecisionContract,
     EvolutionReviewQueueItemContract,
@@ -18,6 +19,7 @@ from shared.contracts import (
 from shared.events import INTERNAL_EVENT_NAMES
 from shared.schemas import (
     ARTIFACT_LIFECYCLE_STATE_SCHEMA,
+    AUTONOMY_LADDER_SCHEMA,
     DELIBERATIVE_PLAN_SCHEMA,
     EVOLUTION_REVIEW_DECISION_SCHEMA,
     EVOLUTION_REVIEW_QUEUE_ITEM_SCHEMA,
@@ -246,6 +248,28 @@ def test_deliberative_plan_schema_declares_semantic_memory_evidence_fields() -> 
     assert "semantic_memory_evidence_refs" in DELIBERATIVE_PLAN_SCHEMA.optional_fields
     assert "semantic_memory_use_reason" in DELIBERATIVE_PLAN_SCHEMA.optional_fields
     assert "semantic_memory_non_use_reason" in DELIBERATIVE_PLAN_SCHEMA.optional_fields
+
+
+def test_autonomy_ladder_contract_is_runtime_declared_not_promotional() -> None:
+    ladder = AutonomyLadderContract(
+        requested_autonomy_level="supervised_external_action",
+        max_autonomy_level="confirm_before_action",
+        effective_autonomy_level="confirm_before_action",
+        autonomy_ladder_status="downgraded_to_max",
+        max_capability_mode="core_with_specialist_handoff",
+        human_confirmation_required=True,
+        human_confirmation_mode="explicit",
+    )
+
+    assert ladder.automatic_promotion_allowed is False
+    assert ladder.core_mutation_allowed is False
+    assert AUTONOMY_LADDER_SCHEMA.contract_name == "AutonomyLadderContract"
+    assert "requested_autonomy_level" in INPUT_SCHEMA.optional_fields
+    assert "effective_autonomy_level" in DELIBERATIVE_PLAN_SCHEMA.optional_fields
+    assert "autonomy_automatic_promotion_allowed" in (
+        DELIBERATIVE_PLAN_SCHEMA.optional_fields
+    )
+    assert "autonomy_ladder_declared" in INTERNAL_EVENT_NAMES
 
 
 def test_procedural_playbook_candidate_contract_is_bounded_schema() -> None:
