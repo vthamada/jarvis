@@ -348,7 +348,8 @@ Notas de leitura:
   `implementation-master-map`, abrindo uma fila maior `MB-161` a `MB-174`;
   `MB-161` foi fechado como anchors de evidencia de memoria semantica;
   `MB-162` foi fechado como candidatos bounded de playbook procedural;
-  `MB-163` e o unico item tecnico `ready` e `MB-164` a `MB-174` permanecem
+  `MB-163` foi fechado como superficie auditavel de influencia de memoria;
+  `MB-164` e o unico item tecnico `ready` e `MB-165` a `MB-174` permanecem
   bloqueados por dependencia/ordem.
 
 ### 5.5 Deferred verticals already mapped
@@ -393,7 +394,7 @@ Ordem recomendada hoje:
 1. tratar `MB-110` a `MB-159` como baseline fechado de objetivos persistentes,
    utilidade operacional, absorcao tecnologica governada, aprendizado revisado,
    higiene documental e horizonte longo minimo.
-2. executar `MB-163` como proximo item tecnico da fila maior pos-`MB-160`.
+2. executar `MB-164` como proximo item tecnico da fila maior pos-`MB-160`.
 3. manter `SO-001`, `TA-004`, `TA-006` e verticais `deferred` fora da fila ate
    haver decisao explicita de fase.
 
@@ -455,8 +456,8 @@ Leitura correta:
   movendo `COG-010` para um baseline minimo operacional;
 - `MB-160` abriu a fila maior `MB-161` a `MB-174`, priorizando memoria causal,
   autonomia runtime, promocao governada, cockpit, feedback, dominios/evals,
-  proveniencia e readiness; `MB-161` e `MB-162` foram fechados e `MB-163` e o
-  unico item `ready`;
+  proveniencia e readiness; `MB-161`, `MB-162` e `MB-163` foram fechados e
+  `MB-164` e o unico item `ready`;
 - `RH-*` permanece fora do backlog implementavel.
 
 ---

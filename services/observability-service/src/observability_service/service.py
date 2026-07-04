@@ -135,6 +135,10 @@ class FlowAudit:
     semantic_memory_evidence_refs: list[str]
     semantic_memory_use_reason: str | None
     semantic_memory_non_use_reason: str | None
+    memory_influence_used_refs: list[str]
+    memory_influence_ignored_refs: list[str]
+    memory_influence_reasons: list[str]
+    memory_influence_evidence_refs: list[str]
     procedural_memory_hint: str | None
     semantic_memory_effects: list[str]
     procedural_memory_effects: list[str]
@@ -529,6 +533,10 @@ class ObservabilityService:
                 semantic_memory_evidence_refs=[],
                 semantic_memory_use_reason=None,
                 semantic_memory_non_use_reason=None,
+                memory_influence_used_refs=[],
+                memory_influence_ignored_refs=[],
+                memory_influence_reasons=[],
+                memory_influence_evidence_refs=[],
                 procedural_memory_hint=None,
                 semantic_memory_effects=[],
                 procedural_memory_effects=[],
@@ -2028,6 +2036,114 @@ class ObservabilityService:
                 "evolution_review_limits",
             ),
         )
+        procedural_artifact_status_for_audit = (
+            str(response_event.payload.get("procedural_artifact_status"))
+            if response_event
+            and response_event.payload.get("procedural_artifact_status") is not None
+            else (
+                str(plan_event.payload.get("procedural_artifact_status"))
+                if plan_event
+                and plan_event.payload.get("procedural_artifact_status") is not None
+                else (
+                    str(memory_event.payload.get("procedural_artifact_status"))
+                    if memory_event
+                    and memory_event.payload.get("procedural_artifact_status") is not None
+                    else "not_applicable"
+                )
+            )
+        )
+        procedural_artifact_refs_for_audit = (
+            [
+                str(item)
+                for item in response_event.payload.get("procedural_artifact_refs", [])
+                if item
+            ]
+            if response_event is not None
+            and response_event.payload.get("procedural_artifact_refs")
+            else (
+                [
+                    str(item)
+                    for item in plan_event.payload.get("procedural_artifact_refs", [])
+                    if item
+                ]
+                if plan_event is not None
+                and plan_event.payload.get("procedural_artifact_refs")
+                else (
+                    [
+                        str(item)
+                        for item in memory_event.payload.get(
+                            "procedural_artifact_refs",
+                            [],
+                        )
+                        if item
+                    ]
+                    if memory_event is not None
+                    and memory_event.payload.get("procedural_artifact_refs")
+                    else []
+                )
+            )
+        )
+        procedural_artifact_version_for_audit = (
+            int(response_event.payload.get("procedural_artifact_version"))
+            if response_event is not None
+            and response_event.payload.get("procedural_artifact_version") is not None
+            else (
+                int(plan_event.payload.get("procedural_artifact_version"))
+                if plan_event is not None
+                and plan_event.payload.get("procedural_artifact_version") is not None
+                else (
+                    int(memory_event.payload.get("procedural_artifact_version"))
+                    if memory_event is not None
+                    and memory_event.payload.get("procedural_artifact_version")
+                    is not None
+                    else None
+                )
+            )
+        )
+        memory_influence_used_refs = list(semantic_memory_anchor_refs)
+        memory_influence_ignored_refs: list[str] = []
+        memory_influence_reasons: list[str] = []
+        memory_influence_evidence_refs = list(semantic_memory_evidence_refs)
+        if semantic_memory_use_reason:
+            if not memory_influence_used_refs and semantic_memory_source:
+                memory_influence_used_refs.append(
+                    f"memory://semantic-source/{semantic_memory_source}"
+                )
+            memory_influence_reasons.append(
+                f"semantic_used:{semantic_memory_use_reason}"
+            )
+        elif semantic_memory_non_use_reason:
+            memory_influence_ignored_refs.append("memory://semantic")
+            memory_influence_reasons.append(
+                f"semantic_ignored:{semantic_memory_non_use_reason}"
+            )
+        if procedural_artifact_refs_for_audit:
+            memory_influence_used_refs.extend(procedural_artifact_refs_for_audit)
+            memory_influence_evidence_refs.extend(procedural_artifact_refs_for_audit)
+            memory_influence_reasons.append(
+                "procedural_artifact_used:"
+                f"{procedural_artifact_status_for_audit or 'unknown'}"
+            )
+        elif procedural_memory_source:
+            memory_influence_used_refs.append(
+                f"memory://procedural-source/{procedural_memory_source}"
+            )
+            memory_influence_reasons.append(
+                "procedural_used:source_available_without_artifact_ref"
+            )
+        else:
+            memory_influence_ignored_refs.append("memory://procedural")
+            memory_influence_reasons.append(
+                "procedural_ignored:no_procedural_artifact_or_source"
+            )
+        memory_influence_used_refs = list(dict.fromkeys(memory_influence_used_refs))
+        memory_influence_ignored_refs = list(
+            dict.fromkeys(memory_influence_ignored_refs)
+        )
+        memory_influence_reasons = list(dict.fromkeys(memory_influence_reasons))
+        memory_influence_evidence_refs = list(
+            dict.fromkeys(memory_influence_evidence_refs)
+        )
 
         return FlowAudit(
             request_id=first_event.request_id,
@@ -2180,6 +2296,10 @@ class ObservabilityService:
             semantic_memory_evidence_refs=semantic_memory_evidence_refs,
             semantic_memory_use_reason=semantic_memory_use_reason,
             semantic_memory_non_use_reason=semantic_memory_non_use_reason,
+            memory_influence_used_refs=memory_influence_used_refs,
+            memory_influence_ignored_refs=memory_influence_ignored_refs,
+            memory_influence_reasons=memory_influence_reasons,
+            memory_influence_evidence_refs=memory_influence_evidence_refs,
             procedural_memory_hint=procedural_memory_hint,
             semantic_memory_effects=semantic_memory_effects,
             procedural_memory_effects=procedural_memory_effects,
@@ -2195,63 +2315,9 @@ class ObservabilityService:
             memory_consolidation_status=memory_consolidation_status,
             memory_fixation_status=memory_fixation_status,
             memory_archive_status=memory_archive_status,
-            procedural_artifact_status=(
-                str(response_event.payload.get("procedural_artifact_status"))
-                if response_event and response_event.payload.get("procedural_artifact_status") is not None
-                else (
-                    str(plan_event.payload.get("procedural_artifact_status"))
-                    if plan_event and plan_event.payload.get("procedural_artifact_status") is not None
-                    else (
-                        str(memory_event.payload.get("procedural_artifact_status"))
-                        if memory_event and memory_event.payload.get("procedural_artifact_status") is not None
-                        else "not_applicable"
-                    )
-                )
-            ),
-            procedural_artifact_refs=(
-                [
-                    str(item)
-                    for item in response_event.payload.get("procedural_artifact_refs", [])
-                    if item
-                ]
-                if response_event is not None
-                and response_event.payload.get("procedural_artifact_refs")
-                else (
-                    [
-                        str(item)
-                        for item in plan_event.payload.get("procedural_artifact_refs", [])
-                        if item
-                    ]
-                    if plan_event is not None
-                    and plan_event.payload.get("procedural_artifact_refs")
-                    else (
-                        [
-                            str(item)
-                            for item in memory_event.payload.get("procedural_artifact_refs", [])
-                            if item
-                        ]
-                        if memory_event is not None
-                        and memory_event.payload.get("procedural_artifact_refs")
-                        else []
-                    )
-                )
-            ),
-            procedural_artifact_version=(
-                int(response_event.payload.get("procedural_artifact_version"))
-                if response_event is not None
-                and response_event.payload.get("procedural_artifact_version") is not None
-                else (
-                    int(plan_event.payload.get("procedural_artifact_version"))
-                    if plan_event is not None
-                    and plan_event.payload.get("procedural_artifact_version") is not None
-                    else (
-                        int(memory_event.payload.get("procedural_artifact_version"))
-                        if memory_event is not None
-                        and memory_event.payload.get("procedural_artifact_version") is not None
-                        else None
-                    )
-                )
-            ),
+            procedural_artifact_status=procedural_artifact_status_for_audit,
+            procedural_artifact_refs=procedural_artifact_refs_for_audit,
+            procedural_artifact_version=procedural_artifact_version_for_audit,
             memory_corpus_status=memory_corpus_status,
             memory_retention_pressure=memory_retention_pressure,
             memory_maintenance_effectiveness=memory_maintenance_effectiveness,

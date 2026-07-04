@@ -15,6 +15,12 @@
 - `evolution-lab` transforma candidato em proposta `procedural_playbook_candidate` sandbox-only, e `jarvis-console procedural-playbooks` mostra a fila read-only;
 - `execution-backlog.md` fechou `MB-162` e abriu `MB-163` como unico item tecnico `ready`.
 
+### MB-163 expoe auditoria de influencia de memoria
+
+- `observability-service` agora consolida refs de memoria usadas, refs ignoradas, razoes e evidencias em `memory_influence_*`;
+- `jarvis-console operator-dashboard` exibe a influencia de memoria em modo read-only para o operador auditar o que guiou a missao;
+- a mudanca nao escreve memoria, nao promove playbooks e nao altera a decisao final; `execution-backlog.md` fechou `MB-163` e abriu `MB-164` como unico item tecnico `ready`.
+
 ## 2026-05-17
 
 ### MB-132 abre o Operator Learning Loop

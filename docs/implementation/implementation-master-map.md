@@ -453,7 +453,7 @@ Map IDs: `MEM-005`, `MEM-006`, `OP-006`, `OBS-005`.
 Goal: expose which memories/procedures influenced a mission, why they were
 selected and what was ignored.
 
-Status: next recommended ready item after `MB-162`.
+Status: closed in `MB-163`; next execution item is `MB-164`.
 
 ### MB-164 -- Runtime Autonomy Ladder Contract
 

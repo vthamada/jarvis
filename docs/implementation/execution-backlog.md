@@ -3086,7 +3086,7 @@ Fora de escopo:
 
 - `id`: `MB-163`
 - `prioridade`: `P0`
-- `status`: `ready`
+- `status`: `done`
 - `eixo_do_mestre`: `memoria`, `observabilidade`, `produto_operador`
 - `map_ids`: `MEM-005`, `MEM-006`, `OP-006`, `OBS-005`
 - `workflow_profile_afetado`: `operational_readiness_workflow`
@@ -3099,12 +3099,14 @@ Fora de escopo:
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `medium`
 - `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: `observability-service` agora consolida `memory_influence_used_refs`, `memory_influence_ignored_refs`, `memory_influence_reasons` e `memory_influence_evidence_refs`; `jarvis-console operator-dashboard` mostra esses sinais em modo read-only, sem escrever memoria ou alterar decisao final.
+- `evidencia_de_fechamento`: `pytest services/observability-service/tests/test_observability_service.py apps/jarvis_console/tests/test_console.py` passou com 78 testes.
 
 ### MB-164
 
 - `id`: `MB-164`
 - `prioridade`: `P0`
-- `status`: `blocked`
+- `status`: `ready`
 - `eixo_do_mestre`: `governanca`, `soberania`, `politica_runtime`
 - `map_ids`: `GOV-007`, `COG-001`, `ACT-002`
 - `workflow_profile_afetado`: `governance_boundary_workflow`, `decision_risk_workflow`
@@ -3391,6 +3393,7 @@ Estado atual da fila:
 - `MB-160` foi concluido como repriorizacao pos-`MB-159` a partir de `docs/implementation/implementation-master-map.md`, abrindo a fila maior `MB-161` a `MB-174`;
 - `MB-161` foi concluido como anchors de evidencia para memoria semantica em planning/synthesis/observabilidade/console;
 - `MB-162` foi concluido como baseline governado de candidatos de playbook procedural;
-- `MB-163` e o unico item tecnico `ready` atual, focado em superficie de auditoria de influencia de memoria; `MB-164` a `MB-174` permanecem `blocked` por dependencia/ordem;
+- `MB-163` foi concluido como superficie auditavel de influencia de memoria em observabilidade e dashboard textual;
+- `MB-164` e o unico item tecnico `ready` atual, focado em contrato runtime de `autonomy_ladder`; `MB-165` a `MB-174` permanecem `blocked` por dependencia/ordem;
 - `SO-001`, `TA-004`, `TA-006` e verticais `deferred` continuam fora da fila sem mudanca explicita de fase;
 - `protective intelligence foundation` continua `deferred` e a matriz da Onda 2 segue como insumo, nao como gatilho automatico para abrir nova vertical.

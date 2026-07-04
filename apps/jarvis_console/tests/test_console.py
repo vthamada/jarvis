@@ -530,6 +530,10 @@ def test_console_operator_dashboard_shows_daily_state_for_mission() -> None:
     assert "semantic_memory_evidence_refs=" in outputs[0]
     assert "semantic_memory_use_reason=" in outputs[0]
     assert "semantic_memory_non_use_reason=" in outputs[0]
+    assert "memory_influence_used_refs=" in outputs[0]
+    assert "memory_influence_ignored_refs=" in outputs[0]
+    assert "memory_influence_reasons=" in outputs[0]
+    assert "memory_influence_evidence_refs=" in outputs[0]
     assert "automatic_promotion=False" in outputs[0]
     assert "next_operator_step=review_evolution_proposal" in outputs[0]
 

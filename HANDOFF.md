@@ -1,5 +1,20 @@
 # HANDOFF
 
+## Atualizacao 2026-07-04
+
+`MB-163` foi concluido: `observability-service` agora consolida
+`memory_influence_used_refs`, `memory_influence_ignored_refs`,
+`memory_influence_reasons` e `memory_influence_evidence_refs` a partir dos
+sinais semanticos/procedurais ja existentes. O console
+`operator-dashboard` mostra esses campos em modo read-only para o operador
+auditar o que influenciou a missao, o que foi ignorado e quais evidencias
+sustentam a leitura. Nao houve escrita de memoria, promocao de playbook ou
+alteracao de decisao final.
+
+`MB-164` e o unico item tecnico `ready`: formalizar `autonomy_ladder` como
+contrato runtime compartilhado, preservando governanca, soberania do core e
+bloqueio de autopromocao.
+
 ## Atualizacao 2026-05-17
 
 O corte pos-`MB-131` foi repriorizado em `MB-132`: a proxima frente ativa e o
@@ -172,8 +187,9 @@ refs de artefato/reflexao, testes, rollback, revisao humana obrigatoria,
 `automatic_promotion_allowed=false`, `core_mutation_allowed=false` e
 `memory_write_mode=through_core_only`. `memory-service` persiste/lista esses
 candidatos, `evolution-lab` cria proposta sandbox-only a partir deles e o
-console possui `procedural-playbooks` read-only. `MB-163` e o unico item
-tecnico `ready`, focado em superficie de auditoria de influencia de memoria.
+console possui `procedural-playbooks` read-only. `MB-163` tambem foi concluido;
+`MB-164` e o unico item tecnico `ready`, focado em contrato runtime de
+`autonomy_ladder`.
 
 O corte pos-`MB-125` foi repriorizado em `MB-126`: a proxima frente ativa e
 experiencia operacional + reflexao pos-tarefa governada. O objetivo e fazer o

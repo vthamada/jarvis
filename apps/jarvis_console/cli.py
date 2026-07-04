@@ -1080,6 +1080,18 @@ def render_operator_dashboard(
     semantic_memory_non_use_reason = safe_console_value(
         getattr(flow_audit, "semantic_memory_non_use_reason", None)
     )
+    memory_influence_used_refs = safe_console_list(
+        list(getattr(flow_audit, "memory_influence_used_refs", []))
+    )
+    memory_influence_ignored_refs = safe_console_list(
+        list(getattr(flow_audit, "memory_influence_ignored_refs", []))
+    )
+    memory_influence_reasons = safe_console_list(
+        list(getattr(flow_audit, "memory_influence_reasons", []))
+    )
+    memory_influence_evidence_refs = safe_console_list(
+        list(getattr(flow_audit, "memory_influence_evidence_refs", []))
+    )
 
     return "\n".join(
         [
@@ -1111,6 +1123,10 @@ def render_operator_dashboard(
             f"semantic_memory_evidence_refs={semantic_memory_evidence_refs}",
             f"semantic_memory_use_reason={semantic_memory_use_reason}",
             f"semantic_memory_non_use_reason={semantic_memory_non_use_reason}",
+            f"memory_influence_used_refs={memory_influence_used_refs}",
+            f"memory_influence_ignored_refs={memory_influence_ignored_refs}",
+            f"memory_influence_reasons={memory_influence_reasons}",
+            f"memory_influence_evidence_refs={memory_influence_evidence_refs}",
             f"operator_usefulness_status={operator_usefulness_status}",
             f"operator_usefulness_score={operator_usefulness_score}",
             f"operator_usefulness_signals={operator_usefulness_signals}",
