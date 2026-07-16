@@ -258,6 +258,15 @@ class FlowAudit:
     promotion_gate_promotion_eligible: bool = False
     promotion_gate_human_decision_required: bool = True
     promotion_gate_promotion_authorized: bool = False
+    mission_progress_report_status: str = "not_applicable"
+    mission_progress_report_id: str | None = None
+    mission_progress_summary: str | None = None
+    mission_progress_next_action_ref: str | None = None
+    mission_progress_pending_decisions: list[str] = field(default_factory=list)
+    mission_progress_evidence_refs: list[str] = field(default_factory=list)
+    mission_progress_memory_influence_refs: list[str] = field(default_factory=list)
+    mission_progress_learning_refs: list[str] = field(default_factory=list)
+    mission_progress_risk_refs: list[str] = field(default_factory=list)
 
     @property
     def trace_complete(self) -> bool:
@@ -2181,6 +2190,47 @@ class ObservabilityService:
             "promotion_gate_promotion_authorized",
             False,
         )
+        mission_progress_event = self._first_payload_event(
+            events,
+            "mission_progress_report_status",
+        )
+        mission_progress_report_status = self._payload_str(
+            mission_progress_event,
+            "mission_progress_report_status",
+            "not_applicable",
+        )
+        mission_progress_report_id = self._payload_optional_str(
+            mission_progress_event,
+            "mission_progress_report_id",
+        )
+        mission_progress_summary = self._payload_optional_str(
+            mission_progress_event,
+            "mission_progress_summary",
+        )
+        mission_progress_next_action_ref = self._payload_optional_str(
+            mission_progress_event,
+            "mission_progress_next_action_ref",
+        )
+        mission_progress_pending_decisions = self._dedupe_payload_list(
+            events,
+            "mission_progress_pending_decisions",
+        )
+        mission_progress_evidence_refs = self._dedupe_payload_list(
+            events,
+            "mission_progress_evidence_refs",
+        )
+        mission_progress_memory_influence_refs = self._dedupe_payload_list(
+            events,
+            "mission_progress_memory_influence_refs",
+        )
+        mission_progress_learning_refs = self._dedupe_payload_list(
+            events,
+            "mission_progress_learning_refs",
+        )
+        mission_progress_risk_refs = self._dedupe_payload_list(
+            events,
+            "mission_progress_risk_refs",
+        )
         procedural_artifact_status_for_audit = (
             str(response_event.payload.get("procedural_artifact_status"))
             if response_event
@@ -2433,6 +2483,21 @@ class ObservabilityService:
             promotion_gate_promotion_authorized=(
                 promotion_gate_promotion_authorized
             ),
+            mission_progress_report_status=mission_progress_report_status,
+            mission_progress_report_id=mission_progress_report_id,
+            mission_progress_summary=mission_progress_summary,
+            mission_progress_next_action_ref=(
+                mission_progress_next_action_ref
+            ),
+            mission_progress_pending_decisions=(
+                mission_progress_pending_decisions
+            ),
+            mission_progress_evidence_refs=mission_progress_evidence_refs,
+            mission_progress_memory_influence_refs=(
+                mission_progress_memory_influence_refs
+            ),
+            mission_progress_learning_refs=mission_progress_learning_refs,
+            mission_progress_risk_refs=mission_progress_risk_refs,
             experiment_lane_status=expanded_eval_state["experiment_lane_status"],
             wave2_candidate_class=expanded_eval_state["wave2_candidate_class"],
             experiment_entry_status=expanded_eval_state["experiment_entry_status"],

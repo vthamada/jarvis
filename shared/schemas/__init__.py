@@ -142,6 +142,45 @@ LONG_HORIZON_GOAL_STRATEGY_SCHEMA = CanonicalSchema(
     ),
 )
 
+MISSION_PROGRESS_REPORT_SCHEMA = CanonicalSchema(
+    name="MissionProgressReportSchema",
+    contract_name="MissionProgressReportContract",
+    required_fields=(
+        "report_id",
+        "mission_id",
+        "report_status",
+        "progress_summary",
+        "report_text",
+        "mission_goal",
+        "mission_status",
+        "objective_status",
+        "generated_at",
+    ),
+    optional_fields=(
+        "work_item_refs",
+        "active_work_items",
+        "artifact_refs",
+        "open_checkpoint_refs",
+        "milestone_refs",
+        "risk_refs",
+        "memory_influence_refs",
+        "learning_refs",
+        "evidence_refs",
+        "pending_decisions",
+        "latest_experience_id",
+        "latest_experience_outcome",
+        "latest_reflection_id",
+        "latest_reflection_status",
+        "operator_usefulness_status",
+        "next_action_ref",
+        "memory_write_mode",
+        "autonomous_execution_allowed",
+    ),
+    notes=(
+        "Read-only human progress report derived from canonical mission state.",
+    ),
+)
+
 TECHNOLOGY_ABSORPTION_CANDIDATE_SCHEMA = CanonicalSchema(
     name="TechnologyAbsorptionCandidateSchema",
     contract_name="TechnologyAbsorptionCandidateContract",

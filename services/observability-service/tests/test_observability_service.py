@@ -516,6 +516,66 @@ def test_observability_service_audits_promotion_gate_decision() -> None:
     assert audit.promotion_gate_promotion_authorized is False
 
 
+def test_observability_service_audits_mission_progress_report() -> None:
+    temp_dir = runtime_dir("observability-mission-progress")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service.ingest_events(
+        [
+            InternalEventEnvelope(
+                event_id="evt-mission-progress-1",
+                event_name="mission_progress_report_generated",
+                timestamp="2026-07-16T00:00:00+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "mission_progress_report_id": (
+                        "mission-progress-report://mission-123"
+                    ),
+                    "mission_progress_report_status": "needs_operator_decision",
+                    "mission_progress_summary": "pending_decisions=1",
+                    "mission_progress_next_action_ref": "next_action:review",
+                    "mission_progress_pending_decisions": [
+                        "review_learning_candidate"
+                    ],
+                    "mission_progress_evidence_refs": ["evidence://mission-123"],
+                    "mission_progress_memory_influence_refs": [
+                        "memory://mission-123"
+                    ],
+                    "mission_progress_learning_refs": [
+                        "reflection://mission-123/001"
+                    ],
+                    "mission_progress_risk_refs": ["risk://release-review"],
+                    "memory_write_mode": "read_only",
+                    "autonomous_execution_allowed": False,
+                },
+                request_id="req-mission-progress",
+                session_id="sess-mission-progress",
+                mission_id="mission-123",
+                correlation_id="req-mission-progress",
+            )
+        ]
+    )
+
+    audit = service.audit_flow(ObservabilityQuery(request_id="req-mission-progress"))
+
+    assert audit.mission_progress_report_status == "needs_operator_decision"
+    assert audit.mission_progress_report_id == (
+        "mission-progress-report://mission-123"
+    )
+    assert audit.mission_progress_summary == "pending_decisions=1"
+    assert audit.mission_progress_next_action_ref == "next_action:review"
+    assert audit.mission_progress_pending_decisions == [
+        "review_learning_candidate"
+    ]
+    assert audit.mission_progress_evidence_refs == ["evidence://mission-123"]
+    assert audit.mission_progress_memory_influence_refs == [
+        "memory://mission-123"
+    ]
+    assert audit.mission_progress_learning_refs == [
+        "reflection://mission-123/001"
+    ]
+    assert audit.mission_progress_risk_refs == ["risk://release-review"]
+
+
 def test_observability_service_audits_surface_continuity_signals() -> None:
     temp_dir = runtime_dir("observability-surface")
     service = ObservabilityService(database_path=str(temp_dir / "observability.db"))

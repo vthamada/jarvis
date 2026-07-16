@@ -37,7 +37,7 @@ Implemented strengths:
 - Runs through the governed core via `JarvisConsole` and `OrchestratorService`.
 - Exposes operational commands for `ask`, `chat`, objectives, work items,
   artifacts, technology candidates, experience/reflection, evolution review,
-  mission cycle, operator dashboard and mission workflow.
+  mission cycle, operator dashboard, progress report and mission workflow.
 - Has meaningful tests in `apps/jarvis_console/tests/test_console.py` and
   `apps/jarvis_console/tests/test_console_end_to_end.py`.
 - Preserves the sovereign core by routing mission interactions through current

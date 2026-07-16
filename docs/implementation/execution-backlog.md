@@ -3206,7 +3206,7 @@ Fora de escopo:
 
 - `id`: `MB-169`
 - `prioridade`: `P1`
-- `status`: `ready`
+- `status`: `done`
 - `eixo_do_mestre`: `sintese`, `produto_operador`, `continuidade`
 - `map_ids`: `OP-008`, `OBS-005`, `COG-010`
 - `workflow_profile_afetado`: `strategic_direction_workflow`, `operational_readiness_workflow`
@@ -3219,12 +3219,14 @@ Fora de escopo:
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `medium`
 - `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: `MissionProgressReportContract` e schema canonico formalizam relatorio derivado/read-only; `synthesis-engine` compoe texto humano com progresso, pendencias, riscos, memoria, aprendizado, estrategia e proxima acao; `orchestrator-service` coleta somente estado canonico e emite `mission_progress_report_generated`; observabilidade audita os sinais e `jarvis-console progress-report` expoe o resultado.
+- `evidencia_de_fechamento`: `pytest tests/unit/test_shared_layer.py engines/synthesis-engine/tests/test_synthesis_engine.py services/orchestrator-service/tests/test_orchestrator_service.py services/observability-service/tests/test_observability_service.py apps/jarvis_console/tests/test_console.py apps/jarvis_console/tests/test_console_end_to_end.py` passou com 156 testes; `python tools/engineering_gate.py --mode standard` passou integralmente.
 
 ### MB-170
 
 - `id`: `MB-170`
 - `prioridade`: `P1`
-- `status`: `blocked`
+- `status`: `ready`
 - `eixo_do_mestre`: `experiencia`, `feedback`, `evolucao`
 - `map_ids`: `OP-007`, `MEM-003`, `EVL-002`, `OBS-009`
 - `workflow_profile_afetado`: `operational_readiness_workflow`
@@ -3409,6 +3411,7 @@ Estado atual da fila:
 - `MB-166` foi concluido como checklist sandbox-to-release executavel, auditavel e incapaz de autorizar promocao autonoma;
 - `MB-167` foi concluido como enforcement runtime/tooling observavel do promotion gate, sem autorizacao autonoma de promocao;
 - `MB-168` foi concluido como cockpit textual consolidado e read-only para estado, limites e decisoes do operador;
-- `MB-169` e o unico item tecnico `ready` atual, focado em relatorio humano compacto de progresso; `MB-170` a `MB-174` permanecem `blocked` por dependencia/ordem;
+- `MB-169` foi concluido como relatorio humano compacto derivado do estado canonico, sem escrita ou execucao autonoma;
+- `MB-170` e o unico item tecnico `ready` atual, focado em feedback explicito do operador no ciclo bounded de aprendizado; `MB-171` a `MB-174` permanecem `blocked` por dependencia/ordem;
 - `SO-001`, `TA-004`, `TA-006` e verticais `deferred` continuam fora da fila sem mudanca explicita de fase;
 - `protective intelligence foundation` continua `deferred` e a matriz da Onda 2 segue como insumo, nao como gatilho automatico para abrir nova vertical.

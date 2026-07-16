@@ -25,7 +25,15 @@ acao, work items, checkpoints, artefatos, experiencia/reflexao, revisoes,
 memoria usada, autonomia e promotion gate. A fila read-only
 `pending_decisions` ordena revisao evolutiva, blockers de release, confirmacao
 de autonomia e checkpoints; `next_operator_decision` aponta a primeira decisao
-humana sem executa-la. `MB-169` e o unico item tecnico `ready`.
+humana sem executa-la.
+
+`MB-169` foi concluido: `MissionProgressReportContract`, `synthesis-engine`,
+orquestrador, observabilidade e o comando `progress-report` agora geram uma
+leitura humana compacta de progresso, pendencias, riscos, artefatos, memoria
+influente, experiencia/reflexao, estrategia e proxima acao. O relatorio deriva
+do estado canonico, emite `mission_progress_report_generated` e preserva
+`memory_write_mode=read_only` e `autonomous_execution_allowed=false`.
+`MB-170` e o unico item tecnico `ready`.
 
 ## Atualizacao 2026-07-04
 
@@ -51,8 +59,8 @@ falha dispatch acima do limite sem gerar artefato; observabilidade e
 `operator-dashboard` mostram nivel efetivo, status do ladder, limite aplicado,
 confirmacao humana e acoes bloqueadas.
 
-`MB-166`, `MB-167` e `MB-168` foram posteriormente concluidos na atualizacao de
-`2026-07-16`; `MB-169` passou a ser o unico item tecnico `ready`.
+`MB-166`, `MB-167`, `MB-168` e `MB-169` foram posteriormente concluidos na
+atualizacao de `2026-07-16`; `MB-170` passou a ser o unico item tecnico `ready`.
 
 ## Atualizacao 2026-05-17
 
@@ -227,8 +235,8 @@ refs de artefato/reflexao, testes, rollback, revisao humana obrigatoria,
 `memory_write_mode=through_core_only`. `memory-service` persiste/lista esses
 candidatos, `evolution-lab` cria proposta sandbox-only a partir deles e o
 console possui `procedural-playbooks` read-only. `MB-163`, `MB-164`, `MB-165`,
-`MB-166`, `MB-167` e `MB-168` tambem foram concluidos; `MB-169` e o unico item
-tecnico `ready`, focado no relatorio humano compacto de progresso.
+`MB-166`, `MB-167`, `MB-168` e `MB-169` tambem foram concluidos; `MB-170` e o
+unico item tecnico `ready`, focado em feedback explicito do operador.
 
 O corte pos-`MB-125` foi repriorizado em `MB-126`: a proxima frente ativa e
 experiencia operacional + reflexao pos-tarefa governada. O objetivo e fazer o

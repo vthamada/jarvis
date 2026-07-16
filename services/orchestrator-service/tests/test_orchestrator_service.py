@@ -325,6 +325,77 @@ def test_orchestrator_inspects_long_horizon_goal_strategy_read_only() -> None:
     assert result.events[0].payload["autonomous_scheduling_allowed"] is False
 
 
+def test_orchestrator_synthesizes_mission_progress_report_read_only() -> None:
+    temp_dir = runtime_dir("orchestrator-progress-report")
+    observability = ObservabilityService(
+        database_path=str(temp_dir / "observability.db")
+    )
+    service = OrchestratorService(
+        memory_service=MemoryService(
+            database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+        ),
+        operational_service=OperationalService(
+            artifact_dir=str(temp_dir / "artifacts")
+        ),
+        observability_service=observability,
+    )
+    mission_id = "mission-orchestrator-progress-report"
+    response = service.handle_input(
+        InputContract(
+            request_id=RequestId("req-orchestrator-progress-report"),
+            session_id=SessionId("sess-orchestrator-progress-report"),
+            mission_id=MissionId(mission_id),
+            channel=ChannelType.CONSOLE,
+            input_type=InputType.TEXT,
+            content="Plan and review the controlled release.",
+            timestamp="2026-07-16T00:00:00Z",
+        )
+    )
+    assert response.experience_record is not None
+    assert response.post_task_reflection is not None
+    service.transition_work_item(
+        mission_id=mission_id,
+        work_item_ref=f"work-item://{mission_id}/review-release",
+        transition="create",
+        session_id="sess-orchestrator-progress-report",
+        next_action_ref="next_action:operator-review",
+    )
+    service.transition_artifact_lifecycle(
+        mission_id=mission_id,
+        artifact_ref=f"artifact://{mission_id}/release-plan/v1",
+        transition="register",
+        session_id="sess-orchestrator-progress-report",
+        artifact_version=1,
+    )
+
+    result = service.inspect_mission_progress_report(
+        mission_id=mission_id,
+        session_id="sess-orchestrator-progress-report",
+    )
+
+    assert result.status == "needs_operator_decision"
+    assert result.report.latest_experience_id.startswith("experience://")
+    assert result.report.latest_reflection_status == "candidate"
+    assert "review_learning_candidate" in result.report.pending_decisions
+    assert result.report.artifact_refs == [
+        f"artifact://{mission_id}/release-plan/v1"
+    ]
+    assert result.report.next_action_ref == "next_action:operator-review"
+    assert result.report.memory_write_mode == "read_only"
+    assert result.report.autonomous_execution_allowed is False
+    assert result.events[0].event_name == "mission_progress_report_generated"
+    assert result.events[0].payload["memory_write_mode"] == "read_only"
+    assert result.events[0].payload["autonomous_execution_allowed"] is False
+
+    audit = observability.audit_flow(
+        ObservabilityQuery(mission_id=mission_id, limit=120)
+    )
+    assert audit.mission_progress_report_status == "needs_operator_decision"
+    assert audit.mission_progress_report_id == result.report.report_id
+    assert "review_learning_candidate" in audit.mission_progress_pending_decisions
+    assert audit.mission_progress_next_action_ref == "next_action:operator-review"
+
+
 def test_orchestrator_service_surfaces_adaptive_intervention_payload_from_synthesis() -> None:
     payload = OrchestratorService._adaptive_intervention_response_payload(
         synthesis_result=SynthesisResult(

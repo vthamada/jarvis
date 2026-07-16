@@ -929,6 +929,37 @@ class LongHorizonGoalStrategyContract:
 
 
 @dataclass
+class MissionProgressReportContract:
+    report_id: str
+    mission_id: MissionId
+    report_status: str
+    progress_summary: str
+    report_text: str
+    mission_goal: str
+    mission_status: str
+    objective_status: str
+    generated_at: Timestamp
+    work_item_refs: list[str] = field(default_factory=list)
+    active_work_items: list[str] = field(default_factory=list)
+    artifact_refs: list[str] = field(default_factory=list)
+    open_checkpoint_refs: list[str] = field(default_factory=list)
+    milestone_refs: list[str] = field(default_factory=list)
+    risk_refs: list[str] = field(default_factory=list)
+    memory_influence_refs: list[str] = field(default_factory=list)
+    learning_refs: list[str] = field(default_factory=list)
+    evidence_refs: list[str] = field(default_factory=list)
+    pending_decisions: list[str] = field(default_factory=list)
+    latest_experience_id: str | None = None
+    latest_experience_outcome: str | None = None
+    latest_reflection_id: str | None = None
+    latest_reflection_status: str | None = None
+    operator_usefulness_status: str = "insufficient_signal"
+    next_action_ref: str | None = None
+    memory_write_mode: str = "read_only"
+    autonomous_execution_allowed: bool = False
+
+
+@dataclass
 class MissionRuntimeStateContract:
     mission_id: MissionId
     mission_goal: str

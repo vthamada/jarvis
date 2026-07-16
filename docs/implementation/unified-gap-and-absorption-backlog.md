@@ -354,7 +354,8 @@ Notas de leitura:
   `MB-166` foi fechado como checklist sandbox-to-release governado;
   `MB-167` foi fechado como enforcement observavel do promotion gate;
   `MB-168` foi fechado como cockpit textual consolidado do operador;
-  `MB-169` e o unico item tecnico `ready` e `MB-170` a `MB-174` permanecem
+  `MB-169` foi fechado como relatorio humano de progresso;
+  `MB-170` e o unico item tecnico `ready` e `MB-171` a `MB-174` permanecem
   bloqueados por dependencia/ordem.
 
 ### 5.5 Deferred verticals already mapped
@@ -399,7 +400,7 @@ Ordem recomendada hoje:
 1. tratar `MB-110` a `MB-159` como baseline fechado de objetivos persistentes,
    utilidade operacional, absorcao tecnologica governada, aprendizado revisado,
    higiene documental e horizonte longo minimo.
-2. executar `MB-169` como proximo item tecnico da fila maior pos-`MB-160`.
+2. executar `MB-170` como proximo item tecnico da fila maior pos-`MB-160`.
 3. manter `SO-001`, `TA-004`, `TA-006` e verticais `deferred` fora da fila ate
    haver decisao explicita de fase.
 
@@ -462,8 +463,8 @@ Leitura correta:
 - `MB-160` abriu a fila maior `MB-161` a `MB-174`, priorizando memoria causal,
   autonomia runtime, promocao governada, cockpit, feedback, dominios/evals,
   proveniencia e readiness; `MB-161`, `MB-162`, `MB-163`, `MB-164`, `MB-165`,
-  `MB-166`, `MB-167` e `MB-168` foram fechados e `MB-169` e o unico item
-  `ready`;
+  `MB-166`, `MB-167`, `MB-168` e `MB-169` foram fechados e `MB-170` e o unico
+  item `ready`;
 - `RH-*` permanece fora do backlog implementavel.
 
 ---

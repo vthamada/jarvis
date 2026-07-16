@@ -20,6 +20,12 @@
 - `cockpit_status`, `pending_decisions` e `next_operator_decision` ordenam as decisoes humanas pendentes sem executa-las ou escrever memoria;
 - testes cobrem missao real, estado global vazio e combinacao de revisao evolutiva, gate bloqueado e confirmacao de autonomia; `execution-backlog.md` abriu `MB-169` como unico item tecnico `ready`.
 
+### MB-169 cria relatorio humano de progresso
+
+- `MissionProgressReportContract` e schema canonico definem um relatorio read-only derivado de missao, estrategia, artefatos, experiencia/reflexao, memoria e observabilidade;
+- `synthesis-engine` compoe a leitura humana, `orchestrator-service` reune fontes canonicas e emite `mission_progress_report_generated`, e observabilidade audita o resultado;
+- `jarvis-console progress-report` mostra resumo tecnico e texto humano sem escrever memoria ou executar acao; `execution-backlog.md` abriu `MB-170` como unico item tecnico `ready`.
+
 ## 2026-07-04
 
 ### MB-161 fecha anchors de evidencia de memoria semantica

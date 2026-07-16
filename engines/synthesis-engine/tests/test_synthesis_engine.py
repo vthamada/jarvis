@@ -1,12 +1,98 @@
 from identity_engine.engine import IdentityEngine
-from synthesis_engine.engine import SynthesisEngine, SynthesisInput
+from synthesis_engine.engine import (
+    MissionProgressReportInput,
+    SynthesisEngine,
+    SynthesisInput,
+)
 
-from shared.contracts import DeliberativePlanContract, GovernanceDecisionContract
-from shared.types import GovernanceCheckId, GovernanceDecisionId, PermissionDecision, RiskLevel
+from shared.contracts import (
+    DeliberativePlanContract,
+    ExperienceRecordContract,
+    GovernanceDecisionContract,
+    LongHorizonGoalStrategyContract,
+    MissionStateContract,
+    PostTaskReflectionContract,
+)
+from shared.types import (
+    GovernanceCheckId,
+    GovernanceDecisionId,
+    MissionStatus,
+    PermissionDecision,
+    RiskLevel,
+)
 
 
 def test_synthesis_engine_name() -> None:
     assert SynthesisEngine.name == "synthesis-engine"
+
+
+def test_synthesis_engine_composes_human_mission_progress_report() -> None:
+    engine = SynthesisEngine()
+    report = engine.compose_mission_progress_report(
+        MissionProgressReportInput(
+            mission_id="mission-progress",
+            mission_state=MissionStateContract(
+                mission_id="mission-progress",
+                mission_goal="Validate the controlled release",
+                mission_status=MissionStatus.ACTIVE,
+                checkpoints=["plan_ready"],
+                updated_at="2026-07-16T00:00:00+00:00",
+                objective_status="active",
+                work_item_refs=["work-item://validate", "work-item://review"],
+                active_work_items=["work-item://review"],
+                artifact_refs=["artifact://release-plan/v1"],
+                open_checkpoint_refs=["checkpoint://operator-review"],
+                open_loops=["confirm release evidence"],
+                next_action_ref="next_action:operator-review",
+            ),
+            strategy=LongHorizonGoalStrategyContract(
+                mission_id="mission-progress",
+                strategy_status="ready",
+                strategy_summary="preserve rollback while validating release",
+                milestone_refs=["work-item://review"],
+                risk_refs=["risk://insufficient-evidence"],
+                evidence_refs=["evidence://strategy"],
+                next_action_ref="next_action:operator-review",
+            ),
+            latest_experience=ExperienceRecordContract(
+                experience_id="experience://mission-progress/001",
+                mission_id="mission-progress",
+                workflow_profile="software_change_workflow",
+                outcome_status="completed",
+                timestamp="2026-07-16T00:00:00+00:00",
+                evidence_refs=["evidence://experience"],
+            ),
+            latest_reflection=PostTaskReflectionContract(
+                reflection_id="reflection://mission-progress/001",
+                experience_id="experience://mission-progress/001",
+                reflection_status="candidate",
+                learning_candidate="preserve the reviewed rollback gate",
+                recommendation="review before promotion",
+                timestamp="2026-07-16T00:00:01+00:00",
+                evidence_refs=["evidence://reflection"],
+            ),
+            generated_at="2026-07-16T00:00:02+00:00",
+            memory_influence_refs=["memory://release/001"],
+            evidence_refs=["trace://mission-progress"],
+            pending_decisions=["review_learning_candidate"],
+            operator_usefulness_status="useful",
+        )
+    )
+
+    assert report.report_status == "needs_operator_decision"
+    assert report.active_work_items == ["work-item://review"]
+    assert report.artifact_refs == ["artifact://release-plan/v1"]
+    assert report.memory_influence_refs == ["memory://release/001"]
+    assert report.learning_refs == [
+        "experience://mission-progress/001",
+        "reflection://mission-progress/001",
+    ]
+    assert report.next_action_ref == "next_action:operator-review"
+    assert report.memory_write_mode == "read_only"
+    assert report.autonomous_execution_allowed is False
+    assert "Missao: Validate the controlled release" in report.report_text
+    assert "Pendencias: review_learning_candidate" in report.report_text
+    assert "Proxima acao: next_action:operator-review" in report.report_text
 
 
 def sample_plan() -> DeliberativePlanContract:

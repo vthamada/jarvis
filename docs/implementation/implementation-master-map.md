@@ -89,7 +89,7 @@ Goal: make JARVIS useful to a human operator in daily work.
 | `OP-005` | Manage artifacts as living outputs | `minimum_baseline` | Artifact registry, versions, owner, status | Operational service, memory | expand after metrics |
 | `OP-006` | Daily operator dashboard | `implemented_baseline` | Validate usefulness and evolve from operator evidence | Console, memory, observability | none |
 | `OP-007` | Operator feedback after mission | `minimum_baseline` | Structured feedback loop that improves future decisions | Experience/reflection | candidate |
-| `OP-008` | Human-readable progress report | `partial_runtime` | Mission and project report generated from state | Synthesis, memory | candidate |
+| `OP-008` | Human-readable progress report | `implemented_baseline` | Validate report usefulness with operator evidence | Synthesis, memory | none |
 | `OP-009` | Multi-session daily continuity | `partial_runtime` | Resume work across days with active/open loops | Memory, mission state | candidate |
 | `OP-010` | Human approval center | `implemented_baseline` | Keep decisions read-only until explicit action command | Evolution review, governance | none |
 
@@ -269,14 +269,13 @@ Goal: keep planning clear without turning documentation into bureaucracy.
 The next functional phase should focus on making the system useful to an
 operator, not on adding speculative technology.
 
-Highest-value gaps after `MB-168`:
+Highest-value gaps after `MB-169`:
 
-1. `OP-008` human-readable mission/project progress report.
-2. `OP-007` explicit operator feedback connected to bounded learning.
-3. `SPC-006` governed domain onboarding protocol.
-4. Domain-specific eval packs for the initial knowledge domains.
-5. Knowledge provenance and freshness signals in retrieval/synthesis.
-6. Integrated readiness validation for the complete post-`MB-160` slice.
+1. `OP-007` explicit operator feedback connected to bounded learning.
+2. `SPC-006` governed domain onboarding protocol.
+3. Domain-specific eval packs for the initial knowledge domains.
+4. Knowledge provenance and freshness signals in retrieval/synthesis.
+5. Integrated readiness validation for the complete post-`MB-160` slice.
 
 ## 7. Dependency Map
 
@@ -295,12 +294,11 @@ These are already present and should be preserved:
 
 Recommended chain for the next few implementation slices:
 
-1. `MB-169` human-readable progress report.
-2. `MB-170` explicit operator feedback loop.
-3. `MB-171` governed domain onboarding protocol.
-4. `MB-172` domain eval packs.
-5. `MB-173` knowledge provenance/freshness.
-6. `MB-174` integrated readiness closure.
+1. `MB-170` explicit operator feedback loop.
+2. `MB-171` governed domain onboarding protocol.
+3. `MB-172` domain eval packs.
+4. `MB-173` knowledge provenance/freshness.
+5. `MB-174` integrated readiness closure.
 
 Why this order:
 
@@ -487,7 +485,7 @@ Map IDs: `EVL-006`, `GOV-009`, `OBS-004`.
 Goal: make the promotion checklist executable through evolution/release
 services and observable events.
 
-Status: closed in `MB-167`; next execution item is `MB-168`.
+Status: closed in `MB-167`.
 
 ### MB-168 -- Operator Cockpit Expansion
 
@@ -496,7 +494,7 @@ Map IDs: `SFC-003`, `OP-003`, `OP-006`, `OP-010`.
 Goal: expand the CLI cockpit for objectives, work items, artifacts, reviews,
 autonomy state and next operator decisions in one governed view.
 
-Status: closed in `MB-168`; next execution item is `MB-169`.
+Status: closed in `MB-168`.
 
 ### MB-169 -- Human-Readable Progress Report
 
@@ -505,7 +503,7 @@ Map IDs: `OP-008`, `OBS-005`, `COG-010`.
 Goal: generate a compact mission/project progress report from canonical state,
 experience, reflection, artifacts and long-horizon strategy.
 
-Status: ready after `MB-168`.
+Status: closed in `MB-169`; next execution item is `MB-170`.
 
 ### MB-170 -- Operator Feedback Loop
 
@@ -513,6 +511,8 @@ Map IDs: `OP-007`, `MEM-003`, `EVL-002`, `OBS-009`.
 
 Goal: capture explicit operator feedback after missions and feed it into
 bounded experience/reflection records.
+
+Status: ready after `MB-169`.
 
 ### MB-171 -- Domain Onboarding Protocol
 

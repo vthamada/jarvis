@@ -8,15 +8,20 @@ from identity_engine.engine import IdentityProfile
 
 from shared.contracts import (
     DeliberativePlanContract,
+    ExperienceRecordContract,
     GovernanceDecisionContract,
+    LongHorizonGoalStrategyContract,
+    MissionProgressReportContract,
+    MissionStateContract,
     OperationResultContract,
+    PostTaskReflectionContract,
     SpecialistContributionContract,
 )
 from shared.domain_registry import route_linked_specialist_type, workflow_runtime_guidance
 from shared.mind_domain_specialist_contract import (
     build_mind_domain_specialist_runtime_policy,
 )
-from shared.types import PermissionDecision
+from shared.types import MissionId, PermissionDecision
 
 
 @dataclass(frozen=True)
@@ -77,6 +82,23 @@ class SynthesisInput:
 
 
 @dataclass(frozen=True)
+class MissionProgressReportInput:
+    """Canonical read-only inputs for a human mission progress report."""
+
+    mission_id: str
+    mission_state: MissionStateContract | None
+    strategy: LongHorizonGoalStrategyContract | None
+    latest_experience: ExperienceRecordContract | None
+    latest_reflection: PostTaskReflectionContract | None
+    generated_at: str
+    memory_influence_refs: list[str] = field(default_factory=list)
+    memory_influence_reasons: list[str] = field(default_factory=list)
+    evidence_refs: list[str] = field(default_factory=list)
+    pending_decisions: list[str] = field(default_factory=list)
+    operator_usefulness_status: str = "insufficient_signal"
+
+
+@dataclass(frozen=True)
 class SynthesisResult:
     """Structured synthesis output plus lightweight validation metadata."""
 
@@ -98,6 +120,218 @@ class SynthesisEngine:
 
     def compose(self, synthesis_input: SynthesisInput) -> str:
         return self.compose_result(synthesis_input).response_text
+
+    def compose_mission_progress_report(
+        self,
+        report_input: MissionProgressReportInput,
+    ) -> MissionProgressReportContract:
+        """Compose a bounded human report from canonical read-only state."""
+
+        state = report_input.mission_state
+        strategy = report_input.strategy
+        experience = report_input.latest_experience
+        reflection = report_input.latest_reflection
+        mission_goal = self._progress_value(
+            getattr(state, "mission_goal", None),
+            default="mission state unavailable",
+        )
+        mission_status = self._enum_text(
+            getattr(state, "mission_status", None),
+            default="missing",
+        )
+        objective_status = self._progress_value(
+            getattr(state, "objective_status", None),
+            default="missing",
+        )
+        work_item_refs = self._unique_progress_values(
+            list(getattr(state, "work_item_refs", []))
+        )
+        active_work_items = self._unique_progress_values(
+            list(getattr(state, "active_work_items", []))
+        )
+        artifact_refs = self._unique_progress_values(
+            [
+                *list(getattr(state, "artifact_refs", [])),
+                *list(getattr(state, "active_artifact_refs", [])),
+            ]
+        )
+        open_checkpoint_refs = self._unique_progress_values(
+            list(getattr(state, "open_checkpoint_refs", []))
+        )
+        milestone_refs = self._unique_progress_values(
+            list(getattr(strategy, "milestone_refs", []))
+        )
+        risk_refs = self._unique_progress_values(
+            [
+                *list(getattr(state, "open_loops", [])),
+                *list(getattr(strategy, "risk_refs", [])),
+            ]
+        )
+        memory_influence_refs = self._unique_progress_values(
+            report_input.memory_influence_refs
+        )
+        latest_experience_id = getattr(experience, "experience_id", None)
+        latest_reflection_id = getattr(reflection, "reflection_id", None)
+        learning_refs = self._unique_progress_values(
+            [latest_experience_id, latest_reflection_id]
+        )
+        evidence_refs = self._unique_progress_values(
+            [
+                *report_input.evidence_refs,
+                *list(getattr(strategy, "evidence_refs", [])),
+                *list(getattr(experience, "evidence_refs", [])),
+                *list(getattr(reflection, "evidence_refs", [])),
+            ]
+        )
+        pending_decisions = self._unique_progress_values(
+            report_input.pending_decisions
+        )
+        next_action_ref = getattr(state, "next_action_ref", None) or getattr(
+            strategy,
+            "next_action_ref",
+            None,
+        )
+        report_status = self._mission_progress_status(
+            state=state,
+            mission_status=mission_status,
+            objective_status=objective_status,
+            pending_decisions=pending_decisions,
+            open_checkpoint_refs=open_checkpoint_refs,
+        )
+        progress_summary = (
+            f"status={report_status}; objective={objective_status}; "
+            f"active_work_items={len(active_work_items)}/{len(work_item_refs)}; "
+            f"artifacts={len(artifact_refs)}; "
+            f"open_checkpoints={len(open_checkpoint_refs)}; "
+            f"pending_decisions={len(pending_decisions)}; "
+            f"next_action={self._progress_value(next_action_ref)}"
+        )
+        report_text = "\n".join(
+            [
+                f"Missao: {mission_goal}",
+                (
+                    f"Status: {report_status} (objetivo={objective_status}; "
+                    f"missao={mission_status})."
+                ),
+                (
+                    f"Progresso: {len(active_work_items)}/{len(work_item_refs)} "
+                    f"work items ativos; {len(artifact_refs)} artefatos; "
+                    f"{len(open_checkpoint_refs)} checkpoints abertos."
+                ),
+                f"Pendencias: {self._progress_list(pending_decisions)}.",
+                f"Riscos: {self._progress_list(risk_refs)}.",
+                (
+                    "Memoria influente: "
+                    f"{self._progress_list(memory_influence_refs)}."
+                ),
+                (
+                    "Aprendizado: "
+                    f"experience={self._progress_value(latest_experience_id)}; "
+                    f"reflection={self._progress_value(latest_reflection_id)} "
+                    f"({self._progress_value(getattr(reflection, 'reflection_status', None))})."
+                ),
+                (
+                    "Estrategia: "
+                    f"{self._progress_value(getattr(strategy, 'strategy_summary', None))}."
+                ),
+                f"Proxima acao: {self._progress_value(next_action_ref)}.",
+            ]
+        )
+        report_key = self._progress_signal_value(
+            f"{report_input.mission_id}-{report_input.generated_at}"
+        )
+        return MissionProgressReportContract(
+            report_id=f"mission-progress-report://{report_key}",
+            mission_id=MissionId(report_input.mission_id),
+            report_status=report_status,
+            progress_summary=progress_summary,
+            report_text=report_text,
+            mission_goal=mission_goal,
+            mission_status=mission_status,
+            objective_status=objective_status,
+            generated_at=report_input.generated_at,
+            work_item_refs=work_item_refs,
+            active_work_items=active_work_items,
+            artifact_refs=artifact_refs,
+            open_checkpoint_refs=open_checkpoint_refs,
+            milestone_refs=milestone_refs,
+            risk_refs=risk_refs,
+            memory_influence_refs=memory_influence_refs,
+            learning_refs=learning_refs,
+            evidence_refs=evidence_refs,
+            pending_decisions=pending_decisions,
+            latest_experience_id=(
+                str(latest_experience_id) if latest_experience_id else None
+            ),
+            latest_experience_outcome=(
+                str(getattr(experience, "outcome_status", None))
+                if getattr(experience, "outcome_status", None)
+                else None
+            ),
+            latest_reflection_id=(
+                str(latest_reflection_id) if latest_reflection_id else None
+            ),
+            latest_reflection_status=(
+                str(getattr(reflection, "reflection_status", None))
+                if getattr(reflection, "reflection_status", None)
+                else None
+            ),
+            operator_usefulness_status=report_input.operator_usefulness_status,
+            next_action_ref=str(next_action_ref) if next_action_ref else None,
+            memory_write_mode="read_only",
+            autonomous_execution_allowed=False,
+        )
+
+    @staticmethod
+    def _mission_progress_status(
+        *,
+        state: MissionStateContract | None,
+        mission_status: str,
+        objective_status: str,
+        pending_decisions: list[str],
+        open_checkpoint_refs: list[str],
+    ) -> str:
+        if state is None:
+            return "unavailable"
+        if objective_status == "blocked" or mission_status == "blocked":
+            return "blocked"
+        if pending_decisions or open_checkpoint_refs:
+            return "needs_operator_decision"
+        if objective_status == "completed" or mission_status == "completed":
+            return "completed"
+        return "in_progress"
+
+    @staticmethod
+    def _enum_text(value: object, *, default: str) -> str:
+        resolved = getattr(value, "value", value)
+        return SynthesisEngine._progress_value(resolved, default=default)
+
+    @staticmethod
+    def _progress_value(value: object, *, default: str = "none") -> str:
+        if value in {None, ""}:
+            return default
+        return " ".join(str(value).replace("\r", " ").replace("\n", " ").split())[:500]
+
+    @staticmethod
+    def _unique_progress_values(values: list[object]) -> list[str]:
+        unique: list[str] = []
+        for value in values:
+            if value in {None, ""}:
+                continue
+            text = SynthesisEngine._progress_value(value)
+            if text not in unique:
+                unique.append(text)
+        return unique
+
+    @staticmethod
+    def _progress_list(values: list[str]) -> str:
+        return ", ".join(values) if values else "none"
+
+    @staticmethod
+    def _progress_signal_value(value: str) -> str:
+        return (
+            value.strip().lower().replace(" ", "-").replace("/", "-").replace(":", "-")
+        )
 
     def compose_result(self, synthesis_input: SynthesisInput) -> SynthesisResult:
         """Create a response that reflects identity, context, and outcome."""

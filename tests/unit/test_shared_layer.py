@@ -8,6 +8,7 @@ from shared.contracts import (
     GovernanceDecisionContract,
     InputContract,
     LongHorizonGoalStrategyContract,
+    MissionProgressReportContract,
     PostTaskReflectionContract,
     ProceduralPlaybookCandidateContract,
     ProjectObjectiveContinuityContract,
@@ -28,6 +29,7 @@ from shared.schemas import (
     EXPERIENCE_RECORD_SCHEMA,
     INPUT_SCHEMA,
     LONG_HORIZON_GOAL_STRATEGY_SCHEMA,
+    MISSION_PROGRESS_REPORT_SCHEMA,
     POST_TASK_REFLECTION_SCHEMA,
     PROCEDURAL_PLAYBOOK_CANDIDATE_SCHEMA,
     PROJECT_OBJECTIVE_CONTINUITY_SCHEMA,
@@ -138,6 +140,7 @@ def test_internal_event_names_include_governance_blocked() -> None:
     assert "objective_state_declared" in INTERNAL_EVENT_NAMES
     assert "objective_state_inspected" in INTERNAL_EVENT_NAMES
     assert "long_horizon_goal_strategy_declared" in INTERNAL_EVENT_NAMES
+    assert "mission_progress_report_generated" in INTERNAL_EVENT_NAMES
     assert "work_item_state_changed" in INTERNAL_EVENT_NAMES
     assert "artifact_lifecycle_state_changed" in INTERNAL_EVENT_NAMES
     assert "technology_absorption_candidate_declared" in INTERNAL_EVENT_NAMES
@@ -201,6 +204,29 @@ def test_long_horizon_goal_strategy_contract_is_read_only_schema() -> None:
         "LongHorizonGoalStrategyContract"
     )
     assert "strategy_status" in LONG_HORIZON_GOAL_STRATEGY_SCHEMA.required_fields
+
+
+def test_mission_progress_report_contract_is_read_only_schema() -> None:
+    report = MissionProgressReportContract(
+        report_id="mission-progress-report://mission-1",
+        mission_id="mission-1",
+        report_status="needs_operator_decision",
+        progress_summary="status=needs_operator_decision; pending_decisions=1",
+        report_text="Missao: validate the release",
+        mission_goal="validate the release",
+        mission_status="active",
+        objective_status="active",
+        generated_at="2026-07-16T00:00:00+00:00",
+        pending_decisions=["review_learning_candidate"],
+        next_action_ref="next_action:review",
+    )
+
+    assert report.memory_write_mode == "read_only"
+    assert report.autonomous_execution_allowed is False
+    assert MISSION_PROGRESS_REPORT_SCHEMA.contract_name == (
+        "MissionProgressReportContract"
+    )
+    assert "report_text" in MISSION_PROGRESS_REPORT_SCHEMA.required_fields
 
 
 def test_experience_reflection_contracts_are_shared_schemas() -> None:

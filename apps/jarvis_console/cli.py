@@ -20,6 +20,7 @@ from operational_service.service import OperationalService
 from orchestrator_service.service import (
     ArtifactLifecycleTransitionResult,
     LongHorizonGoalStrategyResult,
+    MissionProgressReportResult,
     ObjectiveTransitionResult,
     OrchestratorResponse,
     OrchestratorService,
@@ -181,6 +182,22 @@ class JarvisConsole:
             mission_id=mission_id,
             session_id=session_id,
             operator_identity_ref=operator_identity_ref or DEFAULT_OPERATOR_IDENTITY_REF,
+            canonical_user_ref=canonical_user_ref or DEFAULT_CANONICAL_USER_REF,
+        )
+
+    def inspect_progress_report(
+        self,
+        *,
+        mission_id: str,
+        session_id: str,
+        operator_identity_ref: str | None = None,
+        canonical_user_ref: str | None = None,
+    ) -> MissionProgressReportResult:
+        return self.orchestrator.inspect_mission_progress_report(
+            mission_id=mission_id,
+            session_id=session_id,
+            operator_identity_ref=operator_identity_ref
+            or DEFAULT_OPERATOR_IDENTITY_REF,
             canonical_user_ref=canonical_user_ref or DEFAULT_CANONICAL_USER_REF,
         )
 
@@ -378,6 +395,18 @@ def build_parser() -> ArgumentParser:
     dashboard_parser.add_argument("--evolution-db")
     dashboard_parser.add_argument("--workflow-profile")
     dashboard_parser.add_argument("--limit", type=int, default=5)
+
+    progress_report_parser = subparsers.add_parser(
+        "progress-report",
+        help="Show a synthesized read-only mission progress report.",
+    )
+    progress_report_parser.add_argument("--mission-id", required=True)
+    progress_report_parser.add_argument(
+        "--session-id",
+        default="console-progress-report",
+    )
+    progress_report_parser.add_argument("--operator-identity-ref")
+    progress_report_parser.add_argument("--canonical-user-ref")
 
     mission_workflow_parser = subparsers.add_parser(
         "mission-workflow",
@@ -1306,6 +1335,36 @@ def render_operator_dashboard(
     )
 
 
+def render_mission_progress_report(result: MissionProgressReportResult) -> str:
+    report = result.report
+    return "\n".join(
+        [
+            "mission_progress_report=read_only",
+            f"report_id={safe_console_value(report.report_id)}",
+            f"mission_id={safe_console_value(result.mission_id)}",
+            f"report_status={safe_console_value(report.report_status)}",
+            f"progress_summary={safe_console_value(report.progress_summary)}",
+            f"work_item_refs={safe_console_list(report.work_item_refs)}",
+            f"active_work_items={safe_console_list(report.active_work_items)}",
+            f"artifact_refs={safe_console_list(report.artifact_refs)}",
+            f"open_checkpoint_refs={safe_console_list(report.open_checkpoint_refs)}",
+            f"milestone_refs={safe_console_list(report.milestone_refs)}",
+            f"risk_refs={safe_console_list(report.risk_refs)}",
+            f"memory_influence_refs={safe_console_list(report.memory_influence_refs)}",
+            f"learning_refs={safe_console_list(report.learning_refs)}",
+            f"evidence_refs={safe_console_list(report.evidence_refs)}",
+            f"pending_decisions={safe_console_list(report.pending_decisions)}",
+            f"operator_usefulness_status={safe_console_value(report.operator_usefulness_status)}",
+            f"next_action_ref={safe_console_value(report.next_action_ref)}",
+            f"memory_write_mode={safe_console_value(report.memory_write_mode)}",
+            "autonomous_execution_allowed="
+            f"{safe_console_value(report.autonomous_execution_allowed)}",
+            "---",
+            report.report_text,
+        ]
+    )
+
+
 def render_mission_workflow_report(
     *,
     response: OrchestratorResponse,
@@ -1574,6 +1633,16 @@ def run_operator_dashboard_command(console: JarvisConsole, args: Namespace) -> l
     ]
 
 
+def run_progress_report_command(console: JarvisConsole, args: Namespace) -> list[str]:
+    result = console.inspect_progress_report(
+        mission_id=args.mission_id,
+        session_id=args.session_id,
+        operator_identity_ref=args.operator_identity_ref,
+        canonical_user_ref=args.canonical_user_ref,
+    )
+    return [render_mission_progress_report(result)]
+
+
 def run_mission_workflow_command(console: JarvisConsole, args: Namespace) -> list[str]:
     response = console.ask(
         args.prompt,
@@ -1676,6 +1745,8 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "mission-cycle"
         else run_operator_dashboard_command(console, args)
         if args.command == "operator-dashboard"
+        else run_progress_report_command(console, args)
+        if args.command == "progress-report"
         else run_mission_workflow_command(console, args)
         if args.command == "mission-workflow"
         else run_technology_candidates_command(args)
@@ -1712,6 +1783,7 @@ def main(argv: list[str] | None = None) -> int:
         "evolution-review",
         "mission-cycle",
         "operator-dashboard",
+        "progress-report",
         "mission-workflow",
     }:
         print(outputs[0])

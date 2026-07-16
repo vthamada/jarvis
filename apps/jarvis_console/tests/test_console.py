@@ -36,6 +36,7 @@ from apps.jarvis_console.cli import (
     run_objectives_command,
     run_operator_dashboard_command,
     run_procedural_playbooks_command,
+    run_progress_report_command,
     run_technology_candidates_command,
     run_work_item_command,
     run_work_items_command,
@@ -628,6 +629,58 @@ def test_console_operator_dashboard_handles_empty_global_state() -> None:
     assert "cockpit_status=idle" in rendered
     assert "pending_decision_count=0" in rendered
     assert "next_operator_step=start_governed_mission" in rendered
+
+
+def test_console_progress_report_synthesizes_canonical_mission_state() -> None:
+    temp_dir = runtime_dir("console-progress-report")
+    console = JarvisConsole.build(runtime_dir=temp_dir)
+    mission_id = "mission-console-progress-report"
+    response = console.ask(
+        "Plan and review the controlled release.",
+        session_id="sess-console-progress-report",
+        mission_id=mission_id,
+    )
+    assert response.experience_record is not None
+    assert response.post_task_reflection is not None
+    console.transition_work_item(
+        mission_id=mission_id,
+        work_item_ref=f"work-item://{mission_id}/review-release",
+        transition="create",
+        session_id="sess-console-progress-report",
+        next_action_ref="next_action:operator-review",
+    )
+    console.transition_artifact_lifecycle(
+        mission_id=mission_id,
+        artifact_ref=f"artifact://{mission_id}/release-plan/v1",
+        transition="register",
+        session_id="sess-console-progress-report",
+        artifact_version=1,
+    )
+    args = build_parser().parse_args(
+        [
+            "progress-report",
+            "--mission-id",
+            mission_id,
+            "--session-id",
+            "sess-console-progress-report",
+        ]
+    )
+
+    outputs = run_progress_report_command(console, args)
+
+    assert "mission_progress_report=read_only" in outputs[0]
+    assert f"mission_id={mission_id}" in outputs[0]
+    assert "report_status=needs_operator_decision" in outputs[0]
+    assert f"work-item://{mission_id}/review-release" in outputs[0]
+    assert f"artifact://{mission_id}/release-plan/v1" in outputs[0]
+    assert "learning_refs=experience://" in outputs[0]
+    assert "reflection://" in outputs[0]
+    assert "pending_decisions=review_learning_candidate" in outputs[0]
+    assert "next_action_ref=next_action:operator-review" in outputs[0]
+    assert "memory_write_mode=read_only" in outputs[0]
+    assert "autonomous_execution_allowed=False" in outputs[0]
+    assert "Missao: Plan and review the controlled release." in outputs[0]
+    assert "Proxima acao: next_action:operator-review" in outputs[0]
 
 
 def test_console_mission_workflow_runs_governed_loop_end_to_end() -> None:

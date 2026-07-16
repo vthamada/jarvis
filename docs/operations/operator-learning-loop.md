@@ -35,19 +35,29 @@ autonomia, promotion gate e decisoes humanas pendentes. Os campos
 `cockpit_status`, `pending_decisions` e `next_operator_decision` indicam o que
 o operador precisa decidir primeiro; o comando nao executa a decisao.
 
-4. Consultar experiencias/reflexoes recentes:
+4. Gerar um relatorio humano compacto de progresso:
+
+```powershell
+python -m apps.jarvis_console.cli progress-report --mission-id mission-demo
+```
+
+O relatorio e sintetizado a partir do estado canonico da missao, estrategia de
+horizonte longo, artefatos, experiencia/reflexao e sinais observaveis de
+memoria. Ele nao grava estado nem executa a proxima acao.
+
+5. Consultar experiencias/reflexoes recentes:
 
 ```powershell
 python -m apps.jarvis_console.cli experience-reflections --mission-id mission-demo
 ```
 
-5. Consultar propostas aguardando revisao humana:
+6. Consultar propostas aguardando revisao humana:
 
 ```powershell
 python -m apps.jarvis_console.cli evolution-review-queue
 ```
 
-6. Registrar decisao humana sobre uma proposta:
+7. Registrar decisao humana sobre uma proposta:
 
 ```powershell
 python -m apps.jarvis_console.cli evolution-review --proposal-id proposal-123 --action approve --evidence-ref evidence://eval/123 --proposed-test tests/unit/test_learning_loop.py --rollback-plan-ref rollback://proposal-123
@@ -88,6 +98,14 @@ python -m apps.jarvis_console.cli evolution-review --proposal-id proposal-123 --
   sem executa-la.
 - `promotion_gate_status=passed|blocked|not_applicable`: mostra o resultado do
   gate; mesmo `passed` preserva `promotion_gate_promotion_authorized=False`.
+- `mission_progress_report=read_only`: identifica o relatorio derivado, sem
+  escrita de memoria.
+- `report_status=completed|in_progress|blocked|needs_operator_decision|unavailable`:
+  resume o estado humano do progresso.
+- `progress_summary=...`: mostra contagens de work items ativos, artefatos,
+  checkpoints, decisoes pendentes e proxima acao.
+- o bloco apos `---` e a leitura humana sintetizada de missao, progresso,
+  pendencias, riscos, memoria, aprendizado, estrategia e proxima acao.
 
 ## Revisao humana
 

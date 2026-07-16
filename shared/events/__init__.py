@@ -16,6 +16,7 @@ INTERNAL_EVENT_NAMES = (
     "objective_state_declared",
     "objective_state_inspected",
     "long_horizon_goal_strategy_declared",
+    "mission_progress_report_generated",
     "work_item_state_changed",
     "artifact_lifecycle_state_changed",
     "technology_absorption_candidate_declared",

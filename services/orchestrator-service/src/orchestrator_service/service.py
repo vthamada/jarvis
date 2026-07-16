@@ -12,11 +12,16 @@ from governance_service.service import GovernanceService
 from identity_engine.engine import IdentityEngine
 from knowledge_service.service import KnowledgeRetrievalResult, KnowledgeService
 from memory_service.service import MemoryRecoveryResult, MemoryService
-from observability_service.service import ObservabilityService
+from observability_service.service import ObservabilityQuery, ObservabilityService
 from operational_service.service import OperationalService
 from planning_engine.engine import PlanningContext, PlanningEngine
 from specialist_engine.engine import SpecialistEngine, SpecialistHandoffPlan, SpecialistReview
-from synthesis_engine.engine import SynthesisEngine, SynthesisInput, SynthesisResult
+from synthesis_engine.engine import (
+    MissionProgressReportInput,
+    SynthesisEngine,
+    SynthesisInput,
+    SynthesisResult,
+)
 
 from shared.autonomy_ladder import derive_autonomy_ladder
 from shared.contracts import (
@@ -34,6 +39,7 @@ from shared.contracts import (
     LongHorizonGoalStrategyContract,
     MemoryRecordContract,
     MemoryRecoveryContract,
+    MissionProgressReportContract,
     MissionRuntimeStateContract,
     MissionStateContract,
     OperationDispatchContract,
@@ -171,6 +177,16 @@ class LongHorizonGoalStrategyResult:
     mission_id: str
     status: str
     strategy: LongHorizonGoalStrategyContract | None
+    events: list[InternalEventEnvelope] = field(default_factory=list)
+
+
+@dataclass
+class MissionProgressReportResult:
+    """Read-only synthesized mission progress report result."""
+
+    mission_id: str
+    status: str
+    report: MissionProgressReportContract
     events: list[InternalEventEnvelope] = field(default_factory=list)
 
 
@@ -801,6 +817,155 @@ class OrchestratorService:
             strategy=strategy,
             events=events,
         )
+
+    def inspect_mission_progress_report(
+        self,
+        *,
+        mission_id: str,
+        session_id: str,
+        operator_identity_ref: str | None = None,
+        canonical_user_ref: str | None = None,
+    ) -> MissionProgressReportResult:
+        """Synthesize a read-only report from canonical mission sources."""
+
+        contract = InputContract(
+            request_id=RequestId(f"req-progress-report-{uuid4().hex[:8]}"),
+            session_id=SessionId(session_id),
+            mission_id=MissionId(mission_id),
+            channel=ChannelType.CONSOLE,
+            input_type=InputType.STRUCTURED_PAYLOAD,
+            content="mission_progress_report_inspection",
+            timestamp=self.now(),
+            metadata={
+                "operation": "mission_progress_report_inspection",
+                "memory_write_mode": "read_only",
+                "autonomous_execution_allowed": False,
+            },
+            surface_id="surface://jarvis_console",
+            surface_kind="console",
+            surface_session_id=session_id,
+            surface_capability_scope=["mission_progress_report_read"],
+            operator_identity_ref=operator_identity_ref,
+            canonical_user_ref=canonical_user_ref,
+            surface_continuity_status="single_surface",
+        )
+        mission_state = self.memory_service.get_mission_state(mission_id)
+        strategy = self.memory_service.build_long_horizon_goal_strategy(mission_id)
+        records = self.memory_service.list_experience_reflections(
+            mission_id=mission_id,
+            limit=1,
+        )
+        latest_record = records[0] if records else None
+        latest_experience = getattr(latest_record, "experience", None)
+        latest_reflection = getattr(latest_record, "reflection", None)
+        flow_audit = self.observability_service.audit_flow(
+            ObservabilityQuery(mission_id=mission_id, limit=100)
+        )
+        pending_decisions = self._mission_progress_pending_decisions(
+            mission_state=mission_state,
+            latest_reflection=latest_reflection,
+            flow_audit=flow_audit,
+        )
+        evidence_refs = self._dedupe_texts(
+            [
+                *list(getattr(flow_audit, "memory_influence_evidence_refs", [])),
+                *list(getattr(flow_audit, "promotion_gate_evidence_refs", [])),
+            ]
+        )
+        report = self.synthesis_engine.compose_mission_progress_report(
+            MissionProgressReportInput(
+                mission_id=mission_id,
+                mission_state=mission_state,
+                strategy=strategy,
+                latest_experience=latest_experience,
+                latest_reflection=latest_reflection,
+                generated_at=self.now(),
+                memory_influence_refs=list(
+                    getattr(flow_audit, "memory_influence_used_refs", [])
+                ),
+                memory_influence_reasons=list(
+                    getattr(flow_audit, "memory_influence_reasons", [])
+                ),
+                evidence_refs=evidence_refs,
+                pending_decisions=pending_decisions,
+                operator_usefulness_status=str(
+                    getattr(
+                        flow_audit,
+                        "operator_usefulness_status",
+                        "insufficient_signal",
+                    )
+                ),
+            )
+        )
+        payload: dict[str, object] = {
+            "mission_progress_report_id": report.report_id,
+            "mission_progress_report_status": report.report_status,
+            "mission_progress_summary": report.progress_summary,
+            "mission_progress_next_action_ref": report.next_action_ref,
+            "mission_progress_pending_decisions": list(report.pending_decisions),
+            "mission_progress_evidence_refs": list(report.evidence_refs),
+            "mission_progress_memory_influence_refs": list(
+                report.memory_influence_refs
+            ),
+            "mission_progress_learning_refs": list(report.learning_refs),
+            "mission_progress_risk_refs": list(report.risk_refs),
+            "memory_write_mode": report.memory_write_mode,
+            "autonomous_execution_allowed": report.autonomous_execution_allowed,
+        }
+        events = [
+            self.make_event(
+                "mission_progress_report_generated",
+                contract,
+                payload,
+            )
+        ]
+        self.observability_service.ingest_events(events)
+        return MissionProgressReportResult(
+            mission_id=mission_id,
+            status=report.report_status,
+            report=report,
+            events=events,
+        )
+
+    @staticmethod
+    def _mission_progress_pending_decisions(
+        *,
+        mission_state: MissionStateContract | None,
+        latest_reflection: PostTaskReflectionContract | None,
+        flow_audit: object,
+    ) -> list[str]:
+        decisions: list[str] = []
+        if getattr(latest_reflection, "reflection_status", None) in {
+            "candidate",
+            "needs_review",
+        }:
+            decisions.append("review_learning_candidate")
+        promotion_gate_status = getattr(flow_audit, "promotion_gate_status", None)
+        promotion_gate_id = getattr(flow_audit, "promotion_gate_id", None)
+        if promotion_gate_status == "blocked":
+            decisions.append(
+                f"resolve_promotion_gate_blockers:{promotion_gate_id or 'unknown'}"
+            )
+        elif promotion_gate_status == "passed" and not bool(
+            getattr(flow_audit, "promotion_gate_promotion_authorized", False)
+        ):
+            decisions.append(
+                f"human_promotion_decision:{promotion_gate_id or 'unknown'}"
+            )
+        if getattr(flow_audit, "effective_autonomy_level", None) not in {
+            None,
+            "",
+            "not_applicable",
+        } and bool(
+            getattr(flow_audit, "autonomy_human_confirmation_required", False)
+        ):
+            decisions.append("confirm_autonomy_action")
+        checkpoint_refs = list(
+            getattr(mission_state, "open_checkpoint_refs", [])
+        )
+        if checkpoint_refs:
+            decisions.append(f"resolve_workflow_checkpoint:{checkpoint_refs[0]}")
+        return list(dict.fromkeys(decisions))
 
     def handle_input(self, contract: InputContract) -> OrchestratorResponse:
         """Execute the orchestrated flow for a normalized input contract."""
