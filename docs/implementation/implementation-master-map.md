@@ -84,14 +84,14 @@ Goal: make JARVIS useful to a human operator in daily work.
 | --- | --- | --- | --- | --- | --- |
 | `OP-001` | Start and close a governed mission | `implemented_baseline` | Keep stable | Operator Learning Loop | none |
 | `OP-002` | Inspect mission route, plan, checkpoints and synthesis | `implemented_baseline` | Keep stable | Console, orchestrator | none |
-| `OP-003` | Manage objective/project state | `minimum_baseline` | Practical project cockpit | MissionState, memory | candidate |
+| `OP-003` | Manage objective/project state | `implemented_baseline` | Validate cockpit through real operator use | MissionState, memory | none |
 | `OP-004` | Manage tasks/work items as first-class operator objects | `minimum_baseline` | Create/update/close work items through governance | Objective continuity | expand after artifact lifecycle |
 | `OP-005` | Manage artifacts as living outputs | `minimum_baseline` | Artifact registry, versions, owner, status | Operational service, memory | expand after metrics |
-| `OP-006` | Daily operator dashboard | `minimum_baseline` | CLI report of missions, objectives, pending reviews, next actions | Console, memory, observability | expand after MB-156 |
+| `OP-006` | Daily operator dashboard | `implemented_baseline` | Validate usefulness and evolve from operator evidence | Console, memory, observability | none |
 | `OP-007` | Operator feedback after mission | `minimum_baseline` | Structured feedback loop that improves future decisions | Experience/reflection | candidate |
 | `OP-008` | Human-readable progress report | `partial_runtime` | Mission and project report generated from state | Synthesis, memory | candidate |
 | `OP-009` | Multi-session daily continuity | `partial_runtime` | Resume work across days with active/open loops | Memory, mission state | candidate |
-| `OP-010` | Human approval center | `minimum_baseline` | One place for pending decisions, reviews and gates | Evolution review, governance | candidate |
+| `OP-010` | Human approval center | `implemented_baseline` | Keep decisions read-only until explicit action command | Evolution review, governance | none |
 
 ### Track B -- Core Cognitive Depth
 
@@ -140,7 +140,7 @@ Goal: make improvement continuous, measured and governed.
 | `EVL-003` | Human review decision | `implemented_baseline` | Keep stable | Console/evolution lab | none |
 | `EVL-004` | Reviewed-learning guidance | `implemented_baseline` | Keep stable | Review decisions | none |
 | `EVL-005` | Baseline vs assisted evals | `implemented_baseline` | Keep stable | Observability/tools | none |
-| `EVL-006` | Promotion gate from sandbox to runtime | `minimum_baseline` | Explicit release path and rollback checklist | Engineering gate | high-priority |
+| `EVL-006` | Promotion gate from sandbox to runtime | `implemented_baseline` | Validate with real release candidates | Engineering gate | none |
 | `EVL-007` | Skill evolution from repeated patterns | `documentation_only` | Reusable skills/playbooks from reviewed evidence | Memory, artifacts | candidate |
 | `EVL-008` | Workflow optimization loop | `partial_runtime` | Compare and promote workflow variants manually | Evolution lab | candidate |
 | `EVL-009` | Parametric adaptation | `research_only` | Isolated components only | Future V3+ | not now |
@@ -227,7 +227,7 @@ Goal: preserve control while increasing autonomy.
 | `GOV-006` | Incident response for documentation/runtime | `minimum_baseline` | Practical incident drills and recovery | Operations docs | later |
 | `GOV-007` | Autonomy ladder enforcement | `partial_runtime_enforced` | Runtime-enforced autonomy levels | Mission policy | high-priority |
 | `GOV-008` | Secrets and sensitive data policy | `partial_runtime` | Stronger local rules and tests | Security | later |
-| `GOV-009` | Release promotion workflow | `minimum_baseline` | Explicit promote/reject/sandbox pipeline | Evolution, gates | high-priority |
+| `GOV-009` | Release promotion workflow | `implemented_baseline` | Keep human authorization separate from gate evaluation | Evolution, gates | none |
 | `GOV-010` | Protective intelligence controls | `deferred_by_phase` | SecurityOS-like vertical only after core readiness | DV-001 | not now |
 
 ### Track J -- Surfaces And Interfaces
@@ -238,7 +238,7 @@ Goal: expose the same sovereign entity through multiple interfaces.
 | --- | --- | --- | --- | --- | --- |
 | `SFC-001` | CLI console | `implemented_baseline` | Keep stable | apps/jarvis_console | none |
 | `SFC-002` | Mission-cycle console | `implemented_baseline` | Keep stable | Operator loop | none |
-| `SFC-003` | Objective console | `minimum_baseline` | Practical operator cockpit | OP track | high-priority |
+| `SFC-003` | Objective console | `implemented_baseline` | Validate practical cockpit through operator pilots | OP track | none |
 | `SFC-004` | Evolution review console | `implemented_baseline` | Keep stable | Evolution review | none |
 | `SFC-005` | API surface | `missing` | Governed API exposing same core | Surface identity | later |
 | `SFC-006` | Web UI | `deferred_by_phase` | Thin operator interface over core | API, security | later |
@@ -269,18 +269,14 @@ Goal: keep planning clear without turning documentation into bureaucracy.
 The next functional phase should focus on making the system useful to an
 operator, not on adding speculative technology.
 
-Highest-value gaps:
+Highest-value gaps after `MB-168`:
 
-1. `MEM-005` and `MEM-006` stronger causal semantic/procedural memory.
-2. `GOV-007` runtime-enforced autonomy ladder.
-3. `SPC-006` new domain onboarding protocol.
-4. `EVL-006` explicit sandbox-to-release promotion path.
-5. `SFC-003` practical objective/project cockpit in console.
-6. `OBS-005` operator usefulness metrics expansion beyond the minimum baseline.
-7. `OP-005` artifact lifecycle expansion beyond the minimum CLI baseline.
-8. `OP-004` work item lifecycle expansion beyond the minimum CLI baseline.
-9. `OP-006` daily operator dashboard expansion beyond the minimum CLI baseline.
-10. `COG-010` long-horizon strategy expansion after real operator validation.
+1. `OP-008` human-readable mission/project progress report.
+2. `OP-007` explicit operator feedback connected to bounded learning.
+3. `SPC-006` governed domain onboarding protocol.
+4. Domain-specific eval packs for the initial knowledge domains.
+5. Knowledge provenance and freshness signals in retrieval/synthesis.
+6. Integrated readiness validation for the complete post-`MB-160` slice.
 
 ## 7. Dependency Map
 
@@ -299,10 +295,12 @@ These are already present and should be preserved:
 
 Recommended chain for the next few implementation slices:
 
-1. `MEM-005`/`MEM-006` causal memory deepening tied to the dashboard and work
-   items.
-2. `EVL-006` release promotion path for reviewed learning.
-3. `GOV-007` runtime-enforced autonomy ladder.
+1. `MB-169` human-readable progress report.
+2. `MB-170` explicit operator feedback loop.
+3. `MB-171` governed domain onboarding protocol.
+4. `MB-172` domain eval packs.
+5. `MB-173` knowledge provenance/freshness.
+6. `MB-174` integrated readiness closure.
 
 Why this order:
 
@@ -498,7 +496,7 @@ Map IDs: `SFC-003`, `OP-003`, `OP-006`, `OP-010`.
 Goal: expand the CLI cockpit for objectives, work items, artifacts, reviews,
 autonomy state and next operator decisions in one governed view.
 
-Status: ready after `MB-167`.
+Status: closed in `MB-168`; next execution item is `MB-169`.
 
 ### MB-169 -- Human-Readable Progress Report
 
@@ -506,6 +504,8 @@ Map IDs: `OP-008`, `OBS-005`, `COG-010`.
 
 Goal: generate a compact mission/project progress report from canonical state,
 experience, reflection, artifacts and long-horizon strategy.
+
+Status: ready after `MB-168`.
 
 ### MB-170 -- Operator Feedback Loop
 

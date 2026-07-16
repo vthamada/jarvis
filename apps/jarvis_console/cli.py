@@ -976,6 +976,59 @@ def _mission_cycle_next_step(
     return "start_governed_mission"
 
 
+def _operator_pending_decisions(
+    *,
+    mission_state: MissionStateContract | None,
+    review_item: object | None,
+    flow_audit: object | None,
+) -> list[str]:
+    decisions: list[str] = []
+    review_status = getattr(review_item, "review_status", None)
+    if review_status in {"observed", "candidate", "needs_review", "sandboxed"}:
+        proposal_id = safe_console_value(
+            getattr(review_item, "evolution_proposal_id", None)
+        )
+        decisions.append(f"review_evolution_proposal:{proposal_id}")
+
+    promotion_gate_status = getattr(flow_audit, "promotion_gate_status", None)
+    promotion_gate_id = safe_console_value(
+        getattr(flow_audit, "promotion_gate_id", None)
+    )
+    if promotion_gate_status == "blocked":
+        decisions.append(f"resolve_promotion_gate_blockers:{promotion_gate_id}")
+    elif promotion_gate_status == "passed" and not bool(
+        getattr(flow_audit, "promotion_gate_promotion_authorized", False)
+    ):
+        decisions.append(f"human_promotion_decision:{promotion_gate_id}")
+
+    effective_autonomy_level = getattr(
+        flow_audit,
+        "effective_autonomy_level",
+        None,
+    )
+    if effective_autonomy_level not in {None, "", "not_applicable"} and bool(
+        getattr(flow_audit, "autonomy_human_confirmation_required", False)
+    ):
+        confirmation_mode = safe_console_value(
+            getattr(flow_audit, "autonomy_confirmation_mode", None)
+        )
+        decisions.append(f"confirm_autonomy_action:{confirmation_mode}")
+
+    checkpoint_refs = list(getattr(mission_state, "open_checkpoint_refs", []))
+    if checkpoint_refs:
+        decisions.append(
+            "resolve_workflow_checkpoint:"
+            f"{safe_console_value(checkpoint_refs[0])}"
+        )
+    if mission_state is not None and getattr(
+        mission_state,
+        "objective_status",
+        None,
+    ) == "requires_operator_decision":
+        decisions.append("resolve_objective_decision")
+    return list(dict.fromkeys(decisions))
+
+
 def render_operator_dashboard(
     *,
     mission_id: str | None,
@@ -1041,12 +1094,14 @@ def render_operator_dashboard(
     active_work_items = safe_console_list(
         list(getattr(mission_state, "active_work_items", []))
     )
+    work_item_refs = list(getattr(mission_state, "work_item_refs", []))
+    work_item_count = len(work_item_refs)
     open_checkpoint_refs = safe_console_list(
         list(getattr(mission_state, "open_checkpoint_refs", []))
     )
-    artifact_refs = safe_console_list(
-        list(getattr(mission_state, "artifact_refs", []))
-    )
+    artifact_ref_values = list(getattr(mission_state, "artifact_refs", []))
+    artifact_refs = safe_console_list(artifact_ref_values)
+    artifact_count = len(artifact_ref_values)
     latest_experience_id = safe_console_value(
         getattr(experience, "experience_id", None)
     )
@@ -1110,6 +1165,71 @@ def render_operator_dashboard(
     autonomy_blocked_runtime_actions = safe_console_list(
         list(getattr(flow_audit, "autonomy_blocked_runtime_actions", []))
     )
+    objective_continuity_status = safe_console_value(
+        getattr(flow_audit, "objective_continuity_status", "not_applicable")
+    )
+    artifact_continuity_status = safe_console_value(
+        getattr(flow_audit, "artifact_continuity_status", "not_applicable")
+    )
+    next_action_status = safe_console_value(
+        getattr(flow_audit, "next_action_status", "not_applicable")
+    )
+    primary_review_status = safe_console_value(
+        getattr(primary_review, "review_status", None)
+    )
+    primary_review_blockers = safe_console_list(
+        list(getattr(primary_review, "blockers", []))
+    )
+    primary_review_tests = safe_console_list(
+        list(getattr(primary_review, "proposed_tests", []))
+    )
+    primary_review_rollback = safe_console_value(
+        getattr(primary_review, "rollback_plan_ref", None)
+    )
+    promotion_gate_status = safe_console_value(
+        getattr(flow_audit, "promotion_gate_status", "not_applicable")
+    )
+    promotion_gate_decision = safe_console_value(
+        getattr(flow_audit, "promotion_gate_decision", "not_applicable")
+    )
+    promotion_gate_release_conclusion = safe_console_value(
+        getattr(
+            flow_audit,
+            "promotion_gate_release_conclusion",
+            "no_promotion_gate_evidence",
+        )
+    )
+    promotion_gate_missing_gates = safe_console_list(
+        list(getattr(flow_audit, "promotion_gate_missing_gates", []))
+    )
+    promotion_gate_blockers = safe_console_list(
+        list(getattr(flow_audit, "promotion_gate_blockers", []))
+    )
+    promotion_gate_evidence_refs = safe_console_list(
+        list(getattr(flow_audit, "promotion_gate_evidence_refs", []))
+    )
+    promotion_gate_human_decision_required = safe_console_value(
+        getattr(flow_audit, "promotion_gate_human_decision_required", True)
+    )
+    promotion_gate_promotion_authorized = safe_console_value(
+        getattr(flow_audit, "promotion_gate_promotion_authorized", False)
+    )
+    pending_decision_values = _operator_pending_decisions(
+        mission_state=mission_state,
+        review_item=primary_review,
+        flow_audit=flow_audit,
+    )
+    pending_decisions = safe_console_list(pending_decision_values)
+    cockpit_status = (
+        "operator_decision_required"
+        if pending_decision_values
+        else "ready_for_next_action"
+        if next_action_ref not in {"none", "not_applicable", ""}
+        else "idle"
+    )
+    next_operator_decision = (
+        pending_decision_values[0] if pending_decision_values else next_step
+    )
 
     return "\n".join(
         [
@@ -1118,10 +1238,16 @@ def render_operator_dashboard(
             f"mission_id={safe_console_value(mission_id)}",
             f"mission_goal={mission_goal}",
             f"objective_status={objective_status}",
+            f"objective_continuity_status={objective_continuity_status}",
             f"next_action_ref={next_action_ref}",
+            f"next_action_status={next_action_status}",
             f"active_work_items={active_work_items}",
+            f"work_item_refs={safe_console_list(work_item_refs)}",
+            f"work_item_count={work_item_count}",
             f"open_checkpoint_refs={open_checkpoint_refs}",
             f"artifact_refs={artifact_refs}",
+            f"artifact_count={artifact_count}",
+            f"artifact_continuity_status={artifact_continuity_status}",
             f"latest_experience_id={latest_experience_id}",
             f"latest_experience_outcome={latest_experience_outcome}",
             f"latest_reflection_id={latest_reflection_id}",
@@ -1134,6 +1260,10 @@ def render_operator_dashboard(
                     for item in pending_review_items
                 ]
             ),
+            f"primary_review_status={primary_review_status}",
+            f"primary_review_blockers={primary_review_blockers}",
+            f"primary_review_tests={primary_review_tests}",
+            f"primary_review_rollback_plan_ref={primary_review_rollback}",
             f"reviewed_learning_influence_status={reviewed_learning_status}",
             f"reviewed_learning_assisted_eval_status={reviewed_learning_eval_status}",
             f"reviewed_learning_release_conclusion={reviewed_learning_release}",
@@ -1155,7 +1285,22 @@ def render_operator_dashboard(
             f"operator_usefulness_status={operator_usefulness_status}",
             f"operator_usefulness_score={operator_usefulness_score}",
             f"operator_usefulness_signals={operator_usefulness_signals}",
+            f"promotion_gate_status={promotion_gate_status}",
+            f"promotion_gate_decision={promotion_gate_decision}",
+            "promotion_gate_release_conclusion="
+            f"{promotion_gate_release_conclusion}",
+            f"promotion_gate_missing_gates={promotion_gate_missing_gates}",
+            f"promotion_gate_blockers={promotion_gate_blockers}",
+            f"promotion_gate_evidence_refs={promotion_gate_evidence_refs}",
+            "promotion_gate_human_decision_required="
+            f"{promotion_gate_human_decision_required}",
+            "promotion_gate_promotion_authorized="
+            f"{promotion_gate_promotion_authorized}",
+            f"cockpit_status={cockpit_status}",
+            f"pending_decision_count={len(pending_decision_values)}",
+            f"pending_decisions={pending_decisions}",
             "automatic_promotion=False",
+            f"next_operator_decision={safe_console_value(next_operator_decision)}",
             f"next_operator_step={safe_console_value(next_step)}",
         ]
     )

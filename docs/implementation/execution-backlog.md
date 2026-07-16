@@ -3186,7 +3186,7 @@ Fora de escopo:
 
 - `id`: `MB-168`
 - `prioridade`: `P1`
-- `status`: `ready`
+- `status`: `done`
 - `eixo_do_mestre`: `superficies/operador`, `continuidade`, `governanca`
 - `map_ids`: `SFC-003`, `OP-003`, `OP-006`, `OP-010`
 - `workflow_profile_afetado`: `operational_readiness_workflow`
@@ -3199,12 +3199,14 @@ Fora de escopo:
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `medium`
 - `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: `operator-dashboard` agora consolida status/contagens de objetivo, work items, checkpoints e artefatos; detalhes da revisao; memoria e autonomia; evidencia/status/blockers do promotion gate; e uma fila ordenada de decisoes humanas com `cockpit_status`, `pending_decisions`, `next_operator_decision` e `next_operator_step`, mantendo a superficie read-only.
+- `evidencia_de_fechamento`: `pytest apps/jarvis_console/tests/test_console.py apps/jarvis_console/tests/test_console_end_to_end.py` passou com 38 testes; cobertura inclui missao real, estado global vazio e consolidacao de revisao, promotion gate e confirmacao de autonomia; `python tools/engineering_gate.py --mode standard` passou integralmente.
 
 ### MB-169
 
 - `id`: `MB-169`
 - `prioridade`: `P1`
-- `status`: `blocked`
+- `status`: `ready`
 - `eixo_do_mestre`: `sintese`, `produto_operador`, `continuidade`
 - `map_ids`: `OP-008`, `OBS-005`, `COG-010`
 - `workflow_profile_afetado`: `strategic_direction_workflow`, `operational_readiness_workflow`
@@ -3406,6 +3408,7 @@ Estado atual da fila:
 - `MB-165` foi concluido como enforcement minimo de `autonomy_ladder` em governanca, dispatch operacional, observabilidade e console;
 - `MB-166` foi concluido como checklist sandbox-to-release executavel, auditavel e incapaz de autorizar promocao autonoma;
 - `MB-167` foi concluido como enforcement runtime/tooling observavel do promotion gate, sem autorizacao autonoma de promocao;
-- `MB-168` e o unico item tecnico `ready` atual, focado na expansao do cockpit textual do operador; `MB-169` a `MB-174` permanecem `blocked` por dependencia/ordem;
+- `MB-168` foi concluido como cockpit textual consolidado e read-only para estado, limites e decisoes do operador;
+- `MB-169` e o unico item tecnico `ready` atual, focado em relatorio humano compacto de progresso; `MB-170` a `MB-174` permanecem `blocked` por dependencia/ordem;
 - `SO-001`, `TA-004`, `TA-006` e verticais `deferred` continuam fora da fila sem mudanca explicita de fase;
 - `protective intelligence foundation` continua `deferred` e a matriz da Onda 2 segue como insumo, nao como gatilho automatico para abrir nova vertical.

@@ -14,6 +14,12 @@
 - `evolution-lab` deriva gates intrinsecos dos dados reais do checklist, aceita somente gates externos conhecidos e bloqueia checklist incompleto ou tentativa de autopromocao/core mutation;
 - `observability-service` audita a decisao e `verify_release_signal_baseline.py` valida cenarios pass/block; gate aprovado permanece pendente de decisao humana, e `execution-backlog.md` abriu `MB-168` como unico item tecnico `ready`.
 
+### MB-168 consolida o cockpit textual do operador
+
+- `operator-dashboard` mostra estado e contagens de objetivo, work items, checkpoints e artefatos, alem de revisao, memoria, autonomia e promotion gate;
+- `cockpit_status`, `pending_decisions` e `next_operator_decision` ordenam as decisoes humanas pendentes sem executa-las ou escrever memoria;
+- testes cobrem missao real, estado global vazio e combinacao de revisao evolutiva, gate bloqueado e confirmacao de autonomia; `execution-backlog.md` abriu `MB-169` como unico item tecnico `ready`.
+
 ## 2026-07-04
 
 ### MB-161 fecha anchors de evidencia de memoria semantica

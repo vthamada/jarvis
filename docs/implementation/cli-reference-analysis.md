@@ -388,6 +388,11 @@ memory influence and next operator decision.
 
 This should reuse existing services, not create a new architecture.
 
+Status: implemented in `MB-168` through the existing `operator-dashboard`,
+including consolidated objective/work item/artifact state, review detail,
+memory/autonomy signals, promotion gate evidence, ordered pending decisions and
+the next operator decision. The command remains read-only.
+
 ### CLI-006 - Completion And CLI Reference
 
 Goal: generate shell completion and maintain an operator command reference from

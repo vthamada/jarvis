@@ -1,5 +1,6 @@
 ﻿from pathlib import Path
 from tempfile import gettempdir
+from types import SimpleNamespace
 from uuid import uuid4
 
 from evolution_lab.service import (
@@ -513,11 +514,21 @@ def test_console_operator_dashboard_shows_daily_state_for_mission() -> None:
     assert "dashboard_scope=mission" in outputs[0]
     assert "mission_id=mission-console-dashboard" in outputs[0]
     assert "objective_status=completed" in outputs[0]
+    assert "objective_continuity_status=" in outputs[0]
     assert "next_action_ref=next_action:" in outputs[0]
+    assert "next_action_status=" in outputs[0]
+    assert "work_item_refs=" in outputs[0]
+    assert "work_item_count=" in outputs[0]
+    assert "artifact_count=" in outputs[0]
+    assert "artifact_continuity_status=" in outputs[0]
     assert "latest_experience_id=experience://mission-console-dashboard/" in outputs[0]
     assert "latest_reflection_status=candidate" in outputs[0]
     assert "pending_review_count=1" in outputs[0]
     assert "pending_review_proposal_ids=evo-proposal-" in outputs[0]
+    assert "primary_review_status=needs_review" in outputs[0]
+    assert "primary_review_blockers=" in outputs[0]
+    assert "primary_review_tests=" in outputs[0]
+    assert "primary_review_rollback_plan_ref=" in outputs[0]
     assert "reviewed_learning_influence_status=no_relevant_guidance" in outputs[0]
     assert (
         "reviewed_learning_assisted_eval_status=baseline_no_reviewed_learning"
@@ -540,8 +551,67 @@ def test_console_operator_dashboard_shows_daily_state_for_mission() -> None:
     assert "autonomy_human_confirmation_required=" in outputs[0]
     assert "autonomy_confirmation_mode=" in outputs[0]
     assert "autonomy_blocked_runtime_actions=" in outputs[0]
+    assert "promotion_gate_status=not_applicable" in outputs[0]
+    assert "promotion_gate_decision=not_applicable" in outputs[0]
+    assert "promotion_gate_release_conclusion=no_promotion_gate_evidence" in outputs[0]
+    assert "promotion_gate_promotion_authorized=False" in outputs[0]
+    assert "cockpit_status=operator_decision_required" in outputs[0]
+    assert "pending_decision_count=" in outputs[0]
+    assert "pending_decisions=review_evolution_proposal:" in outputs[0]
     assert "automatic_promotion=False" in outputs[0]
+    assert "next_operator_decision=review_evolution_proposal:" in outputs[0]
     assert "next_operator_step=review_evolution_proposal" in outputs[0]
+
+
+def test_console_operator_dashboard_consolidates_pending_human_decisions() -> None:
+    review_item = SimpleNamespace(
+        evolution_proposal_id="proposal-123",
+        review_status="needs_review",
+        candidate_refs=[],
+        blockers=["human_approval_required"],
+        proposed_tests=["pytest tests/unit/test_release.py"],
+        rollback_plan_ref="rollback://proposal-123",
+    )
+    flow_audit = SimpleNamespace(
+        objective_continuity_status="active",
+        artifact_continuity_status="active",
+        next_action_status="ready",
+        promotion_gate_id="promotion-gate://proposal-123",
+        promotion_gate_status="blocked",
+        promotion_gate_decision="promotion_blocked",
+        promotion_gate_release_conclusion="promotion_blocked_by_release_gate",
+        promotion_gate_missing_gates=["release_gate_before_promotion"],
+        promotion_gate_blockers=[
+            "gate_not_completed:release_gate_before_promotion"
+        ],
+        promotion_gate_evidence_refs=["evidence://proposal-123"],
+        promotion_gate_human_decision_required=True,
+        promotion_gate_promotion_authorized=False,
+        effective_autonomy_level="confirm_before_action",
+        autonomy_human_confirmation_required=True,
+        autonomy_confirmation_mode="explicit",
+    )
+
+    rendered = render_operator_dashboard(
+        mission_id="mission-operator-decisions",
+        mission_state=None,
+        records=[],
+        review_items=[review_item],
+        flow_audit=flow_audit,
+    )
+
+    assert "primary_review_status=needs_review" in rendered
+    assert "promotion_gate_status=blocked" in rendered
+    assert "promotion_gate_decision=promotion_blocked" in rendered
+    assert "promotion_gate_missing_gates=release_gate_before_promotion" in rendered
+    assert "promotion_gate_evidence_refs=evidence://proposal-123" in rendered
+    assert "promotion_gate_promotion_authorized=False" in rendered
+    assert "cockpit_status=operator_decision_required" in rendered
+    assert "pending_decision_count=3" in rendered
+    assert "review_evolution_proposal:proposal-123" in rendered
+    assert "resolve_promotion_gate_blockers:promotion-gate://proposal-123" in rendered
+    assert "confirm_autonomy_action:explicit" in rendered
+    assert "next_operator_decision=review_evolution_proposal:proposal-123" in rendered
 
 
 def test_console_operator_dashboard_handles_empty_global_state() -> None:
@@ -555,6 +625,8 @@ def test_console_operator_dashboard_handles_empty_global_state() -> None:
     assert "operator_dashboard=read_only" in rendered
     assert "dashboard_scope=global" in rendered
     assert "pending_review_count=0" in rendered
+    assert "cockpit_status=idle" in rendered
+    assert "pending_decision_count=0" in rendered
     assert "next_operator_step=start_governed_mission" in rendered
 
 

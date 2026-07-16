@@ -23,19 +23,31 @@ python -m apps.jarvis_console.cli mission-workflow "Plan the controlled rollout.
 python -m apps.jarvis_console.cli mission-cycle --mission-id mission-demo
 ```
 
-3. Consultar experiencias/reflexoes recentes:
+3. Abrir o cockpit diario consolidado:
+
+```powershell
+python -m apps.jarvis_console.cli operator-dashboard --mission-id mission-demo
+```
+
+O cockpit e read-only. Ele consolida objetivo, proxima acao, work items,
+checkpoints, artefatos, experiencia/reflexao, revisao evolutiva, memoria usada,
+autonomia, promotion gate e decisoes humanas pendentes. Os campos
+`cockpit_status`, `pending_decisions` e `next_operator_decision` indicam o que
+o operador precisa decidir primeiro; o comando nao executa a decisao.
+
+4. Consultar experiencias/reflexoes recentes:
 
 ```powershell
 python -m apps.jarvis_console.cli experience-reflections --mission-id mission-demo
 ```
 
-4. Consultar propostas aguardando revisao humana:
+5. Consultar propostas aguardando revisao humana:
 
 ```powershell
 python -m apps.jarvis_console.cli evolution-review-queue
 ```
 
-5. Registrar decisao humana sobre uma proposta:
+6. Registrar decisao humana sobre uma proposta:
 
 ```powershell
 python -m apps.jarvis_console.cli evolution-review --proposal-id proposal-123 --action approve --evidence-ref evidence://eval/123 --proposed-test tests/unit/test_learning_loop.py --rollback-plan-ref rollback://proposal-123
@@ -68,6 +80,14 @@ python -m apps.jarvis_console.cli evolution-review --proposal-id proposal-123 --
 - `reviewed_learning_release_conclusion=no_promotion_without_release_gate`:
   mesmo quando ha ganho aparente, o sistema nao promove mudanca sem gate de
   release e revisao humana.
+- `cockpit_status=operator_decision_required|ready_for_next_action|idle`: resume
+  se existe decisao humana, proxima acao pronta ou ausencia de trabalho ativo.
+- `pending_decisions=...`: ordena revisao evolutiva, blockers do promotion
+  gate, confirmacao de autonomia e checkpoints pendentes.
+- `next_operator_decision=...`: aponta a primeira decisao humana recomendada,
+  sem executa-la.
+- `promotion_gate_status=passed|blocked|not_applicable`: mostra o resultado do
+  gate; mesmo `passed` preserva `promotion_gate_promotion_authorized=False`.
 
 ## Revisao humana
 
