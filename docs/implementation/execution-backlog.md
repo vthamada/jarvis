@@ -3146,7 +3146,7 @@ Fora de escopo:
 
 - `id`: `MB-166`
 - `prioridade`: `P1`
-- `status`: `ready`
+- `status`: `done`
 - `eixo_do_mestre`: `evolucao`, `release`, `governanca`
 - `map_ids`: `EVL-006`, `GOV-009`, `DOC-010`
 - `workflow_profile_afetado`: `governance_boundary_workflow`, `operational_readiness_workflow`
@@ -3159,12 +3159,14 @@ Fora de escopo:
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `high`
 - `modelo_recomendado`: `gpt-5.4`
+- `impacto_no_baseline`: `SandboxToReleaseChecklistContract` e schema canonico agora formalizam escopo, revisao humana, evidencias, testes, rollback, gates obrigatorios e blockers; `evolution-lab` constroi o checklist a partir da proposta/revisao, rejeita revisao de outra proposta e preserva `automatic_promotion_allowed=false` e `core_mutation_allowed=false`.
+- `evidencia_de_fechamento`: `pytest tests/unit/test_shared_layer.py evolution/evolution-lab/tests/test_evolution_lab_service.py` passou com 33 testes; `python tools/engineering_gate.py --mode standard` passou integralmente; `docs/operations/release-and-change-management.md` registra que `ready_for_release_review` nao constitui permissao de promocao.
 
 ### MB-167
 
 - `id`: `MB-167`
 - `prioridade`: `P1`
-- `status`: `blocked`
+- `status`: `ready`
 - `eixo_do_mestre`: `evolucao`, `release`, `observabilidade`
 - `map_ids`: `EVL-006`, `GOV-009`, `OBS-004`
 - `workflow_profile_afetado`: `governance_boundary_workflow`
@@ -3400,6 +3402,7 @@ Estado atual da fila:
 - `MB-163` foi concluido como superficie auditavel de influencia de memoria em observabilidade e dashboard textual;
 - `MB-164` foi concluido como contrato runtime compartilhado de `autonomy_ladder`, sem enforcement amplo ainda;
 - `MB-165` foi concluido como enforcement minimo de `autonomy_ladder` em governanca, dispatch operacional, observabilidade e console;
-- `MB-166` e o unico item tecnico `ready` atual, focado em checklist sandbox-to-release para aprendizados/candidatos revisados; `MB-167` a `MB-174` permanecem `blocked` por dependencia/ordem;
+- `MB-166` foi concluido como checklist sandbox-to-release executavel, auditavel e incapaz de autorizar promocao autonoma;
+- `MB-167` e o unico item tecnico `ready` atual, focado no enforcement runtime/tooling do promotion gate; `MB-168` a `MB-174` permanecem `blocked` por dependencia/ordem;
 - `SO-001`, `TA-004`, `TA-006` e verticais `deferred` continuam fora da fila sem mudanca explicita de fase;
 - `protective intelligence foundation` continua `deferred` e a matriz da Onda 2 segue como insumo, nao como gatilho automatico para abrir nova vertical.

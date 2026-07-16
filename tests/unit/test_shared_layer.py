@@ -12,6 +12,7 @@ from shared.contracts import (
     ProceduralPlaybookCandidateContract,
     ProjectObjectiveContinuityContract,
     ReviewedLearningGuidanceContract,
+    SandboxToReleaseChecklistContract,
     SurfaceIdentityContract,
     TechnologyAbsorptionCandidateContract,
     WorkItemStateContract,
@@ -30,6 +31,7 @@ from shared.schemas import (
     PROCEDURAL_PLAYBOOK_CANDIDATE_SCHEMA,
     PROJECT_OBJECTIVE_CONTINUITY_SCHEMA,
     REVIEWED_LEARNING_GUIDANCE_SCHEMA,
+    SANDBOX_TO_RELEASE_CHECKLIST_SCHEMA,
     SURFACE_IDENTITY_SCHEMA,
     TECHNOLOGY_ABSORPTION_CANDIDATE_SCHEMA,
     WORK_ITEM_STATE_SCHEMA,
@@ -270,6 +272,26 @@ def test_autonomy_ladder_contract_is_runtime_declared_not_promotional() -> None:
         DELIBERATIVE_PLAN_SCHEMA.optional_fields
     )
     assert "autonomy_ladder_declared" in INTERNAL_EVENT_NAMES
+
+
+def test_sandbox_to_release_checklist_contract_is_not_promotion_permit() -> None:
+    checklist = SandboxToReleaseChecklistContract(
+        checklist_id="sandbox-release-checklist://proposal-1",
+        evolution_proposal_id="proposal-1",
+        release_scope="workflow:software_change_workflow",
+        checklist_status="ready_for_release_review",
+        human_review_status="approved",
+        required_gates=["human_review", "standard_engineering_gate"],
+    )
+
+    assert checklist.sandbox_required is True
+    assert checklist.release_gate_required is True
+    assert checklist.automatic_promotion_allowed is False
+    assert checklist.core_mutation_allowed is False
+    assert SANDBOX_TO_RELEASE_CHECKLIST_SCHEMA.contract_name == (
+        "SandboxToReleaseChecklistContract"
+    )
+    assert "required_gates" in SANDBOX_TO_RELEASE_CHECKLIST_SCHEMA.required_fields
 
 
 def test_procedural_playbook_candidate_contract_is_bounded_schema() -> None:

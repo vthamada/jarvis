@@ -805,6 +805,32 @@ ARTIFACT_RESULT_SCHEMA = CanonicalSchema(
     ),
 )
 
+SANDBOX_TO_RELEASE_CHECKLIST_SCHEMA = CanonicalSchema(
+    name="SandboxToReleaseChecklistSchema",
+    contract_name="SandboxToReleaseChecklistContract",
+    required_fields=(
+        "checklist_id",
+        "evolution_proposal_id",
+        "release_scope",
+        "checklist_status",
+        "human_review_status",
+        "required_gates",
+    ),
+    optional_fields=(
+        "evidence_refs",
+        "proposed_tests",
+        "rollback_plan_ref",
+        "blockers",
+        "sandbox_required",
+        "release_gate_required",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Executable sandbox-to-release checklist; not a promotion authorization.",
+    ),
+)
+
 EVOLUTION_PROPOSAL_SCHEMA = CanonicalSchema(
     name="EvolutionProposalSchema",
     contract_name="EvolutionProposalContract",

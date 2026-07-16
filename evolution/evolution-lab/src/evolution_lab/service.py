@@ -19,6 +19,7 @@ from shared.contracts import (
     PostTaskReflectionContract,
     ProceduralPlaybookCandidateContract,
     ReviewedLearningGuidanceContract,
+    SandboxToReleaseChecklistContract,
     TechnologyAbsorptionCandidateContract,
 )
 from shared.eval_expansion import derive_expanded_eval_state
@@ -1275,6 +1276,85 @@ class EvolutionLabService:
             core_mutation_allowed=False,
         )
 
+    def build_sandbox_to_release_checklist(
+        self,
+        proposal: EvolutionProposalContract,
+        *,
+        review_decision: EvolutionReviewDecisionContract | None = None,
+    ) -> SandboxToReleaseChecklistContract:
+        """Build an executable checklist without authorizing promotion."""
+
+        if review_decision is not None and str(
+            review_decision.evolution_proposal_id
+        ) != str(proposal.evolution_proposal_id):
+            raise ValueError(
+                "review decision does not belong to the evolution proposal"
+            )
+        review_context = dict(proposal.strategy_context.get("evolution_review", {}))
+        human_review_status = (
+            review_decision.review_status
+            if review_decision is not None
+            else str(review_context.get("review_status") or "needs_review")
+        )
+        evidence_refs = self._unique_values(
+            list(review_decision.evidence_refs if review_decision else [])
+            or self._proposal_evidence_refs(proposal)
+        )
+        proposed_tests = self._unique_values(
+            list(review_decision.proposed_tests if review_decision else [])
+            or list(proposal.proposed_tests)
+        )
+        rollback_plan_ref = (
+            review_decision.rollback_plan_ref
+            if review_decision is not None
+            else self._proposal_rollback_plan_ref(proposal)
+        )
+        blockers = list(proposal.optimization_blockers)
+        if human_review_status not in {"approved", "sandboxed"}:
+            blockers.append("human_approval_required")
+        if review_decision is not None and (
+            review_decision.automatic_promotion_allowed
+            or review_decision.core_mutation_allowed
+        ):
+            blockers.append("review_decision_cannot_authorize_autonomous_mutation")
+        if not evidence_refs:
+            blockers.append("evidence_required")
+        if not proposed_tests:
+            blockers.append("tests_required")
+        if not rollback_plan_ref:
+            blockers.append("rollback_plan_required")
+        if not proposal.requires_sandbox:
+            blockers.append("sandbox_required")
+        blockers = self._unique_values(blockers)
+        return SandboxToReleaseChecklistContract(
+            checklist_id=(
+                "sandbox-release-checklist://"
+                f"{self._signal_value(proposal.evolution_proposal_id)}"
+            ),
+            evolution_proposal_id=proposal.evolution_proposal_id,
+            release_scope=proposal.target_scope,
+            checklist_status=(
+                "ready_for_release_review" if not blockers else "blocked"
+            ),
+            human_review_status=human_review_status,
+            required_gates=[
+                "human_review",
+                "evidence",
+                "proposed_tests",
+                "rollback_plan",
+                "standard_engineering_gate",
+                "release_gate_before_promotion",
+            ],
+            evidence_refs=evidence_refs,
+            proposed_tests=proposed_tests,
+            rollback_plan_ref=rollback_plan_ref,
+            blockers=blockers,
+            sandbox_required=True,
+            release_gate_required=True,
+            automatic_promotion_allowed=False,
+            core_mutation_allowed=False,
+        )
+
     def preferred_strategy(self) -> str:
         """Return the current sandbox-first evolution strategy."""
 
@@ -1346,6 +1426,22 @@ class EvolutionLabService:
         review = dict(proposal.strategy_context.get("evolution_review", {}))
         rollback_plan_ref = review.get("rollback_plan_ref")
         return str(rollback_plan_ref) if rollback_plan_ref is not None else None
+
+    @staticmethod
+    def _proposal_evidence_refs(proposal: EvolutionProposalContract) -> list[str]:
+        prefixes = (
+            "trace://",
+            "evidence://",
+            "eval://",
+            "baseline://",
+            "artifact://",
+        )
+        values = [
+            str(item)
+            for item in [*proposal.source_signals, *proposal.baseline_refs]
+            if str(item).startswith(prefixes)
+        ]
+        return EvolutionLabService._unique_values(values)
 
     @staticmethod
     def _reviewed_guidance_scope(

@@ -471,7 +471,7 @@ Map IDs: `GOV-007`, `GOV-005`, `ACT-002`, `ACT-003`.
 Goal: enforce autonomy level limits in governance, operation dispatch and
 console-visible decisions.
 
-Status: closed in `MB-165`; next execution item is `MB-166`.
+Status: closed in `MB-165`.
 
 ### MB-166 -- Sandbox-To-Release Promotion Checklist
 
@@ -480,12 +480,16 @@ Map IDs: `EVL-006`, `GOV-009`, `DOC-010`.
 Goal: define the explicit promotion checklist for reviewed learning and
 sandbox candidates, including tests, rollback and release gates.
 
+Status: closed in `MB-166`; next execution item is `MB-167`.
+
 ### MB-167 -- Promotion Gate Runtime Enforcement
 
 Map IDs: `EVL-006`, `GOV-009`, `OBS-004`.
 
 Goal: make the promotion checklist executable through evolution/release
 services and observable events.
+
+Status: ready after `MB-166`.
 
 ### MB-168 -- Operator Cockpit Expansion
 

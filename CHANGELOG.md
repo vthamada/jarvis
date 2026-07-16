@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 2026-07-16
+
+### MB-166 define checklist sandbox-to-release
+
+- `shared/contracts` e `shared/schemas` adicionaram `SandboxToReleaseChecklistContract`, com escopo de release, revisao humana, evidencias, testes, rollback, gates e blockers;
+- `evolution-lab` cria o checklist a partir de proposta/revisao, rejeita revisao pertencente a outra proposta e nunca habilita autopromocao ou mutacao do Core;
+- `docs/operations/release-and-change-management.md` registra que `ready_for_release_review` nao e permissao de promocao; `execution-backlog.md` fechou `MB-166` e abriu `MB-167` como unico item tecnico `ready`.
+
 ## 2026-07-04
 
 ### MB-161 fecha anchors de evidencia de memoria semantica

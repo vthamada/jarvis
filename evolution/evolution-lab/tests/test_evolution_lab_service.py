@@ -2,6 +2,7 @@ from pathlib import Path
 from tempfile import gettempdir
 from uuid import uuid4
 
+import pytest
 from evolution_lab.service import (
     ComparisonInput,
     EvolutionLabService,
@@ -318,6 +319,88 @@ def test_evolution_lab_derives_reviewed_learning_guidance_from_human_review() ->
     assert guidance.rollback_plan_ref == "rollback://workflow/reviewed-guidance"
     assert guidance.automatic_promotion_allowed is False
     assert guidance.core_mutation_allowed is False
+
+
+def test_evolution_lab_builds_sandbox_to_release_checklist() -> None:
+    temp_dir = runtime_dir("evolution-lab-release-checklist")
+    service = EvolutionLabService(database_path=str(temp_dir / "evolution.db"))
+    proposal = service.create_proposal_from_post_task_reflection(
+        PostTaskReflectionInput(
+            experience_id="experience://mission-release-checklist/001",
+            mission_id="mission-release-checklist",
+            workflow_profile="software_change_workflow",
+            outcome_status="completed",
+            learning_candidate="Use reviewed release checklist.",
+            recommendation="Promote only after release gate.",
+            evidence_refs=["trace://req-release-checklist"],
+            proposed_tests=["python tools/engineering_gate.py --mode standard"],
+            rollback_plan_ref="rollback://workflow/release-checklist",
+        )
+    )
+    decision = service.review_proposal(
+        evolution_proposal_id=str(proposal.evolution_proposal_id),
+        action="sandbox",
+        operator_ref="operator://local_console",
+        evidence_refs=["trace://req-release-checklist"],
+        proposed_tests=["python tools/engineering_gate.py --mode standard"],
+        rollback_plan_ref="rollback://workflow/release-checklist",
+    )
+
+    checklist = service.build_sandbox_to_release_checklist(
+        proposal,
+        review_decision=decision,
+    )
+
+    assert checklist.checklist_status == "ready_for_release_review"
+    assert checklist.human_review_status == "sandboxed"
+    assert "human_review" in checklist.required_gates
+    assert "standard_engineering_gate" in checklist.required_gates
+    assert checklist.evidence_refs == ["trace://req-release-checklist"]
+    assert checklist.proposed_tests == [
+        "python tools/engineering_gate.py --mode standard"
+    ]
+    assert checklist.rollback_plan_ref == "rollback://workflow/release-checklist"
+    assert checklist.blockers == []
+    assert checklist.automatic_promotion_allowed is False
+    assert checklist.core_mutation_allowed is False
+
+
+def test_evolution_lab_blocks_release_checklist_with_foreign_review() -> None:
+    temp_dir = runtime_dir("evolution-lab-foreign-release-review")
+    service = EvolutionLabService(database_path=str(temp_dir / "evolution.db"))
+    first = service.create_proposal(
+        proposal_type="review_integrity",
+        target_scope="workflow:first",
+        hypothesis="First bounded release candidate.",
+        expected_gain="Validated release path.",
+        baseline_refs=["baseline://release/first"],
+        proposed_tests=["test:first"],
+    )
+    second = service.create_proposal(
+        proposal_type="review_integrity",
+        target_scope="workflow:second",
+        hypothesis="Second bounded release candidate.",
+        expected_gain="Validated release path.",
+        baseline_refs=["baseline://release/second"],
+        proposed_tests=["test:second"],
+    )
+    decision = service.review_proposal(
+        evolution_proposal_id=str(first.evolution_proposal_id),
+        action="approve",
+        operator_ref="operator://local_console",
+        evidence_refs=["evidence://release/first"],
+        proposed_tests=["test:first"],
+        rollback_plan_ref="rollback://release/first",
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="review decision does not belong to the evolution proposal",
+    ):
+        service.build_sandbox_to_release_checklist(
+            second,
+            review_decision=decision,
+        )
 
 
 def test_evolution_lab_creates_sandbox_proposal_from_procedural_playbook_candidate() -> None:

@@ -1,5 +1,18 @@
 # HANDOFF
 
+## Atualizacao 2026-07-16
+
+`MB-166` foi concluido: `SandboxToReleaseChecklistContract`, schema canonico e
+`evolution-lab` agora produzem um checklist sandbox-to-release com escopo,
+revisao humana, evidencias, testes, rollback, gates obrigatorios e blockers. O
+checklist rejeita revisao ligada a outra proposta e preserva
+`automatic_promotion_allowed=false` e `core_mutation_allowed=false`.
+
+`ready_for_release_review` significa somente que o checklist esta completo;
+promocao continua condicionada a decisao humana e release gate separado.
+`MB-167` e o unico item tecnico `ready`, para tornar essa verificacao
+executavel e observavel no runtime/tooling.
+
 ## Atualizacao 2026-07-04
 
 `MB-163` foi concluido: `observability-service` agora consolida
@@ -24,9 +37,8 @@ falha dispatch acima do limite sem gerar artefato; observabilidade e
 `operator-dashboard` mostram nivel efetivo, status do ladder, limite aplicado,
 confirmacao humana e acoes bloqueadas.
 
-`MB-166` e o unico item tecnico `ready`: definir checklist sandbox-to-release
-para aprendizados revisados e candidatos evolutivos, mantendo evidencia, testes,
-rollback e aprovacao humana como fronteira.
+`MB-166` foi posteriormente concluido na atualizacao de `2026-07-16`; `MB-167`
+passou a ser o unico item tecnico `ready`.
 
 ## Atualizacao 2026-05-17
 
@@ -200,9 +212,9 @@ refs de artefato/reflexao, testes, rollback, revisao humana obrigatoria,
 `automatic_promotion_allowed=false`, `core_mutation_allowed=false` e
 `memory_write_mode=through_core_only`. `memory-service` persiste/lista esses
 candidatos, `evolution-lab` cria proposta sandbox-only a partir deles e o
-console possui `procedural-playbooks` read-only. `MB-163`, `MB-164` e `MB-165`
-tambem foram concluidos; `MB-166` e o unico item tecnico `ready`, focado no
-checklist sandbox-to-release governado.
+console possui `procedural-playbooks` read-only. `MB-163`, `MB-164`, `MB-165`
+e `MB-166` tambem foram concluidos; `MB-167` e o unico item tecnico `ready`,
+focado no enforcement runtime/tooling do promotion gate.
 
 O corte pos-`MB-125` foi repriorizado em `MB-126`: a proxima frente ativa e
 experiencia operacional + reflexao pos-tarefa governada. O objetivo e fazer o

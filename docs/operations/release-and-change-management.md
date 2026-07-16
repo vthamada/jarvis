@@ -12,6 +12,26 @@ No documentation move, delete, rename or merge should be treated as routine if
 the backlink map shows active references or if the document is canonical,
 operational, architectural or tied to governance.
 
+## MB-166 Sandbox-To-Release Checklist
+
+Starting with `MB-166`, reviewed learning and evolution candidates must produce
+an executable checklist before any release decision. The minimum checklist
+contains:
+
+- `human_review_status` equal to `approved` or `sandboxed`;
+- reviewable `evidence_refs`;
+- `proposed_tests` that validate the candidate;
+- a `rollback_plan_ref`;
+- the exact `release_scope`;
+- `required_gates`, including human review, evidence, tests, rollback, the
+  standard engineering gate and a separate release gate;
+- `automatic_promotion_allowed=false`;
+- `core_mutation_allowed=false`.
+
+`ready_for_release_review` means that the checklist is complete. It is not a
+promotion permit. Any blocker retains the candidate in review or sandbox, and
+actual promotion still requires a separate release gate and human decision.
+
 ## 1. Objetivo
 
 Este documento operacionaliza a política de **releases, versionamento e mudança controlada** do JARVIS.

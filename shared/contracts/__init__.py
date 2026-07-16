@@ -988,6 +988,24 @@ class ArtifactResultContract:
 
 
 @dataclass
+class SandboxToReleaseChecklistContract:
+    checklist_id: str
+    evolution_proposal_id: EvolutionProposalId
+    release_scope: str
+    checklist_status: str
+    human_review_status: str
+    required_gates: list[str]
+    evidence_refs: list[str] = field(default_factory=list)
+    proposed_tests: list[str] = field(default_factory=list)
+    rollback_plan_ref: str | None = None
+    blockers: list[str] = field(default_factory=list)
+    sandbox_required: bool = True
+    release_gate_required: bool = True
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass
 class EvolutionProposalContract:
     evolution_proposal_id: EvolutionProposalId
     proposal_type: str
