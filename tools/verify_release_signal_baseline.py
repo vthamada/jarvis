@@ -482,6 +482,43 @@ def _make_closure_payload() -> dict[str, object]:
     }
 
 
+def _make_promotion_gate_evidence() -> tuple[Any, Any, dict[str, object]]:
+    from evolution_lab.service import EvolutionLabService
+
+    from shared.contracts import SandboxToReleaseChecklistContract
+
+    checklist = SandboxToReleaseChecklistContract(
+        checklist_id="sandbox-release-checklist://release-signal-baseline",
+        evolution_proposal_id="release-signal-baseline",
+        release_scope="workflow:release-signal-baseline",
+        checklist_status="ready_for_release_review",
+        human_review_status="approved",
+        required_gates=[
+            "human_review",
+            "evidence",
+            "proposed_tests",
+            "rollback_plan",
+            "standard_engineering_gate",
+            "release_gate_before_promotion",
+        ],
+        evidence_refs=["evidence://release-signal-baseline"],
+        proposed_tests=["python tools/engineering_gate.py --mode release"],
+        rollback_plan_ref="rollback://release-signal-baseline",
+    )
+    passed = EvolutionLabService.evaluate_promotion_gate(
+        checklist,
+        completed_gates=[
+            "standard_engineering_gate",
+            "release_gate_before_promotion",
+        ],
+    )
+    blocked = EvolutionLabService.evaluate_promotion_gate(
+        checklist,
+        completed_gates=["standard_engineering_gate"],
+    )
+    return passed, blocked, EvolutionLabService.promotion_gate_event_payload(blocked)
+
+
 def main() -> None:
     from tools.archive.close_alignment_cycle import (
         render_markdown as render_alignment_markdown,
@@ -564,9 +601,31 @@ def main() -> None:
     closure_payload = _make_closure_payload()
     alignment_markdown = render_alignment_markdown(closure_payload)
     sovereign_markdown = render_sovereign_markdown(closure_payload)
+    passed_promotion_gate, blocked_promotion_gate, promotion_gate_event = (
+        _make_promotion_gate_evidence()
+    )
 
     summary = comparison_payload["comparison_summary"]
     scenario = comparison_payload["scenario_results"][0]
+    _ensure(
+        passed_promotion_gate.gate_status == "passed"
+        and passed_promotion_gate.promotion_eligible
+        and not passed_promotion_gate.promotion_authorized,
+        "Promotion gate baseline lost bounded pass semantics.",
+    )
+    _ensure(
+        blocked_promotion_gate.gate_status == "blocked"
+        and blocked_promotion_gate.decision == "promotion_blocked"
+        and "release_gate_before_promotion" in blocked_promotion_gate.missing_gates,
+        "Promotion gate baseline no longer blocks an incomplete release gate.",
+    )
+    _ensure(
+        promotion_gate_event["promotion_gate_release_conclusion"]
+        == "promotion_blocked_by_release_gate"
+        and promotion_gate_event["automatic_promotion_allowed"] is False
+        and promotion_gate_event["core_mutation_allowed"] is False,
+        "Promotion gate observable payload lost sovereign release limits.",
+    )
     _ensure(
         summary["candidate_workflow_output_decision"] == "maturation_recommended",
         "Comparison summary lost the workflow output release decision.",

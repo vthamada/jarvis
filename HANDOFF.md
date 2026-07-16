@@ -10,8 +10,15 @@ checklist rejeita revisao ligada a outra proposta e preserva
 
 `ready_for_release_review` significa somente que o checklist esta completo;
 promocao continua condicionada a decisao humana e release gate separado.
-`MB-167` e o unico item tecnico `ready`, para tornar essa verificacao
-executavel e observavel no runtime/tooling.
+
+`MB-167` foi concluido: `PromotionGateDecisionContract`, schema e evento
+`promotion_gate_evaluated` agora tornam o checklist verificavel por runtime e
+release tooling. O evaluator valida gates intrinsecos pela evidencia real,
+aceita apenas gates externos conhecidos, bloqueia qualquer ausencia e produz
+status, decisao, blockers, evidencias e conclusao de release observaveis.
+Mesmo quando o gate passa, a conclusao e
+`release_gate_passed_pending_human_decision`, com
+`promotion_authorized=false`. `MB-168` e o unico item tecnico `ready`.
 
 ## Atualizacao 2026-07-04
 
@@ -37,8 +44,8 @@ falha dispatch acima do limite sem gerar artefato; observabilidade e
 `operator-dashboard` mostram nivel efetivo, status do ladder, limite aplicado,
 confirmacao humana e acoes bloqueadas.
 
-`MB-166` foi posteriormente concluido na atualizacao de `2026-07-16`; `MB-167`
-passou a ser o unico item tecnico `ready`.
+`MB-166` e `MB-167` foram posteriormente concluidos na atualizacao de
+`2026-07-16`; `MB-168` passou a ser o unico item tecnico `ready`.
 
 ## Atualizacao 2026-05-17
 
@@ -212,9 +219,9 @@ refs de artefato/reflexao, testes, rollback, revisao humana obrigatoria,
 `automatic_promotion_allowed=false`, `core_mutation_allowed=false` e
 `memory_write_mode=through_core_only`. `memory-service` persiste/lista esses
 candidatos, `evolution-lab` cria proposta sandbox-only a partir deles e o
-console possui `procedural-playbooks` read-only. `MB-163`, `MB-164`, `MB-165`
-e `MB-166` tambem foram concluidos; `MB-167` e o unico item tecnico `ready`,
-focado no enforcement runtime/tooling do promotion gate.
+console possui `procedural-playbooks` read-only. `MB-163`, `MB-164`, `MB-165`,
+`MB-166` e `MB-167` tambem foram concluidos; `MB-168` e o unico item tecnico
+`ready`, focado na expansao do cockpit textual do operador.
 
 O corte pos-`MB-125` foi repriorizado em `MB-126`: a proxima frente ativa e
 experiencia operacional + reflexao pos-tarefa governada. O objetivo e fazer o

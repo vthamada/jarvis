@@ -11,7 +11,10 @@ from evolution_lab.service import (
     TechnologyAbsorptionInput,
 )
 
-from shared.contracts import ProceduralPlaybookCandidateContract
+from shared.contracts import (
+    ProceduralPlaybookCandidateContract,
+    SandboxToReleaseChecklistContract,
+)
 
 
 def runtime_dir(name: str) -> Path:
@@ -401,6 +404,83 @@ def test_evolution_lab_blocks_release_checklist_with_foreign_review() -> None:
             second,
             review_decision=decision,
         )
+
+
+def test_evolution_lab_passes_complete_promotion_gate_without_authorizing_it() -> None:
+    checklist = SandboxToReleaseChecklistContract(
+        checklist_id="sandbox-release-checklist://proposal-pass",
+        evolution_proposal_id="proposal-pass",
+        release_scope="workflow:software_change_workflow",
+        checklist_status="ready_for_release_review",
+        human_review_status="approved",
+        required_gates=[
+            "human_review",
+            "evidence",
+            "proposed_tests",
+            "rollback_plan",
+            "standard_engineering_gate",
+            "release_gate_before_promotion",
+        ],
+        evidence_refs=["evidence://proposal-pass"],
+        proposed_tests=["pytest tests/unit/test_release.py"],
+        rollback_plan_ref="rollback://proposal-pass",
+    )
+
+    decision = EvolutionLabService.evaluate_promotion_gate(
+        checklist,
+        completed_gates=[
+            "standard_engineering_gate",
+            "release_gate_before_promotion",
+        ],
+    )
+    payload = EvolutionLabService.promotion_gate_event_payload(decision)
+
+    assert decision.gate_status == "passed"
+    assert decision.decision == "eligible_for_human_promotion_decision"
+    assert decision.release_conclusion == (
+        "release_gate_passed_pending_human_decision"
+    )
+    assert decision.missing_gates == []
+    assert decision.blockers == []
+    assert decision.promotion_eligible is True
+    assert decision.promotion_authorized is False
+    assert payload["promotion_gate_status"] == "passed"
+    assert payload["promotion_gate_evidence_refs"] == ["evidence://proposal-pass"]
+    assert payload["automatic_promotion_allowed"] is False
+
+
+def test_evolution_lab_blocks_spoofed_or_incomplete_promotion_gate() -> None:
+    checklist = SandboxToReleaseChecklistContract(
+        checklist_id="sandbox-release-checklist://proposal-blocked",
+        evolution_proposal_id="proposal-blocked",
+        release_scope="workflow:software_change_workflow",
+        checklist_status="blocked",
+        human_review_status="needs_review",
+        required_gates=[],
+    )
+
+    decision = EvolutionLabService.evaluate_promotion_gate(
+        checklist,
+        completed_gates=[
+            "human_review",
+            "evidence",
+            "proposed_tests",
+            "rollback_plan",
+            "standard_engineering_gate",
+        ],
+    )
+
+    assert decision.gate_status == "blocked"
+    assert decision.decision == "promotion_blocked"
+    assert decision.release_conclusion == "promotion_blocked_by_release_gate"
+    assert "human_review" in decision.missing_gates
+    assert "evidence" in decision.missing_gates
+    assert "proposed_tests" in decision.missing_gates
+    assert "rollback_plan" in decision.missing_gates
+    assert "release_gate_before_promotion" in decision.missing_gates
+    assert "checklist_not_ready_for_release_review" in decision.blockers
+    assert decision.promotion_eligible is False
+    assert decision.promotion_authorized is False
 
 
 def test_evolution_lab_creates_sandbox_proposal_from_procedural_playbook_candidate() -> None:

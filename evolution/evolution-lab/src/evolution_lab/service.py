@@ -18,6 +18,7 @@ from shared.contracts import (
     ExperienceRecordContract,
     PostTaskReflectionContract,
     ProceduralPlaybookCandidateContract,
+    PromotionGateDecisionContract,
     ReviewedLearningGuidanceContract,
     SandboxToReleaseChecklistContract,
     TechnologyAbsorptionCandidateContract,
@@ -1354,6 +1355,129 @@ class EvolutionLabService:
             automatic_promotion_allowed=False,
             core_mutation_allowed=False,
         )
+
+    @staticmethod
+    def evaluate_promotion_gate(
+        checklist: SandboxToReleaseChecklistContract,
+        *,
+        completed_gates: list[str],
+    ) -> PromotionGateDecisionContract:
+        """Evaluate release readiness without authorizing promotion."""
+
+        mandatory_gates = [
+            "human_review",
+            "evidence",
+            "proposed_tests",
+            "rollback_plan",
+            "standard_engineering_gate",
+            "release_gate_before_promotion",
+        ]
+        required_gates = EvolutionLabService._unique_values(
+            [*checklist.required_gates, *mandatory_gates]
+        )
+        declared_completed = EvolutionLabService._unique_values(completed_gates)
+        intrinsic_gates: list[str] = []
+        if checklist.human_review_status in {"approved", "sandboxed"}:
+            intrinsic_gates.append("human_review")
+        if checklist.evidence_refs:
+            intrinsic_gates.append("evidence")
+        if checklist.proposed_tests:
+            intrinsic_gates.append("proposed_tests")
+        if checklist.rollback_plan_ref:
+            intrinsic_gates.append("rollback_plan")
+        externally_verifiable = {
+            "standard_engineering_gate",
+            "release_gate_before_promotion",
+        }
+        validated_external_gates = [
+            gate
+            for gate in declared_completed
+            if gate in externally_verifiable and gate in required_gates
+        ]
+        validated_completed = EvolutionLabService._unique_values(
+            [*intrinsic_gates, *validated_external_gates]
+        )
+        missing_gates = [
+            gate for gate in required_gates if gate not in validated_completed
+        ]
+        blockers = list(checklist.blockers)
+        if checklist.checklist_status != "ready_for_release_review":
+            blockers.append("checklist_not_ready_for_release_review")
+        if not checklist.release_scope.strip():
+            blockers.append("release_scope_required")
+        if not checklist.sandbox_required:
+            blockers.append("sandbox_required")
+        if not checklist.release_gate_required:
+            blockers.append("release_gate_required")
+        if checklist.automatic_promotion_allowed:
+            blockers.append("automatic_promotion_not_allowed")
+        if checklist.core_mutation_allowed:
+            blockers.append("core_mutation_not_allowed")
+        blockers.extend(f"gate_not_completed:{gate}" for gate in missing_gates)
+        blockers = EvolutionLabService._unique_values(blockers)
+        gate_passed = not blockers
+        return PromotionGateDecisionContract(
+            promotion_gate_id=(
+                "promotion-gate://"
+                f"{EvolutionLabService._signal_value(checklist.checklist_id)}"
+            ),
+            checklist_id=checklist.checklist_id,
+            evolution_proposal_id=checklist.evolution_proposal_id,
+            release_scope=checklist.release_scope,
+            gate_status="passed" if gate_passed else "blocked",
+            decision=(
+                "eligible_for_human_promotion_decision"
+                if gate_passed
+                else "promotion_blocked"
+            ),
+            release_conclusion=(
+                "release_gate_passed_pending_human_decision"
+                if gate_passed
+                else "promotion_blocked_by_release_gate"
+            ),
+            required_gates=required_gates,
+            completed_gates=validated_completed,
+            missing_gates=missing_gates,
+            evidence_refs=EvolutionLabService._unique_values(
+                checklist.evidence_refs
+            ),
+            blockers=blockers,
+            human_review_status=checklist.human_review_status,
+            promotion_eligible=gate_passed,
+            human_decision_required=True,
+            promotion_authorized=False,
+            automatic_promotion_allowed=False,
+            core_mutation_allowed=False,
+        )
+
+    @staticmethod
+    def promotion_gate_event_payload(
+        decision: PromotionGateDecisionContract,
+    ) -> dict[str, object]:
+        """Expose the canonical audit payload for a promotion gate decision."""
+
+        return {
+            "promotion_gate_id": decision.promotion_gate_id,
+            "promotion_gate_checklist_id": decision.checklist_id,
+            "evolution_proposal_id": str(decision.evolution_proposal_id),
+            "promotion_gate_release_scope": decision.release_scope,
+            "promotion_gate_status": decision.gate_status,
+            "promotion_gate_decision": decision.decision,
+            "promotion_gate_release_conclusion": decision.release_conclusion,
+            "promotion_gate_required_gates": list(decision.required_gates),
+            "promotion_gate_completed_gates": list(decision.completed_gates),
+            "promotion_gate_missing_gates": list(decision.missing_gates),
+            "promotion_gate_evidence_refs": list(decision.evidence_refs),
+            "promotion_gate_blockers": list(decision.blockers),
+            "promotion_gate_human_review_status": decision.human_review_status,
+            "promotion_gate_promotion_eligible": decision.promotion_eligible,
+            "promotion_gate_human_decision_required": (
+                decision.human_decision_required
+            ),
+            "promotion_gate_promotion_authorized": decision.promotion_authorized,
+            "automatic_promotion_allowed": decision.automatic_promotion_allowed,
+            "core_mutation_allowed": decision.core_mutation_allowed,
+        }
 
     def preferred_strategy(self) -> str:
         """Return the current sandbox-first evolution strategy."""

@@ -243,6 +243,21 @@ class FlowAudit:
     evolution_review_evidence_refs: list[str] = field(default_factory=list)
     evolution_review_rollback_plan_ref: str | None = None
     evolution_review_limits: list[str] = field(default_factory=list)
+    promotion_gate_status: str = "not_applicable"
+    promotion_gate_decision: str = "not_applicable"
+    promotion_gate_id: str | None = None
+    promotion_gate_checklist_id: str | None = None
+    promotion_gate_release_scope: str | None = None
+    promotion_gate_release_conclusion: str = "no_promotion_gate_evidence"
+    promotion_gate_required_gates: list[str] = field(default_factory=list)
+    promotion_gate_completed_gates: list[str] = field(default_factory=list)
+    promotion_gate_missing_gates: list[str] = field(default_factory=list)
+    promotion_gate_evidence_refs: list[str] = field(default_factory=list)
+    promotion_gate_blockers: list[str] = field(default_factory=list)
+    promotion_gate_human_review_status: str = "not_applicable"
+    promotion_gate_promotion_eligible: bool = False
+    promotion_gate_human_decision_required: bool = True
+    promotion_gate_promotion_authorized: bool = False
 
     @property
     def trace_complete(self) -> bool:
@@ -311,6 +326,7 @@ class FlowAudit:
                 "needs_review",
                 "rolled_back",
             }
+            and self.promotion_gate_status in {"not_applicable", "passed", "blocked"}
         )
 
 
@@ -2094,6 +2110,77 @@ class ObservabilityService:
                 "evolution_review_limits",
             ),
         )
+        promotion_gate_event = self._first_payload_event(
+            events,
+            "promotion_gate_status",
+        )
+        promotion_gate_status = self._payload_str(
+            promotion_gate_event,
+            "promotion_gate_status",
+            "not_applicable",
+        )
+        promotion_gate_decision = self._payload_str(
+            promotion_gate_event,
+            "promotion_gate_decision",
+            "not_applicable",
+        )
+        promotion_gate_id = self._payload_optional_str(
+            promotion_gate_event,
+            "promotion_gate_id",
+        )
+        promotion_gate_checklist_id = self._payload_optional_str(
+            promotion_gate_event,
+            "promotion_gate_checklist_id",
+        )
+        promotion_gate_release_scope = self._payload_optional_str(
+            promotion_gate_event,
+            "promotion_gate_release_scope",
+        )
+        promotion_gate_release_conclusion = self._payload_str(
+            promotion_gate_event,
+            "promotion_gate_release_conclusion",
+            "no_promotion_gate_evidence",
+        )
+        promotion_gate_required_gates = self._dedupe_payload_list(
+            events,
+            "promotion_gate_required_gates",
+        )
+        promotion_gate_completed_gates = self._dedupe_payload_list(
+            events,
+            "promotion_gate_completed_gates",
+        )
+        promotion_gate_missing_gates = self._dedupe_payload_list(
+            events,
+            "promotion_gate_missing_gates",
+        )
+        promotion_gate_evidence_refs = self._dedupe_payload_list(
+            events,
+            "promotion_gate_evidence_refs",
+        )
+        promotion_gate_blockers = self._dedupe_payload_list(
+            events,
+            "promotion_gate_blockers",
+        )
+        promotion_gate_human_review_status = self._payload_str(
+            promotion_gate_event,
+            "promotion_gate_human_review_status",
+            "not_applicable",
+        )
+        promotion_gate_promotion_eligible = self._payload_bool(
+            promotion_gate_event,
+            "promotion_gate_promotion_eligible",
+            False,
+        )
+        promotion_gate_human_decision_required = self._payload_bool(
+            promotion_gate_event,
+            "promotion_gate_human_decision_required",
+            True,
+        )
+        promotion_gate_promotion_authorized = self._payload_bool(
+            promotion_gate_event,
+            "promotion_gate_promotion_authorized",
+            False,
+        )
         procedural_artifact_status_for_audit = (
             str(response_event.payload.get("procedural_artifact_status"))
             if response_event
@@ -2323,6 +2410,29 @@ class ObservabilityService:
             evolution_review_evidence_refs=evolution_review_evidence_refs,
             evolution_review_rollback_plan_ref=evolution_review_rollback_plan_ref,
             evolution_review_limits=evolution_review_limits,
+            promotion_gate_status=promotion_gate_status,
+            promotion_gate_decision=promotion_gate_decision,
+            promotion_gate_id=promotion_gate_id,
+            promotion_gate_checklist_id=promotion_gate_checklist_id,
+            promotion_gate_release_scope=promotion_gate_release_scope,
+            promotion_gate_release_conclusion=promotion_gate_release_conclusion,
+            promotion_gate_required_gates=promotion_gate_required_gates,
+            promotion_gate_completed_gates=promotion_gate_completed_gates,
+            promotion_gate_missing_gates=promotion_gate_missing_gates,
+            promotion_gate_evidence_refs=promotion_gate_evidence_refs,
+            promotion_gate_blockers=promotion_gate_blockers,
+            promotion_gate_human_review_status=(
+                promotion_gate_human_review_status
+            ),
+            promotion_gate_promotion_eligible=(
+                promotion_gate_promotion_eligible
+            ),
+            promotion_gate_human_decision_required=(
+                promotion_gate_human_decision_required
+            ),
+            promotion_gate_promotion_authorized=(
+                promotion_gate_promotion_authorized
+            ),
             experiment_lane_status=expanded_eval_state["experiment_lane_status"],
             wave2_candidate_class=expanded_eval_state["wave2_candidate_class"],
             experiment_entry_status=expanded_eval_state["experiment_entry_status"],
@@ -2541,6 +2651,17 @@ class ObservabilityService:
         if event is None or event.payload.get(field_name) in {None, ""}:
             return None
         return str(event.payload[field_name])
+
+    @staticmethod
+    def _payload_bool(
+        event: InternalEventEnvelope | None,
+        field_name: str,
+        default: bool,
+    ) -> bool:
+        if event is None:
+            return default
+        value = event.payload.get(field_name)
+        return value if isinstance(value, bool) else default
 
     @staticmethod
     def _dedupe_payload_list(

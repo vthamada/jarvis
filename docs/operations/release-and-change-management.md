@@ -32,6 +32,24 @@ contains:
 promotion permit. Any blocker retains the candidate in review or sandbox, and
 actual promotion still requires a separate release gate and human decision.
 
+## MB-167 Promotion Gate Enforcement
+
+Starting with `MB-167`, the checklist is evaluated into a
+`PromotionGateDecisionContract`. The evaluator:
+
+- derives human review, evidence, tests and rollback gates from checklist data;
+- accepts only the external `standard_engineering_gate` and
+  `release_gate_before_promotion` completion signals;
+- adds every missing gate and checklist defect to explicit blockers;
+- emits the observable `promotion_gate_evaluated` payload;
+- returns `promotion_blocked` whenever any blocker remains.
+
+A passed gate returns `eligible_for_human_promotion_decision` and
+`release_gate_passed_pending_human_decision`. It always keeps
+`promotion_authorized=false`, `automatic_promotion_allowed=false` and
+`core_mutation_allowed=false`. Human authorization remains a separate release
+decision outside this gate evaluator.
+
 ## 1. Objetivo
 
 Este documento operacionaliza a política de **releases, versionamento e mudança controlada** do JARVIS.

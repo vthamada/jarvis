@@ -1006,6 +1006,28 @@ class SandboxToReleaseChecklistContract:
 
 
 @dataclass
+class PromotionGateDecisionContract:
+    promotion_gate_id: str
+    checklist_id: str
+    evolution_proposal_id: EvolutionProposalId
+    release_scope: str
+    gate_status: str
+    decision: str
+    release_conclusion: str
+    required_gates: list[str]
+    completed_gates: list[str]
+    missing_gates: list[str]
+    evidence_refs: list[str]
+    blockers: list[str]
+    human_review_status: str
+    promotion_eligible: bool
+    human_decision_required: bool = True
+    promotion_authorized: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass
 class EvolutionProposalContract:
     evolution_proposal_id: EvolutionProposalId
     proposal_type: str

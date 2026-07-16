@@ -831,6 +831,36 @@ SANDBOX_TO_RELEASE_CHECKLIST_SCHEMA = CanonicalSchema(
     ),
 )
 
+PROMOTION_GATE_DECISION_SCHEMA = CanonicalSchema(
+    name="PromotionGateDecisionSchema",
+    contract_name="PromotionGateDecisionContract",
+    required_fields=(
+        "promotion_gate_id",
+        "checklist_id",
+        "evolution_proposal_id",
+        "release_scope",
+        "gate_status",
+        "decision",
+        "release_conclusion",
+        "required_gates",
+        "completed_gates",
+        "missing_gates",
+        "evidence_refs",
+        "blockers",
+        "human_review_status",
+        "promotion_eligible",
+    ),
+    optional_fields=(
+        "human_decision_required",
+        "promotion_authorized",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Executable promotion gate decision; never a human promotion authorization.",
+    ),
+)
+
 EVOLUTION_PROPOSAL_SCHEMA = CanonicalSchema(
     name="EvolutionProposalSchema",
     contract_name="EvolutionProposalContract",

@@ -440,6 +440,82 @@ def test_observability_service_audits_evolution_review_decision() -> None:
     assert "core_mutation_blocked" in audit.evolution_review_limits
 
 
+def test_observability_service_audits_promotion_gate_decision() -> None:
+    temp_dir = runtime_dir("observability-promotion-gate")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service.ingest_events(
+        [
+            InternalEventEnvelope(
+                event_id="evt-promotion-gate-1",
+                event_name="promotion_gate_evaluated",
+                timestamp="2026-07-16T00:00:00+00:00",
+                source_service="evolution-lab",
+                payload={
+                    "promotion_gate_id": "promotion-gate://proposal-123",
+                    "promotion_gate_checklist_id": (
+                        "sandbox-release-checklist://proposal-123"
+                    ),
+                    "evolution_proposal_id": "proposal-123",
+                    "promotion_gate_release_scope": "workflow:software_change",
+                    "promotion_gate_status": "blocked",
+                    "promotion_gate_decision": "promotion_blocked",
+                    "promotion_gate_release_conclusion": (
+                        "promotion_blocked_by_release_gate"
+                    ),
+                    "promotion_gate_required_gates": [
+                        "human_review",
+                        "standard_engineering_gate",
+                        "release_gate_before_promotion",
+                    ],
+                    "promotion_gate_completed_gates": [
+                        "human_review",
+                        "standard_engineering_gate",
+                    ],
+                    "promotion_gate_missing_gates": [
+                        "release_gate_before_promotion"
+                    ],
+                    "promotion_gate_evidence_refs": ["evidence://eval/123"],
+                    "promotion_gate_blockers": [
+                        "gate_not_completed:release_gate_before_promotion"
+                    ],
+                    "promotion_gate_human_review_status": "approved",
+                    "promotion_gate_promotion_eligible": False,
+                    "promotion_gate_human_decision_required": True,
+                    "promotion_gate_promotion_authorized": False,
+                    "automatic_promotion_allowed": False,
+                    "core_mutation_allowed": False,
+                },
+                request_id="req-promotion-gate",
+                session_id="sess-promotion-gate",
+                mission_id="mission-promotion-gate",
+                correlation_id="req-promotion-gate",
+            )
+        ]
+    )
+
+    audit = service.audit_flow(ObservabilityQuery(request_id="req-promotion-gate"))
+
+    assert audit.promotion_gate_status == "blocked"
+    assert audit.promotion_gate_decision == "promotion_blocked"
+    assert audit.promotion_gate_id == "promotion-gate://proposal-123"
+    assert audit.promotion_gate_checklist_id == (
+        "sandbox-release-checklist://proposal-123"
+    )
+    assert audit.promotion_gate_release_scope == "workflow:software_change"
+    assert audit.promotion_gate_release_conclusion == (
+        "promotion_blocked_by_release_gate"
+    )
+    assert audit.promotion_gate_missing_gates == ["release_gate_before_promotion"]
+    assert audit.promotion_gate_evidence_refs == ["evidence://eval/123"]
+    assert audit.promotion_gate_blockers == [
+        "gate_not_completed:release_gate_before_promotion"
+    ]
+    assert audit.promotion_gate_human_review_status == "approved"
+    assert audit.promotion_gate_promotion_eligible is False
+    assert audit.promotion_gate_human_decision_required is True
+    assert audit.promotion_gate_promotion_authorized is False
+
+
 def test_observability_service_audits_surface_continuity_signals() -> None:
     temp_dir = runtime_dir("observability-surface")
     service = ObservabilityService(database_path=str(temp_dir / "observability.db"))

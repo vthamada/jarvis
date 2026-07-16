@@ -11,6 +11,7 @@ from shared.contracts import (
     PostTaskReflectionContract,
     ProceduralPlaybookCandidateContract,
     ProjectObjectiveContinuityContract,
+    PromotionGateDecisionContract,
     ReviewedLearningGuidanceContract,
     SandboxToReleaseChecklistContract,
     SurfaceIdentityContract,
@@ -30,6 +31,7 @@ from shared.schemas import (
     POST_TASK_REFLECTION_SCHEMA,
     PROCEDURAL_PLAYBOOK_CANDIDATE_SCHEMA,
     PROJECT_OBJECTIVE_CONTINUITY_SCHEMA,
+    PROMOTION_GATE_DECISION_SCHEMA,
     REVIEWED_LEARNING_GUIDANCE_SCHEMA,
     SANDBOX_TO_RELEASE_CHECKLIST_SCHEMA,
     SURFACE_IDENTITY_SCHEMA,
@@ -143,6 +145,7 @@ def test_internal_event_names_include_governance_blocked() -> None:
     assert "post_task_reflection_declared" in INTERNAL_EVENT_NAMES
     assert "evolution_review_decision_declared" in INTERNAL_EVENT_NAMES
     assert "reviewed_learning_guidance_declared" in INTERNAL_EVENT_NAMES
+    assert "promotion_gate_evaluated" in INTERNAL_EVENT_NAMES
 
 
 def test_work_item_state_contract_is_shared_schema() -> None:
@@ -292,6 +295,35 @@ def test_sandbox_to_release_checklist_contract_is_not_promotion_permit() -> None
         "SandboxToReleaseChecklistContract"
     )
     assert "required_gates" in SANDBOX_TO_RELEASE_CHECKLIST_SCHEMA.required_fields
+
+
+def test_promotion_gate_decision_is_not_human_promotion_authorization() -> None:
+    decision = PromotionGateDecisionContract(
+        promotion_gate_id="promotion-gate://proposal-1",
+        checklist_id="sandbox-release-checklist://proposal-1",
+        evolution_proposal_id="proposal-1",
+        release_scope="workflow:software_change_workflow",
+        gate_status="passed",
+        decision="eligible_for_human_promotion_decision",
+        release_conclusion="release_gate_passed_pending_human_decision",
+        required_gates=["human_review", "release_gate_before_promotion"],
+        completed_gates=["human_review", "release_gate_before_promotion"],
+        missing_gates=[],
+        evidence_refs=["evidence://proposal-1"],
+        blockers=[],
+        human_review_status="approved",
+        promotion_eligible=True,
+    )
+
+    assert decision.promotion_eligible is True
+    assert decision.human_decision_required is True
+    assert decision.promotion_authorized is False
+    assert decision.automatic_promotion_allowed is False
+    assert decision.core_mutation_allowed is False
+    assert PROMOTION_GATE_DECISION_SCHEMA.contract_name == (
+        "PromotionGateDecisionContract"
+    )
+    assert "release_conclusion" in PROMOTION_GATE_DECISION_SCHEMA.required_fields
 
 
 def test_procedural_playbook_candidate_contract_is_bounded_schema() -> None:

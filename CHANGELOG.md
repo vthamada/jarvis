@@ -8,6 +8,12 @@
 - `evolution-lab` cria o checklist a partir de proposta/revisao, rejeita revisao pertencente a outra proposta e nunca habilita autopromocao ou mutacao do Core;
 - `docs/operations/release-and-change-management.md` registra que `ready_for_release_review` nao e permissao de promocao; `execution-backlog.md` fechou `MB-166` e abriu `MB-167` como unico item tecnico `ready`.
 
+### MB-167 aplica enforcement observavel do promotion gate
+
+- `PromotionGateDecisionContract`, schema e evento `promotion_gate_evaluated` formalizam status, decisao, conclusao de release, gates completos/ausentes, evidencias e blockers;
+- `evolution-lab` deriva gates intrinsecos dos dados reais do checklist, aceita somente gates externos conhecidos e bloqueia checklist incompleto ou tentativa de autopromocao/core mutation;
+- `observability-service` audita a decisao e `verify_release_signal_baseline.py` valida cenarios pass/block; gate aprovado permanece pendente de decisao humana, e `execution-backlog.md` abriu `MB-168` como unico item tecnico `ready`.
+
 ## 2026-07-04
 
 ### MB-161 fecha anchors de evidencia de memoria semantica
