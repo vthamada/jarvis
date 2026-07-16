@@ -31,6 +31,7 @@ from apps.jarvis_console.cli import (
     run_experience_reflections_command,
     run_goal_strategy_command,
     run_mission_cycle_command,
+    run_mission_feedback_command,
     run_mission_workflow_command,
     run_objective_command,
     run_objectives_command,
@@ -713,6 +714,69 @@ def test_console_mission_workflow_runs_governed_loop_end_to_end() -> None:
     assert "review_status=needs_review" in outputs[0]
     assert "operator_learning_loop=read_only" in outputs[0]
     assert "next_operator_step=review_evolution_proposal" in outputs[0]
+
+
+def test_console_mission_feedback_records_learning_and_review_proposal() -> None:
+    temp_dir = runtime_dir("console-mission-feedback")
+    evolution_db = temp_dir / "evolution.db"
+    console = JarvisConsole.build(runtime_dir=temp_dir)
+    mission_id = "mission-console-feedback"
+    response = console.ask(
+        "Plan the controlled release.",
+        session_id="sess-console-feedback",
+        mission_id=mission_id,
+    )
+    assert response.experience_record is not None
+    args = build_parser().parse_args(
+        [
+            "mission-feedback",
+            "--mission-id",
+            mission_id,
+            "--session-id",
+            "sess-console-feedback",
+            "--experience-id",
+            response.experience_record.experience_id,
+            "--assessment",
+            "correction",
+            "--rating",
+            "2",
+            "--comment",
+            "The answer omitted release evidence.",
+            "--correction",
+            "Require verified evidence before recommending release.",
+            "--next-expectation",
+            "Show evidence and rollback references.",
+            "--evidence-ref",
+            "evidence://console-feedback/release",
+            "--evolution-db",
+            str(evolution_db),
+        ]
+    )
+
+    outputs = run_mission_feedback_command(console, args)
+    stored = console.orchestrator.memory_service.get_experience_reflection(
+        response.experience_record.experience_id
+    )
+    review_items = EvolutionLabService(
+        database_path=str(evolution_db)
+    ).list_human_review_queue(limit=5)
+
+    assert "operator_feedback_status=recorded" in outputs[0]
+    assert "governance_decision=allow_with_conditions" in outputs[0]
+    assert "assessment=correction" in outputs[0]
+    assert "feedback_memory_status=recorded_bounded" in outputs[0]
+    assert "evolution_proposal_id=evo-proposal-" in outputs[0]
+    assert "evolution_review_status=needs_review" in outputs[0]
+    assert "memory_write_mode=through_core_only" in outputs[0]
+    assert "automatic_promotion=False" in outputs[0]
+    assert "core_mutation_allowed=False" in outputs[0]
+    assert stored is not None
+    assert "assessment=correction" in stored.experience.user_feedback
+    assert stored.reflection is not None
+    assert review_items[0].proposal_type == "operator_feedback_improvement"
+    assert review_items[0].review_status == "needs_review"
+    assert review_items[0].requires_human_review is True
+    assert review_items[0].requires_sandbox is True
 
 
 def test_console_experience_reflections_shows_recent_records() -> None:

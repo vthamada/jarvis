@@ -6,6 +6,7 @@ from memory_service.service import MemoryService
 
 from shared.contracts import (
     ExperienceRecordContract,
+    OperatorFeedbackContract,
     PostTaskReflectionContract,
     ReviewedLearningGuidanceContract,
 )
@@ -85,6 +86,70 @@ def test_memory_service_persists_bounded_experience_reflection() -> None:
     assert records[0].reflection.recommendation == (
         "promote a bounded checklist only after tests"
     )
+
+
+def test_memory_service_attaches_operator_feedback_to_experience_and_reflection() -> None:
+    temp_dir = runtime_dir("memory-operator-feedback")
+    service = MemoryService(
+        database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+    )
+    service.record_experience_reflection(
+        experience=ExperienceRecordContract(
+            experience_id="experience://mission-feedback/001",
+            mission_id=MissionId("mission-feedback"),
+            workflow_profile="software_change_workflow",
+            outcome_status="completed",
+            evidence_refs=["trace://mission-feedback"],
+            timestamp="2026-07-16T00:00:00+00:00",
+        ),
+        reflection=PostTaskReflectionContract(
+            reflection_id="reflection://mission-feedback/001",
+            experience_id="experience://mission-feedback/001",
+            reflection_status="candidate",
+            learning_candidate="Use release evidence consistently.",
+            recommendation="Keep the change in sandbox until reviewed.",
+            evidence_refs=["trace://mission-feedback"],
+            timestamp="2026-07-16T00:00:01+00:00",
+        ),
+    )
+
+    result = service.record_operator_feedback(
+        OperatorFeedbackContract(
+            feedback_id="operator-feedback://mission-feedback/001",
+            mission_id=MissionId("mission-feedback"),
+            experience_id="experience://mission-feedback/001",
+            assessment="correction",
+            operator_ref="operator://local_console",
+            rating=2,
+            comment="The answer omitted the release evidence.",
+            correction="Require verified release evidence before recommendation.",
+            next_expectation="Show the evidence reference in the next answer.",
+            evidence_refs=["evidence://mission-feedback/release"],
+            timestamp="2026-07-16T00:00:02+00:00",
+        )
+    )
+    reloaded = service.get_experience_reflection(
+        "experience://mission-feedback/001"
+    )
+
+    assert result.feedback.feedback_status == "recorded_bounded"
+    assert reloaded is not None
+    assert "assessment=correction" in reloaded.experience.user_feedback
+    assert "operator-feedback://mission-feedback/001" in (
+        reloaded.experience.signal_refs
+    )
+    assert "evidence://mission-feedback/release" in (
+        reloaded.experience.evidence_refs
+    )
+    assert reloaded.reflection is not None
+    assert "operator-feedback://mission-feedback/001" in (
+        reloaded.reflection.evidence_refs
+    )
+    assert "evaluate_decision_against_explicit_operator_feedback" in (
+        reloaded.reflection.proposed_tests
+    )
+    assert reloaded.experience.automatic_promotion_allowed is False
+    assert reloaded.reflection.core_mutation_allowed is False
 
 
 def test_memory_service_persists_experience_before_reflection() -> None:

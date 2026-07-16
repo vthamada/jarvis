@@ -40,6 +40,75 @@ def test_orchestrator_service_name() -> None:
     assert OrchestratorService.name == "orchestrator-service"
 
 
+def test_orchestrator_records_operator_feedback_through_governed_memory() -> None:
+    temp_dir = runtime_dir("orchestrator-operator-feedback")
+    service = OrchestratorService(
+        memory_service=MemoryService(
+            database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+        ),
+        operational_service=OperationalService(
+            artifact_dir=str(temp_dir / "artifacts")
+        ),
+        observability_service=ObservabilityService(
+            database_path=str(temp_dir / "observability.db")
+        ),
+    )
+    mission_id = "mission-orchestrator-feedback"
+    mission_response = service.handle_input(
+        InputContract(
+            request_id=RequestId("req-orchestrator-feedback-mission"),
+            session_id=SessionId("sess-orchestrator-feedback"),
+            mission_id=MissionId(mission_id),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Plan a governed release with explicit evidence.",
+            timestamp="2026-07-16T00:00:00+00:00",
+        )
+    )
+    assert mission_response.experience_record is not None
+
+    result = service.record_operator_feedback(
+        mission_id=mission_id,
+        session_id="sess-orchestrator-feedback",
+        experience_id=mission_response.experience_record.experience_id,
+        assessment="correction",
+        rating=2,
+        comment="The response did not expose the release evidence.",
+        correction="Expose verified evidence before recommending release.",
+        next_expectation="Show evidence and rollback references.",
+        evidence_refs=["evidence://orchestrator-feedback/release"],
+        operator_identity_ref="operator://local_console",
+        canonical_user_ref="user://local_operator",
+    )
+
+    assert result.status == "recorded"
+    assert result.feedback is not None
+    assert result.feedback.assessment == "correction"
+    assert result.experience_record is not None
+    assert "assessment=correction" in result.experience_record.user_feedback
+    assert result.post_task_reflection is not None
+    assert result.feedback.feedback_id in result.post_task_reflection.evidence_refs
+    assert result.governance_decision.decision == (
+        PermissionDecision.ALLOW_WITH_CONDITIONS
+    )
+    feedback_event = next(
+        event for event in result.events if event.event_name == "operator_feedback_recorded"
+    )
+    assert feedback_event.payload["operator_feedback_status"] == "recorded_bounded"
+    assert feedback_event.payload["operator_feedback_automatic_promotion_allowed"] is False
+    stored = service.memory_service.get_experience_reflection(result.experience_id)
+    assert stored is not None
+    assert result.feedback.feedback_id in stored.experience.signal_refs
+    audit = service.observability_service.audit_flow(
+        ObservabilityQuery(request_id=feedback_event.request_id)
+    )
+    assert audit.operator_feedback_status == "recorded_bounded"
+    assert audit.operator_feedback_assessment == "correction"
+    assert audit.operator_feedback_rating == 2
+    assert audit.operator_feedback_automatic_promotion_allowed is False
+    assert audit.operator_feedback_core_mutation_allowed is False
+
+
 def test_orchestrator_declares_and_propagates_autonomy_ladder() -> None:
     temp_dir = runtime_dir("orchestrator-autonomy-ladder")
     service = OrchestratorService(

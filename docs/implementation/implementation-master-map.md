@@ -88,7 +88,7 @@ Goal: make JARVIS useful to a human operator in daily work.
 | `OP-004` | Manage tasks/work items as first-class operator objects | `minimum_baseline` | Create/update/close work items through governance | Objective continuity | expand after artifact lifecycle |
 | `OP-005` | Manage artifacts as living outputs | `minimum_baseline` | Artifact registry, versions, owner, status | Operational service, memory | expand after metrics |
 | `OP-006` | Daily operator dashboard | `implemented_baseline` | Validate usefulness and evolve from operator evidence | Console, memory, observability | none |
-| `OP-007` | Operator feedback after mission | `minimum_baseline` | Structured feedback loop that improves future decisions | Experience/reflection | candidate |
+| `OP-007` | Operator feedback after mission | `implemented_baseline` | Validate usefulness through real operator feedback | Experience/reflection | none |
 | `OP-008` | Human-readable progress report | `implemented_baseline` | Validate report usefulness with operator evidence | Synthesis, memory | none |
 | `OP-009` | Multi-session daily continuity | `partial_runtime` | Resume work across days with active/open loops | Memory, mission state | candidate |
 | `OP-010` | Human approval center | `implemented_baseline` | Keep decisions read-only until explicit action command | Evolution review, governance | none |
@@ -269,13 +269,12 @@ Goal: keep planning clear without turning documentation into bureaucracy.
 The next functional phase should focus on making the system useful to an
 operator, not on adding speculative technology.
 
-Highest-value gaps after `MB-169`:
+Highest-value gaps after `MB-170`:
 
-1. `OP-007` explicit operator feedback connected to bounded learning.
-2. `SPC-006` governed domain onboarding protocol.
-3. Domain-specific eval packs for the initial knowledge domains.
-4. Knowledge provenance and freshness signals in retrieval/synthesis.
-5. Integrated readiness validation for the complete post-`MB-160` slice.
+1. `SPC-006` governed domain onboarding protocol.
+2. Domain-specific eval packs for the initial knowledge domains.
+3. Knowledge provenance and freshness signals in retrieval/synthesis.
+4. Integrated readiness validation for the complete post-`MB-160` slice.
 
 ## 7. Dependency Map
 
@@ -294,11 +293,10 @@ These are already present and should be preserved:
 
 Recommended chain for the next few implementation slices:
 
-1. `MB-170` explicit operator feedback loop.
-2. `MB-171` governed domain onboarding protocol.
-3. `MB-172` domain eval packs.
-4. `MB-173` knowledge provenance/freshness.
-5. `MB-174` integrated readiness closure.
+1. `MB-171` governed domain onboarding protocol.
+2. `MB-172` domain eval packs.
+3. `MB-173` knowledge provenance/freshness.
+4. `MB-174` integrated readiness closure.
 
 Why this order:
 
@@ -512,7 +510,7 @@ Map IDs: `OP-007`, `MEM-003`, `EVL-002`, `OBS-009`.
 Goal: capture explicit operator feedback after missions and feed it into
 bounded experience/reflection records.
 
-Status: ready after `MB-169`.
+Status: closed in `MB-170`; next execution item is `MB-171`.
 
 ### MB-171 -- Domain Onboarding Protocol
 
@@ -520,6 +518,8 @@ Map IDs: `SPC-006`, `KNW-007`, `OBS-006`.
 
 Goal: define the minimum protocol to promote a new domain: registry entry,
 knowledge pack, route, specialist, tests and evals.
+
+Status: ready after `MB-170`.
 
 ### MB-172 -- Domain-Specific Eval Pack Baseline
 

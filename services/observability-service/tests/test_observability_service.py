@@ -516,6 +516,54 @@ def test_observability_service_audits_promotion_gate_decision() -> None:
     assert audit.promotion_gate_promotion_authorized is False
 
 
+def test_observability_service_audits_operator_feedback() -> None:
+    temp_dir = runtime_dir("observability-operator-feedback")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service.ingest_events(
+        [
+            InternalEventEnvelope(
+                event_id="evt-operator-feedback-1",
+                event_name="operator_feedback_recorded",
+                timestamp="2026-07-16T00:00:00+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "operator_feedback_status": "recorded_bounded",
+                    "operator_feedback_id": "operator-feedback://mission-123/001",
+                    "operator_feedback_experience_id": "experience://mission-123/001",
+                    "operator_feedback_assessment": "not_helpful",
+                    "operator_feedback_rating": 2,
+                    "operator_feedback_evidence_refs": [
+                        "evidence://mission-123/operator"
+                    ],
+                    "operator_feedback_evolution_review_status": "needs_review",
+                    "operator_feedback_human_review_required": True,
+                    "operator_feedback_automatic_promotion_allowed": False,
+                    "operator_feedback_core_mutation_allowed": False,
+                },
+                request_id="req-operator-feedback",
+                session_id="sess-operator-feedback",
+                mission_id="mission-123",
+                correlation_id="req-operator-feedback",
+            )
+        ]
+    )
+
+    audit = service.audit_flow(ObservabilityQuery(request_id="req-operator-feedback"))
+
+    assert audit.operator_feedback_status == "recorded_bounded"
+    assert audit.operator_feedback_id == "operator-feedback://mission-123/001"
+    assert audit.operator_feedback_experience_id == "experience://mission-123/001"
+    assert audit.operator_feedback_assessment == "not_helpful"
+    assert audit.operator_feedback_rating == 2
+    assert audit.operator_feedback_evidence_refs == [
+        "evidence://mission-123/operator"
+    ]
+    assert audit.operator_feedback_evolution_review_status == "needs_review"
+    assert audit.operator_feedback_human_review_required is True
+    assert audit.operator_feedback_automatic_promotion_allowed is False
+    assert audit.operator_feedback_core_mutation_allowed is False
+
+
 def test_observability_service_audits_mission_progress_report() -> None:
     temp_dir = runtime_dir("observability-mission-progress")
     service = ObservabilityService(database_path=str(temp_dir / "observability.db"))

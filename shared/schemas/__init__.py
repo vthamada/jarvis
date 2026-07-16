@@ -280,6 +280,36 @@ POST_TASK_REFLECTION_SCHEMA = CanonicalSchema(
     ),
 )
 
+OPERATOR_FEEDBACK_SCHEMA = CanonicalSchema(
+    name="OperatorFeedbackSchema",
+    contract_name="OperatorFeedbackContract",
+    required_fields=(
+        "feedback_id",
+        "mission_id",
+        "experience_id",
+        "assessment",
+        "operator_ref",
+        "timestamp",
+    ),
+    optional_fields=(
+        "rating",
+        "comment",
+        "correction",
+        "next_expectation",
+        "evidence_refs",
+        "feedback_status",
+        "evolution_review_status",
+        "memory_write_mode",
+        "human_review_required",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Explicit bounded operator feedback enriches experience and reflection; "
+        "it never authorizes promotion or core mutation.",
+    ),
+)
+
 PROCEDURAL_PLAYBOOK_CANDIDATE_SCHEMA = CanonicalSchema(
     name="ProceduralPlaybookCandidateSchema",
     contract_name="ProceduralPlaybookCandidateContract",

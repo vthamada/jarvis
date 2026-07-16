@@ -36,6 +36,7 @@ from shared.contracts import (
     MissionStateContract,
     OperationDispatchContract,
     OperationResultContract,
+    OperatorFeedbackContract,
     PostTaskReflectionContract,
     ProceduralPlaybookCandidateContract,
     ReviewedLearningGuidanceContract,
@@ -139,6 +140,12 @@ class ProjectObjectiveContinuityState:
     next_action_ref: str | None = None
 
 
+@dataclass(frozen=True)
+class OperatorFeedbackMemoryResult:
+    feedback: OperatorFeedbackContract
+    record: StoredExperienceReflection
+
+
 class MemoryService:
     """Handles contextual continuity with persistent episodic and mission memory."""
 
@@ -229,6 +236,119 @@ class MemoryService:
             mission_id=mission_id,
             workflow_profile=workflow_profile,
             limit=max(1, limit),
+        )
+
+    def get_experience_reflection(
+        self,
+        experience_id: str,
+    ) -> StoredExperienceReflection | None:
+        """Return one canonical experience/reflection pair."""
+
+        return self.repository.fetch_experience_reflection(experience_id)
+
+    def record_operator_feedback(
+        self,
+        feedback: OperatorFeedbackContract,
+    ) -> OperatorFeedbackMemoryResult:
+        """Attach explicit bounded operator feedback to canonical learning memory."""
+
+        record = self.get_experience_reflection(feedback.experience_id)
+        if record is None:
+            raise ValueError("operator feedback requires an existing experience")
+        if str(record.experience.mission_id) != str(feedback.mission_id):
+            raise ValueError("operator feedback mission does not match experience")
+        if record.reflection is None:
+            raise ValueError("operator feedback requires an existing reflection")
+        if feedback.assessment not in {
+            "helpful",
+            "partially_helpful",
+            "not_helpful",
+            "correction",
+        }:
+            raise ValueError("unsupported operator feedback assessment")
+        if feedback.rating is not None and (
+            isinstance(feedback.rating, bool)
+            or feedback.rating < 1
+            or feedback.rating > 5
+        ):
+            raise ValueError("operator feedback rating must be between 1 and 5")
+        if feedback.assessment == "correction" and not feedback.correction:
+            raise ValueError("correction feedback requires correction text")
+        if not feedback.operator_ref or len(feedback.operator_ref) > 160:
+            raise ValueError("operator feedback requires a bounded operator_ref")
+        if len(feedback.evidence_refs) > 20 or any(
+            not item or len(item) > 200 for item in feedback.evidence_refs
+        ):
+            raise ValueError("operator feedback evidence_refs must be bounded")
+        if feedback.automatic_promotion_allowed or feedback.core_mutation_allowed:
+            raise ValueError("operator feedback cannot authorize autonomous mutation")
+        if feedback.memory_write_mode != "through_core_only":
+            raise ValueError("operator feedback must write through the sovereign core")
+
+        safe_feedback = replace(
+            feedback,
+            comment=self._bounded_operator_feedback_text(feedback.comment, 1000),
+            correction=self._bounded_operator_feedback_text(feedback.correction, 1000),
+            next_expectation=self._bounded_operator_feedback_text(
+                feedback.next_expectation,
+                500,
+            ),
+            evidence_refs=self._merge_unique_strings(feedback.evidence_refs, []),
+            feedback_status="recorded_bounded",
+            evolution_review_status="needs_review",
+            memory_write_mode="through_core_only",
+            human_review_required=True,
+            automatic_promotion_allowed=False,
+            core_mutation_allowed=False,
+        )
+        feedback_summary = self._operator_feedback_summary(safe_feedback)
+        prior_feedback = record.experience.user_feedback or ""
+        combined_feedback = " | ".join(
+            item for item in (prior_feedback, feedback_summary) if item
+        )[-2000:]
+        feedback_signals = [
+            safe_feedback.feedback_id,
+            f"operator-feedback://assessment/{safe_feedback.assessment}",
+        ]
+        if safe_feedback.rating is not None:
+            feedback_signals.append(
+                f"operator-feedback://rating/{safe_feedback.rating}"
+            )
+        evidence_refs = self._merge_unique_strings(
+            record.experience.evidence_refs,
+            [safe_feedback.feedback_id],
+            safe_feedback.evidence_refs,
+        )
+        updated_experience = replace(
+            record.experience,
+            user_feedback=combined_feedback,
+            evidence_refs=evidence_refs,
+            signal_refs=self._merge_unique_strings(
+                record.experience.signal_refs,
+                feedback_signals,
+            ),
+            human_review_required=True,
+            automatic_promotion_allowed=False,
+            core_mutation_allowed=False,
+        )
+        updated_reflection = replace(
+            record.reflection,
+            evidence_refs=evidence_refs,
+            proposed_tests=self._merge_unique_strings(
+                record.reflection.proposed_tests,
+                ["evaluate_decision_against_explicit_operator_feedback"],
+            ),
+            human_review_required=True,
+            automatic_promotion_allowed=False,
+            core_mutation_allowed=False,
+        )
+        updated_record = self.record_experience_reflection(
+            experience=updated_experience,
+            reflection=updated_reflection,
+        )
+        return OperatorFeedbackMemoryResult(
+            feedback=safe_feedback,
+            record=updated_record,
         )
 
     def record_reviewed_learning_guidance(
@@ -3570,6 +3690,36 @@ class MemoryService:
                 if item and item not in merged:
                     merged.append(item)
         return merged
+
+    @staticmethod
+    def _bounded_operator_feedback_text(
+        value: str | None,
+        limit: int,
+    ) -> str | None:
+        if value is None:
+            return None
+        sanitized = "".join(
+            character if ord(character) >= 32 and ord(character) != 127 else " "
+            for character in str(value)
+        )
+        normalized = " ".join(sanitized.split()).strip()
+        return normalized[:limit] or None
+
+    @staticmethod
+    def _operator_feedback_summary(feedback: OperatorFeedbackContract) -> str:
+        values = [
+            f"feedback_id={feedback.feedback_id}",
+            f"assessment={feedback.assessment}",
+        ]
+        if feedback.rating is not None:
+            values.append(f"rating={feedback.rating}")
+        if feedback.comment:
+            values.append(f"comment={feedback.comment}")
+        if feedback.correction:
+            values.append(f"correction={feedback.correction}")
+        if feedback.next_expectation:
+            values.append(f"next_expectation={feedback.next_expectation}")
+        return "; ".join(values)
 
     @staticmethod
     def _long_horizon_strategy_status(

@@ -9,6 +9,7 @@ from shared.contracts import (
     InputContract,
     LongHorizonGoalStrategyContract,
     MissionProgressReportContract,
+    OperatorFeedbackContract,
     PostTaskReflectionContract,
     ProceduralPlaybookCandidateContract,
     ProjectObjectiveContinuityContract,
@@ -30,6 +31,7 @@ from shared.schemas import (
     INPUT_SCHEMA,
     LONG_HORIZON_GOAL_STRATEGY_SCHEMA,
     MISSION_PROGRESS_REPORT_SCHEMA,
+    OPERATOR_FEEDBACK_SCHEMA,
     POST_TASK_REFLECTION_SCHEMA,
     PROCEDURAL_PLAYBOOK_CANDIDATE_SCHEMA,
     PROJECT_OBJECTIVE_CONTINUITY_SCHEMA,
@@ -146,6 +148,7 @@ def test_internal_event_names_include_governance_blocked() -> None:
     assert "technology_absorption_candidate_declared" in INTERNAL_EVENT_NAMES
     assert "experience_record_declared" in INTERNAL_EVENT_NAMES
     assert "post_task_reflection_declared" in INTERNAL_EVENT_NAMES
+    assert "operator_feedback_recorded" in INTERNAL_EVENT_NAMES
     assert "evolution_review_decision_declared" in INTERNAL_EVENT_NAMES
     assert "reviewed_learning_guidance_declared" in INTERNAL_EVENT_NAMES
     assert "promotion_gate_evaluated" in INTERNAL_EVENT_NAMES
@@ -254,6 +257,29 @@ def test_experience_reflection_contracts_are_shared_schemas() -> None:
     assert "specialist_used" in EXPERIENCE_RECORD_SCHEMA.optional_fields
     assert POST_TASK_REFLECTION_SCHEMA.contract_name == "PostTaskReflectionContract"
     assert "reflection_influence_status" in DELIBERATIVE_PLAN_SCHEMA.optional_fields
+
+
+def test_operator_feedback_contract_is_bounded_and_human_reviewed() -> None:
+    feedback = OperatorFeedbackContract(
+        feedback_id="operator-feedback://mission-1/001",
+        mission_id="mission-1",
+        experience_id="experience://mission-1/001",
+        assessment="correction",
+        operator_ref="operator://local_console",
+        rating=2,
+        correction="Use the verified rollback evidence before recommending release.",
+        evidence_refs=["evidence://mission-1/rollback"],
+        timestamp="2026-07-16T00:00:00+00:00",
+    )
+
+    assert feedback.feedback_status == "recorded_bounded"
+    assert feedback.evolution_review_status == "needs_review"
+    assert feedback.memory_write_mode == "through_core_only"
+    assert feedback.human_review_required is True
+    assert feedback.automatic_promotion_allowed is False
+    assert feedback.core_mutation_allowed is False
+    assert OPERATOR_FEEDBACK_SCHEMA.contract_name == "OperatorFeedbackContract"
+    assert "assessment" in OPERATOR_FEEDBACK_SCHEMA.required_fields
 
 
 def test_deliberative_plan_schema_declares_semantic_memory_evidence_fields() -> None:

@@ -44,6 +44,7 @@ from shared.contracts import (
     MissionStateContract,
     OperationDispatchContract,
     OperationResultContract,
+    OperatorFeedbackContract,
     PostTaskReflectionContract,
     ProjectObjectiveContinuityContract,
     SpecialistInvocationContract,
@@ -187,6 +188,21 @@ class MissionProgressReportResult:
     mission_id: str
     status: str
     report: MissionProgressReportContract
+    events: list[InternalEventEnvelope] = field(default_factory=list)
+
+
+@dataclass
+class OperatorFeedbackResult:
+    """Outcome of a governed explicit operator feedback write."""
+
+    mission_id: str
+    experience_id: str
+    status: str
+    feedback: OperatorFeedbackContract | None
+    experience_record: ExperienceRecordContract | None
+    post_task_reflection: PostTaskReflectionContract | None
+    governance_check: GovernanceCheckContract
+    governance_decision: GovernanceDecisionContract
     events: list[InternalEventEnvelope] = field(default_factory=list)
 
 
@@ -924,6 +940,211 @@ class OrchestratorService:
             mission_id=mission_id,
             status=report.report_status,
             report=report,
+            events=events,
+        )
+
+    def record_operator_feedback(
+        self,
+        *,
+        mission_id: str,
+        session_id: str,
+        assessment: str,
+        rating: int | None = None,
+        comment: str | None = None,
+        correction: str | None = None,
+        next_expectation: str | None = None,
+        evidence_refs: list[str] | None = None,
+        experience_id: str | None = None,
+        operator_identity_ref: str | None = None,
+        canonical_user_ref: str | None = None,
+    ) -> OperatorFeedbackResult:
+        """Record explicit post-mission feedback through governance and memory."""
+
+        request_id = RequestId(f"req-feedback-{uuid4().hex[:8]}")
+        normalized_assessment = assessment.strip().lower().replace("-", "_")
+        current_record = (
+            self.memory_service.get_experience_reflection(experience_id)
+            if experience_id
+            else None
+        )
+        if current_record is None and experience_id is None:
+            records = self.memory_service.list_experience_reflections(
+                mission_id=mission_id,
+                limit=1,
+            )
+            current_record = records[0] if records else None
+        resolved_experience_id = (
+            current_record.experience.experience_id
+            if current_record is not None
+            else experience_id or f"experience://missing/{mission_id}"
+        )
+        operator_ref = operator_identity_ref or "operator://unknown"
+        feedback = OperatorFeedbackContract(
+            feedback_id=f"operator-feedback://{mission_id}/{uuid4().hex[:8]}",
+            mission_id=MissionId(mission_id),
+            experience_id=resolved_experience_id,
+            assessment=normalized_assessment,
+            operator_ref=operator_ref,
+            rating=rating,
+            comment=comment,
+            correction=correction,
+            next_expectation=next_expectation,
+            evidence_refs=list(evidence_refs or []),
+            timestamp=self.now(),
+            automatic_promotion_allowed=False,
+            core_mutation_allowed=False,
+        )
+        contract = InputContract(
+            request_id=request_id,
+            session_id=SessionId(session_id),
+            mission_id=MissionId(mission_id),
+            channel=ChannelType.CONSOLE,
+            input_type=InputType.STRUCTURED_PAYLOAD,
+            content=f"operator_feedback:{normalized_assessment}",
+            timestamp=self.now(),
+            metadata={
+                "feedback_id": feedback.feedback_id,
+                "experience_id": feedback.experience_id,
+                "assessment": feedback.assessment,
+                "rating": feedback.rating,
+                "memory_write_mode": feedback.memory_write_mode,
+                "automatic_promotion_allowed": False,
+                "core_mutation_allowed": False,
+            },
+            surface_id="surface://jarvis_console",
+            surface_kind="console",
+            surface_session_id=session_id,
+            surface_capability_scope=["operator_feedback_write"],
+            operator_identity_ref=operator_ref,
+            canonical_user_ref=canonical_user_ref,
+            surface_continuity_status="single_surface",
+        )
+        assessment_result = self.governance_service.assess_operator_feedback(
+            contract=contract,
+            feedback=feedback,
+            experience_mission_id=(
+                str(current_record.experience.mission_id)
+                if current_record is not None
+                else None
+            ),
+            reflection_available=(
+                current_record is not None and current_record.reflection is not None
+            ),
+            requested_by_service=self.name,
+        )
+        events = [
+            self.make_event(
+                "governance_checked",
+                contract,
+                {
+                    "governance_check_id": str(
+                        assessment_result.governance_check.governance_check_id
+                    ),
+                    "subject_type": "operator_feedback",
+                    "feedback_id": feedback.feedback_id,
+                    "experience_id": feedback.experience_id,
+                    "assessment": feedback.assessment,
+                    "decision": assessment_result.governance_decision.decision.value,
+                    "memory_write_mode": "through_core_only",
+                },
+            )
+        ]
+        if assessment_result.governance_decision.decision in {
+            PermissionDecision.BLOCK,
+            PermissionDecision.DEFER_FOR_VALIDATION,
+        }:
+            events.append(
+                self.make_event(
+                    "governance_blocked",
+                    contract,
+                    {
+                        "decision": (
+                            assessment_result.governance_decision.decision.value
+                        ),
+                        "reason": assessment_result.governance_decision.justification,
+                        "subject_type": "operator_feedback",
+                        "feedback_id": feedback.feedback_id,
+                        "experience_id": feedback.experience_id,
+                    },
+                )
+            )
+            self.observability_service.ingest_events(events)
+            return OperatorFeedbackResult(
+                mission_id=mission_id,
+                experience_id=feedback.experience_id,
+                status="blocked",
+                feedback=None,
+                experience_record=(
+                    current_record.experience if current_record is not None else None
+                ),
+                post_task_reflection=(
+                    current_record.reflection if current_record is not None else None
+                ),
+                governance_check=assessment_result.governance_check,
+                governance_decision=assessment_result.governance_decision,
+                events=events,
+            )
+
+        memory_result = self.memory_service.record_operator_feedback(feedback)
+        safe_feedback = memory_result.feedback
+        updated_record = memory_result.record
+        events.append(
+            self.make_event(
+                "operator_feedback_recorded",
+                contract,
+                {
+                    "operator_feedback_status": safe_feedback.feedback_status,
+                    "operator_feedback_id": safe_feedback.feedback_id,
+                    "operator_feedback_experience_id": safe_feedback.experience_id,
+                    "operator_feedback_assessment": safe_feedback.assessment,
+                    "operator_feedback_rating": safe_feedback.rating,
+                    "operator_feedback_evidence_refs": [
+                        safe_feedback.feedback_id,
+                        *safe_feedback.evidence_refs,
+                    ],
+                    "operator_feedback_evolution_review_status": (
+                        safe_feedback.evolution_review_status
+                    ),
+                    "operator_feedback_human_review_required": (
+                        safe_feedback.human_review_required
+                    ),
+                    "operator_feedback_automatic_promotion_allowed": False,
+                    "operator_feedback_core_mutation_allowed": False,
+                    "operator_feedback_has_comment": bool(safe_feedback.comment),
+                    "operator_feedback_has_correction": bool(
+                        safe_feedback.correction
+                    ),
+                    "operator_feedback_has_next_expectation": bool(
+                        safe_feedback.next_expectation
+                    ),
+                    "experience_reflection_status": (
+                        updated_record.reflection.reflection_status
+                        if updated_record.reflection is not None
+                        else "missing"
+                    ),
+                    "experience_reflection_refs": [
+                        updated_record.experience.experience_id,
+                        *(
+                            [updated_record.reflection.reflection_id]
+                            if updated_record.reflection is not None
+                            else []
+                        ),
+                        safe_feedback.feedback_id,
+                    ],
+                    "memory_write_mode": safe_feedback.memory_write_mode,
+                },
+            )
+        )
+        self.observability_service.ingest_events(events)
+        return OperatorFeedbackResult(
+            mission_id=mission_id,
+            experience_id=safe_feedback.experience_id,
+            status="recorded",
+            feedback=safe_feedback,
+            experience_record=updated_record.experience,
+            post_task_reflection=updated_record.reflection,
+            governance_check=assessment_result.governance_check,
+            governance_decision=assessment_result.governance_decision,
             events=events,
         )
 

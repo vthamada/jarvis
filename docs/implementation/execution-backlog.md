@@ -3226,7 +3226,7 @@ Fora de escopo:
 
 - `id`: `MB-170`
 - `prioridade`: `P1`
-- `status`: `ready`
+- `status`: `done`
 - `eixo_do_mestre`: `experiencia`, `feedback`, `evolucao`
 - `map_ids`: `OP-007`, `MEM-003`, `EVL-002`, `OBS-009`
 - `workflow_profile_afetado`: `operational_readiness_workflow`
@@ -3239,12 +3239,14 @@ Fora de escopo:
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `medium`
 - `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: `OperatorFeedbackContract`, schema e evento `operator_feedback_recorded` formalizam feedback explicito bounded; governanca valida experiencia/reflexao, rating, refs e limites; memoria canonica anexa resumo, evidencias e sinais; `evolution-lab` cria proposta `operator_feedback_improvement` sandbox-only; observabilidade audita o sinal e `jarvis-console mission-feedback` fecha o caminho humano sem autopromocao.
+- `evidencia_de_fechamento`: 181 testes focados passaram em shared, experience/reflection, governance, evolution, orchestrator, observability e console; `python tools/engineering_gate.py --mode standard` passou integralmente apos sincronizacao documental.
 
 ### MB-171
 
 - `id`: `MB-171`
 - `prioridade`: `P1`
-- `status`: `blocked`
+- `status`: `ready`
 - `eixo_do_mestre`: `dominios`, `especialistas`, `conhecimento`, `evals`
 - `map_ids`: `SPC-006`, `KNW-007`, `OBS-006`
 - `workflow_profile_afetado`: `governance_boundary_workflow`, `domain_onboarding_workflow`
@@ -3412,6 +3414,7 @@ Estado atual da fila:
 - `MB-167` foi concluido como enforcement runtime/tooling observavel do promotion gate, sem autorizacao autonoma de promocao;
 - `MB-168` foi concluido como cockpit textual consolidado e read-only para estado, limites e decisoes do operador;
 - `MB-169` foi concluido como relatorio humano compacto derivado do estado canonico, sem escrita ou execucao autonoma;
-- `MB-170` e o unico item tecnico `ready` atual, focado em feedback explicito do operador no ciclo bounded de aprendizado; `MB-171` a `MB-174` permanecem `blocked` por dependencia/ordem;
+- `MB-170` foi concluido como feedback explicito governado do operador, persistido em experiencia/reflexao e convertido em proposta sandbox sob revisao humana;
+- `MB-171` e o unico item tecnico `ready` atual, focado no protocolo governado de onboarding de dominios; `MB-172` a `MB-174` permanecem `blocked` por dependencia/ordem;
 - `SO-001`, `TA-004`, `TA-006` e verticais `deferred` continuam fora da fila sem mudanca explicita de fase;
 - `protective intelligence foundation` continua `deferred` e a matriz da Onda 2 segue como insumo, nao como gatilho automatico para abrir nova vertical.

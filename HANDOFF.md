@@ -2,6 +2,15 @@
 
 ## Atualizacao 2026-07-16
 
+`MB-170` foi concluido: `OperatorFeedbackContract`, schema e evento
+`operator_feedback_recorded` agora formalizam feedback explicito do operador
+apos uma missao. `governance-service` valida experiencia/reflexao, assessment,
+rating, refs e limites; `memory-service` anexa o sinal ao par canonico;
+`evolution-lab` cria proposta `operator_feedback_improvement` sandbox-only; e
+`mission-feedback` expoe o fluxo no console. Toda proposta permanece
+`needs_review`, com autopromocao e mutacao do Core bloqueadas. `MB-171` e o
+unico item tecnico `ready`.
+
 `MB-166` foi concluido: `SandboxToReleaseChecklistContract`, schema canonico e
 `evolution-lab` agora produzem um checklist sandbox-to-release com escopo,
 revisao humana, evidencias, testes, rollback, gates obrigatorios e blockers. O
@@ -33,7 +42,8 @@ leitura humana compacta de progresso, pendencias, riscos, artefatos, memoria
 influente, experiencia/reflexao, estrategia e proxima acao. O relatorio deriva
 do estado canonico, emite `mission_progress_report_generated` e preserva
 `memory_write_mode=read_only` e `autonomous_execution_allowed=false`.
-`MB-170` e o unico item tecnico `ready`.
+Esse estado foi sucedido pelo fechamento de `MB-170`; `MB-171` e o unico item
+tecnico `ready`.
 
 ## Atualizacao 2026-07-04
 
@@ -59,8 +69,9 @@ falha dispatch acima do limite sem gerar artefato; observabilidade e
 `operator-dashboard` mostram nivel efetivo, status do ladder, limite aplicado,
 confirmacao humana e acoes bloqueadas.
 
-`MB-166`, `MB-167`, `MB-168` e `MB-169` foram posteriormente concluidos na
-atualizacao de `2026-07-16`; `MB-170` passou a ser o unico item tecnico `ready`.
+`MB-166`, `MB-167`, `MB-168`, `MB-169` e `MB-170` foram posteriormente
+concluidos na atualizacao de `2026-07-16`; `MB-171` passou a ser o unico item
+tecnico `ready`.
 
 ## Atualizacao 2026-05-17
 
@@ -235,8 +246,9 @@ refs de artefato/reflexao, testes, rollback, revisao humana obrigatoria,
 `memory_write_mode=through_core_only`. `memory-service` persiste/lista esses
 candidatos, `evolution-lab` cria proposta sandbox-only a partir deles e o
 console possui `procedural-playbooks` read-only. `MB-163`, `MB-164`, `MB-165`,
-`MB-166`, `MB-167`, `MB-168` e `MB-169` tambem foram concluidos; `MB-170` e o
-unico item tecnico `ready`, focado em feedback explicito do operador.
+`MB-166`, `MB-167`, `MB-168`, `MB-169` e `MB-170` tambem foram concluidos;
+`MB-171` e o unico item tecnico `ready`, focado no protocolo governado de
+onboarding de dominios.
 
 O corte pos-`MB-125` foi repriorizado em `MB-126`: a proxima frente ativa e
 experiencia operacional + reflexao pos-tarefa governada. O objetivo e fazer o

@@ -4,6 +4,7 @@ from shared.contracts import (
     DeliberativePlanContract,
     InputContract,
     MissionStateContract,
+    OperatorFeedbackContract,
     SpecialistBoundaryContract,
     SpecialistInvocationContract,
     SpecialistSelectionContract,
@@ -572,3 +573,75 @@ def test_governance_service_blocks_specialist_handoff_with_invalid_boundary() ->
     )
     assert result.governance_decision.decision == PermissionDecision.BLOCK
     assert result.governance_decision.requires_rollback_plan is True
+
+
+def test_governance_service_allows_bounded_operator_feedback() -> None:
+    service = GovernanceService()
+    contract = InputContract(
+        request_id=RequestId("req-feedback-1"),
+        session_id=SessionId("sess-feedback-1"),
+        mission_id=MissionId("mission-feedback-1"),
+        channel=ChannelType.CONSOLE,
+        input_type=InputType.STRUCTURED_PAYLOAD,
+        content="operator_feedback:not_helpful",
+        timestamp="2026-07-16T00:00:00+00:00",
+        operator_identity_ref="operator://local_console",
+    )
+    feedback = OperatorFeedbackContract(
+        feedback_id="operator-feedback://mission-feedback-1/001",
+        mission_id=MissionId("mission-feedback-1"),
+        experience_id="experience://mission-feedback-1/001",
+        assessment="not_helpful",
+        operator_ref="operator://local_console",
+        rating=2,
+        comment="The recommendation omitted rollback evidence.",
+        timestamp="2026-07-16T00:00:01+00:00",
+    )
+
+    result = service.assess_operator_feedback(
+        contract=contract,
+        feedback=feedback,
+        experience_mission_id="mission-feedback-1",
+        reflection_available=True,
+        requested_by_service="orchestrator-service",
+    )
+
+    assert result.governance_decision.decision == (
+        PermissionDecision.ALLOW_WITH_CONDITIONS
+    )
+    assert result.governance_decision.requires_audit is True
+    assert "policy://operator-feedback/bounded-core-write" in (
+        result.governance_decision.policy_refs
+    )
+
+
+def test_governance_service_blocks_unbounded_operator_correction() -> None:
+    service = GovernanceService()
+    contract = InputContract(
+        request_id=RequestId("req-feedback-blocked"),
+        session_id=SessionId("sess-feedback-blocked"),
+        mission_id=MissionId("mission-feedback-blocked"),
+        channel=ChannelType.CONSOLE,
+        input_type=InputType.STRUCTURED_PAYLOAD,
+        content="operator_feedback:correction",
+        timestamp="2026-07-16T00:00:00+00:00",
+    )
+    feedback = OperatorFeedbackContract(
+        feedback_id="operator-feedback://mission-feedback-blocked/001",
+        mission_id=MissionId("mission-feedback-blocked"),
+        experience_id="experience://mission-feedback-blocked/001",
+        assessment="correction",
+        operator_ref="operator://local_console",
+        timestamp="2026-07-16T00:00:01+00:00",
+    )
+
+    result = service.assess_operator_feedback(
+        contract=contract,
+        feedback=feedback,
+        experience_mission_id="mission-feedback-blocked",
+        reflection_available=True,
+        requested_by_service="orchestrator-service",
+    )
+
+    assert result.governance_decision.decision == PermissionDecision.BLOCK
+    assert result.governance_decision.containment_hint == "block_missing_correction"

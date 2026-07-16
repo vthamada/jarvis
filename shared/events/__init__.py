@@ -22,6 +22,7 @@ INTERNAL_EVENT_NAMES = (
     "technology_absorption_candidate_declared",
     "experience_record_declared",
     "post_task_reflection_declared",
+    "operator_feedback_recorded",
     "evolution_review_decision_declared",
     "reviewed_learning_guidance_declared",
     "promotion_gate_evaluated",

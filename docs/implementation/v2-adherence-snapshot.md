@@ -31,7 +31,7 @@ Estado de referencia desta revisao:
 - data da fotografia: `2026-05-17`
 - ultimo recorte funcional fechado: `v2-native-memory-scope-hardening-cut`
 - ultimo recorte estrutural fechado: `v2-repository-hygiene-and-tools-review-cut`
-- passo funcional em andamento: lotes `MB-062` a `MB-150` concluidos ate leitura operacional e medicao de aprendizado revisado; `MB-151` foi fechado como auditoria documental governada oficial; `MB-152` foi fechado como mapa de backlinks e sincronizacao segura de docs ativos; `MB-153` foi fechado como archive fisico conservador de historico de implementacao; `MB-154` foi fechado como mapa mestre de implementacao; `MB-155` foi fechado como dashboard textual minimo do operador; `MB-156` foi fechado como ciclo governado minimo de work items; `MB-157` foi fechado como lifecycle minimo de artefatos vivos; `MB-158` foi fechado como metricas de utilidade operacional; `MB-159` foi fechado como raciocinio minimo de objetivos de horizonte longo; `MB-160` abriu a fila maior `MB-161` a `MB-174`; `MB-161` foi fechado como anchors de evidencia de memoria semantica; `MB-162` foi fechado como candidatos bounded de playbook procedural; `MB-163` foi fechado como auditoria de influencia de memoria; `MB-164` foi fechado como contrato runtime de autonomia; `MB-165` foi fechado como enforcement minimo do autonomy ladder; `MB-166` foi fechado como checklist sandbox-to-release; `MB-167` foi fechado como enforcement observavel do promotion gate; `MB-168` foi fechado como cockpit textual consolidado; `MB-169` foi fechado como relatorio humano de progresso; `MB-170` e o unico item tecnico `ready`.
+- passo funcional em andamento: lotes `MB-062` a `MB-150` concluidos ate leitura operacional e medicao de aprendizado revisado; `MB-151` foi fechado como auditoria documental governada oficial; `MB-152` foi fechado como mapa de backlinks e sincronizacao segura de docs ativos; `MB-153` foi fechado como archive fisico conservador de historico de implementacao; `MB-154` foi fechado como mapa mestre de implementacao; `MB-155` foi fechado como dashboard textual minimo do operador; `MB-156` foi fechado como ciclo governado minimo de work items; `MB-157` foi fechado como lifecycle minimo de artefatos vivos; `MB-158` foi fechado como metricas de utilidade operacional; `MB-159` foi fechado como raciocinio minimo de objetivos de horizonte longo; `MB-160` abriu a fila maior `MB-161` a `MB-174`; `MB-161` foi fechado como anchors de evidencia de memoria semantica; `MB-162` foi fechado como candidatos bounded de playbook procedural; `MB-163` foi fechado como auditoria de influencia de memoria; `MB-164` foi fechado como contrato runtime de autonomia; `MB-165` foi fechado como enforcement minimo do autonomy ladder; `MB-166` foi fechado como checklist sandbox-to-release; `MB-167` foi fechado como enforcement observavel do promotion gate; `MB-168` foi fechado como cockpit textual consolidado; `MB-169` foi fechado como relatorio humano de progresso; `MB-170` foi fechado como feedback explicito governado do operador; `MB-171` e o unico item tecnico `ready`.
 
 Leitura executiva:
 
@@ -155,8 +155,8 @@ Leitura executiva:
   `MB-161` a `MB-174` prioriza memoria causal, autonomia runtime, promocao
   governada, cockpit, feedback, dominios/evals, proveniencia e readiness;
   `MB-161`, `MB-162`, `MB-163`, `MB-164`, `MB-165`, `MB-166`, `MB-167`,
-  `MB-168` e `MB-169` foram fechados e `MB-170` e o unico item tecnico
-  `ready`.
+  `MB-168`, `MB-169` e `MB-170` foram fechados e `MB-171` e o unico item
+  tecnico `ready`.
 - `MB-161` adicionou anchors de evidencia para memoria semantica:
   `semantic_memory_anchor_refs`, `semantic_memory_evidence_refs`,
   `semantic_memory_use_reason` e `semantic_memory_non_use_reason` atravessam
@@ -187,6 +187,9 @@ Leitura executiva:
 - `MB-169` adicionou relatorio humano de progresso derivado de estado canonico,
   experiencia/reflexao, artefatos, memoria e estrategia, sintetizado pelo Core
   e observavel sem escrita de memoria ou execucao autonoma.
+- `MB-170` adicionou feedback explicito pos-missao: contrato, governanca,
+  memoria canonica, observabilidade, proposta sandbox no `evolution-lab` e
+  comando `mission-feedback` mantem toda influencia em revisao humana.
 - o contrato canonico da rota ativa passou a atravessar tambem o `planning` e a influenciar a `synthesis`, reduzindo a distancia entre memoria guiada disponivel e comportamento final do runtime.
 - esse contrato agora tambem molda passos, restricoes, criterios de sucesso e checkpoint/gate governado do plano, e ja aparece na leitura final como objetivo, entrega esperada, foco de leitura e workflow ativo da rota promovida.
 - esse mesmo slice soberano agora tambem atravessa `operation_dispatch`, `workflow_*` e `operation_completed`, e a observabilidade passou a marcar drift quando objetivo, entregaveis, foco de sucesso, foco final e telemetria deixam de bater entre composicao e execucao.

@@ -13,6 +13,7 @@ from shared.contracts import (
     GovernanceDecisionContract,
     InputContract,
     MissionStateContract,
+    OperatorFeedbackContract,
     SpecialistInvocationContract,
     SpecialistSelectionContract,
 )
@@ -604,6 +605,161 @@ class GovernanceService:
             "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:/._-"
         )
         return all(character in allowed for character in value)
+
+    def assess_operator_feedback(
+        self,
+        *,
+        contract: InputContract,
+        feedback: OperatorFeedbackContract,
+        experience_mission_id: str | None,
+        reflection_available: bool,
+        requested_by_service: str,
+    ) -> GovernanceAssessment:
+        """Govern an explicit bounded post-mission operator feedback write."""
+
+        governance_check = GovernanceCheckContract(
+            governance_check_id=GovernanceCheckId(f"gov-check-{uuid4().hex[:8]}"),
+            subject_type="operator_feedback",
+            subject_action="record",
+            scope="mission",
+            context={
+                "mission_id": str(contract.mission_id) if contract.mission_id else None,
+                "experience_id": feedback.experience_id,
+                "experience_mission_id": experience_mission_id,
+                "reflection_available": reflection_available,
+                "assessment": feedback.assessment,
+                "rating": feedback.rating,
+                "comment_length": len(feedback.comment or ""),
+                "correction_length": len(feedback.correction or ""),
+                "next_expectation_length": len(feedback.next_expectation or ""),
+                "evidence_ref_count": len(feedback.evidence_refs),
+                "memory_write_mode": feedback.memory_write_mode,
+                "operator_identity_ref": contract.operator_identity_ref,
+                "canonical_user_ref": contract.canonical_user_ref,
+                "automatic_promotion_allowed": feedback.automatic_promotion_allowed,
+                "core_mutation_allowed": feedback.core_mutation_allowed,
+            },
+            sensitivity="normal",
+            reversibility="high",
+            mission_id=contract.mission_id,
+            session_id=contract.session_id,
+            proposed_effect="append_bounded_operator_feedback",
+            risk_hint=RiskLevel.LOW,
+            requested_by_service=requested_by_service,
+            requires_human_validation=False,
+            decision_frame="operator_feedback_write",
+            mission_continuity_hint="post_mission_operator_learning",
+        )
+        decision = PermissionDecision.ALLOW_WITH_CONDITIONS
+        justification = (
+            "Feedback explicito bounded permitido via nucleo e memoria canonica."
+        )
+        conditions = [
+            "Persistir o feedback somente via experiencia/reflexao canonica.",
+            "Enviar qualquer proposta evolutiva para revisao humana.",
+            "Nao autorizar promocao automatica ou mutacao do nucleo.",
+        ]
+        containment_hint = None
+        policy_refs = ["policy://operator-feedback/bounded-core-write"]
+
+        if experience_mission_id is None:
+            decision = PermissionDecision.BLOCK
+            justification = "Feedback exige experiencia canonica existente."
+            containment_hint = "block_missing_experience"
+            policy_refs = ["policy://operator-feedback/missing-experience"]
+        elif str(contract.mission_id) != experience_mission_id:
+            decision = PermissionDecision.BLOCK
+            justification = "Experiencia nao pertence a missao informada."
+            containment_hint = "block_experience_mission_mismatch"
+            policy_refs = ["policy://operator-feedback/mission-mismatch"]
+        elif not reflection_available:
+            decision = PermissionDecision.BLOCK
+            justification = "Feedback pos-missao exige reflexao canonica existente."
+            containment_hint = "block_missing_reflection"
+            policy_refs = ["policy://operator-feedback/missing-reflection"]
+        elif feedback.assessment not in {
+            "helpful",
+            "partially_helpful",
+            "not_helpful",
+            "correction",
+        }:
+            decision = PermissionDecision.BLOCK
+            justification = "Assessment de feedback nao suportado."
+            containment_hint = "block_unsupported_assessment"
+            policy_refs = ["policy://operator-feedback/unsupported-assessment"]
+        elif feedback.rating is not None and (
+            isinstance(feedback.rating, bool)
+            or feedback.rating < 1
+            or feedback.rating > 5
+        ):
+            decision = PermissionDecision.BLOCK
+            justification = "Rating deve estar entre 1 e 5."
+            containment_hint = "block_invalid_rating"
+            policy_refs = ["policy://operator-feedback/invalid-rating"]
+        elif feedback.assessment == "correction" and not feedback.correction:
+            decision = PermissionDecision.BLOCK
+            justification = "Feedback corretivo exige texto de correcao."
+            containment_hint = "block_missing_correction"
+            policy_refs = ["policy://operator-feedback/missing-correction"]
+        elif any(
+            len(value or "") > limit
+            for value, limit in (
+                (feedback.comment, 1000),
+                (feedback.correction, 1000),
+                (feedback.next_expectation, 500),
+            )
+        ):
+            decision = PermissionDecision.BLOCK
+            justification = "Conteudo de feedback excede os limites bounded."
+            containment_hint = "block_unbounded_feedback_content"
+            policy_refs = ["policy://operator-feedback/unbounded-content"]
+        elif not all(
+            self._is_bounded_reference(value)
+            for value in (
+                feedback.feedback_id,
+                feedback.experience_id,
+                feedback.operator_ref,
+            )
+        ):
+            decision = PermissionDecision.BLOCK
+            justification = "Referencias de feedback fora do formato bounded."
+            containment_hint = "block_unbounded_feedback_reference"
+            policy_refs = ["policy://operator-feedback/unbounded-reference"]
+        elif len(feedback.evidence_refs) > 20 or any(
+            not self._is_bounded_reference(value) for value in feedback.evidence_refs
+        ):
+            decision = PermissionDecision.BLOCK
+            justification = "Evidence refs de feedback fora do formato bounded."
+            containment_hint = "block_unbounded_feedback_evidence"
+            policy_refs = ["policy://operator-feedback/unbounded-evidence"]
+        elif feedback.memory_write_mode != "through_core_only":
+            decision = PermissionDecision.BLOCK
+            justification = "Feedback deve ser persistido somente pelo nucleo."
+            containment_hint = "block_feedback_memory_bypass"
+            policy_refs = ["policy://operator-feedback/core-write-required"]
+        elif feedback.automatic_promotion_allowed or feedback.core_mutation_allowed:
+            decision = PermissionDecision.BLOCK
+            justification = "Feedback nao pode autorizar promocao ou mutacao autonoma."
+            containment_hint = "block_autonomous_feedback_mutation"
+            policy_refs = ["policy://operator-feedback/no-autonomous-mutation"]
+
+        governance_decision = GovernanceDecisionContract(
+            decision_id=GovernanceDecisionId(f"gov-decision-{uuid4().hex[:8]}"),
+            governance_check_id=governance_check.governance_check_id,
+            risk_level=RiskLevel.LOW,
+            decision=decision,
+            justification=justification,
+            timestamp=self.now(),
+            conditions=conditions,
+            requires_audit=True,
+            requires_rollback_plan=False,
+            containment_hint=containment_hint,
+            policy_refs=policy_refs,
+        )
+        return GovernanceAssessment(
+            governance_check=governance_check,
+            governance_decision=governance_decision,
+        )
 
     def assess_specialist_handoff(
         self,

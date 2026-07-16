@@ -22,6 +22,7 @@ from orchestrator_service.service import (
     LongHorizonGoalStrategyResult,
     MissionProgressReportResult,
     ObjectiveTransitionResult,
+    OperatorFeedbackResult,
     OrchestratorResponse,
     OrchestratorService,
     WorkItemTransitionResult,
@@ -196,6 +197,36 @@ class JarvisConsole:
         return self.orchestrator.inspect_mission_progress_report(
             mission_id=mission_id,
             session_id=session_id,
+            operator_identity_ref=operator_identity_ref
+            or DEFAULT_OPERATOR_IDENTITY_REF,
+            canonical_user_ref=canonical_user_ref or DEFAULT_CANONICAL_USER_REF,
+        )
+
+    def record_mission_feedback(
+        self,
+        *,
+        mission_id: str,
+        session_id: str,
+        assessment: str,
+        rating: int | None = None,
+        comment: str | None = None,
+        correction: str | None = None,
+        next_expectation: str | None = None,
+        evidence_refs: list[str] | None = None,
+        experience_id: str | None = None,
+        operator_identity_ref: str | None = None,
+        canonical_user_ref: str | None = None,
+    ) -> OperatorFeedbackResult:
+        return self.orchestrator.record_operator_feedback(
+            mission_id=mission_id,
+            session_id=session_id,
+            assessment=assessment,
+            rating=rating,
+            comment=comment,
+            correction=correction,
+            next_expectation=next_expectation,
+            evidence_refs=list(evidence_refs or []),
+            experience_id=experience_id,
             operator_identity_ref=operator_identity_ref
             or DEFAULT_OPERATOR_IDENTITY_REF,
             canonical_user_ref=canonical_user_ref or DEFAULT_CANONICAL_USER_REF,
@@ -418,6 +449,30 @@ def build_parser() -> ArgumentParser:
     mission_workflow_parser.add_argument("--evolution-db")
     mission_workflow_parser.add_argument("--operator-identity-ref")
     mission_workflow_parser.add_argument("--canonical-user-ref")
+
+    mission_feedback_parser = subparsers.add_parser(
+        "mission-feedback",
+        help="Record explicit bounded operator feedback after a mission.",
+    )
+    mission_feedback_parser.add_argument("--mission-id", required=True)
+    mission_feedback_parser.add_argument(
+        "--session-id",
+        default="console-mission-feedback",
+    )
+    mission_feedback_parser.add_argument("--experience-id")
+    mission_feedback_parser.add_argument(
+        "--assessment",
+        required=True,
+        choices=["helpful", "partially-helpful", "not-helpful", "correction"],
+    )
+    mission_feedback_parser.add_argument("--rating", type=int)
+    mission_feedback_parser.add_argument("--comment")
+    mission_feedback_parser.add_argument("--correction")
+    mission_feedback_parser.add_argument("--next-expectation")
+    mission_feedback_parser.add_argument("--evidence-ref", action="append", default=[])
+    mission_feedback_parser.add_argument("--evolution-db")
+    mission_feedback_parser.add_argument("--operator-identity-ref")
+    mission_feedback_parser.add_argument("--canonical-user-ref")
 
     return parser
 
@@ -1402,6 +1457,47 @@ def render_mission_workflow_report(
     )
 
 
+def render_operator_feedback_result(
+    result: OperatorFeedbackResult,
+    *,
+    proposal: object | None,
+) -> str:
+    feedback = result.feedback
+    experience = result.experience_record
+    reflection = result.post_task_reflection
+    return "\n".join(
+        [
+            f"operator_feedback_status={safe_console_value(result.status)}",
+            f"mission_id={safe_console_value(result.mission_id)}",
+            f"experience_id={safe_console_value(result.experience_id)}",
+            "governance_decision="
+            f"{safe_console_value(result.governance_decision.decision.value)}",
+            "governance_justification="
+            f"{safe_console_value(result.governance_decision.justification)}",
+            f"feedback_id={safe_console_value(getattr(feedback, 'feedback_id', None))}",
+            f"assessment={safe_console_value(getattr(feedback, 'assessment', None))}",
+            f"rating={safe_console_value(getattr(feedback, 'rating', None))}",
+            "feedback_memory_status="
+            f"{safe_console_value(getattr(feedback, 'feedback_status', None))}",
+            "experience_feedback="
+            f"{safe_console_value(getattr(experience, 'user_feedback', None))}",
+            "reflection_id="
+            f"{safe_console_value(getattr(reflection, 'reflection_id', None))}",
+            "reflection_status="
+            f"{safe_console_value(getattr(reflection, 'reflection_status', None))}",
+            "feedback_evidence_refs="
+            f"{safe_console_list(list(getattr(feedback, 'evidence_refs', [])))}",
+            "reflection_evidence_refs="
+            f"{safe_console_list(list(getattr(reflection, 'evidence_refs', [])))}",
+            "evolution_proposal_id="
+            f"{safe_console_value(getattr(proposal, 'evolution_proposal_id', None))}",
+            "evolution_review_status="
+            + ("needs_review" if proposal is not None else "not_created"),
+            "memory_write_mode=through_core_only",
+            "automatic_promotion=False",
+            "core_mutation_allowed=False",
+        ]
+    )
 def run_ask_command(console: JarvisConsole, args: Namespace) -> list[str]:
     response = console.ask(
         args.prompt,
@@ -1682,6 +1778,39 @@ def run_mission_workflow_command(console: JarvisConsole, args: Namespace) -> lis
     ]
 
 
+def run_mission_feedback_command(
+    console: JarvisConsole,
+    args: Namespace,
+) -> list[str]:
+    result = console.record_mission_feedback(
+        mission_id=args.mission_id,
+        session_id=args.session_id,
+        assessment=args.assessment,
+        rating=args.rating,
+        comment=args.comment,
+        correction=args.correction,
+        next_expectation=args.next_expectation,
+        evidence_refs=list(args.evidence_ref),
+        experience_id=args.experience_id,
+        operator_identity_ref=args.operator_identity_ref,
+        canonical_user_ref=args.canonical_user_ref,
+    )
+    proposal = None
+    if (
+        result.feedback is not None
+        and result.experience_record is not None
+        and result.post_task_reflection is not None
+    ):
+        proposal = _evolution_service_from_args(
+            args
+        ).create_proposal_from_operator_feedback(
+            result.feedback,
+            experience=result.experience_record,
+            reflection=result.post_task_reflection,
+        )
+    return [render_operator_feedback_result(result, proposal=proposal)]
+
+
 def _create_review_proposal_from_response(
     evolution_service: EvolutionLabService,
     response: OrchestratorResponse,
@@ -1749,6 +1878,8 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "progress-report"
         else run_mission_workflow_command(console, args)
         if args.command == "mission-workflow"
+        else run_mission_feedback_command(console, args)
+        if args.command == "mission-feedback"
         else run_technology_candidates_command(args)
         if args.command == "technology-candidates"
         else run_work_item_command(console, args)
@@ -1785,6 +1916,7 @@ def main(argv: list[str] | None = None) -> int:
         "operator-dashboard",
         "progress-report",
         "mission-workflow",
+        "mission-feedback",
     }:
         print(outputs[0])
     elif args.message:

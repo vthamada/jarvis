@@ -12,6 +12,9 @@ from evolution_lab.service import (
 )
 
 from shared.contracts import (
+    ExperienceRecordContract,
+    OperatorFeedbackContract,
+    PostTaskReflectionContract,
     ProceduralPlaybookCandidateContract,
     SandboxToReleaseChecklistContract,
 )
@@ -214,6 +217,66 @@ def test_evolution_lab_creates_sandbox_proposal_from_post_task_reflection() -> N
     assert review_items[0].requires_sandbox is True
     assert review_items[0].rollback_plan_ref == "rollback://workflow/current"
     assert "experience://mission-reflection/001" in review_items[0].candidate_refs
+
+
+def test_evolution_lab_creates_review_only_proposal_from_operator_feedback() -> None:
+    temp_dir = runtime_dir("evolution-lab-operator-feedback")
+    service = EvolutionLabService(database_path=str(temp_dir / "evolution.db"))
+    experience = ExperienceRecordContract(
+        experience_id="experience://mission-feedback/001",
+        mission_id="mission-feedback",
+        workflow_profile="software_change_workflow",
+        outcome_status="completed",
+        route="software_development",
+        primary_domain_driver="engenharia_de_software",
+        evidence_refs=["trace://mission-feedback"],
+        timestamp="2026-07-16T00:00:00+00:00",
+    )
+    reflection = PostTaskReflectionContract(
+        reflection_id="reflection://mission-feedback/001",
+        experience_id=experience.experience_id,
+        reflection_status="candidate",
+        learning_candidate="Use explicit release evidence.",
+        recommendation="Keep the candidate sandboxed for review.",
+        evidence_refs=["trace://mission-feedback"],
+        rollback_plan_ref="rollback://mission-feedback/current",
+        timestamp="2026-07-16T00:00:01+00:00",
+    )
+    feedback = OperatorFeedbackContract(
+        feedback_id="operator-feedback://mission-feedback/001",
+        mission_id="mission-feedback",
+        experience_id=experience.experience_id,
+        assessment="correction",
+        operator_ref="operator://local_console",
+        rating=2,
+        correction="Require verified release evidence.",
+        next_expectation="Cite the evidence before the next recommendation.",
+        evidence_refs=["evidence://mission-feedback/release"],
+        timestamp="2026-07-16T00:00:02+00:00",
+    )
+
+    proposal = service.create_proposal_from_operator_feedback(
+        feedback,
+        experience=experience,
+        reflection=reflection,
+    )
+    review_item = service.list_human_review_queue(limit=1)[0]
+
+    assert proposal.proposal_type == "operator_feedback_improvement"
+    assert proposal.requires_sandbox is True
+    assert proposal.strategy_context["evolution_review"]["review_status"] == (
+        "needs_review"
+    )
+    assert proposal.strategy_context["promotion_policy"]["automatic_promotion"] is False
+    assert proposal.strategy_context["promotion_policy"]["core_mutation_allowed"] is False
+    assert proposal.evaluation_matrix["operator_feedback"]["assessment"] == (
+        "correction"
+    )
+    assert feedback.feedback_id in proposal.candidate_refs
+    assert review_item.review_status == "needs_review"
+    assert review_item.requires_human_review is True
+    assert review_item.requires_sandbox is True
+    assert "no_automatic_promotion" in proposal.promotion_constraints
 
 
 def test_evolution_lab_blocks_reflection_that_requests_autopromotion() -> None:

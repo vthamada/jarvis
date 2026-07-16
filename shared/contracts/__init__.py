@@ -154,6 +154,27 @@ class PostTaskReflectionContract:
 
 
 @dataclass
+class OperatorFeedbackContract:
+    feedback_id: str
+    mission_id: MissionId
+    experience_id: str
+    assessment: str
+    operator_ref: str
+    timestamp: Timestamp
+    rating: int | None = None
+    comment: str | None = None
+    correction: str | None = None
+    next_expectation: str | None = None
+    evidence_refs: list[str] = field(default_factory=list)
+    feedback_status: str = "recorded_bounded"
+    evolution_review_status: str = "needs_review"
+    memory_write_mode: str = "through_core_only"
+    human_review_required: bool = True
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass
 class ProceduralPlaybookCandidateContract:
     playbook_candidate_id: str
     procedure_name: str

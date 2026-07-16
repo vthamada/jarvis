@@ -226,6 +226,16 @@ class FlowAudit:
     experience_reflection_blockers: list[str] = field(default_factory=list)
     experience_reflection_refs: list[str] = field(default_factory=list)
     experience_reflection_signals: list[str] = field(default_factory=list)
+    operator_feedback_status: str = "not_applicable"
+    operator_feedback_id: str | None = None
+    operator_feedback_experience_id: str | None = None
+    operator_feedback_assessment: str = "not_applicable"
+    operator_feedback_rating: int | None = None
+    operator_feedback_evidence_refs: list[str] = field(default_factory=list)
+    operator_feedback_evolution_review_status: str = "not_applicable"
+    operator_feedback_human_review_required: bool = True
+    operator_feedback_automatic_promotion_allowed: bool = False
+    operator_feedback_core_mutation_allowed: bool = False
     reflection_influence_status: str = "not_applicable"
     reflection_influence_refs: list[str] = field(default_factory=list)
     reflection_influence_summary: str | None = None
@@ -326,6 +336,8 @@ class FlowAudit:
             and self.technology_absorption_decision
             not in {"block_absorption", "attention_required"}
             and self.experience_reflection_status not in {"blocked", "attention_required"}
+            and self.operator_feedback_status
+            in {"not_applicable", "recorded_bounded"}
             and self.evolution_review_decision_status
             in {
                 "not_applicable",
@@ -2031,6 +2043,56 @@ class ObservabilityService:
             blockers=experience_reflection_blockers,
             refs=experience_reflection_refs,
         )
+        operator_feedback_event = self._first_payload_event(
+            events,
+            "operator_feedback_status",
+        )
+        operator_feedback_status = self._payload_str(
+            operator_feedback_event,
+            "operator_feedback_status",
+            "not_applicable",
+        )
+        operator_feedback_id = self._payload_optional_str(
+            operator_feedback_event,
+            "operator_feedback_id",
+        )
+        operator_feedback_experience_id = self._payload_optional_str(
+            operator_feedback_event,
+            "operator_feedback_experience_id",
+        )
+        operator_feedback_assessment = self._payload_str(
+            operator_feedback_event,
+            "operator_feedback_assessment",
+            "not_applicable",
+        )
+        operator_feedback_rating = self._payload_optional_int(
+            operator_feedback_event,
+            "operator_feedback_rating",
+        )
+        operator_feedback_evidence_refs = self._dedupe_payload_list(
+            events,
+            "operator_feedback_evidence_refs",
+        )
+        operator_feedback_evolution_review_status = self._payload_str(
+            operator_feedback_event,
+            "operator_feedback_evolution_review_status",
+            "not_applicable",
+        )
+        operator_feedback_human_review_required = self._payload_bool(
+            operator_feedback_event,
+            "operator_feedback_human_review_required",
+            True,
+        )
+        operator_feedback_automatic_promotion_allowed = self._payload_bool(
+            operator_feedback_event,
+            "operator_feedback_automatic_promotion_allowed",
+            False,
+        )
+        operator_feedback_core_mutation_allowed = self._payload_bool(
+            operator_feedback_event,
+            "operator_feedback_core_mutation_allowed",
+            False,
+        )
         reflection_influence_event = self._first_payload_event(
             events,
             "reflection_influence_status",
@@ -2439,6 +2501,24 @@ class ObservabilityService:
             experience_reflection_blockers=experience_reflection_blockers,
             experience_reflection_refs=experience_reflection_refs,
             experience_reflection_signals=experience_reflection_signals,
+            operator_feedback_status=operator_feedback_status,
+            operator_feedback_id=operator_feedback_id,
+            operator_feedback_experience_id=operator_feedback_experience_id,
+            operator_feedback_assessment=operator_feedback_assessment,
+            operator_feedback_rating=operator_feedback_rating,
+            operator_feedback_evidence_refs=operator_feedback_evidence_refs,
+            operator_feedback_evolution_review_status=(
+                operator_feedback_evolution_review_status
+            ),
+            operator_feedback_human_review_required=(
+                operator_feedback_human_review_required
+            ),
+            operator_feedback_automatic_promotion_allowed=(
+                operator_feedback_automatic_promotion_allowed
+            ),
+            operator_feedback_core_mutation_allowed=(
+                operator_feedback_core_mutation_allowed
+            ),
             reflection_influence_status=reflection_influence_status,
             reflection_influence_refs=reflection_influence_refs,
             reflection_influence_summary=reflection_influence_summary,
@@ -2716,6 +2796,16 @@ class ObservabilityService:
         if event is None or event.payload.get(field_name) in {None, ""}:
             return None
         return str(event.payload[field_name])
+
+    @staticmethod
+    def _payload_optional_int(
+        event: InternalEventEnvelope | None,
+        field_name: str,
+    ) -> int | None:
+        if event is None:
+            return None
+        value = event.payload.get(field_name)
+        return value if isinstance(value, int) and not isinstance(value, bool) else None
 
     @staticmethod
     def _payload_bool(

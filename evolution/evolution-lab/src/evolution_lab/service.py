@@ -16,6 +16,7 @@ from shared.contracts import (
     EvolutionReviewDecisionContract,
     EvolutionReviewQueueItemContract,
     ExperienceRecordContract,
+    OperatorFeedbackContract,
     PostTaskReflectionContract,
     ProceduralPlaybookCandidateContract,
     PromotionGateDecisionContract,
@@ -1012,6 +1013,122 @@ class EvolutionLabService:
                 "blocked_by_safety" if reflection.blockers else "sandbox_only"
             ),
             optimization_blockers=list(reflection.blockers),
+        )
+
+    def create_proposal_from_operator_feedback(
+        self,
+        feedback: OperatorFeedbackContract,
+        *,
+        experience: ExperienceRecordContract,
+        reflection: PostTaskReflectionContract,
+        target_scope: str | None = None,
+        strategy_name: str | None = None,
+    ) -> EvolutionProposalContract:
+        """Create a human-review-only proposal from explicit operator feedback."""
+
+        if feedback.experience_id != experience.experience_id:
+            raise ValueError("operator feedback does not match experience")
+        if reflection.experience_id != experience.experience_id:
+            raise ValueError("reflection does not match operator feedback experience")
+        if str(feedback.mission_id) != str(experience.mission_id):
+            raise ValueError("operator feedback does not match experience mission")
+        if feedback.automatic_promotion_allowed or feedback.core_mutation_allowed:
+            raise ValueError("operator feedback cannot authorize autonomous mutation")
+        if feedback.feedback_status != "recorded_bounded":
+            raise ValueError("operator feedback must be recorded before proposal creation")
+
+        blockers = self._unique_values(list(reflection.blockers))
+        source_signals = self._unique_values(
+            [
+                feedback.feedback_id,
+                f"operator-feedback://assessment/{feedback.assessment}",
+                *(
+                    [f"operator-feedback://rating/{feedback.rating}"]
+                    if feedback.rating is not None
+                    else []
+                ),
+                *feedback.evidence_refs,
+                experience.experience_id,
+                reflection.reflection_id,
+            ]
+        )
+        expected_gain = (
+            feedback.next_expectation
+            or feedback.correction
+            or feedback.comment
+            or "align future governed decisions with explicit operator assessment"
+        )
+        hypothesis = (
+            "Explicit operator feedback can improve the bounded workflow without "
+            "changing the sovereign core autonomously."
+        )
+        proposed_tests = self._unique_values(
+            [
+                *reflection.proposed_tests,
+                "compare_future_decision_with_operator_feedback_baseline",
+            ]
+        )
+        return self.create_proposal(
+            proposal_type="operator_feedback_improvement",
+            target_scope=target_scope or f"workflow:{experience.workflow_profile}",
+            hypothesis=hypothesis,
+            expected_gain=expected_gain,
+            baseline_refs=[
+                "baseline://sovereign-core/current",
+                experience.experience_id,
+                reflection.reflection_id,
+            ],
+            source_signals=source_signals,
+            risk_hint=reflection.risk_hint or "low",
+            proposed_tests=proposed_tests,
+            strategy_name=strategy_name,
+            candidate_refs=[
+                feedback.feedback_id,
+                experience.experience_id,
+                reflection.reflection_id,
+            ],
+            evaluation_matrix={
+                "operator_feedback": {
+                    "feedback_status": feedback.feedback_status,
+                    "assessment": feedback.assessment,
+                    "rating": feedback.rating,
+                    "workflow_profile": experience.workflow_profile,
+                    "route": experience.route,
+                    "domain": experience.primary_domain_driver,
+                    "manual_review_required": True,
+                    "automatic_promotion_allowed": False,
+                }
+            },
+            strategy_context={
+                "operator_feedback": {
+                    "feedback_id": feedback.feedback_id,
+                    "experience_id": feedback.experience_id,
+                    "mission_id": str(feedback.mission_id),
+                    "assessment": feedback.assessment,
+                    "rating": feedback.rating,
+                    "comment": feedback.comment,
+                    "correction": feedback.correction,
+                    "next_expectation": feedback.next_expectation,
+                    "operator_ref": feedback.operator_ref,
+                    "evidence_refs": list(feedback.evidence_refs),
+                    "feedback_status": feedback.feedback_status,
+                },
+                "promotion_policy": {
+                    "automatic_promotion": False,
+                    "core_mutation_allowed": False,
+                    "manual_review_required": True,
+                },
+                "evolution_review": self._review_context(
+                    status="needs_review",
+                    blockers=blockers,
+                    rollback_plan_ref=reflection.rollback_plan_ref,
+                ),
+            },
+            optimization_candidate_status="blocked" if blockers else "candidate",
+            optimization_safety_status=(
+                "blocked_by_safety" if blockers else "sandbox_only"
+            ),
+            optimization_blockers=blockers,
         )
 
     def create_proposal_from_procedural_playbook_candidate(

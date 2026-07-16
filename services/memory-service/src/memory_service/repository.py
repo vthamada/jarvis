@@ -299,6 +299,13 @@ class MemoryRepository(ABC):
         """Load recent bounded experience/reflection pairs."""
         raise NotImplementedError
 
+    def fetch_experience_reflection(
+        self,
+        experience_id: str,
+    ) -> StoredExperienceReflection | None:
+        """Load one bounded experience/reflection pair by canonical id."""
+        raise NotImplementedError
+
     def record_reviewed_learning_guidance(
         self,
         record: StoredReviewedLearningGuidance,
@@ -1034,6 +1041,21 @@ class SqliteMemoryRepository(MemoryRepository):
                 tuple(params),
             ).fetchall()
         return [self._row_to_experience_reflection(row) for row in rows]
+
+    def fetch_experience_reflection(
+        self,
+        experience_id: str,
+    ) -> StoredExperienceReflection | None:
+        with self._connect() as connection:
+            row = connection.execute(
+                """
+                SELECT *
+                FROM experience_reflections
+                WHERE experience_id = ?
+                """,
+                (experience_id,),
+            ).fetchone()
+        return self._row_to_experience_reflection(row) if row is not None else None
 
     def record_reviewed_learning_guidance(
         self,
@@ -3093,6 +3115,22 @@ class PostgresMemoryRepository(MemoryRepository):
             )
             rows = cursor.fetchall()
         return [self._row_to_experience_reflection(row) for row in rows]
+
+    def fetch_experience_reflection(
+        self,
+        experience_id: str,
+    ) -> StoredExperienceReflection | None:
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT *
+                FROM experience_reflections
+                WHERE experience_id = %s
+                """,
+                (experience_id,),
+            )
+            row = cursor.fetchone()
+        return self._row_to_experience_reflection(row) if row is not None else None
 
     def record_reviewed_learning_guidance(
         self,

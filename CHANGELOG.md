@@ -26,6 +26,12 @@
 - `synthesis-engine` compoe a leitura humana, `orchestrator-service` reune fontes canonicas e emite `mission_progress_report_generated`, e observabilidade audita o resultado;
 - `jarvis-console progress-report` mostra resumo tecnico e texto humano sem escrever memoria ou executar acao; `execution-backlog.md` abriu `MB-170` como unico item tecnico `ready`.
 
+### MB-170 conecta feedback explicito ao aprendizado governado
+
+- `OperatorFeedbackContract`, schema e evento `operator_feedback_recorded` definem assessment, rating, comentario, correcao, expectativa e evidencias bounded, sempre via Core;
+- governanca bloqueia experiencia/reflexao ausente, mismatch de missao, refs/conteudo invalidos e qualquer claim de autopromocao; memoria persiste o sinal em experiencia/reflexao e observabilidade o torna auditavel;
+- `evolution-lab` cria proposta `operator_feedback_improvement` sandbox-only e `jarvis-console mission-feedback` mostra feedback, memoria, reflexao e proposta em `needs_review`; `execution-backlog.md` abriu `MB-171` como unico item tecnico `ready`.
+
 ## 2026-07-04
 
 ### MB-161 fecha anchors de evidencia de memoria semantica
