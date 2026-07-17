@@ -8,8 +8,13 @@ from hashlib import sha256
 from pathlib import Path
 from uuid import uuid4
 
+from shared.artifact_policy import (
+    canonical_artifact_states_from_mission,
+    order_artifact_states,
+)
 from shared.autonomy_ladder import capability_mode_exceeds_autonomy_limit
 from shared.contracts import (
+    ArtifactRegistryContract,
     ArtifactResultContract,
     DailyOperatorWorkspaceContract,
     DailyWorkspaceMissionContract,
@@ -34,6 +39,45 @@ class OperationalService:
     """Execute low-risk tasks and persist text artifacts."""
 
     name = "operational-service"
+
+    @classmethod
+    def build_artifact_registry(
+        cls,
+        mission_state: MissionStateContract,
+    ) -> ArtifactRegistryContract:
+        """Project canonical artifact lineage without mutating files or mission state."""
+
+        artifact_states = order_artifact_states(
+            canonical_artifact_states_from_mission(mission_state)
+        )
+        refs_by_status = {
+            status: [
+                item.artifact_ref
+                for item in artifact_states
+                if item.artifact_status == status
+            ]
+            for status in ("active", "archived", "superseded", "rolled_back")
+        }
+        registry_status = (
+            "empty"
+            if not artifact_states
+            else "active"
+            if refs_by_status["active"]
+            else "historical"
+        )
+        return ArtifactRegistryContract(
+            mission_id=mission_state.mission_id,
+            registry_status=registry_status,
+            artifact_states=artifact_states,
+            active_artifact_refs=refs_by_status["active"],
+            archived_artifact_refs=refs_by_status["archived"],
+            superseded_artifact_refs=refs_by_status["superseded"],
+            rolled_back_artifact_refs=refs_by_status["rolled_back"],
+            evidence_refs=[
+                f"mission-state://{mission_state.mission_id}@{mission_state.updated_at}",
+                *mission_state.checkpoint_refs,
+            ],
+        )
 
     def __init__(self, artifact_dir: str | None = None) -> None:
         resolved_dir = (

@@ -304,6 +304,7 @@ def test_console_goal_strategy_shows_read_only_long_horizon_state() -> None:
         transition="register",
         session_id="sess-console-goal-strategy",
         artifact_version=1,
+        work_item_ref=work_item_ref,
     )
     args = build_parser().parse_args(
         [
@@ -939,6 +940,7 @@ def test_console_progress_report_synthesizes_canonical_mission_state() -> None:
         transition="register",
         session_id="sess-console-progress-report",
         artifact_version=1,
+        work_item_ref=f"work-item://{mission_id}/review-release",
     )
     args = build_parser().parse_args(
         [
@@ -1319,6 +1321,12 @@ def test_console_artifact_lifecycle_updates_state_through_governed_core() -> Non
         session_id="sess-console-artifact-cycle",
         mission_id=mission_id,
     )
+    console.transition_work_item(
+        mission_id=mission_id,
+        work_item_ref="work-item://mission-console-artifact-cycle/validate-plan",
+        transition="create",
+        session_id="sess-console-artifact-cycle",
+    )
     parser = build_parser()
     register_args = parser.parse_args(
         [
@@ -1371,10 +1379,13 @@ def test_console_artifact_lifecycle_updates_state_through_governed_core() -> Non
     assert "artifact_version=1" in registered[0]
     assert "rollback_plan_ref=rollback://mission-console-artifact-cycle/plan/v1" in registered[0]
     assert "transition_status=updated" in replaced[0]
-    assert f"replacement_artifact_ref={artifact_v2}" in replaced[0]
+    assert f"resulting_artifact_ref={artifact_v2}" in replaced[0]
+    assert f"supersedes_artifact_ref={artifact_v1}" in replaced[0]
     assert "artifact_lifecycle_state_changed" in replaced[0]
     assert f"artifact_ref={artifact_v1}" in listed[0]
     assert f"artifact_ref={artifact_v2}" in listed[0]
+    assert "artifact_status=superseded" in listed[0]
+    assert "external_file_mutation_allowed=False" in listed[0]
     assert mission_state is not None
     assert artifact_v2 in mission_state.artifact_refs
     assert artifact_v2 in mission_state.active_artifact_refs
@@ -1390,6 +1401,13 @@ def test_console_artifact_blocks_missing_replacement_ref() -> None:
         session_id="sess-console-artifact-block",
         mission_id=mission_id,
     )
+    work_item_ref = "work-item://mission-console-artifact-block/plan"
+    console.transition_work_item(
+        mission_id=mission_id,
+        work_item_ref=work_item_ref,
+        transition="create",
+        session_id="sess-console-artifact-block",
+    )
     parser = build_parser()
     register_args = parser.parse_args(
         [
@@ -1402,6 +1420,10 @@ def test_console_artifact_blocks_missing_replacement_ref() -> None:
             "register",
             "--artifact-ref",
             artifact_v1,
+            "--artifact-version",
+            "1",
+            "--work-item-ref",
+            work_item_ref,
         ]
     )
     replace_args = parser.parse_args(
@@ -1415,6 +1437,10 @@ def test_console_artifact_blocks_missing_replacement_ref() -> None:
             "replace",
             "--artifact-ref",
             artifact_v1,
+            "--artifact-version",
+            "2",
+            "--rollback-plan-ref",
+            "rollback://mission-console-artifact-block/plan/v1",
         ]
     )
 

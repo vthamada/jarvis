@@ -414,6 +414,12 @@ review queues. `MB-195` adds canonical dependency/priority ordering to
 `work-items` and the daily snapshot. Both commands remain read-only; priority
 is explicit, and resume is never inferred or executed.
 
+`MB-196` deepens the existing `artifact`/`artifacts` family with canonical,
+cross-session version lineage. The list view exposes owner, source work item,
+supersede/replacement, rollback and timestamps in lineage order, while all
+lifecycle transitions continue through the governed Core and never mutate the
+external file.
+
 `MB-180` extends this operator-facing baseline with `skill-evolution`, a
 read-only evolution-family view that correlates recurring evidence, inactive
 candidate identity/version, scope, risk, review, sandbox, tests, rollback and

@@ -11,6 +11,8 @@ from observability_service.service import FlowAudit, ObservabilityQuery
 from apps.jarvis_console.cli import (
     JarvisConsole,
     build_parser,
+    run_artifact_command,
+    run_artifacts_command,
     run_daily_workspace_command,
     run_longitudinal_learning_report_command,
     run_skill_evolution_command,
@@ -676,3 +678,126 @@ def test_console_skill_evolution_correlates_governed_chain_end_to_end() -> None:
     assert "trend_status=insufficient_evidence" in learning_report
     assert "offline_eval_is_not_longitudinal_runtime_evidence" in learning_report
     assert "promotion_authorized=False" in learning_report
+
+
+def test_artifact_lineage_persists_and_rolls_back_across_console_sessions() -> None:
+    temp_dir = runtime_dir("console-e2e-artifact-lineage")
+    mission_id = "mission-e2e-artifact-lineage"
+    work_item_ref = f"work-item://{mission_id}/produce-plan"
+    artifact_v1 = f"artifact://{mission_id}/plan/v1"
+    artifact_v2 = f"artifact://{mission_id}/plan/v2"
+    rollback_ref = f"rollback://{mission_id}/plan/v1"
+    parser = build_parser()
+    first_console = JarvisConsole.build(runtime_dir=temp_dir)
+    first_console.ask(
+        "Plan the controlled rollout.",
+        session_id="sess-artifact-lineage-one",
+        mission_id=mission_id,
+    )
+    work_item_args = parser.parse_args(
+        [
+            "work-item",
+            "--mission-id",
+            mission_id,
+            "--session-id",
+            "sess-artifact-lineage-one",
+            "--action",
+            "create",
+            "--work-item-ref",
+            work_item_ref,
+        ]
+    )
+    run_work_item_command(first_console, work_item_args)
+    files_before = sorted(
+        path.relative_to(temp_dir).as_posix()
+        for path in temp_dir.rglob("*")
+        if path.is_file()
+    )
+    register_args = parser.parse_args(
+        [
+            "artifact",
+            "--mission-id",
+            mission_id,
+            "--session-id",
+            "sess-artifact-lineage-one",
+            "--action",
+            "register",
+            "--artifact-ref",
+            artifact_v1,
+            "--artifact-version",
+            "1",
+            "--work-item-ref",
+            work_item_ref,
+            "--rollback-plan-ref",
+            rollback_ref,
+        ]
+    )
+    registered = run_artifact_command(first_console, register_args)[0]
+
+    second_console = JarvisConsole.build(runtime_dir=temp_dir)
+    replace_args = parser.parse_args(
+        [
+            "artifact",
+            "--mission-id",
+            mission_id,
+            "--session-id",
+            "sess-artifact-lineage-two",
+            "--action",
+            "replace",
+            "--artifact-ref",
+            artifact_v1,
+            "--artifact-version",
+            "2",
+            "--replacement-artifact-ref",
+            artifact_v2,
+            "--rollback-plan-ref",
+            rollback_ref,
+        ]
+    )
+    replaced = run_artifact_command(second_console, replace_args)[0]
+
+    third_console = JarvisConsole.build(runtime_dir=temp_dir)
+    rollback_args = parser.parse_args(
+        [
+            "artifact",
+            "--mission-id",
+            mission_id,
+            "--session-id",
+            "sess-artifact-lineage-three",
+            "--action",
+            "rollback",
+            "--artifact-ref",
+            artifact_v1,
+            "--rollback-plan-ref",
+            rollback_ref,
+        ]
+    )
+    rolled_back = run_artifact_command(third_console, rollback_args)[0]
+    listed = run_artifacts_command(
+        third_console,
+        parser.parse_args(["artifacts", "--mission-id", mission_id]),
+    )[0]
+    mission_state = third_console.get_objective_state(mission_id=mission_id)
+    files_after = sorted(
+        path.relative_to(temp_dir).as_posix()
+        for path in temp_dir.rglob("*")
+        if path.is_file()
+    )
+
+    assert "transition_status=updated" in registered
+    assert f"resulting_artifact_ref={artifact_v2}" in replaced
+    assert f"supersedes_artifact_ref={artifact_v1}" in replaced
+    assert "transition_status=updated" in rolled_back
+    assert "active_artifact_refs=" in listed
+    assert artifact_v1 in listed
+    assert "rolled_back_artifact_refs=" in listed
+    assert artifact_v2 in listed
+    assert "external_file_mutation_allowed=False" in listed
+    assert mission_state is not None
+    status_by_ref = {
+        item.artifact_ref: item.artifact_status for item in mission_state.artifact_states
+    }
+    assert status_by_ref[artifact_v1] == "active"
+    assert status_by_ref[artifact_v2] == "rolled_back"
+    assert artifact_v1 in mission_state.active_artifact_refs
+    assert files_after == files_before

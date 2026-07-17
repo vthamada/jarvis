@@ -50,6 +50,12 @@
 - governanca valida state machine, referencias, dependencia conhecida, autorreferencia, ciclos e causa explicita de bloqueio; completion atualiza readiness, mas nunca retoma ou executa o dependente;
 - `work-items` e `daily-workspace` mostram ordem topologica, itens executaveis/bloqueados e autoridade autonoma falsa; testes locais/E2E cobrem duas sessoes, grafo, ciclo e imutabilidade da decisao, e `MB-196` passa a ser o unico item tecnico `ready`.
 
+### MB-196 persiste linhagem e ownership de artefatos
+
+- `MissionStateContract.artifact_states` preserva versoes canonicas com owner mission, objective, source work item, raiz de linhagem, supersede/replacement, rollback, timestamps e checkpoints em SQLite/PostgreSQL;
+- governanca e memoria exigem state machine valida, versao positiva e sequencial, source work item da mesma missao e rollback explicito, preservando refs legadas sem promove-las ao registro estruturado;
+- `artifacts` expoe registry read-only por linhagem e o E2E em tres sessoes valida register, replace e rollback sem mutar arquivos externos; `MB-197` passa a ser o unico item tecnico `ready`.
+
 ## 2026-07-16
 
 ### MB-166 define checklist sandbox-to-release

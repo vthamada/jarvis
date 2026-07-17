@@ -2,6 +2,15 @@
 
 ## Atualizacao 2026-07-17
 
+`MB-196` tornou versoes de artefato estado canonico persistente. Cada versao
+governada registra owner mission, objective, source work item, raiz de linhagem,
+supersede/replacement, rollback e timestamps; `replace` cria a proxima versao
+sequencial e `rollback` reativa a anterior sem tocar o arquivo externo. O
+registry operacional e `artifacts` sao read-only, preservam refs legadas sem
+promocao silenciosa e persistem em SQLite/PostgreSQL. Testes locais e E2E em
+tres sessoes cobrem register, replace, rollback, imutabilidade e ausencia de
+mutacao de arquivo. `MB-197` e o unico item tecnico `ready`.
+
 `MB-195` tornou work items governados objetos canonicos estruturados. Prioridade
 `p0..p3`, dependencias, blockers e blocking state persistem em
 SQLite/PostgreSQL; governanca rejeita referencias invalidas, transicoes
@@ -9,7 +18,8 @@ incompativeis, dependencias desconhecidas e ciclos. `work-items` e
 `daily-workspace` expoem ordem topologica, itens executaveis e bloqueados em
 modo read-only, sempre com execucao e scheduler autonomos falsos. Testes locais
 e E2E cobrem persistencia cross-session, ciclo, completion de dependencia e
-compatibilidade dos refs legados. `MB-196` e o unico item tecnico `ready`.
+compatibilidade dos refs legados. Esse estado foi sucedido pelo fechamento de
+`MB-196`.
 
 `MB-194` implementou `daily-workspace` como snapshot local multi-missao,
 standalone e read-only. Novos contratos compartilhados representam cada missao

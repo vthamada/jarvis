@@ -24,8 +24,15 @@ from memory_service.repository import (
     build_memory_repository,
     continuity_checkpoint_to_contract,
 )
+from shared.artifact_policy import (
+    canonical_artifact_states_from_mission,
+    validate_artifact_lineage,
+    validate_artifact_transition,
+    validate_artifact_version,
+)
 from shared.contracts import (
     WORK_ITEM_PRIORITY_LEVELS,
+    ArtifactLifecycleStateContract,
     ContinuityCheckpointContract,
     ContinuityPauseContract,
     ContinuityReplayContract,
@@ -1461,34 +1468,194 @@ class MemoryService:
         artifact_ref: str,
         artifact_status: str,
         transition_ref: str,
+        transition: str | None = None,
+        artifact_version: int | None = None,
+        work_item_ref: str | None = None,
         replacement_artifact_ref: str | None = None,
+        rollback_plan_ref: str | None = None,
     ) -> MissionStateContract | None:
-        """Persist a bounded artifact lifecycle transition in mission state."""
+        """Persist a governed artifact version transition in canonical mission state."""
 
         current = self.repository.fetch_mission_state(mission_id)
         if current is None:
             return None
 
+        transition_name = transition or self._artifact_transition_from_ref(
+            transition_ref
+        )
+        expected_status = "archived" if transition_name == "archive" else "active"
+        if artifact_status != expected_status:
+            raise ValueError("artifact status does not match lifecycle transition")
+        artifact_states = list(current.artifact_states)
+        if not any(item.artifact_ref == artifact_ref for item in artifact_states):
+            artifact_states.extend(
+                item
+                for item in canonical_artifact_states_from_mission(current)
+                if item.artifact_ref == artifact_ref
+            )
+        existing = next(
+            (item for item in artifact_states if item.artifact_ref == artifact_ref),
+            None,
+        )
+        transition_error = validate_artifact_transition(
+            current_status=existing.artifact_status if existing else None,
+            requested_transition=transition_name,
+        )
+        if transition_error:
+            raise ValueError(f"invalid artifact transition: {transition_error}")
+        version_error = validate_artifact_version(
+            requested_transition=transition_name,
+            requested_version=artifact_version,
+            current_version=existing.artifact_version if existing else None,
+        )
+        if version_error:
+            raise ValueError(f"invalid artifact version: {version_error}")
+        lineage_errors = validate_artifact_lineage(
+            artifact_states,
+            artifact_ref=artifact_ref,
+            replacement_artifact_ref=(
+                replacement_artifact_ref if transition_name == "replace" else None
+            ),
+        )
+        if lineage_errors:
+            raise ValueError("invalid artifact lineage: " + ",".join(lineage_errors))
+
+        canonical_work_item_refs = {
+            item.work_item_ref for item in canonical_work_items_from_mission(current)
+        }
+        effective_work_item_ref = work_item_ref or (
+            existing.work_item_ref if existing else None
+        )
+        if not effective_work_item_ref or effective_work_item_ref not in canonical_work_item_refs:
+            raise ValueError("artifact source work item must belong to the mission")
+        if transition_name == "replace" and (
+            not replacement_artifact_ref or not rollback_plan_ref
+        ):
+            raise ValueError("artifact replacement requires replacement and rollback refs")
+        if transition_name == "rollback" and (
+            existing is None
+            or not existing.replacement_artifact_ref
+            or not rollback_plan_ref
+        ):
+            raise ValueError("artifact rollback requires canonical successor and rollback ref")
+
+        now = self.now()
+        checkpoint_refs = [
+            *(list(existing.checkpoint_refs) if existing else []),
+            transition_ref,
+        ][-20:]
+        if transition_name == "register":
+            artifact_states.append(
+                ArtifactLifecycleStateContract(
+                    artifact_ref=artifact_ref,
+                    artifact_status="active",
+                    mission_id=current.mission_id,
+                    transition=transition_name,
+                    artifact_version=artifact_version,
+                    owner_mission_id=current.mission_id,
+                    objective_ref=current.objective_ref,
+                    work_item_ref=effective_work_item_ref,
+                    lineage_root_ref=artifact_ref,
+                    rollback_plan_ref=rollback_plan_ref,
+                    created_at=now,
+                    updated_at=now,
+                    checkpoint_refs=checkpoint_refs,
+                )
+            )
+        elif transition_name == "replace":
+            assert existing is not None and replacement_artifact_ref is not None
+            updated_existing = replace(
+                existing,
+                artifact_status="superseded",
+                transition=transition_name,
+                replacement_artifact_ref=replacement_artifact_ref,
+                updated_at=now,
+                checkpoint_refs=checkpoint_refs,
+            )
+            replacement_state = ArtifactLifecycleStateContract(
+                artifact_ref=replacement_artifact_ref,
+                artifact_status="active",
+                mission_id=current.mission_id,
+                transition=transition_name,
+                artifact_version=artifact_version,
+                owner_mission_id=existing.owner_mission_id or current.mission_id,
+                objective_ref=existing.objective_ref or current.objective_ref,
+                work_item_ref=effective_work_item_ref,
+                lineage_root_ref=existing.lineage_root_ref or existing.artifact_ref,
+                supersedes_artifact_ref=existing.artifact_ref,
+                rollback_plan_ref=rollback_plan_ref,
+                created_at=now,
+                updated_at=now,
+                checkpoint_refs=[transition_ref],
+            )
+            artifact_states = [
+                updated_existing if item.artifact_ref == artifact_ref else item
+                for item in artifact_states
+            ]
+            artifact_states.append(replacement_state)
+        elif transition_name == "rollback":
+            assert existing is not None and existing.replacement_artifact_ref is not None
+            successor = next(
+                (
+                    item
+                    for item in artifact_states
+                    if item.artifact_ref == existing.replacement_artifact_ref
+                ),
+                None,
+            )
+            if successor is None or successor.artifact_status != "active":
+                raise ValueError("artifact rollback successor must be active")
+            artifact_states = [
+                replace(
+                    item,
+                    artifact_status="active",
+                    transition=transition_name,
+                    updated_at=now,
+                    checkpoint_refs=checkpoint_refs,
+                )
+                if item.artifact_ref == artifact_ref
+                else replace(
+                    item,
+                    artifact_status="rolled_back",
+                    transition=transition_name,
+                    updated_at=now,
+                    checkpoint_refs=[*item.checkpoint_refs, transition_ref][-20:],
+                )
+                if item.artifact_ref == successor.artifact_ref
+                else item
+                for item in artifact_states
+            ]
+        else:
+            assert existing is not None
+            artifact_states = [
+                replace(
+                    item,
+                    artifact_status=artifact_status,
+                    transition=transition_name,
+                    updated_at=now,
+                    checkpoint_refs=checkpoint_refs,
+                )
+                if item.artifact_ref == artifact_ref
+                else item
+                for item in artifact_states
+            ]
+
         artifact_refs = self._merge_unique_strings(
             list(current.artifact_refs),
-            [artifact_ref],
-            [replacement_artifact_ref] if replacement_artifact_ref else [],
+            [item.artifact_ref for item in artifact_states],
         )
-        active_artifact_refs = list(current.active_artifact_refs)
-        if artifact_status == "active":
-            active_artifact_refs = self._merge_unique_strings(
-                active_artifact_refs,
-                [replacement_artifact_ref or artifact_ref],
-            )
-            if replacement_artifact_ref:
-                active_artifact_refs = [
-                    item for item in active_artifact_refs if item != artifact_ref
-                ]
-        else:
-            active_artifact_refs = [
-                item for item in active_artifact_refs if item != artifact_ref
-            ]
-        checkpoint_refs = [
+        structured_refs = {item.artifact_ref for item in artifact_states}
+        active_artifact_refs = [
+            item
+            for item in current.active_artifact_refs
+            if item not in structured_refs
+        ] + [
+            item.artifact_ref
+            for item in artifact_states
+            if item.artifact_status == "active"
+        ]
+        active_artifact_refs = self._merge_unique_strings(active_artifact_refs)
+        mission_checkpoint_refs = [
             *list(current.checkpoint_refs),
             transition_ref,
         ][-5:]
@@ -1499,13 +1666,19 @@ class MemoryService:
         updated = replace(
             current,
             checkpoints=checkpoints,
-            checkpoint_refs=checkpoint_refs,
+            checkpoint_refs=mission_checkpoint_refs,
             artifact_refs=artifact_refs,
+            artifact_states=artifact_states,
             active_artifact_refs=active_artifact_refs,
-            updated_at=self.now(),
+            updated_at=now,
         )
         self.repository.upsert_mission_state(updated)
         return updated
+
+    @staticmethod
+    def _artifact_transition_from_ref(transition_ref: str) -> str:
+        parts = transition_ref.split(":", 2)
+        return parts[1] if len(parts) > 1 else "register"
 
     def get_session_continuity_checkpoint(
         self,

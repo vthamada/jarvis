@@ -38,6 +38,12 @@ WORKFLOW_VARIANT_EVAL_METRICS = (
 )
 
 WORK_ITEM_PRIORITY_LEVELS = ("p0", "p1", "p2", "p3")
+ARTIFACT_LIFECYCLE_STATUSES = (
+    "active",
+    "archived",
+    "superseded",
+    "rolled_back",
+)
 
 
 @dataclass
@@ -102,10 +108,30 @@ class ArtifactLifecycleStateContract:
     owner_mission_id: MissionId | None = None
     objective_ref: str | None = None
     work_item_ref: str | None = None
+    lineage_root_ref: str | None = None
+    supersedes_artifact_ref: str | None = None
     replacement_artifact_ref: str | None = None
     rollback_plan_ref: str | None = None
+    created_at: CreatedAt | None = None
+    updated_at: UpdatedAt | None = None
     checkpoint_refs: list[str] = field(default_factory=list)
     memory_write_mode: str = "through_core_only"
+
+
+@dataclass
+class ArtifactRegistryContract:
+    mission_id: MissionId
+    registry_status: str
+    artifact_states: list[ArtifactLifecycleStateContract]
+    active_artifact_refs: list[str]
+    archived_artifact_refs: list[str]
+    superseded_artifact_refs: list[str]
+    rolled_back_artifact_refs: list[str]
+    evidence_refs: list[str] = field(default_factory=list)
+    ordering_policy: str = "lineage_root_then_version_then_ref"
+    memory_write_mode: str = "read_only"
+    read_only: bool = True
+    external_file_mutation_allowed: bool = False
 
 
 @dataclass
@@ -1834,6 +1860,7 @@ class MissionStateContract:
     work_items: list[WorkItemStateContract] = field(default_factory=list)
     checkpoint_refs: list[str] = field(default_factory=list)
     artifact_refs: list[str] = field(default_factory=list)
+    artifact_states: list[ArtifactLifecycleStateContract] = field(default_factory=list)
     objective_status: str | None = None
     next_action_ref: str | None = None
     linked_surface_ids: list[str] = field(default_factory=list)

@@ -5,6 +5,7 @@ from uuid import uuid4
 from operational_service.service import OperationalExecution, OperationalService
 
 from shared.contracts import (
+    ArtifactLifecycleStateContract,
     MissionStateContract,
     OperationDispatchContract,
     WorkItemStateContract,
@@ -29,6 +30,47 @@ def runtime_dir(name: str) -> Path:
 
 def test_operational_service_name() -> None:
     assert OperationalService.name == "operational-service"
+
+
+def test_operational_service_projects_read_only_artifact_registry() -> None:
+    mission_id = MissionId("mission-artifact-registry")
+    root_ref = "artifact://mission-artifact-registry/plan/v1"
+    replacement_ref = "artifact://mission-artifact-registry/plan/v2"
+    mission = MissionStateContract(
+        mission_id=mission_id,
+        mission_goal="Track plan lineage",
+        mission_status=MissionStatus.ACTIVE,
+        checkpoints=[],
+        updated_at="2026-07-17T09:00:00+00:00",
+        artifact_states=[
+            ArtifactLifecycleStateContract(
+                artifact_ref=replacement_ref,
+                artifact_status="active",
+                mission_id=mission_id,
+                artifact_version=2,
+                owner_mission_id=mission_id,
+                lineage_root_ref=root_ref,
+                supersedes_artifact_ref=root_ref,
+            ),
+            ArtifactLifecycleStateContract(
+                artifact_ref=root_ref,
+                artifact_status="superseded",
+                mission_id=mission_id,
+                artifact_version=1,
+                owner_mission_id=mission_id,
+                lineage_root_ref=root_ref,
+                replacement_artifact_ref=replacement_ref,
+            ),
+        ],
+    )
+
+    registry = OperationalService.build_artifact_registry(mission)
+
+    assert [item.artifact_version for item in registry.artifact_states] == [1, 2]
+    assert registry.active_artifact_refs == [replacement_ref]
+    assert registry.superseded_artifact_refs == [root_ref]
+    assert registry.read_only is True
+    assert registry.external_file_mutation_allowed is False
 
 
 def test_operational_service_builds_cross_session_daily_workspace() -> None:

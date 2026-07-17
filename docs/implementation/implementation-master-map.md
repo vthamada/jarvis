@@ -86,7 +86,7 @@ Goal: make JARVIS useful to a human operator in daily work.
 | `OP-002` | Inspect mission route, plan, checkpoints and synthesis | `implemented_baseline` | Keep stable | Console, orchestrator | none |
 | `OP-003` | Manage objective/project state | `implemented_baseline` | Validate cockpit through real operator use | MissionState, memory | none |
 | `OP-004` | Manage tasks/work items as first-class operator objects | `implemented_baseline` | Validate dependency/priority usefulness with real operator evidence | Objective continuity | none |
-| `OP-005` | Manage artifacts as living outputs | `minimum_baseline` | Artifact registry, versions, owner, status | Operational service, memory | expand after metrics |
+| `OP-005` | Manage artifacts as living outputs | `implemented_baseline` | Validate lineage usefulness with operator evidence | Operational service, memory | none |
 | `OP-006` | Daily operator dashboard | `implemented_baseline` | Validate usefulness and evolve from operator evidence | Console, memory, observability | none |
 | `OP-007` | Operator feedback after mission | `implemented_baseline` | Validate usefulness through real operator feedback | Experience/reflection | none |
 | `OP-008` | Human-readable progress report | `implemented_baseline` | Validate report usefulness with operator evidence | Synthesis, memory | none |
@@ -155,7 +155,7 @@ Goal: let JARVIS act safely beyond text generation.
 | `ACT-001` | Low-risk text artifact production | `implemented_baseline` | Keep stable | Operational service | none |
 | `ACT-002` | Capability/tool decision contract | `implemented_baseline` | Keep stable | Planning/governance | none |
 | `ACT-003` | Tool authorization and denial reasons | `implemented_baseline` | Keep stable | Governance | none |
-| `ACT-004` | Artifact lifecycle and registry | `minimum_baseline` | Durable artifact state, versions and refs | OP-005, memory | expand after metrics |
+| `ACT-004` | Artifact lifecycle and registry | `implemented_baseline` | Keep governed version lineage stable | OP-005, memory | none |
 | `ACT-005` | File operations through governed adapter | `missing` | Safe local file adapter with allowlist and rollback | Governance, artifacts | later |
 | `ACT-006` | Browser automation | `deferred_by_phase` | Bounded tool, not core replacement | TA-006 | not now |
 | `ACT-007` | Computer use | `deferred_by_phase` | Bounded tool, not autonomy bypass | TA-006 | not now |
@@ -790,6 +790,11 @@ Map IDs: `OP-005`, `ACT-004`, `MEM-006`.
 
 Goal: preserve durable artifact versions, owner, source work item and supersede
 relationships through canonical state.
+
+Status: closed in `MB-196`; structured artifact versions persist owner, source
+work item, lineage, replacement, rollback and audit timestamps in canonical
+memory. The operational registry and CLI are read-only and no lifecycle
+transition mutates the external file.
 
 ### MB-197 -- Governed Open-Loop Resume Workflow
 

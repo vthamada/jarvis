@@ -23,6 +23,7 @@ from synthesis_engine.engine import (
     SynthesisResult,
 )
 
+from shared.artifact_policy import canonical_artifact_states_from_mission
 from shared.autonomy_ladder import derive_autonomy_ladder
 from shared.contracts import (
     ArtifactLifecycleStateContract,
@@ -163,6 +164,7 @@ class ArtifactLifecycleTransitionResult:
 
     mission_id: str
     artifact_ref: str | None
+    resulting_artifact_ref: str | None
     transition: str
     status: str
     previous_artifact_status: str | None
@@ -613,6 +615,8 @@ class OrchestratorService:
             current_state=current_state,
             requested_transition=transition,
             requested_artifact_ref=artifact_ref,
+            requested_artifact_version=artifact_version,
+            requested_work_item_ref=work_item_ref,
             requested_replacement_artifact_ref=replacement_artifact_ref,
             requested_rollback_plan_ref=rollback_plan_ref,
             requested_by_service=self.name,
@@ -653,6 +657,7 @@ class OrchestratorService:
             return ArtifactLifecycleTransitionResult(
                 mission_id=mission_id,
                 artifact_ref=artifact_ref,
+                resulting_artifact_ref=artifact_ref,
                 transition=transition,
                 status="blocked",
                 previous_artifact_status=previous_status,
@@ -673,31 +678,32 @@ class OrchestratorService:
             artifact_ref=str(artifact_ref),
             artifact_status=artifact_status,
             transition_ref=transition_ref,
+            transition=transition,
+            artifact_version=artifact_version,
+            work_item_ref=work_item_ref,
             replacement_artifact_ref=replacement_artifact_ref,
+            rollback_plan_ref=rollback_plan_ref,
+        )
+        resulting_artifact_ref = (
+            replacement_artifact_ref if transition == "replace" else artifact_ref
         )
         artifact_state = (
-            ArtifactLifecycleStateContract(
-                artifact_ref=str(artifact_ref),
-                artifact_status=artifact_status,
-                mission_id=MissionId(mission_id),
-                transition=transition,
-                artifact_version=artifact_version,
-                owner_mission_id=MissionId(mission_id),
-                objective_ref=updated_state.objective_ref if updated_state else None,
-                work_item_ref=work_item_ref,
-                replacement_artifact_ref=replacement_artifact_ref,
-                rollback_plan_ref=rollback_plan_ref,
-                checkpoint_refs=(
-                    list(updated_state.checkpoint_refs) if updated_state else []
+            next(
+                (
+                    item
+                    for item in updated_state.artifact_states
+                    if item.artifact_ref == resulting_artifact_ref
                 ),
+                None,
             )
-            if updated_state is not None and artifact_ref is not None
+            if updated_state is not None and resulting_artifact_ref is not None
             else None
         )
         event_payload = {
             "transition": transition,
             "transition_ref": transition_ref,
             "artifact_ref": artifact_ref,
+            "resulting_artifact_ref": resulting_artifact_ref,
             "artifact_status": artifact_status,
             "artifact_version": artifact_version,
             "work_item_ref": work_item_ref,
@@ -725,6 +731,7 @@ class OrchestratorService:
         return ArtifactLifecycleTransitionResult(
             mission_id=mission_id,
             artifact_ref=artifact_ref,
+            resulting_artifact_ref=resulting_artifact_ref,
             transition=transition,
             status="updated" if updated_state else "missing",
             previous_artifact_status=previous_status,
@@ -4472,6 +4479,9 @@ class OrchestratorService:
     ) -> str | None:
         if mission_state is None or artifact_ref is None:
             return None
+        for artifact_state in canonical_artifact_states_from_mission(mission_state):
+            if artifact_state.artifact_ref == artifact_ref:
+                return artifact_state.artifact_status
         if artifact_ref in mission_state.active_artifact_refs:
             return "active"
         for checkpoint_ref in reversed(mission_state.checkpoint_refs):

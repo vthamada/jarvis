@@ -401,6 +401,13 @@ def test_orchestrator_transitions_artifact_lifecycle_through_governed_core() -> 
             timestamp="2026-05-18T00:00:00Z",
         )
     )
+    work_item_ref = "work-item://mission-orchestrator-artifact/plan"
+    service.transition_work_item(
+        mission_id=mission_id,
+        work_item_ref=work_item_ref,
+        transition="create",
+        session_id="sess-orchestrator-artifact",
+    )
 
     registered = service.transition_artifact_lifecycle(
         mission_id=mission_id,
@@ -408,6 +415,7 @@ def test_orchestrator_transitions_artifact_lifecycle_through_governed_core() -> 
         transition="register",
         session_id="sess-orchestrator-artifact",
         artifact_version=1,
+        work_item_ref=work_item_ref,
         rollback_plan_ref="rollback://mission-orchestrator-artifact/plan/v1",
     )
     replaced = service.transition_artifact_lifecycle(
@@ -430,9 +438,14 @@ def test_orchestrator_transitions_artifact_lifecycle_through_governed_core() -> 
     assert registered.artifact_state.artifact_status == "active"
     assert replaced.status == "updated"
     assert replaced.artifact_state is not None
-    assert replaced.artifact_state.replacement_artifact_ref == (
+    assert replaced.resulting_artifact_ref == (
         "artifact://mission-orchestrator-artifact/plan/v2"
     )
+    assert replaced.artifact_state.supersedes_artifact_ref == (
+        "artifact://mission-orchestrator-artifact/plan/v1"
+    )
+    assert replaced.artifact_state.artifact_version == 2
+    assert replaced.artifact_state.work_item_ref == work_item_ref
     assert mission_state is not None
     assert "artifact://mission-orchestrator-artifact/plan/v2" in mission_state.artifact_refs
     assert (
@@ -485,6 +498,7 @@ def test_orchestrator_inspects_long_horizon_goal_strategy_read_only() -> None:
         transition="register",
         session_id="sess-orchestrator-long-horizon",
         artifact_version=1,
+        work_item_ref="work-item://mission-orchestrator-long-horizon/validate-plan",
     )
 
     result = service.inspect_long_horizon_goal_strategy(
@@ -543,6 +557,7 @@ def test_orchestrator_synthesizes_mission_progress_report_read_only() -> None:
         transition="register",
         session_id="sess-orchestrator-progress-report",
         artifact_version=1,
+        work_item_ref=f"work-item://{mission_id}/review-release",
     )
 
     result = service.inspect_mission_progress_report(

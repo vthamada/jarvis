@@ -1,5 +1,6 @@
 from shared.contracts import (
     ArtifactLifecycleStateContract,
+    ArtifactRegistryContract,
     AutonomyLadderContract,
     DailyOperatorWorkspaceContract,
     DailyWorkspaceMissionContract,
@@ -46,6 +47,7 @@ from shared.contracts import (
 from shared.events import INTERNAL_EVENT_NAMES
 from shared.schemas import (
     ARTIFACT_LIFECYCLE_STATE_SCHEMA,
+    ARTIFACT_REGISTRY_SCHEMA,
     AUTONOMY_LADDER_SCHEMA,
     DAILY_OPERATOR_WORKSPACE_SCHEMA,
     DAILY_WORKSPACE_MISSION_SCHEMA,
@@ -374,6 +376,7 @@ def test_artifact_lifecycle_state_contract_is_shared_schema() -> None:
         owner_mission_id="mission-1",
         objective_ref="objective://mission-1",
         work_item_ref="work-item://mission-1/validate-plan",
+        lineage_root_ref="artifact://mission-1/plan/v1",
         rollback_plan_ref="rollback://mission-1/plan/v1",
     )
 
@@ -382,6 +385,26 @@ def test_artifact_lifecycle_state_contract_is_shared_schema() -> None:
         "ArtifactLifecycleStateContract"
     )
     assert "artifact_status" in ARTIFACT_LIFECYCLE_STATE_SCHEMA.required_fields
+    assert "supersedes_artifact_ref" in (
+        ARTIFACT_LIFECYCLE_STATE_SCHEMA.optional_fields
+    )
+
+
+def test_artifact_registry_contract_is_read_only_and_never_mutates_files() -> None:
+    registry = ArtifactRegistryContract(
+        mission_id="mission-1",
+        registry_status="active",
+        artifact_states=[],
+        active_artifact_refs=[],
+        archived_artifact_refs=[],
+        superseded_artifact_refs=[],
+        rolled_back_artifact_refs=[],
+    )
+
+    assert ARTIFACT_REGISTRY_SCHEMA.contract_name == "ArtifactRegistryContract"
+    assert registry.read_only is True
+    assert registry.memory_write_mode == "read_only"
+    assert registry.external_file_mutation_allowed is False
 
 
 def test_long_horizon_goal_strategy_contract_is_read_only_schema() -> None:

@@ -45,6 +45,7 @@ INPUT_SCHEMA = CanonicalSchema(
         "work_item_refs",
         "checkpoint_refs",
         "artifact_refs",
+        "artifact_states",
         "objective_status",
         "next_action_ref",
         "requested_autonomy_level",
@@ -2145,11 +2146,37 @@ ARTIFACT_LIFECYCLE_STATE_SCHEMA = CanonicalSchema(
         "owner_mission_id",
         "objective_ref",
         "work_item_ref",
+        "lineage_root_ref",
+        "supersedes_artifact_ref",
         "replacement_artifact_ref",
         "rollback_plan_ref",
+        "created_at",
+        "updated_at",
         "checkpoint_refs",
         "memory_write_mode",
     ),
+)
+
+ARTIFACT_REGISTRY_SCHEMA = CanonicalSchema(
+    name="ArtifactRegistrySchema",
+    contract_name="ArtifactRegistryContract",
+    required_fields=(
+        "mission_id",
+        "registry_status",
+        "artifact_states",
+        "active_artifact_refs",
+        "archived_artifact_refs",
+        "superseded_artifact_refs",
+        "rolled_back_artifact_refs",
+    ),
+    optional_fields=(
+        "evidence_refs",
+        "ordering_policy",
+        "memory_write_mode",
+        "read_only",
+        "external_file_mutation_allowed",
+    ),
+    notes=("Read-only projection of immutable artifact versions and lifecycle state.",),
 )
 
 ARTIFACT_RESULT_SCHEMA = CanonicalSchema(

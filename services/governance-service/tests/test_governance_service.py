@@ -1,6 +1,7 @@
 from governance_service.service import GovernanceAssessment, GovernanceService
 
 from shared.contracts import (
+    ArtifactLifecycleStateContract,
     DeliberativePlanContract,
     InputContract,
     MemoryLifecycleCandidateContract,
@@ -246,7 +247,7 @@ def test_governance_allows_bounded_work_item_creation() -> None:
             content="work_item_transition:create",
             timestamp="2026-05-18T00:00:00Z",
         ),
-        current_state=MissionStateContract(
+            current_state=MissionStateContract(
             mission_id=MissionId("mission-work-item-create"),
             mission_goal="Plan rollout",
             mission_status=MissionStatus.ACTIVE,
@@ -419,9 +420,18 @@ def test_governance_allows_bounded_artifact_registration() -> None:
             mission_status=MissionStatus.ACTIVE,
             checkpoints=[],
             updated_at="2026-05-18T00:00:00Z",
+            work_items=[
+                WorkItemStateContract(
+                    work_item_ref="work-item://mission-artifact-register/plan",
+                    work_item_status="active",
+                    mission_id=MissionId("mission-artifact-register"),
+                )
+            ],
         ),
         requested_transition="register",
         requested_artifact_ref="artifact://mission-artifact-register/plan/v1",
+        requested_artifact_version=1,
+        requested_work_item_ref="work-item://mission-artifact-register/plan",
         requested_replacement_artifact_ref=None,
         requested_rollback_plan_ref="rollback://mission-artifact-register/plan/v1",
         requested_by_service="orchestrator-service",
@@ -451,9 +461,29 @@ def test_governance_blocks_artifact_replacement_without_replacement_ref() -> Non
             checkpoints=[],
             updated_at="2026-05-18T00:00:00Z",
             artifact_refs=["artifact://mission-artifact-replace-block/plan/v1"],
+            artifact_states=[
+                ArtifactLifecycleStateContract(
+                    artifact_ref="artifact://mission-artifact-replace-block/plan/v1",
+                    artifact_status="active",
+                    mission_id=MissionId("mission-artifact-replace-block"),
+                    artifact_version=1,
+                    owner_mission_id=MissionId("mission-artifact-replace-block"),
+                    work_item_ref="work-item://mission-artifact-replace-block/plan",
+                    lineage_root_ref="artifact://mission-artifact-replace-block/plan/v1",
+                )
+            ],
+            work_items=[
+                WorkItemStateContract(
+                    work_item_ref="work-item://mission-artifact-replace-block/plan",
+                    work_item_status="active",
+                    mission_id=MissionId("mission-artifact-replace-block"),
+                )
+            ],
         ),
         requested_transition="replace",
         requested_artifact_ref="artifact://mission-artifact-replace-block/plan/v1",
+        requested_artifact_version=2,
+        requested_work_item_ref=None,
         requested_replacement_artifact_ref=None,
         requested_rollback_plan_ref=None,
         requested_by_service="orchestrator-service",

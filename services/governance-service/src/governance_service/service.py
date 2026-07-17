@@ -6,6 +6,12 @@ from dataclasses import dataclass
 from datetime import UTC, datetime
 from uuid import uuid4
 
+from shared.artifact_policy import (
+    canonical_artifact_states_from_mission,
+    validate_artifact_lineage,
+    validate_artifact_transition,
+    validate_artifact_version,
+)
 from shared.autonomy_ladder import capability_mode_exceeds_autonomy_limit
 from shared.contracts import (
     WORK_ITEM_PRIORITY_LEVELS,
@@ -754,14 +760,28 @@ class GovernanceService:
         current_state: MissionStateContract | None,
         requested_transition: str,
         requested_artifact_ref: str | None,
+        requested_artifact_version: int | None,
+        requested_work_item_ref: str | None,
         requested_replacement_artifact_ref: str | None,
         requested_rollback_plan_ref: str | None,
         requested_by_service: str,
     ) -> GovernanceAssessment:
         """Govern bounded operator-driven artifact lifecycle changes."""
 
-        existing_refs = set(current_state.artifact_refs if current_state else [])
+        artifact_states = canonical_artifact_states_from_mission(current_state)
+        current_artifact = next(
+            (
+                item
+                for item in artifact_states
+                if item.artifact_ref == requested_artifact_ref
+            ),
+            None,
+        )
+        existing_refs = {item.artifact_ref for item in artifact_states}
         active_refs = set(current_state.active_artifact_refs if current_state else [])
+        effective_work_item_ref = requested_work_item_ref or (
+            current_artifact.work_item_ref if current_artifact else None
+        )
         governance_check = GovernanceCheckContract(
             governance_check_id=GovernanceCheckId(f"gov-check-{uuid4().hex[:8]}"),
             subject_type="artifact_lifecycle_transition",
@@ -770,6 +790,8 @@ class GovernanceService:
             context={
                 "mission_id": str(contract.mission_id) if contract.mission_id else None,
                 "requested_artifact_ref": requested_artifact_ref,
+                "requested_artifact_version": requested_artifact_version,
+                "requested_work_item_ref": requested_work_item_ref,
                 "requested_replacement_artifact_ref": requested_replacement_artifact_ref,
                 "requested_rollback_plan_ref": requested_rollback_plan_ref,
                 "existing_artifact_count": len(existing_refs),
@@ -845,20 +867,74 @@ class GovernanceService:
             requires_rollback_plan = True
             containment_hint = "block_unbounded_rollback_ref"
             policy_refs = ["policy://artifact-lifecycle/unbounded-rollback"]
-        elif requested_transition == "register" and requested_artifact_ref in existing_refs:
+        elif requested_work_item_ref and not self._is_bounded_reference(
+            requested_work_item_ref
+        ):
             decision = PermissionDecision.BLOCK
-            justification = "Artefato ja existe na missao canonica."
-            conditions = ["Usar activate, archive, replace ou rollback."]
+            justification = "Source work item fora do formato bounded permitido."
+            conditions = ["Usar uma referencia curta e bounded de work item."]
             requires_rollback_plan = True
-            containment_hint = "block_duplicate_artifact"
-            policy_refs = ["policy://artifact-lifecycle/duplicate-ref"]
-        elif requested_transition != "register" and requested_artifact_ref not in existing_refs:
+            containment_hint = "block_unbounded_artifact_work_item"
+            policy_refs = ["policy://artifact-lifecycle/unbounded-work-item"]
+        elif (
+            transition_error := validate_artifact_transition(
+                current_status=(
+                    current_artifact.artifact_status if current_artifact else None
+                ),
+                requested_transition=requested_transition,
+            )
+        ) is not None:
             decision = PermissionDecision.BLOCK
-            justification = "Artefato inexistente nao pode receber transicao."
-            conditions = ["Registrar o artefato antes de atualizar seu estado."]
+            justification = f"Transicao de artefato invalida: {transition_error}."
+            conditions = ["Aplicar uma transicao valida ao estado canonico atual."]
             requires_rollback_plan = True
-            containment_hint = "block_missing_artifact"
-            policy_refs = ["policy://artifact-lifecycle/missing-artifact"]
+            containment_hint = f"block_{transition_error.replace(':', '_')}"
+            policy_refs = ["policy://artifact-lifecycle/state-machine"]
+        elif (
+            version_error := validate_artifact_version(
+                requested_transition=requested_transition,
+                requested_version=requested_artifact_version,
+                current_version=(
+                    current_artifact.artifact_version if current_artifact else None
+                ),
+            )
+        ) is not None:
+            decision = PermissionDecision.BLOCK
+            justification = f"Versao de artefato invalida: {version_error}."
+            conditions = ["Preservar versoes positivas, sequenciais e imutaveis."]
+            requires_rollback_plan = True
+            containment_hint = f"block_{version_error}"
+            policy_refs = ["policy://artifact-lifecycle/immutable-version"]
+        elif requested_transition in {"register", "replace"} and not effective_work_item_ref:
+            decision = PermissionDecision.BLOCK
+            justification = "Nova versao de artefato exige source work item explicito."
+            conditions = ["Informar --work-item-ref pertencente a missao."]
+            requires_rollback_plan = True
+            containment_hint = "block_missing_artifact_work_item"
+            policy_refs = ["policy://artifact-lifecycle/source-work-item"]
+        elif effective_work_item_ref and effective_work_item_ref not in {
+            item.work_item_ref for item in canonical_work_items_from_mission(current_state)
+        }:
+            decision = PermissionDecision.BLOCK
+            justification = "Source work item nao pertence ao estado canonico da missao."
+            conditions = ["Criar ou selecionar um work item canonico da mesma missao."]
+            requires_rollback_plan = True
+            containment_hint = "block_unknown_artifact_work_item"
+            policy_refs = ["policy://artifact-lifecycle/source-work-item"]
+        elif requested_transition not in {"register", "replace"} and requested_work_item_ref:
+            decision = PermissionDecision.BLOCK
+            justification = "Source work item de uma versao existente e imutavel."
+            conditions = ["Definir source work item somente em register ou replace."]
+            requires_rollback_plan = True
+            containment_hint = "block_immutable_artifact_work_item"
+            policy_refs = ["policy://artifact-lifecycle/immutable-ownership"]
+        elif requested_transition in {"activate", "archive"} and requested_rollback_plan_ref:
+            decision = PermissionDecision.BLOCK
+            justification = "Rollback ref nao altera metadata de versao existente."
+            conditions = ["Remover rollback ref desta transicao de lifecycle."]
+            requires_rollback_plan = True
+            containment_hint = "block_immutable_artifact_rollback_metadata"
+            policy_refs = ["policy://artifact-lifecycle/immutable-version"]
         elif requested_transition == "replace" and not requested_replacement_artifact_ref:
             decision = PermissionDecision.BLOCK
             justification = "Substituir artefato exige referencia de substituicao."
@@ -866,6 +942,49 @@ class GovernanceService:
             requires_rollback_plan = True
             containment_hint = "block_missing_replacement_ref"
             policy_refs = ["policy://artifact-lifecycle/missing-replacement"]
+        elif requested_transition == "replace" and not requested_rollback_plan_ref:
+            decision = PermissionDecision.BLOCK
+            justification = "Substituir artefato exige rollback ref explicita."
+            conditions = ["Informar --rollback-plan-ref bounded."]
+            requires_rollback_plan = True
+            containment_hint = "block_missing_replacement_rollback"
+            policy_refs = ["policy://artifact-lifecycle/missing-rollback"]
+        elif requested_transition != "replace" and requested_replacement_artifact_ref:
+            decision = PermissionDecision.BLOCK
+            justification = "Replacement ref so pode ser usada pela transicao replace."
+            conditions = ["Remover replacement ref ou usar replace."]
+            requires_rollback_plan = True
+            containment_hint = "block_replacement_outside_replace"
+            policy_refs = ["policy://artifact-lifecycle/replacement-scope"]
+        elif requested_transition == "replace" and (
+            lineage_errors := validate_artifact_lineage(
+                artifact_states,
+                artifact_ref=str(requested_artifact_ref),
+                replacement_artifact_ref=requested_replacement_artifact_ref,
+            )
+        ):
+            decision = PermissionDecision.BLOCK
+            justification = "Linhagem de substituicao de artefato invalida."
+            conditions = [*lineage_errors]
+            requires_rollback_plan = True
+            containment_hint = "block_invalid_artifact_lineage"
+            policy_refs = ["policy://artifact-lifecycle/lineage"]
+        elif requested_transition == "rollback" and not requested_rollback_plan_ref:
+            decision = PermissionDecision.BLOCK
+            justification = "Rollback exige referencia de plano explicita."
+            conditions = ["Informar --rollback-plan-ref bounded."]
+            requires_rollback_plan = True
+            containment_hint = "block_missing_rollback_ref"
+            policy_refs = ["policy://artifact-lifecycle/missing-rollback"]
+        elif requested_transition == "rollback" and current_artifact and not (
+            current_artifact.replacement_artifact_ref
+        ):
+            decision = PermissionDecision.BLOCK
+            justification = "Artefato sem sucessor canonico nao pode receber rollback."
+            conditions = ["Selecionar uma versao superseded com sucessor registrado."]
+            requires_rollback_plan = True
+            containment_hint = "block_missing_rollback_successor"
+            policy_refs = ["policy://artifact-lifecycle/rollback-lineage"]
 
         governance_decision = GovernanceDecisionContract(
             decision_id=GovernanceDecisionId(f"gov-decision-{uuid4().hex[:8]}"),

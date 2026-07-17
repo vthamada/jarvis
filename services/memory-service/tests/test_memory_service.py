@@ -6,6 +6,7 @@ import memory_service.repository as memory_repository
 import pytest
 from governance_service.service import GovernanceService
 from memory_service.repository import (
+    PostgresMemoryRepository,
     SqliteMemoryRepository,
     StoredSpecialistSharedMemory,
     build_memory_repository,
@@ -235,6 +236,14 @@ def test_memory_service_transitions_artifact_lifecycle_in_mission_state() -> Non
         deliberative_plan=sample_plan(),
         governance_decision=PermissionDecision.ALLOW_WITH_CONDITIONS,
     )
+    work_item_ref = "work-item://mission-artifact-memory/plan"
+    service.transition_work_item_state(
+        mission_id="mission-artifact-memory",
+        work_item_ref=work_item_ref,
+        work_item_status="active",
+        transition="create",
+        transition_ref=f"work_item_transition:create:{work_item_ref}:source",
+    )
 
     registered = service.transition_artifact_lifecycle_state(
         mission_id="mission-artifact-memory",
@@ -244,6 +253,9 @@ def test_memory_service_transitions_artifact_lifecycle_in_mission_state() -> Non
             "artifact_lifecycle_transition:register:"
             "artifact://mission-artifact-memory/plan/v1:abc12345"
         ),
+        artifact_version=1,
+        work_item_ref=work_item_ref,
+        rollback_plan_ref="rollback://mission-artifact-memory/plan/v1",
     )
     replaced = service.transition_artifact_lifecycle_state(
         mission_id="mission-artifact-memory",
@@ -254,14 +266,30 @@ def test_memory_service_transitions_artifact_lifecycle_in_mission_state() -> Non
             "artifact://mission-artifact-memory/plan/v1:def67890"
         ),
         replacement_artifact_ref="artifact://mission-artifact-memory/plan/v2",
+        artifact_version=2,
+        rollback_plan_ref="rollback://mission-artifact-memory/plan/v1",
     )
+    rolled_back = service.transition_artifact_lifecycle_state(
+        mission_id="mission-artifact-memory",
+        artifact_ref="artifact://mission-artifact-memory/plan/v1",
+        artifact_status="active",
+        transition="rollback",
+        transition_ref=(
+            "artifact_lifecycle_transition:rollback:"
+            "artifact://mission-artifact-memory/plan/v1:rollback1"
+        ),
+        rollback_plan_ref="rollback://mission-artifact-memory/plan/v1",
+    )
+    reloaded = MemoryService(
+        database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+    ).get_mission_state("mission-artifact-memory")
     archived = service.transition_artifact_lifecycle_state(
         mission_id="mission-artifact-memory",
-        artifact_ref="artifact://mission-artifact-memory/plan/v2",
+        artifact_ref="artifact://mission-artifact-memory/plan/v1",
         artifact_status="archived",
         transition_ref=(
             "artifact_lifecycle_transition:archive:"
-            "artifact://mission-artifact-memory/plan/v2:fedcba98"
+            "artifact://mission-artifact-memory/plan/v1:fedcba98"
         ),
     )
 
@@ -281,15 +309,90 @@ def test_memory_service_transitions_artifact_lifecycle_in_mission_state() -> Non
         "artifact://mission-artifact-memory/plan/v1"
         not in replaced.active_artifact_refs
     )
+    assert len(replaced.artifact_states) == 2
+    version_one = next(
+        item
+        for item in replaced.artifact_states
+        if item.artifact_ref == "artifact://mission-artifact-memory/plan/v1"
+    )
+    version_two = next(
+        item
+        for item in replaced.artifact_states
+        if item.artifact_ref == "artifact://mission-artifact-memory/plan/v2"
+    )
+    assert version_one.artifact_status == "superseded"
+    assert version_one.replacement_artifact_ref == version_two.artifact_ref
+    assert version_two.supersedes_artifact_ref == version_one.artifact_ref
+    assert version_two.artifact_version == 2
+    assert version_two.work_item_ref == work_item_ref
+    assert rolled_back is not None
+    assert reloaded is not None
+    reloaded_v1 = next(
+        item for item in reloaded.artifact_states if item.artifact_ref == version_one.artifact_ref
+    )
+    reloaded_v2 = next(
+        item for item in reloaded.artifact_states if item.artifact_ref == version_two.artifact_ref
+    )
+    assert reloaded_v1.artifact_status == "active"
+    assert reloaded_v2.artifact_status == "rolled_back"
+    assert reloaded_v1.artifact_version == 1
+    assert reloaded_v1.created_at == version_one.created_at
     assert archived is not None
     assert (
-        "artifact://mission-artifact-memory/plan/v2"
+        "artifact://mission-artifact-memory/plan/v1"
         not in archived.active_artifact_refs
     )
     assert any(
         ref.startswith("artifact_lifecycle_transition:archive:")
         for ref in archived.checkpoint_refs
     )
+
+
+def test_postgres_mission_upsert_keeps_columns_and_placeholders_in_sync() -> None:
+    captured: dict[str, object] = {}
+
+    class FakeCursor:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def execute(self, query: str, params: tuple[object, ...]) -> None:
+            captured["query"] = query
+            captured["params"] = params
+
+    class FakeConnection:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def cursor(self) -> FakeCursor:
+            return FakeCursor()
+
+        def commit(self) -> None:
+            captured["committed"] = True
+
+    repository = PostgresMemoryRepository.__new__(PostgresMemoryRepository)
+    repository._connect = lambda: FakeConnection()
+    mission = MissionStateContract(
+        mission_id=MissionId("mission-postgres-artifact-state"),
+        mission_goal="Persist artifact lineage",
+        mission_status=MissionStatus.ACTIVE,
+        checkpoints=[],
+        updated_at="2026-07-17T00:00:00Z",
+    )
+
+    repository.upsert_mission_state(mission)
+
+    query = str(captured["query"])
+    params = captured["params"]
+    assert isinstance(params, tuple)
+    assert query.count("%s") == len(params) == 35
+    assert "artifact_states" in query
+    assert captured["committed"] is True
 
 
 def test_memory_service_recovers_empty_context_for_new_session() -> None:
@@ -699,6 +802,8 @@ def test_memory_service_derives_long_horizon_goal_strategy_read_only() -> None:
         artifact_ref="artifact://mission-long-horizon/plan/v1",
         artifact_status="active",
         transition_ref="artifact_lifecycle_transition:register:long-horizon",
+        artifact_version=1,
+        work_item_ref="work-item://mission-long-horizon/validate-plan",
     )
 
     strategy = service.build_long_horizon_goal_strategy(mission_id)

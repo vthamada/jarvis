@@ -873,6 +873,9 @@ def artifact_status_from_state(
 ) -> str:
     if mission_state is None:
         return "missing"
+    for artifact_state in mission_state.artifact_states:
+        if artifact_state.artifact_ref == artifact_ref:
+            return artifact_state.artifact_status
     if artifact_ref in mission_state.active_artifact_refs:
         return "active"
     for checkpoint_ref in reversed(mission_state.checkpoint_refs):
@@ -896,23 +899,42 @@ def render_artifacts_state(
 ) -> str:
     if mission_state is None:
         return f"No artifacts found for mission_id={safe_console_value(mission_id)}"
-    artifact_refs = list(mission_state.artifact_refs)
-    if not artifact_refs:
+    registry = OperationalService.build_artifact_registry(mission_state)
+    if not registry.artifact_states:
         return f"No artifacts found for mission_id={safe_console_value(mission_id)}"
     lines = [
         f"mission_id={safe_console_value(mission_state.mission_id)}",
         f"objective_ref={safe_console_value(mission_state.objective_ref)}",
         f"objective_status={safe_console_value(mission_state.objective_status)}",
+        f"registry_status={safe_console_value(registry.registry_status)}",
+        "active_artifact_refs=" + safe_console_list(registry.active_artifact_refs),
+        "superseded_artifact_refs="
+        + safe_console_list(registry.superseded_artifact_refs),
+        "rolled_back_artifact_refs="
+        + safe_console_list(registry.rolled_back_artifact_refs),
+        "external_file_mutation_allowed=False",
     ]
-    for artifact_ref in artifact_refs:
+    for artifact_state in registry.artifact_states:
         lines.extend(
             [
                 "---",
-                f"artifact_ref={safe_console_value(artifact_ref)}",
-                "artifact_status="
-                + safe_console_value(artifact_status_from_state(mission_state, artifact_ref)),
-                "is_active="
-                + safe_console_value(artifact_ref in mission_state.active_artifact_refs),
+                f"artifact_ref={safe_console_value(artifact_state.artifact_ref)}",
+                f"artifact_status={safe_console_value(artifact_state.artifact_status)}",
+                f"artifact_version={safe_console_value(artifact_state.artifact_version)}",
+                "owner_mission_id="
+                + safe_console_value(artifact_state.owner_mission_id),
+                f"objective_ref={safe_console_value(artifact_state.objective_ref)}",
+                f"work_item_ref={safe_console_value(artifact_state.work_item_ref)}",
+                "lineage_root_ref="
+                + safe_console_value(artifact_state.lineage_root_ref),
+                "supersedes_artifact_ref="
+                + safe_console_value(artifact_state.supersedes_artifact_ref),
+                "replacement_artifact_ref="
+                + safe_console_value(artifact_state.replacement_artifact_ref),
+                "rollback_plan_ref="
+                + safe_console_value(artifact_state.rollback_plan_ref),
+                f"created_at={safe_console_value(artifact_state.created_at)}",
+                f"updated_at={safe_console_value(artifact_state.updated_at)}",
             ]
         )
     return "\n".join(lines)
@@ -925,6 +947,8 @@ def render_artifact_transition(result: ArtifactLifecycleTransitionResult) -> str
         [
             f"mission_id={safe_console_value(result.mission_id)}",
             f"artifact_ref={safe_console_value(result.artifact_ref)}",
+            "resulting_artifact_ref="
+            + safe_console_value(result.resulting_artifact_ref),
             f"transition={safe_console_value(result.transition)}",
             f"transition_status={safe_console_value(result.status)}",
             f"governance_decision={safe_console_value(result.governance_decision.decision)}",
@@ -938,6 +962,14 @@ def render_artifact_transition(result: ArtifactLifecycleTransitionResult) -> str
             + safe_console_value(getattr(artifact_state, "artifact_version", None)),
             "work_item_ref="
             + safe_console_value(getattr(artifact_state, "work_item_ref", None)),
+            "owner_mission_id="
+            + safe_console_value(getattr(artifact_state, "owner_mission_id", None)),
+            "lineage_root_ref="
+            + safe_console_value(getattr(artifact_state, "lineage_root_ref", None)),
+            "supersedes_artifact_ref="
+            + safe_console_value(
+                getattr(artifact_state, "supersedes_artifact_ref", None)
+            ),
             "replacement_artifact_ref="
             + safe_console_value(
                 getattr(artifact_state, "replacement_artifact_ref", None)
@@ -951,6 +983,7 @@ def render_artifact_transition(result: ArtifactLifecycleTransitionResult) -> str
             "artifact_refs="
             + safe_console_list(list(getattr(mission_state, "artifact_refs", []))),
             "memory_write_mode=through_core_only",
+            "external_file_mutation_allowed=False",
             f"event_names={safe_console_list([event.event_name for event in result.events])}",
         ]
     )
