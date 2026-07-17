@@ -20,6 +20,12 @@
 - `execution-backlog.md` abre `MB-191` a `MB-200`, estabilizando CLI antes de workspace diario, work-item dependencies, artifact lineage, resume e metricas;
 - WIP permanece 1 com somente `MB-191` ready; TUI, voz, browser/computer use, scheduler, integracoes e autonomia ampla continuam fora da fila.
 
+### MB-191 cria registry tipado de comandos CLI
+
+- os 24 comandos existentes declaram metadata de id, help, handler, categoria, execution mode e output mode em `apps/jarvis_console/registry.py`;
+- parser/help drift e handler ausente falham fechados, e `main()` despacha pelo registry sem a cadeia monolitica de branches;
+- comandos standalone nao constroem o Core desnecessariamente, enquanto handlers e fronteiras soberanas permanecem inalterados; `MB-192` passa a ser o unico item tecnico `ready`.
+
 ## 2026-07-16
 
 ### MB-166 define checklist sandbox-to-release

@@ -2,13 +2,20 @@
 
 ## Atualizacao 2026-07-17
 
+`MB-191` implementou o typed CLI command registry. Os 24 comandos atuais agora
+declaram id, help, handler, categoria, execution mode (`core`/`standalone`) e
+output mode; parser e registry falham fechados em drift. `main()` nao possui
+mais a cadeia de branches por comando e constroi o Core somente para comandos
+que o exigem. Handlers, governanca, memoria canonica e outputs existentes foram
+preservados. `MB-192` e o unico item tecnico `ready`.
+
 `MB-190` repriorizou o pos-`MB-189` para o Daily Operator Loop com fundacao CLI
 antes de novos comandos. A fila `MB-191` a `MB-200` comeca por registry tipado,
 runtime/output e doctor; depois fecha workspace diario, dependencias de work
 items, linhagem de artefatos, resume governado, metricas e readiness. A decisao
 deriva do mapa mestre e de `cli-reference-analysis.md`; TUI, voz,
 browser/computer use, scheduler e integracoes permanecem fora de escopo.
-`MB-191` e o unico item tecnico `ready`.
+Esse estado foi sucedido pelo fechamento de `MB-191`.
 
 `MB-189` fechou o slice governado de evolucao de skills/workflows aberto em
 `MB-175`. O dashboard de readiness agora incorpora status, regressions,

@@ -340,6 +340,11 @@ Done when:
 - `main()` dispatch no longer depends on a long if/else chain;
 - existing tests pass unchanged or with minimal adaptation.
 
+Status: implemented in `MB-191`. The 24 existing commands declare typed id,
+help, handler, category, execution mode and output mode; parser drift fails
+closed and `main()` dispatches through the bound registry without changing
+governed handlers.
+
 ### CLI-002 - Runtime Output Contract
 
 Goal: define `ConsoleRuntime` with text/json output helpers, redaction and

@@ -246,7 +246,7 @@ Goal: expose the same sovereign entity through multiple interfaces.
 | `SFC-008` | Mobile/multichannel | `deferred_by_phase` | Same entity across surfaces | Multisurface continuity | later |
 | `SFC-009` | Surface identity conflict handling | `minimum_baseline` | Full conflict policy across surfaces | Surface contract | later |
 | `SFC-010` | Notification layer | `missing` | Human-approved reminders, not autonomous scheduler | Governance | later |
-| `SFC-011` | Typed CLI command registry | `missing` | Stable metadata and dispatch without a monolithic branch chain | SFC-001 | high-priority |
+| `SFC-011` | Typed CLI command registry | `implemented_baseline` | Keep command metadata and parser dispatch synchronized | SFC-001 | none |
 | `SFC-012` | CLI runtime/output contract | `missing` | Text/JSON, redaction, stderr and stable exit codes | SFC-011 | high-priority |
 | `SFC-013` | Read-only CLI doctor | `missing` | Runtime, stores, backlog, governance and gate preflight | SFC-011, OBS-007 | candidate |
 | `SFC-014` | Generated CLI reference and completion | `missing` | Registry-derived reference and shell completion | SFC-011, DOC-010 | candidate |
@@ -735,7 +735,8 @@ Map IDs: `SFC-001`, `SFC-011`, `DOC-010`.
 Goal: register existing commands through typed metadata and dispatch while
 preserving command behavior and sovereign service boundaries.
 
-Status: ready after `MB-190`.
+Status: closed in `MB-191`; all existing commands now bind through typed
+metadata, parser/help validation and declared Core/standalone execution modes.
 
 ### MB-192 -- CLI Runtime Output And Exit Contract
 
@@ -743,6 +744,8 @@ Map IDs: `SFC-001`, `SFC-012`, `GOV-008`.
 
 Goal: add redacted text/JSON output, stdout/stderr discipline and stable exit
 codes to read/report commands without changing Core decisions.
+
+Status: ready after `MB-191`.
 
 ### MB-193 -- Read-Only Doctor And Preflight
 

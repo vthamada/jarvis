@@ -3607,7 +3607,7 @@ Fora de escopo:
 
 - `id`: `MB-191`
 - `prioridade`: `P1`
-- `status`: `ready`
+- `status`: `completed`
 - `eixo_do_mestre`: `superficie CLI`, `qualidade`, `documentacao`
 - `map_ids`: `SFC-001`, `SFC-011`, `DOC-010`
 - `workflow_profile_afetado`: todos os comandos do `jarvis-console`
@@ -3620,12 +3620,14 @@ Fora de escopo:
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `high`
 - `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: os 24 comandos existentes possuem metadata tipada de id, help, handler, categoria, execution mode e output mode; parser e registry falham em drift e `main()` despacha sem branch chain por comando.
+- `evidencia_de_fechamento`: `apps/jarvis_console/registry.py`, testes de registry/console/E2E e `docs/operations/cli-command-registry.md` comprovam binding integral, Core lazy para standalone e comportamento preservado.
 
 ### MB-192
 
 - `id`: `MB-192`
 - `prioridade`: `P1`
-- `status`: `blocked`
+- `status`: `ready`
 - `eixo_do_mestre`: `superficie CLI`, `seguranca`, `scriptabilidade`
 - `map_ids`: `SFC-001`, `SFC-012`, `GOV-008`
 - `workflow_profile_afetado`: comandos read/report do `jarvis-console`
@@ -3890,6 +3892,6 @@ Estado atual da fila:
 - `MB-174` foi concluido como dashboard integrado de regressao/readiness, fechando a fila `MB-161` a `MB-174`; nao ha item tecnico `ready` ate nova repriorizacao explicita pelo mapa mestre;
 - `MB-175` foi concluido como repriorizacao pos-`MB-174`, abrindo a fila governada de skill/workflow evolution `MB-176` a `MB-189`;
 - `MB-176` a `MB-189` foram concluidos como cadeia de skill/workflow, routing, politica causal, revisao humana de memoria, medicao longitudinal e fechamento de readiness;
-- `MB-190` repriorizou o Daily Operator Loop e abriu `MB-191` a `MB-200`; somente `MB-191` esta `ready`;
+- `MB-190` repriorizou o Daily Operator Loop e abriu `MB-191` a `MB-200`; `MB-191` foi concluido como registry tipado e somente `MB-192` esta `ready`;
 - `SO-001`, `TA-004`, `TA-006` e verticais `deferred` continuam fora da fila sem mudanca explicita de fase;
 - `protective intelligence foundation` continua `deferred` e a matriz da Onda 2 segue como insumo, nao como gatilho automatico para abrir nova vertical.

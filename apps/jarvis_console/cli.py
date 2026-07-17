@@ -10,6 +10,7 @@ from pathlib import Path
 from uuid import uuid4
 
 from apps.jarvis_console.bootstrap import ROOT, ensure_src_paths
+from apps.jarvis_console.registry import COMMAND_REGISTRY
 
 ensure_src_paths()
 
@@ -552,6 +553,12 @@ def build_parser() -> ArgumentParser:
     mission_feedback_parser.add_argument("--operator-identity-ref")
     mission_feedback_parser.add_argument("--canonical-user-ref")
 
+    COMMAND_REGISTRY.validate_parser_commands(
+        {
+            action.dest: action.help
+            for action in subparsers._choices_actions
+        }
+    )
     return parser
 
 
@@ -2301,85 +2308,18 @@ def run_memory_lifecycle_review_command(args: Namespace) -> list[str]:
     ]
 
 
+BOUND_COMMAND_REGISTRY = COMMAND_REGISTRY.bind(globals())
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
-    console = JarvisConsole.build(runtime_dir=ROOT / ".jarvis_runtime" / "console")
-    outputs = (
-        run_ask_command(console, args)
-        if args.command == "ask"
-        else run_experience_reflections_command(args)
-        if args.command == "experience-reflections"
-        else run_procedural_playbooks_command(args)
-        if args.command == "procedural-playbooks"
-        else run_skill_evolution_command(args)
-        if args.command == "skill-evolution"
-        else run_evolution_review_queue_command(args)
-        if args.command == "evolution-review-queue"
-        else run_evolution_review_command(args)
-        if args.command == "evolution-review"
-        else run_memory_lifecycle_review_queue_command(args)
-        if args.command == "memory-review-queue"
-        else run_memory_lifecycle_review_command(args)
-        if args.command == "memory-review"
-        else run_mission_cycle_command(console, args)
-        if args.command == "mission-cycle"
-        else run_operator_dashboard_command(console, args)
-        if args.command == "operator-dashboard"
-        else run_readiness_dashboard_command(args)
-        if args.command == "readiness-dashboard"
-        else run_longitudinal_learning_report_command(args)
-        if args.command == "learning-report"
-        else run_progress_report_command(console, args)
-        if args.command == "progress-report"
-        else run_mission_workflow_command(console, args)
-        if args.command == "mission-workflow"
-        else run_mission_feedback_command(console, args)
-        if args.command == "mission-feedback"
-        else run_technology_candidates_command(args)
-        if args.command == "technology-candidates"
-        else run_work_item_command(console, args)
-        if args.command == "work-item"
-        else run_work_items_command(console, args)
-        if args.command == "work-items"
-        else run_artifact_command(console, args)
-        if args.command == "artifact"
-        else run_artifacts_command(console, args)
-        if args.command == "artifacts"
-        else run_goal_strategy_command(console, args)
-        if args.command == "goal-strategy"
-        else run_objective_command(console, args)
-        if args.command == "objective"
-        else run_objectives_command(console, args)
-        if args.command == "objectives"
-        else run_chat_command(console, args)
+    command, outputs = BOUND_COMMAND_REGISTRY.invoke(
+        args.command,
+        args=args,
+        console_factory=lambda: JarvisConsole.build(
+            runtime_dir=ROOT / ".jarvis_runtime" / "console"
+        ),
     )
-    if args.command in {
-        "ask",
-        "objective",
-        "objectives",
-        "work-item",
-        "work-items",
-        "artifact",
-        "artifacts",
-        "goal-strategy",
-        "technology-candidates",
-        "experience-reflections",
-        "procedural-playbooks",
-        "skill-evolution",
-        "evolution-review-queue",
-        "evolution-review",
-        "memory-review-queue",
-        "memory-review",
-        "mission-cycle",
-        "operator-dashboard",
-        "readiness-dashboard",
-        "learning-report",
-        "progress-report",
-        "mission-workflow",
-        "mission-feedback",
-    }:
-        print(outputs[0])
-    elif args.message:
-        for item in outputs:
-            print(item)
+    for output in command.emitted_outputs(args=args, outputs=outputs):
+        print(output)
     return 0

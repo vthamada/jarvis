@@ -362,7 +362,8 @@ Notas de leitura:
   `MB-174` foi fechado como dashboard integrado de regressao/readiness; a fila
   foi repriorizada em `MB-175`, abrindo `MB-176` a `MB-189`; `MB-176` foi
   fechado e `MB-177` a `MB-189` tambem foram fechados; `MB-190` abriu
-  `MB-191` a `MB-200` e `MB-191` e o unico item tecnico `ready`.
+  `MB-191` a `MB-200`, `MB-191` foi fechado e `MB-192` e o unico item tecnico
+  `ready`.
 
 ### 5.5 Deferred verticals already mapped
 
@@ -406,8 +407,8 @@ Ordem recomendada hoje:
 1. tratar `MB-110` a `MB-159` como baseline fechado de objetivos persistentes,
    utilidade operacional, absorcao tecnologica governada, aprendizado revisado,
    higiene documental e horizonte longo minimo.
-2. tratar `MB-160` a `MB-189` como baseline fechado e executar `MB-191` a
-   `MB-200` como fundacao CLI e Daily Operator Loop, seguindo WIP 1.
+2. tratar `MB-160` a `MB-191` como baseline fechado e executar `MB-192` a
+   `MB-200` como runtime CLI e Daily Operator Loop, seguindo WIP 1.
 3. manter `SO-001`, `TA-004`, `TA-006` e verticais `deferred` fora da fila ate
    haver decisao explicita de fase.
 
@@ -473,7 +474,7 @@ Leitura correta:
   `MB-166`, `MB-167`, `MB-168`, `MB-169`, `MB-170`, `MB-171`, `MB-172` e
   `MB-173`, `MB-174` e `MB-176` foram fechados; `MB-175` abriu `MB-176` a
   `MB-189`; `MB-177` a `MB-189` tambem foram fechados; `MB-190` abriu
-  `MB-191` a `MB-200` e somente `MB-191` esta `ready`;
+  `MB-191` a `MB-200`; `MB-191` foi fechado e somente `MB-192` esta `ready`;
 - `RH-*` permanece fora do backlog implementavel.
 
 ---
