@@ -61,6 +61,9 @@ O repositorio ja possui um corte operacional do laboratorio evolutivo:
 - side-registry versionado de workflows ativos e candidatos inativos, com
   fingerprint, semver, evidencia, testes e rollback, sem escrita no registry
   soberano ou ativacao runtime.
+- builder de variante de workflow que exige pattern evidence elegivel, revisao
+  humana persistida e delta bounded; a variante retorna a `needs_review` e
+  permanece inativa no side-registry.
 
 ---
 

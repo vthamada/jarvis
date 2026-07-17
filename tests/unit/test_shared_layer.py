@@ -27,6 +27,8 @@ from shared.contracts import (
     SkillSandboxEvalContract,
     SurfaceIdentityContract,
     TechnologyAbsorptionCandidateContract,
+    WorkflowEvolutionBuildResultContract,
+    WorkflowEvolutionRequestContract,
     WorkflowProfileVersionContract,
     WorkflowProfileVersionRegistryContract,
     WorkItemStateContract,
@@ -61,6 +63,8 @@ from shared.schemas import (
     SURFACE_IDENTITY_SCHEMA,
     TECHNOLOGY_ABSORPTION_CANDIDATE_SCHEMA,
     WORK_ITEM_STATE_SCHEMA,
+    WORKFLOW_EVOLUTION_BUILD_RESULT_SCHEMA,
+    WORKFLOW_EVOLUTION_REQUEST_SCHEMA,
     WORKFLOW_PROFILE_VERSION_REGISTRY_SCHEMA,
     WORKFLOW_PROFILE_VERSION_SCHEMA,
 )
@@ -603,6 +607,63 @@ def test_workflow_version_registry_contract_cannot_mutate_active_runtime() -> No
     assert "source_registry_fingerprint" in (
         WORKFLOW_PROFILE_VERSION_SCHEMA.required_fields
     )
+
+
+def test_workflow_evolution_contracts_are_explicit_and_inactive() -> None:
+    request = WorkflowEvolutionRequestContract(
+        workflow_evolution_request_id="workflow-evolution-request://software/1.1.0",
+        source_pattern_ref="recurring-pattern://software-release",
+        source_review_decision_id="review-decision://software-release/001",
+        baseline_version_ref=(
+            "workflow-version://software_change_workflow/1.0.0"
+        ),
+        candidate_version="1.1.0",
+        step_additions=["record verified release evidence"],
+        step_removals=[],
+        checkpoint_additions=["release_evidence_recorded"],
+        checkpoint_removals=[],
+        decision_point_additions=[],
+        decision_point_removals=[],
+        success_criteria_additions=["release evidence is auditable"],
+        success_criteria_removals=[],
+        change_summary="record release evidence before recommendation",
+        evidence_refs=["evidence://software-release/pattern"],
+        proposed_tests=["test://workflow/software-release"],
+        rollback_plan_ref="rollback://workflow/software/1.0.0",
+        risk_level="moderate",
+        timestamp="2026-07-16T19:00:00Z",
+    )
+    result = WorkflowEvolutionBuildResultContract(
+        workflow_evolution_result_id="workflow-evolution-result://software-1",
+        build_status="blocked",
+        source_pattern_ref=request.source_pattern_ref,
+        source_review_decision_id=request.source_review_decision_id,
+        baseline_version_ref=request.baseline_version_ref,
+        source_authority_status=(
+            "reviewed_evidence_requires_candidate_review_sandbox_and_release_gate"
+        ),
+        delta_summary={"step_additions": list(request.step_additions)},
+        evidence_refs=list(request.evidence_refs),
+        blockers=["persisted_human_review_decision_required"],
+        generated_at=request.timestamp,
+    )
+
+    assert request.automatic_build_allowed is False
+    assert request.active_registry_write_allowed is False
+    assert request.runtime_activation_allowed is False
+    assert result.candidate is None
+    assert result.active_registry_write_allowed is False
+    assert result.runtime_activation_allowed is False
+    assert result.automatic_promotion_allowed is False
+    assert result.core_mutation_allowed is False
+    assert WORKFLOW_EVOLUTION_REQUEST_SCHEMA.contract_name == (
+        "WorkflowEvolutionRequestContract"
+    )
+    assert WORKFLOW_EVOLUTION_BUILD_RESULT_SCHEMA.contract_name == (
+        "WorkflowEvolutionBuildResultContract"
+    )
+    assert "step_additions" in WORKFLOW_EVOLUTION_REQUEST_SCHEMA.required_fields
+    assert "candidate" in WORKFLOW_EVOLUTION_BUILD_RESULT_SCHEMA.optional_fields
 
 
 def test_deliberative_plan_schema_declares_semantic_memory_evidence_fields() -> None:

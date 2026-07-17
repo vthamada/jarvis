@@ -453,6 +453,55 @@ class WorkflowProfileVersionRegistryContract:
 
 
 @dataclass
+class WorkflowEvolutionRequestContract:
+    workflow_evolution_request_id: str
+    source_pattern_ref: str
+    source_review_decision_id: str
+    baseline_version_ref: str
+    candidate_version: str
+    step_additions: list[str]
+    step_removals: list[str]
+    checkpoint_additions: list[str]
+    checkpoint_removals: list[str]
+    decision_point_additions: list[str]
+    decision_point_removals: list[str]
+    success_criteria_additions: list[str]
+    success_criteria_removals: list[str]
+    change_summary: str
+    evidence_refs: list[str]
+    proposed_tests: list[str]
+    rollback_plan_ref: str
+    risk_level: str
+    timestamp: Timestamp
+    human_review_required: bool = True
+    automatic_build_allowed: bool = False
+    active_registry_write_allowed: bool = False
+    runtime_activation_allowed: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass
+class WorkflowEvolutionBuildResultContract:
+    workflow_evolution_result_id: str
+    build_status: str
+    source_pattern_ref: str
+    source_review_decision_id: str
+    baseline_version_ref: str
+    source_authority_status: str
+    delta_summary: dict[str, list[str]]
+    evidence_refs: list[str]
+    blockers: list[str]
+    generated_at: Timestamp
+    candidate: WorkflowProfileVersionContract | None = None
+    human_review_required: bool = True
+    active_registry_write_allowed: bool = False
+    runtime_activation_allowed: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass
 class ProceduralPlaybookCandidateContract:
     playbook_candidate_id: str
     procedure_name: str

@@ -98,6 +98,12 @@
 - `shared/domain_registry.py` constroi snapshots deterministas de todos os workflows ativos e registra candidatas somente em novo side-registry imutavel, com fingerprint e autoridade runtime sempre bloqueada;
 - `evolution-lab` expoe delegates sem acesso de escrita; testes cobrem cobertura, idempotencia, colisao, drift e claims inseguras, e `MB-182` e o unico item tecnico `ready`.
 
+### MB-182 deriva candidata de workflow somente de evidencia revisada
+
+- `WorkflowEvolutionRequestContract` e `WorkflowEvolutionBuildResultContract` formalizam delta de passos, checkpoints, decision points e criterios, com evidencia, testes, risco e rollback;
+- `evolution-lab` persiste a proposta do pattern e exige que decisao, status, operador e timestamp coincidam com a ultima revisao humana gravada antes de construir a variante;
+- o E2E usa memoria real ate o side-registry e comprova bloqueio de review forjado, delta invalido e claim de escrita; a candidata permanece inativa e `MB-183` e o unico item tecnico `ready`.
+
 ## 2026-07-04
 
 ### MB-161 fecha anchors de evidencia de memoria semantica

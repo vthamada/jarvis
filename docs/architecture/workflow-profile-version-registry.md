@@ -75,10 +75,11 @@ only:
 - `baseline_snapshot`;
 - `candidate_inactive`.
 
-`MB-182` may build a candidate from reviewed recurring evidence. `MB-183` may
-evaluate it offline. `MB-184` may connect evidence to human release and
-rollback gates. None of those stages may mutate the active registry by direct
-assignment.
+`MB-182` now builds a candidate only from recurring evidence whose human review
+is persisted in the evolution lab. The resulting delta is explicit and the
+candidate returns to `needs_review`. `MB-183` may evaluate it offline. `MB-184`
+may connect evidence to human release and rollback gates. None of those stages
+may mutate the active registry by direct assignment.
 
 ## Evolution lab role
 

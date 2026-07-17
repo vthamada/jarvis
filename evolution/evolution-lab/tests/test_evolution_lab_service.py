@@ -22,10 +22,15 @@ from shared.contracts import (
     SandboxToReleaseChecklistContract,
     SkillCandidateContract,
     SkillMiningRequestContract,
+    WorkflowEvolutionRequestContract,
     WorkflowProfileVersionContract,
 )
-from shared.domain_registry import workflow_definition_hash
-from shared.types import RiskLevel
+from shared.domain_registry import (
+    RUNTIME_ROUTE_REGISTRY,
+    route_metadata_payload,
+    workflow_definition_hash,
+)
+from shared.types import MissionId, RiskLevel
 
 
 def runtime_dir(name: str) -> Path:
@@ -98,6 +103,235 @@ def test_evolution_lab_exposes_inactive_workflow_version_registry() -> None:
     assert updated.versions[-1].runtime_activation_allowed is False
     assert updated.active_registry_mutation_allowed is False
     assert updated.automatic_promotion_allowed is False
+
+
+def test_reviewed_memory_pattern_builds_only_inactive_workflow_candidate_end_to_end() -> None:
+    temp_dir = runtime_dir("evolution-lab-workflow-candidate")
+    memory = MemoryService(
+        database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+    )
+    service = EvolutionLabService(database_path=str(temp_dir / "evolution.db"))
+    for index in (1, 2):
+        experience_id = f"experience://workflow-candidate/{index}"
+        memory.record_experience_reflection(
+            experience=ExperienceRecordContract(
+                experience_id=experience_id,
+                mission_id=MissionId(f"mission-workflow-candidate-{index}"),
+                workflow_profile="software_change_workflow",
+                route="software_development",
+                primary_domain_driver="software_engineering",
+                outcome_status="completed",
+                checkpoints=["run_targeted_tests", "record_release_evidence"],
+                evidence_refs=[f"trace://workflow-candidate/{index}"],
+                timestamp=f"2026-07-16T18:00:0{index}Z",
+            ),
+            reflection=PostTaskReflectionContract(
+                reflection_id=f"reflection://workflow-candidate/{index}",
+                experience_id=experience_id,
+                reflection_status="candidate",
+                learning_candidate="release evidence should be explicit",
+                recommendation="review a bounded release evidence checkpoint",
+                evidence_refs=[f"trace://workflow-candidate/{index}"],
+                timestamp=f"2026-07-16T18:01:0{index}Z",
+            ),
+        )
+    report = memory.build_recurring_pattern_report(
+        report_id="recurring-pattern-report://workflow-candidate",
+        workflow_profile="software_change_workflow",
+        route="software_development",
+        domain="software_engineering",
+        generated_at="2026-07-16T18:10:00Z",
+    )
+    pattern = report.patterns[0]
+    registry = service.build_workflow_version_registry(
+        registry_version="1.0.0",
+        generated_at="2026-07-16T18:15:00Z",
+    )
+    baseline = next(
+        version
+        for version in registry.versions
+        if version.workflow_profile == pattern.workflow_profile
+    )
+    proposal = service.create_workflow_pattern_review_proposal(
+        pattern=pattern,
+        baseline=baseline,
+        proposed_tests=["test://workflow/software-change-candidate"],
+        rollback_plan_ref="rollback://workflow/software-change/1.0.0",
+    )
+    decision = service.review_proposal(
+        evolution_proposal_id=str(proposal.evolution_proposal_id),
+        action="sandbox",
+        operator_ref="operator://workflow-reviewer",
+        evidence_refs=["evidence://workflow/software-change/review"],
+        proposed_tests=["test://workflow/software-change-candidate"],
+        rollback_plan_ref="rollback://workflow/software-change/1.0.0",
+    )
+    request = WorkflowEvolutionRequestContract(
+        workflow_evolution_request_id=(
+            "workflow-evolution-request://software-change/1.1.0"
+        ),
+        source_pattern_ref=pattern.pattern_id,
+        source_review_decision_id=decision.review_decision_id,
+        baseline_version_ref=baseline.workflow_version_id,
+        candidate_version="1.1.0",
+        step_additions=["record verified release evidence"],
+        step_removals=[],
+        checkpoint_additions=["release_evidence_recorded"],
+        checkpoint_removals=[],
+        decision_point_additions=["release_evidence_gate"],
+        decision_point_removals=[],
+        success_criteria_additions=["release evidence remains auditable"],
+        success_criteria_removals=[],
+        change_summary="record evidence before the release recommendation",
+        evidence_refs=["evidence://workflow/software-change/review"],
+        proposed_tests=["test://workflow/software-change-candidate"],
+        rollback_plan_ref="rollback://workflow/software-change/1.0.0",
+        risk_level="moderate",
+        timestamp="2026-07-16T18:20:00Z",
+    )
+    active_before = {
+        route: route_metadata_payload(route) for route in RUNTIME_ROUTE_REGISTRY
+    }
+
+    result = service.build_workflow_candidate_from_reviewed_pattern(
+        pattern=pattern,
+        baseline=baseline,
+        review_decision=decision,
+        request=request,
+    )
+    assert result.candidate is not None
+    updated = service.register_workflow_candidate_version(
+        registry,
+        result.candidate,
+    )
+
+    assert report.report_status == "evidence_ready_for_human_review"
+    assert decision.review_status == "sandboxed"
+    assert result.build_status == "candidate_created_inactive"
+    assert result.blockers == []
+    assert result.delta_summary["step_additions"] == [
+        "record verified release evidence"
+    ]
+    assert result.candidate.lifecycle_status == "candidate_inactive"
+    assert result.candidate.review_status == "needs_review"
+    assert result.candidate.runtime_binding_status == "inactive_candidate"
+    assert result.candidate.active_registry_write_allowed is False
+    assert result.candidate.runtime_activation_allowed is False
+    assert result.candidate.automatic_promotion_allowed is False
+    assert updated.candidate_count == 1
+    assert registry.candidate_count == 0
+    assert {
+        route: route_metadata_payload(route) for route in RUNTIME_ROUTE_REGISTRY
+    } == active_before
+
+
+def test_workflow_candidate_builder_blocks_forgery_invalid_delta_and_authority() -> None:
+    temp_dir = runtime_dir("evolution-lab-workflow-candidate-blocked")
+    service = EvolutionLabService(database_path=str(temp_dir / "evolution.db"))
+    registry = service.build_workflow_version_registry(
+        registry_version="1.0.0",
+        generated_at="2026-07-16T18:15:00Z",
+    )
+    baseline = next(
+        version
+        for version in registry.versions
+        if version.workflow_profile == "software_change_workflow"
+    )
+    pattern = RecurringPatternEvidenceContract(
+        pattern_id="recurring-pattern://workflow-builder-blocked",
+        pattern_type="repeated_successful_workflow",
+        pattern_status="evidence_ready_for_human_review",
+        workflow_profile=baseline.workflow_profile,
+        route=baseline.route,
+        domain="software_engineering",
+        occurrence_count=2,
+        minimum_occurrences=2,
+        successful_occurrences=2,
+        non_successful_occurrences=0,
+        confidence_status="bounded_moderate",
+        outcome_summary="completed=2",
+        pattern_summary="two compatible completed experiences",
+        experience_refs=["experience://workflow/1", "experience://workflow/2"],
+        reflection_refs=["reflection://workflow/1", "reflection://workflow/2"],
+        feedback_refs=[],
+        evidence_refs=["trace://workflow/1", "trace://workflow/2"],
+        recurring_signals=["record_release_evidence"],
+        conflict_flags=[],
+        blockers=[],
+        generated_at="2026-07-16T18:10:00Z",
+    )
+    proposal = service.create_workflow_pattern_review_proposal(
+        pattern=pattern,
+        baseline=baseline,
+        proposed_tests=["test://workflow/builder-blocked"],
+        rollback_plan_ref="rollback://workflow/software-change/1.0.0",
+    )
+    decision = service.review_proposal(
+        evolution_proposal_id=str(proposal.evolution_proposal_id),
+        action="sandbox",
+        operator_ref="operator://workflow-reviewer",
+        evidence_refs=["evidence://workflow/builder-blocked"],
+        proposed_tests=["test://workflow/builder-blocked"],
+        rollback_plan_ref="rollback://workflow/software-change/1.0.0",
+    )
+    request = WorkflowEvolutionRequestContract(
+        workflow_evolution_request_id="workflow-evolution-request://blocked/1.1.0",
+        source_pattern_ref=pattern.pattern_id,
+        source_review_decision_id=decision.review_decision_id,
+        baseline_version_ref=baseline.workflow_version_id,
+        candidate_version="1.1.0",
+        step_additions=["record verified release evidence"],
+        step_removals=[],
+        checkpoint_additions=[],
+        checkpoint_removals=[],
+        decision_point_additions=[],
+        decision_point_removals=[],
+        success_criteria_additions=[],
+        success_criteria_removals=[],
+        change_summary="record release evidence",
+        evidence_refs=["evidence://workflow/builder-blocked"],
+        proposed_tests=["test://workflow/builder-blocked"],
+        rollback_plan_ref="rollback://workflow/software-change/1.0.0",
+        risk_level="moderate",
+        timestamp="2026-07-16T18:20:00Z",
+    )
+
+    forged_decision = replace(
+        decision,
+        review_decision_id="review-decision://forged",
+    )
+    forged = service.build_workflow_candidate_from_reviewed_pattern(
+        pattern=pattern,
+        baseline=baseline,
+        review_decision=forged_decision,
+        request=replace(
+            request,
+            source_review_decision_id=forged_decision.review_decision_id,
+        ),
+    )
+    invalid_delta = service.build_workflow_candidate_from_reviewed_pattern(
+        pattern=pattern,
+        baseline=baseline,
+        review_decision=decision,
+        request=replace(
+            request,
+            step_additions=[],
+            step_removals=["missing baseline step"],
+        ),
+    )
+    unsafe = service.build_workflow_candidate_from_reviewed_pattern(
+        pattern=pattern,
+        baseline=baseline,
+        review_decision=decision,
+        request=replace(request, active_registry_write_allowed=True),
+    )
+
+    assert forged.candidate is None
+    assert "persisted_human_review_decision_required" in forged.blockers
+    assert invalid_delta.candidate is None
+    assert "steps_removal_not_in_baseline" in invalid_delta.blockers
+    assert unsafe.candidate is None
+    assert "workflow_request_authority_claim_not_allowed" in unsafe.blockers
 
 
 def test_evolution_lab_persists_proposals_and_sandbox_candidate_decision() -> None:

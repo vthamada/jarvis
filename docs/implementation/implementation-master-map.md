@@ -632,13 +632,17 @@ Map IDs: `EVL-008`, `COG-006`, `COG-007`.
 
 Goal: derive a workflow variant only from reviewed pattern evidence.
 
-Status: ready after `MB-181`.
+Status: closed in `MB-182`; persisted human pattern review and an explicit
+bounded delta now produce only an inactive, review-bound side-registry
+candidate.
 
 ### MB-183 -- Workflow Variant Eval
 
 Map IDs: `EVL-005`, `EVL-008`, `OBS-009`.
 
 Goal: compare workflow baseline and candidate under equivalent offline cases.
+
+Status: ready after `MB-182`.
 
 ### MB-184 -- Workflow Promotion And Rollback Gate
 

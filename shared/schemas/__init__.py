@@ -672,6 +672,72 @@ WORKFLOW_PROFILE_VERSION_REGISTRY_SCHEMA = CanonicalSchema(
     ),
 )
 
+WORKFLOW_EVOLUTION_REQUEST_SCHEMA = CanonicalSchema(
+    name="WorkflowEvolutionRequestSchema",
+    contract_name="WorkflowEvolutionRequestContract",
+    required_fields=(
+        "workflow_evolution_request_id",
+        "source_pattern_ref",
+        "source_review_decision_id",
+        "baseline_version_ref",
+        "candidate_version",
+        "step_additions",
+        "step_removals",
+        "checkpoint_additions",
+        "checkpoint_removals",
+        "decision_point_additions",
+        "decision_point_removals",
+        "success_criteria_additions",
+        "success_criteria_removals",
+        "change_summary",
+        "evidence_refs",
+        "proposed_tests",
+        "rollback_plan_ref",
+        "risk_level",
+        "timestamp",
+    ),
+    optional_fields=(
+        "human_review_required",
+        "automatic_build_allowed",
+        "active_registry_write_allowed",
+        "runtime_activation_allowed",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Explicit reviewed workflow delta; it grants no registry or runtime authority.",
+    ),
+)
+
+WORKFLOW_EVOLUTION_BUILD_RESULT_SCHEMA = CanonicalSchema(
+    name="WorkflowEvolutionBuildResultSchema",
+    contract_name="WorkflowEvolutionBuildResultContract",
+    required_fields=(
+        "workflow_evolution_result_id",
+        "build_status",
+        "source_pattern_ref",
+        "source_review_decision_id",
+        "baseline_version_ref",
+        "source_authority_status",
+        "delta_summary",
+        "evidence_refs",
+        "blockers",
+        "generated_at",
+    ),
+    optional_fields=(
+        "candidate",
+        "human_review_required",
+        "active_registry_write_allowed",
+        "runtime_activation_allowed",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Blocked builds return no candidate; successful candidates remain inactive "
+        "and review-bound.",
+    ),
+)
+
 PROCEDURAL_PLAYBOOK_CANDIDATE_SCHEMA = CanonicalSchema(
     name="ProceduralPlaybookCandidateSchema",
     contract_name="ProceduralPlaybookCandidateContract",

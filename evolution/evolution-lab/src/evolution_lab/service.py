@@ -30,12 +30,15 @@ from shared.contracts import (
     SkillSandboxCaseResultContract,
     SkillSandboxEvalContract,
     TechnologyAbsorptionCandidateContract,
+    WorkflowEvolutionBuildResultContract,
+    WorkflowEvolutionRequestContract,
     WorkflowProfileVersionContract,
     WorkflowProfileVersionRegistryContract,
 )
 from shared.domain_registry import (
     build_active_workflow_version_registry,
     register_workflow_candidate_version,
+    workflow_definition_hash,
 )
 from shared.eval_expansion import derive_expanded_eval_state
 from shared.optimization_state import derive_optimization_state
@@ -2160,6 +2163,262 @@ class EvolutionLabService:
             return str(strategy_name)
         return self.preferred_strategy()
 
+    def create_workflow_pattern_review_proposal(
+        self,
+        *,
+        pattern: RecurringPatternEvidenceContract,
+        baseline: WorkflowProfileVersionContract,
+        proposed_tests: list[str] | None = None,
+        rollback_plan_ref: str | None = None,
+        strategy_name: str | None = None,
+    ) -> EvolutionProposalContract:
+        """Persist recurring workflow evidence for explicit human review."""
+
+        blockers = list(pattern.blockers)
+        if pattern.pattern_status != "evidence_ready_for_human_review":
+            blockers.append("workflow_pattern_not_eligible_for_review")
+        if pattern.conflict_flags:
+            blockers.append("workflow_pattern_conflict_requires_review")
+        if pattern.successful_occurrences < pattern.minimum_occurrences:
+            blockers.append("successful_recurrence_threshold_not_met")
+        if pattern.non_successful_occurrences:
+            blockers.append("non_successful_pattern_cannot_seed_workflow_delta")
+        if not pattern.evidence_refs or not pattern.experience_refs:
+            blockers.append("workflow_pattern_evidence_required")
+        if pattern.workflow_profile != baseline.workflow_profile:
+            blockers.append("workflow_pattern_profile_mismatch")
+        if pattern.route != baseline.route:
+            blockers.append("workflow_pattern_route_mismatch")
+        if baseline.lifecycle_status != "baseline_snapshot":
+            blockers.append("workflow_baseline_snapshot_required")
+        if (
+            pattern.skill_candidate_generation_allowed
+            or pattern.automatic_skill_creation_allowed
+            or pattern.automatic_promotion_allowed
+            or pattern.core_mutation_allowed
+        ):
+            blockers.append("workflow_pattern_authority_claim_not_allowed")
+        blockers = self._unique_values(blockers)
+        safe_tests = self._unique_values(
+            list(proposed_tests or ["test://workflow/pattern-reviewed-delta"])
+        )
+        safe_rollback = rollback_plan_ref or baseline.rollback_plan_ref
+        return self.create_proposal(
+            proposal_type="workflow_pattern_evidence",
+            target_scope=f"workflow:{baseline.workflow_profile}",
+            hypothesis=(
+                "reviewed recurring evidence may justify a bounded workflow variant"
+            ),
+            expected_gain=(
+                "improve the affected workflow without mutating the active registry"
+            ),
+            baseline_refs=self._unique_values(
+                [baseline.workflow_version_id, *pattern.evidence_refs]
+            ),
+            source_signals=self._unique_values(
+                [
+                    pattern.pattern_id,
+                    f"workflow://profile/{self._signal_value(pattern.workflow_profile)}",
+                    f"workflow://route/{self._signal_value(pattern.route)}",
+                    "workflow://candidate-generation/human-review-required",
+                    "workflow://active-registry-write/forbidden",
+                    *pattern.experience_refs,
+                    *pattern.reflection_refs,
+                ]
+            ),
+            risk_hint="moderate",
+            proposed_tests=safe_tests,
+            strategy_name=strategy_name,
+            candidate_refs=[pattern.pattern_id, baseline.workflow_version_id],
+            evaluation_matrix={
+                "workflow_pattern_evidence": {
+                    "pattern_id": pattern.pattern_id,
+                    "pattern_status": pattern.pattern_status,
+                    "workflow_profile": pattern.workflow_profile,
+                    "route": pattern.route,
+                    "domain": pattern.domain,
+                    "occurrence_count": pattern.occurrence_count,
+                    "successful_occurrences": pattern.successful_occurrences,
+                    "confidence_status": pattern.confidence_status,
+                    "blockers": blockers,
+                }
+            },
+            strategy_context={
+                "workflow_pattern_evidence": {
+                    "pattern_id": pattern.pattern_id,
+                    "workflow_profile": pattern.workflow_profile,
+                    "route": pattern.route,
+                    "domain": pattern.domain,
+                    "baseline_version_ref": baseline.workflow_version_id,
+                    "baseline_definition_hash": baseline.definition_hash,
+                    "evidence_refs": list(pattern.evidence_refs),
+                },
+                "promotion_policy": {
+                    "automatic_build": False,
+                    "active_registry_write": False,
+                    "runtime_activation": False,
+                    "automatic_promotion": False,
+                    "core_mutation_allowed": False,
+                    "human_review_required": True,
+                    "sandbox_eval_required": True,
+                    "release_gate_required": True,
+                },
+                "evolution_review": self._review_context(
+                    status="needs_review",
+                    blockers=blockers,
+                    rollback_plan_ref=safe_rollback,
+                ),
+            },
+            optimization_candidate_status="blocked" if blockers else "candidate",
+            optimization_safety_status=(
+                "blocked_by_safety" if blockers else "human_review_required"
+            ),
+            optimization_blockers=blockers,
+        )
+
+    def build_workflow_candidate_from_reviewed_pattern(
+        self,
+        *,
+        pattern: RecurringPatternEvidenceContract,
+        baseline: WorkflowProfileVersionContract,
+        review_decision: EvolutionReviewDecisionContract,
+        request: WorkflowEvolutionRequestContract,
+    ) -> WorkflowEvolutionBuildResultContract:
+        """Build one inactive workflow delta only from persisted reviewed evidence."""
+
+        delta_summary = self._workflow_delta_summary(request)
+        blockers = self._workflow_candidate_build_blockers(
+            pattern=pattern,
+            baseline=baseline,
+            review_decision=review_decision,
+            request=request,
+            delta_summary=delta_summary,
+        )
+        proposal = self.repository.fetch_proposal(
+            str(review_decision.evolution_proposal_id)
+        )
+        if proposal is None:
+            blockers.append("persisted_workflow_pattern_proposal_required")
+        else:
+            blockers.extend(
+                self._persisted_workflow_review_blockers(
+                    proposal=proposal,
+                    pattern=pattern,
+                    baseline=baseline,
+                    decision=review_decision,
+                )
+            )
+
+        steps = self._apply_workflow_delta(
+            baseline.workflow_steps,
+            additions=delta_summary["step_additions"],
+            removals=delta_summary["step_removals"],
+            field_name="steps",
+            blockers=blockers,
+        )
+        checkpoints = self._apply_workflow_delta(
+            baseline.workflow_checkpoints,
+            additions=delta_summary["checkpoint_additions"],
+            removals=delta_summary["checkpoint_removals"],
+            field_name="checkpoints",
+            blockers=blockers,
+        )
+        decision_points = self._apply_workflow_delta(
+            baseline.workflow_decision_points,
+            additions=delta_summary["decision_point_additions"],
+            removals=delta_summary["decision_point_removals"],
+            field_name="decision_points",
+            blockers=blockers,
+        )
+        success_criteria = self._apply_workflow_delta(
+            baseline.success_criteria,
+            additions=delta_summary["success_criteria_additions"],
+            removals=delta_summary["success_criteria_removals"],
+            field_name="success_criteria",
+            blockers=blockers,
+        )
+        definition_hash = workflow_definition_hash(
+            workflow_steps=steps,
+            workflow_checkpoints=checkpoints,
+            workflow_decision_points=decision_points,
+            success_criteria=success_criteria,
+        )
+        if definition_hash == baseline.definition_hash:
+            blockers.append("workflow_delta_must_change_baseline")
+        blockers = self._unique_values(blockers)
+
+        evidence_refs = self._unique_values(
+            [
+                pattern.pattern_id,
+                baseline.workflow_version_id,
+                review_decision.review_decision_id,
+                str(review_decision.evolution_proposal_id),
+                *request.evidence_refs,
+                *review_decision.evidence_refs,
+                *pattern.evidence_refs,
+            ]
+        )[:50]
+        candidate = None
+        if not blockers:
+            candidate = WorkflowProfileVersionContract(
+                workflow_version_id=(
+                    f"workflow-version://{baseline.workflow_profile}/"
+                    f"{request.candidate_version}"
+                ),
+                workflow_profile=baseline.workflow_profile,
+                version=request.candidate_version,
+                route=baseline.route,
+                lifecycle_status="candidate_inactive",
+                definition_hash=definition_hash,
+                workflow_steps=steps,
+                workflow_checkpoints=checkpoints,
+                workflow_decision_points=decision_points,
+                success_criteria=success_criteria,
+                evidence_refs=evidence_refs,
+                proposed_tests=self._unique_values(request.proposed_tests),
+                rollback_plan_ref=request.rollback_plan_ref,
+                source_registry_ref=baseline.source_registry_ref,
+                source_registry_fingerprint=baseline.source_registry_fingerprint,
+                timestamp=request.timestamp,
+                baseline_version_ref=baseline.workflow_version_id,
+                change_summary=request.change_summary.strip(),
+                risk_level=request.risk_level,
+                review_status="needs_review",
+                runtime_binding_status="inactive_candidate",
+                blockers=[],
+                human_review_required=True,
+                sandbox_required=True,
+                active_registry_write_allowed=False,
+                runtime_activation_allowed=False,
+                automatic_promotion_allowed=False,
+                core_mutation_allowed=False,
+            )
+
+        result_seed = (
+            f"{request.workflow_evolution_request_id}:"
+            f"{review_decision.review_decision_id}:{baseline.definition_hash}"
+        )
+        result_hash = sha256(result_seed.encode("utf-8")).hexdigest()[:16]
+        return WorkflowEvolutionBuildResultContract(
+            workflow_evolution_result_id=(
+                f"workflow-evolution-result://{result_hash}"
+            ),
+            build_status=(
+                "candidate_created_inactive" if candidate is not None else "blocked"
+            ),
+            source_pattern_ref=pattern.pattern_id,
+            source_review_decision_id=review_decision.review_decision_id,
+            baseline_version_ref=baseline.workflow_version_id,
+            source_authority_status=(
+                "reviewed_evidence_requires_candidate_review_sandbox_and_release_gate"
+            ),
+            delta_summary=delta_summary,
+            evidence_refs=evidence_refs,
+            blockers=blockers,
+            generated_at=request.timestamp,
+            candidate=candidate,
+        )
+
     def build_workflow_version_registry(
         self,
         *,
@@ -2188,6 +2447,188 @@ class EvolutionLabService:
         """Register an inactive candidate in a new immutable side snapshot."""
 
         return register_workflow_candidate_version(registry, candidate)
+
+    @staticmethod
+    def _workflow_delta_summary(
+        request: WorkflowEvolutionRequestContract,
+    ) -> dict[str, list[str]]:
+        return {
+            field_name: [
+                normalized
+                for item in getattr(request, field_name)
+                if (normalized := str(item).strip())
+            ]
+            for field_name in (
+                "step_additions",
+                "step_removals",
+                "checkpoint_additions",
+                "checkpoint_removals",
+                "decision_point_additions",
+                "decision_point_removals",
+                "success_criteria_additions",
+                "success_criteria_removals",
+            )
+        }
+
+    @classmethod
+    def _workflow_candidate_build_blockers(
+        cls,
+        *,
+        pattern: RecurringPatternEvidenceContract,
+        baseline: WorkflowProfileVersionContract,
+        review_decision: EvolutionReviewDecisionContract,
+        request: WorkflowEvolutionRequestContract,
+        delta_summary: dict[str, list[str]],
+    ) -> list[str]:
+        blockers = list(pattern.blockers)
+        if pattern.pattern_status != "evidence_ready_for_human_review":
+            blockers.append("workflow_pattern_not_eligible")
+        if pattern.conflict_flags:
+            blockers.append("workflow_pattern_conflict_detected")
+        if pattern.successful_occurrences < pattern.minimum_occurrences:
+            blockers.append("successful_recurrence_threshold_not_met")
+        if pattern.non_successful_occurrences:
+            blockers.append("non_successful_pattern_cannot_seed_workflow_delta")
+        if pattern.workflow_profile != baseline.workflow_profile:
+            blockers.append("workflow_pattern_profile_mismatch")
+        if pattern.route != baseline.route:
+            blockers.append("workflow_pattern_route_mismatch")
+        if baseline.lifecycle_status != "baseline_snapshot":
+            blockers.append("workflow_baseline_snapshot_required")
+        if request.source_pattern_ref != pattern.pattern_id:
+            blockers.append("workflow_request_pattern_ref_mismatch")
+        if request.source_review_decision_id != review_decision.review_decision_id:
+            blockers.append("workflow_request_review_ref_mismatch")
+        if request.baseline_version_ref != baseline.workflow_version_id:
+            blockers.append("workflow_request_baseline_ref_mismatch")
+        if review_decision.review_status not in REVIEWED_LEARNING_GUIDANCE_STATUSES:
+            blockers.append("approved_or_sandboxed_pattern_review_required")
+        if (
+            review_decision.automatic_promotion_allowed
+            or review_decision.core_mutation_allowed
+        ):
+            blockers.append("review_decision_authority_claim_not_allowed")
+        if not request.human_review_required:
+            blockers.append("workflow_candidate_human_review_required")
+        if (
+            request.automatic_build_allowed
+            or request.active_registry_write_allowed
+            or request.runtime_activation_allowed
+            or request.automatic_promotion_allowed
+            or request.core_mutation_allowed
+        ):
+            blockers.append("workflow_request_authority_claim_not_allowed")
+        if not cls._numeric_semver(baseline.version):
+            blockers.append("baseline_numeric_semver_required")
+        if not cls._numeric_semver(request.candidate_version):
+            blockers.append("numeric_semver_required")
+        elif cls._numeric_semver(baseline.version):
+            candidate_version = tuple(
+                int(part) for part in request.candidate_version.split(".")
+            )
+            baseline_version = tuple(int(part) for part in baseline.version.split("."))
+            if candidate_version <= baseline_version:
+                blockers.append("candidate_version_must_advance_baseline")
+        if request.risk_level not in {"low", "moderate"}:
+            blockers.append("workflow_candidate_risk_exceeds_bounded_limit")
+        if (
+            not request.workflow_evolution_request_id
+            or len(request.workflow_evolution_request_id) > 500
+        ):
+            blockers.append("bounded_workflow_evolution_request_id_required")
+        if not request.change_summary.strip() or len(request.change_summary) > 500:
+            blockers.append("bounded_change_summary_required")
+        if not request.rollback_plan_ref or len(request.rollback_plan_ref) > 500:
+            blockers.append("bounded_rollback_plan_required")
+        if not request.timestamp or len(request.timestamp) > 100:
+            blockers.append("bounded_timestamp_required")
+        for field_name, values in delta_summary.items():
+            raw_values = list(getattr(request, field_name))
+            if len(raw_values) > 20 or any(len(str(item)) > 500 for item in raw_values):
+                blockers.append(f"{field_name}_must_be_bounded")
+            if len(values) != len(raw_values):
+                blockers.append(f"{field_name}_cannot_contain_blank_values")
+            if len(values) != len(set(values)):
+                blockers.append(f"{field_name}_must_be_unique")
+        if not any(delta_summary.values()):
+            blockers.append("explicit_workflow_delta_required")
+        for field_name, values in (
+            ("evidence_refs", request.evidence_refs),
+            ("proposed_tests", request.proposed_tests),
+        ):
+            if (
+                not values
+                or len(values) > 50
+                or any(not str(item).strip() or len(str(item)) > 500 for item in values)
+            ):
+                blockers.append(f"{field_name}_must_be_present_and_bounded")
+        return cls._unique_values(blockers)
+
+    @staticmethod
+    def _persisted_workflow_review_blockers(
+        *,
+        proposal: EvolutionProposalContract,
+        pattern: RecurringPatternEvidenceContract,
+        baseline: WorkflowProfileVersionContract,
+        decision: EvolutionReviewDecisionContract,
+    ) -> list[str]:
+        blockers: list[str] = []
+        if proposal.proposal_type != "workflow_pattern_evidence":
+            blockers.append("workflow_pattern_proposal_type_required")
+        if str(proposal.evolution_proposal_id) != str(decision.evolution_proposal_id):
+            blockers.append("workflow_review_proposal_mismatch")
+        context = dict(proposal.strategy_context)
+        pattern_context = dict(context.get("workflow_pattern_evidence", {}))
+        if pattern_context.get("pattern_id") != pattern.pattern_id:
+            blockers.append("persisted_pattern_ref_mismatch")
+        if pattern_context.get("workflow_profile") != pattern.workflow_profile:
+            blockers.append("persisted_pattern_profile_mismatch")
+        if pattern_context.get("route") != pattern.route:
+            blockers.append("persisted_pattern_route_mismatch")
+        if pattern_context.get("baseline_version_ref") != baseline.workflow_version_id:
+            blockers.append("persisted_baseline_ref_mismatch")
+        if pattern_context.get("baseline_definition_hash") != baseline.definition_hash:
+            blockers.append("persisted_baseline_definition_mismatch")
+        review = dict(context.get("evolution_review", {}))
+        if review.get("last_review_decision_id") != decision.review_decision_id:
+            blockers.append("persisted_human_review_decision_required")
+        if review.get("review_status") != decision.review_status:
+            blockers.append("persisted_human_review_status_mismatch")
+        if review.get("last_decision") != decision.decision:
+            blockers.append("persisted_human_review_action_mismatch")
+        if review.get("last_operator_ref") != decision.operator_ref:
+            blockers.append("persisted_human_reviewer_mismatch")
+        if review.get("last_reviewed_at") != decision.timestamp:
+            blockers.append("persisted_human_review_timestamp_mismatch")
+        if review.get("blockers"):
+            blockers.append("persisted_human_review_has_blockers")
+        return blockers
+
+    @staticmethod
+    def _apply_workflow_delta(
+        baseline_values: list[str],
+        *,
+        additions: list[str],
+        removals: list[str],
+        field_name: str,
+        blockers: list[str],
+    ) -> list[str]:
+        overlap = set(additions) & set(removals)
+        if overlap:
+            blockers.append(f"{field_name}_delta_add_remove_conflict")
+        missing = [value for value in removals if value not in baseline_values]
+        if missing:
+            blockers.append(f"{field_name}_removal_not_in_baseline")
+        already_present = [value for value in additions if value in baseline_values]
+        if already_present:
+            blockers.append(f"{field_name}_addition_already_in_baseline")
+        result = [value for value in baseline_values if value not in removals]
+        result.extend(value for value in additions if value not in result)
+        if not result:
+            blockers.append(f"{field_name}_cannot_be_empty")
+        if len(result) > 50 or any(len(value) > 500 for value in result):
+            blockers.append(f"{field_name}_result_must_be_bounded")
+        return result
 
     @staticmethod
     def _review_context(
