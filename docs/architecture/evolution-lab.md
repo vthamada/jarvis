@@ -67,6 +67,9 @@ O repositorio ja possui um corte operacional do laboratorio evolutivo:
 - comparacao offline equivalente de workflow baseline/candidata, medindo
   sucesso, aderencia de contrato, retrabalho, checkpoints e causalidade de
   memoria; qualquer regressao bloqueia readiness e nenhum resultado promove.
+- proposta e review separados para a versao candidata, plano de rollback
+  `manual_only` e integracao ao checklist/promotion gate existente; gate verde
+  ainda termina pendente de decisao humana e sem escrita no registry ativo.
 
 ---
 

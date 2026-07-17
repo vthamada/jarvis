@@ -3485,7 +3485,7 @@ Fora de escopo:
 
 - `id`: `MB-184`
 - `prioridade`: `P2`
-- `status`: `ready`
+- `status`: `completed`
 - `eixo_do_mestre`: `governanca`, `workflows`, `rollback`
 - `map_ids`: `EVL-006`, `EVL-008`, `GOV-009`
 - `workflow_profile_afetado`: workflow candidato aprovado em eval
@@ -3495,12 +3495,14 @@ Fora de escopo:
 - `dependencias`: `MB-183`
 - `criterio_de_aceite`: checklist exige review, eval, release gate e rollback; nenhuma promocao ocorre automaticamente.
 - `gate_minimo`: testes de evolution/governance/release e gate padrao
+- `impacto_no_baseline`: candidata de workflow agora recebe proposta/review proprios, eval equivalente e rollback manual verificado antes de entrar no promotion gate existente; gate verde continua pendente de decisao humana separada.
+- `evidencia_de_fechamento`: `WorkflowRollbackPlanContract`, proposta `workflow_candidate`, extensao do checklist/gate, `tools/workflow_release_gate.py` e E2E pass/block comprovam `manual_only`, candidata inativa, registry ativo imutavel e `promotion_authorized=false`.
 
 ### MB-185
 
 - `id`: `MB-185`
 - `prioridade`: `P2`
-- `status`: `blocked`
+- `status`: `ready`
 - `eixo_do_mestre`: `roteamento`, `evolucao`, `observabilidade`
 - `map_ids`: `COG-003`, `COG-007`, `EVL-008`, `OBS-009`
 - `workflow_profile_afetado`: rotas promovidas
@@ -3677,6 +3679,6 @@ Estado atual da fila:
 - `MB-173` foi concluido como baseline de proveniencia, freshness e conflito/incerteza de conhecimento;
 - `MB-174` foi concluido como dashboard integrado de regressao/readiness, fechando a fila `MB-161` a `MB-174`; nao ha item tecnico `ready` ate nova repriorizacao explicita pelo mapa mestre;
 - `MB-175` foi concluido como repriorizacao pos-`MB-174`, abrindo a fila governada de skill/workflow evolution `MB-176` a `MB-189`;
-- `MB-176` a `MB-183` foram concluidos como cadeia de skill, registry versionado, builder revisado e eval de workflow; `MB-184` e o unico item tecnico `ready` e `MB-185` a `MB-189` permanecem `blocked` por dependencia/ordem;
+- `MB-176` a `MB-184` foram concluidos como cadeia de skill e workflow ate eval, promotion gate e rollback manual; `MB-185` e o unico item tecnico `ready` e `MB-186` a `MB-189` permanecem `blocked` por dependencia/ordem;
 - `SO-001`, `TA-004`, `TA-006` e verticais `deferred` continuam fora da fila sem mudanca explicita de fase;
 - `protective intelligence foundation` continua `deferred` e a matriz da Onda 2 segue como insumo, nao como gatilho automatico para abrir nova vertical.

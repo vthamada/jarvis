@@ -52,5 +52,7 @@ and success criteria against the versioned definition before comparing metrics.
   gate; it is not release approval.
 - `manual_gate_only`: `promotion_authorized` remains false.
 
-`MB-184` may consume this result as one input to the existing promotion and
-rollback gate. A green result alone never changes the active registry.
+`MB-184` now consumes this result as one input to the existing promotion and
+rollback gate. It additionally requires a candidate-specific human review and
+a verified manual rollback plan. A green result alone never changes the active
+registry.

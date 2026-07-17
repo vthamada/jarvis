@@ -652,13 +652,17 @@ Map IDs: `EVL-006`, `EVL-008`, `GOV-009`.
 
 Goal: reuse human review, release gates and rollback for workflow candidates.
 
-Status: ready after `MB-183`.
+Status: closed in `MB-184`; candidate-specific review, equivalent eval and a
+verified manual rollback plan now feed the existing machine gate, which still
+cannot authorize promotion.
 
 ### MB-185 -- Routing Adaptation Evidence
 
 Map IDs: `COG-003`, `COG-007`, `EVL-008`, `OBS-009`.
 
 Goal: measure route/specialist fit and produce reviewable adaptation evidence.
+
+Status: ready after `MB-184`.
 
 ### MB-186 -- Semantic And Procedural Influence Policy Hardening
 

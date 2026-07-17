@@ -73,6 +73,31 @@ command. The command is an inspection surface only: its
 `next_operator_action` values are labels, not execution authority, and a
 `release_review_required` view still has `promotion_authorized=false`.
 
+## MB-184 Workflow Promotion And Rollback Gate
+
+Workflow candidates require a separate proposal and human review after the
+pattern review that originated the candidate. Pattern review authorizes only
+candidate construction; it does not approve the generated workflow version.
+
+The workflow release checklist requires the same candidate identity and
+version across:
+
+1. inactive side-registry candidate;
+2. `workflow_candidate` evolution proposal;
+3. candidate-specific human review decision;
+4. passed `WorkflowVariantEvalRunContract` from equivalent offline cases;
+5. `WorkflowRollbackPlanContract` verified as `manual_only`;
+6. standard engineering and release gates.
+
+The rollback plan identifies the candidate and baseline, trigger conditions,
+procedure, verification tests, evidence and responsible operator. Verification
+does not execute rollback or grant registry write authority.
+
+A complete workflow gate still ends in
+`release_gate_passed_pending_human_decision`. The evaluator never activates the
+candidate, changes the active route registry, executes rollback or sets
+`promotion_authorized=true`.
+
 ## 1. Objetivo
 
 Este documento operacionaliza a política de **releases, versionamento e mudança controlada** do JARVIS.

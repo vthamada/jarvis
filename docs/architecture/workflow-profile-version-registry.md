@@ -77,9 +77,11 @@ only:
 
 `MB-182` now builds a candidate only from recurring evidence whose human review
 is persisted in the evolution lab. The resulting delta is explicit and the
-candidate returns to `needs_review`. `MB-183` may evaluate it offline. `MB-184`
-may connect evidence to human release and rollback gates. None of those stages
-may mutate the active registry by direct assignment.
+candidate returns to `needs_review`. `MB-183` evaluates it offline. `MB-184`
+connects the candidate-specific review, eval and manual rollback plan to the
+existing release gates. A passed machine gate still waits for a separate human
+promotion decision. None of those stages may mutate the active registry by
+direct assignment.
 
 ## Evolution lab role
 

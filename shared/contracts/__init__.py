@@ -583,6 +583,31 @@ class WorkflowVariantEvalRunContract:
 
 
 @dataclass
+class WorkflowRollbackPlanContract:
+    rollback_plan_id: str
+    rollback_plan_ref: str
+    workflow_profile: str
+    route: str
+    baseline_version_ref: str
+    candidate_version_ref: str
+    plan_status: str
+    execution_mode: str
+    trigger_conditions: list[str]
+    procedure_steps: list[str]
+    verification_tests: list[str]
+    evidence_refs: list[str]
+    blockers: list[str]
+    operator_ref: str
+    generated_at: Timestamp
+    human_review_required: bool = True
+    execution_authorized: bool = False
+    active_registry_write_allowed: bool = False
+    automatic_rollback_allowed: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass
 class ProceduralPlaybookCandidateContract:
     playbook_candidate_id: str
     procedure_name: str
@@ -1683,6 +1708,9 @@ class SandboxToReleaseChecklistContract:
     candidate_version: str | None = None
     sandbox_eval_ref: str | None = None
     sandbox_eval_status: str | None = None
+    baseline_version_ref: str | None = None
+    rollback_verification_ref: str | None = None
+    rollback_verification_status: str | None = None
     sandbox_required: bool = True
     release_gate_required: bool = True
     automatic_promotion_allowed: bool = False

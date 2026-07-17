@@ -835,6 +835,39 @@ WORKFLOW_VARIANT_EVAL_RUN_SCHEMA = CanonicalSchema(
     ),
 )
 
+WORKFLOW_ROLLBACK_PLAN_SCHEMA = CanonicalSchema(
+    name="WorkflowRollbackPlanSchema",
+    contract_name="WorkflowRollbackPlanContract",
+    required_fields=(
+        "rollback_plan_id",
+        "rollback_plan_ref",
+        "workflow_profile",
+        "route",
+        "baseline_version_ref",
+        "candidate_version_ref",
+        "plan_status",
+        "execution_mode",
+        "trigger_conditions",
+        "procedure_steps",
+        "verification_tests",
+        "evidence_refs",
+        "operator_ref",
+        "generated_at",
+    ),
+    optional_fields=(
+        "blockers",
+        "human_review_required",
+        "execution_authorized",
+        "active_registry_write_allowed",
+        "automatic_rollback_allowed",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Verified manual rollback plan; it records readiness but cannot execute registry writes.",
+    ),
+)
+
 PROCEDURAL_PLAYBOOK_CANDIDATE_SCHEMA = CanonicalSchema(
     name="ProceduralPlaybookCandidateSchema",
     contract_name="ProceduralPlaybookCandidateContract",
@@ -1675,6 +1708,9 @@ SANDBOX_TO_RELEASE_CHECKLIST_SCHEMA = CanonicalSchema(
         "candidate_version",
         "sandbox_eval_ref",
         "sandbox_eval_status",
+        "baseline_version_ref",
+        "rollback_verification_ref",
+        "rollback_verification_status",
         "sandbox_required",
         "release_gate_required",
         "automatic_promotion_allowed",

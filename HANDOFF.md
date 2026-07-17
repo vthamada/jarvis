@@ -2,6 +2,17 @@
 
 ## Atualizacao 2026-07-16
 
+`MB-184` foi concluido como integracao da candidata de workflow ao promotion
+gate e rollback manual. A versao candidata recebe proposta e review proprios,
+separados da revisao do pattern. `WorkflowRollbackPlanContract` registra
+baseline, candidata, triggers, procedimento, testes, evidencia e operador com
+`execution_mode=manual_only`. O checklist exige identidade/versao coerentes,
+eval MB-183 aprovado, rollback verificado, engineering gate e release gate. O
+E2E comprova que a cadeia completa termina em
+`release_gate_passed_pending_human_decision`; regressao ou rollback ausente
+bloqueiam. Candidata permanece inativa, registry ativo inalterado e
+`promotion_authorized=false`. `MB-185` e o unico item tecnico `ready`.
+
 `MB-183` foi concluido como eval offline equivalente de workflow baseline vs
 candidata. Os contratos `WorkflowVariantEval*` registram casos, checks,
 metricas, deltas, melhorias, regressoes e run agregada. O `evolution-lab`
@@ -11,7 +22,7 @@ valida as definicoes versionadas e as dimensoes `success_score`,
 `tools/workflow_variant_eval.py` exige candidata registrada e inativa no
 side-registry atual. Qualquer regressao falha a run. Mesmo verde, o resultado e
 `manual_gate_only`, com `promotion_authorized=false` e registry ativo
-inalterado. `MB-184` e o unico item tecnico `ready`.
+inalterado. Esse estado foi sucedido pelo fechamento de `MB-184`.
 
 `MB-182` foi concluido como builder governado de candidata de workflow.
 `WorkflowEvolutionRequestContract` declara delta explicito de passos,
@@ -103,7 +114,7 @@ flag explicita e salva evidencia historica em `.jarvis_runtime/readiness/`; o
 console expoe a mesma leitura por `readiness-dashboard`. Capacidades deferred
 nao viram falsos blockers e nenhum status autoriza release autonomo. A fila
 `MB-161` a `MB-174` esta fechada. Esse estado foi sucedido por `MB-175` e pelo
-fechamento de `MB-176` a `MB-183`; `MB-184` e agora o unico item tecnico
+fechamento de `MB-176` a `MB-184`; `MB-185` e agora o unico item tecnico
 `ready`.
 
 `MB-173` foi concluido: `KnowledgeSourceEvidenceContract` e

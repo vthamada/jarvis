@@ -110,6 +110,12 @@
 - `evolution-lab` valida identidade, evidencia revisada, elementos esperados e cinco dimensoes bounded; `observability-service` agrega pass rate e regressao, e o runner exige side-registry atual e inativo;
 - testes comprovam melhoria sem regressao, regressao bloqueada e authority claims contidos; run verde permanece `manual_gate_only`, e `MB-184` e o unico item tecnico `ready`.
 
+### MB-184 integra workflow ao promotion gate e rollback manual
+
+- `WorkflowRollbackPlanContract` formaliza baseline/candidata, triggers, procedimento, testes, evidencia e operador, sempre `manual_only` e sem executar escrita no registry;
+- candidata de workflow ganha proposta/review proprios; checklist exige identidade/versao coerentes, eval MB-183 aprovado, rollback verificado, engineering gate e release gate;
+- E2E pass/block comprova que gate completo termina pendente de decisao humana e que regressao ou rollback ausente bloqueiam release; `MB-185` e o unico item tecnico `ready`.
+
 ## 2026-07-04
 
 ### MB-161 fecha anchors de evidencia de memoria semantica
