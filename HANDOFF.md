@@ -2,6 +2,17 @@
 
 ## Atualizacao 2026-07-16
 
+`MB-177` foi concluido como registry canonico de skills candidatas. O novo
+`SkillCandidateContract` formaliza identidade logica, semver, workflow,
+dominio, especialista subordinado, inputs, outputs, instrucoes bounded, tools,
+risco, evidencias, pattern refs, failure modes, testes e rollback. O
+`memory-service` persiste o registry em SQLite/PostgreSQL com unicidade
+`(skill_id, version)`: retry identico e idempotente, mas mutacao ou colisao de
+versao e rejeitada. Toda entrada permanece `candidate_inactive`,
+`needs_review`, `inactive`, sandbox-required e sem ativacao, promocao ou Core
+mutation automaticas. `MB-178` e o unico item tecnico `ready` e podera minerar
+somente pattern evidence elegivel para esse registry.
+
 `MB-176` foi concluido como baseline bounded de pattern evidence. Os novos
 `RecurringPatternEvidenceContract` e `RecurringPatternReportContract` agregam
 experiencias, reflexoes e feedbacks por workflow, rota e dominio, exigem duas
@@ -9,7 +20,8 @@ ocorrencias distintas e expoem outcomes, evidence refs, sinais recorrentes,
 confidence, conflitos e blockers. Memoria e observabilidade usam o mesmo
 agregador deterministico read-only; amostra insuficiente ou outcomes mistos nao
 viram evidencia elegivel. Criacao de skill, promocao automatica e mutacao do
-Core permanecem explicitamente falsas. `MB-177` e o unico item tecnico `ready`.
+Core permanecem explicitamente falsas. Esse estado foi sucedido pelo
+fechamento de `MB-177`.
 
 `MB-175` foi concluido como repriorizacao explicita pos-`MB-174`. A fila
 `MB-176` a `MB-189` cobre pattern evidence, skill registry e miner,
@@ -26,7 +38,8 @@ flag explicita e salva evidencia historica em `.jarvis_runtime/readiness/`; o
 console expoe a mesma leitura por `readiness-dashboard`. Capacidades deferred
 nao viram falsos blockers e nenhum status autoriza release autonomo. A fila
 `MB-161` a `MB-174` esta fechada. Esse estado foi sucedido por `MB-175` e pelo
-fechamento de `MB-176`; `MB-177` e agora o unico item tecnico `ready`.
+fechamento de `MB-176` e `MB-177`; `MB-178` e agora o unico item tecnico
+`ready`.
 
 `MB-173` foi concluido: `KnowledgeSourceEvidenceContract` e
 `KnowledgeEvidenceGovernanceContract` agora carregam proveniencia, freshness,

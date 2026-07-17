@@ -68,6 +68,12 @@
 - `memory-service` e `observability-service` usam o mesmo agregador deterministico read-only sobre experiencias, reflexoes e feedbacks canonicos, sem nova memoria paralela;
 - testes cobrem recorrencia valida, amostra insuficiente, outcomes conflitantes e duas correcoes reais ponta a ponta; skill generation, autopromocao e mutacao do Core permanecem bloqueadas, e `MB-177` e o unico item tecnico `ready`.
 
+### MB-177 cria registry inativo de skills candidatas
+
+- `SkillCandidateContract` e schema formalizam identidade/versionamento, escopo, especialista, inputs/outputs, instrucoes, tools, risco, pattern/evidence refs, failure modes, testes, rollback e estados humanos;
+- `memory-service` persiste e filtra o registry em SQLite/PostgreSQL, garante unicidade `(skill_id, version)`, retry idempotente e rejeicao de mutacao/colisao;
+- claims de ativacao, aprovacao, escrita direta, autopromocao ou Core mutation sao contidos; testes comprovam invariantes e `MB-178` e o unico item tecnico `ready`.
+
 ## 2026-07-04
 
 ### MB-161 fecha anchors de evidencia de memoria semantica

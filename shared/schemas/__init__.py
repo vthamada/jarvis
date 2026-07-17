@@ -378,6 +378,46 @@ RECURRING_PATTERN_REPORT_SCHEMA = CanonicalSchema(
     ),
 )
 
+SKILL_CANDIDATE_SCHEMA = CanonicalSchema(
+    name="SkillCandidateSchema",
+    contract_name="SkillCandidateContract",
+    required_fields=(
+        "skill_candidate_id",
+        "skill_id",
+        "skill_name",
+        "version",
+        "workflow_profile",
+        "domain",
+        "specialist_type",
+        "inputs",
+        "outputs",
+        "allowed_tools",
+        "bounded_instructions",
+        "risk_level",
+        "evidence_refs",
+        "source_pattern_refs",
+        "failure_modes",
+        "proposed_tests",
+        "rollback_plan_ref",
+        "timestamp",
+    ),
+    optional_fields=(
+        "registry_status",
+        "review_status",
+        "activation_status",
+        "blockers",
+        "sandbox_required",
+        "human_review_required",
+        "automatic_activation_allowed",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+        "memory_write_mode",
+    ),
+    notes=(
+        "Versioned inactive skill candidate; registration is not activation or promotion.",
+    ),
+)
+
 PROCEDURAL_PLAYBOOK_CANDIDATE_SCHEMA = CanonicalSchema(
     name="ProceduralPlaybookCandidateSchema",
     contract_name="ProceduralPlaybookCandidateContract",

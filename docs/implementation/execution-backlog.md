@@ -3366,7 +3366,7 @@ Fora de escopo:
 
 - `id`: `MB-177`
 - `prioridade`: `P1`
-- `status`: `ready`
+- `status`: `done`
 - `eixo_do_mestre`: `evolucao`, `skills`, `memoria procedural`
 - `map_ids`: `EVL-007`, `MEM-006`, `GOV-004`
 - `workflow_profile_afetado`: `operational_readiness_workflow`
@@ -3376,12 +3376,14 @@ Fora de escopo:
 - `dependencias`: `MB-176`
 - `criterio_de_aceite`: skill candidata possui inputs, outputs, dominio, especialista, tools permitidas, risco, versao, evidencias, failure modes, rollback e status humano; ativacao automatica e mutacao do Core ficam falsas.
 - `gate_minimo`: testes direcionados de memory/evolution/shared e gate padrao
+- `impacto_no_baseline`: existe registry canonico SQLite/PostgreSQL para skill candidata versionada, bounded, inativa, consultavel e imutavel por versao, sem consumo runtime.
+- `evidencia_de_fechamento`: `SkillCandidateContract`/schema, `StoredSkillCandidate`, tabela/index/filtros e enforcement no `memory-service`; testes comprovam persistencia, idempotencia, contencao de claims inseguros, colisao de versao e imutabilidade.
 
 ### MB-178
 
 - `id`: `MB-178`
 - `prioridade`: `P1`
-- `status`: `blocked`
+- `status`: `ready`
 - `eixo_do_mestre`: `evolucao`, `skills`
 - `map_ids`: `EVL-007`, `MEM-003`, `MEM-006`
 - `workflow_profile_afetado`: `operational_readiness_workflow`, `research_synthesis_workflow`
@@ -3663,6 +3665,6 @@ Estado atual da fila:
 - `MB-173` foi concluido como baseline de proveniencia, freshness e conflito/incerteza de conhecimento;
 - `MB-174` foi concluido como dashboard integrado de regressao/readiness, fechando a fila `MB-161` a `MB-174`; nao ha item tecnico `ready` ate nova repriorizacao explicita pelo mapa mestre;
 - `MB-175` foi concluido como repriorizacao pos-`MB-174`, abrindo a fila governada de skill/workflow evolution `MB-176` a `MB-189`;
-- `MB-176` foi concluido como baseline bounded de pattern evidence; `MB-177` e o unico item tecnico `ready` e `MB-178` a `MB-189` permanecem `blocked` por dependencia/ordem;
+- `MB-176` foi concluido como baseline bounded de pattern evidence e `MB-177` como registry inativo de skill candidata; `MB-178` e o unico item tecnico `ready` e `MB-179` a `MB-189` permanecem `blocked` por dependencia/ordem;
 - `SO-001`, `TA-004`, `TA-006` e verticais `deferred` continuam fora da fila sem mudanca explicita de fase;
 - `protective intelligence foundation` continua `deferred` e a matriz da Onda 2 segue como insumo, nao como gatilho automatico para abrir nova vertical.

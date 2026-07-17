@@ -18,6 +18,7 @@ from shared.contracts import (
     RecurringPatternReportContract,
     ReviewedLearningGuidanceContract,
     SandboxToReleaseChecklistContract,
+    SkillCandidateContract,
     SurfaceIdentityContract,
     TechnologyAbsorptionCandidateContract,
     WorkItemStateContract,
@@ -42,6 +43,7 @@ from shared.schemas import (
     RECURRING_PATTERN_REPORT_SCHEMA,
     REVIEWED_LEARNING_GUIDANCE_SCHEMA,
     SANDBOX_TO_RELEASE_CHECKLIST_SCHEMA,
+    SKILL_CANDIDATE_SCHEMA,
     SURFACE_IDENTITY_SCHEMA,
     TECHNOLOGY_ABSORPTION_CANDIDATE_SCHEMA,
     WORK_ITEM_STATE_SCHEMA,
@@ -340,6 +342,42 @@ def test_recurring_pattern_contracts_are_observational_only() -> None:
         "automatic_skill_creation_allowed"
         in RECURRING_PATTERN_REPORT_SCHEMA.optional_fields
     )
+
+
+def test_skill_candidate_contract_is_versioned_inactive_and_review_bound() -> None:
+    candidate = SkillCandidateContract(
+        skill_candidate_id="skill-candidate://release-evidence/1.0.0",
+        skill_id="skill://release-evidence",
+        skill_name="release evidence verification",
+        version="1.0.0",
+        workflow_profile="software_change_workflow",
+        domain="software_engineering",
+        specialist_type="software_change_specialist",
+        inputs=["change_scope", "release_evidence"],
+        outputs=["bounded_release_recommendation"],
+        allowed_tools=["local_test_runner"],
+        bounded_instructions=["verify evidence", "report missing gates"],
+        risk_level=RiskLevel.MODERATE,
+        evidence_refs=["trace://release-evidence/1"],
+        source_pattern_refs=["recurring-pattern://release-evidence"],
+        failure_modes=["missing_release_evidence"],
+        proposed_tests=["run targeted release tests"],
+        rollback_plan_ref="rollback://skill/release-evidence/1.0.0",
+        timestamp="2026-07-16T14:00:00Z",
+    )
+
+    assert candidate.registry_status == "candidate_inactive"
+    assert candidate.review_status == "needs_review"
+    assert candidate.activation_status == "inactive"
+    assert candidate.sandbox_required is True
+    assert candidate.human_review_required is True
+    assert candidate.automatic_activation_allowed is False
+    assert candidate.automatic_promotion_allowed is False
+    assert candidate.core_mutation_allowed is False
+    assert candidate.memory_write_mode == "through_core_only"
+    assert SKILL_CANDIDATE_SCHEMA.contract_name == "SkillCandidateContract"
+    assert "version" in SKILL_CANDIDATE_SCHEMA.required_fields
+    assert "allowed_tools" in SKILL_CANDIDATE_SCHEMA.required_fields
 
 
 def test_deliberative_plan_schema_declares_semantic_memory_evidence_fields() -> None:

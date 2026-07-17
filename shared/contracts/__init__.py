@@ -227,6 +227,38 @@ class RecurringPatternReportContract:
 
 
 @dataclass
+class SkillCandidateContract:
+    skill_candidate_id: str
+    skill_id: str
+    skill_name: str
+    version: str
+    workflow_profile: str
+    domain: str
+    specialist_type: str
+    inputs: list[str]
+    outputs: list[str]
+    allowed_tools: list[str]
+    bounded_instructions: list[str]
+    risk_level: RiskLevel
+    evidence_refs: list[str]
+    source_pattern_refs: list[str]
+    failure_modes: list[str]
+    proposed_tests: list[str]
+    rollback_plan_ref: str
+    timestamp: Timestamp
+    registry_status: str = "candidate_inactive"
+    review_status: str = "needs_review"
+    activation_status: str = "inactive"
+    blockers: list[str] = field(default_factory=list)
+    sandbox_required: bool = True
+    human_review_required: bool = True
+    automatic_activation_allowed: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+    memory_write_mode: str = "through_core_only"
+
+
+@dataclass
 class ProceduralPlaybookCandidateContract:
     playbook_candidate_id: str
     procedure_name: str

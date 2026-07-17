@@ -5,6 +5,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from os import getenv
+from re import fullmatch
 from uuid import uuid4
 
 from memory_service.repository import (
@@ -14,6 +15,7 @@ from memory_service.repository import (
     StoredExperienceReflection,
     StoredProceduralPlaybookCandidate,
     StoredReviewedLearningGuidance,
+    StoredSkillCandidate,
     StoredSpecialistSharedMemory,
     StoredTurn,
     StoredUserScopeSnapshot,
@@ -41,6 +43,7 @@ from shared.contracts import (
     ProceduralPlaybookCandidateContract,
     RecurringPatternReportContract,
     ReviewedLearningGuidanceContract,
+    SkillCandidateContract,
     SpecialistContributionContract,
     SpecialistSharedMemoryContextContract,
     UserScopeContextContract,
@@ -488,6 +491,171 @@ class MemoryService:
             workflow_profile=workflow_profile,
             review_status=review_status,
             limit=max(1, limit),
+        )
+
+    def record_skill_candidate(
+        self,
+        candidate: SkillCandidateContract,
+    ) -> StoredSkillCandidate:
+        """Register one immutable inactive skill candidate through canonical memory."""
+
+        for field_name, value in (
+            ("skill_candidate_id", candidate.skill_candidate_id),
+            ("skill_id", candidate.skill_id),
+            ("skill_name", candidate.skill_name),
+        ):
+            if not value or len(value) > 200:
+                raise ValueError(f"{field_name} must be present and bounded")
+        if fullmatch(r"\d+\.\d+\.\d+", candidate.version) is None:
+            raise ValueError("skill candidate version must use numeric semver")
+        try:
+            risk_level = RiskLevel(str(candidate.risk_level))
+        except ValueError as exc:
+            raise ValueError("skill candidate risk_level is invalid") from exc
+
+        blockers = list(candidate.blockers)
+        bounded_fields = {
+            "inputs": self._bounded_skill_values(candidate.inputs, "inputs", blockers),
+            "outputs": self._bounded_skill_values(candidate.outputs, "outputs", blockers),
+            "allowed_tools": self._bounded_skill_values(
+                candidate.allowed_tools,
+                "allowed_tools",
+                blockers,
+            ),
+            "bounded_instructions": self._bounded_skill_values(
+                candidate.bounded_instructions,
+                "bounded_instructions",
+                blockers,
+                max_items=12,
+                item_limit=500,
+            ),
+            "evidence_refs": self._bounded_skill_values(
+                candidate.evidence_refs,
+                "evidence_refs",
+                blockers,
+                item_limit=240,
+            ),
+            "source_pattern_refs": self._bounded_skill_values(
+                candidate.source_pattern_refs,
+                "source_pattern_refs",
+                blockers,
+                item_limit=240,
+            ),
+            "failure_modes": self._bounded_skill_values(
+                candidate.failure_modes,
+                "failure_modes",
+                blockers,
+            ),
+            "proposed_tests": self._bounded_skill_values(
+                candidate.proposed_tests,
+                "proposed_tests",
+                blockers,
+                item_limit=500,
+            ),
+        }
+        for required_field in (
+            "workflow_profile",
+            "domain",
+            "specialist_type",
+            "rollback_plan_ref",
+        ):
+            value = str(getattr(candidate, required_field) or "").strip()
+            if not value or len(value) > 240:
+                blockers.append(f"{required_field}_required_and_bounded")
+        for required_list in (
+            "inputs",
+            "outputs",
+            "bounded_instructions",
+            "evidence_refs",
+            "source_pattern_refs",
+            "failure_modes",
+            "proposed_tests",
+        ):
+            if not bounded_fields[required_list]:
+                blockers.append(f"{required_list}_required")
+        if any(
+            item.strip().lower() in {"*", "all", "any", "unrestricted"}
+            for item in bounded_fields["allowed_tools"]
+        ):
+            blockers.append("allowed_tools_must_be_explicit")
+        if risk_level in {RiskLevel.HIGH, RiskLevel.CRITICAL}:
+            blockers.append("high_risk_candidate_requires_explicit_sandbox_review")
+        if candidate.registry_status != "candidate_inactive":
+            blockers.append("registry_status_forced_inactive")
+        if candidate.review_status != "needs_review":
+            blockers.append("human_review_required_before_status_change")
+        if candidate.activation_status != "inactive":
+            blockers.append("activation_status_forced_inactive")
+        if not candidate.sandbox_required:
+            blockers.append("sandbox_required")
+        if candidate.automatic_activation_allowed:
+            blockers.append("automatic_activation_not_allowed")
+        if candidate.automatic_promotion_allowed:
+            blockers.append("automatic_promotion_not_allowed")
+        if candidate.core_mutation_allowed:
+            blockers.append("core_mutation_not_allowed")
+        if candidate.memory_write_mode != "through_core_only":
+            blockers.append("memory_write_must_use_sovereign_core")
+
+        safe_candidate = replace(
+            candidate,
+            risk_level=risk_level,
+            **bounded_fields,
+            registry_status="candidate_inactive",
+            review_status="needs_review",
+            activation_status="inactive",
+            blockers=self._merge_unique_strings(blockers, []),
+            sandbox_required=True,
+            human_review_required=True,
+            automatic_activation_allowed=False,
+            automatic_promotion_allowed=False,
+            core_mutation_allowed=False,
+            memory_write_mode="through_core_only",
+        )
+        existing = self.repository.fetch_skill_candidate(
+            safe_candidate.skill_candidate_id
+        )
+        if existing is not None:
+            if existing.candidate == safe_candidate:
+                return existing
+            raise ValueError("registered skill candidate versions are immutable")
+        version_matches = self.repository.list_skill_candidates(
+            skill_id=safe_candidate.skill_id,
+            version=safe_candidate.version,
+            limit=1,
+        )
+        if version_matches:
+            raise ValueError("skill_id and version already belong to another candidate")
+
+        record = StoredSkillCandidate(candidate=safe_candidate)
+        self.repository.record_skill_candidate(record)
+        return record
+
+    def get_skill_candidate(
+        self,
+        skill_candidate_id: str,
+    ) -> StoredSkillCandidate | None:
+        """Return one inactive candidate without changing registry state."""
+
+        return self.repository.fetch_skill_candidate(skill_candidate_id)
+
+    def list_skill_candidates(
+        self,
+        *,
+        skill_id: str | None = None,
+        version: str | None = None,
+        domain: str | None = None,
+        review_status: str | None = None,
+        limit: int = 20,
+    ) -> list[StoredSkillCandidate]:
+        """Return bounded inactive candidates from the canonical registry."""
+
+        return self.repository.list_skill_candidates(
+            skill_id=skill_id,
+            version=version,
+            domain=domain,
+            review_status=review_status,
+            limit=max(1, min(limit, 100)),
         )
 
     def recover_for_input(self, contract: InputContract) -> MemoryRecoveryResult:
@@ -3740,6 +3908,23 @@ class MemoryService:
         )
         normalized = " ".join(sanitized.split()).strip()
         return normalized[:limit] or None
+
+    @classmethod
+    def _bounded_skill_values(
+        cls,
+        values: list[str],
+        field_name: str,
+        blockers: list[str],
+        *,
+        max_items: int = 20,
+        item_limit: int = 200,
+    ) -> list[str]:
+        normalized = cls._merge_unique_strings(values, [])
+        if len(normalized) > max_items:
+            blockers.append(f"{field_name}_item_limit_exceeded")
+        if any(len(item) > item_limit for item in normalized):
+            blockers.append(f"{field_name}_value_limit_exceeded")
+        return [item[:item_limit] for item in normalized[:max_items]]
 
     @staticmethod
     def _operator_feedback_summary(feedback: OperatorFeedbackContract) -> str:

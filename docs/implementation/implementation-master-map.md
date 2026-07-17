@@ -577,8 +577,7 @@ Goal: aggregate compatible experiences, reflections and feedback into bounded,
 auditable recurring-pattern evidence without creating a skill automatically.
 
 Status: closed in `MB-176`; compatible experience, reflection and feedback
-records now produce bounded, read-only pattern evidence, and `MB-177` is the
-only technical item ready.
+records now produce bounded, read-only pattern evidence.
 
 ### MB-177 -- Candidate Skill Registry Contracts
 
@@ -586,13 +585,17 @@ Map IDs: `EVL-007`, `MEM-006`, `GOV-004`.
 
 Goal: define a versioned, inactive and human-review-bound skill candidate.
 
-Status: ready after `MB-176`.
+Status: closed in `MB-177`; the persistent registry enforces inactive,
+human-review-bound, immutable logical versions, and `MB-178` is the only
+technical item ready.
 
 ### MB-178 -- Bounded Skill Miner
 
 Map IDs: `EVL-007`, `MEM-003`, `MEM-006`.
 
 Goal: convert only eligible recurring-pattern evidence into a skill candidate.
+
+Status: ready after `MB-177`.
 
 ### MB-179 -- Skill Review And Sandbox Eval
 

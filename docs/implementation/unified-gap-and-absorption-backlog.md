@@ -361,7 +361,8 @@ Notas de leitura:
   `MB-173` foi fechado como baseline de proveniencia/freshness e incerteza;
   `MB-174` foi fechado como dashboard integrado de regressao/readiness; a fila
   foi repriorizada em `MB-175`, abrindo `MB-176` a `MB-189`; `MB-176` foi
-  fechado e `MB-177` e o unico item tecnico `ready`.
+  fechado, `MB-177` tambem foi fechado e `MB-178` e o unico item tecnico
+  `ready`.
 
 ### 5.5 Deferred verticals already mapped
 
@@ -405,8 +406,8 @@ Ordem recomendada hoje:
 1. tratar `MB-110` a `MB-159` como baseline fechado de objetivos persistentes,
    utilidade operacional, absorcao tecnologica governada, aprendizado revisado,
    higiene documental e horizonte longo minimo.
-2. tratar `MB-160` a `MB-176` como baseline fechado e executar `MB-177` como
-   contrato/registry inativo antes de qualquer Skill Miner.
+2. tratar `MB-160` a `MB-177` como baseline fechado e executar `MB-178` como
+   Skill Miner bounded, sem ativacao ou proposta de release.
 3. manter `SO-001`, `TA-004`, `TA-006` e verticais `deferred` fora da fila ate
    haver decisao explicita de fase.
 
@@ -471,7 +472,7 @@ Leitura correta:
   proveniencia e readiness; `MB-161`, `MB-162`, `MB-163`, `MB-164`, `MB-165`,
   `MB-166`, `MB-167`, `MB-168`, `MB-169`, `MB-170`, `MB-171`, `MB-172` e
   `MB-173`, `MB-174` e `MB-176` foram fechados; `MB-175` abriu `MB-176` a
-  `MB-189` e `MB-177` e o unico item `ready`;
+  `MB-189`; `MB-177` tambem foi fechado e `MB-178` e o unico item `ready`;
 - `RH-*` permanece fora do backlog implementavel.
 
 ---

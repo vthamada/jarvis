@@ -3,6 +3,7 @@ from tempfile import gettempdir
 from uuid import uuid4
 
 import memory_service.repository as memory_repository
+import pytest
 from memory_service.repository import (
     SqliteMemoryRepository,
     build_memory_repository,
@@ -17,6 +18,7 @@ from shared.contracts import (
     OperationDispatchContract,
     OperationResultContract,
     ProceduralPlaybookCandidateContract,
+    SkillCandidateContract,
     SpecialistContributionContract,
     SpecialistSharedMemoryContextContract,
 )
@@ -29,6 +31,7 @@ from shared.types import (
     OperationStatus,
     PermissionDecision,
     RequestId,
+    RiskLevel,
     SessionId,
 )
 
@@ -881,6 +884,156 @@ def test_memory_service_records_bounded_procedural_playbook_candidate() -> None:
         "playbook-candidate://software-change/001",
     ]
     assert records[1].candidate.memory_write_mode == "through_core_only"
+
+
+def test_memory_service_registers_versioned_inactive_skill_candidate() -> None:
+    temp_dir = runtime_dir("memory-skill-candidate")
+    service = MemoryService(
+        database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+    )
+    candidate = SkillCandidateContract(
+        skill_candidate_id="skill-candidate://release-evidence/1.0.0",
+        skill_id="skill://release-evidence",
+        skill_name="release evidence verification",
+        version="1.0.0",
+        workflow_profile="software_change_workflow",
+        domain="software_engineering",
+        specialist_type="software_change_specialist",
+        inputs=["change_scope", "release_evidence"],
+        outputs=["bounded_release_recommendation"],
+        allowed_tools=["local_test_runner"],
+        bounded_instructions=["verify evidence", "report missing gates"],
+        risk_level=RiskLevel.MODERATE,
+        evidence_refs=["trace://release-evidence/1"],
+        source_pattern_refs=["recurring-pattern://release-evidence"],
+        failure_modes=["missing_release_evidence"],
+        proposed_tests=["run targeted release tests"],
+        rollback_plan_ref="rollback://skill/release-evidence/1.0.0",
+        timestamp="2026-07-16T14:00:00Z",
+    )
+
+    stored = service.record_skill_candidate(candidate)
+    idempotent = service.record_skill_candidate(candidate)
+    reloaded = service.get_skill_candidate(candidate.skill_candidate_id)
+    filtered = service.list_skill_candidates(
+        skill_id=candidate.skill_id,
+        version="1.0.0",
+        domain="software_engineering",
+        review_status="needs_review",
+    )
+
+    assert stored == idempotent
+    assert reloaded == stored
+    assert filtered == [stored]
+    assert stored.candidate.registry_status == "candidate_inactive"
+    assert stored.candidate.review_status == "needs_review"
+    assert stored.candidate.activation_status == "inactive"
+    assert stored.candidate.risk_level == RiskLevel.MODERATE
+    assert stored.candidate.automatic_activation_allowed is False
+    assert stored.candidate.automatic_promotion_allowed is False
+    assert stored.candidate.core_mutation_allowed is False
+
+
+def test_memory_service_contains_unsafe_skill_candidate_claims() -> None:
+    temp_dir = runtime_dir("memory-skill-candidate-contained")
+    service = MemoryService(
+        database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+    )
+
+    stored = service.record_skill_candidate(
+        SkillCandidateContract(
+            skill_candidate_id="skill-candidate://unsafe-release/1.0.0",
+            skill_id="skill://unsafe-release",
+            skill_name="unsafe release automation",
+            version="1.0.0",
+            workflow_profile="software_change_workflow",
+            domain="software_engineering",
+            specialist_type="software_change_specialist",
+            inputs=["release_scope"],
+            outputs=["release_decision"],
+            allowed_tools=["*"],
+            bounded_instructions=["release without review"],
+            risk_level=RiskLevel.HIGH,
+            evidence_refs=["trace://unsafe-release/1"],
+            source_pattern_refs=["recurring-pattern://unsafe-release"],
+            failure_modes=["unauthorized_release"],
+            proposed_tests=["run release gate"],
+            rollback_plan_ref="rollback://skill/unsafe-release/1.0.0",
+            registry_status="active",
+            review_status="approved",
+            activation_status="active",
+            sandbox_required=False,
+            automatic_activation_allowed=True,
+            automatic_promotion_allowed=True,
+            core_mutation_allowed=True,
+            memory_write_mode="direct",
+            timestamp="2026-07-16T14:01:00Z",
+        )
+    )
+
+    assert stored.candidate.registry_status == "candidate_inactive"
+    assert stored.candidate.review_status == "needs_review"
+    assert stored.candidate.activation_status == "inactive"
+    assert stored.candidate.sandbox_required is True
+    assert stored.candidate.automatic_activation_allowed is False
+    assert stored.candidate.automatic_promotion_allowed is False
+    assert stored.candidate.core_mutation_allowed is False
+    assert stored.candidate.memory_write_mode == "through_core_only"
+    assert "high_risk_candidate_requires_explicit_sandbox_review" in (
+        stored.candidate.blockers
+    )
+    assert "activation_status_forced_inactive" in stored.candidate.blockers
+    assert "automatic_activation_not_allowed" in stored.candidate.blockers
+    assert "allowed_tools_must_be_explicit" in stored.candidate.blockers
+
+
+def test_memory_service_rejects_skill_candidate_version_collisions_and_mutation() -> None:
+    temp_dir = runtime_dir("memory-skill-candidate-immutable")
+    service = MemoryService(
+        database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+    )
+
+    def candidate(candidate_id: str, *, name: str) -> SkillCandidateContract:
+        return SkillCandidateContract(
+            skill_candidate_id=candidate_id,
+            skill_id="skill://immutable",
+            skill_name=name,
+            version="1.0.0",
+            workflow_profile="software_change_workflow",
+            domain="software_engineering",
+            specialist_type="software_change_specialist",
+            inputs=["input"],
+            outputs=["output"],
+            allowed_tools=[],
+            bounded_instructions=["bounded step"],
+            risk_level=RiskLevel.LOW,
+            evidence_refs=["trace://immutable/1"],
+            source_pattern_refs=["recurring-pattern://immutable"],
+            failure_modes=["invalid_output"],
+            proposed_tests=["run immutable skill test"],
+            rollback_plan_ref="rollback://skill/immutable/1.0.0",
+            timestamp="2026-07-16T14:02:00Z",
+        )
+
+    service.record_skill_candidate(
+        candidate("skill-candidate://immutable/1.0.0", name="immutable skill")
+    )
+
+    with pytest.raises(ValueError, match="versions are immutable"):
+        service.record_skill_candidate(
+            candidate("skill-candidate://immutable/1.0.0", name="mutated skill")
+        )
+    with pytest.raises(ValueError, match="already belong"):
+        service.record_skill_candidate(
+            candidate("skill-candidate://immutable-alias/1.0.0", name="alias skill")
+        )
+    with pytest.raises(ValueError, match="numeric semver"):
+        invalid_version = candidate(
+            "skill-candidate://immutable/latest",
+            name="invalid version",
+        )
+        invalid_version.version = "latest"
+        service.record_skill_candidate(invalid_version)
 
 
 def test_memory_service_persists_session_continuity_for_governed_reformulation() -> None:

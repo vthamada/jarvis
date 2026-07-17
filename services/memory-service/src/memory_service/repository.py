@@ -17,11 +17,12 @@ from shared.contracts import (
     PostTaskReflectionContract,
     ProceduralPlaybookCandidateContract,
     ReviewedLearningGuidanceContract,
+    SkillCandidateContract,
     SpecialistSharedMemoryContextContract,
     UserScopeContextContract,
 )
 from shared.memory_registry import memory_lifecycle_support_signals
-from shared.types import MissionId, MissionStatus
+from shared.types import MissionId, MissionStatus, RiskLevel
 
 try:
     import psycopg
@@ -149,6 +150,54 @@ class StoredReviewedLearningGuidance:
 @dataclass(frozen=True)
 class StoredProceduralPlaybookCandidate:
     candidate: ProceduralPlaybookCandidateContract
+
+
+@dataclass(frozen=True)
+class StoredSkillCandidate:
+    candidate: SkillCandidateContract
+
+
+def _stored_skill_candidate_from_row(row: Row | dict[str, object]) -> StoredSkillCandidate:
+    return StoredSkillCandidate(
+        candidate=SkillCandidateContract(
+            skill_candidate_id=str(row["skill_candidate_id"]),
+            skill_id=str(row["skill_id"]),
+            skill_name=str(row["skill_name"]),
+            version=str(row["version"]),
+            workflow_profile=str(row["workflow_profile"]),
+            domain=str(row["domain"]),
+            specialist_type=str(row["specialist_type"]),
+            inputs=list(loads(str(row["inputs"] or "[]"))),
+            outputs=list(loads(str(row["outputs"] or "[]"))),
+            allowed_tools=list(loads(str(row["allowed_tools"] or "[]"))),
+            bounded_instructions=list(
+                loads(str(row["bounded_instructions"] or "[]"))
+            ),
+            risk_level=RiskLevel(str(row["risk_level"])),
+            evidence_refs=list(loads(str(row["evidence_refs"] or "[]"))),
+            source_pattern_refs=list(
+                loads(str(row["source_pattern_refs"] or "[]"))
+            ),
+            failure_modes=list(loads(str(row["failure_modes"] or "[]"))),
+            proposed_tests=list(loads(str(row["proposed_tests"] or "[]"))),
+            rollback_plan_ref=str(row["rollback_plan_ref"]),
+            registry_status=str(row["registry_status"]),
+            review_status=str(row["review_status"]),
+            activation_status=str(row["activation_status"]),
+            blockers=list(loads(str(row["blockers"] or "[]"))),
+            sandbox_required=bool(row["sandbox_required"]),
+            human_review_required=bool(row["human_review_required"]),
+            automatic_activation_allowed=bool(
+                row["automatic_activation_allowed"]
+            ),
+            automatic_promotion_allowed=bool(
+                row["automatic_promotion_allowed"]
+            ),
+            core_mutation_allowed=bool(row["core_mutation_allowed"]),
+            memory_write_mode=str(row["memory_write_mode"]),
+            timestamp=str(row["timestamp"]),
+        )
+    )
 
 
 @dataclass(frozen=True)
@@ -339,6 +388,29 @@ class MemoryRepository(ABC):
         limit: int = 20,
     ) -> list[StoredProceduralPlaybookCandidate]:
         """Load recent bounded procedural playbook candidates."""
+        raise NotImplementedError
+
+    def record_skill_candidate(self, record: StoredSkillCandidate) -> None:
+        """Persist one inactive versioned skill candidate."""
+        raise NotImplementedError
+
+    def fetch_skill_candidate(
+        self,
+        skill_candidate_id: str,
+    ) -> StoredSkillCandidate | None:
+        """Load one skill candidate by registry identity."""
+        raise NotImplementedError
+
+    def list_skill_candidates(
+        self,
+        *,
+        skill_id: str | None = None,
+        version: str | None = None,
+        domain: str | None = None,
+        review_status: str | None = None,
+        limit: int = 20,
+    ) -> list[StoredSkillCandidate]:
+        """Load inactive skill candidates through bounded registry filters."""
         raise NotImplementedError
 
     def upsert_specialist_shared_memory(
@@ -1199,6 +1271,110 @@ class SqliteMemoryRepository(MemoryRepository):
             ).fetchall()
         return [self._row_to_procedural_playbook_candidate(row) for row in rows]
 
+    def record_skill_candidate(self, record: StoredSkillCandidate) -> None:
+        candidate = record.candidate
+        with self._connect() as connection:
+            connection.execute(
+                """
+                INSERT INTO skill_candidates (
+                    skill_candidate_id, skill_id, skill_name, version,
+                    workflow_profile, domain, specialist_type, inputs, outputs,
+                    allowed_tools, bounded_instructions, risk_level, evidence_refs,
+                    source_pattern_refs, failure_modes, proposed_tests,
+                    rollback_plan_ref, registry_status, review_status,
+                    activation_status, blockers, sandbox_required,
+                    human_review_required, automatic_activation_allowed,
+                    automatic_promotion_allowed, core_mutation_allowed,
+                    memory_write_mode, timestamp
+                )
+                VALUES (
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
+                    ?, ?, ?, ?, ?, ?, ?, ?
+                )
+                """,
+                (
+                    candidate.skill_candidate_id,
+                    candidate.skill_id,
+                    candidate.skill_name,
+                    candidate.version,
+                    candidate.workflow_profile,
+                    candidate.domain,
+                    candidate.specialist_type,
+                    dumps(candidate.inputs),
+                    dumps(candidate.outputs),
+                    dumps(candidate.allowed_tools),
+                    dumps(candidate.bounded_instructions),
+                    str(candidate.risk_level),
+                    dumps(candidate.evidence_refs),
+                    dumps(candidate.source_pattern_refs),
+                    dumps(candidate.failure_modes),
+                    dumps(candidate.proposed_tests),
+                    candidate.rollback_plan_ref,
+                    candidate.registry_status,
+                    candidate.review_status,
+                    candidate.activation_status,
+                    dumps(candidate.blockers),
+                    int(candidate.sandbox_required),
+                    int(candidate.human_review_required),
+                    int(candidate.automatic_activation_allowed),
+                    int(candidate.automatic_promotion_allowed),
+                    int(candidate.core_mutation_allowed),
+                    candidate.memory_write_mode,
+                    candidate.timestamp,
+                ),
+            )
+            connection.commit()
+
+    def fetch_skill_candidate(
+        self,
+        skill_candidate_id: str,
+    ) -> StoredSkillCandidate | None:
+        with self._connect() as connection:
+            row = connection.execute(
+                """
+                SELECT *
+                FROM skill_candidates
+                WHERE skill_candidate_id = ?
+                """,
+                (skill_candidate_id,),
+            ).fetchone()
+        return _stored_skill_candidate_from_row(row) if row is not None else None
+
+    def list_skill_candidates(
+        self,
+        *,
+        skill_id: str | None = None,
+        version: str | None = None,
+        domain: str | None = None,
+        review_status: str | None = None,
+        limit: int = 20,
+    ) -> list[StoredSkillCandidate]:
+        clauses: list[str] = []
+        params: list[object] = []
+        for column, value in (
+            ("skill_id", skill_id),
+            ("version", version),
+            ("domain", domain),
+            ("review_status", review_status),
+        ):
+            if value:
+                clauses.append(f"{column} = ?")
+                params.append(value)
+        where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        params.append(limit)
+        with self._connect() as connection:
+            rows = connection.execute(
+                f"""
+                SELECT *
+                FROM skill_candidates
+                {where}
+                ORDER BY timestamp DESC, skill_candidate_id ASC
+                LIMIT ?
+                """,
+                tuple(params),
+            ).fetchall()
+        return [_stored_skill_candidate_from_row(row) for row in rows]
+
     def upsert_specialist_shared_memory(
         self,
         snapshot: StoredSpecialistSharedMemory,
@@ -1796,6 +1972,43 @@ class SqliteMemoryRepository(MemoryRepository):
                 CREATE INDEX IF NOT EXISTS idx_procedural_playbook_candidates_scope_timestamp
                 ON procedural_playbook_candidates (workflow_profile, review_status, timestamp);
 
+                CREATE TABLE IF NOT EXISTS skill_candidates (
+                    skill_candidate_id TEXT PRIMARY KEY,
+                    skill_id TEXT NOT NULL,
+                    skill_name TEXT NOT NULL,
+                    version TEXT NOT NULL,
+                    workflow_profile TEXT NOT NULL,
+                    domain TEXT NOT NULL,
+                    specialist_type TEXT NOT NULL,
+                    inputs TEXT NOT NULL DEFAULT '[]',
+                    outputs TEXT NOT NULL DEFAULT '[]',
+                    allowed_tools TEXT NOT NULL DEFAULT '[]',
+                    bounded_instructions TEXT NOT NULL DEFAULT '[]',
+                    risk_level TEXT NOT NULL,
+                    evidence_refs TEXT NOT NULL DEFAULT '[]',
+                    source_pattern_refs TEXT NOT NULL DEFAULT '[]',
+                    failure_modes TEXT NOT NULL DEFAULT '[]',
+                    proposed_tests TEXT NOT NULL DEFAULT '[]',
+                    rollback_plan_ref TEXT NOT NULL,
+                    registry_status TEXT NOT NULL,
+                    review_status TEXT NOT NULL,
+                    activation_status TEXT NOT NULL,
+                    blockers TEXT NOT NULL DEFAULT '[]',
+                    sandbox_required INTEGER NOT NULL,
+                    human_review_required INTEGER NOT NULL,
+                    automatic_activation_allowed INTEGER NOT NULL,
+                    automatic_promotion_allowed INTEGER NOT NULL,
+                    core_mutation_allowed INTEGER NOT NULL,
+                    memory_write_mode TEXT NOT NULL,
+                    timestamp TEXT NOT NULL,
+                    UNIQUE (skill_id, version)
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_skill_candidates_scope_timestamp
+                ON skill_candidates (
+                    workflow_profile, domain, review_status, timestamp
+                );
+
                 CREATE TABLE IF NOT EXISTS specialist_shared_memory (
                     session_id TEXT NOT NULL,
                     specialist_type TEXT NOT NULL,
@@ -2333,6 +2546,7 @@ class SqliteMemoryRepository(MemoryRepository):
                 timestamp=str(row["timestamp"]),
             )
         )
+
 
     @staticmethod
     def _row_to_mission_state(row: Row) -> MissionStateContract:
@@ -3315,6 +3529,112 @@ class PostgresMemoryRepository(MemoryRepository):
             rows = cursor.fetchall()
         return [self._row_to_procedural_playbook_candidate(row) for row in rows]
 
+    def record_skill_candidate(self, record: StoredSkillCandidate) -> None:
+        candidate = record.candidate
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO skill_candidates (
+                    skill_candidate_id, skill_id, skill_name, version,
+                    workflow_profile, domain, specialist_type, inputs, outputs,
+                    allowed_tools, bounded_instructions, risk_level, evidence_refs,
+                    source_pattern_refs, failure_modes, proposed_tests,
+                    rollback_plan_ref, registry_status, review_status,
+                    activation_status, blockers, sandbox_required,
+                    human_review_required, automatic_activation_allowed,
+                    automatic_promotion_allowed, core_mutation_allowed,
+                    memory_write_mode, timestamp
+                )
+                VALUES (
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                )
+                """,
+                (
+                    candidate.skill_candidate_id,
+                    candidate.skill_id,
+                    candidate.skill_name,
+                    candidate.version,
+                    candidate.workflow_profile,
+                    candidate.domain,
+                    candidate.specialist_type,
+                    dumps(candidate.inputs),
+                    dumps(candidate.outputs),
+                    dumps(candidate.allowed_tools),
+                    dumps(candidate.bounded_instructions),
+                    str(candidate.risk_level),
+                    dumps(candidate.evidence_refs),
+                    dumps(candidate.source_pattern_refs),
+                    dumps(candidate.failure_modes),
+                    dumps(candidate.proposed_tests),
+                    candidate.rollback_plan_ref,
+                    candidate.registry_status,
+                    candidate.review_status,
+                    candidate.activation_status,
+                    dumps(candidate.blockers),
+                    candidate.sandbox_required,
+                    candidate.human_review_required,
+                    candidate.automatic_activation_allowed,
+                    candidate.automatic_promotion_allowed,
+                    candidate.core_mutation_allowed,
+                    candidate.memory_write_mode,
+                    candidate.timestamp,
+                ),
+            )
+            connection.commit()
+
+    def fetch_skill_candidate(
+        self,
+        skill_candidate_id: str,
+    ) -> StoredSkillCandidate | None:
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT *
+                FROM skill_candidates
+                WHERE skill_candidate_id = %s
+                """,
+                (skill_candidate_id,),
+            )
+            row = cursor.fetchone()
+        return _stored_skill_candidate_from_row(row) if row is not None else None
+
+    def list_skill_candidates(
+        self,
+        *,
+        skill_id: str | None = None,
+        version: str | None = None,
+        domain: str | None = None,
+        review_status: str | None = None,
+        limit: int = 20,
+    ) -> list[StoredSkillCandidate]:
+        clauses: list[str] = []
+        params: list[object] = []
+        for column, value in (
+            ("skill_id", skill_id),
+            ("version", version),
+            ("domain", domain),
+            ("review_status", review_status),
+        ):
+            if value:
+                clauses.append(f"{column} = %s")
+                params.append(value)
+        where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
+        params.append(limit)
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                f"""
+                SELECT *
+                FROM skill_candidates
+                {where}
+                ORDER BY timestamp DESC, skill_candidate_id ASC
+                LIMIT %s
+                """,
+                tuple(params),
+            )
+            rows = cursor.fetchall()
+        return [_stored_skill_candidate_from_row(row) for row in rows]
+
     def upsert_specialist_shared_memory(
         self,
         snapshot: StoredSpecialistSharedMemory,
@@ -3981,6 +4301,49 @@ class PostgresMemoryRepository(MemoryRepository):
                 """
                 CREATE INDEX IF NOT EXISTS idx_procedural_playbook_candidates_scope_timestamp
                 ON procedural_playbook_candidates (workflow_profile, review_status, timestamp)
+                """
+            )
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS skill_candidates (
+                    skill_candidate_id TEXT PRIMARY KEY,
+                    skill_id TEXT NOT NULL,
+                    skill_name TEXT NOT NULL,
+                    version TEXT NOT NULL,
+                    workflow_profile TEXT NOT NULL,
+                    domain TEXT NOT NULL,
+                    specialist_type TEXT NOT NULL,
+                    inputs TEXT NOT NULL DEFAULT '[]',
+                    outputs TEXT NOT NULL DEFAULT '[]',
+                    allowed_tools TEXT NOT NULL DEFAULT '[]',
+                    bounded_instructions TEXT NOT NULL DEFAULT '[]',
+                    risk_level TEXT NOT NULL,
+                    evidence_refs TEXT NOT NULL DEFAULT '[]',
+                    source_pattern_refs TEXT NOT NULL DEFAULT '[]',
+                    failure_modes TEXT NOT NULL DEFAULT '[]',
+                    proposed_tests TEXT NOT NULL DEFAULT '[]',
+                    rollback_plan_ref TEXT NOT NULL,
+                    registry_status TEXT NOT NULL,
+                    review_status TEXT NOT NULL,
+                    activation_status TEXT NOT NULL,
+                    blockers TEXT NOT NULL DEFAULT '[]',
+                    sandbox_required BOOLEAN NOT NULL,
+                    human_review_required BOOLEAN NOT NULL,
+                    automatic_activation_allowed BOOLEAN NOT NULL,
+                    automatic_promotion_allowed BOOLEAN NOT NULL,
+                    core_mutation_allowed BOOLEAN NOT NULL,
+                    memory_write_mode TEXT NOT NULL,
+                    timestamp TEXT NOT NULL,
+                    UNIQUE (skill_id, version)
+                )
+                """
+            )
+            cursor.execute(
+                """
+                CREATE INDEX IF NOT EXISTS idx_skill_candidates_scope_timestamp
+                ON skill_candidates (
+                    workflow_profile, domain, review_status, timestamp
+                )
                 """
             )
             cursor.execute(
