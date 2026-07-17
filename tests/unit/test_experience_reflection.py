@@ -152,6 +152,75 @@ def test_memory_service_attaches_operator_feedback_to_experience_and_reflection(
     assert reloaded.reflection.core_mutation_allowed is False
 
 
+def test_memory_service_builds_recurring_correction_evidence_end_to_end() -> None:
+    temp_dir = runtime_dir("memory-recurring-pattern")
+    service = MemoryService(
+        database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+    )
+    for index in (1, 2):
+        experience_id = f"experience://mission-pattern/{index}"
+        mission_id = MissionId(f"mission-pattern-{index}")
+        service.record_experience_reflection(
+            experience=ExperienceRecordContract(
+                experience_id=experience_id,
+                mission_id=mission_id,
+                workflow_profile="software_change_workflow",
+                route="software_development",
+                primary_domain_driver="software_engineering",
+                outcome_status="completed",
+                checkpoints=["run_targeted_tests", "run_standard_gate"],
+                evidence_refs=[f"trace://mission-pattern/{index}"],
+                timestamp=f"2026-07-16T10:00:0{index}Z",
+            ),
+            reflection=PostTaskReflectionContract(
+                reflection_id=f"reflection://mission-pattern/{index}",
+                experience_id=experience_id,
+                reflection_status="candidate",
+                learning_candidate="release evidence should be explicit",
+                recommendation="review a bounded evidence checklist",
+                evidence_refs=[f"trace://mission-pattern/{index}"],
+                timestamp=f"2026-07-16T10:01:0{index}Z",
+            ),
+        )
+        service.record_operator_feedback(
+            OperatorFeedbackContract(
+                feedback_id=f"operator-feedback://mission-pattern/{index}",
+                mission_id=mission_id,
+                experience_id=experience_id,
+                assessment="correction",
+                operator_ref="operator://local_console",
+                correction="Show verified release evidence before recommendation.",
+                evidence_refs=[f"evidence://mission-pattern/{index}/release"],
+                timestamp=f"2026-07-16T10:02:0{index}Z",
+            )
+        )
+
+    report = service.build_recurring_pattern_report(
+        report_id="recurring-pattern-report://memory-e2e",
+        workflow_profile="software_change_workflow",
+        route="software_development",
+        domain="software_engineering",
+        generated_at="2026-07-16T11:00:00Z",
+    )
+
+    assert report.report_status == "evidence_ready_for_human_review"
+    assert report.records_analyzed == 2
+    assert report.compatible_group_count == 1
+    assert report.eligible_pattern_count == 1
+    assert report.patterns[0].pattern_type == "recurring_operator_correction"
+    assert report.patterns[0].feedback_refs == [
+        "operator-feedback://mission-pattern/2",
+        "operator-feedback://mission-pattern/1",
+    ]
+    assert report.patterns[0].reflection_refs == [
+        "reflection://mission-pattern/2",
+        "reflection://mission-pattern/1",
+    ]
+    assert report.patterns[0].automatic_skill_creation_allowed is False
+    assert report.patterns[0].automatic_promotion_allowed is False
+    assert report.patterns[0].core_mutation_allowed is False
+
+
 def test_memory_service_persists_experience_before_reflection() -> None:
     temp_dir = runtime_dir("memory-experience-only")
     service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")

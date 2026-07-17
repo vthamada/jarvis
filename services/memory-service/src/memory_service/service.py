@@ -39,6 +39,7 @@ from shared.contracts import (
     OperatorFeedbackContract,
     PostTaskReflectionContract,
     ProceduralPlaybookCandidateContract,
+    RecurringPatternReportContract,
     ReviewedLearningGuidanceContract,
     SpecialistContributionContract,
     SpecialistSharedMemoryContextContract,
@@ -64,6 +65,7 @@ from shared.memory_registry import (
     procedural_artifact_decision,
     specialist_memory_policy_payload,
 )
+from shared.recurring_patterns import build_recurring_pattern_report
 from shared.specialist_registry import (
     canonical_specialist_type,
     legacy_specialist_type,
@@ -245,6 +247,40 @@ class MemoryService:
         """Return one canonical experience/reflection pair."""
 
         return self.repository.fetch_experience_reflection(experience_id)
+
+    def build_recurring_pattern_report(
+        self,
+        *,
+        report_id: str | None = None,
+        workflow_profile: str | None = None,
+        route: str | None = None,
+        domain: str | None = None,
+        minimum_occurrences: int = 2,
+        max_records: int = 100,
+        max_patterns: int = 20,
+        generated_at: str | None = None,
+    ) -> RecurringPatternReportContract:
+        """Build read-only recurrence evidence from canonical learning memory."""
+
+        records = self.list_experience_reflections(
+            workflow_profile=workflow_profile,
+            limit=max_records + 1,
+        )
+        resolved_at = generated_at or datetime.now(UTC).isoformat()
+        return build_recurring_pattern_report(
+            report_id=report_id or f"recurring-pattern-report://{uuid4().hex[:12]}",
+            experiences=[record.experience for record in records],
+            reflections=[
+                record.reflection for record in records if record.reflection is not None
+            ],
+            minimum_occurrences=minimum_occurrences,
+            generated_at=resolved_at,
+            workflow_profile=workflow_profile,
+            route=route,
+            domain=domain,
+            max_records=max_records,
+            max_patterns=max_patterns,
+        )
 
     def record_operator_feedback(
         self,

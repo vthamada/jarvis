@@ -310,6 +310,74 @@ OPERATOR_FEEDBACK_SCHEMA = CanonicalSchema(
     ),
 )
 
+RECURRING_PATTERN_EVIDENCE_SCHEMA = CanonicalSchema(
+    name="RecurringPatternEvidenceSchema",
+    contract_name="RecurringPatternEvidenceContract",
+    required_fields=(
+        "pattern_id",
+        "pattern_type",
+        "pattern_status",
+        "workflow_profile",
+        "route",
+        "domain",
+        "occurrence_count",
+        "minimum_occurrences",
+        "successful_occurrences",
+        "non_successful_occurrences",
+        "confidence_status",
+        "outcome_summary",
+        "pattern_summary",
+        "experience_refs",
+        "reflection_refs",
+        "feedback_refs",
+        "evidence_refs",
+        "recurring_signals",
+        "conflict_flags",
+        "blockers",
+        "generated_at",
+    ),
+    optional_fields=(
+        "human_review_required",
+        "skill_candidate_generation_allowed",
+        "automatic_skill_creation_allowed",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Bounded recurrence evidence only; it cannot create or activate a skill.",
+    ),
+)
+
+RECURRING_PATTERN_REPORT_SCHEMA = CanonicalSchema(
+    name="RecurringPatternReportSchema",
+    contract_name="RecurringPatternReportContract",
+    required_fields=(
+        "report_id",
+        "report_status",
+        "records_analyzed",
+        "compatible_group_count",
+        "eligible_pattern_count",
+        "minimum_occurrences",
+        "scope_filters",
+        "patterns",
+        "evidence_refs",
+        "blockers",
+        "generated_at",
+    ),
+    optional_fields=(
+        "sample_truncated",
+        "read_only",
+        "human_review_required",
+        "skill_candidate_generation_allowed",
+        "automatic_skill_creation_allowed",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Read-only recurring-pattern report over compatible experience scopes.",
+    ),
+)
+
 PROCEDURAL_PLAYBOOK_CANDIDATE_SCHEMA = CanonicalSchema(
     name="ProceduralPlaybookCandidateSchema",
     contract_name="ProceduralPlaybookCandidateContract",

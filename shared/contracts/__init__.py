@@ -175,6 +175,58 @@ class OperatorFeedbackContract:
 
 
 @dataclass
+class RecurringPatternEvidenceContract:
+    pattern_id: str
+    pattern_type: str
+    pattern_status: str
+    workflow_profile: str
+    route: str
+    domain: str
+    occurrence_count: int
+    minimum_occurrences: int
+    successful_occurrences: int
+    non_successful_occurrences: int
+    confidence_status: str
+    outcome_summary: str
+    pattern_summary: str
+    experience_refs: list[str]
+    reflection_refs: list[str]
+    feedback_refs: list[str]
+    evidence_refs: list[str]
+    recurring_signals: list[str]
+    conflict_flags: list[str]
+    blockers: list[str]
+    generated_at: Timestamp
+    human_review_required: bool = True
+    skill_candidate_generation_allowed: bool = False
+    automatic_skill_creation_allowed: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass
+class RecurringPatternReportContract:
+    report_id: str
+    report_status: str
+    records_analyzed: int
+    compatible_group_count: int
+    eligible_pattern_count: int
+    minimum_occurrences: int
+    scope_filters: dict[str, str]
+    patterns: list[RecurringPatternEvidenceContract]
+    evidence_refs: list[str]
+    blockers: list[str]
+    generated_at: Timestamp
+    sample_truncated: bool = False
+    read_only: bool = True
+    human_review_required: bool = True
+    skill_candidate_generation_allowed: bool = False
+    automatic_skill_creation_allowed: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass
 class ProceduralPlaybookCandidateContract:
     playbook_candidate_id: str
     procedure_name: str

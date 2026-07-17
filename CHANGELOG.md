@@ -62,6 +62,12 @@
 - `execution-backlog.md` abre `MB-176` a `MB-189` para pattern evidence, skill registry/miner, review/sandbox, workflow evolution, routing, memoria e metricas longitudinais;
 - WIP permanece 1: somente `MB-176` fica ready, e adapters amplos, superficies, scheduler autonomo, self-modification e promocao automatica continuam fora da fila.
 
+### MB-176 cria evidence baseline de padroes recorrentes
+
+- `RecurringPatternEvidenceContract` e `RecurringPatternReportContract` formalizam recorrencia por workflow, rota e dominio, com threshold, outcomes, refs, sinais, confidence bounded, conflitos e blockers;
+- `memory-service` e `observability-service` usam o mesmo agregador deterministico read-only sobre experiencias, reflexoes e feedbacks canonicos, sem nova memoria paralela;
+- testes cobrem recorrencia valida, amostra insuficiente, outcomes conflitantes e duas correcoes reais ponta a ponta; skill generation, autopromocao e mutacao do Core permanecem bloqueadas, e `MB-177` e o unico item tecnico `ready`.
+
 ## 2026-07-04
 
 ### MB-161 fecha anchors de evidencia de memoria semantica

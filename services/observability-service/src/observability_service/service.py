@@ -17,11 +17,15 @@ from shared.contracts import (
     CapabilityReadinessContract,
     DomainEvalCaseResultContract,
     DomainEvalRunContract,
+    ExperienceRecordContract,
+    PostTaskReflectionContract,
+    RecurringPatternReportContract,
     RegressionReadinessReportContract,
 )
 from shared.domain_registry import workflow_runtime_guidance
 from shared.eval_expansion import derive_expanded_eval_state
 from shared.events import InternalEventEnvelope
+from shared.recurring_patterns import build_recurring_pattern_report
 
 
 @dataclass(frozen=True)
@@ -527,6 +531,35 @@ class ObservabilityService:
             evidence_refs=list(evidence_refs),
             blockers=resolved_blockers,
             generated_at=generated_at,
+        )
+
+    @staticmethod
+    def build_recurring_pattern_report(
+        *,
+        report_id: str,
+        experiences: list[ExperienceRecordContract],
+        reflections: list[PostTaskReflectionContract] | None,
+        minimum_occurrences: int,
+        generated_at: str,
+        workflow_profile: str | None = None,
+        route: str | None = None,
+        domain: str | None = None,
+        max_records: int = 100,
+        max_patterns: int = 20,
+    ) -> RecurringPatternReportContract:
+        """Expose bounded recurrence aggregation as an observability projection."""
+
+        return build_recurring_pattern_report(
+            report_id=report_id,
+            experiences=experiences,
+            reflections=reflections,
+            minimum_occurrences=minimum_occurrences,
+            generated_at=generated_at,
+            workflow_profile=workflow_profile,
+            route=route,
+            domain=domain,
+            max_records=max_records,
+            max_patterns=max_patterns,
         )
 
     @staticmethod

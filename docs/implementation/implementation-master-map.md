@@ -141,7 +141,7 @@ Goal: make improvement continuous, measured and governed.
 | `EVL-004` | Reviewed-learning guidance | `implemented_baseline` | Keep stable | Review decisions | none |
 | `EVL-005` | Baseline vs assisted evals | `implemented_baseline` | Keep stable | Observability/tools | none |
 | `EVL-006` | Promotion gate from sandbox to runtime | `implemented_baseline` | Validate with real release candidates | Engineering gate | none |
-| `EVL-007` | Skill evolution from repeated patterns | `documentation_only` | Reusable skills/playbooks from reviewed evidence | Memory, artifacts | candidate |
+| `EVL-007` | Skill evolution from repeated patterns | `minimum_baseline` | Reusable skills/playbooks from reviewed evidence | Memory, artifacts | candidate |
 | `EVL-008` | Workflow optimization loop | `partial_runtime` | Compare and promote workflow variants manually | Evolution lab | candidate |
 | `EVL-009` | Parametric adaptation | `research_only` | Isolated components only | Future V3+ | not now |
 | `EVL-010` | Deep self-modification | `research_only` | Research only, no production mutation | Human decision | not now |
@@ -566,8 +566,8 @@ Execution remains sequential with WIP 1.
 
 Map IDs: `EVL-007`, `MEM-003`, `MEM-006`, `EVL-008`, `OBS-009`.
 
-Status: closed as explicit post-`MB-174` reprioritization; `MB-176` is the only
-technical item ready.
+Status: closed as explicit post-`MB-174` reprioritization; the queue has
+advanced through `MB-176`.
 
 ### MB-176 -- Recurrent Pattern Evidence Baseline
 
@@ -576,13 +576,17 @@ Map IDs: `EVL-007`, `MEM-003`, `OBS-009`.
 Goal: aggregate compatible experiences, reflections and feedback into bounded,
 auditable recurring-pattern evidence without creating a skill automatically.
 
-Status: ready after `MB-175`.
+Status: closed in `MB-176`; compatible experience, reflection and feedback
+records now produce bounded, read-only pattern evidence, and `MB-177` is the
+only technical item ready.
 
 ### MB-177 -- Candidate Skill Registry Contracts
 
 Map IDs: `EVL-007`, `MEM-006`, `GOV-004`.
 
 Goal: define a versioned, inactive and human-review-bound skill candidate.
+
+Status: ready after `MB-176`.
 
 ### MB-178 -- Bounded Skill Miner
 

@@ -14,6 +14,8 @@ from shared.contracts import (
     ProceduralPlaybookCandidateContract,
     ProjectObjectiveContinuityContract,
     PromotionGateDecisionContract,
+    RecurringPatternEvidenceContract,
+    RecurringPatternReportContract,
     ReviewedLearningGuidanceContract,
     SandboxToReleaseChecklistContract,
     SurfaceIdentityContract,
@@ -36,6 +38,8 @@ from shared.schemas import (
     PROCEDURAL_PLAYBOOK_CANDIDATE_SCHEMA,
     PROJECT_OBJECTIVE_CONTINUITY_SCHEMA,
     PROMOTION_GATE_DECISION_SCHEMA,
+    RECURRING_PATTERN_EVIDENCE_SCHEMA,
+    RECURRING_PATTERN_REPORT_SCHEMA,
     REVIEWED_LEARNING_GUIDANCE_SCHEMA,
     SANDBOX_TO_RELEASE_CHECKLIST_SCHEMA,
     SURFACE_IDENTITY_SCHEMA,
@@ -280,6 +284,62 @@ def test_operator_feedback_contract_is_bounded_and_human_reviewed() -> None:
     assert feedback.core_mutation_allowed is False
     assert OPERATOR_FEEDBACK_SCHEMA.contract_name == "OperatorFeedbackContract"
     assert "assessment" in OPERATOR_FEEDBACK_SCHEMA.required_fields
+
+
+def test_recurring_pattern_contracts_are_observational_only() -> None:
+    pattern = RecurringPatternEvidenceContract(
+        pattern_id="recurring-pattern://software-change",
+        pattern_type="repeated_successful_workflow",
+        pattern_status="evidence_ready_for_human_review",
+        workflow_profile="software_change_workflow",
+        route="software_development",
+        domain="software_engineering",
+        occurrence_count=2,
+        minimum_occurrences=2,
+        successful_occurrences=2,
+        non_successful_occurrences=0,
+        confidence_status="bounded_moderate",
+        outcome_summary="completed=2",
+        pattern_summary="two compatible completed experiences",
+        experience_refs=["experience://1", "experience://2"],
+        reflection_refs=["reflection://1", "reflection://2"],
+        feedback_refs=[],
+        evidence_refs=["trace://1", "trace://2"],
+        recurring_signals=["run_targeted_tests"],
+        conflict_flags=[],
+        blockers=[],
+        generated_at="2026-07-16T12:00:00Z",
+    )
+    report = RecurringPatternReportContract(
+        report_id="recurring-pattern-report://test",
+        report_status="evidence_ready_for_human_review",
+        records_analyzed=2,
+        compatible_group_count=1,
+        eligible_pattern_count=1,
+        minimum_occurrences=2,
+        scope_filters={},
+        patterns=[pattern],
+        evidence_refs=["trace://1", "trace://2"],
+        blockers=[],
+        generated_at="2026-07-16T12:00:00Z",
+    )
+
+    assert pattern.skill_candidate_generation_allowed is False
+    assert pattern.automatic_skill_creation_allowed is False
+    assert pattern.automatic_promotion_allowed is False
+    assert pattern.core_mutation_allowed is False
+    assert report.read_only is True
+    assert report.skill_candidate_generation_allowed is False
+    assert RECURRING_PATTERN_EVIDENCE_SCHEMA.contract_name == (
+        "RecurringPatternEvidenceContract"
+    )
+    assert RECURRING_PATTERN_REPORT_SCHEMA.contract_name == (
+        "RecurringPatternReportContract"
+    )
+    assert (
+        "automatic_skill_creation_allowed"
+        in RECURRING_PATTERN_REPORT_SCHEMA.optional_fields
+    )
 
 
 def test_deliberative_plan_schema_declares_semantic_memory_evidence_fields() -> None:

@@ -2,13 +2,21 @@
 
 ## Atualizacao 2026-07-16
 
-`MB-175` foi concluido como repriorizacao explicita pos-`MB-174`. O warning
-ativo `EVL-007` e o Documento Evolutivo mostram que o proximo elo faltante e
-converter recorrencia real de experiencias/reflexoes em skill candidata
-governada. A fila `MB-176` a `MB-189` cobre pattern evidence, skill registry e
-miner, review/sandbox, workflow evolution, routing, politica de memoria e
-metricas longitudinais. Somente `MB-176` esta `ready`; toda skill/workflow nasce
-inativa, revisavel e sem promocao automatica ou mutacao do Core.
+`MB-176` foi concluido como baseline bounded de pattern evidence. Os novos
+`RecurringPatternEvidenceContract` e `RecurringPatternReportContract` agregam
+experiencias, reflexoes e feedbacks por workflow, rota e dominio, exigem duas
+ocorrencias distintas e expoem outcomes, evidence refs, sinais recorrentes,
+confidence, conflitos e blockers. Memoria e observabilidade usam o mesmo
+agregador deterministico read-only; amostra insuficiente ou outcomes mistos nao
+viram evidencia elegivel. Criacao de skill, promocao automatica e mutacao do
+Core permanecem explicitamente falsas. `MB-177` e o unico item tecnico `ready`.
+
+`MB-175` foi concluido como repriorizacao explicita pos-`MB-174`. A fila
+`MB-176` a `MB-189` cobre pattern evidence, skill registry e miner,
+review/sandbox, workflow evolution, routing, politica de memoria e metricas
+longitudinais. `MB-176` foi sucedido pelo baseline descrito acima; toda
+skill/workflow continua nascendo inativa, revisavel e sem promocao automatica
+ou mutacao do Core.
 
 `MB-174` foi concluido: `CapabilityReadinessContract` e
 `RegressionReadinessReportContract` agora consolidam maturidade por capacidade,
@@ -17,8 +25,8 @@ read-only. `tools/readiness_dashboard.py` pode atualizar o gate somente por
 flag explicita e salva evidencia historica em `.jarvis_runtime/readiness/`; o
 console expoe a mesma leitura por `readiness-dashboard`. Capacidades deferred
 nao viram falsos blockers e nenhum status autoriza release autonomo. A fila
-`MB-161` a `MB-174` esta fechada. Esse estado foi sucedido por `MB-175`, que
-abriu `MB-176` como unico item tecnico `ready`.
+`MB-161` a `MB-174` esta fechada. Esse estado foi sucedido por `MB-175` e pelo
+fechamento de `MB-176`; `MB-177` e agora o unico item tecnico `ready`.
 
 `MB-173` foi concluido: `KnowledgeSourceEvidenceContract` e
 `KnowledgeEvidenceGovernanceContract` agora carregam proveniencia, freshness,

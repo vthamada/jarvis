@@ -6,7 +6,11 @@ from uuid import uuid4
 from observability_service.agentic import JsonlAgenticMirrorAdapter, LangSmithObservabilityAdapter
 from observability_service.service import ObservabilityQuery, ObservabilityService
 
-from shared.contracts import CapabilityReadinessContract
+from shared.contracts import (
+    CapabilityReadinessContract,
+    ExperienceRecordContract,
+    PostTaskReflectionContract,
+)
 from shared.events import InternalEventEnvelope
 
 
@@ -70,6 +74,125 @@ def test_observability_builds_bounded_regression_readiness_report() -> None:
     assert report.warnings == ["candidate_gaps:OBS-001"]
     assert report.read_only is True
     assert report.autonomous_release_allowed is False
+
+
+def test_observability_builds_bounded_recurring_pattern_report() -> None:
+    experiences = [
+        ExperienceRecordContract(
+            experience_id=f"experience://pattern/{index}",
+            mission_id=f"mission-pattern-{index}",
+            workflow_profile="software_change_workflow",
+            route="software_development",
+            primary_domain_driver="software_engineering",
+            outcome_status="completed",
+            checkpoints=["run_targeted_tests", "run_standard_gate"],
+            learned_patterns=["small_reversible_patch"],
+            evidence_refs=[f"trace://pattern/{index}"],
+            timestamp=f"2026-07-16T12:00:0{index}Z",
+        )
+        for index in (1, 2)
+    ]
+    reflections = [
+        PostTaskReflectionContract(
+            reflection_id=f"reflection://pattern/{index}",
+            experience_id=f"experience://pattern/{index}",
+            reflection_status="candidate",
+            learning_candidate="small reversible patches reduced regression risk",
+            recommendation="review the repeated workflow before reuse",
+            evidence_refs=[f"trace://pattern/{index}"],
+            timestamp=f"2026-07-16T12:01:0{index}Z",
+        )
+        for index in (1, 2)
+    ]
+
+    report = ObservabilityService.build_recurring_pattern_report(
+        report_id="recurring-pattern-report://observability-test",
+        experiences=experiences,
+        reflections=reflections,
+        minimum_occurrences=2,
+        generated_at="2026-07-16T13:00:00Z",
+    )
+
+    assert report.report_status == "evidence_ready_for_human_review"
+    assert report.eligible_pattern_count == 1
+    assert report.patterns[0].pattern_type == "repeated_successful_workflow"
+    assert report.patterns[0].recurring_signals == [
+        "run_standard_gate",
+        "run_targeted_tests",
+        "small_reversible_patch",
+    ]
+    assert report.patterns[0].reflection_refs == [
+        "reflection://pattern/1",
+        "reflection://pattern/2",
+    ]
+    assert report.skill_candidate_generation_allowed is False
+    assert report.automatic_skill_creation_allowed is False
+    assert report.automatic_promotion_allowed is False
+
+
+def test_observability_blocks_conflicting_recurring_pattern() -> None:
+    experiences = [
+        ExperienceRecordContract(
+            experience_id="experience://pattern/completed",
+            mission_id="mission-pattern-completed",
+            workflow_profile="research_synthesis_workflow",
+            route="research",
+            primary_domain_driver="knowledge_and_communication",
+            outcome_status="completed",
+            evidence_refs=["trace://pattern/completed"],
+            timestamp="2026-07-16T12:00:01Z",
+        ),
+        ExperienceRecordContract(
+            experience_id="experience://pattern/partial",
+            mission_id="mission-pattern-partial",
+            workflow_profile="research_synthesis_workflow",
+            route="research",
+            primary_domain_driver="knowledge_and_communication",
+            outcome_status="partial",
+            evidence_refs=["trace://pattern/partial"],
+            timestamp="2026-07-16T12:00:02Z",
+        ),
+    ]
+
+    report = ObservabilityService.build_recurring_pattern_report(
+        report_id="recurring-pattern-report://conflict-test",
+        experiences=experiences,
+        reflections=[],
+        minimum_occurrences=2,
+        generated_at="2026-07-16T13:00:00Z",
+    )
+
+    assert report.report_status == "attention_required"
+    assert report.eligible_pattern_count == 0
+    assert report.patterns[0].pattern_status == "conflict_detected"
+    assert report.patterns[0].conflict_flags == ["mixed_outcomes"]
+    assert "outcome_conflict_requires_review" in report.patterns[0].blockers
+    assert report.patterns[0].skill_candidate_generation_allowed is False
+
+
+def test_observability_requires_two_compatible_experiences() -> None:
+    report = ObservabilityService.build_recurring_pattern_report(
+        report_id="recurring-pattern-report://insufficient-test",
+        experiences=[
+            ExperienceRecordContract(
+                experience_id="experience://pattern/single",
+                mission_id="mission-pattern-single",
+                workflow_profile="software_change_workflow",
+                route="software_development",
+                primary_domain_driver="software_engineering",
+                outcome_status="completed",
+                evidence_refs=["trace://pattern/single"],
+                timestamp="2026-07-16T12:00:01Z",
+            )
+        ],
+        reflections=[],
+        minimum_occurrences=2,
+        generated_at="2026-07-16T13:00:00Z",
+    )
+
+    assert report.report_status == "insufficient_evidence"
+    assert report.patterns == []
+    assert report.blockers == ["no_compatible_recurring_pattern"]
 
 
 def test_observability_service_persists_and_filters_events() -> None:

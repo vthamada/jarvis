@@ -3346,7 +3346,7 @@ Fora de escopo:
 
 - `id`: `MB-176`
 - `prioridade`: `P1`
-- `status`: `ready`
+- `status`: `done`
 - `eixo_do_mestre`: `evolucao`, `experiencia`, `observabilidade`
 - `map_ids`: `EVL-007`, `MEM-003`, `OBS-009`
 - `workflow_profile_afetado`: `operational_readiness_workflow`, `research_synthesis_workflow`
@@ -3359,12 +3359,14 @@ Fora de escopo:
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `medium`
 - `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: experiencias, reflexoes e feedbacks canonicos agora podem ser agregados por workflow, rota e dominio em pattern evidence read-only, com threshold, confidence bounded, conflitos e blockers explicitos.
+- `evidencia_de_fechamento`: contratos/schemas `RecurringPatternEvidenceContract` e `RecurringPatternReportContract`, agregador deterministico compartilhado, builders em memoria/observabilidade e testes de recorrencia valida, insuficiencia, conflito e correcao ponta a ponta; nenhuma skill e criada ou promovida.
 
 ### MB-177
 
 - `id`: `MB-177`
 - `prioridade`: `P1`
-- `status`: `blocked`
+- `status`: `ready`
 - `eixo_do_mestre`: `evolucao`, `skills`, `memoria procedural`
 - `map_ids`: `EVL-007`, `MEM-006`, `GOV-004`
 - `workflow_profile_afetado`: `operational_readiness_workflow`
@@ -3661,6 +3663,6 @@ Estado atual da fila:
 - `MB-173` foi concluido como baseline de proveniencia, freshness e conflito/incerteza de conhecimento;
 - `MB-174` foi concluido como dashboard integrado de regressao/readiness, fechando a fila `MB-161` a `MB-174`; nao ha item tecnico `ready` ate nova repriorizacao explicita pelo mapa mestre;
 - `MB-175` foi concluido como repriorizacao pos-`MB-174`, abrindo a fila governada de skill/workflow evolution `MB-176` a `MB-189`;
-- `MB-176` e o unico item tecnico `ready`; `MB-177` a `MB-189` permanecem `blocked` por dependencia/ordem;
+- `MB-176` foi concluido como baseline bounded de pattern evidence; `MB-177` e o unico item tecnico `ready` e `MB-178` a `MB-189` permanecem `blocked` por dependencia/ordem;
 - `SO-001`, `TA-004`, `TA-006` e verticais `deferred` continuam fora da fila sem mudanca explicita de fase;
 - `protective intelligence foundation` continua `deferred` e a matriz da Onda 2 segue como insumo, nao como gatilho automatico para abrir nova vertical.
