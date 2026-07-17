@@ -19,6 +19,8 @@ from shared.contracts import (
     ReviewedLearningGuidanceContract,
     SandboxToReleaseChecklistContract,
     SkillCandidateContract,
+    SkillMiningRequestContract,
+    SkillMiningResultContract,
     SurfaceIdentityContract,
     TechnologyAbsorptionCandidateContract,
     WorkItemStateContract,
@@ -44,6 +46,8 @@ from shared.schemas import (
     REVIEWED_LEARNING_GUIDANCE_SCHEMA,
     SANDBOX_TO_RELEASE_CHECKLIST_SCHEMA,
     SKILL_CANDIDATE_SCHEMA,
+    SKILL_MINING_REQUEST_SCHEMA,
+    SKILL_MINING_RESULT_SCHEMA,
     SURFACE_IDENTITY_SCHEMA,
     TECHNOLOGY_ABSORPTION_CANDIDATE_SCHEMA,
     WORK_ITEM_STATE_SCHEMA,
@@ -378,6 +382,50 @@ def test_skill_candidate_contract_is_versioned_inactive_and_review_bound() -> No
     assert SKILL_CANDIDATE_SCHEMA.contract_name == "SkillCandidateContract"
     assert "version" in SKILL_CANDIDATE_SCHEMA.required_fields
     assert "allowed_tools" in SKILL_CANDIDATE_SCHEMA.required_fields
+
+
+def test_skill_mining_contracts_never_grant_activation_or_promotion() -> None:
+    request = SkillMiningRequestContract(
+        mining_request_id="skill-mining-request://release-evidence/1",
+        source_pattern_ref="recurring-pattern://release-evidence",
+        skill_id="skill://release-evidence",
+        skill_name="release evidence verification",
+        version="1.0.0",
+        specialist_type="software_change_specialist",
+        inputs=["release_evidence"],
+        outputs=["bounded_recommendation"],
+        allowed_tools=["local_test_runner"],
+        bounded_instructions=["verify evidence"],
+        risk_level=RiskLevel.MODERATE,
+        failure_modes=["missing_evidence"],
+        proposed_tests=["run release evidence tests"],
+        rollback_plan_ref="rollback://skill/release-evidence/1.0.0",
+        timestamp="2026-07-16T15:00:00Z",
+    )
+    result = SkillMiningResultContract(
+        mining_result_id="skill-mining-result://release-evidence/1",
+        mining_status="blocked",
+        eligibility_status="ineligible",
+        source_pattern_ref=request.source_pattern_ref,
+        source_authority_status="observation_only_requires_miner_and_review",
+        threshold_occurrences=2,
+        observed_occurrences=1,
+        blockers=["recurrence_threshold_not_met"],
+        evidence_refs=[request.source_pattern_ref],
+        generated_at=request.timestamp,
+    )
+
+    assert request.automatic_mining_allowed is False
+    assert request.automatic_activation_allowed is False
+    assert result.candidate is None
+    assert result.automatic_activation_allowed is False
+    assert result.automatic_promotion_allowed is False
+    assert result.core_mutation_allowed is False
+    assert SKILL_MINING_REQUEST_SCHEMA.contract_name == (
+        "SkillMiningRequestContract"
+    )
+    assert SKILL_MINING_RESULT_SCHEMA.contract_name == "SkillMiningResultContract"
+    assert "candidate" in SKILL_MINING_RESULT_SCHEMA.optional_fields
 
 
 def test_deliberative_plan_schema_declares_semantic_memory_evidence_fields() -> None:

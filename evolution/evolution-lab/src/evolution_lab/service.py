@@ -5,6 +5,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
+from hashlib import sha256
 from os import getenv
 from pathlib import Path
 from uuid import uuid4
@@ -20,14 +21,18 @@ from shared.contracts import (
     PostTaskReflectionContract,
     ProceduralPlaybookCandidateContract,
     PromotionGateDecisionContract,
+    RecurringPatternEvidenceContract,
     ReviewedLearningGuidanceContract,
     SandboxToReleaseChecklistContract,
+    SkillCandidateContract,
+    SkillMiningRequestContract,
+    SkillMiningResultContract,
     TechnologyAbsorptionCandidateContract,
 )
 from shared.eval_expansion import derive_expanded_eval_state
 from shared.optimization_state import derive_optimization_state
 from shared.technology_absorption import derive_technology_absorption_state
-from shared.types import EvolutionDecisionId, EvolutionProposalId
+from shared.types import EvolutionDecisionId, EvolutionProposalId, RiskLevel
 
 DEFAULT_EVOLUTION_STRATEGY = "manual_variants"
 SUPPORTED_EVOLUTION_STRATEGIES = (
@@ -1130,6 +1135,174 @@ class EvolutionLabService:
             ),
             optimization_blockers=blockers,
         )
+
+    @classmethod
+    def mine_skill_candidate(
+        cls,
+        *,
+        pattern: RecurringPatternEvidenceContract,
+        request: SkillMiningRequestContract,
+        minimum_occurrences: int = 2,
+    ) -> SkillMiningResultContract:
+        """Compile eligible recurrence evidence into one inactive skill candidate."""
+
+        if minimum_occurrences < 2:
+            raise ValueError("skill mining requires at least two occurrences")
+        threshold = max(minimum_occurrences, pattern.minimum_occurrences)
+        blockers = list(pattern.blockers)
+        if request.source_pattern_ref != pattern.pattern_id:
+            blockers.append("source_pattern_ref_mismatch")
+        if pattern.pattern_status != "evidence_ready_for_human_review":
+            blockers.append("pattern_not_eligible_for_skill_mining")
+        if pattern.occurrence_count < threshold:
+            blockers.append("recurrence_threshold_not_met")
+        if pattern.successful_occurrences < threshold:
+            blockers.append("successful_outcome_threshold_not_met")
+        if pattern.non_successful_occurrences:
+            blockers.append("non_successful_outcomes_require_review")
+        if pattern.conflict_flags:
+            blockers.append("pattern_conflict_requires_review")
+        if pattern.confidence_status not in {"bounded_moderate", "bounded_high"}:
+            blockers.append("bounded_confidence_required")
+        if len(set(pattern.experience_refs)) < threshold:
+            blockers.append("distinct_experience_evidence_required")
+        if len(set(pattern.reflection_refs)) < threshold:
+            blockers.append("distinct_reflection_evidence_required")
+        if not pattern.evidence_refs:
+            blockers.append("pattern_evidence_required")
+        if not pattern.human_review_required:
+            blockers.append("human_review_invariant_required")
+        if pattern.automatic_skill_creation_allowed:
+            blockers.append("source_claims_automatic_skill_creation")
+        if pattern.automatic_promotion_allowed:
+            blockers.append("source_claims_automatic_promotion")
+        if pattern.core_mutation_allowed:
+            blockers.append("source_claims_core_mutation")
+
+        scalar_fields = {
+            "mining_request_id": request.mining_request_id,
+            "skill_id": request.skill_id,
+            "skill_name": request.skill_name,
+            "specialist_type": request.specialist_type,
+            "rollback_plan_ref": request.rollback_plan_ref,
+        }
+        for field_name, value in scalar_fields.items():
+            if not value or len(value) > 240:
+                blockers.append(f"{field_name}_required_and_bounded")
+        if cls._numeric_semver(request.version) is False:
+            blockers.append("numeric_semver_required")
+        try:
+            risk_level = RiskLevel(str(request.risk_level))
+        except ValueError:
+            risk_level = RiskLevel.CRITICAL
+            blockers.append("valid_risk_level_required")
+        if risk_level not in {RiskLevel.LOW, RiskLevel.MODERATE}:
+            blockers.append("risk_exceeds_bounded_miner_limit")
+
+        bounded_fields: dict[str, list[str]] = {}
+        for field_name, values, max_items, item_limit in (
+            ("inputs", request.inputs, 20, 200),
+            ("outputs", request.outputs, 20, 200),
+            ("allowed_tools", request.allowed_tools, 20, 200),
+            ("bounded_instructions", request.bounded_instructions, 12, 500),
+            ("failure_modes", request.failure_modes, 20, 200),
+            ("proposed_tests", request.proposed_tests, 20, 500),
+        ):
+            unique_values = cls._unique_values(values)
+            if len(unique_values) > max_items or any(
+                len(value) > item_limit for value in unique_values
+            ):
+                blockers.append(f"{field_name}_must_be_bounded")
+            bounded_fields[field_name] = [
+                value[:item_limit] for value in unique_values[:max_items]
+            ]
+        for required_field in (
+            "inputs",
+            "outputs",
+            "bounded_instructions",
+            "failure_modes",
+            "proposed_tests",
+        ):
+            if not bounded_fields[required_field]:
+                blockers.append(f"{required_field}_required")
+        if any(
+            tool.strip().lower() in {"*", "all", "any", "unrestricted"}
+            for tool in bounded_fields["allowed_tools"]
+        ):
+            blockers.append("allowed_tools_must_be_explicit")
+        if request.automatic_mining_allowed:
+            blockers.append("automatic_mining_not_allowed")
+        if request.automatic_activation_allowed:
+            blockers.append("automatic_activation_not_allowed")
+        if request.automatic_promotion_allowed:
+            blockers.append("automatic_promotion_not_allowed")
+        if request.core_mutation_allowed:
+            blockers.append("core_mutation_not_allowed")
+        if not request.human_review_required:
+            blockers.append("human_review_invariant_required")
+
+        resolved_blockers = cls._unique_values(blockers)
+        evidence_refs = cls._unique_values(
+            [
+                pattern.pattern_id,
+                *pattern.experience_refs,
+                *pattern.reflection_refs,
+                *pattern.feedback_refs,
+                *pattern.evidence_refs,
+            ]
+        )[:200]
+        result_seed = (
+            f"{request.mining_request_id}:{pattern.pattern_id}:"
+            f"{request.skill_id}:{request.version}"
+        )
+        result_hash = sha256(result_seed.encode("utf-8")).hexdigest()[:16]
+        candidate_seed = f"{pattern.pattern_id}:{request.skill_id}:{request.version}"
+        candidate_hash = sha256(candidate_seed.encode("utf-8")).hexdigest()[:16]
+        candidate: SkillCandidateContract | None = None
+        if not resolved_blockers:
+            candidate = SkillCandidateContract(
+                skill_candidate_id=(
+                    f"skill-candidate://{candidate_hash}/{request.version}"
+                ),
+                skill_id=request.skill_id,
+                skill_name=request.skill_name,
+                version=request.version,
+                workflow_profile=pattern.workflow_profile,
+                domain=pattern.domain,
+                specialist_type=request.specialist_type,
+                inputs=bounded_fields["inputs"],
+                outputs=bounded_fields["outputs"],
+                allowed_tools=bounded_fields["allowed_tools"],
+                bounded_instructions=bounded_fields["bounded_instructions"],
+                risk_level=risk_level,
+                evidence_refs=evidence_refs,
+                source_pattern_refs=[pattern.pattern_id],
+                failure_modes=bounded_fields["failure_modes"],
+                proposed_tests=bounded_fields["proposed_tests"],
+                rollback_plan_ref=request.rollback_plan_ref,
+                timestamp=pattern.generated_at,
+            )
+
+        return SkillMiningResultContract(
+            mining_result_id=f"skill-mining-result://{result_hash}",
+            mining_status=(
+                "candidate_created_inactive" if candidate is not None else "blocked"
+            ),
+            eligibility_status="eligible" if candidate is not None else "ineligible",
+            source_pattern_ref=pattern.pattern_id,
+            source_authority_status="observation_only_requires_miner_and_review",
+            threshold_occurrences=threshold,
+            observed_occurrences=pattern.occurrence_count,
+            blockers=resolved_blockers,
+            evidence_refs=evidence_refs,
+            generated_at=request.timestamp,
+            candidate=candidate,
+        )
+
+    @staticmethod
+    def _numeric_semver(value: str) -> bool:
+        parts = value.split(".")
+        return len(parts) == 3 and all(part.isdigit() for part in parts)
 
     def create_proposal_from_procedural_playbook_candidate(
         self,

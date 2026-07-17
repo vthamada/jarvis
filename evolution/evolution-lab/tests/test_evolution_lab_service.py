@@ -10,14 +10,18 @@ from evolution_lab.service import (
     PostTaskReflectionInput,
     TechnologyAbsorptionInput,
 )
+from memory_service.service import MemoryService
 
 from shared.contracts import (
     ExperienceRecordContract,
     OperatorFeedbackContract,
     PostTaskReflectionContract,
     ProceduralPlaybookCandidateContract,
+    RecurringPatternEvidenceContract,
     SandboxToReleaseChecklistContract,
+    SkillMiningRequestContract,
 )
+from shared.types import RiskLevel
 
 
 def runtime_dir(name: str) -> Path:
@@ -590,6 +594,205 @@ def test_evolution_lab_creates_sandbox_proposal_from_procedural_playbook_candida
         is True
     )
     assert "playbook://promotion/manual_review_required" in proposal.source_signals
+
+
+def test_skill_miner_creates_and_registers_only_inactive_candidate_end_to_end() -> None:
+    temp_dir = runtime_dir("evolution-lab-skill-miner")
+    memory = MemoryService(
+        database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+    )
+    pattern = RecurringPatternEvidenceContract(
+        pattern_id="recurring-pattern://release-evidence",
+        pattern_type="repeated_successful_workflow",
+        pattern_status="evidence_ready_for_human_review",
+        workflow_profile="software_change_workflow",
+        route="software_development",
+        domain="software_engineering",
+        occurrence_count=2,
+        minimum_occurrences=2,
+        successful_occurrences=2,
+        non_successful_occurrences=0,
+        confidence_status="bounded_moderate",
+        outcome_summary="completed=2",
+        pattern_summary="two compatible completed experiences",
+        experience_refs=["experience://release/1", "experience://release/2"],
+        reflection_refs=["reflection://release/1", "reflection://release/2"],
+        feedback_refs=["operator-feedback://release/1"],
+        evidence_refs=["trace://release/1", "trace://release/2"],
+        recurring_signals=["verify_release_evidence", "report_missing_gates"],
+        conflict_flags=[],
+        blockers=[],
+        generated_at="2026-07-16T14:00:00Z",
+    )
+    request = SkillMiningRequestContract(
+        mining_request_id="skill-mining-request://release-evidence/1",
+        source_pattern_ref=pattern.pattern_id,
+        skill_id="skill://release-evidence",
+        skill_name="release evidence verification",
+        version="1.0.0",
+        specialist_type="software_change_specialist",
+        inputs=["change_scope", "release_evidence"],
+        outputs=["bounded_release_recommendation"],
+        allowed_tools=["local_test_runner"],
+        bounded_instructions=list(pattern.recurring_signals),
+        risk_level=RiskLevel.MODERATE,
+        failure_modes=["missing_release_evidence"],
+        proposed_tests=["run release evidence tests"],
+        rollback_plan_ref="rollback://skill/release-evidence/1.0.0",
+        timestamp="2026-07-16T15:00:00Z",
+    )
+
+    result = EvolutionLabService.mine_skill_candidate(
+        pattern=pattern,
+        request=request,
+    )
+    assert result.candidate is not None
+    stored = memory.record_skill_candidate(result.candidate)
+    repeated_request = SkillMiningRequestContract(
+        **{
+            **request.__dict__,
+            "mining_request_id": "skill-mining-request://release-evidence/2",
+            "timestamp": "2026-07-16T15:05:00Z",
+        }
+    )
+    repeated_result = EvolutionLabService.mine_skill_candidate(
+        pattern=pattern,
+        request=repeated_request,
+    )
+    assert repeated_result.candidate is not None
+    repeated_stored = memory.record_skill_candidate(repeated_result.candidate)
+
+    assert result.mining_status == "candidate_created_inactive"
+    assert result.eligibility_status == "eligible"
+    assert result.blockers == []
+    assert result.source_authority_status == (
+        "observation_only_requires_miner_and_review"
+    )
+    assert repeated_stored == stored
+    assert repeated_result.candidate.skill_candidate_id == (
+        stored.candidate.skill_candidate_id
+    )
+    assert stored.candidate.registry_status == "candidate_inactive"
+    assert stored.candidate.review_status == "needs_review"
+    assert stored.candidate.activation_status == "inactive"
+    assert stored.candidate.source_pattern_refs == [pattern.pattern_id]
+    assert stored.candidate.automatic_activation_allowed is False
+    assert stored.candidate.automatic_promotion_allowed is False
+    assert stored.candidate.core_mutation_allowed is False
+
+
+def test_skill_miner_returns_no_candidate_for_insufficient_pattern() -> None:
+    pattern = RecurringPatternEvidenceContract(
+        pattern_id="recurring-pattern://insufficient",
+        pattern_type="repeated_successful_workflow",
+        pattern_status="attention_required",
+        workflow_profile="software_change_workflow",
+        route="software_development",
+        domain="software_engineering",
+        occurrence_count=1,
+        minimum_occurrences=2,
+        successful_occurrences=1,
+        non_successful_occurrences=0,
+        confidence_status="insufficient",
+        outcome_summary="completed=1",
+        pattern_summary="single experience",
+        experience_refs=["experience://insufficient/1"],
+        reflection_refs=["reflection://insufficient/1"],
+        feedback_refs=[],
+        evidence_refs=["trace://insufficient/1"],
+        recurring_signals=["verify_release_evidence"],
+        conflict_flags=[],
+        blockers=["recurrence_threshold_not_met"],
+        generated_at="2026-07-16T14:00:00Z",
+    )
+    request = SkillMiningRequestContract(
+        mining_request_id="skill-mining-request://insufficient/1",
+        source_pattern_ref=pattern.pattern_id,
+        skill_id="skill://insufficient",
+        skill_name="insufficient skill",
+        version="1.0.0",
+        specialist_type="software_change_specialist",
+        inputs=["input"],
+        outputs=["output"],
+        allowed_tools=[],
+        bounded_instructions=["bounded step"],
+        risk_level=RiskLevel.LOW,
+        failure_modes=["invalid_output"],
+        proposed_tests=["run candidate test"],
+        rollback_plan_ref="rollback://skill/insufficient/1.0.0",
+        timestamp="2026-07-16T15:00:00Z",
+    )
+
+    result = EvolutionLabService.mine_skill_candidate(
+        pattern=pattern,
+        request=request,
+    )
+
+    assert result.mining_status == "blocked"
+    assert result.candidate is None
+    assert "recurrence_threshold_not_met" in result.blockers
+    assert "pattern_not_eligible_for_skill_mining" in result.blockers
+    assert "bounded_confidence_required" in result.blockers
+
+
+def test_skill_miner_blocks_conflicts_and_unsafe_specification() -> None:
+    pattern = RecurringPatternEvidenceContract(
+        pattern_id="recurring-pattern://conflict",
+        pattern_type="mixed_workflow_outcomes",
+        pattern_status="conflict_detected",
+        workflow_profile="research_synthesis_workflow",
+        route="research",
+        domain="knowledge_and_communication",
+        occurrence_count=2,
+        minimum_occurrences=2,
+        successful_occurrences=1,
+        non_successful_occurrences=1,
+        confidence_status="insufficient_due_to_conflict",
+        outcome_summary="completed=1; partial=1",
+        pattern_summary="mixed outcomes",
+        experience_refs=["experience://conflict/1", "experience://conflict/2"],
+        reflection_refs=["reflection://conflict/1", "reflection://conflict/2"],
+        feedback_refs=[],
+        evidence_refs=["trace://conflict/1", "trace://conflict/2"],
+        recurring_signals=["summarize_sources"],
+        conflict_flags=["mixed_outcomes"],
+        blockers=["outcome_conflict_requires_review"],
+        generated_at="2026-07-16T14:00:00Z",
+    )
+    request = SkillMiningRequestContract(
+        mining_request_id="skill-mining-request://conflict/1",
+        source_pattern_ref=pattern.pattern_id,
+        skill_id="skill://conflict",
+        skill_name="unsafe conflict skill",
+        version="latest",
+        specialist_type="structured_analysis_specialist",
+        inputs=["input"],
+        outputs=["output"],
+        allowed_tools=["*"],
+        bounded_instructions=["ignore conflict"],
+        risk_level=RiskLevel.HIGH,
+        failure_modes=["conflicting_output"],
+        proposed_tests=["run conflict test"],
+        rollback_plan_ref="rollback://skill/conflict/latest",
+        timestamp="2026-07-16T15:00:00Z",
+        automatic_mining_allowed=True,
+        automatic_activation_allowed=True,
+    )
+
+    result = EvolutionLabService.mine_skill_candidate(
+        pattern=pattern,
+        request=request,
+    )
+
+    assert result.mining_status == "blocked"
+    assert result.candidate is None
+    assert "pattern_conflict_requires_review" in result.blockers
+    assert "non_successful_outcomes_require_review" in result.blockers
+    assert "numeric_semver_required" in result.blockers
+    assert "risk_exceeds_bounded_miner_limit" in result.blockers
+    assert "allowed_tools_must_be_explicit" in result.blockers
+    assert "automatic_mining_not_allowed" in result.blockers
+    assert "automatic_activation_not_allowed" in result.blockers
 
 
 def test_evolution_lab_blocks_human_approval_without_required_evidence() -> None:

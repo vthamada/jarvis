@@ -586,8 +586,7 @@ Map IDs: `EVL-007`, `MEM-006`, `GOV-004`.
 Goal: define a versioned, inactive and human-review-bound skill candidate.
 
 Status: closed in `MB-177`; the persistent registry enforces inactive,
-human-review-bound, immutable logical versions, and `MB-178` is the only
-technical item ready.
+human-review-bound, immutable logical versions.
 
 ### MB-178 -- Bounded Skill Miner
 
@@ -595,7 +594,9 @@ Map IDs: `EVL-007`, `MEM-003`, `MEM-006`.
 
 Goal: convert only eligible recurring-pattern evidence into a skill candidate.
 
-Status: ready after `MB-177`.
+Status: closed in `MB-178`; deterministic eligibility checks return an inactive
+candidate or a blocked result with no candidate, and `MB-179` is the only
+technical item ready.
 
 ### MB-179 -- Skill Review And Sandbox Eval
 
@@ -603,6 +604,8 @@ Map IDs: `EVL-007`, `EVL-005`, `EVL-006`, `GOV-009`.
 
 Goal: connect skill candidates to human review, sandbox eval and promotion
 checklist without runtime activation.
+
+Status: ready after `MB-178`.
 
 ### MB-180 -- Skill Operator Surface
 

@@ -74,6 +74,12 @@
 - `memory-service` persiste e filtra o registry em SQLite/PostgreSQL, garante unicidade `(skill_id, version)`, retry idempotente e rejeicao de mutacao/colisao;
 - claims de ativacao, aprovacao, escrita direta, autopromocao ou Core mutation sao contidos; testes comprovam invariantes e `MB-178` e o unico item tecnico `ready`.
 
+### MB-178 implementa Skill Miner bounded
+
+- `SkillMiningRequestContract` e `SkillMiningResultContract` tornam spec, eligibility, blockers, evidence e candidata opcional auditaveis;
+- `evolution-lab` exige threshold, outcomes consistentes, experiencias/reflexoes distintas, confidence, evidencia, spec bounded, tools explicitas e risco controlado; falha sempre retorna `candidate=None`;
+- candidata elegivel nasce deterministica, idempotente e inativa, e o teste ponta a ponta a registra sem ativacao; `MB-179` e o unico item tecnico `ready`.
+
 ## 2026-07-04
 
 ### MB-161 fecha anchors de evidencia de memoria semantica

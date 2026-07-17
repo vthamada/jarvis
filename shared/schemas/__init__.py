@@ -418,6 +418,65 @@ SKILL_CANDIDATE_SCHEMA = CanonicalSchema(
     ),
 )
 
+SKILL_MINING_REQUEST_SCHEMA = CanonicalSchema(
+    name="SkillMiningRequestSchema",
+    contract_name="SkillMiningRequestContract",
+    required_fields=(
+        "mining_request_id",
+        "source_pattern_ref",
+        "skill_id",
+        "skill_name",
+        "version",
+        "specialist_type",
+        "inputs",
+        "outputs",
+        "allowed_tools",
+        "bounded_instructions",
+        "risk_level",
+        "failure_modes",
+        "proposed_tests",
+        "rollback_plan_ref",
+        "timestamp",
+    ),
+    optional_fields=(
+        "human_review_required",
+        "automatic_mining_allowed",
+        "automatic_activation_allowed",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Bounded explicit mining specification; it grants no runtime authority.",
+    ),
+)
+
+SKILL_MINING_RESULT_SCHEMA = CanonicalSchema(
+    name="SkillMiningResultSchema",
+    contract_name="SkillMiningResultContract",
+    required_fields=(
+        "mining_result_id",
+        "mining_status",
+        "eligibility_status",
+        "source_pattern_ref",
+        "source_authority_status",
+        "threshold_occurrences",
+        "observed_occurrences",
+        "blockers",
+        "evidence_refs",
+        "generated_at",
+    ),
+    optional_fields=(
+        "candidate",
+        "human_review_required",
+        "automatic_activation_allowed",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Blocked mining returns no candidate; successful mining remains inactive.",
+    ),
+)
+
 PROCEDURAL_PLAYBOOK_CANDIDATE_SCHEMA = CanonicalSchema(
     name="ProceduralPlaybookCandidateSchema",
     contract_name="ProceduralPlaybookCandidateContract",

@@ -259,6 +259,49 @@ class SkillCandidateContract:
 
 
 @dataclass
+class SkillMiningRequestContract:
+    mining_request_id: str
+    source_pattern_ref: str
+    skill_id: str
+    skill_name: str
+    version: str
+    specialist_type: str
+    inputs: list[str]
+    outputs: list[str]
+    allowed_tools: list[str]
+    bounded_instructions: list[str]
+    risk_level: RiskLevel
+    failure_modes: list[str]
+    proposed_tests: list[str]
+    rollback_plan_ref: str
+    timestamp: Timestamp
+    human_review_required: bool = True
+    automatic_mining_allowed: bool = False
+    automatic_activation_allowed: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass
+class SkillMiningResultContract:
+    mining_result_id: str
+    mining_status: str
+    eligibility_status: str
+    source_pattern_ref: str
+    source_authority_status: str
+    threshold_occurrences: int
+    observed_occurrences: int
+    blockers: list[str]
+    evidence_refs: list[str]
+    generated_at: Timestamp
+    candidate: SkillCandidateContract | None = None
+    human_review_required: bool = True
+    automatic_activation_allowed: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass
 class ProceduralPlaybookCandidateContract:
     playbook_candidate_id: str
     procedure_name: str

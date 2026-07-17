@@ -3383,7 +3383,7 @@ Fora de escopo:
 
 - `id`: `MB-178`
 - `prioridade`: `P1`
-- `status`: `ready`
+- `status`: `done`
 - `eixo_do_mestre`: `evolucao`, `skills`
 - `map_ids`: `EVL-007`, `MEM-003`, `MEM-006`
 - `workflow_profile_afetado`: `operational_readiness_workflow`, `research_synthesis_workflow`
@@ -3393,12 +3393,14 @@ Fora de escopo:
 - `dependencias`: `MB-177`
 - `criterio_de_aceite`: threshold de recorrencia, outcomes, conflitos e evidencias controla geracao; insuficiencia produz blocker visivel, nunca candidata otimista.
 - `gate_minimo`: testes direcionados de evolution/memory e gate padrao
+- `impacto_no_baseline`: o `evolution-lab` possui miner deterministico que converte somente pattern evidence elegivel e spec bounded em candidata inativa idempotente; qualquer falha retorna resultado bloqueado sem candidata.
+- `evidencia_de_fechamento`: `SkillMiningRequestContract`/`SkillMiningResultContract`, eligibility gate por threshold/outcome/confidence/refs/conflitos/risco/tools e testes elegivel, insuficiente, conflitante, inseguro e miner-to-registry ponta a ponta.
 
 ### MB-179
 
 - `id`: `MB-179`
 - `prioridade`: `P1`
-- `status`: `blocked`
+- `status`: `ready`
 - `eixo_do_mestre`: `evolucao`, `governanca`, `evals`
 - `map_ids`: `EVL-007`, `EVL-005`, `EVL-006`, `GOV-009`
 - `workflow_profile_afetado`: `governance_boundary_workflow`, `operational_readiness_workflow`
@@ -3665,6 +3667,6 @@ Estado atual da fila:
 - `MB-173` foi concluido como baseline de proveniencia, freshness e conflito/incerteza de conhecimento;
 - `MB-174` foi concluido como dashboard integrado de regressao/readiness, fechando a fila `MB-161` a `MB-174`; nao ha item tecnico `ready` ate nova repriorizacao explicita pelo mapa mestre;
 - `MB-175` foi concluido como repriorizacao pos-`MB-174`, abrindo a fila governada de skill/workflow evolution `MB-176` a `MB-189`;
-- `MB-176` foi concluido como baseline bounded de pattern evidence e `MB-177` como registry inativo de skill candidata; `MB-178` e o unico item tecnico `ready` e `MB-179` a `MB-189` permanecem `blocked` por dependencia/ordem;
+- `MB-176` foi concluido como pattern evidence, `MB-177` como registry inativo e `MB-178` como Skill Miner bounded; `MB-179` e o unico item tecnico `ready` e `MB-180` a `MB-189` permanecem `blocked` por dependencia/ordem;
 - `SO-001`, `TA-004`, `TA-006` e verticais `deferred` continuam fora da fila sem mudanca explicita de fase;
 - `protective intelligence foundation` continua `deferred` e a matriz da Onda 2 segue como insumo, nao como gatilho automatico para abrir nova vertical.
