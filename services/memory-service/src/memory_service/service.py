@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
+from hashlib import sha256
 from os import getenv
 from re import fullmatch
 from uuid import uuid4
@@ -13,6 +14,7 @@ from memory_service.repository import (
     StoredContinuityCheckpoint,
     StoredContinuityPauseResolution,
     StoredExperienceReflection,
+    StoredMemoryLifecycleReviewDecision,
     StoredProceduralPlaybookCandidate,
     StoredReviewedLearningGuidance,
     StoredSkillCandidate,
@@ -33,6 +35,9 @@ from shared.contracts import (
     LongHorizonGoalStrategyContract,
     MemoryInfluencePolicyDecisionContract,
     MemoryInfluenceSignalContract,
+    MemoryLifecycleCandidateContract,
+    MemoryLifecycleGovernanceAssessmentContract,
+    MemoryLifecycleReviewDecisionContract,
     MemoryRecordContract,
     MemoryRecoveryContract,
     MissionContinuityCandidateContract,
@@ -158,6 +163,12 @@ class MemoryService:
     """Handles contextual continuity with persistent episodic and mission memory."""
 
     name = "memory-service"
+    _MEMORY_REVIEW_ACTIONS = {
+        "approve": "approved",
+        "reject": "rejected",
+        "needs_review": "needs_review",
+        "rollback": "rolled_back",
+    }
 
     def __init__(self, database_url: str | None = None) -> None:
         configured_url = database_url or getenv("DATABASE_URL")
@@ -433,6 +444,243 @@ class MemoryService:
             workflow_profile=workflow_profile,
             domain=domain,
             limit=max(1, limit),
+        )
+
+    def list_memory_lifecycle_review_queue(
+        self,
+        *,
+        maintenance_action: str | None = None,
+        review_status: str | None = None,
+        limit: int = 20,
+        generated_at: str | None = None,
+    ) -> list[MemoryLifecycleCandidateContract]:
+        """Derive a human-only maintenance queue from canonical memory signals."""
+
+        safe_generated_at = generated_at or self.now()
+        corpus = self.repository.summarize_memory_corpus()
+        candidates: list[MemoryLifecycleCandidateContract] = []
+        if corpus.consolidating_records > 0:
+            evidence_refs = [
+                "memory-telemetry://consolidating-records/"
+                f"{corpus.consolidating_records}",
+            ]
+            candidates.append(
+                self._memory_lifecycle_candidate(
+                    maintenance_action="consolidate",
+                    target_scope="semantic_procedural_corpus",
+                    target_refs=["memory-corpus://semantic-procedural/consolidating"],
+                    reason=(
+                        f"{corpus.consolidating_records} memory record(s) remain in "
+                        "consolidating lifecycle state"
+                    ),
+                    evidence_refs=evidence_refs,
+                    rollback_plan_ref=(
+                        "rollback://memory-lifecycle/consolidation/restore-corpus-snapshot"
+                    ),
+                    generated_at=safe_generated_at,
+                )
+            )
+        if corpus.archivable_records > 0:
+            evidence_refs = [
+                f"memory-telemetry://archivable-records/{corpus.archivable_records}",
+            ]
+            candidates.append(
+                self._memory_lifecycle_candidate(
+                    maintenance_action="archive",
+                    target_scope="semantic_procedural_corpus",
+                    target_refs=["memory-corpus://semantic-procedural/archivable"],
+                    reason=(
+                        f"{corpus.archivable_records} memory record(s) are archive "
+                        "candidates and require human disposition"
+                    ),
+                    evidence_refs=evidence_refs,
+                    rollback_plan_ref=(
+                        "rollback://memory-lifecycle/archive/restore-indexed-records"
+                    ),
+                    generated_at=safe_generated_at,
+                )
+            )
+
+        for record in self.repository.list_reviewed_learning_guidance(limit=200):
+            guidance = record.guidance
+            if not guidance.expires_at or not self._timestamp_reached(
+                guidance.expires_at,
+                safe_generated_at,
+            ):
+                continue
+            candidates.append(
+                self._memory_lifecycle_candidate(
+                    maintenance_action="expire",
+                    target_scope="reviewed_learning_guidance",
+                    target_refs=[guidance.guidance_id],
+                    reason=(
+                        "reviewed learning guidance reached its bounded validity window "
+                        f"at {guidance.expires_at}"
+                    ),
+                    evidence_refs=self._merge_unique_strings(
+                        guidance.evidence_refs,
+                        [f"memory-expiration://{guidance.expires_at}"],
+                    ),
+                    rollback_plan_ref=(
+                        guidance.rollback_plan_ref
+                        or f"rollback://reviewed-learning/{guidance.guidance_id}"
+                    ),
+                    generated_at=safe_generated_at,
+                )
+            )
+
+        latest_by_candidate: dict[str, MemoryLifecycleReviewDecisionContract] = {}
+        for record in self.repository.list_memory_lifecycle_review_decisions(limit=500):
+            latest_by_candidate.setdefault(record.decision.candidate_id, record.decision)
+        reviewed_candidates = [
+            self._candidate_with_review(candidate, latest_by_candidate.get(candidate.candidate_id))
+            for candidate in candidates
+        ]
+        if maintenance_action:
+            reviewed_candidates = [
+                candidate
+                for candidate in reviewed_candidates
+                if candidate.maintenance_action == maintenance_action
+            ]
+        if review_status:
+            reviewed_candidates = [
+                candidate
+                for candidate in reviewed_candidates
+                if candidate.review_status == review_status
+            ]
+        reviewed_candidates.sort(
+            key=lambda item: (
+                {"archive": 0, "expire": 1, "consolidate": 2}.get(
+                    item.maintenance_action,
+                    9,
+                ),
+                item.candidate_id,
+            )
+        )
+        return reviewed_candidates[: max(1, min(limit, 200))]
+
+    def get_memory_lifecycle_candidate(
+        self,
+        candidate_id: str,
+        *,
+        generated_at: str | None = None,
+    ) -> MemoryLifecycleCandidateContract | None:
+        """Return one currently evidenced maintenance candidate."""
+
+        return next(
+            (
+                candidate
+                for candidate in self.list_memory_lifecycle_review_queue(
+                    limit=200,
+                    generated_at=generated_at,
+                )
+                if candidate.candidate_id == candidate_id
+            ),
+            None,
+        )
+
+    def record_memory_lifecycle_review_decision(
+        self,
+        *,
+        candidate_id: str,
+        decision_action: str,
+        operator_ref: str,
+        evidence_refs: list[str],
+        rollback_plan_ref: str | None,
+        review_notes: list[str],
+        governance_assessment: MemoryLifecycleGovernanceAssessmentContract,
+    ) -> MemoryLifecycleReviewDecisionContract:
+        """Persist a governed human decision without executing memory maintenance."""
+
+        normalized_action = decision_action.replace("-", "_")
+        if normalized_action not in self._MEMORY_REVIEW_ACTIONS:
+            raise ValueError(f"unsupported memory lifecycle review action: {decision_action}")
+        candidate = self.get_memory_lifecycle_candidate(
+            candidate_id,
+            generated_at=governance_assessment.timestamp,
+        )
+        if candidate is None:
+            raise ValueError(f"unknown memory lifecycle candidate: {candidate_id}")
+        if governance_assessment.status != "governed" or governance_assessment.blockers:
+            raise ValueError("memory lifecycle review requires a governed assessment")
+        if governance_assessment.candidate_id != candidate.candidate_id:
+            raise ValueError("memory lifecycle governance candidate mismatch")
+        if governance_assessment.maintenance_action != candidate.maintenance_action:
+            raise ValueError("memory lifecycle governance action mismatch")
+        if governance_assessment.decision_action != normalized_action:
+            raise ValueError("memory lifecycle governance decision mismatch")
+        if (
+            not governance_assessment.human_review_required
+            or governance_assessment.execution_authorized
+            or governance_assessment.automatic_execution_allowed
+            or governance_assessment.core_mutation_allowed
+        ):
+            raise ValueError("memory lifecycle governance cannot authorize mutation")
+        required_policy_refs = {
+            "policy://memory-lifecycle/human-review-required",
+            "policy://memory-lifecycle/no-autonomous-maintenance",
+            "policy://memory-lifecycle/separate-execution-step",
+        }
+        if not required_policy_refs.issubset(governance_assessment.policy_refs):
+            raise ValueError("memory lifecycle governance policy trace required")
+        if normalized_action in {"approve", "rollback"} and not evidence_refs:
+            raise ValueError("memory lifecycle review evidence required")
+        if normalized_action in {"approve", "rollback"} and not rollback_plan_ref:
+            raise ValueError("memory lifecycle rollback plan required")
+        if not self._bounded_memory_review_ref(operator_ref):
+            raise ValueError("bounded memory lifecycle operator ref required")
+        if rollback_plan_ref and not self._bounded_memory_review_ref(rollback_plan_ref):
+            raise ValueError("bounded memory lifecycle rollback ref required")
+        if any(not self._bounded_memory_review_ref(ref) for ref in evidence_refs):
+            raise ValueError("bounded memory lifecycle evidence refs required")
+        previous_decisions = self.repository.list_memory_lifecycle_review_decisions(
+            candidate_id=candidate.candidate_id,
+            limit=1,
+        )
+        if normalized_action == "rollback" and (
+            not previous_decisions
+            or previous_decisions[0].decision.review_status != "approved"
+        ):
+            raise ValueError("approved memory lifecycle review required before rollback")
+
+        review_timestamp = self.now()
+        review_identity = sha256(
+            f"{candidate_id}|{review_timestamp}".encode()
+        ).hexdigest()[:16]
+        decision = MemoryLifecycleReviewDecisionContract(
+            review_decision_id=(
+                f"memory-lifecycle-review://{review_identity}"
+            ),
+            candidate_id=candidate.candidate_id,
+            maintenance_action=candidate.maintenance_action,
+            decision_action=normalized_action,
+            review_status=self._MEMORY_REVIEW_ACTIONS[normalized_action],
+            operator_ref=operator_ref,
+            evidence_refs=self._merge_unique_strings(evidence_refs, []),
+            rollback_plan_ref=rollback_plan_ref or candidate.rollback_plan_ref,
+            governance_assessment_id=governance_assessment.assessment_id,
+            timestamp=review_timestamp,
+            review_notes=self._merge_unique_strings(review_notes, []),
+            execution_authorized=False,
+            automatic_execution_allowed=False,
+            core_mutation_allowed=False,
+        )
+        self.repository.record_memory_lifecycle_review_decision(
+            StoredMemoryLifecycleReviewDecision(decision=decision)
+        )
+        return decision
+
+    def list_memory_lifecycle_review_decisions(
+        self,
+        *,
+        candidate_id: str | None = None,
+        limit: int = 20,
+    ) -> list[StoredMemoryLifecycleReviewDecision]:
+        """Return persisted human review history for memory maintenance."""
+
+        return self.repository.list_memory_lifecycle_review_decisions(
+            candidate_id=candidate_id,
+            limit=max(1, min(limit, 200)),
         )
 
     @staticmethod
@@ -3909,6 +4157,78 @@ class MemoryService:
     @staticmethod
     def _request_id_or_none(value: str | None) -> RequestId | None:
         return RequestId(value) if value else None
+
+    @staticmethod
+    def _bounded_memory_review_ref(value: str) -> bool:
+        return bool(value) and len(value) <= 160 and fullmatch(
+            r"[A-Za-z0-9:/._-]+",
+            value,
+        ) is not None
+
+    @staticmethod
+    def _memory_lifecycle_candidate(
+        *,
+        maintenance_action: str,
+        target_scope: str,
+        target_refs: list[str],
+        reason: str,
+        evidence_refs: list[str],
+        rollback_plan_ref: str,
+        generated_at: str,
+    ) -> MemoryLifecycleCandidateContract:
+        identity = "|".join(
+            [maintenance_action, target_scope, *target_refs, *evidence_refs]
+        )
+        candidate_id = (
+            "memory-lifecycle-candidate://"
+            f"{maintenance_action}/{sha256(identity.encode()).hexdigest()[:16]}"
+        )
+        return MemoryLifecycleCandidateContract(
+            candidate_id=candidate_id,
+            maintenance_action=maintenance_action,
+            target_scope=target_scope,
+            target_refs=target_refs,
+            reason=reason,
+            evidence_refs=evidence_refs,
+            rollback_plan_ref=rollback_plan_ref,
+            review_status="needs_review",
+            execution_status="not_executed",
+            generated_at=generated_at,
+            human_review_required=True,
+            automatic_execution_allowed=False,
+            core_mutation_allowed=False,
+        )
+
+    @staticmethod
+    def _candidate_with_review(
+        candidate: MemoryLifecycleCandidateContract,
+        decision: MemoryLifecycleReviewDecisionContract | None,
+    ) -> MemoryLifecycleCandidateContract:
+        if decision is None:
+            return candidate
+        return replace(
+            candidate,
+            review_status=decision.review_status,
+            last_review_decision_id=decision.review_decision_id,
+            last_reviewed_by=decision.operator_ref,
+            last_reviewed_at=decision.timestamp,
+            execution_status="not_executed",
+            automatic_execution_allowed=False,
+            core_mutation_allowed=False,
+        )
+
+    @staticmethod
+    def _timestamp_reached(expires_at: str, generated_at: str) -> bool:
+        try:
+            expires = datetime.fromisoformat(expires_at.replace("Z", "+00:00"))
+            generated = datetime.fromisoformat(generated_at.replace("Z", "+00:00"))
+        except ValueError:
+            return False
+        if expires.tzinfo is None:
+            expires = expires.replace(tzinfo=UTC)
+        if generated.tzinfo is None:
+            generated = generated.replace(tzinfo=UTC)
+        return expires <= generated
 
     @staticmethod
     def _merge_unique_strings(*groups: list[str]) -> list[str]:

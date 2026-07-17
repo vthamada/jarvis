@@ -128,6 +128,12 @@
 - policy compartilhada e read-only ordena `reviewed_learning > procedural > semantic > reflection`; planning aplica somente sinais selecionados, e synthesis explica sinais usados/ignorados;
 - memory-service reutiliza a mesma policy sem novo storage, governance bloqueia trilha/autoridade invalida e orchestrator emite `memory_influence_governed`; E2E libera `MB-187` como unico item tecnico `ready`.
 
+### MB-187 consolida fila humana de lifecycle de memoria
+
+- contratos/schemas `MemoryLifecycle*` formalizam candidatos de consolidacao, archive e expiracao, assessment de governanca e decisao humana persistida;
+- `memory-service` deriva a fila de telemetria canonica e guidance expirado, persiste somente a revisao em SQLite/PostgreSQL e mantem `execution_authorized=false` mesmo quando aprovada;
+- `jarvis-console memory-review-queue` e `memory-review` expoem evidencias, rollback, status e blockers; testes locais e E2E comprovam que corpus, guidance e missao nao sofrem mutacao, e `MB-188` passa a ser o unico item tecnico `ready`.
+
 ## 2026-07-04
 
 ### MB-161 fecha anchors de evidencia de memoria semantica

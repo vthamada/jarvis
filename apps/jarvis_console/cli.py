@@ -14,6 +14,7 @@ from apps.jarvis_console.bootstrap import ROOT, ensure_src_paths
 ensure_src_paths()
 
 from evolution_lab.service import EvolutionLabService, PostTaskReflectionInput
+from governance_service.service import GovernanceService
 from memory_service.service import MemoryService
 from observability_service.service import ObservabilityQuery, ObservabilityService
 from operational_service.service import OperationalService
@@ -426,6 +427,37 @@ def build_parser() -> ArgumentParser:
     review_decision_parser.add_argument("--rollback-plan-ref")
     review_decision_parser.add_argument("--risk-acceptance")
     review_decision_parser.add_argument("--note", action="append", default=[])
+
+    memory_review_queue_parser = subparsers.add_parser(
+        "memory-review-queue",
+        help="Show human-only consolidation, archive and expiration candidates.",
+    )
+    memory_review_queue_parser.add_argument("--memory-db")
+    memory_review_queue_parser.add_argument(
+        "--maintenance-action",
+        choices=["consolidate", "archive", "expire"],
+    )
+    memory_review_queue_parser.add_argument("--review-status")
+    memory_review_queue_parser.add_argument("--limit", type=int, default=10)
+
+    memory_review_parser = subparsers.add_parser(
+        "memory-review",
+        help="Record a governed human decision without executing memory maintenance.",
+    )
+    memory_review_parser.add_argument("--memory-db")
+    memory_review_parser.add_argument("--candidate-id", required=True)
+    memory_review_parser.add_argument(
+        "--action",
+        required=True,
+        choices=["approve", "reject", "needs-review", "rollback"],
+    )
+    memory_review_parser.add_argument(
+        "--operator-ref",
+        default=DEFAULT_OPERATOR_IDENTITY_REF,
+    )
+    memory_review_parser.add_argument("--evidence-ref", action="append", default=[])
+    memory_review_parser.add_argument("--rollback-plan-ref")
+    memory_review_parser.add_argument("--note", action="append", default=[])
 
     mission_cycle_parser = subparsers.add_parser(
         "mission-cycle",
@@ -1032,6 +1064,80 @@ def render_evolution_review_decision(decision: object) -> str:
             "core_mutation_allowed=False",
         ]
     )
+
+
+def render_memory_lifecycle_review_queue(items: list[object]) -> str:
+    if not items:
+        return "No memory lifecycle review items found."
+    lines: list[str] = []
+    for item in items:
+        lines.extend(
+            [
+                f"candidate_id={safe_console_value(getattr(item, 'candidate_id', None))}",
+                "maintenance_action="
+                + safe_console_value(getattr(item, "maintenance_action", None)),
+                f"target_scope={safe_console_value(getattr(item, 'target_scope', None))}",
+                "target_refs="
+                + safe_console_list(list(getattr(item, "target_refs", []))),
+                f"reason={safe_console_value(getattr(item, 'reason', None))}",
+                "evidence_refs="
+                + safe_console_list(list(getattr(item, "evidence_refs", []))),
+                "rollback_plan_ref="
+                + safe_console_value(getattr(item, "rollback_plan_ref", None)),
+                f"review_status={safe_console_value(getattr(item, 'review_status', None))}",
+                "execution_status="
+                + safe_console_value(getattr(item, "execution_status", None)),
+                "last_review_decision_id="
+                + safe_console_value(getattr(item, "last_review_decision_id", None)),
+                "human_review_required="
+                + safe_console_value(getattr(item, "human_review_required", None)),
+                "automatic_execution_allowed="
+                + safe_console_value(
+                    getattr(item, "automatic_execution_allowed", None)
+                ),
+                "core_mutation_allowed="
+                + safe_console_value(getattr(item, "core_mutation_allowed", None)),
+                "---",
+            ]
+        )
+    lines.pop()
+    return "\n".join(lines)
+
+
+def render_memory_lifecycle_review_result(
+    *,
+    assessment: object,
+    decision: object | None,
+) -> str:
+    lines = [
+        "governance_assessment_id="
+        + safe_console_value(getattr(assessment, "assessment_id", None)),
+        f"governance_status={safe_console_value(getattr(assessment, 'status', None))}",
+        "governance_blockers="
+        + safe_console_list(list(getattr(assessment, "blockers", []))),
+        "execution_authorized=False",
+        "automatic_execution_allowed=False",
+        "core_mutation_allowed=False",
+    ]
+    if decision is not None:
+        lines.extend(
+            [
+                "review_decision_id="
+                + safe_console_value(getattr(decision, "review_decision_id", None)),
+                f"candidate_id={safe_console_value(getattr(decision, 'candidate_id', None))}",
+                "maintenance_action="
+                + safe_console_value(getattr(decision, "maintenance_action", None)),
+                "decision_action="
+                + safe_console_value(getattr(decision, "decision_action", None)),
+                f"review_status={safe_console_value(getattr(decision, 'review_status', None))}",
+                f"operator_ref={safe_console_value(getattr(decision, 'operator_ref', None))}",
+                "evidence_refs="
+                + safe_console_list(list(getattr(decision, "evidence_refs", []))),
+                "rollback_plan_ref="
+                + safe_console_value(getattr(decision, "rollback_plan_ref", None)),
+            ]
+        )
+    return "\n".join(lines)
 
 
 def render_mission_cycle(
@@ -2044,6 +2150,55 @@ def run_evolution_review_command(args: Namespace) -> list[str]:
     return [render_evolution_review_decision(decision)]
 
 
+def run_memory_lifecycle_review_queue_command(args: Namespace) -> list[str]:
+    service = _memory_service_from_args(args)
+    items = service.list_memory_lifecycle_review_queue(
+        maintenance_action=args.maintenance_action,
+        review_status=args.review_status,
+        limit=max(1, args.limit),
+    )
+    return [render_memory_lifecycle_review_queue(items)]
+
+
+def run_memory_lifecycle_review_command(args: Namespace) -> list[str]:
+    service = _memory_service_from_args(args)
+    candidate = service.get_memory_lifecycle_candidate(args.candidate_id)
+    if candidate is None:
+        raise ValueError(f"unknown memory lifecycle candidate: {args.candidate_id}")
+    previous_decisions = service.list_memory_lifecycle_review_decisions(
+        candidate_id=candidate.candidate_id,
+        limit=1,
+    )
+    previous_review_status = (
+        previous_decisions[0].decision.review_status if previous_decisions else None
+    )
+    assessment = GovernanceService().assess_memory_lifecycle_review(
+        candidate,
+        decision_action=args.action,
+        operator_ref=args.operator_ref,
+        evidence_refs=list(args.evidence_ref),
+        rollback_plan_ref=args.rollback_plan_ref,
+        previous_review_status=previous_review_status,
+    )
+    decision = None
+    if assessment.status == "governed":
+        decision = service.record_memory_lifecycle_review_decision(
+            candidate_id=candidate.candidate_id,
+            decision_action=args.action,
+            operator_ref=args.operator_ref,
+            evidence_refs=list(args.evidence_ref),
+            rollback_plan_ref=args.rollback_plan_ref,
+            review_notes=list(args.note),
+            governance_assessment=assessment,
+        )
+    return [
+        render_memory_lifecycle_review_result(
+            assessment=assessment,
+            decision=decision,
+        )
+    ]
+
+
 def main(argv: list[str] | None = None) -> int:
     args = build_parser().parse_args(argv)
     console = JarvisConsole.build(runtime_dir=ROOT / ".jarvis_runtime" / "console")
@@ -2060,6 +2215,10 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "evolution-review-queue"
         else run_evolution_review_command(args)
         if args.command == "evolution-review"
+        else run_memory_lifecycle_review_queue_command(args)
+        if args.command == "memory-review-queue"
+        else run_memory_lifecycle_review_command(args)
+        if args.command == "memory-review"
         else run_mission_cycle_command(console, args)
         if args.command == "mission-cycle"
         else run_operator_dashboard_command(console, args)
@@ -2105,6 +2264,8 @@ def main(argv: list[str] | None = None) -> int:
         "skill-evolution",
         "evolution-review-queue",
         "evolution-review",
+        "memory-review-queue",
+        "memory-review",
         "mission-cycle",
         "operator-dashboard",
         "readiness-dashboard",

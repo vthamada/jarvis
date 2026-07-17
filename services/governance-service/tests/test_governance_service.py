@@ -3,6 +3,7 @@ from governance_service.service import GovernanceAssessment, GovernanceService
 from shared.contracts import (
     DeliberativePlanContract,
     InputContract,
+    MemoryLifecycleCandidateContract,
     MissionStateContract,
     OperatorFeedbackContract,
     SpecialistBoundaryContract,
@@ -689,3 +690,65 @@ def test_governance_service_requires_review_for_missing_or_conflicting_evidence(
     assert conflicting.status == "review_required"
     assert conflicting.use_mode == "do_not_assert_as_verified"
     assert "Declared source conflicts require explicit resolution." in conflicting.blockers
+
+
+def test_governance_service_governs_memory_review_without_execution_authority() -> None:
+    candidate = MemoryLifecycleCandidateContract(
+        candidate_id="memory-lifecycle-candidate://archive/001",
+        maintenance_action="archive",
+        target_scope="semantic_procedural_corpus",
+        target_refs=["memory-corpus://semantic-procedural/archivable"],
+        reason="one record is archivable",
+        evidence_refs=["memory-telemetry://archivable-records/1"],
+        rollback_plan_ref="rollback://memory/archive/restore",
+        review_status="needs_review",
+        execution_status="not_executed",
+        generated_at="2026-07-16T00:00:00Z",
+    )
+
+    result = GovernanceService().assess_memory_lifecycle_review(
+        candidate,
+        decision_action="approve",
+        operator_ref="operator://local_console",
+        evidence_refs=["trace://memory-review/001"],
+        rollback_plan_ref="rollback://memory/archive/restore",
+        assessed_at="2026-07-16T00:00:01Z",
+    )
+
+    assert result.status == "governed"
+    assert result.blockers == []
+    assert result.execution_authorized is False
+    assert result.automatic_execution_allowed is False
+    assert result.core_mutation_allowed is False
+
+
+def test_governance_service_blocks_unsafe_memory_review_and_early_rollback() -> None:
+    candidate = MemoryLifecycleCandidateContract(
+        candidate_id="memory-lifecycle-candidate://expire/001",
+        maintenance_action="expire",
+        target_scope="reviewed_learning_guidance",
+        target_refs=["reviewed-learning-guidance://001"],
+        reason="guidance expired",
+        evidence_refs=["memory-expiration://2026-07-15T00:00:00Z"],
+        rollback_plan_ref="rollback://memory/guidance/restore",
+        review_status="needs_review",
+        execution_status="not_executed",
+        generated_at="2026-07-16T00:00:00Z",
+        automatic_execution_allowed=True,
+    )
+
+    result = GovernanceService().assess_memory_lifecycle_review(
+        candidate,
+        decision_action="rollback",
+        operator_ref="operator://local_console",
+        evidence_refs=[],
+        rollback_plan_ref=None,
+        previous_review_status=None,
+    )
+
+    assert result.status == "blocked"
+    assert "memory_lifecycle_candidate_authority_not_allowed" in result.blockers
+    assert "explicit_review_evidence_required" in result.blockers
+    assert "explicit_rollback_plan_required" in result.blockers
+    assert "approved_review_required_before_rollback" in result.blockers
+    assert result.execution_authorized is False

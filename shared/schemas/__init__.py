@@ -1385,6 +1385,88 @@ EVOLUTION_REVIEW_DECISION_SCHEMA = CanonicalSchema(
     ),
 )
 
+MEMORY_LIFECYCLE_CANDIDATE_SCHEMA = CanonicalSchema(
+    name="MemoryLifecycleCandidateSchema",
+    contract_name="MemoryLifecycleCandidateContract",
+    required_fields=(
+        "candidate_id",
+        "maintenance_action",
+        "target_scope",
+        "target_refs",
+        "reason",
+        "evidence_refs",
+        "rollback_plan_ref",
+        "review_status",
+        "execution_status",
+        "generated_at",
+    ),
+    optional_fields=(
+        "last_review_decision_id",
+        "last_reviewed_by",
+        "last_reviewed_at",
+        "human_review_required",
+        "automatic_execution_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Human maintenance queue item derived from canonical memory signals; it never "
+        "executes consolidation, archive or expiration.",
+    ),
+)
+
+MEMORY_LIFECYCLE_GOVERNANCE_ASSESSMENT_SCHEMA = CanonicalSchema(
+    name="MemoryLifecycleGovernanceAssessmentSchema",
+    contract_name="MemoryLifecycleGovernanceAssessmentContract",
+    required_fields=(
+        "assessment_id",
+        "candidate_id",
+        "maintenance_action",
+        "decision_action",
+        "status",
+        "timestamp",
+    ),
+    optional_fields=(
+        "blockers",
+        "conditions",
+        "policy_refs",
+        "human_review_required",
+        "execution_authorized",
+        "automatic_execution_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Governance assessment for a human memory lifecycle review; never an execution "
+        "authorization.",
+    ),
+)
+
+MEMORY_LIFECYCLE_REVIEW_DECISION_SCHEMA = CanonicalSchema(
+    name="MemoryLifecycleReviewDecisionSchema",
+    contract_name="MemoryLifecycleReviewDecisionContract",
+    required_fields=(
+        "review_decision_id",
+        "candidate_id",
+        "maintenance_action",
+        "decision_action",
+        "review_status",
+        "operator_ref",
+        "evidence_refs",
+        "rollback_plan_ref",
+        "governance_assessment_id",
+        "timestamp",
+    ),
+    optional_fields=(
+        "review_notes",
+        "execution_authorized",
+        "automatic_execution_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Persisted human review of a memory maintenance candidate; approval remains "
+        "non-executing and requires a separate governed maintenance step.",
+    ),
+)
+
 REVIEWED_LEARNING_GUIDANCE_SCHEMA = CanonicalSchema(
     name="ReviewedLearningGuidanceSchema",
     contract_name="ReviewedLearningGuidanceContract",

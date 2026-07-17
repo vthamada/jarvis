@@ -18,6 +18,7 @@ from apps.jarvis_console.cli import (
     render_evolution_review_queue,
     render_experience_reflections,
     render_goal_strategy,
+    render_memory_lifecycle_review_queue,
     render_mission_cycle,
     render_objective_state,
     render_operator_dashboard,
@@ -32,6 +33,8 @@ from apps.jarvis_console.cli import (
     run_evolution_review_queue_command,
     run_experience_reflections_command,
     run_goal_strategy_command,
+    run_memory_lifecycle_review_command,
+    run_memory_lifecycle_review_queue_command,
     run_mission_cycle_command,
     run_mission_feedback_command,
     run_mission_workflow_command,
@@ -52,6 +55,7 @@ from shared.contracts import (
     PostTaskReflectionContract,
     ProceduralPlaybookCandidateContract,
     RegressionReadinessReportContract,
+    ReviewedLearningGuidanceContract,
     SkillEvolutionOperatorViewContract,
 )
 from shared.types import MissionId, MissionStatus
@@ -1463,3 +1467,82 @@ def test_console_chat_keeps_session_continuity() -> None:
     assert "Leitura do objetivo" in outputs[0]
     assert "Julgamento" in outputs[1]
     assert "continuidade ativa" in outputs[1].lower()
+
+
+def test_console_memory_review_queue_and_decision_remain_non_executing() -> None:
+    temp_dir = runtime_dir("console-memory-review")
+    memory_db = temp_dir / "memory.db"
+    service = MemoryService(database_url=f"sqlite:///{memory_db.as_posix()}")
+    guidance = ReviewedLearningGuidanceContract(
+        guidance_id="reviewed-learning-guidance://console-expired/001",
+        source_review_decision_id="review-decision://console-expired/001",
+        evolution_proposal_id="proposal-console-expired-001",
+        review_status="approved",
+        route="software_change",
+        workflow_profile="software_change_workflow",
+        domain="software_development",
+        guidance_summary="use bounded validation",
+        allowed_usage=["planning_context"],
+        evidence_refs=["trace://console-expired/001"],
+        rollback_plan_ref="rollback://console-memory/expired/001",
+        timestamp="2026-07-14T00:00:00Z",
+        expires_at="2026-07-15T00:00:00Z",
+    )
+    service.record_reviewed_learning_guidance(guidance)
+    candidate = service.list_memory_lifecycle_review_queue(limit=5)[0]
+    parser = build_parser()
+    queue_args = parser.parse_args(
+        [
+            "memory-review-queue",
+            "--memory-db",
+            str(memory_db),
+            "--maintenance-action",
+            "expire",
+        ]
+    )
+
+    queue_output = run_memory_lifecycle_review_queue_command(queue_args)[0]
+
+    assert f"candidate_id={candidate.candidate_id}" in queue_output
+    assert "maintenance_action=expire" in queue_output
+    assert "review_status=needs_review" in queue_output
+    assert "execution_status=not_executed" in queue_output
+    assert "automatic_execution_allowed=False" in queue_output
+
+    review_args = parser.parse_args(
+        [
+            "memory-review",
+            "--memory-db",
+            str(memory_db),
+            "--candidate-id",
+            candidate.candidate_id,
+            "--action",
+            "approve",
+            "--operator-ref",
+            "operator://local_console",
+            "--evidence-ref",
+            "trace://console-memory-review/001",
+            "--rollback-plan-ref",
+            candidate.rollback_plan_ref,
+        ]
+    )
+    review_output = run_memory_lifecycle_review_command(review_args)[0]
+
+    assert "governance_status=governed" in review_output
+    assert "review_status=approved" in review_output
+    assert "execution_authorized=False" in review_output
+    assert "automatic_execution_allowed=False" in review_output
+    reader = MemoryService(database_url=f"sqlite:///{memory_db.as_posix()}")
+    assert reader.list_reviewed_learning_guidance(limit=5)[0].guidance == guidance
+    persisted = reader.list_memory_lifecycle_review_decisions(
+        candidate_id=candidate.candidate_id,
+        limit=5,
+    )
+    assert persisted[0].decision.review_status == "approved"
+
+
+def test_console_memory_review_queue_empty_renderer_is_explicit() -> None:
+    assert (
+        render_memory_lifecycle_review_queue([])
+        == "No memory lifecycle review items found."
+    )

@@ -8,6 +8,9 @@ from shared.contracts import (
     GovernanceDecisionContract,
     InputContract,
     LongHorizonGoalStrategyContract,
+    MemoryLifecycleCandidateContract,
+    MemoryLifecycleGovernanceAssessmentContract,
+    MemoryLifecycleReviewDecisionContract,
     MissionProgressReportContract,
     OperatorFeedbackContract,
     PostTaskReflectionContract,
@@ -43,6 +46,9 @@ from shared.schemas import (
     EXPERIENCE_RECORD_SCHEMA,
     INPUT_SCHEMA,
     LONG_HORIZON_GOAL_STRATEGY_SCHEMA,
+    MEMORY_LIFECYCLE_CANDIDATE_SCHEMA,
+    MEMORY_LIFECYCLE_GOVERNANCE_ASSESSMENT_SCHEMA,
+    MEMORY_LIFECYCLE_REVIEW_DECISION_SCHEMA,
     MISSION_PROGRESS_REPORT_SCHEMA,
     OPERATOR_FEEDBACK_SCHEMA,
     POST_TASK_REFLECTION_SCHEMA,
@@ -834,6 +840,53 @@ def test_procedural_playbook_candidate_contract_is_bounded_schema() -> None:
     assert "allowed_usage" in REVIEWED_LEARNING_GUIDANCE_SCHEMA.required_fields
 
 
+def test_memory_lifecycle_review_contracts_never_authorize_maintenance() -> None:
+    candidate = MemoryLifecycleCandidateContract(
+        candidate_id="memory-lifecycle-candidate://archive/001",
+        maintenance_action="archive",
+        target_scope="semantic_procedural_corpus",
+        target_refs=["memory-corpus://semantic-procedural/archivable"],
+        reason="one record is archivable",
+        evidence_refs=["memory-telemetry://archivable-records/1"],
+        rollback_plan_ref="rollback://memory/archive/restore",
+        review_status="needs_review",
+        execution_status="not_executed",
+        generated_at="2026-07-16T00:00:00Z",
+    )
+    assessment = MemoryLifecycleGovernanceAssessmentContract(
+        assessment_id="memory-lifecycle-assessment://001",
+        candidate_id=candidate.candidate_id,
+        maintenance_action=candidate.maintenance_action,
+        decision_action="approve",
+        status="governed",
+        timestamp="2026-07-16T00:00:01Z",
+    )
+    decision = MemoryLifecycleReviewDecisionContract(
+        review_decision_id="memory-lifecycle-review://001",
+        candidate_id=candidate.candidate_id,
+        maintenance_action=candidate.maintenance_action,
+        decision_action="approve",
+        review_status="approved",
+        operator_ref="operator://local_console",
+        evidence_refs=list(candidate.evidence_refs),
+        rollback_plan_ref=candidate.rollback_plan_ref,
+        governance_assessment_id=assessment.assessment_id,
+        timestamp="2026-07-16T00:00:02Z",
+    )
+
+    assert candidate.automatic_execution_allowed is False
+    assert assessment.execution_authorized is False
+    assert decision.execution_authorized is False
+    assert decision.core_mutation_allowed is False
+    assert MEMORY_LIFECYCLE_CANDIDATE_SCHEMA.contract_name == (
+        "MemoryLifecycleCandidateContract"
+    )
+    assert MEMORY_LIFECYCLE_GOVERNANCE_ASSESSMENT_SCHEMA.contract_name == (
+        "MemoryLifecycleGovernanceAssessmentContract"
+    )
+    assert MEMORY_LIFECYCLE_REVIEW_DECISION_SCHEMA.contract_name == (
+        "MemoryLifecycleReviewDecisionContract"
+    )
 def test_system_identity_has_core_principles() -> None:
     assert "truth_and_quality" in SYSTEM_IDENTITY.nuclear_principles
     assert "utility" in SYSTEM_IDENTITY.nuclear_principles

@@ -122,9 +122,9 @@ Goal: make memory reliable, causal, reviewable and useful over long time.
 | `MEM-004` | Reviewed-learning guidance memory | `implemented_baseline` | Keep stable | Human review | none |
 | `MEM-005` | Semantic memory influence | `partial_runtime` | More causal use with evidence refs | Memory registry | high-priority |
 | `MEM-006` | Procedural memory influence | `partial_runtime` | Reusable procedures and playbooks | Memory registry, artifacts | high-priority |
-| `MEM-007` | Memory review queue | `minimum_baseline` | Human-reviewable memory maintenance | Observability, console | candidate |
-| `MEM-008` | Memory consolidation | `partial_runtime` | Scheduled/manual consolidation with evidence | Memory lifecycle | candidate |
-| `MEM-009` | Memory expiration/forgetting | `partial_runtime` | Explicit retention and archival policy | Memory registry | candidate |
+| `MEM-007` | Memory review queue | `implemented_baseline` | Keep human review stable | Observability, console | none |
+| `MEM-008` | Memory consolidation | `partial_runtime` | Separate governed manual execution with evidence | Memory lifecycle | later |
+| `MEM-009` | Memory expiration/forgetting | `partial_runtime` | Separate governed retention/archive execution | Memory registry | later |
 | `MEM-010` | Temporal/relational memory | `deferred_by_phase` | Graph/time-aware memory when justified | TA-004, Graphiti/Zep/Mem0 | later |
 | `MEM-011` | Organization scope memory | `deferred_by_phase` | Only with sovereign consumer | Governance | later |
 | `MEM-012` | Vector/semantic retrieval at scale | `deferred_by_phase` | Only under real retrieval pressure | TA-008, pgvector | later |
@@ -683,7 +683,9 @@ Map IDs: `MEM-007`, `MEM-008`, `MEM-009`, `GOV-004`.
 Goal: expose evidence-bound consolidation/archive/expiration decisions without
 an autonomous scheduler.
 
-Status: ready after `MB-186`.
+Status: closed in `MB-187`; canonical telemetry and expired reviewed guidance
+now produce a persisted human-review disposition with evidence and rollback,
+while consolidation, archive, expiration and deletion remain non-executing.
 
 ### MB-188 -- Longitudinal Learning Metrics
 
@@ -691,6 +693,8 @@ Map IDs: `OBS-005`, `OBS-009`, `EVL-005`, `EVL-008`.
 
 Goal: measure sustained utility and regressions by reviewed skill/workflow
 version over time.
+
+Status: ready after `MB-187`.
 
 ### MB-189 -- Skill And Workflow Evolution Readiness Closure
 

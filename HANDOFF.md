@@ -2,6 +2,16 @@
 
 ## Atualizacao 2026-07-16
 
+`MB-187` foi concluido como fila humana governada de lifecycle de memoria. Os
+contratos `MemoryLifecycle*` representam candidatos de `consolidate`, `archive`
+e `expire`, assessment e decisao humana. O `memory-service` deriva candidatos
+de telemetria canonica e reviewed guidance expirado, persiste somente a decisao
+em SQLite/PostgreSQL e nunca executa manutencao; `governance-service` exige
+evidencia e rollback para approve/rollback e bloqueia autoridade automatica. O
+console expoe `memory-review-queue` e `memory-review`. E2E comprova o fluxo de
+missao ate revisao e que corpus, guidance e missao permanecem intactos mesmo
+apos approve/rollback. `MB-188` e o unico item tecnico `ready`.
+
 `MB-186` foi concluido como hardening da politica causal de memoria. Os novos
 contratos `MemoryInfluence*` normalizam sinais semanticos, procedurais,
 reflection e reviewed learning por escopo, evidencia, lifecycle/review e grupo
@@ -9,8 +19,8 @@ de conflito. A ordem fixa e `reviewed_learning > procedural > semantic >
 reflection`; conflito estruturado preserva o sinal superior e registra non-use
 do inferior. Planning aplica somente refs selecionadas, synthesis mostra uso e
 non-use, governance valida a trilha e o evento `memory_influence_governed` a
-torna auditavel. Nao ha novo storage, escrita automatica ou promocao. `MB-187`
-e o unico item tecnico `ready`.
+torna auditavel. Nao ha novo storage, escrita automatica ou promocao. Esse
+estado foi sucedido pelo fechamento de `MB-187`.
 
 `MB-185` foi concluido como evidencia bounded de adaptacao de routing. Os
 contratos `RoutingAdaptation*` comparam rota, workflow e especialista esperados

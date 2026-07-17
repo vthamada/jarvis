@@ -1935,6 +1935,61 @@ class EvolutionReviewDecisionContract:
 
 
 @dataclass
+class MemoryLifecycleCandidateContract:
+    candidate_id: str
+    maintenance_action: str
+    target_scope: str
+    target_refs: list[str]
+    reason: str
+    evidence_refs: list[str]
+    rollback_plan_ref: str
+    review_status: str
+    execution_status: str
+    generated_at: Timestamp
+    last_review_decision_id: str | None = None
+    last_reviewed_by: str | None = None
+    last_reviewed_at: Timestamp | None = None
+    human_review_required: bool = True
+    automatic_execution_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass
+class MemoryLifecycleGovernanceAssessmentContract:
+    assessment_id: str
+    candidate_id: str
+    maintenance_action: str
+    decision_action: str
+    status: str
+    timestamp: Timestamp
+    blockers: list[str] = field(default_factory=list)
+    conditions: list[str] = field(default_factory=list)
+    policy_refs: list[str] = field(default_factory=list)
+    human_review_required: bool = True
+    execution_authorized: bool = False
+    automatic_execution_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass
+class MemoryLifecycleReviewDecisionContract:
+    review_decision_id: str
+    candidate_id: str
+    maintenance_action: str
+    decision_action: str
+    review_status: str
+    operator_ref: str
+    evidence_refs: list[str]
+    rollback_plan_ref: str
+    governance_assessment_id: str
+    timestamp: Timestamp
+    review_notes: list[str] = field(default_factory=list)
+    execution_authorized: bool = False
+    automatic_execution_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass
 class ReviewedLearningGuidanceContract:
     guidance_id: str
     source_review_decision_id: str

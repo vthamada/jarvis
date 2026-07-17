@@ -13,6 +13,7 @@ from urllib.parse import urlparse
 from shared.contracts import (
     ContinuityCheckpointContract,
     ExperienceRecordContract,
+    MemoryLifecycleReviewDecisionContract,
     MissionStateContract,
     PostTaskReflectionContract,
     ProceduralPlaybookCandidateContract,
@@ -148,6 +149,11 @@ class StoredReviewedLearningGuidance:
 
 
 @dataclass(frozen=True)
+class StoredMemoryLifecycleReviewDecision:
+    decision: MemoryLifecycleReviewDecisionContract
+
+
+@dataclass(frozen=True)
 class StoredProceduralPlaybookCandidate:
     candidate: ProceduralPlaybookCandidateContract
 
@@ -196,6 +202,29 @@ def _stored_skill_candidate_from_row(row: Row | dict[str, object]) -> StoredSkil
             core_mutation_allowed=bool(row["core_mutation_allowed"]),
             memory_write_mode=str(row["memory_write_mode"]),
             timestamp=str(row["timestamp"]),
+        )
+    )
+
+
+def _stored_memory_lifecycle_review_from_row(
+    row: Row | dict[str, object],
+) -> StoredMemoryLifecycleReviewDecision:
+    return StoredMemoryLifecycleReviewDecision(
+        decision=MemoryLifecycleReviewDecisionContract(
+            review_decision_id=str(row["review_decision_id"]),
+            candidate_id=str(row["candidate_id"]),
+            maintenance_action=str(row["maintenance_action"]),
+            decision_action=str(row["decision_action"]),
+            review_status=str(row["review_status"]),
+            operator_ref=str(row["operator_ref"]),
+            evidence_refs=list(loads(str(row["evidence_refs"] or "[]"))),
+            rollback_plan_ref=str(row["rollback_plan_ref"]),
+            governance_assessment_id=str(row["governance_assessment_id"]),
+            timestamp=str(row["timestamp"]),
+            review_notes=list(loads(str(row["review_notes"] or "[]"))),
+            execution_authorized=bool(row["execution_authorized"]),
+            automatic_execution_allowed=bool(row["automatic_execution_allowed"]),
+            core_mutation_allowed=bool(row["core_mutation_allowed"]),
         )
     )
 
@@ -371,6 +400,22 @@ class MemoryRepository(ABC):
         limit: int = 20,
     ) -> list[StoredReviewedLearningGuidance]:
         """Load recent human-reviewed learning guidance."""
+        raise NotImplementedError
+
+    def record_memory_lifecycle_review_decision(
+        self,
+        record: StoredMemoryLifecycleReviewDecision,
+    ) -> None:
+        """Persist one human memory-maintenance review decision."""
+        raise NotImplementedError
+
+    def list_memory_lifecycle_review_decisions(
+        self,
+        *,
+        candidate_id: str | None = None,
+        limit: int = 20,
+    ) -> list[StoredMemoryLifecycleReviewDecision]:
+        """Load bounded human memory-maintenance review history."""
         raise NotImplementedError
 
     def record_procedural_playbook_candidate(
@@ -1199,6 +1244,65 @@ class SqliteMemoryRepository(MemoryRepository):
             ).fetchall()
         return [self._row_to_reviewed_learning_guidance(row) for row in rows]
 
+    def record_memory_lifecycle_review_decision(
+        self,
+        record: StoredMemoryLifecycleReviewDecision,
+    ) -> None:
+        decision = record.decision
+        with self._connect() as connection:
+            connection.execute(
+                """
+                INSERT INTO memory_lifecycle_review_decisions (
+                    review_decision_id, candidate_id, maintenance_action,
+                    decision_action, review_status, operator_ref, evidence_refs,
+                    rollback_plan_ref, governance_assessment_id, review_notes,
+                    execution_authorized, automatic_execution_allowed,
+                    core_mutation_allowed, timestamp
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """,
+                (
+                    decision.review_decision_id,
+                    decision.candidate_id,
+                    decision.maintenance_action,
+                    decision.decision_action,
+                    decision.review_status,
+                    decision.operator_ref,
+                    dumps(decision.evidence_refs),
+                    decision.rollback_plan_ref,
+                    decision.governance_assessment_id,
+                    dumps(decision.review_notes),
+                    int(decision.execution_authorized),
+                    int(decision.automatic_execution_allowed),
+                    int(decision.core_mutation_allowed),
+                    decision.timestamp,
+                ),
+            )
+            connection.commit()
+
+    def list_memory_lifecycle_review_decisions(
+        self,
+        *,
+        candidate_id: str | None = None,
+        limit: int = 20,
+    ) -> list[StoredMemoryLifecycleReviewDecision]:
+        where = "WHERE candidate_id = ?" if candidate_id else ""
+        params: tuple[object, ...] = (
+            (candidate_id, limit) if candidate_id else (limit,)
+        )
+        with self._connect() as connection:
+            rows = connection.execute(
+                f"""
+                SELECT *
+                FROM memory_lifecycle_review_decisions
+                {where}
+                ORDER BY timestamp DESC, review_decision_id DESC
+                LIMIT ?
+                """,
+                params,
+            ).fetchall()
+        return [_stored_memory_lifecycle_review_from_row(row) for row in rows]
+
     def record_procedural_playbook_candidate(
         self,
         record: StoredProceduralPlaybookCandidate,
@@ -1946,6 +2050,26 @@ class SqliteMemoryRepository(MemoryRepository):
 
                 CREATE INDEX IF NOT EXISTS idx_reviewed_learning_guidance_scope_timestamp
                 ON reviewed_learning_guidance (workflow_profile, route, domain, timestamp);
+
+                CREATE TABLE IF NOT EXISTS memory_lifecycle_review_decisions (
+                    review_decision_id TEXT PRIMARY KEY,
+                    candidate_id TEXT NOT NULL,
+                    maintenance_action TEXT NOT NULL,
+                    decision_action TEXT NOT NULL,
+                    review_status TEXT NOT NULL,
+                    operator_ref TEXT NOT NULL,
+                    evidence_refs TEXT NOT NULL DEFAULT '[]',
+                    rollback_plan_ref TEXT NOT NULL,
+                    governance_assessment_id TEXT NOT NULL,
+                    review_notes TEXT NOT NULL DEFAULT '[]',
+                    execution_authorized INTEGER NOT NULL,
+                    automatic_execution_allowed INTEGER NOT NULL,
+                    core_mutation_allowed INTEGER NOT NULL,
+                    timestamp TEXT NOT NULL
+                );
+
+                CREATE INDEX IF NOT EXISTS idx_memory_lifecycle_review_candidate_timestamp
+                ON memory_lifecycle_review_decisions (candidate_id, timestamp);
 
                 CREATE TABLE IF NOT EXISTS procedural_playbook_candidates (
                     playbook_candidate_id TEXT PRIMARY KEY,
@@ -3434,6 +3558,68 @@ class PostgresMemoryRepository(MemoryRepository):
             rows = cursor.fetchall()
         return [self._row_to_reviewed_learning_guidance(row) for row in rows]
 
+    def record_memory_lifecycle_review_decision(
+        self,
+        record: StoredMemoryLifecycleReviewDecision,
+    ) -> None:
+        decision = record.decision
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                """
+                INSERT INTO memory_lifecycle_review_decisions (
+                    review_decision_id, candidate_id, maintenance_action,
+                    decision_action, review_status, operator_ref, evidence_refs,
+                    rollback_plan_ref, governance_assessment_id, review_notes,
+                    execution_authorized, automatic_execution_allowed,
+                    core_mutation_allowed, timestamp
+                )
+                VALUES (
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                )
+                """,
+                (
+                    decision.review_decision_id,
+                    decision.candidate_id,
+                    decision.maintenance_action,
+                    decision.decision_action,
+                    decision.review_status,
+                    decision.operator_ref,
+                    dumps(decision.evidence_refs),
+                    decision.rollback_plan_ref,
+                    decision.governance_assessment_id,
+                    dumps(decision.review_notes),
+                    decision.execution_authorized,
+                    decision.automatic_execution_allowed,
+                    decision.core_mutation_allowed,
+                    decision.timestamp,
+                ),
+            )
+            connection.commit()
+
+    def list_memory_lifecycle_review_decisions(
+        self,
+        *,
+        candidate_id: str | None = None,
+        limit: int = 20,
+    ) -> list[StoredMemoryLifecycleReviewDecision]:
+        where = "WHERE candidate_id = %s" if candidate_id else ""
+        params: tuple[object, ...] = (
+            (candidate_id, limit) if candidate_id else (limit,)
+        )
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                f"""
+                SELECT *
+                FROM memory_lifecycle_review_decisions
+                {where}
+                ORDER BY timestamp DESC, review_decision_id DESC
+                LIMIT %s
+                """,
+                params,
+            )
+            rows = cursor.fetchall()
+        return [_stored_memory_lifecycle_review_from_row(row) for row in rows]
+
     def record_procedural_playbook_candidate(
         self,
         record: StoredProceduralPlaybookCandidate,
@@ -4270,6 +4456,32 @@ class PostgresMemoryRepository(MemoryRepository):
                 """
                 CREATE INDEX IF NOT EXISTS idx_reviewed_learning_guidance_scope_timestamp
                 ON reviewed_learning_guidance (workflow_profile, route, domain, timestamp)
+                """
+            )
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS memory_lifecycle_review_decisions (
+                    review_decision_id TEXT PRIMARY KEY,
+                    candidate_id TEXT NOT NULL,
+                    maintenance_action TEXT NOT NULL,
+                    decision_action TEXT NOT NULL,
+                    review_status TEXT NOT NULL,
+                    operator_ref TEXT NOT NULL,
+                    evidence_refs TEXT NOT NULL DEFAULT '[]',
+                    rollback_plan_ref TEXT NOT NULL,
+                    governance_assessment_id TEXT NOT NULL,
+                    review_notes TEXT NOT NULL DEFAULT '[]',
+                    execution_authorized BOOLEAN NOT NULL,
+                    automatic_execution_allowed BOOLEAN NOT NULL,
+                    core_mutation_allowed BOOLEAN NOT NULL,
+                    timestamp TEXT NOT NULL
+                )
+                """
+            )
+            cursor.execute(
+                """
+                CREATE INDEX IF NOT EXISTS idx_memory_lifecycle_review_candidate_timestamp
+                ON memory_lifecycle_review_decisions (candidate_id, timestamp)
                 """
             )
             cursor.execute(

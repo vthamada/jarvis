@@ -15,6 +15,8 @@ from shared.contracts import (
     KnowledgeEvidenceGovernanceContract,
     MemoryInfluenceGovernanceAssessmentContract,
     MemoryInfluencePolicyDecisionContract,
+    MemoryLifecycleCandidateContract,
+    MemoryLifecycleGovernanceAssessmentContract,
     MissionStateContract,
     OperatorFeedbackContract,
     SpecialistInvocationContract,
@@ -63,6 +65,71 @@ class GovernanceService:
     """Apply explicit request and memory policies for the v1 flow."""
 
     name = "governance-service"
+
+    def assess_memory_lifecycle_review(
+        self,
+        candidate: MemoryLifecycleCandidateContract,
+        *,
+        decision_action: str,
+        operator_ref: str,
+        evidence_refs: list[str],
+        rollback_plan_ref: str | None,
+        previous_review_status: str | None = None,
+        assessed_at: str | None = None,
+    ) -> MemoryLifecycleGovernanceAssessmentContract:
+        """Govern a human queue decision without authorizing maintenance execution."""
+
+        normalized_action = decision_action.replace("-", "_")
+        blockers: list[str] = []
+        if candidate.maintenance_action not in {"consolidate", "archive", "expire"}:
+            blockers.append("unsupported_memory_maintenance_action")
+        if normalized_action not in {"approve", "reject", "needs_review", "rollback"}:
+            blockers.append("unsupported_memory_review_action")
+        if not self._is_bounded_reference(operator_ref):
+            blockers.append("bounded_operator_ref_required")
+        if not candidate.target_refs or not candidate.evidence_refs:
+            blockers.append("memory_lifecycle_candidate_evidence_required")
+        if not candidate.rollback_plan_ref:
+            blockers.append("memory_lifecycle_candidate_rollback_required")
+        if (
+            not candidate.human_review_required
+            or candidate.automatic_execution_allowed
+            or candidate.core_mutation_allowed
+            or candidate.execution_status != "not_executed"
+        ):
+            blockers.append("memory_lifecycle_candidate_authority_not_allowed")
+        if normalized_action in {"approve", "rollback"} and not evidence_refs:
+            blockers.append("explicit_review_evidence_required")
+        if normalized_action in {"approve", "rollback"} and not rollback_plan_ref:
+            blockers.append("explicit_rollback_plan_required")
+        if rollback_plan_ref and not self._is_bounded_reference(rollback_plan_ref):
+            blockers.append("bounded_rollback_plan_ref_required")
+        if normalized_action == "rollback" and previous_review_status != "approved":
+            blockers.append("approved_review_required_before_rollback")
+
+        return MemoryLifecycleGovernanceAssessmentContract(
+            assessment_id=f"memory-lifecycle-assessment://{uuid4().hex[:12]}",
+            candidate_id=candidate.candidate_id,
+            maintenance_action=candidate.maintenance_action,
+            decision_action=normalized_action,
+            status="blocked" if blockers else "governed",
+            timestamp=assessed_at or self.now(),
+            blockers=blockers,
+            conditions=[
+                "Persist only the human review decision through canonical memory.",
+                "Do not consolidate, archive, expire or delete memory in this review step.",
+                "Require a separate governed and reversible maintenance workflow.",
+            ],
+            policy_refs=[
+                "policy://memory-lifecycle/human-review-required",
+                "policy://memory-lifecycle/no-autonomous-maintenance",
+                "policy://memory-lifecycle/separate-execution-step",
+            ],
+            human_review_required=True,
+            execution_authorized=False,
+            automatic_execution_allowed=False,
+            core_mutation_allowed=False,
+        )
 
     def assess_memory_influence_policy(
         self,

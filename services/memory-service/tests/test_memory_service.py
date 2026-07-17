@@ -4,8 +4,10 @@ from uuid import uuid4
 
 import memory_service.repository as memory_repository
 import pytest
+from governance_service.service import GovernanceService
 from memory_service.repository import (
     SqliteMemoryRepository,
+    StoredSpecialistSharedMemory,
     build_memory_repository,
     normalize_database_url,
     parse_sqlite_database_path,
@@ -15,9 +17,11 @@ from memory_service.service import MemoryRecordResult, MemoryRecoveryResult, Mem
 from shared.contracts import (
     DeliberativePlanContract,
     InputContract,
+    MemoryLifecycleGovernanceAssessmentContract,
     OperationDispatchContract,
     OperationResultContract,
     ProceduralPlaybookCandidateContract,
+    ReviewedLearningGuidanceContract,
     SkillCandidateContract,
     SpecialistContributionContract,
     SpecialistSharedMemoryContextContract,
@@ -1958,3 +1962,155 @@ def test_memory_service_recovers_recoverable_user_scope_context() -> None:
         for item in recovered.recovered_items
     )
     assert any(str(scope.value) == "user" for scope in recovered.recovery_contract.requested_scopes)
+
+
+def test_memory_lifecycle_queue_requires_human_review_and_never_mutates_sources() -> None:
+    temp_dir = runtime_dir("memory-lifecycle-review")
+    service = MemoryService(
+        database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+    )
+    service.repository.upsert_specialist_shared_memory(
+        StoredSpecialistSharedMemory(
+            session_id="sess-memory-consolidating",
+            specialist_type="software_change_specialist",
+            sharing_mode="shared_read_only",
+            continuity_mode="continuar",
+            shared_memory_brief="consolidating memory",
+            write_policy="through_core_only",
+            semantic_memory_lifecycle="consolidating",
+            procedural_memory_lifecycle="consolidating",
+            memory_lifecycle_status="emerging",
+            memory_review_status="monitor",
+            updated_at="2026-07-16T00:00:00Z",
+        )
+    )
+    service.repository.upsert_specialist_shared_memory(
+        StoredSpecialistSharedMemory(
+            session_id="sess-memory-aging",
+            specialist_type="structured_analysis_specialist",
+            sharing_mode="shared_read_only",
+            continuity_mode="continuar",
+            shared_memory_brief="aging memory",
+            write_policy="through_core_only",
+            semantic_memory_lifecycle="aging",
+            procedural_memory_lifecycle="aging",
+            memory_lifecycle_status="review_recommended",
+            memory_review_status="review_recommended",
+            updated_at="2026-07-16T00:00:00Z",
+        )
+    )
+    service.record_reviewed_learning_guidance(
+        ReviewedLearningGuidanceContract(
+            guidance_id="reviewed-learning-guidance://expired/001",
+            source_review_decision_id="review-decision://expired/001",
+            evolution_proposal_id="proposal-expired-001",
+            review_status="approved",
+            route="software_change",
+            workflow_profile="software_change_workflow",
+            domain="software_development",
+            guidance_summary="use the bounded rollback checklist",
+            allowed_usage=["planning_context"],
+            evidence_refs=["trace://expired-guidance/001"],
+            rollback_plan_ref="rollback://reviewed-learning/expired/001",
+            timestamp="2026-07-14T00:00:00Z",
+            expires_at="2026-07-15T00:00:00Z",
+        )
+    )
+
+    generated_at = "2026-07-16T00:00:00Z"
+    queue = service.list_memory_lifecycle_review_queue(
+        generated_at=generated_at,
+        limit=10,
+    )
+    assert {candidate.maintenance_action for candidate in queue} == {
+        "archive",
+        "consolidate",
+        "expire",
+    }
+    assert all(candidate.review_status == "needs_review" for candidate in queue)
+    assert all(candidate.execution_status == "not_executed" for candidate in queue)
+    assert all(not candidate.automatic_execution_allowed for candidate in queue)
+
+    archive_candidate = next(
+        candidate for candidate in queue if candidate.maintenance_action == "archive"
+    )
+    source_summary_before = service.repository.summarize_memory_corpus()
+    guidance_before = service.list_reviewed_learning_guidance(limit=10)
+    governance = GovernanceService()
+    assessment = governance.assess_memory_lifecycle_review(
+        archive_candidate,
+        decision_action="approve",
+        operator_ref="operator://memory-reviewer",
+        evidence_refs=["trace://memory-review/archive/001"],
+        rollback_plan_ref=archive_candidate.rollback_plan_ref,
+        assessed_at="2026-07-16T00:00:01Z",
+    )
+    approved = service.record_memory_lifecycle_review_decision(
+        candidate_id=archive_candidate.candidate_id,
+        decision_action="approve",
+        operator_ref="operator://memory-reviewer",
+        evidence_refs=["trace://memory-review/archive/001"],
+        rollback_plan_ref=archive_candidate.rollback_plan_ref,
+        review_notes=["evidence checked; manual execution remains separate"],
+        governance_assessment=assessment,
+    )
+
+    assert approved.review_status == "approved"
+    assert approved.execution_authorized is False
+    approved_queue = service.list_memory_lifecycle_review_queue(
+        generated_at=generated_at,
+        limit=10,
+    )
+    approved_candidate = next(
+        candidate
+        for candidate in approved_queue
+        if candidate.candidate_id == archive_candidate.candidate_id
+    )
+    assert approved_candidate.review_status == "approved"
+    assert approved_candidate.execution_status == "not_executed"
+
+    rollback_assessment = governance.assess_memory_lifecycle_review(
+        approved_candidate,
+        decision_action="rollback",
+        operator_ref="operator://memory-reviewer",
+        evidence_refs=["trace://memory-review/rollback/001"],
+        rollback_plan_ref=archive_candidate.rollback_plan_ref,
+        previous_review_status=approved.review_status,
+        assessed_at="2026-07-16T00:00:02Z",
+    )
+    rolled_back = service.record_memory_lifecycle_review_decision(
+        candidate_id=archive_candidate.candidate_id,
+        decision_action="rollback",
+        operator_ref="operator://memory-reviewer",
+        evidence_refs=["trace://memory-review/rollback/001"],
+        rollback_plan_ref=archive_candidate.rollback_plan_ref,
+        review_notes=["reverted review disposition only"],
+        governance_assessment=rollback_assessment,
+    )
+
+    assert rolled_back.review_status == "rolled_back"
+    assert rolled_back.execution_authorized is False
+    assert service.repository.summarize_memory_corpus() == source_summary_before
+    assert service.list_reviewed_learning_guidance(limit=10) == guidance_before
+
+    expire_candidate = next(
+        candidate for candidate in queue if candidate.maintenance_action == "expire"
+    )
+    forged_assessment = MemoryLifecycleGovernanceAssessmentContract(
+        assessment_id="memory-lifecycle-assessment://forged",
+        candidate_id=expire_candidate.candidate_id,
+        maintenance_action="expire",
+        decision_action="reject",
+        status="governed",
+        timestamp="2026-07-16T00:00:03Z",
+    )
+    with pytest.raises(ValueError, match="policy trace required"):
+        service.record_memory_lifecycle_review_decision(
+            candidate_id=expire_candidate.candidate_id,
+            decision_action="reject",
+            operator_ref="operator://memory-reviewer",
+            evidence_refs=[],
+            rollback_plan_ref=None,
+            review_notes=[],
+            governance_assessment=forged_assessment,
+        )

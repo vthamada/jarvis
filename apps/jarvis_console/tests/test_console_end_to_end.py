@@ -4,6 +4,7 @@ from tempfile import gettempdir
 from uuid import uuid4
 
 from evolution_lab.service import EvolutionLabService
+from governance_service.service import GovernanceService
 from memory_service.service import MemoryService
 from observability_service.service import FlowAudit, ObservabilityQuery
 
@@ -253,6 +254,56 @@ def test_console_operator_flow_reuses_mission_memory_and_emits_memory_maintenanc
         "seeded_live_context",
     }
     assert audit.cross_session_recall_status == "active"
+
+
+def test_console_mission_memory_reaches_human_lifecycle_review_without_mutation() -> None:
+    console = JarvisConsole.build(runtime_dir=runtime_dir("console-e2e-memory-review"))
+    mission_id = "mission-e2e-memory-review"
+    console.ask(
+        "Plan a bounded Python service rollout with reversible checkpoints.",
+        session_id="sess-e2e-memory-review",
+        mission_id=mission_id,
+    )
+    console.ask(
+        "Plan the next Python rollout checkpoint and preserve prior evidence.",
+        session_id="sess-e2e-memory-review",
+        mission_id=mission_id,
+    )
+    console.ask(
+        "Continue the Python rollout plan using the prior checkpoint.",
+        session_id="sess-e2e-memory-review",
+        mission_id=mission_id,
+    )
+    memory_service = console.orchestrator.memory_service
+    source_summary = memory_service.repository.summarize_memory_corpus()
+    queue = memory_service.list_memory_lifecycle_review_queue(limit=20)
+    candidate = next(
+        item for item in queue if item.maintenance_action == "consolidate"
+    )
+    assessment = GovernanceService().assess_memory_lifecycle_review(
+        candidate,
+        decision_action="approve",
+        operator_ref="operator://local_console",
+        evidence_refs=["trace://e2e-memory-review/001"],
+        rollback_plan_ref=candidate.rollback_plan_ref,
+    )
+
+    decision = memory_service.record_memory_lifecycle_review_decision(
+        candidate_id=candidate.candidate_id,
+        decision_action="approve",
+        operator_ref="operator://local_console",
+        evidence_refs=["trace://e2e-memory-review/001"],
+        rollback_plan_ref=candidate.rollback_plan_ref,
+        review_notes=["operator approved review disposition only"],
+        governance_assessment=assessment,
+    )
+
+    assert decision.review_status == "approved"
+    assert decision.execution_authorized is False
+    assert memory_service.repository.summarize_memory_corpus() == source_summary
+    mission_state = memory_service.get_mission_state(mission_id)
+    assert mission_state is not None
+    assert mission_state.mission_status.value == "active"
 
 
 def test_console_operator_battery_keeps_promoted_contracts_coherent_together() -> None:
