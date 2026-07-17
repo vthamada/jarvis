@@ -86,6 +86,12 @@
 - `SkillSandboxEvalContract` deriva casos/checks, preserva historico de review e retorna somente `passed_pending_release_gate` ou `blocked`;
 - checklist exige `skill_sandbox_eval`, e testes pass/block comprovam que ate gate verde permanece `pending_human_decision` e `promotion_authorized=false`; `MB-180` e o unico item tecnico `ready`.
 
+### MB-180 expoe evolucao de skill ao operador
+
+- `SkillEvolutionOperatorItemContract` e `SkillEvolutionOperatorViewContract` formalizam uma projecao read-only de pattern, candidata, proposta, review e sandbox, sem autoridade de ativacao ou promocao;
+- `observability-service` correlaciona a cadeia por `skill_candidate_id` e pattern refs, explicita recorrencia, escopo, risco, versao, evidencias, testes, rollback, blockers e proxima acao humana;
+- `jarvis-console skill-evolution` adiciona filtros bounded e renderizacao sanitizada; testes de contrato, observabilidade, console e E2E comprovam consulta sem mutacao, e `MB-181` e o unico item tecnico `ready`.
+
 ## 2026-07-04
 
 ### MB-161 fecha anchors de evidencia de memoria semantica

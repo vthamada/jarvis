@@ -526,6 +526,82 @@ SKILL_SANDBOX_EVAL_SCHEMA = CanonicalSchema(
     ),
 )
 
+SKILL_EVOLUTION_OPERATOR_ITEM_SCHEMA = CanonicalSchema(
+    name="SkillEvolutionOperatorItemSchema",
+    contract_name="SkillEvolutionOperatorItemContract",
+    required_fields=(
+        "skill_candidate_id",
+        "skill_id",
+        "skill_name",
+        "version",
+        "workflow_profile",
+        "route",
+        "domain",
+        "specialist_type",
+        "risk_level",
+        "registry_status",
+        "review_status",
+        "activation_status",
+        "evolution_status",
+        "source_pattern_refs",
+        "pattern_status",
+        "pattern_summary",
+        "occurrence_count",
+        "minimum_occurrences",
+        "confidence_status",
+        "proposal_id",
+        "proposal_status",
+        "sandbox_eval_ref",
+        "sandbox_eval_status",
+        "sandbox_pass_rate",
+        "allowed_tools",
+        "evidence_refs",
+        "proposed_tests",
+        "rollback_plan_ref",
+        "blockers",
+        "next_operator_action",
+    ),
+    optional_fields=(
+        "read_only",
+        "human_review_required",
+        "runtime_activation_allowed",
+        "promotion_authorized",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Read-only correlated skill evolution item; it grants no runtime authority.",
+    ),
+)
+
+SKILL_EVOLUTION_OPERATOR_VIEW_SCHEMA = CanonicalSchema(
+    name="SkillEvolutionOperatorViewSchema",
+    contract_name="SkillEvolutionOperatorViewContract",
+    required_fields=(
+        "view_id",
+        "view_status",
+        "pattern_report_id",
+        "pattern_report_status",
+        "pattern_count",
+        "candidate_count",
+        "items",
+        "unregistered_pattern_refs",
+        "blockers",
+        "generated_at",
+    ),
+    optional_fields=(
+        "read_only",
+        "human_review_required",
+        "runtime_activation_allowed",
+        "promotion_authorized",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Operator projection only; human review and release gates remain mandatory.",
+    ),
+)
+
 PROCEDURAL_PLAYBOOK_CANDIDATE_SCHEMA = CanonicalSchema(
     name="ProceduralPlaybookCandidateSchema",
     contract_name="ProceduralPlaybookCandidateContract",

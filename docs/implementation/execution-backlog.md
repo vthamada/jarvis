@@ -3417,7 +3417,7 @@ Fora de escopo:
 
 - `id`: `MB-180`
 - `prioridade`: `P1`
-- `status`: `ready`
+- `status`: `completed`
 - `eixo_do_mestre`: `operador`, `skills`, `observabilidade`
 - `map_ids`: `EVL-007`, `OP-010`, `SFC-004`
 - `workflow_profile_afetado`: `operational_readiness_workflow`
@@ -3427,12 +3427,14 @@ Fora de escopo:
 - `dependencias`: `MB-179`
 - `criterio_de_aceite`: console mostra origem, recorrencia, escopo, risco, versao, testes, rollback e status sem executar/promover skill.
 - `gate_minimo`: testes de console/observability, E2E afetado e gate padrao
+- `impacto_no_baseline`: `skill-evolution` correlaciona pattern, candidata inativa, proposta, review e sandbox em leitura sanitizada, sem escrita, ativacao ou promocao.
+- `evidencia_de_fechamento`: contratos `SkillEvolutionOperator*`, projection no observability, console com filtros bounded, runbook e E2E real preservam `runtime_activation_allowed=false` e `promotion_authorized=false`.
 
 ### MB-181
 
 - `id`: `MB-181`
 - `prioridade`: `P2`
-- `status`: `blocked`
+- `status`: `ready`
 - `eixo_do_mestre`: `workflows`, `evolucao`
 - `map_ids`: `COG-006`, `EVL-008`, `DOC-004`
 - `workflow_profile_afetado`: todos os workflows promovidos do registry
@@ -3669,6 +3671,6 @@ Estado atual da fila:
 - `MB-173` foi concluido como baseline de proveniencia, freshness e conflito/incerteza de conhecimento;
 - `MB-174` foi concluido como dashboard integrado de regressao/readiness, fechando a fila `MB-161` a `MB-174`; nao ha item tecnico `ready` ate nova repriorizacao explicita pelo mapa mestre;
 - `MB-175` foi concluido como repriorizacao pos-`MB-174`, abrindo a fila governada de skill/workflow evolution `MB-176` a `MB-189`;
-- `MB-176` foi concluido como pattern evidence, `MB-177` como registry inativo, `MB-178` como miner e `MB-179` como review/eval/checklist; `MB-180` e o unico item tecnico `ready` e `MB-181` a `MB-189` permanecem `blocked` por dependencia/ordem;
+- `MB-176` a `MB-180` foram concluidos como cadeia de pattern evidence, registry, miner, review/sandbox e superficie read-only; `MB-181` e o unico item tecnico `ready` e `MB-182` a `MB-189` permanecem `blocked` por dependencia/ordem;
 - `SO-001`, `TA-004`, `TA-006` e verticais `deferred` continuam fora da fila sem mudanca explicita de fase;
 - `protective intelligence foundation` continua `deferred` e a matriz da Onda 2 segue como insumo, nao como gatilho automatico para abrir nova vertical.

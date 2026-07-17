@@ -68,6 +68,11 @@ skill eval has status `passed_pending_release_gate`; a passing promotion gate
 still has `promotion_authorized=false` and does not activate the skill in
 routing, planning or tool execution.
 
+`MB-180` exposes this chain through the read-only `skill-evolution` console
+command. The command is an inspection surface only: its
+`next_operator_action` values are labels, not execution authority, and a
+`release_review_required` view still has `promotion_authorized=false`.
+
 ## 1. Objetivo
 
 Este documento operacionaliza a política de **releases, versionamento e mudança controlada** do JARVIS.

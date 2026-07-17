@@ -339,6 +339,66 @@ class SkillSandboxEvalContract:
 
 
 @dataclass
+class SkillEvolutionOperatorItemContract:
+    skill_candidate_id: str
+    skill_id: str
+    skill_name: str
+    version: str
+    workflow_profile: str
+    route: str | None
+    domain: str
+    specialist_type: str
+    risk_level: str
+    registry_status: str
+    review_status: str
+    activation_status: str
+    evolution_status: str
+    source_pattern_refs: list[str]
+    pattern_status: str | None
+    pattern_summary: str | None
+    occurrence_count: int | None
+    minimum_occurrences: int | None
+    confidence_status: str | None
+    proposal_id: str | None
+    proposal_status: str | None
+    sandbox_eval_ref: str | None
+    sandbox_eval_status: str | None
+    sandbox_pass_rate: float | None
+    allowed_tools: list[str]
+    evidence_refs: list[str]
+    proposed_tests: list[str]
+    rollback_plan_ref: str
+    blockers: list[str]
+    next_operator_action: str
+    read_only: bool = True
+    human_review_required: bool = True
+    runtime_activation_allowed: bool = False
+    promotion_authorized: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass
+class SkillEvolutionOperatorViewContract:
+    view_id: str
+    view_status: str
+    pattern_report_id: str
+    pattern_report_status: str
+    pattern_count: int
+    candidate_count: int
+    items: list[SkillEvolutionOperatorItemContract]
+    unregistered_pattern_refs: list[str]
+    blockers: list[str]
+    generated_at: Timestamp
+    read_only: bool = True
+    human_review_required: bool = True
+    runtime_activation_allowed: bool = False
+    promotion_authorized: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass
 class ProceduralPlaybookCandidateContract:
     playbook_candidate_id: str
     procedure_name: str

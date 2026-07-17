@@ -17,10 +17,14 @@ from shared.contracts import (
     CapabilityReadinessContract,
     DomainEvalCaseResultContract,
     DomainEvalRunContract,
+    EvolutionProposalContract,
     ExperienceRecordContract,
     PostTaskReflectionContract,
     RecurringPatternReportContract,
     RegressionReadinessReportContract,
+    SkillCandidateContract,
+    SkillEvolutionOperatorItemContract,
+    SkillEvolutionOperatorViewContract,
 )
 from shared.domain_registry import workflow_runtime_guidance
 from shared.eval_expansion import derive_expanded_eval_state
@@ -560,6 +564,193 @@ class ObservabilityService:
             domain=domain,
             max_records=max_records,
             max_patterns=max_patterns,
+        )
+
+    @staticmethod
+    def build_skill_evolution_operator_view(
+        *,
+        view_id: str,
+        pattern_report: RecurringPatternReportContract,
+        candidates: list[SkillCandidateContract],
+        proposals: list[EvolutionProposalContract],
+        generated_at: str,
+    ) -> SkillEvolutionOperatorViewContract:
+        """Correlate persisted skill evidence without mutating evolution state."""
+
+        patterns_by_ref = {
+            pattern.pattern_id: pattern for pattern in pattern_report.patterns
+        }
+        proposals_by_candidate_ref: dict[str, EvolutionProposalContract] = {}
+        for proposal in proposals:
+            if proposal.proposal_type != "skill_candidate":
+                continue
+            for candidate_ref in proposal.candidate_refs:
+                proposals_by_candidate_ref.setdefault(candidate_ref, proposal)
+
+        registered_pattern_refs = {
+            pattern_ref
+            for candidate in candidates
+            for pattern_ref in candidate.source_pattern_refs
+        }
+        items: list[SkillEvolutionOperatorItemContract] = []
+        for candidate in candidates:
+            patterns = [
+                patterns_by_ref[pattern_ref]
+                for pattern_ref in candidate.source_pattern_refs
+                if pattern_ref in patterns_by_ref
+            ]
+            pattern = patterns[0] if patterns else None
+            proposal = proposals_by_candidate_ref.get(candidate.skill_candidate_id)
+            review_context = (
+                dict(proposal.strategy_context.get("evolution_review", {}))
+                if proposal is not None
+                else {}
+            )
+            sandbox_context = (
+                dict(proposal.strategy_context.get("skill_sandbox_eval", {}))
+                if proposal is not None
+                else {}
+            )
+            review_status = str(
+                review_context.get("review_status") or candidate.review_status
+            )
+            sandbox_eval_status = (
+                str(sandbox_context["eval_status"])
+                if sandbox_context.get("eval_status") is not None
+                else None
+            )
+            blockers = list(candidate.blockers)
+            if candidate.source_pattern_refs and pattern is None:
+                blockers.append("source_pattern_not_available_in_view")
+            if pattern is not None:
+                blockers.extend(pattern.blockers)
+                blockers.extend(pattern.conflict_flags)
+            if proposal is not None:
+                blockers.extend(proposal.optimization_blockers)
+                blockers.extend(
+                    str(value) for value in review_context.get("blockers", [])
+                )
+                blockers.extend(
+                    str(value) for value in sandbox_context.get("blockers", [])
+                )
+            blockers = sorted(set(blockers))
+
+            if blockers:
+                evolution_status = "blocked"
+                next_operator_action = "resolve_evolution_blockers"
+            elif proposal is None:
+                evolution_status = "candidate_registered"
+                next_operator_action = "create_skill_evolution_proposal"
+            elif review_status in {"rejected", "rolled_back"}:
+                evolution_status = f"human_review_{review_status}"
+                next_operator_action = "close_or_revise_skill_candidate"
+            elif sandbox_eval_status == "passed_pending_release_gate":
+                evolution_status = "sandbox_passed_pending_release_review"
+                next_operator_action = "prepare_human_release_review"
+            elif sandbox_eval_status is not None:
+                evolution_status = "sandbox_attention_required"
+                next_operator_action = "resolve_skill_sandbox_evidence"
+            elif review_status in {"approved", "sandboxed"}:
+                evolution_status = "sandbox_eval_pending"
+                next_operator_action = "run_skill_sandbox_eval"
+            else:
+                evolution_status = "human_review_pending"
+                next_operator_action = "review_skill_candidate"
+
+            proposal_status = (
+                proposal.optimization_safety_status if proposal is not None else None
+            )
+            evidence_refs = list(candidate.evidence_refs)
+            if pattern is not None:
+                evidence_refs.extend(pattern.evidence_refs)
+            if proposal is not None:
+                evidence_refs.extend(proposal.baseline_refs)
+            evidence_refs = list(dict.fromkeys(evidence_refs))
+            items.append(
+                SkillEvolutionOperatorItemContract(
+                    skill_candidate_id=candidate.skill_candidate_id,
+                    skill_id=candidate.skill_id,
+                    skill_name=candidate.skill_name,
+                    version=candidate.version,
+                    workflow_profile=candidate.workflow_profile,
+                    route=pattern.route if pattern is not None else None,
+                    domain=candidate.domain,
+                    specialist_type=candidate.specialist_type,
+                    risk_level=str(candidate.risk_level),
+                    registry_status=candidate.registry_status,
+                    review_status=review_status,
+                    activation_status=candidate.activation_status,
+                    evolution_status=evolution_status,
+                    source_pattern_refs=list(candidate.source_pattern_refs),
+                    pattern_status=pattern.pattern_status if pattern is not None else None,
+                    pattern_summary=pattern.pattern_summary if pattern is not None else None,
+                    occurrence_count=(pattern.occurrence_count if pattern is not None else None),
+                    minimum_occurrences=(
+                        pattern.minimum_occurrences if pattern is not None else None
+                    ),
+                    confidence_status=(
+                        pattern.confidence_status if pattern is not None else None
+                    ),
+                    proposal_id=(
+                        str(proposal.evolution_proposal_id)
+                        if proposal is not None
+                        else None
+                    ),
+                    proposal_status=proposal_status,
+                    sandbox_eval_ref=(
+                        str(sandbox_context["eval_id"])
+                        if sandbox_context.get("eval_id") is not None
+                        else None
+                    ),
+                    sandbox_eval_status=sandbox_eval_status,
+                    sandbox_pass_rate=(
+                        float(sandbox_context["pass_rate"])
+                        if sandbox_context.get("pass_rate") is not None
+                        else None
+                    ),
+                    allowed_tools=list(candidate.allowed_tools),
+                    evidence_refs=evidence_refs,
+                    proposed_tests=list(candidate.proposed_tests),
+                    rollback_plan_ref=candidate.rollback_plan_ref,
+                    blockers=blockers,
+                    next_operator_action=next_operator_action,
+                )
+            )
+
+        unregistered_pattern_refs = sorted(
+            pattern.pattern_id
+            for pattern in pattern_report.patterns
+            if pattern.pattern_id not in registered_pattern_refs
+        )
+        view_blockers = sorted(
+            set(pattern_report.blockers).union(
+                blocker for item in items for blocker in item.blockers
+            )
+        )
+        if not candidates and not pattern_report.patterns:
+            view_status = "empty"
+        elif any(item.evolution_status == "blocked" for item in items):
+            view_status = "attention_required"
+        elif unregistered_pattern_refs and not items:
+            view_status = "pattern_review_required"
+        elif items and all(
+            item.evolution_status == "sandbox_passed_pending_release_review"
+            for item in items
+        ):
+            view_status = "release_review_required"
+        else:
+            view_status = "operator_action_required"
+        return SkillEvolutionOperatorViewContract(
+            view_id=view_id,
+            view_status=view_status,
+            pattern_report_id=pattern_report.report_id,
+            pattern_report_status=pattern_report.report_status,
+            pattern_count=len(pattern_report.patterns),
+            candidate_count=len(candidates),
+            items=items,
+            unregistered_pattern_refs=unregistered_pattern_refs,
+            blockers=view_blockers,
+            generated_at=generated_at,
         )
 
     @staticmethod

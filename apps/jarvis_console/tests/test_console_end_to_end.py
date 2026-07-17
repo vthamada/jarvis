@@ -3,12 +3,21 @@ from pathlib import Path
 from tempfile import gettempdir
 from uuid import uuid4
 
-from observability_service.service import (
-    FlowAudit,
-    ObservabilityQuery,
-)
+from evolution_lab.service import EvolutionLabService
+from memory_service.service import MemoryService
+from observability_service.service import FlowAudit, ObservabilityQuery
 
-from apps.jarvis_console.cli import JarvisConsole
+from apps.jarvis_console.cli import (
+    JarvisConsole,
+    build_parser,
+    run_skill_evolution_command,
+)
+from shared.contracts import (
+    ExperienceRecordContract,
+    PostTaskReflectionContract,
+    SkillCandidateContract,
+)
+from shared.types import RiskLevel
 
 
 def runtime_dir(name: str) -> Path:
@@ -305,3 +314,117 @@ def test_console_operator_battery_keeps_promoted_contracts_coherent_together() -
     )
     assert any(audit.continuity_source == "fresh_request" for audit in audits)
     assert any(audit.experiment_lane_status == "attention_required" for audit in audits)
+
+
+def test_console_skill_evolution_correlates_governed_chain_end_to_end() -> None:
+    temp_dir = runtime_dir("console-e2e-skill-evolution")
+    memory_db = temp_dir / "memory.db"
+    evolution_db = temp_dir / "evolution.db"
+    memory_service = MemoryService(
+        database_url=f"sqlite:///{memory_db.as_posix()}"
+    )
+    for index in (1, 2):
+        memory_service.record_experience_reflection(
+            experience=ExperienceRecordContract(
+                experience_id=f"experience://console-skill/{index}",
+                mission_id=f"mission-console-skill-{index}",
+                workflow_profile="software_change_workflow",
+                route="software_development",
+                primary_domain_driver="software_engineering",
+                outcome_status="completed",
+                evidence_refs=[f"trace://console-skill/{index}"],
+                timestamp=f"2026-07-16T14:00:0{index}Z",
+            ),
+            reflection=PostTaskReflectionContract(
+                reflection_id=f"reflection://console-skill/{index}",
+                experience_id=f"experience://console-skill/{index}",
+                reflection_status="candidate",
+                learning_candidate="verify bounded release evidence",
+                recommendation="review recurring verification before reuse",
+                evidence_refs=[f"trace://console-skill/{index}"],
+                timestamp=f"2026-07-16T14:01:0{index}Z",
+            ),
+        )
+    pattern_report = memory_service.build_recurring_pattern_report(
+        generated_at="2026-07-16T15:00:00Z"
+    )
+    candidate = SkillCandidateContract(
+        skill_candidate_id="skill-candidate://console-release/1.0.0",
+        skill_id="skill://console-release",
+        skill_name="console release evidence",
+        version="1.0.0",
+        workflow_profile="software_change_workflow",
+        domain="software_engineering",
+        specialist_type="software_change_specialist",
+        inputs=["release_evidence"],
+        outputs=["bounded_release_recommendation"],
+        allowed_tools=["local_test_runner"],
+        bounded_instructions=["verify release evidence"],
+        risk_level=RiskLevel.MODERATE,
+        evidence_refs=["trace://console-skill/1", "trace://console-skill/2"],
+        source_pattern_refs=[pattern_report.patterns[0].pattern_id],
+        failure_modes=["missing_release_evidence"],
+        proposed_tests=["run console skill sandbox tests"],
+        rollback_plan_ref="rollback://skill/console-release/1.0.0",
+        timestamp="2026-07-16T15:01:00Z",
+    )
+    candidate = memory_service.record_skill_candidate(candidate).candidate
+    evolution_service = EvolutionLabService(database_path=str(evolution_db))
+    proposal = evolution_service.create_proposal_from_skill_candidate(candidate)
+    review = evolution_service.review_proposal(
+        evolution_proposal_id=str(proposal.evolution_proposal_id),
+        action="sandbox",
+        operator_ref="operator://local_console",
+        evidence_refs=["evidence://console-skill/review"],
+        proposed_tests=list(candidate.proposed_tests),
+        rollback_plan_ref=candidate.rollback_plan_ref,
+    )
+    evolution_service.evaluate_skill_candidate_in_sandbox(
+        candidate=candidate,
+        proposal=proposal,
+        review_decision=review,
+        test_cases={
+            "bounded-output": {
+                "output_contract_satisfied": True,
+                "core_unchanged": True,
+            }
+        },
+        evidence_refs=["eval://console-skill/run-1"],
+        generated_at="2026-07-16T15:05:00Z",
+    )
+    proposal_count_before = len(evolution_service.list_recent_proposals(limit=10))
+    args = build_parser().parse_args(
+        [
+            "skill-evolution",
+            "--memory-db",
+            str(memory_db),
+            "--evolution-db",
+            str(evolution_db),
+            "--skill-id",
+            candidate.skill_id,
+        ]
+    )
+
+    rendered = run_skill_evolution_command(args)[0]
+
+    assert f"skill_candidate_id={candidate.skill_candidate_id}" in rendered
+    assert f"origin_pattern_refs={pattern_report.patterns[0].pattern_id}" in rendered
+    assert "occurrence_count=2" in rendered
+    assert "workflow_profile=software_change_workflow" in rendered
+    assert "route=software_development" in rendered
+    assert "domain=software_engineering" in rendered
+    assert "risk_level=moderate" in rendered
+    assert "version=1.0.0" in rendered
+    assert "review_status=sandboxed" in rendered
+    assert "sandbox_eval_status=passed_pending_release_gate" in rendered
+    assert "proposed_tests=run console skill sandbox tests" in rendered
+    assert "rollback_plan_ref=rollback://skill/console-release/1.0.0" in rendered
+    assert "next_operator_action=prepare_human_release_review" in rendered
+    assert "runtime_activation_allowed=False" in rendered
+    assert "promotion_authorized=False" in rendered
+    assert memory_service.get_skill_candidate(
+        candidate.skill_candidate_id
+    ).candidate.activation_status == "inactive"
+    assert len(evolution_service.list_recent_proposals(limit=10)) == (
+        proposal_count_before
+    )

@@ -19,6 +19,8 @@ from shared.contracts import (
     ReviewedLearningGuidanceContract,
     SandboxToReleaseChecklistContract,
     SkillCandidateContract,
+    SkillEvolutionOperatorItemContract,
+    SkillEvolutionOperatorViewContract,
     SkillMiningRequestContract,
     SkillMiningResultContract,
     SkillSandboxCaseResultContract,
@@ -48,6 +50,8 @@ from shared.schemas import (
     REVIEWED_LEARNING_GUIDANCE_SCHEMA,
     SANDBOX_TO_RELEASE_CHECKLIST_SCHEMA,
     SKILL_CANDIDATE_SCHEMA,
+    SKILL_EVOLUTION_OPERATOR_ITEM_SCHEMA,
+    SKILL_EVOLUTION_OPERATOR_VIEW_SCHEMA,
     SKILL_MINING_REQUEST_SCHEMA,
     SKILL_MINING_RESULT_SCHEMA,
     SKILL_SANDBOX_CASE_RESULT_SCHEMA,
@@ -475,6 +479,69 @@ def test_skill_sandbox_eval_contract_remains_pending_human_release() -> None:
         SANDBOX_TO_RELEASE_CHECKLIST_SCHEMA.optional_fields
     )
     assert "candidate_version" in EVOLUTION_REVIEW_DECISION_SCHEMA.optional_fields
+
+
+def test_skill_evolution_operator_view_is_read_only_and_review_bound() -> None:
+    item = SkillEvolutionOperatorItemContract(
+        skill_candidate_id="skill-candidate://release-evidence/1.0.0",
+        skill_id="skill://release-evidence",
+        skill_name="release evidence verification",
+        version="1.0.0",
+        workflow_profile="software_change_workflow",
+        route="software_development",
+        domain="software_engineering",
+        specialist_type="software_change_specialist",
+        risk_level="moderate",
+        registry_status="candidate_inactive",
+        review_status="sandboxed",
+        activation_status="inactive",
+        evolution_status="sandbox_passed_pending_release_review",
+        source_pattern_refs=["recurring-pattern://release-evidence"],
+        pattern_status="evidence_ready_for_human_review",
+        pattern_summary="two compatible successful experiences",
+        occurrence_count=2,
+        minimum_occurrences=2,
+        confidence_status="bounded_moderate",
+        proposal_id="proposal-skill-release-evidence",
+        proposal_status="sandbox_only",
+        sandbox_eval_ref="skill-sandbox-eval://release-evidence",
+        sandbox_eval_status="passed_pending_release_gate",
+        sandbox_pass_rate=1.0,
+        allowed_tools=["local_test_runner"],
+        evidence_refs=["trace://release-evidence/1"],
+        proposed_tests=["run skill sandbox tests"],
+        rollback_plan_ref="rollback://skill/release-evidence/1.0.0",
+        blockers=[],
+        next_operator_action="prepare_human_release_review",
+    )
+    view = SkillEvolutionOperatorViewContract(
+        view_id="skill-evolution-view://test",
+        view_status="release_review_required",
+        pattern_report_id="recurring-pattern-report://test",
+        pattern_report_status="evidence_ready_for_human_review",
+        pattern_count=1,
+        candidate_count=1,
+        items=[item],
+        unregistered_pattern_refs=[],
+        blockers=[],
+        generated_at="2026-07-16T17:00:00Z",
+    )
+
+    assert view.read_only is True
+    assert view.human_review_required is True
+    assert view.runtime_activation_allowed is False
+    assert view.promotion_authorized is False
+    assert item.runtime_activation_allowed is False
+    assert item.promotion_authorized is False
+    assert SKILL_EVOLUTION_OPERATOR_ITEM_SCHEMA.contract_name == (
+        "SkillEvolutionOperatorItemContract"
+    )
+    assert SKILL_EVOLUTION_OPERATOR_VIEW_SCHEMA.contract_name == (
+        "SkillEvolutionOperatorViewContract"
+    )
+    assert "next_operator_action" in (
+        SKILL_EVOLUTION_OPERATOR_ITEM_SCHEMA.required_fields
+    )
 
 
 def test_deliberative_plan_schema_declares_semantic_memory_evidence_fields() -> None:

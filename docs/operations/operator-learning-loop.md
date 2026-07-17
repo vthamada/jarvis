@@ -14,19 +14,19 @@ governanca, memoria canonica ou sintese final.
 1. Iniciar uma missao governada:
 
 ```powershell
-python -m apps.jarvis_console.cli mission-workflow "Plan the controlled rollout." --mission-id mission-demo
+python -m apps.jarvis_console mission-workflow "Plan the controlled rollout." --mission-id mission-demo
 ```
 
 2. Ver o ciclo completo de uma missao ja executada:
 
 ```powershell
-python -m apps.jarvis_console.cli mission-cycle --mission-id mission-demo
+python -m apps.jarvis_console mission-cycle --mission-id mission-demo
 ```
 
 3. Abrir o cockpit diario consolidado:
 
 ```powershell
-python -m apps.jarvis_console.cli operator-dashboard --mission-id mission-demo
+python -m apps.jarvis_console operator-dashboard --mission-id mission-demo
 ```
 
 O cockpit e read-only. Ele consolida objetivo, proxima acao, work items,
@@ -38,7 +38,7 @@ o operador precisa decidir primeiro; o comando nao executa a decisao.
 4. Gerar um relatorio humano compacto de progresso:
 
 ```powershell
-python -m apps.jarvis_console.cli progress-report --mission-id mission-demo
+python -m apps.jarvis_console progress-report --mission-id mission-demo
 ```
 
 O relatorio e sintetizado a partir do estado canonico da missao, estrategia de
@@ -48,7 +48,7 @@ memoria. Ele nao grava estado nem executa a proxima acao.
 5. Registrar feedback explicito apos a missao:
 
 ```powershell
-python -m apps.jarvis_console.cli mission-feedback --mission-id mission-demo --assessment correction --rating 2 --comment "faltou evidencia de release" --correction "validar evidencia antes da recomendacao" --next-expectation "mostrar evidencia e rollback" --evidence-ref evidence://mission-demo/release
+python -m apps.jarvis_console mission-feedback --mission-id mission-demo --assessment correction --rating 2 --comment "faltou evidencia de release" --correction "validar evidencia antes da recomendacao" --next-expectation "mostrar evidencia e rollback" --evidence-ref evidence://mission-demo/release
 ```
 
 O comando passa por governanca, atualiza a experiencia/reflexao canonica e
@@ -58,20 +58,31 @@ regra, nao promove a proposta e nao muta o Core.
 6. Consultar experiencias/reflexoes recentes:
 
 ```powershell
-python -m apps.jarvis_console.cli experience-reflections --mission-id mission-demo
+python -m apps.jarvis_console experience-reflections --mission-id mission-demo
 ```
 
 7. Consultar propostas aguardando revisao humana:
 
 ```powershell
-python -m apps.jarvis_console.cli evolution-review-queue
+python -m apps.jarvis_console evolution-review-queue
 ```
 
 8. Registrar decisao humana sobre uma proposta:
 
 ```powershell
-python -m apps.jarvis_console.cli evolution-review --proposal-id proposal-123 --action approve --evidence-ref evidence://eval/123 --proposed-test tests/unit/test_learning_loop.py --rollback-plan-ref rollback://proposal-123
+python -m apps.jarvis_console evolution-review --proposal-id proposal-123 --action approve --evidence-ref evidence://eval/123 --proposed-test tests/unit/test_learning_loop.py --rollback-plan-ref rollback://proposal-123
 ```
+
+9. Inspecionar a cadeia de evolucao de skills sem executar ou promover:
+
+```powershell
+python -m apps.jarvis_console skill-evolution --workflow-profile software_change_workflow
+```
+
+A leitura correlaciona pattern evidence, candidata inativa, proposta, review,
+sandbox, testes, rollback e blockers. O guia detalhado esta em
+`docs/operations/skill-evolution-operator-surface.md`. Mesmo um sandbox verde
+permanece pendente de release e promocao humana separada.
 
 ## Como interpretar a saida
 
@@ -148,19 +159,19 @@ As decisoes disponiveis sao:
 Para `approve` e `sandbox`, informe evidencia, testes propostos e rollback:
 
 ```powershell
-python -m apps.jarvis_console.cli evolution-review --proposal-id proposal-123 --action sandbox --evidence-ref evidence://pilot/123 --proposed-test tests/unit/test_operator_learning_loop.py --rollback-plan-ref rollback://proposal-123 --note "validar em piloto antes de qualquer promocao"
+python -m apps.jarvis_console evolution-review --proposal-id proposal-123 --action sandbox --evidence-ref evidence://pilot/123 --proposed-test tests/unit/test_operator_learning_loop.py --rollback-plan-ref rollback://proposal-123 --note "validar em piloto antes de qualquer promocao"
 ```
 
 Para rejeitar:
 
 ```powershell
-python -m apps.jarvis_console.cli evolution-review --proposal-id proposal-123 --action reject --note "evidencia insuficiente"
+python -m apps.jarvis_console evolution-review --proposal-id proposal-123 --action reject --note "evidencia insuficiente"
 ```
 
 Para rollback:
 
 ```powershell
-python -m apps.jarvis_console.cli evolution-review --proposal-id proposal-123 --action rollback --rollback-plan-ref rollback://proposal-123 --note "reverter candidato sandbox"
+python -m apps.jarvis_console evolution-review --proposal-id proposal-123 --action rollback --rollback-plan-ref rollback://proposal-123 --note "reverter candidato sandbox"
 ```
 
 Esses comandos registram decisao, operador, evidencia, testes, rollback e

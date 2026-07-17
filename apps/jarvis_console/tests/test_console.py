@@ -23,6 +23,7 @@ from apps.jarvis_console.cli import (
     render_operator_dashboard,
     render_readiness_dashboard,
     render_response,
+    render_skill_evolution_operator_view,
     render_work_items_state,
     run_artifact_command,
     run_artifacts_command,
@@ -40,6 +41,7 @@ from apps.jarvis_console.cli import (
     run_procedural_playbooks_command,
     run_progress_report_command,
     run_readiness_dashboard_command,
+    run_skill_evolution_command,
     run_technology_candidates_command,
     run_work_item_command,
     run_work_items_command,
@@ -50,6 +52,7 @@ from shared.contracts import (
     PostTaskReflectionContract,
     ProceduralPlaybookCandidateContract,
     RegressionReadinessReportContract,
+    SkillEvolutionOperatorViewContract,
 )
 from shared.types import MissionId, MissionStatus
 
@@ -318,6 +321,55 @@ def test_console_evolution_review_queue_shows_human_review_items() -> None:
 
 def test_console_evolution_review_queue_handles_empty_items() -> None:
     assert render_evolution_review_queue([]) == "No evolution review items found."
+
+
+def test_console_skill_evolution_empty_view_is_explicitly_read_only(
+    monkeypatch,
+) -> None:
+    temp_dir = runtime_dir("console-skill-evolution-empty")
+    monkeypatch.chdir(temp_dir)
+    args = build_parser().parse_args(
+        [
+            "skill-evolution",
+            "--memory-db",
+            "memory.db",
+            "--evolution-db",
+            "evolution.db",
+        ]
+    )
+
+    rendered = run_skill_evolution_command(args)[0]
+
+    assert "skill_evolution_view=read_only" in rendered
+    assert "view_status=empty" in rendered
+    assert "candidate_count=0" in rendered
+    assert "runtime_activation_allowed=False" in rendered
+    assert "promotion_authorized=False" in rendered
+    assert "automatic_promotion_allowed=False" in rendered
+    assert "core_mutation_allowed=False" in rendered
+    assert (temp_dir / "memory.db").exists()
+    assert (temp_dir / "evolution.db").exists()
+
+
+def test_console_skill_evolution_renderer_sanitizes_persisted_values() -> None:
+    view = SkillEvolutionOperatorViewContract(
+        view_id="skill-evolution-view://safe\nview_status=spoofed",
+        view_status="empty",
+        pattern_report_id="recurring-pattern-report://safe",
+        pattern_report_status="insufficient_evidence",
+        pattern_count=0,
+        candidate_count=0,
+        items=[],
+        unregistered_pattern_refs=[],
+        blockers=["bounded\rblocker"],
+        generated_at="2026-07-16T17:00:00Z",
+    )
+
+    rendered = render_skill_evolution_operator_view(view)
+
+    assert "view_id=skill-evolution-view://safe view_status=spoofed" in rendered
+    assert "\nview_status=spoofed" not in rendered
+    assert "view_blockers=bounded blocker" in rendered
 
 
 def test_console_evolution_review_approves_with_evidence_and_rollback() -> None:

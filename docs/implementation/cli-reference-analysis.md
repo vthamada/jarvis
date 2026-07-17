@@ -398,6 +398,12 @@ including consolidated objective/work item/artifact state, review detail,
 memory/autonomy signals, promotion gate evidence, ordered pending decisions and
 the next operator decision. The command remains read-only.
 
+`MB-180` extends this operator-facing baseline with `skill-evolution`, a
+read-only evolution-family view that correlates recurring evidence, inactive
+candidate identity/version, scope, risk, review, sandbox, tests, rollback and
+blockers. It deliberately does not implement the command registry or renderer
+module split proposed by `CLI-001`/`CLI-004`.
+
 ### CLI-006 - Completion And CLI Reference
 
 Goal: generate shell completion and maintain an operator command reference from

@@ -33,6 +33,7 @@ from shared.contracts import (
     LongHorizonGoalStrategyContract,
     MissionStateContract,
     RegressionReadinessReportContract,
+    SkillEvolutionOperatorViewContract,
 )
 from shared.types import ChannelType, InputType, MissionId, RequestId, SessionId
 from tools.readiness_dashboard import build_repository_readiness_report
@@ -384,6 +385,19 @@ def build_parser() -> ArgumentParser:
     playbooks_parser.add_argument("--workflow-profile")
     playbooks_parser.add_argument("--review-status")
     playbooks_parser.add_argument("--limit", type=int, default=5)
+
+    skill_evolution_parser = subparsers.add_parser(
+        "skill-evolution",
+        help="Show the read-only skill evidence, review and sandbox chain.",
+    )
+    skill_evolution_parser.add_argument("--memory-db")
+    skill_evolution_parser.add_argument("--evolution-db")
+    skill_evolution_parser.add_argument("--skill-id")
+    skill_evolution_parser.add_argument("--version")
+    skill_evolution_parser.add_argument("--workflow-profile")
+    skill_evolution_parser.add_argument("--route")
+    skill_evolution_parser.add_argument("--domain")
+    skill_evolution_parser.add_argument("--limit", type=int, default=10)
 
     review_parser = subparsers.add_parser(
         "evolution-review-queue",
@@ -891,6 +905,72 @@ def render_procedural_playbook_candidates(records: list[object]) -> str:
         )
     if lines and lines[-1] == "---":
         lines.pop()
+    return "\n".join(lines)
+
+
+def render_skill_evolution_operator_view(
+    view: SkillEvolutionOperatorViewContract,
+) -> str:
+    lines = [
+        "skill_evolution_view=read_only",
+        f"view_id={safe_console_value(view.view_id)}",
+        f"view_status={safe_console_value(view.view_status)}",
+        f"pattern_report_id={safe_console_value(view.pattern_report_id)}",
+        f"pattern_report_status={safe_console_value(view.pattern_report_status)}",
+        f"pattern_count={safe_console_value(view.pattern_count)}",
+        f"candidate_count={safe_console_value(view.candidate_count)}",
+        "unregistered_pattern_refs="
+        + safe_console_list(list(view.unregistered_pattern_refs)),
+        f"view_blockers={safe_console_list(list(view.blockers))}",
+        f"human_review_required={safe_console_value(view.human_review_required)}",
+        f"runtime_activation_allowed={safe_console_value(view.runtime_activation_allowed)}",
+        f"promotion_authorized={safe_console_value(view.promotion_authorized)}",
+        "automatic_promotion_allowed="
+        + safe_console_value(view.automatic_promotion_allowed),
+        f"core_mutation_allowed={safe_console_value(view.core_mutation_allowed)}",
+    ]
+    for item in view.items:
+        lines.extend(
+            [
+                "---",
+                f"skill_candidate_id={safe_console_value(item.skill_candidate_id)}",
+                f"skill_id={safe_console_value(item.skill_id)}",
+                f"skill_name={safe_console_value(item.skill_name)}",
+                f"version={safe_console_value(item.version)}",
+                f"workflow_profile={safe_console_value(item.workflow_profile)}",
+                f"route={safe_console_value(item.route)}",
+                f"domain={safe_console_value(item.domain)}",
+                f"specialist_type={safe_console_value(item.specialist_type)}",
+                f"risk_level={safe_console_value(item.risk_level)}",
+                f"registry_status={safe_console_value(item.registry_status)}",
+                f"review_status={safe_console_value(item.review_status)}",
+                f"activation_status={safe_console_value(item.activation_status)}",
+                f"evolution_status={safe_console_value(item.evolution_status)}",
+                "origin_pattern_refs="
+                + safe_console_list(list(item.source_pattern_refs)),
+                f"pattern_status={safe_console_value(item.pattern_status)}",
+                f"pattern_summary={safe_console_value(item.pattern_summary)}",
+                f"occurrence_count={safe_console_value(item.occurrence_count)}",
+                "minimum_occurrences="
+                + safe_console_value(item.minimum_occurrences),
+                f"confidence_status={safe_console_value(item.confidence_status)}",
+                f"proposal_id={safe_console_value(item.proposal_id)}",
+                f"proposal_status={safe_console_value(item.proposal_status)}",
+                f"sandbox_eval_ref={safe_console_value(item.sandbox_eval_ref)}",
+                f"sandbox_eval_status={safe_console_value(item.sandbox_eval_status)}",
+                f"sandbox_pass_rate={safe_console_value(item.sandbox_pass_rate)}",
+                f"allowed_tools={safe_console_list(list(item.allowed_tools))}",
+                f"evidence_refs={safe_console_list(list(item.evidence_refs))}",
+                f"proposed_tests={safe_console_list(list(item.proposed_tests))}",
+                f"rollback_plan_ref={safe_console_value(item.rollback_plan_ref)}",
+                f"blockers={safe_console_list(list(item.blockers))}",
+                "next_operator_action="
+                + safe_console_value(item.next_operator_action),
+                "runtime_activation_allowed="
+                + safe_console_value(item.runtime_activation_allowed),
+                f"promotion_authorized={safe_console_value(item.promotion_authorized)}",
+            ]
+        )
     return "\n".join(lines)
 
 
@@ -1685,6 +1765,9 @@ def _memory_service_from_args(args: Namespace) -> MemoryService:
         if args.memory_db
         else ROOT / ".jarvis_runtime" / "memory.db"
     )
+    memory_db = memory_db.expanduser()
+    if not memory_db.is_absolute():
+        memory_db = (Path.cwd() / memory_db).resolve()
     return MemoryService(database_url=f"sqlite:///{memory_db.as_posix()}")
 
 
@@ -1694,6 +1777,9 @@ def _evolution_service_from_args(args: Namespace) -> EvolutionLabService:
         if args.evolution_db
         else ROOT / ".jarvis_runtime" / "evolution.db"
     )
+    evolution_db = evolution_db.expanduser()
+    if not evolution_db.is_absolute():
+        evolution_db = (Path.cwd() / evolution_db).resolve()
     return EvolutionLabService(database_path=str(evolution_db))
 
 
@@ -1715,6 +1801,56 @@ def run_procedural_playbooks_command(args: Namespace) -> list[str]:
         limit=max(1, args.limit),
     )
     return [render_procedural_playbook_candidates(records)]
+
+
+def run_skill_evolution_command(args: Namespace) -> list[str]:
+    memory_service = _memory_service_from_args(args)
+    evolution_service = _evolution_service_from_args(args)
+    limit = max(1, min(args.limit, 100))
+    generated_at = datetime.now(UTC).isoformat()
+    pattern_report = memory_service.build_recurring_pattern_report(
+        workflow_profile=args.workflow_profile,
+        route=args.route,
+        domain=args.domain,
+        minimum_occurrences=2,
+        max_records=max(20, min(limit * 20, 100)),
+        max_patterns=limit,
+        generated_at=generated_at,
+    )
+    candidate_records = memory_service.list_skill_candidates(
+        skill_id=args.skill_id,
+        version=args.version,
+        domain=args.domain,
+        limit=100,
+    )
+    candidates = [record.candidate for record in candidate_records]
+    if args.workflow_profile:
+        candidates = [
+            candidate
+            for candidate in candidates
+            if candidate.workflow_profile == args.workflow_profile
+        ]
+    if args.route:
+        visible_pattern_refs = {
+            pattern.pattern_id for pattern in pattern_report.patterns
+        }
+        candidates = [
+            candidate
+            for candidate in candidates
+            if visible_pattern_refs.intersection(candidate.source_pattern_refs)
+        ]
+    candidates = candidates[:limit]
+    proposals = evolution_service.list_recent_proposals(
+        limit=max(20, min(limit * 5, 100))
+    )
+    view = ObservabilityService.build_skill_evolution_operator_view(
+        view_id=f"skill-evolution-view://{uuid4().hex[:12]}",
+        pattern_report=pattern_report,
+        candidates=candidates,
+        proposals=proposals,
+        generated_at=generated_at,
+    )
+    return [render_skill_evolution_operator_view(view)]
 
 
 def run_mission_cycle_command(console: JarvisConsole, args: Namespace) -> list[str]:
@@ -1918,6 +2054,8 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "experience-reflections"
         else run_procedural_playbooks_command(args)
         if args.command == "procedural-playbooks"
+        else run_skill_evolution_command(args)
+        if args.command == "skill-evolution"
         else run_evolution_review_queue_command(args)
         if args.command == "evolution-review-queue"
         else run_evolution_review_command(args)
@@ -1964,6 +2102,7 @@ def main(argv: list[str] | None = None) -> int:
         "technology-candidates",
         "experience-reflections",
         "procedural-playbooks",
+        "skill-evolution",
         "evolution-review-queue",
         "evolution-review",
         "mission-cycle",

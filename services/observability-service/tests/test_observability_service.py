@@ -8,10 +8,14 @@ from observability_service.service import ObservabilityQuery, ObservabilityServi
 
 from shared.contracts import (
     CapabilityReadinessContract,
+    EvolutionProposalContract,
     ExperienceRecordContract,
     PostTaskReflectionContract,
+    RecurringPatternReportContract,
+    SkillCandidateContract,
 )
 from shared.events import InternalEventEnvelope
+from shared.types import RiskLevel
 
 
 def runtime_dir(name: str) -> Path:
@@ -193,6 +197,171 @@ def test_observability_requires_two_compatible_experiences() -> None:
     assert report.report_status == "insufficient_evidence"
     assert report.patterns == []
     assert report.blockers == ["no_compatible_recurring_pattern"]
+
+
+def skill_operator_pattern_report() -> RecurringPatternReportContract:
+    experiences = [
+        ExperienceRecordContract(
+            experience_id=f"experience://skill-operator/{index}",
+            mission_id=f"mission-skill-operator-{index}",
+            workflow_profile="software_change_workflow",
+            route="software_development",
+            primary_domain_driver="software_engineering",
+            outcome_status="completed",
+            evidence_refs=[f"trace://skill-operator/{index}"],
+            timestamp=f"2026-07-16T14:00:0{index}Z",
+        )
+        for index in (1, 2)
+    ]
+    reflections = [
+        PostTaskReflectionContract(
+            reflection_id=f"reflection://skill-operator/{index}",
+            experience_id=f"experience://skill-operator/{index}",
+            reflection_status="candidate",
+            learning_candidate="verify release evidence before recommendation",
+            recommendation="review bounded verification for reuse",
+            evidence_refs=[f"trace://skill-operator/{index}"],
+            timestamp=f"2026-07-16T14:01:0{index}Z",
+        )
+        for index in (1, 2)
+    ]
+    return ObservabilityService.build_recurring_pattern_report(
+        report_id="recurring-pattern-report://skill-operator",
+        experiences=experiences,
+        reflections=reflections,
+        minimum_occurrences=2,
+        generated_at="2026-07-16T15:00:00Z",
+    )
+
+
+def skill_operator_candidate(pattern_id: str) -> SkillCandidateContract:
+    return SkillCandidateContract(
+        skill_candidate_id="skill-candidate://release-evidence/1.0.0",
+        skill_id="skill://release-evidence",
+        skill_name="release evidence verification",
+        version="1.0.0",
+        workflow_profile="software_change_workflow",
+        domain="software_engineering",
+        specialist_type="software_change_specialist",
+        inputs=["release_evidence"],
+        outputs=["bounded_release_recommendation"],
+        allowed_tools=["local_test_runner"],
+        bounded_instructions=["verify evidence and report missing gates"],
+        risk_level=RiskLevel.MODERATE,
+        evidence_refs=["trace://skill-operator/1", "trace://skill-operator/2"],
+        source_pattern_refs=[pattern_id],
+        failure_modes=["missing_release_evidence"],
+        proposed_tests=["run skill sandbox tests"],
+        rollback_plan_ref="rollback://skill/release-evidence/1.0.0",
+        timestamp="2026-07-16T15:01:00Z",
+    )
+
+
+def skill_operator_proposal(
+    candidate: SkillCandidateContract,
+    *,
+    review_status: str = "needs_review",
+    sandbox_status: str | None = None,
+    sandbox_blockers: list[str] | None = None,
+) -> EvolutionProposalContract:
+    strategy_context: dict[str, object] = {
+        "evolution_review": {
+            "review_status": review_status,
+            "blockers": [],
+            "requires_human_review": True,
+        }
+    }
+    if sandbox_status is not None:
+        strategy_context["skill_sandbox_eval"] = {
+            "eval_id": "skill-sandbox-eval://release-evidence",
+            "eval_status": sandbox_status,
+            "pass_rate": 1.0 if not sandbox_blockers else 0.0,
+            "blockers": list(sandbox_blockers or []),
+        }
+    return EvolutionProposalContract(
+        evolution_proposal_id="proposal-skill-release-evidence",
+        proposal_type="skill_candidate",
+        target_scope="skill:skill://release-evidence@1.0.0",
+        hypothesis="sandbox release evidence verification",
+        expected_gain="bounded reusable verification",
+        timestamp="2026-07-16T15:02:00Z",
+        baseline_refs=["baseline://sovereign-core/current"],
+        risk_hint="moderate",
+        proposed_tests=list(candidate.proposed_tests),
+        candidate_refs=[candidate.skill_candidate_id],
+        optimization_candidate_status="candidate",
+        optimization_safety_status="sandbox_only",
+        strategy_context=strategy_context,
+    )
+
+
+def test_observability_builds_pending_skill_operator_view() -> None:
+    report = skill_operator_pattern_report()
+    candidate = skill_operator_candidate(report.patterns[0].pattern_id)
+    proposal = skill_operator_proposal(candidate)
+
+    view = ObservabilityService.build_skill_evolution_operator_view(
+        view_id="skill-evolution-view://pending",
+        pattern_report=report,
+        candidates=[candidate],
+        proposals=[proposal],
+        generated_at="2026-07-16T16:00:00Z",
+    )
+
+    assert view.view_status == "operator_action_required"
+    assert view.items[0].evolution_status == "human_review_pending"
+    assert view.items[0].next_operator_action == "review_skill_candidate"
+    assert view.items[0].occurrence_count == 2
+    assert view.items[0].route == "software_development"
+    assert view.items[0].runtime_activation_allowed is False
+
+
+def test_observability_keeps_passing_skill_pending_human_release() -> None:
+    report = skill_operator_pattern_report()
+    candidate = skill_operator_candidate(report.patterns[0].pattern_id)
+    proposal = skill_operator_proposal(
+        candidate,
+        review_status="sandboxed",
+        sandbox_status="passed_pending_release_gate",
+    )
+
+    view = ObservabilityService.build_skill_evolution_operator_view(
+        view_id="skill-evolution-view://passed",
+        pattern_report=report,
+        candidates=[candidate],
+        proposals=[proposal],
+        generated_at="2026-07-16T16:00:00Z",
+    )
+
+    assert view.view_status == "release_review_required"
+    assert view.items[0].sandbox_pass_rate == 1.0
+    assert view.items[0].next_operator_action == "prepare_human_release_review"
+    assert view.promotion_authorized is False
+    assert view.automatic_promotion_allowed is False
+
+
+def test_observability_surfaces_skill_sandbox_blockers() -> None:
+    report = skill_operator_pattern_report()
+    candidate = skill_operator_candidate(report.patterns[0].pattern_id)
+    proposal = skill_operator_proposal(
+        candidate,
+        review_status="sandboxed",
+        sandbox_status="blocked",
+        sandbox_blockers=["sandbox_pass_rate_below_threshold"],
+    )
+
+    view = ObservabilityService.build_skill_evolution_operator_view(
+        view_id="skill-evolution-view://blocked",
+        pattern_report=report,
+        candidates=[candidate],
+        proposals=[proposal],
+        generated_at="2026-07-16T16:00:00Z",
+    )
+
+    assert view.view_status == "attention_required"
+    assert view.items[0].evolution_status == "blocked"
+    assert "sandbox_pass_rate_below_threshold" in view.items[0].blockers
+    assert view.items[0].next_operator_action == "resolve_evolution_blockers"
 
 
 def test_observability_service_persists_and_filters_events() -> None:

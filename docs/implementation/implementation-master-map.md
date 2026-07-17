@@ -606,7 +606,7 @@ checklist without runtime activation.
 
 Status: closed in `MB-179`; skill identity and version now cross proposal,
 human review, derived sandbox eval, checklist and promotion gate while runtime
-activation remains disabled. `MB-180` is the only technical item ready.
+activation remains disabled.
 
 ### MB-180 -- Skill Operator Surface
 
@@ -614,13 +614,16 @@ Map IDs: `EVL-007`, `OP-010`, `SFC-004`.
 
 Goal: expose pattern, candidate, eval, review, risk and rollback in the console.
 
-Status: ready after `MB-179`.
+Status: closed in `MB-180`; `skill-evolution` correlates the complete persisted
+chain in a sanitized read-only view without activation or promotion authority.
 
 ### MB-181 -- Workflow Profile Version Registry
 
 Map IDs: `COG-006`, `EVL-008`, `DOC-004`.
 
 Goal: version baseline/candidate workflows without mutating the active registry.
+
+Status: ready after `MB-180`.
 
 ### MB-182 -- Workflow Evolution Candidate Builder
 
