@@ -623,13 +623,16 @@ Map IDs: `COG-006`, `EVL-008`, `DOC-004`.
 
 Goal: version baseline/candidate workflows without mutating the active registry.
 
-Status: ready after `MB-180`.
+Status: closed in `MB-181`; active workflows now have deterministic semver
+snapshots and candidates enter only an immutable inactive side registry.
 
 ### MB-182 -- Workflow Evolution Candidate Builder
 
 Map IDs: `EVL-008`, `COG-006`, `COG-007`.
 
 Goal: derive a workflow variant only from reviewed pattern evidence.
+
+Status: ready after `MB-181`.
 
 ### MB-183 -- Workflow Variant Eval
 

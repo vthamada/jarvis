@@ -602,6 +602,76 @@ SKILL_EVOLUTION_OPERATOR_VIEW_SCHEMA = CanonicalSchema(
     ),
 )
 
+WORKFLOW_PROFILE_VERSION_SCHEMA = CanonicalSchema(
+    name="WorkflowProfileVersionSchema",
+    contract_name="WorkflowProfileVersionContract",
+    required_fields=(
+        "workflow_version_id",
+        "workflow_profile",
+        "version",
+        "route",
+        "lifecycle_status",
+        "definition_hash",
+        "workflow_steps",
+        "workflow_checkpoints",
+        "workflow_decision_points",
+        "success_criteria",
+        "evidence_refs",
+        "proposed_tests",
+        "rollback_plan_ref",
+        "source_registry_ref",
+        "source_registry_fingerprint",
+        "timestamp",
+    ),
+    optional_fields=(
+        "baseline_version_ref",
+        "change_summary",
+        "risk_level",
+        "review_status",
+        "runtime_binding_status",
+        "blockers",
+        "human_review_required",
+        "sandbox_required",
+        "active_registry_write_allowed",
+        "runtime_activation_allowed",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Version snapshot or inactive candidate; it cannot mutate the active registry.",
+    ),
+)
+
+WORKFLOW_PROFILE_VERSION_REGISTRY_SCHEMA = CanonicalSchema(
+    name="WorkflowProfileVersionRegistrySchema",
+    contract_name="WorkflowProfileVersionRegistryContract",
+    required_fields=(
+        "registry_id",
+        "registry_version",
+        "registry_status",
+        "active_registry_ref",
+        "active_registry_fingerprint",
+        "workflow_count",
+        "baseline_count",
+        "candidate_count",
+        "versions",
+        "evidence_refs",
+        "blockers",
+        "generated_at",
+    ),
+    optional_fields=(
+        "read_only",
+        "human_review_required",
+        "active_registry_mutation_allowed",
+        "runtime_activation_allowed",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Immutable side registry over the sovereign active workflow registry.",
+    ),
+)
+
 PROCEDURAL_PLAYBOOK_CANDIDATE_SCHEMA = CanonicalSchema(
     name="ProceduralPlaybookCandidateSchema",
     contract_name="ProceduralPlaybookCandidateContract",

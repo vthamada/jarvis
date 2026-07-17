@@ -399,6 +399,60 @@ class SkillEvolutionOperatorViewContract:
 
 
 @dataclass
+class WorkflowProfileVersionContract:
+    workflow_version_id: str
+    workflow_profile: str
+    version: str
+    route: str
+    lifecycle_status: str
+    definition_hash: str
+    workflow_steps: list[str]
+    workflow_checkpoints: list[str]
+    workflow_decision_points: list[str]
+    success_criteria: list[str]
+    evidence_refs: list[str]
+    proposed_tests: list[str]
+    rollback_plan_ref: str
+    source_registry_ref: str
+    source_registry_fingerprint: str
+    timestamp: Timestamp
+    baseline_version_ref: str | None = None
+    change_summary: str | None = None
+    risk_level: str = "moderate"
+    review_status: str = "needs_review"
+    runtime_binding_status: str = "inactive_candidate"
+    blockers: list[str] = field(default_factory=list)
+    human_review_required: bool = True
+    sandbox_required: bool = True
+    active_registry_write_allowed: bool = False
+    runtime_activation_allowed: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass
+class WorkflowProfileVersionRegistryContract:
+    registry_id: str
+    registry_version: str
+    registry_status: str
+    active_registry_ref: str
+    active_registry_fingerprint: str
+    workflow_count: int
+    baseline_count: int
+    candidate_count: int
+    versions: list[WorkflowProfileVersionContract]
+    evidence_refs: list[str]
+    blockers: list[str]
+    generated_at: Timestamp
+    read_only: bool = True
+    human_review_required: bool = True
+    active_registry_mutation_allowed: bool = False
+    runtime_activation_allowed: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass
 class ProceduralPlaybookCandidateContract:
     playbook_candidate_id: str
     procedure_name: str

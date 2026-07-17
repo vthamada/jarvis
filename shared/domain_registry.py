@@ -2,10 +2,16 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from json import loads
+from dataclasses import dataclass, field, replace
+from hashlib import sha256
+from json import dumps, loads
 from pathlib import Path
+from re import fullmatch
 
+from shared.contracts import (
+    WorkflowProfileVersionContract,
+    WorkflowProfileVersionRegistryContract,
+)
 from shared.specialist_registry import canonical_specialist_type
 
 _REGISTRY_PATH = Path(__file__).parent.parent / "knowledge" / "curated" / "domain_registry.json"
@@ -146,6 +152,20 @@ _ACTIVE_ROUTES = [
     name for name, entry in RUNTIME_ROUTE_REGISTRY.items() if entry.maturity == "active_registry"
 ]
 FALLBACK_RUNTIME_ROUTE: str = _ACTIVE_ROUTES[-1] if _ACTIVE_ROUTES else "productivity"
+
+ACTIVE_WORKFLOW_MATURITIES = frozenset({"active_registry", "active_specialist"})
+ACTIVE_WORKFLOW_REGISTRY_REF = "domain-registry://runtime-routes/current"
+WORKFLOW_VERSION_LIFECYCLE_STATUSES = (
+    "baseline_snapshot",
+    "candidate_inactive",
+    "needs_review",
+    "sandboxed",
+    "eval_passed_pending_release",
+    "approved_pending_promotion",
+    "rejected",
+    "rolled_back",
+    "promoted_snapshot",
+)
 
 DEFAULT_WORKFLOW_RUNTIME_GUIDANCE = WorkflowRuntimeGuidance(
     planning_focus="progressao governada da rota ativa",
@@ -351,6 +371,288 @@ def workflow_runtime_guidance(workflow_profile: str | None) -> WorkflowRuntimeGu
     return WORKFLOW_RUNTIME_GUIDANCE_REGISTRY.get(
         workflow_profile,
         DEFAULT_WORKFLOW_RUNTIME_GUIDANCE,
+    )
+
+
+def workflow_definition_hash(
+    *,
+    workflow_steps: list[str] | tuple[str, ...],
+    workflow_checkpoints: list[str] | tuple[str, ...],
+    workflow_decision_points: list[str] | tuple[str, ...],
+    success_criteria: list[str] | tuple[str, ...],
+) -> str:
+    """Return a stable hash for a complete workflow behavior definition."""
+
+    payload = {
+        "workflow_steps": list(workflow_steps),
+        "workflow_checkpoints": list(workflow_checkpoints),
+        "workflow_decision_points": list(workflow_decision_points),
+        "success_criteria": list(success_criteria),
+    }
+    encoded = dumps(payload, ensure_ascii=True, sort_keys=True, separators=(",", ":"))
+    return sha256(encoded.encode("utf-8")).hexdigest()
+
+
+def _numeric_semver(value: str) -> tuple[int, int, int]:
+    if fullmatch(r"\d+\.\d+\.\d+", value) is None:
+        raise ValueError("workflow version must use numeric semver")
+    major, minor, patch = value.split(".")
+    return int(major), int(minor), int(patch)
+
+
+def active_workflow_registry_fingerprint() -> str:
+    """Fingerprint the active authority without creating a writable copy of it."""
+
+    definitions = []
+    for route_name, entry in sorted(RUNTIME_ROUTE_REGISTRY.items()):
+        if entry.maturity not in ACTIVE_WORKFLOW_MATURITIES or not entry.workflow_profile:
+            continue
+        guidance = workflow_runtime_guidance(entry.workflow_profile)
+        definitions.append(
+            {
+                "route": route_name,
+                "workflow_profile": entry.workflow_profile,
+                "definition_hash": workflow_definition_hash(
+                    workflow_steps=entry.workflow_steps,
+                    workflow_checkpoints=entry.workflow_checkpoints,
+                    workflow_decision_points=entry.workflow_decision_points,
+                    success_criteria=[
+                        *entry.expected_deliverables,
+                        guidance.success_focus,
+                    ],
+                ),
+            }
+        )
+    encoded = dumps(
+        definitions,
+        ensure_ascii=True,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return sha256(encoded.encode("utf-8")).hexdigest()
+
+
+def build_active_workflow_version_registry(
+    *,
+    registry_version: str,
+    generated_at: str,
+    evidence_refs: list[str] | None = None,
+    rollback_plan_ref: str = "rollback://domain-registry/runtime-routes/current",
+) -> WorkflowProfileVersionRegistryContract:
+    """Snapshot active workflow definitions beside, never into, the live registry."""
+
+    _numeric_semver(registry_version)
+    if not rollback_plan_ref:
+        raise ValueError("workflow registry snapshot requires rollback evidence")
+    fingerprint = active_workflow_registry_fingerprint()
+    base_evidence = list(
+        dict.fromkeys(
+            [
+                ACTIVE_WORKFLOW_REGISTRY_REF,
+                f"domain-registry-fingerprint://{fingerprint}",
+                *(evidence_refs or []),
+            ]
+        )
+    )
+    versions: list[WorkflowProfileVersionContract] = []
+    seen_profiles: set[str] = set()
+    for route_name, entry in sorted(RUNTIME_ROUTE_REGISTRY.items()):
+        if entry.maturity not in ACTIVE_WORKFLOW_MATURITIES or not entry.workflow_profile:
+            continue
+        if entry.workflow_profile in seen_profiles:
+            raise ValueError("active workflow profiles must map to one route")
+        seen_profiles.add(entry.workflow_profile)
+        guidance = workflow_runtime_guidance(entry.workflow_profile)
+        success_criteria = list(
+            dict.fromkeys([*entry.expected_deliverables, guidance.success_focus])
+        )
+        versions.append(
+            WorkflowProfileVersionContract(
+                workflow_version_id=(
+                    f"workflow-version://{entry.workflow_profile}/{registry_version}"
+                ),
+                workflow_profile=entry.workflow_profile,
+                version=registry_version,
+                route=route_name,
+                lifecycle_status="baseline_snapshot",
+                definition_hash=workflow_definition_hash(
+                    workflow_steps=entry.workflow_steps,
+                    workflow_checkpoints=entry.workflow_checkpoints,
+                    workflow_decision_points=entry.workflow_decision_points,
+                    success_criteria=success_criteria,
+                ),
+                workflow_steps=list(entry.workflow_steps),
+                workflow_checkpoints=list(entry.workflow_checkpoints),
+                workflow_decision_points=list(entry.workflow_decision_points),
+                success_criteria=success_criteria,
+                evidence_refs=list(
+                    dict.fromkeys(
+                        [
+                            *base_evidence,
+                            f"domain-registry-route://{route_name}",
+                            f"workflow-guidance://{entry.workflow_profile}",
+                        ]
+                    )
+                ),
+                proposed_tests=["tests/unit/test_domain_registry_workflows.py"],
+                rollback_plan_ref=rollback_plan_ref,
+                source_registry_ref=ACTIVE_WORKFLOW_REGISTRY_REF,
+                source_registry_fingerprint=fingerprint,
+                timestamp=generated_at,
+                change_summary="snapshot of the active sovereign workflow definition",
+                risk_level="low",
+                review_status="not_applicable",
+                runtime_binding_status="observed_active_baseline",
+                human_review_required=False,
+                sandbox_required=False,
+            )
+        )
+    blockers = [] if versions else ["no_active_workflow_definitions"]
+    return WorkflowProfileVersionRegistryContract(
+        registry_id=(
+            f"workflow-version-registry://active/{fingerprint[:16]}/{registry_version}"
+        ),
+        registry_version=registry_version,
+        registry_status=(
+            "baseline_snapshot_ready" if versions else "attention_required"
+        ),
+        active_registry_ref=ACTIVE_WORKFLOW_REGISTRY_REF,
+        active_registry_fingerprint=fingerprint,
+        workflow_count=len(versions),
+        baseline_count=len(versions),
+        candidate_count=0,
+        versions=versions,
+        evidence_refs=base_evidence,
+        blockers=blockers,
+        generated_at=generated_at,
+    )
+
+
+def register_workflow_candidate_version(
+    registry: WorkflowProfileVersionRegistryContract,
+    candidate: WorkflowProfileVersionContract,
+) -> WorkflowProfileVersionRegistryContract:
+    """Return a new side-registry snapshot with one inactive workflow candidate."""
+
+    if registry.active_registry_mutation_allowed:
+        raise ValueError("workflow version registry cannot mutate the active registry")
+    if registry.active_registry_fingerprint != active_workflow_registry_fingerprint():
+        raise ValueError("active workflow registry drift requires a fresh snapshot")
+    if candidate.lifecycle_status != "candidate_inactive":
+        raise ValueError("workflow candidate must remain candidate_inactive")
+    expected_version_id = (
+        f"workflow-version://{candidate.workflow_profile}/{candidate.version}"
+    )
+    if candidate.workflow_version_id != expected_version_id:
+        raise ValueError("workflow candidate identity must match profile and version")
+    if candidate.runtime_binding_status != "inactive_candidate":
+        raise ValueError("workflow candidate cannot claim an active runtime binding")
+    if candidate.review_status != "needs_review" or not candidate.human_review_required:
+        raise ValueError("workflow candidate requires explicit human review")
+    if not candidate.sandbox_required:
+        raise ValueError("workflow candidate requires sandbox evaluation")
+    if (
+        candidate.active_registry_write_allowed
+        or candidate.runtime_activation_allowed
+        or candidate.automatic_promotion_allowed
+        or candidate.core_mutation_allowed
+    ):
+        raise ValueError("workflow candidate cannot claim runtime or mutation authority")
+    candidate_semver = _numeric_semver(candidate.version)
+    if candidate.source_registry_ref != registry.active_registry_ref:
+        raise ValueError("workflow candidate source registry mismatch")
+    if candidate.source_registry_fingerprint != registry.active_registry_fingerprint:
+        raise ValueError("workflow candidate source fingerprint mismatch")
+    baselines = [
+        version
+        for version in registry.versions
+        if version.workflow_profile == candidate.workflow_profile
+        and version.lifecycle_status == "baseline_snapshot"
+    ]
+    if len(baselines) != 1:
+        raise ValueError("workflow candidate requires one baseline version")
+    baseline = baselines[0]
+    if candidate.route != baseline.route:
+        raise ValueError("workflow candidate route must match its baseline")
+    if candidate.baseline_version_ref != baseline.workflow_version_id:
+        raise ValueError("workflow candidate baseline ref mismatch")
+    if candidate_semver <= _numeric_semver(baseline.version):
+        raise ValueError("workflow candidate version must advance its baseline")
+    expected_hash = workflow_definition_hash(
+        workflow_steps=candidate.workflow_steps,
+        workflow_checkpoints=candidate.workflow_checkpoints,
+        workflow_decision_points=candidate.workflow_decision_points,
+        success_criteria=candidate.success_criteria,
+    )
+    if candidate.definition_hash != expected_hash:
+        raise ValueError("workflow candidate definition hash mismatch")
+    if candidate.definition_hash == baseline.definition_hash:
+        raise ValueError("workflow candidate must change the baseline definition")
+    for field_name, values in (
+        ("workflow_steps", candidate.workflow_steps),
+        ("workflow_checkpoints", candidate.workflow_checkpoints),
+        ("workflow_decision_points", candidate.workflow_decision_points),
+        ("success_criteria", candidate.success_criteria),
+        ("evidence_refs", candidate.evidence_refs),
+        ("proposed_tests", candidate.proposed_tests),
+    ):
+        if not values or len(values) > 50 or any(len(value) > 500 for value in values):
+            raise ValueError(f"{field_name} must be present and bounded")
+    if (
+        not candidate.rollback_plan_ref
+        or len(candidate.rollback_plan_ref) > 500
+        or not candidate.change_summary
+        or len(candidate.change_summary) > 500
+        or not candidate.timestamp
+        or len(candidate.timestamp) > 100
+    ):
+        raise ValueError("workflow candidate requires change summary and rollback")
+    if candidate.blockers:
+        raise ValueError("blocked workflow candidate cannot enter the version registry")
+    if candidate.risk_level not in {"low", "moderate"}:
+        raise ValueError("workflow candidate risk exceeds registry baseline")
+    for existing in registry.versions:
+        if existing.workflow_version_id == candidate.workflow_version_id:
+            if existing == candidate:
+                return registry
+            raise ValueError("workflow version identifiers are immutable")
+        if (
+            existing.workflow_profile == candidate.workflow_profile
+            and existing.version == candidate.version
+        ):
+            raise ValueError("workflow profile and version already exist")
+
+    safe_candidate = replace(
+        candidate,
+        lifecycle_status="candidate_inactive",
+        review_status="needs_review",
+        runtime_binding_status="inactive_candidate",
+        human_review_required=True,
+        sandbox_required=True,
+        active_registry_write_allowed=False,
+        runtime_activation_allowed=False,
+        automatic_promotion_allowed=False,
+        core_mutation_allowed=False,
+    )
+    registry_seed = f"{registry.registry_id}:{candidate.workflow_version_id}"
+    registry_hash = sha256(registry_seed.encode("utf-8")).hexdigest()[:16]
+    return replace(
+        registry,
+        registry_id=f"workflow-version-registry://candidate/{registry_hash}",
+        registry_status="candidate_registered_inactive",
+        workflow_count=registry.workflow_count,
+        candidate_count=registry.candidate_count + 1,
+        versions=[*registry.versions, safe_candidate],
+        evidence_refs=list(
+            dict.fromkeys([*registry.evidence_refs, *candidate.evidence_refs])
+        ),
+        generated_at=candidate.timestamp,
+        read_only=True,
+        human_review_required=True,
+        active_registry_mutation_allowed=False,
+        runtime_activation_allowed=False,
+        automatic_promotion_allowed=False,
+        core_mutation_allowed=False,
     )
 
 

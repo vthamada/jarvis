@@ -58,6 +58,9 @@ O repositorio ja possui um corte operacional do laboratorio evolutivo:
 - referencia explicita de rollback para o baseline avaliado;
 - integracao com sinais do `internal pilot` e da comparacao de paths;
 - `manual_variants` priorizado como estrategia inicial do baseline.
+- side-registry versionado de workflows ativos e candidatos inativos, com
+  fingerprint, semver, evidencia, testes e rollback, sem escrita no registry
+  soberano ou ativacao runtime.
 
 ---
 

@@ -2,6 +2,17 @@
 
 ## Atualizacao 2026-07-16
 
+`MB-181` foi concluido como registry versionado de `workflow_profile` ao lado
+do registry ativo soberano. `WorkflowProfileVersionContract` e
+`WorkflowProfileVersionRegistryContract` registram semver, fingerprint,
+passos, checkpoints, decision points, criterios, evidencias, testes e rollback.
+`shared/domain_registry.py` gera baselines deterministicas para todas as rotas
+ativas e aceita candidata somente em novo snapshot imutavel, com versao
+posterior, definicao distinta, baseline/fingerprint coerentes, risco bounded e
+sem claims de escrita ou ativacao. O `evolution-lab` apenas delega essas
+operacoes. Testes comprovam idempotencia, colisao/drift contidos e payload do
+registry ativo inalterado. `MB-182` e o unico item tecnico `ready`.
+
 `MB-180` foi concluido como superficie read-only da evolucao de skills. Os
 novos `SkillEvolutionOperatorItemContract` e
 `SkillEvolutionOperatorViewContract` correlacionam pattern evidence,
@@ -11,7 +22,7 @@ recorrencia, escopo, risco, versao, tools, evidencias, testes, rollback,
 blockers e proxima acao humana com filtros bounded e sanitizacao. O E2E
 comprova a cadeia persistida e que a consulta nao altera candidata nem
 propostas. Ativacao runtime, autorizacao de promocao, autopromocao e mutacao do
-Core permanecem falsas. `MB-181` e o unico item tecnico `ready`.
+Core permanecem falsas. Esse estado foi sucedido pelo fechamento de `MB-181`.
 
 `MB-179` foi concluido como cadeia governada de review e sandbox para skill
 candidata. `create_proposal_from_skill_candidate` persiste identidade, versao,
@@ -68,7 +79,7 @@ flag explicita e salva evidencia historica em `.jarvis_runtime/readiness/`; o
 console expoe a mesma leitura por `readiness-dashboard`. Capacidades deferred
 nao viram falsos blockers e nenhum status autoriza release autonomo. A fila
 `MB-161` a `MB-174` esta fechada. Esse estado foi sucedido por `MB-175` e pelo
-fechamento de `MB-176` a `MB-180`; `MB-181` e agora o unico item tecnico
+fechamento de `MB-176` a `MB-181`; `MB-182` e agora o unico item tecnico
 `ready`.
 
 `MB-173` foi concluido: `KnowledgeSourceEvidenceContract` e

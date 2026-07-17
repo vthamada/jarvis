@@ -1,3 +1,4 @@
+from dataclasses import replace
 from pathlib import Path
 from tempfile import gettempdir
 from uuid import uuid4
@@ -21,7 +22,9 @@ from shared.contracts import (
     SandboxToReleaseChecklistContract,
     SkillCandidateContract,
     SkillMiningRequestContract,
+    WorkflowProfileVersionContract,
 )
+from shared.domain_registry import workflow_definition_hash
 from shared.types import RiskLevel
 
 
@@ -45,6 +48,56 @@ def test_evolution_lab_defaults_to_manual_variants_strategy() -> None:
     assert service.resolve_strategy_name(None) == "manual_variants"
     assert service.resolve_strategy_name("unknown") == "manual_variants"
     assert "manual_variants" in service.list_supported_strategies()
+
+
+def test_evolution_lab_exposes_inactive_workflow_version_registry() -> None:
+    temp_dir = runtime_dir("evolution-lab-workflow-version-registry")
+    service = EvolutionLabService(database_path=str(temp_dir / "evolution.db"))
+    registry = service.build_workflow_version_registry(
+        registry_version="1.0.0",
+        generated_at="2026-07-16T18:00:00Z",
+        evidence_refs=["evidence://evolution-lab/workflow-baseline"],
+    )
+    baseline = next(
+        version
+        for version in registry.versions
+        if version.workflow_profile == "operational_readiness_workflow"
+    )
+    candidate_steps = [*baseline.workflow_steps, "record candidate evidence"]
+    candidate: WorkflowProfileVersionContract = replace(
+        baseline,
+        workflow_version_id=(
+            "workflow-version://operational_readiness_workflow/1.1.0"
+        ),
+        version="1.1.0",
+        lifecycle_status="candidate_inactive",
+        definition_hash=workflow_definition_hash(
+            workflow_steps=candidate_steps,
+            workflow_checkpoints=baseline.workflow_checkpoints,
+            workflow_decision_points=baseline.workflow_decision_points,
+            success_criteria=baseline.success_criteria,
+        ),
+        workflow_steps=candidate_steps,
+        evidence_refs=[*baseline.evidence_refs, "pattern://readiness/evidence"],
+        proposed_tests=["test://workflow/readiness-candidate"],
+        rollback_plan_ref="rollback://workflow/readiness/1.0.0",
+        baseline_version_ref=baseline.workflow_version_id,
+        change_summary="record evidence before readiness recommendation",
+        risk_level="moderate",
+        review_status="needs_review",
+        runtime_binding_status="inactive_candidate",
+        human_review_required=True,
+        sandbox_required=True,
+    )
+
+    updated = service.register_workflow_candidate_version(registry, candidate)
+
+    assert "evolution-lab://workflow-version-registry" in registry.evidence_refs
+    assert updated.candidate_count == 1
+    assert updated.versions[-1].lifecycle_status == "candidate_inactive"
+    assert updated.versions[-1].runtime_activation_allowed is False
+    assert updated.active_registry_mutation_allowed is False
+    assert updated.automatic_promotion_allowed is False
 
 
 def test_evolution_lab_persists_proposals_and_sandbox_candidate_decision() -> None:

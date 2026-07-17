@@ -30,6 +30,12 @@ from shared.contracts import (
     SkillSandboxCaseResultContract,
     SkillSandboxEvalContract,
     TechnologyAbsorptionCandidateContract,
+    WorkflowProfileVersionContract,
+    WorkflowProfileVersionRegistryContract,
+)
+from shared.domain_registry import (
+    build_active_workflow_version_registry,
+    register_workflow_candidate_version,
 )
 from shared.eval_expansion import derive_expanded_eval_state
 from shared.optimization_state import derive_optimization_state
@@ -2153,6 +2159,35 @@ class EvolutionLabService:
         if strategy_name in SUPPORTED_EVOLUTION_STRATEGIES:
             return str(strategy_name)
         return self.preferred_strategy()
+
+    def build_workflow_version_registry(
+        self,
+        *,
+        registry_version: str = "1.0.0",
+        generated_at: str | None = None,
+        evidence_refs: list[str] | None = None,
+        rollback_plan_ref: str = "rollback://domain-registry/runtime-routes/current",
+    ) -> WorkflowProfileVersionRegistryContract:
+        """Snapshot active workflows without granting the lab registry authority."""
+
+        return build_active_workflow_version_registry(
+            registry_version=registry_version,
+            generated_at=generated_at or self.now(),
+            evidence_refs=[
+                "evolution-lab://workflow-version-registry",
+                *(evidence_refs or []),
+            ],
+            rollback_plan_ref=rollback_plan_ref,
+        )
+
+    @staticmethod
+    def register_workflow_candidate_version(
+        registry: WorkflowProfileVersionRegistryContract,
+        candidate: WorkflowProfileVersionContract,
+    ) -> WorkflowProfileVersionRegistryContract:
+        """Register an inactive candidate in a new immutable side snapshot."""
+
+        return register_workflow_candidate_version(registry, candidate)
 
     @staticmethod
     def _review_context(

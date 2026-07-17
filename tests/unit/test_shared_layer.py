@@ -27,6 +27,8 @@ from shared.contracts import (
     SkillSandboxEvalContract,
     SurfaceIdentityContract,
     TechnologyAbsorptionCandidateContract,
+    WorkflowProfileVersionContract,
+    WorkflowProfileVersionRegistryContract,
     WorkItemStateContract,
 )
 from shared.events import INTERNAL_EVENT_NAMES
@@ -59,6 +61,8 @@ from shared.schemas import (
     SURFACE_IDENTITY_SCHEMA,
     TECHNOLOGY_ABSORPTION_CANDIDATE_SCHEMA,
     WORK_ITEM_STATE_SCHEMA,
+    WORKFLOW_PROFILE_VERSION_REGISTRY_SCHEMA,
+    WORKFLOW_PROFILE_VERSION_SCHEMA,
 )
 from shared.state import SYSTEM_IDENTITY
 from shared.types import (
@@ -541,6 +545,63 @@ def test_skill_evolution_operator_view_is_read_only_and_review_bound() -> None:
     )
     assert "next_operator_action" in (
         SKILL_EVOLUTION_OPERATOR_ITEM_SCHEMA.required_fields
+    )
+
+
+def test_workflow_version_registry_contract_cannot_mutate_active_runtime() -> None:
+    version = WorkflowProfileVersionContract(
+        workflow_version_id="workflow-version://software_change_workflow/1.0.0",
+        workflow_profile="software_change_workflow",
+        version="1.0.0",
+        route="software_development",
+        lifecycle_status="baseline_snapshot",
+        definition_hash="a" * 64,
+        workflow_steps=["frame change", "evaluate risk", "recommend patch"],
+        workflow_checkpoints=["scope_framed", "risk_checked", "patch_ready"],
+        workflow_decision_points=["scope_gate", "risk_gate", "patch_gate"],
+        success_criteria=["bounded patch direction"],
+        evidence_refs=["domain-registry://runtime-routes/current"],
+        proposed_tests=["tests/unit/test_domain_registry_workflows.py"],
+        rollback_plan_ref="rollback://domain-registry/runtime-routes/current",
+        source_registry_ref="domain-registry://runtime-routes/current",
+        source_registry_fingerprint="b" * 64,
+        timestamp="2026-07-16T18:00:00Z",
+        risk_level="low",
+        review_status="not_applicable",
+        runtime_binding_status="observed_active_baseline",
+        human_review_required=False,
+        sandbox_required=False,
+    )
+    registry = WorkflowProfileVersionRegistryContract(
+        registry_id="workflow-version-registry://active/test/1.0.0",
+        registry_version="1.0.0",
+        registry_status="baseline_snapshot_ready",
+        active_registry_ref="domain-registry://runtime-routes/current",
+        active_registry_fingerprint="b" * 64,
+        workflow_count=1,
+        baseline_count=1,
+        candidate_count=0,
+        versions=[version],
+        evidence_refs=["domain-registry://runtime-routes/current"],
+        blockers=[],
+        generated_at="2026-07-16T18:00:00Z",
+    )
+
+    assert registry.read_only is True
+    assert registry.active_registry_mutation_allowed is False
+    assert registry.runtime_activation_allowed is False
+    assert registry.automatic_promotion_allowed is False
+    assert registry.core_mutation_allowed is False
+    assert version.active_registry_write_allowed is False
+    assert version.runtime_activation_allowed is False
+    assert WORKFLOW_PROFILE_VERSION_SCHEMA.contract_name == (
+        "WorkflowProfileVersionContract"
+    )
+    assert WORKFLOW_PROFILE_VERSION_REGISTRY_SCHEMA.contract_name == (
+        "WorkflowProfileVersionRegistryContract"
+    )
+    assert "source_registry_fingerprint" in (
+        WORKFLOW_PROFILE_VERSION_SCHEMA.required_fields
     )
 
 

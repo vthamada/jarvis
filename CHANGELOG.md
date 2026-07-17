@@ -92,6 +92,12 @@
 - `observability-service` correlaciona a cadeia por `skill_candidate_id` e pattern refs, explicita recorrencia, escopo, risco, versao, evidencias, testes, rollback, blockers e proxima acao humana;
 - `jarvis-console skill-evolution` adiciona filtros bounded e renderizacao sanitizada; testes de contrato, observabilidade, console e E2E comprovam consulta sem mutacao, e `MB-181` e o unico item tecnico `ready`.
 
+### MB-181 versiona workflows sem mutar o registry ativo
+
+- `WorkflowProfileVersionContract` e `WorkflowProfileVersionRegistryContract` formalizam semver, lifecycle, definition hash, passos, checkpoints, decisions, criterios, evidencias, testes e rollback;
+- `shared/domain_registry.py` constroi snapshots deterministas de todos os workflows ativos e registra candidatas somente em novo side-registry imutavel, com fingerprint e autoridade runtime sempre bloqueada;
+- `evolution-lab` expoe delegates sem acesso de escrita; testes cobrem cobertura, idempotencia, colisao, drift e claims inseguras, e `MB-182` e o unico item tecnico `ready`.
+
 ## 2026-07-04
 
 ### MB-161 fecha anchors de evidencia de memoria semantica
