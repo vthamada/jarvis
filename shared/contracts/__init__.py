@@ -302,6 +302,43 @@ class SkillMiningResultContract:
 
 
 @dataclass
+class SkillSandboxCaseResultContract:
+    case_id: str
+    passed: bool
+    checks: dict[str, bool]
+    failed_checks: list[str]
+    evidence_refs: list[str]
+
+
+@dataclass
+class SkillSandboxEvalContract:
+    eval_id: str
+    skill_candidate_id: str
+    skill_id: str
+    version: str
+    evolution_proposal_id: EvolutionProposalId
+    review_decision_id: str
+    eval_status: str
+    required_pass_rate: float
+    pass_rate: float
+    total_cases: int
+    passed_cases: int
+    failed_cases: int
+    case_results: list[SkillSandboxCaseResultContract]
+    evidence_refs: list[str]
+    proposed_tests: list[str]
+    rollback_plan_ref: str
+    blockers: list[str]
+    generated_at: Timestamp
+    sandbox_only: bool = True
+    human_review_required: bool = True
+    runtime_activation_allowed: bool = False
+    promotion_authorized: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass
 class ProceduralPlaybookCandidateContract:
     playbook_candidate_id: str
     procedure_name: str
@@ -1397,6 +1434,11 @@ class SandboxToReleaseChecklistContract:
     proposed_tests: list[str] = field(default_factory=list)
     rollback_plan_ref: str | None = None
     blockers: list[str] = field(default_factory=list)
+    candidate_type: str | None = None
+    candidate_identity_ref: str | None = None
+    candidate_version: str | None = None
+    sandbox_eval_ref: str | None = None
+    sandbox_eval_status: str | None = None
     sandbox_required: bool = True
     release_gate_required: bool = True
     automatic_promotion_allowed: bool = False
@@ -1481,6 +1523,8 @@ class EvolutionReviewDecisionContract:
     rollback_plan_ref: str | None = None
     risk_acceptance: str | None = None
     review_notes: list[str] = field(default_factory=list)
+    candidate_identity_ref: str | None = None
+    candidate_version: str | None = None
     automatic_promotion_allowed: bool = False
     core_mutation_allowed: bool = False
 

@@ -595,8 +595,7 @@ Map IDs: `EVL-007`, `MEM-003`, `MEM-006`.
 Goal: convert only eligible recurring-pattern evidence into a skill candidate.
 
 Status: closed in `MB-178`; deterministic eligibility checks return an inactive
-candidate or a blocked result with no candidate, and `MB-179` is the only
-technical item ready.
+candidate or a blocked result with no candidate.
 
 ### MB-179 -- Skill Review And Sandbox Eval
 
@@ -605,13 +604,17 @@ Map IDs: `EVL-007`, `EVL-005`, `EVL-006`, `GOV-009`.
 Goal: connect skill candidates to human review, sandbox eval and promotion
 checklist without runtime activation.
 
-Status: ready after `MB-178`.
+Status: closed in `MB-179`; skill identity and version now cross proposal,
+human review, derived sandbox eval, checklist and promotion gate while runtime
+activation remains disabled. `MB-180` is the only technical item ready.
 
 ### MB-180 -- Skill Operator Surface
 
 Map IDs: `EVL-007`, `OP-010`, `SFC-004`.
 
 Goal: expose pattern, candidate, eval, review, risk and rollback in the console.
+
+Status: ready after `MB-179`.
 
 ### MB-181 -- Workflow Profile Version Registry
 

@@ -21,6 +21,8 @@ from shared.contracts import (
     SkillCandidateContract,
     SkillMiningRequestContract,
     SkillMiningResultContract,
+    SkillSandboxCaseResultContract,
+    SkillSandboxEvalContract,
     SurfaceIdentityContract,
     TechnologyAbsorptionCandidateContract,
     WorkItemStateContract,
@@ -48,6 +50,8 @@ from shared.schemas import (
     SKILL_CANDIDATE_SCHEMA,
     SKILL_MINING_REQUEST_SCHEMA,
     SKILL_MINING_RESULT_SCHEMA,
+    SKILL_SANDBOX_CASE_RESULT_SCHEMA,
+    SKILL_SANDBOX_EVAL_SCHEMA,
     SURFACE_IDENTITY_SCHEMA,
     TECHNOLOGY_ABSORPTION_CANDIDATE_SCHEMA,
     WORK_ITEM_STATE_SCHEMA,
@@ -426,6 +430,51 @@ def test_skill_mining_contracts_never_grant_activation_or_promotion() -> None:
     )
     assert SKILL_MINING_RESULT_SCHEMA.contract_name == "SkillMiningResultContract"
     assert "candidate" in SKILL_MINING_RESULT_SCHEMA.optional_fields
+
+
+def test_skill_sandbox_eval_contract_remains_pending_human_release() -> None:
+    case = SkillSandboxCaseResultContract(
+        case_id="case-release-evidence",
+        passed=True,
+        checks={"expected_output": True, "tool_scope": True},
+        failed_checks=[],
+        evidence_refs=["eval://skill/release-evidence/case-1"],
+    )
+    evaluation = SkillSandboxEvalContract(
+        eval_id="skill-sandbox-eval://release-evidence",
+        skill_candidate_id="skill-candidate://release-evidence/1.0.0",
+        skill_id="skill://release-evidence",
+        version="1.0.0",
+        evolution_proposal_id="proposal-skill-release-evidence",
+        review_decision_id="review-decision://skill-release-evidence",
+        eval_status="passed_pending_release_gate",
+        required_pass_rate=1.0,
+        pass_rate=1.0,
+        total_cases=1,
+        passed_cases=1,
+        failed_cases=0,
+        case_results=[case],
+        evidence_refs=["eval://skill/release-evidence"],
+        proposed_tests=["run skill sandbox tests"],
+        rollback_plan_ref="rollback://skill/release-evidence/1.0.0",
+        blockers=[],
+        generated_at="2026-07-16T16:00:00Z",
+    )
+
+    assert evaluation.sandbox_only is True
+    assert evaluation.runtime_activation_allowed is False
+    assert evaluation.promotion_authorized is False
+    assert evaluation.automatic_promotion_allowed is False
+    assert evaluation.core_mutation_allowed is False
+    assert SKILL_SANDBOX_CASE_RESULT_SCHEMA.contract_name == (
+        "SkillSandboxCaseResultContract"
+    )
+    assert SKILL_SANDBOX_EVAL_SCHEMA.contract_name == "SkillSandboxEvalContract"
+    assert "runtime_activation_allowed" in SKILL_SANDBOX_EVAL_SCHEMA.optional_fields
+    assert "candidate_version" in (
+        SANDBOX_TO_RELEASE_CHECKLIST_SCHEMA.optional_fields
+    )
+    assert "candidate_version" in EVOLUTION_REVIEW_DECISION_SCHEMA.optional_fields
 
 
 def test_deliberative_plan_schema_declares_semantic_memory_evidence_fields() -> None:

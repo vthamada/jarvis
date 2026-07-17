@@ -477,6 +477,55 @@ SKILL_MINING_RESULT_SCHEMA = CanonicalSchema(
     ),
 )
 
+SKILL_SANDBOX_CASE_RESULT_SCHEMA = CanonicalSchema(
+    name="SkillSandboxCaseResultSchema",
+    contract_name="SkillSandboxCaseResultContract",
+    required_fields=(
+        "case_id",
+        "passed",
+        "checks",
+        "failed_checks",
+        "evidence_refs",
+    ),
+    notes=("Case pass status is derived from all declared checks.",),
+)
+
+SKILL_SANDBOX_EVAL_SCHEMA = CanonicalSchema(
+    name="SkillSandboxEvalSchema",
+    contract_name="SkillSandboxEvalContract",
+    required_fields=(
+        "eval_id",
+        "skill_candidate_id",
+        "skill_id",
+        "version",
+        "evolution_proposal_id",
+        "review_decision_id",
+        "eval_status",
+        "required_pass_rate",
+        "pass_rate",
+        "total_cases",
+        "passed_cases",
+        "failed_cases",
+        "case_results",
+        "evidence_refs",
+        "proposed_tests",
+        "rollback_plan_ref",
+        "blockers",
+        "generated_at",
+    ),
+    optional_fields=(
+        "sandbox_only",
+        "human_review_required",
+        "runtime_activation_allowed",
+        "promotion_authorized",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Sandbox evidence only; a passing eval remains pending release and human gates.",
+    ),
+)
+
 PROCEDURAL_PLAYBOOK_CANDIDATE_SCHEMA = CanonicalSchema(
     name="ProceduralPlaybookCandidateSchema",
     contract_name="ProceduralPlaybookCandidateContract",
@@ -804,6 +853,8 @@ EVOLUTION_REVIEW_DECISION_SCHEMA = CanonicalSchema(
         "rollback_plan_ref",
         "risk_acceptance",
         "review_notes",
+        "candidate_identity_ref",
+        "candidate_version",
         "automatic_promotion_allowed",
         "core_mutation_allowed",
     ),
@@ -1310,6 +1361,11 @@ SANDBOX_TO_RELEASE_CHECKLIST_SCHEMA = CanonicalSchema(
         "proposed_tests",
         "rollback_plan_ref",
         "blockers",
+        "candidate_type",
+        "candidate_identity_ref",
+        "candidate_version",
+        "sandbox_eval_ref",
+        "sandbox_eval_status",
         "sandbox_required",
         "release_gate_required",
         "automatic_promotion_allowed",

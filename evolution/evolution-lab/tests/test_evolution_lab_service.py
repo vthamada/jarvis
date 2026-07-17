@@ -19,6 +19,7 @@ from shared.contracts import (
     ProceduralPlaybookCandidateContract,
     RecurringPatternEvidenceContract,
     SandboxToReleaseChecklistContract,
+    SkillCandidateContract,
     SkillMiningRequestContract,
 )
 from shared.types import RiskLevel
@@ -793,6 +794,162 @@ def test_skill_miner_blocks_conflicts_and_unsafe_specification() -> None:
     assert "allowed_tools_must_be_explicit" in result.blockers
     assert "automatic_mining_not_allowed" in result.blockers
     assert "automatic_activation_not_allowed" in result.blockers
+
+
+def skill_candidate_for_sandbox() -> SkillCandidateContract:
+    return SkillCandidateContract(
+        skill_candidate_id="skill-candidate://sandbox-release/1.0.0",
+        skill_id="skill://sandbox-release",
+        skill_name="sandbox release evidence",
+        version="1.0.0",
+        workflow_profile="software_change_workflow",
+        domain="software_engineering",
+        specialist_type="software_change_specialist",
+        inputs=["change_scope", "release_evidence"],
+        outputs=["bounded_release_recommendation"],
+        allowed_tools=["local_test_runner"],
+        bounded_instructions=["verify evidence", "report missing gates"],
+        risk_level=RiskLevel.MODERATE,
+        evidence_refs=["evidence://skill/sandbox-release/source"],
+        source_pattern_refs=["recurring-pattern://sandbox-release"],
+        failure_modes=["missing_release_evidence"],
+        proposed_tests=["test://skill/sandbox-release"],
+        rollback_plan_ref="rollback://skill/sandbox-release/1.0.0",
+        timestamp="2026-07-16T16:00:00Z",
+    )
+
+
+def test_skill_candidate_review_eval_checklist_and_gate_are_governed_end_to_end() -> None:
+    temp_dir = runtime_dir("evolution-lab-skill-sandbox")
+    service = EvolutionLabService(database_path=str(temp_dir / "evolution.db"))
+    candidate = skill_candidate_for_sandbox()
+
+    proposal = service.create_proposal_from_skill_candidate(candidate)
+    queue_item = service.list_human_review_queue(limit=1)[0]
+    review = service.review_proposal(
+        evolution_proposal_id=str(proposal.evolution_proposal_id),
+        action="sandbox",
+        operator_ref="operator://local_console",
+        evidence_refs=["evidence://skill/sandbox-release/review"],
+        proposed_tests=list(candidate.proposed_tests),
+        rollback_plan_ref=candidate.rollback_plan_ref,
+    )
+    evaluation = service.evaluate_skill_candidate_in_sandbox(
+        candidate=candidate,
+        proposal=proposal,
+        review_decision=review,
+        test_cases={
+            "expected-output": {
+                "output_contract_satisfied": True,
+                "failure_mode_contained": True,
+            },
+            "tool-boundary": {
+                "allowed_tool_only": True,
+                "core_unchanged": True,
+            },
+        },
+        evidence_refs=["eval://skill/sandbox-release/run-1"],
+        generated_at="2026-07-16T16:05:00Z",
+    )
+    checklist = service.build_sandbox_to_release_checklist(
+        proposal,
+        review_decision=review,
+        skill_sandbox_eval=evaluation,
+    )
+    gate = EvolutionLabService.evaluate_promotion_gate(
+        checklist,
+        completed_gates=[
+            "standard_engineering_gate",
+            "release_gate_before_promotion",
+        ],
+    )
+    reviewed_queue_item = service.list_human_review_queue(limit=1)[0]
+
+    assert proposal.proposal_type == "skill_candidate"
+    assert proposal.optimization_candidate_status == "candidate"
+    assert proposal.optimization_safety_status == "sandbox_only"
+    assert candidate.skill_candidate_id in proposal.candidate_refs
+    assert queue_item.candidate_refs == proposal.candidate_refs
+    assert review.review_status == "sandboxed"
+    assert reviewed_queue_item.review_status == "sandboxed"
+    assert review.candidate_identity_ref == candidate.skill_id
+    assert review.candidate_version == candidate.version
+    assert evaluation.eval_status == "passed_pending_release_gate"
+    assert evaluation.pass_rate == 1.0
+    assert evaluation.failed_cases == 0
+    assert evaluation.runtime_activation_allowed is False
+    assert evaluation.promotion_authorized is False
+    assert checklist.checklist_status == "ready_for_release_review"
+    assert checklist.candidate_type == "skill_candidate"
+    assert checklist.candidate_identity_ref == candidate.skill_id
+    assert checklist.candidate_version == candidate.version
+    assert checklist.sandbox_eval_ref == evaluation.eval_id
+    assert checklist.sandbox_eval_status == "passed_pending_release_gate"
+    assert "skill_sandbox_eval" in checklist.required_gates
+    assert gate.gate_status == "passed"
+    assert "skill_sandbox_eval" in gate.completed_gates
+    assert gate.release_conclusion == "release_gate_passed_pending_human_decision"
+    assert gate.human_decision_required is True
+    assert gate.promotion_authorized is False
+    assert gate.automatic_promotion_allowed is False
+    assert candidate.activation_status == "inactive"
+
+
+def test_skill_sandbox_failure_blocks_checklist_and_promotion_gate() -> None:
+    temp_dir = runtime_dir("evolution-lab-skill-sandbox-blocked")
+    service = EvolutionLabService(database_path=str(temp_dir / "evolution.db"))
+    candidate = skill_candidate_for_sandbox()
+    proposal = service.create_proposal_from_skill_candidate(candidate)
+    review = service.review_proposal(
+        evolution_proposal_id=str(proposal.evolution_proposal_id),
+        action="sandbox",
+        operator_ref="operator://local_console",
+        evidence_refs=["evidence://skill/sandbox-release/review"],
+        proposed_tests=list(candidate.proposed_tests),
+        rollback_plan_ref=candidate.rollback_plan_ref,
+    )
+
+    evaluation = service.evaluate_skill_candidate_in_sandbox(
+        candidate=candidate,
+        proposal=proposal,
+        review_decision=review,
+        test_cases={
+            "tool-boundary": {
+                "allowed_tool_only": False,
+                "core_unchanged": True,
+            }
+        },
+        evidence_refs=["eval://skill/sandbox-release/failed"],
+        generated_at="2026-07-16T16:06:00Z",
+    )
+    checklist_without_eval = service.build_sandbox_to_release_checklist(
+        proposal,
+        review_decision=review,
+    )
+    checklist = service.build_sandbox_to_release_checklist(
+        proposal,
+        review_decision=review,
+        skill_sandbox_eval=evaluation,
+    )
+    gate = EvolutionLabService.evaluate_promotion_gate(
+        checklist,
+        completed_gates=[
+            "standard_engineering_gate",
+            "release_gate_before_promotion",
+        ],
+    )
+
+    assert evaluation.eval_status == "blocked"
+    assert evaluation.pass_rate == 0.0
+    assert evaluation.case_results[0].failed_checks == ["allowed_tool_only"]
+    assert "sandbox_pass_rate_below_threshold" in evaluation.blockers
+    assert checklist_without_eval.checklist_status == "blocked"
+    assert "skill_sandbox_eval_required" in checklist_without_eval.blockers
+    assert checklist.checklist_status == "blocked"
+    assert "skill_sandbox_eval_not_passed" in checklist.blockers
+    assert gate.gate_status == "blocked"
+    assert gate.promotion_authorized is False
+    assert candidate.activation_status == "inactive"
 
 
 def test_evolution_lab_blocks_human_approval_without_required_evidence() -> None:

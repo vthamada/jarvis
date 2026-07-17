@@ -27,6 +27,8 @@ from shared.contracts import (
     SkillCandidateContract,
     SkillMiningRequestContract,
     SkillMiningResultContract,
+    SkillSandboxCaseResultContract,
+    SkillSandboxEvalContract,
     TechnologyAbsorptionCandidateContract,
 )
 from shared.eval_expansion import derive_expanded_eval_state
@@ -1304,6 +1306,292 @@ class EvolutionLabService:
         parts = value.split(".")
         return len(parts) == 3 and all(part.isdigit() for part in parts)
 
+    def create_proposal_from_skill_candidate(
+        self,
+        candidate: SkillCandidateContract,
+        *,
+        strategy_name: str | None = None,
+    ) -> EvolutionProposalContract:
+        """Persist a sandbox-only proposal without activating the skill candidate."""
+
+        blockers = list(candidate.blockers)
+        if candidate.registry_status != "candidate_inactive":
+            blockers.append("inactive_registry_candidate_required")
+        if candidate.review_status != "needs_review":
+            blockers.append("human_review_required_before_skill_proposal")
+        if candidate.activation_status != "inactive":
+            blockers.append("inactive_skill_candidate_required")
+        if not candidate.sandbox_required:
+            blockers.append("sandbox_required")
+        if not candidate.evidence_refs or not candidate.source_pattern_refs:
+            blockers.append("pattern_and_evidence_refs_required")
+        if not candidate.proposed_tests:
+            blockers.append("tests_required")
+        if not candidate.rollback_plan_ref:
+            blockers.append("rollback_plan_required")
+        if candidate.automatic_activation_allowed:
+            blockers.append("automatic_activation_not_allowed")
+        if candidate.automatic_promotion_allowed:
+            blockers.append("automatic_promotion_not_allowed")
+        if candidate.core_mutation_allowed:
+            blockers.append("core_mutation_not_allowed")
+        blockers = self._unique_values(blockers)
+        candidate_refs = self._unique_values(
+            [
+                candidate.skill_candidate_id,
+                candidate.skill_id,
+                *candidate.source_pattern_refs,
+            ]
+        )
+        source_signals = self._unique_values(
+            [
+                f"skill://candidate/{self._signal_value(candidate.skill_candidate_id)}",
+                f"skill://identity/{self._signal_value(candidate.skill_id)}",
+                f"skill://version/{candidate.version}",
+                f"skill://workflow/{self._signal_value(candidate.workflow_profile)}",
+                f"skill://domain/{self._signal_value(candidate.domain)}",
+                "skill://activation/inactive",
+                "skill://promotion/manual_review_and_release_gate_required",
+                *candidate.evidence_refs,
+                *candidate.source_pattern_refs,
+                *(f"skill://blocker/{item}" for item in blockers),
+            ]
+        )
+        return self.create_proposal(
+            proposal_type="skill_candidate",
+            target_scope=f"skill:{candidate.skill_id}@{candidate.version}",
+            hypothesis=f"sandbox skill candidate {candidate.skill_name}",
+            expected_gain=(
+                "reuse reviewed recurring behavior after sandbox and human release"
+            ),
+            baseline_refs=self._unique_values(
+                ["baseline://sovereign-core/current", *candidate.evidence_refs]
+            ),
+            source_signals=source_signals,
+            risk_hint=str(candidate.risk_level),
+            proposed_tests=list(candidate.proposed_tests),
+            strategy_name=strategy_name,
+            candidate_refs=candidate_refs,
+            evaluation_matrix={
+                "skill_candidate": {
+                    "skill_candidate_id": candidate.skill_candidate_id,
+                    "skill_id": candidate.skill_id,
+                    "skill_name": candidate.skill_name,
+                    "version": candidate.version,
+                    "workflow_profile": candidate.workflow_profile,
+                    "domain": candidate.domain,
+                    "specialist_type": candidate.specialist_type,
+                    "risk_level": str(candidate.risk_level),
+                    "registry_status": candidate.registry_status,
+                    "review_status": candidate.review_status,
+                    "activation_status": candidate.activation_status,
+                    "blockers": blockers,
+                    "runtime_activation_allowed": False,
+                }
+            },
+            strategy_context={
+                "skill_candidate": {
+                    "skill_candidate_id": candidate.skill_candidate_id,
+                    "skill_id": candidate.skill_id,
+                    "skill_name": candidate.skill_name,
+                    "version": candidate.version,
+                    "workflow_profile": candidate.workflow_profile,
+                    "domain": candidate.domain,
+                    "specialist_type": candidate.specialist_type,
+                    "inputs": list(candidate.inputs),
+                    "outputs": list(candidate.outputs),
+                    "allowed_tools": list(candidate.allowed_tools),
+                    "bounded_instructions": list(candidate.bounded_instructions),
+                    "failure_modes": list(candidate.failure_modes),
+                    "source_pattern_refs": list(candidate.source_pattern_refs),
+                    "rollback_plan_ref": candidate.rollback_plan_ref,
+                    "activation_status": "inactive",
+                },
+                "promotion_policy": {
+                    "automatic_activation": False,
+                    "automatic_promotion": False,
+                    "core_mutation_allowed": False,
+                    "human_review_required": True,
+                    "sandbox_eval_required": True,
+                    "release_gate_required": True,
+                },
+                "evolution_review": self._review_context(
+                    status="needs_review",
+                    blockers=blockers,
+                    rollback_plan_ref=candidate.rollback_plan_ref,
+                ),
+            },
+            optimization_candidate_status="blocked" if blockers else "candidate",
+            optimization_safety_status=(
+                "blocked_by_safety" if blockers else "sandbox_only"
+            ),
+            optimization_blockers=blockers,
+        )
+
+    def evaluate_skill_candidate_in_sandbox(
+        self,
+        *,
+        candidate: SkillCandidateContract,
+        proposal: EvolutionProposalContract,
+        review_decision: EvolutionReviewDecisionContract,
+        test_cases: dict[str, dict[str, bool]],
+        evidence_refs: list[str],
+        generated_at: str,
+        required_pass_rate: float = 1.0,
+    ) -> SkillSandboxEvalContract:
+        """Derive sandbox evidence while keeping runtime activation impossible."""
+
+        if not 0.0 < required_pass_rate <= 1.0:
+            raise ValueError("required_pass_rate must be greater than zero and at most one")
+        if str(review_decision.evolution_proposal_id) != str(
+            proposal.evolution_proposal_id
+        ):
+            raise ValueError("review decision does not belong to the skill proposal")
+        blockers = list(candidate.blockers)
+        skill_context = dict(proposal.evaluation_matrix.get("skill_candidate", {}))
+        if proposal.proposal_type != "skill_candidate":
+            blockers.append("skill_candidate_proposal_required")
+        if candidate.skill_candidate_id not in proposal.candidate_refs:
+            blockers.append("skill_candidate_ref_mismatch")
+        if skill_context.get("skill_id") != candidate.skill_id:
+            blockers.append("skill_identity_mismatch")
+        if skill_context.get("version") != candidate.version:
+            blockers.append("skill_version_mismatch")
+        if review_decision.review_status not in {"approved", "sandboxed"}:
+            blockers.append("human_sandbox_review_required")
+        if review_decision.candidate_identity_ref != candidate.skill_id:
+            blockers.append("review_skill_identity_mismatch")
+        if review_decision.candidate_version != candidate.version:
+            blockers.append("review_skill_version_mismatch")
+        if review_decision.automatic_promotion_allowed:
+            blockers.append("automatic_promotion_not_allowed")
+        if review_decision.core_mutation_allowed:
+            blockers.append("core_mutation_not_allowed")
+        if candidate.activation_status != "inactive":
+            blockers.append("inactive_skill_candidate_required")
+        if not test_cases:
+            blockers.append("sandbox_test_cases_required")
+        if len(test_cases) > 50:
+            blockers.append("sandbox_test_case_limit_exceeded")
+
+        case_results: list[SkillSandboxCaseResultContract] = []
+        for case_id, checks in list(test_cases.items())[:50]:
+            case_blockers: list[str] = []
+            if not case_id or len(case_id) > 160:
+                case_blockers.append("case_id_required_and_bounded")
+            if not checks:
+                case_blockers.append("case_checks_required")
+            if len(checks) > 50:
+                case_blockers.append("case_check_limit_exceeded")
+            if any(not isinstance(value, bool) for value in checks.values()):
+                case_blockers.append("case_checks_must_be_boolean")
+            safe_checks = {
+                str(name)[:160]: bool(value)
+                for name, value in list(checks.items())[:50]
+            }
+            failed_checks = [
+                name for name, passed in safe_checks.items() if not passed
+            ]
+            failed_checks.extend(case_blockers)
+            passed = bool(safe_checks) and not failed_checks
+            case_evidence = [
+                f"skill-sandbox-case://{self._signal_value(case_id or 'invalid')}"
+            ]
+            case_results.append(
+                SkillSandboxCaseResultContract(
+                    case_id=case_id[:160] or "invalid_case",
+                    passed=passed,
+                    checks=safe_checks,
+                    failed_checks=self._unique_values(failed_checks),
+                    evidence_refs=case_evidence,
+                )
+            )
+            blockers.extend(
+                f"case:{case_id or 'invalid'}:{item}" for item in case_blockers
+            )
+
+        total_cases = len(case_results)
+        passed_cases = sum(result.passed for result in case_results)
+        failed_cases = total_cases - passed_cases
+        pass_rate = round(passed_cases / total_cases, 4) if total_cases else 0.0
+        if pass_rate < required_pass_rate:
+            blockers.append("sandbox_pass_rate_below_threshold")
+        safe_evidence_refs = self._unique_values(
+            [
+                candidate.skill_candidate_id,
+                candidate.skill_id,
+                f"skill-version://{candidate.version}",
+                str(proposal.evolution_proposal_id),
+                review_decision.review_decision_id,
+                *candidate.evidence_refs,
+                *review_decision.evidence_refs,
+                *evidence_refs,
+                *(
+                    ref
+                    for result in case_results
+                    for ref in result.evidence_refs
+                ),
+            ]
+        )[:250]
+        if not evidence_refs:
+            blockers.append("external_sandbox_evidence_required")
+        if not review_decision.proposed_tests or not candidate.proposed_tests:
+            blockers.append("proposed_tests_required")
+        if review_decision.rollback_plan_ref != candidate.rollback_plan_ref:
+            blockers.append("rollback_plan_mismatch")
+        resolved_blockers = self._unique_values(blockers)
+        eval_seed = (
+            f"{candidate.skill_candidate_id}:"
+            f"{proposal.evolution_proposal_id}:{review_decision.review_decision_id}"
+        )
+        eval_id = (
+            "skill-sandbox-eval://"
+            f"{sha256(eval_seed.encode('utf-8')).hexdigest()[:16]}"
+        )
+        eval_result = SkillSandboxEvalContract(
+            eval_id=eval_id,
+            skill_candidate_id=candidate.skill_candidate_id,
+            skill_id=candidate.skill_id,
+            version=candidate.version,
+            evolution_proposal_id=proposal.evolution_proposal_id,
+            review_decision_id=review_decision.review_decision_id,
+            eval_status=(
+                "passed_pending_release_gate" if not resolved_blockers else "blocked"
+            ),
+            required_pass_rate=required_pass_rate,
+            pass_rate=pass_rate,
+            total_cases=total_cases,
+            passed_cases=passed_cases,
+            failed_cases=failed_cases,
+            case_results=case_results,
+            evidence_refs=safe_evidence_refs,
+            proposed_tests=self._unique_values(
+                [*candidate.proposed_tests, *review_decision.proposed_tests]
+            ),
+            rollback_plan_ref=candidate.rollback_plan_ref,
+            blockers=resolved_blockers,
+            generated_at=generated_at,
+        )
+        current_proposal = self.repository.fetch_proposal(
+            str(proposal.evolution_proposal_id)
+        ) or proposal
+        context = dict(current_proposal.strategy_context)
+        context["skill_sandbox_eval"] = {
+            "eval_id": eval_result.eval_id,
+            "skill_candidate_id": eval_result.skill_candidate_id,
+            "skill_id": eval_result.skill_id,
+            "version": eval_result.version,
+            "eval_status": eval_result.eval_status,
+            "pass_rate": eval_result.pass_rate,
+            "blockers": list(eval_result.blockers),
+            "runtime_activation_allowed": False,
+            "promotion_authorized": False,
+        }
+        self.repository.record_proposal(
+            replace(current_proposal, strategy_context=context)
+        )
+        return eval_result
+
     def create_proposal_from_procedural_playbook_candidate(
         self,
         candidate: ProceduralPlaybookCandidateContract,
@@ -1486,6 +1774,9 @@ class EvolutionLabService:
             if blockers and normalized_action in RISKY_REVIEW_ACTIONS
             else EVOLUTION_REVIEW_ACTIONS[normalized_action]
         )
+        candidate_identity_ref, candidate_version = self._proposal_candidate_metadata(
+            proposal
+        )
         decision = EvolutionReviewDecisionContract(
             review_decision_id=(
                 f"review-decision://{proposal.evolution_proposal_id}/{uuid4().hex[:8]}"
@@ -1499,6 +1790,8 @@ class EvolutionLabService:
             rollback_plan_ref=safe_rollback_ref,
             risk_acceptance=risk_acceptance,
             review_notes=safe_notes + blockers,
+            candidate_identity_ref=candidate_identity_ref,
+            candidate_version=candidate_version,
             timestamp=self.now(),
             automatic_promotion_allowed=False,
             core_mutation_allowed=False,
@@ -1572,6 +1865,7 @@ class EvolutionLabService:
         proposal: EvolutionProposalContract,
         *,
         review_decision: EvolutionReviewDecisionContract | None = None,
+        skill_sandbox_eval: SkillSandboxEvalContract | None = None,
     ) -> SandboxToReleaseChecklistContract:
         """Build an executable checklist without authorizing promotion."""
 
@@ -1581,19 +1875,31 @@ class EvolutionLabService:
             raise ValueError(
                 "review decision does not belong to the evolution proposal"
             )
+        if skill_sandbox_eval is not None and str(
+            skill_sandbox_eval.evolution_proposal_id
+        ) != str(proposal.evolution_proposal_id):
+            raise ValueError("skill sandbox eval does not belong to the proposal")
         review_context = dict(proposal.strategy_context.get("evolution_review", {}))
         human_review_status = (
             review_decision.review_status
             if review_decision is not None
             else str(review_context.get("review_status") or "needs_review")
         )
+        review_evidence = list(
+            review_decision.evidence_refs if review_decision else []
+        )
         evidence_refs = self._unique_values(
-            list(review_decision.evidence_refs if review_decision else [])
-            or self._proposal_evidence_refs(proposal)
+            [
+                *(review_evidence or self._proposal_evidence_refs(proposal)),
+                *list(skill_sandbox_eval.evidence_refs if skill_sandbox_eval else []),
+            ]
         )
         proposed_tests = self._unique_values(
-            list(review_decision.proposed_tests if review_decision else [])
-            or list(proposal.proposed_tests)
+            [
+                *list(proposal.proposed_tests),
+                *list(review_decision.proposed_tests if review_decision else []),
+                *list(skill_sandbox_eval.proposed_tests if skill_sandbox_eval else []),
+            ]
         )
         rollback_plan_ref = (
             review_decision.rollback_plan_ref
@@ -1616,6 +1922,54 @@ class EvolutionLabService:
             blockers.append("rollback_plan_required")
         if not proposal.requires_sandbox:
             blockers.append("sandbox_required")
+        candidate_type: str | None = None
+        candidate_identity_ref: str | None = None
+        candidate_version: str | None = None
+        sandbox_eval_ref: str | None = None
+        sandbox_eval_status: str | None = None
+        required_gates = [
+            "human_review",
+            "evidence",
+            "proposed_tests",
+            "rollback_plan",
+            "standard_engineering_gate",
+            "release_gate_before_promotion",
+        ]
+        if proposal.proposal_type == "skill_candidate":
+            candidate_type = "skill_candidate"
+            candidate_identity_ref, candidate_version = (
+                self._proposal_candidate_metadata(proposal)
+            )
+            required_gates.append("skill_sandbox_eval")
+            if not candidate_identity_ref or not candidate_version:
+                blockers.append("skill_identity_and_version_required")
+            if review_decision is None:
+                blockers.append("skill_human_review_decision_required")
+            elif (
+                review_decision.candidate_identity_ref != candidate_identity_ref
+                or review_decision.candidate_version != candidate_version
+            ):
+                blockers.append("skill_review_metadata_mismatch")
+            if skill_sandbox_eval is None:
+                blockers.append("skill_sandbox_eval_required")
+            else:
+                sandbox_eval_ref = skill_sandbox_eval.eval_id
+                sandbox_eval_status = skill_sandbox_eval.eval_status
+                if skill_sandbox_eval.skill_id != candidate_identity_ref:
+                    blockers.append("skill_sandbox_eval_identity_mismatch")
+                if skill_sandbox_eval.version != candidate_version:
+                    blockers.append("skill_sandbox_eval_version_mismatch")
+                if skill_sandbox_eval.review_decision_id != (
+                    review_decision.review_decision_id if review_decision else None
+                ):
+                    blockers.append("skill_sandbox_eval_review_mismatch")
+                if skill_sandbox_eval.eval_status != "passed_pending_release_gate":
+                    blockers.append("skill_sandbox_eval_not_passed")
+                if skill_sandbox_eval.runtime_activation_allowed:
+                    blockers.append("runtime_activation_not_allowed")
+                if skill_sandbox_eval.promotion_authorized:
+                    blockers.append("sandbox_eval_cannot_authorize_promotion")
+                blockers.extend(skill_sandbox_eval.blockers)
         blockers = self._unique_values(blockers)
         return SandboxToReleaseChecklistContract(
             checklist_id=(
@@ -1628,18 +1982,16 @@ class EvolutionLabService:
                 "ready_for_release_review" if not blockers else "blocked"
             ),
             human_review_status=human_review_status,
-            required_gates=[
-                "human_review",
-                "evidence",
-                "proposed_tests",
-                "rollback_plan",
-                "standard_engineering_gate",
-                "release_gate_before_promotion",
-            ],
+            required_gates=required_gates,
             evidence_refs=evidence_refs,
             proposed_tests=proposed_tests,
             rollback_plan_ref=rollback_plan_ref,
             blockers=blockers,
+            candidate_type=candidate_type,
+            candidate_identity_ref=candidate_identity_ref,
+            candidate_version=candidate_version,
+            sandbox_eval_ref=sandbox_eval_ref,
+            sandbox_eval_status=sandbox_eval_status,
             sandbox_required=True,
             release_gate_required=True,
             automatic_promotion_allowed=False,
@@ -1662,6 +2014,8 @@ class EvolutionLabService:
             "standard_engineering_gate",
             "release_gate_before_promotion",
         ]
+        if checklist.candidate_type == "skill_candidate":
+            mandatory_gates.append("skill_sandbox_eval")
         required_gates = EvolutionLabService._unique_values(
             [*checklist.required_gates, *mandatory_gates]
         )
@@ -1675,6 +2029,14 @@ class EvolutionLabService:
             intrinsic_gates.append("proposed_tests")
         if checklist.rollback_plan_ref:
             intrinsic_gates.append("rollback_plan")
+        if (
+            checklist.candidate_type == "skill_candidate"
+            and checklist.candidate_identity_ref
+            and checklist.candidate_version
+            and checklist.sandbox_eval_ref
+            and checklist.sandbox_eval_status == "passed_pending_release_gate"
+        ):
+            intrinsic_gates.append("skill_sandbox_eval")
         externally_verifiable = {
             "standard_engineering_gate",
             "release_gate_before_promotion",
@@ -1703,6 +2065,12 @@ class EvolutionLabService:
             blockers.append("automatic_promotion_not_allowed")
         if checklist.core_mutation_allowed:
             blockers.append("core_mutation_not_allowed")
+        if checklist.candidate_type == "skill_candidate" and (
+            not checklist.candidate_identity_ref
+            or not checklist.candidate_version
+            or not checklist.sandbox_eval_ref
+        ):
+            blockers.append("skill_release_metadata_required")
         blockers.extend(f"gate_not_completed:{gate}" for gate in missing_gates)
         blockers = EvolutionLabService._unique_values(blockers)
         gate_passed = not blockers
@@ -1856,6 +2224,18 @@ class EvolutionLabService:
             if str(item).startswith(prefixes)
         ]
         return EvolutionLabService._unique_values(values)
+
+    @staticmethod
+    def _proposal_candidate_metadata(
+        proposal: EvolutionProposalContract,
+    ) -> tuple[str | None, str | None]:
+        skill_context = dict(proposal.evaluation_matrix.get("skill_candidate", {}))
+        skill_id = skill_context.get("skill_id")
+        version = skill_context.get("version")
+        return (
+            str(skill_id) if skill_id else None,
+            str(version) if version else None,
+        )
 
     @staticmethod
     def _reviewed_guidance_scope(

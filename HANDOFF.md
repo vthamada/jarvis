@@ -2,6 +2,17 @@
 
 ## Atualizacao 2026-07-16
 
+`MB-179` foi concluido como cadeia governada de review e sandbox para skill
+candidata. `create_proposal_from_skill_candidate` persiste identidade, versao,
+escopo, risco, evidencias, testes e rollback sem ativar runtime; review humano
+carrega skill/version; `SkillSandboxEvalContract` deriva pass/fail de checks e
+mescla o resultado sobre a proposta mais recente sem perder o historico de
+review. O checklist exige o gate intrinseco `skill_sandbox_eval` e bloqueia
+ausencia, falha ou mismatch. Mesmo a cadeia totalmente verde termina em
+`release_gate_passed_pending_human_decision`, com `promotion_authorized=false`
+e candidata inativa. `MB-180` e o unico item tecnico `ready` para expor essa
+cadeia no console read-only.
+
 `MB-178` foi concluido como Skill Miner bounded. Os novos
 `SkillMiningRequestContract` e `SkillMiningResultContract` separam spec
 explicita, eligibility e candidata. O `evolution-lab` exige pattern elegivel,
@@ -10,8 +21,7 @@ confidence bounded, evidencia, ausencia de conflitos, interface completa,
 tools explicitas e risco no maximo moderado. Qualquer insuficiencia retorna
 `blocked` com `candidate=None`; sucesso produz somente candidata
 `candidate_inactive/needs_review/inactive`, com identidade deterministica e
-registro idempotente. `MB-179` e o unico item tecnico `ready` para conectar
-review humano, eval sandbox e checklist, ainda sem ativacao runtime.
+registro idempotente. Esse estado foi sucedido pelo fechamento de `MB-179`.
 
 `MB-177` foi concluido como registry canonico de skills candidatas. O novo
 `SkillCandidateContract` formaliza identidade logica, semver, workflow,
@@ -48,7 +58,7 @@ flag explicita e salva evidencia historica em `.jarvis_runtime/readiness/`; o
 console expoe a mesma leitura por `readiness-dashboard`. Capacidades deferred
 nao viram falsos blockers e nenhum status autoriza release autonomo. A fila
 `MB-161` a `MB-174` esta fechada. Esse estado foi sucedido por `MB-175` e pelo
-fechamento de `MB-176`, `MB-177` e `MB-178`; `MB-179` e agora o unico item tecnico
+fechamento de `MB-176` a `MB-179`; `MB-180` e agora o unico item tecnico
 `ready`.
 
 `MB-173` foi concluido: `KnowledgeSourceEvidenceContract` e

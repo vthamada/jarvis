@@ -80,6 +80,12 @@
 - `evolution-lab` exige threshold, outcomes consistentes, experiencias/reflexoes distintas, confidence, evidencia, spec bounded, tools explicitas e risco controlado; falha sempre retorna `candidate=None`;
 - candidata elegivel nasce deterministica, idempotente e inativa, e o teste ponta a ponta a registra sem ativacao; `MB-179` e o unico item tecnico `ready`.
 
+### MB-179 conecta skill a review, sandbox e release gate
+
+- proposta `skill_candidate` e decisao humana carregam identidade, versao, escopo, risco, evidencias, testes e rollback sem ativar runtime;
+- `SkillSandboxEvalContract` deriva casos/checks, preserva historico de review e retorna somente `passed_pending_release_gate` ou `blocked`;
+- checklist exige `skill_sandbox_eval`, e testes pass/block comprovam que ate gate verde permanece `pending_human_decision` e `promotion_authorized=false`; `MB-180` e o unico item tecnico `ready`.
+
 ## 2026-07-04
 
 ### MB-161 fecha anchors de evidencia de memoria semantica

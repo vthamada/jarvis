@@ -50,6 +50,24 @@ A passed gate returns `eligible_for_human_promotion_decision` and
 `core_mutation_allowed=false`. Human authorization remains a separate release
 decision outside this gate evaluator.
 
+## MB-179 Skill Candidate Release Chain
+
+Skill candidates add a stricter gate to the generic release checklist. Before
+the checklist can become `ready_for_release_review`, the operator must be able
+to trace the same skill identity and version through:
+
+1. inactive skill registry candidate;
+2. persisted evolution proposal;
+3. human review decision with evidence, tests and rollback;
+4. `SkillSandboxEvalContract` derived from explicit case checks;
+5. sandbox-to-release checklist.
+
+The checklist requires `skill_sandbox_eval` in addition to the standard gates.
+Missing, failed or mismatched sandbox evidence blocks release review. A passing
+skill eval has status `passed_pending_release_gate`; a passing promotion gate
+still has `promotion_authorized=false` and does not activate the skill in
+routing, planning or tool execution.
+
 ## 1. Objetivo
 
 Este documento operacionaliza a política de **releases, versionamento e mudança controlada** do JARVIS.
