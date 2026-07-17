@@ -1,5 +1,18 @@
 # HANDOFF
 
+## Atualizacao 2026-07-17
+
+`MB-188` foi concluido como baseline de metricas longitudinais de aprendizado.
+Os contratos `LearningVersionTargetContract`,
+`LearningOutcomeObservationContract`, `LongitudinalVersionMetricsContract` e
+`LongitudinalLearningReportContract` separam alvo versionado, observacao e
+comparacao. O `observability-service` mede sucesso, retrabalho, feedback,
+regressao e rollback; `tools/longitudinal_learning_report.py` correlaciona
+auditorias, reviewed guidance e propostas/evals, e o console expoe
+`learning-report`. Eval offline nunca vale como runtime, versao inativa nao
+pode alegar impacto e nenhuma metrica autoriza promocao ou mutacao. `MB-189` e
+o unico item tecnico `ready`.
+
 ## Atualizacao 2026-07-16
 
 `MB-187` foi concluido como fila humana governada de lifecycle de memoria. Os
@@ -10,7 +23,7 @@ em SQLite/PostgreSQL e nunca executa manutencao; `governance-service` exige
 evidencia e rollback para approve/rollback e bloqueia autoridade automatica. O
 console expoe `memory-review-queue` e `memory-review`. E2E comprova o fluxo de
 missao ate revisao e que corpus, guidance e missao permanecem intactos mesmo
-apos approve/rollback. `MB-188` e o unico item tecnico `ready`.
+apos approve/rollback. Esse estado foi sucedido pelo fechamento de `MB-188`.
 
 `MB-186` foi concluido como hardening da politica causal de memoria. Os novos
 contratos `MemoryInfluence*` normalizam sinais semanticos, procedurais,

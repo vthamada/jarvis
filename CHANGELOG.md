@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 2026-07-17
+
+### MB-188 mede aprendizado longitudinal por versao
+
+- contratos e schemas compartilhados formalizam alvos versionados, observacoes de outcome, metricas comparativas e relatorio read-only;
+- `observability-service` compara sucesso, retrabalho, feedback, regressao e rollback contra baseline, enquanto o coletor cruza memoria revisada, auditorias runtime e evals de skills/workflows sem fabricar impacto de versao inativa;
+- `jarvis-console learning-report` expoe a evidencia, testes locais/E2E preservam stores e autoridade automatica permanece falsa; `MB-189` passa a ser o unico item tecnico `ready`.
+
 ## 2026-07-16
 
 ### MB-166 define checklist sandbox-to-release

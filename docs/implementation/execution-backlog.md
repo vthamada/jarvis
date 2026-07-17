@@ -3553,7 +3553,7 @@ Fora de escopo:
 
 - `id`: `MB-188`
 - `prioridade`: `P2`
-- `status`: `ready`
+- `status`: `completed`
 - `eixo_do_mestre`: `observabilidade`, `evolucao`, `utilidade`
 - `map_ids`: `OBS-005`, `OBS-009`, `EVL-005`, `EVL-008`
 - `workflow_profile_afetado`: workflows com evidencia longitudinal
@@ -3563,12 +3563,14 @@ Fora de escopo:
 - `dependencias`: `MB-187`
 - `criterio_de_aceite`: relatorio longitudinal mede sucesso, retrabalho, feedback, regressao e rollback por versao, sem converter score em promocao.
 - `gate_minimo`: testes de observability/tools/console e gate padrao
+- `impacto_no_baseline`: contratos compartilhados, agregacao no `observability-service`, coletor read-only e comando `learning-report` comparam versoes de memoria revisada, skills e workflows por sucesso, retrabalho, feedback, regressao e rollback sem autoridade de promocao.
+- `evidencia_de_fechamento`: testes unitarios e E2E cobrem ganho sustentado, regressao, rollback, skill inativa com eval offline, stores vazios e invariantes de nao mutacao; `docs/operations/longitudinal-learning-metrics.md` registra a operacao; `python tools/engineering_gate.py --mode standard` passou integralmente com dois skips esperados.
 
 ### MB-189
 
 - `id`: `MB-189`
 - `prioridade`: `P2`
-- `status`: `blocked`
+- `status`: `ready`
 - `eixo_do_mestre`: `qualidade`, `documentacao`, `readiness`
 - `map_ids`: `OBS-007`, `OBS-008`, `DOC-010`
 - `workflow_profile_afetado`: `operational_readiness_workflow`
@@ -3685,6 +3687,6 @@ Estado atual da fila:
 - `MB-173` foi concluido como baseline de proveniencia, freshness e conflito/incerteza de conhecimento;
 - `MB-174` foi concluido como dashboard integrado de regressao/readiness, fechando a fila `MB-161` a `MB-174`; nao ha item tecnico `ready` ate nova repriorizacao explicita pelo mapa mestre;
 - `MB-175` foi concluido como repriorizacao pos-`MB-174`, abrindo a fila governada de skill/workflow evolution `MB-176` a `MB-189`;
-- `MB-176` a `MB-187` foram concluidos como cadeia de skill/workflow, routing, politica causal e revisao humana de memoria; `MB-188` e o unico item tecnico `ready` e `MB-189` permanece `blocked` por dependencia/ordem;
+- `MB-176` a `MB-188` foram concluidos como cadeia de skill/workflow, routing, politica causal, revisao humana de memoria e medicao longitudinal; `MB-189` e o unico item tecnico `ready`;
 - `SO-001`, `TA-004`, `TA-006` e verticais `deferred` continuam fora da fila sem mudanca explicita de fase;
 - `protective intelligence foundation` continua `deferred` e a matriz da Onda 2 segue como insumo, nao como gatilho automatico para abrir nova vertical.

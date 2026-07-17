@@ -10,12 +10,67 @@ from shared.contracts import (
     CapabilityReadinessContract,
     EvolutionProposalContract,
     ExperienceRecordContract,
+    LearningOutcomeObservationContract,
+    LearningVersionTargetContract,
     PostTaskReflectionContract,
     RecurringPatternReportContract,
     SkillCandidateContract,
 )
 from shared.events import InternalEventEnvelope
 from shared.types import RiskLevel
+
+
+def learning_target(
+    *,
+    version_ref: str,
+    baseline_version_ref: str | None = None,
+    runtime_status: str = "active_reviewed_guidance",
+    rollback_status: str = "not_observed",
+    rollback_plan_ref: str | None = None,
+) -> LearningVersionTargetContract:
+    return LearningVersionTargetContract(
+        target_id=f"learning-target://test/{version_ref.rsplit('/', 1)[-1]}",
+        capability_kind="reviewed_memory",
+        capability_id="software_change_workflow",
+        version_ref=version_ref,
+        lifecycle_status="reviewed_guidance",
+        review_status="approved",
+        runtime_status=runtime_status,
+        evidence_refs=[f"evidence://{version_ref.rsplit('/', 1)[-1]}"],
+        rollback_plan_ref=rollback_plan_ref,
+        rollback_status=rollback_status,
+        observed_at="2026-07-01T12:00:00Z",
+        baseline_version_ref=baseline_version_ref,
+    )
+
+
+def learning_observation(
+    *,
+    observation_id: str,
+    version_ref: str,
+    success: bool,
+    score: float,
+    rework_count: int,
+    feedback: str,
+    regression_flags: list[str] | None = None,
+) -> LearningOutcomeObservationContract:
+    return LearningOutcomeObservationContract(
+        observation_id=observation_id,
+        capability_kind="reviewed_memory",
+        capability_id="software_change_workflow",
+        version_ref=version_ref,
+        source_kind="runtime_mission",
+        observed_at="2026-07-10T12:00:00Z",
+        success=success,
+        success_score=score,
+        rework_count=rework_count,
+        evidence_refs=[f"trace://{observation_id}"],
+        mission_id=f"mission-{observation_id}",
+        workflow_profile="software_change_workflow",
+        route="software_development",
+        feedback_assessment=feedback,
+        regression_flags=regression_flags or [],
+    )
 
 
 def runtime_dir(name: str) -> Path:
@@ -28,6 +83,170 @@ def runtime_dir(name: str) -> Path:
 
 def test_observability_service_name() -> None:
     assert ObservabilityService.name == "observability-service"
+
+
+def test_longitudinal_learning_report_detects_sustained_runtime_gain() -> None:
+    baseline_ref = "baseline://reviewed-memory/software-change"
+    guidance_ref = "reviewed-learning-guidance://software-change/1.0.0"
+    targets = [
+        learning_target(version_ref=baseline_ref, runtime_status="active_baseline"),
+        learning_target(
+            version_ref=guidance_ref,
+            baseline_version_ref=baseline_ref,
+        ),
+    ]
+    observations = [
+        learning_observation(
+            observation_id="baseline-1",
+            version_ref=baseline_ref,
+            success=True,
+            score=0.6,
+            rework_count=1,
+            feedback="not_helpful",
+        ),
+        learning_observation(
+            observation_id="baseline-2",
+            version_ref=baseline_ref,
+            success=False,
+            score=0.4,
+            rework_count=1,
+            feedback="not_helpful",
+        ),
+        learning_observation(
+            observation_id="guidance-1",
+            version_ref=guidance_ref,
+            success=True,
+            score=0.9,
+            rework_count=0,
+            feedback="helpful",
+        ),
+        learning_observation(
+            observation_id="guidance-2",
+            version_ref=guidance_ref,
+            success=True,
+            score=1.0,
+            rework_count=0,
+            feedback="helpful",
+        ),
+    ]
+
+    report = ObservabilityService.build_longitudinal_learning_report(
+        report_id="longitudinal-learning-report://sustained-gain",
+        targets=targets,
+        observations=observations,
+        generated_at="2026-07-16T12:00:00Z",
+        minimum_observations=2,
+    )
+
+    guidance_metric = next(
+        metric for metric in report.version_metrics if metric.version_ref == guidance_ref
+    )
+    assert report.report_status == "sustained_gain_observed"
+    assert guidance_metric.trend_status == "sustained_gain"
+    assert guidance_metric.success_rate_delta == 0.5
+    assert guidance_metric.rework_rate_delta == -1.0
+    assert guidance_metric.helpful_feedback_rate == 1.0
+    assert report.read_only is True
+    assert report.promotion_authorized is False
+    assert report.automatic_promotion_allowed is False
+    assert report.core_mutation_allowed is False
+
+
+def test_longitudinal_learning_report_surfaces_regression_and_rollback_once() -> None:
+    baseline_ref = "baseline://reviewed-memory/software-change"
+    guidance_ref = "reviewed-learning-guidance://software-change/2.0.0"
+    report = ObservabilityService.build_longitudinal_learning_report(
+        report_id="longitudinal-learning-report://rollback",
+        targets=[
+            learning_target(version_ref=baseline_ref, runtime_status="active_baseline"),
+            learning_target(
+                version_ref=guidance_ref,
+                baseline_version_ref=baseline_ref,
+                rollback_status="rolled_back",
+                rollback_plan_ref="rollback://guidance/2.0.0",
+            ),
+        ],
+        observations=[
+            learning_observation(
+                observation_id="baseline-1",
+                version_ref=baseline_ref,
+                success=True,
+                score=1.0,
+                rework_count=0,
+                feedback="helpful",
+            ),
+            learning_observation(
+                observation_id="baseline-2",
+                version_ref=baseline_ref,
+                success=True,
+                score=1.0,
+                rework_count=0,
+                feedback="helpful",
+            ),
+            learning_observation(
+                observation_id="guidance-1",
+                version_ref=guidance_ref,
+                success=False,
+                score=0.2,
+                rework_count=1,
+                feedback="correction",
+                regression_flags=["operator_feedback:correction"],
+            ),
+            learning_observation(
+                observation_id="guidance-2",
+                version_ref=guidance_ref,
+                success=False,
+                score=0.3,
+                rework_count=1,
+                feedback="not_helpful",
+                regression_flags=["operator_feedback:not_helpful"],
+            ),
+        ],
+        generated_at="2026-07-16T12:00:00Z",
+    )
+
+    guidance_metric = next(
+        metric for metric in report.version_metrics if metric.version_ref == guidance_ref
+    )
+    assert report.report_status == "attention_required"
+    assert guidance_metric.trend_status == "regression_or_rollback_observed"
+    assert guidance_metric.regression_count == 2
+    assert guidance_metric.rollback_count == 1
+    assert report.rollback_refs == ["rollback://guidance/2.0.0"]
+
+
+def test_longitudinal_learning_report_rejects_inactive_runtime_and_authority_claims() -> None:
+    target = learning_target(
+        version_ref="skill-candidate://unsafe/1.0.0",
+        runtime_status="inactive_candidate",
+    )
+    target.runtime_activation_allowed = True
+    observation = learning_observation(
+        observation_id="inactive-runtime",
+        version_ref=target.version_ref,
+        success=True,
+        score=1.0,
+        rework_count=0,
+        feedback="helpful",
+    )
+    observation.promotion_authorized = True
+
+    report = ObservabilityService.build_longitudinal_learning_report(
+        report_id="longitudinal-learning-report://blocked",
+        targets=[target],
+        observations=[observation],
+        generated_at="2026-07-16T12:00:00Z",
+    )
+
+    metric = report.version_metrics[0]
+    assert report.report_status == "attention_required"
+    assert metric.trend_status == "blocked"
+    assert metric.blockers == [
+        "inactive_target_has_runtime_observation",
+        "observation_authority_claim_not_allowed",
+        "target_authority_claim_not_allowed",
+    ]
+    assert "inactive_versions_have_no_valid_runtime_claim" in report.limitations
 
 
 def test_observability_builds_bounded_regression_readiness_report() -> None:

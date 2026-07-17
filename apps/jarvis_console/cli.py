@@ -32,11 +32,13 @@ from orchestrator_service.service import (
 from shared.contracts import (
     InputContract,
     LongHorizonGoalStrategyContract,
+    LongitudinalLearningReportContract,
     MissionStateContract,
     RegressionReadinessReportContract,
     SkillEvolutionOperatorViewContract,
 )
 from shared.types import ChannelType, InputType, MissionId, RequestId, SessionId
+from tools.longitudinal_learning_report import build_longitudinal_report
 from tools.readiness_dashboard import build_repository_readiness_report
 
 CONSOLE_SURFACE_ID = "surface://jarvis_console"
@@ -488,6 +490,16 @@ def build_parser() -> ArgumentParser:
         choices=["quick", "standard"],
         help="Explicitly refresh engineering gate evidence before reporting.",
     )
+
+    learning_report_parser = subparsers.add_parser(
+        "learning-report",
+        help="Show read-only longitudinal outcomes by reviewed version.",
+    )
+    learning_report_parser.add_argument("--observability-db")
+    learning_report_parser.add_argument("--memory-db")
+    learning_report_parser.add_argument("--evolution-db")
+    learning_report_parser.add_argument("--limit", type=int, default=100)
+    learning_report_parser.add_argument("--minimum-observations", type=int, default=2)
 
     progress_report_parser = subparsers.add_parser(
         "progress-report",
@@ -1650,6 +1662,59 @@ def render_readiness_dashboard(report: RegressionReadinessReportContract) -> str
     )
 
 
+def render_longitudinal_learning_report(
+    report: LongitudinalLearningReportContract,
+) -> str:
+    lines = [
+        "longitudinal_learning=read_only",
+        f"report_id={safe_console_value(report.report_id)}",
+        f"report_status={safe_console_value(report.report_status)}",
+        f"minimum_observations={safe_console_value(report.minimum_observations)}",
+        f"target_count={safe_console_value(report.target_count)}",
+        f"observation_count={safe_console_value(report.observation_count)}",
+        f"observed_version_count={safe_console_value(report.observed_version_count)}",
+        f"period_start={safe_console_value(report.period_start)}",
+        f"period_end={safe_console_value(report.period_end)}",
+        f"missing_evidence_refs={safe_console_list(report.missing_evidence_refs)}",
+        f"regression_flags={safe_console_list(report.regression_flags)}",
+        f"rollback_refs={safe_console_list(report.rollback_refs)}",
+        f"limitations={safe_console_list(report.limitations)}",
+        "promotion_authorized=False",
+        "automatic_promotion_allowed=False",
+        "core_mutation_allowed=False",
+    ]
+    for metric in report.version_metrics:
+        lines.extend(
+            [
+                "---",
+                f"capability_kind={safe_console_value(metric.capability_kind)}",
+                f"capability_id={safe_console_value(metric.capability_id)}",
+                f"version_ref={safe_console_value(metric.version_ref)}",
+                f"baseline_version_ref={safe_console_value(metric.baseline_version_ref)}",
+                f"lifecycle_status={safe_console_value(metric.lifecycle_status)}",
+                f"runtime_status={safe_console_value(metric.runtime_status)}",
+                f"trend_status={safe_console_value(metric.trend_status)}",
+                f"observations={safe_console_value(metric.observation_count)}",
+                f"runtime_observations={safe_console_value(metric.runtime_observation_count)}",
+                f"offline_observations={safe_console_value(metric.offline_observation_count)}",
+                f"missions={safe_console_value(metric.mission_count)}",
+                f"success_rate={safe_console_value(metric.success_rate)}",
+                "average_success_score="
+                + safe_console_value(metric.average_success_score),
+                f"success_rate_delta={safe_console_value(metric.success_rate_delta)}",
+                f"rework_rate={safe_console_value(metric.rework_rate)}",
+                f"rework_rate_delta={safe_console_value(metric.rework_rate_delta)}",
+                f"feedback_count={safe_console_value(metric.feedback_count)}",
+                "helpful_feedback_rate="
+                + safe_console_value(metric.helpful_feedback_rate),
+                f"regression_count={safe_console_value(metric.regression_count)}",
+                f"rollback_count={safe_console_value(metric.rollback_count)}",
+                f"blockers={safe_console_list(metric.blockers)}",
+            ]
+        )
+    return "\n".join(lines)
+
+
 def render_mission_workflow_report(
     *,
     response: OrchestratorResponse,
@@ -2023,6 +2088,26 @@ def run_readiness_dashboard_command(args: Namespace) -> list[str]:
     return [render_readiness_dashboard(report)]
 
 
+def run_longitudinal_learning_report_command(args: Namespace) -> list[str]:
+    observability_db = (
+        Path(args.observability_db)
+        if args.observability_db
+        else ROOT / ".jarvis_runtime" / "observability.db"
+    ).expanduser()
+    if not observability_db.is_absolute():
+        observability_db = (Path.cwd() / observability_db).resolve()
+    report = build_longitudinal_report(
+        observability_service=ObservabilityService(
+            database_path=str(observability_db)
+        ),
+        memory_service=_memory_service_from_args(args),
+        evolution_service=_evolution_service_from_args(args),
+        limit=max(1, min(args.limit, 500)),
+        minimum_observations=args.minimum_observations,
+    )
+    return [render_longitudinal_learning_report(report)]
+
+
 def run_progress_report_command(console: JarvisConsole, args: Namespace) -> list[str]:
     result = console.inspect_progress_report(
         mission_id=args.mission_id,
@@ -2225,6 +2310,8 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "operator-dashboard"
         else run_readiness_dashboard_command(args)
         if args.command == "readiness-dashboard"
+        else run_longitudinal_learning_report_command(args)
+        if args.command == "learning-report"
         else run_progress_report_command(console, args)
         if args.command == "progress-report"
         else run_mission_workflow_command(console, args)
@@ -2269,6 +2356,7 @@ def main(argv: list[str] | None = None) -> int:
         "mission-cycle",
         "operator-dashboard",
         "readiness-dashboard",
+        "learning-report",
         "progress-report",
         "mission-workflow",
         "mission-feedback",

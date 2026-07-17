@@ -7,7 +7,11 @@ from shared.contracts import (
     ExperienceRecordContract,
     GovernanceDecisionContract,
     InputContract,
+    LearningOutcomeObservationContract,
+    LearningVersionTargetContract,
     LongHorizonGoalStrategyContract,
+    LongitudinalLearningReportContract,
+    LongitudinalVersionMetricsContract,
     MemoryLifecycleCandidateContract,
     MemoryLifecycleGovernanceAssessmentContract,
     MemoryLifecycleReviewDecisionContract,
@@ -45,7 +49,11 @@ from shared.schemas import (
     EVOLUTION_REVIEW_QUEUE_ITEM_SCHEMA,
     EXPERIENCE_RECORD_SCHEMA,
     INPUT_SCHEMA,
+    LEARNING_OUTCOME_OBSERVATION_SCHEMA,
+    LEARNING_VERSION_TARGET_SCHEMA,
     LONG_HORIZON_GOAL_STRATEGY_SCHEMA,
+    LONGITUDINAL_LEARNING_REPORT_SCHEMA,
+    LONGITUDINAL_VERSION_METRICS_SCHEMA,
     MEMORY_LIFECYCLE_CANDIDATE_SCHEMA,
     MEMORY_LIFECYCLE_GOVERNANCE_ASSESSMENT_SCHEMA,
     MEMORY_LIFECYCLE_REVIEW_DECISION_SCHEMA,
@@ -101,6 +109,79 @@ def test_input_contract_can_be_instantiated() -> None:
         timestamp="2026-03-16T00:00:00Z",
     )
     assert contract.content == "hello"
+
+
+def test_longitudinal_learning_contracts_are_read_only_shared_schemas() -> None:
+    target = LearningVersionTargetContract(
+        target_id="learning-target://test",
+        capability_kind="workflow",
+        capability_id="software_change_workflow",
+        version_ref="workflow-version://software-change/1.0.0",
+        lifecycle_status="candidate_inactive",
+        review_status="needs_review",
+        runtime_status="inactive_candidate",
+        evidence_refs=["eval://workflow/1.0.0"],
+        rollback_plan_ref="rollback://workflow/1.0.0",
+        rollback_status="available",
+        observed_at="2026-07-16T12:00:00Z",
+    )
+    observation = LearningOutcomeObservationContract(
+        observation_id="learning-observation://offline/test",
+        capability_kind="workflow",
+        capability_id="software_change_workflow",
+        version_ref=target.version_ref,
+        source_kind="offline_eval",
+        observed_at="2026-07-16T12:00:00Z",
+        success=True,
+        success_score=1.0,
+        rework_count=0,
+        evidence_refs=["eval://workflow/1.0.0"],
+    )
+    metrics = LongitudinalVersionMetricsContract(
+        capability_kind="workflow",
+        capability_id="software_change_workflow",
+        version_ref=target.version_ref,
+        lifecycle_status=target.lifecycle_status,
+        runtime_status=target.runtime_status,
+        observation_count=1,
+        runtime_observation_count=0,
+        offline_observation_count=1,
+        mission_count=0,
+        success_rate=1.0,
+        average_success_score=1.0,
+        rework_rate=0.0,
+        feedback_count=0,
+        helpful_feedback_rate=0.0,
+        regression_count=0,
+        rollback_count=0,
+        trend_status="insufficient_evidence",
+        evidence_refs=observation.evidence_refs,
+        blockers=[],
+    )
+    report = LongitudinalLearningReportContract(
+        report_id="longitudinal-learning-report://test",
+        report_status="insufficient_evidence",
+        minimum_observations=2,
+        target_count=1,
+        observation_count=1,
+        observed_version_count=1,
+        version_metrics=[metrics],
+        missing_evidence_refs=[target.version_ref],
+        regression_flags=[],
+        rollback_refs=[],
+        limitations=["measurement_does_not_authorize_promotion"],
+        evidence_refs=observation.evidence_refs,
+        generated_at="2026-07-16T12:00:00Z",
+    )
+
+    assert LEARNING_VERSION_TARGET_SCHEMA.contract_name == type(target).__name__
+    assert LEARNING_OUTCOME_OBSERVATION_SCHEMA.contract_name == type(observation).__name__
+    assert LONGITUDINAL_VERSION_METRICS_SCHEMA.contract_name == type(metrics).__name__
+    assert LONGITUDINAL_LEARNING_REPORT_SCHEMA.contract_name == type(report).__name__
+    assert report.read_only is True
+    assert report.promotion_authorized is False
+    assert report.automatic_promotion_allowed is False
+    assert report.core_mutation_allowed is False
 
 
 def test_surface_identity_contract_declares_minimum_continuity_fields() -> None:

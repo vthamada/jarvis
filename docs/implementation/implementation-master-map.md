@@ -210,7 +210,7 @@ Goal: know whether JARVIS is actually improving.
 | `OBS-006` | Domain-specific eval packs | `minimum_baseline` | Expand packs across promoted routes/domains | Domain onboarding | later |
 | `OBS-007` | Regression dashboard | `implemented_baseline` | Compact CLI/report of health over time | Observability/tools | none |
 | `OBS-008` | Production-readiness score | `implemented_baseline` | Unified readiness per capability | Gates/docs | none |
-| `OBS-009` | Longitudinal learning metrics | `minimum_baseline` | Does learning improve future decisions over weeks? | Memory/evolution | candidate |
+| `OBS-009` | Longitudinal learning metrics | `implemented_baseline` | Accumulate real observations and preserve regression visibility | Memory/evolution | none |
 | `OBS-010` | Security and misuse metrics | `partial_runtime` | Risk trend and incident evidence | Governance/security | later |
 
 ### Track I -- Governance, Security And Sovereignty
@@ -694,7 +694,9 @@ Map IDs: `OBS-005`, `OBS-009`, `EVL-005`, `EVL-008`.
 Goal: measure sustained utility and regressions by reviewed skill/workflow
 version over time.
 
-Status: ready after `MB-187`.
+Status: closed in `MB-188`; versioned reviewed memory, skill and workflow
+evidence now measures success, rework, feedback, regression and rollback in a
+read-only report without promotion authority.
 
 ### MB-189 -- Skill And Workflow Evolution Readiness Closure
 

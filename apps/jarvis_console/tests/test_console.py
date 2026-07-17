@@ -18,6 +18,7 @@ from apps.jarvis_console.cli import (
     render_evolution_review_queue,
     render_experience_reflections,
     render_goal_strategy,
+    render_longitudinal_learning_report,
     render_memory_lifecycle_review_queue,
     render_mission_cycle,
     render_objective_state,
@@ -33,6 +34,7 @@ from apps.jarvis_console.cli import (
     run_evolution_review_queue_command,
     run_experience_reflections_command,
     run_goal_strategy_command,
+    run_longitudinal_learning_report_command,
     run_memory_lifecycle_review_command,
     run_memory_lifecycle_review_queue_command,
     run_mission_cycle_command,
@@ -51,6 +53,7 @@ from apps.jarvis_console.cli import (
 )
 from shared.contracts import (
     ExperienceRecordContract,
+    LongitudinalLearningReportContract,
     MissionStateContract,
     PostTaskReflectionContract,
     ProceduralPlaybookCandidateContract,
@@ -113,6 +116,56 @@ def test_console_readiness_renderer_surfaces_drift_and_blockers() -> None:
     assert "status_drift=master_map_ready_mismatch:MB-174" in rendered
     assert "blockers=engineering_gate_failed" in rendered
     assert "capability_missing=1" in rendered
+
+
+def test_console_longitudinal_learning_report_is_explicitly_non_authoritative() -> None:
+    rendered = render_longitudinal_learning_report(
+        LongitudinalLearningReportContract(
+            report_id="longitudinal-learning-report://console-test",
+            report_status="insufficient_evidence",
+            minimum_observations=2,
+            target_count=1,
+            observation_count=0,
+            observed_version_count=0,
+            version_metrics=[],
+            missing_evidence_refs=["skill-candidate://test/1.0.0"],
+            regression_flags=[],
+            rollback_refs=[],
+            limitations=["measurement_does_not_authorize_promotion"],
+            evidence_refs=["skill-candidate://test/1.0.0"],
+            generated_at="2026-07-16T12:00:00Z",
+        )
+    )
+
+    assert "longitudinal_learning=read_only" in rendered
+    assert "report_status=insufficient_evidence" in rendered
+    assert "measurement_does_not_authorize_promotion" in rendered
+    assert "promotion_authorized=False" in rendered
+    assert "automatic_promotion_allowed=False" in rendered
+    assert "core_mutation_allowed=False" in rendered
+
+
+def test_console_learning_report_command_handles_empty_canonical_stores() -> None:
+    temp_dir = runtime_dir("console-learning-report-empty")
+    args = build_parser().parse_args(
+        [
+            "learning-report",
+            "--observability-db",
+            str(temp_dir / "observability.db"),
+            "--memory-db",
+            str(temp_dir / "memory.db"),
+            "--evolution-db",
+            str(temp_dir / "evolution.db"),
+        ]
+    )
+
+    rendered = run_longitudinal_learning_report_command(args)[0]
+
+    assert "longitudinal_learning=read_only" in rendered
+    assert "report_status=no_version_targets" in rendered
+    assert "target_count=0" in rendered
+    assert "observation_count=0" in rendered
+    assert "promotion_authorized=False" in rendered
 
 
 def test_console_ask_returns_orchestrated_response() -> None:

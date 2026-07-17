@@ -3,7 +3,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from os import getenv
 from pathlib import Path
 
@@ -20,6 +20,10 @@ from shared.contracts import (
     DomainEvalRunContract,
     EvolutionProposalContract,
     ExperienceRecordContract,
+    LearningOutcomeObservationContract,
+    LearningVersionTargetContract,
+    LongitudinalLearningReportContract,
+    LongitudinalVersionMetricsContract,
     PostTaskReflectionContract,
     RecurringPatternReportContract,
     RegressionReadinessReportContract,
@@ -1143,6 +1147,310 @@ class ObservabilityService:
             unregistered_pattern_refs=unregistered_pattern_refs,
             blockers=view_blockers,
             generated_at=generated_at,
+        )
+
+    @staticmethod
+    def build_longitudinal_learning_report(
+        *,
+        report_id: str,
+        targets: list[LearningVersionTargetContract],
+        observations: list[LearningOutcomeObservationContract],
+        generated_at: str,
+        minimum_observations: int = 2,
+    ) -> LongitudinalLearningReportContract:
+        """Measure versioned learning evidence without creating promotion authority."""
+
+        if not 2 <= minimum_observations <= 100:
+            raise ValueError("minimum_observations must be between 2 and 100")
+        target_keys: set[tuple[str, str, str]] = set()
+        observation_ids: set[str] = set()
+        duplicate_target_refs: list[str] = []
+        duplicate_observation_refs: list[str] = []
+        for target in targets:
+            key = (target.capability_kind, target.capability_id, target.version_ref)
+            if key in target_keys:
+                duplicate_target_refs.append(target.target_id)
+            target_keys.add(key)
+        for observation in observations:
+            if observation.observation_id in observation_ids:
+                duplicate_observation_refs.append(observation.observation_id)
+            observation_ids.add(observation.observation_id)
+
+        unknown_observation_refs = [
+            observation.observation_id
+            for observation in observations
+            if (
+                observation.capability_kind,
+                observation.capability_id,
+                observation.version_ref,
+            )
+            not in target_keys
+        ]
+        metrics: list[LongitudinalVersionMetricsContract] = []
+        for target in targets:
+            scoped = [
+                observation
+                for observation in observations
+                if observation.capability_kind == target.capability_kind
+                and observation.capability_id == target.capability_id
+                and observation.version_ref == target.version_ref
+            ]
+            blockers: list[str] = []
+            if (
+                target.runtime_activation_allowed
+                or target.promotion_authorized
+                or target.automatic_promotion_allowed
+                or target.core_mutation_allowed
+            ):
+                blockers.append("target_authority_claim_not_allowed")
+            if not target.evidence_refs:
+                blockers.append("target_evidence_required")
+            if any(
+                observation.promotion_authorized
+                or observation.automatic_promotion_allowed
+                or observation.core_mutation_allowed
+                for observation in scoped
+            ):
+                blockers.append("observation_authority_claim_not_allowed")
+            if any(
+                not 0.0 <= observation.success_score <= 1.0
+                or observation.rework_count < 0
+                for observation in scoped
+            ):
+                blockers.append("invalid_observation_metric")
+            runtime_count = sum(
+                observation.source_kind == "runtime_mission" for observation in scoped
+            )
+            offline_count = sum(
+                observation.source_kind == "offline_eval" for observation in scoped
+            )
+            if target.runtime_status.startswith("inactive") and runtime_count:
+                blockers.append("inactive_target_has_runtime_observation")
+            observation_count = len(scoped)
+            success_rate = (
+                round(sum(observation.success for observation in scoped) / observation_count, 4)
+                if observation_count
+                else 0.0
+            )
+            average_success_score = (
+                round(
+                    sum(observation.success_score for observation in scoped)
+                    / observation_count,
+                    4,
+                )
+                if observation_count
+                else 0.0
+            )
+            rework_rate = (
+                round(
+                    sum(observation.rework_count for observation in scoped)
+                    / observation_count,
+                    4,
+                )
+                if observation_count
+                else 0.0
+            )
+            feedback = [
+                observation.feedback_assessment
+                for observation in scoped
+                if observation.feedback_assessment
+                and observation.feedback_assessment != "not_applicable"
+            ]
+            helpful_feedback_rate = (
+                round(sum(item == "helpful" for item in feedback) / len(feedback), 4)
+                if feedback
+                else 0.0
+            )
+            regression_flags = sorted(
+                {
+                    flag
+                    for observation in scoped
+                    for flag in observation.regression_flags
+                }
+            )
+            rollback_count = sum(
+                observation.rollback_observed for observation in scoped
+            ) + int(target.rollback_status == "rolled_back")
+            evidence_refs = list(
+                dict.fromkeys(
+                    [
+                        target.target_id,
+                        *target.evidence_refs,
+                        *(ref for observation in scoped for ref in observation.evidence_refs),
+                    ]
+                )
+            )[:250]
+            metrics.append(
+                LongitudinalVersionMetricsContract(
+                    capability_kind=target.capability_kind,
+                    capability_id=target.capability_id,
+                    version_ref=target.version_ref,
+                    lifecycle_status=target.lifecycle_status,
+                    runtime_status=target.runtime_status,
+                    observation_count=observation_count,
+                    runtime_observation_count=runtime_count,
+                    offline_observation_count=offline_count,
+                    mission_count=len(
+                        {observation.mission_id for observation in scoped if observation.mission_id}
+                    ),
+                    success_rate=success_rate,
+                    average_success_score=average_success_score,
+                    rework_rate=rework_rate,
+                    feedback_count=len(feedback),
+                    helpful_feedback_rate=helpful_feedback_rate,
+                    regression_count=len(regression_flags),
+                    rollback_count=rollback_count,
+                    trend_status="pending_comparison",
+                    evidence_refs=evidence_refs,
+                    blockers=sorted(set(blockers)),
+                    baseline_version_ref=target.baseline_version_ref,
+                )
+            )
+
+        metric_by_key = {
+            (metric.capability_kind, metric.capability_id, metric.version_ref): metric
+            for metric in metrics
+        }
+        resolved_metrics: list[LongitudinalVersionMetricsContract] = []
+        for metric in metrics:
+            baseline = (
+                metric_by_key.get(
+                    (
+                        metric.capability_kind,
+                        metric.capability_id,
+                        metric.baseline_version_ref,
+                    )
+                )
+                if metric.baseline_version_ref
+                else None
+            )
+            success_delta = (
+                round(metric.success_rate - baseline.success_rate, 4)
+                if baseline is not None
+                else None
+            )
+            rework_delta = (
+                round(metric.rework_rate - baseline.rework_rate, 4)
+                if baseline is not None
+                else None
+            )
+            blockers = list(metric.blockers)
+            if metric.baseline_version_ref and baseline is None:
+                blockers.append("baseline_version_evidence_missing")
+            if blockers:
+                trend_status = "blocked"
+            elif metric.regression_count or metric.rollback_count:
+                trend_status = "regression_or_rollback_observed"
+            elif metric.version_ref.startswith("baseline://"):
+                trend_status = (
+                    "baseline_reference"
+                    if metric.observation_count >= minimum_observations
+                    else "insufficient_evidence"
+                )
+            elif metric.observation_count < minimum_observations:
+                trend_status = "insufficient_evidence"
+            elif baseline is None or baseline.observation_count < minimum_observations:
+                trend_status = "insufficient_baseline_evidence"
+            elif success_delta is not None and success_delta < 0:
+                trend_status = "regression_detected"
+            elif rework_delta is not None and rework_delta > 0:
+                trend_status = "regression_detected"
+            elif (
+                success_delta is not None
+                and success_delta > 0
+                and rework_delta is not None
+                and rework_delta <= 0
+                and metric.feedback_count > 0
+                and metric.helpful_feedback_rate >= 0.5
+            ):
+                trend_status = "sustained_gain"
+            else:
+                trend_status = "stable_or_mixed"
+            resolved_metrics.append(
+                replace(
+                    metric,
+                    trend_status=trend_status,
+                    blockers=sorted(set(blockers)),
+                    success_rate_delta=success_delta,
+                    rework_rate_delta=rework_delta,
+                )
+            )
+
+        regression_flags = [
+            f"{metric.capability_kind}:{metric.version_ref}:{metric.trend_status}"
+            for metric in resolved_metrics
+            if metric.trend_status
+            in {"regression_detected", "regression_or_rollback_observed", "blocked"}
+        ]
+        if duplicate_target_refs:
+            regression_flags.append("duplicate_version_targets")
+        if duplicate_observation_refs:
+            regression_flags.append("duplicate_learning_observations")
+        if unknown_observation_refs:
+            regression_flags.append("observations_without_version_target")
+        if regression_flags:
+            report_status = "attention_required"
+        elif any(metric.trend_status == "sustained_gain" for metric in resolved_metrics):
+            report_status = "sustained_gain_observed"
+        elif resolved_metrics and all(
+            metric.trend_status
+            in {"insufficient_evidence", "insufficient_baseline_evidence"}
+            for metric in resolved_metrics
+        ):
+            report_status = "insufficient_evidence"
+        elif resolved_metrics:
+            report_status = "mixed_or_stable"
+        else:
+            report_status = "no_version_targets"
+
+        missing_evidence_refs = [
+            metric.version_ref
+            for metric in resolved_metrics
+            if metric.observation_count < minimum_observations
+        ]
+        rollback_refs = [
+            target.rollback_plan_ref
+            for target in targets
+            if target.rollback_status == "rolled_back" and target.rollback_plan_ref
+        ]
+        observed_at_values = sorted(observation.observed_at for observation in observations)
+        limitations = ["measurement_does_not_authorize_promotion"]
+        if any(metric.offline_observation_count for metric in resolved_metrics):
+            limitations.append("offline_eval_is_not_longitudinal_runtime_evidence")
+        if any(metric.runtime_status.startswith("inactive") for metric in resolved_metrics):
+            limitations.append("inactive_versions_have_no_valid_runtime_claim")
+        return LongitudinalLearningReportContract(
+            report_id=report_id,
+            report_status=report_status,
+            minimum_observations=minimum_observations,
+            target_count=len(targets),
+            observation_count=len(observations),
+            observed_version_count=sum(
+                metric.observation_count > 0 for metric in resolved_metrics
+            ),
+            version_metrics=resolved_metrics,
+            missing_evidence_refs=sorted(set(missing_evidence_refs)),
+            regression_flags=sorted(set(regression_flags)),
+            rollback_refs=sorted(set(rollback_refs)),
+            limitations=limitations,
+            evidence_refs=list(
+                dict.fromkeys(
+                    [
+                        *duplicate_target_refs,
+                        *duplicate_observation_refs,
+                        *unknown_observation_refs,
+                        *(ref for metric in resolved_metrics for ref in metric.evidence_refs),
+                    ]
+                )
+            )[:500],
+            generated_at=generated_at,
+            period_start=observed_at_values[0] if observed_at_values else None,
+            period_end=observed_at_values[-1] if observed_at_values else None,
+            read_only=True,
+            human_review_required=True,
+            promotion_authorized=False,
+            automatic_promotion_allowed=False,
+            core_mutation_allowed=False,
         )
 
     @staticmethod

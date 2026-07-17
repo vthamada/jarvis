@@ -11,6 +11,7 @@ from observability_service.service import FlowAudit, ObservabilityQuery
 from apps.jarvis_console.cli import (
     JarvisConsole,
     build_parser,
+    run_longitudinal_learning_report_command,
     run_skill_evolution_command,
 )
 from shared.contracts import (
@@ -479,3 +480,25 @@ def test_console_skill_evolution_correlates_governed_chain_end_to_end() -> None:
     assert len(evolution_service.list_recent_proposals(limit=10)) == (
         proposal_count_before
     )
+
+    learning_args = build_parser().parse_args(
+        [
+            "learning-report",
+            "--observability-db",
+            str(temp_dir / "observability.db"),
+            "--memory-db",
+            str(memory_db),
+            "--evolution-db",
+            str(evolution_db),
+        ]
+    )
+    learning_report = run_longitudinal_learning_report_command(learning_args)[0]
+
+    assert f"capability_id={candidate.skill_id}" in learning_report
+    assert f"version_ref={candidate.skill_candidate_id}" in learning_report
+    assert "runtime_status=inactive_candidate" in learning_report
+    assert "offline_observations=1" in learning_report
+    assert "runtime_observations=0" in learning_report
+    assert "trend_status=insufficient_evidence" in learning_report
+    assert "offline_eval_is_not_longitudinal_runtime_evidence" in learning_report
+    assert "promotion_authorized=False" in learning_report

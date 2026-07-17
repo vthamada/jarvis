@@ -1247,6 +1247,107 @@ class RegressionReadinessReportContract:
 
 
 @dataclass
+class LearningVersionTargetContract:
+    target_id: str
+    capability_kind: str
+    capability_id: str
+    version_ref: str
+    lifecycle_status: str
+    review_status: str
+    runtime_status: str
+    evidence_refs: list[str]
+    rollback_plan_ref: str | None
+    rollback_status: str
+    observed_at: Timestamp
+    baseline_version_ref: str | None = None
+    human_review_required: bool = True
+    runtime_activation_allowed: bool = False
+    promotion_authorized: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass
+class LearningOutcomeObservationContract:
+    observation_id: str
+    capability_kind: str
+    capability_id: str
+    version_ref: str
+    source_kind: str
+    observed_at: Timestamp
+    success: bool
+    success_score: float
+    rework_count: int
+    evidence_refs: list[str]
+    mission_id: str | None = None
+    request_id: str | None = None
+    workflow_profile: str | None = None
+    route: str | None = None
+    feedback_assessment: str | None = None
+    feedback_rating: int | None = None
+    regression_flags: list[str] = field(default_factory=list)
+    rollback_observed: bool = False
+    human_review_required: bool = True
+    promotion_authorized: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass
+class LongitudinalVersionMetricsContract:
+    capability_kind: str
+    capability_id: str
+    version_ref: str
+    lifecycle_status: str
+    runtime_status: str
+    observation_count: int
+    runtime_observation_count: int
+    offline_observation_count: int
+    mission_count: int
+    success_rate: float
+    average_success_score: float
+    rework_rate: float
+    feedback_count: int
+    helpful_feedback_rate: float
+    regression_count: int
+    rollback_count: int
+    trend_status: str
+    evidence_refs: list[str]
+    blockers: list[str]
+    baseline_version_ref: str | None = None
+    success_rate_delta: float | None = None
+    rework_rate_delta: float | None = None
+    read_only: bool = True
+    promotion_authorized: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass
+class LongitudinalLearningReportContract:
+    report_id: str
+    report_status: str
+    minimum_observations: int
+    target_count: int
+    observation_count: int
+    observed_version_count: int
+    version_metrics: list[LongitudinalVersionMetricsContract]
+    missing_evidence_refs: list[str]
+    regression_flags: list[str]
+    rollback_refs: list[str]
+    limitations: list[str]
+    evidence_refs: list[str]
+    generated_at: Timestamp
+    period_start: Timestamp | None = None
+    period_end: Timestamp | None = None
+    read_only: bool = True
+    human_review_required: bool = True
+    promotion_authorized: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass
 class SpecialistBoundaryContract:
     specialist_type: str
     runtime_scope: str
