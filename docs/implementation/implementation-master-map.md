@@ -175,7 +175,7 @@ core.
 | `SPC-003` | Specialist boundary contract | `implemented_baseline` | Keep stable | Governance | none |
 | `SPC-004` | Promoted route eligibility | `implemented_baseline` | Keep stable | Domain registry | none |
 | `SPC-005` | Specialist effectiveness metrics | `implemented_baseline` | Keep stable | Observability | none |
-| `SPC-006` | New domain onboarding protocol | `missing` | Criteria, tests, corpus, route, specialist, evals | Domain registry | high-priority |
+| `SPC-006` | New domain onboarding protocol | `minimum_baseline` | Validate candidates with real eval packs before promotion | Domain registry | MB-172 |
 | `SPC-007` | Deep specialist state | `partial_runtime` | Per-specialist bounded memory through core | Memory registry | candidate |
 | `SPC-008` | Software engineering specialist | `documentation_only` | Subordinate software agent, no identity split | ACT-008 | later |
 | `SPC-009` | Research/intelligence specialist | `documentation_only` | Domain-specific retrieval and synthesis | Knowledge, evals | later |
@@ -193,7 +193,7 @@ Goal: keep JARVIS current and useful without uncontrolled ingestion.
 | `KNW-004` | Source provenance in answers | `partial_runtime` | Stronger provenance and evidence refs | Synthesis, knowledge | candidate |
 | `KNW-005` | External research ingestion | `missing` | Governed import queue, no auto-trust | Governance | later |
 | `KNW-006` | Technology radar refresh loop | `minimum_baseline` | Scheduled/manual technology review cycle | Tech absorption | candidate |
-| `KNW-007` | Domain knowledge packs | `missing` | Versioned packs by domain | Domain onboarding | later |
+| `KNW-007` | Domain knowledge packs | `minimum_baseline` | Expand reviewed versioned packs after eval evidence | Domain onboarding | MB-172 |
 | `KNW-008` | Knowledge conflict resolution | `missing` | Compare sources and surface uncertainty | Governance, synthesis | later |
 
 ### Track H -- Observability, Evals And Quality
@@ -269,12 +269,11 @@ Goal: keep planning clear without turning documentation into bureaucracy.
 The next functional phase should focus on making the system useful to an
 operator, not on adding speculative technology.
 
-Highest-value gaps after `MB-170`:
+Highest-value gaps after `MB-171`:
 
-1. `SPC-006` governed domain onboarding protocol.
-2. Domain-specific eval packs for the initial knowledge domains.
-3. Knowledge provenance and freshness signals in retrieval/synthesis.
-4. Integrated readiness validation for the complete post-`MB-160` slice.
+1. Domain-specific eval packs for the initial knowledge domains.
+2. Knowledge provenance and freshness signals in retrieval/synthesis.
+3. Integrated readiness validation for the complete post-`MB-160` slice.
 
 ## 7. Dependency Map
 
@@ -293,10 +292,10 @@ These are already present and should be preserved:
 
 Recommended chain for the next few implementation slices:
 
-1. `MB-171` governed domain onboarding protocol.
-2. `MB-172` domain eval packs.
-3. `MB-173` knowledge provenance/freshness.
-4. `MB-174` integrated readiness closure.
+1. Preserve the closed `MB-171` governed domain onboarding protocol.
+2. Execute `MB-172` domain eval packs.
+3. Execute `MB-173` knowledge provenance/freshness.
+4. Execute `MB-174` integrated readiness closure.
 
 Why this order:
 
@@ -519,13 +518,15 @@ Map IDs: `SPC-006`, `KNW-007`, `OBS-006`.
 Goal: define the minimum protocol to promote a new domain: registry entry,
 knowledge pack, route, specialist, tests and evals.
 
-Status: ready after `MB-170`.
+Status: closed in `MB-171`; candidate assessment is no-mutation and human-review-bound.
 
 ### MB-172 -- Domain-Specific Eval Pack Baseline
 
 Map IDs: `OBS-006`, `SPC-006`, `KNW-004`.
 
 Goal: create the first reusable eval pack pattern for promoted routes/domains.
+
+Status: ready after `MB-171`.
 
 ### MB-173 -- Knowledge Provenance And Freshness
 

@@ -7,7 +7,18 @@ from json import loads
 from pathlib import Path
 from unicodedata import normalize
 
-from shared.contracts import DomainRegistryEntryContract, DomainSpecialistRouteContract
+from shared.contracts import (
+    DomainKnowledgePackContract,
+    DomainOnboardingAssessmentContract,
+    DomainOnboardingCandidateContract,
+    DomainRegistryEntryContract,
+    DomainSpecialistRouteContract,
+)
+from shared.domain_onboarding import (
+    DEFAULT_DOMAIN_ONBOARDING_BASELINE_PATH,
+    assess_domain_onboarding_candidate,
+    load_domain_onboarding_manifest,
+)
 from shared.domain_registry import (
     FALLBACK_RUNTIME_ROUTE,
     DomainEntry,
@@ -15,6 +26,7 @@ from shared.domain_registry import (
     load_domain_registries,
     route_routing_source,
 )
+from shared.specialist_registry import CANONICAL_SPECIALIST_TYPES
 
 
 @dataclass(frozen=True)
@@ -105,6 +117,36 @@ class KnowledgeService:
         """Expose runtime route labels currently wired into retrieval."""
 
         return list(self.domain_routes.keys())
+
+    def assess_domain_onboarding(
+        self,
+        *,
+        candidate: DomainOnboardingCandidateContract,
+        knowledge_pack: DomainKnowledgePackContract,
+    ) -> DomainOnboardingAssessmentContract:
+        """Assess a candidate without changing canonical or runtime registries."""
+
+        return assess_domain_onboarding_candidate(
+            candidate=candidate,
+            knowledge_pack=knowledge_pack,
+            canonical_domains=self.canonical_domain_registry,
+            runtime_routes=self.domain_routes,
+            canonical_specialist_types=CANONICAL_SPECIALIST_TYPES,
+        )
+
+    def assess_domain_onboarding_manifest(
+        self,
+        manifest_path: str | None = None,
+    ) -> DomainOnboardingAssessmentContract:
+        """Load and assess the bounded baseline or another local candidate manifest."""
+
+        candidate, knowledge_pack = load_domain_onboarding_manifest(
+            Path(manifest_path) if manifest_path else DEFAULT_DOMAIN_ONBOARDING_BASELINE_PATH
+        )
+        return self.assess_domain_onboarding(
+            candidate=candidate,
+            knowledge_pack=knowledge_pack,
+        )
 
     @staticmethod
     def _normalize_text(value: str) -> str:

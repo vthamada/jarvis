@@ -2,14 +2,24 @@
 
 ## Atualizacao 2026-07-16
 
+`MB-171` foi concluido: `DomainKnowledgePackContract`,
+`DomainOnboardingCandidateContract` e `DomainOnboardingAssessmentContract`
+formalizam entrada de novos dominios como candidatura governada. O novo
+`shared/domain_onboarding.py` valida dominio canonico, rota unica, knowledge
+pack versionado, workflow, testes, eval, rollback e fronteira de especialista;
+`knowledge-service` avalia o manifest baseline sem escrever nos registries.
+Mesmo um candidato coerente termina apenas em `ready_for_human_review`, com
+ativacao, promocao de especialista, autopromocao e mutacao do Core bloqueadas.
+`MB-172` e o unico item tecnico `ready`.
+
 `MB-170` foi concluido: `OperatorFeedbackContract`, schema e evento
 `operator_feedback_recorded` agora formalizam feedback explicito do operador
 apos uma missao. `governance-service` valida experiencia/reflexao, assessment,
 rating, refs e limites; `memory-service` anexa o sinal ao par canonico;
 `evolution-lab` cria proposta `operator_feedback_improvement` sandbox-only; e
 `mission-feedback` expoe o fluxo no console. Toda proposta permanece
-`needs_review`, com autopromocao e mutacao do Core bloqueadas. `MB-171` e o
-unico item tecnico `ready`.
+`needs_review`, com autopromocao e mutacao do Core bloqueadas. Esse estado foi
+sucedido pelo fechamento de `MB-171`.
 
 `MB-166` foi concluido: `SandboxToReleaseChecklistContract`, schema canonico e
 `evolution-lab` agora produzem um checklist sandbox-to-release com escopo,
@@ -42,8 +52,8 @@ leitura humana compacta de progresso, pendencias, riscos, artefatos, memoria
 influente, experiencia/reflexao, estrategia e proxima acao. O relatorio deriva
 do estado canonico, emite `mission_progress_report_generated` e preserva
 `memory_write_mode=read_only` e `autonomous_execution_allowed=false`.
-Esse estado foi sucedido pelo fechamento de `MB-170`; `MB-171` e o unico item
-tecnico `ready`.
+Esse estado foi sucedido pelos fechamentos de `MB-170` e `MB-171`; `MB-172` e
+o unico item tecnico `ready`.
 
 ## Atualizacao 2026-07-04
 
@@ -245,10 +255,9 @@ refs de artefato/reflexao, testes, rollback, revisao humana obrigatoria,
 `automatic_promotion_allowed=false`, `core_mutation_allowed=false` e
 `memory_write_mode=through_core_only`. `memory-service` persiste/lista esses
 candidatos, `evolution-lab` cria proposta sandbox-only a partir deles e o
-console possui `procedural-playbooks` read-only. `MB-163`, `MB-164`, `MB-165`,
-`MB-166`, `MB-167`, `MB-168`, `MB-169` e `MB-170` tambem foram concluidos;
-`MB-171` e o unico item tecnico `ready`, focado no protocolo governado de
-onboarding de dominios.
+console possui `procedural-playbooks` read-only. `MB-163` a `MB-171` tambem
+foram concluidos; `MB-172` e o unico item tecnico `ready`, focado no primeiro
+eval pack reutilizavel por dominio/rota.
 
 O corte pos-`MB-125` foi repriorizado em `MB-126`: a proxima frente ativa e
 experiencia operacional + reflexao pos-tarefa governada. O objetivo e fazer o

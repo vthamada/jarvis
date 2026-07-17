@@ -356,7 +356,8 @@ Notas de leitura:
   `MB-168` foi fechado como cockpit textual consolidado do operador;
   `MB-169` foi fechado como relatorio humano de progresso;
   `MB-170` foi fechado como feedback explicito governado do operador;
-  `MB-171` e o unico item tecnico `ready` e `MB-172` a `MB-174` permanecem
+  `MB-171` foi fechado como protocolo governado de onboarding de dominios;
+  `MB-172` e o unico item tecnico `ready` e `MB-173` a `MB-174` permanecem
   bloqueados por dependencia/ordem.
 
 ### 5.5 Deferred verticals already mapped
@@ -401,7 +402,8 @@ Ordem recomendada hoje:
 1. tratar `MB-110` a `MB-159` como baseline fechado de objetivos persistentes,
    utilidade operacional, absorcao tecnologica governada, aprendizado revisado,
    higiene documental e horizonte longo minimo.
-2. executar `MB-171` como proximo item tecnico da fila maior pos-`MB-160`.
+2. executar `MB-172` como proximo item tecnico da fila maior pos-`MB-160`,
+   preservando o protocolo sem mutacao fechado em `MB-171`.
 3. manter `SO-001`, `TA-004`, `TA-006` e verticais `deferred` fora da fila ate
    haver decisao explicita de fase.
 
@@ -464,8 +466,8 @@ Leitura correta:
 - `MB-160` abriu a fila maior `MB-161` a `MB-174`, priorizando memoria causal,
   autonomia runtime, promocao governada, cockpit, feedback, dominios/evals,
   proveniencia e readiness; `MB-161`, `MB-162`, `MB-163`, `MB-164`, `MB-165`,
-  `MB-166`, `MB-167`, `MB-168`, `MB-169` e `MB-170` foram fechados e `MB-171`
-  e o unico item `ready`;
+  `MB-166`, `MB-167`, `MB-168`, `MB-169`, `MB-170` e `MB-171` foram fechados e
+  `MB-172` e o unico item `ready`;
 - `RH-*` permanece fora do backlog implementavel.
 
 ---

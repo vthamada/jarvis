@@ -342,6 +342,98 @@ PROCEDURAL_PLAYBOOK_CANDIDATE_SCHEMA = CanonicalSchema(
     ),
 )
 
+DOMAIN_KNOWLEDGE_PACK_SCHEMA = CanonicalSchema(
+    name="DomainKnowledgePackSchema",
+    contract_name="DomainKnowledgePackContract",
+    required_fields=(
+        "knowledge_pack_id",
+        "version",
+        "canonical_domain_refs",
+        "source_refs",
+        "content_refs",
+        "coverage_topics",
+        "evidence_refs",
+        "timestamp",
+    ),
+    optional_fields=(
+        "pack_status",
+        "freshness_status",
+        "review_status",
+        "human_review_required",
+        "automatic_activation_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Versioned candidate knowledge pack; it cannot activate a runtime route by itself.",
+    ),
+)
+
+DOMAIN_ONBOARDING_CANDIDATE_SCHEMA = CanonicalSchema(
+    name="DomainOnboardingCandidateSchema",
+    contract_name="DomainOnboardingCandidateContract",
+    required_fields=(
+        "onboarding_candidate_id",
+        "route_name",
+        "display_name",
+        "canonical_domain_refs",
+        "knowledge_pack_id",
+        "onboarding_workflow_profile",
+        "runtime_workflow_profile",
+        "workflow_steps",
+        "workflow_checkpoints",
+        "workflow_decision_points",
+        "proposed_tests",
+        "eval_pack_ref",
+        "rollback_plan_ref",
+        "evidence_refs",
+        "timestamp",
+    ),
+    optional_fields=(
+        "linked_specialist_type",
+        "specialist_mode",
+        "requested_maturity",
+        "activation_stage",
+        "human_review_required",
+        "registry_write_allowed",
+        "specialist_promotion_allowed",
+        "automatic_activation_allowed",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Bounded domain onboarding candidate; assessment never writes to active registries.",
+    ),
+)
+
+DOMAIN_ONBOARDING_ASSESSMENT_SCHEMA = CanonicalSchema(
+    name="DomainOnboardingAssessmentSchema",
+    contract_name="DomainOnboardingAssessmentContract",
+    required_fields=(
+        "assessment_id",
+        "onboarding_candidate_id",
+        "route_name",
+        "knowledge_pack_id",
+        "readiness_status",
+        "decision",
+        "criteria",
+        "registry_preview",
+        "timestamp",
+    ),
+    optional_fields=(
+        "blockers",
+        "warnings",
+        "human_review_required",
+        "registry_write_allowed",
+        "specialist_promotion_allowed",
+        "automatic_activation_allowed",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Assessment is advisory and human-review-bound; it is not a promotion permit.",
+    ),
+)
+
 EVOLUTION_REVIEW_QUEUE_ITEM_SCHEMA = CanonicalSchema(
     name="EvolutionReviewQueueItemSchema",
     contract_name="EvolutionReviewQueueItemContract",

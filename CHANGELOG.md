@@ -32,6 +32,12 @@
 - governanca bloqueia experiencia/reflexao ausente, mismatch de missao, refs/conteudo invalidos e qualquer claim de autopromocao; memoria persiste o sinal em experiencia/reflexao e observabilidade o torna auditavel;
 - `evolution-lab` cria proposta `operator_feedback_improvement` sandbox-only e `jarvis-console mission-feedback` mostra feedback, memoria, reflexao e proposta em `needs_review`; `execution-backlog.md` abriu `MB-171` como unico item tecnico `ready`.
 
+### MB-171 formaliza onboarding governado de dominios
+
+- `DomainKnowledgePackContract`, `DomainOnboardingCandidateContract` e `DomainOnboardingAssessmentContract` definem knowledge pack versionado, rota candidata, workflow, testes, eval, rollback, evidencias e controles de promocao;
+- `shared/domain_onboarding.py` avalia candidatos sem mutar registries, bloqueia colisao, dominio desconhecido, payload incompleto, ativacao automatica e especialista acima de `shadow`;
+- `knowledge-service` avalia o manifest reproduzivel `domain_onboarding_baseline.json`, que permanece fora do runtime; `execution-backlog.md` fechou `MB-171` e abriu `MB-172` como unico item tecnico `ready`.
+
 ## 2026-07-04
 
 ### MB-161 fecha anchors de evidencia de memoria semantica

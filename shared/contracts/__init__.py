@@ -462,6 +462,74 @@ class DomainSpecialistRouteContract:
 
 
 @dataclass
+class DomainKnowledgePackContract:
+    knowledge_pack_id: str
+    version: str
+    canonical_domain_refs: list[str]
+    source_refs: list[str]
+    content_refs: list[str]
+    coverage_topics: list[str]
+    evidence_refs: list[str]
+    timestamp: Timestamp
+    pack_status: str = "candidate"
+    freshness_status: str = "unverified"
+    review_status: str = "needs_review"
+    human_review_required: bool = True
+    automatic_activation_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass
+class DomainOnboardingCandidateContract:
+    onboarding_candidate_id: str
+    route_name: str
+    display_name: str
+    canonical_domain_refs: list[str]
+    knowledge_pack_id: str
+    onboarding_workflow_profile: str
+    runtime_workflow_profile: str
+    workflow_steps: list[str]
+    workflow_checkpoints: list[str]
+    workflow_decision_points: list[str]
+    proposed_tests: list[str]
+    eval_pack_ref: str
+    rollback_plan_ref: str
+    evidence_refs: list[str]
+    timestamp: Timestamp
+    linked_specialist_type: str | None = None
+    specialist_mode: str = "registry_only"
+    requested_maturity: str = "candidate"
+    activation_stage: str = "candidate"
+    human_review_required: bool = True
+    registry_write_allowed: bool = False
+    specialist_promotion_allowed: bool = False
+    automatic_activation_allowed: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass
+class DomainOnboardingAssessmentContract:
+    assessment_id: str
+    onboarding_candidate_id: str
+    route_name: str
+    knowledge_pack_id: str
+    readiness_status: str
+    decision: str
+    criteria: dict[str, bool]
+    blockers: list[str]
+    warnings: list[str]
+    registry_preview: dict[str, object]
+    timestamp: Timestamp
+    human_review_required: bool = True
+    registry_write_allowed: bool = False
+    specialist_promotion_allowed: bool = False
+    automatic_activation_allowed: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass
 class SpecialistBoundaryContract:
     specialist_type: str
     runtime_scope: str

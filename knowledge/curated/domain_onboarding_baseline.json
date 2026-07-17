@@ -1,0 +1,76 @@
+{
+  "schema_version": "1.0.0",
+  "candidate": {
+    "onboarding_candidate_id": "domain-onboarding-candidate://education_learning/1.0.0",
+    "route_name": "education_learning",
+    "display_name": "Education and Learning",
+    "canonical_domain_refs": [
+      "educacao_ensino_e_desenvolvimento_humano"
+    ],
+    "knowledge_pack_id": "knowledge-pack://education_learning/1.0.0",
+    "onboarding_workflow_profile": "domain_onboarding_workflow",
+    "runtime_workflow_profile": "education_learning_workflow",
+    "workflow_steps": [
+      "frame_learning_objective",
+      "retrieve_reviewed_evidence",
+      "compose_bounded_guidance"
+    ],
+    "workflow_checkpoints": [
+      "objective_scope_review",
+      "evidence_quality_review",
+      "operator_acceptance_review"
+    ],
+    "workflow_decision_points": [
+      "source_quality_sufficient",
+      "human_review_required"
+    ],
+    "proposed_tests": [
+      "domain_registry_candidate_is_not_runtime_eligible",
+      "education_learning_eval_pack_baseline"
+    ],
+    "eval_pack_ref": "eval-pack://domain/education_learning/1.0.0",
+    "rollback_plan_ref": "rollback://domain-onboarding/remove-candidate-manifest",
+    "evidence_refs": [
+      "evidence://mb-171/domain-onboarding-protocol"
+    ],
+    "timestamp": "2026-07-16T00:00:00Z",
+    "linked_specialist_type": null,
+    "specialist_mode": "registry_only",
+    "requested_maturity": "candidate",
+    "activation_stage": "candidate",
+    "human_review_required": true,
+    "registry_write_allowed": false,
+    "specialist_promotion_allowed": false,
+    "automatic_activation_allowed": false,
+    "automatic_promotion_allowed": false,
+    "core_mutation_allowed": false
+  },
+  "knowledge_pack": {
+    "knowledge_pack_id": "knowledge-pack://education_learning/1.0.0",
+    "version": "1.0.0",
+    "canonical_domain_refs": [
+      "educacao_ensino_e_desenvolvimento_humano"
+    ],
+    "source_refs": [
+      "document://documento_mestre_jarvis/domain-map"
+    ],
+    "content_refs": [
+      "knowledge://curated/domain_registry/educacao_ensino_e_desenvolvimento_humano"
+    ],
+    "coverage_topics": [
+      "learning_objective_definition",
+      "evidence_quality",
+      "human_review_boundary"
+    ],
+    "evidence_refs": [
+      "evidence://mb-171/knowledge-pack-baseline"
+    ],
+    "timestamp": "2026-07-16T00:00:00Z",
+    "pack_status": "candidate",
+    "freshness_status": "unverified",
+    "review_status": "needs_review",
+    "human_review_required": true,
+    "automatic_activation_allowed": false,
+    "core_mutation_allowed": false
+  }
+}
