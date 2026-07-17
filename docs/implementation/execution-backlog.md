@@ -3322,6 +3322,239 @@ Fora de escopo:
 - `impacto_no_baseline`: existe dashboard read-only de readiness por capacidade, gate/testes, documentos e fila; o agregador distingue baseline, candidato e deferred, detecta status drift, preserva historico JSON e nunca autoriza release autonomo.
 - `evidencia_de_fechamento`: `tools/readiness_dashboard.py`, `jarvis-console readiness-dashboard`, contratos/schemas e agregacao no `observability-service` possuem testes de parsing, score, drift, blockers, historico e console; `docs/operations/regression-readiness-dashboard.md` registra uso e limites.
 
+### MB-175
+
+- `id`: `MB-175`
+- `prioridade`: `P1`
+- `status`: `done`
+- `eixo_do_mestre`: `evolucao`, `memoria procedural`, `controle de programa`
+- `map_ids`: `EVL-007`, `MEM-003`, `MEM-006`, `EVL-008`, `OBS-009`
+- `workflow_profile_afetado`: `operational_readiness_workflow`, `research_synthesis_workflow`
+- `micro_objetivo`: repriorizar o pos-`MB-174` para evolucao governada de skills e workflows a partir de padroes recorrentes reais.
+- `justificativa_arquitetural`: experiencia/reflexao, playbooks, review, sandbox e promotion gate ja existem; o maior elo faltante e transformar recorrencia observada em candidata reutilizavel sem ativacao autonoma.
+- `arquivos/servicos_principais`: `docs/implementation`, `HANDOFF.md`, `CHANGELOG.md`
+- `dependencias`: `MB-174`
+- `criterio_de_aceite`: existe fila ordenada `MB-176` a `MB-189`, com WIP 1, criterios de aceite, gates e limites de fase; somente `MB-176` fica ready.
+- `gate_minimo`: `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `medium`
+- `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: a proxima fase aprofunda a autoevolucao operacional por evidencia, skills e workflows governados, mantendo adapters amplos, superficies e self-modification fora da fila.
+- `evidencia_de_fechamento`: fila `MB-176` a `MB-189` derivada do mapa mestre e do warning ativo `EVL-007` no dashboard, com `MB-176` como unico item tecnico ready.
+
+### MB-176
+
+- `id`: `MB-176`
+- `prioridade`: `P1`
+- `status`: `ready`
+- `eixo_do_mestre`: `evolucao`, `experiencia`, `observabilidade`
+- `map_ids`: `EVL-007`, `MEM-003`, `OBS-009`
+- `workflow_profile_afetado`: `operational_readiness_workflow`, `research_synthesis_workflow`
+- `micro_objetivo`: gerar relatorio bounded de padroes recorrentes a partir de experiencias, reflexoes e feedbacks com escopo compativel.
+- `justificativa_arquitetural`: skill candidata exige recorrencia e evidencia antes de qualquer mineracao ou registry.
+- `arquivos/servicos_principais`: `shared/contracts`, `services/memory-service`, `services/observability-service`, `tests`
+- `dependencias`: `MB-175`
+- `criterio_de_aceite`: duas ou mais experiencias compativeis podem formar pattern evidence com workflow, rota, dominio, outcome, evidencias, confidence bounded e bloqueio explicito de criacao/promocao automatica de skill.
+- `gate_minimo`: testes direcionados de memory/observability/shared e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `medium`
+- `modelo_recomendado`: `gpt-5.3-codex`
+
+### MB-177
+
+- `id`: `MB-177`
+- `prioridade`: `P1`
+- `status`: `blocked`
+- `eixo_do_mestre`: `evolucao`, `skills`, `memoria procedural`
+- `map_ids`: `EVL-007`, `MEM-006`, `GOV-004`
+- `workflow_profile_afetado`: `operational_readiness_workflow`
+- `micro_objetivo`: formalizar contrato e registry persistente de skill candidata, versionada e inativa.
+- `justificativa_arquitetural`: separar candidata de playbook, skill formal e skill ativa evita promocao implicita.
+- `arquivos/servicos_principais`: `shared/contracts`, `services/memory-service`, `evolution/evolution-lab`, `tests`
+- `dependencias`: `MB-176`
+- `criterio_de_aceite`: skill candidata possui inputs, outputs, dominio, especialista, tools permitidas, risco, versao, evidencias, failure modes, rollback e status humano; ativacao automatica e mutacao do Core ficam falsas.
+- `gate_minimo`: testes direcionados de memory/evolution/shared e gate padrao
+
+### MB-178
+
+- `id`: `MB-178`
+- `prioridade`: `P1`
+- `status`: `blocked`
+- `eixo_do_mestre`: `evolucao`, `skills`
+- `map_ids`: `EVL-007`, `MEM-003`, `MEM-006`
+- `workflow_profile_afetado`: `operational_readiness_workflow`, `research_synthesis_workflow`
+- `micro_objetivo`: implementar Skill Miner bounded que converte pattern evidence elegivel em skill candidata.
+- `justificativa_arquitetural`: mineracao deve ser deterministica, auditavel e incapaz de ativar skill.
+- `arquivos/servicos_principais`: `evolution/evolution-lab`, `services/memory-service`, `tests`
+- `dependencias`: `MB-177`
+- `criterio_de_aceite`: threshold de recorrencia, outcomes, conflitos e evidencias controla geracao; insuficiencia produz blocker visivel, nunca candidata otimista.
+- `gate_minimo`: testes direcionados de evolution/memory e gate padrao
+
+### MB-179
+
+- `id`: `MB-179`
+- `prioridade`: `P1`
+- `status`: `blocked`
+- `eixo_do_mestre`: `evolucao`, `governanca`, `evals`
+- `map_ids`: `EVL-007`, `EVL-005`, `EVL-006`, `GOV-009`
+- `workflow_profile_afetado`: `governance_boundary_workflow`, `operational_readiness_workflow`
+- `micro_objetivo`: conectar skill candidata a review humano, eval sandbox e promotion checklist sem ativacao runtime.
+- `justificativa_arquitetural`: candidato reutilizavel precisa de prova e decisao humana antes de consumo.
+- `arquivos/servicos_principais`: `evolution/evolution-lab`, `services/governance-service`, `services/observability-service`, `tests`
+- `dependencias`: `MB-178`
+- `criterio_de_aceite`: review/eval/checklist carregam skill/version/evidencias/testes/rollback; resultado verde permanece pendente de promocao humana separada.
+- `gate_minimo`: testes direcionados de evolution/governance/observability e gate padrao
+
+### MB-180
+
+- `id`: `MB-180`
+- `prioridade`: `P1`
+- `status`: `blocked`
+- `eixo_do_mestre`: `operador`, `skills`, `observabilidade`
+- `map_ids`: `EVL-007`, `OP-010`, `SFC-004`
+- `workflow_profile_afetado`: `operational_readiness_workflow`
+- `micro_objetivo`: expor pattern evidence, skill candidata, eval, review e blockers no console read-only.
+- `justificativa_arquitetural`: o operador precisa compreender e revisar a evolucao proposta.
+- `arquivos/servicos_principais`: `apps/jarvis_console`, `services/observability-service`, `tests`, `docs/operations`
+- `dependencias`: `MB-179`
+- `criterio_de_aceite`: console mostra origem, recorrencia, escopo, risco, versao, testes, rollback e status sem executar/promover skill.
+- `gate_minimo`: testes de console/observability, E2E afetado e gate padrao
+
+### MB-181
+
+- `id`: `MB-181`
+- `prioridade`: `P2`
+- `status`: `blocked`
+- `eixo_do_mestre`: `workflows`, `evolucao`
+- `map_ids`: `COG-006`, `EVL-008`, `DOC-004`
+- `workflow_profile_afetado`: todos os workflows promovidos do registry
+- `micro_objetivo`: formalizar versao e lifecycle de workflow_profile sem alterar registry ativo.
+- `justificativa_arquitetural`: comparar workflows exige identidade/versionamento antes de gerar variantes.
+- `arquivos/servicos_principais`: `shared/contracts`, `shared/domain_registry.py`, `evolution/evolution-lab`, `tests`
+- `dependencias`: `MB-180`
+- `criterio_de_aceite`: versoes baseline/candidate possuem passos, checkpoints, decisions, evidencias e rollback; registry ativo permanece imutavel.
+- `gate_minimo`: testes de shared/evolution/domain registry e gate padrao
+
+### MB-182
+
+- `id`: `MB-182`
+- `prioridade`: `P2`
+- `status`: `blocked`
+- `eixo_do_mestre`: `workflows`, `evolucao`, `memoria`
+- `map_ids`: `EVL-008`, `COG-006`, `COG-007`
+- `workflow_profile_afetado`: workflows promovidos com pattern evidence elegivel
+- `micro_objetivo`: gerar variante candidata de workflow a partir de evidencia revisada.
+- `justificativa_arquitetural`: reflexao isolada nao pode reescrever workflow; somente pattern evidence revisada pode propor variante.
+- `arquivos/servicos_principais`: `evolution/evolution-lab`, `services/memory-service`, `tests`
+- `dependencias`: `MB-181`
+- `criterio_de_aceite`: candidata explicita delta de passos/checkpoints/criteria, evidencia, risco e rollback, sem escrita no registry ativo.
+- `gate_minimo`: testes de evolution/memory e gate padrao
+
+### MB-183
+
+- `id`: `MB-183`
+- `prioridade`: `P2`
+- `status`: `blocked`
+- `eixo_do_mestre`: `evals`, `workflows`, `observabilidade`
+- `map_ids`: `EVL-005`, `EVL-008`, `OBS-009`
+- `workflow_profile_afetado`: workflow candidato sob avaliacao
+- `micro_objetivo`: comparar baseline vs workflow candidate em cenarios offline equivalentes.
+- `justificativa_arquitetural`: workflow so pode avancar com ganho mensuravel e ausencia de regressao.
+- `arquivos/servicos_principais`: `tools`, `services/observability-service`, `evolution/evolution-lab`, `tests`
+- `dependencias`: `MB-182`
+- `criterio_de_aceite`: eval mede sucesso, contrato, retrabalho, checkpoints, memoria e regressao; resultado nao autoriza promocao.
+- `gate_minimo`: testes de tools/observability/evolution e gate padrao
+
+### MB-184
+
+- `id`: `MB-184`
+- `prioridade`: `P2`
+- `status`: `blocked`
+- `eixo_do_mestre`: `governanca`, `workflows`, `rollback`
+- `map_ids`: `EVL-006`, `EVL-008`, `GOV-009`
+- `workflow_profile_afetado`: workflow candidato aprovado em eval
+- `micro_objetivo`: integrar workflow candidate ao promotion gate e rollback manual.
+- `justificativa_arquitetural`: promocao de workflow deve reutilizar gates existentes e preservar decisao humana separada.
+- `arquivos/servicos_principais`: `evolution/evolution-lab`, `services/governance-service`, `tools`, `tests`
+- `dependencias`: `MB-183`
+- `criterio_de_aceite`: checklist exige review, eval, release gate e rollback; nenhuma promocao ocorre automaticamente.
+- `gate_minimo`: testes de evolution/governance/release e gate padrao
+
+### MB-185
+
+- `id`: `MB-185`
+- `prioridade`: `P2`
+- `status`: `blocked`
+- `eixo_do_mestre`: `roteamento`, `evolucao`, `observabilidade`
+- `map_ids`: `COG-003`, `COG-007`, `EVL-008`, `OBS-009`
+- `workflow_profile_afetado`: rotas promovidas
+- `micro_objetivo`: produzir evidencia de adaptacao de routing sem mutar rota ativa.
+- `justificativa_arquitetural`: acerto de rota/especialista deve ser medido antes de qualquer ajuste.
+- `arquivos/servicos_principais`: `services/observability-service`, `evolution/evolution-lab`, `tools`, `tests`
+- `dependencias`: `MB-184`
+- `criterio_de_aceite`: relatorio compara rota esperada/observada, outcome, memoria e especialista e gera somente candidata revisavel.
+- `gate_minimo`: testes de observability/evolution/tools e gate padrao
+
+### MB-186
+
+- `id`: `MB-186`
+- `prioridade`: `P2`
+- `status`: `blocked`
+- `eixo_do_mestre`: `memoria semantica`, `memoria procedural`, `planejamento`
+- `map_ids`: `MEM-005`, `MEM-006`, `COG-007`, `GOV-004`
+- `workflow_profile_afetado`: workflows promovidos
+- `micro_objetivo`: endurecer politica causal de influencia semantica/procedural com prioridade, conflito e non-use auditavel.
+- `justificativa_arquitetural`: skills/workflows revisados precisam coexistir com memoria sem influencia indiscriminada.
+- `arquivos/servicos_principais`: `services/memory-service`, `engines/planning-engine`, `services/governance-service`, `tests`
+- `dependencias`: `MB-185`
+- `criterio_de_aceite`: politica seleciona ou ignora memoria por escopo/evidencia/conflito e registra razao na decisao e sintese.
+- `gate_minimo`: testes de memory/planning/governance/orchestrator e gate padrao
+
+### MB-187
+
+- `id`: `MB-187`
+- `prioridade`: `P2`
+- `status`: `blocked`
+- `eixo_do_mestre`: `memoria`, `operador`, `governanca`
+- `map_ids`: `MEM-007`, `MEM-008`, `MEM-009`, `GOV-004`
+- `workflow_profile_afetado`: `memory_lifecycle_workflow`
+- `micro_objetivo`: consolidar fila humana de revisao, consolidacao e expiracao de memoria.
+- `justificativa_arquitetural`: memoria evolutiva crescente exige manutencao humana verificavel, nao scheduler autonomo.
+- `arquivos/servicos_principais`: `services/memory-service`, `services/governance-service`, `apps/jarvis_console`, `tests`
+- `dependencias`: `MB-186`
+- `criterio_de_aceite`: operador revisa candidatos de consolidacao/arquivo/expiracao com evidencias e rollback; nenhuma manutencao critica e autonoma.
+- `gate_minimo`: testes de memory/governance/console e gate padrao
+
+### MB-188
+
+- `id`: `MB-188`
+- `prioridade`: `P2`
+- `status`: `blocked`
+- `eixo_do_mestre`: `observabilidade`, `evolucao`, `utilidade`
+- `map_ids`: `OBS-005`, `OBS-009`, `EVL-005`, `EVL-008`
+- `workflow_profile_afetado`: workflows com evidencia longitudinal
+- `micro_objetivo`: medir ao longo do tempo se skills, workflows e memoria revisados melhoram missoes futuras.
+- `justificativa_arquitetural`: autoevolucao util exige ganho sustentado, nao apenas eval pontual.
+- `arquivos/servicos_principais`: `services/observability-service`, `tools`, `apps/jarvis_console`, `tests`
+- `dependencias`: `MB-187`
+- `criterio_de_aceite`: relatorio longitudinal mede sucesso, retrabalho, feedback, regressao e rollback por versao, sem converter score em promocao.
+- `gate_minimo`: testes de observability/tools/console e gate padrao
+
+### MB-189
+
+- `id`: `MB-189`
+- `prioridade`: `P2`
+- `status`: `blocked`
+- `eixo_do_mestre`: `qualidade`, `documentacao`, `readiness`
+- `map_ids`: `OBS-007`, `OBS-008`, `DOC-010`
+- `workflow_profile_afetado`: `operational_readiness_workflow`
+- `micro_objetivo`: fechar o slice de evolucao de skills/workflows com readiness, regressao e docs sincronizados.
+- `justificativa_arquitetural`: a fase precisa terminar com evidencia acumulada e proxima decisao explicita.
+- `arquivos/servicos_principais`: `tools`, `docs/implementation`, `HANDOFF.md`, `CHANGELOG.md`, `tests`
+- `dependencias`: `MB-188`
+- `criterio_de_aceite`: dashboard registra capacidades/status sem drift, gate padrao passa e nenhuma promocao/autonomia fora de escopo foi aberta.
+- `gate_minimo`: dashboard com gate padrao e document guardrails
+
 ## 5. Regras de manutencao da fila
 
 - o proximo item puxado deve ser o primeiro `ready` de maior prioridade sem dependencia aberta;
@@ -3427,5 +3660,7 @@ Estado atual da fila:
 - `MB-172` foi concluido como primeiro eval pack offline reutilizavel por dominio/rota, com agregacao observavel e promocao manual-only;
 - `MB-173` foi concluido como baseline de proveniencia, freshness e conflito/incerteza de conhecimento;
 - `MB-174` foi concluido como dashboard integrado de regressao/readiness, fechando a fila `MB-161` a `MB-174`; nao ha item tecnico `ready` ate nova repriorizacao explicita pelo mapa mestre;
+- `MB-175` foi concluido como repriorizacao pos-`MB-174`, abrindo a fila governada de skill/workflow evolution `MB-176` a `MB-189`;
+- `MB-176` e o unico item tecnico `ready`; `MB-177` a `MB-189` permanecem `blocked` por dependencia/ordem;
 - `SO-001`, `TA-004`, `TA-006` e verticais `deferred` continuam fora da fila sem mudanca explicita de fase;
 - `protective intelligence foundation` continua `deferred` e a matriz da Onda 2 segue como insumo, nao como gatilho automatico para abrir nova vertical.

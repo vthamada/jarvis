@@ -56,6 +56,12 @@
 - `tools/readiness_dashboard.py` deriva o estado do mapa/backlog existentes, executa gate somente por flag explicita e salva `latest.json` mais historico operacional para comparacao longitudinal;
 - `jarvis-console readiness-dashboard` expoe a leitura read-only; testes cobrem parsing, drift, score, blockers, historico e console, fechando a fila `MB-161` a `MB-174` sem novo item ready automatico.
 
+### MB-175 reprioriza evolucao governada de skills e workflows
+
+- o mapa mestre e o Documento Evolutivo apontam `EVL-007` como o principal elo ainda documental entre experiencias/reflexoes e skills reutilizaveis;
+- `execution-backlog.md` abre `MB-176` a `MB-189` para pattern evidence, skill registry/miner, review/sandbox, workflow evolution, routing, memoria e metricas longitudinais;
+- WIP permanece 1: somente `MB-176` fica ready, e adapters amplos, superficies, scheduler autonomo, self-modification e promocao automatica continuam fora da fila.
+
 ## 2026-07-04
 
 ### MB-161 fecha anchors de evidencia de memoria semantica

@@ -553,7 +553,113 @@ drift into a compact CLI/report.
 Status: closed in `MB-174`; capability, gate/test, document and backlog signals
 are available in a read-only report and console command.
 
-## 12. What Must Not Be Pulled Next By Inertia
+## 12. Suggested MB-175 To MB-189 Queue
+
+This queue continues inside `v2_core_depth`. It materializes the path already
+defined by the Documento Evolutivo:
+
+`experience -> recurring pattern -> skill candidate -> review -> sandbox -> workflow candidate -> eval -> manual gate -> longitudinal measurement`
+
+Execution remains sequential with WIP 1.
+
+### MB-175 -- Reprioritize Governed Skill And Workflow Evolution
+
+Map IDs: `EVL-007`, `MEM-003`, `MEM-006`, `EVL-008`, `OBS-009`.
+
+Status: closed as explicit post-`MB-174` reprioritization; `MB-176` is the only
+technical item ready.
+
+### MB-176 -- Recurrent Pattern Evidence Baseline
+
+Map IDs: `EVL-007`, `MEM-003`, `OBS-009`.
+
+Goal: aggregate compatible experiences, reflections and feedback into bounded,
+auditable recurring-pattern evidence without creating a skill automatically.
+
+Status: ready after `MB-175`.
+
+### MB-177 -- Candidate Skill Registry Contracts
+
+Map IDs: `EVL-007`, `MEM-006`, `GOV-004`.
+
+Goal: define a versioned, inactive and human-review-bound skill candidate.
+
+### MB-178 -- Bounded Skill Miner
+
+Map IDs: `EVL-007`, `MEM-003`, `MEM-006`.
+
+Goal: convert only eligible recurring-pattern evidence into a skill candidate.
+
+### MB-179 -- Skill Review And Sandbox Eval
+
+Map IDs: `EVL-007`, `EVL-005`, `EVL-006`, `GOV-009`.
+
+Goal: connect skill candidates to human review, sandbox eval and promotion
+checklist without runtime activation.
+
+### MB-180 -- Skill Operator Surface
+
+Map IDs: `EVL-007`, `OP-010`, `SFC-004`.
+
+Goal: expose pattern, candidate, eval, review, risk and rollback in the console.
+
+### MB-181 -- Workflow Profile Version Registry
+
+Map IDs: `COG-006`, `EVL-008`, `DOC-004`.
+
+Goal: version baseline/candidate workflows without mutating the active registry.
+
+### MB-182 -- Workflow Evolution Candidate Builder
+
+Map IDs: `EVL-008`, `COG-006`, `COG-007`.
+
+Goal: derive a workflow variant only from reviewed pattern evidence.
+
+### MB-183 -- Workflow Variant Eval
+
+Map IDs: `EVL-005`, `EVL-008`, `OBS-009`.
+
+Goal: compare workflow baseline and candidate under equivalent offline cases.
+
+### MB-184 -- Workflow Promotion And Rollback Gate
+
+Map IDs: `EVL-006`, `EVL-008`, `GOV-009`.
+
+Goal: reuse human review, release gates and rollback for workflow candidates.
+
+### MB-185 -- Routing Adaptation Evidence
+
+Map IDs: `COG-003`, `COG-007`, `EVL-008`, `OBS-009`.
+
+Goal: measure route/specialist fit and produce reviewable adaptation evidence.
+
+### MB-186 -- Semantic And Procedural Influence Policy Hardening
+
+Map IDs: `MEM-005`, `MEM-006`, `COG-007`, `GOV-004`.
+
+Goal: govern priority, conflict, use and non-use across reviewed memory inputs.
+
+### MB-187 -- Human Memory Review And Consolidation
+
+Map IDs: `MEM-007`, `MEM-008`, `MEM-009`, `GOV-004`.
+
+Goal: expose evidence-bound consolidation/archive/expiration decisions without
+an autonomous scheduler.
+
+### MB-188 -- Longitudinal Learning Metrics
+
+Map IDs: `OBS-005`, `OBS-009`, `EVL-005`, `EVL-008`.
+
+Goal: measure sustained utility and regressions by reviewed skill/workflow
+version over time.
+
+### MB-189 -- Skill And Workflow Evolution Readiness Closure
+
+Map IDs: `OBS-007`, `OBS-008`, `DOC-010`.
+
+Goal: close the slice with dashboard, regression and documentation evidence.
+
+## 13. What Must Not Be Pulled Next By Inertia
 
 Do not open these without explicit phase decision:
 
@@ -569,7 +675,7 @@ Do not open these without explicit phase decision:
 - model weight changes;
 - autonomous promotion of evolution proposals.
 
-## 13. Maintenance Policy
+## 14. Maintenance Policy
 
 This map should be updated when:
 
@@ -582,7 +688,7 @@ This map should be updated when:
 The `execution-backlog.md` should remain the only micro queue. This map should
 remain the complete capability decomposition.
 
-## 13. Executive Conclusion
+## 15. Executive Conclusion
 
 The system is no longer just scattered infrastructure. It has a governed core,
 memory, planning, synthesis, observability, evolution lab, console and learning

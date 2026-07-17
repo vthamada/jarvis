@@ -35,8 +35,7 @@ MB_HEADING_PATTERN = re.compile(
     re.MULTILINE,
 )
 READY_ITEM_CLAIM_PATTERN = re.compile(
-    r"`(MB-\d+)`.{0,100}?e o unico item tecnico `ready`",
-    re.DOTALL,
+    r"`(MB-\d+)`\s+e o unico item tecnico `ready`",
 )
 
 READY_STATUSES = {"implemented_baseline", "resolved_in_baseline"}
