@@ -4,7 +4,11 @@ from uuid import uuid4
 
 from operational_service.service import OperationalExecution, OperationalService
 
-from shared.contracts import MissionStateContract, OperationDispatchContract
+from shared.contracts import (
+    MissionStateContract,
+    OperationDispatchContract,
+    WorkItemStateContract,
+)
 from shared.types import (
     MissionId,
     MissionStatus,
@@ -129,6 +133,57 @@ def test_operational_service_requires_decision_for_open_mission_without_next_act
     assert workspace.next_operator_decision == (
         "define_next_action:mission-needs-next-action"
     )
+
+
+def test_operational_service_orders_governed_work_without_execution() -> None:
+    mission_id = MissionId("mission-governed-work-order")
+    foundation_ref = "work-item://mission-governed-work-order/foundation"
+    release_ref = "work-item://mission-governed-work-order/release"
+    mission = MissionStateContract(
+        mission_id=mission_id,
+        mission_goal="Order explicit work",
+        mission_status=MissionStatus.ACTIVE,
+        checkpoints=[],
+        updated_at="2026-07-17T09:00:00+00:00",
+        objective_status="active",
+        work_item_refs=[foundation_ref, release_ref],
+        active_work_items=[foundation_ref, release_ref],
+        work_items=[
+            WorkItemStateContract(
+                work_item_ref=release_ref,
+                work_item_status="active",
+                mission_id=mission_id,
+                priority_level="p0",
+                dependency_refs=[foundation_ref],
+            ),
+            WorkItemStateContract(
+                work_item_ref=foundation_ref,
+                work_item_status="active",
+                mission_id=mission_id,
+                priority_level="p2",
+            ),
+        ],
+    )
+
+    queue = OperationalService.build_work_item_queue(mission)
+    workspace = OperationalService.build_daily_operator_workspace(
+        mission_states=[mission],
+        generated_at="2026-07-17T10:00:00+00:00",
+    )
+
+    assert [item.work_item_ref for item in queue.ordered_work_items] == [
+        foundation_ref,
+        release_ref,
+    ]
+    assert queue.executable_work_item_refs == [foundation_ref]
+    assert queue.blocked_work_item_refs == [release_ref]
+    assert queue.autonomous_execution_allowed is False
+    assert workspace.missions[0].ordered_work_item_refs == [
+        foundation_ref,
+        release_ref,
+    ]
+    assert workspace.missions[0].executable_work_item_refs == [foundation_ref]
+    assert workspace.next_operator_decision == f"review_blocked_work_items:{mission_id}"
 
 
 def test_operational_service_blocks_dispatch_above_autonomy_limit() -> None:

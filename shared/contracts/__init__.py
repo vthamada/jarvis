@@ -37,6 +37,8 @@ WORKFLOW_VARIANT_EVAL_METRICS = (
     "memory_causality",
 )
 
+WORK_ITEM_PRIORITY_LEVELS = ("p0", "p1", "p2", "p3")
+
 
 @dataclass
 class SurfaceIdentityContract:
@@ -67,8 +69,27 @@ class WorkItemStateContract:
     mission_id: MissionId
     transition: str | None = None
     next_action_ref: str | None = None
+    dependency_refs: list[str] = field(default_factory=list)
+    priority_level: str = "p2"
+    blocking_state: str = "ready"
+    blocker_refs: list[str] = field(default_factory=list)
     checkpoint_refs: list[str] = field(default_factory=list)
     memory_write_mode: str = "through_core_only"
+
+
+@dataclass
+class WorkItemQueueContract:
+    mission_id: MissionId
+    queue_status: str
+    ordered_work_items: list[WorkItemStateContract]
+    executable_work_item_refs: list[str]
+    blocked_work_item_refs: list[str]
+    completed_work_item_refs: list[str]
+    evidence_refs: list[str] = field(default_factory=list)
+    ordering_policy: str = "dependency_topology_then_priority_p0_to_p3_then_ref"
+    memory_write_mode: str = "read_only"
+    read_only: bool = True
+    autonomous_execution_allowed: bool = False
 
 
 @dataclass
@@ -1810,6 +1831,7 @@ class MissionStateContract:
     project_ref: str | None = None
     objective_ref: str | None = None
     work_item_refs: list[str] = field(default_factory=list)
+    work_items: list[WorkItemStateContract] = field(default_factory=list)
     checkpoint_refs: list[str] = field(default_factory=list)
     artifact_refs: list[str] = field(default_factory=list)
     objective_status: str | None = None
@@ -1839,6 +1861,9 @@ class DailyWorkspaceMissionContract:
     next_action_ref: str | None = None
     work_item_refs: list[str] = field(default_factory=list)
     active_work_items: list[str] = field(default_factory=list)
+    ordered_work_item_refs: list[str] = field(default_factory=list)
+    executable_work_item_refs: list[str] = field(default_factory=list)
+    blocked_work_item_refs: list[str] = field(default_factory=list)
     artifact_refs: list[str] = field(default_factory=list)
     active_artifact_refs: list[str] = field(default_factory=list)
     open_checkpoint_refs: list[str] = field(default_factory=list)

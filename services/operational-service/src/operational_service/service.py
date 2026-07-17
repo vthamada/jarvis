@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import UTC, datetime
 from hashlib import sha256
 from pathlib import Path
@@ -16,8 +16,10 @@ from shared.contracts import (
     MissionStateContract,
     OperationDispatchContract,
     OperationResultContract,
+    WorkItemQueueContract,
 )
 from shared.types import ArtifactId, ArtifactStatus, MissionStatus, OperationStatus
+from shared.work_item_policy import canonical_work_items_from_mission, order_work_items
 
 
 @dataclass
@@ -39,6 +41,67 @@ class OperationalService:
         )
         resolved_dir.mkdir(parents=True, exist_ok=True)
         self.artifact_dir = resolved_dir
+
+    @classmethod
+    def build_work_item_queue(
+        cls,
+        mission_state: MissionStateContract,
+    ) -> WorkItemQueueContract:
+        """Build a read-only governed queue without scheduling or execution."""
+
+        ordered = order_work_items(canonical_work_items_from_mission(mission_state))
+        mission_blocking_state = {
+            MissionStatus.PAUSED: "mission_paused",
+            MissionStatus.BLOCKED: "mission_blocked",
+            MissionStatus.COMPLETED: "mission_completed",
+            MissionStatus.CANCELED: "mission_canceled",
+        }.get(mission_state.mission_status)
+        if mission_blocking_state:
+            ordered = [
+                replace(item, blocking_state=mission_blocking_state)
+                if item.work_item_status != "completed"
+                else item
+                for item in ordered
+            ]
+        executable_refs = [
+            item.work_item_ref
+            for item in ordered
+            if item.work_item_status == "active" and item.blocking_state == "ready"
+        ]
+        blocked_refs = [
+            item.work_item_ref
+            for item in ordered
+            if item.work_item_status != "completed"
+            and item.work_item_ref not in executable_refs
+        ]
+        completed_refs = [
+            item.work_item_ref
+            for item in ordered
+            if item.work_item_status == "completed"
+        ]
+        queue_status = (
+            "empty"
+            if not ordered
+            else "ready_with_blocked"
+            if executable_refs and blocked_refs
+            else "ready"
+            if executable_refs
+            else "blocked"
+            if blocked_refs
+            else "completed"
+        )
+        return WorkItemQueueContract(
+            mission_id=mission_state.mission_id,
+            queue_status=queue_status,
+            ordered_work_items=ordered,
+            executable_work_item_refs=executable_refs,
+            blocked_work_item_refs=blocked_refs,
+            completed_work_item_refs=completed_refs,
+            evidence_refs=[
+                f"mission-state://{mission_state.mission_id}@{mission_state.updated_at}",
+                *mission_state.checkpoint_refs,
+            ],
+        )
 
     @classmethod
     def build_daily_operator_workspace(
@@ -146,6 +209,7 @@ class OperationalService:
         generated_at: str,
     ) -> DailyWorkspaceMissionContract:
         mission_id = str(state.mission_id)
+        work_item_queue = cls.build_work_item_queue(state)
         objective_status = state.objective_status or state.mission_status.value
         freshness_status, freshness_age_hours = cls._workspace_freshness(
             state.updated_at,
@@ -165,13 +229,18 @@ class OperationalService:
             pending_decisions.append(f"review_stale_mission:{mission_id}")
         if state.open_checkpoint_refs:
             pending_decisions.append(f"review_open_checkpoints:{mission_id}")
+        if work_item_queue.blocked_work_item_refs:
+            pending_decisions.append(f"review_blocked_work_items:{mission_id}")
         if not blocked and not paused:
             if state.next_action_ref:
                 pending_decisions.append(
                     f"continue_mission:{mission_id}:{state.next_action_ref}"
                 )
-            elif state.active_work_items:
-                pending_decisions.append(f"select_active_work_item:{mission_id}")
+            elif work_item_queue.executable_work_item_refs:
+                pending_decisions.append(
+                    "select_work_item:"
+                    + work_item_queue.executable_work_item_refs[0]
+                )
             else:
                 pending_decisions.append(f"define_next_action:{mission_id}")
         next_action_status = (
@@ -182,7 +251,9 @@ class OperationalService:
             else "ready"
             if state.next_action_ref
             else "derive_from_work_item"
-            if state.active_work_items
+            if work_item_queue.executable_work_item_refs
+            else "blocked_by_work_item"
+            if work_item_queue.blocked_work_item_refs
             else "missing"
         )
         operator_attention_status = (
@@ -213,6 +284,13 @@ class OperationalService:
             next_action_ref=state.next_action_ref,
             work_item_refs=list(state.work_item_refs),
             active_work_items=list(state.active_work_items),
+            ordered_work_item_refs=[
+                item.work_item_ref for item in work_item_queue.ordered_work_items
+            ],
+            executable_work_item_refs=list(
+                work_item_queue.executable_work_item_refs
+            ),
+            blocked_work_item_refs=list(work_item_queue.blocked_work_item_refs),
             artifact_refs=list(state.artifact_refs),
             active_artifact_refs=list(state.active_artifact_refs),
             open_checkpoint_refs=list(state.open_checkpoint_refs),

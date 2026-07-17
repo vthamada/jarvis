@@ -14,6 +14,8 @@ from apps.jarvis_console.cli import (
     run_daily_workspace_command,
     run_longitudinal_learning_report_command,
     run_skill_evolution_command,
+    run_work_item_command,
+    run_work_items_command,
 )
 from shared.contracts import (
     ExperienceRecordContract,
@@ -160,6 +162,118 @@ def test_daily_workspace_reads_two_real_cross_session_missions_without_mutation(
     assert "autonomous_scheduling_allowed=False" in rendered
     assert memory_db.read_bytes() == before[memory_db]
     assert evolution_db.read_bytes() == before[evolution_db]
+
+
+def test_console_governs_work_item_graph_across_sessions_without_execution() -> None:
+    temp_dir = runtime_dir("console-e2e-work-item-graph")
+    mission_id = "mission-e2e-work-item-graph"
+    foundation_ref = f"work-item://{mission_id}/foundation"
+    release_ref = f"work-item://{mission_id}/release"
+    first_console = JarvisConsole.build(runtime_dir=temp_dir)
+    first_console.ask(
+        "Plan the controlled rollout.",
+        session_id="sess-e2e-work-item-one",
+        mission_id=mission_id,
+    )
+    parser = build_parser()
+    create_foundation = parser.parse_args(
+        [
+            "work-item",
+            "--mission-id",
+            mission_id,
+            "--session-id",
+            "sess-e2e-work-item-one",
+            "--action",
+            "create",
+            "--work-item-ref",
+            foundation_ref,
+            "--priority",
+            "p2",
+        ]
+    )
+    create_release = parser.parse_args(
+        [
+            "work-item",
+            "--mission-id",
+            mission_id,
+            "--session-id",
+            "sess-e2e-work-item-one",
+            "--action",
+            "create",
+            "--work-item-ref",
+            release_ref,
+            "--depends-on",
+            foundation_ref,
+            "--priority",
+            "p0",
+        ]
+    )
+
+    run_work_item_command(first_console, create_foundation)
+    created_release = run_work_item_command(first_console, create_release)[0]
+    second_console = JarvisConsole.build(runtime_dir=temp_dir)
+    list_args = parser.parse_args(["work-items", "--mission-id", mission_id])
+    before_completion = run_work_items_command(second_console, list_args)[0]
+    cyclic_update = parser.parse_args(
+        [
+            "work-item",
+            "--mission-id",
+            mission_id,
+            "--session-id",
+            "sess-e2e-work-item-two",
+            "--action",
+            "update",
+            "--work-item-ref",
+            foundation_ref,
+            "--depends-on",
+            release_ref,
+        ]
+    )
+    blocked_cycle = run_work_item_command(second_console, cyclic_update)[0]
+    premature_complete = parser.parse_args(
+        [
+            "work-item",
+            "--mission-id",
+            mission_id,
+            "--session-id",
+            "sess-e2e-work-item-two",
+            "--action",
+            "complete",
+            "--work-item-ref",
+            release_ref,
+        ]
+    )
+    blocked_completion = run_work_item_command(
+        second_console,
+        premature_complete,
+    )[0]
+    complete_foundation = parser.parse_args(
+        [
+            "work-item",
+            "--mission-id",
+            mission_id,
+            "--session-id",
+            "sess-e2e-work-item-two",
+            "--action",
+            "complete",
+            "--work-item-ref",
+            foundation_ref,
+        ]
+    )
+    run_work_item_command(second_console, complete_foundation)
+    after_completion = run_work_items_command(second_console, list_args)[0]
+
+    assert "priority_level=p0" in created_release
+    assert "blocking_state=dependency_blocked" in created_release
+    assert f"ordered_work_item_refs={foundation_ref},{release_ref}" in before_completion
+    assert f"executable_work_item_refs={foundation_ref}" in before_completion
+    assert f"blocked_work_item_refs={release_ref}" in before_completion
+    assert "transition_status=blocked" in blocked_cycle
+    assert "governance_decision=block" in blocked_cycle
+    assert "transition_status=blocked" in blocked_completion
+    assert "governance_decision=block" in blocked_completion
+    assert f"executable_work_item_refs={release_ref}" in after_completion
+    assert "autonomous_execution_allowed=False" in after_completion
 
 
 def test_console_operator_route_matrix_covers_promoted_journeys() -> None:

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from json import dumps, loads
 from pathlib import Path
 from sqlite3 import Connection, OperationalError, Row
@@ -11,6 +11,7 @@ from sqlite3 import connect as sqlite_connect
 from urllib.parse import urlparse
 
 from shared.contracts import (
+    WORK_ITEM_PRIORITY_LEVELS,
     ContinuityCheckpointContract,
     ExperienceRecordContract,
     MemoryLifecycleReviewDecisionContract,
@@ -21,6 +22,7 @@ from shared.contracts import (
     SkillCandidateContract,
     SpecialistSharedMemoryContextContract,
     UserScopeContextContract,
+    WorkItemStateContract,
 )
 from shared.memory_registry import memory_lifecycle_support_signals
 from shared.types import MissionId, MissionStatus, RiskLevel
@@ -31,6 +33,73 @@ try:
 except ImportError:  # pragma: no cover - exercised only when postgres backend is unavailable.
     psycopg = None
     dict_row = None
+
+
+def _serialize_work_items(work_items: list[WorkItemStateContract]) -> str:
+    return dumps([asdict(item) for item in work_items])
+
+
+def _deserialize_work_items(
+    raw: str | None,
+    *,
+    mission_id: str,
+) -> list[WorkItemStateContract]:
+    values = loads(raw or "[]")
+    if not isinstance(values, list):
+        raise ValueError("mission work_items must be a JSON list")
+    items: list[WorkItemStateContract] = []
+    seen_refs: set[str] = set()
+    for value in values:
+        if not isinstance(value, dict):
+            raise ValueError("mission work_items entries must be JSON objects")
+        item_ref = str(value["work_item_ref"])
+        if item_ref in seen_refs:
+            raise ValueError("mission work_items must not contain duplicate refs")
+        seen_refs.add(item_ref)
+        stored_mission_id = str(value.get("mission_id") or mission_id)
+        if stored_mission_id != mission_id:
+            raise ValueError("mission work item identity does not match its mission")
+        priority_level = str(value.get("priority_level") or "p2")
+        if priority_level not in WORK_ITEM_PRIORITY_LEVELS:
+            raise ValueError("mission work item has invalid priority")
+        items.append(
+            WorkItemStateContract(
+                work_item_ref=item_ref,
+                work_item_status=str(value["work_item_status"]),
+                mission_id=MissionId(stored_mission_id),
+                transition=(
+                    str(value["transition"])
+                    if value.get("transition") is not None
+                    else None
+                ),
+                next_action_ref=(
+                    str(value["next_action_ref"])
+                    if value.get("next_action_ref") is not None
+                    else None
+                ),
+                dependency_refs=_work_item_string_list(
+                    value.get("dependency_refs", []), "dependency_refs"
+                ),
+                priority_level=priority_level,
+                blocking_state=str(value.get("blocking_state") or "ready"),
+                blocker_refs=_work_item_string_list(
+                    value.get("blocker_refs", []), "blocker_refs"
+                ),
+                checkpoint_refs=_work_item_string_list(
+                    value.get("checkpoint_refs", []), "checkpoint_refs"
+                ),
+                memory_write_mode=str(
+                    value.get("memory_write_mode") or "through_core_only"
+                ),
+            )
+        )
+    return items
+
+
+def _work_item_string_list(value: object, field_name: str) -> list[str]:
+    if not isinstance(value, list):
+        raise ValueError(f"mission work item {field_name} must be a JSON list")
+    return [str(item) for item in value]
 
 
 @dataclass(frozen=True)
@@ -653,14 +722,14 @@ class SqliteMemoryRepository(MemoryRepository):
                     identity_continuity_brief, open_loops, last_decision_frame,
                     ecosystem_state_status, active_work_items, active_artifact_refs,
                     open_checkpoint_refs, surface_presence, ecosystem_state_summary,
-                    project_ref, objective_ref, work_item_refs, checkpoint_refs,
+                    project_ref, objective_ref, work_item_refs, work_items, checkpoint_refs,
                     artifact_refs, objective_status, next_action_ref,
                     linked_surface_ids, active_surface_id, last_surface_id,
                     surface_continuity_status, surface_identity_conflict_flags, updated_at
                 )
                 VALUES (
                     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
                 )
                 ON CONFLICT(mission_id) DO UPDATE SET
                     mission_goal = excluded.mission_goal,
@@ -685,6 +754,7 @@ class SqliteMemoryRepository(MemoryRepository):
                     project_ref = excluded.project_ref,
                     objective_ref = excluded.objective_ref,
                     work_item_refs = excluded.work_item_refs,
+                    work_items = excluded.work_items,
                     checkpoint_refs = excluded.checkpoint_refs,
                     artifact_refs = excluded.artifact_refs,
                     objective_status = excluded.objective_status,
@@ -720,6 +790,7 @@ class SqliteMemoryRepository(MemoryRepository):
                     mission_state.project_ref,
                     mission_state.objective_ref,
                     dumps(mission_state.work_item_refs),
+                    _serialize_work_items(mission_state.work_items),
                     dumps(mission_state.checkpoint_refs),
                     dumps(mission_state.artifact_refs),
                     mission_state.objective_status,
@@ -1681,7 +1752,7 @@ class SqliteMemoryRepository(MemoryRepository):
                        identity_continuity_brief, open_loops, last_decision_frame,
                        ecosystem_state_status, active_work_items, active_artifact_refs,
                        open_checkpoint_refs, surface_presence, ecosystem_state_summary,
-                       project_ref, objective_ref, work_item_refs, checkpoint_refs,
+                       project_ref, objective_ref, work_item_refs, work_items, checkpoint_refs,
                        artifact_refs, objective_status, next_action_ref,
                        linked_surface_ids, active_surface_id, last_surface_id,
                        surface_continuity_status, surface_identity_conflict_flags, updated_at
@@ -2242,6 +2313,7 @@ class SqliteMemoryRepository(MemoryRepository):
                     project_ref TEXT,
                     objective_ref TEXT,
                     work_item_refs TEXT NOT NULL DEFAULT '[]',
+                    work_items TEXT NOT NULL DEFAULT '[]',
                     checkpoint_refs TEXT NOT NULL DEFAULT '[]',
                     artifact_refs TEXT NOT NULL DEFAULT '[]',
                     objective_status TEXT,
@@ -2294,6 +2366,9 @@ class SqliteMemoryRepository(MemoryRepository):
             )
             self._ensure_column(connection, "mission_states", "ecosystem_state_summary", "TEXT")
             self._ensure_project_objective_columns(connection, "mission_states")
+            self._ensure_column(
+                connection, "mission_states", "work_items", "TEXT NOT NULL DEFAULT '[]'"
+            )
             self._ensure_surface_continuity_columns(connection, "mission_states")
             self._ensure_column(connection, "session_continuity", "ecosystem_state_status", "TEXT")
             self._ensure_column(
@@ -2737,6 +2812,9 @@ class SqliteMemoryRepository(MemoryRepository):
             project_ref=row["project_ref"],
             objective_ref=row["objective_ref"],
             work_item_refs=list(loads(row["work_item_refs"] or "[]")),
+            work_items=_deserialize_work_items(
+                row["work_items"], mission_id=str(row["mission_id"])
+            ),
             checkpoint_refs=list(loads(row["checkpoint_refs"] or "[]")),
             artifact_refs=list(loads(row["artifact_refs"] or "[]")),
             objective_status=row["objective_status"],
@@ -2994,7 +3072,7 @@ class PostgresMemoryRepository(MemoryRepository):
                     identity_continuity_brief, open_loops, last_decision_frame,
                     ecosystem_state_status, active_work_items, active_artifact_refs,
                     open_checkpoint_refs, surface_presence, ecosystem_state_summary,
-                    project_ref, objective_ref, work_item_refs, checkpoint_refs,
+                    project_ref, objective_ref, work_item_refs, work_items, checkpoint_refs,
                     artifact_refs, objective_status, next_action_ref,
                     linked_surface_ids, active_surface_id, last_surface_id,
                     surface_continuity_status, surface_identity_conflict_flags, updated_at
@@ -3002,7 +3080,7 @@ class PostgresMemoryRepository(MemoryRepository):
                 VALUES (
                     %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
                     %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
-                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
                 )
                 ON CONFLICT (mission_id) DO UPDATE SET
                     mission_goal = EXCLUDED.mission_goal,
@@ -3027,6 +3105,7 @@ class PostgresMemoryRepository(MemoryRepository):
                     project_ref = EXCLUDED.project_ref,
                     objective_ref = EXCLUDED.objective_ref,
                     work_item_refs = EXCLUDED.work_item_refs,
+                    work_items = EXCLUDED.work_items,
                     checkpoint_refs = EXCLUDED.checkpoint_refs,
                     artifact_refs = EXCLUDED.artifact_refs,
                     objective_status = EXCLUDED.objective_status,
@@ -3062,6 +3141,7 @@ class PostgresMemoryRepository(MemoryRepository):
                     mission_state.project_ref,
                     mission_state.objective_ref,
                     dumps(mission_state.work_item_refs),
+                    _serialize_work_items(mission_state.work_items),
                     dumps(mission_state.checkpoint_refs),
                     dumps(mission_state.artifact_refs),
                     mission_state.objective_status,
@@ -4164,7 +4244,7 @@ class PostgresMemoryRepository(MemoryRepository):
                        identity_continuity_brief, open_loops, last_decision_frame,
                        ecosystem_state_status, active_work_items, active_artifact_refs,
                        open_checkpoint_refs, surface_presence, ecosystem_state_summary,
-                       project_ref, objective_ref, work_item_refs, checkpoint_refs,
+                       project_ref, objective_ref, work_item_refs, work_items, checkpoint_refs,
                        artifact_refs, objective_status, next_action_ref,
                        linked_surface_ids, active_surface_id, last_surface_id,
                        surface_continuity_status, surface_identity_conflict_flags, updated_at
@@ -4200,6 +4280,9 @@ class PostgresMemoryRepository(MemoryRepository):
             project_ref=row["project_ref"],
             objective_ref=row["objective_ref"],
             work_item_refs=list(loads(row["work_item_refs"] or "[]")),
+            work_items=_deserialize_work_items(
+                row["work_items"], mission_id=str(row["mission_id"])
+            ),
             checkpoint_refs=list(loads(row["checkpoint_refs"] or "[]")),
             artifact_refs=list(loads(row["artifact_refs"] or "[]")),
             objective_status=row["objective_status"],
@@ -4706,11 +4789,19 @@ class PostgresMemoryRepository(MemoryRepository):
                     open_checkpoint_refs TEXT NOT NULL DEFAULT '[]',
                     surface_presence TEXT NOT NULL DEFAULT '[]',
                     ecosystem_state_summary TEXT,
+                    project_ref TEXT,
+                    objective_ref TEXT,
+                    work_item_refs TEXT NOT NULL DEFAULT '[]',
+                    checkpoint_refs TEXT NOT NULL DEFAULT '[]',
+                    artifact_refs TEXT NOT NULL DEFAULT '[]',
+                    objective_status TEXT,
+                    next_action_ref TEXT,
                     linked_surface_ids TEXT NOT NULL DEFAULT '[]',
                     active_surface_id TEXT,
                     last_surface_id TEXT,
                     surface_continuity_status TEXT,
                     surface_identity_conflict_flags TEXT NOT NULL DEFAULT '[]',
+                    work_items TEXT NOT NULL DEFAULT '[]',
                     updated_at TEXT NOT NULL
                 )
                 """
@@ -4757,6 +4848,23 @@ class PostgresMemoryRepository(MemoryRepository):
                 "ALTER TABLE mission_states ADD COLUMN IF NOT EXISTS "
                 "active_work_items TEXT NOT NULL DEFAULT '[]'"
             )
+            cursor.execute(
+                "ALTER TABLE mission_states ADD COLUMN IF NOT EXISTS "
+                "work_items TEXT NOT NULL DEFAULT '[]'"
+            )
+            for column_definition in (
+                "project_ref TEXT",
+                "objective_ref TEXT",
+                "work_item_refs TEXT NOT NULL DEFAULT '[]'",
+                "checkpoint_refs TEXT NOT NULL DEFAULT '[]'",
+                "artifact_refs TEXT NOT NULL DEFAULT '[]'",
+                "objective_status TEXT",
+                "next_action_ref TEXT",
+            ):
+                cursor.execute(
+                    "ALTER TABLE mission_states ADD COLUMN IF NOT EXISTS "
+                    + column_definition
+                )
             cursor.execute(
                 "ALTER TABLE mission_states ADD COLUMN IF NOT EXISTS "
                 "active_artifact_refs TEXT NOT NULL DEFAULT '[]'"

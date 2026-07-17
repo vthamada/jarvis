@@ -43,8 +43,22 @@ python -m apps.jarvis_console daily-workspace
 ```
 
 O workspace multi-missao mostra somente loops abertos, freshness, revisoes e a
-proxima decisao. Ele nao infere prioridade, nao retoma missao e nao agenda
-execucao.
+proxima decisao. Dentro da missao, prioridade `p0..p3` e dependencias sao lidas
+do estado canonico criado pelo operador; o workspace nao inventa prioridade,
+nao retoma missao e nao agenda execucao.
+
+Para criar e inspecionar uma cadeia governada de work items:
+
+```powershell
+python -m apps.jarvis_console work-item --mission-id mission-demo --action create --work-item-ref work-item://mission-demo/foundation --priority p1
+python -m apps.jarvis_console work-item --mission-id mission-demo --action create --work-item-ref work-item://mission-demo/release --depends-on work-item://mission-demo/foundation --priority p0
+python -m apps.jarvis_console work-items --mission-id mission-demo
+```
+
+O segundo item permanece `dependency_blocked` ate a conclusao do primeiro. A
+ordem e somente recomendacao read-only; `autonomous_execution_allowed=False`
+permanece fixo. O fluxo completo esta em
+`docs/operations/governed-work-item-queue.md`.
 
 4. Gerar um relatorio humano compacto de progresso:
 

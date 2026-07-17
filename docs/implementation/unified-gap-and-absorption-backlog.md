@@ -362,7 +362,7 @@ Notas de leitura:
   `MB-174` foi fechado como dashboard integrado de regressao/readiness; a fila
   foi repriorizada em `MB-175`, abrindo `MB-176` a `MB-189`; `MB-176` foi
   fechado e `MB-177` a `MB-189` tambem foram fechados; `MB-190` abriu
-  `MB-191` a `MB-200`, `MB-191` a `MB-194` foram fechados e `MB-195` e o unico item tecnico
+  `MB-191` a `MB-200`, `MB-191` a `MB-195` foram fechados e `MB-196` e o unico item tecnico
   `ready`.
 
 ### 5.5 Deferred verticals already mapped
@@ -407,7 +407,7 @@ Ordem recomendada hoje:
 1. tratar `MB-110` a `MB-159` como baseline fechado de objetivos persistentes,
    utilidade operacional, absorcao tecnologica governada, aprendizado revisado,
    higiene documental e horizonte longo minimo.
-2. tratar `MB-160` a `MB-194` como baseline fechado e executar `MB-195` a
+2. tratar `MB-160` a `MB-195` como baseline fechado e executar `MB-196` a
    `MB-200` como runtime CLI e Daily Operator Loop, seguindo WIP 1.
 3. manter `SO-001`, `TA-004`, `TA-006` e verticais `deferred` fora da fila ate
    haver decisao explicita de fase.
@@ -462,6 +462,9 @@ Leitura correta:
   `OP-006` para `minimum_baseline`;
 - `MB-156` foi fechado como ciclo governado minimo de work items, movendo
   `OP-004` para `minimum_baseline`;
+- `MB-195` aprofundou esse ciclo com prioridade, dependencias, blockers,
+  persistencia cross-session e ordem read-only, movendo `OP-004` para
+  `implemented_baseline`;
 - `MB-157` foi fechado como lifecycle minimo de artefatos vivos, movendo
   `OP-005` e `ACT-004` para `minimum_baseline`;
 - `MB-158` foi fechado como metricas compactas de utilidade operacional, movendo
@@ -474,7 +477,7 @@ Leitura correta:
   `MB-166`, `MB-167`, `MB-168`, `MB-169`, `MB-170`, `MB-171`, `MB-172` e
   `MB-173`, `MB-174` e `MB-176` foram fechados; `MB-175` abriu `MB-176` a
   `MB-189`; `MB-177` a `MB-189` tambem foram fechados; `MB-190` abriu
-  `MB-191` a `MB-200`; `MB-191` a `MB-194` foram fechados e somente `MB-195` esta `ready`;
+  `MB-191` a `MB-200`; `MB-191` a `MB-195` foram fechados e somente `MB-196` esta `ready`;
 - `RH-*` permanece fora do backlog implementavel.
 
 ---

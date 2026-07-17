@@ -392,6 +392,9 @@ class OrchestratorService:
         transition: str,
         session_id: str,
         next_action_ref: str | None = None,
+        dependency_refs: list[str] | None = None,
+        priority_level: str | None = None,
+        blocker_refs: list[str] | None = None,
         operator_identity_ref: str | None = None,
         canonical_user_ref: str | None = None,
     ) -> WorkItemTransitionResult:
@@ -410,6 +413,9 @@ class OrchestratorService:
                 "transition": transition,
                 "work_item_ref": work_item_ref,
                 "next_action_ref": next_action_ref,
+                "dependency_refs": list(dependency_refs or []),
+                "priority_level": priority_level,
+                "blocker_refs": list(blocker_refs or []),
                 "memory_write_mode": "through_core_only",
             },
             surface_id="surface://jarvis_console",
@@ -432,6 +438,9 @@ class OrchestratorService:
             requested_work_item_ref=work_item_ref,
             requested_next_action_ref=next_action_ref,
             requested_by_service=self.name,
+            requested_dependency_refs=dependency_refs,
+            requested_priority_level=priority_level,
+            requested_blocker_refs=blocker_refs,
         )
         events = [
             self.make_event(
@@ -480,7 +489,10 @@ class OrchestratorService:
                 events=events,
             )
 
-        work_item_status = self._work_item_transition_target_status(transition)
+        work_item_status = self._work_item_transition_target_status(
+            transition,
+            previous_status=previous_status,
+        )
         transition_ref = (
             f"work_item_transition:{transition}:{work_item_ref}:{uuid4().hex[:8]}"
         )
@@ -490,17 +502,19 @@ class OrchestratorService:
             work_item_status=work_item_status,
             transition_ref=transition_ref,
             next_action_ref=next_action_ref,
+            transition=transition,
+            dependency_refs=dependency_refs,
+            priority_level=priority_level,
+            blocker_refs=blocker_refs,
         )
         work_item_state = (
-            WorkItemStateContract(
-                work_item_ref=str(work_item_ref),
-                work_item_status=work_item_status,
-                mission_id=MissionId(mission_id),
-                transition=transition,
-                next_action_ref=updated_state.next_action_ref if updated_state else None,
-                checkpoint_refs=(
-                    list(updated_state.checkpoint_refs) if updated_state else []
+            next(
+                (
+                    item
+                    for item in updated_state.work_items
+                    if item.work_item_ref == work_item_ref
                 ),
+                None,
             )
             if updated_state is not None and work_item_ref is not None
             else None
@@ -511,6 +525,16 @@ class OrchestratorService:
             "work_item_ref": work_item_ref,
             "previous_work_item_status": previous_status,
             "work_item_status": work_item_status,
+            "dependency_refs": (
+                list(work_item_state.dependency_refs) if work_item_state else []
+            ),
+            "priority_level": (
+                work_item_state.priority_level if work_item_state else None
+            ),
+            "blocking_state": (
+                work_item_state.blocking_state if work_item_state else None
+            ),
+            "blocker_refs": list(work_item_state.blocker_refs) if work_item_state else [],
             "next_action_ref": updated_state.next_action_ref if updated_state else None,
             "active_work_items": (
                 list(updated_state.active_work_items) if updated_state else []
@@ -4388,9 +4412,15 @@ class OrchestratorService:
         )
 
     @staticmethod
-    def _work_item_transition_target_status(transition: str) -> str:
-        if transition in {"create", "resume", "redefine-next-action"}:
+    def _work_item_transition_target_status(
+        transition: str,
+        *,
+        previous_status: str | None = None,
+    ) -> str:
+        if transition in {"create", "resume"}:
             return "active"
+        if transition in {"update", "redefine-next-action"}:
+            return previous_status or "active"
         if transition == "pause":
             return "paused"
         if transition == "block":
@@ -4406,6 +4436,9 @@ class OrchestratorService:
     ) -> str | None:
         if mission_state is None or work_item_ref is None:
             return None
+        for item in mission_state.work_items:
+            if item.work_item_ref == work_item_ref:
+                return item.work_item_status
         if work_item_ref in mission_state.active_work_items:
             return "active"
         for checkpoint_ref in reversed(mission_state.checkpoint_refs):

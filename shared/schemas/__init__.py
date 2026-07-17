@@ -2012,6 +2012,7 @@ MISSION_STATE_SCHEMA = CanonicalSchema(
         "project_ref",
         "objective_ref",
         "work_item_refs",
+        "work_items",
         "checkpoint_refs",
         "artifact_refs",
         "objective_status",
@@ -2041,6 +2042,9 @@ DAILY_WORKSPACE_MISSION_SCHEMA = CanonicalSchema(
         "next_action_ref",
         "work_item_refs",
         "active_work_items",
+        "ordered_work_item_refs",
+        "executable_work_item_refs",
+        "blocked_work_item_refs",
         "artifact_refs",
         "active_artifact_refs",
         "open_checkpoint_refs",
@@ -2097,9 +2101,34 @@ WORK_ITEM_STATE_SCHEMA = CanonicalSchema(
     optional_fields=(
         "transition",
         "next_action_ref",
+        "dependency_refs",
+        "priority_level",
+        "blocking_state",
+        "blocker_refs",
         "checkpoint_refs",
         "memory_write_mode",
     ),
+)
+
+WORK_ITEM_QUEUE_SCHEMA = CanonicalSchema(
+    name="WorkItemQueueSchema",
+    contract_name="WorkItemQueueContract",
+    required_fields=(
+        "mission_id",
+        "queue_status",
+        "ordered_work_items",
+        "executable_work_item_refs",
+        "blocked_work_item_refs",
+        "completed_work_item_refs",
+    ),
+    optional_fields=(
+        "evidence_refs",
+        "ordering_policy",
+        "memory_write_mode",
+        "read_only",
+        "autonomous_execution_allowed",
+    ),
+    notes=("Read-only governed ordering; it never schedules or executes work.",),
 )
 
 ARTIFACT_LIFECYCLE_STATE_SCHEMA = CanonicalSchema(

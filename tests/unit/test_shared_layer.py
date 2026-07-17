@@ -40,6 +40,7 @@ from shared.contracts import (
     WorkflowEvolutionRequestContract,
     WorkflowProfileVersionContract,
     WorkflowProfileVersionRegistryContract,
+    WorkItemQueueContract,
     WorkItemStateContract,
 )
 from shared.events import INTERNAL_EVENT_NAMES
@@ -81,6 +82,7 @@ from shared.schemas import (
     SKILL_SANDBOX_EVAL_SCHEMA,
     SURFACE_IDENTITY_SCHEMA,
     TECHNOLOGY_ABSORPTION_CANDIDATE_SCHEMA,
+    WORK_ITEM_QUEUE_SCHEMA,
     WORK_ITEM_STATE_SCHEMA,
     WORKFLOW_EVOLUTION_BUILD_RESULT_SCHEMA,
     WORKFLOW_EVOLUTION_REQUEST_SCHEMA,
@@ -326,12 +328,40 @@ def test_work_item_state_contract_is_shared_schema() -> None:
         mission_id="mission-1",
         transition="create",
         next_action_ref="next_action:validate-plan",
+        dependency_refs=["work-item://mission-1/prepare-plan"],
+        priority_level="p1",
+        blocking_state="dependency_blocked",
+        blocker_refs=[],
         checkpoint_refs=["work_item_transition:create:work-item://mission-1/validate-plan:1"],
     )
 
     assert contract.memory_write_mode == "through_core_only"
     assert WORK_ITEM_STATE_SCHEMA.contract_name == "WorkItemStateContract"
     assert "work_item_status" in WORK_ITEM_STATE_SCHEMA.required_fields
+    assert contract.priority_level == "p1"
+    assert "dependency_refs" in WORK_ITEM_STATE_SCHEMA.optional_fields
+
+
+def test_work_item_queue_contract_is_read_only_and_non_executing() -> None:
+    item = WorkItemStateContract(
+        work_item_ref="work-item://mission-1/validate-plan",
+        work_item_status="active",
+        mission_id="mission-1",
+        priority_level="p0",
+    )
+    queue = WorkItemQueueContract(
+        mission_id="mission-1",
+        queue_status="ready",
+        ordered_work_items=[item],
+        executable_work_item_refs=[item.work_item_ref],
+        blocked_work_item_refs=[],
+        completed_work_item_refs=[],
+    )
+
+    assert WORK_ITEM_QUEUE_SCHEMA.contract_name == "WorkItemQueueContract"
+    assert queue.read_only is True
+    assert queue.memory_write_mode == "read_only"
+    assert queue.autonomous_execution_allowed is False
 
 
 def test_artifact_lifecycle_state_contract_is_shared_schema() -> None:

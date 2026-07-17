@@ -9,6 +9,7 @@ from shared.contracts import (
     SpecialistBoundaryContract,
     SpecialistInvocationContract,
     SpecialistSelectionContract,
+    WorkItemStateContract,
 )
 from shared.types import (
     ChannelType,
@@ -40,6 +41,18 @@ def low_risk_plan() -> DeliberativePlanContract:
         smallest_safe_next_action="definir objetivo",
         continuity_action="continuar",
         open_loops=["alinhar checkpoint principal"],
+    )
+
+
+def work_item_input(mission_id: str, transition: str) -> InputContract:
+    return InputContract(
+        request_id=RequestId(f"req-{mission_id}-{transition}"),
+        session_id=SessionId(f"sess-{mission_id}"),
+        mission_id=MissionId(mission_id),
+        channel=ChannelType.CONSOLE,
+        input_type=InputType.STRUCTURED_PAYLOAD,
+        content=f"work_item_transition:{transition}",
+        timestamp="2026-07-17T00:00:00Z",
     )
 
 
@@ -278,6 +291,114 @@ def test_governance_blocks_work_item_transition_with_unbounded_ref() -> None:
 
     assert result.governance_decision.decision == PermissionDecision.BLOCK
     assert result.governance_decision.containment_hint == "block_unbounded_work_item_ref"
+
+
+def test_governance_blocks_invalid_work_item_priority_and_missing_blocker() -> None:
+    service = GovernanceService()
+    mission_id = "mission-work-item-policy"
+    item_ref = "work-item://mission-work-item-policy/plan"
+    state = MissionStateContract(
+        mission_id=MissionId(mission_id),
+        mission_goal="Plan governed work",
+        mission_status=MissionStatus.ACTIVE,
+        checkpoints=[],
+        updated_at="2026-07-17T00:00:00Z",
+        work_item_refs=[item_ref],
+        active_work_items=[item_ref],
+        work_items=[
+            WorkItemStateContract(
+                work_item_ref=item_ref,
+                work_item_status="active",
+                mission_id=MissionId(mission_id),
+            )
+        ],
+    )
+
+    invalid_priority = service.assess_work_item_transition(
+        contract=work_item_input(mission_id, "update"),
+        current_state=state,
+        requested_transition="update",
+        requested_work_item_ref=item_ref,
+        requested_next_action_ref=None,
+        requested_by_service="orchestrator-service",
+        requested_priority_level="urgent",
+    )
+    missing_blocker = service.assess_work_item_transition(
+        contract=work_item_input(mission_id, "block"),
+        current_state=state,
+        requested_transition="block",
+        requested_work_item_ref=item_ref,
+        requested_next_action_ref=None,
+        requested_by_service="orchestrator-service",
+    )
+
+    assert invalid_priority.governance_decision.decision == PermissionDecision.BLOCK
+    assert invalid_priority.governance_decision.containment_hint == (
+        "block_invalid_work_item_priority"
+    )
+    assert missing_blocker.governance_decision.decision == PermissionDecision.BLOCK
+    assert missing_blocker.governance_decision.containment_hint == (
+        "block_missing_blocker_ref"
+    )
+
+
+def test_governance_blocks_work_item_dependency_cycle_and_unresolved_resume() -> None:
+    service = GovernanceService()
+    mission_id = "mission-work-item-graph"
+    first_ref = "work-item://mission-work-item-graph/first"
+    second_ref = "work-item://mission-work-item-graph/second"
+    state = MissionStateContract(
+        mission_id=MissionId(mission_id),
+        mission_goal="Validate dependency graph",
+        mission_status=MissionStatus.ACTIVE,
+        checkpoints=[],
+        updated_at="2026-07-17T00:00:00Z",
+        work_item_refs=[first_ref, second_ref],
+        active_work_items=[],
+        work_items=[
+            WorkItemStateContract(
+                work_item_ref=first_ref,
+                work_item_status="blocked",
+                mission_id=MissionId(mission_id),
+                dependency_refs=[second_ref],
+                blocker_refs=["blocker://dependency"],
+            ),
+            WorkItemStateContract(
+                work_item_ref=second_ref,
+                work_item_status="blocked",
+                mission_id=MissionId(mission_id),
+                blocker_refs=["blocker://operator-review"],
+            ),
+        ],
+    )
+
+    cycle = service.assess_work_item_transition(
+        contract=work_item_input(mission_id, "update"),
+        current_state=state,
+        requested_transition="update",
+        requested_work_item_ref=second_ref,
+        requested_next_action_ref=None,
+        requested_by_service="orchestrator-service",
+        requested_dependency_refs=[first_ref],
+    )
+    unresolved = service.assess_work_item_transition(
+        contract=work_item_input(mission_id, "resume"),
+        current_state=state,
+        requested_transition="resume",
+        requested_work_item_ref=first_ref,
+        requested_next_action_ref=None,
+        requested_by_service="orchestrator-service",
+    )
+
+    assert cycle.governance_decision.decision == PermissionDecision.BLOCK
+    assert cycle.governance_decision.containment_hint == (
+        "block_invalid_work_item_graph"
+    )
+    assert "dependency_cycle" in cycle.governance_decision.conditions
+    assert unresolved.governance_decision.decision == PermissionDecision.BLOCK
+    assert unresolved.governance_decision.containment_hint == (
+        "block_unresolved_work_item_dependencies"
+    )
 
 
 def test_governance_allows_bounded_artifact_registration() -> None:

@@ -162,6 +162,9 @@ class JarvisConsole:
         transition: str,
         session_id: str,
         next_action_ref: str | None = None,
+        dependency_refs: list[str] | None = None,
+        priority_level: str | None = None,
+        blocker_refs: list[str] | None = None,
         operator_identity_ref: str | None = None,
         canonical_user_ref: str | None = None,
     ) -> WorkItemTransitionResult:
@@ -171,6 +174,9 @@ class JarvisConsole:
             transition=transition,
             session_id=session_id,
             next_action_ref=next_action_ref,
+            dependency_refs=dependency_refs,
+            priority_level=priority_level,
+            blocker_refs=blocker_refs,
             operator_identity_ref=operator_identity_ref or DEFAULT_OPERATOR_IDENTITY_REF,
             canonical_user_ref=canonical_user_ref or DEFAULT_CANONICAL_USER_REF,
         )
@@ -355,6 +361,7 @@ def build_parser() -> ArgumentParser:
         required=True,
         choices=[
             "create",
+            "update",
             "resume",
             "pause",
             "block",
@@ -364,6 +371,29 @@ def build_parser() -> ArgumentParser:
     )
     work_item_parser.add_argument("--work-item-ref", required=True)
     work_item_parser.add_argument("--next-action-ref")
+    work_item_dependency_group = work_item_parser.add_mutually_exclusive_group()
+    work_item_dependency_group.add_argument(
+        "--depends-on",
+        dest="dependency_refs",
+        action="append",
+        help="Add a governed dependency ref; repeat for multiple dependencies.",
+    )
+    work_item_dependency_group.add_argument(
+        "--clear-dependencies",
+        action="store_true",
+        help="Replace the dependency set with an empty governed set.",
+    )
+    work_item_parser.add_argument(
+        "--priority",
+        dest="priority_level",
+        choices=["p0", "p1", "p2", "p3"],
+    )
+    work_item_parser.add_argument(
+        "--blocker-ref",
+        dest="blocker_refs",
+        action="append",
+        help="Declare an explicit blocker; required by the block action.",
+    )
     work_item_parser.add_argument("--operator-identity-ref")
     work_item_parser.add_argument("--canonical-user-ref")
 
@@ -736,6 +766,9 @@ def work_item_status_from_state(
 ) -> str:
     if mission_state is None:
         return "missing"
+    for item in mission_state.work_items:
+        if item.work_item_ref == work_item_ref:
+            return item.work_item_status
     if work_item_ref in mission_state.active_work_items:
         return "active"
     for checkpoint_ref in reversed(mission_state.checkpoint_refs):
@@ -760,24 +793,38 @@ def render_work_items_state(
 ) -> str:
     if mission_state is None:
         return f"No work items found for mission_id={safe_console_value(mission_id)}"
-    work_item_refs = list(mission_state.work_item_refs)
-    if not work_item_refs:
+    queue = OperationalService.build_work_item_queue(mission_state)
+    if not queue.ordered_work_items:
         return f"No work items found for mission_id={safe_console_value(mission_id)}"
     lines = [
         f"mission_id={safe_console_value(mission_state.mission_id)}",
         f"objective_status={safe_console_value(mission_state.objective_status)}",
         f"next_action_ref={safe_console_value(mission_state.next_action_ref)}",
+        f"queue_status={safe_console_value(queue.queue_status)}",
+        "ordered_work_item_refs="
+        + safe_console_list([item.work_item_ref for item in queue.ordered_work_items]),
+        "executable_work_item_refs="
+        + safe_console_list(queue.executable_work_item_refs),
+        "blocked_work_item_refs=" + safe_console_list(queue.blocked_work_item_refs),
+        f"ordering_policy={safe_console_value(queue.ordering_policy)}",
+        "autonomous_execution_allowed=False",
     ]
-    for work_item_ref in work_item_refs:
+    for rank, item in enumerate(queue.ordered_work_items, start=1):
         lines.extend(
             [
                 "---",
-                f"work_item_ref={safe_console_value(work_item_ref)}",
-                "work_item_status="
+                f"operator_order={rank}",
+                f"work_item_ref={safe_console_value(item.work_item_ref)}",
+                f"work_item_status={safe_console_value(item.work_item_status)}",
+                f"priority_level={safe_console_value(item.priority_level)}",
+                f"dependency_refs={safe_console_list(item.dependency_refs)}",
+                f"blocking_state={safe_console_value(item.blocking_state)}",
+                f"blocker_refs={safe_console_list(item.blocker_refs)}",
+                f"next_action_ref={safe_console_value(item.next_action_ref)}",
+                "is_executable="
                 + safe_console_value(
-                    work_item_status_from_state(mission_state, work_item_ref)
+                    item.work_item_ref in queue.executable_work_item_refs
                 ),
-                f"is_active={safe_console_value(work_item_ref in mission_state.active_work_items)}",
             ]
         )
     return "\n".join(lines)
@@ -799,6 +846,16 @@ def render_work_item_transition(result: WorkItemTransitionResult) -> str:
             + safe_console_value(
                 getattr(work_item_state, "work_item_status", None)
             ),
+            "priority_level="
+            + safe_console_value(getattr(work_item_state, "priority_level", None)),
+            "dependency_refs="
+            + safe_console_list(
+                list(getattr(work_item_state, "dependency_refs", []))
+            ),
+            "blocking_state="
+            + safe_console_value(getattr(work_item_state, "blocking_state", None)),
+            "blocker_refs="
+            + safe_console_list(list(getattr(work_item_state, "blocker_refs", []))),
             f"next_action_ref={safe_console_value(result.next_action_ref)}",
             "active_work_items="
             + safe_console_list(list(getattr(mission_state, "active_work_items", []))),
@@ -1720,6 +1777,12 @@ def render_daily_operator_workspace(
                 f"next_action_ref={safe_console_value(mission.next_action_ref)}",
                 f"work_item_refs={safe_console_list(mission.work_item_refs)}",
                 f"active_work_items={safe_console_list(mission.active_work_items)}",
+                "ordered_work_item_refs="
+                + safe_console_list(mission.ordered_work_item_refs),
+                "executable_work_item_refs="
+                + safe_console_list(mission.executable_work_item_refs),
+                "blocked_work_item_refs="
+                + safe_console_list(mission.blocked_work_item_refs),
                 f"artifact_refs={safe_console_list(mission.artifact_refs)}",
                 "active_artifact_refs="
                 + safe_console_list(mission.active_artifact_refs),
@@ -2025,6 +2088,9 @@ def run_work_item_command(console: JarvisConsole, args: Namespace) -> list[str]:
         transition=args.action,
         session_id=args.session_id,
         next_action_ref=args.next_action_ref,
+        dependency_refs=([] if args.clear_dependencies else args.dependency_refs),
+        priority_level=args.priority_level,
+        blocker_refs=args.blocker_refs,
         operator_identity_ref=args.operator_identity_ref,
         canonical_user_ref=args.canonical_user_ref,
     )

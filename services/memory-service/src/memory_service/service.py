@@ -25,6 +25,7 @@ from memory_service.repository import (
     continuity_checkpoint_to_contract,
 )
 from shared.contracts import (
+    WORK_ITEM_PRIORITY_LEVELS,
     ContinuityCheckpointContract,
     ContinuityPauseContract,
     ContinuityReplayContract,
@@ -54,6 +55,7 @@ from shared.contracts import (
     SpecialistContributionContract,
     SpecialistSharedMemoryContextContract,
     UserScopeContextContract,
+    WorkItemStateContract,
 )
 from shared.domain_registry import (
     primary_route_payload,
@@ -95,6 +97,11 @@ from shared.types import (
     RiskLevel,
     SessionId,
     TimeWindow,
+)
+from shared.work_item_policy import (
+    canonical_work_items_from_mission,
+    refresh_work_item_blocking_states,
+    validate_work_item_graph,
 )
 
 
@@ -1332,6 +1339,10 @@ class MemoryService:
         work_item_status: str,
         transition_ref: str,
         next_action_ref: str | None = None,
+        transition: str | None = None,
+        dependency_refs: list[str] | None = None,
+        priority_level: str | None = None,
+        blocker_refs: list[str] | None = None,
     ) -> MissionStateContract | None:
         """Persist a bounded work item transition in the canonical mission state."""
 
@@ -1339,20 +1350,84 @@ class MemoryService:
         if current is None:
             return None
 
+        transition_name = transition or self._work_item_transition_from_ref(
+            transition_ref
+        )
+        work_items = canonical_work_items_from_mission(current)
+        existing = next(
+            (item for item in work_items if item.work_item_ref == work_item_ref),
+            None,
+        )
+        effective_dependency_refs = (
+            list(dependency_refs)
+            if dependency_refs is not None
+            else list(existing.dependency_refs) if existing else []
+        )
+        effective_priority = priority_level or (
+            existing.priority_level if existing else "p2"
+        )
+        if effective_priority not in WORK_ITEM_PRIORITY_LEVELS:
+            raise ValueError("invalid work item priority")
+        graph_errors = validate_work_item_graph(
+            work_items,
+            work_item_ref=work_item_ref,
+            dependency_refs=effective_dependency_refs,
+        )
+        if graph_errors:
+            raise ValueError(
+                "invalid work item dependency graph: " + ",".join(graph_errors)
+            )
+        effective_blocker_refs = (
+            []
+            if transition_name == "resume"
+            else list(blocker_refs)
+            if blocker_refs is not None
+            else list(existing.blocker_refs)
+            if existing
+            else []
+        )
+        item_checkpoint_refs = [
+            *(list(existing.checkpoint_refs) if existing else []),
+            transition_ref,
+        ][-20:]
+        updated_item = WorkItemStateContract(
+            work_item_ref=work_item_ref,
+            work_item_status=work_item_status,
+            mission_id=current.mission_id,
+            transition=transition_name,
+            next_action_ref=(
+                next_action_ref
+                if next_action_ref is not None
+                else existing.next_action_ref if existing else None
+            ),
+            dependency_refs=effective_dependency_refs,
+            priority_level=effective_priority,
+            blocker_refs=effective_blocker_refs,
+            checkpoint_refs=item_checkpoint_refs,
+        )
+        if existing is None:
+            work_items.append(updated_item)
+        else:
+            work_items = [
+                updated_item if item.work_item_ref == work_item_ref else item
+                for item in work_items
+            ]
+        work_items = refresh_work_item_blocking_states(work_items)
+        structured_refs = {item.work_item_ref for item in work_items}
         work_item_refs = self._merge_unique_strings(
             list(current.work_item_refs),
-            [work_item_ref],
+            [item.work_item_ref for item in work_items],
         )
-        active_work_items = list(current.active_work_items)
-        if work_item_status == "active":
-            active_work_items = self._merge_unique_strings(
-                active_work_items,
-                [work_item_ref],
-            )
-        else:
-            active_work_items = [
-                item for item in active_work_items if item != work_item_ref
-            ]
+        active_work_items = [
+            item_ref
+            for item_ref in current.active_work_items
+            if item_ref not in structured_refs
+        ] + [
+            item.work_item_ref
+            for item in work_items
+            if item.work_item_status == "active"
+        ]
+        active_work_items = self._merge_unique_strings(active_work_items)
         checkpoint_refs = [
             *list(current.checkpoint_refs),
             transition_ref,
@@ -1366,12 +1441,18 @@ class MemoryService:
             checkpoints=checkpoints,
             checkpoint_refs=checkpoint_refs,
             work_item_refs=work_item_refs,
+            work_items=work_items,
             active_work_items=active_work_items,
             next_action_ref=next_action_ref or current.next_action_ref,
             updated_at=self.now(),
         )
         self.repository.upsert_mission_state(updated)
         return updated
+
+    @staticmethod
+    def _work_item_transition_from_ref(transition_ref: str) -> str:
+        parts = transition_ref.split(":", 2)
+        return parts[1] if len(parts) > 1 else "update"
 
     def transition_artifact_lifecycle_state(
         self,

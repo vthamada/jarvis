@@ -44,6 +44,12 @@
 - `operational-service` deriva freshness, contagens, reviews e proxima decisao, e `jarvis-console daily-workspace` expoe text/JSON sem construir Core ou criar storage paralelo;
 - testes locais e E2E comprovam duas sessoes reais, filtro de encerradas e stores imutaveis; prioridade, resume e scheduler permanecem bloqueados, e `MB-195` passa a ser o unico item tecnico `ready`.
 
+### MB-195 governa dependencias e prioridade de work items
+
+- contratos/schemas e `MissionStateContract.work_items` formalizam prioridade `p0..p3`, dependencias, blockers e blocking state, com persistencia aditiva SQLite/PostgreSQL e compatibilidade dos refs legados;
+- governanca valida state machine, referencias, dependencia conhecida, autorreferencia, ciclos e causa explicita de bloqueio; completion atualiza readiness, mas nunca retoma ou executa o dependente;
+- `work-items` e `daily-workspace` mostram ordem topologica, itens executaveis/bloqueados e autoridade autonoma falsa; testes locais/E2E cobrem duas sessoes, grafo, ciclo e imutabilidade da decisao, e `MB-196` passa a ser o unico item tecnico `ready`.
+
 ## 2026-07-16
 
 ### MB-166 define checklist sandbox-to-release

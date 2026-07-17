@@ -150,6 +150,70 @@ def test_memory_service_transitions_work_item_in_canonical_mission_state() -> No
     )
 
 
+def test_memory_service_persists_work_item_graph_and_refreshes_readiness() -> None:
+    temp_dir = runtime_dir("memory-work-item-graph")
+    database_url = f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+    service = MemoryService(database_url=database_url)
+    mission_id = "mission-memory-work-item-graph"
+    foundation_ref = f"work-item://{mission_id}/foundation"
+    release_ref = f"work-item://{mission_id}/release"
+    service.record_turn(
+        InputContract(
+            request_id=RequestId("req-memory-work-item-graph"),
+            session_id=SessionId("sess-memory-work-item-graph"),
+            mission_id=MissionId(mission_id),
+            channel=ChannelType.CONSOLE,
+            input_type=InputType.TEXT,
+            content="Plan the governed graph.",
+            timestamp="2026-07-17T00:00:00Z",
+        ),
+        intent="planning",
+        response_text="Graph planned.",
+        deliberative_plan=sample_plan(),
+        governance_decision=PermissionDecision.ALLOW_WITH_CONDITIONS,
+    )
+    service.transition_work_item_state(
+        mission_id=mission_id,
+        work_item_ref=foundation_ref,
+        work_item_status="active",
+        transition="create",
+        transition_ref=f"work_item_transition:create:{foundation_ref}:one",
+        priority_level="p2",
+    )
+    created = service.transition_work_item_state(
+        mission_id=mission_id,
+        work_item_ref=release_ref,
+        work_item_status="active",
+        transition="create",
+        transition_ref=f"work_item_transition:create:{release_ref}:two",
+        dependency_refs=[foundation_ref],
+        priority_level="p0",
+    )
+
+    reloaded = MemoryService(database_url=database_url).get_mission_state(mission_id)
+
+    assert created is not None
+    assert reloaded is not None
+    assert len(reloaded.work_items) == 2
+    release = next(item for item in reloaded.work_items if item.work_item_ref == release_ref)
+    assert release.dependency_refs == [foundation_ref]
+    assert release.priority_level == "p0"
+    assert release.blocking_state == "dependency_blocked"
+
+    completed = service.transition_work_item_state(
+        mission_id=mission_id,
+        work_item_ref=foundation_ref,
+        work_item_status="completed",
+        transition="complete",
+        transition_ref=f"work_item_transition:complete:{foundation_ref}:three",
+    )
+
+    assert completed is not None
+    release = next(item for item in completed.work_items if item.work_item_ref == release_ref)
+    assert release.blocking_state == "ready"
+    assert release_ref in completed.active_work_items
+
+
 def test_memory_service_transitions_artifact_lifecycle_in_mission_state() -> None:
     temp_dir = runtime_dir("memory-artifact-lifecycle")
     service = MemoryService(

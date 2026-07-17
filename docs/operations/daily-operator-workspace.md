@@ -1,6 +1,6 @@
 # Daily Operator Workspace
 
-Status: active baseline from `MB-194`.
+Status: active baseline from `MB-194`, extended by `MB-195`.
 
 ## Purpose
 
@@ -58,10 +58,14 @@ The first `next_operator_decision` follows a deterministic bounded order:
 3. blocked or paused mission;
 4. stale mission;
 5. open checkpoint;
-6. explicit next action, active work-item selection or next-action definition.
+6. blocked work-item review;
+7. explicit next action, first executable governed work-item selection or
+   next-action definition.
 
-Mission ordering remains `updated_at` descending. `MB-194` does not infer
-priority; governed dependencies and priority belong to `MB-195`.
+Mission ordering remains `updated_at` descending. Inside each mission, `MB-195`
+exposes `ordered_work_item_refs`, `executable_work_item_refs` and
+`blocked_work_item_refs`. That order comes only from canonical dependencies and
+explicit `p0..p3` priority; it is not an execution schedule.
 
 ## Safety Boundaries
 

@@ -2,6 +2,15 @@
 
 ## Atualizacao 2026-07-17
 
+`MB-195` tornou work items governados objetos canonicos estruturados. Prioridade
+`p0..p3`, dependencias, blockers e blocking state persistem em
+SQLite/PostgreSQL; governanca rejeita referencias invalidas, transicoes
+incompativeis, dependencias desconhecidas e ciclos. `work-items` e
+`daily-workspace` expoem ordem topologica, itens executaveis e bloqueados em
+modo read-only, sempre com execucao e scheduler autonomos falsos. Testes locais
+e E2E cobrem persistencia cross-session, ciclo, completion de dependencia e
+compatibilidade dos refs legados. `MB-196` e o unico item tecnico `ready`.
+
 `MB-194` implementou `daily-workspace` como snapshot local multi-missao,
 standalone e read-only. Novos contratos compartilhados representam cada missao
 e o agregado; `memory-service` lista estados canonicos abertos por `updated_at`
@@ -9,8 +18,8 @@ em SQLite/PostgreSQL, e `operational-service` deriva freshness, contagens,
 revisoes e proxima decisao sem novo storage. O comando text/JSON usa por padrao
 o store do Core do console, exclui missoes completed/canceled e nao infere
 prioridade, constroi Core, escreve, retoma ou agenda. Testes locais/E2E cobrem
-duas sessoes reais e imutabilidade dos stores. `MB-195` e o unico item tecnico
-`ready`.
+duas sessoes reais e imutabilidade dos stores. Esse estado foi sucedido pelo
+fechamento de `MB-195`.
 
 `MB-193` implementou `jarvis-console doctor` como preflight local standalone e
 read-only. O comando text/JSON verifica Python, imports, runtime dir, stores

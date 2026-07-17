@@ -410,8 +410,9 @@ including consolidated objective/work item/artifact state, review detail,
 memory/autonomy signals, promotion gate evidence, ordered pending decisions and
 the next operator decision. `MB-194` complements it with standalone
 `daily-workspace` for selection across open missions/sessions, freshness and
-review queues. Both commands remain read-only; priority and resume are not
-inferred.
+review queues. `MB-195` adds canonical dependency/priority ordering to
+`work-items` and the daily snapshot. Both commands remain read-only; priority
+is explicit, and resume is never inferred or executed.
 
 `MB-180` extends this operator-facing baseline with `skill-evolution`, a
 read-only evolution-family view that correlates recurring evidence, inactive

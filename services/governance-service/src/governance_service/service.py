@@ -8,6 +8,7 @@ from uuid import uuid4
 
 from shared.autonomy_ladder import capability_mode_exceeds_autonomy_limit
 from shared.contracts import (
+    WORK_ITEM_PRIORITY_LEVELS,
     DeliberativePlanContract,
     GovernanceCheckContract,
     GovernanceDecisionContract,
@@ -29,6 +30,12 @@ from shared.types import (
     MissionStatus,
     PermissionDecision,
     RiskLevel,
+)
+from shared.work_item_policy import (
+    canonical_work_items_from_mission,
+    unresolved_dependency_refs,
+    validate_work_item_graph,
+    validate_work_item_transition,
 )
 
 HIGH_RISK_KEYWORDS = (
@@ -519,6 +526,9 @@ class GovernanceService:
         requested_work_item_ref: str | None,
         requested_next_action_ref: str | None,
         requested_by_service: str,
+        requested_dependency_refs: list[str] | None = None,
+        requested_priority_level: str | None = None,
+        requested_blocker_refs: list[str] | None = None,
     ) -> GovernanceAssessment:
         """Govern bounded operator-driven work item state changes."""
 
@@ -527,6 +537,25 @@ class GovernanceService:
         )
         existing_refs = set(current_state.work_item_refs if current_state else [])
         active_refs = set(current_state.active_work_items if current_state else [])
+        current_items = canonical_work_items_from_mission(current_state)
+        current_item = next(
+            (
+                item
+                for item in current_items
+                if item.work_item_ref == requested_work_item_ref
+            ),
+            None,
+        )
+        effective_dependency_refs = (
+            list(requested_dependency_refs)
+            if requested_dependency_refs is not None
+            else list(current_item.dependency_refs) if current_item else []
+        )
+        effective_priority_level = (
+            requested_priority_level
+            or (current_item.priority_level if current_item else "p2")
+        )
+        blocker_refs = list(requested_blocker_refs or [])
         governance_check = GovernanceCheckContract(
             governance_check_id=GovernanceCheckId(f"gov-check-{uuid4().hex[:8]}"),
             subject_type="work_item_transition",
@@ -537,6 +566,9 @@ class GovernanceService:
                 "current_mission_status": current_status,
                 "requested_work_item_ref": requested_work_item_ref,
                 "requested_next_action_ref": requested_next_action_ref,
+                "requested_dependency_refs": effective_dependency_refs,
+                "requested_priority_level": effective_priority_level,
+                "requested_blocker_refs": blocker_refs,
                 "existing_work_item_count": len(existing_refs),
                 "active_work_item_count": len(active_refs),
                 "memory_write_mode": "through_core_only",
@@ -611,20 +643,84 @@ class GovernanceService:
             requires_rollback_plan = True
             containment_hint = "block_unbounded_next_action_ref"
             policy_refs = ["policy://work-item-transition/unbounded-next-action"]
-        elif requested_transition == "create" and requested_work_item_ref in existing_refs:
+        elif any(
+            not self._is_bounded_reference(item)
+            for item in [*effective_dependency_refs, *blocker_refs]
+        ):
             decision = PermissionDecision.BLOCK
-            justification = "Work item ja existe na missao canonica."
-            conditions = ["Usar resume, pause, block, complete ou redefinir proxima acao."]
+            justification = "Dependencia ou blocker fora do formato bounded permitido."
+            conditions = ["Usar somente referencias bounded sem caracteres de controle."]
             requires_rollback_plan = True
-            containment_hint = "block_duplicate_work_item"
-            policy_refs = ["policy://work-item-transition/duplicate-ref"]
-        elif requested_transition != "create" and requested_work_item_ref not in existing_refs:
+            containment_hint = "block_unbounded_work_item_relation"
+            policy_refs = ["policy://work-item-transition/unbounded-relation"]
+        elif effective_priority_level not in WORK_ITEM_PRIORITY_LEVELS:
             decision = PermissionDecision.BLOCK
-            justification = "Work item inexistente nao pode receber transicao."
-            conditions = ["Criar o work item antes de atualizar seu estado."]
+            justification = "Prioridade de work item fora da escala governada."
+            conditions = ["Usar uma prioridade entre p0, p1, p2 ou p3."]
             requires_rollback_plan = True
-            containment_hint = "block_missing_work_item"
-            policy_refs = ["policy://work-item-transition/missing-work-item"]
+            containment_hint = "block_invalid_work_item_priority"
+            policy_refs = ["policy://work-item-transition/invalid-priority"]
+        elif (
+            requested_transition not in {"create", "update"}
+            and (
+                requested_dependency_refs is not None
+                or requested_priority_level is not None
+            )
+        ):
+            decision = PermissionDecision.BLOCK
+            justification = "Dependencias e prioridade so mudam por create ou update."
+            conditions = ["Separar a alteracao estrutural da transicao de lifecycle."]
+            requires_rollback_plan = True
+            containment_hint = "block_metadata_outside_create_update"
+            policy_refs = ["policy://work-item-transition/metadata-scope"]
+        elif requested_transition == "block" and not blocker_refs:
+            decision = PermissionDecision.BLOCK
+            justification = "Bloqueio de work item exige causa explicita."
+            conditions = ["Informar ao menos um --blocker-ref bounded."]
+            requires_rollback_plan = True
+            containment_hint = "block_missing_blocker_ref"
+            policy_refs = ["policy://work-item-transition/missing-blocker"]
+        elif requested_transition != "block" and blocker_refs:
+            decision = PermissionDecision.BLOCK
+            justification = "Blocker explicito so pode ser declarado pela transicao block."
+            conditions = ["Usar block para registrar causa ou resume para limpa-la."]
+            requires_rollback_plan = True
+            containment_hint = "block_blocker_outside_block_transition"
+            policy_refs = ["policy://work-item-transition/blocker-scope"]
+        elif (
+            transition_error := validate_work_item_transition(
+                current_status=(current_item.work_item_status if current_item else None),
+                requested_transition=requested_transition,
+            )
+        ) is not None:
+            decision = PermissionDecision.BLOCK
+            justification = f"Transicao de work item invalida: {transition_error}."
+            conditions = ["Aplicar uma transicao valida para o estado canonico atual."]
+            requires_rollback_plan = True
+            containment_hint = f"block_{transition_error.replace(':', '_')}"
+            policy_refs = ["policy://work-item-transition/state-machine"]
+        elif requested_transition in {"create", "update"} and (
+            graph_errors := validate_work_item_graph(
+                current_items,
+                work_item_ref=str(requested_work_item_ref),
+                dependency_refs=effective_dependency_refs,
+            )
+        ):
+            decision = PermissionDecision.BLOCK
+            justification = "Grafo de dependencias de work item invalido."
+            conditions = [*graph_errors]
+            requires_rollback_plan = True
+            containment_hint = "block_invalid_work_item_graph"
+            policy_refs = ["policy://work-item-transition/dependency-graph"]
+        elif requested_transition in {"resume", "complete"} and current_item and (
+            unresolved := unresolved_dependency_refs(current_item, current_items)
+        ):
+            decision = PermissionDecision.BLOCK
+            justification = "Work item possui dependencias ainda nao concluidas."
+            conditions = [f"complete_dependency:{item}" for item in unresolved]
+            requires_rollback_plan = True
+            containment_hint = "block_unresolved_work_item_dependencies"
+            policy_refs = ["policy://work-item-transition/dependency-readiness"]
         elif requested_transition == "redefine-next-action" and not requested_next_action_ref:
             decision = PermissionDecision.BLOCK
             justification = "Redefinir proxima acao exige referencia explicita."

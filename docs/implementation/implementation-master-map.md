@@ -85,7 +85,7 @@ Goal: make JARVIS useful to a human operator in daily work.
 | `OP-001` | Start and close a governed mission | `implemented_baseline` | Keep stable | Operator Learning Loop | none |
 | `OP-002` | Inspect mission route, plan, checkpoints and synthesis | `implemented_baseline` | Keep stable | Console, orchestrator | none |
 | `OP-003` | Manage objective/project state | `implemented_baseline` | Validate cockpit through real operator use | MissionState, memory | none |
-| `OP-004` | Manage tasks/work items as first-class operator objects | `minimum_baseline` | Create/update/close work items through governance | Objective continuity | expand after artifact lifecycle |
+| `OP-004` | Manage tasks/work items as first-class operator objects | `implemented_baseline` | Validate dependency/priority usefulness with real operator evidence | Objective continuity | none |
 | `OP-005` | Manage artifacts as living outputs | `minimum_baseline` | Artifact registry, versions, owner, status | Operational service, memory | expand after metrics |
 | `OP-006` | Daily operator dashboard | `implemented_baseline` | Validate usefulness and evolve from operator evidence | Console, memory, observability | none |
 | `OP-007` | Operator feedback after mission | `implemented_baseline` | Validate usefulness through real operator feedback | Experience/reflection | none |
@@ -778,7 +778,11 @@ Map IDs: `OP-004`, `COG-010`, `GOV-003`.
 Goal: make dependency, priority and blocking state first-class governed work
 item data rather than renderer inference.
 
-Status: ready after `MB-194`.
+Status: closed in `MB-195`; canonical work-item state now persists bounded
+priority, dependencies, blockers and blocking state across sessions. Governance
+rejects invalid transitions, unknown dependencies and cycles, while the
+operator queue applies deterministic dependency/priority ordering without
+scheduling or execution.
 
 ### MB-196 -- Artifact Version Lineage And Ownership
 
