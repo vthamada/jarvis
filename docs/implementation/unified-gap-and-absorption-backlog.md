@@ -359,7 +359,8 @@ Notas de leitura:
   `MB-171` foi fechado como protocolo governado de onboarding de dominios;
   `MB-172` foi fechado como baseline offline de eval pack por dominio/rota;
   `MB-173` foi fechado como baseline de proveniencia/freshness e incerteza;
-  `MB-174` e o unico item tecnico `ready`.
+  `MB-174` foi fechado como dashboard integrado de regressao/readiness; a fila
+  esta esgotada e sem item tecnico `ready` ate repriorizacao explicita.
 
 ### 5.5 Deferred verticals already mapped
 
@@ -403,9 +404,8 @@ Ordem recomendada hoje:
 1. tratar `MB-110` a `MB-159` como baseline fechado de objetivos persistentes,
    utilidade operacional, absorcao tecnologica governada, aprendizado revisado,
    higiene documental e horizonte longo minimo.
-2. executar `MB-174` como proximo item tecnico da fila maior pos-`MB-160`,
-   preservando onboarding, evals e proveniencia fechados em `MB-171` a
-   `MB-173`.
+2. tratar `MB-160` a `MB-174` como fila fechada e usar o dashboard de readiness
+   para repriorizar o proximo lote a partir dos gaps candidatos do mapa mestre.
 3. manter `SO-001`, `TA-004`, `TA-006` e verticais `deferred` fora da fila ate
    haver decisao explicita de fase.
 
@@ -469,7 +469,8 @@ Leitura correta:
   autonomia runtime, promocao governada, cockpit, feedback, dominios/evals,
   proveniencia e readiness; `MB-161`, `MB-162`, `MB-163`, `MB-164`, `MB-165`,
   `MB-166`, `MB-167`, `MB-168`, `MB-169`, `MB-170`, `MB-171`, `MB-172` e
-  `MB-173` foram fechados e `MB-174` e o unico item `ready`;
+  `MB-173` e `MB-174` foram fechados; nao ha item `ready` antes da proxima
+  repriorizacao explicita;
 - `RH-*` permanece fora do backlog implementavel.
 
 ---

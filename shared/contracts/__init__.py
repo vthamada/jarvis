@@ -644,6 +644,43 @@ class KnowledgeEvidenceGovernanceContract:
 
 
 @dataclass
+class CapabilityReadinessContract:
+    capability_id: str
+    capability_name: str
+    source_status: str
+    scope_status: str
+    readiness_status: str
+    score: int
+    target: str
+    dependencies: str
+    next_slice: str
+    evidence_refs: list[str]
+    blockers: list[str] = field(default_factory=list)
+
+
+@dataclass
+class RegressionReadinessReportContract:
+    report_id: str
+    status: str
+    overall_score: int
+    capability_counts: dict[str, int]
+    capability_results: list[CapabilityReadinessContract]
+    gate_mode: str
+    gate_status: str
+    test_status: str
+    document_status: str
+    backlog_status: str
+    status_drift: list[str]
+    blockers: list[str]
+    warnings: list[str]
+    evidence_refs: list[str]
+    generated_at: Timestamp
+    next_ready_item: str | None = None
+    read_only: bool = True
+    autonomous_release_allowed: bool = False
+
+
+@dataclass
 class SpecialistBoundaryContract:
     specialist_type: str
     runtime_scope: str

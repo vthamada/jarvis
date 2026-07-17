@@ -21,6 +21,7 @@ from apps.jarvis_console.cli import (
     render_mission_cycle,
     render_objective_state,
     render_operator_dashboard,
+    render_readiness_dashboard,
     render_response,
     render_work_items_state,
     run_artifact_command,
@@ -38,6 +39,7 @@ from apps.jarvis_console.cli import (
     run_operator_dashboard_command,
     run_procedural_playbooks_command,
     run_progress_report_command,
+    run_readiness_dashboard_command,
     run_technology_candidates_command,
     run_work_item_command,
     run_work_items_command,
@@ -47,6 +49,7 @@ from shared.contracts import (
     MissionStateContract,
     PostTaskReflectionContract,
     ProceduralPlaybookCandidateContract,
+    RegressionReadinessReportContract,
 )
 from shared.types import MissionId, MissionStatus
 
@@ -57,6 +60,52 @@ def runtime_dir(name: str) -> Path:
     target = base_dir / f"{name}-{uuid4().hex[:8]}"
     target.mkdir(parents=True, exist_ok=True)
     return target
+
+
+def test_console_readiness_dashboard_is_read_only_and_does_not_run_gate() -> None:
+    args = build_parser().parse_args(["readiness-dashboard"])
+
+    outputs = run_readiness_dashboard_command(args)
+
+    assert "regression_readiness=read_only" in outputs[0]
+    assert "gate_mode=not_run" in outputs[0]
+    assert "test_status=not_run" in outputs[0]
+    assert "document_status=healthy" in outputs[0]
+    assert "autonomous_release_allowed=False" in outputs[0]
+
+
+def test_console_readiness_renderer_surfaces_drift_and_blockers() -> None:
+    rendered = render_readiness_dashboard(
+        RegressionReadinessReportContract(
+            report_id="regression-readiness://console-test",
+            status="blocked",
+            overall_score=45,
+            capability_counts={
+                "ready": 1,
+                "partial": 1,
+                "attention_required": 0,
+                "missing": 1,
+                "deferred": 1,
+            },
+            capability_results=[],
+            gate_mode="standard",
+            gate_status="failed",
+            test_status="failed",
+            document_status="attention_required",
+            backlog_status="status_drift",
+            status_drift=["master_map_ready_mismatch:MB-174"],
+            blockers=["engineering_gate_failed"],
+            warnings=[],
+            evidence_refs=[],
+            generated_at="2026-07-16T12:00:00Z",
+            next_ready_item="MB-174",
+        )
+    )
+
+    assert "status=blocked" in rendered
+    assert "status_drift=master_map_ready_mismatch:MB-174" in rendered
+    assert "blockers=engineering_gate_failed" in rendered
+    assert "capability_missing=1" in rendered
 
 
 def test_console_ask_returns_orchestrated_response() -> None:

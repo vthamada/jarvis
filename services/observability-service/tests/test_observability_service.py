@@ -6,6 +6,7 @@ from uuid import uuid4
 from observability_service.agentic import JsonlAgenticMirrorAdapter, LangSmithObservabilityAdapter
 from observability_service.service import ObservabilityQuery, ObservabilityService
 
+from shared.contracts import CapabilityReadinessContract
 from shared.events import InternalEventEnvelope
 
 
@@ -19,6 +20,56 @@ def runtime_dir(name: str) -> Path:
 
 def test_observability_service_name() -> None:
     assert ObservabilityService.name == "observability-service"
+
+
+def test_observability_builds_bounded_regression_readiness_report() -> None:
+    report = ObservabilityService.build_regression_readiness_report(
+        report_id="regression-readiness://test",
+        capability_results=[
+            CapabilityReadinessContract(
+                capability_id="OP-001",
+                capability_name="Governed mission",
+                source_status="implemented_baseline",
+                scope_status="baseline",
+                readiness_status="ready",
+                score=100,
+                target="Keep stable",
+                dependencies="Core",
+                next_slice="none",
+                evidence_refs=["docs://map/OP-001"],
+            ),
+            CapabilityReadinessContract(
+                capability_id="OBS-001",
+                capability_name="Regression signal",
+                source_status="missing",
+                scope_status="candidate",
+                readiness_status="missing",
+                score=0,
+                target="Add report",
+                dependencies="Tools",
+                next_slice="candidate",
+                evidence_refs=["docs://map/OBS-001"],
+            ),
+        ],
+        gate_mode="standard",
+        gate_status="passed",
+        test_status="passed",
+        document_status="healthy",
+        backlog_status="synchronized",
+        next_ready_item="MB-174",
+        status_drift=[],
+        evidence_refs=["engineering-gate://standard/passed"],
+        generated_at="2026-07-16T12:00:00Z",
+    )
+
+    assert report.status == "ready_with_known_gaps"
+    assert report.overall_score == 65
+    assert report.capability_counts["ready"] == 1
+    assert report.capability_counts["missing"] == 1
+    assert report.blockers == []
+    assert report.warnings == ["candidate_gaps:OBS-001"]
+    assert report.read_only is True
+    assert report.autonomous_release_allowed is False
 
 
 def test_observability_service_persists_and_filters_events() -> None:

@@ -28,8 +28,14 @@ from orchestrator_service.service import (
     WorkItemTransitionResult,
 )
 
-from shared.contracts import InputContract, LongHorizonGoalStrategyContract, MissionStateContract
+from shared.contracts import (
+    InputContract,
+    LongHorizonGoalStrategyContract,
+    MissionStateContract,
+    RegressionReadinessReportContract,
+)
 from shared.types import ChannelType, InputType, MissionId, RequestId, SessionId
+from tools.readiness_dashboard import build_repository_readiness_report
 
 CONSOLE_SURFACE_ID = "surface://jarvis_console"
 CONSOLE_SURFACE_KIND = "console"
@@ -426,6 +432,16 @@ def build_parser() -> ArgumentParser:
     dashboard_parser.add_argument("--evolution-db")
     dashboard_parser.add_argument("--workflow-profile")
     dashboard_parser.add_argument("--limit", type=int, default=5)
+
+    readiness_parser = subparsers.add_parser(
+        "readiness-dashboard",
+        help="Show repository regression and readiness signals.",
+    )
+    readiness_parser.add_argument(
+        "--run-gate",
+        choices=["quick", "standard"],
+        help="Explicitly refresh engineering gate evidence before reporting.",
+    )
 
     progress_report_parser = subparsers.add_parser(
         "progress-report",
@@ -1420,6 +1436,34 @@ def render_mission_progress_report(result: MissionProgressReportResult) -> str:
     )
 
 
+def render_readiness_dashboard(report: RegressionReadinessReportContract) -> str:
+    counts = report.capability_counts
+    return "\n".join(
+        [
+            "regression_readiness=read_only",
+            f"status={safe_console_value(report.status)}",
+            f"overall_score={safe_console_value(report.overall_score)}",
+            f"gate_mode={safe_console_value(report.gate_mode)}",
+            f"gate_status={safe_console_value(report.gate_status)}",
+            f"test_status={safe_console_value(report.test_status)}",
+            f"document_status={safe_console_value(report.document_status)}",
+            f"backlog_status={safe_console_value(report.backlog_status)}",
+            f"next_ready_item={safe_console_value(report.next_ready_item)}",
+            f"capability_ready={safe_console_value(counts.get('ready', 0))}",
+            f"capability_partial={safe_console_value(counts.get('partial', 0))}",
+            "capability_attention="
+            f"{safe_console_value(counts.get('attention_required', 0))}",
+            f"capability_missing={safe_console_value(counts.get('missing', 0))}",
+            f"capability_deferred={safe_console_value(counts.get('deferred', 0))}",
+            f"status_drift={safe_console_list(report.status_drift)}",
+            f"blockers={safe_console_list(report.blockers)}",
+            f"warnings={safe_console_list(report.warnings)}",
+            "read_only=True",
+            "autonomous_release_allowed=False",
+        ]
+    )
+
+
 def render_mission_workflow_report(
     *,
     response: OrchestratorResponse,
@@ -1729,6 +1773,14 @@ def run_operator_dashboard_command(console: JarvisConsole, args: Namespace) -> l
     ]
 
 
+def run_readiness_dashboard_command(args: Namespace) -> list[str]:
+    report = build_repository_readiness_report(
+        root=ROOT,
+        gate_mode=args.run_gate,
+    )
+    return [render_readiness_dashboard(report)]
+
+
 def run_progress_report_command(console: JarvisConsole, args: Namespace) -> list[str]:
     result = console.inspect_progress_report(
         mission_id=args.mission_id,
@@ -1874,6 +1926,8 @@ def main(argv: list[str] | None = None) -> int:
         if args.command == "mission-cycle"
         else run_operator_dashboard_command(console, args)
         if args.command == "operator-dashboard"
+        else run_readiness_dashboard_command(args)
+        if args.command == "readiness-dashboard"
         else run_progress_report_command(console, args)
         if args.command == "progress-report"
         else run_mission_workflow_command(console, args)
@@ -1914,6 +1968,7 @@ def main(argv: list[str] | None = None) -> int:
         "evolution-review",
         "mission-cycle",
         "operator-dashboard",
+        "readiness-dashboard",
         "progress-report",
         "mission-workflow",
         "mission-feedback",

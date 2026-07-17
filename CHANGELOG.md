@@ -50,6 +50,12 @@
 - `knowledge-service` deriva os sinais pelo timestamp da request, marca metadata ausente como `missing/unknown` e identifica o corpus v1 como fonte interna curada, nunca como verdade externa implicita;
 - sintese e eventos expoem fonte e limitacoes ponta a ponta; testes cobrem evidencia vigente, ausente, expirada e conflitante, e `execution-backlog.md` abriu `MB-174` como unico item tecnico `ready`.
 
+### MB-174 consolida regressao e readiness
+
+- `CapabilityReadinessContract` e `RegressionReadinessReportContract` projetam maturidade por capacidade, score, gate/testes, guardrails documentais, backlog e status drift sem autorizar release autonomo;
+- `tools/readiness_dashboard.py` deriva o estado do mapa/backlog existentes, executa gate somente por flag explicita e salva `latest.json` mais historico operacional para comparacao longitudinal;
+- `jarvis-console readiness-dashboard` expoe a leitura read-only; testes cobrem parsing, drift, score, blockers, historico e console, fechando a fila `MB-161` a `MB-174` sem novo item ready automatico.
+
 ## 2026-07-04
 
 ### MB-161 fecha anchors de evidencia de memoria semantica

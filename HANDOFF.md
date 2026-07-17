@@ -2,6 +2,16 @@
 
 ## Atualizacao 2026-07-16
 
+`MB-174` foi concluido: `CapabilityReadinessContract` e
+`RegressionReadinessReportContract` agora consolidam maturidade por capacidade,
+gate/testes, guardrails documentais, backlog e status drift em leitura
+read-only. `tools/readiness_dashboard.py` pode atualizar o gate somente por
+flag explicita e salva evidencia historica em `.jarvis_runtime/readiness/`; o
+console expoe a mesma leitura por `readiness-dashboard`. Capacidades deferred
+nao viram falsos blockers e nenhum status autoriza release autonomo. A fila
+`MB-161` a `MB-174` esta fechada e sem item tecnico `ready`; a proxima rodada
+deve nascer de repriorizacao explicita pelo mapa mestre.
+
 `MB-173` foi concluido: `KnowledgeSourceEvidenceContract` e
 `KnowledgeEvidenceGovernanceContract` agora carregam proveniencia, freshness,
 conflito, incerteza e modo governado de uso desde o `knowledge-service` ate a
@@ -11,7 +21,7 @@ exige revisao, sem alterar a permissao principal da request. A sintese mostra
 uma clausula `Conhecimento:` e a trilha completa fica em
 `knowledge_retrieved`/`response_synthesized`. Resolucao automatica de conflitos
 e ingestao externa continuam fora do baseline. `MB-174` e o unico item tecnico
-`ready`.
+`ready` naquele momento. Esse estado foi sucedido pelo fechamento de `MB-174`.
 
 `MB-172` foi concluido: contratos compartilhados agora formalizam eval case,
 pack versionado, resultado por caso e run agregado. O novo runner offline usa
@@ -73,8 +83,8 @@ leitura humana compacta de progresso, pendencias, riscos, artefatos, memoria
 influente, experiencia/reflexao, estrategia e proxima acao. O relatorio deriva
 do estado canonico, emite `mission_progress_report_generated` e preserva
 `memory_write_mode=read_only` e `autonomous_execution_allowed=false`.
-Esse estado foi sucedido pelos fechamentos de `MB-170` e `MB-171`; `MB-172` e
-o unico item tecnico `ready`.
+Esse estado foi sucedido pelos fechamentos de `MB-170` a `MB-174`; a fila
+tecnica posterior esta esgotada e aguarda repriorizacao.
 
 ## Atualizacao 2026-07-04
 
@@ -276,9 +286,9 @@ refs de artefato/reflexao, testes, rollback, revisao humana obrigatoria,
 `automatic_promotion_allowed=false`, `core_mutation_allowed=false` e
 `memory_write_mode=through_core_only`. `memory-service` persiste/lista esses
 candidatos, `evolution-lab` cria proposta sandbox-only a partir deles e o
-console possui `procedural-playbooks` read-only. `MB-163` a `MB-173` tambem
-foram concluidos; `MB-174` e o unico item tecnico `ready`, focado no dashboard
-integrado de regressao e readiness.
+console possui `procedural-playbooks` read-only. `MB-163` a `MB-174` tambem
+foram concluidos; a fila tecnica posterior esta esgotada e aguarda
+repriorizacao pelo mapa mestre.
 
 O corte pos-`MB-125` foi repriorizado em `MB-126`: a proxima frente ativa e
 experiencia operacional + reflexao pos-tarefa governada. O objetivo e fazer o

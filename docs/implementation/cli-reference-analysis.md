@@ -365,6 +365,11 @@ Checks should include:
 - governance mode visible;
 - warnings for missing optional capabilities without failing.
 
+Status parcial: `MB-174` implementou `readiness-dashboard` como diagnostico
+read-only de capacidades, gate/testes, backlog e drift documental. O `doctor`
+amplo ainda permanece candidato para imports, runtime dir e conectividade dos
+bancos locais; esse escopo nao deve ser inferido como concluido.
+
 ### CLI-004 - Command Families And Renderer Split
 
 Goal: move command families into modules without changing behavior.

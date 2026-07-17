@@ -3306,7 +3306,7 @@ Fora de escopo:
 
 - `id`: `MB-174`
 - `prioridade`: `P2`
-- `status`: `ready`
+- `status`: `done`
 - `eixo_do_mestre`: `observabilidade`, `qualidade`, `documentacao`
 - `map_ids`: `OBS-007`, `OBS-008`, `DOC-010`
 - `workflow_profile_afetado`: `operational_readiness_workflow`, `governance_boundary_workflow`
@@ -3319,6 +3319,8 @@ Fora de escopo:
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `medium`
 - `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: existe dashboard read-only de readiness por capacidade, gate/testes, documentos e fila; o agregador distingue baseline, candidato e deferred, detecta status drift, preserva historico JSON e nunca autoriza release autonomo.
+- `evidencia_de_fechamento`: `tools/readiness_dashboard.py`, `jarvis-console readiness-dashboard`, contratos/schemas e agregacao no `observability-service` possuem testes de parsing, score, drift, blockers, historico e console; `docs/operations/regression-readiness-dashboard.md` registra uso e limites.
 
 ## 5. Regras de manutencao da fila
 
@@ -3423,6 +3425,7 @@ Estado atual da fila:
 - `MB-170` foi concluido como feedback explicito governado do operador, persistido em experiencia/reflexao e convertido em proposta sandbox sob revisao humana;
 - `MB-171` foi concluido como protocolo governado de onboarding de dominios, sem ativar rota ou promover especialista;
 - `MB-172` foi concluido como primeiro eval pack offline reutilizavel por dominio/rota, com agregacao observavel e promocao manual-only;
-- `MB-173` foi concluido como baseline de proveniencia, freshness e conflito/incerteza de conhecimento; `MB-174` e o unico item tecnico `ready` atual, focado em dashboard integrado de regressao e readiness;
+- `MB-173` foi concluido como baseline de proveniencia, freshness e conflito/incerteza de conhecimento;
+- `MB-174` foi concluido como dashboard integrado de regressao/readiness, fechando a fila `MB-161` a `MB-174`; nao ha item tecnico `ready` ate nova repriorizacao explicita pelo mapa mestre;
 - `SO-001`, `TA-004`, `TA-006` e verticais `deferred` continuam fora da fila sem mudanca explicita de fase;
 - `protective intelligence foundation` continua `deferred` e a matriz da Onda 2 segue como insumo, nao como gatilho automatico para abrir nova vertical.

@@ -544,6 +544,57 @@ KNOWLEDGE_EVIDENCE_GOVERNANCE_SCHEMA = CanonicalSchema(
     ),
 )
 
+CAPABILITY_READINESS_SCHEMA = CanonicalSchema(
+    name="CapabilityReadinessSchema",
+    contract_name="CapabilityReadinessContract",
+    required_fields=(
+        "capability_id",
+        "capability_name",
+        "source_status",
+        "scope_status",
+        "readiness_status",
+        "score",
+        "target",
+        "dependencies",
+        "next_slice",
+        "evidence_refs",
+    ),
+    optional_fields=("blockers",),
+    notes=(
+        "Read-only projection of one capability from the implementation master map.",
+    ),
+)
+
+REGRESSION_READINESS_REPORT_SCHEMA = CanonicalSchema(
+    name="RegressionReadinessReportSchema",
+    contract_name="RegressionReadinessReportContract",
+    required_fields=(
+        "report_id",
+        "status",
+        "overall_score",
+        "capability_counts",
+        "capability_results",
+        "gate_mode",
+        "gate_status",
+        "test_status",
+        "document_status",
+        "backlog_status",
+        "status_drift",
+        "blockers",
+        "warnings",
+        "evidence_refs",
+        "generated_at",
+    ),
+    optional_fields=(
+        "next_ready_item",
+        "read_only",
+        "autonomous_release_allowed",
+    ),
+    notes=(
+        "Aggregates existing readiness signals; it never authorizes release autonomously.",
+    ),
+)
+
 EVOLUTION_REVIEW_QUEUE_ITEM_SCHEMA = CanonicalSchema(
     name="EvolutionReviewQueueItemSchema",
     contract_name="EvolutionReviewQueueItemContract",

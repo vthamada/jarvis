@@ -208,8 +208,8 @@ Goal: know whether JARVIS is actually improving.
 | `OBS-004` | Release signal verification | `implemented_baseline` | Keep stable | engineering_gate | none |
 | `OBS-005` | Operator usefulness metrics | `minimum_baseline` | Measure daily utility, task completion, saved effort | Operator product loop | expand after long-horizon goals |
 | `OBS-006` | Domain-specific eval packs | `minimum_baseline` | Expand packs across promoted routes/domains | Domain onboarding | later |
-| `OBS-007` | Regression dashboard | `missing` | Compact CLI/report of health over time | Observability/tools | candidate |
-| `OBS-008` | Production-readiness score | `partial_runtime` | Unified readiness per capability | Gates/docs | candidate |
+| `OBS-007` | Regression dashboard | `implemented_baseline` | Compact CLI/report of health over time | Observability/tools | none |
+| `OBS-008` | Production-readiness score | `implemented_baseline` | Unified readiness per capability | Gates/docs | none |
 | `OBS-009` | Longitudinal learning metrics | `minimum_baseline` | Does learning improve future decisions over weeks? | Memory/evolution | candidate |
 | `OBS-010` | Security and misuse metrics | `partial_runtime` | Risk trend and incident evidence | Governance/security | later |
 
@@ -262,17 +262,19 @@ Goal: keep planning clear without turning documentation into bureaucracy.
 | `DOC-007` | Implementation master map | `implemented_baseline` | Primary capability decomposition | MB-154 | none |
 | `DOC-008` | Roadmap consolidation | `partial_runtime` | Reduce ambiguity across roadmap docs | Human decision | later |
 | `DOC-009` | Architecture-sensitive doc review | `human_decision_required` | Decide future architecture hierarchy | Human decision | later |
-| `DOC-010` | Automated doc consistency checks | `minimum_baseline` | More coverage for stale references/status drift | engineering_gate | candidate |
+| `DOC-010` | Automated doc consistency checks | `implemented_baseline` | More coverage for stale references/status drift | engineering_gate | none |
 
 ## 6. Current Highest-Value Gaps
 
 The next functional phase should focus on making the system useful to an
 operator, not on adding speculative technology.
 
-Highest-value gaps after `MB-172`:
+Highest-value gaps after `MB-174`:
 
-1. Knowledge provenance and freshness signals in retrieval/synthesis.
-2. Integrated readiness validation for the complete post-`MB-160` slice.
+1. Reprioritize the next queue from operator utility, memory maturity and
+   bounded action gaps using measured readiness instead of queue inertia.
+2. Preserve the closed onboarding, eval, provenance and readiness baselines
+   before expanding domains or surfaces.
 
 ## 7. Dependency Map
 
@@ -294,7 +296,10 @@ Recommended chain for the next few implementation slices:
 1. Preserve the closed `MB-171` governed domain onboarding protocol.
 2. Preserve the closed `MB-172` offline domain eval baseline.
 3. Preserve the closed `MB-173` knowledge provenance/freshness baseline.
-4. Execute `MB-174` integrated readiness closure.
+4. Preserve the closed `MB-174` integrated readiness baseline.
+
+The queue is exhausted after `MB-174`; the next item must be created by an
+explicit reprioritization from this map.
 
 Why this order:
 
@@ -545,7 +550,8 @@ Map IDs: `OBS-007`, `OBS-008`, `DOC-010`.
 Goal: consolidate capability readiness, regression signals and stale-doc/status
 drift into a compact CLI/report.
 
-Status: ready after `MB-173`.
+Status: closed in `MB-174`; capability, gate/test, document and backlog signals
+are available in a read-only report and console command.
 
 ## 12. What Must Not Be Pulled Next By Inertia
 

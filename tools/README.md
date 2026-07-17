@@ -22,6 +22,16 @@ Para validar que documentos vivos criticos mantem identidade e piso historico mi
 python tools/verify_document_guardrails.py
 ```
 
+Para gerar o dashboard integrado de regressao/readiness e atualizar a evidencia
+do gate padrao explicitamente:
+
+```powershell
+python tools/readiness_dashboard.py --run-gate standard
+```
+
+O relatorio salva `latest.json` e historico timestamped em
+`.jarvis_runtime/readiness/`; use `--no-save` para somente inspecionar.
+
 ## Gates do baseline
 
 Os gates executaveis do `v1` continuam sendo:

@@ -13,7 +13,12 @@ from observability_service.agentic import (
     LangSmithObservabilityAdapter,
 )
 from observability_service.repository import ObservabilityRepository
-from shared.contracts import DomainEvalCaseResultContract, DomainEvalRunContract
+from shared.contracts import (
+    CapabilityReadinessContract,
+    DomainEvalCaseResultContract,
+    DomainEvalRunContract,
+    RegressionReadinessReportContract,
+)
 from shared.domain_registry import workflow_runtime_guidance
 from shared.eval_expansion import derive_expanded_eval_state
 from shared.events import InternalEventEnvelope
@@ -522,6 +527,114 @@ class ObservabilityService:
             evidence_refs=list(evidence_refs),
             blockers=resolved_blockers,
             generated_at=generated_at,
+        )
+
+    @staticmethod
+    def build_regression_readiness_report(
+        *,
+        report_id: str,
+        capability_results: list[CapabilityReadinessContract],
+        gate_mode: str,
+        gate_status: str,
+        test_status: str,
+        document_status: str,
+        backlog_status: str,
+        next_ready_item: str | None,
+        status_drift: list[str],
+        evidence_refs: list[str],
+        generated_at: str,
+    ) -> RegressionReadinessReportContract:
+        """Aggregate repository readiness without authorizing release."""
+
+        capability_counts = {
+            status: sum(
+                1 for item in capability_results if item.readiness_status == status
+            )
+            for status in ("ready", "partial", "attention_required", "missing", "deferred")
+        }
+        scored_capabilities = [
+            item for item in capability_results if item.scope_status != "deferred"
+        ]
+        capability_score = (
+            round(
+                sum(item.score for item in scored_capabilities)
+                / len(scored_capabilities)
+            )
+            if scored_capabilities
+            else 0
+        )
+        gate_score = 100 if gate_status == "passed" else 0
+        test_score = 100 if test_status == "passed" else 0
+        document_score = 100 if document_status == "healthy" else 0
+        backlog_score = (
+            100
+            if backlog_status in {"synchronized", "queue_exhausted"}
+            else 0
+        )
+        overall_score = round(
+            capability_score * 0.7
+            + gate_score * 0.1
+            + test_score * 0.1
+            + document_score * 0.05
+            + backlog_score * 0.05
+        )
+
+        blockers = list(status_drift)
+        if gate_status == "failed":
+            blockers.append("engineering_gate_failed")
+        if document_status != "healthy":
+            blockers.append("document_guardrails_failed")
+        if backlog_status not in {"synchronized", "queue_exhausted"}:
+            blockers.append("backlog_status_drift")
+        blockers.extend(
+            f"baseline_capability_missing:{item.capability_id}"
+            for item in capability_results
+            if item.scope_status == "baseline" and item.readiness_status == "missing"
+        )
+        blockers = list(dict.fromkeys(blockers))
+
+        warnings: list[str] = []
+        if gate_status == "not_run":
+            warnings.append("engineering_gate_evidence_not_refreshed")
+        if test_status == "not_run":
+            warnings.append("test_evidence_not_refreshed")
+        candidate_gaps = [
+            item.capability_id
+            for item in capability_results
+            if item.scope_status == "candidate"
+            and item.readiness_status in {"attention_required", "missing"}
+        ]
+        if candidate_gaps:
+            warnings.append(f"candidate_gaps:{','.join(candidate_gaps)}")
+
+        if blockers:
+            status = "blocked"
+        elif gate_status != "passed" or test_status != "passed":
+            status = "evidence_required"
+        elif candidate_gaps or capability_counts["partial"]:
+            status = "ready_with_known_gaps"
+        else:
+            status = "ready"
+
+        return RegressionReadinessReportContract(
+            report_id=report_id,
+            status=status,
+            overall_score=overall_score,
+            capability_counts=capability_counts,
+            capability_results=list(capability_results),
+            gate_mode=gate_mode,
+            gate_status=gate_status,
+            test_status=test_status,
+            document_status=document_status,
+            backlog_status=backlog_status,
+            next_ready_item=next_ready_item,
+            status_drift=list(dict.fromkeys(status_drift)),
+            blockers=blockers,
+            warnings=warnings,
+            evidence_refs=list(dict.fromkeys(evidence_refs)),
+            generated_at=generated_at,
+            read_only=True,
+            autonomous_release_allowed=False,
         )
 
     def audit_flow(
