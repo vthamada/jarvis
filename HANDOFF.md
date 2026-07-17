@@ -2,6 +2,16 @@
 
 ## Atualizacao 2026-07-16
 
+`MB-186` foi concluido como hardening da politica causal de memoria. Os novos
+contratos `MemoryInfluence*` normalizam sinais semanticos, procedurais,
+reflection e reviewed learning por escopo, evidencia, lifecycle/review e grupo
+de conflito. A ordem fixa e `reviewed_learning > procedural > semantic >
+reflection`; conflito estruturado preserva o sinal superior e registra non-use
+do inferior. Planning aplica somente refs selecionadas, synthesis mostra uso e
+non-use, governance valida a trilha e o evento `memory_influence_governed` a
+torna auditavel. Nao ha novo storage, escrita automatica ou promocao. `MB-187`
+e o unico item tecnico `ready`.
+
 `MB-185` foi concluido como evidencia bounded de adaptacao de routing. Os
 contratos `RoutingAdaptation*` comparam rota, workflow e especialista esperados
 e observados, outcome e causalidade de memoria a partir dos evals de dominio.
@@ -10,7 +20,8 @@ outcomes, memoria ou especialistas conflitantes e nunca escreve no registry.
 Somente evidencia coerente vira candidata `needs_review`; o `evolution-lab` a
 persiste como proposta `routing_adaptation_candidate` sandbox-only na fila
 humana, com testes e rollback. E2E comprova registry ativo imutavel e todas as
-autoridades automaticas falsas. `MB-186` e o unico item tecnico `ready`.
+autoridades automaticas falsas. Esse estado foi sucedido pelo fechamento de
+`MB-186`.
 
 `MB-184` foi concluido como integracao da candidata de workflow ao promotion
 gate e rollback manual. A versao candidata recebe proposta e review proprios,

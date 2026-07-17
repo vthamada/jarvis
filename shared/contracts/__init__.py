@@ -714,6 +714,62 @@ class MemoryRecordContract:
 
 
 @dataclass
+class MemoryInfluenceSignalContract:
+    signal_ref: str
+    source_kind: str
+    summary: str
+    evidence_refs: list[str]
+    conflict_group: str
+    directive: str
+    route: str | None = None
+    workflow_profile: str | None = None
+    domain: str | None = None
+    lifecycle_status: str | None = None
+    review_status: str | None = None
+    allowed_usage: list[str] = field(default_factory=lambda: ["planning_context"])
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass
+class MemoryInfluencePolicyDecisionContract:
+    decision_id: str
+    decision_status: str
+    route: str | None
+    workflow_profile: str | None
+    domain: str | None
+    selected_refs: list[str]
+    ignored_refs: list[str]
+    priority_order: list[str]
+    conflict_refs: list[str]
+    use_reasons: dict[str, str]
+    non_use_reasons: dict[str, str]
+    evidence_refs: list[str]
+    policy_refs: list[str]
+    generated_at: Timestamp
+    read_only: bool = True
+    memory_write_allowed: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass
+class MemoryInfluenceGovernanceAssessmentContract:
+    assessment_id: str
+    assessment_status: str
+    decision_id: str
+    blockers: list[str]
+    policy_refs: list[str]
+    timestamp: Timestamp
+    causal_use_allowed: bool
+    human_review_required: bool = False
+    decision_mutation_allowed: bool = False
+    memory_write_allowed: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass
 class UserScopeContextContract:
     user_id: str
     context_status: str
@@ -786,6 +842,7 @@ class DeliberativePlanContract:
     semantic_memory_evidence_refs: list[str] = field(default_factory=list)
     semantic_memory_use_reason: str | None = None
     semantic_memory_non_use_reason: str | None = None
+    memory_influence_policy_decision: MemoryInfluencePolicyDecisionContract | None = None
     memory_lifecycle_status: str | None = None
     memory_review_status: str | None = None
     memory_maintenance_status: str | None = None

@@ -361,7 +361,7 @@ Notas de leitura:
   `MB-173` foi fechado como baseline de proveniencia/freshness e incerteza;
   `MB-174` foi fechado como dashboard integrado de regressao/readiness; a fila
   foi repriorizada em `MB-175`, abrindo `MB-176` a `MB-189`; `MB-176` foi
-  fechado, `MB-177` a `MB-185` tambem foram fechados e `MB-186` e o unico item tecnico
+  fechado, `MB-177` a `MB-186` tambem foram fechados e `MB-187` e o unico item tecnico
   `ready`.
 
 ### 5.5 Deferred verticals already mapped
@@ -406,9 +406,9 @@ Ordem recomendada hoje:
 1. tratar `MB-110` a `MB-159` como baseline fechado de objetivos persistentes,
    utilidade operacional, absorcao tecnologica governada, aprendizado revisado,
    higiene documental e horizonte longo minimo.
-2. tratar `MB-160` a `MB-185` como baseline fechado e executar `MB-186` como
-   hardening da influencia semantica/procedural, com prioridade, conflito e
-   non-use auditaveis.
+2. tratar `MB-160` a `MB-186` como baseline fechado e executar `MB-187` como
+   fila humana de revisao, consolidacao, archive e expiracao de memoria, sem
+   scheduler autonomo.
 3. manter `SO-001`, `TA-004`, `TA-006` e verticais `deferred` fora da fila ate
    haver decisao explicita de fase.
 
@@ -473,7 +473,7 @@ Leitura correta:
   proveniencia e readiness; `MB-161`, `MB-162`, `MB-163`, `MB-164`, `MB-165`,
   `MB-166`, `MB-167`, `MB-168`, `MB-169`, `MB-170`, `MB-171`, `MB-172` e
   `MB-173`, `MB-174` e `MB-176` foram fechados; `MB-175` abriu `MB-176` a
-  `MB-189`; `MB-177` a `MB-185` tambem foram fechados e `MB-186` e o unico item `ready`;
+  `MB-189`; `MB-177` a `MB-186` tambem foram fechados e `MB-187` e o unico item `ready`;
 - `RH-*` permanece fora do backlog implementavel.
 
 ---

@@ -10,6 +10,7 @@ INTERNAL_EVENT_NAMES = (
     "context_composed",
     "knowledge_retrieved",
     "memory_recovered",
+    "memory_influence_governed",
     "memory_recorded",
     "surface_identity_declared",
     "ecosystem_state_declared",

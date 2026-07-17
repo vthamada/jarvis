@@ -13,6 +13,8 @@ from shared.contracts import (
     GovernanceDecisionContract,
     InputContract,
     KnowledgeEvidenceGovernanceContract,
+    MemoryInfluenceGovernanceAssessmentContract,
+    MemoryInfluencePolicyDecisionContract,
     MissionStateContract,
     OperatorFeedbackContract,
     SpecialistInvocationContract,
@@ -61,6 +63,64 @@ class GovernanceService:
     """Apply explicit request and memory policies for the v1 flow."""
 
     name = "governance-service"
+
+    def assess_memory_influence_policy(
+        self,
+        decision: MemoryInfluencePolicyDecisionContract,
+        *,
+        assessed_at: str | None = None,
+    ) -> MemoryInfluenceGovernanceAssessmentContract:
+        """Fail closed when causal memory use lacks a complete policy trail."""
+
+        blockers: list[str] = []
+        if (
+            not decision.read_only
+            or decision.memory_write_allowed
+            or decision.automatic_promotion_allowed
+            or decision.core_mutation_allowed
+        ):
+            blockers.append("memory_influence_authority_claim_not_allowed")
+        if decision.selected_refs and not all(
+            ref in decision.use_reasons for ref in decision.selected_refs
+        ):
+            blockers.append("memory_influence_selected_reason_required")
+        if decision.ignored_refs and not all(
+            ref in decision.non_use_reasons for ref in decision.ignored_refs
+        ):
+            blockers.append("memory_influence_non_use_reason_required")
+        if decision.conflict_refs and (
+            decision.decision_status != "applied_with_conflict_resolution"
+        ):
+            blockers.append("memory_influence_conflict_status_mismatch")
+        if decision.priority_order != [
+            "reviewed_learning",
+            "procedural",
+            "semantic",
+            "reflection",
+        ]:
+            blockers.append("memory_influence_priority_policy_mismatch")
+        if not decision.policy_refs:
+            blockers.append("memory_influence_policy_refs_required")
+        blockers = list(dict.fromkeys(blockers))
+        causal_use_allowed = bool(
+            not blockers
+            and decision.selected_refs
+            and decision.decision_status
+            in {"applied", "applied_with_conflict_resolution"}
+        )
+        return MemoryInfluenceGovernanceAssessmentContract(
+            assessment_id=f"memory-influence-assessment://{uuid4().hex[:12]}",
+            assessment_status="governed" if not blockers else "blocked",
+            decision_id=decision.decision_id,
+            blockers=blockers,
+            policy_refs=[
+                "policy://governance/memory-influence-trace-required",
+                *decision.policy_refs,
+            ],
+            timestamp=assessed_at or self.now(),
+            causal_use_allowed=causal_use_allowed,
+            human_review_required=bool(blockers),
+        )
 
     def assess_knowledge_evidence(
         self,

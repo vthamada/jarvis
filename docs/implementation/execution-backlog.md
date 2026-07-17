@@ -3519,7 +3519,7 @@ Fora de escopo:
 
 - `id`: `MB-186`
 - `prioridade`: `P2`
-- `status`: `ready`
+- `status`: `completed`
 - `eixo_do_mestre`: `memoria semantica`, `memoria procedural`, `planejamento`
 - `map_ids`: `MEM-005`, `MEM-006`, `COG-007`, `GOV-004`
 - `workflow_profile_afetado`: workflows promovidos
@@ -3529,12 +3529,14 @@ Fora de escopo:
 - `dependencias`: `MB-185`
 - `criterio_de_aceite`: politica seleciona ou ignora memoria por escopo/evidencia/conflito e registra razao na decisao e sintese.
 - `gate_minimo`: testes de memory/planning/governance/orchestrator e gate padrao
+- `impacto_no_baseline`: semantic, procedural, reflection e reviewed learning agora passam por politica causal unica, com prioridade fixa, escopo/evidencia/lifecycle, conflito estruturado e non-use auditavel antes de afetar planning/synthesis.
+- `evidencia_de_fechamento`: contratos/schemas `MemoryInfluence*`, avaliador puro, delegate no `memory-service`, enforcement no planning, assessment/evento de governanca, sintese humana e E2E de conflito comprovam `reviewed_learning > procedural > semantic > reflection`, sem nova persistencia ou escrita automatica.
 
 ### MB-187
 
 - `id`: `MB-187`
 - `prioridade`: `P2`
-- `status`: `blocked`
+- `status`: `ready`
 - `eixo_do_mestre`: `memoria`, `operador`, `governanca`
 - `map_ids`: `MEM-007`, `MEM-008`, `MEM-009`, `GOV-004`
 - `workflow_profile_afetado`: `memory_lifecycle_workflow`
@@ -3681,6 +3683,6 @@ Estado atual da fila:
 - `MB-173` foi concluido como baseline de proveniencia, freshness e conflito/incerteza de conhecimento;
 - `MB-174` foi concluido como dashboard integrado de regressao/readiness, fechando a fila `MB-161` a `MB-174`; nao ha item tecnico `ready` ate nova repriorizacao explicita pelo mapa mestre;
 - `MB-175` foi concluido como repriorizacao pos-`MB-174`, abrindo a fila governada de skill/workflow evolution `MB-176` a `MB-189`;
-- `MB-176` a `MB-185` foram concluidos como cadeia de skill/workflow e evidencia revisavel de adaptacao de routing; `MB-186` e o unico item tecnico `ready` e `MB-187` a `MB-189` permanecem `blocked` por dependencia/ordem;
+- `MB-176` a `MB-186` foram concluidos como cadeia de skill/workflow, routing e politica causal de memoria; `MB-187` e o unico item tecnico `ready` e `MB-188` a `MB-189` permanecem `blocked` por dependencia/ordem;
 - `SO-001`, `TA-004`, `TA-006` e verticais `deferred` continuam fora da fila sem mudanca explicita de fase;
 - `protective intelligence foundation` continua `deferred` e a matriz da Onda 2 segue como insumo, nao como gatilho automatico para abrir nova vertical.

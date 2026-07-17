@@ -672,7 +672,9 @@ Map IDs: `MEM-005`, `MEM-006`, `COG-007`, `GOV-004`.
 
 Goal: govern priority, conflict, use and non-use across reviewed memory inputs.
 
-Status: ready after `MB-185`.
+Status: closed in `MB-186`; reviewed learning, procedural, semantic and raw
+reflection signals now pass through one evidence/scope/lifecycle policy with
+fixed priority, structured conflict resolution and auditable non-use.
 
 ### MB-187 -- Human Memory Review And Consolidation
 
@@ -680,6 +682,8 @@ Map IDs: `MEM-007`, `MEM-008`, `MEM-009`, `GOV-004`.
 
 Goal: expose evidence-bound consolidation/archive/expiration decisions without
 an autonomous scheduler.
+
+Status: ready after `MB-186`.
 
 ### MB-188 -- Longitudinal Learning Metrics
 

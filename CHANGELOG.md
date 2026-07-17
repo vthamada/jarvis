@@ -122,6 +122,12 @@
 - `routing_adaptation_evidence.py` correlaciona domain evals existentes e o `observability-service` exige recorrencia coerente, bloqueando conflito, insuficiencia e claims de autoridade;
 - `evolution-lab` persiste somente proposta sandbox `needs_review` na fila humana, com testes e rollback, sem escrita no roteador; E2E preserva registry ativo e abre `MB-186` como unico item tecnico `ready`.
 
+### MB-186 governa prioridade e conflito de influencia de memoria
+
+- contratos/schemas `MemoryInfluenceSignal`, `MemoryInfluencePolicyDecision` e `MemoryInfluenceGovernanceAssessment` formalizam escopo, evidencia, lifecycle, prioridade, conflito, uso e non-use;
+- policy compartilhada e read-only ordena `reviewed_learning > procedural > semantic > reflection`; planning aplica somente sinais selecionados, e synthesis explica sinais usados/ignorados;
+- memory-service reutiliza a mesma policy sem novo storage, governance bloqueia trilha/autoridade invalida e orchestrator emite `memory_influence_governed`; E2E libera `MB-187` como unico item tecnico `ready`.
+
 ## 2026-07-04
 
 ### MB-161 fecha anchors de evidencia de memoria semantica

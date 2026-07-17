@@ -442,6 +442,9 @@ class SynthesisEngine:
         semantic_memory_line = self._semantic_memory_evidence_line(synthesis_input)
         if semantic_memory_line:
             parts.append(f"Memoria semantica: {semantic_memory_line}.")
+        memory_policy_line = self._memory_influence_policy_line(synthesis_input)
+        if memory_policy_line:
+            parts.append(f"Politica causal de memoria: {memory_policy_line}.")
         reflection_line = self._reflection_influence_line(synthesis_input)
         if reflection_line:
             parts.append(f"Reflexao aplicada: {reflection_line}.")
@@ -764,6 +767,11 @@ class SynthesisEngine:
         status = synthesis_input.reflection_influence_status
         if status != "applied":
             return None
+        if not cls._memory_policy_allows_refs(
+            synthesis_input,
+            synthesis_input.reflection_influence_refs,
+        ):
+            return None
         summary = cls._safe_operational_value(
             synthesis_input.reflection_influence_summary
         )
@@ -783,6 +791,11 @@ class SynthesisEngine:
     ) -> str | None:
         status = synthesis_input.reviewed_learning_influence_status
         if status != "applied":
+            return None
+        if not cls._memory_policy_allows_refs(
+            synthesis_input,
+            synthesis_input.reviewed_learning_influence_refs,
+        ):
             return None
         summary = cls._safe_operational_value(
             synthesis_input.reviewed_learning_influence_summary
@@ -839,6 +852,44 @@ class SynthesisEngine:
             parts.append(f"motivo_nao_uso {non_use_reason}")
         parts.append("auditavel")
         return "; ".join(parts)
+
+    @classmethod
+    def _memory_influence_policy_line(
+        cls,
+        synthesis_input: SynthesisInput,
+    ) -> str | None:
+        plan = synthesis_input.deliberative_plan
+        decision = plan.memory_influence_policy_decision if plan else None
+        if decision is None or decision.decision_status == "not_applicable":
+            return None
+        selected = cls._first_safe_ref(decision.selected_refs)
+        ignored = cls._first_safe_ref(decision.ignored_refs)
+        priority = cls._safe_operational_value(
+            ">".join(decision.priority_order)
+        )
+        non_use = cls._safe_operational_value(decision.non_use_reasons)
+        parts = [f"status {decision.decision_status}"]
+        if priority:
+            parts.append(f"prioridade {priority}")
+        if selected:
+            parts.append(f"usado {selected}")
+        if ignored:
+            parts.append(f"ignorado {ignored}")
+        if non_use:
+            parts.append(f"motivo_nao_uso {non_use}")
+        parts.append("read_only")
+        return "; ".join(parts)
+
+    @staticmethod
+    def _memory_policy_allows_refs(
+        synthesis_input: SynthesisInput,
+        refs: list[str],
+    ) -> bool:
+        plan = synthesis_input.deliberative_plan
+        decision = plan.memory_influence_policy_decision if plan else None
+        if decision is None:
+            return True
+        return bool(set(refs).intersection(decision.selected_refs))
 
     @classmethod
     def _first_safe_ref(cls, values: list[str]) -> str | None:

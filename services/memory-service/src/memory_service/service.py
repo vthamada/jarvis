@@ -31,6 +31,8 @@ from shared.contracts import (
     ExperienceRecordContract,
     InputContract,
     LongHorizonGoalStrategyContract,
+    MemoryInfluencePolicyDecisionContract,
+    MemoryInfluenceSignalContract,
     MemoryRecordContract,
     MemoryRecoveryContract,
     MissionContinuityCandidateContract,
@@ -53,6 +55,7 @@ from shared.domain_registry import (
     specialist_eligible_route,
     specialist_route_payload,
 )
+from shared.memory_influence_policy import evaluate_memory_influence_policy
 from shared.memory_registry import (
     DEFAULT_MEMORY_SCOPES,
     SHARED_MEMORY_CLASSES,
@@ -430,6 +433,27 @@ class MemoryService:
             workflow_profile=workflow_profile,
             domain=domain,
             limit=max(1, limit),
+        )
+
+    @staticmethod
+    def evaluate_influence_policy(
+        *,
+        decision_id: str,
+        signals: list[MemoryInfluenceSignalContract],
+        route: str | None,
+        workflow_profile: str | None,
+        domain: str | None,
+        generated_at: str,
+    ) -> MemoryInfluencePolicyDecisionContract:
+        """Apply the shared read-only policy without creating another store."""
+
+        return evaluate_memory_influence_policy(
+            decision_id=decision_id,
+            signals=signals,
+            route=route,
+            workflow_profile=workflow_profile,
+            domain=domain,
+            generated_at=generated_at,
         )
 
     def record_procedural_playbook_candidate(

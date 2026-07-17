@@ -1405,6 +1405,38 @@ class OrchestratorService:
                 memory_route_guidance=memory_route_guidance,
             )
         )
+        memory_influence_decision = (
+            deliberative_plan.memory_influence_policy_decision
+        )
+        if memory_influence_decision is None:
+            raise RuntimeError("planning omitted governed memory influence decision")
+        memory_influence_governance = (
+            self.governance_service.assess_memory_influence_policy(
+                memory_influence_decision,
+                assessed_at=str(contract.timestamp),
+            )
+        )
+        events.append(
+            self.make_event(
+                "memory_influence_governed",
+                contract,
+                {
+                    **self._memory_influence_policy_payload(deliberative_plan),
+                    "memory_influence_governance_status": (
+                        memory_influence_governance.assessment_status
+                    ),
+                    "memory_influence_governance_blockers": list(
+                        memory_influence_governance.blockers
+                    ),
+                    "memory_influence_causal_use_allowed": (
+                        memory_influence_governance.causal_use_allowed
+                    ),
+                    "memory_influence_decision_mutation_allowed": (
+                        memory_influence_governance.decision_mutation_allowed
+                    ),
+                },
+            )
+        )
         autonomy_ladder = derive_autonomy_ladder(
             contract=contract,
             plan=deliberative_plan,
@@ -1528,6 +1560,7 @@ class OrchestratorService:
                     "semantic_memory_non_use_reason": (
                         deliberative_plan.semantic_memory_non_use_reason
                     ),
+                    **self._memory_influence_policy_payload(deliberative_plan),
                     "memory_lifecycle_status": deliberative_plan.memory_lifecycle_status,
                     "memory_review_status": deliberative_plan.memory_review_status,
                     "memory_consolidation_status": (
@@ -2189,6 +2222,7 @@ class OrchestratorService:
                     "semantic_memory_non_use_reason": (
                         deliberative_plan.semantic_memory_non_use_reason
                     ),
+                    **self._memory_influence_policy_payload(deliberative_plan),
                     "memory_lifecycle_status": deliberative_plan.memory_lifecycle_status,
                     "memory_review_status": deliberative_plan.memory_review_status,
                     "memory_consolidation_status": (
@@ -2335,6 +2369,7 @@ class OrchestratorService:
                     "semantic_memory_non_use_reason": (
                         deliberative_plan.semantic_memory_non_use_reason
                     ),
+                    **self._memory_influence_policy_payload(deliberative_plan),
                     "memory_lifecycle_status": deliberative_plan.memory_lifecycle_status,
                     "memory_review_status": deliberative_plan.memory_review_status,
                     **self._memory_maintenance_event_payload(
@@ -4479,6 +4514,7 @@ class OrchestratorService:
             recovered_context=recovered,
             active_domains=cognitive_snapshot.active_domains,
             mission_id=str(contract.mission_id) if contract.mission_id else None,
+            request_timestamp=str(contract.timestamp),
             canonical_domains=canonical_domains,
             primary_canonical_domain=primary_canonical_domain,
             primary_route=primary_route_name,
@@ -4643,6 +4679,12 @@ class OrchestratorService:
             reflection_influence_refs=list(reflection_influence["refs"]),
             reflection_influence_summary=reflection_influence["summary"],
             reflection_influence_workflow_profile=route_workflow_profile,
+            reflection_influence_evidence_refs=list(
+                reflection_influence["evidence_refs"]
+            ),
+            reflection_influence_review_status=reflection_influence[
+                "review_status"
+            ],
             reviewed_learning_influence_status=str(
                 reviewed_learning_influence["status"]
             ),
@@ -4655,6 +4697,12 @@ class OrchestratorService:
             reviewed_learning_influence_reason=reviewed_learning_influence[
                 "reason"
             ],
+            reviewed_learning_influence_evidence_refs=list(
+                reviewed_learning_influence["evidence_refs"]
+            ),
+            reviewed_learning_influence_review_status=(
+                reviewed_learning_influence["review_status"]
+            ),
             memory_maintenance_status=self._extract_context_hint(
                 recovered, "memory_maintenance_status="
             ),
@@ -4772,7 +4820,13 @@ class OrchestratorService:
         primary_domain_driver: str | None,
     ) -> dict[str, object]:
         if not workflow_profile:
-            return {"status": "no_workflow_profile", "refs": [], "summary": None}
+            return {
+                "status": "no_workflow_profile",
+                "refs": [],
+                "summary": None,
+                "evidence_refs": [],
+                "review_status": None,
+            }
         records = self.memory_service.list_experience_reflections(
             mission_id=mission_id,
             workflow_profile=workflow_profile,
@@ -4785,6 +4839,8 @@ class OrchestratorService:
             )
         relevant_refs: list[str] = []
         recommendations: list[str] = []
+        evidence_refs: list[str] = []
+        review_statuses: list[str] = []
         for record in records:
             reflection = record.reflection
             experience = record.experience
@@ -4803,12 +4859,26 @@ class OrchestratorService:
                 continue
             relevant_refs.append(reflection.reflection_id)
             recommendations.append(reflection.recommendation)
+            evidence_refs.extend(reflection.evidence_refs)
+            review_statuses.append(reflection.reflection_status)
             if len(relevant_refs) >= 3:
                 break
         if not relevant_refs:
-            return {"status": "no_relevant_reflection", "refs": [], "summary": None}
+            return {
+                "status": "no_relevant_reflection",
+                "refs": [],
+                "summary": None,
+                "evidence_refs": [],
+                "review_status": None,
+            }
         summary = "; ".join(recommendations[:2])
-        return {"status": "applied", "refs": relevant_refs, "summary": summary}
+        return {
+            "status": "applied",
+            "refs": relevant_refs,
+            "summary": summary,
+            "evidence_refs": list(dict.fromkeys(evidence_refs))[:20],
+            "review_status": review_statuses[0],
+        }
 
     def _reviewed_learning_influence_payload(
         self,
@@ -4823,6 +4893,8 @@ class OrchestratorService:
                 "refs": [],
                 "summary": None,
                 "reason": "missing_workflow_profile",
+                "evidence_refs": [],
+                "review_status": None,
             }
         candidates = self.memory_service.list_reviewed_learning_guidance(
             workflow_profile=workflow_profile,
@@ -4841,6 +4913,8 @@ class OrchestratorService:
         relevant_refs: list[str] = []
         summaries: list[str] = []
         reasons: list[str] = []
+        evidence_refs: list[str] = []
+        review_statuses: list[str] = []
         for record in candidates:
             guidance = record.guidance
             if guidance.automatic_promotion_allowed or guidance.core_mutation_allowed:
@@ -4860,6 +4934,8 @@ class OrchestratorService:
                 continue
             relevant_refs.append(guidance.guidance_id)
             summaries.append(guidance.guidance_summary)
+            evidence_refs.extend(guidance.evidence_refs)
+            review_statuses.append(guidance.review_status)
             reasons.append(
                 self._reviewed_learning_match_reason(
                     workflow_matches=workflow_matches,
@@ -4875,12 +4951,16 @@ class OrchestratorService:
                 "refs": [],
                 "summary": None,
                 "reason": "no_scope_match",
+                "evidence_refs": [],
+                "review_status": None,
             }
         return {
             "status": "applied",
             "refs": relevant_refs,
             "summary": "; ".join(summaries[:2]),
             "reason": ",".join(reasons[:3]),
+            "evidence_refs": list(dict.fromkeys(evidence_refs))[:20],
+            "review_status": review_statuses[0],
         }
 
     @staticmethod
@@ -5322,6 +5402,35 @@ class OrchestratorService:
             "adaptive_intervention_preserved_gate": (
                 synthesis_result.adaptive_intervention_preserved_gate
             ),
+        }
+
+    @staticmethod
+    def _memory_influence_policy_payload(
+        deliberative_plan: DeliberativePlanContract,
+    ) -> dict[str, object]:
+        decision = deliberative_plan.memory_influence_policy_decision
+        if decision is None:
+            return {
+                "memory_influence_policy_status": "not_evaluated",
+                "memory_influence_selected_refs": [],
+                "memory_influence_ignored_refs": [],
+                "memory_influence_conflict_refs": [],
+                "memory_influence_priority_order": [],
+                "memory_influence_use_reasons": {},
+                "memory_influence_non_use_reasons": {},
+                "memory_influence_policy_refs": [],
+                "memory_influence_memory_write_allowed": False,
+            }
+        return {
+            "memory_influence_policy_status": decision.decision_status,
+            "memory_influence_selected_refs": list(decision.selected_refs),
+            "memory_influence_ignored_refs": list(decision.ignored_refs),
+            "memory_influence_conflict_refs": list(decision.conflict_refs),
+            "memory_influence_priority_order": list(decision.priority_order),
+            "memory_influence_use_reasons": dict(decision.use_reasons),
+            "memory_influence_non_use_reasons": dict(decision.non_use_reasons),
+            "memory_influence_policy_refs": list(decision.policy_refs),
+            "memory_influence_memory_write_allowed": decision.memory_write_allowed,
         }
 
     @staticmethod

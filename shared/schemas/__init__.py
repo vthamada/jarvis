@@ -80,6 +80,86 @@ AUTONOMY_LADDER_SCHEMA = CanonicalSchema(
     ),
 )
 
+MEMORY_INFLUENCE_SIGNAL_SCHEMA = CanonicalSchema(
+    name="MemoryInfluenceSignalSchema",
+    contract_name="MemoryInfluenceSignalContract",
+    required_fields=(
+        "signal_ref",
+        "source_kind",
+        "summary",
+        "evidence_refs",
+        "conflict_group",
+        "directive",
+    ),
+    optional_fields=(
+        "route",
+        "workflow_profile",
+        "domain",
+        "lifecycle_status",
+        "review_status",
+        "allowed_usage",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Bounded candidate influence; retrieval does not imply causal use.",
+    ),
+)
+
+MEMORY_INFLUENCE_POLICY_DECISION_SCHEMA = CanonicalSchema(
+    name="MemoryInfluencePolicyDecisionSchema",
+    contract_name="MemoryInfluencePolicyDecisionContract",
+    required_fields=(
+        "decision_id",
+        "decision_status",
+        "priority_order",
+        "policy_refs",
+        "generated_at",
+    ),
+    optional_fields=(
+        "route",
+        "workflow_profile",
+        "domain",
+        "selected_refs",
+        "ignored_refs",
+        "conflict_refs",
+        "evidence_refs",
+        "use_reasons",
+        "non_use_reasons",
+        "read_only",
+        "memory_write_allowed",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Read-only causal decision with explicit priority, conflict, use and non-use.",
+    ),
+)
+
+MEMORY_INFLUENCE_GOVERNANCE_ASSESSMENT_SCHEMA = CanonicalSchema(
+    name="MemoryInfluenceGovernanceAssessmentSchema",
+    contract_name="MemoryInfluenceGovernanceAssessmentContract",
+    required_fields=(
+        "assessment_id",
+        "assessment_status",
+        "decision_id",
+        "policy_refs",
+        "timestamp",
+        "causal_use_allowed",
+    ),
+    optional_fields=(
+        "blockers",
+        "human_review_required",
+        "decision_mutation_allowed",
+        "memory_write_allowed",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Governance validates the policy trail but cannot mutate memory or promote it.",
+    ),
+)
+
 SURFACE_IDENTITY_SCHEMA = CanonicalSchema(
     name="SurfaceIdentitySchema",
     contract_name="SurfaceIdentityContract",
@@ -1595,6 +1675,7 @@ DELIBERATIVE_PLAN_SCHEMA = CanonicalSchema(
         "semantic_memory_evidence_refs",
         "semantic_memory_use_reason",
         "semantic_memory_non_use_reason",
+        "memory_influence_policy_decision",
         "memory_lifecycle_status",
         "memory_review_status",
         "memory_maintenance_status",

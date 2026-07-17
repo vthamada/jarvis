@@ -7,9 +7,12 @@ from dataclasses import dataclass, replace
 from shared.contract_validation import validate_contract_instance
 from shared.contracts import (
     DeliberativePlanContract,
+    MemoryInfluencePolicyDecisionContract,
+    MemoryInfluenceSignalContract,
     SpecialistContributionContract,
 )
 from shared.domain_registry import workflow_runtime_guidance
+from shared.memory_influence_policy import evaluate_memory_influence_policy
 from shared.memory_registry import guided_memory_decision, memory_maintenance_decision
 from shared.mind_domain_specialist_contract import (
     build_mind_domain_specialist_contract,
@@ -96,6 +99,7 @@ class PlanningContext:
     requires_clarification: bool
     preferred_response_mode: str
     mission_id: str | None = None
+    request_timestamp: str | None = None
     canonical_domains: list[str] | None = None
     primary_canonical_domain: str | None = None
     primary_route: str | None = None
@@ -154,10 +158,14 @@ class PlanningContext:
     reflection_influence_refs: list[str] | None = None
     reflection_influence_summary: str | None = None
     reflection_influence_workflow_profile: str | None = None
+    reflection_influence_evidence_refs: list[str] | None = None
+    reflection_influence_review_status: str | None = None
     reviewed_learning_influence_status: str | None = None
     reviewed_learning_influence_refs: list[str] | None = None
     reviewed_learning_influence_summary: str | None = None
     reviewed_learning_influence_reason: str | None = None
+    reviewed_learning_influence_evidence_refs: list[str] | None = None
+    reviewed_learning_influence_review_status: str | None = None
     memory_maintenance_status: str | None = None
     memory_maintenance_reason: str | None = None
     memory_maintenance_fallback_mode: str | None = None
@@ -368,24 +376,93 @@ class PlanningEngine:
             context,
             memory_decision=memory_decision,
         )
+        memory_influence_signals = self._memory_influence_signals(
+            context,
+            memory_decision=memory_decision,
+            semantic_anchor_refs=semantic_memory_anchor_refs,
+            semantic_evidence_refs=semantic_memory_evidence_refs,
+        )
+        memory_influence_policy_decision = evaluate_memory_influence_policy(
+            decision_id=(
+                f"memory-influence-decision://{context.mission_id or 'request'}/"
+                f"{context.route_workflow_profile or 'unscoped'}/"
+                f"{context.request_timestamp or 'runtime'}"
+            ),
+            signals=memory_influence_signals,
+            route=context.primary_route,
+            workflow_profile=context.route_workflow_profile,
+            domain=context.primary_domain_driver or context.primary_canonical_domain,
+            generated_at=context.request_timestamp or "runtime",
+        )
+        reflection_influence_status = context.reflection_influence_status
+        if (
+            reflection_influence_status == "applied"
+            and not self._policy_selects_kind(
+                memory_influence_policy_decision,
+                memory_influence_signals,
+                "reflection",
+            )
+        ):
+            reflection_influence_status = "suppressed_by_memory_influence_policy"
+        reviewed_learning_influence_status = (
+            context.reviewed_learning_influence_status
+        )
+        if (
+            reviewed_learning_influence_status == "applied"
+            and not self._policy_selects_kind(
+                memory_influence_policy_decision,
+                memory_influence_signals,
+                "reviewed_learning",
+            )
+        ):
+            reviewed_learning_influence_status = (
+                "suppressed_by_memory_influence_policy"
+            )
+        if memory_decision.semantic_source and not self._policy_selects_kind(
+            memory_influence_policy_decision,
+            memory_influence_signals,
+            "semantic",
+        ):
+            semantic_memory_use_reason = None
+            semantic_signal = next(
+                (
+                    signal
+                    for signal in memory_influence_signals
+                    if signal.source_kind == "semantic"
+                ),
+                None,
+            )
+            semantic_memory_non_use_reason = (
+                memory_influence_policy_decision.non_use_reasons.get(
+                    semantic_signal.signal_ref
+                )
+                if semantic_signal is not None
+                else "semantic_signal_not_eligible"
+            )
         steps, constraints, success_criteria = self._apply_memory_causality_guidance(
             steps=steps,
             constraints=constraints,
             success_criteria=success_criteria,
             context=context,
             memory_decision=memory_decision,
+            memory_influence_policy_decision=memory_influence_policy_decision,
+            memory_influence_signals=memory_influence_signals,
         )
         steps, constraints, success_criteria = self._apply_reflection_influence(
             steps=steps,
             constraints=constraints,
             success_criteria=success_criteria,
             context=context,
+            memory_influence_policy_decision=memory_influence_policy_decision,
+            memory_influence_signals=memory_influence_signals,
         )
         steps, constraints, success_criteria = self._apply_reviewed_learning_influence(
             steps=steps,
             constraints=constraints,
             success_criteria=success_criteria,
             context=context,
+            memory_influence_policy_decision=memory_influence_policy_decision,
+            memory_influence_signals=memory_influence_signals,
         )
         memory_maintenance = self._memory_maintenance_decision(
             context,
@@ -401,6 +478,8 @@ class PlanningEngine:
             smallest_safe_next_action,
             context=context,
             memory_decision=memory_decision,
+            memory_influence_policy_decision=memory_influence_policy_decision,
+            memory_influence_signals=memory_influence_signals,
         )
         smallest_safe_next_action = self._apply_memory_maintenance_to_next_action(
             smallest_safe_next_action,
@@ -496,16 +575,24 @@ class PlanningEngine:
                 "capability_authorization="
                 f"{capability_decision.authorization_status or 'none'}"
             )
-        if context.reflection_influence_status:
+        if reflection_influence_status:
             plan_summary = (
                 f"{plan_summary}; reflection_influence="
-                f"{context.reflection_influence_status}"
+                f"{reflection_influence_status}"
             )
-        if context.reviewed_learning_influence_status:
+        if reviewed_learning_influence_status:
             plan_summary = (
                 f"{plan_summary}; reviewed_learning_influence="
-                f"{context.reviewed_learning_influence_status}"
+                f"{reviewed_learning_influence_status}"
             )
+        plan_summary = (
+            f"{plan_summary}; memory_influence_policy="
+            f"{memory_influence_policy_decision.decision_status}; "
+            "memory_influence_selected="
+            f"{','.join(memory_influence_policy_decision.selected_refs) or 'none'}; "
+            "memory_influence_ignored="
+            f"{','.join(memory_influence_policy_decision.ignored_refs) or 'none'}"
+        )
         plan_summary = (
             f"{plan_summary}; request_identity={request_identity_policy.status}; "
             f"request_authority={request_identity_policy.authority_level}; "
@@ -553,17 +640,25 @@ class PlanningEngine:
         )
         rationale = (
             f"{rationale}; reflection_influence_status="
-            f"{context.reflection_influence_status or 'not_evaluated'}; "
+            f"{reflection_influence_status or 'not_evaluated'}; "
             "reflection_influence_refs="
             f"{','.join(context.reflection_influence_refs or []) or 'none'}"
         )
         rationale = (
             f"{rationale}; reviewed_learning_influence_status="
-            f"{context.reviewed_learning_influence_status or 'not_evaluated'}; "
+            f"{reviewed_learning_influence_status or 'not_evaluated'}; "
             "reviewed_learning_influence_refs="
             f"{','.join(context.reviewed_learning_influence_refs or []) or 'none'}; "
             "reviewed_learning_influence_reason="
             f"{context.reviewed_learning_influence_reason or 'none'}"
+        )
+        rationale = (
+            f"{rationale}; memory_influence_policy_status="
+            f"{memory_influence_policy_decision.decision_status}; "
+            "memory_influence_use_reasons="
+            f"{memory_influence_policy_decision.use_reasons}; "
+            "memory_influence_non_use_reasons="
+            f"{memory_influence_policy_decision.non_use_reasons}"
         )
         rationale = (
             f"{rationale}; request_identity_status={request_identity_policy.status}; "
@@ -642,8 +737,24 @@ class PlanningEngine:
             ),
             semantic_memory_source=memory_decision.semantic_source,
             procedural_memory_source=memory_decision.procedural_source,
-            semantic_memory_effects=list(memory_decision.semantic_effects),
-            procedural_memory_effects=list(memory_decision.procedural_effects),
+            semantic_memory_effects=(
+                list(memory_decision.semantic_effects)
+                if self._policy_selects_kind(
+                    memory_influence_policy_decision,
+                    memory_influence_signals,
+                    "semantic",
+                )
+                else []
+            ),
+            procedural_memory_effects=(
+                list(memory_decision.procedural_effects)
+                if self._policy_selects_kind(
+                    memory_influence_policy_decision,
+                    memory_influence_signals,
+                    "procedural",
+                )
+                else []
+            ),
             semantic_memory_lifecycle=memory_decision.semantic_lifecycle,
             procedural_memory_lifecycle=memory_decision.procedural_lifecycle,
             semantic_memory_state=memory_decision.semantic_memory_state,
@@ -652,6 +763,7 @@ class PlanningEngine:
             semantic_memory_evidence_refs=semantic_memory_evidence_refs,
             semantic_memory_use_reason=semantic_memory_use_reason,
             semantic_memory_non_use_reason=semantic_memory_non_use_reason,
+            memory_influence_policy_decision=memory_influence_policy_decision,
             memory_lifecycle_status=memory_decision.lifecycle_status,
             memory_review_status=memory_decision.review_status,
             memory_maintenance_status=memory_maintenance.status,
@@ -662,15 +774,13 @@ class PlanningEngine:
             memory_consolidation_status=memory_decision.consolidation_status,
             memory_fixation_status=memory_decision.fixation_status,
             memory_archive_status=memory_decision.archive_status,
-            reflection_influence_status=context.reflection_influence_status,
+            reflection_influence_status=reflection_influence_status,
             reflection_influence_refs=list(context.reflection_influence_refs or []),
             reflection_influence_summary=context.reflection_influence_summary,
             reflection_influence_workflow_profile=(
                 context.reflection_influence_workflow_profile
             ),
-            reviewed_learning_influence_status=(
-                context.reviewed_learning_influence_status
-            ),
+            reviewed_learning_influence_status=reviewed_learning_influence_status,
             reviewed_learning_influence_refs=list(
                 context.reviewed_learning_influence_refs or []
             ),
@@ -3162,16 +3272,163 @@ class PlanningEngine:
             sources.append("user_scope")
         return sources
 
+    def _memory_influence_signals(
+        self,
+        context: PlanningContext,
+        *,
+        memory_decision,
+        semantic_anchor_refs: list[str],
+        semantic_evidence_refs: list[str],
+    ) -> list[MemoryInfluenceSignalContract]:
+        signals: list[MemoryInfluenceSignalContract] = []
+        scope = {
+            "route": context.primary_route,
+            "workflow_profile": context.route_workflow_profile,
+            "domain": (
+                context.primary_domain_driver or context.primary_canonical_domain
+            ),
+        }
+        semantic_anchor = self._semantic_memory_anchor(context)
+        if memory_decision.semantic_source and semantic_anchor_refs and semantic_anchor:
+            signals.append(
+                MemoryInfluenceSignalContract(
+                    signal_ref=semantic_anchor_refs[0],
+                    source_kind="semantic",
+                    summary=semantic_anchor[:1000],
+                    evidence_refs=list(semantic_evidence_refs),
+                    conflict_group="semantic_context",
+                    directive=semantic_anchor[:1000],
+                    lifecycle_status=memory_decision.semantic_lifecycle,
+                    review_status=memory_decision.review_status,
+                    **scope,
+                )
+            )
+        procedural_ref = self._procedural_memory_policy_ref(
+            context,
+            source=memory_decision.procedural_source,
+        )
+        procedural_anchor = self._procedural_memory_anchor(context)
+        if memory_decision.procedural_source and procedural_ref and procedural_anchor:
+            procedural_evidence = [f"{procedural_ref}#evidence"]
+            if context.route_workflow_profile:
+                procedural_evidence.append(
+                    f"workflow://{context.route_workflow_profile}"
+                )
+            if context.primary_route:
+                procedural_evidence.append(f"route://{context.primary_route}")
+            signals.append(
+                MemoryInfluenceSignalContract(
+                    signal_ref=procedural_ref,
+                    source_kind="procedural",
+                    summary=procedural_anchor[:1000],
+                    evidence_refs=procedural_evidence,
+                    conflict_group="procedural_execution",
+                    directive=procedural_anchor[:1000],
+                    lifecycle_status=memory_decision.procedural_lifecycle,
+                    review_status=memory_decision.review_status,
+                    **scope,
+                )
+            )
+        if (
+            context.reflection_influence_status == "applied"
+            and context.reflection_influence_refs
+        ):
+            reflection_summary = (
+                context.reflection_influence_summary
+                or "bounded prior reflection"
+            )[:1000]
+            signals.append(
+                MemoryInfluenceSignalContract(
+                    signal_ref=context.reflection_influence_refs[0],
+                    source_kind="reflection",
+                    summary=reflection_summary,
+                    evidence_refs=list(
+                        context.reflection_influence_evidence_refs
+                        or context.reflection_influence_refs
+                    ),
+                    conflict_group="learning_guidance",
+                    directive=reflection_summary,
+                    lifecycle_status="bounded",
+                    review_status=(
+                        context.reflection_influence_review_status or "candidate"
+                    ),
+                    **scope,
+                )
+            )
+        if (
+            context.reviewed_learning_influence_status == "applied"
+            and context.reviewed_learning_influence_refs
+        ):
+            reviewed_summary = (
+                context.reviewed_learning_influence_summary
+                or "human-reviewed learning guidance"
+            )[:1000]
+            signals.append(
+                MemoryInfluenceSignalContract(
+                    signal_ref=context.reviewed_learning_influence_refs[0],
+                    source_kind="reviewed_learning",
+                    summary=reviewed_summary,
+                    evidence_refs=list(
+                        context.reviewed_learning_influence_evidence_refs
+                        or context.reviewed_learning_influence_refs
+                    ),
+                    conflict_group="learning_guidance",
+                    directive=reviewed_summary,
+                    lifecycle_status="reviewed",
+                    review_status=(
+                        context.reviewed_learning_influence_review_status
+                        or "approved"
+                    ),
+                    **scope,
+                )
+            )
+        return signals
+
+    @staticmethod
+    def _procedural_memory_policy_ref(
+        context: PlanningContext,
+        *,
+        source: str | None,
+    ) -> str | None:
+        if context.procedural_artifact_ref:
+            return context.procedural_artifact_ref
+        if source == "active_mission":
+            return f"memory://mission/{context.mission_id or 'active'}/procedural"
+        if source == "related_mission" and context.related_mission_id:
+            return f"memory://mission/{context.related_mission_id}/procedural"
+        if source == "user_scope":
+            return "memory://user-scope/procedural"
+        return None
+
+    @staticmethod
+    def _policy_selects_kind(
+        decision: MemoryInfluencePolicyDecisionContract,
+        signals: list[MemoryInfluenceSignalContract],
+        source_kind: str,
+    ) -> bool:
+        selected = set(decision.selected_refs)
+        return any(
+            signal.source_kind == source_kind and signal.signal_ref in selected
+            for signal in signals
+        )
+
     def _apply_guided_memory_to_next_action(
         self,
         action: str,
         *,
         context: PlanningContext,
         memory_decision,
+        memory_influence_policy_decision: MemoryInfluencePolicyDecisionContract,
+        memory_influence_signals: list[MemoryInfluenceSignalContract],
     ) -> str:
         if (
             not memory_decision.procedural_source
             or "next_action" not in memory_decision.procedural_effects
+            or not self._policy_selects_kind(
+                memory_influence_policy_decision,
+                memory_influence_signals,
+                "procedural",
+            )
         ):
             return action
         anchor = self._procedural_memory_anchor(context)
@@ -3188,27 +3445,39 @@ class PlanningEngine:
         success_criteria: list[str],
         context: PlanningContext,
         memory_decision,
+        memory_influence_policy_decision: MemoryInfluencePolicyDecisionContract,
+        memory_influence_signals: list[MemoryInfluenceSignalContract],
     ) -> tuple[list[str], list[str], list[str]]:
         updated_steps = list(steps)
         updated_constraints = list(constraints)
         updated_success = list(success_criteria)
         guidance = workflow_runtime_guidance(context.route_workflow_profile)
 
-        if "priority" in memory_decision.semantic_effects:
+        semantic_selected = self._policy_selects_kind(
+            memory_influence_policy_decision,
+            memory_influence_signals,
+            "semantic",
+        )
+        procedural_selected = self._policy_selects_kind(
+            memory_influence_policy_decision,
+            memory_influence_signals,
+            "procedural",
+        )
+        if semantic_selected and "priority" in memory_decision.semantic_effects:
             semantic_step = (
                 "priorizar a leitura semantica antes de consolidar o fechamento "
                 f"do workflow: {guidance.semantic_memory_role}"
             )
             if semantic_step not in updated_steps:
                 updated_steps.insert(0, semantic_step)
-        if "depth" in memory_decision.semantic_effects:
+        if semantic_selected and "depth" in memory_decision.semantic_effects:
             depth_constraint = (
                 "nao reduzir a leitura final enquanto a memoria semantica ainda "
                 f"estiver aprofundando {guidance.semantic_memory_role}"
             )
             if depth_constraint not in updated_constraints:
                 updated_constraints.append(depth_constraint)
-        if "recommendation" in memory_decision.semantic_effects:
+        if semantic_selected and "recommendation" in memory_decision.semantic_effects:
             semantic_criterion = (
                 "recomendacao final deve refletir o framing semantico dominante "
                 "do workflow ativo"
@@ -3216,19 +3485,19 @@ class PlanningEngine:
             if semantic_criterion not in updated_success:
                 updated_success.append(semantic_criterion)
 
-        if "priority" in memory_decision.procedural_effects:
+        if procedural_selected and "priority" in memory_decision.procedural_effects:
             procedural_step = (
                 "priorizar a memoria procedural na ordenacao da proxima acao segura"
             )
             if procedural_step not in updated_steps:
                 updated_steps.append(procedural_step)
-        if "depth" in memory_decision.procedural_effects:
+        if procedural_selected and "depth" in memory_decision.procedural_effects:
             procedural_constraint = (
                 "manter validacao procedural extra antes de concluir a resposta final"
             )
             if procedural_constraint not in updated_constraints:
                 updated_constraints.append(procedural_constraint)
-        if "recommendation" in memory_decision.procedural_effects:
+        if procedural_selected and "recommendation" in memory_decision.procedural_effects:
             procedural_criterion = (
                 "recomendacao final deve preservar a continuidade procedural do workflow"
             )
@@ -3244,11 +3513,20 @@ class PlanningEngine:
         constraints: list[str],
         success_criteria: list[str],
         context: PlanningContext,
+        memory_influence_policy_decision: MemoryInfluencePolicyDecisionContract,
+        memory_influence_signals: list[MemoryInfluenceSignalContract],
     ) -> tuple[list[str], list[str], list[str]]:
         updated_steps = list(steps)
         updated_constraints = list(constraints)
         updated_success = list(success_criteria)
-        if context.reflection_influence_status != "applied":
+        if (
+            context.reflection_influence_status != "applied"
+            or not self._policy_selects_kind(
+                memory_influence_policy_decision,
+                memory_influence_signals,
+                "reflection",
+            )
+        ):
             return updated_steps, updated_constraints, updated_success
 
         summary = context.reflection_influence_summary or "bounded prior reflection"
@@ -3275,11 +3553,20 @@ class PlanningEngine:
         constraints: list[str],
         success_criteria: list[str],
         context: PlanningContext,
+        memory_influence_policy_decision: MemoryInfluencePolicyDecisionContract,
+        memory_influence_signals: list[MemoryInfluenceSignalContract],
     ) -> tuple[list[str], list[str], list[str]]:
         updated_steps = list(steps)
         updated_constraints = list(constraints)
         updated_success = list(success_criteria)
-        if context.reviewed_learning_influence_status != "applied":
+        if (
+            context.reviewed_learning_influence_status != "applied"
+            or not self._policy_selects_kind(
+                memory_influence_policy_decision,
+                memory_influence_signals,
+                "reviewed_learning",
+            )
+        ):
             return updated_steps, updated_constraints, updated_success
 
         summary = (

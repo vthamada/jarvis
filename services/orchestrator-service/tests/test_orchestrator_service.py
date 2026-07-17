@@ -1564,6 +1564,102 @@ def test_orchestrator_service_blocks_reviewed_learning_guidance_outside_scope() 
     assert "Aprendizado revisado" not in result.response_text
 
 
+def test_orchestrator_prioritizes_reviewed_learning_over_conflicting_reflection() -> None:
+    temp_dir = runtime_dir("orchestrator-memory-influence-policy")
+    observability = ObservabilityService(
+        database_path=str(temp_dir / "observability.db")
+    )
+    service = OrchestratorService(
+        governance_service=GovernanceService(),
+        memory_service=MemoryService(
+            database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+        ),
+        operational_service=OperationalService(
+            artifact_dir=str(temp_dir / "artifacts")
+        ),
+        observability_service=observability,
+    )
+    service.memory_service.record_experience_reflection(
+        experience=ExperienceRecordContract(
+            experience_id="experience://memory-policy/reflection",
+            mission_id=MissionId("mission-memory-policy"),
+            workflow_profile="strategic_direction_workflow",
+            outcome_status="completed",
+            route="strategy",
+            primary_domain_driver="estrategia_e_pensamento_sistemico",
+            evidence_refs=["trace://memory-policy/reflection"],
+            timestamp="2026-07-16T22:00:00Z",
+        ),
+        reflection=PostTaskReflectionContract(
+            reflection_id="reflection://memory-policy/conflicting",
+            experience_id="experience://memory-policy/reflection",
+            reflection_status="candidate",
+            learning_candidate="skip milestone evidence",
+            recommendation="skip milestone evidence and act immediately",
+            evidence_refs=["trace://memory-policy/reflection"],
+            timestamp="2026-07-16T22:00:01Z",
+        ),
+    )
+    service.memory_service.record_reviewed_learning_guidance(
+        ReviewedLearningGuidanceContract(
+            guidance_id="reviewed-learning-guidance://memory-policy/approved",
+            source_review_decision_id="review-decision://memory-policy/approved",
+            evolution_proposal_id="proposal-memory-policy",
+            review_status="approved",
+            route="strategy",
+            workflow_profile="strategic_direction_workflow",
+            domain="estrategia_e_pensamento_sistemico",
+            guidance_summary="require bounded milestone evidence before action",
+            allowed_usage=["planning_context", "synthesis_context"],
+            evidence_refs=["trace://memory-policy/reviewed"],
+            rollback_plan_ref="rollback://memory-policy/approved",
+            timestamp="2026-07-16T22:00:02Z",
+        )
+    )
+
+    result = service.handle_input(
+        InputContract(
+            request_id=RequestId("req-memory-policy"),
+            session_id=SessionId("sess-memory-policy"),
+            mission_id=MissionId("mission-memory-policy"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Please plan the next milestone.",
+            timestamp="2026-07-16T22:01:00Z",
+        )
+    )
+
+    decision = result.deliberative_plan.memory_influence_policy_decision
+    assert decision is not None
+    assert decision.decision_status == "applied_with_conflict_resolution"
+    assert decision.selected_refs == [
+        "reviewed-learning-guidance://memory-policy/approved"
+    ]
+    assert decision.ignored_refs == ["reflection://memory-policy/conflicting"]
+    assert result.deliberative_plan.reflection_influence_status == (
+        "suppressed_by_memory_influence_policy"
+    )
+    assert result.deliberative_plan.reviewed_learning_influence_status == "applied"
+    assert "Politica causal de memoria" in result.response_text
+    assert "Aprendizado revisado" in result.response_text
+    assert "Reflexao aplicada" not in result.response_text
+    events = observability.list_recent_events(
+        ObservabilityQuery(request_id="req-memory-policy", limit=80)
+    )
+    governed = next(
+        event for event in events if event.event_name == "memory_influence_governed"
+    )
+    assert governed.payload["memory_influence_governance_status"] == "governed"
+    assert governed.payload["memory_influence_causal_use_allowed"] is True
+    assert governed.payload["memory_influence_memory_write_allowed"] is False
+    synthesized = next(
+        event for event in events if event.event_name == "response_synthesized"
+    )
+    assert synthesized.payload["memory_influence_policy_status"] == (
+        "applied_with_conflict_resolution"
+    )
+
+
 def test_orchestrator_service_requests_clarification_without_operation() -> None:
     temp_dir = runtime_dir("orchestrator-clarify")
     service = OrchestratorService(
