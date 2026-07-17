@@ -116,6 +116,12 @@
 - candidata de workflow ganha proposta/review proprios; checklist exige identidade/versao coerentes, eval MB-183 aprovado, rollback verificado, engineering gate e release gate;
 - E2E pass/block comprova que gate completo termina pendente de decisao humana e que regressao ou rollback ausente bloqueiam release; `MB-185` e o unico item tecnico `ready`.
 
+### MB-185 produz evidencia revisavel de adaptacao de routing
+
+- contratos/schemas `RoutingAdaptationObservation`, `RoutingAdaptationCandidate` e `RoutingAdaptationReport` formalizam comparacao bounded de rota, workflow, especialista, outcome e memoria;
+- `routing_adaptation_evidence.py` correlaciona domain evals existentes e o `observability-service` exige recorrencia coerente, bloqueando conflito, insuficiencia e claims de autoridade;
+- `evolution-lab` persiste somente proposta sandbox `needs_review` na fila humana, com testes e rollback, sem escrita no roteador; E2E preserva registry ativo e abre `MB-186` como unico item tecnico `ready`.
+
 ## 2026-07-04
 
 ### MB-161 fecha anchors de evidencia de memoria semantica

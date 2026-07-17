@@ -23,13 +23,20 @@ from shared.contracts import (
     PostTaskReflectionContract,
     RecurringPatternReportContract,
     RegressionReadinessReportContract,
+    RoutingAdaptationCandidateContract,
+    RoutingAdaptationObservationContract,
+    RoutingAdaptationReportContract,
     SkillCandidateContract,
     SkillEvolutionOperatorItemContract,
     SkillEvolutionOperatorViewContract,
     WorkflowVariantEvalCaseResultContract,
     WorkflowVariantEvalRunContract,
 )
-from shared.domain_registry import workflow_runtime_guidance
+from shared.domain_registry import (
+    is_promoted_specialist_route,
+    route_metadata_payload,
+    workflow_runtime_guidance,
+)
 from shared.eval_expansion import derive_expanded_eval_state
 from shared.events import InternalEventEnvelope
 from shared.recurring_patterns import build_recurring_pattern_report
@@ -687,6 +694,268 @@ class ObservabilityService:
             domain=domain,
             max_records=max_records,
             max_patterns=max_patterns,
+        )
+
+    @staticmethod
+    def build_routing_adaptation_report(
+        *,
+        report_id: str,
+        observations: list[RoutingAdaptationObservationContract],
+        minimum_occurrences: int,
+        generated_at: str,
+        max_observations: int = 100,
+        max_candidates: int = 20,
+        blockers: list[str] | None = None,
+    ) -> RoutingAdaptationReportContract:
+        """Aggregate route mismatch evidence without changing runtime routing."""
+
+        resolved_blockers = list(blockers or [])
+        if minimum_occurrences < 2 or minimum_occurrences > 20:
+            resolved_blockers.append("invalid_routing_adaptation_minimum_occurrences")
+        if max_observations < 1 or max_observations > 100:
+            resolved_blockers.append("invalid_routing_adaptation_observation_limit")
+        if max_candidates < 1 or max_candidates > 20:
+            resolved_blockers.append("invalid_routing_adaptation_candidate_limit")
+        if not observations:
+            resolved_blockers.append("no_routing_adaptation_observations")
+        if len(observations) > max_observations:
+            resolved_blockers.append("routing_adaptation_observation_limit_exceeded")
+
+        bounded_observations = list(observations[:max_observations])
+        observation_ids = [item.observation_id for item in bounded_observations]
+        if len(observation_ids) != len(set(observation_ids)):
+            resolved_blockers.append("duplicate_routing_adaptation_observation_id")
+        source_case_ids = [item.source_case_id for item in bounded_observations]
+        if len(source_case_ids) != len(set(source_case_ids)):
+            resolved_blockers.append("duplicate_routing_adaptation_source_case_id")
+
+        mismatches: dict[
+            tuple[str, str, str], list[RoutingAdaptationObservationContract]
+        ] = {}
+        observed_routes_by_scope: dict[tuple[str, str], set[str]] = {}
+        all_evidence: list[str] = []
+        for observation in bounded_observations:
+            all_evidence.extend(observation.evidence_refs)
+            expected_metadata = route_metadata_payload(observation.expected_route)
+            observed_metadata = route_metadata_payload(observation.observed_route or "")
+            expected_route_valid = is_promoted_specialist_route(
+                observation.expected_route
+            )
+            if not expected_route_valid:
+                resolved_blockers.append(
+                    f"observation:{observation.observation_id}:expected_promoted_route_required"
+                )
+            if observed_metadata["maturity"] is None:
+                resolved_blockers.append(
+                    f"observation:{observation.observation_id}:observed_route_not_registered"
+                )
+            if (
+                expected_metadata["workflow_profile"]
+                != observation.expected_workflow_profile
+            ):
+                resolved_blockers.append(
+                    f"observation:{observation.observation_id}:expected_workflow_registry_mismatch"
+                )
+            if (
+                expected_metadata["linked_specialist_type"]
+                != observation.expected_specialist_type
+            ):
+                resolved_blockers.append(
+                    f"observation:{observation.observation_id}:expected_specialist_registry_mismatch"
+                )
+            if observation.route_match != (
+                observation.expected_route == observation.observed_route
+            ):
+                resolved_blockers.append(
+                    f"observation:{observation.observation_id}:route_comparison_inconsistent"
+                )
+            if observation.workflow_match != (
+                observation.expected_workflow_profile
+                == observation.observed_workflow_profile
+            ):
+                resolved_blockers.append(
+                    f"observation:{observation.observation_id}:workflow_comparison_inconsistent"
+                )
+            if observation.specialist_match != (
+                observation.expected_specialist_type
+                in observation.observed_specialist_types
+            ):
+                resolved_blockers.append(
+                    f"observation:{observation.observation_id}:specialist_comparison_inconsistent"
+                )
+            if not observation.outcome_status:
+                resolved_blockers.append(
+                    f"observation:{observation.observation_id}:outcome_status_required"
+                )
+            if not observation.memory_causality_status:
+                resolved_blockers.append(
+                    f"observation:{observation.observation_id}:memory_causality_status_required"
+                )
+            if not observation.evidence_refs:
+                resolved_blockers.append(
+                    f"observation:{observation.observation_id}:evidence_required"
+                )
+            if (
+                not observation.read_only
+                or not observation.human_review_required
+                or observation.routing_write_allowed
+                or observation.runtime_activation_allowed
+                or observation.automatic_promotion_allowed
+                or observation.core_mutation_allowed
+            ):
+                resolved_blockers.append(
+                    f"observation:{observation.observation_id}:routing_authority_claim_not_allowed"
+                )
+            if observation.route_match or observation.observed_route is None:
+                continue
+            scope = (
+                observation.expected_route,
+                observation.expected_workflow_profile,
+            )
+            observed_routes_by_scope.setdefault(scope, set()).add(
+                observation.observed_route
+            )
+            key = (*scope, observation.observed_route)
+            mismatches.setdefault(key, []).append(observation)
+
+        conflict_flags: list[str] = []
+        for scope, observed_routes in sorted(observed_routes_by_scope.items()):
+            if len(observed_routes) > 1:
+                conflict_flags.append(
+                    f"scope:{scope[0]}:{scope[1]}:conflicting_observed_routes"
+                )
+
+        candidates: list[RoutingAdaptationCandidateContract] = []
+        successful_outcomes = {"completed", "success", "succeeded"}
+        conflicted_scopes = {
+            flag.removeprefix("scope:").removesuffix(
+                ":conflicting_observed_routes"
+            )
+            for flag in conflict_flags
+        }
+        if not resolved_blockers:
+            for key, group in sorted(mismatches.items()):
+                expected_route, workflow_profile, observed_route = key
+                scope_ref = f"{expected_route}:{workflow_profile}"
+                if scope_ref in conflicted_scopes or len(group) < minimum_occurrences:
+                    continue
+                outcomes = sorted({item.outcome_status for item in group})
+                memory_statuses = sorted(
+                    {item.memory_causality_status for item in group}
+                )
+                specialist_sets = {
+                    tuple(sorted(set(item.observed_specialist_types)))
+                    for item in group
+                }
+                group_conflicts: list[str] = []
+                if len(outcomes) != 1:
+                    group_conflicts.append(
+                        f"scope:{scope_ref}:{observed_route}:conflicting_outcomes"
+                    )
+                elif outcomes[0] not in successful_outcomes:
+                    group_conflicts.append(
+                        f"scope:{scope_ref}:{observed_route}:non_successful_outcome"
+                    )
+                if len(memory_statuses) != 1:
+                    group_conflicts.append(
+                        f"scope:{scope_ref}:{observed_route}:conflicting_memory_causality"
+                    )
+                if len(specialist_sets) != 1:
+                    group_conflicts.append(
+                        f"scope:{scope_ref}:{observed_route}:conflicting_specialists"
+                    )
+                elif any(not specialists for specialists in specialist_sets):
+                    group_conflicts.append(
+                        f"scope:{scope_ref}:{observed_route}:observed_specialist_required"
+                    )
+                if group_conflicts:
+                    conflict_flags.extend(group_conflicts)
+                    continue
+
+                observation_refs = [item.observation_id for item in group]
+                evidence_refs = list(
+                    dict.fromkeys(
+                        reference
+                        for item in group
+                        for reference in item.evidence_refs
+                    )
+                )[:100]
+                observed_specialists = sorted(
+                    {
+                        specialist
+                        for item in group
+                        for specialist in item.observed_specialist_types
+                    }
+                )
+                candidates.append(
+                    RoutingAdaptationCandidateContract(
+                        candidate_id=(
+                            "routing-adaptation-candidate://"
+                            f"{expected_route}/from/{observed_route}/{workflow_profile}"
+                        ),
+                        candidate_status="needs_review",
+                        current_route=observed_route,
+                        proposed_route=expected_route,
+                        workflow_profile=workflow_profile,
+                        expected_specialist_type=group[0].expected_specialist_type,
+                        observed_specialist_types=observed_specialists,
+                        observation_count=len(group),
+                        minimum_occurrences=minimum_occurrences,
+                        outcome_statuses=outcomes,
+                        memory_causality_statuses=memory_statuses,
+                        observation_refs=observation_refs,
+                        evidence_refs=evidence_refs,
+                        rationale=(
+                            f"{len(group)} coherent observations routed to "
+                            f"{observed_route} instead of expected promoted route "
+                            f"{expected_route}; outcome={outcomes[0]}; "
+                            f"memory={memory_statuses[0]}; "
+                            f"specialists={','.join(observed_specialists) or 'none'}"
+                        ),
+                        proposed_tests=[
+                            f"eval://routing/{expected_route}/equivalent-cases",
+                            "python tools/engineering_gate.py --mode standard",
+                        ],
+                        rollback_plan_ref=(
+                            f"rollback://routing/{expected_route}/current-baseline"
+                        ),
+                        risk_level="moderate",
+                        blockers=[],
+                        generated_at=generated_at,
+                    )
+                )
+                if len(candidates) >= max_candidates:
+                    break
+
+        conflict_flags = sorted(set(conflict_flags))
+        resolved_blockers = sorted(set(resolved_blockers))
+        status = (
+            "blocked"
+            if resolved_blockers
+            else (
+                "attention_required"
+                if conflict_flags
+                else (
+                    "evidence_ready_for_human_review"
+                    if candidates
+                    else "no_adaptation_candidate"
+                )
+            )
+        )
+        return RoutingAdaptationReportContract(
+            report_id=report_id,
+            report_status=status,
+            observation_count=len(bounded_observations),
+            route_match_count=sum(item.route_match for item in bounded_observations),
+            route_mismatch_count=sum(
+                not item.route_match for item in bounded_observations
+            ),
+            candidate_count=len(candidates),
+            candidates=candidates,
+            conflict_flags=conflict_flags,
+            evidence_refs=list(dict.fromkeys(all_evidence))[:100],
+            blockers=resolved_blockers,
+            generated_at=generated_at,
         )
 
     @staticmethod

@@ -2,6 +2,16 @@
 
 ## Atualizacao 2026-07-16
 
+`MB-185` foi concluido como evidencia bounded de adaptacao de routing. Os
+contratos `RoutingAdaptation*` comparam rota, workflow e especialista esperados
+e observados, outcome e causalidade de memoria a partir dos evals de dominio.
+O `observability-service` exige recorrencia minima, rejeita rotas observadas,
+outcomes, memoria ou especialistas conflitantes e nunca escreve no registry.
+Somente evidencia coerente vira candidata `needs_review`; o `evolution-lab` a
+persiste como proposta `routing_adaptation_candidate` sandbox-only na fila
+humana, com testes e rollback. E2E comprova registry ativo imutavel e todas as
+autoridades automaticas falsas. `MB-186` e o unico item tecnico `ready`.
+
 `MB-184` foi concluido como integracao da candidata de workflow ao promotion
 gate e rollback manual. A versao candidata recebe proposta e review proprios,
 separados da revisao do pattern. `WorkflowRollbackPlanContract` registra
@@ -11,7 +21,8 @@ eval MB-183 aprovado, rollback verificado, engineering gate e release gate. O
 E2E comprova que a cadeia completa termina em
 `release_gate_passed_pending_human_decision`; regressao ou rollback ausente
 bloqueiam. Candidata permanece inativa, registry ativo inalterado e
-`promotion_authorized=false`. `MB-185` e o unico item tecnico `ready`.
+`promotion_authorized=false`. Esse estado foi sucedido pelo fechamento de
+`MB-185`.
 
 `MB-183` foi concluido como eval offline equivalente de workflow baseline vs
 candidata. Os contratos `WorkflowVariantEval*` registram casos, checks,
@@ -114,7 +125,7 @@ flag explicita e salva evidencia historica em `.jarvis_runtime/readiness/`; o
 console expoe a mesma leitura por `readiness-dashboard`. Capacidades deferred
 nao viram falsos blockers e nenhum status autoriza release autonomo. A fila
 `MB-161` a `MB-174` esta fechada. Esse estado foi sucedido por `MB-175` e pelo
-fechamento de `MB-176` a `MB-184`; `MB-185` e agora o unico item tecnico
+fechamento de `MB-176` a `MB-185`; `MB-186` e agora o unico item tecnico
 `ready`.
 
 `MB-173` foi concluido: `KnowledgeSourceEvidenceContract` e

@@ -662,13 +662,17 @@ Map IDs: `COG-003`, `COG-007`, `EVL-008`, `OBS-009`.
 
 Goal: measure route/specialist fit and produce reviewable adaptation evidence.
 
-Status: ready after `MB-184`.
+Status: closed in `MB-185`; domain eval evidence now produces bounded routing
+observations and only recurring coherent mismatches become human-reviewable
+candidates, without active registry writes or promotion authority.
 
 ### MB-186 -- Semantic And Procedural Influence Policy Hardening
 
 Map IDs: `MEM-005`, `MEM-006`, `COG-007`, `GOV-004`.
 
 Goal: govern priority, conflict, use and non-use across reviewed memory inputs.
+
+Status: ready after `MB-185`.
 
 ### MB-187 -- Human Memory Review And Consolidation
 

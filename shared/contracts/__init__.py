@@ -1041,6 +1041,82 @@ class DomainEvalRunContract:
 
 
 @dataclass
+class RoutingAdaptationObservationContract:
+    observation_id: str
+    source_case_id: str
+    expected_route: str
+    observed_route: str | None
+    expected_workflow_profile: str
+    observed_workflow_profile: str | None
+    expected_specialist_type: str
+    observed_specialist_types: list[str]
+    outcome_status: str
+    memory_causality_status: str
+    route_match: bool
+    workflow_match: bool
+    specialist_match: bool
+    evidence_refs: list[str]
+    timestamp: Timestamp
+    mission_id: str | None = None
+    read_only: bool = True
+    human_review_required: bool = True
+    routing_write_allowed: bool = False
+    runtime_activation_allowed: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass
+class RoutingAdaptationCandidateContract:
+    candidate_id: str
+    candidate_status: str
+    current_route: str
+    proposed_route: str
+    workflow_profile: str
+    expected_specialist_type: str
+    observed_specialist_types: list[str]
+    observation_count: int
+    minimum_occurrences: int
+    outcome_statuses: list[str]
+    memory_causality_statuses: list[str]
+    observation_refs: list[str]
+    evidence_refs: list[str]
+    rationale: str
+    proposed_tests: list[str]
+    rollback_plan_ref: str
+    risk_level: str
+    blockers: list[str]
+    generated_at: Timestamp
+    human_review_required: bool = True
+    routing_write_allowed: bool = False
+    runtime_activation_allowed: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass
+class RoutingAdaptationReportContract:
+    report_id: str
+    report_status: str
+    observation_count: int
+    route_match_count: int
+    route_mismatch_count: int
+    candidate_count: int
+    candidates: list[RoutingAdaptationCandidateContract]
+    conflict_flags: list[str]
+    evidence_refs: list[str]
+    blockers: list[str]
+    generated_at: Timestamp
+    read_only: bool = True
+    human_review_required: bool = True
+    routing_write_allowed: bool = False
+    runtime_activation_allowed: bool = False
+    promotion_authorized: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass
 class KnowledgeSourceEvidenceContract:
     source_ref: str
     domain_name: str

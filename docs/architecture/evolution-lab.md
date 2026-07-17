@@ -70,6 +70,10 @@ O repositorio ja possui um corte operacional do laboratorio evolutivo:
 - proposta e review separados para a versao candidata, plano de rollback
   `manual_only` e integracao ao checklist/promotion gate existente; gate verde
   ainda termina pendente de decisao humana e sem escrita no registry ativo.
+- evidencia bounded de adaptacao de routing derivada de evals de dominio,
+  comparando rota, workflow, especialista, outcome e causalidade de memoria;
+  somente recorrencia coerente vira candidata `needs_review`, sem escrita no
+  roteador ou registry ativo.
 
 ---
 

@@ -868,6 +868,106 @@ WORKFLOW_ROLLBACK_PLAN_SCHEMA = CanonicalSchema(
     ),
 )
 
+ROUTING_ADAPTATION_OBSERVATION_SCHEMA = CanonicalSchema(
+    name="RoutingAdaptationObservationSchema",
+    contract_name="RoutingAdaptationObservationContract",
+    required_fields=(
+        "observation_id",
+        "source_case_id",
+        "expected_route",
+        "observed_route",
+        "expected_workflow_profile",
+        "observed_workflow_profile",
+        "expected_specialist_type",
+        "outcome_status",
+        "memory_causality_status",
+        "route_match",
+        "workflow_match",
+        "specialist_match",
+        "evidence_refs",
+        "timestamp",
+    ),
+    optional_fields=(
+        "mission_id",
+        "observed_specialist_types",
+        "read_only",
+        "human_review_required",
+        "routing_write_allowed",
+        "runtime_activation_allowed",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Read-only comparison evidence; it cannot mutate the active router.",
+    ),
+)
+
+ROUTING_ADAPTATION_CANDIDATE_SCHEMA = CanonicalSchema(
+    name="RoutingAdaptationCandidateSchema",
+    contract_name="RoutingAdaptationCandidateContract",
+    required_fields=(
+        "candidate_id",
+        "candidate_status",
+        "current_route",
+        "proposed_route",
+        "workflow_profile",
+        "expected_specialist_type",
+        "observed_specialist_types",
+        "observation_count",
+        "minimum_occurrences",
+        "outcome_statuses",
+        "memory_causality_statuses",
+        "observation_refs",
+        "evidence_refs",
+        "rationale",
+        "proposed_tests",
+        "rollback_plan_ref",
+        "risk_level",
+        "generated_at",
+    ),
+    optional_fields=(
+        "blockers",
+        "human_review_required",
+        "routing_write_allowed",
+        "runtime_activation_allowed",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Recurring routing mismatch candidate; human review and sandbox remain mandatory.",
+    ),
+)
+
+ROUTING_ADAPTATION_REPORT_SCHEMA = CanonicalSchema(
+    name="RoutingAdaptationReportSchema",
+    contract_name="RoutingAdaptationReportContract",
+    required_fields=(
+        "report_id",
+        "report_status",
+        "observation_count",
+        "route_match_count",
+        "route_mismatch_count",
+        "candidate_count",
+        "evidence_refs",
+        "generated_at",
+    ),
+    optional_fields=(
+        "candidates",
+        "conflict_flags",
+        "blockers",
+        "read_only",
+        "human_review_required",
+        "routing_write_allowed",
+        "runtime_activation_allowed",
+        "promotion_authorized",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Bounded adaptation report; candidates never authorize routing changes.",
+    ),
+)
+
 PROCEDURAL_PLAYBOOK_CANDIDATE_SCHEMA = CanonicalSchema(
     name="ProceduralPlaybookCandidateSchema",
     contract_name="ProceduralPlaybookCandidateContract",

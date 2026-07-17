@@ -24,6 +24,7 @@ from shared.contracts import (
     PromotionGateDecisionContract,
     RecurringPatternEvidenceContract,
     ReviewedLearningGuidanceContract,
+    RoutingAdaptationCandidateContract,
     SandboxToReleaseChecklistContract,
     SkillCandidateContract,
     SkillMiningRequestContract,
@@ -42,7 +43,9 @@ from shared.contracts import (
 )
 from shared.domain_registry import (
     build_active_workflow_version_registry,
+    is_promoted_specialist_route,
     register_workflow_candidate_version,
+    route_metadata_payload,
     workflow_definition_hash,
 )
 from shared.eval_expansion import derive_expanded_eval_state
@@ -2494,6 +2497,155 @@ class EvolutionLabService:
             optimization_blockers=blockers,
         )
 
+    def create_proposal_from_routing_adaptation_candidate(
+        self,
+        candidate: RoutingAdaptationCandidateContract,
+        *,
+        strategy_name: str | None = None,
+    ) -> EvolutionProposalContract:
+        """Persist routing evidence for review without changing active routes."""
+
+        blockers = list(candidate.blockers)
+        proposed_metadata = route_metadata_payload(candidate.proposed_route)
+        current_metadata = route_metadata_payload(candidate.current_route)
+        if candidate.candidate_status != "needs_review":
+            blockers.append("routing_candidate_human_review_status_required")
+        if candidate.observation_count < candidate.minimum_occurrences:
+            blockers.append("routing_candidate_recurrence_threshold_not_met")
+        if candidate.observation_count != len(set(candidate.observation_refs)):
+            blockers.append("routing_candidate_observation_count_mismatch")
+        if candidate.minimum_occurrences < 2:
+            blockers.append("routing_candidate_minimum_occurrences_invalid")
+        if not candidate.observation_refs:
+            blockers.append("routing_candidate_observations_required")
+        if not candidate.evidence_refs:
+            blockers.append("routing_candidate_evidence_required")
+        if not candidate.observed_specialist_types:
+            blockers.append("routing_candidate_observed_specialist_required")
+        if not candidate.proposed_tests:
+            blockers.append("routing_candidate_tests_required")
+        if not candidate.rollback_plan_ref:
+            blockers.append("routing_candidate_rollback_required")
+        if candidate.risk_level not in {"low", "moderate"}:
+            blockers.append("routing_candidate_risk_not_bounded")
+        if len(candidate.outcome_statuses) != 1:
+            blockers.append("routing_candidate_coherent_outcome_required")
+        elif candidate.outcome_statuses[0] not in {
+            "completed",
+            "success",
+            "succeeded",
+        }:
+            blockers.append("routing_candidate_successful_outcome_required")
+        if len(candidate.memory_causality_statuses) != 1:
+            blockers.append("routing_candidate_coherent_memory_status_required")
+        if not is_promoted_specialist_route(candidate.proposed_route):
+            blockers.append("routing_candidate_promoted_target_required")
+        if candidate.current_route == candidate.proposed_route:
+            blockers.append("routing_candidate_distinct_routes_required")
+        if current_metadata["maturity"] is None:
+            blockers.append("routing_candidate_current_route_not_registered")
+        if proposed_metadata["workflow_profile"] != candidate.workflow_profile:
+            blockers.append("routing_candidate_workflow_registry_mismatch")
+        if (
+            proposed_metadata["linked_specialist_type"]
+            != candidate.expected_specialist_type
+        ):
+            blockers.append("routing_candidate_specialist_registry_mismatch")
+        if (
+            not candidate.human_review_required
+            or candidate.routing_write_allowed
+            or candidate.runtime_activation_allowed
+            or candidate.automatic_promotion_allowed
+            or candidate.core_mutation_allowed
+        ):
+            blockers.append("routing_candidate_authority_claim_not_allowed")
+        blockers = self._unique_values(blockers)
+        return self.create_proposal(
+            proposal_type="routing_adaptation_candidate",
+            target_scope=(
+                f"routing:{candidate.current_route}->{candidate.proposed_route}"
+            ),
+            hypothesis=(
+                f"evaluate recurring correction from {candidate.current_route} "
+                f"to promoted route {candidate.proposed_route}"
+            ),
+            expected_gain=(
+                "improve route and specialist adherence without bypassing the Core"
+            ),
+            baseline_refs=self._unique_values(
+                [*candidate.observation_refs, *candidate.evidence_refs]
+            ),
+            source_signals=self._unique_values(
+                [
+                    candidate.candidate_id,
+                    f"routing://current/{candidate.current_route}",
+                    f"routing://proposed/{candidate.proposed_route}",
+                    f"workflow://profile/{candidate.workflow_profile}",
+                    f"specialist://expected/{candidate.expected_specialist_type}",
+                    "routing://active-registry/write-disabled",
+                    "routing://promotion/manual-gates-required",
+                ]
+            ),
+            risk_hint=candidate.risk_level,
+            proposed_tests=list(candidate.proposed_tests),
+            strategy_name=strategy_name,
+            candidate_refs=self._unique_values(
+                [candidate.candidate_id, *candidate.observation_refs]
+            ),
+            evaluation_matrix={
+                "routing_adaptation_candidate": {
+                    "candidate_id": candidate.candidate_id,
+                    "candidate_status": candidate.candidate_status,
+                    "current_route": candidate.current_route,
+                    "proposed_route": candidate.proposed_route,
+                    "workflow_profile": candidate.workflow_profile,
+                    "expected_specialist_type": candidate.expected_specialist_type,
+                    "observed_specialist_types": list(
+                        candidate.observed_specialist_types
+                    ),
+                    "observation_count": candidate.observation_count,
+                    "minimum_occurrences": candidate.minimum_occurrences,
+                    "outcome_statuses": list(candidate.outcome_statuses),
+                    "memory_causality_statuses": list(
+                        candidate.memory_causality_statuses
+                    ),
+                    "blockers": blockers,
+                }
+            },
+            strategy_context={
+                "routing_adaptation": {
+                    "candidate_id": candidate.candidate_id,
+                    "rationale": candidate.rationale,
+                    "rollback_plan_ref": candidate.rollback_plan_ref,
+                    "routing_write_allowed": False,
+                },
+                "promotion_policy": {
+                    "equivalent_routing_eval_required": True,
+                    "standard_engineering_gate_required": True,
+                    "release_gate_required": True,
+                    "human_promotion_decision_required": True,
+                    "active_registry_write": False,
+                    "runtime_activation": False,
+                    "automatic_promotion": False,
+                    "core_mutation_allowed": False,
+                },
+                "evolution_review": self._review_context(
+                    status="needs_review",
+                    blockers=blockers,
+                    rollback_plan_ref=candidate.rollback_plan_ref,
+                ),
+            },
+            optimization_scope="routing_adaptation",
+            optimization_target_kind="route_specialist_alignment",
+            optimization_candidate_status=(
+                "blocked" if blockers else "candidate"
+            ),
+            optimization_safety_status=(
+                "blocked_by_safety" if blockers else "sandbox_only"
+            ),
+            optimization_blockers=blockers,
+        )
+
     def create_workflow_pattern_review_proposal(
         self,
         *,
@@ -3389,8 +3541,13 @@ class EvolutionLabService:
         workflow_context = dict(
             proposal.evaluation_matrix.get("workflow_candidate", {})
         )
-        candidate_identity = skill_context.get("skill_id") or workflow_context.get(
-            "workflow_profile"
+        routing_context = dict(
+            proposal.evaluation_matrix.get("routing_adaptation_candidate", {})
+        )
+        candidate_identity = (
+            skill_context.get("skill_id")
+            or workflow_context.get("workflow_profile")
+            or routing_context.get("candidate_id")
         )
         version = skill_context.get("version") or workflow_context.get("version")
         return (
