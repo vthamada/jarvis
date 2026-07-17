@@ -319,8 +319,9 @@ MBs.
 
 ## Proposed Implementation Sequence
 
-This sequence should be considered input to future reprioritization, not an
-automatic change to the current ready item.
+This sequence became an explicit implementation input in `MB-190`. `CLI-001`
+to `CLI-003` map to `MB-191` to `MB-193`; later items are sequenced behind the
+Daily Operator Loop and remain WIP-1.
 
 ### CLI-001 - Command Registry Baseline
 
@@ -430,8 +431,8 @@ Goal: preserve CLI UX and machine-readable contracts against regression.
 ## Integration With Existing Backlog
 
 At the time this analysis was created, the active micro queue kept `MB-161` as
-the only ready item. After `MB-161` closed, this CLI research still should not
-displace the ordered queue automatically; it should feed the CLI-related MBs.
+the only ready item. `MB-190` later made the explicit phase decision to pull
+the bounded CLI foundation before expanding the Daily Operator Loop.
 
 Best fit for adoption:
 
@@ -440,12 +441,10 @@ Best fit for adoption:
 - `CLI-003` can also support `MB-174 - Regression And Readiness Dashboard`.
 - `CLI-005` maps directly to `MB-168`.
 
-Recommended next decision:
+Current execution decision:
 
-- Keep following the ordered micro queue unless the operator explicitly
-  reprioritizes toward CLI hardening.
-- When CLI hardening is pulled, start with `CLI-001` and `CLI-002`; do not jump
-  directly to TUI or broad cockpit expansion.
+- `MB-191` starts with `CLI-001`, followed by output/runtime and doctor;
+- no TUI, broad cockpit rewrite or external surface is authorized by this pull.
 
 ## Architectural Conclusion
 

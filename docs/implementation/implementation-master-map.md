@@ -246,6 +246,10 @@ Goal: expose the same sovereign entity through multiple interfaces.
 | `SFC-008` | Mobile/multichannel | `deferred_by_phase` | Same entity across surfaces | Multisurface continuity | later |
 | `SFC-009` | Surface identity conflict handling | `minimum_baseline` | Full conflict policy across surfaces | Surface contract | later |
 | `SFC-010` | Notification layer | `missing` | Human-approved reminders, not autonomous scheduler | Governance | later |
+| `SFC-011` | Typed CLI command registry | `missing` | Stable metadata and dispatch without a monolithic branch chain | SFC-001 | high-priority |
+| `SFC-012` | CLI runtime/output contract | `missing` | Text/JSON, redaction, stderr and stable exit codes | SFC-011 | high-priority |
+| `SFC-013` | Read-only CLI doctor | `missing` | Runtime, stores, backlog, governance and gate preflight | SFC-011, OBS-007 | candidate |
+| `SFC-014` | Generated CLI reference and completion | `missing` | Registry-derived reference and shell completion | SFC-011, DOC-010 | candidate |
 
 ### Track K -- Documentation And Program Control
 
@@ -269,12 +273,14 @@ Goal: keep planning clear without turning documentation into bureaucracy.
 The next functional phase should focus on making the system useful to an
 operator, not on adding speculative technology.
 
-Highest-value gaps after `MB-174`:
+Highest-value gaps after `MB-189`:
 
-1. Reprioritize the next queue from operator utility, memory maturity and
-   bounded action gaps using measured readiness instead of queue inertia.
-2. Preserve the closed onboarding, eval, provenance and readiness baselines
-   before expanding domains or surfaces.
+1. Stabilize CLI dispatch/output before adding more daily operator commands.
+2. Close multi-session daily continuity around objectives, work items,
+   artifacts and open loops.
+3. Measure whether the daily loop reduces rework and improves task completion.
+4. Preserve the closed learning/evolution slice before expanding domains or
+   deferred surfaces.
 
 ## 7. Dependency Map
 
@@ -291,15 +297,14 @@ These are already present and should be preserved:
 
 ### Next functional chain
 
-Recommended chain for the next few implementation slices:
+Recommended chain for the next implementation slice:
 
-1. Preserve the closed `MB-171` governed domain onboarding protocol.
-2. Preserve the closed `MB-172` offline domain eval baseline.
-3. Preserve the closed `MB-173` knowledge provenance/freshness baseline.
-4. Preserve the closed `MB-174` integrated readiness baseline.
-
-The queue is exhausted after `MB-174`; the next item must be created by an
-explicit reprioritization from this map.
+1. typed CLI registry and output/runtime contract;
+2. read-only doctor/preflight;
+3. daily workspace snapshot and governed resume;
+4. work-item dependency/priority and artifact version lineage;
+5. open-loop continuation and utility measurement;
+6. golden/reference evidence and readiness closure.
 
 Why this order:
 
@@ -708,7 +713,94 @@ Status: closed in `MB-189`; longitudinal status, regression flags, evidence
 identity and authority safety now reach the repository readiness dashboard,
 and the `MB-176` to `MB-189` queue is explicitly exhausted.
 
-## 13. What Must Not Be Pulled Next By Inertia
+## 13. Suggested MB-190 To MB-200 Queue
+
+This queue remains inside `v2_core_depth`. It combines the researched CLI
+hardening prerequisites with the highest-value operator continuity gaps.
+
+### MB-190 -- Reprioritize Operator CLI And Daily Continuity
+
+Map IDs: `SFC-011`, `SFC-012`, `SFC-013`, `OP-009`, `OP-004`, `OP-005`,
+`ACT-004`, `OBS-005`.
+
+Goal: open one ordered WIP-1 queue that stabilizes the CLI before expanding the
+daily operator loop.
+
+Status: closed as planning/reprioritization documentation; `MB-191` is ready.
+
+### MB-191 -- Typed CLI Command Registry Baseline
+
+Map IDs: `SFC-001`, `SFC-011`, `DOC-010`.
+
+Goal: register existing commands through typed metadata and dispatch while
+preserving command behavior and sovereign service boundaries.
+
+Status: ready after `MB-190`.
+
+### MB-192 -- CLI Runtime Output And Exit Contract
+
+Map IDs: `SFC-001`, `SFC-012`, `GOV-008`.
+
+Goal: add redacted text/JSON output, stdout/stderr discipline and stable exit
+codes to read/report commands without changing Core decisions.
+
+### MB-193 -- Read-Only Doctor And Preflight
+
+Map IDs: `SFC-013`, `OBS-007`, `GOV-008`.
+
+Goal: diagnose imports, runtime directory, canonical stores, backlog,
+governance and gate availability without mutating state or exposing secrets.
+
+### MB-194 -- Daily Operator Workspace Snapshot
+
+Map IDs: `OP-006`, `OP-009`, `SFC-003`, `MEM-002`.
+
+Goal: provide one canonical read-only snapshot of active objectives, open work,
+artifacts, pending reviews and next decisions across sessions.
+
+### MB-195 -- Governed Work Item Dependencies And Priority
+
+Map IDs: `OP-004`, `COG-010`, `GOV-003`.
+
+Goal: make dependency, priority and blocking state first-class governed work
+item data rather than renderer inference.
+
+### MB-196 -- Artifact Version Lineage And Ownership
+
+Map IDs: `OP-005`, `ACT-004`, `MEM-006`.
+
+Goal: preserve durable artifact versions, owner, source work item and supersede
+relationships through canonical state.
+
+### MB-197 -- Governed Open-Loop Resume Workflow
+
+Map IDs: `OP-009`, `MEM-002`, `MEM-003`, `COG-010`.
+
+Goal: resume active loops across sessions with explicit selection, evidence and
+human-visible next action, without an autonomous scheduler.
+
+### MB-198 -- Daily Operator Utility Outcome Metrics
+
+Map IDs: `OBS-005`, `OP-006`, `OP-009`.
+
+Goal: measure completion, rework, stale loops, feedback and time-to-next-action
+for the daily workflow without inventing saved-time claims.
+
+### MB-199 -- Registry-Derived CLI Reference And Golden Outputs
+
+Map IDs: `SFC-014`, `DOC-010`, `SFC-012`.
+
+Goal: generate command reference/completion from registry metadata and protect
+text/JSON behavior with deterministic golden tests.
+
+### MB-200 -- Daily Operator Loop Readiness Closure
+
+Map IDs: `OBS-007`, `OBS-008`, `DOC-010`, `OP-009`.
+
+Goal: close the slice with integrated readiness, regression, operator runbook
+and explicit next phase decision.
+
+## 14. What Must Not Be Pulled Next By Inertia
 
 Do not open these without explicit phase decision:
 
@@ -724,7 +816,7 @@ Do not open these without explicit phase decision:
 - model weight changes;
 - autonomous promotion of evolution proposals.
 
-## 14. Maintenance Policy
+## 15. Maintenance Policy
 
 This map should be updated when:
 
@@ -737,7 +829,7 @@ This map should be updated when:
 The `execution-backlog.md` should remain the only micro queue. This map should
 remain the complete capability decomposition.
 
-## 15. Executive Conclusion
+## 16. Executive Conclusion
 
 The system is no longer just scattered infrastructure. It has a governed core,
 memory, planning, synthesis, observability, evolution lab, console and learning

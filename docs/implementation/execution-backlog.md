@@ -3583,6 +3583,206 @@ Fora de escopo:
 - `impacto_no_baseline`: o dashboard de readiness incorpora status, regressions, evidence ref e safety da medicao longitudinal; payload invalido ou claim de autoridade bloqueia, enquanto regressao valida permanece warning para revisao humana.
 - `evidencia_de_fechamento`: `docs/implementation/skill-workflow-evolution-readiness-closure-mb189.md` fecha `MB-176` a `MB-189`; testes cobrem evidencias safe, regressao, adulteracao, JSON invalido, CLI e fila esgotada; `python tools/readiness_dashboard.py --run-gate standard` retornou `ready_with_known_gaps`, score `95`, gate/testes `passed`, `queue_exhausted`, zero drift/blockers e release autonomo falso.
 
+### MB-190
+
+- `id`: `MB-190`
+- `prioridade`: `P1`
+- `status`: `done`
+- `eixo_do_mestre`: `superficie CLI`, `utilidade do operador`, `controle de programa`
+- `map_ids`: `SFC-011`, `SFC-012`, `SFC-013`, `OP-009`, `OP-004`, `OP-005`, `ACT-004`, `OBS-005`
+- `workflow_profile_afetado`: `operational_readiness_workflow`, `long_horizon_goal_workflow`
+- `micro_objetivo`: repriorizar o pos-`MB-189` para estabilizar o CLI e fechar o Daily Operator Loop.
+- `justificativa_arquitetural`: continuidade, work items e artefatos nao devem aprofundar o `cli.py` monolitico; registry/output/doctor formam a fundacao minima antes dos novos fluxos diarios.
+- `arquivos/servicos_principais`: `docs/implementation`, `HANDOFF.md`, `CHANGELOG.md`
+- `dependencias`: `MB-189`
+- `criterio_de_aceite`: existe fila ordenada `MB-191` a `MB-200`, com WIP 1, criterios de aceite, gates e somente `MB-191` ready.
+- `gate_minimo`: `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `medium`
+- `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: a proxima fase estabiliza a superficie textual antes de expandir continuidade diaria, mantendo Core, governanca e memoria canonica como autoridades.
+- `evidencia_de_fechamento`: mapa mestre e pesquisa CLI convergem na fila `MB-191` a `MB-200`; voz, TUI, browser/computer use, scheduler e integracoes permanecem fora de escopo.
+
+### MB-191
+
+- `id`: `MB-191`
+- `prioridade`: `P1`
+- `status`: `ready`
+- `eixo_do_mestre`: `superficie CLI`, `qualidade`, `documentacao`
+- `map_ids`: `SFC-001`, `SFC-011`, `DOC-010`
+- `workflow_profile_afetado`: todos os comandos do `jarvis-console`
+- `micro_objetivo`: introduzir registry tipado de comandos e dispatch por metadata preservando o parser e comportamento existentes.
+- `justificativa_arquitetural`: o entrypoint monolitico dificulta evolucao segura e documentacao consistente da superficie do operador.
+- `arquivos/servicos_principais`: `apps/jarvis_console/registry.py`, `apps/jarvis_console/cli.py`, `apps/jarvis_console/tests`
+- `dependencias`: `MB-190`
+- `criterio_de_aceite`: comandos existentes possuem id, help, handler e modo de construcao declarados; `main()` despacha pelo registry sem cadeia longa por comando; comportamento e governanca permanecem inalterados.
+- `gate_minimo`: testes do console/registry e `python tools/engineering_gate.py --mode standard`
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.3-codex`
+
+### MB-192
+
+- `id`: `MB-192`
+- `prioridade`: `P1`
+- `status`: `blocked`
+- `eixo_do_mestre`: `superficie CLI`, `seguranca`, `scriptabilidade`
+- `map_ids`: `SFC-001`, `SFC-012`, `GOV-008`
+- `workflow_profile_afetado`: comandos read/report do `jarvis-console`
+- `micro_objetivo`: criar contrato de runtime CLI para text/JSON, redacao, stdout/stderr e exit codes estaveis.
+- `justificativa_arquitetural`: automacao segura exige separar payload, diagnostico e falha sem vazar segredo ou caminho sensivel.
+- `arquivos/servicos_principais`: `apps/jarvis_console/runtime.py`, `registry.py`, `cli.py`, `tests`
+- `dependencias`: `MB-191`
+- `criterio_de_aceite`: comandos read/report selecionados emitem envelope JSON deterministico; erros tipados usam stderr/exit code; output humano permanece compativel e redacted.
+- `gate_minimo`: testes de runtime/console, security assertions e gate padrao
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.3-codex`
+
+### MB-193
+
+- `id`: `MB-193`
+- `prioridade`: `P1`
+- `status`: `blocked`
+- `eixo_do_mestre`: `diagnostico`, `observabilidade`, `seguranca`
+- `map_ids`: `SFC-013`, `OBS-007`, `GOV-008`
+- `workflow_profile_afetado`: `operational_readiness_workflow`
+- `micro_objetivo`: adicionar `doctor` read-only para imports, runtime dir, stores, backlog, governanca e gate.
+- `justificativa_arquitetural`: o operador precisa distinguir instalacao, configuracao e runtime degradado sem executar reparo implicito.
+- `arquivos/servicos_principais`: `apps/jarvis_console/commands/doctor.py`, `runtime.py`, `registry.py`, `tests`, `docs/operations`
+- `dependencias`: `MB-192`
+- `criterio_de_aceite`: doctor text/JSON retorna checks redacted e severidade/exit code, nao escreve stores e trata capacidades opcionais como warning.
+- `gate_minimo`: testes de diagnostico/redacao/stores e gate padrao
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.3-codex`
+
+### MB-194
+
+- `id`: `MB-194`
+- `prioridade`: `P1`
+- `status`: `blocked`
+- `eixo_do_mestre`: `operacao diaria`, `continuidade`, `console`
+- `map_ids`: `OP-006`, `OP-009`, `SFC-003`, `MEM-002`
+- `workflow_profile_afetado`: `long_horizon_goal_workflow`, `operational_readiness_workflow`
+- `micro_objetivo`: criar snapshot canonico read-only do workspace diario entre sessoes.
+- `justificativa_arquitetural`: o operador precisa ver objetivos ativos, open work, artefatos, reviews e proxima decisao sem reconstruir contexto manualmente.
+- `arquivos/servicos_principais`: `shared/contracts`, `services/operational-service`, `services/memory-service`, `apps/jarvis_console`, `tests`
+- `dependencias`: `MB-193`
+- `criterio_de_aceite`: snapshot mostra estado canonico, freshness, open loops e next actions por missao/projeto, sem escrita ou scheduler.
+- `gate_minimo`: testes locais/E2E do workspace e gate padrao
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.3-codex`
+
+### MB-195
+
+- `id`: `MB-195`
+- `prioridade`: `P1`
+- `status`: `blocked`
+- `eixo_do_mestre`: `work items`, `objetivos`, `governanca`
+- `map_ids`: `OP-004`, `COG-010`, `GOV-003`
+- `workflow_profile_afetado`: `long_horizon_goal_workflow`
+- `micro_objetivo`: tornar dependencia, prioridade e blocking state dados governados de work item.
+- `justificativa_arquitetural`: continuidade util exige distinguir proximo trabalho executavel de item bloqueado ou subordinado.
+- `arquivos/servicos_principais`: `shared/contracts`, `services/operational-service`, `services/governance-service`, `apps/jarvis_console`, `tests`
+- `dependencias`: `MB-194`
+- `criterio_de_aceite`: criar/atualizar work item valida dependencias, ciclos, prioridade e transicoes; dashboard mostra ordem sem executa-la autonomamente.
+- `gate_minimo`: testes de contrato/governanca/repositorio/E2E e gate padrao
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.3-codex`
+
+### MB-196
+
+- `id`: `MB-196`
+- `prioridade`: `P1`
+- `status`: `blocked`
+- `eixo_do_mestre`: `artefatos`, `acao bounded`, `memoria procedural`
+- `map_ids`: `OP-005`, `ACT-004`, `MEM-006`
+- `workflow_profile_afetado`: workflows que produzem artefatos
+- `micro_objetivo`: adicionar versao, owner, source work item e relacao supersede ao lifecycle canonico de artefato.
+- `justificativa_arquitetural`: output vivo precisa de linhagem e ownership antes de adapters de arquivo ou integracoes.
+- `arquivos/servicos_principais`: `shared/contracts`, `services/operational-service`, `services/memory-service`, `apps/jarvis_console`, `tests`
+- `dependencias`: `MB-195`
+- `criterio_de_aceite`: versoes sao imutaveis e ligadas a owner/work item/source; update cria lineage auditavel e rollback ref sem escrever arquivo externo.
+- `gate_minimo`: testes de contrato/repositorio/E2E e gate padrao
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.3-codex`
+
+### MB-197
+
+- `id`: `MB-197`
+- `prioridade`: `P1`
+- `status`: `blocked`
+- `eixo_do_mestre`: `continuidade`, `memoria`, `objetivos`
+- `map_ids`: `OP-009`, `MEM-002`, `MEM-003`, `COG-010`
+- `workflow_profile_afetado`: `long_horizon_goal_workflow`, `operational_readiness_workflow`
+- `micro_objetivo`: criar workflow governado de selecao e retomada de open loop entre sessoes.
+- `justificativa_arquitetural`: retomar deve ser decisao explicita baseada em estado/evidencia, nao scheduler autonomo.
+- `arquivos/servicos_principais`: `services/orchestrator-service`, `planning-engine`, `governance-service`, `memory-service`, `apps/jarvis_console`, `tests`
+- `dependencias`: `MB-196`
+- `criterio_de_aceite`: operador seleciona loop elegivel, Core revalida objetivo/dependencias/freshness, registra resume e sintetiza next action; conflito bloqueia fail-closed.
+- `gate_minimo`: testes locais/E2E de resume/conflito e gate padrao
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.3-codex`
+
+### MB-198
+
+- `id`: `MB-198`
+- `prioridade`: `P2`
+- `status`: `blocked`
+- `eixo_do_mestre`: `utilidade`, `observabilidade`, `operacao diaria`
+- `map_ids`: `OBS-005`, `OP-006`, `OP-009`
+- `workflow_profile_afetado`: Daily Operator Loop
+- `micro_objetivo`: medir completion, rework, stale loops, feedback e time-to-next-action sem estimar tempo economizado sem evidencia.
+- `justificativa_arquitetural`: a expansao so e util se melhorar outcomes reais do operador ao longo de sessoes.
+- `arquivos/servicos_principais`: `services/observability-service`, `tools`, `apps/jarvis_console`, `tests`
+- `dependencias`: `MB-197`
+- `criterio_de_aceite`: relatorio por periodo correlaciona work items, artefatos, resume e feedback; missing timestamps/evidence aparecem como limitacao, nao como ganho.
+- `gate_minimo`: testes de observability/tools/console e gate padrao
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `medium`
+- `modelo_recomendado`: `gpt-5.3-codex`
+
+### MB-199
+
+- `id`: `MB-199`
+- `prioridade`: `P2`
+- `status`: `blocked`
+- `eixo_do_mestre`: `CLI`, `documentacao`, `regressao`
+- `map_ids`: `SFC-014`, `DOC-010`, `SFC-012`
+- `workflow_profile_afetado`: todos os comandos do `jarvis-console`
+- `micro_objetivo`: gerar referencia/completion pelo registry e proteger outputs text/JSON com golden tests.
+- `justificativa_arquitetural`: metadata deve ser fonte unica de help, referencia e completion para evitar drift.
+- `arquivos/servicos_principais`: `apps/jarvis_console`, `tools`, `docs/operations`, `tests`
+- `dependencias`: `MB-198`
+- `criterio_de_aceite`: referencia e completion sao deterministicos e derivados do registry; golden tests cobrem comandos criticos sem incluir ids/timestamps instaveis.
+- `gate_minimo`: golden tests, document guardrails e gate padrao
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `medium`
+- `modelo_recomendado`: `gpt-5.3-codex`
+
+### MB-200
+
+- `id`: `MB-200`
+- `prioridade`: `P2`
+- `status`: `blocked`
+- `eixo_do_mestre`: `readiness`, `operacao`, `documentacao`
+- `map_ids`: `OBS-007`, `OBS-008`, `DOC-010`, `OP-009`
+- `workflow_profile_afetado`: `operational_readiness_workflow`
+- `micro_objetivo`: fechar o Daily Operator Loop com readiness, regressao, runbook e proxima decisao de fase.
+- `justificativa_arquitetural`: o lote precisa provar utilidade e consistencia antes de adapters, API ou superficies ricas.
+- `arquivos/servicos_principais`: `tools`, `docs/implementation`, `docs/operations`, `HANDOFF.md`, `CHANGELOG.md`, `tests`
+- `dependencias`: `MB-199`
+- `criterio_de_aceite`: dashboard sem drift, gate padrao, runbook ponta a ponta e nenhuma autonomia/superficie deferred aberta.
+- `gate_minimo`: dashboard com gate padrao e document guardrails
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `medium`
+- `modelo_recomendado`: `gpt-5.3-codex`
+
 ## 5. Regras de manutencao da fila
 
 - o proximo item puxado deve ser o primeiro `ready` de maior prioridade sem dependencia aberta;
@@ -3689,6 +3889,7 @@ Estado atual da fila:
 - `MB-173` foi concluido como baseline de proveniencia, freshness e conflito/incerteza de conhecimento;
 - `MB-174` foi concluido como dashboard integrado de regressao/readiness, fechando a fila `MB-161` a `MB-174`; nao ha item tecnico `ready` ate nova repriorizacao explicita pelo mapa mestre;
 - `MB-175` foi concluido como repriorizacao pos-`MB-174`, abrindo a fila governada de skill/workflow evolution `MB-176` a `MB-189`;
-- `MB-176` a `MB-189` foram concluidos como cadeia de skill/workflow, routing, politica causal, revisao humana de memoria, medicao longitudinal e fechamento de readiness; a fila esta esgotada e exige repriorizacao explicita pelo mapa mestre;
+- `MB-176` a `MB-189` foram concluidos como cadeia de skill/workflow, routing, politica causal, revisao humana de memoria, medicao longitudinal e fechamento de readiness;
+- `MB-190` repriorizou o Daily Operator Loop e abriu `MB-191` a `MB-200`; somente `MB-191` esta `ready`;
 - `SO-001`, `TA-004`, `TA-006` e verticais `deferred` continuam fora da fila sem mudanca explicita de fase;
 - `protective intelligence foundation` continua `deferred` e a matriz da Onda 2 segue como insumo, nao como gatilho automatico para abrir nova vertical.

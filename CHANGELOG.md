@@ -14,6 +14,12 @@
 - regressao valida vira warning; JSON invalido ou claim de promocao, autopromocao ou Core mutation bloqueia readiness;
 - testes cobrem integracao, adulteracao, CLI e fila esgotada, e o documento de closure consolida `MB-176` a `MB-189`; a fila micro fica sem item `ready` ate repriorizacao explicita.
 
+### MB-190 reprioriza CLI e Daily Operator Loop
+
+- o mapa mestre incorpora registry, runtime/output, doctor e referencia/completion como gaps explicitos da superficie CLI;
+- `execution-backlog.md` abre `MB-191` a `MB-200`, estabilizando CLI antes de workspace diario, work-item dependencies, artifact lineage, resume e metricas;
+- WIP permanece 1 com somente `MB-191` ready; TUI, voz, browser/computer use, scheduler, integracoes e autonomia ampla continuam fora da fila.
+
 ## 2026-07-16
 
 ### MB-166 define checklist sandbox-to-release

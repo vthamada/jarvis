@@ -2,14 +2,22 @@
 
 ## Atualizacao 2026-07-17
 
+`MB-190` repriorizou o pos-`MB-189` para o Daily Operator Loop com fundacao CLI
+antes de novos comandos. A fila `MB-191` a `MB-200` comeca por registry tipado,
+runtime/output e doctor; depois fecha workspace diario, dependencias de work
+items, linhagem de artefatos, resume governado, metricas e readiness. A decisao
+deriva do mapa mestre e de `cli-reference-analysis.md`; TUI, voz,
+browser/computer use, scheduler e integracoes permanecem fora de escopo.
+`MB-191` e o unico item tecnico `ready`.
+
 `MB-189` fechou o slice governado de evolucao de skills/workflows aberto em
 `MB-175`. O dashboard de readiness agora incorpora status, regressions,
 evidence ref e safety do relatorio longitudinal: regressao valida permanece
 warning auditavel, enquanto JSON invalido ou claim de promocao/Core mutation
 bloqueia readiness. O documento
 `docs/implementation/skill-workflow-evolution-readiness-closure-mb189.md`
-consolida `MB-176` a `MB-189`. A fila micro esta esgotada e a proxima frente
-deve nascer de repriorizacao explicita pelo mapa mestre.
+consolida `MB-176` a `MB-189`. Esse estado foi sucedido pela repriorizacao de
+`MB-190`.
 
 `MB-188` foi concluido como baseline de metricas longitudinais de aprendizado.
 Os contratos `LearningVersionTargetContract`,
