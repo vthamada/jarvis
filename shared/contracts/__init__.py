@@ -530,6 +530,84 @@ class DomainOnboardingAssessmentContract:
 
 
 @dataclass
+class DomainEvalCaseContract:
+    case_id: str
+    intent: str
+    input_text: str
+    session_key: str
+    expected_decision: str
+    expected_route: str
+    expected_canonical_domain_refs: list[str]
+    expected_workflow_profile: str
+    expected_specialist_type: str
+    allowed_memory_causality_statuses: list[str]
+    required_response_fragments: list[str]
+    required_events: list[str]
+    mission_key: str | None = None
+    minimum_response_length: int = 120
+
+
+@dataclass
+class DomainEvalPackContract:
+    eval_pack_id: str
+    version: str
+    route_name: str
+    canonical_domain_refs: list[str]
+    workflow_profile: str
+    specialist_type: str
+    cases: list[DomainEvalCaseContract]
+    evidence_refs: list[str]
+    timestamp: Timestamp
+    minimum_pass_rate: float = 1.0
+    offline_only: bool = True
+    human_review_required: bool = True
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass
+class DomainEvalCaseResultContract:
+    eval_pack_id: str
+    case_id: str
+    passed: bool
+    checks: dict[str, bool]
+    failures: list[str]
+    observed_governance_decision: str | None
+    observed_route: str | None
+    observed_canonical_domain_refs: list[str]
+    observed_workflow_profile: str | None
+    observed_specialist_types: list[str]
+    observed_memory_causality_status: str
+    response_evidence: list[str]
+    response_length: int
+    observed_events: list[str]
+
+
+@dataclass
+class DomainEvalRunContract:
+    run_id: str
+    eval_pack_id: str
+    pack_version: str
+    route_name: str
+    status: str
+    readiness_status: str
+    promotion_readiness: str
+    pass_rate: float
+    total_cases: int
+    passed_cases: int
+    failed_cases: int
+    case_results: list[DomainEvalCaseResultContract]
+    evidence_refs: list[str]
+    blockers: list[str]
+    generated_at: Timestamp
+    offline_only: bool = True
+    human_review_required: bool = True
+    promotion_authorized: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass
 class SpecialistBoundaryContract:
     specialist_type: str
     runtime_scope: str

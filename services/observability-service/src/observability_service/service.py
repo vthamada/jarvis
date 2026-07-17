@@ -13,6 +13,7 @@ from observability_service.agentic import (
     LangSmithObservabilityAdapter,
 )
 from observability_service.repository import ObservabilityRepository
+from shared.contracts import DomainEvalCaseResultContract, DomainEvalRunContract
 from shared.domain_registry import workflow_runtime_guidance
 from shared.eval_expansion import derive_expanded_eval_state
 from shared.events import InternalEventEnvelope
@@ -471,6 +472,56 @@ class ObservabilityService:
             memory_writes=sum(1 for event in events if event.event_name == "memory_recorded"),
             error_events=sum(1 for event in events if event.event_name == "error_raised"),
             duration_seconds=duration,
+        )
+
+    @staticmethod
+    def build_domain_eval_run(
+        *,
+        run_id: str,
+        eval_pack_id: str,
+        pack_version: str,
+        route_name: str,
+        case_results: list[DomainEvalCaseResultContract],
+        minimum_pass_rate: float,
+        evidence_refs: list[str],
+        generated_at: str,
+        blockers: list[str] | None = None,
+    ) -> DomainEvalRunContract:
+        """Aggregate domain eval evidence without turning it into promotion authority."""
+
+        resolved_blockers = list(blockers or [])
+        if not 0.0 < minimum_pass_rate <= 1.0:
+            resolved_blockers.append("invalid_minimum_pass_rate")
+        total_cases = len(case_results)
+        passed_cases = sum(1 for result in case_results if result.passed)
+        failed_cases = total_cases - passed_cases
+        pass_rate = round(passed_cases / total_cases, 4) if total_cases else 0.0
+        if total_cases == 0:
+            resolved_blockers.append("no_domain_eval_results")
+        for result in case_results:
+            resolved_blockers.extend(
+                f"case:{result.case_id}:{failure}" for failure in result.failures
+            )
+        resolved_blockers = sorted(set(resolved_blockers))
+        passed = not resolved_blockers and pass_rate >= minimum_pass_rate
+        return DomainEvalRunContract(
+            run_id=run_id,
+            eval_pack_id=eval_pack_id,
+            pack_version=pack_version,
+            route_name=route_name,
+            status="passed" if passed else "failed",
+            readiness_status=(
+                "candidate_ready_for_human_review" if passed else "attention_required"
+            ),
+            promotion_readiness="manual_review_only" if passed else "blocked",
+            pass_rate=pass_rate,
+            total_cases=total_cases,
+            passed_cases=passed_cases,
+            failed_cases=failed_cases,
+            case_results=list(case_results),
+            evidence_refs=list(evidence_refs),
+            blockers=resolved_blockers,
+            generated_at=generated_at,
         )
 
     def audit_flow(

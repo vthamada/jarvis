@@ -2,6 +2,15 @@
 
 ## Atualizacao 2026-07-16
 
+`MB-172` foi concluido: contratos compartilhados agora formalizam eval case,
+pack versionado, resultado por caso e run agregado. O novo runner offline usa
+o Core real e o `observability-service` para validar decisao, rota, dominios,
+workflow, especialista, resposta, memoria causal, eventos e trace. O pack
+baseline de `analysis` passa abertura e follow-up com `pass_rate=1.0`; o segundo
+caso comprova `causal_guidance`. Mesmo verde, o resultado permanece
+`candidate_ready_for_human_review`, `manual_review_only` e
+`promotion_authorized=false`. `MB-173` e o unico item tecnico `ready`.
+
 `MB-171` foi concluido: `DomainKnowledgePackContract`,
 `DomainOnboardingCandidateContract` e `DomainOnboardingAssessmentContract`
 formalizam entrada de novos dominios como candidatura governada. O novo
@@ -10,7 +19,7 @@ pack versionado, workflow, testes, eval, rollback e fronteira de especialista;
 `knowledge-service` avalia o manifest baseline sem escrever nos registries.
 Mesmo um candidato coerente termina apenas em `ready_for_human_review`, com
 ativacao, promocao de especialista, autopromocao e mutacao do Core bloqueadas.
-`MB-172` e o unico item tecnico `ready`.
+Esse estado foi sucedido pelo fechamento de `MB-172`.
 
 `MB-170` foi concluido: `OperatorFeedbackContract`, schema e evento
 `operator_feedback_recorded` agora formalizam feedback explicito do operador

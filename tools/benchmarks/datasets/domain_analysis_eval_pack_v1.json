@@ -1,0 +1,83 @@
+{
+  "eval_pack_id": "eval-pack://domain/analysis/1.0.0",
+  "version": "1.0.0",
+  "route_name": "analysis",
+  "canonical_domain_refs": [
+    "dados_estatistica_e_inteligencia_analitica",
+    "tomada_de_decisao_complexa"
+  ],
+  "workflow_profile": "structured_analysis_workflow",
+  "specialist_type": "structured_analysis_specialist",
+  "cases": [
+    {
+      "case_id": "analysis_seed",
+      "intent": "analysis",
+      "input_text": "Analyze the release evidence, compare trade-offs, and identify the safest path.",
+      "session_key": "domain-analysis-eval",
+      "mission_key": "mission-domain-analysis-eval",
+      "expected_decision": "allow_with_conditions",
+      "expected_route": "analysis",
+      "expected_canonical_domain_refs": [
+        "dados_estatistica_e_inteligencia_analitica",
+        "tomada_de_decisao_complexa"
+      ],
+      "expected_workflow_profile": "structured_analysis_workflow",
+      "expected_specialist_type": "structured_analysis_specialist",
+      "allowed_memory_causality_statuses": [
+        "not_applicable",
+        "attached_only"
+      ],
+      "required_response_fragments": [
+        "structured analysis workflow",
+        "structured analysis specialist",
+        "Memoria semantica: status not_used"
+      ],
+      "required_events": [
+        "knowledge_retrieved",
+        "plan_built",
+        "response_synthesized",
+        "memory_recorded"
+      ],
+      "minimum_response_length": 500
+    },
+    {
+      "case_id": "analysis_memory_followup",
+      "intent": "analysis",
+      "input_text": "Continue the previous analysis and refine the recommendation using the established evidence and trade-offs.",
+      "session_key": "domain-analysis-eval",
+      "mission_key": "mission-domain-analysis-eval",
+      "expected_decision": "allow",
+      "expected_route": "analysis",
+      "expected_canonical_domain_refs": [
+        "dados_estatistica_e_inteligencia_analitica",
+        "tomada_de_decisao_complexa"
+      ],
+      "expected_workflow_profile": "structured_analysis_workflow",
+      "expected_specialist_type": "structured_analysis_specialist",
+      "allowed_memory_causality_statuses": [
+        "causal_guidance"
+      ],
+      "required_response_fragments": [
+        "structured analysis workflow",
+        "structured analysis specialist",
+        "Memoria semantica: status used"
+      ],
+      "required_events": [
+        "knowledge_retrieved",
+        "plan_built",
+        "response_synthesized",
+        "memory_recorded"
+      ],
+      "minimum_response_length": 500
+    }
+  ],
+  "evidence_refs": [
+    "evidence://mb-172/domain-analysis-eval-pack"
+  ],
+  "timestamp": "2026-07-16T00:00:00Z",
+  "minimum_pass_rate": 1.0,
+  "offline_only": true,
+  "human_review_required": true,
+  "automatic_promotion_allowed": false,
+  "core_mutation_allowed": false
+}

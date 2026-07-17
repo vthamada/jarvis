@@ -38,6 +38,12 @@
 - `shared/domain_onboarding.py` avalia candidatos sem mutar registries, bloqueia colisao, dominio desconhecido, payload incompleto, ativacao automatica e especialista acima de `shadow`;
 - `knowledge-service` avalia o manifest reproduzivel `domain_onboarding_baseline.json`, que permanece fora do runtime; `execution-backlog.md` fechou `MB-171` e abriu `MB-172` como unico item tecnico `ready`.
 
+### MB-172 cria baseline de eval packs por dominio
+
+- contratos compartilhados formalizam eval case, pack versionado, resultado por caso e run agregado, sempre offline, bounded e sem autorizacao de promocao;
+- `domain_eval_support.py` executa o Core real e valida decisao, rota, dominios canonicos, workflow, especialista, resposta, memoria causal, eventos e trace; `observability-service` agrega pass rate, blockers e readiness;
+- o pack `analysis` passa seed e follow-up com memoria `causal_guidance`, e `run_domain_eval.py` grava evidencia local; `execution-backlog.md` fechou `MB-172` e abriu `MB-173` como unico item tecnico `ready`.
+
 ## 2026-07-04
 
 ### MB-161 fecha anchors de evidencia de memoria semantica

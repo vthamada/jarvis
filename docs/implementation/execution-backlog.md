@@ -3266,7 +3266,7 @@ Fora de escopo:
 
 - `id`: `MB-172`
 - `prioridade`: `P1`
-- `status`: `ready`
+- `status`: `done`
 - `eixo_do_mestre`: `evals`, `dominios`, `qualidade`
 - `map_ids`: `OBS-006`, `SPC-006`, `KNW-004`
 - `workflow_profile_afetado`: `domain_onboarding_workflow`
@@ -3279,12 +3279,14 @@ Fora de escopo:
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `medium`
 - `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: o sistema agora possui contrato e runner offline reutilizavel de eval por dominio/rota promovida, cobrindo decisao, rota, refs canonicas, workflow, especialista, resposta, memoria causal, eventos e trace sem transformar resultado verde em autorizacao de promocao.
+- `evidencia_de_fechamento`: `domain_analysis_eval_pack_v1.json` executou dois casos consecutivos pelo Core real com `pass_rate=1.0`; o follow-up comprovou `causal_guidance`, o comando operacional gerou artefatos locais e o gate padrao foi aprovado.
 
 ### MB-173
 
 - `id`: `MB-173`
 - `prioridade`: `P2`
-- `status`: `blocked`
+- `status`: `ready`
 - `eixo_do_mestre`: `conhecimento`, `sintese`, `governanca`
 - `map_ids`: `KNW-003`, `KNW-004`, `KNW-008`
 - `workflow_profile_afetado`: `research_synthesis_workflow`, `strategic_direction_workflow`
@@ -3418,6 +3420,7 @@ Estado atual da fila:
 - `MB-169` foi concluido como relatorio humano compacto derivado do estado canonico, sem escrita ou execucao autonoma;
 - `MB-170` foi concluido como feedback explicito governado do operador, persistido em experiencia/reflexao e convertido em proposta sandbox sob revisao humana;
 - `MB-171` foi concluido como protocolo governado de onboarding de dominios, sem ativar rota ou promover especialista;
-- `MB-172` e o unico item tecnico `ready` atual, focado no primeiro eval pack reutilizavel por dominio/rota; `MB-173` e `MB-174` permanecem `blocked` por dependencia/ordem;
+- `MB-172` foi concluido como primeiro eval pack offline reutilizavel por dominio/rota, com agregacao observavel e promocao manual-only;
+- `MB-173` e o unico item tecnico `ready` atual, focado em proveniencia, freshness e conflito/incerteza de conhecimento; `MB-174` permanece `blocked` por dependencia/ordem;
 - `SO-001`, `TA-004`, `TA-006` e verticais `deferred` continuam fora da fila sem mudanca explicita de fase;
 - `protective intelligence foundation` continua `deferred` e a matriz da Onda 2 segue como insumo, nao como gatilho automatico para abrir nova vertical.

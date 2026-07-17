@@ -175,7 +175,7 @@ core.
 | `SPC-003` | Specialist boundary contract | `implemented_baseline` | Keep stable | Governance | none |
 | `SPC-004` | Promoted route eligibility | `implemented_baseline` | Keep stable | Domain registry | none |
 | `SPC-005` | Specialist effectiveness metrics | `implemented_baseline` | Keep stable | Observability | none |
-| `SPC-006` | New domain onboarding protocol | `minimum_baseline` | Validate candidates with real eval packs before promotion | Domain registry | MB-172 |
+| `SPC-006` | New domain onboarding protocol | `minimum_baseline` | Apply protocol and domain evals before each real promotion | Domain registry | later |
 | `SPC-007` | Deep specialist state | `partial_runtime` | Per-specialist bounded memory through core | Memory registry | candidate |
 | `SPC-008` | Software engineering specialist | `documentation_only` | Subordinate software agent, no identity split | ACT-008 | later |
 | `SPC-009` | Research/intelligence specialist | `documentation_only` | Domain-specific retrieval and synthesis | Knowledge, evals | later |
@@ -193,7 +193,7 @@ Goal: keep JARVIS current and useful without uncontrolled ingestion.
 | `KNW-004` | Source provenance in answers | `partial_runtime` | Stronger provenance and evidence refs | Synthesis, knowledge | candidate |
 | `KNW-005` | External research ingestion | `missing` | Governed import queue, no auto-trust | Governance | later |
 | `KNW-006` | Technology radar refresh loop | `minimum_baseline` | Scheduled/manual technology review cycle | Tech absorption | candidate |
-| `KNW-007` | Domain knowledge packs | `minimum_baseline` | Expand reviewed versioned packs after eval evidence | Domain onboarding | MB-172 |
+| `KNW-007` | Domain knowledge packs | `minimum_baseline` | Expand reviewed versioned packs after eval evidence | Domain onboarding | later |
 | `KNW-008` | Knowledge conflict resolution | `missing` | Compare sources and surface uncertainty | Governance, synthesis | later |
 
 ### Track H -- Observability, Evals And Quality
@@ -207,7 +207,7 @@ Goal: know whether JARVIS is actually improving.
 | `OBS-003` | Baseline comparison | `implemented_baseline` | Keep stable | compare_orchestrator_paths | none |
 | `OBS-004` | Release signal verification | `implemented_baseline` | Keep stable | engineering_gate | none |
 | `OBS-005` | Operator usefulness metrics | `minimum_baseline` | Measure daily utility, task completion, saved effort | Operator product loop | expand after long-horizon goals |
-| `OBS-006` | Domain-specific eval packs | `missing` | Evals per promoted route/domain | Domain onboarding | candidate |
+| `OBS-006` | Domain-specific eval packs | `minimum_baseline` | Expand packs across promoted routes/domains | Domain onboarding | later |
 | `OBS-007` | Regression dashboard | `missing` | Compact CLI/report of health over time | Observability/tools | candidate |
 | `OBS-008` | Production-readiness score | `partial_runtime` | Unified readiness per capability | Gates/docs | candidate |
 | `OBS-009` | Longitudinal learning metrics | `minimum_baseline` | Does learning improve future decisions over weeks? | Memory/evolution | candidate |
@@ -269,11 +269,10 @@ Goal: keep planning clear without turning documentation into bureaucracy.
 The next functional phase should focus on making the system useful to an
 operator, not on adding speculative technology.
 
-Highest-value gaps after `MB-171`:
+Highest-value gaps after `MB-172`:
 
-1. Domain-specific eval packs for the initial knowledge domains.
-2. Knowledge provenance and freshness signals in retrieval/synthesis.
-3. Integrated readiness validation for the complete post-`MB-160` slice.
+1. Knowledge provenance and freshness signals in retrieval/synthesis.
+2. Integrated readiness validation for the complete post-`MB-160` slice.
 
 ## 7. Dependency Map
 
@@ -293,7 +292,7 @@ These are already present and should be preserved:
 Recommended chain for the next few implementation slices:
 
 1. Preserve the closed `MB-171` governed domain onboarding protocol.
-2. Execute `MB-172` domain eval packs.
+2. Preserve the closed `MB-172` offline domain eval baseline.
 3. Execute `MB-173` knowledge provenance/freshness.
 4. Execute `MB-174` integrated readiness closure.
 
@@ -526,7 +525,8 @@ Map IDs: `OBS-006`, `SPC-006`, `KNW-004`.
 
 Goal: create the first reusable eval pack pattern for promoted routes/domains.
 
-Status: ready after `MB-171`.
+Status: closed in `MB-172`; the analysis pack passes route, response, memory,
+specialist and trace checks while remaining `manual_review_only`.
 
 ### MB-173 -- Knowledge Provenance And Freshness
 
@@ -534,6 +534,8 @@ Map IDs: `KNW-003`, `KNW-004`, `KNW-008`.
 
 Goal: strengthen source provenance, freshness status and uncertainty/conflict
 signals in knowledge-backed answers.
+
+Status: ready after `MB-172`.
 
 ### MB-174 -- Regression And Readiness Dashboard
 

@@ -53,5 +53,6 @@ engineering gate. A linked specialist may only enter this onboarding stage in
 manifest used to prove the protocol. It references the canonical education
 domain, but it does not add `education_learning` to runtime retrieval.
 
-The next slice, `MB-172`, must materialize the referenced reusable domain eval
-pack before any promotion can be considered.
+`MB-172` materialized the reusable offline domain eval pattern with the
+promoted `analysis` route. The education candidate still requires its own pack
+and passing evidence before any real promotion can be considered.

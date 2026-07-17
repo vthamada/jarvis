@@ -434,6 +434,64 @@ DOMAIN_ONBOARDING_ASSESSMENT_SCHEMA = CanonicalSchema(
     ),
 )
 
+DOMAIN_EVAL_PACK_SCHEMA = CanonicalSchema(
+    name="DomainEvalPackSchema",
+    contract_name="DomainEvalPackContract",
+    required_fields=(
+        "eval_pack_id",
+        "version",
+        "route_name",
+        "canonical_domain_refs",
+        "workflow_profile",
+        "specialist_type",
+        "cases",
+        "evidence_refs",
+        "timestamp",
+    ),
+    optional_fields=(
+        "minimum_pass_rate",
+        "offline_only",
+        "human_review_required",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Versioned offline eval pack for a governed promoted route/domain.",
+    ),
+)
+
+DOMAIN_EVAL_RUN_SCHEMA = CanonicalSchema(
+    name="DomainEvalRunSchema",
+    contract_name="DomainEvalRunContract",
+    required_fields=(
+        "run_id",
+        "eval_pack_id",
+        "pack_version",
+        "route_name",
+        "status",
+        "readiness_status",
+        "promotion_readiness",
+        "pass_rate",
+        "total_cases",
+        "case_results",
+        "evidence_refs",
+        "generated_at",
+    ),
+    optional_fields=(
+        "passed_cases",
+        "failed_cases",
+        "blockers",
+        "offline_only",
+        "human_review_required",
+        "promotion_authorized",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "A passing run is evidence for human review, never a promotion authorization.",
+    ),
+)
+
 EVOLUTION_REVIEW_QUEUE_ITEM_SCHEMA = CanonicalSchema(
     name="EvolutionReviewQueueItemSchema",
     contract_name="EvolutionReviewQueueItemContract",
