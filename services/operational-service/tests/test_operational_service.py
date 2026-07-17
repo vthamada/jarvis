@@ -4,8 +4,15 @@ from uuid import uuid4
 
 from operational_service.service import OperationalExecution, OperationalService
 
-from shared.contracts import OperationDispatchContract
-from shared.types import OperationId, OperationStatus, RequestId, SessionId
+from shared.contracts import MissionStateContract, OperationDispatchContract
+from shared.types import (
+    MissionId,
+    MissionStatus,
+    OperationId,
+    OperationStatus,
+    RequestId,
+    SessionId,
+)
 
 
 def runtime_dir(name: str) -> Path:
@@ -18,6 +25,110 @@ def runtime_dir(name: str) -> Path:
 
 def test_operational_service_name() -> None:
     assert OperationalService.name == "operational-service"
+
+
+def test_operational_service_builds_cross_session_daily_workspace() -> None:
+    service = OperationalService(
+        artifact_dir=str(runtime_dir("operational-daily-workspace"))
+    )
+    fresh = MissionStateContract(
+        mission_id=MissionId("mission-fresh"),
+        mission_goal="Continue the current release",
+        mission_status=MissionStatus.ACTIVE,
+        checkpoints=[],
+        updated_at="2026-07-17T09:00:00+00:00",
+        project_ref="project://release",
+        objective_ref="objective://release/controlled",
+        objective_status="active",
+        work_item_refs=["work-item://release/validate"],
+        active_work_items=["work-item://release/validate"],
+        artifact_refs=["artifact://release/plan/v1"],
+        active_artifact_refs=["artifact://release/plan/v1"],
+        next_action_ref="next-action://release/validate",
+    )
+    stale_blocked = MissionStateContract(
+        mission_id=MissionId("mission-stale"),
+        mission_goal="Resolve the blocked migration",
+        mission_status=MissionStatus.BLOCKED,
+        checkpoints=[],
+        updated_at="2026-07-12T08:00:00+00:00",
+        objective_status="blocked",
+        open_checkpoint_refs=["checkpoint://migration/approval"],
+    )
+
+    workspace = service.build_daily_operator_workspace(
+        mission_states=[stale_blocked, fresh],
+        pending_evolution_review_refs=["proposal-001", "proposal-001"],
+        pending_memory_review_refs=["memory-candidate-001"],
+        generated_at="2026-07-17T10:00:00+00:00",
+    )
+
+    assert workspace.workspace_id.startswith("daily-workspace://")
+    assert workspace.workspace_status == "operator_decision_required"
+    assert workspace.mission_count == 2
+    assert workspace.active_objective_count == 2
+    assert workspace.active_work_item_count == 1
+    assert workspace.active_artifact_count == 1
+    assert workspace.open_checkpoint_count == 1
+    assert workspace.pending_review_count == 2
+    assert workspace.stale_mission_count == 1
+    assert [str(item.mission_id) for item in workspace.missions] == [
+        "mission-fresh",
+        "mission-stale",
+    ]
+    assert workspace.missions[0].freshness_status == "fresh"
+    assert workspace.missions[0].next_action_status == "ready"
+    assert workspace.missions[1].freshness_status == "stale"
+    assert workspace.missions[1].operator_attention_status == "blocked"
+    assert workspace.next_operator_decision == (
+        "review_evolution_proposal:proposal-001"
+    )
+    assert "resolve_blocked_mission:mission-stale" in workspace.next_decision_refs
+    assert "review_stale_mission:mission-stale" in workspace.next_decision_refs
+    assert workspace.ordering_policy == "updated_at_desc_no_priority_inference"
+    assert workspace.read_only is True
+    assert workspace.autonomous_resume_allowed is False
+    assert workspace.autonomous_scheduling_allowed is False
+    assert fresh.active_work_items == ["work-item://release/validate"]
+
+
+def test_operational_service_builds_idle_workspace_without_inventing_work() -> None:
+    service = OperationalService(
+        artifact_dir=str(runtime_dir("operational-empty-workspace"))
+    )
+
+    workspace = service.build_daily_operator_workspace(
+        mission_states=[],
+        generated_at="2026-07-17T10:00:00+00:00",
+    )
+
+    assert workspace.workspace_status == "idle"
+    assert workspace.mission_count == 0
+    assert workspace.next_decision_refs == []
+    assert workspace.next_operator_decision is None
+    assert workspace.evidence_refs == []
+
+
+def test_operational_service_requires_decision_for_open_mission_without_next_action() -> None:
+    workspace = OperationalService.build_daily_operator_workspace(
+        mission_states=[
+            MissionStateContract(
+                mission_id=MissionId("mission-needs-next-action"),
+                mission_goal="Define the next governed action",
+                mission_status=MissionStatus.ACTIVE,
+                checkpoints=[],
+                updated_at="2026-07-17T09:00:00+00:00",
+                objective_status="active",
+            )
+        ],
+        generated_at="2026-07-17T10:00:00+00:00",
+    )
+
+    assert workspace.workspace_status == "operator_decision_required"
+    assert workspace.missions[0].operator_attention_status == "decision_required"
+    assert workspace.next_operator_decision == (
+        "define_next_action:mission-needs-next-action"
+    )
 
 
 def test_operational_service_blocks_dispatch_above_autonomy_limit() -> None:

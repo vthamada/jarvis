@@ -10,12 +10,14 @@ from evolution_lab.service import (
     TechnologyAbsorptionInput,
 )
 from memory_service.service import MemoryService
+from operational_service.service import OperationalService
 
 from apps.jarvis_console.cli import (
     JarvisConsole,
     LongHorizonGoalStrategyResult,
     build_parser,
     render_artifacts_state,
+    render_daily_operator_workspace,
     render_evolution_review_queue,
     render_experience_reflections,
     render_goal_strategy,
@@ -31,6 +33,7 @@ from apps.jarvis_console.cli import (
     run_artifact_command,
     run_artifacts_command,
     run_chat_command,
+    run_daily_workspace_command,
     run_evolution_review_command,
     run_evolution_review_queue_command,
     run_experience_reflections_command,
@@ -827,6 +830,89 @@ def test_console_operator_dashboard_handles_empty_global_state() -> None:
     assert "cockpit_status=idle" in rendered
     assert "pending_decision_count=0" in rendered
     assert "next_operator_step=start_governed_mission" in rendered
+
+
+def test_console_daily_workspace_reads_multiple_sessions_without_mutation() -> None:
+    temp_dir = runtime_dir("console-daily-workspace")
+    memory_db = temp_dir / "memory.db"
+    evolution_db = temp_dir / "evolution.db"
+    memory_service = MemoryService(database_url=f"sqlite:///{memory_db.as_posix()}")
+    for mission in (
+        MissionStateContract(
+            mission_id=MissionId("mission-daily-fresh"),
+            mission_goal="Continue the daily release",
+            mission_status=MissionStatus.ACTIVE,
+            checkpoints=[],
+            updated_at="2026-07-17T03:00:00+00:00",
+            objective_status="active",
+            active_work_items=["work-item://daily/validate"],
+            next_action_ref="next-action://daily/validate",
+        ),
+        MissionStateContract(
+            mission_id=MissionId("mission-daily-stale"),
+            mission_goal="Review the paused migration",
+            mission_status=MissionStatus.PAUSED,
+            checkpoints=[],
+            updated_at="2026-07-10T03:00:00+00:00",
+            objective_status="paused",
+            open_checkpoint_refs=["checkpoint://daily/migration"],
+        ),
+    ):
+        memory_service.repository.upsert_mission_state(mission)
+    evolution_service = EvolutionLabService(database_path=str(evolution_db))
+    proposal = evolution_service.create_proposal_from_post_task_reflection(
+        PostTaskReflectionInput(
+            experience_id="experience://mission-daily-fresh/001",
+            mission_id="mission-daily-fresh",
+            workflow_profile="operational_readiness_workflow",
+            outcome_status="completed",
+            learning_candidate="Preserve daily validation evidence.",
+            recommendation="Review the evidence before the next action.",
+            evidence_refs=["evidence://daily/001"],
+            proposed_tests=["tests/unit/test_daily_workspace.py"],
+            rollback_plan_ref="rollback://daily/001",
+        )
+    )
+    before = {
+        memory_db: memory_db.read_bytes(),
+        evolution_db: evolution_db.read_bytes(),
+    }
+    args = build_parser().parse_args(
+        [
+            "daily-workspace",
+            "--memory-db",
+            str(memory_db),
+            "--evolution-db",
+            str(evolution_db),
+        ]
+    )
+
+    output = run_daily_workspace_command(args)[0]
+
+    assert "daily_operator_workspace=read_only" in output
+    assert "workspace_status=operator_decision_required" in output
+    assert "mission_count=2" in output
+    assert "active_work_item_count=1" in output
+    assert "open_checkpoint_count=1" in output
+    assert "pending_review_count=1" in output
+    assert "stale_mission_count=1" in output
+    assert "mission_id=mission-daily-fresh" in output
+    assert "mission_id=mission-daily-stale" in output
+    assert "freshness_status=stale" in output
+    assert f"pending_evolution_review_refs={proposal.evolution_proposal_id}" in output
+    assert "next_operator_decision=review_evolution_proposal:" in output
+    assert "ordering_policy=updated_at_desc_no_priority_inference" in output
+    assert "memory_write_mode=read_only" in output
+    assert "autonomous_resume_allowed=False" in output
+    assert "autonomous_scheduling_allowed=False" in output
+    assert render_daily_operator_workspace(
+        OperationalService.build_daily_operator_workspace(
+            mission_states=[],
+            generated_at="2026-07-17T04:00:00+00:00",
+        )
+    ).startswith("daily_operator_workspace=read_only")
+    assert memory_db.read_bytes() == before[memory_db]
+    assert evolution_db.read_bytes() == before[evolution_db]
 
 
 def test_console_progress_report_synthesizes_canonical_mission_state() -> None:

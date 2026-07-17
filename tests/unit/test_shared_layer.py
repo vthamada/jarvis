@@ -1,6 +1,8 @@
 from shared.contracts import (
     ArtifactLifecycleStateContract,
     AutonomyLadderContract,
+    DailyOperatorWorkspaceContract,
+    DailyWorkspaceMissionContract,
     DeliberativePlanContract,
     EvolutionReviewDecisionContract,
     EvolutionReviewQueueItemContract,
@@ -44,6 +46,8 @@ from shared.events import INTERNAL_EVENT_NAMES
 from shared.schemas import (
     ARTIFACT_LIFECYCLE_STATE_SCHEMA,
     AUTONOMY_LADDER_SCHEMA,
+    DAILY_OPERATOR_WORKSPACE_SCHEMA,
+    DAILY_WORKSPACE_MISSION_SCHEMA,
     DELIBERATIVE_PLAN_SCHEMA,
     EVOLUTION_REVIEW_DECISION_SCHEMA,
     EVOLUTION_REVIEW_QUEUE_ITEM_SCHEMA,
@@ -229,6 +233,41 @@ def test_project_objective_continuity_contract_declares_minimum_fields() -> None
         "ProjectObjectiveContinuityContract"
     )
     assert "project_ref" in INPUT_SCHEMA.optional_fields
+
+
+def test_daily_workspace_contract_is_read_only_and_non_scheduling() -> None:
+    mission = DailyWorkspaceMissionContract(
+        mission_id="mission-daily-workspace",
+        mission_goal="Resume the governed daily loop",
+        mission_status="active",
+        objective_status="active",
+        updated_at="2026-07-17T09:00:00+00:00",
+        freshness_status="fresh",
+        operator_attention_status="ready",
+        next_action_status="ready",
+        next_action_ref="next-action://daily/review",
+    )
+    workspace = DailyOperatorWorkspaceContract(
+        workspace_id="daily-workspace://test",
+        workspace_status="ready_for_next_action",
+        generated_at="2026-07-17T10:00:00+00:00",
+        missions=[mission],
+        mission_count=1,
+        active_objective_count=1,
+        active_work_item_count=0,
+        active_artifact_count=0,
+        open_checkpoint_count=0,
+        pending_review_count=0,
+        stale_mission_count=0,
+        next_operator_decision="continue_mission:mission-daily-workspace",
+    )
+
+    assert DAILY_WORKSPACE_MISSION_SCHEMA.contract_name == type(mission).__name__
+    assert DAILY_OPERATOR_WORKSPACE_SCHEMA.contract_name == type(workspace).__name__
+    assert workspace.read_only is True
+    assert workspace.memory_write_mode == "read_only"
+    assert workspace.autonomous_resume_allowed is False
+    assert workspace.autonomous_scheduling_allowed is False
 
 
 def test_technology_absorption_candidate_contract_is_subordinate_by_default() -> None:

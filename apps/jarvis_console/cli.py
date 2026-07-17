@@ -41,6 +41,7 @@ from apps.jarvis_console.commands.doctor import (
     render_doctor_report,
 )
 from shared.contracts import (
+    DailyOperatorWorkspaceContract,
     InputContract,
     LongHorizonGoalStrategyContract,
     LongitudinalLearningReportContract,
@@ -507,6 +508,18 @@ def build_parser() -> ArgumentParser:
     dashboard_parser.add_argument("--evolution-db")
     dashboard_parser.add_argument("--workflow-profile")
     dashboard_parser.add_argument("--limit", type=int, default=5)
+
+    daily_workspace_parser = subparsers.add_parser(
+        "daily-workspace",
+        help="Show a read-only cross-session operator workspace.",
+    )
+    daily_workspace_parser.add_argument(
+        "--memory-db",
+        default=str(ROOT / ".jarvis_runtime" / "console" / "memory.db"),
+        help="Use an explicit canonical memory store (defaults to the console store).",
+    )
+    daily_workspace_parser.add_argument("--evolution-db")
+    daily_workspace_parser.add_argument("--limit", type=int, default=20)
 
     readiness_parser = subparsers.add_parser(
         "readiness-dashboard",
@@ -1658,6 +1671,69 @@ def render_operator_dashboard(
     )
 
 
+def render_daily_operator_workspace(
+    workspace: DailyOperatorWorkspaceContract,
+) -> str:
+    lines = [
+        "daily_operator_workspace=read_only",
+        f"workspace_id={safe_console_value(workspace.workspace_id)}",
+        f"workspace_status={safe_console_value(workspace.workspace_status)}",
+        f"generated_at={safe_console_value(workspace.generated_at)}",
+        f"mission_count={workspace.mission_count}",
+        f"active_objective_count={workspace.active_objective_count}",
+        f"active_work_item_count={workspace.active_work_item_count}",
+        f"active_artifact_count={workspace.active_artifact_count}",
+        f"open_checkpoint_count={workspace.open_checkpoint_count}",
+        f"pending_review_count={workspace.pending_review_count}",
+        f"stale_mission_count={workspace.stale_mission_count}",
+        "pending_evolution_review_refs="
+        + safe_console_list(workspace.pending_evolution_review_refs),
+        "pending_memory_review_refs="
+        + safe_console_list(workspace.pending_memory_review_refs),
+        f"next_decision_refs={safe_console_list(workspace.next_decision_refs)}",
+        "next_operator_decision="
+        + safe_console_value(workspace.next_operator_decision),
+        f"freshness_policy={safe_console_value(workspace.freshness_policy)}",
+        f"ordering_policy={safe_console_value(workspace.ordering_policy)}",
+        f"evidence_refs={safe_console_list(workspace.evidence_refs)}",
+        f"memory_write_mode={safe_console_value(workspace.memory_write_mode)}",
+        f"autonomous_resume_allowed={workspace.autonomous_resume_allowed}",
+        f"autonomous_scheduling_allowed={workspace.autonomous_scheduling_allowed}",
+    ]
+    for mission in workspace.missions:
+        lines.extend(
+            [
+                "---",
+                f"mission_id={safe_console_value(mission.mission_id)}",
+                f"mission_goal={safe_console_value(mission.mission_goal)}",
+                f"mission_status={safe_console_value(mission.mission_status)}",
+                f"project_ref={safe_console_value(mission.project_ref)}",
+                f"objective_ref={safe_console_value(mission.objective_ref)}",
+                f"objective_status={safe_console_value(mission.objective_status)}",
+                f"updated_at={safe_console_value(mission.updated_at)}",
+                f"freshness_status={safe_console_value(mission.freshness_status)}",
+                "freshness_age_hours="
+                + safe_console_value(mission.freshness_age_hours),
+                "operator_attention_status="
+                + safe_console_value(mission.operator_attention_status),
+                f"next_action_status={safe_console_value(mission.next_action_status)}",
+                f"next_action_ref={safe_console_value(mission.next_action_ref)}",
+                f"work_item_refs={safe_console_list(mission.work_item_refs)}",
+                f"active_work_items={safe_console_list(mission.active_work_items)}",
+                f"artifact_refs={safe_console_list(mission.artifact_refs)}",
+                "active_artifact_refs="
+                + safe_console_list(mission.active_artifact_refs),
+                "open_checkpoint_refs="
+                + safe_console_list(mission.open_checkpoint_refs),
+                f"open_loops={safe_console_list(mission.open_loops)}",
+                "pending_decision_refs="
+                + safe_console_list(mission.pending_decision_refs),
+                f"mission_evidence_refs={safe_console_list(mission.evidence_refs)}",
+            ]
+        )
+    return "\n".join(lines)
+
+
 def render_mission_progress_report(result: MissionProgressReportResult) -> str:
     report = result.report
     return "\n".join(
@@ -2140,6 +2216,34 @@ def run_operator_dashboard_command(console: JarvisConsole, args: Namespace) -> l
             flow_audit=flow_audit,
         )
     ]
+
+
+def run_daily_workspace_command(args: Namespace) -> list[str]:
+    limit = max(1, min(args.limit, 200))
+    generated_at = OperationalService.now()
+    memory_service = _memory_service_from_args(args)
+    evolution_service = _evolution_service_from_args(args)
+    evolution_review_refs = [
+        str(item.evolution_proposal_id)
+        for item in evolution_service.list_human_review_queue(limit=limit)
+        if item.review_status
+        in {"observed", "candidate", "needs_review", "sandboxed"}
+    ]
+    memory_review_refs = [
+        item.candidate_id
+        for item in memory_service.list_memory_lifecycle_review_queue(
+            limit=limit,
+            generated_at=generated_at,
+        )
+        if item.review_status == "needs_review"
+    ]
+    workspace = OperationalService.build_daily_operator_workspace(
+        mission_states=memory_service.list_mission_states(limit=limit),
+        pending_evolution_review_refs=evolution_review_refs,
+        pending_memory_review_refs=memory_review_refs,
+        generated_at=generated_at,
+    )
+    return [render_daily_operator_workspace(workspace)]
 
 
 def run_readiness_dashboard_command(args: Namespace) -> list[str]:

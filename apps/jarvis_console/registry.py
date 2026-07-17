@@ -45,6 +45,7 @@ JSON_OUTPUT_COMMAND_IDS = frozenset(
         "memory-review-queue",
         "mission-cycle",
         "operator-dashboard",
+        "daily-workspace",
         "readiness-dashboard",
         "doctor",
         "learning-report",
@@ -357,6 +358,13 @@ COMMAND_REGISTRY = CommandRegistry(
             "run_operator_dashboard_command",
             CommandCategory.MISSION,
             CORE,
+        ),
+        _command(
+            "daily-workspace",
+            "Show a read-only cross-session operator workspace.",
+            "run_daily_workspace_command",
+            CommandCategory.MISSION,
+            STANDALONE,
         ),
         _command(
             "readiness-dashboard",

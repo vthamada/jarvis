@@ -52,6 +52,10 @@ its existing governance and canonical persistence path.
 stderr discipline, redaction and stable exit codes. The registry remains the
 authority for whether a command supports JSON.
 
+`MB-194` adds `daily-workspace` as a standalone read/report command. It reads
+canonical stores and composes a cross-session projection without constructing
+Core or authorizing resume/scheduling.
+
 ## Adding A Command
 
 1. Implement and test the handler through the appropriate governed service.

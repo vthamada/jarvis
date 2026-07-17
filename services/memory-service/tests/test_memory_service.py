@@ -18,6 +18,7 @@ from shared.contracts import (
     DeliberativePlanContract,
     InputContract,
     MemoryLifecycleGovernanceAssessmentContract,
+    MissionStateContract,
     OperationDispatchContract,
     OperationResultContract,
     ProceduralPlaybookCandidateContract,
@@ -31,6 +32,7 @@ from shared.types import (
     ChannelType,
     InputType,
     MissionId,
+    MissionStatus,
     OperationId,
     OperationStatus,
     PermissionDecision,
@@ -542,6 +544,38 @@ def test_memory_service_persists_mission_state_with_identity_continuity_and_open
     assert "prioridade=fechar checkpoint principal" in mission_state.identity_continuity_brief
     assert mission_state.open_loops == ["fechar checkpoint principal"]
     assert mission_state.last_decision_frame == "planning"
+
+
+def test_memory_service_lists_open_missions_by_latest_canonical_update() -> None:
+    temp_dir = runtime_dir("memory-daily-workspace-list")
+    service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
+    for mission_id, status, updated_at in (
+        ("mission-older", MissionStatus.PAUSED, "2026-07-16T09:00:00+00:00"),
+        ("mission-closed", MissionStatus.COMPLETED, "2026-07-17T10:00:00+00:00"),
+        ("mission-newer", MissionStatus.ACTIVE, "2026-07-17T09:00:00+00:00"),
+    ):
+        service.repository.upsert_mission_state(
+            MissionStateContract(
+                mission_id=MissionId(mission_id),
+                mission_goal=f"Goal for {mission_id}",
+                mission_status=status,
+                checkpoints=[],
+                updated_at=updated_at,
+            )
+        )
+
+    open_states = service.list_mission_states(limit=20)
+    all_states = service.list_mission_states(limit=20, include_closed=True)
+
+    assert [str(state.mission_id) for state in open_states] == [
+        "mission-newer",
+        "mission-older",
+    ]
+    assert [str(state.mission_id) for state in all_states] == [
+        "mission-closed",
+        "mission-newer",
+        "mission-older",
+    ]
 
 
 def test_memory_service_recovers_mission_hints_in_continuity_priority_order() -> None:

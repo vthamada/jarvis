@@ -3,7 +3,7 @@ from pathlib import Path
 from tempfile import gettempdir
 from uuid import uuid4
 
-from evolution_lab.service import EvolutionLabService
+from evolution_lab.service import EvolutionLabService, PostTaskReflectionInput
 from governance_service.service import GovernanceService
 from memory_service.service import MemoryService
 from observability_service.service import FlowAudit, ObservabilityQuery
@@ -11,6 +11,7 @@ from observability_service.service import FlowAudit, ObservabilityQuery
 from apps.jarvis_console.cli import (
     JarvisConsole,
     build_parser,
+    run_daily_workspace_command,
     run_longitudinal_learning_report_command,
     run_skill_evolution_command,
 )
@@ -100,6 +101,65 @@ def assert_core_trace_invariants(audit: FlowAudit) -> None:
     }
     assert audit.memory_maintenance_status != "incomplete"
     assert audit.memory_maintenance_effectiveness in {"effective", "insufficient"}
+
+
+def test_daily_workspace_reads_two_real_cross_session_missions_without_mutation() -> None:
+    temp_dir = runtime_dir("console-e2e-daily-workspace")
+    memory_db = temp_dir / "memory.db"
+    evolution_db = temp_dir / "evolution.db"
+    console = JarvisConsole.build(runtime_dir=temp_dir)
+    first = console.ask(
+        "Analyze the controlled daily release evidence and compare the strongest signal.",
+        session_id="sess-e2e-daily-one",
+        mission_id="mission-e2e-daily-one",
+    )
+    second = console.ask(
+        "Analyze the pilot evidence for tomorrow.",
+        session_id="sess-e2e-daily-two",
+        mission_id="mission-e2e-daily-two",
+    )
+    assert first.experience_record is not None
+    assert first.post_task_reflection is not None
+    assert second.experience_record is not None
+    EvolutionLabService(database_path=str(evolution_db)).create_proposal_from_post_task_reflection(
+        PostTaskReflectionInput(
+            experience_id=first.experience_record.experience_id,
+            mission_id="mission-e2e-daily-one",
+            workflow_profile=first.experience_record.workflow_profile,
+            outcome_status=first.experience_record.outcome_status,
+            learning_candidate=first.post_task_reflection.learning_candidate,
+            recommendation=first.post_task_reflection.recommendation,
+            evidence_refs=list(first.post_task_reflection.evidence_refs),
+            proposed_tests=list(first.post_task_reflection.proposed_tests),
+            rollback_plan_ref=first.post_task_reflection.rollback_plan_ref,
+        )
+    )
+    before = {
+        memory_db: memory_db.read_bytes(),
+        evolution_db: evolution_db.read_bytes(),
+    }
+    args = build_parser().parse_args(
+        [
+            "daily-workspace",
+            "--memory-db",
+            str(memory_db),
+            "--evolution-db",
+            str(evolution_db),
+        ]
+    )
+
+    rendered = run_daily_workspace_command(args)[0]
+
+    assert "daily_operator_workspace=read_only" in rendered
+    assert "mission_count=2" in rendered
+    assert "mission_id=mission-e2e-daily-one" in rendered
+    assert "mission_id=mission-e2e-daily-two" in rendered
+    assert "pending_review_count=1" in rendered
+    assert "next_operator_decision=review_evolution_proposal:" in rendered
+    assert "autonomous_resume_allowed=False" in rendered
+    assert "autonomous_scheduling_allowed=False" in rendered
+    assert memory_db.read_bytes() == before[memory_db]
+    assert evolution_db.read_bytes() == before[evolution_db]
 
 
 def test_console_operator_route_matrix_covers_promoted_journeys() -> None:

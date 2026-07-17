@@ -2,13 +2,23 @@
 
 ## Atualizacao 2026-07-17
 
+`MB-194` implementou `daily-workspace` como snapshot local multi-missao,
+standalone e read-only. Novos contratos compartilhados representam cada missao
+e o agregado; `memory-service` lista estados canonicos abertos por `updated_at`
+em SQLite/PostgreSQL, e `operational-service` deriva freshness, contagens,
+revisoes e proxima decisao sem novo storage. O comando text/JSON usa por padrao
+o store do Core do console, exclui missoes completed/canceled e nao infere
+prioridade, constroi Core, escreve, retoma ou agenda. Testes locais/E2E cobrem
+duas sessoes reais e imutabilidade dos stores. `MB-195` e o unico item tecnico
+`ready`.
+
 `MB-193` implementou `jarvis-console doctor` como preflight local standalone e
 read-only. O comando text/JSON verifica Python, imports, runtime dir, stores
 SQLite via `mode=ro`, sincronizacao backlog/mapa/docs, governanca e descoberta
 do engineering gate. Runtime ou stores ausentes sao warnings com status
 `degraded` e exit `0`; estado presente invalido ou fronteira obrigatoria falha
 resulta em `failed` e exit `1`. O doctor nao constroi Core, cria stores, executa
-gate ou repara estado. `MB-194` e o unico item tecnico `ready`.
+gate ou repara estado. Esse estado foi sucedido pelo fechamento de `MB-194`.
 
 `MB-192` implementou o contrato runtime/output do CLI. `--format text|json`
 funciona antes ou depois do subcomando; somente comandos read/report declarados

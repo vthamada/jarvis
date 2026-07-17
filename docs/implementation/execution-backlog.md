@@ -3667,7 +3667,7 @@ Fora de escopo:
 
 - `id`: `MB-194`
 - `prioridade`: `P1`
-- `status`: `ready`
+- `status`: `completed`
 - `eixo_do_mestre`: `operacao diaria`, `continuidade`, `console`
 - `map_ids`: `OP-006`, `OP-009`, `SFC-003`, `MEM-002`
 - `workflow_profile_afetado`: `long_horizon_goal_workflow`, `operational_readiness_workflow`
@@ -3680,12 +3680,14 @@ Fora de escopo:
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `high`
 - `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: `daily-workspace` expoe snapshot multi-missao derivado de `MissionState` canonico e filas humanas, com freshness, contagens, evidencias e proxima decisao, sem storage paralelo, Core, prioridade inferida, resume ou scheduler.
+- `evidencia_de_fechamento`: contratos/schemas compartilhados, listagem SQLite/PostgreSQL, compositor do `operational-service`, CLI text/JSON e testes locais/E2E cobrem duas sessoes reais, filtro de missao encerrada, review precedence, imutabilidade dos stores e limites de autonomia; `docs/operations/daily-operator-workspace.md` registra a operacao.
 
 ### MB-195
 
 - `id`: `MB-195`
 - `prioridade`: `P1`
-- `status`: `blocked`
+- `status`: `ready`
 - `eixo_do_mestre`: `work items`, `objetivos`, `governanca`
 - `map_ids`: `OP-004`, `COG-010`, `GOV-003`
 - `workflow_profile_afetado`: `long_horizon_goal_workflow`
@@ -3896,6 +3898,6 @@ Estado atual da fila:
 - `MB-174` foi concluido como dashboard integrado de regressao/readiness, fechando a fila `MB-161` a `MB-174`; nao ha item tecnico `ready` ate nova repriorizacao explicita pelo mapa mestre;
 - `MB-175` foi concluido como repriorizacao pos-`MB-174`, abrindo a fila governada de skill/workflow evolution `MB-176` a `MB-189`;
 - `MB-176` a `MB-189` foram concluidos como cadeia de skill/workflow, routing, politica causal, revisao humana de memoria, medicao longitudinal e fechamento de readiness;
-- `MB-190` repriorizou o Daily Operator Loop e abriu `MB-191` a `MB-200`; `MB-191`, `MB-192` e `MB-193` fecharam registry, runtime/output e doctor CLI, e somente `MB-194` esta `ready`;
+- `MB-190` repriorizou o Daily Operator Loop e abriu `MB-191` a `MB-200`; `MB-191` a `MB-194` fecharam registry, runtime/output, doctor e workspace diario CLI, e somente `MB-195` esta `ready`;
 - `SO-001`, `TA-004`, `TA-006` e verticais `deferred` continuam fora da fila sem mudanca explicita de fase;
 - `protective intelligence foundation` continua `deferred` e a matriz da Onda 2 segue como insumo, nao como gatilho automatico para abrir nova vertical.

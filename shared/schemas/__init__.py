@@ -2022,6 +2022,70 @@ MISSION_STATE_SCHEMA = CanonicalSchema(
     ),
 )
 
+DAILY_WORKSPACE_MISSION_SCHEMA = CanonicalSchema(
+    name="DailyWorkspaceMissionSchema",
+    contract_name="DailyWorkspaceMissionContract",
+    required_fields=(
+        "mission_id",
+        "mission_goal",
+        "mission_status",
+        "objective_status",
+        "updated_at",
+        "freshness_status",
+        "operator_attention_status",
+        "next_action_status",
+    ),
+    optional_fields=(
+        "project_ref",
+        "objective_ref",
+        "next_action_ref",
+        "work_item_refs",
+        "active_work_items",
+        "artifact_refs",
+        "active_artifact_refs",
+        "open_checkpoint_refs",
+        "open_loops",
+        "pending_decision_refs",
+        "evidence_refs",
+        "freshness_age_hours",
+    ),
+    notes=("Read-only daily projection of one canonical mission state.",),
+)
+
+DAILY_OPERATOR_WORKSPACE_SCHEMA = CanonicalSchema(
+    name="DailyOperatorWorkspaceSchema",
+    contract_name="DailyOperatorWorkspaceContract",
+    required_fields=(
+        "workspace_id",
+        "workspace_status",
+        "generated_at",
+        "missions",
+        "mission_count",
+        "active_objective_count",
+        "active_work_item_count",
+        "active_artifact_count",
+        "open_checkpoint_count",
+        "pending_review_count",
+        "stale_mission_count",
+    ),
+    optional_fields=(
+        "pending_evolution_review_refs",
+        "pending_memory_review_refs",
+        "next_decision_refs",
+        "next_operator_decision",
+        "evidence_refs",
+        "freshness_policy",
+        "ordering_policy",
+        "memory_write_mode",
+        "read_only",
+        "autonomous_resume_allowed",
+        "autonomous_scheduling_allowed",
+    ),
+    notes=(
+        "Derived workspace only; it never schedules, resumes or mutates missions.",
+    ),
+)
+
 WORK_ITEM_STATE_SCHEMA = CanonicalSchema(
     name="WorkItemStateSchema",
     contract_name="WorkItemStateContract",

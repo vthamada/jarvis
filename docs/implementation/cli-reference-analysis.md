@@ -408,7 +408,10 @@ This should reuse existing services, not create a new architecture.
 Status: implemented in `MB-168` through the existing `operator-dashboard`,
 including consolidated objective/work item/artifact state, review detail,
 memory/autonomy signals, promotion gate evidence, ordered pending decisions and
-the next operator decision. The command remains read-only.
+the next operator decision. `MB-194` complements it with standalone
+`daily-workspace` for selection across open missions/sessions, freshness and
+review queues. Both commands remain read-only; priority and resume are not
+inferred.
 
 `MB-180` extends this operator-facing baseline with `skill-evolution`, a
 read-only evolution-family view that correlates recurring evidence, inactive

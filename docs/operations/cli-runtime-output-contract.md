@@ -22,7 +22,7 @@ python -m apps.jarvis_console readiness-dashboard --format json
 Text remains the default. JSON support is declared per command in the typed
 registry. The baseline supports objectives, goal strategy, work-item and
 artifact lists, bounded memory/evolution queues, mission/readiness/learning and
-progress reports, plus the read-only doctor.
+progress reports, plus the read-only doctor and daily workspace.
 
 State-changing commands intentionally reject JSON in this baseline. Rejection
 happens before constructing the Core or invoking the handler.

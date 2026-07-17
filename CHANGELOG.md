@@ -38,6 +38,12 @@
 - o contrato text/JSON diferencia ambiente saudavel, nao inicializado e invalido com warnings e exit codes estaveis, sem construir Core, criar stores, executar gate ou reparar estado;
 - testes cobrem ausencia, corrupcao, drift, redacao e imutabilidade dos bancos; `MB-194` passa a ser o unico item tecnico `ready`.
 
+### MB-194 cria workspace diario multi-missao
+
+- contratos/schemas e consulta read-only de memoria formalizam missoes abertas ordenadas por atualizacao, com paridade SQLite/PostgreSQL;
+- `operational-service` deriva freshness, contagens, reviews e proxima decisao, e `jarvis-console daily-workspace` expoe text/JSON sem construir Core ou criar storage paralelo;
+- testes locais e E2E comprovam duas sessoes reais, filtro de encerradas e stores imutaveis; prioridade, resume e scheduler permanecem bloqueados, e `MB-195` passa a ser o unico item tecnico `ready`.
+
 ## 2026-07-16
 
 ### MB-166 define checklist sandbox-to-release

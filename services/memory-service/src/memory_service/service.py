@@ -1193,6 +1193,19 @@ class MemoryService:
 
         return self.repository.fetch_mission_state(mission_id)
 
+    def list_mission_states(
+        self,
+        *,
+        limit: int = 20,
+        include_closed: bool = False,
+    ) -> list[MissionStateContract]:
+        """Expose recent canonical mission states without deriving new state."""
+
+        return self.repository.list_mission_states(
+            limit=max(1, min(limit, 200)),
+            include_closed=include_closed,
+        )
+
     def build_long_horizon_goal_strategy(
         self,
         mission_id: str,

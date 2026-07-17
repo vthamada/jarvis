@@ -4,16 +4,20 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from datetime import UTC, datetime
+from hashlib import sha256
 from pathlib import Path
 from uuid import uuid4
 
 from shared.autonomy_ladder import capability_mode_exceeds_autonomy_limit
 from shared.contracts import (
     ArtifactResultContract,
+    DailyOperatorWorkspaceContract,
+    DailyWorkspaceMissionContract,
+    MissionStateContract,
     OperationDispatchContract,
     OperationResultContract,
 )
-from shared.types import ArtifactId, ArtifactStatus, OperationStatus
+from shared.types import ArtifactId, ArtifactStatus, MissionStatus, OperationStatus
 
 
 @dataclass
@@ -35,6 +39,225 @@ class OperationalService:
         )
         resolved_dir.mkdir(parents=True, exist_ok=True)
         self.artifact_dir = resolved_dir
+
+    @classmethod
+    def build_daily_operator_workspace(
+        cls,
+        *,
+        mission_states: list[MissionStateContract],
+        pending_evolution_review_refs: list[str] | None = None,
+        pending_memory_review_refs: list[str] | None = None,
+        generated_at: str | None = None,
+    ) -> DailyOperatorWorkspaceContract:
+        """Build a read-only cross-session workspace from canonical state."""
+
+        safe_generated_at = generated_at or cls.now()
+        evolution_refs = cls._unique_values(pending_evolution_review_refs or [])
+        memory_refs = cls._unique_values(pending_memory_review_refs or [])
+        ordered_states = sorted(
+            mission_states[:200],
+            key=lambda state: str(state.mission_id),
+        )
+        ordered_states.sort(
+            key=lambda state: cls._workspace_sort_timestamp(state.updated_at),
+            reverse=True,
+        )
+        missions = [
+            cls._daily_workspace_mission(state, generated_at=safe_generated_at)
+            for state in ordered_states
+        ]
+        next_decision_refs = cls._unique_values(
+            [f"review_evolution_proposal:{item}" for item in evolution_refs]
+            + [f"review_memory_lifecycle:{item}" for item in memory_refs]
+            + [
+                decision
+                for mission in missions
+                for decision in mission.pending_decision_refs
+            ]
+        )
+        requires_operator_decision = bool(evolution_refs or memory_refs) or any(
+            mission.operator_attention_status
+            in {"blocked", "paused", "stale", "unknown", "decision_required"}
+            for mission in missions
+        )
+        ready_for_next_action = any(
+            mission.next_action_status in {"ready", "derive_from_work_item"}
+            for mission in missions
+        )
+        workspace_status = (
+            "operator_decision_required"
+            if requires_operator_decision
+            else "ready_for_next_action"
+            if ready_for_next_action
+            else "idle"
+        )
+        evidence_refs = cls._unique_values(
+            [evidence for mission in missions for evidence in mission.evidence_refs]
+            + [f"evolution-review://{item}" for item in evolution_refs]
+            + [f"memory-review://{item}" for item in memory_refs]
+        )
+        fingerprint = "|".join(
+            [
+                safe_generated_at,
+                *(f"{mission.mission_id}@{mission.updated_at}" for mission in missions),
+                *evolution_refs,
+                *memory_refs,
+            ]
+        )
+        return DailyOperatorWorkspaceContract(
+            workspace_id=(
+                "daily-workspace://"
+                + sha256(fingerprint.encode("utf-8")).hexdigest()[:16]
+            ),
+            workspace_status=workspace_status,
+            generated_at=safe_generated_at,
+            missions=missions,
+            mission_count=len(missions),
+            active_objective_count=sum(
+                mission.objective_status not in {"completed", "canceled"}
+                for mission in missions
+            ),
+            active_work_item_count=sum(
+                len(mission.active_work_items) for mission in missions
+            ),
+            active_artifact_count=sum(
+                len(mission.active_artifact_refs) for mission in missions
+            ),
+            open_checkpoint_count=sum(
+                len(mission.open_checkpoint_refs) for mission in missions
+            ),
+            pending_review_count=len(evolution_refs) + len(memory_refs),
+            stale_mission_count=sum(
+                mission.freshness_status in {"stale", "unknown"}
+                for mission in missions
+            ),
+            pending_evolution_review_refs=evolution_refs,
+            pending_memory_review_refs=memory_refs,
+            next_decision_refs=next_decision_refs,
+            next_operator_decision=(next_decision_refs[0] if next_decision_refs else None),
+            evidence_refs=evidence_refs,
+        )
+
+    @classmethod
+    def _daily_workspace_mission(
+        cls,
+        state: MissionStateContract,
+        *,
+        generated_at: str,
+    ) -> DailyWorkspaceMissionContract:
+        mission_id = str(state.mission_id)
+        objective_status = state.objective_status or state.mission_status.value
+        freshness_status, freshness_age_hours = cls._workspace_freshness(
+            state.updated_at,
+            generated_at,
+        )
+        blocked = (
+            state.mission_status == MissionStatus.BLOCKED
+            or objective_status == "blocked"
+        )
+        paused = state.mission_status == MissionStatus.PAUSED
+        pending_decisions: list[str] = []
+        if blocked:
+            pending_decisions.append(f"resolve_blocked_mission:{mission_id}")
+        elif paused:
+            pending_decisions.append(f"review_paused_mission:{mission_id}")
+        if freshness_status in {"stale", "unknown"}:
+            pending_decisions.append(f"review_stale_mission:{mission_id}")
+        if state.open_checkpoint_refs:
+            pending_decisions.append(f"review_open_checkpoints:{mission_id}")
+        if not blocked and not paused:
+            if state.next_action_ref:
+                pending_decisions.append(
+                    f"continue_mission:{mission_id}:{state.next_action_ref}"
+                )
+            elif state.active_work_items:
+                pending_decisions.append(f"select_active_work_item:{mission_id}")
+            else:
+                pending_decisions.append(f"define_next_action:{mission_id}")
+        next_action_status = (
+            "blocked"
+            if blocked
+            else "paused"
+            if paused
+            else "ready"
+            if state.next_action_ref
+            else "derive_from_work_item"
+            if state.active_work_items
+            else "missing"
+        )
+        operator_attention_status = (
+            "blocked"
+            if blocked
+            else "paused"
+            if paused
+            else freshness_status
+            if freshness_status in {"stale", "unknown"}
+            else "decision_required"
+            if state.open_checkpoint_refs
+            else "ready"
+            if next_action_status in {"ready", "derive_from_work_item"}
+            else "decision_required"
+        )
+        return DailyWorkspaceMissionContract(
+            mission_id=state.mission_id,
+            mission_goal=state.mission_goal,
+            mission_status=state.mission_status,
+            objective_status=objective_status,
+            updated_at=state.updated_at,
+            freshness_status=freshness_status,
+            freshness_age_hours=freshness_age_hours,
+            operator_attention_status=operator_attention_status,
+            next_action_status=next_action_status,
+            project_ref=state.project_ref,
+            objective_ref=state.objective_ref,
+            next_action_ref=state.next_action_ref,
+            work_item_refs=list(state.work_item_refs),
+            active_work_items=list(state.active_work_items),
+            artifact_refs=list(state.artifact_refs),
+            active_artifact_refs=list(state.active_artifact_refs),
+            open_checkpoint_refs=list(state.open_checkpoint_refs),
+            open_loops=list(state.open_loops),
+            pending_decision_refs=cls._unique_values(pending_decisions),
+            evidence_refs=[f"mission-state://{mission_id}@{state.updated_at}"],
+        )
+
+    @staticmethod
+    def _workspace_freshness(
+        updated_at: str,
+        generated_at: str,
+    ) -> tuple[str, float | None]:
+        try:
+            updated = datetime.fromisoformat(updated_at.replace("Z", "+00:00"))
+            generated = datetime.fromisoformat(generated_at.replace("Z", "+00:00"))
+            if updated.tzinfo is None:
+                updated = updated.replace(tzinfo=UTC)
+            if generated.tzinfo is None:
+                generated = generated.replace(tzinfo=UTC)
+            age_hours = (generated - updated).total_seconds() / 3600
+        except (TypeError, ValueError):
+            return "unknown", None
+        if age_hours < -0.084:
+            return "unknown", None
+        safe_age = round(max(0.0, age_hours), 2)
+        if safe_age <= 24:
+            return "fresh", safe_age
+        if safe_age <= 72:
+            return "aging", safe_age
+        return "stale", safe_age
+
+    @staticmethod
+    def _workspace_sort_timestamp(value: str) -> float:
+        try:
+            timestamp = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except (TypeError, ValueError):
+            return float("-inf")
+        if timestamp.tzinfo is None:
+            timestamp = timestamp.replace(tzinfo=UTC)
+        return timestamp.timestamp()
+
+    @staticmethod
+    def _unique_values(values: list[str]) -> list[str]:
+        return list(dict.fromkeys(value for value in values if value))
 
     def execute(self, dispatch: OperationDispatchContract) -> OperationalExecution:
         """Execute a low-risk operation using a deterministic local policy."""

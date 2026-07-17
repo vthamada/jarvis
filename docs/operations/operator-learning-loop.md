@@ -35,6 +35,17 @@ autonomia, promotion gate e decisoes humanas pendentes. Os campos
 `cockpit_status`, `pending_decisions` e `next_operator_decision` indicam o que
 o operador precisa decidir primeiro; o comando nao executa a decisao.
 
+Para selecionar trabalho entre varias missoes/sessoes antes da inspecao
+detalhada, use:
+
+```powershell
+python -m apps.jarvis_console daily-workspace
+```
+
+O workspace multi-missao mostra somente loops abertos, freshness, revisoes e a
+proxima decisao. Ele nao infere prioridade, nao retoma missao e nao agenda
+execucao.
+
 4. Gerar um relatorio humano compacto de progresso:
 
 ```powershell

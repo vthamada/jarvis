@@ -492,6 +492,15 @@ class MemoryRepository(ABC):
         """Load a persisted mission state, if any."""
 
     @abstractmethod
+    def list_mission_states(
+        self,
+        *,
+        limit: int,
+        include_closed: bool = False,
+    ) -> list[MissionStateContract]:
+        """Load canonical mission states ordered by most recent update."""
+
+    @abstractmethod
     def list_related_mission_states(
         self,
         *,
@@ -1682,6 +1691,36 @@ class SqliteMemoryRepository(MemoryRepository):
                 (mission_id,),
             ).fetchone()
         return None if row is None else self._row_to_mission_state(row)
+
+    def list_mission_states(
+        self,
+        *,
+        limit: int,
+        include_closed: bool = False,
+    ) -> list[MissionStateContract]:
+        clauses = ""
+        params: list[object] = []
+        if not include_closed:
+            clauses = "WHERE mission_status NOT IN (?, ?)"
+            params.extend(
+                [MissionStatus.COMPLETED.value, MissionStatus.CANCELED.value]
+            )
+        params.append(limit)
+        with self._connect() as connection:
+            rows = connection.execute(
+                f"""
+                SELECT mission_id
+                FROM mission_states
+                {clauses}
+                ORDER BY updated_at DESC, mission_id ASC
+                LIMIT ?
+                """,
+                tuple(params),
+            ).fetchall()
+        states = [
+            self.fetch_mission_state(str(row["mission_id"])) for row in rows
+        ]
+        return [state for state in states if state is not None]
 
     def list_related_mission_states(
         self,
@@ -4158,6 +4197,13 @@ class PostgresMemoryRepository(MemoryRepository):
             open_checkpoint_refs=list(loads(row["open_checkpoint_refs"] or "[]")),
             surface_presence=list(loads(row["surface_presence"] or "[]")),
             ecosystem_state_summary=row["ecosystem_state_summary"],
+            project_ref=row["project_ref"],
+            objective_ref=row["objective_ref"],
+            work_item_refs=list(loads(row["work_item_refs"] or "[]")),
+            checkpoint_refs=list(loads(row["checkpoint_refs"] or "[]")),
+            artifact_refs=list(loads(row["artifact_refs"] or "[]")),
+            objective_status=row["objective_status"],
+            next_action_ref=row["next_action_ref"],
             linked_surface_ids=list(loads(row["linked_surface_ids"] or "[]")),
             active_surface_id=row["active_surface_id"],
             last_surface_id=row["last_surface_id"],
@@ -4167,6 +4213,37 @@ class PostgresMemoryRepository(MemoryRepository):
             ),
             updated_at=row["updated_at"],
         )
+
+    def list_mission_states(
+        self,
+        *,
+        limit: int,
+        include_closed: bool = False,
+    ) -> list[MissionStateContract]:
+        clauses = ""
+        params: list[object] = []
+        if not include_closed:
+            clauses = "WHERE mission_status NOT IN (%s, %s)"
+            params.extend(
+                [MissionStatus.COMPLETED.value, MissionStatus.CANCELED.value]
+            )
+        params.append(limit)
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                f"""
+                SELECT mission_id
+                FROM mission_states
+                {clauses}
+                ORDER BY updated_at DESC, mission_id ASC
+                LIMIT %s
+                """,
+                tuple(params),
+            )
+            rows = cursor.fetchall()
+        states = [
+            self.fetch_mission_state(str(row["mission_id"])) for row in rows
+        ]
+        return [state for state in states if state is not None]
 
     def list_related_mission_states(
         self,

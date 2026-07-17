@@ -4,6 +4,8 @@ from json import loads
 from pathlib import Path
 
 import pytest
+from evolution_lab.service import EvolutionLabService
+from memory_service.service import MemoryService
 
 from apps.jarvis_console import cli
 from apps.jarvis_console.registry import (
@@ -45,6 +47,9 @@ def test_parser_accepts_global_format_before_and_after_subcommand() -> None:
     assert before.output_format == "json"
     assert after.output_format == "json"
     assert parser.parse_args(["readiness-dashboard"]).output_format == "text"
+    assert parser.parse_args(["daily-workspace"]).memory_db == str(
+        cli.ROOT / ".jarvis_runtime" / "console" / "memory.db"
+    )
 
 
 def test_json_runtime_emits_versioned_redacted_success_envelope() -> None:
@@ -218,6 +223,43 @@ def test_main_json_readiness_is_machine_readable_and_skips_core(
     assert payload["command_id"] == "readiness-dashboard"
     assert payload["status"] == "success"
     assert "regression_readiness=read_only" in payload["outputs"][0]
+
+
+def test_main_json_daily_workspace_is_standalone_and_machine_readable(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    memory_db = tmp_path / "memory.db"
+    evolution_db = tmp_path / "evolution.db"
+    MemoryService(database_url=f"sqlite:///{memory_db.as_posix()}")
+    EvolutionLabService(database_path=str(evolution_db))
+
+    def fail_build(*args, **kwargs):
+        raise AssertionError("daily workspace constructed Core")
+
+    monkeypatch.setattr(cli.JarvisConsole, "build", fail_build)
+
+    exit_code = cli.main(
+        [
+            "daily-workspace",
+            "--memory-db",
+            str(memory_db),
+            "--evolution-db",
+            str(evolution_db),
+            "--format",
+            "json",
+        ]
+    )
+
+    captured = capsys.readouterr()
+    payload = loads(captured.out)
+    assert exit_code == ConsoleExitCode.SUCCESS
+    assert captured.err == ""
+    assert payload["command_id"] == "daily-workspace"
+    assert payload["status"] == "success"
+    assert "daily_operator_workspace=read_only" in payload["outputs"][0]
+    assert "workspace_status=idle" in payload["outputs"][0]
 
 
 def test_main_rejects_json_for_state_change_before_core_build(

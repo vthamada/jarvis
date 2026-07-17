@@ -1825,6 +1825,56 @@ class MissionStateContract:
 
 
 @dataclass
+class DailyWorkspaceMissionContract:
+    mission_id: MissionId
+    mission_goal: str
+    mission_status: MissionStatus
+    objective_status: str
+    updated_at: UpdatedAt
+    freshness_status: str
+    operator_attention_status: str
+    next_action_status: str
+    project_ref: str | None = None
+    objective_ref: str | None = None
+    next_action_ref: str | None = None
+    work_item_refs: list[str] = field(default_factory=list)
+    active_work_items: list[str] = field(default_factory=list)
+    artifact_refs: list[str] = field(default_factory=list)
+    active_artifact_refs: list[str] = field(default_factory=list)
+    open_checkpoint_refs: list[str] = field(default_factory=list)
+    open_loops: list[str] = field(default_factory=list)
+    pending_decision_refs: list[str] = field(default_factory=list)
+    evidence_refs: list[str] = field(default_factory=list)
+    freshness_age_hours: float | None = None
+
+
+@dataclass
+class DailyOperatorWorkspaceContract:
+    workspace_id: str
+    workspace_status: str
+    generated_at: Timestamp
+    missions: list[DailyWorkspaceMissionContract]
+    mission_count: int
+    active_objective_count: int
+    active_work_item_count: int
+    active_artifact_count: int
+    open_checkpoint_count: int
+    pending_review_count: int
+    stale_mission_count: int
+    pending_evolution_review_refs: list[str] = field(default_factory=list)
+    pending_memory_review_refs: list[str] = field(default_factory=list)
+    next_decision_refs: list[str] = field(default_factory=list)
+    next_operator_decision: str | None = None
+    evidence_refs: list[str] = field(default_factory=list)
+    freshness_policy: str = "fresh_24h_aging_72h_stale_after_72h"
+    ordering_policy: str = "updated_at_desc_no_priority_inference"
+    memory_write_mode: str = "read_only"
+    read_only: bool = True
+    autonomous_resume_allowed: bool = False
+    autonomous_scheduling_allowed: bool = False
+
+
+@dataclass
 class LongHorizonGoalStrategyContract:
     mission_id: MissionId
     strategy_status: str

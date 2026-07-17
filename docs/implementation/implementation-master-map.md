@@ -767,7 +767,9 @@ Map IDs: `OP-006`, `OP-009`, `SFC-003`, `MEM-002`.
 Goal: provide one canonical read-only snapshot of active objectives, open work,
 artifacts, pending reviews and next decisions across sessions.
 
-Status: ready after `MB-193`.
+Status: closed in `MB-194`; `daily-workspace` derives open missions, work,
+artifacts, checkpoints, review queues, freshness and the next operator decision
+from canonical stores without writing, inferring priority or scheduling work.
 
 ### MB-195 -- Governed Work Item Dependencies And Priority
 
@@ -775,6 +777,8 @@ Map IDs: `OP-004`, `COG-010`, `GOV-003`.
 
 Goal: make dependency, priority and blocking state first-class governed work
 item data rather than renderer inference.
+
+Status: ready after `MB-194`.
 
 ### MB-196 -- Artifact Version Lineage And Ownership
 
