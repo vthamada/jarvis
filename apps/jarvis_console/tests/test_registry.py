@@ -9,6 +9,7 @@ from apps.jarvis_console.registry import (
     CommandCategory,
     CommandDefinition,
     CommandExecutionMode,
+    CommandExecutionResult,
     CommandOutputMode,
     CommandRegistry,
 )
@@ -49,7 +50,7 @@ def test_registry_matches_every_parser_command_help_and_handler() -> None:
 
     COMMAND_REGISTRY.validate_parser_commands(parser_help)
 
-    assert len(COMMAND_REGISTRY.definitions) == 24
+    assert len(COMMAND_REGISTRY.definitions) == 25
     assert set(parser_help) == {
         item.command_id for item in COMMAND_REGISTRY.definitions
     }
@@ -72,19 +73,28 @@ def test_registry_rejects_duplicate_ids_and_parser_drift() -> None:
         registry.validate_parser_commands({item.command_id: "Stale help."})
 
 
+def test_command_result_rejects_inconsistent_status_and_exit_code() -> None:
+    with pytest.raises(ValueError, match="requires exit code 0"):
+        CommandExecutionResult(outputs=[], status="degraded", exit_code=1)
+    with pytest.raises(ValueError, match="requires nonzero exit code"):
+        CommandExecutionResult(outputs=[], status="failed", exit_code=0)
+
+
 def test_standalone_dispatch_does_not_construct_core() -> None:
     registry = CommandRegistry((definition(),)).bind(
         {"run_test_command": lambda args: [f"value={args.value}"]}
     )
 
-    command, outputs = registry.invoke(
+    command, result = registry.invoke(
         "test-command",
         args=Namespace(value="safe"),
         console_factory=lambda: pytest.fail("standalone command constructed Core"),
     )
 
-    assert outputs == ["value=safe"]
-    assert command.emitted_outputs(args=Namespace(), outputs=outputs) == outputs
+    assert result.outputs == ["value=safe"]
+    assert command.emitted_outputs(
+        args=Namespace(), outputs=result.outputs
+    ) == result.outputs
 
 
 def test_core_dispatch_constructs_once_and_chat_output_preserves_mode() -> None:
@@ -104,18 +114,20 @@ def test_core_dispatch_constructs_once_and_chat_output_preserves_mode() -> None:
         }
     )
 
-    command, outputs = registry.invoke(
+    command, result = registry.invoke(
         "test-command",
         args=Namespace(message=["one", "two"]),
         console_factory=lambda: calls.append("built") or "core",
     )
 
     assert calls == ["built"]
-    assert outputs == ["core:one", "core:two"]
+    assert result.outputs == ["core:one", "core:two"]
     assert command.emitted_outputs(
-        args=Namespace(message=["one", "two"]), outputs=outputs
-    ) == outputs
-    assert command.emitted_outputs(args=Namespace(message=[]), outputs=outputs) == []
+        args=Namespace(message=["one", "two"]), outputs=result.outputs
+    ) == result.outputs
+    assert command.emitted_outputs(
+        args=Namespace(message=[]), outputs=result.outputs
+    ) == []
 
 
 def test_main_standalone_readiness_command_skips_console_build(

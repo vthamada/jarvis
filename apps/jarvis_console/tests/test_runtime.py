@@ -10,6 +10,7 @@ from apps.jarvis_console.registry import (
     CommandCategory,
     CommandDefinition,
     CommandExecutionMode,
+    CommandExecutionResult,
     CommandRegistry,
 )
 from apps.jarvis_console.runtime import (
@@ -79,6 +80,36 @@ def test_json_runtime_emits_versioned_redacted_success_envelope() -> None:
         "status": "success",
         "warnings": [],
     }
+
+
+def test_json_runtime_propagates_degraded_status_and_redacts_warnings() -> None:
+    stdout = StringIO()
+    runtime = ConsoleRuntime(
+        output_format="json",
+        stdout_stream=stdout,
+        stderr_stream=StringIO(),
+        sensitive_paths=(r"C:\Users\operator\jarvis",),
+    )
+    registry = bound_registry(
+        lambda args: CommandExecutionResult(
+            outputs=["doctor=read_only"],
+            status="degraded",
+            warnings=[r"store=C:\Users\operator\jarvis\memory.db"],
+        )
+    )
+
+    exit_code = runtime.execute(
+        registry=registry,
+        command_id="test-command",
+        args=Namespace(),
+        console_factory=lambda: pytest.fail("standalone command constructed Core"),
+    )
+
+    payload = loads(stdout.getvalue())
+    assert exit_code == ConsoleExitCode.SUCCESS
+    assert payload["status"] == "degraded"
+    assert payload["warnings"] == ["store=<redacted-path>"]
+    assert payload["redacted"] is True
 
 
 def test_json_not_supported_fails_before_handler_or_core() -> None:

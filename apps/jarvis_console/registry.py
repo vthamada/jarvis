@@ -4,11 +4,10 @@ from __future__ import annotations
 
 from argparse import Namespace
 from collections.abc import Callable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import StrEnum
 from re import fullmatch
 
-CommandHandler = Callable[..., list[str]]
 ConsoleFactory = Callable[[], object]
 
 
@@ -47,6 +46,7 @@ JSON_OUTPUT_COMMAND_IDS = frozenset(
         "mission-cycle",
         "operator-dashboard",
         "readiness-dashboard",
+        "doctor",
         "learning-report",
         "progress-report",
     }
@@ -65,6 +65,27 @@ class CommandDefinition:
 
 
 @dataclass(frozen=True)
+class CommandExecutionResult:
+    outputs: list[str]
+    status: str = "success"
+    exit_code: int = 0
+    warnings: list[str] = field(default_factory=list)
+
+    def __post_init__(self) -> None:
+        if self.status not in {"success", "degraded", "failed"}:
+            raise ValueError(f"invalid command result status: {self.status}")
+        if self.exit_code not in {0, 1, 2, 3}:
+            raise ValueError(f"invalid command result exit code: {self.exit_code}")
+        if self.status in {"success", "degraded"} and self.exit_code != 0:
+            raise ValueError("non-failed command result requires exit code 0")
+        if self.status == "failed" and self.exit_code == 0:
+            raise ValueError("failed command result requires nonzero exit code")
+
+
+CommandHandler = Callable[..., list[str] | CommandExecutionResult]
+
+
+@dataclass(frozen=True)
 class BoundCommand:
     definition: CommandDefinition
     handler: CommandHandler
@@ -74,10 +95,14 @@ class BoundCommand:
         *,
         args: Namespace,
         console_factory: ConsoleFactory,
-    ) -> list[str]:
+    ) -> CommandExecutionResult:
         if self.definition.execution_mode == CommandExecutionMode.CORE:
-            return self.handler(console_factory(), args)
-        return self.handler(args)
+            result = self.handler(console_factory(), args)
+        else:
+            result = self.handler(args)
+        if isinstance(result, CommandExecutionResult):
+            return result
+        return CommandExecutionResult(outputs=list(result))
 
     def emitted_outputs(self, *, args: Namespace, outputs: list[str]) -> list[str]:
         if self.definition.output_mode == CommandOutputMode.CHAT:
@@ -103,7 +128,7 @@ class BoundCommandRegistry:
         *,
         args: Namespace,
         console_factory: ConsoleFactory,
-    ) -> tuple[BoundCommand, list[str]]:
+    ) -> tuple[BoundCommand, CommandExecutionResult]:
         command = self.require(command_id)
         return command, command.invoke(args=args, console_factory=console_factory)
 
@@ -337,6 +362,13 @@ COMMAND_REGISTRY = CommandRegistry(
             "readiness-dashboard",
             "Show repository regression and readiness signals.",
             "run_readiness_dashboard_command",
+            CommandCategory.OBSERVABILITY,
+            STANDALONE,
+        ),
+        _command(
+            "doctor",
+            "Run read-only local runtime and governance diagnostics.",
+            "run_doctor_command",
             CommandCategory.OBSERVABILITY,
             STANDALONE,
         ),

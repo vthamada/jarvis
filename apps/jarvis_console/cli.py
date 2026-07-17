@@ -11,7 +11,7 @@ from sys import argv as process_argv
 from uuid import uuid4
 
 from apps.jarvis_console.bootstrap import ROOT, ensure_src_paths
-from apps.jarvis_console.registry import COMMAND_REGISTRY
+from apps.jarvis_console.registry import COMMAND_REGISTRY, CommandExecutionResult
 from apps.jarvis_console.runtime import (
     ConsoleCommandError,
     ConsoleExitCode,
@@ -36,6 +36,10 @@ from orchestrator_service.service import (
     WorkItemTransitionResult,
 )
 
+from apps.jarvis_console.commands.doctor import (
+    build_doctor_report,
+    render_doctor_report,
+)
 from shared.contracts import (
     InputContract,
     LongHorizonGoalStrategyContract,
@@ -517,6 +521,15 @@ def build_parser() -> ArgumentParser:
         "--longitudinal-report",
         help="Use an explicit MB-188 longitudinal report JSON artifact.",
     )
+
+    doctor_parser = subparsers.add_parser(
+        "doctor",
+        help="Run read-only local runtime and governance diagnostics.",
+    )
+    doctor_parser.add_argument("--runtime-dir")
+    doctor_parser.add_argument("--memory-db")
+    doctor_parser.add_argument("--evolution-db")
+    doctor_parser.add_argument("--observability-db")
 
     learning_report_parser = subparsers.add_parser(
         "learning-report",
@@ -2140,6 +2153,41 @@ def run_readiness_dashboard_command(args: Namespace) -> list[str]:
         ),
     )
     return [render_readiness_dashboard(report)]
+
+
+def run_doctor_command(args: Namespace) -> CommandExecutionResult:
+    runtime_dir = _resolve_doctor_path(args.runtime_dir, ROOT / ".jarvis_runtime")
+    report = build_doctor_report(
+        root=ROOT,
+        runtime_dir=runtime_dir,
+        memory_db=_resolve_doctor_path(args.memory_db, runtime_dir / "memory.db"),
+        evolution_db=_resolve_doctor_path(
+            args.evolution_db,
+            runtime_dir / "evolution.db",
+        ),
+        observability_db=_resolve_doctor_path(
+            args.observability_db,
+            runtime_dir / "observability.db",
+        ),
+    )
+    result_status = {
+        "healthy": "success",
+        "degraded": "degraded",
+        "failed": "failed",
+    }[report.status]
+    return CommandExecutionResult(
+        outputs=[render_doctor_report(report)],
+        status=result_status,
+        exit_code=report.recommended_exit_code,
+        warnings=[
+            check.check_id for check in report.checks if check.status == "warning"
+        ],
+    )
+
+
+def _resolve_doctor_path(value: str | None, default: Path) -> Path:
+    path = Path(value).expanduser() if value else default
+    return path if path.is_absolute() else (Path.cwd() / path).resolve()
 
 
 def run_longitudinal_learning_report_command(args: Namespace) -> list[str]:

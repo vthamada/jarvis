@@ -13,6 +13,7 @@ from typing import TextIO
 
 from apps.jarvis_console.registry import (
     BoundCommandRegistry,
+    CommandExecutionResult,
     ConsoleFactory,
 )
 
@@ -124,14 +125,18 @@ class ConsoleRuntime:
                     error_code="json_not_supported",
                     exit_code=ConsoleExitCode.USAGE_ERROR,
                 )
-            command, outputs = registry.invoke(
+            command, result = registry.invoke(
                 command_id,
                 args=args,
                 console_factory=console_factory,
             )
-            emitted = command.emitted_outputs(args=args, outputs=outputs)
-            self._emit_success(command_id=command_id, outputs=emitted)
-            return int(ConsoleExitCode.SUCCESS)
+            emitted = command.emitted_outputs(args=args, outputs=result.outputs)
+            self._emit_success(
+                command_id=command_id,
+                outputs=emitted,
+                result=result,
+            )
+            return result.exit_code
         except ConsoleCommandError as exc:
             self._emit_error(
                 command_id=command_id,
@@ -187,20 +192,31 @@ class ConsoleRuntime:
         redacted = _SENSITIVE_UNIX_PATH.sub("<redacted-path>", redacted)
         return redacted, redacted != value
 
-    def _emit_success(self, *, command_id: str, outputs: list[str]) -> None:
+    def _emit_success(
+        self,
+        *,
+        command_id: str,
+        outputs: list[str],
+        result: CommandExecutionResult,
+    ) -> None:
         redacted_outputs: list[str] = []
         redaction_applied = False
         for output in outputs:
             safe_output, changed = self.redact(output)
             redacted_outputs.append(safe_output)
             redaction_applied = redaction_applied or changed
+        redacted_warnings: list[str] = []
+        for warning in result.warnings:
+            safe_warning, changed = self.redact(warning)
+            redacted_warnings.append(safe_warning)
+            redaction_applied = redaction_applied or changed
         if self.output_format == "json":
             envelope = ConsoleResultEnvelope(
                 schema_version="jarvis-console/v1",
                 command_id=command_id,
-                status="success",
+                status=result.status,
                 outputs=redacted_outputs,
-                warnings=[],
+                warnings=redacted_warnings,
                 redacted=redaction_applied,
             )
             self.stdout.write(dumps(asdict(envelope), ensure_ascii=False, sort_keys=True))

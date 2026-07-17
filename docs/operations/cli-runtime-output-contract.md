@@ -22,7 +22,7 @@ python -m apps.jarvis_console readiness-dashboard --format json
 Text remains the default. JSON support is declared per command in the typed
 registry. The baseline supports objectives, goal strategy, work-item and
 artifact lists, bounded memory/evolution queues, mission/readiness/learning and
-progress reports.
+progress reports, plus the read-only doctor.
 
 State-changing commands intentionally reject JSON in this baseline. Rejection
 happens before constructing the Core or invoking the handler.
@@ -43,6 +43,10 @@ happens before constructing the Core or invoking the handler.
 Success is written only to stdout. The `outputs` list contains the current
 stable human rendering; domain-specific JSON payloads can evolve later without
 changing sovereign service contracts.
+
+Read-only diagnostics may return `degraded` with exit `0`, or `failed` with a
+nonzero exit code, in the same result envelope. Warnings and outputs are both
+redacted before emission.
 
 ## Error Envelope
 
@@ -67,7 +71,7 @@ Text errors use `error[code]: message` on stderr.
 | Code | Meaning |
 | --- | --- |
 | `0` | success |
-| `1` | runtime error |
+| `1` | runtime error or failed read-only diagnostic |
 | `2` | invalid usage/input or unsupported output mode |
 | `3` | explicit governance-blocked console error |
 
@@ -95,4 +99,3 @@ was changed through `redacted=true`.
 - the runtime does not persist output or create a parallel event store;
 - shell completion and registry-derived golden/reference output remain in
   `MB-199`.
-

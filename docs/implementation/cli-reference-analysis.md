@@ -376,10 +376,11 @@ Checks should include:
 - governance mode visible;
 - warnings for missing optional capabilities without failing.
 
-Status parcial: `MB-174` implementou `readiness-dashboard` como diagnostico
-read-only de capacidades, gate/testes, backlog e drift documental. O `doctor`
-amplo ainda permanece candidato para imports, runtime dir e conectividade dos
-bancos locais; esse escopo nao deve ser inferido como concluido.
+Status: implementado em `MB-193`. O comando standalone cobre Python, imports,
+runtime dir, stores SQLite read-only, sincronizacao de backlog, governanca e
+descoberta do gate. Ausencia ainda nao inicializada vira warning; estado
+presente e invalido falha fechado. O doctor nao constroi Core, cria stores,
+executa reparo ou roda o gate.
 
 ### CLI-004 - Command Families And Renderer Split
 

@@ -32,6 +32,12 @@
 - redaction cobre segredos, bearer tokens, URLs autenticadas e caminhos locais em sucesso e erro, inclusive falhas do parser;
 - JSON fica limitado aos read/report commands declarados e mutacoes sao rejeitadas antes do Core; `MB-193` passa a ser o unico item tecnico `ready`.
 
+### MB-193 adiciona doctor local read-only
+
+- `jarvis-console doctor` verifica Python, imports, runtime dir, stores SQLite read-only, sincronizacao documental, governanca e disponibilidade do engineering gate;
+- o contrato text/JSON diferencia ambiente saudavel, nao inicializado e invalido com warnings e exit codes estaveis, sem construir Core, criar stores, executar gate ou reparar estado;
+- testes cobrem ausencia, corrupcao, drift, redacao e imutabilidade dos bancos; `MB-194` passa a ser o unico item tecnico `ready`.
+
 ## 2026-07-16
 
 ### MB-166 define checklist sandbox-to-release

@@ -248,7 +248,7 @@ Goal: expose the same sovereign entity through multiple interfaces.
 | `SFC-010` | Notification layer | `missing` | Human-approved reminders, not autonomous scheduler | Governance | later |
 | `SFC-011` | Typed CLI command registry | `implemented_baseline` | Keep command metadata and parser dispatch synchronized | SFC-001 | none |
 | `SFC-012` | CLI runtime/output contract | `implemented_baseline` | Preserve versioned envelopes, redaction and stable exit semantics | SFC-011 | none |
-| `SFC-013` | Read-only CLI doctor | `missing` | Runtime, stores, backlog, governance and gate preflight | SFC-011, OBS-007 | candidate |
+| `SFC-013` | Read-only CLI doctor | `implemented_baseline` | Preserve non-mutating local preflight and typed severity | SFC-011, OBS-007 | none |
 | `SFC-014` | Generated CLI reference and completion | `missing` | Registry-derived reference and shell completion | SFC-011, DOC-010 | candidate |
 
 ### Track K -- Documentation And Program Control
@@ -756,7 +756,9 @@ Map IDs: `SFC-013`, `OBS-007`, `GOV-008`.
 Goal: diagnose imports, runtime directory, canonical stores, backlog,
 governance and gate availability without mutating state or exposing secrets.
 
-Status: ready after `MB-192`.
+Status: closed in `MB-193`; the standalone text/JSON doctor checks Python,
+imports, runtime directory, read-only stores, backlog synchronization,
+governance and gate discoverability without building Core or mutating state.
 
 ### MB-194 -- Daily Operator Workspace Snapshot
 
@@ -764,6 +766,8 @@ Map IDs: `OP-006`, `OP-009`, `SFC-003`, `MEM-002`.
 
 Goal: provide one canonical read-only snapshot of active objectives, open work,
 artifacts, pending reviews and next decisions across sessions.
+
+Status: ready after `MB-193`.
 
 ### MB-195 -- Governed Work Item Dependencies And Priority
 
