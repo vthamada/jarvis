@@ -10,6 +10,7 @@ from shared.contracts import (
     DeliberativePlanContract,
     ExperienceRecordContract,
     GovernanceDecisionContract,
+    KnowledgeEvidenceGovernanceContract,
     LongHorizonGoalStrategyContract,
     MissionProgressReportContract,
     MissionStateContract,
@@ -39,6 +40,12 @@ class SynthesisInput:
     deliberative_plan: DeliberativePlanContract | None
     specialist_contributions: list[SpecialistContributionContract]
     operation_result: OperationResultContract | None
+    knowledge_source_refs: list[str] = field(default_factory=list)
+    knowledge_provenance_status: str | None = None
+    knowledge_freshness_status: str | None = None
+    knowledge_conflict_status: str | None = None
+    knowledge_uncertainty_notes: list[str] = field(default_factory=list)
+    knowledge_evidence_governance: KnowledgeEvidenceGovernanceContract | None = None
     identity_mode: str | None = None
     arbitration_summary: str | None = None
     session_continuity_brief: str | None = None
@@ -443,6 +450,9 @@ class SynthesisEngine:
         )
         if reviewed_learning_line:
             parts.append(f"Aprendizado revisado: {reviewed_learning_line}.")
+        knowledge_evidence_line = self._knowledge_evidence_line(synthesis_input)
+        if knowledge_evidence_line:
+            parts.append(f"Conhecimento: {knowledge_evidence_line}.")
         limitation = self._limitation_line(synthesis_input)
         if limitation:
             parts.append(f"Limite atual: {limitation}.")
@@ -921,10 +931,56 @@ class SynthesisEngine:
         objective_line = self._objective_state_line(synthesis_input)
         if objective_line:
             response = f"{response}. Estado do objetivo: {objective_line}"
+        knowledge_evidence_line = self._knowledge_evidence_line(synthesis_input)
+        if knowledge_evidence_line:
+            response = f"{response}. Conhecimento: {knowledge_evidence_line}"
         limitation = self._limitation_line(synthesis_input)
         if limitation:
             response = f"{response}. Limite atual: {limitation}"
         return response
+
+    def _knowledge_evidence_line(
+        self,
+        synthesis_input: SynthesisInput,
+    ) -> str | None:
+        assessment = synthesis_input.knowledge_evidence_governance
+        if not assessment and not synthesis_input.knowledge_source_refs:
+            return None
+        provenance = (
+            assessment.provenance_status
+            if assessment
+            else synthesis_input.knowledge_provenance_status or "missing"
+        )
+        freshness = (
+            assessment.freshness_status
+            if assessment
+            else synthesis_input.knowledge_freshness_status or "unknown"
+        )
+        conflict = (
+            assessment.conflict_status
+            if assessment
+            else synthesis_input.knowledge_conflict_status or "unknown"
+        )
+        use_mode = assessment.use_mode if assessment else "unassessed"
+        source_ref = self._first_safe_ref(synthesis_input.knowledge_source_refs)
+        uncertainty = self._first_safe_ref(
+            assessment.uncertainty_notes
+            if assessment
+            else synthesis_input.knowledge_uncertainty_notes
+        )
+        parts = [
+            f"proveniencia={provenance}",
+            f"freshness={freshness}",
+            f"conflito={conflict}",
+            f"uso={use_mode}",
+        ]
+        if source_ref:
+            parts.append(f"fonte={source_ref}")
+        if uncertainty:
+            parts.append(f"incerteza={uncertainty}")
+        if assessment and assessment.human_review_required:
+            parts.append("revisao_humana=requerida")
+        return "; ".join(parts)
 
     @staticmethod
     def _goal_line(synthesis_input: SynthesisInput) -> str:

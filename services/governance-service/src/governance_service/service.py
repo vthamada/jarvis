@@ -12,6 +12,7 @@ from shared.contracts import (
     GovernanceCheckContract,
     GovernanceDecisionContract,
     InputContract,
+    KnowledgeEvidenceGovernanceContract,
     MissionStateContract,
     OperatorFeedbackContract,
     SpecialistInvocationContract,
@@ -60,6 +61,70 @@ class GovernanceService:
     """Apply explicit request and memory policies for the v1 flow."""
 
     name = "governance-service"
+
+    def assess_knowledge_evidence(
+        self,
+        *,
+        provenance_status: str,
+        freshness_status: str,
+        conflict_status: str,
+        source_refs: list[str],
+        uncertainty_notes: list[str],
+        assessed_at: str | None = None,
+    ) -> KnowledgeEvidenceGovernanceContract:
+        """Qualify evidence use without changing the request permission decision."""
+
+        status = "evidence_ready"
+        use_mode = "bounded_grounding"
+        conditions = ["Expose source refs in the observable response trail."]
+        blockers: list[str] = []
+        human_review_required = False
+
+        if conflict_status == "conflict_detected":
+            status = "review_required"
+            use_mode = "do_not_assert_as_verified"
+            blockers.append("Declared source conflicts require explicit resolution.")
+            human_review_required = True
+        elif provenance_status == "missing":
+            status = "review_required"
+            use_mode = "do_not_assert_as_verified"
+            blockers.append("Source provenance is missing.")
+            human_review_required = True
+        elif freshness_status == "stale":
+            status = "review_required"
+            use_mode = "historical_context_only"
+            blockers.append("Source freshness window has expired.")
+            human_review_required = True
+        elif (
+            provenance_status != "complete"
+            or freshness_status != "current"
+            or conflict_status != "none_declared"
+        ):
+            status = "conditional_use"
+            use_mode = "qualified_grounding"
+            conditions.append("Surface uncertainty and avoid unqualified factual claims.")
+            human_review_required = True
+
+        if uncertainty_notes:
+            conditions.append("Preserve retrieval uncertainty in final synthesis.")
+
+        return KnowledgeEvidenceGovernanceContract(
+            assessment_id=f"knowledge-evidence-assessment://{uuid4().hex[:12]}",
+            status=status,
+            use_mode=use_mode,
+            provenance_status=provenance_status,
+            freshness_status=freshness_status,
+            conflict_status=conflict_status,
+            source_refs=list(dict.fromkeys(source_refs)),
+            conditions=conditions,
+            blockers=blockers,
+            uncertainty_notes=list(dict.fromkeys(uncertainty_notes)),
+            timestamp=assessed_at or self.now(),
+            human_review_required=human_review_required,
+            request_decision_mutation_allowed=False,
+            automatic_promotion_allowed=False,
+            core_mutation_allowed=False,
+        )
 
     def assess_request(
         self,

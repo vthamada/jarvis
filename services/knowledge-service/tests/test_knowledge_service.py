@@ -377,3 +377,93 @@ def test_knowledge_service_exposes_guided_decision_risk_specialist_route() -> No
         for route in result.specialist_routes
     )
 
+
+def test_knowledge_service_exposes_current_curated_source_evidence() -> None:
+    service = KnowledgeService()
+
+    result = service.retrieve_for_intent(
+        intent="analysis",
+        query="Analyze governance risk and evidence for the release.",
+        as_of="2026-07-16T12:00:00Z",
+    )
+
+    assert result.provenance_status == "complete"
+    assert result.freshness_status == "current"
+    assert result.conflict_status == "none_declared"
+    assert result.uncertainty_notes == []
+    assert result.source_evidence
+    assert all(item.source_kind == "curated_internal" for item in result.source_evidence)
+    assert all(
+        item.source_ref.startswith("corpus://jarvis/curated/v1/")
+        for item in result.source_evidence
+    )
+
+
+def test_knowledge_service_marks_missing_source_metadata_as_unknown() -> None:
+    temp_dir = runtime_dir("knowledge-missing-provenance")
+    corpus_path = temp_dir / "custom_corpus.json"
+    corpus_path.write_text(
+        dumps(
+            {
+                "domains": [
+                    {
+                        "name": "strategy",
+                        "keywords": ["strategy"],
+                        "snippets": ["Use a bounded strategy."],
+                    }
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = KnowledgeService(corpus_path=str(corpus_path)).retrieve_for_intent(
+        intent="planning",
+        query="Plan the strategy.",
+        as_of="2026-07-16T12:00:00Z",
+    )
+
+    assert result.provenance_status == "missing"
+    assert result.freshness_status == "unknown"
+    assert result.conflict_status == "unknown"
+    assert "source metadata missing for strategy" in result.uncertainty_notes
+    assert "source freshness window missing" in result.uncertainty_notes
+
+
+def test_knowledge_service_surfaces_stale_and_conflicting_source_evidence() -> None:
+    temp_dir = runtime_dir("knowledge-stale-conflict")
+    corpus_path = temp_dir / "custom_corpus.json"
+    corpus_path.write_text(
+        dumps(
+            {
+                "source_policy": {
+                    "source_ref_prefix": "corpus://test/stale",
+                    "source_kind": "curated_internal",
+                    "reviewed_at": "2025-01-01T00:00:00Z",
+                    "valid_until": "2025-12-31T23:59:59Z",
+                    "confidence_status": "review_required",
+                    "conflict_refs": ["source://conflicting-review"],
+                },
+                "domains": [
+                    {
+                        "name": "strategy",
+                        "keywords": ["strategy"],
+                        "snippets": ["Use a bounded strategy."],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    result = KnowledgeService(corpus_path=str(corpus_path)).retrieve_for_intent(
+        intent="planning",
+        query="Plan the strategy.",
+        as_of="2026-07-16T12:00:00Z",
+    )
+
+    assert result.provenance_status == "complete"
+    assert result.freshness_status == "stale"
+    assert result.conflict_status == "conflict_detected"
+    assert result.source_evidence[0].conflict_refs == ["source://conflicting-review"]
+    assert any("freshness expired" in note for note in result.uncertainty_notes)

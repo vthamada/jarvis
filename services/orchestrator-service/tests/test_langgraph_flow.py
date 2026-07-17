@@ -114,6 +114,11 @@ def test_langgraph_flow_replays_orchestrator_path_with_fake_runtime(
 
     assert result.intent == "planning"
     assert result.governance_decision.decision == PermissionDecision.ALLOW_WITH_CONDITIONS
+    assert result.knowledge_result is not None
+    assert result.knowledge_result.provenance_status == "complete"
+    assert result.knowledge_evidence_governance is not None
+    assert result.knowledge_evidence_governance.status == "evidence_ready"
+    assert "Conhecimento:" in result.response_text
     assert result.operation_result is not None
     assert any(event.event_name == "plan_built" for event in result.events)
     assert any(event.event_name == "specialist_selection_decided" for event in result.events)

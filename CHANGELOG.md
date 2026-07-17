@@ -44,6 +44,12 @@
 - `domain_eval_support.py` executa o Core real e valida decisao, rota, dominios canonicos, workflow, especialista, resposta, memoria causal, eventos e trace; `observability-service` agrega pass rate, blockers e readiness;
 - o pack `analysis` passa seed e follow-up com memoria `causal_guidance`, e `run_domain_eval.py` grava evidencia local; `execution-backlog.md` fechou `MB-172` e abriu `MB-173` como unico item tecnico `ready`.
 
+### MB-173 torna proveniencia e freshness observaveis
+
+- `KnowledgeSourceEvidenceContract` e `KnowledgeEvidenceGovernanceContract` formalizam fonte, revisao, validade, conflito, incerteza e modo bounded de uso sem alterar a permissao principal da request;
+- `knowledge-service` deriva os sinais pelo timestamp da request, marca metadata ausente como `missing/unknown` e identifica o corpus v1 como fonte interna curada, nunca como verdade externa implicita;
+- sintese e eventos expoem fonte e limitacoes ponta a ponta; testes cobrem evidencia vigente, ausente, expirada e conflitante, e `execution-backlog.md` abriu `MB-174` como unico item tecnico `ready`.
+
 ## 2026-07-04
 
 ### MB-161 fecha anchors de evidencia de memoria semantica

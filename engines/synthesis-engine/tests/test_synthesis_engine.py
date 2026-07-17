@@ -9,6 +9,7 @@ from shared.contracts import (
     DeliberativePlanContract,
     ExperienceRecordContract,
     GovernanceDecisionContract,
+    KnowledgeEvidenceGovernanceContract,
     LongHorizonGoalStrategyContract,
     MissionStateContract,
     PostTaskReflectionContract,
@@ -189,6 +190,57 @@ def test_synthesis_engine_composes_unitary_allowed_response() -> None:
     assert "Julgamento" in response
     assert "Recomendacao" in response
     assert "retomar alinhar checkpoint principal" in response
+
+
+def test_synthesis_engine_surfaces_governed_knowledge_evidence() -> None:
+    engine = SynthesisEngine()
+    response = engine.compose(
+        SynthesisInput(
+            intent="analysis",
+            identity_profile=IdentityEngine().get_profile(),
+            response_style="estruturado",
+            governance_decision=GovernanceDecisionContract(
+                decision_id=GovernanceDecisionId("decision-knowledge"),
+                governance_check_id=GovernanceCheckId("check-knowledge"),
+                risk_level=RiskLevel.LOW,
+                decision=PermissionDecision.ALLOW,
+                justification="ok",
+                timestamp="2026-07-16T12:00:00Z",
+            ),
+            recovered_context=[],
+            active_minds=["mente_analitica"],
+            active_domains=["analysis"],
+            knowledge_snippets=["Separate evidence from interpretation."],
+            deliberative_plan=sample_plan(),
+            specialist_contributions=[],
+            operation_result=None,
+            knowledge_source_refs=["local://knowledge/analysis"],
+            knowledge_provenance_status="missing",
+            knowledge_freshness_status="unknown",
+            knowledge_conflict_status="unknown",
+            knowledge_uncertainty_notes=["source metadata missing for analysis"],
+            knowledge_evidence_governance=KnowledgeEvidenceGovernanceContract(
+                assessment_id="knowledge-evidence-assessment://test",
+                status="review_required",
+                use_mode="do_not_assert_as_verified",
+                provenance_status="missing",
+                freshness_status="unknown",
+                conflict_status="unknown",
+                source_refs=["local://knowledge/analysis"],
+                conditions=["Preserve uncertainty."],
+                blockers=["Source provenance is missing."],
+                uncertainty_notes=["source metadata missing for analysis"],
+                timestamp="2026-07-16T12:00:00Z",
+                human_review_required=True,
+            ),
+        )
+    )
+
+    assert "Conhecimento:" in response
+    assert "proveniencia=missing" in response
+    assert "freshness=unknown" in response
+    assert "uso=do_not_assert_as_verified" in response
+    assert "revisao_humana=requerida" in response
     assert "workflow ativo: strategic direction workflow" in response
     assert "foco final: direcao recomendada, criterios e trade-offs dominantes" in response
     assert "checkpoint ativo: scenario framed" in response

@@ -608,6 +608,42 @@ class DomainEvalRunContract:
 
 
 @dataclass
+class KnowledgeSourceEvidenceContract:
+    source_ref: str
+    domain_name: str
+    source_kind: str
+    retrieved_at: Timestamp
+    provenance_status: str
+    freshness_status: str
+    conflict_status: str
+    confidence_status: str = "unverified"
+    published_at: Timestamp | None = None
+    reviewed_at: Timestamp | None = None
+    valid_until: Timestamp | None = None
+    conflict_refs: list[str] = field(default_factory=list)
+    uncertainty_notes: list[str] = field(default_factory=list)
+
+
+@dataclass
+class KnowledgeEvidenceGovernanceContract:
+    assessment_id: str
+    status: str
+    use_mode: str
+    provenance_status: str
+    freshness_status: str
+    conflict_status: str
+    source_refs: list[str]
+    conditions: list[str]
+    blockers: list[str]
+    uncertainty_notes: list[str]
+    timestamp: Timestamp
+    human_review_required: bool = False
+    request_decision_mutation_allowed: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass
 class SpecialistBoundaryContract:
     specialist_type: str
     runtime_scope: str

@@ -1,4 +1,14 @@
 {
+  "source_policy": {
+    "source_ref_prefix": "corpus://jarvis/curated/v1",
+    "source_kind": "curated_internal",
+    "published_at": "2026-03-18T00:00:00Z",
+    "reviewed_at": "2026-07-16T00:00:00Z",
+    "valid_until": "2027-07-16T23:59:59Z",
+    "confidence_status": "curated_baseline",
+    "conflict_status": "none_declared",
+    "conflict_refs": []
+  },
   "domains": [
     {
       "name": "strategy",

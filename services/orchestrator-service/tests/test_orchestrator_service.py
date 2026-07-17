@@ -1,8 +1,10 @@
+from json import dumps
 from pathlib import Path
 from tempfile import gettempdir
 from uuid import uuid4
 
 from governance_service.service import GovernanceService
+from knowledge_service.service import KnowledgeService
 from memory_service.service import MemoryService
 from observability_service.service import ObservabilityQuery, ObservabilityService
 from operational_service.service import OperationalService
@@ -38,6 +40,112 @@ def runtime_dir(name: str) -> Path:
 
 def test_orchestrator_service_name() -> None:
     assert OrchestratorService.name == "orchestrator-service"
+
+
+def test_orchestrator_propagates_current_knowledge_evidence_end_to_end() -> None:
+    temp_dir = runtime_dir("orchestrator-knowledge-evidence")
+    observability = ObservabilityService(
+        database_path=str(temp_dir / "observability.db")
+    )
+    service = OrchestratorService(
+        memory_service=MemoryService(
+            database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+        ),
+        operational_service=OperationalService(
+            artifact_dir=str(temp_dir / "artifacts")
+        ),
+        observability_service=observability,
+    )
+
+    result = service.handle_input(
+        InputContract(
+            request_id=RequestId("req-knowledge-evidence"),
+            session_id=SessionId("sess-knowledge-evidence"),
+            mission_id=MissionId("mission-knowledge-evidence"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Analyze governance risk and evidence for the release.",
+            timestamp="2026-07-16T12:00:00Z",
+        )
+    )
+
+    assert result.knowledge_result is not None
+    assert result.knowledge_result.provenance_status == "complete"
+    assert result.knowledge_result.freshness_status == "current"
+    assert result.knowledge_evidence_governance is not None
+    assert result.knowledge_evidence_governance.status == "evidence_ready"
+    assert result.knowledge_evidence_governance.request_decision_mutation_allowed is False
+    assert "Conhecimento:" in result.response_text
+    assert "proveniencia=complete" in result.response_text
+    events = observability.list_recent_events(
+        ObservabilityQuery(request_id="req-knowledge-evidence", limit=80)
+    )
+    retrieved = next(event for event in events if event.event_name == "knowledge_retrieved")
+    synthesized = next(event for event in events if event.event_name == "response_synthesized")
+    assert retrieved.payload["knowledge_source_evidence"]
+    assert retrieved.payload["knowledge_freshness_status"] == "current"
+    assert synthesized.payload["knowledge_evidence_use_mode"] == "bounded_grounding"
+
+
+def test_orchestrator_surfaces_missing_provenance_without_mutating_permission() -> None:
+    temp_dir = runtime_dir("orchestrator-missing-provenance")
+    corpus_path = temp_dir / "custom_corpus.json"
+    corpus_path.write_text(
+        dumps(
+            {
+                "domains": [
+                    {
+                        "name": name,
+                        "keywords": [name, "plan", "strategy"],
+                        "snippets": [f"Bounded guidance for {name}."],
+                    }
+                    for name in ("strategy", "productivity", "operational_readiness")
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    observability = ObservabilityService(
+        database_path=str(temp_dir / "observability.db")
+    )
+    service = OrchestratorService(
+        knowledge_service=KnowledgeService(corpus_path=str(corpus_path)),
+        memory_service=MemoryService(
+            database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+        ),
+        operational_service=OperationalService(
+            artifact_dir=str(temp_dir / "artifacts")
+        ),
+        observability_service=observability,
+    )
+
+    result = service.handle_input(
+        InputContract(
+            request_id=RequestId("req-missing-provenance"),
+            session_id=SessionId("sess-missing-provenance"),
+            mission_id=MissionId("mission-missing-provenance"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Plan the next strategy milestone.",
+            timestamp="2026-07-16T12:00:00Z",
+        )
+    )
+
+    assert result.knowledge_result is not None
+    assert result.knowledge_result.provenance_status == "missing"
+    assert result.knowledge_evidence_governance is not None
+    assert result.knowledge_evidence_governance.status == "review_required"
+    assert result.knowledge_evidence_governance.request_decision_mutation_allowed is False
+    assert "proveniencia=missing" in result.response_text
+    assert "revisao_humana=requerida" in result.response_text
+    events = observability.list_recent_events(
+        ObservabilityQuery(request_id="req-missing-provenance", limit=80)
+    )
+    synthesized = next(event for event in events if event.event_name == "response_synthesized")
+    assert synthesized.payload["knowledge_evidence_blockers"] == [
+        "Source provenance is missing."
+    ]
+    assert synthesized.payload["knowledge_request_decision_mutation_allowed"] is False
 
 
 def test_orchestrator_records_operator_feedback_through_governed_memory() -> None:

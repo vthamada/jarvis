@@ -2,6 +2,17 @@
 
 ## Atualizacao 2026-07-16
 
+`MB-173` foi concluido: `KnowledgeSourceEvidenceContract` e
+`KnowledgeEvidenceGovernanceContract` agora carregam proveniencia, freshness,
+conflito, incerteza e modo governado de uso desde o `knowledge-service` ate a
+sintese e os eventos. O corpus v1 foi identificado como `curated_internal`, com
+janela de revisao explicita; corpus sem metadata permanece `missing/unknown` e
+exige revisao, sem alterar a permissao principal da request. A sintese mostra
+uma clausula `Conhecimento:` e a trilha completa fica em
+`knowledge_retrieved`/`response_synthesized`. Resolucao automatica de conflitos
+e ingestao externa continuam fora do baseline. `MB-174` e o unico item tecnico
+`ready`.
+
 `MB-172` foi concluido: contratos compartilhados agora formalizam eval case,
 pack versionado, resultado por caso e run agregado. O novo runner offline usa
 o Core real e o `observability-service` para validar decisao, rota, dominios,
@@ -9,7 +20,8 @@ workflow, especialista, resposta, memoria causal, eventos e trace. O pack
 baseline de `analysis` passa abertura e follow-up com `pass_rate=1.0`; o segundo
 caso comprova `causal_guidance`. Mesmo verde, o resultado permanece
 `candidate_ready_for_human_review`, `manual_review_only` e
-`promotion_authorized=false`. `MB-173` e o unico item tecnico `ready`.
+`promotion_authorized=false`. Esse estado foi sucedido pelo fechamento de
+`MB-173`.
 
 `MB-171` foi concluido: `DomainKnowledgePackContract`,
 `DomainOnboardingCandidateContract` e `DomainOnboardingAssessmentContract`
@@ -264,9 +276,9 @@ refs de artefato/reflexao, testes, rollback, revisao humana obrigatoria,
 `automatic_promotion_allowed=false`, `core_mutation_allowed=false` e
 `memory_write_mode=through_core_only`. `memory-service` persiste/lista esses
 candidatos, `evolution-lab` cria proposta sandbox-only a partir deles e o
-console possui `procedural-playbooks` read-only. `MB-163` a `MB-171` tambem
-foram concluidos; `MB-172` e o unico item tecnico `ready`, focado no primeiro
-eval pack reutilizavel por dominio/rota.
+console possui `procedural-playbooks` read-only. `MB-163` a `MB-173` tambem
+foram concluidos; `MB-174` e o unico item tecnico `ready`, focado no dashboard
+integrado de regressao e readiness.
 
 O corte pos-`MB-125` foi repriorizado em `MB-126`: a proxima frente ativa e
 experiencia operacional + reflexao pos-tarefa governada. O objetivo e fazer o

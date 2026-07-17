@@ -645,3 +645,47 @@ def test_governance_service_blocks_unbounded_operator_correction() -> None:
 
     assert result.governance_decision.decision == PermissionDecision.BLOCK
     assert result.governance_decision.containment_hint == "block_missing_correction"
+
+
+def test_governance_service_allows_bounded_use_of_current_evidence() -> None:
+    result = GovernanceService().assess_knowledge_evidence(
+        provenance_status="complete",
+        freshness_status="current",
+        conflict_status="none_declared",
+        source_refs=["corpus://jarvis/curated/v1/strategy"],
+        uncertainty_notes=[],
+        assessed_at="2026-07-16T12:00:00Z",
+    )
+
+    assert result.status == "evidence_ready"
+    assert result.use_mode == "bounded_grounding"
+    assert result.human_review_required is False
+    assert result.request_decision_mutation_allowed is False
+    assert result.automatic_promotion_allowed is False
+    assert result.core_mutation_allowed is False
+
+
+def test_governance_service_requires_review_for_missing_or_conflicting_evidence() -> None:
+    service = GovernanceService()
+    missing = service.assess_knowledge_evidence(
+        provenance_status="missing",
+        freshness_status="unknown",
+        conflict_status="unknown",
+        source_refs=["local://knowledge/strategy"],
+        uncertainty_notes=["source metadata missing for strategy"],
+    )
+    conflicting = service.assess_knowledge_evidence(
+        provenance_status="complete",
+        freshness_status="current",
+        conflict_status="conflict_detected",
+        source_refs=["corpus://test/strategy"],
+        uncertainty_notes=["source conflicts declared for strategy"],
+    )
+
+    assert missing.status == "review_required"
+    assert missing.use_mode == "do_not_assert_as_verified"
+    assert missing.human_review_required is True
+    assert "Source provenance is missing." in missing.blockers
+    assert conflicting.status == "review_required"
+    assert conflicting.use_mode == "do_not_assert_as_verified"
+    assert "Declared source conflicts require explicit resolution." in conflicting.blockers

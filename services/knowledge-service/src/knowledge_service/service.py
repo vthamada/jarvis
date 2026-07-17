@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from json import loads
 from pathlib import Path
 from unicodedata import normalize
@@ -13,6 +14,7 @@ from shared.contracts import (
     DomainOnboardingCandidateContract,
     DomainRegistryEntryContract,
     DomainSpecialistRouteContract,
+    KnowledgeSourceEvidenceContract,
 )
 from shared.domain_onboarding import (
     DEFAULT_DOMAIN_ONBOARDING_BASELINE_PATH,
@@ -37,6 +39,7 @@ class KnowledgeDomain:
     keywords: list[str]
     snippets: list[str]
     registry_entry: DomainRegistryEntryContract | None = None
+    source_metadata: dict[str, object] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -50,6 +53,11 @@ class KnowledgeRetrievalResult:
     snippets: list[str]
     sources: list[str]
     specialist_routes: list[DomainSpecialistRouteContract]
+    source_evidence: list[KnowledgeSourceEvidenceContract] = field(default_factory=list)
+    provenance_status: str = "missing"
+    freshness_status: str = "unknown"
+    conflict_status: str = "unknown"
+    uncertainty_notes: list[str] = field(default_factory=list)
 
 
 DEFAULT_CORPUS_PATH = Path.cwd() / "knowledge" / "curated" / "v1_corpus.json"
@@ -81,7 +89,13 @@ class KnowledgeService:
         ) = self._load_domain_registry(registry_path)
         self.domains = self._load_domains(resolved_path)
 
-    def retrieve_for_intent(self, *, intent: str, query: str) -> KnowledgeRetrievalResult:
+    def retrieve_for_intent(
+        self,
+        *,
+        intent: str,
+        query: str,
+        as_of: str | None = None,
+    ) -> KnowledgeRetrievalResult:
         """Return the most relevant domains and snippets for the given intent."""
 
         active_domains = self._select_domains(intent, query)
@@ -89,9 +103,38 @@ class KnowledgeService:
         snippets = [
             self.domains[domain].snippets[0] for domain in active_domains if domain in self.domains
         ]
-        sources = [
-            f"local://knowledge/{domain}" for domain in active_domains if domain in self.domains
+        retrieved_at = as_of or datetime.now(UTC).isoformat()
+        source_evidence = [
+            self._build_source_evidence(domain, retrieved_at=retrieved_at)
+            for domain in active_domains
+            if domain in self.domains
         ]
+        sources = [item.source_ref for item in source_evidence]
+        provenance_status = self._aggregate_status(
+            [item.provenance_status for item in source_evidence],
+            preferred="complete",
+            priority=("missing", "partial", "complete"),
+            empty="missing",
+        )
+        freshness_status = self._aggregate_status(
+            [item.freshness_status for item in source_evidence],
+            preferred="current",
+            priority=("stale", "unknown", "current"),
+            empty="unknown",
+        )
+        conflict_status = self._aggregate_status(
+            [item.conflict_status for item in source_evidence],
+            preferred="none_declared",
+            priority=("conflict_detected", "unknown", "none_declared"),
+            empty="unknown",
+        )
+        uncertainty_notes = list(
+            dict.fromkeys(
+                note
+                for item in source_evidence
+                for note in item.uncertainty_notes
+            )
+        )
         specialist_routes = self._resolve_specialist_routes(active_domains)
         return KnowledgeRetrievalResult(
             intent=intent,
@@ -101,7 +144,125 @@ class KnowledgeService:
             snippets=snippets,
             sources=sources,
             specialist_routes=specialist_routes,
+            source_evidence=source_evidence,
+            provenance_status=provenance_status,
+            freshness_status=freshness_status,
+            conflict_status=conflict_status,
+            uncertainty_notes=uncertainty_notes,
         )
+
+    def _build_source_evidence(
+        self,
+        domain_name: str,
+        *,
+        retrieved_at: str,
+    ) -> KnowledgeSourceEvidenceContract:
+        domain = self.domains[domain_name]
+        metadata = {**self.source_policy, **domain.source_metadata}
+        source_prefix = str(metadata.get("source_ref_prefix") or "").rstrip("/")
+        explicit_source_ref = str(metadata.get("source_ref") or "").strip()
+        source_ref = explicit_source_ref or (
+            f"{source_prefix}/{domain_name}"
+            if source_prefix
+            else f"local://knowledge/{domain_name}"
+        )
+        source_kind = str(metadata.get("source_kind") or "unspecified")
+        reviewed_at = self._optional_text(metadata.get("reviewed_at"))
+        published_at = self._optional_text(metadata.get("published_at"))
+        valid_until = self._optional_text(metadata.get("valid_until"))
+        provenance_fields = (source_prefix or explicit_source_ref, source_kind, reviewed_at)
+        if all(provenance_fields) and source_kind != "unspecified":
+            provenance_status = "complete"
+        elif any(provenance_fields) and source_kind != "unspecified":
+            provenance_status = "partial"
+        else:
+            provenance_status = "missing"
+
+        freshness_status, freshness_note = self._freshness_status(
+            retrieved_at=retrieved_at,
+            valid_until=valid_until,
+        )
+        conflict_refs = [str(item) for item in metadata.get("conflict_refs", [])]
+        declared_conflict_status = str(metadata.get("conflict_status") or "unknown")
+        conflict_status = (
+            "conflict_detected" if conflict_refs else declared_conflict_status
+        )
+        if conflict_status not in {"conflict_detected", "none_declared"}:
+            conflict_status = "unknown"
+
+        uncertainty_notes: list[str] = []
+        if provenance_status == "missing":
+            uncertainty_notes.append(f"source metadata missing for {domain_name}")
+        elif provenance_status == "partial":
+            uncertainty_notes.append(f"source metadata incomplete for {domain_name}")
+        if freshness_note:
+            uncertainty_notes.append(freshness_note)
+        if conflict_status == "unknown":
+            uncertainty_notes.append(f"source conflict status unknown for {domain_name}")
+        if conflict_refs:
+            uncertainty_notes.append(f"source conflicts declared for {domain_name}")
+
+        return KnowledgeSourceEvidenceContract(
+            source_ref=source_ref,
+            domain_name=domain_name,
+            source_kind=source_kind,
+            retrieved_at=retrieved_at,
+            provenance_status=provenance_status,
+            freshness_status=freshness_status,
+            conflict_status=conflict_status,
+            confidence_status=str(metadata.get("confidence_status") or "unverified"),
+            published_at=published_at,
+            reviewed_at=reviewed_at,
+            valid_until=valid_until,
+            conflict_refs=conflict_refs,
+            uncertainty_notes=uncertainty_notes,
+        )
+
+    @staticmethod
+    def _optional_text(value: object | None) -> str | None:
+        normalized = str(value).strip() if value is not None else ""
+        return normalized or None
+
+    @classmethod
+    def _freshness_status(
+        cls,
+        *,
+        retrieved_at: str,
+        valid_until: str | None,
+    ) -> tuple[str, str | None]:
+        if not valid_until:
+            return "unknown", "source freshness window missing"
+        try:
+            retrieval_time = cls._parse_timestamp(retrieved_at)
+            expiry_time = cls._parse_timestamp(valid_until)
+        except ValueError:
+            return "unknown", "source freshness timestamp invalid"
+        if retrieval_time <= expiry_time:
+            return "current", None
+        return "stale", f"source freshness expired at {valid_until}"
+
+    @staticmethod
+    def _parse_timestamp(value: str) -> datetime:
+        normalized = value.replace("Z", "+00:00")
+        parsed = datetime.fromisoformat(normalized)
+        if parsed.tzinfo is None:
+            parsed = parsed.replace(tzinfo=UTC)
+        return parsed.astimezone(UTC)
+
+    @staticmethod
+    def _aggregate_status(
+        values: list[str],
+        *,
+        preferred: str,
+        priority: tuple[str, ...],
+        empty: str,
+    ) -> str:
+        if not values:
+            return empty
+        for candidate in priority:
+            if candidate in values:
+                return candidate
+        return preferred
 
     def list_domains(self) -> list[str]:
         """Expose the curated runtime domains available to deterministic retrieval."""
@@ -255,12 +416,14 @@ class KnowledgeService:
 
     def _load_domains(self, corpus_path: Path) -> dict[str, KnowledgeDomain]:
         payload = loads(corpus_path.read_text(encoding="utf-8"))
+        self.source_policy = dict(payload.get("source_policy", {}))
         return {
             item["name"]: KnowledgeDomain(
                 name=item["name"],
                 keywords=item.get("keywords", []),
                 snippets=item.get("snippets", []),
                 registry_entry=self.domain_routes.get(item["name"]),
+                source_metadata=dict(item.get("source", {})),
             )
             for item in payload.get("domains", [])
         }

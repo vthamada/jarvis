@@ -492,6 +492,58 @@ DOMAIN_EVAL_RUN_SCHEMA = CanonicalSchema(
     ),
 )
 
+KNOWLEDGE_SOURCE_EVIDENCE_SCHEMA = CanonicalSchema(
+    name="KnowledgeSourceEvidenceSchema",
+    contract_name="KnowledgeSourceEvidenceContract",
+    required_fields=(
+        "source_ref",
+        "domain_name",
+        "source_kind",
+        "retrieved_at",
+        "provenance_status",
+        "freshness_status",
+        "conflict_status",
+    ),
+    optional_fields=(
+        "confidence_status",
+        "published_at",
+        "reviewed_at",
+        "valid_until",
+        "conflict_refs",
+        "uncertainty_notes",
+    ),
+    notes=(
+        "Per-source evidence metadata; unknown or missing provenance must remain explicit.",
+    ),
+)
+
+KNOWLEDGE_EVIDENCE_GOVERNANCE_SCHEMA = CanonicalSchema(
+    name="KnowledgeEvidenceGovernanceSchema",
+    contract_name="KnowledgeEvidenceGovernanceContract",
+    required_fields=(
+        "assessment_id",
+        "status",
+        "use_mode",
+        "provenance_status",
+        "freshness_status",
+        "conflict_status",
+        "source_refs",
+        "conditions",
+        "blockers",
+        "uncertainty_notes",
+        "timestamp",
+    ),
+    optional_fields=(
+        "human_review_required",
+        "request_decision_mutation_allowed",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Qualifies knowledge use without mutating the request permission decision.",
+    ),
+)
+
 EVOLUTION_REVIEW_QUEUE_ITEM_SCHEMA = CanonicalSchema(
     name="EvolutionReviewQueueItemSchema",
     contract_name="EvolutionReviewQueueItemContract",

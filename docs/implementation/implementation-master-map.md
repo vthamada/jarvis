@@ -189,12 +189,12 @@ Goal: keep JARVIS current and useful without uncontrolled ingestion.
 | --- | --- | --- | --- | --- | --- |
 | `KNW-001` | Curated local corpus | `implemented_baseline` | Keep stable | Knowledge service | none |
 | `KNW-002` | Domain registry-backed retrieval | `implemented_baseline` | Keep stable | Domain registry | none |
-| `KNW-003` | Knowledge freshness policy | `documentation_only` | Temporal validity and review status | Memory/knowledge | candidate |
-| `KNW-004` | Source provenance in answers | `partial_runtime` | Stronger provenance and evidence refs | Synthesis, knowledge | candidate |
+| `KNW-003` | Knowledge freshness policy | `implemented_baseline` | Temporal validity and review status | Memory/knowledge | none |
+| `KNW-004` | Source provenance in answers | `implemented_baseline` | Stronger provenance and evidence refs | Synthesis, knowledge | none |
 | `KNW-005` | External research ingestion | `missing` | Governed import queue, no auto-trust | Governance | later |
 | `KNW-006` | Technology radar refresh loop | `minimum_baseline` | Scheduled/manual technology review cycle | Tech absorption | candidate |
 | `KNW-007` | Domain knowledge packs | `minimum_baseline` | Expand reviewed versioned packs after eval evidence | Domain onboarding | later |
-| `KNW-008` | Knowledge conflict resolution | `missing` | Compare sources and surface uncertainty | Governance, synthesis | later |
+| `KNW-008` | Knowledge conflict resolution | `minimum_baseline` | Compare sources and surface uncertainty | Governance, synthesis | later |
 
 ### Track H -- Observability, Evals And Quality
 
@@ -293,7 +293,7 @@ Recommended chain for the next few implementation slices:
 
 1. Preserve the closed `MB-171` governed domain onboarding protocol.
 2. Preserve the closed `MB-172` offline domain eval baseline.
-3. Execute `MB-173` knowledge provenance/freshness.
+3. Preserve the closed `MB-173` knowledge provenance/freshness baseline.
 4. Execute `MB-174` integrated readiness closure.
 
 Why this order:
@@ -535,7 +535,8 @@ Map IDs: `KNW-003`, `KNW-004`, `KNW-008`.
 Goal: strengthen source provenance, freshness status and uncertainty/conflict
 signals in knowledge-backed answers.
 
-Status: ready after `MB-172`.
+Status: closed in `MB-173`; source, freshness, conflict and uncertainty signals
+reach governed synthesis and events without changing request permission.
 
 ### MB-174 -- Regression And Readiness Dashboard
 
@@ -543,6 +544,8 @@ Map IDs: `OBS-007`, `OBS-008`, `DOC-010`.
 
 Goal: consolidate capability readiness, regression signals and stale-doc/status
 drift into a compact CLI/report.
+
+Status: ready after `MB-173`.
 
 ## 12. What Must Not Be Pulled Next By Inertia
 

@@ -36,6 +36,7 @@ from shared.contracts import (
     GovernanceCheckContract,
     GovernanceDecisionContract,
     InputContract,
+    KnowledgeEvidenceGovernanceContract,
     LongHorizonGoalStrategyContract,
     MemoryRecordContract,
     MemoryRecoveryContract,
@@ -93,6 +94,7 @@ class OrchestratorResponse:
     memory_record: MemoryRecordContract
     recovered_context: list[str]
     knowledge_result: KnowledgeRetrievalResult | None = None
+    knowledge_evidence_governance: KnowledgeEvidenceGovernanceContract | None = None
     artifact_results: list[ArtifactResultContract] = field(default_factory=list)
     active_minds: list[str] = field(default_factory=list)
     active_domains: list[str] = field(default_factory=list)
@@ -1250,10 +1252,22 @@ class OrchestratorService:
             )
 
         knowledge_result = None
+        knowledge_evidence_governance = None
         if directive.should_query_knowledge:
             knowledge_result = self.knowledge_service.retrieve_for_intent(
                 intent=directive.intent,
                 query=contract.content,
+                as_of=contract.timestamp,
+            )
+            knowledge_evidence_governance = (
+                self.governance_service.assess_knowledge_evidence(
+                    provenance_status=knowledge_result.provenance_status,
+                    freshness_status=knowledge_result.freshness_status,
+                    conflict_status=knowledge_result.conflict_status,
+                    source_refs=knowledge_result.sources,
+                    uncertainty_notes=knowledge_result.uncertainty_notes,
+                    assessed_at=contract.timestamp,
+                )
             )
             events.append(
                 self.make_event(
@@ -1273,6 +1287,10 @@ class OrchestratorService:
                             for route in knowledge_result.specialist_routes
                         ],
                         "sources": knowledge_result.sources,
+                        **self._knowledge_evidence_event_payload(
+                            knowledge_result,
+                            knowledge_evidence_governance,
+                        ),
                     },
                 )
             )
@@ -2019,6 +2037,7 @@ class OrchestratorService:
             memory_recovery_result=memory_recovery_result,
             cognitive_snapshot=cognitive_snapshot,
             knowledge_result=knowledge_result,
+            knowledge_evidence_governance=knowledge_evidence_governance,
             deliberative_plan=deliberative_plan,
             specialist_review=specialist_review,
             operation_result=operation_result,
@@ -2031,6 +2050,10 @@ class OrchestratorService:
                 contract,
                 {
                     "intent": directive.intent,
+                    **self._knowledge_evidence_event_payload(
+                        knowledge_result,
+                        knowledge_evidence_governance,
+                    ),
                     "continuity_action": deliberative_plan.continuity_action,
                     "continuity_source": deliberative_plan.continuity_source,
                     "continuity_target_mission_id": (
@@ -2440,6 +2463,7 @@ class OrchestratorService:
                 "memory_recovery_result": memory_recovery_result,
                 "memory_record_result": memory_record_result,
                 "knowledge_result": knowledge_result,
+                "knowledge_evidence_governance": knowledge_evidence_governance,
                 "artifact_results": artifact_results,
                 "cognitive_snapshot": cognitive_snapshot,
                 "mission_runtime_state": mission_runtime_state,
@@ -4875,6 +4899,68 @@ class OrchestratorService:
             matches.append("domain_match")
         return "+".join(matches) or "unknown_match"
 
+    @staticmethod
+    def _knowledge_evidence_event_payload(
+        knowledge_result: KnowledgeRetrievalResult | None,
+        assessment: KnowledgeEvidenceGovernanceContract | None,
+    ) -> dict[str, object]:
+        if knowledge_result is None:
+            return {
+                "knowledge_source_evidence": [],
+                "knowledge_provenance_status": "not_applicable",
+                "knowledge_freshness_status": "not_applicable",
+                "knowledge_conflict_status": "not_applicable",
+                "knowledge_uncertainty_notes": [],
+                "knowledge_evidence_governance_status": "not_applicable",
+                "knowledge_evidence_use_mode": "not_applicable",
+                "knowledge_evidence_conditions": [],
+                "knowledge_evidence_blockers": [],
+                "knowledge_evidence_human_review_required": False,
+                "knowledge_request_decision_mutation_allowed": False,
+            }
+        return {
+            "knowledge_source_evidence": [
+                {
+                    "source_ref": item.source_ref,
+                    "domain_name": item.domain_name,
+                    "source_kind": item.source_kind,
+                    "retrieved_at": item.retrieved_at,
+                    "published_at": item.published_at,
+                    "reviewed_at": item.reviewed_at,
+                    "valid_until": item.valid_until,
+                    "provenance_status": item.provenance_status,
+                    "freshness_status": item.freshness_status,
+                    "conflict_status": item.conflict_status,
+                    "confidence_status": item.confidence_status,
+                    "conflict_refs": list(item.conflict_refs),
+                    "uncertainty_notes": list(item.uncertainty_notes),
+                }
+                for item in knowledge_result.source_evidence
+            ],
+            "knowledge_provenance_status": knowledge_result.provenance_status,
+            "knowledge_freshness_status": knowledge_result.freshness_status,
+            "knowledge_conflict_status": knowledge_result.conflict_status,
+            "knowledge_uncertainty_notes": list(knowledge_result.uncertainty_notes),
+            "knowledge_evidence_governance_status": (
+                assessment.status if assessment else "unassessed"
+            ),
+            "knowledge_evidence_use_mode": (
+                assessment.use_mode if assessment else "unassessed"
+            ),
+            "knowledge_evidence_conditions": (
+                list(assessment.conditions) if assessment else []
+            ),
+            "knowledge_evidence_blockers": (
+                list(assessment.blockers) if assessment else []
+            ),
+            "knowledge_evidence_human_review_required": (
+                assessment.human_review_required if assessment else True
+            ),
+            "knowledge_request_decision_mutation_allowed": (
+                assessment.request_decision_mutation_allowed if assessment else False
+            ),
+        }
+
     def _domain_registry_event_payload(
         self,
         knowledge_result: KnowledgeRetrievalResult,
@@ -5013,6 +5099,7 @@ class OrchestratorService:
         memory_recovery_result: MemoryRecoveryResult,
         cognitive_snapshot,
         knowledge_result: KnowledgeRetrievalResult | None,
+        knowledge_evidence_governance: KnowledgeEvidenceGovernanceContract | None,
         deliberative_plan: DeliberativePlanContract,
         specialist_review: SpecialistReview,
         operation_result: OperationResultContract | None,
@@ -5041,6 +5128,22 @@ class OrchestratorService:
                 active_minds=cognitive_snapshot.active_minds,
                 active_domains=cognitive_snapshot.active_domains,
                 knowledge_snippets=knowledge_result.snippets if knowledge_result else [],
+                knowledge_source_refs=(
+                    list(knowledge_result.sources) if knowledge_result else []
+                ),
+                knowledge_provenance_status=(
+                    knowledge_result.provenance_status if knowledge_result else None
+                ),
+                knowledge_freshness_status=(
+                    knowledge_result.freshness_status if knowledge_result else None
+                ),
+                knowledge_conflict_status=(
+                    knowledge_result.conflict_status if knowledge_result else None
+                ),
+                knowledge_uncertainty_notes=(
+                    list(knowledge_result.uncertainty_notes) if knowledge_result else []
+                ),
+                knowledge_evidence_governance=knowledge_evidence_governance,
                 deliberative_plan=deliberative_plan,
                 specialist_contributions=specialist_review.contributions,
                 operation_result=operation_result,
@@ -6223,6 +6326,7 @@ class OrchestratorService:
             memory_record=memory_record_result.record_contract,
             recovered_context=memory_recovery_result.recovered_items,
             knowledge_result=state["knowledge_result"],
+            knowledge_evidence_governance=state.get("knowledge_evidence_governance"),
             artifact_results=state["artifact_results"],
             active_minds=cognitive_snapshot.active_minds,
             active_domains=cognitive_snapshot.active_domains,

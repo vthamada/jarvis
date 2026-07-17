@@ -19,6 +19,7 @@ class OrchestratorFlowState(TypedDict, total=False):
     directive: object
     memory_recovery_result: object
     knowledge_result: object | None
+    knowledge_evidence_governance: object | None
     cognitive_snapshot: object
     deliberative_plan: object
     specialist_review: object
@@ -144,10 +145,22 @@ class LangGraphFlowRunner:
         directive = state["directive"]
         events = list(state["events"])
         knowledge_result = None
+        knowledge_evidence_governance = None
         if directive.should_query_knowledge:
             knowledge_result = self.orchestrator.knowledge_service.retrieve_for_intent(
                 intent=directive.intent,
                 query=contract.content,
+                as_of=contract.timestamp,
+            )
+            knowledge_evidence_governance = (
+                self.orchestrator.governance_service.assess_knowledge_evidence(
+                    provenance_status=knowledge_result.provenance_status,
+                    freshness_status=knowledge_result.freshness_status,
+                    conflict_status=knowledge_result.conflict_status,
+                    source_refs=knowledge_result.sources,
+                    uncertainty_notes=knowledge_result.uncertainty_notes,
+                    assessed_at=contract.timestamp,
+                )
             )
             events.append(
                 self.orchestrator.make_event(
@@ -167,6 +180,10 @@ class LangGraphFlowRunner:
                             for route in knowledge_result.specialist_routes
                         ],
                         "sources": knowledge_result.sources,
+                        **self.orchestrator._knowledge_evidence_event_payload(
+                            knowledge_result,
+                            knowledge_evidence_governance,
+                        ),
                     },
                 )
             )
@@ -177,7 +194,11 @@ class LangGraphFlowRunner:
                     self.orchestrator._domain_registry_event_payload(knowledge_result),
                 )
             )
-        return {"knowledge_result": knowledge_result, "events": events}
+        return {
+            "knowledge_result": knowledge_result,
+            "knowledge_evidence_governance": knowledge_evidence_governance,
+            "events": events,
+        }
 
     def _compose_context(self, state: OrchestratorFlowState) -> OrchestratorFlowState:
         contract = state["contract"]
@@ -714,6 +735,9 @@ class LangGraphFlowRunner:
             memory_recovery_result=state["memory_recovery_result"],
             cognitive_snapshot=state["cognitive_snapshot"],
             knowledge_result=state.get("knowledge_result"),
+            knowledge_evidence_governance=state.get(
+                "knowledge_evidence_governance"
+            ),
             deliberative_plan=state["deliberative_plan"],
             specialist_review=state["specialist_review"],
             operation_result=state.get("operation_result"),
@@ -726,6 +750,10 @@ class LangGraphFlowRunner:
                 contract,
                 {
                     "intent": directive.intent,
+                    **self.orchestrator._knowledge_evidence_event_payload(
+                        state.get("knowledge_result"),
+                        state.get("knowledge_evidence_governance"),
+                    ),
                     "contract_validation_status": (
                         state["deliberative_plan"].contract_validation_status
                     ),
