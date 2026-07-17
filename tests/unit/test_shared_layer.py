@@ -662,7 +662,7 @@ def test_workflow_evolution_contracts_are_explicit_and_inactive() -> None:
     assert WORKFLOW_EVOLUTION_BUILD_RESULT_SCHEMA.contract_name == (
         "WorkflowEvolutionBuildResultContract"
     )
-    assert "step_additions" in WORKFLOW_EVOLUTION_REQUEST_SCHEMA.required_fields
+    assert "step_additions" in WORKFLOW_EVOLUTION_REQUEST_SCHEMA.optional_fields
     assert "candidate" in WORKFLOW_EVOLUTION_BUILD_RESULT_SCHEMA.optional_fields
 
 

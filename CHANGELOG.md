@@ -104,6 +104,12 @@
 - `evolution-lab` persiste a proposta do pattern e exige que decisao, status, operador e timestamp coincidam com a ultima revisao humana gravada antes de construir a variante;
 - o E2E usa memoria real ate o side-registry e comprova bloqueio de review forjado, delta invalido e claim de escrita; a candidata permanece inativa e `MB-183` e o unico item tecnico `ready`.
 
+### MB-183 compara workflow baseline e candidata offline
+
+- contratos/schemas `WorkflowVariantEval*` formalizam casos equivalentes, checks de definicao, metricas baseline/candidata, deltas, melhorias, regressoes e run agregada;
+- `evolution-lab` valida identidade, evidencia revisada, elementos esperados e cinco dimensoes bounded; `observability-service` agrega pass rate e regressao, e o runner exige side-registry atual e inativo;
+- testes comprovam melhoria sem regressao, regressao bloqueada e authority claims contidos; run verde permanece `manual_gate_only`, e `MB-184` e o unico item tecnico `ready`.
+
 ## 2026-07-04
 
 ### MB-161 fecha anchors de evidencia de memoria semantica

@@ -63,6 +63,7 @@ side-registry snapshot. It never writes to the active route registry.
 
 ## Next gate
 
-`MB-183` must compare baseline and candidate under equivalent offline cases.
-Even a passing comparison cannot authorize promotion; workflow release and
-rollback remain reserved for the later human-governed gate.
+`MB-183` now compares baseline and candidate under equivalent offline cases,
+with fixed success, contract, rework, checkpoint and memory metrics. Even a
+passing comparison cannot authorize promotion; workflow release and rollback
+remain reserved for the later human-governed gate.

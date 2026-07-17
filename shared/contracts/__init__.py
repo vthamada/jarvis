@@ -29,6 +29,14 @@ from shared.types import (
     UpdatedAt,
 )
 
+WORKFLOW_VARIANT_EVAL_METRICS = (
+    "success_score",
+    "contract_adherence",
+    "rework_rate",
+    "checkpoint_coverage",
+    "memory_causality",
+)
+
 
 @dataclass
 class SurfaceIdentityContract:
@@ -497,6 +505,79 @@ class WorkflowEvolutionBuildResultContract:
     human_review_required: bool = True
     active_registry_write_allowed: bool = False
     runtime_activation_allowed: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass
+class WorkflowVariantEvalCaseContract:
+    case_id: str
+    scenario_ref: str
+    workflow_profile: str
+    route: str
+    baseline_version_ref: str
+    candidate_version_ref: str
+    required_candidate_steps: list[str]
+    required_candidate_checkpoints: list[str]
+    required_candidate_decision_points: list[str]
+    required_candidate_success_criteria: list[str]
+    baseline_metrics: dict[str, float]
+    candidate_metrics: dict[str, float]
+    evidence_refs: list[str]
+    offline_only: bool = True
+    human_review_required: bool = True
+    promotion_authorized: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass
+class WorkflowVariantEvalCaseResultContract:
+    case_id: str
+    scenario_ref: str
+    workflow_profile: str
+    route: str
+    baseline_version_ref: str
+    candidate_version_ref: str
+    passed: bool
+    checks: dict[str, bool]
+    baseline_metrics: dict[str, float]
+    candidate_metrics: dict[str, float]
+    metric_deltas: dict[str, float]
+    improvement_signals: list[str]
+    regression_flags: list[str]
+    failures: list[str]
+    evidence_refs: list[str]
+    offline_only: bool = True
+    promotion_authorized: bool = False
+
+
+@dataclass
+class WorkflowVariantEvalRunContract:
+    run_id: str
+    workflow_profile: str
+    route: str
+    baseline_version_ref: str
+    candidate_version_ref: str
+    status: str
+    readiness_status: str
+    promotion_readiness: str
+    comparison_conclusion: str
+    pass_rate: float
+    total_cases: int
+    passed_cases: int
+    failed_cases: int
+    aggregate_baseline_metrics: dict[str, float]
+    aggregate_candidate_metrics: dict[str, float]
+    aggregate_metric_deltas: dict[str, float]
+    case_results: list[WorkflowVariantEvalCaseResultContract]
+    regression_flags: list[str]
+    evidence_refs: list[str]
+    blockers: list[str]
+    generated_at: Timestamp
+    offline_only: bool = True
+    human_review_required: bool = True
+    promotion_authorized: bool = False
     automatic_promotion_allowed: bool = False
     core_mutation_allowed: bool = False
 

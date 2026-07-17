@@ -642,13 +642,17 @@ Map IDs: `EVL-005`, `EVL-008`, `OBS-009`.
 
 Goal: compare workflow baseline and candidate under equivalent offline cases.
 
-Status: ready after `MB-182`.
+Status: closed in `MB-183`; fixed success, contract, rework, checkpoint and
+memory metrics now produce fail-closed offline comparison evidence without
+promotion authority.
 
 ### MB-184 -- Workflow Promotion And Rollback Gate
 
 Map IDs: `EVL-006`, `EVL-008`, `GOV-009`.
 
 Goal: reuse human review, release gates and rollback for workflow candidates.
+
+Status: ready after `MB-183`.
 
 ### MB-185 -- Routing Adaptation Evidence
 

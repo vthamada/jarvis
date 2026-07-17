@@ -64,6 +64,9 @@ O repositorio ja possui um corte operacional do laboratorio evolutivo:
 - builder de variante de workflow que exige pattern evidence elegivel, revisao
   humana persistida e delta bounded; a variante retorna a `needs_review` e
   permanece inativa no side-registry.
+- comparacao offline equivalente de workflow baseline/candidata, medindo
+  sucesso, aderencia de contrato, retrabalho, checkpoints e causalidade de
+  memoria; qualquer regressao bloqueia readiness e nenhum resultado promove.
 
 ---
 

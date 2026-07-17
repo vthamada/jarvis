@@ -12,6 +12,7 @@ from uuid import uuid4
 
 from evolution_lab.repository import EvolutionLabRepository
 from shared.contracts import (
+    WORKFLOW_VARIANT_EVAL_METRICS,
     EvolutionDecisionContract,
     EvolutionProposalContract,
     EvolutionReviewDecisionContract,
@@ -34,6 +35,8 @@ from shared.contracts import (
     WorkflowEvolutionRequestContract,
     WorkflowProfileVersionContract,
     WorkflowProfileVersionRegistryContract,
+    WorkflowVariantEvalCaseContract,
+    WorkflowVariantEvalCaseResultContract,
 )
 from shared.domain_registry import (
     build_active_workflow_version_registry,
@@ -70,6 +73,14 @@ EVOLUTION_REVIEW_ACTIONS = {
 }
 RISKY_REVIEW_ACTIONS = {"approve", "sandbox"}
 REVIEWED_LEARNING_GUIDANCE_STATUSES = {"approved", "sandboxed"}
+WORKFLOW_VARIANT_HIGHER_IS_BETTER = frozenset(
+    {
+        "success_score",
+        "contract_adherence",
+        "checkpoint_coverage",
+        "memory_causality",
+    }
+)
 
 
 @dataclass(frozen=True)
@@ -2419,6 +2430,180 @@ class EvolutionLabService:
             candidate=candidate,
         )
 
+    @staticmethod
+    def evaluate_workflow_variant_case(
+        *,
+        baseline: WorkflowProfileVersionContract,
+        candidate: WorkflowProfileVersionContract,
+        case: WorkflowVariantEvalCaseContract,
+    ) -> WorkflowVariantEvalCaseResultContract:
+        """Compare one equivalent offline case without binding the candidate."""
+
+        checks = {
+            "equivalent_identity": (
+                case.workflow_profile == baseline.workflow_profile
+                == candidate.workflow_profile
+                and case.route == baseline.route == candidate.route
+                and case.baseline_version_ref == baseline.workflow_version_id
+                and case.candidate_version_ref == candidate.workflow_version_id
+            ),
+            "baseline_contract_complete": all(
+                (
+                    baseline.workflow_steps,
+                    baseline.workflow_checkpoints,
+                    baseline.workflow_decision_points,
+                    baseline.success_criteria,
+                )
+            ),
+            "candidate_contract_complete": all(
+                (
+                    candidate.workflow_steps,
+                    candidate.workflow_checkpoints,
+                    candidate.workflow_decision_points,
+                    candidate.success_criteria,
+                )
+            ),
+            "candidate_is_inactive": (
+                candidate.lifecycle_status == "candidate_inactive"
+                and candidate.runtime_binding_status == "inactive_candidate"
+                and candidate.review_status == "needs_review"
+                and candidate.human_review_required
+                and candidate.sandbox_required
+            ),
+            "candidate_matches_baseline": (
+                baseline.lifecycle_status == "baseline_snapshot"
+                and candidate.baseline_version_ref == baseline.workflow_version_id
+                and candidate.source_registry_ref == baseline.source_registry_ref
+                and candidate.source_registry_fingerprint
+                == baseline.source_registry_fingerprint
+                and candidate.definition_hash != baseline.definition_hash
+            ),
+            "reviewed_pattern_evidence": (
+                any(
+                    reference.startswith("recurring-pattern://")
+                    for reference in candidate.evidence_refs
+                )
+                and any(
+                    reference.startswith("review-decision://")
+                    for reference in candidate.evidence_refs
+                )
+            ),
+            "required_candidate_steps": set(case.required_candidate_steps).issubset(
+                candidate.workflow_steps
+            ),
+            "required_candidate_checkpoints": set(
+                case.required_candidate_checkpoints
+            ).issubset(candidate.workflow_checkpoints),
+            "required_candidate_decision_points": set(
+                case.required_candidate_decision_points
+            ).issubset(candidate.workflow_decision_points),
+            "required_candidate_success_criteria": set(
+                case.required_candidate_success_criteria
+            ).issubset(candidate.success_criteria),
+            "candidate_expectations_declared": any(
+                (
+                    case.required_candidate_steps,
+                    case.required_candidate_checkpoints,
+                    case.required_candidate_decision_points,
+                    case.required_candidate_success_criteria,
+                )
+            ),
+            "candidate_expectations_target_delta": any(
+                (
+                    any(
+                        item not in baseline.workflow_steps
+                        for item in case.required_candidate_steps
+                    ),
+                    any(
+                        item not in baseline.workflow_checkpoints
+                        for item in case.required_candidate_checkpoints
+                    ),
+                    any(
+                        item not in baseline.workflow_decision_points
+                        for item in case.required_candidate_decision_points
+                    ),
+                    any(
+                        item not in baseline.success_criteria
+                        for item in case.required_candidate_success_criteria
+                    ),
+                )
+            ),
+            "bounded_offline_evidence": EvolutionLabService._workflow_eval_case_is_bounded(
+                case
+            ),
+            "no_authority_claims": (
+                case.offline_only
+                and case.human_review_required
+                and not case.promotion_authorized
+                and not case.automatic_promotion_allowed
+                and not case.core_mutation_allowed
+                and not candidate.active_registry_write_allowed
+                and not candidate.runtime_activation_allowed
+                and not candidate.automatic_promotion_allowed
+                and not candidate.core_mutation_allowed
+            ),
+        }
+        baseline_metrics, baseline_metrics_valid = (
+            EvolutionLabService._workflow_eval_metrics(case.baseline_metrics)
+        )
+        candidate_metrics, candidate_metrics_valid = (
+            EvolutionLabService._workflow_eval_metrics(case.candidate_metrics)
+        )
+        checks["metrics_complete"] = (
+            baseline_metrics_valid and candidate_metrics_valid
+        )
+        metric_deltas = {
+            metric: round(candidate_metrics[metric] - baseline_metrics[metric], 4)
+            for metric in WORKFLOW_VARIANT_EVAL_METRICS
+        }
+        regression_flags = []
+        improvement_signals = []
+        if checks["metrics_complete"]:
+            for metric, delta in metric_deltas.items():
+                regressed = (
+                    delta < 0
+                    if metric in WORKFLOW_VARIANT_HIGHER_IS_BETTER
+                    else delta > 0
+                )
+                improved = (
+                    delta > 0
+                    if metric in WORKFLOW_VARIANT_HIGHER_IS_BETTER
+                    else delta < 0
+                )
+                if regressed:
+                    regression_flags.append(f"{metric}_regressed")
+                if improved:
+                    improvement_signals.append(f"{metric}_improved")
+        checks["no_metric_regression"] = not regression_flags
+        checks["measurable_improvement"] = bool(improvement_signals)
+        failures = [name for name, passed in checks.items() if not passed]
+        evidence_refs = EvolutionLabService._unique_values(
+            [
+                case.scenario_ref,
+                baseline.workflow_version_id,
+                candidate.workflow_version_id,
+                *case.evidence_refs,
+                *candidate.evidence_refs,
+            ]
+        )[:50]
+        return WorkflowVariantEvalCaseResultContract(
+            case_id=case.case_id,
+            scenario_ref=case.scenario_ref,
+            workflow_profile=case.workflow_profile,
+            route=case.route,
+            baseline_version_ref=case.baseline_version_ref,
+            candidate_version_ref=case.candidate_version_ref,
+            passed=not failures,
+            checks=checks,
+            baseline_metrics=baseline_metrics,
+            candidate_metrics=candidate_metrics,
+            metric_deltas=metric_deltas,
+            improvement_signals=improvement_signals,
+            regression_flags=regression_flags,
+            failures=failures,
+            evidence_refs=evidence_refs,
+        )
+
     def build_workflow_version_registry(
         self,
         *,
@@ -2469,6 +2654,56 @@ class EvolutionLabService:
                 "success_criteria_removals",
             )
         }
+
+    @staticmethod
+    def _workflow_eval_metrics(
+        metrics: dict[str, float],
+    ) -> tuple[dict[str, float], bool]:
+        valid = set(metrics) == set(WORKFLOW_VARIANT_EVAL_METRICS)
+        normalized: dict[str, float] = {}
+        for metric in WORKFLOW_VARIANT_EVAL_METRICS:
+            value = metrics.get(metric)
+            if (
+                isinstance(value, bool)
+                or not isinstance(value, (int, float))
+                or not 0.0 <= float(value) <= 1.0
+            ):
+                valid = False
+                normalized[metric] = 0.0
+            else:
+                normalized[metric] = round(float(value), 4)
+        return normalized, valid
+
+    @staticmethod
+    def _workflow_eval_case_is_bounded(
+        case: WorkflowVariantEvalCaseContract,
+    ) -> bool:
+        if (
+            not case.case_id
+            or len(case.case_id) > 100
+            or not case.scenario_ref
+            or len(case.scenario_ref) > 500
+            or len(case.evidence_refs) < 2
+            or len(case.evidence_refs) > 50
+        ):
+            return False
+        values = (
+            *case.required_candidate_steps,
+            *case.required_candidate_checkpoints,
+            *case.required_candidate_decision_points,
+            *case.required_candidate_success_criteria,
+            *case.evidence_refs,
+        )
+        lists = (
+            case.required_candidate_steps,
+            case.required_candidate_checkpoints,
+            case.required_candidate_decision_points,
+            case.required_candidate_success_criteria,
+        )
+        return (
+            all(len(items) <= 20 and len(items) == len(set(items)) for items in lists)
+            and all(str(value).strip() and len(str(value)) <= 500 for value in values)
+        )
 
     @classmethod
     def _workflow_candidate_build_blockers(

@@ -14,6 +14,7 @@ from observability_service.agentic import (
 )
 from observability_service.repository import ObservabilityRepository
 from shared.contracts import (
+    WORKFLOW_VARIANT_EVAL_METRICS,
     CapabilityReadinessContract,
     DomainEvalCaseResultContract,
     DomainEvalRunContract,
@@ -25,6 +26,8 @@ from shared.contracts import (
     SkillCandidateContract,
     SkillEvolutionOperatorItemContract,
     SkillEvolutionOperatorViewContract,
+    WorkflowVariantEvalCaseResultContract,
+    WorkflowVariantEvalRunContract,
 )
 from shared.domain_registry import workflow_runtime_guidance
 from shared.eval_expansion import derive_expanded_eval_state
@@ -533,6 +536,126 @@ class ObservabilityService:
             failed_cases=failed_cases,
             case_results=list(case_results),
             evidence_refs=list(evidence_refs),
+            blockers=resolved_blockers,
+            generated_at=generated_at,
+        )
+
+    @staticmethod
+    def build_workflow_variant_eval_run(
+        *,
+        run_id: str,
+        workflow_profile: str,
+        route: str,
+        baseline_version_ref: str,
+        candidate_version_ref: str,
+        case_results: list[WorkflowVariantEvalCaseResultContract],
+        minimum_pass_rate: float,
+        evidence_refs: list[str],
+        generated_at: str,
+        blockers: list[str] | None = None,
+    ) -> WorkflowVariantEvalRunContract:
+        """Aggregate equivalent workflow comparisons without release authority."""
+
+        resolved_blockers = list(blockers or [])
+        if not 0.0 < minimum_pass_rate <= 1.0:
+            resolved_blockers.append("invalid_minimum_pass_rate")
+        if not case_results:
+            resolved_blockers.append("no_workflow_variant_eval_results")
+        if len(case_results) > 32:
+            resolved_blockers.append("too_many_workflow_variant_eval_results")
+        case_ids = [result.case_id for result in case_results]
+        if len(case_ids) != len(set(case_ids)):
+            resolved_blockers.append("duplicate_workflow_variant_case_id")
+        regression_flags: list[str] = []
+        for result in case_results:
+            if (
+                result.workflow_profile != workflow_profile
+                or result.route != route
+                or result.baseline_version_ref != baseline_version_ref
+                or result.candidate_version_ref != candidate_version_ref
+            ):
+                resolved_blockers.append(f"case:{result.case_id}:scope_mismatch")
+            if (
+                set(result.baseline_metrics) != set(WORKFLOW_VARIANT_EVAL_METRICS)
+                or set(result.candidate_metrics) != set(WORKFLOW_VARIANT_EVAL_METRICS)
+                or set(result.metric_deltas) != set(WORKFLOW_VARIANT_EVAL_METRICS)
+            ):
+                resolved_blockers.append(
+                    f"case:{result.case_id}:metric_dimensions_mismatch"
+                )
+            resolved_blockers.extend(
+                f"case:{result.case_id}:{failure}" for failure in result.failures
+            )
+            regression_flags.extend(
+                f"case:{result.case_id}:{flag}" for flag in result.regression_flags
+            )
+
+        total_cases = len(case_results)
+        passed_cases = sum(result.passed for result in case_results)
+        failed_cases = total_cases - passed_cases
+        pass_rate = round(passed_cases / total_cases, 4) if total_cases else 0.0
+
+        def aggregate(attribute: str) -> dict[str, float]:
+            if not total_cases:
+                return {metric: 0.0 for metric in WORKFLOW_VARIANT_EVAL_METRICS}
+            return {
+                metric: round(
+                    sum(
+                        getattr(result, attribute).get(metric, 0.0)
+                        for result in case_results
+                    )
+                    / total_cases,
+                    4,
+                )
+                for metric in WORKFLOW_VARIANT_EVAL_METRICS
+            }
+
+        baseline_metrics = aggregate("baseline_metrics")
+        candidate_metrics = aggregate("candidate_metrics")
+        metric_deltas = {
+            metric: round(candidate_metrics[metric] - baseline_metrics[metric], 4)
+            for metric in WORKFLOW_VARIANT_EVAL_METRICS
+        }
+        resolved_blockers.extend(regression_flags)
+        resolved_blockers = sorted(set(resolved_blockers))
+        passed = (
+            not resolved_blockers
+            and pass_rate >= minimum_pass_rate
+            and all(result.improvement_signals for result in case_results)
+        )
+        comparison_conclusion = (
+            "candidate_improved_without_regression"
+            if passed
+            else (
+                "candidate_regression_detected"
+                if regression_flags
+                else "insufficient_or_invalid_evidence"
+            )
+        )
+        return WorkflowVariantEvalRunContract(
+            run_id=run_id,
+            workflow_profile=workflow_profile,
+            route=route,
+            baseline_version_ref=baseline_version_ref,
+            candidate_version_ref=candidate_version_ref,
+            status="passed" if passed else "failed",
+            readiness_status=(
+                "candidate_ready_for_human_gate_review"
+                if passed
+                else "attention_required"
+            ),
+            promotion_readiness="manual_gate_only" if passed else "blocked",
+            comparison_conclusion=comparison_conclusion,
+            pass_rate=pass_rate,
+            total_cases=total_cases,
+            passed_cases=passed_cases,
+            failed_cases=failed_cases,
+            aggregate_baseline_metrics=baseline_metrics,
+            aggregate_candidate_metrics=candidate_metrics,
+            aggregate_metric_deltas=metric_deltas,
+            case_results=list(case_results),
+            regression_flags=sorted(set(regression_flags)),
+            evidence_refs=list(dict.fromkeys(evidence_refs))[:100],
             blockers=resolved_blockers,
             generated_at=generated_at,
         )
