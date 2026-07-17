@@ -704,6 +704,10 @@ Map IDs: `OBS-007`, `OBS-008`, `DOC-010`.
 
 Goal: close the slice with dashboard, regression and documentation evidence.
 
+Status: closed in `MB-189`; longitudinal status, regression flags, evidence
+identity and authority safety now reach the repository readiness dashboard,
+and the `MB-176` to `MB-189` queue is explicitly exhausted.
+
 ## 13. What Must Not Be Pulled Next By Inertia
 
 Do not open these without explicit phase decision:

@@ -1325,6 +1325,10 @@ REGRESSION_READINESS_REPORT_SCHEMA = CanonicalSchema(
     ),
     optional_fields=(
         "next_ready_item",
+        "longitudinal_learning_status",
+        "longitudinal_regression_flags",
+        "longitudinal_learning_evidence_ref",
+        "longitudinal_learning_authority_safe",
         "read_only",
         "autonomous_release_allowed",
     ),

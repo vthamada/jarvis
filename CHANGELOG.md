@@ -8,6 +8,12 @@
 - `observability-service` compara sucesso, retrabalho, feedback, regressao e rollback contra baseline, enquanto o coletor cruza memoria revisada, auditorias runtime e evals de skills/workflows sem fabricar impacto de versao inativa;
 - `jarvis-console learning-report` expoe a evidencia, testes locais/E2E preservam stores e autoridade automatica permanece falsa; `MB-189` passa a ser o unico item tecnico `ready`.
 
+### MB-189 fecha readiness da evolucao de skills e workflows
+
+- o dashboard integra status, regressions, evidence ref e safety do relatorio longitudinal sem transformar metricas em release authority;
+- regressao valida vira warning; JSON invalido ou claim de promocao, autopromocao ou Core mutation bloqueia readiness;
+- testes cobrem integracao, adulteracao, CLI e fila esgotada, e o documento de closure consolida `MB-176` a `MB-189`; a fila micro fica sem item `ready` ate repriorizacao explicita.
+
 ## 2026-07-16
 
 ### MB-166 define checklist sandbox-to-release

@@ -65,6 +65,7 @@ from shared.schemas import (
     PROMOTION_GATE_DECISION_SCHEMA,
     RECURRING_PATTERN_EVIDENCE_SCHEMA,
     RECURRING_PATTERN_REPORT_SCHEMA,
+    REGRESSION_READINESS_REPORT_SCHEMA,
     REVIEWED_LEARNING_GUIDANCE_SCHEMA,
     SANDBOX_TO_RELEASE_CHECKLIST_SCHEMA,
     SKILL_CANDIDATE_SCHEMA,
@@ -182,6 +183,18 @@ def test_longitudinal_learning_contracts_are_read_only_shared_schemas() -> None:
     assert report.promotion_authorized is False
     assert report.automatic_promotion_allowed is False
     assert report.core_mutation_allowed is False
+
+
+def test_regression_readiness_schema_includes_longitudinal_closure_fields() -> None:
+    assert "longitudinal_learning_status" in (
+        REGRESSION_READINESS_REPORT_SCHEMA.optional_fields
+    )
+    assert "longitudinal_regression_flags" in (
+        REGRESSION_READINESS_REPORT_SCHEMA.optional_fields
+    )
+    assert "longitudinal_learning_authority_safe" in (
+        REGRESSION_READINESS_REPORT_SCHEMA.optional_fields
+    )
 
 
 def test_surface_identity_contract_declares_minimum_continuity_fields() -> None:

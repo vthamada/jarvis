@@ -3570,7 +3570,7 @@ Fora de escopo:
 
 - `id`: `MB-189`
 - `prioridade`: `P2`
-- `status`: `ready`
+- `status`: `completed`
 - `eixo_do_mestre`: `qualidade`, `documentacao`, `readiness`
 - `map_ids`: `OBS-007`, `OBS-008`, `DOC-010`
 - `workflow_profile_afetado`: `operational_readiness_workflow`
@@ -3580,6 +3580,8 @@ Fora de escopo:
 - `dependencias`: `MB-188`
 - `criterio_de_aceite`: dashboard registra capacidades/status sem drift, gate padrao passa e nenhuma promocao/autonomia fora de escopo foi aberta.
 - `gate_minimo`: dashboard com gate padrao e document guardrails
+- `impacto_no_baseline`: o dashboard de readiness incorpora status, regressions, evidence ref e safety da medicao longitudinal; payload invalido ou claim de autoridade bloqueia, enquanto regressao valida permanece warning para revisao humana.
+- `evidencia_de_fechamento`: `docs/implementation/skill-workflow-evolution-readiness-closure-mb189.md` fecha `MB-176` a `MB-189`; testes cobrem evidencias safe, regressao, adulteracao, JSON invalido, CLI e fila esgotada; `python tools/readiness_dashboard.py --run-gate standard` retornou `ready_with_known_gaps`, score `95`, gate/testes `passed`, `queue_exhausted`, zero drift/blockers e release autonomo falso.
 
 ## 5. Regras de manutencao da fila
 
@@ -3687,6 +3689,6 @@ Estado atual da fila:
 - `MB-173` foi concluido como baseline de proveniencia, freshness e conflito/incerteza de conhecimento;
 - `MB-174` foi concluido como dashboard integrado de regressao/readiness, fechando a fila `MB-161` a `MB-174`; nao ha item tecnico `ready` ate nova repriorizacao explicita pelo mapa mestre;
 - `MB-175` foi concluido como repriorizacao pos-`MB-174`, abrindo a fila governada de skill/workflow evolution `MB-176` a `MB-189`;
-- `MB-176` a `MB-188` foram concluidos como cadeia de skill/workflow, routing, politica causal, revisao humana de memoria e medicao longitudinal; `MB-189` e o unico item tecnico `ready`;
+- `MB-176` a `MB-189` foram concluidos como cadeia de skill/workflow, routing, politica causal, revisao humana de memoria, medicao longitudinal e fechamento de readiness; a fila esta esgotada e exige repriorizacao explicita pelo mapa mestre;
 - `SO-001`, `TA-004`, `TA-006` e verticais `deferred` continuam fora da fila sem mudanca explicita de fase;
 - `protective intelligence foundation` continua `deferred` e a matriz da Onda 2 segue como insumo, nao como gatilho automatico para abrir nova vertical.

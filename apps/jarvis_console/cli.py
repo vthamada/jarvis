@@ -490,6 +490,10 @@ def build_parser() -> ArgumentParser:
         choices=["quick", "standard"],
         help="Explicitly refresh engineering gate evidence before reporting.",
     )
+    readiness_parser.add_argument(
+        "--longitudinal-report",
+        help="Use an explicit MB-188 longitudinal report JSON artifact.",
+    )
 
     learning_report_parser = subparsers.add_parser(
         "learning-report",
@@ -1647,6 +1651,14 @@ def render_readiness_dashboard(report: RegressionReadinessReportContract) -> str
             f"document_status={safe_console_value(report.document_status)}",
             f"backlog_status={safe_console_value(report.backlog_status)}",
             f"next_ready_item={safe_console_value(report.next_ready_item)}",
+            "longitudinal_learning_status="
+            f"{safe_console_value(report.longitudinal_learning_status)}",
+            "longitudinal_regression_flags="
+            f"{safe_console_list(report.longitudinal_regression_flags)}",
+            "longitudinal_learning_evidence_ref="
+            f"{safe_console_value(report.longitudinal_learning_evidence_ref)}",
+            "longitudinal_learning_authority_safe="
+            f"{safe_console_value(report.longitudinal_learning_authority_safe)}",
             f"capability_ready={safe_console_value(counts.get('ready', 0))}",
             f"capability_partial={safe_console_value(counts.get('partial', 0))}",
             "capability_attention="
@@ -2084,6 +2096,11 @@ def run_readiness_dashboard_command(args: Namespace) -> list[str]:
     report = build_repository_readiness_report(
         root=ROOT,
         gate_mode=args.run_gate,
+        longitudinal_report_path=(
+            Path(args.longitudinal_report).expanduser()
+            if args.longitudinal_report
+            else None
+        ),
     )
     return [render_readiness_dashboard(report)]
 

@@ -294,7 +294,10 @@ def test_observability_builds_bounded_regression_readiness_report() -> None:
     assert report.capability_counts["ready"] == 1
     assert report.capability_counts["missing"] == 1
     assert report.blockers == []
-    assert report.warnings == ["candidate_gaps:OBS-001"]
+    assert report.warnings == [
+        "longitudinal_learning_evidence:not_evaluated",
+        "candidate_gaps:OBS-001",
+    ]
     assert report.read_only is True
     assert report.autonomous_release_allowed is False
 

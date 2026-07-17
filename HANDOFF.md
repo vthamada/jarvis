@@ -2,6 +2,15 @@
 
 ## Atualizacao 2026-07-17
 
+`MB-189` fechou o slice governado de evolucao de skills/workflows aberto em
+`MB-175`. O dashboard de readiness agora incorpora status, regressions,
+evidence ref e safety do relatorio longitudinal: regressao valida permanece
+warning auditavel, enquanto JSON invalido ou claim de promocao/Core mutation
+bloqueia readiness. O documento
+`docs/implementation/skill-workflow-evolution-readiness-closure-mb189.md`
+consolida `MB-176` a `MB-189`. A fila micro esta esgotada e a proxima frente
+deve nascer de repriorizacao explicita pelo mapa mestre.
+
 `MB-188` foi concluido como baseline de metricas longitudinais de aprendizado.
 Os contratos `LearningVersionTargetContract`,
 `LearningOutcomeObservationContract`, `LongitudinalVersionMetricsContract` e
@@ -10,8 +19,8 @@ comparacao. O `observability-service` mede sucesso, retrabalho, feedback,
 regressao e rollback; `tools/longitudinal_learning_report.py` correlaciona
 auditorias, reviewed guidance e propostas/evals, e o console expoe
 `learning-report`. Eval offline nunca vale como runtime, versao inativa nao
-pode alegar impacto e nenhuma metrica autoriza promocao ou mutacao. `MB-189` e
-o unico item tecnico `ready`.
+pode alegar impacto e nenhuma metrica autoriza promocao ou mutacao. Esse estado
+foi sucedido pelo fechamento de `MB-189`.
 
 ## Atualizacao 2026-07-16
 

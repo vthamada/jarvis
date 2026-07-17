@@ -9,6 +9,7 @@ existing sources instead of introducing a second status authority:
 - executable queue status from `execution-backlog.md`;
 - active-document identity from `verify_document_guardrails.py`;
 - test and quality evidence from `engineering_gate.py`.
+- longitudinal learning evidence from the latest governed `MB-188` report.
 
 The report never authorizes release, promotion or Core mutation.
 
@@ -30,6 +31,12 @@ Refresh test and standard-gate evidence explicitly:
 
 ```powershell
 python -m apps.jarvis_console readiness-dashboard --run-gate standard
+```
+
+Use a specific longitudinal report artifact:
+
+```powershell
+python -m apps.jarvis_console readiness-dashboard --longitudinal-report .jarvis_runtime/learning/longitudinal/latest.json
 ```
 
 Without `--run-gate`, `gate_status` and `test_status` remain `not_run`. The
@@ -69,6 +76,8 @@ The report checks whether:
 - a `ready` item is also marked ready in the master map;
 - active status documents mention the current item or latest closed item;
 - critical document guardrails pass.
+- longitudinal evidence is structurally valid and carries no promotion or Core
+  mutation authority.
 
 An exhausted queue is a valid state and is reported as `queue_exhausted`; it
 requires reprioritization, not a fabricated ready item.
@@ -85,10 +94,15 @@ requires reprioritization, not a fabricated ready item.
 Even `ready` means evidence is coherent for human release review. The contract
 keeps `autonomous_release_allowed=false`.
 
+Longitudinal `attention_required` is reported as a warning so regressions stay
+visible for human action. A malformed report or any authority claim blocks
+readiness. Missing or insufficient observations remain an explicit evidence
+warning rather than a false pass.
+
 ## 7. Limits
 
 - The dashboard does not replace release gates or human approval.
 - It does not execute gates implicitly.
 - It does not claim production readiness for deferred capabilities.
-- Longitudinal comparison currently depends on saved JSON history; trend
-  analytics remain a later capability.
+- Longitudinal confidence depends on accumulated real mission evidence; an
+  empty local store can correctly report `no_version_targets`.

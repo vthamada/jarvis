@@ -1467,6 +1467,10 @@ class ObservabilityService:
         status_drift: list[str],
         evidence_refs: list[str],
         generated_at: str,
+        longitudinal_learning_status: str = "not_evaluated",
+        longitudinal_regression_flags: list[str] | None = None,
+        longitudinal_learning_evidence_ref: str | None = None,
+        longitudinal_learning_authority_safe: bool = True,
     ) -> RegressionReadinessReportContract:
         """Aggregate repository readiness without authorizing release."""
 
@@ -1503,6 +1507,17 @@ class ObservabilityService:
             + backlog_score * 0.05
         )
 
+        safe_longitudinal_flags = list(
+            dict.fromkeys(longitudinal_regression_flags or [])
+        )
+        valid_longitudinal_statuses = {
+            "not_evaluated",
+            "no_version_targets",
+            "insufficient_evidence",
+            "mixed_or_stable",
+            "sustained_gain_observed",
+            "attention_required",
+        }
         blockers = list(status_drift)
         if gate_status == "failed":
             blockers.append("engineering_gate_failed")
@@ -1510,6 +1525,10 @@ class ObservabilityService:
             blockers.append("document_guardrails_failed")
         if backlog_status not in {"synchronized", "queue_exhausted"}:
             blockers.append("backlog_status_drift")
+        if longitudinal_learning_status not in valid_longitudinal_statuses:
+            blockers.append("longitudinal_learning_evidence_invalid")
+        if not longitudinal_learning_authority_safe:
+            blockers.append("longitudinal_learning_authority_violation")
         blockers.extend(
             f"baseline_capability_missing:{item.capability_id}"
             for item in capability_results
@@ -1522,6 +1541,17 @@ class ObservabilityService:
             warnings.append("engineering_gate_evidence_not_refreshed")
         if test_status == "not_run":
             warnings.append("test_evidence_not_refreshed")
+        if longitudinal_learning_status in {
+            "not_evaluated",
+            "no_version_targets",
+            "insufficient_evidence",
+        }:
+            warnings.append(
+                f"longitudinal_learning_evidence:{longitudinal_learning_status}"
+            )
+        elif longitudinal_learning_status == "attention_required":
+            detail = ",".join(safe_longitudinal_flags) or "unspecified_regression"
+            warnings.append(f"longitudinal_learning_attention_required:{detail}")
         candidate_gaps = [
             item.capability_id
             for item in capability_results
@@ -1552,10 +1582,27 @@ class ObservabilityService:
             document_status=document_status,
             backlog_status=backlog_status,
             next_ready_item=next_ready_item,
+            longitudinal_learning_status=longitudinal_learning_status,
+            longitudinal_regression_flags=safe_longitudinal_flags,
+            longitudinal_learning_evidence_ref=longitudinal_learning_evidence_ref,
+            longitudinal_learning_authority_safe=(
+                longitudinal_learning_authority_safe
+            ),
             status_drift=list(dict.fromkeys(status_drift)),
             blockers=blockers,
             warnings=warnings,
-            evidence_refs=list(dict.fromkeys(evidence_refs)),
+            evidence_refs=list(
+                dict.fromkeys(
+                    [
+                        *evidence_refs,
+                        *(
+                            [longitudinal_learning_evidence_ref]
+                            if longitudinal_learning_evidence_ref
+                            else []
+                        ),
+                    ]
+                )
+            ),
             generated_at=generated_at,
             read_only=True,
             autonomous_release_allowed=False,

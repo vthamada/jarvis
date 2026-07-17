@@ -1,4 +1,5 @@
-﻿from pathlib import Path
+﻿from json import dumps
+from pathlib import Path
 from tempfile import gettempdir
 from types import SimpleNamespace
 from uuid import uuid4
@@ -73,7 +74,10 @@ def runtime_dir(name: str) -> Path:
 
 
 def test_console_readiness_dashboard_is_read_only_and_does_not_run_gate() -> None:
-    args = build_parser().parse_args(["readiness-dashboard"])
+    missing_report = runtime_dir("console-readiness-empty") / "missing.json"
+    args = build_parser().parse_args(
+        ["readiness-dashboard", "--longitudinal-report", str(missing_report)]
+    )
 
     outputs = run_readiness_dashboard_command(args)
 
@@ -81,7 +85,41 @@ def test_console_readiness_dashboard_is_read_only_and_does_not_run_gate() -> Non
     assert "gate_mode=not_run" in outputs[0]
     assert "test_status=not_run" in outputs[0]
     assert "document_status=healthy" in outputs[0]
+    assert "longitudinal_learning_status=not_evaluated" in outputs[0]
+    assert "longitudinal_learning_authority_safe=True" in outputs[0]
     assert "autonomous_release_allowed=False" in outputs[0]
+
+
+def test_console_readiness_dashboard_loads_explicit_longitudinal_evidence() -> None:
+    temp_dir = runtime_dir("console-readiness-learning")
+    report_path = temp_dir / "longitudinal.json"
+    report_path.write_text(
+        dumps(
+            {
+                "report_id": "longitudinal-learning-report://console-readiness",
+                "report_status": "sustained_gain_observed",
+                "regression_flags": [],
+                "read_only": True,
+                "promotion_authorized": False,
+                "automatic_promotion_allowed": False,
+                "core_mutation_allowed": False,
+            }
+        ),
+        encoding="utf-8",
+    )
+    args = build_parser().parse_args(
+        ["readiness-dashboard", "--longitudinal-report", str(report_path)]
+    )
+
+    rendered = run_readiness_dashboard_command(args)[0]
+
+    assert "longitudinal_learning_status=sustained_gain_observed" in rendered
+    assert (
+        "longitudinal_learning_evidence_ref="
+        "longitudinal-learning-report://console-readiness"
+    ) in rendered
+    assert "longitudinal_learning_authority_safe=True" in rendered
+    assert "autonomous_release_allowed=False" in rendered
 
 
 def test_console_readiness_renderer_surfaces_drift_and_blockers() -> None:
@@ -116,6 +154,7 @@ def test_console_readiness_renderer_surfaces_drift_and_blockers() -> None:
     assert "status_drift=master_map_ready_mismatch:MB-174" in rendered
     assert "blockers=engineering_gate_failed" in rendered
     assert "capability_missing=1" in rendered
+    assert "longitudinal_learning_status=not_evaluated" in rendered
 
 
 def test_console_longitudinal_learning_report_is_explicitly_non_authoritative() -> None:

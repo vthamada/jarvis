@@ -6,7 +6,7 @@ import re
 from argparse import ArgumentParser, Namespace
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
-from json import dumps
+from json import dumps, loads
 from pathlib import Path
 from subprocess import run
 from sys import executable
@@ -29,6 +29,9 @@ ACTIVE_STATUS_DOCS = (
     Path("docs/implementation/unified-gap-and-absorption-backlog.md"),
 )
 DEFAULT_OUTPUT_DIR = ROOT / ".jarvis_runtime" / "readiness"
+LONGITUDINAL_REPORT_PATH = Path(
+    ".jarvis_runtime/learning/longitudinal/latest.json"
+)
 CAPABILITY_ID_PATTERN = re.compile(r"^[A-Z]{2,4}-\d{3}$")
 MB_HEADING_PATTERN = re.compile(
     r"^### (MB-\d+)(?: -- [^\n]+)?\s*$([\s\S]*?)(?=^### |\Z)",
@@ -60,6 +63,14 @@ class GateRunResult:
     gate_status: str
     test_status: str
     evidence_refs: list[str]
+
+
+@dataclass(frozen=True)
+class LongitudinalReadinessSignal:
+    report_status: str
+    regression_flags: list[str]
+    evidence_ref: str | None
+    authority_safe: bool
 
 
 def _clean_cell(value: str) -> str:
@@ -247,12 +258,75 @@ def _default_gate_result() -> GateRunResult:
     )
 
 
+def load_longitudinal_readiness_signal(
+    *,
+    report_path: Path,
+    payload: dict[str, object] | None = None,
+) -> LongitudinalReadinessSignal:
+    """Read MB-188 evidence without treating it as release authority."""
+
+    raw_payload: object = payload
+    if raw_payload is None:
+        if not report_path.exists():
+            return LongitudinalReadinessSignal(
+                report_status="not_evaluated",
+                regression_flags=[],
+                evidence_ref=None,
+                authority_safe=True,
+            )
+        try:
+            raw_payload = loads(report_path.read_text(encoding="utf-8"))
+        except (OSError, ValueError):
+            raw_payload = None
+    if not isinstance(raw_payload, dict):
+        return LongitudinalReadinessSignal(
+            report_status="invalid_evidence",
+            regression_flags=[],
+            evidence_ref=None,
+            authority_safe=False,
+        )
+
+    report_status = raw_payload.get("report_status")
+    report_id = raw_payload.get("report_id")
+    regression_flags = raw_payload.get("regression_flags")
+    valid_flags = (
+        isinstance(regression_flags, list)
+        and all(isinstance(item, str) and item for item in regression_flags)
+    )
+    authority_safe = (
+        raw_payload.get("read_only") is True
+        and raw_payload.get("promotion_authorized") is False
+        and raw_payload.get("automatic_promotion_allowed") is False
+        and raw_payload.get("core_mutation_allowed") is False
+    )
+    if (
+        not isinstance(report_status, str)
+        or not isinstance(report_id, str)
+        or not report_id
+        or not valid_flags
+    ):
+        return LongitudinalReadinessSignal(
+            report_status="invalid_evidence",
+            regression_flags=[],
+            evidence_ref=None,
+            authority_safe=False,
+        )
+    return LongitudinalReadinessSignal(
+        report_status=report_status,
+        regression_flags=list(dict.fromkeys(regression_flags)),
+        evidence_ref=report_id,
+        authority_safe=authority_safe,
+    )
+
+
 def build_repository_readiness_report(
     *,
     root: Path = ROOT,
     gate_mode: str | None = None,
     gate_result: GateRunResult | None = None,
     document_payload: dict[str, object] | None = None,
+    longitudinal_report_path: Path | None = None,
+    longitudinal_payload: dict[str, object] | None = None,
     generated_at: str | None = None,
 ) -> RegressionReadinessReportContract:
     """Collect canonical repository signals and build one bounded report."""
@@ -276,6 +350,14 @@ def build_repository_readiness_report(
         if gate_mode
         else _default_gate_result()
     )
+    longitudinal_signal = load_longitudinal_readiness_signal(
+        report_path=(
+            longitudinal_report_path
+            if longitudinal_report_path is not None
+            else root / LONGITUDINAL_REPORT_PATH
+        ),
+        payload=longitudinal_payload,
+    )
     timestamp = generated_at or datetime.now(UTC).isoformat()
     evidence_refs = [
         "docs://implementation-master-map",
@@ -295,6 +377,10 @@ def build_repository_readiness_report(
         status_drift=status_drift,
         evidence_refs=evidence_refs,
         generated_at=timestamp,
+        longitudinal_learning_status=longitudinal_signal.report_status,
+        longitudinal_regression_flags=longitudinal_signal.regression_flags,
+        longitudinal_learning_evidence_ref=longitudinal_signal.evidence_ref,
+        longitudinal_learning_authority_safe=longitudinal_signal.authority_safe,
     )
 
 
@@ -310,6 +396,13 @@ def render_text(report: RegressionReadinessReportContract) -> str:
         f"document_status={report.document_status}",
         f"backlog_status={report.backlog_status}",
         f"next_ready_item={report.next_ready_item or 'none'}",
+        f"longitudinal_learning_status={report.longitudinal_learning_status}",
+        "longitudinal_regression_flags="
+        f"{','.join(report.longitudinal_regression_flags) or 'none'}",
+        "longitudinal_learning_evidence_ref="
+        f"{report.longitudinal_learning_evidence_ref or 'none'}",
+        "longitudinal_learning_authority_safe="
+        f"{str(report.longitudinal_learning_authority_safe).lower()}",
         (
             "capabilities="
             f"ready:{counts.get('ready', 0)},"
@@ -348,13 +441,19 @@ def parse_args() -> Namespace:
     parser.add_argument("--run-gate", choices=["quick", "standard"])
     parser.add_argument("--format", choices=["text", "json"], default="text")
     parser.add_argument("--output-dir", default=str(DEFAULT_OUTPUT_DIR))
+    parser.add_argument("--longitudinal-report")
     parser.add_argument("--no-save", action="store_true")
     return parser.parse_args()
 
 
 def main() -> None:
     args = parse_args()
-    report = build_repository_readiness_report(gate_mode=args.run_gate)
+    report = build_repository_readiness_report(
+        gate_mode=args.run_gate,
+        longitudinal_report_path=(
+            Path(args.longitudinal_report) if args.longitudinal_report else None
+        ),
+    )
     if not args.no_save:
         save_report(report, output_dir=Path(args.output_dir))
     print(

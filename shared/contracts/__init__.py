@@ -1242,6 +1242,10 @@ class RegressionReadinessReportContract:
     evidence_refs: list[str]
     generated_at: Timestamp
     next_ready_item: str | None = None
+    longitudinal_learning_status: str = "not_evaluated"
+    longitudinal_regression_flags: list[str] = field(default_factory=list)
+    longitudinal_learning_evidence_ref: str | None = None
+    longitudinal_learning_authority_safe: bool = True
     read_only: bool = True
     autonomous_release_allowed: bool = False
 
