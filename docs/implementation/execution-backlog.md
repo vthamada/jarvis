@@ -3627,7 +3627,7 @@ Fora de escopo:
 
 - `id`: `MB-192`
 - `prioridade`: `P1`
-- `status`: `ready`
+- `status`: `completed`
 - `eixo_do_mestre`: `superficie CLI`, `seguranca`, `scriptabilidade`
 - `map_ids`: `SFC-001`, `SFC-012`, `GOV-008`
 - `workflow_profile_afetado`: comandos read/report do `jarvis-console`
@@ -3640,12 +3640,14 @@ Fora de escopo:
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `high`
 - `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: `ConsoleRuntime` adiciona envelope `jarvis-console/v1`, text/JSON, redaction, stdout/stderr e exit codes `0/1/2/3`; registry limita JSON a comandos read/report e rejeita mutacao antes do Core.
+- `evidencia_de_fechamento`: testes cobrem format antes/depois do subcomando, success/error envelope, parser error, Core lazy, JSON mutavel bloqueado, redaction de segredo/path e governance exit; `docs/operations/cli-runtime-output-contract.md` registra a operacao.
 
 ### MB-193
 
 - `id`: `MB-193`
 - `prioridade`: `P1`
-- `status`: `blocked`
+- `status`: `ready`
 - `eixo_do_mestre`: `diagnostico`, `observabilidade`, `seguranca`
 - `map_ids`: `SFC-013`, `OBS-007`, `GOV-008`
 - `workflow_profile_afetado`: `operational_readiness_workflow`
@@ -3892,6 +3894,6 @@ Estado atual da fila:
 - `MB-174` foi concluido como dashboard integrado de regressao/readiness, fechando a fila `MB-161` a `MB-174`; nao ha item tecnico `ready` ate nova repriorizacao explicita pelo mapa mestre;
 - `MB-175` foi concluido como repriorizacao pos-`MB-174`, abrindo a fila governada de skill/workflow evolution `MB-176` a `MB-189`;
 - `MB-176` a `MB-189` foram concluidos como cadeia de skill/workflow, routing, politica causal, revisao humana de memoria, medicao longitudinal e fechamento de readiness;
-- `MB-190` repriorizou o Daily Operator Loop e abriu `MB-191` a `MB-200`; `MB-191` foi concluido como registry tipado e somente `MB-192` esta `ready`;
+- `MB-190` repriorizou o Daily Operator Loop e abriu `MB-191` a `MB-200`; `MB-191` e `MB-192` fecharam registry/runtime CLI e somente `MB-193` esta `ready`;
 - `SO-001`, `TA-004`, `TA-006` e verticais `deferred` continuam fora da fila sem mudanca explicita de fase;
 - `protective intelligence foundation` continua `deferred` e a matriz da Onda 2 segue como insumo, nao como gatilho automatico para abrir nova vertical.

@@ -3,14 +3,20 @@
 
 from __future__ import annotations
 
-from argparse import ArgumentParser, Namespace
+from argparse import SUPPRESS, ArgumentParser, Namespace
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
+from sys import argv as process_argv
 from uuid import uuid4
 
 from apps.jarvis_console.bootstrap import ROOT, ensure_src_paths
 from apps.jarvis_console.registry import COMMAND_REGISTRY
+from apps.jarvis_console.runtime import (
+    ConsoleCommandError,
+    ConsoleExitCode,
+    ConsoleRuntime,
+)
 
 ensure_src_paths()
 
@@ -48,6 +54,15 @@ CONSOLE_SURFACE_CAPABILITIES = ["text_input", "core_orchestrated_response"]
 DEFAULT_OPERATOR_IDENTITY_REF = "operator://local_console"
 DEFAULT_CANONICAL_USER_REF = "user://local_operator"
 MAX_CONSOLE_FIELD_LENGTH = 500
+
+
+class ConsoleArgumentParser(ArgumentParser):
+    def error(self, message: str) -> None:
+        raise ConsoleCommandError(
+            message,
+            error_code="invalid_cli_usage",
+            exit_code=ConsoleExitCode.USAGE_ERROR,
+        )
 
 
 @dataclass
@@ -262,7 +277,14 @@ class JarvisConsole:
 
 
 def build_parser() -> ArgumentParser:
-    parser = ArgumentParser(description="Run the minimal JARVIS console.")
+    parser = ConsoleArgumentParser(description="Run the minimal JARVIS console.")
+    parser.add_argument(
+        "--format",
+        choices=["text", "json"],
+        dest="output_format",
+        default="text",
+        help="Select human text or supported machine-readable JSON output.",
+    )
     subparsers = parser.add_subparsers(dest="command", required=True)
 
     ask_parser = subparsers.add_parser("ask", help="Execute a single prompt.")
@@ -553,6 +575,14 @@ def build_parser() -> ArgumentParser:
     mission_feedback_parser.add_argument("--operator-identity-ref")
     mission_feedback_parser.add_argument("--canonical-user-ref")
 
+    for command_parser in subparsers.choices.values():
+        command_parser.add_argument(
+            "--format",
+            choices=["text", "json"],
+            dest="output_format",
+            default=SUPPRESS,
+            help="Select human text or supported machine-readable JSON output.",
+        )
     COMMAND_REGISTRY.validate_parser_commands(
         {
             action.dest: action.help
@@ -2312,14 +2342,45 @@ BOUND_COMMAND_REGISTRY = COMMAND_REGISTRY.bind(globals())
 
 
 def main(argv: list[str] | None = None) -> int:
-    args = build_parser().parse_args(argv)
-    command, outputs = BOUND_COMMAND_REGISTRY.invoke(
-        args.command,
+    raw_argv = list(argv) if argv is not None else list(process_argv[1:])
+    requested_format = _requested_output_format(raw_argv)
+    try:
+        args = build_parser().parse_args(raw_argv)
+    except ConsoleCommandError as exc:
+        return ConsoleRuntime(
+            output_format=requested_format,
+            sensitive_paths=(str(ROOT), str(Path.home())),
+        ).report_error(
+            command_id=_requested_command_id(raw_argv),
+            error=exc,
+        )
+    runtime = ConsoleRuntime(
+        output_format=args.output_format,
+        sensitive_paths=(str(ROOT), str(Path.home())),
+    )
+    return runtime.execute(
+        registry=BOUND_COMMAND_REGISTRY,
+        command_id=args.command,
         args=args,
         console_factory=lambda: JarvisConsole.build(
             runtime_dir=ROOT / ".jarvis_runtime" / "console"
         ),
     )
-    for output in command.emitted_outputs(args=args, outputs=outputs):
-        print(output)
-    return 0
+
+
+def _requested_output_format(argv: list[str]) -> str:
+    for index, argument in enumerate(argv):
+        if argument.startswith("--format="):
+            value = argument.partition("=")[2]
+            return value if value in {"text", "json"} else "text"
+        if argument == "--format" and index + 1 < len(argv):
+            value = argv[index + 1]
+            return value if value in {"text", "json"} else "text"
+    return "text"
+
+
+def _requested_command_id(argv: list[str]) -> str:
+    command_ids = {
+        definition.command_id for definition in COMMAND_REGISTRY.definitions
+    }
+    return next((argument for argument in argv if argument in command_ids), "unknown")

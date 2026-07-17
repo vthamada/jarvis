@@ -247,7 +247,7 @@ Goal: expose the same sovereign entity through multiple interfaces.
 | `SFC-009` | Surface identity conflict handling | `minimum_baseline` | Full conflict policy across surfaces | Surface contract | later |
 | `SFC-010` | Notification layer | `missing` | Human-approved reminders, not autonomous scheduler | Governance | later |
 | `SFC-011` | Typed CLI command registry | `implemented_baseline` | Keep command metadata and parser dispatch synchronized | SFC-001 | none |
-| `SFC-012` | CLI runtime/output contract | `missing` | Text/JSON, redaction, stderr and stable exit codes | SFC-011 | high-priority |
+| `SFC-012` | CLI runtime/output contract | `implemented_baseline` | Preserve versioned envelopes, redaction and stable exit semantics | SFC-011 | none |
 | `SFC-013` | Read-only CLI doctor | `missing` | Runtime, stores, backlog, governance and gate preflight | SFC-011, OBS-007 | candidate |
 | `SFC-014` | Generated CLI reference and completion | `missing` | Registry-derived reference and shell completion | SFC-011, DOC-010 | candidate |
 
@@ -745,7 +745,9 @@ Map IDs: `SFC-001`, `SFC-012`, `GOV-008`.
 Goal: add redacted text/JSON output, stdout/stderr discipline and stable exit
 codes to read/report commands without changing Core decisions.
 
-Status: ready after `MB-191`.
+Status: closed in `MB-192`; declared read/report commands now support a
+versioned redacted JSON envelope, stdout/stderr discipline and stable exit
+codes, while mutable commands fail before Core construction.
 
 ### MB-193 -- Read-Only Doctor And Preflight
 
@@ -753,6 +755,8 @@ Map IDs: `SFC-013`, `OBS-007`, `GOV-008`.
 
 Goal: diagnose imports, runtime directory, canonical stores, backlog,
 governance and gate availability without mutating state or exposing secrets.
+
+Status: ready after `MB-192`.
 
 ### MB-194 -- Daily Operator Workspace Snapshot
 

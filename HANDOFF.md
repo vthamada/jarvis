@@ -2,12 +2,19 @@
 
 ## Atualizacao 2026-07-17
 
+`MB-192` implementou o contrato runtime/output do CLI. `--format text|json`
+funciona antes ou depois do subcomando; somente comandos read/report declarados
+aceitam JSON `jarvis-console/v1`. Sucesso usa stdout, falha/parser usa stderr e
+exit codes sao `0/1/2/3`. Segredos, bearer tokens, URL autenticada e caminhos
+locais sao redigidos. JSON para comando mutavel falha antes de construir Core
+ou chamar handler. `MB-193` e o unico item tecnico `ready`.
+
 `MB-191` implementou o typed CLI command registry. Os 24 comandos atuais agora
 declaram id, help, handler, categoria, execution mode (`core`/`standalone`) e
 output mode; parser e registry falham fechados em drift. `main()` nao possui
 mais a cadeia de branches por comando e constroi o Core somente para comandos
 que o exigem. Handlers, governanca, memoria canonica e outputs existentes foram
-preservados. `MB-192` e o unico item tecnico `ready`.
+preservados. Esse estado foi sucedido pelo fechamento de `MB-192`.
 
 `MB-190` repriorizou o pos-`MB-189` para o Daily Operator Loop com fundacao CLI
 antes de novos comandos. A fila `MB-191` a `MB-200` comeca por registry tipado,

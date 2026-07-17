@@ -356,6 +356,11 @@ Done when:
 - stdout/stderr behavior is documented and tested;
 - no secrets or local sensitive paths are exposed by default.
 
+Status: implemented in `MB-192`. `ConsoleRuntime` adds versioned success/error
+envelopes, text/JSON selection before or after the subcommand, redaction,
+stdout/stderr separation and stable exit codes. JSON remains limited to
+declared read/report commands.
+
 ### CLI-003 - Doctor Command
 
 Goal: add `jarvis-console doctor` as read-only diagnostics.

@@ -26,6 +26,12 @@
 - parser/help drift e handler ausente falham fechados, e `main()` despacha pelo registry sem a cadeia monolitica de branches;
 - comandos standalone nao constroem o Core desnecessariamente, enquanto handlers e fronteiras soberanas permanecem inalterados; `MB-192` passa a ser o unico item tecnico `ready`.
 
+### MB-192 adiciona runtime text/JSON seguro ao CLI
+
+- `ConsoleRuntime` implementa envelopes `jarvis-console/v1`, text/JSON antes ou depois do subcomando, stdout/stderr e exit codes estaveis;
+- redaction cobre segredos, bearer tokens, URLs autenticadas e caminhos locais em sucesso e erro, inclusive falhas do parser;
+- JSON fica limitado aos read/report commands declarados e mutacoes sao rejeitadas antes do Core; `MB-193` passa a ser o unico item tecnico `ready`.
+
 ## 2026-07-16
 
 ### MB-166 define checklist sandbox-to-release

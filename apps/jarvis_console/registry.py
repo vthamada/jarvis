@@ -32,6 +32,27 @@ class CommandCategory(StrEnum):
     OBSERVABILITY = "observability"
 
 
+JSON_OUTPUT_COMMAND_IDS = frozenset(
+    {
+        "objectives",
+        "goal-strategy",
+        "work-items",
+        "artifacts",
+        "technology-candidates",
+        "experience-reflections",
+        "procedural-playbooks",
+        "skill-evolution",
+        "evolution-review-queue",
+        "memory-review-queue",
+        "mission-cycle",
+        "operator-dashboard",
+        "readiness-dashboard",
+        "learning-report",
+        "progress-report",
+    }
+)
+
+
 @dataclass(frozen=True)
 class CommandDefinition:
     command_id: str
@@ -40,6 +61,7 @@ class CommandDefinition:
     category: CommandCategory
     execution_mode: CommandExecutionMode
     output_mode: CommandOutputMode = CommandOutputMode.SINGLE
+    supports_json: bool = False
 
 
 @dataclass(frozen=True)
@@ -100,6 +122,13 @@ class CommandRegistry:
                 definition.handler_name.endswith("_command")
             ):
                 raise ValueError(f"invalid handler name: {definition.handler_name}")
+            if (
+                definition.supports_json
+                and definition.output_mode != CommandOutputMode.SINGLE
+            ):
+                raise ValueError(
+                    f"JSON requires single output mode: {definition.command_id}"
+                )
         self._definitions = definitions
         self._by_id = {
             definition.command_id: definition for definition in definitions
@@ -161,6 +190,7 @@ def _command(
         category=category,
         execution_mode=execution_mode,
         output_mode=output_mode,
+        supports_json=command_id in JSON_OUTPUT_COMMAND_IDS,
     )
 
 

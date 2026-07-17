@@ -19,7 +19,7 @@ def parser_command_help() -> dict[str, str]:
     subparsers = next(
         action
         for action in parser._actions
-        if getattr(action, "choices", None)
+        if action.dest == "command" and hasattr(action, "_choices_actions")
     )
     return {
         action.dest: action.help

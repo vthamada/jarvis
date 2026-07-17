@@ -48,8 +48,9 @@ its existing governance and canonical persistence path.
 - `chat`: print all scripted `--message` outputs; interactive chat continues to
   manage its prompt/output loop inside the existing handler.
 
-Structured JSON, stderr discipline and stable exit codes remain the scope of
-`MB-192`; `MB-191` does not change output contracts.
+`MB-192` now provides structured JSON for declared read/report commands,
+stderr discipline, redaction and stable exit codes. The registry remains the
+authority for whether a command supports JSON.
 
 ## Adding A Command
 
@@ -63,4 +64,3 @@ Structured JSON, stderr discipline and stable exit codes remain the scope of
 
 Do not add TUI, voice, browser/computer use, external gateway or permission
 bypass behavior through the registry.
-
