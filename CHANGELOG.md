@@ -2,6 +2,12 @@
 
 ## 2026-07-18
 
+### MB-200 fecha readiness do Daily Operator Loop
+
+- um runbook ponta a ponta conecta doctor, workspace, missao, retomada, work items, artefatos, feedback, reflexao, revisao, outcomes e readiness sem criar autoridade paralela;
+- o closure registra limitacoes, fronteiras e a decisao de aprofundar politica de workflow e causalidade de memoria antes de adapters ou novas superficies;
+- teste de invariantes e dashboard com gate padrao exigem fila `queue_exhausted`, zero drift/blockers, guardrails saudaveis e release autonomo falso; nao ha item tecnico `ready` ate repriorizacao separada.
+
 ### MB-198 mede outcomes diarios do operador
 
 - contratos e schemas compartilhados formalizam metricas por missao e relatorio por periodo, com taxas opcionais quando nao existe denominador confiavel;

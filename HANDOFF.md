@@ -2,6 +2,14 @@
 
 ## Atualizacao 2026-07-18
 
+`MB-200` fechou o Daily Operator Loop. O novo runbook conecta preflight,
+workspace, missao, retomada, work items, artefatos, feedback, experiencia,
+reflexao, revisao humana, outcomes e readiness sem criar nova autoridade. O
+closure registra fila `queue_exhausted`, limites conhecidos e decisao de
+aprofundar politica de workflow e causalidade de memoria antes de adapters,
+API ou superficies ricas. Nao ha item tecnico `ready` ate repriorizacao
+separada.
+
 `MB-199` implementou referencia e completion deterministicas derivadas do
 registry e do parser validado. `command-reference` e `completion` sao
 standalone; o gerador versiona Markdown e scripts PowerShell/Bash/Zsh, e testes
@@ -9,7 +17,7 @@ comparam os quatro artefatos byte a byte. Tokens de shell fora da gramatica
 permitida falham fechados, `--format` antes/depois do comando e preservado e
 goldens fixos protegem daily workspace, operator outcomes e envelope JSON sem
 ids/timestamps instaveis. Nenhum comando gera autoridade ou constroi o Core.
-`MB-200` e o unico item tecnico `ready`.
+Esse estado foi sucedido pelo fechamento de `MB-200`.
 
 `MB-198` implementou outcomes diarios de utilidade do operador por periodo e
 por missao. O novo `operator-outcomes` e standalone/read-only e correlaciona

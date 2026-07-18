@@ -362,8 +362,8 @@ Notas de leitura:
   `MB-174` foi fechado como dashboard integrado de regressao/readiness; a fila
   foi repriorizada em `MB-175`, abrindo `MB-176` a `MB-189`; `MB-176` foi
   fechado e `MB-177` a `MB-189` tambem foram fechados; `MB-190` abriu
-  `MB-191` a `MB-200`, `MB-191` a `MB-199` foram fechados e `MB-200` e o unico item tecnico
-  `ready`.
+  `MB-191` a `MB-200`, e o lote foi integralmente fechado em `MB-200`; a fila
+  esta sem item `ready` ate repriorizacao explicita.
 
 ### 5.5 Deferred verticals already mapped
 
@@ -407,8 +407,8 @@ Ordem recomendada hoje:
 1. tratar `MB-110` a `MB-159` como baseline fechado de objetivos persistentes,
    utilidade operacional, absorcao tecnologica governada, aprendizado revisado,
    higiene documental e horizonte longo minimo.
-2. tratar `MB-160` a `MB-199` como baseline fechado e executar `MB-200` como
-   closure de readiness do runtime CLI e Daily Operator Loop, seguindo WIP 1.
+2. tratar `MB-160` a `MB-200` como baseline fechado e derivar a proxima fila
+   por repriorizacao separada de workflow policy e causalidade de memoria.
 3. manter `SO-001`, `TA-004`, `TA-006` e verticais `deferred` fora da fila ate
    haver decisao explicita de fase.
 
@@ -483,6 +483,9 @@ Leitura correta:
 - `MB-199` fechou referencia/completion derivadas do registry, assets
   deterministicos e golden outputs text/JSON, movendo `SFC-014` para
   `implemented_baseline`;
+- `MB-200` fechou o Daily Operator Loop com runbook integrado, dashboard sem
+  drift/blockers e decisao de aprofundar `COG-006`, `MEM-005`, `MEM-006`,
+  `COG-007` e `EVL-008` antes de novas superficies;
 - `MB-159` foi fechado como raciocinio minimo de objetivos de horizonte longo,
   movendo `COG-010` para um baseline minimo operacional;
 - `MB-160` abriu a fila maior `MB-161` a `MB-174`, priorizando memoria causal,
@@ -491,7 +494,7 @@ Leitura correta:
   `MB-166`, `MB-167`, `MB-168`, `MB-169`, `MB-170`, `MB-171`, `MB-172` e
   `MB-173`, `MB-174` e `MB-176` foram fechados; `MB-175` abriu `MB-176` a
   `MB-189`; `MB-177` a `MB-189` tambem foram fechados; `MB-190` abriu
-  `MB-191` a `MB-200`; `MB-191` a `MB-199` foram fechados e somente `MB-200` esta `ready`;
+  `MB-191` a `MB-200`; o lote foi integralmente fechado e a fila esta esgotada;
 - `RH-*` permanece fora do backlog implementavel.
 
 ---

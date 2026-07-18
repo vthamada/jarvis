@@ -838,7 +838,14 @@ Map IDs: `OBS-007`, `OBS-008`, `DOC-010`, `OP-009`.
 Goal: close the slice with integrated readiness, regression, operator runbook
 and explicit next phase decision.
 
-Status: ready after `MB-199`.
+Status: closed in `MB-200`; the end-to-end runbook, repository readiness
+invariants and standard-gate evidence close the Daily Operator Loop with an
+exhausted synchronized queue, no blockers and no autonomous release authority.
+
+Next phase decision: deepen workflow policy and semantic/procedural memory
+causality before opening broad adapters or product surfaces. A separate
+reprioritization must derive the executable queue from `COG-006`, `MEM-005`,
+`MEM-006`, `COG-007` and `EVL-008`.
 
 ## 14. What Must Not Be Pulled Next By Inertia
 
