@@ -50,6 +50,7 @@ def test_parser_accepts_global_format_before_and_after_subcommand() -> None:
     assert parser.parse_args(["daily-workspace"]).memory_db == str(
         cli.ROOT / ".jarvis_runtime" / "console" / "memory.db"
     )
+    assert parser.parse_args(["operator-outcomes"]).event_limit == 1000
 
 
 def test_json_runtime_emits_versioned_redacted_success_envelope() -> None:
@@ -260,6 +261,44 @@ def test_main_json_daily_workspace_is_standalone_and_machine_readable(
     assert payload["status"] == "success"
     assert "daily_operator_workspace=read_only" in payload["outputs"][0]
     assert "workspace_status=idle" in payload["outputs"][0]
+
+
+def test_main_json_operator_outcomes_is_standalone_and_machine_readable(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    memory_db = tmp_path / "memory.db"
+    observability_db = tmp_path / "observability.db"
+    MemoryService(database_url=f"sqlite:///{memory_db.as_posix()}")
+
+    def fail_build(*args, **kwargs):
+        raise AssertionError("operator outcomes constructed Core")
+
+    monkeypatch.setattr(cli.JarvisConsole, "build", fail_build)
+
+    exit_code = cli.main(
+        [
+            "operator-outcomes",
+            "--memory-db",
+            str(memory_db),
+            "--observability-db",
+            str(observability_db),
+            "--format",
+            "json",
+        ]
+    )
+
+    captured = capsys.readouterr()
+    payload = loads(captured.out)
+    assert exit_code == ConsoleExitCode.SUCCESS
+    assert captured.err == ""
+    assert payload["command_id"] == "operator-outcomes"
+    assert payload["status"] == "success"
+    assert "operator_outcomes=read_only" in payload["outputs"][0]
+    assert "saved_time_claim_status=not_claimed_without_controlled_baseline" in (
+        payload["outputs"][0]
+    )
 
 
 def test_main_rejects_json_for_state_change_before_core_build(

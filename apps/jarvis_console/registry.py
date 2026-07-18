@@ -47,6 +47,7 @@ JSON_OUTPUT_COMMAND_IDS = frozenset(
         "mission-cycle",
         "operator-dashboard",
         "daily-workspace",
+        "operator-outcomes",
         "readiness-dashboard",
         "doctor",
         "learning-report",
@@ -379,6 +380,13 @@ COMMAND_REGISTRY = CommandRegistry(
             "Show a read-only cross-session operator workspace.",
             "run_daily_workspace_command",
             CommandCategory.MISSION,
+            STANDALONE,
+        ),
+        _command(
+            "operator-outcomes",
+            "Show evidence-backed daily operator utility outcomes.",
+            "run_operator_outcomes_command",
+            CommandCategory.OBSERVABILITY,
             STANDALONE,
         ),
         _command(

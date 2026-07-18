@@ -3747,7 +3747,7 @@ Fora de escopo:
 
 - `id`: `MB-198`
 - `prioridade`: `P2`
-- `status`: `ready`
+- `status`: `completed`
 - `eixo_do_mestre`: `utilidade`, `observabilidade`, `operacao diaria`
 - `map_ids`: `OBS-005`, `OP-006`, `OP-009`
 - `workflow_profile_afetado`: Daily Operator Loop
@@ -3760,12 +3760,14 @@ Fora de escopo:
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `medium`
 - `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: outcomes diarios agora correlacionam work items, artefatos, resume, feedback e stale loops por periodo e por missao, com metricas indisponiveis e limites de evidencia explicitos, sem claim de tempo economizado.
+- `evidencia_de_fechamento`: contratos/schemas, agregador do `observability-service`, tool persistivel, comando standalone text/JSON `operator-outcomes`, testes de imutabilidade e runbook operacional cobrem completion, rework, stale loops, feedback e latencia resume-para-proxima-acao; `saved_time_claim_status` permanece sem claim.
 
 ### MB-199
 
 - `id`: `MB-199`
 - `prioridade`: `P2`
-- `status`: `blocked`
+- `status`: `ready`
 - `eixo_do_mestre`: `CLI`, `documentacao`, `regressao`
 - `map_ids`: `SFC-014`, `DOC-010`, `SFC-012`
 - `workflow_profile_afetado`: todos os comandos do `jarvis-console`
@@ -3904,6 +3906,6 @@ Estado atual da fila:
 - `MB-174` foi concluido como dashboard integrado de regressao/readiness, fechando a fila `MB-161` a `MB-174`; nao ha item tecnico `ready` ate nova repriorizacao explicita pelo mapa mestre;
 - `MB-175` foi concluido como repriorizacao pos-`MB-174`, abrindo a fila governada de skill/workflow evolution `MB-176` a `MB-189`;
 - `MB-176` a `MB-189` foram concluidos como cadeia de skill/workflow, routing, politica causal, revisao humana de memoria, medicao longitudinal e fechamento de readiness;
-- `MB-190` repriorizou o Daily Operator Loop e abriu `MB-191` a `MB-200`; `MB-191` a `MB-197` fecharam registry, runtime/output, doctor, workspace diario, grafo governado de work items, linhagem canonica de artefatos e retomada governada de open loops, e somente `MB-198` esta `ready`;
+- `MB-190` repriorizou o Daily Operator Loop e abriu `MB-191` a `MB-200`; `MB-191` a `MB-198` fecharam registry, runtime/output, doctor, workspace diario, grafo governado de work items, linhagem canonica de artefatos, retomada governada e outcome metrics, e somente `MB-199` esta `ready`;
 - `SO-001`, `TA-004`, `TA-006` e verticais `deferred` continuam fora da fila sem mudanca explicita de fase;
 - `protective intelligence foundation` continua `deferred` e a matriz da Onda 2 segue como insumo, nao como gatilho automatico para abrir nova vertical.

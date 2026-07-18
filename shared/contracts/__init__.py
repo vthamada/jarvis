@@ -1448,6 +1448,66 @@ class LongitudinalLearningReportContract:
 
 
 @dataclass
+class DailyOperatorMissionOutcomeContract:
+    mission_id: MissionId
+    work_item_event_count: int
+    observed_work_item_count: int
+    completed_work_item_count: int
+    reworked_work_item_count: int
+    artifact_event_count: int
+    observed_artifact_count: int
+    resume_count: int
+    feedback_count: int
+    helpful_feedback_count: int
+    time_to_next_action_observation_count: int
+    completion_rate: float | None
+    rework_rate: float | None
+    helpful_feedback_rate: float | None
+    average_time_to_next_action_seconds: float | None
+    stale_open_loop_count: int | None
+    evidence_refs: list[str] = field(default_factory=list)
+    limitations: list[str] = field(default_factory=list)
+
+
+@dataclass
+class DailyOperatorUtilityReportContract:
+    report_id: str
+    report_status: str
+    period_start: Timestamp
+    period_end: Timestamp
+    generated_at: Timestamp
+    mission_count: int
+    mission_metrics: list[DailyOperatorMissionOutcomeContract]
+    event_count: int
+    work_item_event_count: int
+    observed_work_item_count: int
+    completed_work_item_count: int
+    reworked_work_item_count: int
+    completion_rate: float | None
+    rework_rate: float | None
+    artifact_event_count: int
+    observed_artifact_count: int
+    resume_count: int
+    stale_open_loop_count: int | None
+    feedback_count: int
+    feedback_mission_count: int
+    feedback_coverage: float | None
+    helpful_feedback_count: int
+    helpful_feedback_rate: float | None
+    time_to_next_action_observation_count: int
+    average_time_to_next_action_seconds: float | None
+    limitations: list[str]
+    evidence_refs: list[str]
+    time_to_next_action_definition: str = (
+        "open_loop_resumed_to_next_recorded_work_or_artifact_transition"
+    )
+    saved_time_claim_status: str = "not_claimed_without_controlled_baseline"
+    read_only: bool = True
+    memory_write_mode: str = "read_only"
+    autonomous_action_allowed: bool = False
+
+
+@dataclass
 class SpecialistBoundaryContract:
     specialist_type: str
     runtime_scope: str

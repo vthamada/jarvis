@@ -17,6 +17,7 @@ from apps.jarvis_console.cli import (
     run_longitudinal_learning_report_command,
     run_objective_command,
     run_open_loops_command,
+    run_operator_outcomes_command,
     run_resume_loop_command,
     run_skill_evolution_command,
     run_work_item_command,
@@ -876,6 +877,22 @@ def test_open_loop_resume_is_explicit_governed_and_persistent_across_sessions() 
     )[0]
 
     third_console = JarvisConsole.build(runtime_dir=temp_dir)
+    run_work_item_command(
+        third_console,
+        parser.parse_args(
+            [
+                "work-item",
+                "--mission-id",
+                mission_id,
+                "--session-id",
+                "sess-open-loop-three",
+                "--action",
+                "complete",
+                "--work-item-ref",
+                work_item_ref,
+            ]
+        ),
+    )
     listed_after = run_open_loops_command(
         third_console,
         parser.parse_args(["open-loops", "--mission-id", mission_id]),
@@ -884,6 +901,21 @@ def test_open_loop_resume_is_explicit_governed_and_persistent_across_sessions() 
     events = third_console.orchestrator.observability_service.list_recent_events(
         ObservabilityQuery(mission_id=mission_id, limit=100)
     )
+    outcomes = run_operator_outcomes_command(
+        parser.parse_args(
+            [
+                "operator-outcomes",
+                "--memory-db",
+                str(temp_dir / "memory.db"),
+                "--observability-db",
+                str(temp_dir / "observability.db"),
+                "--period-start",
+                "2026-01-01T00:00:00+00:00",
+                "--period-end",
+                "2030-01-01T00:00:00+00:00",
+            ]
+        )
+    )[0]
 
     assert selected_loop_ref in listed_before
     assert "registry_status=resume_available" in listed_before
@@ -908,3 +940,9 @@ def test_open_loop_resume_is_explicit_governed_and_persistent_across_sessions() 
     }
     assert "open_loop_resumed" in resume_event_names
     assert "operation_dispatched" not in resume_event_names
+    assert "operator_outcomes=read_only" in outcomes
+    assert "observed_work_item_count=1" in outcomes
+    assert "completed_work_item_count=1" in outcomes
+    assert "resume_count=1" in outcomes
+    assert "time_to_next_action_observation_count=1" in outcomes
+    assert "saved_time_claim_status=not_claimed_without_controlled_baseline" in outcomes

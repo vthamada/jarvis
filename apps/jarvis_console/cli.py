@@ -42,6 +42,7 @@ from apps.jarvis_console.commands.doctor import (
     render_doctor_report,
 )
 from shared.contracts import (
+    DailyOperatorUtilityReportContract,
     DailyOperatorWorkspaceContract,
     InputContract,
     LongHorizonGoalStrategyContract,
@@ -52,6 +53,7 @@ from shared.contracts import (
     SkillEvolutionOperatorViewContract,
 )
 from shared.types import ChannelType, InputType, MissionId, RequestId, SessionId
+from tools.daily_operator_utility_report import build_daily_operator_utility_report
 from tools.longitudinal_learning_report import build_longitudinal_report
 from tools.readiness_dashboard import build_repository_readiness_report
 
@@ -600,6 +602,23 @@ def build_parser() -> ArgumentParser:
     daily_workspace_parser.add_argument("--evolution-db")
     daily_workspace_parser.add_argument("--limit", type=int, default=20)
 
+    operator_outcomes_parser = subparsers.add_parser(
+        "operator-outcomes",
+        help="Show evidence-backed daily operator utility outcomes.",
+    )
+    operator_outcomes_parser.add_argument(
+        "--observability-db",
+        default=str(ROOT / ".jarvis_runtime" / "console" / "observability.db"),
+    )
+    operator_outcomes_parser.add_argument(
+        "--memory-db",
+        default=str(ROOT / ".jarvis_runtime" / "console" / "memory.db"),
+    )
+    operator_outcomes_parser.add_argument("--period-start")
+    operator_outcomes_parser.add_argument("--period-end")
+    operator_outcomes_parser.add_argument("--event-limit", type=int, default=1000)
+    operator_outcomes_parser.add_argument("--mission-limit", type=int, default=200)
+
     readiness_parser = subparsers.add_parser(
         "readiness-dashboard",
         help="Show repository regression and readiness signals.",
@@ -731,6 +750,10 @@ def safe_console_value(value: object | None) -> str:
         )
     sanitized = "".join(sanitized_characters)
     return sanitized[:MAX_CONSOLE_FIELD_LENGTH].strip() or "none"
+
+
+def safe_console_metric(value: object | None) -> str:
+    return "unavailable" if value is None else safe_console_value(value)
 
 
 def safe_console_list(values: list[object]) -> str:
@@ -2073,6 +2096,66 @@ def render_longitudinal_learning_report(
     return "\n".join(lines)
 
 
+def render_daily_operator_utility_report(
+    report: DailyOperatorUtilityReportContract,
+) -> str:
+    lines = [
+        "operator_outcomes=read_only",
+        f"report_id={safe_console_value(report.report_id)}",
+        f"report_status={safe_console_value(report.report_status)}",
+        f"period_start={safe_console_value(report.period_start)}",
+        f"period_end={safe_console_value(report.period_end)}",
+        f"generated_at={safe_console_value(report.generated_at)}",
+        f"mission_count={report.mission_count}",
+        f"event_count={report.event_count}",
+        f"work_item_event_count={report.work_item_event_count}",
+        f"observed_work_item_count={report.observed_work_item_count}",
+        f"completed_work_item_count={report.completed_work_item_count}",
+        f"reworked_work_item_count={report.reworked_work_item_count}",
+        f"completion_rate={safe_console_metric(report.completion_rate)}",
+        f"rework_rate={safe_console_metric(report.rework_rate)}",
+        f"artifact_event_count={report.artifact_event_count}",
+        f"observed_artifact_count={report.observed_artifact_count}",
+        f"resume_count={report.resume_count}",
+        f"stale_open_loop_count={safe_console_metric(report.stale_open_loop_count)}",
+        f"feedback_count={report.feedback_count}",
+        f"feedback_mission_count={report.feedback_mission_count}",
+        f"feedback_coverage={safe_console_metric(report.feedback_coverage)}",
+        f"helpful_feedback_count={report.helpful_feedback_count}",
+        f"helpful_feedback_rate={safe_console_metric(report.helpful_feedback_rate)}",
+        "time_to_next_action_observation_count="
+        + safe_console_value(report.time_to_next_action_observation_count),
+        "average_time_to_next_action_seconds="
+        + safe_console_metric(report.average_time_to_next_action_seconds),
+        "time_to_next_action_definition="
+        + safe_console_value(report.time_to_next_action_definition),
+        f"limitations={safe_console_list(report.limitations)}",
+        f"saved_time_claim_status={safe_console_value(report.saved_time_claim_status)}",
+        "memory_write_mode=read_only",
+        "autonomous_action_allowed=False",
+    ]
+    for metric in report.mission_metrics:
+        lines.extend(
+            [
+                "---",
+                f"mission_id={safe_console_value(metric.mission_id)}",
+                f"mission_completion_rate={safe_console_metric(metric.completion_rate)}",
+                f"mission_rework_rate={safe_console_metric(metric.rework_rate)}",
+                f"mission_artifact_count={metric.observed_artifact_count}",
+                f"mission_resume_count={metric.resume_count}",
+                "mission_stale_open_loop_count="
+                + safe_console_metric(metric.stale_open_loop_count),
+                f"mission_feedback_count={metric.feedback_count}",
+                "mission_helpful_feedback_rate="
+                + safe_console_metric(metric.helpful_feedback_rate),
+                "mission_average_time_to_next_action_seconds="
+                + safe_console_metric(metric.average_time_to_next_action_seconds),
+                f"mission_limitations={safe_console_list(metric.limitations)}",
+            ]
+        )
+    return "\n".join(lines)
+
+
 def render_mission_workflow_report(
     *,
     response: OrchestratorResponse,
@@ -2483,6 +2566,23 @@ def run_daily_workspace_command(args: Namespace) -> list[str]:
         generated_at=generated_at,
     )
     return [render_daily_operator_workspace(workspace)]
+
+
+def run_operator_outcomes_command(args: Namespace) -> list[str]:
+    observability_db = Path(args.observability_db).expanduser()
+    if not observability_db.is_absolute():
+        observability_db = (Path.cwd() / observability_db).resolve()
+    report = build_daily_operator_utility_report(
+        observability_service=ObservabilityService(
+            database_path=str(observability_db)
+        ),
+        memory_service=_memory_service_from_args(args),
+        period_start=args.period_start,
+        period_end=args.period_end,
+        event_limit=args.event_limit,
+        mission_limit=args.mission_limit,
+    )
+    return [render_daily_operator_utility_report(report)]
 
 
 def run_readiness_dashboard_command(args: Namespace) -> list[str]:

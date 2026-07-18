@@ -1,5 +1,13 @@
 # CHANGELOG
 
+## 2026-07-18
+
+### MB-198 mede outcomes diarios do operador
+
+- contratos e schemas compartilhados formalizam metricas por missao e relatorio por periodo, com taxas opcionais quando nao existe denominador confiavel;
+- `observability-service` correlaciona work items, artefatos, resume, stale loops e feedback; timestamps, snapshots e pares resume-acao ausentes viram limitacoes, nao ganhos;
+- `tools/daily_operator_utility_report.py` e `jarvis-console operator-outcomes` expoem evidencia read-only text/JSON sem mutar stores nem estimar tempo economizado; testes locais preservam os bancos e `MB-199` passa a ser o unico item tecnico `ready`.
+
 ## 2026-07-17
 
 ### MB-188 mede aprendizado longitudinal por versao

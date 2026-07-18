@@ -10,6 +10,7 @@ from evolution_lab.service import (
     TechnologyAbsorptionInput,
 )
 from memory_service.service import MemoryService
+from observability_service.service import ObservabilityService
 from operational_service.service import OperationalService
 
 from apps.jarvis_console.cli import (
@@ -17,6 +18,7 @@ from apps.jarvis_console.cli import (
     LongHorizonGoalStrategyResult,
     build_parser,
     render_artifacts_state,
+    render_daily_operator_utility_report,
     render_daily_operator_workspace,
     render_evolution_review_queue,
     render_experience_reflections,
@@ -47,6 +49,7 @@ from apps.jarvis_console.cli import (
     run_objective_command,
     run_objectives_command,
     run_operator_dashboard_command,
+    run_operator_outcomes_command,
     run_procedural_playbooks_command,
     run_progress_report_command,
     run_readiness_dashboard_command,
@@ -56,6 +59,8 @@ from apps.jarvis_console.cli import (
     run_work_items_command,
 )
 from shared.contracts import (
+    DailyOperatorMissionOutcomeContract,
+    DailyOperatorUtilityReportContract,
     ExperienceRecordContract,
     LongitudinalLearningReportContract,
     MissionStateContract,
@@ -65,6 +70,7 @@ from shared.contracts import (
     ReviewedLearningGuidanceContract,
     SkillEvolutionOperatorViewContract,
 )
+from shared.events import InternalEventEnvelope
 from shared.types import MissionId, MissionStatus
 
 
@@ -208,6 +214,134 @@ def test_console_learning_report_command_handles_empty_canonical_stores() -> Non
     assert "target_count=0" in rendered
     assert "observation_count=0" in rendered
     assert "promotion_authorized=False" in rendered
+
+
+def test_console_operator_outcomes_correlates_stores_without_mutation() -> None:
+    temp_dir = runtime_dir("console-operator-outcomes")
+    memory_db = temp_dir / "memory.db"
+    observability_db = temp_dir / "observability.db"
+    memory = MemoryService(database_url=f"sqlite:///{memory_db.as_posix()}")
+    observability = ObservabilityService(database_path=str(observability_db))
+    memory.repository.upsert_mission_state(
+        MissionStateContract(
+            mission_id=MissionId("mission-console-outcomes"),
+            mission_goal="Measure the daily operator loop",
+            mission_status=MissionStatus.ACTIVE,
+            checkpoints=[],
+            updated_at="2026-07-18T10:05:00+00:00",
+        )
+    )
+    observability.ingest_events(
+        [
+            InternalEventEnvelope(
+                event_id="event-console-outcomes-resume",
+                event_name="open_loop_resumed",
+                timestamp="2026-07-18T10:00:00+00:00",
+                source_service="orchestrator-service",
+                mission_id="mission-console-outcomes",
+                payload={"next_action_ref": "next-action://console/outcomes"},
+            ),
+            InternalEventEnvelope(
+                event_id="event-console-outcomes-complete",
+                event_name="work_item_state_changed",
+                timestamp="2026-07-18T10:05:00+00:00",
+                source_service="orchestrator-service",
+                mission_id="mission-console-outcomes",
+                payload={
+                    "work_item_ref": "work-item://console/outcomes",
+                    "work_item_status": "completed",
+                    "previous_work_item_status": "active",
+                },
+            ),
+        ]
+    )
+    before = {
+        memory_db: memory_db.read_bytes(),
+        observability_db: observability_db.read_bytes(),
+    }
+    args = build_parser().parse_args(
+        [
+            "operator-outcomes",
+            "--memory-db",
+            str(memory_db),
+            "--observability-db",
+            str(observability_db),
+            "--period-start",
+            "2026-07-18T09:00:00+00:00",
+            "--period-end",
+            "2026-07-19T00:00:00+00:00",
+        ]
+    )
+
+    rendered = run_operator_outcomes_command(args)[0]
+
+    assert "operator_outcomes=read_only" in rendered
+    assert "mission_count=1" in rendered
+    assert "completion_rate=1.0" in rendered
+    assert "resume_count=1" in rendered
+    assert "average_time_to_next_action_seconds=300.0" in rendered
+    assert "saved_time_claim_status=not_claimed_without_controlled_baseline" in rendered
+    assert "memory_write_mode=read_only" in rendered
+    assert "autonomous_action_allowed=False" in rendered
+    assert memory_db.read_bytes() == before[memory_db]
+    assert observability_db.read_bytes() == before[observability_db]
+
+
+def test_console_operator_outcomes_renderer_exposes_unavailable_metrics() -> None:
+    mission = DailyOperatorMissionOutcomeContract(
+        mission_id="mission-no-evidence",
+        work_item_event_count=0,
+        observed_work_item_count=0,
+        completed_work_item_count=0,
+        reworked_work_item_count=0,
+        artifact_event_count=0,
+        observed_artifact_count=0,
+        resume_count=0,
+        feedback_count=0,
+        helpful_feedback_count=0,
+        time_to_next_action_observation_count=0,
+        completion_rate=None,
+        rework_rate=None,
+        helpful_feedback_rate=None,
+        average_time_to_next_action_seconds=None,
+        stale_open_loop_count=None,
+        limitations=["canonical_mission_snapshot_missing"],
+    )
+    report = DailyOperatorUtilityReportContract(
+        report_id="operator-utility-report://console-limited",
+        report_status="measured_with_limitations",
+        period_start="2026-07-17T00:00:00+00:00",
+        period_end="2026-07-18T00:00:00+00:00",
+        generated_at="2026-07-18T12:00:00+00:00",
+        mission_count=1,
+        mission_metrics=[mission],
+        event_count=0,
+        work_item_event_count=0,
+        observed_work_item_count=0,
+        completed_work_item_count=0,
+        reworked_work_item_count=0,
+        completion_rate=None,
+        rework_rate=None,
+        artifact_event_count=0,
+        observed_artifact_count=0,
+        resume_count=0,
+        stale_open_loop_count=None,
+        feedback_count=0,
+        feedback_mission_count=0,
+        feedback_coverage=0.0,
+        helpful_feedback_count=0,
+        helpful_feedback_rate=None,
+        time_to_next_action_observation_count=0,
+        average_time_to_next_action_seconds=None,
+        limitations=["historical_stale_loop_snapshot_not_available"],
+        evidence_refs=[],
+    )
+
+    rendered = render_daily_operator_utility_report(report)
+
+    assert "completion_rate=unavailable" in rendered
+    assert "stale_open_loop_count=unavailable" in rendered
+    assert "historical_stale_loop_snapshot_not_available" in rendered
 
 
 def test_console_ask_returns_orchestrated_response() -> None:

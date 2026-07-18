@@ -12,12 +12,14 @@ from shared.contracts import (
     ExperienceRecordContract,
     LearningOutcomeObservationContract,
     LearningVersionTargetContract,
+    MissionStateContract,
+    OpenLoopStateContract,
     PostTaskReflectionContract,
     RecurringPatternReportContract,
     SkillCandidateContract,
 )
 from shared.events import InternalEventEnvelope
-from shared.types import RiskLevel
+from shared.types import MissionStatus, RiskLevel
 
 
 def learning_target(
@@ -83,6 +85,163 @@ def runtime_dir(name: str) -> Path:
 
 def test_observability_service_name() -> None:
     assert ObservabilityService.name == "observability-service"
+
+
+def test_daily_operator_utility_report_correlates_governed_outcomes() -> None:
+    def event(
+        event_id: str,
+        event_name: str,
+        timestamp: str,
+        mission_id: str,
+        payload: dict[str, object],
+    ) -> InternalEventEnvelope:
+        return InternalEventEnvelope(
+            event_id=event_id,
+            event_name=event_name,
+            timestamp=timestamp,
+            source_service="orchestrator-service",
+            mission_id=mission_id,
+            payload=payload,
+        )
+
+    events = [
+        event(
+            "event-resume",
+            "open_loop_resumed",
+            "2026-07-18T08:00:00+00:00",
+            "mission-utility",
+            {"next_action_ref": "next-action://utility/continue"},
+        ),
+        event(
+            "event-work-create",
+            "work_item_state_changed",
+            "2026-07-18T08:05:00+00:00",
+            "mission-utility",
+            {
+                "work_item_ref": "work-item://utility/1",
+                "work_item_status": "active",
+                "previous_work_item_status": None,
+            },
+        ),
+        event(
+            "event-work-complete",
+            "work_item_state_changed",
+            "2026-07-18T08:10:00+00:00",
+            "mission-utility",
+            {
+                "work_item_ref": "work-item://utility/1",
+                "work_item_status": "completed",
+                "previous_work_item_status": "active",
+            },
+        ),
+        event(
+            "event-work-rework",
+            "work_item_state_changed",
+            "2026-07-18T08:20:00+00:00",
+            "mission-utility",
+            {
+                "work_item_ref": "work-item://utility/1",
+                "work_item_status": "active",
+                "previous_work_item_status": "completed",
+            },
+        ),
+        event(
+            "event-artifact",
+            "artifact_lifecycle_state_changed",
+            "2026-07-18T08:30:00+00:00",
+            "mission-utility",
+            {"resulting_artifact_ref": "artifact://utility/1"},
+        ),
+        event(
+            "event-feedback",
+            "operator_feedback_recorded",
+            "2026-07-18T08:40:00+00:00",
+            "mission-utility",
+            {"operator_feedback_assessment": "helpful"},
+        ),
+    ]
+    states = [
+        MissionStateContract(
+            mission_id="mission-utility",
+            mission_goal="Complete the operator utility slice",
+            mission_status=MissionStatus.ACTIVE,
+            checkpoints=[],
+            updated_at="2026-07-18T08:40:00+00:00",
+        ),
+        MissionStateContract(
+            mission_id="mission-stale-loop",
+            mission_goal="Resume an unattended loop",
+            mission_status=MissionStatus.ACTIVE,
+            checkpoints=[],
+            updated_at="2026-07-14T08:00:00+00:00",
+            open_loops=["open-loop://stale/1"],
+            open_loop_states=[
+                OpenLoopStateContract(
+                    open_loop_ref="open-loop://stale/1",
+                    mission_id="mission-stale-loop",
+                    loop_summary="Review the unattended mission.",
+                )
+            ],
+        ),
+    ]
+
+    report = ObservabilityService.build_daily_operator_utility_report(
+        report_id="operator-utility-report://test",
+        events=events,
+        mission_states=states,
+        period_start="2026-07-18T00:00:00+00:00",
+        period_end="2026-07-18T12:00:00+00:00",
+        generated_at="2026-07-18T12:00:00+00:00",
+    )
+
+    assert report.mission_count == 2
+    assert report.event_count == 6
+    assert report.observed_work_item_count == 1
+    assert report.completed_work_item_count == 1
+    assert report.completion_rate == 1.0
+    assert report.reworked_work_item_count == 1
+    assert report.rework_rate == 1.0
+    assert report.observed_artifact_count == 1
+    assert report.resume_count == 1
+    assert report.stale_open_loop_count == 1
+    assert report.feedback_count == 1
+    assert report.feedback_coverage == 0.5
+    assert report.helpful_feedback_rate == 1.0
+    assert report.time_to_next_action_observation_count == 1
+    assert report.average_time_to_next_action_seconds == 300.0
+    assert report.saved_time_claim_status == "not_claimed_without_controlled_baseline"
+    assert report.read_only is True
+
+
+def test_daily_operator_utility_report_surfaces_missing_period_evidence() -> None:
+    report = ObservabilityService.build_daily_operator_utility_report(
+        report_id="operator-utility-report://limited",
+        events=[
+            InternalEventEnvelope(
+                event_id="event-invalid-time",
+                event_name="work_item_state_changed",
+                timestamp="invalid",
+                source_service="orchestrator-service",
+                mission_id="mission-limited",
+                payload={"work_item_ref": "work-item://limited/1"},
+            )
+        ],
+        mission_states=[],
+        period_start="2026-07-17T00:00:00+00:00",
+        period_end="2026-07-18T00:00:00+00:00",
+        generated_at="2026-07-18T12:00:00+00:00",
+        source_event_limit_reached=True,
+    )
+
+    assert report.report_status == "insufficient_evidence"
+    assert report.completion_rate is None
+    assert report.rework_rate is None
+    assert report.helpful_feedback_rate is None
+    assert report.average_time_to_next_action_seconds is None
+    assert report.stale_open_loop_count is None
+    assert "invalid_or_missing_event_timestamp" in report.limitations
+    assert "event_query_limit_reached_period_may_be_incomplete" in report.limitations
+    assert "historical_stale_loop_snapshot_not_available" in report.limitations
 
 
 def test_longitudinal_learning_report_detects_sustained_runtime_gain() -> None:

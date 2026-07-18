@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
+from datetime import UTC, datetime
 from os import getenv
 from pathlib import Path
 
@@ -16,6 +17,8 @@ from observability_service.repository import ObservabilityRepository
 from shared.contracts import (
     WORKFLOW_VARIANT_EVAL_METRICS,
     CapabilityReadinessContract,
+    DailyOperatorMissionOutcomeContract,
+    DailyOperatorUtilityReportContract,
     DomainEvalCaseResultContract,
     DomainEvalRunContract,
     EvolutionProposalContract,
@@ -24,6 +27,7 @@ from shared.contracts import (
     LearningVersionTargetContract,
     LongitudinalLearningReportContract,
     LongitudinalVersionMetricsContract,
+    MissionStateContract,
     PostTaskReflectionContract,
     RecurringPatternReportContract,
     RegressionReadinessReportContract,
@@ -69,6 +73,70 @@ DEFAULT_REQUIRED_FLOW_EVENTS = (
     "response_synthesized",
     "memory_recorded",
 )
+
+OPERATOR_UTILITY_EVENT_NAMES = frozenset(
+    {
+        "work_item_state_changed",
+        "artifact_lifecycle_state_changed",
+        "open_loop_resumed",
+        "operator_feedback_recorded",
+    }
+)
+OPERATOR_UTILITY_ACTION_EVENT_NAMES = frozenset(
+    {"work_item_state_changed", "artifact_lifecycle_state_changed"}
+)
+
+
+@dataclass
+class _MissionOutcomeAccumulator:
+    mission_id: str
+    work_item_events: list[InternalEventEnvelope] = field(default_factory=list)
+    work_item_refs: set[str] = field(default_factory=set)
+    completed_work_item_refs: set[str] = field(default_factory=set)
+    reworked_work_item_refs: set[str] = field(default_factory=set)
+    artifact_events: list[InternalEventEnvelope] = field(default_factory=list)
+    artifact_refs: set[str] = field(default_factory=set)
+    resume_positions: list[int] = field(default_factory=list)
+    feedback_events: list[InternalEventEnvelope] = field(default_factory=list)
+    helpful_feedback_count: int = 0
+    time_to_next_action_seconds: list[float] = field(default_factory=list)
+    stale_open_loop_count: int | None = 0
+    evidence_refs: list[str] = field(default_factory=list)
+    limitations: set[str] = field(default_factory=set)
+
+
+def _utility_timestamp(value: object) -> datetime | None:
+    if not isinstance(value, str) or not value.strip():
+        return None
+    try:
+        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+    except ValueError:
+        return None
+    if parsed.tzinfo is None:
+        parsed = parsed.replace(tzinfo=UTC)
+    return parsed.astimezone(UTC)
+
+
+def _utility_rate(numerator: int, denominator: int) -> float | None:
+    return round(numerator / denominator, 4) if denominator else None
+
+
+def _utility_payload_ref(event: InternalEventEnvelope, key: str) -> str | None:
+    value = event.payload.get(key)
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def _utility_open_loop_refs(state: MissionStateContract) -> set[str]:
+    refs = {
+        item.open_loop_ref
+        for item in state.open_loop_states
+        if item.loop_status == "open" and item.open_loop_ref
+    }
+    refs.update(str(item) for item in state.open_loops if str(item).strip())
+    return refs
 
 
 @dataclass(frozen=True)
@@ -1147,6 +1215,302 @@ class ObservabilityService:
             unregistered_pattern_refs=unregistered_pattern_refs,
             blockers=view_blockers,
             generated_at=generated_at,
+        )
+
+    @staticmethod
+    def build_daily_operator_utility_report(
+        *,
+        report_id: str,
+        events: list[InternalEventEnvelope],
+        mission_states: list[MissionStateContract],
+        period_start: str,
+        period_end: str,
+        generated_at: str,
+        source_event_limit_reached: bool = False,
+        source_mission_limit_reached: bool = False,
+    ) -> DailyOperatorUtilityReportContract:
+        """Correlate daily operator outcomes without inferring unobserved gains."""
+
+        start = _utility_timestamp(period_start)
+        end = _utility_timestamp(period_end)
+        generated = _utility_timestamp(generated_at)
+        if start is None or end is None or generated is None:
+            raise ValueError("period_start, period_end and generated_at must be ISO timestamps")
+        if start > end:
+            raise ValueError("period_start must be before or equal to period_end")
+
+        limitations: set[str] = set()
+        if source_event_limit_reached:
+            limitations.add("event_query_limit_reached_period_may_be_incomplete")
+        if source_mission_limit_reached:
+            limitations.add("mission_snapshot_limit_reached_stale_loop_count_may_be_incomplete")
+
+        dated_events: list[tuple[datetime, int, InternalEventEnvelope]] = []
+        for position, event in enumerate(events):
+            if event.event_name not in OPERATOR_UTILITY_EVENT_NAMES:
+                continue
+            timestamp = _utility_timestamp(event.timestamp)
+            if timestamp is None:
+                limitations.add("invalid_or_missing_event_timestamp")
+                continue
+            if start <= timestamp <= end:
+                dated_events.append((timestamp, position, event))
+        dated_events.sort(key=lambda item: (item[0], item[1]))
+
+        accumulators: dict[str, _MissionOutcomeAccumulator] = {}
+
+        def accumulator(mission_id: str) -> _MissionOutcomeAccumulator:
+            return accumulators.setdefault(
+                mission_id,
+                _MissionOutcomeAccumulator(mission_id=mission_id),
+            )
+
+        for ordered_position, (_, _, event) in enumerate(dated_events):
+            mission_id = str(event.mission_id or "").strip()
+            if not mission_id:
+                limitations.add("event_missing_mission_id")
+                continue
+            item = accumulator(mission_id)
+            if event.event_id:
+                item.evidence_refs.append(event.event_id)
+            else:
+                item.limitations.add("event_missing_evidence_ref")
+                limitations.add("event_missing_evidence_ref")
+
+            if event.event_name == "work_item_state_changed":
+                item.work_item_events.append(event)
+                work_item_ref = _utility_payload_ref(event, "work_item_ref")
+                if work_item_ref is None:
+                    item.limitations.add("work_item_event_missing_ref")
+                    limitations.add("work_item_event_missing_ref")
+                    continue
+                item.work_item_refs.add(work_item_ref)
+                status = _utility_payload_ref(event, "work_item_status")
+                previous_status = _utility_payload_ref(
+                    event, "previous_work_item_status"
+                )
+                if status == "completed":
+                    item.completed_work_item_refs.add(work_item_ref)
+                if previous_status == "completed" and status != "completed":
+                    item.completed_work_item_refs.add(work_item_ref)
+                    item.reworked_work_item_refs.add(work_item_ref)
+            elif event.event_name == "artifact_lifecycle_state_changed":
+                item.artifact_events.append(event)
+                artifact_ref = _utility_payload_ref(
+                    event, "resulting_artifact_ref"
+                ) or _utility_payload_ref(event, "artifact_ref")
+                if artifact_ref is None:
+                    item.limitations.add("artifact_event_missing_ref")
+                    limitations.add("artifact_event_missing_ref")
+                else:
+                    item.artifact_refs.add(artifact_ref)
+            elif event.event_name == "open_loop_resumed":
+                item.resume_positions.append(ordered_position)
+                if _utility_payload_ref(event, "next_action_ref") is None:
+                    item.limitations.add("resume_missing_next_action_ref")
+                    limitations.add("resume_missing_next_action_ref")
+            elif event.event_name == "operator_feedback_recorded":
+                item.feedback_events.append(event)
+                assessment = _utility_payload_ref(
+                    event, "operator_feedback_assessment"
+                )
+                if assessment is None:
+                    item.limitations.add("feedback_missing_assessment")
+                    limitations.add("feedback_missing_assessment")
+                elif assessment.replace("-", "_") == "helpful":
+                    item.helpful_feedback_count += 1
+
+        ordered_events = [item[2] for item in dated_events]
+        ordered_timestamps = [item[0] for item in dated_events]
+        for mission_id, item in accumulators.items():
+            for resume_position in item.resume_positions:
+                resumed_at = ordered_timestamps[resume_position]
+                next_action_position = next(
+                    (
+                        position
+                        for position in range(resume_position + 1, len(ordered_events))
+                        if ordered_events[position].mission_id == mission_id
+                        and ordered_events[position].event_name
+                        in OPERATOR_UTILITY_ACTION_EVENT_NAMES
+                    ),
+                    None,
+                )
+                if next_action_position is None:
+                    item.limitations.add("resume_without_follow_up_action_in_period")
+                    limitations.add("resume_without_follow_up_action_in_period")
+                    continue
+                elapsed = (
+                    ordered_timestamps[next_action_position] - resumed_at
+                ).total_seconds()
+                if elapsed < 0:
+                    item.limitations.add("negative_time_to_next_action")
+                    limitations.add("negative_time_to_next_action")
+                    continue
+                item.time_to_next_action_seconds.append(round(elapsed, 4))
+
+        state_by_mission = {
+            str(state.mission_id): state for state in mission_states
+        }
+        historical_snapshot = end < generated and (generated - end).total_seconds() > 300
+        if historical_snapshot:
+            limitations.add("historical_stale_loop_snapshot_not_available")
+            for item in accumulators.values():
+                item.stale_open_loop_count = None
+                item.limitations.add("historical_stale_loop_snapshot_not_available")
+        else:
+            for state in mission_states:
+                open_loop_refs = _utility_open_loop_refs(state)
+                if not open_loop_refs:
+                    continue
+                item = accumulator(str(state.mission_id))
+                updated_at = _utility_timestamp(state.updated_at)
+                if updated_at is None:
+                    item.stale_open_loop_count = len(open_loop_refs)
+                    item.limitations.add("mission_timestamp_missing_stale_status_unknown")
+                    limitations.add("mission_timestamp_missing_stale_status_unknown")
+                elif (generated - updated_at).total_seconds() > 72 * 3600:
+                    item.stale_open_loop_count = len(open_loop_refs)
+            for mission_id, item in accumulators.items():
+                if mission_id not in state_by_mission:
+                    item.stale_open_loop_count = None
+                    item.limitations.add("canonical_mission_snapshot_missing")
+                    limitations.add("canonical_mission_snapshot_missing")
+
+        mission_metrics: list[DailyOperatorMissionOutcomeContract] = []
+        for mission_id in sorted(accumulators):
+            item = accumulators[mission_id]
+            completion_rate = _utility_rate(
+                len(item.completed_work_item_refs), len(item.work_item_refs)
+            )
+            rework_rate = _utility_rate(
+                len(item.reworked_work_item_refs),
+                len(item.completed_work_item_refs),
+            )
+            helpful_feedback_rate = _utility_rate(
+                item.helpful_feedback_count, len(item.feedback_events)
+            )
+            average_time = (
+                round(
+                    sum(item.time_to_next_action_seconds)
+                    / len(item.time_to_next_action_seconds),
+                    4,
+                )
+                if item.time_to_next_action_seconds
+                else None
+            )
+            mission_metrics.append(
+                DailyOperatorMissionOutcomeContract(
+                    mission_id=mission_id,
+                    work_item_event_count=len(item.work_item_events),
+                    observed_work_item_count=len(item.work_item_refs),
+                    completed_work_item_count=len(item.completed_work_item_refs),
+                    reworked_work_item_count=len(item.reworked_work_item_refs),
+                    artifact_event_count=len(item.artifact_events),
+                    observed_artifact_count=len(item.artifact_refs),
+                    resume_count=len(item.resume_positions),
+                    feedback_count=len(item.feedback_events),
+                    helpful_feedback_count=item.helpful_feedback_count,
+                    time_to_next_action_observation_count=len(
+                        item.time_to_next_action_seconds
+                    ),
+                    completion_rate=completion_rate,
+                    rework_rate=rework_rate,
+                    helpful_feedback_rate=helpful_feedback_rate,
+                    average_time_to_next_action_seconds=average_time,
+                    stale_open_loop_count=item.stale_open_loop_count,
+                    evidence_refs=list(dict.fromkeys(item.evidence_refs))[:250],
+                    limitations=sorted(item.limitations),
+                )
+            )
+
+        observed_work_items = sum(
+            metric.observed_work_item_count for metric in mission_metrics
+        )
+        completed_work_items = sum(
+            metric.completed_work_item_count for metric in mission_metrics
+        )
+        reworked_work_items = sum(
+            metric.reworked_work_item_count for metric in mission_metrics
+        )
+        feedback_count = sum(metric.feedback_count for metric in mission_metrics)
+        helpful_feedback_count = sum(
+            metric.helpful_feedback_count for metric in mission_metrics
+        )
+        time_observations = [
+            elapsed
+            for item in accumulators.values()
+            for elapsed in item.time_to_next_action_seconds
+        ]
+        stale_counts = [
+            metric.stale_open_loop_count
+            for metric in mission_metrics
+            if metric.stale_open_loop_count is not None
+        ]
+        if not observed_work_items:
+            limitations.add("completion_and_rework_rates_unavailable_no_work_items")
+        if not feedback_count:
+            limitations.add("helpful_feedback_rate_unavailable_no_feedback")
+        if not time_observations:
+            limitations.add("time_to_next_action_unavailable_no_completed_resume_pair")
+        if mission_metrics and not stale_counts:
+            limitations.add("stale_open_loop_count_unavailable")
+
+        report_status = (
+            "insufficient_evidence"
+            if not dated_events and not mission_metrics
+            else "measured_with_limitations"
+            if limitations
+            else "measured"
+        )
+        return DailyOperatorUtilityReportContract(
+            report_id=report_id,
+            report_status=report_status,
+            period_start=start.isoformat(),
+            period_end=end.isoformat(),
+            generated_at=generated.isoformat(),
+            mission_count=len(mission_metrics),
+            mission_metrics=mission_metrics,
+            event_count=len(dated_events),
+            work_item_event_count=sum(
+                metric.work_item_event_count for metric in mission_metrics
+            ),
+            observed_work_item_count=observed_work_items,
+            completed_work_item_count=completed_work_items,
+            reworked_work_item_count=reworked_work_items,
+            completion_rate=_utility_rate(completed_work_items, observed_work_items),
+            rework_rate=_utility_rate(reworked_work_items, completed_work_items),
+            artifact_event_count=sum(
+                metric.artifact_event_count for metric in mission_metrics
+            ),
+            observed_artifact_count=sum(
+                metric.observed_artifact_count for metric in mission_metrics
+            ),
+            resume_count=sum(metric.resume_count for metric in mission_metrics),
+            stale_open_loop_count=(sum(stale_counts) if stale_counts else None),
+            feedback_count=feedback_count,
+            feedback_mission_count=sum(
+                metric.feedback_count > 0 for metric in mission_metrics
+            ),
+            feedback_coverage=_utility_rate(
+                sum(metric.feedback_count > 0 for metric in mission_metrics),
+                len(mission_metrics),
+            ),
+            helpful_feedback_count=helpful_feedback_count,
+            helpful_feedback_rate=_utility_rate(
+                helpful_feedback_count, feedback_count
+            ),
+            time_to_next_action_observation_count=len(time_observations),
+            average_time_to_next_action_seconds=(
+                round(sum(time_observations) / len(time_observations), 4)
+                if time_observations
+                else None
+            ),
+            limitations=sorted(limitations),
+            evidence_refs=list(
+                dict.fromkeys(
+                    ref for metric in mission_metrics for ref in metric.evidence_refs
+                )
+            )[:1000],
         )
 
     @staticmethod

@@ -1,6 +1,16 @@
 # HANDOFF
 
-## Atualizacao 2026-07-17
+## Atualizacao 2026-07-18
+
+`MB-198` implementou outcomes diarios de utilidade do operador por periodo e
+por missao. O novo `operator-outcomes` e standalone/read-only e correlaciona
+work items, artefatos, resume, stale loops e feedback a partir de eventos e
+snapshots canonicos. Completion, rework, feedback coverage e latencia entre
+resume e proxima transicao observada ficam indisponiveis quando falta
+denominador/timestamp/evidencia; nenhum valor e convertido em ganho ou tempo
+economizado. O tool persistivel e o runbook registram fontes, formulas e
+limites. Testes preservam os stores e cobrem text/JSON. `MB-199` e o unico item
+tecnico `ready`.
 
 `MB-197` implementou a retomada governada de open loops entre sessoes.
 `open-loops` deriva registry read-only com refs deterministicas, freshness,
@@ -10,7 +20,7 @@ Estado concorrente, stale, conflito de identidade, dependencia bloqueada e
 repeticao falham fechados. O resume apenas registra checkpoint e next action:
 nao executa ferramenta/work item e nao cria scheduler. Testes unitarios e E2E
 em tres sessoes cobrem persistencia, corrida, conflitos, eventos e ausencia de
-dispatch. `MB-198` e o unico item tecnico `ready`.
+dispatch. Esse estado foi sucedido pelo fechamento de `MB-198`.
 
 `MB-196` tornou versoes de artefato estado canonico persistente. Cada versao
 governada registra owner mission, objective, source work item, raiz de linhagem,

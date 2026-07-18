@@ -2,6 +2,8 @@ from shared.contracts import (
     ArtifactLifecycleStateContract,
     ArtifactRegistryContract,
     AutonomyLadderContract,
+    DailyOperatorMissionOutcomeContract,
+    DailyOperatorUtilityReportContract,
     DailyOperatorWorkspaceContract,
     DailyWorkspaceMissionContract,
     DeliberativePlanContract,
@@ -49,6 +51,8 @@ from shared.schemas import (
     ARTIFACT_LIFECYCLE_STATE_SCHEMA,
     ARTIFACT_REGISTRY_SCHEMA,
     AUTONOMY_LADDER_SCHEMA,
+    DAILY_OPERATOR_MISSION_OUTCOME_SCHEMA,
+    DAILY_OPERATOR_UTILITY_REPORT_SCHEMA,
     DAILY_OPERATOR_WORKSPACE_SCHEMA,
     DAILY_WORKSPACE_MISSION_SCHEMA,
     DELIBERATIVE_PLAN_SCHEMA,
@@ -272,6 +276,63 @@ def test_daily_workspace_contract_is_read_only_and_non_scheduling() -> None:
     assert workspace.memory_write_mode == "read_only"
     assert workspace.autonomous_resume_allowed is False
     assert workspace.autonomous_scheduling_allowed is False
+
+
+def test_daily_operator_utility_contract_never_claims_saved_time() -> None:
+    metric = DailyOperatorMissionOutcomeContract(
+        mission_id="mission-utility",
+        work_item_event_count=2,
+        observed_work_item_count=1,
+        completed_work_item_count=1,
+        reworked_work_item_count=0,
+        artifact_event_count=1,
+        observed_artifact_count=1,
+        resume_count=1,
+        feedback_count=1,
+        helpful_feedback_count=1,
+        time_to_next_action_observation_count=1,
+        completion_rate=1.0,
+        rework_rate=0.0,
+        helpful_feedback_rate=1.0,
+        average_time_to_next_action_seconds=60.0,
+        stale_open_loop_count=0,
+    )
+    report = DailyOperatorUtilityReportContract(
+        report_id="operator-utility-report://test",
+        report_status="measured",
+        period_start="2026-07-17T12:00:00+00:00",
+        period_end="2026-07-18T12:00:00+00:00",
+        generated_at="2026-07-18T12:00:00+00:00",
+        mission_count=1,
+        mission_metrics=[metric],
+        event_count=5,
+        work_item_event_count=2,
+        observed_work_item_count=1,
+        completed_work_item_count=1,
+        reworked_work_item_count=0,
+        completion_rate=1.0,
+        rework_rate=0.0,
+        artifact_event_count=1,
+        observed_artifact_count=1,
+        resume_count=1,
+        stale_open_loop_count=0,
+        feedback_count=1,
+        feedback_mission_count=1,
+        feedback_coverage=1.0,
+        helpful_feedback_count=1,
+        helpful_feedback_rate=1.0,
+        time_to_next_action_observation_count=1,
+        average_time_to_next_action_seconds=60.0,
+        limitations=[],
+        evidence_refs=["event://utility"],
+    )
+
+    assert DAILY_OPERATOR_MISSION_OUTCOME_SCHEMA.contract_name == type(metric).__name__
+    assert DAILY_OPERATOR_UTILITY_REPORT_SCHEMA.contract_name == type(report).__name__
+    assert report.saved_time_claim_status == "not_claimed_without_controlled_baseline"
+    assert report.read_only is True
+    assert report.memory_write_mode == "read_only"
+    assert report.autonomous_action_allowed is False
 
 
 def test_technology_absorption_candidate_contract_is_subordinate_by_default() -> None:

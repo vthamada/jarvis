@@ -206,7 +206,7 @@ Goal: know whether JARVIS is actually improving.
 | `OBS-002` | Internal pilot | `implemented_baseline` | Keep stable | Tools | none |
 | `OBS-003` | Baseline comparison | `implemented_baseline` | Keep stable | compare_orchestrator_paths | none |
 | `OBS-004` | Release signal verification | `implemented_baseline` | Keep stable | engineering_gate | none |
-| `OBS-005` | Operator usefulness metrics | `minimum_baseline` | Measure daily utility, task completion, saved effort | Operator product loop | expand after long-horizon goals |
+| `OBS-005` | Operator usefulness metrics | `implemented_baseline` | Accumulate controlled comparisons without inventing saved-time claims | Operator product loop | keep stable |
 | `OBS-006` | Domain-specific eval packs | `minimum_baseline` | Expand packs across promoted routes/domains | Domain onboarding | later |
 | `OBS-007` | Regression dashboard | `implemented_baseline` | Compact CLI/report of health over time | Observability/tools | none |
 | `OBS-008` | Production-readiness score | `implemented_baseline` | Unified readiness per capability | Gates/docs | none |
@@ -815,7 +815,10 @@ Map IDs: `OBS-005`, `OP-006`, `OP-009`.
 Goal: measure completion, rework, stale loops, feedback and time-to-next-action
 for the daily workflow without inventing saved-time claims.
 
-Status: ready after `MB-197`.
+Status: closed in `MB-198`; `operator-outcomes` correlates completion, rework,
+artifact activity, resume, stale loops and feedback by period and mission. Missing
+timestamps, snapshots and action pairs remain explicit limitations, and saved
+time is never claimed without a controlled baseline.
 
 ### MB-199 -- Registry-Derived CLI Reference And Golden Outputs
 
@@ -824,7 +827,7 @@ Map IDs: `SFC-014`, `DOC-010`, `SFC-012`.
 Goal: generate command reference/completion from registry metadata and protect
 text/JSON behavior with deterministic golden tests.
 
-Status: blocked by `MB-198`.
+Status: ready after `MB-198`.
 
 ### MB-200 -- Daily Operator Loop Readiness Closure
 

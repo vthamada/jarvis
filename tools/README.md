@@ -32,6 +32,17 @@ python tools/readiness_dashboard.py --run-gate standard
 O relatorio salva `latest.json` e historico timestamped em
 `.jarvis_runtime/readiness/`; use `--no-save` para somente inspecionar.
 
+Para gerar outcomes diarios do operador a partir de eventos e memoria
+canonica, sem estimar tempo economizado:
+
+```powershell
+python tools/daily_operator_utility_report.py
+```
+
+O relatorio salva `latest.json` e historico timestamped em
+`.jarvis_runtime/observability/operator-utility/`. As definicoes e limitacoes
+estao em `docs/operations/daily-operator-utility-outcomes.md`.
+
 ## Gates do baseline
 
 Os gates executaveis do `v1` continuam sendo:

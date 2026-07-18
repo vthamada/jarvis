@@ -1464,6 +1464,77 @@ LONGITUDINAL_LEARNING_REPORT_SCHEMA = CanonicalSchema(
     ),
 )
 
+DAILY_OPERATOR_MISSION_OUTCOME_SCHEMA = CanonicalSchema(
+    name="DailyOperatorMissionOutcomeSchema",
+    contract_name="DailyOperatorMissionOutcomeContract",
+    required_fields=(
+        "mission_id",
+        "work_item_event_count",
+        "observed_work_item_count",
+        "completed_work_item_count",
+        "reworked_work_item_count",
+        "artifact_event_count",
+        "observed_artifact_count",
+        "resume_count",
+        "feedback_count",
+        "helpful_feedback_count",
+        "time_to_next_action_observation_count",
+        "completion_rate",
+        "rework_rate",
+        "helpful_feedback_rate",
+        "average_time_to_next_action_seconds",
+        "stale_open_loop_count",
+    ),
+    optional_fields=("evidence_refs", "limitations"),
+    notes=(
+        "Read-only mission outcome projection derived from observable evidence.",
+    ),
+)
+
+DAILY_OPERATOR_UTILITY_REPORT_SCHEMA = CanonicalSchema(
+    name="DailyOperatorUtilityReportSchema",
+    contract_name="DailyOperatorUtilityReportContract",
+    required_fields=(
+        "report_id",
+        "report_status",
+        "period_start",
+        "period_end",
+        "generated_at",
+        "mission_count",
+        "mission_metrics",
+        "event_count",
+        "work_item_event_count",
+        "observed_work_item_count",
+        "completed_work_item_count",
+        "reworked_work_item_count",
+        "completion_rate",
+        "rework_rate",
+        "artifact_event_count",
+        "observed_artifact_count",
+        "resume_count",
+        "stale_open_loop_count",
+        "feedback_count",
+        "feedback_mission_count",
+        "feedback_coverage",
+        "helpful_feedback_count",
+        "helpful_feedback_rate",
+        "time_to_next_action_observation_count",
+        "average_time_to_next_action_seconds",
+        "limitations",
+        "evidence_refs",
+    ),
+    optional_fields=(
+        "time_to_next_action_definition",
+        "saved_time_claim_status",
+        "read_only",
+        "memory_write_mode",
+        "autonomous_action_allowed",
+    ),
+    notes=(
+        "Period utility report; missing evidence is a limitation, never a gain claim.",
+    ),
+)
+
 EVOLUTION_REVIEW_QUEUE_ITEM_SCHEMA = CanonicalSchema(
     name="EvolutionReviewQueueItemSchema",
     contract_name="EvolutionReviewQueueItemContract",
