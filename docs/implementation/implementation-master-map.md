@@ -847,7 +847,103 @@ causality before opening broad adapters or product surfaces. A separate
 reprioritization must derive the executable queue from `COG-006`, `MEM-005`,
 `MEM-006`, `COG-007` and `EVL-008`.
 
-## 14. What Must Not Be Pulled Next By Inertia
+## 14. Suggested MB-201 To MB-210 Queue
+
+This queue remains inside `v2_core_depth`. It converts the `MB-200` phase
+decision into WIP-1 execution and places governed technology-radar work only
+after the Core policy and memory causality slices.
+
+### MB-201 -- Reprioritize Core Policy, Memory And Technology Learning
+
+Map IDs: `COG-006`, `COG-007`, `MEM-005`, `MEM-006`, `EVL-008`, `KNW-006`.
+
+Goal: open one ordered queue for workflow policy, memory causality, decision
+attribution, governed variants and manual technology intake.
+
+Status: closed as planning/reprioritization documentation; `MB-202` is ready.
+
+### MB-202 -- Versioned Declarative Workflow Policy
+
+Map IDs: `COG-006`, `COG-004`, `OBS-001`.
+
+Goal: resolve one sovereign, versioned workflow policy and expose its applied
+effects or bounded non-use consistently across planning, synthesis and events.
+
+Status: ready after `MB-201`.
+
+### MB-203 -- Evidence-Grounded Semantic Memory Causality
+
+Map IDs: `MEM-005`, `COG-007`, `GOV-004`.
+
+Goal: make semantic memory selection, influence, conflict and non-use
+attributable to evidence and freshness.
+
+Status: planned after `MB-202`.
+
+### MB-204 -- Governed Procedural Playbook Influence
+
+Map IDs: `MEM-006`, `EVL-007`, `GOV-004`.
+
+Goal: consume reviewed, scoped and versioned playbooks as bounded guidance
+without turning them into autonomous scripts.
+
+Status: planned after `MB-203`.
+
+### MB-205 -- Decision-Memory Outcome Attribution
+
+Map IDs: `COG-007`, `MEM-005`, `MEM-006`, `OBS-009`.
+
+Goal: correlate policy and memory participation with decisions and observed
+outcomes while separating evidence from causal claims.
+
+Status: planned after `MB-204`.
+
+### MB-206 -- Controlled Workflow Variant Evaluation
+
+Map IDs: `EVL-008`, `EVL-005`, `OBS-009`.
+
+Goal: compare versioned baseline and candidate workflows under the same
+governance and memory policy without promotion authority.
+
+Status: planned after `MB-205`.
+
+### MB-207 -- Manual Workflow Lifecycle And Rollback
+
+Map IDs: `EVL-006`, `EVL-008`, `GOV-009`.
+
+Goal: bind human review, release evidence, activation and rollback to one
+auditable workflow-variant lifecycle.
+
+Status: planned after `MB-206`.
+
+### MB-208 -- Governed Technology Radar Intake
+
+Map IDs: `KNW-006`, `EVL-001`, `DOC-006`.
+
+Goal: register reviewed repositories, skills, standards and articles as
+versioned evidence without auto-trust or autonomous ingestion.
+
+Status: planned after `MB-207`.
+
+### MB-209 -- Sandboxed Technology Experiment Packs
+
+Map IDs: `KNW-006`, `EVL-001`, `EVL-005`.
+
+Goal: translate selected external patterns into isolated, testable experiments
+with a sovereign consumer and no central dependency or automatic promotion.
+
+Status: planned after `MB-208`.
+
+### MB-210 -- Core Learning And Technology Readiness Closure
+
+Map IDs: `OBS-007`, `OBS-008`, `DOC-010`.
+
+Goal: close the queue with evidence, readiness, runbooks, limitations and an
+explicit phase decision.
+
+Status: planned after `MB-209`.
+
+## 15. What Must Not Be Pulled Next By Inertia
 
 Do not open these without explicit phase decision:
 
@@ -863,7 +959,7 @@ Do not open these without explicit phase decision:
 - model weight changes;
 - autonomous promotion of evolution proposals.
 
-## 15. Maintenance Policy
+## 16. Maintenance Policy
 
 This map should be updated when:
 
@@ -876,7 +972,7 @@ This map should be updated when:
 The `execution-backlog.md` should remain the only micro queue. This map should
 remain the complete capability decomposition.
 
-## 16. Executive Conclusion
+## 17. Executive Conclusion
 
 The system is no longer just scattered infrastructure. It has a governed core,
 memory, planning, synthesis, observability, evolution lab, console and learning

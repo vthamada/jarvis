@@ -2,6 +2,12 @@
 
 ## 2026-07-18
 
+### MB-201 reprioriza politica, memoria e aprendizado tecnologico
+
+- a fila WIP-1 `MB-202` a `MB-210` aprofunda workflow policy, memoria semantica/procedural, atribuicao de decisao e variantes governadas antes do radar tecnologico;
+- intake externo permanece manual, versionado e sem auto-trust; experimentos continuam sandbox-only e subordinados a consumidor soberano;
+- somente `MB-202` fica `ready`; adapters, API, voz, UI rica, scheduler e autopromocao permanecem fora da fase.
+
 ### MB-200 fecha readiness do Daily Operator Loop
 
 - um runbook ponta a ponta conecta doctor, workspace, missao, retomada, work items, artefatos, feedback, reflexao, revisao, outcomes e readiness sem criar autoridade paralela;

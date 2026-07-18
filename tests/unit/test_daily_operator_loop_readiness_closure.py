@@ -1,6 +1,7 @@
 from pathlib import Path
 
 from tools.readiness_dashboard import (
+    ACTIVE_STATUS_DOCS,
     GateRunResult,
     build_repository_readiness_report,
 )
@@ -47,15 +48,51 @@ def test_daily_operator_loop_runbook_covers_governed_end_to_end_path() -> None:
     assert "voice/realtime" in runbook
 
 
-def test_mb200_repository_closure_is_synchronized_and_bounded() -> None:
+def _write_mb200_closure_snapshot(root: Path) -> None:
+    master_map = """# Implementation Master Map
+
+| ID | Capability | Current status | Target | Dependencies | Next slice |
+| --- | --- | --- | --- | --- | --- |
+| `OBS-007` | Regression dashboard | `implemented_baseline` | Keep stable | tools | none |
+| `MEM-005` | Semantic memory influence | `partial_runtime` | Deepen | memory | candidate |
+| `SFC-006` | Web UI | `deferred_by_phase` | Future | API | later |
+| `SFC-007` | Voice/realtime | `deferred_by_phase` | Future | surface | not now |
+| `ACT-006` | Browser automation | `deferred_by_phase` | Future | tools | not now |
+| `ACT-007` | Computer use | `deferred_by_phase` | Future | tools | not now |
+| `ACT-009` | Scheduler | `deferred_by_phase` | Future | governance | later |
+
+### MB-200 -- Daily Operator Loop Readiness Closure
+
+Status: closed in `MB-200`.
+"""
+    backlog = """# Execution Backlog
+
+### MB-200
+
+- `status`: `completed`
+"""
+    map_path = root / "docs/implementation/implementation-master-map.md"
+    backlog_path = root / "docs/implementation/execution-backlog.md"
+    map_path.parent.mkdir(parents=True, exist_ok=True)
+    map_path.write_text(master_map, encoding="utf-8")
+    backlog_path.write_text(backlog, encoding="utf-8")
+    for relative_path in ACTIVE_STATUS_DOCS:
+        path = root / relative_path
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("MB-200 is the latest closed item.\n", encoding="utf-8")
+
+
+def test_mb200_repository_closure_is_synchronized_and_bounded(tmp_path: Path) -> None:
+    _write_mb200_closure_snapshot(tmp_path)
     report = build_repository_readiness_report(
-        root=ROOT,
+        root=tmp_path,
         gate_result=GateRunResult(
             gate_mode="standard",
             gate_status="passed",
             test_status="passed",
             evidence_refs=["engineering-gate://standard/passed"],
         ),
+        document_payload={"decision": "document_guardrails_ok"},
         longitudinal_payload=_safe_longitudinal_payload(),
         generated_at="2026-07-18T12:00:00Z",
     )

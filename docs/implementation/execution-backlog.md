@@ -3803,6 +3803,188 @@ Fora de escopo:
 - `impacto_no_baseline`: o Daily Operator Loop agora possui runbook ponta a ponta, closure auditavel e readiness integrado; fila esgotada e tratada como estado valido, sem promover autonomia ou superficies deferred.
 - `evidencia_de_fechamento`: `docs/operations/daily-operator-loop-runbook.md`, `docs/implementation/daily-operator-loop-readiness-closure-mb200.md` e teste de invariantes consolidam preflight, workspace, missao, retomada, work items, artefatos, feedback, reflexao, revisao, outcomes e readiness; o dashboard com gate padrao comprova `queue_exhausted`, zero drift/blockers e release autonomo falso.
 
+### MB-201
+
+- `id`: `MB-201`
+- `prioridade`: `P1`
+- `status`: `completed`
+- `eixo_do_mestre`: `repriorizacao`, `cognicao`, `memoria`, `evolucao`
+- `map_ids`: `COG-006`, `COG-007`, `MEM-005`, `MEM-006`, `EVL-008`, `KNW-006`
+- `workflow_profile_afetado`: todos os workflows promovidos
+- `micro_objetivo`: abrir uma fila WIP-1 para aprofundar politica de workflow e causalidade de memoria antes de novas superficies, incluindo radar tecnologico somente depois do fechamento dos gaps do Core.
+- `justificativa_arquitetural`: o Daily Operator Loop esta fechado; o maior ganho seguinte vem de melhorar como evidencia e politicas moldam decisoes, nao de adicionar interface ou autonomia.
+- `arquivos/servicos_principais`: `docs/implementation`, `HANDOFF.md`, `CHANGELOG.md`
+- `dependencias`: `MB-200`
+- `criterio_de_aceite`: existe fila ordenada `MB-202` a `MB-210`, criterios/gates explicitos, somente `MB-202` ready e nenhuma capability deferred promovida por inercia.
+- `gate_minimo`: readiness sem drift, document guardrails e gate padrao
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: a fase pos-Daily Operator Loop passa a priorizar politica declarativa de workflow, causalidade de memoria, atribuicao de decisao, comparacao governada e radar tecnologico manual, mantendo WIP 1.
+- `evidencia_de_fechamento`: mapa mestre, backlog micro, snapshot, backlog macro e handoff convergem na fila `MB-202` a `MB-210`; adapters, API, voz, UI rica, scheduler e autopromocao permanecem fora.
+
+### MB-202
+
+- `id`: `MB-202`
+- `prioridade`: `P1`
+- `status`: `ready`
+- `eixo_do_mestre`: `workflow policy`, `planning`, `synthesis`, `observabilidade`
+- `map_ids`: `COG-006`, `COG-004`, `OBS-001`
+- `workflow_profile_afetado`: todos os workflows promovidos
+- `micro_objetivo`: resolver a politica declarativa de workflow como contrato versionado unico e tornar seus efeitos/non-use auditaveis em planning, synthesis e eventos.
+- `justificativa_arquitetural`: workflow profile ainda e `partial_runtime`; sem identidade, versao e efeitos explicitos, o runtime pode aplicar guidance correto sem provar causalidade.
+- `arquivos/servicos_principais`: `shared`, `domain-registry`, `planning-engine`, `synthesis-engine`, `orchestrator-service`, `observability-service`, `tests`
+- `dependencias`: `MB-201`
+- `criterio_de_aceite`: cada rota/workflow elegivel resolve uma politica soberana com ref/versao/fonte; plano, sintese e eventos registram efeitos aplicados ou motivo de non-use; mismatch e policy ausente falham de forma bounded sem fallback paralelo.
+- `gate_minimo`: testes unitarios dos contratos/consumidores, E2E por rotas promovidas e gate padrao
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.3-codex`
+
+### MB-203
+
+- `id`: `MB-203`
+- `prioridade`: `P1`
+- `status`: `planned`
+- `eixo_do_mestre`: `memoria semantica`, `causalidade`, `planejamento`
+- `map_ids`: `MEM-005`, `COG-007`, `GOV-004`
+- `workflow_profile_afetado`: workflows promovidos com memoria semantica elegivel
+- `micro_objetivo`: aprofundar selecao e influencia de memoria semantica com evidencia, freshness, conflito e non-use explicito por decisao.
+- `justificativa_arquitetural`: memoria anexada sem efeito atribuivel nao demonstra melhoria cognitiva.
+- `arquivos/servicos_principais`: `memory-service`, `memory-registry`, `planning-engine`, `synthesis-engine`, `observability-service`, `tests`
+- `dependencias`: `MB-202`
+- `criterio_de_aceite`: somente anchors relevantes e validos influenciam a decisao; efeitos, conflitos e descarte ficam auditaveis; ausencia de evidencia nao vira influencia presumida.
+- `gate_minimo`: testes unitarios/E2E de use, non-use, freshness, conflito e gate padrao
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.3-codex`
+
+### MB-204
+
+- `id`: `MB-204`
+- `prioridade`: `P1`
+- `status`: `planned`
+- `eixo_do_mestre`: `memoria procedural`, `playbooks`, `governanca`
+- `map_ids`: `MEM-006`, `EVL-007`, `GOV-004`
+- `workflow_profile_afetado`: workflows promovidos com playbook revisado elegivel
+- `micro_objetivo`: consumir playbooks procedurais revisados como guidance bounded e versionado, sem executar ferramentas nem ativar candidato nao revisado.
+- `justificativa_arquitetural`: procedimentos reutilizaveis precisam influenciar o plano sem se tornarem scripts autonomos.
+- `arquivos/servicos_principais`: `memory-service`, `evolution-lab`, `planning-engine`, `governance-service`, `observability-service`, `tests`
+- `dependencias`: `MB-203`
+- `criterio_de_aceite`: playbook elegivel exige status humano, escopo e versao; plano registra aplicacao/non-use; revogacao ou mismatch bloqueia uso e nenhuma acao e despachada automaticamente.
+- `gate_minimo`: testes unitarios/E2E de eligibility, revogacao, mismatch, ausencia de dispatch e gate padrao
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.3-codex`
+
+### MB-205
+
+- `id`: `MB-205`
+- `prioridade`: `P1`
+- `status`: `planned`
+- `eixo_do_mestre`: `decision memory`, `atribuicao`, `observabilidade`
+- `map_ids`: `COG-007`, `MEM-005`, `MEM-006`, `OBS-009`
+- `workflow_profile_afetado`: workflows com guidance de memoria elegivel
+- `micro_objetivo`: ligar policy/memory refs a decisoes e outcomes observados, distinguindo correlacao, causalidade declarada e evidencia insuficiente.
+- `justificativa_arquitetural`: evolucao governada precisa saber qual guidance participou de qual decisao antes de propor refinamento.
+- `arquivos/servicos_principais`: `orchestrator-service`, `observability-service`, `memory-service`, `tools`, `tests`
+- `dependencias`: `MB-204`
+- `criterio_de_aceite`: relatorio read-only correlaciona decisao, policy, memoria, outcome e feedback; nao atribui ganho sem comparador e nunca autoriza promocao.
+- `gate_minimo`: testes de atribuicao/non-attribution, stores imutaveis, CLI/tool e gate padrao
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.3-codex`
+
+### MB-206
+
+- `id`: `MB-206`
+- `prioridade`: `P2`
+- `status`: `planned`
+- `eixo_do_mestre`: `workflow variants`, `evals`, `evolucao`
+- `map_ids`: `EVL-008`, `EVL-005`, `OBS-009`
+- `workflow_profile_afetado`: workflow candidato sob avaliacao
+- `micro_objetivo`: comparar baseline e variante de workflow sobre casos versionados usando a mesma politica de memoria e governanca.
+- `justificativa_arquitetural`: variantes so devem avancar com evidencia comparavel, nao por preferencia narrativa.
+- `arquivos/servicos_principais`: `evolution-lab`, `observability-service`, `tools`, `tests`
+- `dependencias`: `MB-205`
+- `criterio_de_aceite`: eval registra versoes, casos, outcomes, regressions e limitacoes; variante permanece sandbox-only e sem autoridade de release.
+- `gate_minimo`: evals deterministicas, testes de regressao/authority e gate padrao
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.3-codex`
+
+### MB-207
+
+- `id`: `MB-207`
+- `prioridade`: `P2`
+- `status`: `planned`
+- `eixo_do_mestre`: `workflow lifecycle`, `revisao humana`, `rollback`
+- `map_ids`: `EVL-006`, `EVL-008`, `GOV-009`
+- `workflow_profile_afetado`: variantes com eval concluida
+- `micro_objetivo`: fechar a ponte manual de revisao, ativacao bounded e rollback de variantes com refs de evidencia executavel.
+- `justificativa_arquitetural`: comparar sem disciplinar lifecycle deixa o sistema preso entre sandbox e runtime ou incentiva promocao informal.
+- `arquivos/servicos_principais`: `evolution-lab`, `governance-service`, `memory-service`, `apps/jarvis_console`, `tests`
+- `dependencias`: `MB-206`
+- `criterio_de_aceite`: transicoes exigem humano, gate, testes e rollback; runtime usa somente versao promovida; falha restaura baseline sem autoedicao.
+- `gate_minimo`: testes de transicao, concorrencia, rollback e gate padrao/release quando aplicavel
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.3-codex`
+
+### MB-208
+
+- `id`: `MB-208`
+- `prioridade`: `P2`
+- `status`: `planned`
+- `eixo_do_mestre`: `technology radar`, `knowledge`, `absorção governada`
+- `map_ids`: `KNW-006`, `EVL-001`, `DOC-006`
+- `workflow_profile_afetado`: `technology_absorption_workflow`
+- `micro_objetivo`: transformar pesquisa externa aprovada em intake manual versionado de referencias, skills, artigos e repositorios, sem auto-trust ou ingestao autonoma.
+- `justificativa_arquitetural`: o radar precisa acumular evidencia reproduzivel sem deixar novidade tecnologica controlar prioridade ou Core.
+- `arquivos/servicos_principais`: `knowledge-service`, `evolution-lab`, `tools`, `docs/technology`, `tests`
+- `dependencias`: `MB-207`
+- `criterio_de_aceite`: intake registra origem, licenca, data, hash/ref, alegacoes, riscos, classe de absorcao e revisao humana; duplicidade e fonte invalida falham fechadas.
+- `gate_minimo`: testes de schema/intake/deduplicacao/redaction, docs e gate padrao
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.3-codex`
+
+### MB-209
+
+- `id`: `MB-209`
+- `prioridade`: `P2`
+- `status`: `planned`
+- `eixo_do_mestre`: `experimentos tecnologicos`, `skills`, `sandbox`
+- `map_ids`: `KNW-006`, `EVL-001`, `EVL-005`
+- `workflow_profile_afetado`: `technology_absorption_workflow`
+- `micro_objetivo`: gerar packs de experimento sandbox para candidatos selecionados, separando padrao absorvivel de framework substituto.
+- `justificativa_arquitetural`: referencias como Agent Skills, OpenJarvis ou stacks de agentes so agregam valor quando traduzidas em hipoteses testaveis e subordinadas.
+- `arquivos/servicos_principais`: `evolution-lab`, `tools`, `evals`, `docs/technology`, `tests`
+- `dependencias`: `MB-208`
+- `criterio_de_aceite`: cada pack possui hipotese, consumidor soberano, isolamento, eval, risco, licenca e rollback; nenhuma dependencia central ou promocao e automatica.
+- `gate_minimo`: testes de manifest/isolamento/authority, eval sandbox e gate padrao
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.3-codex`
+
+### MB-210
+
+- `id`: `MB-210`
+- `prioridade`: `P2`
+- `status`: `planned`
+- `eixo_do_mestre`: `readiness`, `documentacao`, `decisao de fase`
+- `map_ids`: `OBS-007`, `OBS-008`, `DOC-010`
+- `workflow_profile_afetado`: `operational_readiness_workflow`
+- `micro_objetivo`: fechar o lote com matriz de evidencia, dashboard, runbooks e decisao explicita sobre adapters/superficies ou novo aprofundamento do Core.
+- `justificativa_arquitetural`: a fase precisa provar ganho causal e disciplina de absorcao antes de ampliar poder operacional.
+- `arquivos/servicos_principais`: `tools`, `docs/implementation`, `docs/operations`, `HANDOFF.md`, `CHANGELOG.md`, `tests`
+- `dependencias`: `MB-209`
+- `criterio_de_aceite`: capabilities alvo possuem evidencia e status coerente, dashboard/gate passam, limitacoes sao explicitas e nenhuma capability deferred foi aberta por inercia.
+- `gate_minimo`: dashboard com gate padrao, guardrails documentais e closure test
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `medium`
+- `modelo_recomendado`: `gpt-5.3-codex`
+
 ## 5. Regras de manutencao da fila
 
 - o proximo item puxado deve ser o primeiro `ready` de maior prioridade sem dependencia aberta;
@@ -3910,6 +4092,7 @@ Estado atual da fila:
 - `MB-174` foi concluido como dashboard integrado de regressao/readiness, fechando a fila `MB-161` a `MB-174`; nao ha item tecnico `ready` ate nova repriorizacao explicita pelo mapa mestre;
 - `MB-175` foi concluido como repriorizacao pos-`MB-174`, abrindo a fila governada de skill/workflow evolution `MB-176` a `MB-189`;
 - `MB-176` a `MB-189` foram concluidos como cadeia de skill/workflow, routing, politica causal, revisao humana de memoria, medicao longitudinal e fechamento de readiness;
-- `MB-190` repriorizou o Daily Operator Loop e abriu `MB-191` a `MB-200`; o lote foi integralmente fechado e a fila esta sem item `ready` ate nova repriorizacao explicita;
+- `MB-190` repriorizou o Daily Operator Loop e abriu `MB-191` a `MB-200`; o lote foi integralmente fechado;
+- `MB-201` repriorizou o pos-Daily Operator Loop e abriu `MB-202` a `MB-210`; somente `MB-202` esta `ready`;
 - `SO-001`, `TA-004`, `TA-006` e verticais `deferred` continuam fora da fila sem mudanca explicita de fase;
 - `protective intelligence foundation` continua `deferred` e a matriz da Onda 2 segue como insumo, nao como gatilho automatico para abrir nova vertical.

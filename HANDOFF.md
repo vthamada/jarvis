@@ -2,13 +2,20 @@
 
 ## Atualizacao 2026-07-18
 
+`MB-201` repriorizou a fase pos-Daily Operator Loop. A fila `MB-202` a
+`MB-210` aprofunda politica declarativa de workflow, memoria semantica e
+procedural causal, atribuicao de outcomes e variantes governadas antes de abrir
+intake manual e experimentos sandbox do radar tecnologico. Somente `MB-202` e o
+item tecnico `ready`; adapters, API, voz, UI rica, scheduler, auto-trust e
+autopromocao continuam fora.
+
 `MB-200` fechou o Daily Operator Loop. O novo runbook conecta preflight,
 workspace, missao, retomada, work items, artefatos, feedback, experiencia,
 reflexao, revisao humana, outcomes e readiness sem criar nova autoridade. O
 closure registra fila `queue_exhausted`, limites conhecidos e decisao de
 aprofundar politica de workflow e causalidade de memoria antes de adapters,
-API ou superficies ricas. Nao ha item tecnico `ready` ate repriorizacao
-separada.
+API ou superficies ricas. Esse estado foi sucedido pela repriorizacao de
+`MB-201`.
 
 `MB-199` implementou referencia e completion deterministicas derivadas do
 registry e do parser validado. `command-reference` e `completion` sao
