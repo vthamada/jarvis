@@ -50,7 +50,7 @@ def test_registry_matches_every_parser_command_help_and_handler() -> None:
 
     COMMAND_REGISTRY.validate_parser_commands(parser_help)
 
-    assert len(COMMAND_REGISTRY.definitions) == 26
+    assert len(COMMAND_REGISTRY.definitions) == 28
     assert set(parser_help) == {
         item.command_id for item in COMMAND_REGISTRY.definitions
     }

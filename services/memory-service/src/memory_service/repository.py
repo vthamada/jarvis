@@ -18,6 +18,7 @@ from shared.contracts import (
     ExperienceRecordContract,
     MemoryLifecycleReviewDecisionContract,
     MissionStateContract,
+    OpenLoopStateContract,
     PostTaskReflectionContract,
     ProceduralPlaybookCandidateContract,
     ReviewedLearningGuidanceContract,
@@ -175,6 +176,62 @@ def _deserialize_artifact_states(
 
 def _optional_string(value: object) -> str | None:
     return str(value) if value is not None else None
+
+
+def _serialize_open_loop_states(open_loop_states: list[OpenLoopStateContract]) -> str:
+    return dumps([asdict(item) for item in open_loop_states])
+
+
+def _deserialize_open_loop_states(
+    raw: str | None,
+    *,
+    mission_id: str,
+) -> list[OpenLoopStateContract]:
+    values = loads(raw or "[]")
+    if not isinstance(values, list):
+        raise ValueError("mission open_loop_states must be a JSON list")
+    states: list[OpenLoopStateContract] = []
+    seen_refs: set[str] = set()
+    for value in values:
+        if not isinstance(value, dict):
+            raise ValueError("mission open_loop_states entries must be JSON objects")
+        loop_ref = str(value["open_loop_ref"])
+        if loop_ref in seen_refs:
+            raise ValueError("mission open_loop_states must not contain duplicate refs")
+        seen_refs.add(loop_ref)
+        stored_mission_id = str(value.get("mission_id") or mission_id)
+        if stored_mission_id != mission_id:
+            raise ValueError("mission open loop identity does not match its mission")
+        loop_status = str(value.get("loop_status") or "open")
+        if loop_status not in {"open", "resumed"}:
+            raise ValueError("mission open loop has invalid status")
+        states.append(
+            OpenLoopStateContract(
+                open_loop_ref=loop_ref,
+                mission_id=MissionId(stored_mission_id),
+                loop_summary=str(value["loop_summary"]),
+                loop_status=loop_status,
+                source_work_item_ref=_optional_string(
+                    value.get("source_work_item_ref")
+                ),
+                selected_at=_optional_string(value.get("selected_at")),
+                resumed_at=_optional_string(value.get("resumed_at")),
+                next_action_ref=_optional_string(value.get("next_action_ref")),
+                next_action_summary=_optional_string(
+                    value.get("next_action_summary")
+                ),
+                evidence_refs=_work_item_string_list(
+                    value.get("evidence_refs", []), "open loop evidence_refs"
+                ),
+                checkpoint_refs=_work_item_string_list(
+                    value.get("checkpoint_refs", []), "open loop checkpoint_refs"
+                ),
+                memory_write_mode=str(
+                    value.get("memory_write_mode") or "through_core_only"
+                ),
+            )
+        )
+    return states
 
 
 @dataclass(frozen=True)
@@ -794,7 +851,8 @@ class SqliteMemoryRepository(MemoryRepository):
                     mission_id, mission_goal, mission_status, checkpoints, active_tasks,
                     related_memories, related_artifacts, recent_plan_steps,
                     last_recommendation, semantic_brief, semantic_focus,
-                    identity_continuity_brief, open_loops, last_decision_frame,
+                    identity_continuity_brief, open_loops, open_loop_states,
+                    last_decision_frame,
                     ecosystem_state_status, active_work_items, active_artifact_refs,
                     open_checkpoint_refs, surface_presence, ecosystem_state_summary,
                     project_ref, objective_ref, work_item_refs, work_items, checkpoint_refs,
@@ -804,7 +862,7 @@ class SqliteMemoryRepository(MemoryRepository):
                 )
                 VALUES (
                     ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?,
-                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                    ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
                 )
                 ON CONFLICT(mission_id) DO UPDATE SET
                     mission_goal = excluded.mission_goal,
@@ -819,6 +877,7 @@ class SqliteMemoryRepository(MemoryRepository):
                     semantic_focus = excluded.semantic_focus,
                     identity_continuity_brief = excluded.identity_continuity_brief,
                     open_loops = excluded.open_loops,
+                    open_loop_states = excluded.open_loop_states,
                     last_decision_frame = excluded.last_decision_frame,
                     ecosystem_state_status = excluded.ecosystem_state_status,
                     active_work_items = excluded.active_work_items,
@@ -856,6 +915,7 @@ class SqliteMemoryRepository(MemoryRepository):
                     dumps(mission_state.semantic_focus),
                     mission_state.identity_continuity_brief,
                     dumps(mission_state.open_loops),
+                    _serialize_open_loop_states(mission_state.open_loop_states),
                     mission_state.last_decision_frame,
                     mission_state.ecosystem_state_status,
                     dumps(mission_state.active_work_items),
@@ -1826,7 +1886,8 @@ class SqliteMemoryRepository(MemoryRepository):
                 SELECT mission_id, mission_goal, mission_status, checkpoints, active_tasks,
                        related_memories, related_artifacts, recent_plan_steps,
                        last_recommendation, semantic_brief, semantic_focus,
-                       identity_continuity_brief, open_loops, last_decision_frame,
+                       identity_continuity_brief, open_loops, open_loop_states,
+                       last_decision_frame,
                        ecosystem_state_status, active_work_items, active_artifact_refs,
                        open_checkpoint_refs, surface_presence, ecosystem_state_summary,
                        project_ref, objective_ref, work_item_refs, work_items, checkpoint_refs,
@@ -2380,6 +2441,7 @@ class SqliteMemoryRepository(MemoryRepository):
                     semantic_focus TEXT NOT NULL DEFAULT '[]',
                     identity_continuity_brief TEXT,
                     open_loops TEXT NOT NULL DEFAULT '[]',
+                    open_loop_states TEXT NOT NULL DEFAULT '[]',
                     last_decision_frame TEXT,
                     ecosystem_state_status TEXT,
                     active_work_items TEXT NOT NULL DEFAULT '[]',
@@ -2394,6 +2456,7 @@ class SqliteMemoryRepository(MemoryRepository):
                     work_items TEXT NOT NULL DEFAULT '[]',
                     checkpoint_refs TEXT NOT NULL DEFAULT '[]',
                     artifact_refs TEXT NOT NULL DEFAULT '[]',
+                    artifact_states TEXT NOT NULL DEFAULT '[]',
                     objective_status TEXT,
                     next_action_ref TEXT,
                     active_surface_id TEXT,
@@ -2421,6 +2484,12 @@ class SqliteMemoryRepository(MemoryRepository):
             self._ensure_column(connection, "mission_states", "identity_continuity_brief", "TEXT")
             self._ensure_column(
                 connection, "mission_states", "open_loops", "TEXT NOT NULL DEFAULT '[]'"
+            )
+            self._ensure_column(
+                connection,
+                "mission_states",
+                "open_loop_states",
+                "TEXT NOT NULL DEFAULT '[]'",
             )
             self._ensure_column(connection, "mission_states", "last_decision_frame", "TEXT")
             self._ensure_column(connection, "mission_states", "ecosystem_state_status", "TEXT")
@@ -2886,6 +2955,9 @@ class SqliteMemoryRepository(MemoryRepository):
             semantic_focus=list(loads(row["semantic_focus"] or "[]")),
             identity_continuity_brief=row["identity_continuity_brief"],
             open_loops=list(loads(row["open_loops"] or "[]")),
+            open_loop_states=_deserialize_open_loop_states(
+                row["open_loop_states"], mission_id=str(row["mission_id"])
+            ),
             last_decision_frame=row["last_decision_frame"],
             ecosystem_state_status=row["ecosystem_state_status"],
             active_work_items=list(loads(row["active_work_items"] or "[]")),
@@ -3156,7 +3228,8 @@ class PostgresMemoryRepository(MemoryRepository):
                     mission_id, mission_goal, mission_status, checkpoints, active_tasks,
                     related_memories, related_artifacts, recent_plan_steps,
                     last_recommendation, semantic_brief, semantic_focus,
-                    identity_continuity_brief, open_loops, last_decision_frame,
+                    identity_continuity_brief, open_loops, open_loop_states,
+                    last_decision_frame,
                     ecosystem_state_status, active_work_items, active_artifact_refs,
                     open_checkpoint_refs, surface_presence, ecosystem_state_summary,
                     project_ref, objective_ref, work_item_refs, work_items, checkpoint_refs,
@@ -3167,7 +3240,8 @@ class PostgresMemoryRepository(MemoryRepository):
                 VALUES (
                     %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
                     %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
-                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                    %s
                 )
                 ON CONFLICT (mission_id) DO UPDATE SET
                     mission_goal = EXCLUDED.mission_goal,
@@ -3182,6 +3256,7 @@ class PostgresMemoryRepository(MemoryRepository):
                     semantic_focus = EXCLUDED.semantic_focus,
                     identity_continuity_brief = EXCLUDED.identity_continuity_brief,
                     open_loops = EXCLUDED.open_loops,
+                    open_loop_states = EXCLUDED.open_loop_states,
                     last_decision_frame = EXCLUDED.last_decision_frame,
                     ecosystem_state_status = EXCLUDED.ecosystem_state_status,
                     active_work_items = EXCLUDED.active_work_items,
@@ -3219,6 +3294,7 @@ class PostgresMemoryRepository(MemoryRepository):
                     dumps(mission_state.semantic_focus),
                     mission_state.identity_continuity_brief,
                     dumps(mission_state.open_loops),
+                    _serialize_open_loop_states(mission_state.open_loop_states),
                     mission_state.last_decision_frame,
                     mission_state.ecosystem_state_status,
                     dumps(mission_state.active_work_items),
@@ -3693,7 +3769,8 @@ class PostgresMemoryRepository(MemoryRepository):
                     expires_at, automatic_promotion_allowed, core_mutation_allowed
                 )
                 VALUES (
-                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s
+                    %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+                    %s, %s
                 )
                 ON CONFLICT (guidance_id) DO UPDATE SET
                     source_review_decision_id = EXCLUDED.source_review_decision_id,
@@ -4330,7 +4407,8 @@ class PostgresMemoryRepository(MemoryRepository):
                 SELECT mission_id, mission_goal, mission_status, checkpoints, active_tasks,
                        related_memories, related_artifacts, recent_plan_steps,
                        last_recommendation, semantic_brief, semantic_focus,
-                       identity_continuity_brief, open_loops, last_decision_frame,
+                       identity_continuity_brief, open_loops, open_loop_states,
+                       last_decision_frame,
                        ecosystem_state_status, active_work_items, active_artifact_refs,
                        open_checkpoint_refs, surface_presence, ecosystem_state_summary,
                        project_ref, objective_ref, work_item_refs, work_items, checkpoint_refs,
@@ -4359,6 +4437,9 @@ class PostgresMemoryRepository(MemoryRepository):
             semantic_focus=list(loads(row["semantic_focus"] or "[]")),
             identity_continuity_brief=row["identity_continuity_brief"],
             open_loops=list(loads(row["open_loops"] or "[]")),
+            open_loop_states=_deserialize_open_loop_states(
+                row["open_loop_states"], mission_id=str(row["mission_id"])
+            ),
             last_decision_frame=row["last_decision_frame"],
             ecosystem_state_status=row["ecosystem_state_status"],
             active_work_items=list(loads(row["active_work_items"] or "[]")),
@@ -4874,6 +4955,7 @@ class PostgresMemoryRepository(MemoryRepository):
                     semantic_focus TEXT NOT NULL DEFAULT '[]',
                     identity_continuity_brief TEXT,
                     open_loops TEXT NOT NULL DEFAULT '[]',
+                    open_loop_states TEXT NOT NULL DEFAULT '[]',
                     last_decision_frame TEXT,
                     ecosystem_state_status TEXT,
                     active_work_items TEXT NOT NULL DEFAULT '[]',
@@ -4930,6 +5012,10 @@ class PostgresMemoryRepository(MemoryRepository):
             cursor.execute(
                 "ALTER TABLE mission_states ADD COLUMN IF NOT EXISTS "
                 "open_loops TEXT NOT NULL DEFAULT '[]'"
+            )
+            cursor.execute(
+                "ALTER TABLE mission_states ADD COLUMN IF NOT EXISTS "
+                "open_loop_states TEXT NOT NULL DEFAULT '[]'"
             )
             cursor.execute(
                 "ALTER TABLE mission_states ADD COLUMN IF NOT EXISTS last_decision_frame TEXT"

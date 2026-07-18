@@ -420,6 +420,12 @@ supersede/replacement, rollback and timestamps in lineage order, while all
 lifecycle transitions continue through the governed Core and never mutate the
 external file.
 
+`MB-197` adds `open-loops` and `resume-loop`. The first command exposes a
+read-only eligibility registry with freshness and blockers; the second requires
+an exact operator-selected ref and routes revalidation, bounded planning,
+canonical persistence and final synthesis through the Core. Neither command
+schedules work, and resume never dispatches tools or work items.
+
 `MB-180` extends this operator-facing baseline with `skill-evolution`, a
 read-only evolution-family view that correlates recurring evidence, inactive
 candidate identity/version, scope, risk, review, sandbox, tests, rollback and

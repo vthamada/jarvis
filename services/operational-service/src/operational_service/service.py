@@ -19,9 +19,15 @@ from shared.contracts import (
     DailyOperatorWorkspaceContract,
     DailyWorkspaceMissionContract,
     MissionStateContract,
+    OpenLoopRegistryContract,
     OperationDispatchContract,
     OperationResultContract,
     WorkItemQueueContract,
+)
+from shared.open_loop_policy import (
+    canonical_open_loop_states_from_mission,
+    mission_freshness,
+    open_loop_resume_blockers,
 )
 from shared.types import ArtifactId, ArtifactStatus, MissionStatus, OperationStatus
 from shared.work_item_policy import canonical_work_items_from_mission, order_work_items
@@ -77,6 +83,70 @@ class OperationalService:
                 f"mission-state://{mission_state.mission_id}@{mission_state.updated_at}",
                 *mission_state.checkpoint_refs,
             ],
+        )
+
+    @classmethod
+    def build_open_loop_registry(
+        cls,
+        mission_state: MissionStateContract,
+        *,
+        generated_at: str,
+    ) -> OpenLoopRegistryContract:
+        """Project resume eligibility without resuming or scheduling a loop."""
+
+        states = canonical_open_loop_states_from_mission(mission_state)
+        work_queue = cls.build_work_item_queue(mission_state)
+        selected_work_item_ref = (
+            work_queue.executable_work_item_refs[0]
+            if work_queue.executable_work_item_refs
+            else None
+        )
+        freshness_status, mission_age_hours = mission_freshness(
+            mission_state.updated_at,
+            generated_at,
+        )
+        blocking_reasons = {
+            state.open_loop_ref: open_loop_resume_blockers(
+                mission_state=mission_state,
+                loop_state=state,
+                freshness_status=freshness_status,
+                has_structured_work_items=bool(mission_state.work_items),
+                selected_work_item_ref=selected_work_item_ref,
+            )
+            for state in states
+        }
+        eligible_refs = [
+            state.open_loop_ref
+            for state in states
+            if not blocking_reasons[state.open_loop_ref]
+        ]
+        blocked_refs = [
+            state.open_loop_ref
+            for state in states
+            if blocking_reasons[state.open_loop_ref]
+        ]
+        registry_status = (
+            "empty"
+            if not states
+            else "resume_available"
+            if eligible_refs
+            else "blocked"
+        )
+        return OpenLoopRegistryContract(
+            mission_id=mission_state.mission_id,
+            registry_status=registry_status,
+            freshness_status=freshness_status,
+            mission_age_hours=mission_age_hours,
+            open_loop_states=states,
+            eligible_open_loop_refs=eligible_refs,
+            blocked_open_loop_refs=blocked_refs,
+            blocking_reasons=blocking_reasons,
+            selected_work_item_ref=selected_work_item_ref,
+            evidence_refs=[
+                f"mission-state://{mission_state.mission_id}@{mission_state.updated_at}",
+                *mission_state.checkpoint_refs,
+            ],
+            generated_at=generated_at,
         )
 
     def __init__(self, artifact_dir: str | None = None) -> None:

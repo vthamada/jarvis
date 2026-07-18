@@ -35,6 +35,7 @@ JSON_OUTPUT_COMMAND_IDS = frozenset(
     {
         "objectives",
         "goal-strategy",
+        "open-loops",
         "work-items",
         "artifacts",
         "technology-candidates",
@@ -272,6 +273,20 @@ COMMAND_REGISTRY = CommandRegistry(
             "work-item",
             "Apply a bounded operator transition to a mission work item.",
             "run_work_item_command",
+            CommandCategory.WORK,
+            CORE,
+        ),
+        _command(
+            "open-loops",
+            "Show governed open loops eligible for explicit resume.",
+            "run_open_loops_command",
+            CommandCategory.WORK,
+            CORE,
+        ),
+        _command(
+            "resume-loop",
+            "Explicitly resume one governed open loop without autonomous execution.",
+            "run_resume_loop_command",
             CommandCategory.WORK,
             CORE,
         ),

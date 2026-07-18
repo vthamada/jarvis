@@ -56,6 +56,12 @@
 - governanca e memoria exigem state machine valida, versao positiva e sequencial, source work item da mesma missao e rollback explicito, preservando refs legadas sem promove-las ao registro estruturado;
 - `artifacts` expoe registry read-only por linhagem e o E2E em tres sessoes valida register, replace e rollback sem mutar arquivos externos; `MB-197` passa a ser o unico item tecnico `ready`.
 
+### MB-197 retoma open loops com selecao explicita
+
+- contratos e schemas compartilhados formalizam estado, registry de elegibilidade e plano bounded de retomada, com refs deterministicas, freshness, blockers e evidencias;
+- o Core revalida missao, objetivo, identidade, work-item readiness e corrida de estado antes de persistir checkpoint e next action em SQLite/PostgreSQL, bloqueando conflitos fail-closed;
+- `open-loops` e `resume-loop` expoem o fluxo auditavel entre sessoes sem executar ferramentas, work items ou scheduler; testes unitarios/E2E cobrem persistencia e ausencia de dispatch, e `MB-198` passa a ser o unico item tecnico `ready`.
+
 ## 2026-07-16
 
 ### MB-166 define checklist sandbox-to-release

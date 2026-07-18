@@ -135,6 +135,55 @@ class ArtifactRegistryContract:
 
 
 @dataclass
+class OpenLoopStateContract:
+    open_loop_ref: str
+    mission_id: MissionId
+    loop_summary: str
+    loop_status: str = "open"
+    source_work_item_ref: str | None = None
+    selected_at: Timestamp | None = None
+    resumed_at: Timestamp | None = None
+    next_action_ref: str | None = None
+    next_action_summary: str | None = None
+    evidence_refs: list[str] = field(default_factory=list)
+    checkpoint_refs: list[str] = field(default_factory=list)
+    memory_write_mode: str = "through_core_only"
+
+
+@dataclass
+class OpenLoopRegistryContract:
+    mission_id: MissionId
+    registry_status: str
+    freshness_status: str
+    mission_age_hours: float | None
+    open_loop_states: list[OpenLoopStateContract]
+    eligible_open_loop_refs: list[str]
+    blocked_open_loop_refs: list[str]
+    blocking_reasons: dict[str, list[str]] = field(default_factory=dict)
+    selected_work_item_ref: str | None = None
+    evidence_refs: list[str] = field(default_factory=list)
+    generated_at: Timestamp | None = None
+    memory_write_mode: str = "read_only"
+    read_only: bool = True
+    autonomous_resume_allowed: bool = False
+    autonomous_scheduling_allowed: bool = False
+
+
+@dataclass
+class OpenLoopResumePlanContract:
+    mission_id: MissionId
+    open_loop_ref: str
+    loop_summary: str
+    next_action_ref: str
+    next_action_summary: str
+    selected_work_item_ref: str | None = None
+    evidence_refs: list[str] = field(default_factory=list)
+    planning_mode: str = "bounded_open_loop_resume"
+    generated_at: Timestamp | None = None
+    autonomous_execution_allowed: bool = False
+
+
+@dataclass
 class TechnologyAbsorptionCandidateContract:
     candidate_ref: str
     technology_name: str
@@ -1847,6 +1896,7 @@ class MissionStateContract:
     semantic_focus: list[str] = field(default_factory=list)
     identity_continuity_brief: str | None = None
     open_loops: list[str] = field(default_factory=list)
+    open_loop_states: list[OpenLoopStateContract] = field(default_factory=list)
     last_decision_frame: str | None = None
     ecosystem_state_status: str | None = None
     active_work_items: list[str] = field(default_factory=list)

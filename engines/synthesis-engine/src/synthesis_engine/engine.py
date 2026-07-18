@@ -14,6 +14,7 @@ from shared.contracts import (
     LongHorizonGoalStrategyContract,
     MissionProgressReportContract,
     MissionStateContract,
+    OpenLoopResumePlanContract,
     OperationResultContract,
     PostTaskReflectionContract,
     SpecialistContributionContract,
@@ -124,6 +125,18 @@ class SynthesisEngine:
     """Compose the final textual synthesis of the current flow."""
 
     name = "synthesis-engine"
+
+    @staticmethod
+    def compose_open_loop_resume(plan: OpenLoopResumePlanContract) -> str:
+        """Compose the governed human-facing close of an explicit resume."""
+
+        work_item = plan.selected_work_item_ref or "nenhum work item estruturado"
+        return (
+            f"Loop retomado: {plan.loop_summary}. "
+            f"Proxima acao: {plan.next_action_summary}. "
+            f"Work item selecionado: {work_item}. "
+            "A retomada nao executou ferramentas nem agendou trabalho."
+        )
 
     def compose(self, synthesis_input: SynthesisInput) -> str:
         return self.compose_result(synthesis_input).response_text

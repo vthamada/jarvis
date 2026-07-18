@@ -95,4 +95,5 @@ dependent item.
   event;
 - queue composition is read-only and deterministic;
 - no scheduler, background worker, tool call or automatic resume is introduced;
-- artifacts remain separate; version lineage is sequenced for `MB-196`.
+- artifacts remain separate and use the version lineage documented in
+  `governed-artifact-version-registry.md`.

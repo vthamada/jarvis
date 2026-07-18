@@ -20,6 +20,8 @@ INTERNAL_EVENT_NAMES = (
     "mission_progress_report_generated",
     "work_item_state_changed",
     "artifact_lifecycle_state_changed",
+    "open_loop_resumed",
+    "open_loop_resume_contained",
     "technology_absorption_candidate_declared",
     "experience_record_declared",
     "post_task_reflection_declared",

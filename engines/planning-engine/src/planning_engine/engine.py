@@ -3,12 +3,14 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, replace
+from hashlib import sha256
 
 from shared.contract_validation import validate_contract_instance
 from shared.contracts import (
     DeliberativePlanContract,
     MemoryInfluencePolicyDecisionContract,
     MemoryInfluenceSignalContract,
+    OpenLoopResumePlanContract,
     SpecialistContributionContract,
 )
 from shared.domain_registry import workflow_runtime_guidance
@@ -24,6 +26,7 @@ from shared.specialist_registry import (
     STRUCTURED_ANALYSIS_SPECIALIST,
 )
 from shared.state import SYSTEM_IDENTITY
+from shared.types import MissionId
 
 MISSION_SHIFT_KEYWORDS = (
     "new",
@@ -267,6 +270,35 @@ class PlanningEngine:
     """Build concise operational plans from intent, context, and knowledge."""
 
     name = "planning-engine"
+
+    def plan_open_loop_resume(
+        self,
+        *,
+        mission_id: str,
+        open_loop_ref: str,
+        loop_summary: str,
+        selected_work_item_ref: str | None,
+        evidence_refs: list[str],
+        generated_at: str,
+    ) -> OpenLoopResumePlanContract:
+        """Derive one bounded next action without dispatching or scheduling work."""
+
+        digest = sha256(f"{open_loop_ref}\x00{loop_summary}".encode()).hexdigest()[:16]
+        next_action_ref = f"next-action://{mission_id}/open-loop/{digest}"
+        bounded_summary = " ".join(loop_summary.split())[:240]
+        next_action_summary = f"Retomar o loop: {bounded_summary}"
+        if selected_work_item_ref:
+            next_action_summary += f"; continuar pelo work item {selected_work_item_ref}"
+        return OpenLoopResumePlanContract(
+            mission_id=MissionId(mission_id),
+            open_loop_ref=open_loop_ref,
+            loop_summary=bounded_summary,
+            next_action_ref=next_action_ref,
+            next_action_summary=next_action_summary,
+            selected_work_item_ref=selected_work_item_ref,
+            evidence_refs=list(dict.fromkeys(evidence_refs))[:20],
+            generated_at=generated_at,
+        )
 
     @staticmethod
     def _present_contract_label(value: str | None) -> str | None:

@@ -1,6 +1,6 @@
 # Daily Operator Workspace
 
-Status: active baseline from `MB-194`, extended by `MB-195`.
+Status: active baseline from `MB-194`, extended by `MB-195` and `MB-197`.
 
 ## Purpose
 
@@ -79,4 +79,6 @@ explicit `p0..p3` priority; it is not an execution schedule.
 - cross-store or multi-user federation is outside this local baseline.
 
 Use the explicit governed objective/work-item/review commands to apply a human
-decision. Governed open-loop resume remains sequenced for `MB-197`.
+decision. `open-loops` and `resume-loop` now provide the explicit governed
+continuation path documented in `governed-open-loop-resume.md`; the workspace
+itself remains read-only and never resumes a mission.

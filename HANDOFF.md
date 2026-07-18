@@ -2,6 +2,16 @@
 
 ## Atualizacao 2026-07-17
 
+`MB-197` implementou a retomada governada de open loops entre sessoes.
+`open-loops` deriva registry read-only com refs deterministicas, freshness,
+blockers, evidencia e work item executavel; `resume-loop` exige selecao
+explicita e passa por Core, governance, planning, memoria canonica e sintese.
+Estado concorrente, stale, conflito de identidade, dependencia bloqueada e
+repeticao falham fechados. O resume apenas registra checkpoint e next action:
+nao executa ferramenta/work item e nao cria scheduler. Testes unitarios e E2E
+em tres sessoes cobrem persistencia, corrida, conflitos, eventos e ausencia de
+dispatch. `MB-198` e o unico item tecnico `ready`.
+
 `MB-196` tornou versoes de artefato estado canonico persistente. Cada versao
 governada registra owner mission, objective, source work item, raiz de linhagem,
 supersede/replacement, rollback e timestamps; `replace` cria a proxima versao
@@ -9,7 +19,7 @@ sequencial e `rollback` reativa a anterior sem tocar o arquivo externo. O
 registry operacional e `artifacts` sao read-only, preservam refs legadas sem
 promocao silenciosa e persistem em SQLite/PostgreSQL. Testes locais e E2E em
 tres sessoes cobrem register, replace, rollback, imutabilidade e ausencia de
-mutacao de arquivo. `MB-197` e o unico item tecnico `ready`.
+mutacao de arquivo. Esse estado foi sucedido pelo fechamento de `MB-197`.
 
 `MB-195` tornou work items governados objetos canonicos estruturados. Prioridade
 `p0..p3`, dependencias, blockers e blocking state persistem em
@@ -46,7 +56,7 @@ exit codes sao `0/1/2/3`. Segredos, bearer tokens, URL autenticada e caminhos
 locais sao redigidos. JSON para comando mutavel falha antes de construir Core
 ou chamar handler. Esse estado foi sucedido pelo fechamento de `MB-193`.
 
-`MB-191` implementou o typed CLI command registry. Os 24 comandos atuais agora
+`MB-191` implementou o typed CLI command registry. Os 24 comandos daquele baseline
 declaram id, help, handler, categoria, execution mode (`core`/`standalone`) e
 output mode; parser e registry falham fechados em drift. `main()` nao possui
 mais a cadeia de branches por comando e constroi o Core somente para comandos

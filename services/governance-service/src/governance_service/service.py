@@ -25,6 +25,7 @@ from shared.contracts import (
     MemoryLifecycleCandidateContract,
     MemoryLifecycleGovernanceAssessmentContract,
     MissionStateContract,
+    OpenLoopStateContract,
     OperatorFeedbackContract,
     SpecialistInvocationContract,
     SpecialistSelectionContract,
@@ -39,6 +40,7 @@ from shared.types import (
 )
 from shared.work_item_policy import (
     canonical_work_items_from_mission,
+    refresh_work_item_blocking_states,
     unresolved_dependency_refs,
     validate_work_item_graph,
     validate_work_item_transition,
@@ -514,6 +516,126 @@ class GovernanceService:
             timestamp=self.now(),
             conditions=conditions,
             requires_audit=requires_audit,
+            requires_rollback_plan=requires_rollback_plan,
+            containment_hint=containment_hint,
+            policy_refs=policy_refs,
+        )
+        return GovernanceAssessment(
+            governance_check=governance_check,
+            governance_decision=governance_decision,
+        )
+
+    def assess_open_loop_resume(
+        self,
+        *,
+        contract: InputContract,
+        current_state: MissionStateContract | None,
+        requested_open_loop_ref: str,
+        loop_state: OpenLoopStateContract | None,
+        freshness_status: str,
+        selected_work_item_ref: str | None,
+        blocking_reasons: list[str],
+        evidence_refs: list[str],
+        requested_by_service: str,
+    ) -> GovernanceAssessment:
+        """Govern an explicit cross-session loop selection and resume."""
+
+        governance_check = GovernanceCheckContract(
+            governance_check_id=GovernanceCheckId(f"gov-check-{uuid4().hex[:8]}"),
+            subject_type="open_loop_resume",
+            subject_action="resume",
+            scope="mission",
+            context={
+                "mission_id": str(contract.mission_id) if contract.mission_id else None,
+                "requested_open_loop_ref": requested_open_loop_ref,
+                "freshness_status": freshness_status,
+                "selected_work_item_ref": selected_work_item_ref,
+                "blocking_reasons": list(blocking_reasons),
+                "evidence_refs": list(evidence_refs),
+                "memory_write_mode": "through_core_only",
+                "autonomous_resume_allowed": False,
+                "autonomous_scheduling_allowed": False,
+            },
+            sensitivity="normal",
+            reversibility="high",
+            mission_id=contract.mission_id,
+            session_id=contract.session_id,
+            proposed_effect="open_loop_resume",
+            risk_hint=RiskLevel.LOW,
+            requested_by_service=requested_by_service,
+            requires_human_validation=False,
+            decision_frame="explicit_operator_resume",
+            mission_continuity_hint="selected_open_loop_resume",
+            open_loops=[loop_state.loop_summary] if loop_state else [],
+        )
+        decision = PermissionDecision.ALLOW_WITH_CONDITIONS
+        justification = "Retomada explicita elegivel via Core e memoria canonica."
+        conditions = [
+            "Registrar selecao, evidencia, checkpoint e proxima acao.",
+            "Nao executar ferramenta, work item ou scheduler durante o resume.",
+        ]
+        requires_rollback_plan = False
+        containment_hint = None
+        policy_refs = ["policy://open-loop-resume/explicit-selection"]
+
+        if current_state is None:
+            decision = PermissionDecision.BLOCK
+            justification = "Missao inexistente nao pode retomar open loop."
+            conditions = ["Recuperar a missao canonica antes da retomada."]
+            requires_rollback_plan = True
+            containment_hint = "block_missing_mission_state"
+            policy_refs = ["policy://open-loop-resume/missing-state"]
+        elif not self._is_bounded_reference(requested_open_loop_ref):
+            decision = PermissionDecision.BLOCK
+            justification = "Open loop ref fora do formato bounded permitido."
+            conditions = ["Selecionar uma ref retornada por open-loops."]
+            requires_rollback_plan = True
+            containment_hint = "block_unbounded_open_loop_ref"
+            policy_refs = ["policy://open-loop-resume/unbounded-reference"]
+        elif loop_state is None:
+            decision = PermissionDecision.BLOCK
+            justification = "Open loop selecionado nao existe na missao canonica."
+            conditions = ["Listar open-loops e selecionar uma ref existente."]
+            requires_rollback_plan = True
+            containment_hint = "block_missing_open_loop"
+            policy_refs = ["policy://open-loop-resume/missing-loop"]
+        elif not evidence_refs:
+            decision = PermissionDecision.BLOCK
+            justification = "Retomada sem evidencia de estado canonico."
+            conditions = ["Recalcular elegibilidade a partir do estado da missao."]
+            requires_rollback_plan = True
+            containment_hint = "block_missing_resume_evidence"
+            policy_refs = ["policy://open-loop-resume/missing-evidence"]
+        elif blocking_reasons:
+            decision = PermissionDecision.BLOCK
+            justification = "Open loop nao esta elegivel para retomada."
+            conditions = [*blocking_reasons]
+            requires_rollback_plan = True
+            containment_hint = "block_open_loop_resume_conflict"
+            policy_refs = ["policy://open-loop-resume/revalidation"]
+        elif selected_work_item_ref and selected_work_item_ref not in {
+            item.work_item_ref
+            for item in refresh_work_item_blocking_states(
+                canonical_work_items_from_mission(current_state)
+            )
+            if item.work_item_status == "active" and item.blocking_state == "ready"
+        }:
+            decision = PermissionDecision.BLOCK
+            justification = "Work item selecionado deixou de estar executavel."
+            conditions = ["Recalcular a fila governada antes de retomar."]
+            requires_rollback_plan = True
+            containment_hint = "block_stale_resume_work_item"
+            policy_refs = ["policy://open-loop-resume/work-item-readiness"]
+
+        governance_decision = GovernanceDecisionContract(
+            decision_id=GovernanceDecisionId(f"gov-decision-{uuid4().hex[:8]}"),
+            governance_check_id=governance_check.governance_check_id,
+            risk_level=governance_check.risk_hint or RiskLevel.LOW,
+            decision=decision,
+            justification=justification,
+            timestamp=self.now(),
+            conditions=conditions,
+            requires_audit=True,
             requires_rollback_plan=requires_rollback_plan,
             containment_hint=containment_hint,
             policy_refs=policy_refs,

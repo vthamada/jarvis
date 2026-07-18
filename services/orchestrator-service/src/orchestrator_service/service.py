@@ -44,6 +44,9 @@ from shared.contracts import (
     MissionProgressReportContract,
     MissionRuntimeStateContract,
     MissionStateContract,
+    OpenLoopRegistryContract,
+    OpenLoopResumePlanContract,
+    OpenLoopStateContract,
     OperationDispatchContract,
     OperationResultContract,
     OperatorFeedbackContract,
@@ -169,6 +172,23 @@ class ArtifactLifecycleTransitionResult:
     status: str
     previous_artifact_status: str | None
     artifact_state: ArtifactLifecycleStateContract | None
+    governance_check: GovernanceCheckContract
+    governance_decision: GovernanceDecisionContract
+    mission_state: MissionStateContract | None
+    events: list[InternalEventEnvelope] = field(default_factory=list)
+
+
+@dataclass
+class OpenLoopResumeResult:
+    """Outcome of one explicit governed open-loop resume."""
+
+    mission_id: str
+    open_loop_ref: str
+    status: str
+    open_loop_state: OpenLoopStateContract | None
+    resume_plan: OpenLoopResumePlanContract | None
+    registry: OpenLoopRegistryContract | None
+    response_text: str | None
     governance_check: GovernanceCheckContract
     governance_decision: GovernanceDecisionContract
     mission_state: MissionStateContract | None
@@ -736,6 +756,207 @@ class OrchestratorService:
             status="updated" if updated_state else "missing",
             previous_artifact_status=previous_status,
             artifact_state=artifact_state,
+            governance_check=assessment.governance_check,
+            governance_decision=assessment.governance_decision,
+            mission_state=updated_state,
+            events=events,
+        )
+
+    def resume_open_loop(
+        self,
+        *,
+        mission_id: str,
+        open_loop_ref: str,
+        session_id: str,
+        operator_identity_ref: str | None = None,
+        canonical_user_ref: str | None = None,
+    ) -> OpenLoopResumeResult:
+        """Select and resume one eligible loop without dispatching execution."""
+
+        requested_at = self.now()
+        contract = InputContract(
+            request_id=RequestId(f"req-open-loop-{uuid4().hex[:8]}"),
+            session_id=SessionId(session_id),
+            mission_id=MissionId(mission_id),
+            channel=ChannelType.CONSOLE,
+            input_type=InputType.STRUCTURED_PAYLOAD,
+            content="open_loop_resume:resume",
+            timestamp=requested_at,
+            metadata={
+                "open_loop_ref": open_loop_ref,
+                "memory_write_mode": "through_core_only",
+                "autonomous_resume_allowed": False,
+                "autonomous_scheduling_allowed": False,
+            },
+            surface_id="surface://jarvis_console",
+            surface_kind="console",
+            surface_session_id=session_id,
+            surface_capability_scope=["explicit_open_loop_resume"],
+            operator_identity_ref=operator_identity_ref,
+            canonical_user_ref=canonical_user_ref,
+            surface_continuity_status="single_surface",
+        )
+        current_state = self.memory_service.get_mission_state(mission_id)
+        registry = (
+            self.operational_service.build_open_loop_registry(
+                current_state,
+                generated_at=requested_at,
+            )
+            if current_state is not None
+            else None
+        )
+        loop_state = next(
+            (
+                item
+                for item in registry.open_loop_states
+                if item.open_loop_ref == open_loop_ref
+            ),
+            None,
+        ) if registry else None
+        blocking_reasons = (
+            list(registry.blocking_reasons.get(open_loop_ref, []))
+            if registry
+            else ["missing_mission_state"]
+        )
+        evidence_refs = list(registry.evidence_refs) if registry else []
+        assessment = self.governance_service.assess_open_loop_resume(
+            contract=contract,
+            current_state=current_state,
+            requested_open_loop_ref=open_loop_ref,
+            loop_state=loop_state,
+            freshness_status=(registry.freshness_status if registry else "unknown"),
+            selected_work_item_ref=(
+                registry.selected_work_item_ref if registry else None
+            ),
+            blocking_reasons=blocking_reasons,
+            evidence_refs=evidence_refs,
+            requested_by_service=self.name,
+        )
+        events = [
+            self.make_event(
+                "governance_checked",
+                contract,
+                {
+                    "subject_type": "open_loop_resume",
+                    "open_loop_ref": open_loop_ref,
+                    "decision": assessment.governance_decision.decision.value,
+                    "freshness_status": registry.freshness_status if registry else "unknown",
+                    "autonomous_resume_allowed": False,
+                    "autonomous_scheduling_allowed": False,
+                },
+            )
+        ]
+        if assessment.governance_decision.decision in {
+            PermissionDecision.BLOCK,
+            PermissionDecision.DEFER_FOR_VALIDATION,
+        }:
+            events.append(
+                self.make_event(
+                    "governance_blocked",
+                    contract,
+                    {
+                        "subject_type": "open_loop_resume",
+                        "open_loop_ref": open_loop_ref,
+                        "reason": assessment.governance_decision.justification,
+                        "blocking_reasons": blocking_reasons,
+                    },
+                )
+            )
+            self.observability_service.ingest_events(events)
+            return OpenLoopResumeResult(
+                mission_id=mission_id,
+                open_loop_ref=open_loop_ref,
+                status="blocked",
+                open_loop_state=loop_state,
+                resume_plan=None,
+                registry=registry,
+                response_text=None,
+                governance_check=assessment.governance_check,
+                governance_decision=assessment.governance_decision,
+                mission_state=current_state,
+                events=events,
+            )
+
+        assert current_state is not None and registry is not None and loop_state is not None
+        resume_plan = self.planning_engine.plan_open_loop_resume(
+            mission_id=mission_id,
+            open_loop_ref=open_loop_ref,
+            loop_summary=loop_state.loop_summary,
+            selected_work_item_ref=registry.selected_work_item_ref,
+            evidence_refs=evidence_refs,
+            generated_at=requested_at,
+        )
+        checkpoint_ref = f"open_loop_resume:{open_loop_ref}:{uuid4().hex[:8]}"
+        try:
+            updated_state = self.memory_service.resume_open_loop_state(
+                mission_id=mission_id,
+                open_loop_ref=open_loop_ref,
+                plan=resume_plan,
+                expected_updated_at=current_state.updated_at,
+                checkpoint_ref=checkpoint_ref,
+            )
+        except ValueError as exc:
+            events.append(
+                self.make_event(
+                    "open_loop_resume_contained",
+                    contract,
+                    {
+                        "open_loop_ref": open_loop_ref,
+                        "reason": str(exc),
+                        "autonomous_resume_allowed": False,
+                    },
+                )
+            )
+            self.observability_service.ingest_events(events)
+            return OpenLoopResumeResult(
+                mission_id=mission_id,
+                open_loop_ref=open_loop_ref,
+                status="contained",
+                open_loop_state=loop_state,
+                resume_plan=resume_plan,
+                registry=registry,
+                response_text=None,
+                governance_check=assessment.governance_check,
+                governance_decision=assessment.governance_decision,
+                mission_state=self.memory_service.get_mission_state(mission_id),
+                events=events,
+            )
+        updated_loop = next(
+            (
+                item
+                for item in updated_state.open_loop_states
+                if item.open_loop_ref == open_loop_ref
+            ),
+            None,
+        ) if updated_state else None
+        response_text = self.synthesis_engine.compose_open_loop_resume(resume_plan)
+        event_payload = {
+            "open_loop_ref": open_loop_ref,
+            "loop_status": updated_loop.loop_status if updated_loop else None,
+            "next_action_ref": resume_plan.next_action_ref,
+            "selected_work_item_ref": resume_plan.selected_work_item_ref,
+            "evidence_refs": list(resume_plan.evidence_refs),
+            "checkpoint_ref": checkpoint_ref,
+            "autonomous_resume_allowed": False,
+            "autonomous_scheduling_allowed": False,
+            "autonomous_execution_allowed": False,
+        }
+        events.extend(
+            [
+                self.make_event("open_loop_resumed", contract, event_payload),
+                self.make_event("mission_updated", contract, event_payload),
+                self.make_event("response_synthesized", contract, event_payload),
+            ]
+        )
+        self.observability_service.ingest_events(events)
+        return OpenLoopResumeResult(
+            mission_id=mission_id,
+            open_loop_ref=open_loop_ref,
+            status="resumed" if updated_state else "missing",
+            open_loop_state=updated_loop,
+            resume_plan=resume_plan,
+            registry=registry,
+            response_text=response_text,
             governance_check=assessment.governance_check,
             governance_decision=assessment.governance_decision,
             mission_state=updated_state,

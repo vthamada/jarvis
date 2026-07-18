@@ -390,8 +390,9 @@ def test_postgres_mission_upsert_keeps_columns_and_placeholders_in_sync() -> Non
     query = str(captured["query"])
     params = captured["params"]
     assert isinstance(params, tuple)
-    assert query.count("%s") == len(params) == 35
+    assert query.count("%s") == len(params) == 36
     assert "artifact_states" in query
+    assert "open_loop_states" in query
     assert captured["committed"] is True
 
 

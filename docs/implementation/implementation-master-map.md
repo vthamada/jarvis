@@ -90,7 +90,7 @@ Goal: make JARVIS useful to a human operator in daily work.
 | `OP-006` | Daily operator dashboard | `implemented_baseline` | Validate usefulness and evolve from operator evidence | Console, memory, observability | none |
 | `OP-007` | Operator feedback after mission | `implemented_baseline` | Validate usefulness through real operator feedback | Experience/reflection | none |
 | `OP-008` | Human-readable progress report | `implemented_baseline` | Validate report usefulness with operator evidence | Synthesis, memory | none |
-| `OP-009` | Multi-session daily continuity | `partial_runtime` | Resume work across days with active/open loops | Memory, mission state | candidate |
+| `OP-009` | Multi-session daily continuity | `implemented_baseline` | Keep stable and measure real operator outcomes | Memory, mission state | none |
 | `OP-010` | Human approval center | `implemented_baseline` | Keep decisions read-only until explicit action command | Evolution review, governance | none |
 
 ### Track B -- Core Cognitive Depth
@@ -803,12 +803,19 @@ Map IDs: `OP-009`, `MEM-002`, `MEM-003`, `COG-010`.
 Goal: resume active loops across sessions with explicit selection, evidence and
 human-visible next action, without an autonomous scheduler.
 
+Status: closed in `MB-197`; `open-loops` derives a read-only eligibility
+registry and `resume-loop` revalidates freshness, objective, dependencies and
+identity through the Core before persisting one bounded next action. State
+races and conflicts fail closed, and no tool, work item or scheduler runs.
+
 ### MB-198 -- Daily Operator Utility Outcome Metrics
 
 Map IDs: `OBS-005`, `OP-006`, `OP-009`.
 
 Goal: measure completion, rework, stale loops, feedback and time-to-next-action
 for the daily workflow without inventing saved-time claims.
+
+Status: ready after `MB-197`.
 
 ### MB-199 -- Registry-Derived CLI Reference And Golden Outputs
 
@@ -817,12 +824,16 @@ Map IDs: `SFC-014`, `DOC-010`, `SFC-012`.
 Goal: generate command reference/completion from registry metadata and protect
 text/JSON behavior with deterministic golden tests.
 
+Status: blocked by `MB-198`.
+
 ### MB-200 -- Daily Operator Loop Readiness Closure
 
 Map IDs: `OBS-007`, `OBS-008`, `DOC-010`, `OP-009`.
 
 Goal: close the slice with integrated readiness, regression, operator runbook
 and explicit next phase decision.
+
+Status: blocked by `MB-199`.
 
 ## 14. What Must Not Be Pulled Next By Inertia
 

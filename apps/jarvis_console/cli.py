@@ -30,6 +30,7 @@ from orchestrator_service.service import (
     LongHorizonGoalStrategyResult,
     MissionProgressReportResult,
     ObjectiveTransitionResult,
+    OpenLoopResumeResult,
     OperatorFeedbackResult,
     OrchestratorResponse,
     OrchestratorService,
@@ -46,6 +47,7 @@ from shared.contracts import (
     LongHorizonGoalStrategyContract,
     LongitudinalLearningReportContract,
     MissionStateContract,
+    OpenLoopRegistryContract,
     RegressionReadinessReportContract,
     SkillEvolutionOperatorViewContract,
 )
@@ -178,6 +180,37 @@ class JarvisConsole:
             priority_level=priority_level,
             blocker_refs=blocker_refs,
             operator_identity_ref=operator_identity_ref or DEFAULT_OPERATOR_IDENTITY_REF,
+            canonical_user_ref=canonical_user_ref or DEFAULT_CANONICAL_USER_REF,
+        )
+
+    def get_open_loop_registry(
+        self,
+        *,
+        mission_id: str,
+    ) -> OpenLoopRegistryContract | None:
+        mission_state = self.get_objective_state(mission_id=mission_id)
+        if mission_state is None:
+            return None
+        return self.orchestrator.operational_service.build_open_loop_registry(
+            mission_state,
+            generated_at=datetime.now(UTC).isoformat(),
+        )
+
+    def resume_open_loop(
+        self,
+        *,
+        mission_id: str,
+        open_loop_ref: str,
+        session_id: str,
+        operator_identity_ref: str | None = None,
+        canonical_user_ref: str | None = None,
+    ) -> OpenLoopResumeResult:
+        return self.orchestrator.resume_open_loop(
+            mission_id=mission_id,
+            open_loop_ref=open_loop_ref,
+            session_id=session_id,
+            operator_identity_ref=operator_identity_ref
+            or DEFAULT_OPERATOR_IDENTITY_REF,
             canonical_user_ref=canonical_user_ref or DEFAULT_CANONICAL_USER_REF,
         )
 
@@ -396,6 +429,22 @@ def build_parser() -> ArgumentParser:
     )
     work_item_parser.add_argument("--operator-identity-ref")
     work_item_parser.add_argument("--canonical-user-ref")
+
+    open_loops_parser = subparsers.add_parser(
+        "open-loops",
+        help="Show governed open loops eligible for explicit resume.",
+    )
+    open_loops_parser.add_argument("--mission-id", required=True)
+
+    resume_loop_parser = subparsers.add_parser(
+        "resume-loop",
+        help="Explicitly resume one governed open loop without autonomous execution.",
+    )
+    resume_loop_parser.add_argument("--mission-id", required=True)
+    resume_loop_parser.add_argument("--open-loop-ref", required=True)
+    resume_loop_parser.add_argument("--session-id", default="console-resume-loop")
+    resume_loop_parser.add_argument("--operator-identity-ref")
+    resume_loop_parser.add_argument("--canonical-user-ref")
 
     artifacts_parser = subparsers.add_parser(
         "artifacts",
@@ -863,6 +912,81 @@ def render_work_item_transition(result: WorkItemTransitionResult) -> str:
             + safe_console_list(list(getattr(mission_state, "work_item_refs", []))),
             "memory_write_mode=through_core_only",
             f"event_names={safe_console_list([event.event_name for event in result.events])}",
+        ]
+    )
+
+
+def render_open_loop_registry(
+    registry: OpenLoopRegistryContract | None,
+    *,
+    mission_id: str,
+) -> str:
+    if registry is None or not registry.open_loop_states:
+        return f"No open loops found for mission_id={safe_console_value(mission_id)}"
+    lines = [
+        f"mission_id={safe_console_value(registry.mission_id)}",
+        f"registry_status={safe_console_value(registry.registry_status)}",
+        f"freshness_status={safe_console_value(registry.freshness_status)}",
+        f"mission_age_hours={safe_console_value(registry.mission_age_hours)}",
+        "eligible_open_loop_refs=" + safe_console_list(registry.eligible_open_loop_refs),
+        "blocked_open_loop_refs=" + safe_console_list(registry.blocked_open_loop_refs),
+        "selected_work_item_ref="
+        + safe_console_value(registry.selected_work_item_ref),
+        "evidence_refs=" + safe_console_list(registry.evidence_refs),
+        "open_loop_registry=read_only",
+        "autonomous_resume_allowed=False",
+        "autonomous_scheduling_allowed=False",
+    ]
+    eligible_refs = set(registry.eligible_open_loop_refs)
+    for state in registry.open_loop_states:
+        lines.extend(
+            [
+                "---",
+                f"open_loop_ref={safe_console_value(state.open_loop_ref)}",
+                f"loop_summary={safe_console_value(state.loop_summary)}",
+                f"loop_status={safe_console_value(state.loop_status)}",
+                "source_work_item_ref="
+                + safe_console_value(state.source_work_item_ref),
+                "eligible="
+                + safe_console_value(state.open_loop_ref in eligible_refs),
+                "blocking_reasons="
+                + safe_console_list(
+                    registry.blocking_reasons.get(state.open_loop_ref, [])
+                ),
+                f"resumed_at={safe_console_value(state.resumed_at)}",
+                f"next_action_ref={safe_console_value(state.next_action_ref)}",
+            ]
+        )
+    return "\n".join(lines)
+
+
+def render_open_loop_resume(result: OpenLoopResumeResult) -> str:
+    plan = result.resume_plan
+    state = result.open_loop_state
+    return "\n".join(
+        [
+            f"mission_id={safe_console_value(result.mission_id)}",
+            f"open_loop_ref={safe_console_value(result.open_loop_ref)}",
+            f"resume_status={safe_console_value(result.status)}",
+            "governance_decision="
+            + safe_console_value(result.governance_decision.decision),
+            "loop_status=" + safe_console_value(getattr(state, "loop_status", None)),
+            "loop_summary=" + safe_console_value(getattr(state, "loop_summary", None)),
+            "next_action_ref="
+            + safe_console_value(getattr(plan, "next_action_ref", None)),
+            "next_action_summary="
+            + safe_console_value(getattr(plan, "next_action_summary", None)),
+            "selected_work_item_ref="
+            + safe_console_value(getattr(plan, "selected_work_item_ref", None)),
+            "evidence_refs="
+            + safe_console_list(list(getattr(plan, "evidence_refs", []))),
+            "response_text=" + safe_console_value(result.response_text),
+            "memory_write_mode=through_core_only",
+            "autonomous_resume_allowed=False",
+            "autonomous_scheduling_allowed=False",
+            "autonomous_execution_allowed=False",
+            "event_names="
+            + safe_console_list([event.event_name for event in result.events]),
         ]
     )
 
@@ -2128,6 +2252,22 @@ def run_work_item_command(console: JarvisConsole, args: Namespace) -> list[str]:
         canonical_user_ref=args.canonical_user_ref,
     )
     return [render_work_item_transition(result)]
+
+
+def run_open_loops_command(console: JarvisConsole, args: Namespace) -> list[str]:
+    registry = console.get_open_loop_registry(mission_id=args.mission_id)
+    return [render_open_loop_registry(registry, mission_id=args.mission_id)]
+
+
+def run_resume_loop_command(console: JarvisConsole, args: Namespace) -> list[str]:
+    result = console.resume_open_loop(
+        mission_id=args.mission_id,
+        open_loop_ref=args.open_loop_ref,
+        session_id=args.session_id,
+        operator_identity_ref=args.operator_identity_ref,
+        canonical_user_ref=args.canonical_user_ref,
+    )
+    return [render_open_loop_resume(result)]
 
 
 def run_artifacts_command(console: JarvisConsole, args: Namespace) -> list[str]:

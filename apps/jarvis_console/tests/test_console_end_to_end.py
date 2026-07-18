@@ -15,6 +15,9 @@ from apps.jarvis_console.cli import (
     run_artifacts_command,
     run_daily_workspace_command,
     run_longitudinal_learning_report_command,
+    run_objective_command,
+    run_open_loops_command,
+    run_resume_loop_command,
     run_skill_evolution_command,
     run_work_item_command,
     run_work_items_command,
@@ -24,6 +27,7 @@ from shared.contracts import (
     PostTaskReflectionContract,
     SkillCandidateContract,
 )
+from shared.open_loop_policy import open_loop_ref
 from shared.types import RiskLevel
 
 
@@ -801,3 +805,106 @@ def test_artifact_lineage_persists_and_rolls_back_across_console_sessions() -> N
     assert status_by_ref[artifact_v2] == "rolled_back"
     assert artifact_v1 in mission_state.active_artifact_refs
     assert files_after == files_before
+
+
+def test_open_loop_resume_is_explicit_governed_and_persistent_across_sessions() -> None:
+    temp_dir = runtime_dir("console-e2e-open-loop-resume")
+    mission_id = "mission-e2e-open-loop-resume"
+    work_item_ref = f"work-item://{mission_id}/validate-next-step"
+    parser = build_parser()
+
+    first_console = JarvisConsole.build(runtime_dir=temp_dir)
+    first_console.ask(
+        "Plan the next controlled implementation step.",
+        session_id="sess-open-loop-one",
+        mission_id=mission_id,
+    )
+    initial_state = first_console.get_objective_state(mission_id=mission_id)
+    assert initial_state is not None and initial_state.open_loops
+    selected_loop_ref = open_loop_ref(mission_id, initial_state.open_loops[0])
+    run_objective_command(
+        first_console,
+        parser.parse_args(
+            [
+                "objective",
+                "--mission-id",
+                mission_id,
+                "--session-id",
+                "sess-open-loop-one",
+                "--action",
+                "resume",
+            ]
+        ),
+    )
+    run_work_item_command(
+        first_console,
+        parser.parse_args(
+            [
+                "work-item",
+                "--mission-id",
+                mission_id,
+                "--session-id",
+                "sess-open-loop-one",
+                "--action",
+                "create",
+                "--work-item-ref",
+                work_item_ref,
+                "--priority",
+                "p1",
+            ]
+        ),
+    )
+
+    second_console = JarvisConsole.build(runtime_dir=temp_dir)
+    listed_before = run_open_loops_command(
+        second_console,
+        parser.parse_args(["open-loops", "--mission-id", mission_id]),
+    )[0]
+    resumed = run_resume_loop_command(
+        second_console,
+        parser.parse_args(
+            [
+                "resume-loop",
+                "--mission-id",
+                mission_id,
+                "--open-loop-ref",
+                selected_loop_ref,
+                "--session-id",
+                "sess-open-loop-two",
+            ]
+        ),
+    )[0]
+
+    third_console = JarvisConsole.build(runtime_dir=temp_dir)
+    listed_after = run_open_loops_command(
+        third_console,
+        parser.parse_args(["open-loops", "--mission-id", mission_id]),
+    )[0]
+    final_state = third_console.get_objective_state(mission_id=mission_id)
+    events = third_console.orchestrator.observability_service.list_recent_events(
+        ObservabilityQuery(mission_id=mission_id, limit=100)
+    )
+
+    assert selected_loop_ref in listed_before
+    assert "registry_status=resume_available" in listed_before
+    assert f"selected_work_item_ref={work_item_ref}" in listed_before
+    assert "autonomous_resume_allowed=False" in listed_before
+    assert "resume_status=resumed" in resumed
+    assert "governance_decision=allow_with_conditions" in resumed
+    assert f"selected_work_item_ref={work_item_ref}" in resumed
+    assert "autonomous_execution_allowed=False" in resumed
+    assert "open_loop_resumed" in resumed
+    assert "loop_status=resumed" in listed_after
+    assert "registry_status=blocked" in listed_after
+    assert final_state is not None
+    assert final_state.open_loops == []
+    assert final_state.open_loop_states[0].open_loop_ref == selected_loop_ref
+    assert final_state.open_loop_states[0].loop_status == "resumed"
+    assert final_state.next_action_ref is not None
+    resume_event_names = {
+        event.event_name
+        for event in events
+        if event.session_id == "sess-open-loop-two"
+    }
+    assert "open_loop_resumed" in resume_event_names
+    assert "operation_dispatched" not in resume_event_names

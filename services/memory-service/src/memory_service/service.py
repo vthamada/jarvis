@@ -51,6 +51,8 @@ from shared.contracts import (
     MissionContinuityCandidateContract,
     MissionContinuityContextContract,
     MissionStateContract,
+    OpenLoopResumePlanContract,
+    OpenLoopStateContract,
     OperationDispatchContract,
     OperationResultContract,
     OperatorFeedbackContract,
@@ -85,6 +87,7 @@ from shared.memory_registry import (
     procedural_artifact_decision,
     specialist_memory_policy_payload,
 )
+from shared.open_loop_policy import canonical_open_loop_states_from_mission
 from shared.recurring_patterns import build_recurring_pattern_report
 from shared.specialist_registry import (
     canonical_specialist_type,
@@ -1334,6 +1337,90 @@ class MemoryService:
                 [] if mission_status == MissionStatus.COMPLETED else current.open_checkpoint_refs
             ),
             updated_at=self.now(),
+        )
+        self.repository.upsert_mission_state(updated)
+        return updated
+
+    def resume_open_loop_state(
+        self,
+        *,
+        mission_id: str,
+        open_loop_ref: str,
+        plan: OpenLoopResumePlanContract,
+        expected_updated_at: str,
+        checkpoint_ref: str,
+    ) -> MissionStateContract | None:
+        """Record an explicit resume without executing the selected next action."""
+
+        current = self.repository.fetch_mission_state(mission_id)
+        if current is None:
+            return None
+        if current.updated_at != expected_updated_at:
+            raise ValueError("mission state changed after resume revalidation")
+        if current.mission_status != MissionStatus.ACTIVE or (
+            current.objective_status or "active"
+        ) != "active":
+            raise ValueError("mission objective is not active for open loop resume")
+
+        open_loop_states = list(current.open_loop_states)
+        selected = next(
+            (item for item in open_loop_states if item.open_loop_ref == open_loop_ref),
+            None,
+        )
+        if selected is None:
+            selected = next(
+                (
+                    item
+                    for item in canonical_open_loop_states_from_mission(current)
+                    if item.open_loop_ref == open_loop_ref
+                ),
+                None,
+            )
+            if selected is not None:
+                open_loop_states.append(selected)
+        if selected is None or selected.loop_status != "open":
+            raise ValueError("open loop is missing or no longer eligible")
+        if plan.open_loop_ref != open_loop_ref or str(plan.mission_id) != mission_id:
+            raise ValueError("open loop resume plan identity mismatch")
+        if plan.selected_work_item_ref:
+            executable_refs = {
+                item.work_item_ref
+                for item in refresh_work_item_blocking_states(
+                    canonical_work_items_from_mission(current)
+                )
+                if item.work_item_status == "active" and item.blocking_state == "ready"
+            }
+            if plan.selected_work_item_ref not in executable_refs:
+                raise ValueError("selected work item is no longer executable")
+
+        now = self.now()
+        updated_loop = OpenLoopStateContract(
+            open_loop_ref=selected.open_loop_ref,
+            mission_id=current.mission_id,
+            loop_summary=selected.loop_summary,
+            loop_status="resumed",
+            source_work_item_ref=plan.selected_work_item_ref,
+            selected_at=now,
+            resumed_at=now,
+            next_action_ref=plan.next_action_ref,
+            next_action_summary=plan.next_action_summary,
+            evidence_refs=list(plan.evidence_refs),
+            checkpoint_refs=[*selected.checkpoint_refs, checkpoint_ref][-20:],
+        )
+        open_loop_states = [
+            updated_loop if item.open_loop_ref == open_loop_ref else item
+            for item in open_loop_states
+        ]
+        updated = replace(
+            current,
+            open_loops=[
+                item for item in current.open_loops if item != selected.loop_summary
+            ],
+            open_loop_states=open_loop_states,
+            next_action_ref=plan.next_action_ref,
+            checkpoints=[*current.checkpoints, f"open_loop_resume:{checkpoint_ref}"][-5:],
+            checkpoint_refs=[*current.checkpoint_refs, checkpoint_ref][-5:],
+            updated_at=now,
         )
         self.repository.upsert_mission_state(updated)
         return updated

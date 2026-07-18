@@ -1998,6 +1998,7 @@ MISSION_STATE_SCHEMA = CanonicalSchema(
         "semantic_focus",
         "identity_continuity_brief",
         "open_loops",
+        "open_loop_states",
         "last_decision_frame",
         "ecosystem_state_status",
         "active_work_items",
@@ -2177,6 +2178,66 @@ ARTIFACT_REGISTRY_SCHEMA = CanonicalSchema(
         "external_file_mutation_allowed",
     ),
     notes=("Read-only projection of immutable artifact versions and lifecycle state.",),
+)
+
+OPEN_LOOP_STATE_SCHEMA = CanonicalSchema(
+    name="OpenLoopStateSchema",
+    contract_name="OpenLoopStateContract",
+    required_fields=("open_loop_ref", "mission_id", "loop_summary"),
+    optional_fields=(
+        "loop_status",
+        "source_work_item_ref",
+        "selected_at",
+        "resumed_at",
+        "next_action_ref",
+        "next_action_summary",
+        "evidence_refs",
+        "checkpoint_refs",
+        "memory_write_mode",
+    ),
+)
+
+OPEN_LOOP_REGISTRY_SCHEMA = CanonicalSchema(
+    name="OpenLoopRegistrySchema",
+    contract_name="OpenLoopRegistryContract",
+    required_fields=(
+        "mission_id",
+        "registry_status",
+        "freshness_status",
+        "mission_age_hours",
+        "open_loop_states",
+        "eligible_open_loop_refs",
+        "blocked_open_loop_refs",
+    ),
+    optional_fields=(
+        "blocking_reasons",
+        "selected_work_item_ref",
+        "evidence_refs",
+        "generated_at",
+        "memory_write_mode",
+        "read_only",
+        "autonomous_resume_allowed",
+        "autonomous_scheduling_allowed",
+    ),
+)
+
+OPEN_LOOP_RESUME_PLAN_SCHEMA = CanonicalSchema(
+    name="OpenLoopResumePlanSchema",
+    contract_name="OpenLoopResumePlanContract",
+    required_fields=(
+        "mission_id",
+        "open_loop_ref",
+        "loop_summary",
+        "next_action_ref",
+        "next_action_summary",
+    ),
+    optional_fields=(
+        "selected_work_item_ref",
+        "evidence_refs",
+        "planning_mode",
+        "generated_at",
+        "autonomous_execution_allowed",
+    ),
 )
 
 ARTIFACT_RESULT_SCHEMA = CanonicalSchema(
