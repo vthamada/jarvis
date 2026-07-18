@@ -729,6 +729,8 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
         "decision_trace",
         "domain_alignment",
     ]
+    assert result.operation_dispatch.workflow_policy_decision is not None
+    assert result.operation_dispatch.workflow_policy_decision.application_status == "applied"
     assert (
         result.operation_dispatch.workflow_success_focus
         == "direcao recomendada com criterios explicitos"
@@ -779,6 +781,13 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     assert result.deliberative_plan.primary_route == "strategy"
     assert result.deliberative_plan.route_consumer_profile == "strategy_tradeoff_review"
     assert result.deliberative_plan.route_workflow_profile == "strategic_direction_workflow"
+    assert result.deliberative_plan.workflow_policy_decision is not None
+    assert result.deliberative_plan.workflow_policy_decision.resolution_status == "resolved"
+    assert result.deliberative_plan.workflow_policy_decision.policy_version == "1.0.0"
+    assert (
+        result.operation_dispatch.workflow_policy_decision.policy_ref
+        == result.deliberative_plan.workflow_policy_decision.policy_ref
+    )
     assert result.deliberative_plan.capability_decision_status == "resolved"
     assert result.deliberative_plan.capability_decision_selected_mode == "core_with_local_operation"
     assert (
@@ -849,6 +858,24 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     )
     event_names = [event.event_name for event in stored_events]
     assert event_names == [event.event_name for event in result.events]
+    workflow_policy_ref = result.deliberative_plan.workflow_policy_decision.policy_ref
+    for event_name in {
+        "plan_built",
+        "workflow_composed",
+        "workflow_governance_declared",
+        "operation_dispatched",
+        "operation_completed",
+        "workflow_completed",
+        "response_synthesized",
+    }:
+        event = next(event for event in stored_events if event.event_name == event_name)
+        assert event.payload["workflow_policy_ref"] == workflow_policy_ref
+        assert event.payload["workflow_policy_version"] == "1.0.0"
+        assert event.payload["workflow_policy_application_status"] == "applied"
+        assert "response_focus" in event.payload["workflow_policy_effects"]
+        assert event.payload["workflow_policy_autonomous_execution_allowed"] is False
+        assert event.payload["workflow_policy_automatic_promotion_allowed"] is False
+        assert event.payload["workflow_policy_core_mutation_allowed"] is False
     assert "directive_composed" in event_names
     assert "continuity_subflow_completed" in event_names
     assert "plan_built" in event_names

@@ -89,3 +89,22 @@ direct assignment.
 registration as thin delegates. The lab does not persist an active workflow,
 bind a candidate to routing or promote a version. It remains subordinate to
 the sovereign Core and future human release gates.
+
+## Runtime policy resolution
+
+`MB-202` adds `WorkflowPolicyDecisionContract` as the single read-only runtime
+decision derived from the active registry. For each eligible route/profile it
+records a deterministic policy ref, policy version, registry fingerprint,
+resolution/application status, bounded effects and evidence refs.
+
+Planning resolves this decision before applying workflow guidance. Synthesis
+consumes the resolved decision rather than independently choosing route
+guidance. Native and LangGraph orchestrator events preserve the same policy
+ref from `plan_built` through `response_synthesized`.
+
+All active workflow profiles now have explicit planning, success, semantic
+memory, procedural memory, response and adaptive-intervention guidance.
+Missing profiles and route/profile mismatches record non-use and apply no
+workflow-specific effects. An unregistered profile can use only the explicit
+sovereign bounded default and cannot execute, promote, mutate the active
+registry or mutate the Core.

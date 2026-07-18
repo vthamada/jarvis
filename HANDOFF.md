@@ -2,12 +2,17 @@
 
 ## Atualizacao 2026-07-18
 
-`MB-201` repriorizou a fase pos-Daily Operator Loop. A fila `MB-202` a
-`MB-210` aprofunda politica declarativa de workflow, memoria semantica e
-procedural causal, atribuicao de outcomes e variantes governadas antes de abrir
-intake manual e experimentos sandbox do radar tecnologico. Somente `MB-202` e o
-item tecnico `ready`; adapters, API, voz, UI rica, scheduler, auto-trust e
-autopromocao continuam fora.
+`MB-202` implementou policy declarativa versionada para todos os workflows
+ativos. `WorkflowPolicyDecisionContract` preserva ref, versao, fingerprint,
+efeitos e non-use do planning ate synthesis/dispatch e eventos nativos ou
+LangGraph. Mismatch rota/perfil nao aplica guidance; o default bounded e
+explicito e nenhuma policy ganha autoridade de execucao, promocao ou mutacao.
+Somente `MB-203` esta `ready`, para aprofundar causalidade de memoria semantica.
+Adapters, API, voz, UI rica, scheduler, auto-trust e autopromocao continuam
+fora.
+
+`MB-201` repriorizou a fase pos-Daily Operator Loop e abriu a fila `MB-202` a
+`MB-210`. Esse estado foi sucedido pelo fechamento de `MB-202`.
 
 `MB-200` fechou o Daily Operator Loop. O novo runbook conecta preflight,
 workspace, missao, retomada, work items, artefatos, feedback, experiencia,

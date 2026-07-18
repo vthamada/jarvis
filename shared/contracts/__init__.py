@@ -503,6 +503,32 @@ class SkillEvolutionOperatorViewContract:
 
 
 @dataclass
+class WorkflowPolicyDecisionContract:
+    policy_ref: str
+    policy_version: str
+    source_registry_ref: str
+    source_registry_fingerprint: str
+    workflow_profile: str | None
+    route: str | None
+    resolution_status: str
+    application_status: str
+    application_reason: str
+    planning_focus: str
+    success_focus: str
+    semantic_memory_role: str
+    procedural_memory_role: str
+    response_focus: str
+    adaptive_intervention_priority: list[str]
+    effects: list[str]
+    evidence_refs: list[str]
+    non_use_reason: str | None = None
+    read_only: bool = True
+    autonomous_execution_allowed: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass
 class WorkflowProfileVersionContract:
     workflow_version_id: str
     workflow_profile: str
@@ -913,6 +939,7 @@ class DeliberativePlanContract:
     route_workflow_steps: list[str] = field(default_factory=list)
     route_workflow_checkpoints: list[str] = field(default_factory=list)
     route_workflow_decision_points: list[str] = field(default_factory=list)
+    workflow_policy_decision: WorkflowPolicyDecisionContract | None = None
     tensions_considered: list[str] = field(default_factory=list)
     specialist_hints: list[str] = field(default_factory=list)
     success_criteria: list[str] = field(default_factory=list)
@@ -1721,6 +1748,7 @@ class OperationDispatchContract:
     workflow_resume_point: str | None = None
     workflow_resume_status: str | None = None
     workflow_resume_eligible: bool = False
+    workflow_policy_decision: WorkflowPolicyDecisionContract | None = None
     ecosystem_state_status: str | None = None
     active_work_items: list[str] = field(default_factory=list)
     active_artifact_refs: list[str] = field(default_factory=list)

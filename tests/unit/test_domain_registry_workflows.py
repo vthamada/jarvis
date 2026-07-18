@@ -5,15 +5,89 @@ import pytest
 from shared.contracts import WorkflowProfileVersionContract
 from shared.domain_registry import (
     ACTIVE_WORKFLOW_MATURITIES,
+    ACTIVE_WORKFLOW_POLICY_VERSION,
     RUNTIME_ROUTE_REGISTRY,
     WORKFLOW_VERSION_LIFECYCLE_STATUSES,
     active_workflow_registry_fingerprint,
     build_active_workflow_version_registry,
     register_workflow_candidate_version,
+    resolve_workflow_policy,
     route_metadata_payload,
     specialist_route_payload,
     workflow_definition_hash,
 )
+
+
+def test_active_workflow_policies_resolve_as_versioned_read_only_contracts() -> None:
+    active_routes = {
+        name: entry
+        for name, entry in RUNTIME_ROUTE_REGISTRY.items()
+        if entry.maturity in ACTIVE_WORKFLOW_MATURITIES and entry.workflow_profile
+    }
+
+    assert active_routes
+    for route_name, entry in active_routes.items():
+        decision = resolve_workflow_policy(
+            route_name=route_name,
+            workflow_profile=entry.workflow_profile,
+        )
+
+        assert decision.policy_ref.startswith(
+            f"workflow-policy://{entry.workflow_profile}/"
+        )
+        assert decision.policy_version == ACTIVE_WORKFLOW_POLICY_VERSION
+        assert decision.source_registry_fingerprint == (
+            active_workflow_registry_fingerprint()
+        )
+        assert decision.route == route_name
+        assert decision.workflow_profile == entry.workflow_profile
+        assert decision.resolution_status == "resolved"
+        assert decision.application_status == "applied"
+        assert decision.effects == [
+            "planning_focus",
+            "success_focus",
+            "semantic_memory_role",
+            "procedural_memory_role",
+            "response_focus",
+            "adaptive_intervention_priority",
+        ]
+        assert decision.read_only is True
+        assert decision.autonomous_execution_allowed is False
+        assert decision.automatic_promotion_allowed is False
+        assert decision.core_mutation_allowed is False
+
+
+def test_workflow_policy_rejects_route_profile_mismatch_without_effects() -> None:
+    decision = resolve_workflow_policy(
+        route_name="strategy",
+        workflow_profile="software_change_workflow",
+    )
+
+    assert decision.resolution_status == "rejected_route_profile_mismatch"
+    assert decision.application_status == "not_applied"
+    assert decision.application_reason == "route_profile_mismatch"
+    assert decision.non_use_reason == "route_profile_mismatch"
+    assert decision.effects == []
+
+
+def test_workflow_policy_records_bounded_default_and_missing_profile_non_use() -> None:
+    bounded = resolve_workflow_policy(
+        route_name=None,
+        workflow_profile="unregistered_workflow",
+    )
+    absent = resolve_workflow_policy(route_name="strategy", workflow_profile=None)
+
+    assert bounded.resolution_status == "bounded_default"
+    assert bounded.application_status == "applied"
+    assert bounded.non_use_reason == "profile_specific_guidance_unavailable"
+    assert bounded.policy_ref == resolve_workflow_policy(
+        route_name=None,
+        workflow_profile="unregistered_workflow",
+    ).policy_ref
+    assert absent.resolution_status == "not_applicable"
+    assert absent.application_status == "not_applied"
+    assert absent.non_use_reason == "workflow_profile_missing"
+    assert absent.effects == []
 
 
 def test_active_runtime_routes_define_workflow_contracts() -> None:

@@ -13,7 +13,7 @@ from shared.contracts import (
     OpenLoopResumePlanContract,
     SpecialistContributionContract,
 )
-from shared.domain_registry import workflow_runtime_guidance
+from shared.domain_registry import resolve_workflow_policy, workflow_runtime_guidance
 from shared.memory_influence_policy import evaluate_memory_influence_policy
 from shared.memory_registry import guided_memory_decision, memory_maintenance_decision
 from shared.mind_domain_specialist_contract import (
@@ -309,6 +309,18 @@ class PlanningEngine:
     def build_task_plan(self, context: PlanningContext) -> DeliberativePlanContract:
         """Create a structured plan that is safe to pass into the operational layer."""
 
+        workflow_policy_decision = resolve_workflow_policy(
+            route_name=context.primary_route,
+            workflow_profile=context.route_workflow_profile,
+        )
+        if workflow_policy_decision.application_status != "applied":
+            context = replace(
+                context,
+                route_workflow_profile=None,
+                route_workflow_steps=[],
+                route_workflow_checkpoints=[],
+                route_workflow_decision_points=[],
+            )
         tensions = list(context.tensions or [])
         specialist_hints = list(context.specialist_hints or [])
         dominant_goal = context.dominant_goal or context.query
@@ -630,6 +642,12 @@ class PlanningEngine:
             f"request_authority={request_identity_policy.authority_level}; "
             f"request_confirmation={request_identity_policy.confirmation_mode}"
         )
+        plan_summary = (
+            f"{plan_summary}; workflow_policy="
+            f"{workflow_policy_decision.application_status}; "
+            f"workflow_policy_ref={workflow_policy_decision.policy_ref}; "
+            f"workflow_policy_version={workflow_policy_decision.policy_version}"
+        )
         if mind_domain_specialist_contract.summary:
             plan_summary = (
                 f"{plan_summary}; mind_domain_specialist="
@@ -700,6 +718,16 @@ class PlanningEngine:
             f"request_confirmation={request_identity_policy.confirmation_mode}"
         )
         rationale = (
+            f"{rationale}; workflow_policy_resolution="
+            f"{workflow_policy_decision.resolution_status}; "
+            f"workflow_policy_application="
+            f"{workflow_policy_decision.application_status}; "
+            f"workflow_policy_effects="
+            f"{','.join(workflow_policy_decision.effects) or 'none'}; "
+            f"workflow_policy_non_use="
+            f"{workflow_policy_decision.non_use_reason or 'none'}"
+        )
+        rationale = (
             f"{rationale}; mind_domain_specialist_status="
             f"{mind_domain_specialist_contract.status}; "
             "mind_domain_specialist_chain="
@@ -751,6 +779,7 @@ class PlanningEngine:
             route_workflow_decision_points=list(
                 context.route_workflow_decision_points or []
             ),
+            workflow_policy_decision=workflow_policy_decision,
             risks=risks,
             recommended_task_type=recommended_task_type,
             requires_human_validation=requires_human_validation,

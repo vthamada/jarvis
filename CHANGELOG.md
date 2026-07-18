@@ -2,6 +2,12 @@
 
 ## 2026-07-18
 
+### MB-202 implementa policy declarativa versionada de workflow
+
+- `WorkflowPolicyDecisionContract` resolve ref, versao, fonte, fingerprint, efeitos e non-use pelo registry soberano para todos os workflows ativos;
+- planning, synthesis, dispatch e eventos nativos/LangGraph preservam a mesma decisao auditavel, enquanto mismatch nao aplica guidance e o default bounded permanece explicito;
+- a policy e read-only, sem execucao, promocao ou mutacao do Core; `MB-203` passa a ser o unico item tecnico `ready`.
+
 ### MB-201 reprioriza politica, memoria e aprendizado tecnologico
 
 - a fila WIP-1 `MB-202` a `MB-210` aprofunda workflow policy, memoria semantica/procedural, atribuicao de decisao e variantes governadas antes do radar tecnologico;

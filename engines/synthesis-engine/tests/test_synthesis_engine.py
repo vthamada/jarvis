@@ -1,3 +1,5 @@
+from dataclasses import replace
+
 from identity_engine.engine import IdentityEngine
 from synthesis_engine.engine import (
     MissionProgressReportInput,
@@ -14,6 +16,7 @@ from shared.contracts import (
     MissionStateContract,
     PostTaskReflectionContract,
 )
+from shared.domain_registry import resolve_workflow_policy
 from shared.types import (
     GovernanceCheckId,
     GovernanceDecisionId,
@@ -480,6 +483,79 @@ def test_synthesis_engine_marks_workflow_output_partial_when_workflow_clauses_ar
     assert result.workflow_output_status == "partial"
     assert "missing_clause:workflow_profile" in result.workflow_output_errors
     assert "missing_clause:workflow_response_focus" in result.workflow_output_errors
+
+
+def test_synthesis_engine_consumes_resolved_policy_instead_of_parallel_guidance() -> None:
+    plan = sample_plan()
+    policy = resolve_workflow_policy(
+        route_name="strategy",
+        workflow_profile="strategic_direction_workflow",
+    )
+    plan.workflow_policy_decision = replace(
+        policy,
+        response_focus="policy-bound strategic closure",
+    )
+
+    result = SynthesisEngine().compose_result(
+        SynthesisInput(
+            intent="planning",
+            identity_profile=IdentityEngine().get_profile(),
+            response_style="estruturado",
+            governance_decision=GovernanceDecisionContract(
+                decision_id=GovernanceDecisionId("decision-workflow-policy"),
+                governance_check_id=GovernanceCheckId("check-workflow-policy"),
+                risk_level=RiskLevel.LOW,
+                decision=PermissionDecision.ALLOW,
+                justification="ok",
+                timestamp="2026-07-18T00:00:00Z",
+            ),
+            recovered_context=[],
+            active_minds=["mente_decisoria"],
+            active_domains=["strategy"],
+            knowledge_snippets=[],
+            deliberative_plan=plan,
+            specialist_contributions=[],
+            operation_result=None,
+        )
+    )
+
+    assert result.workflow_output_status == "coherent"
+    assert "foco final: policy-bound strategic closure" in result.response_text
+
+
+def test_synthesis_engine_does_not_apply_rejected_workflow_policy() -> None:
+    plan = sample_plan()
+    plan.workflow_policy_decision = resolve_workflow_policy(
+        route_name="strategy",
+        workflow_profile="software_change_workflow",
+    )
+
+    result = SynthesisEngine().compose_result(
+        SynthesisInput(
+            intent="planning",
+            identity_profile=IdentityEngine().get_profile(),
+            response_style="estruturado",
+            governance_decision=GovernanceDecisionContract(
+                decision_id=GovernanceDecisionId("decision-workflow-rejected"),
+                governance_check_id=GovernanceCheckId("check-workflow-rejected"),
+                risk_level=RiskLevel.LOW,
+                decision=PermissionDecision.ALLOW,
+                justification="ok",
+                timestamp="2026-07-18T00:00:00Z",
+            ),
+            recovered_context=[],
+            active_minds=["mente_decisoria"],
+            active_domains=["strategy"],
+            knowledge_snippets=[],
+            deliberative_plan=plan,
+            specialist_contributions=[],
+            operation_result=None,
+        )
+    )
+
+    assert result.workflow_output_status == "not_applicable"
+    assert result.workflow_output_errors == []
+    assert "foco final: direcao recomendada" not in result.response_text
 
 
 def test_synthesis_engine_surfaces_cross_session_recall_and_compaction() -> None:

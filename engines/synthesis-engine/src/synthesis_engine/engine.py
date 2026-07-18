@@ -19,7 +19,12 @@ from shared.contracts import (
     PostTaskReflectionContract,
     SpecialistContributionContract,
 )
-from shared.domain_registry import route_linked_specialist_type, workflow_runtime_guidance
+from shared.domain_registry import (
+    WorkflowRuntimeGuidance,
+    resolve_workflow_policy,
+    route_linked_specialist_type,
+    workflow_runtime_guidance,
+)
 from shared.mind_domain_specialist_contract import (
     build_mind_domain_specialist_runtime_policy,
 )
@@ -125,6 +130,27 @@ class SynthesisEngine:
     """Compose the final textual synthesis of the current flow."""
 
     name = "synthesis-engine"
+
+    @staticmethod
+    def _resolved_workflow_guidance(
+        plan: DeliberativePlanContract,
+    ) -> WorkflowRuntimeGuidance:
+        policy = plan.workflow_policy_decision or resolve_workflow_policy(
+            route_name=plan.primary_route,
+            workflow_profile=plan.route_workflow_profile,
+        )
+        if policy.application_status != "applied":
+            return workflow_runtime_guidance(None)
+        return WorkflowRuntimeGuidance(
+            planning_focus=policy.planning_focus,
+            success_focus=policy.success_focus,
+            semantic_memory_role=policy.semantic_memory_role,
+            procedural_memory_role=policy.procedural_memory_role,
+            response_focus=policy.response_focus,
+            adaptive_intervention_priority=tuple(
+                policy.adaptive_intervention_priority
+            ),
+        )
 
     @staticmethod
     def compose_open_loop_resume(plan: OpenLoopResumePlanContract) -> str:
@@ -541,6 +567,11 @@ class SynthesisEngine:
         plan = synthesis_input.deliberative_plan
         if plan is None or not plan.route_workflow_profile:
             return ("not_applicable", [])
+        if (
+            plan.workflow_policy_decision is not None
+            and plan.workflow_policy_decision.application_status != "applied"
+        ):
+            return ("not_applicable", [])
         errors = self._validate_workflow_output(
             response_text,
             synthesis_input=synthesis_input,
@@ -560,7 +591,7 @@ class SynthesisEngine:
         plan = synthesis_input.deliberative_plan
         if plan is None or not plan.route_workflow_profile:
             return []
-        guidance = workflow_runtime_guidance(plan.route_workflow_profile)
+        guidance = self._resolved_workflow_guidance(plan)
         errors: list[str] = []
         workflow_label = self._present_contract_label(plan.route_workflow_profile)
         if workflow_label:
@@ -1133,7 +1164,7 @@ class SynthesisEngine:
                 f"{strategy_shift_clause}"
                 f"{f'; {cross_session_clause}' if cross_session_clause else ''}"
             )
-        guidance = workflow_runtime_guidance(plan.route_workflow_profile)
+        guidance = self._resolved_workflow_guidance(plan)
         semantic_focus = ", ".join(synthesis_input.semantic_memory_focus[:2])
         route_objective = plan.route_consumer_objective
         route_profile = self._present_contract_label(plan.route_consumer_profile)
@@ -1325,7 +1356,7 @@ class SynthesisEngine:
             next_action = plan.steps[0]
         else:
             next_action = "preservar uma proxima acao segura"
-        guidance = workflow_runtime_guidance(plan.route_workflow_profile)
+        guidance = self._resolved_workflow_guidance(plan)
         deliverable_hint = (
             plan.route_expected_deliverables[0] if plan.route_expected_deliverables else None
         )
@@ -1510,7 +1541,7 @@ class SynthesisEngine:
             or not plan.adaptive_intervention_selected_action
         ):
             return (None, None, None)
-        guidance = workflow_runtime_guidance(plan.route_workflow_profile)
+        guidance = self._resolved_workflow_guidance(plan)
         workflow_label = self._present_contract_label(plan.route_workflow_profile)
         action_label = self._present_contract_label(
             plan.adaptive_intervention_selected_action

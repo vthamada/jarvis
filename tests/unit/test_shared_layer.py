@@ -41,6 +41,7 @@ from shared.contracts import (
     TechnologyAbsorptionCandidateContract,
     WorkflowEvolutionBuildResultContract,
     WorkflowEvolutionRequestContract,
+    WorkflowPolicyDecisionContract,
     WorkflowProfileVersionContract,
     WorkflowProfileVersionRegistryContract,
     WorkItemQueueContract,
@@ -69,6 +70,7 @@ from shared.schemas import (
     MEMORY_LIFECYCLE_GOVERNANCE_ASSESSMENT_SCHEMA,
     MEMORY_LIFECYCLE_REVIEW_DECISION_SCHEMA,
     MISSION_PROGRESS_REPORT_SCHEMA,
+    OPERATION_DISPATCH_SCHEMA,
     OPERATOR_FEEDBACK_SCHEMA,
     POST_TASK_REFLECTION_SCHEMA,
     PROCEDURAL_PLAYBOOK_CANDIDATE_SCHEMA,
@@ -92,6 +94,7 @@ from shared.schemas import (
     WORK_ITEM_STATE_SCHEMA,
     WORKFLOW_EVOLUTION_BUILD_RESULT_SCHEMA,
     WORKFLOW_EVOLUTION_REQUEST_SCHEMA,
+    WORKFLOW_POLICY_DECISION_SCHEMA,
     WORKFLOW_PROFILE_VERSION_REGISTRY_SCHEMA,
     WORKFLOW_PROFILE_VERSION_SCHEMA,
 )
@@ -860,6 +863,41 @@ def test_workflow_version_registry_contract_cannot_mutate_active_runtime() -> No
     assert "source_registry_fingerprint" in (
         WORKFLOW_PROFILE_VERSION_SCHEMA.required_fields
     )
+
+
+def test_workflow_policy_decision_contract_is_explicit_and_non_authoritative() -> None:
+    decision = WorkflowPolicyDecisionContract(
+        policy_ref="workflow-policy://strategy/1.0.0/example",
+        policy_version="1.0.0",
+        source_registry_ref="domain-registry://runtime-routes/current",
+        source_registry_fingerprint="a" * 64,
+        workflow_profile="strategic_direction_workflow",
+        route="strategy",
+        resolution_status="resolved",
+        application_status="applied",
+        application_reason="route_and_profile_match_active_registry",
+        planning_focus="governed strategy framing",
+        success_focus="explicit recommendation criteria",
+        semantic_memory_role="bounded framing",
+        procedural_memory_role="safe progression",
+        response_focus="recommendation and trade-offs",
+        adaptive_intervention_priority=["specialist_reevaluation"],
+        effects=["planning_focus", "response_focus"],
+        evidence_refs=["domain-registry://runtime-routes/current"],
+    )
+
+    assert decision.read_only is True
+    assert decision.autonomous_execution_allowed is False
+    assert decision.automatic_promotion_allowed is False
+    assert decision.core_mutation_allowed is False
+    assert WORKFLOW_POLICY_DECISION_SCHEMA.contract_name == (
+        "WorkflowPolicyDecisionContract"
+    )
+    assert "source_registry_fingerprint" in (
+        WORKFLOW_POLICY_DECISION_SCHEMA.required_fields
+    )
+    assert "workflow_policy_decision" in DELIBERATIVE_PLAN_SCHEMA.optional_fields
+    assert "workflow_policy_decision" in OPERATION_DISPATCH_SCHEMA.optional_fields
 
 
 def test_workflow_evolution_contracts_are_explicit_and_inactive() -> None:

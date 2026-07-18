@@ -9,6 +9,7 @@ from pathlib import Path
 from re import fullmatch
 
 from shared.contracts import (
+    WorkflowPolicyDecisionContract,
     WorkflowProfileVersionContract,
     WorkflowProfileVersionRegistryContract,
 )
@@ -155,6 +156,7 @@ FALLBACK_RUNTIME_ROUTE: str = _ACTIVE_ROUTES[-1] if _ACTIVE_ROUTES else "product
 
 ACTIVE_WORKFLOW_MATURITIES = frozenset({"active_registry", "active_specialist"})
 ACTIVE_WORKFLOW_REGISTRY_REF = "domain-registry://runtime-routes/current"
+ACTIVE_WORKFLOW_POLICY_VERSION = "1.0.0"
 WORKFLOW_VERSION_LIFECYCLE_STATUSES = (
     "baseline_snapshot",
     "candidate_inactive",
@@ -235,6 +237,28 @@ WORKFLOW_RUNTIME_GUIDANCE_REGISTRY: dict[str, WorkflowRuntimeGuidance] = {
             "specialist_reevaluation",
         ),
     ),
+    "observability_review_workflow": WorkflowRuntimeGuidance(
+        planning_focus="trilha, anomalias, correlacao e lacunas de sinal",
+        success_focus="leitura operacional com evidencia e proximo check",
+        semantic_memory_role="framing da trilha e do historico de sinais",
+        procedural_memory_role="sequenciamento da verificacao e da correlacao",
+        response_focus="sinais, anomalias, lacunas e proximo check",
+        adaptive_intervention_priority=(
+            "memory_review_checkpoint",
+            "specialist_reevaluation",
+        ),
+    ),
+    "documentation_artifact_workflow": WorkflowRuntimeGuidance(
+        planning_focus="escopo, audiencia, evidencia e uso do artefato",
+        success_focus="artefato coerente com evidencia e proximo uso explicito",
+        semantic_memory_role="framing do tema, audiencia e contexto documental",
+        procedural_memory_role="sequenciamento da estrutura, revisao e entrega",
+        response_focus="artefato, evidencia, audiencia e proximo uso",
+        adaptive_intervention_priority=(
+            "memory_review_checkpoint",
+            "specialist_reevaluation",
+        ),
+    ),
     "decision_risk_workflow": WorkflowRuntimeGuidance(
         planning_focus="gate de decisao, reversibilidade e incerteza governada",
         success_focus="gate seguro para progressao",
@@ -244,6 +268,28 @@ WORKFLOW_RUNTIME_GUIDANCE_REGISTRY: dict[str, WorkflowRuntimeGuidance] = {
         adaptive_intervention_priority=(
             "specialist_reevaluation",
             "memory_review_checkpoint",
+        ),
+    ),
+    "pilot_operations_workflow": WorkflowRuntimeGuidance(
+        planning_focus="cenario de piloto, paths comparados e gates de aderencia",
+        success_focus="recomendacao de piloto segura com evidencia comparativa",
+        semantic_memory_role="framing do cenario e das expectativas do piloto",
+        procedural_memory_role="sequenciamento da comparacao, gates e relatorio",
+        response_focus="comparacao do piloto, aderencia, risco e progressao",
+        adaptive_intervention_priority=(
+            "memory_review_checkpoint",
+            "specialist_reevaluation",
+        ),
+    ),
+    "assisted_execution_workflow": WorkflowRuntimeGuidance(
+        planning_focus="escopo local, menor proxima acao e reversibilidade",
+        success_focus="resultado verificavel, bounded e reversivel",
+        semantic_memory_role="framing do objetivo e das restricoes locais",
+        procedural_memory_role="sequenciamento da execucao e verificacao",
+        response_focus="resultado, verificacao, reversibilidade e proxima acao",
+        adaptive_intervention_priority=(
+            "memory_review_checkpoint",
+            "specialist_reevaluation",
         ),
     ),
 }
@@ -371,6 +417,133 @@ def workflow_runtime_guidance(workflow_profile: str | None) -> WorkflowRuntimeGu
     return WORKFLOW_RUNTIME_GUIDANCE_REGISTRY.get(
         workflow_profile,
         DEFAULT_WORKFLOW_RUNTIME_GUIDANCE,
+    )
+
+
+def resolve_workflow_policy(
+    *,
+    route_name: str | None,
+    workflow_profile: str | None,
+) -> WorkflowPolicyDecisionContract:
+    """Resolve one immutable runtime policy without granting new authority."""
+
+    route_entry = resolve_route(route_name) if route_name else None
+    resolved_route = route_name
+    resolution_status = "resolved"
+    application_status = "applied"
+    application_reason = "route_and_profile_match_active_registry"
+    non_use_reason: str | None = None
+
+    if workflow_profile is None:
+        guidance = DEFAULT_WORKFLOW_RUNTIME_GUIDANCE
+        resolution_status = "not_applicable"
+        application_status = "not_applied"
+        application_reason = "workflow_profile_missing"
+        non_use_reason = "workflow_profile_missing"
+    elif route_name and route_entry is None:
+        guidance = DEFAULT_WORKFLOW_RUNTIME_GUIDANCE
+        resolution_status = "rejected_unknown_route"
+        application_status = "not_applied"
+        application_reason = "route_not_registered"
+        non_use_reason = "route_not_registered"
+    elif route_entry is not None and route_entry.workflow_profile != workflow_profile:
+        guidance = DEFAULT_WORKFLOW_RUNTIME_GUIDANCE
+        resolution_status = "rejected_route_profile_mismatch"
+        application_status = "not_applied"
+        application_reason = "route_profile_mismatch"
+        non_use_reason = "route_profile_mismatch"
+    elif workflow_profile not in WORKFLOW_RUNTIME_GUIDANCE_REGISTRY:
+        guidance = DEFAULT_WORKFLOW_RUNTIME_GUIDANCE
+        resolution_status = "bounded_default"
+        application_reason = "profile_not_registered_use_sovereign_default"
+        non_use_reason = "profile_specific_guidance_unavailable"
+    else:
+        guidance = WORKFLOW_RUNTIME_GUIDANCE_REGISTRY[workflow_profile]
+        if resolved_route is None:
+            matching_routes = [
+                name
+                for name, entry in RUNTIME_ROUTE_REGISTRY.items()
+                if entry.workflow_profile == workflow_profile
+                and entry.maturity in ACTIVE_WORKFLOW_MATURITIES
+            ]
+            if len(matching_routes) == 1:
+                resolved_route = matching_routes[0]
+                application_reason = "profile_resolved_to_active_registry_route"
+            else:
+                application_reason = "profile_resolved_without_unique_route"
+
+    source_fingerprint = active_workflow_registry_fingerprint()
+    policy_seed = dumps(
+        {
+            "policy_version": ACTIVE_WORKFLOW_POLICY_VERSION,
+            "route": resolved_route,
+            "workflow_profile": workflow_profile,
+            "resolution_status": resolution_status,
+            "guidance": {
+                "planning_focus": guidance.planning_focus,
+                "success_focus": guidance.success_focus,
+                "semantic_memory_role": guidance.semantic_memory_role,
+                "procedural_memory_role": guidance.procedural_memory_role,
+                "response_focus": guidance.response_focus,
+                "adaptive_intervention_priority": list(
+                    guidance.adaptive_intervention_priority
+                ),
+            },
+        },
+        ensure_ascii=True,
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    policy_hash = sha256(policy_seed.encode("utf-8")).hexdigest()[:16]
+    profile_ref = workflow_profile or "none"
+    effects = (
+        [
+            "planning_focus",
+            "success_focus",
+            "semantic_memory_role",
+            "procedural_memory_role",
+            "response_focus",
+            "adaptive_intervention_priority",
+        ]
+        if application_status == "applied"
+        else []
+    )
+    evidence_refs = list(
+        dict.fromkeys(
+            [
+                ACTIVE_WORKFLOW_REGISTRY_REF,
+                f"domain-registry-fingerprint://{source_fingerprint}",
+                f"workflow-guidance://{profile_ref}",
+                *(
+                    [f"domain-registry-route://{resolved_route}"]
+                    if resolved_route
+                    else []
+                ),
+            ]
+        )
+    )
+    return WorkflowPolicyDecisionContract(
+        policy_ref=(
+            f"workflow-policy://{profile_ref}/{ACTIVE_WORKFLOW_POLICY_VERSION}/"
+            f"{policy_hash}"
+        ),
+        policy_version=ACTIVE_WORKFLOW_POLICY_VERSION,
+        source_registry_ref=ACTIVE_WORKFLOW_REGISTRY_REF,
+        source_registry_fingerprint=source_fingerprint,
+        workflow_profile=workflow_profile,
+        route=resolved_route,
+        resolution_status=resolution_status,
+        application_status=application_status,
+        application_reason=application_reason,
+        planning_focus=guidance.planning_focus,
+        success_focus=guidance.success_focus,
+        semantic_memory_role=guidance.semantic_memory_role,
+        procedural_memory_role=guidance.procedural_memory_role,
+        response_focus=guidance.response_focus,
+        adaptive_intervention_priority=list(guidance.adaptive_intervention_priority),
+        effects=effects,
+        evidence_refs=evidence_refs,
+        non_use_reason=non_use_reason,
     )
 
 

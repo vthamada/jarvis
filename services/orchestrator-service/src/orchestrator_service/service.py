@@ -60,11 +60,11 @@ from shared.domain_registry import (
     primary_route_payload,
     promoted_specialist_route_payloads,
     resolve_primary_route,
+    resolve_workflow_policy,
     resolve_workflow_route,
     route_linked_specialist_type,
     route_metadata_payload,
     specialist_route_payload,
-    workflow_runtime_guidance,
 )
 from shared.events import InternalEventEnvelope
 from shared.mind_domain_specialist_contract import (
@@ -1788,6 +1788,7 @@ class OrchestratorService:
                     ),
                     "primary_route": deliberative_plan.primary_route,
                     "primary_canonical_domain": deliberative_plan.primary_canonical_domain,
+                    **self._workflow_policy_payload(deliberative_plan),
                     "semantic_memory_source": deliberative_plan.semantic_memory_source,
                     "procedural_memory_source": deliberative_plan.procedural_memory_source,
                     "semantic_memory_effects": deliberative_plan.semantic_memory_effects,
@@ -2036,6 +2037,7 @@ class OrchestratorService:
                         "workflow_resume_eligible": (
                             operation_dispatch.workflow_resume_eligible
                         ),
+                        **self._workflow_policy_payload(operation_dispatch),
                         **self._ecosystem_operational_state_payload(
                             operation_dispatch
                         ),
@@ -2117,6 +2119,7 @@ class OrchestratorService:
                         "workflow_decision_points": operation_dispatch.workflow_decision_points,
                         "workflow_resume_status": operation_dispatch.workflow_resume_status,
                         "workflow_resume_point": operation_dispatch.workflow_resume_point,
+                        **self._workflow_policy_payload(operation_dispatch),
                         **self._ecosystem_operational_state_payload(
                             operation_dispatch
                         ),
@@ -2156,6 +2159,7 @@ class OrchestratorService:
                         "workflow_success_focus": operation_dispatch.workflow_success_focus,
                         "workflow_response_focus": operation_dispatch.workflow_response_focus,
                         "workflow_state": "dispatched",
+                        **self._workflow_policy_payload(operation_dispatch),
                         "workflow_steps": operation_dispatch.workflow_steps,
                         "workflow_checkpoint_state": (
                             operation_dispatch.workflow_checkpoint_state
@@ -2221,6 +2225,7 @@ class OrchestratorService:
                         ),
                         "workflow_response_focus": operation_dispatch.workflow_response_focus,
                         "workflow_state": operation_result.workflow_state,
+                        **self._workflow_policy_payload(operation_dispatch),
                         "workflow_checkpoints": operation_dispatch.workflow_checkpoints,
                         "workflow_checkpoint_state": (
                             operation_result.workflow_checkpoint_state
@@ -2261,6 +2266,7 @@ class OrchestratorService:
                         "workflow_response_focus": operation_dispatch.workflow_response_focus,
                         "workflow_state": operation_result.workflow_state,
                         "workflow_governance_mode": operation_dispatch.workflow_governance_mode,
+                        **self._workflow_policy_payload(operation_dispatch),
                         "workflow_decision_points": operation_dispatch.workflow_decision_points,
                         "workflow_decisions": operation_result.workflow_decisions,
                         "status": operation_result.status.value,
@@ -2437,9 +2443,10 @@ class OrchestratorService:
                     "primary_route": deliberative_plan.primary_route,
                     "primary_canonical_domain": deliberative_plan.primary_canonical_domain,
                     "workflow_profile": deliberative_plan.route_workflow_profile,
-                    "workflow_response_focus": workflow_runtime_guidance(
-                        deliberative_plan.route_workflow_profile
-                    ).response_focus,
+                    **self._workflow_policy_payload(deliberative_plan),
+                    "workflow_response_focus": (
+                        self._workflow_policy_response_focus(deliberative_plan)
+                    ),
                     "specialist_hints": deliberative_plan.specialist_hints,
                     "guided_memory_specialists": guided_memory_runtime_hints[
                         "guided_memory_specialists"
@@ -3834,7 +3841,20 @@ class OrchestratorService:
             workflow_checkpoints,
             workflow_decision_points,
         ) = self._build_workflow_profile(plan)
-        workflow_guidance = workflow_runtime_guidance(workflow_profile)
+        workflow_policy_decision = plan.workflow_policy_decision or resolve_workflow_policy(
+            route_name=workflow_domain_route,
+            workflow_profile=workflow_profile,
+        )
+        workflow_success_focus = (
+            workflow_policy_decision.success_focus
+            if workflow_policy_decision.application_status == "applied"
+            else None
+        )
+        workflow_response_focus = (
+            workflow_policy_decision.response_focus
+            if workflow_policy_decision.application_status == "applied"
+            else None
+        )
         workflow_resume_point = (
             mission_runtime_state.continuity_resume_point
             if mission_runtime_state is not None and mission_runtime_state.continuity_resume_point
@@ -4004,8 +4024,8 @@ class OrchestratorService:
             workflow_objective=plan.route_consumer_objective or plan.goal,
             workflow_expected_deliverables=list(plan.route_expected_deliverables),
             workflow_telemetry_focus=list(plan.route_telemetry_focus),
-            workflow_success_focus=workflow_guidance.success_focus,
-            workflow_response_focus=workflow_guidance.response_focus,
+            workflow_success_focus=workflow_success_focus,
+            workflow_response_focus=workflow_response_focus,
             workflow_state="composed",
             workflow_governance_mode="core_mediated",
             workflow_steps=workflow_steps,
@@ -4015,6 +4035,7 @@ class OrchestratorService:
             workflow_resume_point=workflow_resume_point,
             workflow_resume_status=workflow_resume_status,
             workflow_resume_eligible=workflow_resume_eligible,
+            workflow_policy_decision=workflow_policy_decision,
             ecosystem_state_status=ecosystem_state.ecosystem_state_status,
             active_work_items=list(ecosystem_state.active_work_items),
             active_artifact_refs=list(ecosystem_state.active_artifact_refs),
@@ -4259,6 +4280,58 @@ class OrchestratorService:
             "request_identity_summary": source.request_identity_summary,
             "request_identity_policy_refs": list(source.request_identity_policy_refs),
         }
+
+    @staticmethod
+    def _workflow_policy_payload(
+        source: DeliberativePlanContract | OperationDispatchContract,
+    ) -> dict[str, object]:
+        policy = source.workflow_policy_decision
+        if policy is None:
+            return {
+                "workflow_policy_ref": None,
+                "workflow_policy_version": None,
+                "workflow_policy_source_registry_ref": None,
+                "workflow_policy_source_registry_fingerprint": None,
+                "workflow_policy_resolution_status": "not_evaluated",
+                "workflow_policy_application_status": "not_evaluated",
+                "workflow_policy_application_reason": "policy_decision_missing",
+                "workflow_policy_effects": [],
+                "workflow_policy_non_use_reason": "policy_decision_missing",
+                "workflow_policy_evidence_refs": [],
+                "workflow_policy_autonomous_execution_allowed": False,
+                "workflow_policy_automatic_promotion_allowed": False,
+                "workflow_policy_core_mutation_allowed": False,
+            }
+        return {
+            "workflow_policy_ref": policy.policy_ref,
+            "workflow_policy_version": policy.policy_version,
+            "workflow_policy_source_registry_ref": policy.source_registry_ref,
+            "workflow_policy_source_registry_fingerprint": (
+                policy.source_registry_fingerprint
+            ),
+            "workflow_policy_resolution_status": policy.resolution_status,
+            "workflow_policy_application_status": policy.application_status,
+            "workflow_policy_application_reason": policy.application_reason,
+            "workflow_policy_effects": list(policy.effects),
+            "workflow_policy_non_use_reason": policy.non_use_reason,
+            "workflow_policy_evidence_refs": list(policy.evidence_refs),
+            "workflow_policy_autonomous_execution_allowed": (
+                policy.autonomous_execution_allowed
+            ),
+            "workflow_policy_automatic_promotion_allowed": (
+                policy.automatic_promotion_allowed
+            ),
+            "workflow_policy_core_mutation_allowed": policy.core_mutation_allowed,
+        }
+
+    @staticmethod
+    def _workflow_policy_response_focus(
+        source: DeliberativePlanContract | OperationDispatchContract,
+    ) -> str | None:
+        policy = source.workflow_policy_decision
+        if policy is None or policy.application_status != "applied":
+            return None
+        return policy.response_focus
 
     @staticmethod
     def _autonomy_ladder_payload(

@@ -577,6 +577,21 @@ def test_planning_engine_carries_primary_route_contract_into_plan() -> None:
     assert plan.route_workflow_profile == "strategic_direction_workflow"
     assert plan.route_workflow_checkpoints[0] == "scenario_framed"
     assert plan.route_workflow_decision_points[0] == "scenario_scope_confirmed"
+    assert plan.workflow_policy_decision is not None
+    assert plan.workflow_policy_decision.resolution_status == "resolved"
+    assert plan.workflow_policy_decision.application_status == "applied"
+    assert plan.workflow_policy_decision.policy_version == "1.0.0"
+    assert plan.workflow_policy_decision.route == "strategy"
+    assert plan.workflow_policy_decision.effects == [
+        "planning_focus",
+        "success_focus",
+        "semantic_memory_role",
+        "procedural_memory_role",
+        "response_focus",
+        "adaptive_intervention_priority",
+    ]
+    assert "workflow_policy=applied" in plan.plan_summary
+    assert "workflow_policy_resolution=resolved" in plan.rationale
     assert plan.procedural_artifact_status == "candidate"
     assert (
         plan.procedural_artifact_ref
@@ -643,6 +658,42 @@ def test_planning_engine_carries_primary_route_contract_into_plan() -> None:
         "mente decisoria ancora estrategia e pensamento sistemico via strategy "
         "sob tensao equilibrar ambicao estrategica com a menor proxima acao segura"
     )
+
+
+def test_planning_engine_bounds_route_profile_policy_mismatch() -> None:
+    plan = PlanningEngine().build_task_plan(
+        PlanningContext(
+            intent="planning",
+            query="Plan a bounded strategic release.",
+            recovered_context=[],
+            active_domains=["strategy"],
+            active_minds=["mente_decisoria"],
+            knowledge_snippets=[],
+            risk_markers=[],
+            requires_clarification=False,
+            preferred_response_mode="plan_and_operate",
+            primary_route="strategy",
+            route_workflow_profile="software_change_workflow",
+            route_workflow_steps=["apply software workflow outside its route"],
+            route_workflow_checkpoints=["patch_ready"],
+            route_workflow_decision_points=["patch_gate"],
+        )
+    )
+
+    assert plan.workflow_policy_decision is not None
+    assert (
+        plan.workflow_policy_decision.resolution_status
+        == "rejected_route_profile_mismatch"
+    )
+    assert plan.workflow_policy_decision.application_status == "not_applied"
+    assert plan.workflow_policy_decision.non_use_reason == "route_profile_mismatch"
+    assert plan.workflow_policy_decision.effects == []
+    assert plan.route_workflow_profile is None
+    assert plan.route_workflow_steps == []
+    assert plan.route_workflow_checkpoints == []
+    assert plan.route_workflow_decision_points == []
+    assert "workflow_policy=not_applied" in plan.plan_summary
+    assert "workflow_policy_non_use=route_profile_mismatch" in plan.rationale
 
 
 def test_planning_engine_adds_priority_and_recommendation_memory_guidance() -> None:

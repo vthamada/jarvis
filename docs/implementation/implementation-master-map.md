@@ -104,7 +104,7 @@ Goal: deepen the reasoning core without replacing it with external frameworks.
 | `COG-003` | Domain -> route -> specialist chain | `implemented_baseline` | Expand routes safely | Domain registry | candidate |
 | `COG-004` | Metacognitive guidance | `implemented_baseline` | Stronger operator-visible reasoning traces | Planning/synthesis | candidate |
 | `COG-005` | Adaptive intervention mid-flow | `implemented_baseline` | More scenario coverage | Observability/evals | candidate |
-| `COG-006` | Workflow profile as behavioral policy | `partial_runtime` | Declarative policy per route/workflow | Domain registry | high-priority |
+| `COG-006` | Workflow profile as behavioral policy | `implemented_baseline` | Keep versioned policy resolution stable | Domain registry | none |
 | `COG-007` | Decision memory shaping planning | `partial_runtime` | Evidence-based policy choice | Memory lifecycle | candidate |
 | `COG-008` | Conflict handling between active mission and new request | `implemented_baseline` | Keep stable | Mission state | none |
 | `COG-009` | Causal route comparison | `missing` | Compare alternative route/plan choices before finalizing | Planning, evals | later |
@@ -860,7 +860,8 @@ Map IDs: `COG-006`, `COG-007`, `MEM-005`, `MEM-006`, `EVL-008`, `KNW-006`.
 Goal: open one ordered queue for workflow policy, memory causality, decision
 attribution, governed variants and manual technology intake.
 
-Status: closed as planning/reprioritization documentation; `MB-202` is ready.
+Status: closed as planning/reprioritization documentation; the queue advanced
+through `MB-202` and `MB-203` is ready.
 
 ### MB-202 -- Versioned Declarative Workflow Policy
 
@@ -869,7 +870,9 @@ Map IDs: `COG-006`, `COG-004`, `OBS-001`.
 Goal: resolve one sovereign, versioned workflow policy and expose its applied
 effects or bounded non-use consistently across planning, synthesis and events.
 
-Status: ready after `MB-201`.
+Status: closed in `MB-202`; all active workflows resolve one versioned,
+read-only policy whose identity, effects and non-use propagate through the
+governed runtime.
 
 ### MB-203 -- Evidence-Grounded Semantic Memory Causality
 
@@ -878,7 +881,7 @@ Map IDs: `MEM-005`, `COG-007`, `GOV-004`.
 Goal: make semantic memory selection, influence, conflict and non-use
 attributable to evidence and freshness.
 
-Status: planned after `MB-202`.
+Status: ready after `MB-202`.
 
 ### MB-204 -- Governed Procedural Playbook Influence
 

@@ -287,6 +287,9 @@ class LangGraphFlowRunner:
                     "recommended_task_type": deliberative_plan.recommended_task_type,
                     "requires_human_validation": deliberative_plan.requires_human_validation,
                     "steps": deliberative_plan.steps,
+                    **self.orchestrator._workflow_policy_payload(
+                        deliberative_plan
+                    ),
                     **self.orchestrator._autonomy_ladder_plan_payload(
                         deliberative_plan
                     ),
@@ -511,6 +514,9 @@ class LangGraphFlowRunner:
                         "workflow_resume_eligible": (
                             operation_dispatch.workflow_resume_eligible
                         ),
+                        **self.orchestrator._workflow_policy_payload(
+                            operation_dispatch
+                        ),
                         **self.orchestrator._ecosystem_operational_state_payload(
                             operation_dispatch
                         ),
@@ -576,6 +582,9 @@ class LangGraphFlowRunner:
                         "workflow_decision_points": operation_dispatch.workflow_decision_points,
                         "workflow_resume_status": operation_dispatch.workflow_resume_status,
                         "workflow_resume_point": operation_dispatch.workflow_resume_point,
+                        **self.orchestrator._workflow_policy_payload(
+                            operation_dispatch
+                        ),
                         **self.orchestrator._ecosystem_operational_state_payload(
                             operation_dispatch
                         ),
@@ -610,6 +619,9 @@ class LangGraphFlowRunner:
                         "workflow_profile": operation_dispatch.workflow_profile,
                         "workflow_domain_route": operation_dispatch.workflow_domain_route,
                         "workflow_state": "dispatched",
+                        **self.orchestrator._workflow_policy_payload(
+                            operation_dispatch
+                        ),
                         "workflow_steps": operation_dispatch.workflow_steps,
                         "workflow_checkpoint_state": (
                             operation_dispatch.workflow_checkpoint_state
@@ -668,6 +680,9 @@ class LangGraphFlowRunner:
                         "workflow_profile": operation_dispatch.workflow_profile,
                         "workflow_domain_route": operation_dispatch.workflow_domain_route,
                         "workflow_state": operation_result.workflow_state,
+                        **self.orchestrator._workflow_policy_payload(
+                            operation_dispatch
+                        ),
                         "workflow_checkpoints": operation_dispatch.workflow_checkpoints,
                         "workflow_checkpoint_state": (
                             operation_result.workflow_checkpoint_state
@@ -698,6 +713,9 @@ class LangGraphFlowRunner:
                         "workflow_domain_route": operation_dispatch.workflow_domain_route,
                         "workflow_state": operation_result.workflow_state,
                         "workflow_governance_mode": operation_dispatch.workflow_governance_mode,
+                        **self.orchestrator._workflow_policy_payload(
+                            operation_dispatch
+                        ),
                         "workflow_decision_points": operation_dispatch.workflow_decision_points,
                         "workflow_decisions": operation_result.workflow_decisions,
                         "status": operation_result.status.value,
@@ -774,6 +792,9 @@ class LangGraphFlowRunner:
                     ),
                     "workflow_output_status": synthesis_result.workflow_output_status,
                     "workflow_output_errors": synthesis_result.workflow_output_errors,
+                    **self.orchestrator._workflow_policy_payload(
+                        state["deliberative_plan"]
+                    ),
                     **self.orchestrator._surface_identity_payload(
                         state.get("operation_result")
                         or state.get("operation_dispatch")

@@ -683,6 +683,40 @@ SKILL_EVOLUTION_OPERATOR_VIEW_SCHEMA = CanonicalSchema(
     ),
 )
 
+WORKFLOW_POLICY_DECISION_SCHEMA = CanonicalSchema(
+    name="WorkflowPolicyDecisionSchema",
+    contract_name="WorkflowPolicyDecisionContract",
+    required_fields=(
+        "policy_ref",
+        "policy_version",
+        "source_registry_ref",
+        "source_registry_fingerprint",
+        "workflow_profile",
+        "route",
+        "resolution_status",
+        "application_status",
+        "application_reason",
+        "planning_focus",
+        "success_focus",
+        "semantic_memory_role",
+        "procedural_memory_role",
+        "response_focus",
+        "adaptive_intervention_priority",
+        "effects",
+        "evidence_refs",
+    ),
+    optional_fields=(
+        "non_use_reason",
+        "read_only",
+        "autonomous_execution_allowed",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Read-only runtime policy resolution; it cannot execute, promote or mutate.",
+    ),
+)
+
 WORKFLOW_PROFILE_VERSION_SCHEMA = CanonicalSchema(
     name="WorkflowProfileVersionSchema",
     contract_name="WorkflowProfileVersionContract",
@@ -1864,6 +1898,7 @@ OPERATION_DISPATCH_SCHEMA = CanonicalSchema(
         "artifact_refs",
         "objective_status",
         "next_action_ref",
+        "workflow_policy_decision",
     ),
 )
 
@@ -1938,6 +1973,7 @@ DELIBERATIVE_PLAN_SCHEMA = CanonicalSchema(
         "route_workflow_steps",
         "route_workflow_checkpoints",
         "route_workflow_decision_points",
+        "workflow_policy_decision",
         "tensions_considered",
         "specialist_hints",
         "specialist_resolution_summary",

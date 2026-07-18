@@ -3827,7 +3827,7 @@ Fora de escopo:
 
 - `id`: `MB-202`
 - `prioridade`: `P1`
-- `status`: `ready`
+- `status`: `completed`
 - `eixo_do_mestre`: `workflow policy`, `planning`, `synthesis`, `observabilidade`
 - `map_ids`: `COG-006`, `COG-004`, `OBS-001`
 - `workflow_profile_afetado`: todos os workflows promovidos
@@ -3840,12 +3840,14 @@ Fora de escopo:
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `high`
 - `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: workflow policy agora e um contrato versionado unico, resolvido pelo registry soberano e propagado com a mesma identidade por planning, synthesis, dispatch e eventos nativos/LangGraph; mismatch e ausencia ficam bounded e auditaveis.
+- `evidencia_de_fechamento`: `WorkflowPolicyDecisionContract`, schema, resolver deterministico, guidance explicito para todos os workflows ativos, testes unitarios/E2E e documentacao arquitetural preservam ref/versao/fonte/efeitos/non-use sem autoridade de execucao, promocao ou mutacao.
 
 ### MB-203
 
 - `id`: `MB-203`
 - `prioridade`: `P1`
-- `status`: `planned`
+- `status`: `ready`
 - `eixo_do_mestre`: `memoria semantica`, `causalidade`, `planejamento`
 - `map_ids`: `MEM-005`, `COG-007`, `GOV-004`
 - `workflow_profile_afetado`: workflows promovidos com memoria semantica elegivel
@@ -4093,6 +4095,6 @@ Estado atual da fila:
 - `MB-175` foi concluido como repriorizacao pos-`MB-174`, abrindo a fila governada de skill/workflow evolution `MB-176` a `MB-189`;
 - `MB-176` a `MB-189` foram concluidos como cadeia de skill/workflow, routing, politica causal, revisao humana de memoria, medicao longitudinal e fechamento de readiness;
 - `MB-190` repriorizou o Daily Operator Loop e abriu `MB-191` a `MB-200`; o lote foi integralmente fechado;
-- `MB-201` repriorizou o pos-Daily Operator Loop e abriu `MB-202` a `MB-210`; somente `MB-202` esta `ready`;
+- `MB-201` repriorizou o pos-Daily Operator Loop e abriu `MB-202` a `MB-210`; `MB-202` foi concluido como policy declarativa versionada e somente `MB-203` esta `ready`;
 - `SO-001`, `TA-004`, `TA-006` e verticais `deferred` continuam fora da fila sem mudanca explicita de fase;
 - `protective intelligence foundation` continua `deferred` e a matriz da Onda 2 segue como insumo, nao como gatilho automatico para abrir nova vertical.

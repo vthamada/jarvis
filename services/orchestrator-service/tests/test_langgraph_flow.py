@@ -125,6 +125,20 @@ def test_langgraph_flow_replays_orchestrator_path_with_fake_runtime(
     assert any(event.event_name == "specialist_contracts_composed" for event in result.events)
     assert any(event.event_name == "specialist_handoff_governed" for event in result.events)
     assert result.specialist_handoff_decision is not None
+    assert result.deliberative_plan.workflow_policy_decision is not None
+    workflow_policy_ref = result.deliberative_plan.workflow_policy_decision.policy_ref
+    for event_name in {
+        "plan_built",
+        "workflow_composed",
+        "workflow_governance_declared",
+        "operation_dispatched",
+        "operation_completed",
+        "workflow_completed",
+        "response_synthesized",
+    }:
+        event = next(event for event in result.events if event.event_name == event_name)
+        assert event.payload["workflow_policy_ref"] == workflow_policy_ref
+        assert event.payload["workflow_policy_application_status"] == "applied"
     continuity_event = next(
         event for event in result.events if event.event_name == "continuity_subflow_completed"
     )
