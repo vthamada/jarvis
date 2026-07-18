@@ -43,6 +43,16 @@ O relatorio salva `latest.json` e historico timestamped em
 `.jarvis_runtime/observability/operator-utility/`. As definicoes e limitacoes
 estao em `docs/operations/daily-operator-utility-outcomes.md`.
 
+Para regenerar a referencia do console e completion para PowerShell, Bash e
+Zsh a partir do registry/parser validados:
+
+```powershell
+python tools/generate_cli_assets.py
+```
+
+Os testes comparam os artefatos versionados byte a byte e falham quando houver
+drift.
+
 ## Gates do baseline
 
 Os gates executaveis do `v1` continuam sendo:

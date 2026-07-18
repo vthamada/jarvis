@@ -301,6 +301,52 @@ def test_main_json_operator_outcomes_is_standalone_and_machine_readable(
     )
 
 
+def test_main_command_reference_json_is_standalone_and_deterministic(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setattr(
+        cli.JarvisConsole,
+        "build",
+        lambda *args, **kwargs: pytest.fail("command reference constructed Core"),
+    )
+
+    exit_code = cli.main(["command-reference", "--format", "json"])
+
+    captured = capsys.readouterr()
+    payload = loads(captured.out)
+    assert exit_code == ConsoleExitCode.SUCCESS
+    assert captured.err == ""
+    assert payload["command_id"] == "command-reference"
+    assert "# JARVIS Console Command Reference" in payload["outputs"][0]
+    assert "`completion`" in payload["outputs"][0]
+
+
+def test_main_completion_is_standalone_and_rejects_json(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    monkeypatch.setattr(
+        cli.JarvisConsole,
+        "build",
+        lambda *args, **kwargs: pytest.fail("completion constructed Core"),
+    )
+
+    text_exit_code = cli.main(["completion", "--shell", "powershell"])
+    text_capture = capsys.readouterr()
+    json_exit_code = cli.main(
+        ["completion", "--shell", "powershell", "--format", "json"]
+    )
+    json_capture = capsys.readouterr()
+
+    assert text_exit_code == ConsoleExitCode.SUCCESS
+    assert "Register-ArgumentCompleter" in text_capture.out
+    assert text_capture.err == ""
+    assert json_exit_code == ConsoleExitCode.USAGE_ERROR
+    assert json_capture.out == ""
+    assert loads(json_capture.err)["error_code"] == "json_not_supported"
+
+
 def test_main_rejects_json_for_state_change_before_core_build(
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],

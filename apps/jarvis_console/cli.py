@@ -41,6 +41,10 @@ from apps.jarvis_console.commands.doctor import (
     build_doctor_report,
     render_doctor_report,
 )
+from apps.jarvis_console.reference import (
+    render_command_reference,
+    render_shell_completion,
+)
 from shared.contracts import (
     DailyOperatorUtilityReportContract,
     DailyOperatorWorkspaceContract,
@@ -618,6 +622,21 @@ def build_parser() -> ArgumentParser:
     operator_outcomes_parser.add_argument("--period-end")
     operator_outcomes_parser.add_argument("--event-limit", type=int, default=1000)
     operator_outcomes_parser.add_argument("--mission-limit", type=int, default=200)
+
+    subparsers.add_parser(
+        "command-reference",
+        help="Show the deterministic registry-derived command reference.",
+    )
+    completion_parser = subparsers.add_parser(
+        "completion",
+        help="Generate deterministic shell completion from the command registry.",
+    )
+    completion_parser.add_argument(
+        "--shell",
+        required=True,
+        choices=["powershell", "bash", "zsh"],
+        help="Select the target shell.",
+    )
 
     readiness_parser = subparsers.add_parser(
         "readiness-dashboard",
@@ -2583,6 +2602,20 @@ def run_operator_outcomes_command(args: Namespace) -> list[str]:
         mission_limit=args.mission_limit,
     )
     return [render_daily_operator_utility_report(report)]
+
+
+def run_command_reference_command(args: Namespace) -> list[str]:
+    return [render_command_reference(COMMAND_REGISTRY, build_parser()).rstrip("\n")]
+
+
+def run_completion_command(args: Namespace) -> list[str]:
+    return [
+        render_shell_completion(
+            COMMAND_REGISTRY,
+            build_parser(),
+            shell=args.shell,
+        ).rstrip("\n")
+    ]
 
 
 def run_readiness_dashboard_command(args: Namespace) -> list[str]:

@@ -3767,7 +3767,7 @@ Fora de escopo:
 
 - `id`: `MB-199`
 - `prioridade`: `P2`
-- `status`: `ready`
+- `status`: `completed`
 - `eixo_do_mestre`: `CLI`, `documentacao`, `regressao`
 - `map_ids`: `SFC-014`, `DOC-010`, `SFC-012`
 - `workflow_profile_afetado`: todos os comandos do `jarvis-console`
@@ -3780,12 +3780,14 @@ Fora de escopo:
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `medium`
 - `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: registry e parser validados agora geram referencia versionada, completion PowerShell/Bash/Zsh e comandos standalone, enquanto golden fixtures estabilizam outputs text/JSON criticos.
+- `evidencia_de_fechamento`: `apps/jarvis_console/reference.py`, `command-reference`, `completion`, `tools/generate_cli_assets.py`, quatro artefatos comparados byte a byte e goldens de workspace/outcomes/envelope JSON cobrem determinismo, global flags, tokens shell fail-closed e ausencia de Core.
 
 ### MB-200
 
 - `id`: `MB-200`
 - `prioridade`: `P2`
-- `status`: `blocked`
+- `status`: `ready`
 - `eixo_do_mestre`: `readiness`, `operacao`, `documentacao`
 - `map_ids`: `OBS-007`, `OBS-008`, `DOC-010`, `OP-009`
 - `workflow_profile_afetado`: `operational_readiness_workflow`
@@ -3906,6 +3908,6 @@ Estado atual da fila:
 - `MB-174` foi concluido como dashboard integrado de regressao/readiness, fechando a fila `MB-161` a `MB-174`; nao ha item tecnico `ready` ate nova repriorizacao explicita pelo mapa mestre;
 - `MB-175` foi concluido como repriorizacao pos-`MB-174`, abrindo a fila governada de skill/workflow evolution `MB-176` a `MB-189`;
 - `MB-176` a `MB-189` foram concluidos como cadeia de skill/workflow, routing, politica causal, revisao humana de memoria, medicao longitudinal e fechamento de readiness;
-- `MB-190` repriorizou o Daily Operator Loop e abriu `MB-191` a `MB-200`; `MB-191` a `MB-198` fecharam registry, runtime/output, doctor, workspace diario, grafo governado de work items, linhagem canonica de artefatos, retomada governada e outcome metrics, e somente `MB-199` esta `ready`;
+- `MB-190` repriorizou o Daily Operator Loop e abriu `MB-191` a `MB-200`; `MB-191` a `MB-199` fecharam a fundacao CLI e o Daily Operator Loop ate referencia/completion/goldens, e somente `MB-200` esta `ready`;
 - `SO-001`, `TA-004`, `TA-006` e verticais `deferred` continuam fora da fila sem mudanca explicita de fase;
 - `protective intelligence foundation` continua `deferred` e a matriz da Onda 2 segue como insumo, nao como gatilho automatico para abrir nova vertical.

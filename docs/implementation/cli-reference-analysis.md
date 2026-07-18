@@ -12,6 +12,11 @@ This document does not open a new functional implementation, does not alter the
 active micro backlog, and does not authorize broad UI, browser, computer use,
 voice, realtime, scheduler or autonomous evolution work.
 
+Implementation update: `MB-191` to `MB-193` closed registry, runtime/output and
+doctor. `MB-199` closed `CLI-006` and `CLI-007` with deterministic generated
+reference, PowerShell/Bash/Zsh completion and golden text/JSON outputs. The
+original gap list below is retained as research history.
+
 ## Sources Reviewed
 
 | Project | Source | Reference |
@@ -437,9 +442,16 @@ module split proposed by `CLI-001`/`CLI-004`.
 Goal: generate shell completion and maintain an operator command reference from
 the registry.
 
+Status: implemented in `MB-199`. Registry order and metadata are combined with
+validated parser arguments; versioned reference and completion assets are
+checked byte for byte, and unsafe shell tokens fail closed.
+
 ### CLI-007 - Golden/Snapshot Output Tests
 
 Goal: preserve CLI UX and machine-readable contracts against regression.
+
+Status: implemented in `MB-199` for critical daily workspace, operator outcomes
+and JSON runtime envelope outputs. Fixtures exclude unstable runtime values.
 
 ## What Should Not Be Implemented From This Research Yet
 

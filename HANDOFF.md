@@ -2,6 +2,15 @@
 
 ## Atualizacao 2026-07-18
 
+`MB-199` implementou referencia e completion deterministicas derivadas do
+registry e do parser validado. `command-reference` e `completion` sao
+standalone; o gerador versiona Markdown e scripts PowerShell/Bash/Zsh, e testes
+comparam os quatro artefatos byte a byte. Tokens de shell fora da gramatica
+permitida falham fechados, `--format` antes/depois do comando e preservado e
+goldens fixos protegem daily workspace, operator outcomes e envelope JSON sem
+ids/timestamps instaveis. Nenhum comando gera autoridade ou constroi o Core.
+`MB-200` e o unico item tecnico `ready`.
+
 `MB-198` implementou outcomes diarios de utilidade do operador por periodo e
 por missao. O novo `operator-outcomes` e standalone/read-only e correlaciona
 work items, artefatos, resume, stale loops e feedback a partir de eventos e
@@ -9,8 +18,8 @@ snapshots canonicos. Completion, rework, feedback coverage e latencia entre
 resume e proxima transicao observada ficam indisponiveis quando falta
 denominador/timestamp/evidencia; nenhum valor e convertido em ganho ou tempo
 economizado. O tool persistivel e o runbook registram fontes, formulas e
-limites. Testes preservam os stores e cobrem text/JSON. `MB-199` e o unico item
-tecnico `ready`.
+limites. Testes preservam os stores e cobrem text/JSON. Esse estado foi
+sucedido pelo fechamento de `MB-199`.
 
 `MB-197` implementou a retomada governada de open loops entre sessoes.
 `open-loops` deriva registry read-only com refs deterministicas, freshness,

@@ -8,6 +8,12 @@
 - `observability-service` correlaciona work items, artefatos, resume, stale loops e feedback; timestamps, snapshots e pares resume-acao ausentes viram limitacoes, nao ganhos;
 - `tools/daily_operator_utility_report.py` e `jarvis-console operator-outcomes` expoem evidencia read-only text/JSON sem mutar stores nem estimar tempo economizado; testes locais preservam os bancos e `MB-199` passa a ser o unico item tecnico `ready`.
 
+### MB-199 gera referencia, completion e goldens do CLI
+
+- registry e parser validado alimentam um modelo unico que gera referencia Markdown e completion PowerShell/Bash/Zsh sem duplicar argumentos;
+- `command-reference` e `completion` sao standalone, completion rejeita tokens shell inseguros e o gerador versiona quatro artefatos reproduziveis;
+- testes byte a byte e goldens fixos protegem daily workspace, operator outcomes e envelope JSON sem valores instaveis; `MB-200` passa a ser o unico item tecnico `ready`.
+
 ## 2026-07-17
 
 ### MB-188 mede aprendizado longitudinal por versao

@@ -249,7 +249,7 @@ Goal: expose the same sovereign entity through multiple interfaces.
 | `SFC-011` | Typed CLI command registry | `implemented_baseline` | Keep command metadata and parser dispatch synchronized | SFC-001 | none |
 | `SFC-012` | CLI runtime/output contract | `implemented_baseline` | Preserve versioned envelopes, redaction and stable exit semantics | SFC-011 | none |
 | `SFC-013` | Read-only CLI doctor | `implemented_baseline` | Preserve non-mutating local preflight and typed severity | SFC-011, OBS-007 | none |
-| `SFC-014` | Generated CLI reference and completion | `missing` | Registry-derived reference and shell completion | SFC-011, DOC-010 | candidate |
+| `SFC-014` | Generated CLI reference and completion | `implemented_baseline` | Keep generated assets synchronized with registry/parser | SFC-011, DOC-010 | none |
 
 ### Track K -- Documentation And Program Control
 
@@ -827,7 +827,9 @@ Map IDs: `SFC-014`, `DOC-010`, `SFC-012`.
 Goal: generate command reference/completion from registry metadata and protect
 text/JSON behavior with deterministic golden tests.
 
-Status: ready after `MB-198`.
+Status: closed in `MB-199`; registry order plus validated parser arguments now
+generate the versioned command reference and PowerShell/Bash/Zsh completion.
+Byte-for-byte asset tests and fixed text/JSON goldens fail on unintended drift.
 
 ### MB-200 -- Daily Operator Loop Readiness Closure
 
@@ -836,7 +838,7 @@ Map IDs: `OBS-007`, `OBS-008`, `DOC-010`, `OP-009`.
 Goal: close the slice with integrated readiness, regression, operator runbook
 and explicit next phase decision.
 
-Status: blocked by `MB-199`.
+Status: ready after `MB-199`.
 
 ## 14. What Must Not Be Pulled Next By Inertia
 

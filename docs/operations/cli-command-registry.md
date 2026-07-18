@@ -56,6 +56,12 @@ authority for whether a command supports JSON.
 canonical stores and composes a cross-session projection without constructing
 Core or authorizing resume/scheduling.
 
+`MB-199` makes this inventory the ordered source for the generated command
+reference and completion model. Argument metadata is read from the already
+validated `argparse` declarations, avoiding a second argument registry. The
+commands `command-reference` and `completion` are standalone and never invoke
+Core handlers.
+
 ## Adding A Command
 
 1. Implement and test the handler through the appropriate governed service.
@@ -65,6 +71,9 @@ Core or authorizing resume/scheduling.
    explicit sovereign boundary.
 5. Add registry and behavior tests.
 6. Run the standard engineering gate.
+
+After a parser or registry change, also run `python tools/generate_cli_assets.py`.
+Byte-for-byte tests reject stale reference or completion assets.
 
 Do not add TUI, voice, browser/computer use, external gateway or permission
 bypass behavior through the registry.
