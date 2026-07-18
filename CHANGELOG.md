@@ -2,6 +2,12 @@
 
 ## 2026-07-18
 
+### MB-203 fecha causalidade semantica baseada em evidencia
+
+- `SemanticMemoryCandidateContract` deriva anchors read-only do estado canonico de missao com evidence refs, timestamp, freshness, relevancia e escopo;
+- a policy recalcula freshness, bloqueia stale/forgery/autoridade e resolve conflito por prioridade e relevancia, sem presumir influencia quando nao ha candidato;
+- planning, synthesis e eventos auditam os mesmos refs, efeitos e non-use em testes unitarios/E2E; `MB-204` passa a ser o unico item tecnico `ready`.
+
 ### MB-202 implementa policy declarativa versionada de workflow
 
 - `WorkflowPolicyDecisionContract` resolve ref, versao, fonte, fingerprint, efeitos e non-use pelo registry soberano para todos os workflows ativos;

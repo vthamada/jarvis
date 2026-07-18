@@ -60,6 +60,7 @@ from shared.contracts import (
     ProceduralPlaybookCandidateContract,
     RecurringPatternReportContract,
     ReviewedLearningGuidanceContract,
+    SemanticMemoryCandidateContract,
     SkillCandidateContract,
     SpecialistContributionContract,
     SpecialistSharedMemoryContextContract,
@@ -71,7 +72,10 @@ from shared.domain_registry import (
     specialist_eligible_route,
     specialist_route_payload,
 )
-from shared.memory_influence_policy import evaluate_memory_influence_policy
+from shared.memory_influence_policy import (
+    evaluate_memory_influence_policy,
+    semantic_memory_freshness_status,
+)
 from shared.memory_registry import (
     DEFAULT_MEMORY_SCOPES,
     SHARED_MEMORY_CLASSES,
@@ -129,6 +133,9 @@ class MemoryRecoveryResult:
     organization_scope_reopen_signal: str
     continuity_context: MissionContinuityContextContract | None = None
     user_scope_context: UserScopeContextContract | None = None
+    semantic_memory_candidates: list[SemanticMemoryCandidateContract] = field(
+        default_factory=list
+    )
 
     @property
     def recovered_items(self) -> list[str]:
@@ -982,6 +989,97 @@ class MemoryService:
             organization_scope_reopen_signal=organization_scope_guard["reopen_signal"],
             continuity_context=continuity_context,
             user_scope_context=user_scope_context,
+            semantic_memory_candidates=self._recover_semantic_memory_candidates(
+                contract=contract,
+                continuity_context=continuity_context,
+            ),
+        )
+
+    def _recover_semantic_memory_candidates(
+        self,
+        *,
+        contract: InputContract,
+        continuity_context: MissionContinuityContextContract | None,
+    ) -> list[SemanticMemoryCandidateContract]:
+        candidates: list[SemanticMemoryCandidateContract] = []
+        if contract.mission_id:
+            active_state = self.repository.fetch_mission_state(str(contract.mission_id))
+            active_score = 0.9
+            if continuity_context is not None:
+                active_score = continuity_context.active_priority_score or 0.65
+            candidate = self._semantic_candidate_from_mission_state(
+                state=active_state,
+                source_kind="active_mission",
+                generated_at=str(contract.timestamp),
+                relevance_score=active_score,
+                relevance_reason="active_mission_id_match",
+            )
+            if candidate is not None:
+                candidates.append(candidate)
+
+        if continuity_context is not None:
+            for related in continuity_context.related_candidates[:2]:
+                state = self.repository.fetch_mission_state(str(related.mission_id))
+                candidate = self._semantic_candidate_from_mission_state(
+                    state=state,
+                    source_kind="related_mission",
+                    generated_at=str(contract.timestamp),
+                    relevance_score=related.priority_score,
+                    relevance_reason=related.continuity_reason,
+                )
+                if candidate is not None and all(
+                    existing.anchor_ref != candidate.anchor_ref
+                    for existing in candidates
+                ):
+                    candidates.append(candidate)
+        return sorted(
+            candidates,
+            key=lambda candidate: (-candidate.relevance_score, candidate.anchor_ref),
+        )[:4]
+
+    @staticmethod
+    def _semantic_candidate_from_mission_state(
+        *,
+        state: MissionStateContract | None,
+        source_kind: str,
+        generated_at: str,
+        relevance_score: float,
+        relevance_reason: str,
+    ) -> SemanticMemoryCandidateContract | None:
+        if state is None or not (state.semantic_brief or state.semantic_focus):
+            return None
+        summary = state.semantic_brief or (
+            f"objective={state.mission_goal}; "
+            f"focus={','.join(state.semantic_focus[:4])}"
+        )
+        observed_at = str(state.updated_at)
+        freshness = semantic_memory_freshness_status(observed_at, generated_at)
+        digest = sha256(
+            f"{state.mission_id}\x00{observed_at}\x00{summary}".encode("utf-8")
+        ).hexdigest()[:16]
+        lifecycle_status = (
+            "retained"
+            if freshness == "current"
+            else "aging"
+            if freshness == "aging"
+            else "expired"
+            if freshness == "stale"
+            else "review_recommended"
+        )
+        return SemanticMemoryCandidateContract(
+            anchor_ref=f"memory://mission/{state.mission_id}/semantic",
+            source_kind=source_kind,
+            summary=summary[:1000],
+            evidence_refs=[
+                f"mission-state://{state.mission_id}/semantic/{digest}",
+                f"mission-state-updated://{state.mission_id}/{observed_at}",
+            ],
+            observed_at=observed_at,
+            freshness_status=freshness,
+            relevance_score=max(0.0, min(float(relevance_score), 1.0)),
+            relevance_reason=relevance_reason[:500],
+            domain_hints=list(dict.fromkeys(state.semantic_focus))[:8],
+            lifecycle_status=lifecycle_status,
         )
 
     def record_turn(

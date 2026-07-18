@@ -1,6 +1,6 @@
 # Governed Memory Influence Policy
 
-Status: active baseline from `MB-186`.
+Status: active baseline from `MB-186`, hardened by `MB-203`.
 
 ## Purpose
 
@@ -25,6 +25,18 @@ The governed cycle is:
 Every signal declares source ref, route/workflow/domain scope, evidence,
 lifecycle/review status, conflict group, directive and allowed usage.
 Retrieval alone never grants causal use.
+
+`MB-203` adds `SemanticMemoryCandidateContract` as the bounded recovery input
+for real mission flows. The canonical mission state supplies the anchor,
+summary, evidence refs, observation timestamp and domain hints. Recovery marks
+freshness and relevance but remains read-only; the influence policy, not the
+retriever, decides causal use.
+
+Semantic freshness is recalculated at decision time from `observed_at` and the
+request timestamp. A claimed freshness value that differs from the computed
+value fails closed. `current` and `aging` may be eligible; `stale`, `unknown`
+or missing timestamps are never presumed usable. Relevance must be explicit,
+bounded to `0..1`, justified and at least `0.5`.
 
 ## Priority
 
@@ -52,6 +64,10 @@ A signal is ignored when it has:
 - unsupported source kind;
 - duplicate or unbounded identity;
 - automatic promotion or Core mutation authority.
+- writable or non-read-only memory authority;
+- stale, unknown or forged semantic freshness;
+- missing, invalid or low semantic relevance;
+- unbounded evidence refs or relevance reason.
 
 `MemoryInfluencePolicyDecisionContract` records selected, ignored and conflict
 refs, priority order, use and non-use reasons, evidence and policy refs.
@@ -69,6 +85,12 @@ and emits `memory_influence_governed`.
 Planning suppresses effects from ignored sources. Synthesis shows priority,
 used refs, ignored refs and non-use reasons and does not claim an ignored
 reflection was applied.
+
+For semantic candidates, the decision also records signal kind, computed
+freshness and relevance score. `memory_influence_governed`, `plan_built` and
+`response_synthesized` expose the same maps. A route, workflow or domain
+mismatch remains non-use even when the candidate belongs to the same mission.
+An empty candidate set produces no semantic anchors, evidence or effects.
 
 All decisions remain read-only with memory writes, decision mutation,
 automatic promotion and Core mutation disabled.

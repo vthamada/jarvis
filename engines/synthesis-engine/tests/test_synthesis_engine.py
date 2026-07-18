@@ -13,6 +13,7 @@ from shared.contracts import (
     GovernanceDecisionContract,
     KnowledgeEvidenceGovernanceContract,
     LongHorizonGoalStrategyContract,
+    MemoryInfluencePolicyDecisionContract,
     MissionStateContract,
     PostTaskReflectionContract,
 )
@@ -193,6 +194,63 @@ def test_synthesis_engine_composes_unitary_allowed_response() -> None:
     assert "Julgamento" in response
     assert "Recomendacao" in response
     assert "retomar alinhar checkpoint principal" in response
+
+
+def test_synthesis_engine_exposes_semantic_freshness_and_relevance() -> None:
+    plan = sample_plan()
+    anchor_ref = "memory://mission/mission-semantic/semantic"
+    plan.memory_influence_policy_decision = MemoryInfluencePolicyDecisionContract(
+        decision_id="memory-influence-decision://mission-semantic/test",
+        decision_status="applied",
+        route="strategy",
+        workflow_profile="strategic_direction_workflow",
+        domain="estrategia_e_pensamento_sistemico",
+        selected_refs=[anchor_ref],
+        ignored_refs=[],
+        priority_order=[
+            "reviewed_learning",
+            "procedural",
+            "semantic",
+            "reflection",
+        ],
+        conflict_refs=[],
+        use_reasons={anchor_ref: "selected:semantic"},
+        non_use_reasons={},
+        evidence_refs=["mission-state://mission-semantic/semantic/abc123"],
+        policy_refs=["policy://memory-influence/semantic-freshness-v1"],
+        generated_at="2026-07-18T12:00:00Z",
+        signal_kinds={anchor_ref: "semantic"},
+        freshness_statuses={anchor_ref: "current"},
+        relevance_scores={anchor_ref: 0.95},
+    )
+
+    response = SynthesisEngine().compose(
+        SynthesisInput(
+            intent="planning",
+            identity_profile=IdentityEngine().get_profile(),
+            response_style="estruturado",
+            governance_decision=GovernanceDecisionContract(
+                decision_id=GovernanceDecisionId("decision-semantic-memory"),
+                governance_check_id=GovernanceCheckId("check-semantic-memory"),
+                risk_level=RiskLevel.LOW,
+                decision=PermissionDecision.ALLOW,
+                justification="ok",
+                timestamp="2026-07-18T12:00:00Z",
+            ),
+            recovered_context=[],
+            active_minds=["mente_decisoria"],
+            active_domains=["strategy"],
+            knowledge_snippets=[],
+            deliberative_plan=plan,
+            specialist_contributions=[],
+            operation_result=None,
+        )
+    )
+
+    assert "Politica causal de memoria:" in response
+    assert f"usado {anchor_ref}" in response
+    assert "freshness current" in response
+    assert "relevancia 0.95" in response
 
 
 def test_synthesis_engine_surfaces_governed_knowledge_evidence() -> None:

@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from json import loads
 from pathlib import Path
 from re import fullmatch
@@ -132,8 +132,18 @@ def run_domain_eval_pack(
         )
 
     orchestrator = build_orchestrator(profile, workdir)
+    runtime_started_at = datetime.now(UTC)
     results = [
-        _execute_case(orchestrator, pack, case, resolved_run_id) for case in pack.cases
+        _execute_case(
+            orchestrator,
+            pack,
+            case,
+            resolved_run_id,
+            request_timestamp=(
+                runtime_started_at + timedelta(seconds=index)
+            ).isoformat(),
+        )
+        for index, case in enumerate(pack.cases)
     ]
     return orchestrator.observability_service.build_domain_eval_run(
         run_id=resolved_run_id,
@@ -177,7 +187,14 @@ def _validate_case(pack: DomainEvalPackContract, case: DomainEvalCaseContract) -
     return blockers
 
 
-def _execute_case(orchestrator, pack, case, run_id):  # type: ignore[no-untyped-def]
+def _execute_case(  # type: ignore[no-untyped-def]
+    orchestrator,
+    pack,
+    case,
+    run_id,
+    *,
+    request_timestamp: str,
+):
     request_id = f"req-{run_id}-{case.case_id}"
     try:
         response = orchestrator.handle_input(
@@ -188,7 +205,7 @@ def _execute_case(orchestrator, pack, case, run_id):  # type: ignore[no-untyped-
                 channel=ChannelType.CHAT,
                 input_type=InputType.TEXT,
                 content=case.input_text,
-                timestamp="2026-07-16T00:00:00Z",
+                timestamp=request_timestamp,
                 metadata={
                     "domain_eval_pack_id": pack.eval_pack_id,
                     "domain_eval_case_id": case.case_id,

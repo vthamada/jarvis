@@ -81,6 +81,32 @@ AUTONOMY_LADDER_SCHEMA = CanonicalSchema(
     ),
 )
 
+SEMANTIC_MEMORY_CANDIDATE_SCHEMA = CanonicalSchema(
+    name="SemanticMemoryCandidateSchema",
+    contract_name="SemanticMemoryCandidateContract",
+    required_fields=(
+        "anchor_ref",
+        "source_kind",
+        "summary",
+        "evidence_refs",
+        "observed_at",
+        "freshness_status",
+        "relevance_score",
+        "relevance_reason",
+    ),
+    optional_fields=(
+        "domain_hints",
+        "lifecycle_status",
+        "read_only",
+        "memory_write_allowed",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Recovered candidate only; policy evaluation is required before causal use.",
+    ),
+)
+
 MEMORY_INFLUENCE_SIGNAL_SCHEMA = CanonicalSchema(
     name="MemoryInfluenceSignalSchema",
     contract_name="MemoryInfluenceSignalContract",
@@ -98,7 +124,13 @@ MEMORY_INFLUENCE_SIGNAL_SCHEMA = CanonicalSchema(
         "domain",
         "lifecycle_status",
         "review_status",
+        "observed_at",
+        "freshness_status",
+        "relevance_score",
+        "relevance_reason",
         "allowed_usage",
+        "read_only",
+        "memory_write_allowed",
         "automatic_promotion_allowed",
         "core_mutation_allowed",
     ),
@@ -127,6 +159,9 @@ MEMORY_INFLUENCE_POLICY_DECISION_SCHEMA = CanonicalSchema(
         "evidence_refs",
         "use_reasons",
         "non_use_reasons",
+        "signal_kinds",
+        "freshness_statuses",
+        "relevance_scores",
         "read_only",
         "memory_write_allowed",
         "automatic_promotion_allowed",

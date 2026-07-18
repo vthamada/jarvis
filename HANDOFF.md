@@ -2,12 +2,22 @@
 
 ## Atualizacao 2026-07-18
 
+`MB-203` implementou causalidade de memoria semantica baseada em evidencia.
+Estado canonico de missao agora gera candidatos read-only com anchor, evidence
+refs, `observed_at`, freshness calculada, relevancia e escopo. A politica
+soberana recalcula freshness, resolve conflito por prioridade/relevancia e
+registra use/non-use; stale, ausencia de candidato, mismatch e claims de
+escrita/promocao/mutacao falham fechados. Planning, synthesis e eventos
+preservam a mesma decisao auditavel. Somente `MB-204` esta `ready`, para
+consumir playbooks procedurais humanos, versionados e bounded sem execucao
+autonoma.
+
 `MB-202` implementou policy declarativa versionada para todos os workflows
 ativos. `WorkflowPolicyDecisionContract` preserva ref, versao, fingerprint,
 efeitos e non-use do planning ate synthesis/dispatch e eventos nativos ou
 LangGraph. Mismatch rota/perfil nao aplica guidance; o default bounded e
 explicito e nenhuma policy ganha autoridade de execucao, promocao ou mutacao.
-Somente `MB-203` esta `ready`, para aprofundar causalidade de memoria semantica.
+Esse estado foi sucedido pelo fechamento de `MB-203`.
 Adapters, API, voz, UI rica, scheduler, auto-trust e autopromocao continuam
 fora.
 

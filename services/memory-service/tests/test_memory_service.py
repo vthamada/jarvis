@@ -415,6 +415,93 @@ def test_memory_service_recovers_empty_context_for_new_session() -> None:
     assert result.recovery_contract.priority_rules[0].startswith("default_recovery_order=")
 
 
+def test_memory_service_recovers_evidence_grounded_semantic_candidates() -> None:
+    temp_dir = runtime_dir("memory-semantic-candidates")
+    service = MemoryService(
+        database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+    )
+    service.repository.upsert_mission_state(
+        MissionStateContract(
+            mission_id=MissionId("mission-semantic-current"),
+            mission_goal="Define the governed strategic direction.",
+            mission_status=MissionStatus.ACTIVE,
+            checkpoints=[],
+            updated_at="2026-07-18T11:00:00Z",
+            semantic_brief="objective=Define the governed strategic direction.",
+            semantic_focus=[
+                "strategy",
+                "estrategia_e_pensamento_sistemico",
+            ],
+        )
+    )
+
+    recovered = service.recover_for_input(
+        InputContract(
+            request_id=RequestId("req-semantic-current"),
+            session_id=SessionId("sess-semantic-current"),
+            mission_id=MissionId("mission-semantic-current"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Continue the governed strategic direction.",
+            timestamp="2026-07-18T12:00:00Z",
+        )
+    )
+
+    assert len(recovered.semantic_memory_candidates) == 1
+    candidate = recovered.semantic_memory_candidates[0]
+    assert candidate.anchor_ref == (
+        "memory://mission/mission-semantic-current/semantic"
+    )
+    assert candidate.source_kind == "active_mission"
+    assert candidate.observed_at == "2026-07-18T11:00:00Z"
+    assert candidate.freshness_status == "current"
+    assert candidate.relevance_score >= 0.5
+    assert candidate.relevance_reason == "active_mission_id_match"
+    assert candidate.evidence_refs[0].startswith(
+        "mission-state://mission-semantic-current/semantic/"
+    )
+    assert candidate.read_only is True
+    assert candidate.memory_write_allowed is False
+    assert candidate.automatic_promotion_allowed is False
+    assert candidate.core_mutation_allowed is False
+
+
+def test_memory_service_marks_stale_semantic_candidate_without_using_it() -> None:
+    temp_dir = runtime_dir("memory-semantic-stale")
+    service = MemoryService(
+        database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+    )
+    service.repository.upsert_mission_state(
+        MissionStateContract(
+            mission_id=MissionId("mission-semantic-stale"),
+            mission_goal="Old strategic direction.",
+            mission_status=MissionStatus.PAUSED,
+            checkpoints=[],
+            updated_at="2026-05-01T12:00:00Z",
+            semantic_brief="objective=Old strategic direction.",
+            semantic_focus=["strategy"],
+        )
+    )
+
+    recovered = service.recover_for_input(
+        InputContract(
+            request_id=RequestId("req-semantic-stale"),
+            session_id=SessionId("sess-semantic-stale"),
+            mission_id=MissionId("mission-semantic-stale"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Review the old direction.",
+            timestamp="2026-07-18T12:00:00Z",
+        )
+    )
+
+    assert len(recovered.semantic_memory_candidates) == 1
+    candidate = recovered.semantic_memory_candidates[0]
+    assert candidate.freshness_status == "stale"
+    assert candidate.lifecycle_status == "expired"
+    assert candidate.read_only is True
+
+
 def test_memory_service_records_and_recovers_session_history_across_instances() -> None:
     temp_dir = runtime_dir("memory-history")
     database_url = f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"

@@ -1,6 +1,9 @@
 from planning_engine.engine import AdaptiveIntervention, PlanningContext, PlanningEngine
 
-from shared.contracts import SpecialistContributionContract
+from shared.contracts import (
+    SemanticMemoryCandidateContract,
+    SpecialistContributionContract,
+)
 
 
 def test_planning_engine_name() -> None:
@@ -710,6 +713,7 @@ def test_planning_engine_adds_priority_and_recommendation_memory_guidance() -> N
             requires_clarification=False,
             preferred_response_mode="plan_and_operate",
             mission_id="mission-semantic-evidence",
+            request_timestamp="2026-07-18T12:00:00Z",
             canonical_domains=["estrategia_e_pensamento_sistemico"],
             primary_canonical_domain="estrategia_e_pensamento_sistemico",
             primary_route="strategy",
@@ -722,6 +726,32 @@ def test_planning_engine_adds_priority_and_recommendation_memory_guidance() -> N
             mission_focus=["strategy", "tradeoff"],
             mission_recommendation="retomar o ultimo criterio estrategico governado",
             last_decision_frame="strategy",
+            semantic_memory_candidates=[
+                SemanticMemoryCandidateContract(
+                    anchor_ref=(
+                        "memory://mission/mission-semantic-evidence/semantic"
+                    ),
+                    source_kind="active_mission",
+                    summary=(
+                        "objetivo=Recommend the safest strategic direction."
+                    ),
+                    evidence_refs=[
+                        "mission-state://mission-semantic-evidence/semantic/abc123",
+                        (
+                            "mission-state-updated://mission-semantic-evidence/"
+                            "2026-07-18T11:00:00Z"
+                        ),
+                    ],
+                    observed_at="2026-07-18T11:00:00Z",
+                    freshness_status="current",
+                    relevance_score=0.95,
+                    relevance_reason="active_mission_id_match",
+                    domain_hints=[
+                        "strategy",
+                        "estrategia_e_pensamento_sistemico",
+                    ],
+                )
+            ],
         )
     )
 
@@ -730,12 +760,16 @@ def test_planning_engine_adds_priority_and_recommendation_memory_guidance() -> N
     assert plan.semantic_memory_anchor_refs == [
         "memory://mission/mission-semantic-evidence/semantic"
     ]
-    assert "memory://mission/mission-semantic-evidence/semantic#evidence" in (
+    assert "mission-state://mission-semantic-evidence/semantic/abc123" in (
         plan.semantic_memory_evidence_refs
     )
-    assert "workflow://strategic_direction_workflow" in (
-        plan.semantic_memory_evidence_refs
-    )
+    assert plan.memory_influence_policy_decision is not None
+    assert plan.memory_influence_policy_decision.freshness_statuses == {
+        "memory://mission/mission-semantic-evidence/semantic": "current"
+    }
+    assert plan.memory_influence_policy_decision.relevance_scores == {
+        "memory://mission/mission-semantic-evidence/semantic": 0.95
+    }
     assert plan.semantic_memory_use_reason is not None
     assert plan.semantic_memory_non_use_reason is None
     assert "semantic_memory_anchor_refs=" in plan.plan_summary
@@ -754,6 +788,138 @@ def test_planning_engine_adds_priority_and_recommendation_memory_guidance() -> N
         "success_criteria",
         "smallest_safe_next_action",
     ]
+
+
+def test_planning_engine_does_not_presume_semantic_influence_without_candidate() -> None:
+    plan = PlanningEngine().build_task_plan(
+        PlanningContext(
+            intent="planning",
+            query="Plan the next strategic checkpoint.",
+            recovered_context=[],
+            active_domains=["strategy"],
+            active_minds=["mente_decisoria"],
+            knowledge_snippets=[],
+            risk_markers=[],
+            requires_clarification=False,
+            preferred_response_mode="plan_and_operate",
+            mission_id="mission-no-semantic-evidence",
+            request_timestamp="2026-07-18T12:00:00Z",
+            primary_route="strategy",
+            route_workflow_profile="strategic_direction_workflow",
+            primary_domain_driver="estrategia_e_pensamento_sistemico",
+            mission_semantic_brief="unverified recovered text",
+            mission_focus=["strategy"],
+            semantic_memory_candidates=[],
+        )
+    )
+
+    assert plan.semantic_memory_source is None
+    assert plan.semantic_memory_anchor_refs == []
+    assert plan.semantic_memory_evidence_refs == []
+    assert plan.semantic_memory_effects == []
+    assert plan.semantic_memory_use_reason is None
+    assert plan.semantic_memory_non_use_reason == "no_semantic_memory_candidate"
+
+
+def test_planning_engine_audits_stale_semantic_candidate_non_use() -> None:
+    candidate = SemanticMemoryCandidateContract(
+        anchor_ref="memory://mission/stale/semantic",
+        source_kind="related_mission",
+        summary="stale strategic frame",
+        evidence_refs=["mission-state://stale/semantic/abc123"],
+        observed_at="2026-05-01T12:00:00Z",
+        freshness_status="stale",
+        relevance_score=0.8,
+        relevance_reason="related_mission_similarity",
+        domain_hints=["strategy"],
+        lifecycle_status="expired",
+    )
+    plan = PlanningEngine().build_task_plan(
+        PlanningContext(
+            intent="planning",
+            query="Plan a fresh strategic checkpoint.",
+            recovered_context=[],
+            active_domains=["strategy"],
+            active_minds=["mente_decisoria"],
+            knowledge_snippets=[],
+            risk_markers=[],
+            requires_clarification=False,
+            preferred_response_mode="plan_and_operate",
+            request_timestamp="2026-07-18T12:00:00Z",
+            primary_route="strategy",
+            route_workflow_profile="strategic_direction_workflow",
+            primary_domain_driver="estrategia_e_pensamento_sistemico",
+            mission_semantic_brief="fresh mission context",
+            mission_focus=["strategy"],
+            semantic_memory_candidates=[candidate],
+        )
+    )
+
+    decision = plan.memory_influence_policy_decision
+    assert decision is not None
+    assert candidate.anchor_ref in decision.ignored_refs
+    assert decision.freshness_statuses[candidate.anchor_ref] == "stale"
+    assert decision.non_use_reasons[candidate.anchor_ref] == (
+        "freshness_not_eligible:stale"
+    )
+    assert plan.semantic_memory_effects == []
+    assert plan.semantic_memory_non_use_reason == (
+        f"{candidate.anchor_ref}:freshness_not_eligible:stale"
+    )
+
+
+def test_planning_engine_resolves_semantic_candidate_conflict_by_relevance() -> None:
+    common = {
+        "source_kind": "related_mission",
+        "observed_at": "2026-07-18T11:00:00Z",
+        "freshness_status": "current",
+        "domain_hints": ["strategy"],
+    }
+    lower = SemanticMemoryCandidateContract(
+        anchor_ref="memory://mission/a-lower/semantic",
+        summary="reuse the related direction",
+        evidence_refs=["mission-state://a-lower/semantic/abc123"],
+        relevance_score=0.6,
+        relevance_reason="related_mission_similarity",
+        **common,
+    )
+    higher = SemanticMemoryCandidateContract(
+        anchor_ref="memory://mission/z-higher/semantic",
+        summary="continue the active direction",
+        evidence_refs=["mission-state://z-higher/semantic/def456"],
+        relevance_score=0.95,
+        relevance_reason="active_mission_id_match",
+        **common,
+    )
+    plan = PlanningEngine().build_task_plan(
+        PlanningContext(
+            intent="planning",
+            query="Continue the strategic direction.",
+            recovered_context=[],
+            active_domains=["strategy"],
+            active_minds=["mente_decisoria"],
+            knowledge_snippets=[],
+            risk_markers=[],
+            requires_clarification=False,
+            preferred_response_mode="plan_and_operate",
+            request_timestamp="2026-07-18T12:00:00Z",
+            primary_route="strategy",
+            route_workflow_profile="strategic_direction_workflow",
+            primary_domain_driver="estrategia_e_pensamento_sistemico",
+            mission_semantic_brief="continue the active direction",
+            mission_focus=["strategy"],
+            semantic_memory_candidates=[lower, higher],
+        )
+    )
+
+    decision = plan.memory_influence_policy_decision
+    assert decision is not None
+    assert plan.semantic_memory_anchor_refs == [higher.anchor_ref]
+    assert lower.anchor_ref in decision.ignored_refs
+    assert decision.conflict_refs == [higher.anchor_ref, lower.anchor_ref]
+    assert decision.non_use_reasons[lower.anchor_ref] == (
+        f"conflict_with_higher_priority:{higher.anchor_ref}"
+    )
 
 
 def test_planning_engine_refines_plan_and_consolidates_specialists() -> None:

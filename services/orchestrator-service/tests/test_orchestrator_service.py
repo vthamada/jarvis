@@ -1286,7 +1286,11 @@ def test_orchestrator_service_applies_relevant_post_task_reflection() -> None:
     assert plan_event.payload["semantic_memory_non_use_reason"] == (
         result.deliberative_plan.semantic_memory_non_use_reason
     )
-    assert result.deliberative_plan.semantic_memory_evidence_refs
+    assert result.deliberative_plan.semantic_memory_evidence_refs == []
+    assert (
+        result.deliberative_plan.semantic_memory_non_use_reason
+        == "no_semantic_memory_candidate"
+    )
     workflow_composed_event = next(
         event for event in stored_events if event.event_name == "workflow_composed"
     )
@@ -2773,3 +2777,87 @@ def test_orchestrator_service_prioritizes_route_guidance_from_recovered_memory()
         "procedural_artifact",
     ]
     assert "analysis:" in str(guidance["summary"])
+
+
+def test_orchestrator_service_applies_auditable_semantic_memory_on_next_turn() -> None:
+    temp_dir = runtime_dir("orchestrator-semantic-causality")
+    observability = ObservabilityService(
+        database_path=str(temp_dir / "observability.db")
+    )
+    service = OrchestratorService(
+        governance_service=GovernanceService(),
+        memory_service=MemoryService(
+            database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+        ),
+        operational_service=OperationalService(
+            artifact_dir=str(temp_dir / "artifacts")
+        ),
+        observability_service=observability,
+    )
+    mission_id = MissionId("mission-semantic-causality")
+
+    first = service.handle_input(
+        InputContract(
+            request_id=RequestId("req-semantic-causality-1"),
+            session_id=SessionId("sess-semantic-causality"),
+            mission_id=mission_id,
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Please plan the governed strategic direction.",
+            timestamp=service.now(),
+        )
+    )
+    second = service.handle_input(
+        InputContract(
+            request_id=RequestId("req-semantic-causality-2"),
+            session_id=SessionId("sess-semantic-causality"),
+            mission_id=mission_id,
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Please plan the next governed strategic direction.",
+            timestamp=service.now(),
+        )
+    )
+
+    anchor_ref = "memory://mission/mission-semantic-causality/semantic"
+    decision = second.deliberative_plan.memory_influence_policy_decision
+    assert decision is not None
+    assert decision.non_use_reasons == {}, decision.non_use_reasons
+    assert first.deliberative_plan.semantic_memory_anchor_refs == []
+    assert first.deliberative_plan.semantic_memory_effects == []
+    assert second.deliberative_plan.semantic_memory_anchor_refs == [anchor_ref], decision
+    assert second.deliberative_plan.semantic_memory_evidence_refs
+    assert second.deliberative_plan.semantic_memory_effects
+    assert anchor_ref in decision.selected_refs
+    assert decision.signal_kinds[anchor_ref] == "semantic"
+    assert decision.freshness_statuses[anchor_ref] == "current"
+    assert decision.relevance_scores[anchor_ref] >= 0.5
+    assert "freshness=current" in decision.use_reasons[anchor_ref]
+
+    stored_events = observability.list_recent_events(
+        ObservabilityQuery(request_id="req-semantic-causality-2", limit=100)
+    )
+    governed_event = next(
+        event
+        for event in stored_events
+        if event.event_name == "memory_influence_governed"
+    )
+    plan_event = next(
+        event for event in stored_events if event.event_name == "plan_built"
+    )
+    response_event = next(
+        event
+        for event in stored_events
+        if event.event_name == "response_synthesized"
+    )
+    for event in (governed_event, plan_event, response_event):
+        assert event.payload["memory_influence_selected_refs"] == (
+            decision.selected_refs
+        )
+        assert event.payload["memory_influence_freshness_statuses"] == (
+            decision.freshness_statuses
+        )
+        assert event.payload["memory_influence_relevance_scores"] == (
+            decision.relevance_scores
+        )
+    assert governed_event.payload["memory_influence_causal_use_allowed"] is True

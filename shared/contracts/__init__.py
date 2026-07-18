@@ -836,6 +836,24 @@ class MemoryRecordContract:
 
 
 @dataclass
+class SemanticMemoryCandidateContract:
+    anchor_ref: str
+    source_kind: str
+    summary: str
+    evidence_refs: list[str]
+    observed_at: Timestamp
+    freshness_status: str
+    relevance_score: float
+    relevance_reason: str
+    domain_hints: list[str] = field(default_factory=list)
+    lifecycle_status: str = "retained"
+    read_only: bool = True
+    memory_write_allowed: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass
 class MemoryInfluenceSignalContract:
     signal_ref: str
     source_kind: str
@@ -848,7 +866,13 @@ class MemoryInfluenceSignalContract:
     domain: str | None = None
     lifecycle_status: str | None = None
     review_status: str | None = None
+    observed_at: Timestamp | None = None
+    freshness_status: str | None = None
+    relevance_score: float | None = None
+    relevance_reason: str | None = None
     allowed_usage: list[str] = field(default_factory=lambda: ["planning_context"])
+    read_only: bool = True
+    memory_write_allowed: bool = False
     automatic_promotion_allowed: bool = False
     core_mutation_allowed: bool = False
 
@@ -869,6 +893,9 @@ class MemoryInfluencePolicyDecisionContract:
     evidence_refs: list[str]
     policy_refs: list[str]
     generated_at: Timestamp
+    signal_kinds: dict[str, str] = field(default_factory=dict)
+    freshness_statuses: dict[str, str] = field(default_factory=dict)
+    relevance_scores: dict[str, float] = field(default_factory=dict)
     read_only: bool = True
     memory_write_allowed: bool = False
     automatic_promotion_allowed: bool = False

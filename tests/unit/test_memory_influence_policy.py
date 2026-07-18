@@ -5,7 +5,10 @@ from memory_service.service import MemoryService
 
 from shared.contract_validation import validate_contract_instance
 from shared.contracts import MemoryInfluenceSignalContract
-from shared.memory_influence_policy import evaluate_memory_influence_policy
+from shared.memory_influence_policy import (
+    evaluate_memory_influence_policy,
+    semantic_memory_freshness_status,
+)
 from shared.schemas import (
     MEMORY_INFLUENCE_GOVERNANCE_ASSESSMENT_SCHEMA,
     MEMORY_INFLUENCE_POLICY_DECISION_SCHEMA,
@@ -40,6 +43,14 @@ def _signal(
         domain="estrategia_e_pensamento_sistemico",
         lifecycle_status="reviewed" if source_kind == "reviewed_learning" else "retained",
         review_status=review_status,
+        observed_at=(
+            "2026-07-16T21:00:00Z" if source_kind == "semantic" else None
+        ),
+        freshness_status="current" if source_kind == "semantic" else None,
+        relevance_score=0.8 if source_kind == "semantic" else None,
+        relevance_reason=(
+            "route_workflow_domain_match" if source_kind == "semantic" else None
+        ),
     )
 
 
@@ -170,3 +181,104 @@ def test_governance_blocks_forged_memory_influence_authority() -> None:
         governed,
         schema=MEMORY_INFLUENCE_GOVERNANCE_ASSESSMENT_SCHEMA,
     ).status == "coherent"
+
+
+def test_semantic_memory_freshness_is_derived_from_canonical_timestamps() -> None:
+    generated_at = "2026-07-18T12:00:00Z"
+
+    assert (
+        semantic_memory_freshness_status(
+            "2026-07-18T11:00:00Z",
+            generated_at,
+        )
+        == "current"
+    )
+    assert (
+        semantic_memory_freshness_status(
+            "2026-06-28T12:00:00Z",
+            generated_at,
+        )
+        == "aging"
+    )
+    assert (
+        semantic_memory_freshness_status(
+            "2026-05-01T12:00:00Z",
+            generated_at,
+        )
+        == "stale"
+    )
+    assert semantic_memory_freshness_status("invalid", generated_at) == "unknown"
+
+
+def test_memory_influence_policy_rejects_stale_or_forged_semantic_freshness() -> None:
+    stale = replace(
+        _signal("semantic"),
+        observed_at="2026-05-01T12:00:00Z",
+        freshness_status="stale",
+    )
+    forged = replace(
+        _signal("semantic"),
+        signal_ref="memory-influence://semantic/forged",
+        observed_at="2026-05-01T12:00:00Z",
+        freshness_status="current",
+    )
+
+    stale_decision = _evaluate([stale])
+    forged_decision = _evaluate([forged])
+
+    assert stale_decision.decision_status == "blocked_no_eligible_signal"
+    assert stale_decision.freshness_statuses[stale.signal_ref] == "stale"
+    assert stale_decision.non_use_reasons[stale.signal_ref] == (
+        "freshness_not_eligible:stale"
+    )
+    assert forged_decision.decision_status == "blocked_no_eligible_signal"
+    assert forged_decision.freshness_statuses[forged.signal_ref] == "stale"
+    assert forged_decision.non_use_reasons[forged.signal_ref] == (
+        "semantic_freshness_claim_mismatch:current:stale"
+    )
+
+
+def test_memory_influence_policy_rejects_semantic_write_authority() -> None:
+    writable = replace(
+        _signal("semantic"),
+        signal_ref="memory-influence://semantic/writable",
+        read_only=False,
+        memory_write_allowed=True,
+    )
+
+    decision = _evaluate([writable])
+
+    assert decision.decision_status == "blocked_no_eligible_signal"
+    assert decision.selected_refs == []
+    assert decision.non_use_reasons[writable.signal_ref] == (
+        "authority_claim_not_allowed"
+    )
+
+
+def test_memory_influence_policy_resolves_semantic_conflict_by_relevance() -> None:
+    lower = replace(
+        _signal("semantic", summary="reuse the older strategic frame"),
+        signal_ref="memory-influence://semantic/a-lower",
+        relevance_score=0.6,
+        relevance_reason="related_mission_similarity",
+    )
+    higher = replace(
+        _signal("semantic", summary="continue the active strategic frame"),
+        signal_ref="memory-influence://semantic/z-higher",
+        relevance_score=0.95,
+        relevance_reason="active_mission_id_match",
+    )
+
+    decision = _evaluate([lower, higher])
+
+    assert decision.decision_status == "applied_with_conflict_resolution"
+    assert decision.selected_refs == [higher.signal_ref]
+    assert decision.ignored_refs == [lower.signal_ref]
+    assert decision.conflict_refs == [higher.signal_ref, lower.signal_ref]
+    assert decision.relevance_scores == {
+        lower.signal_ref: 0.6,
+        higher.signal_ref: 0.95,
+    }
+    assert decision.non_use_reasons[lower.signal_ref] == (
+        f"conflict_with_higher_priority:{higher.signal_ref}"
+    )

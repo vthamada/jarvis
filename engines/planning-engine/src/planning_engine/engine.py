@@ -11,6 +11,7 @@ from shared.contracts import (
     MemoryInfluencePolicyDecisionContract,
     MemoryInfluenceSignalContract,
     OpenLoopResumePlanContract,
+    SemanticMemoryCandidateContract,
     SpecialistContributionContract,
 )
 from shared.domain_registry import resolve_workflow_policy, workflow_runtime_guidance
@@ -133,6 +134,7 @@ class PlanningContext:
     open_loops: list[str] | None = None
     mission_semantic_brief: str | None = None
     mission_focus: list[str] | None = None
+    semantic_memory_candidates: list[SemanticMemoryCandidateContract] | None = None
     last_decision_frame: str | None = None
     mission_goal: str | None = None
     mission_recommendation: str | None = None
@@ -438,6 +440,57 @@ class PlanningEngine:
             domain=context.primary_domain_driver or context.primary_canonical_domain,
             generated_at=context.request_timestamp or "runtime",
         )
+        semantic_memory_source = memory_decision.semantic_source
+        if context.semantic_memory_candidates is not None:
+            semantic_signals = [
+                signal
+                for signal in memory_influence_signals
+                if signal.source_kind == "semantic"
+            ]
+            selected_semantic_refs = {
+                signal.signal_ref
+                for signal in semantic_signals
+                if signal.signal_ref
+                in memory_influence_policy_decision.selected_refs
+            }
+            semantic_memory_anchor_refs = sorted(selected_semantic_refs)
+            semantic_memory_evidence_refs = list(
+                dict.fromkeys(
+                    evidence_ref
+                    for signal in semantic_signals
+                    if signal.signal_ref in selected_semantic_refs
+                    for evidence_ref in signal.evidence_refs
+                )
+            )
+            semantic_memory_use_reason = " | ".join(
+                memory_influence_policy_decision.use_reasons[ref]
+                for ref in semantic_memory_anchor_refs
+                if ref in memory_influence_policy_decision.use_reasons
+            ) or None
+            ignored_semantic_reasons = [
+                f"{signal.signal_ref}:{memory_influence_policy_decision.non_use_reasons[signal.signal_ref]}"
+                for signal in semantic_signals
+                if signal.signal_ref
+                in memory_influence_policy_decision.non_use_reasons
+            ]
+            semantic_memory_non_use_reason = (
+                " | ".join(ignored_semantic_reasons)
+                if ignored_semantic_reasons
+                else None
+                if semantic_memory_anchor_refs
+                else "no_semantic_memory_candidate"
+            )
+            selected_candidate = next(
+                (
+                    candidate
+                    for candidate in context.semantic_memory_candidates
+                    if candidate.anchor_ref in selected_semantic_refs
+                ),
+                None,
+            )
+            semantic_memory_source = (
+                selected_candidate.source_kind if selected_candidate else None
+            )
         reflection_influence_status = context.reflection_influence_status
         if (
             reflection_influence_status == "applied"
@@ -462,10 +515,14 @@ class PlanningEngine:
             reviewed_learning_influence_status = (
                 "suppressed_by_memory_influence_policy"
             )
-        if memory_decision.semantic_source and not self._policy_selects_kind(
-            memory_influence_policy_decision,
-            memory_influence_signals,
-            "semantic",
+        if (
+            context.semantic_memory_candidates is None
+            and memory_decision.semantic_source
+            and not self._policy_selects_kind(
+                memory_influence_policy_decision,
+                memory_influence_signals,
+                "semantic",
+            )
         ):
             semantic_memory_use_reason = None
             semantic_signal = next(
@@ -796,7 +853,7 @@ class PlanningEngine:
             metacognitive_containment_recommendation=(
                 metacognitive_guidance.containment_recommendation
             ),
-            semantic_memory_source=memory_decision.semantic_source,
+            semantic_memory_source=semantic_memory_source,
             procedural_memory_source=memory_decision.procedural_source,
             semantic_memory_effects=(
                 list(memory_decision.semantic_effects)
@@ -3350,7 +3407,62 @@ class PlanningEngine:
             ),
         }
         semantic_anchor = self._semantic_memory_anchor(context)
-        if memory_decision.semantic_source and semantic_anchor_refs and semantic_anchor:
+        if context.semantic_memory_candidates is not None:
+            active_scope = {
+                value
+                for value in (
+                    context.primary_route,
+                    context.route_workflow_profile,
+                    context.primary_domain_driver,
+                    context.primary_canonical_domain,
+                    *(context.canonical_domains or []),
+                )
+                if value
+            }
+            active_domain = (
+                context.primary_domain_driver or context.primary_canonical_domain
+            )
+            for candidate in context.semantic_memory_candidates[:8]:
+                candidate_scope = set(candidate.domain_hints)
+                scope_matches = bool(active_scope.intersection(candidate_scope))
+                signals.append(
+                    MemoryInfluenceSignalContract(
+                        signal_ref=candidate.anchor_ref,
+                        source_kind="semantic",
+                        summary=candidate.summary[:1000],
+                        evidence_refs=list(candidate.evidence_refs),
+                        conflict_group="semantic_context",
+                        directive=candidate.summary[:1000],
+                        route=context.primary_route if scope_matches else None,
+                        workflow_profile=(
+                            context.route_workflow_profile if scope_matches else None
+                        ),
+                        domain=(
+                            active_domain
+                            if scope_matches
+                            else candidate.domain_hints[0]
+                            if candidate.domain_hints
+                            else None
+                        ),
+                        lifecycle_status=candidate.lifecycle_status,
+                        review_status=(
+                            "stable"
+                            if candidate.freshness_status in {"current", "aging"}
+                            else "review_recommended"
+                        ),
+                        observed_at=candidate.observed_at,
+                        freshness_status=candidate.freshness_status,
+                        relevance_score=candidate.relevance_score,
+                        relevance_reason=candidate.relevance_reason,
+                        read_only=candidate.read_only,
+                        memory_write_allowed=candidate.memory_write_allowed,
+                        automatic_promotion_allowed=(
+                            candidate.automatic_promotion_allowed
+                        ),
+                        core_mutation_allowed=candidate.core_mutation_allowed,
+                    )
+                )
+        elif memory_decision.semantic_source and semantic_anchor_refs and semantic_anchor:
             signals.append(
                 MemoryInfluenceSignalContract(
                     signal_ref=semantic_anchor_refs[0],
@@ -3361,6 +3473,10 @@ class PlanningEngine:
                     directive=semantic_anchor[:1000],
                     lifecycle_status=memory_decision.semantic_lifecycle,
                     review_status=memory_decision.review_status,
+                    observed_at=context.request_timestamp or "runtime",
+                    freshness_status="current",
+                    relevance_score=1.0,
+                    relevance_reason="legacy_explicit_planning_context",
                     **scope,
                 )
             )

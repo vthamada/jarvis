@@ -4903,6 +4903,9 @@ class OrchestratorService:
             open_loops=self._extract_list_hint(recovered, "open_loops="),
             mission_semantic_brief=self._extract_context_hint(recovered, "mission_semantic_brief="),
             mission_focus=self._extract_list_hint(recovered, "mission_focus=", separator=","),
+            semantic_memory_candidates=list(
+                memory_recovery_result.semantic_memory_candidates
+            ),
             last_decision_frame=self._extract_context_hint(recovered, "last_decision_frame="),
             mission_goal=self._extract_context_hint(recovered, "mission_goal="),
             mission_recommendation=self._extract_context_hint(recovered, "mission_recommendation="),
@@ -5755,6 +5758,9 @@ class OrchestratorService:
                 "memory_influence_priority_order": [],
                 "memory_influence_use_reasons": {},
                 "memory_influence_non_use_reasons": {},
+                "memory_influence_signal_kinds": {},
+                "memory_influence_freshness_statuses": {},
+                "memory_influence_relevance_scores": {},
                 "memory_influence_policy_refs": [],
                 "memory_influence_memory_write_allowed": False,
             }
@@ -5766,6 +5772,11 @@ class OrchestratorService:
             "memory_influence_priority_order": list(decision.priority_order),
             "memory_influence_use_reasons": dict(decision.use_reasons),
             "memory_influence_non_use_reasons": dict(decision.non_use_reasons),
+            "memory_influence_signal_kinds": dict(decision.signal_kinds),
+            "memory_influence_freshness_statuses": dict(
+                decision.freshness_statuses
+            ),
+            "memory_influence_relevance_scores": dict(decision.relevance_scores),
             "memory_influence_policy_refs": list(decision.policy_refs),
             "memory_influence_memory_write_allowed": decision.memory_write_allowed,
         }

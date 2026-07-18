@@ -917,6 +917,14 @@ class SynthesisEngine:
             parts.append(f"prioridade {priority}")
         if selected:
             parts.append(f"usado {selected}")
+            freshness = cls._safe_operational_value(
+                decision.freshness_statuses.get(selected)
+            )
+            relevance = decision.relevance_scores.get(selected)
+            if freshness:
+                parts.append(f"freshness {freshness}")
+            if relevance is not None:
+                parts.append(f"relevancia {relevance:.2f}")
         if ignored:
             parts.append(f"ignorado {ignored}")
         if non_use:

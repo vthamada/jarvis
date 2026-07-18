@@ -30,6 +30,7 @@ from shared.contracts import (
     RecurringPatternReportContract,
     ReviewedLearningGuidanceContract,
     SandboxToReleaseChecklistContract,
+    SemanticMemoryCandidateContract,
     SkillCandidateContract,
     SkillEvolutionOperatorItemContract,
     SkillEvolutionOperatorViewContract,
@@ -81,6 +82,7 @@ from shared.schemas import (
     REGRESSION_READINESS_REPORT_SCHEMA,
     REVIEWED_LEARNING_GUIDANCE_SCHEMA,
     SANDBOX_TO_RELEASE_CHECKLIST_SCHEMA,
+    SEMANTIC_MEMORY_CANDIDATE_SCHEMA,
     SKILL_CANDIDATE_SCHEMA,
     SKILL_EVOLUTION_OPERATOR_ITEM_SCHEMA,
     SKILL_EVOLUTION_OPERATOR_VIEW_SCHEMA,
@@ -125,6 +127,28 @@ def test_input_contract_can_be_instantiated() -> None:
         timestamp="2026-03-16T00:00:00Z",
     )
     assert contract.content == "hello"
+
+
+def test_semantic_memory_candidate_is_read_only_shared_schema() -> None:
+    candidate = SemanticMemoryCandidateContract(
+        anchor_ref="memory://mission/mission-1/semantic",
+        source_kind="active_mission",
+        summary="objective=Continue the governed mission.",
+        evidence_refs=["mission-state://mission-1/semantic/abc123"],
+        observed_at="2026-07-18T11:00:00Z",
+        freshness_status="current",
+        relevance_score=0.95,
+        relevance_reason="active_mission_id_match",
+        domain_hints=["strategy"],
+    )
+
+    assert SEMANTIC_MEMORY_CANDIDATE_SCHEMA.contract_name == (
+        "SemanticMemoryCandidateContract"
+    )
+    assert candidate.read_only is True
+    assert candidate.memory_write_allowed is False
+    assert candidate.automatic_promotion_allowed is False
+    assert candidate.core_mutation_allowed is False
 
 
 def test_longitudinal_learning_contracts_are_read_only_shared_schemas() -> None:

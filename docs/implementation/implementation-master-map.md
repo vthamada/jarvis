@@ -120,7 +120,7 @@ Goal: make memory reliable, causal, reviewable and useful over long time.
 | `MEM-002` | Mission state persistence | `implemented_baseline` | Keep stable | MissionStateContract | none |
 | `MEM-003` | Experience/reflection memory | `implemented_baseline` | Keep stable | Operator Learning Loop | none |
 | `MEM-004` | Reviewed-learning guidance memory | `implemented_baseline` | Keep stable | Human review | none |
-| `MEM-005` | Semantic memory influence | `partial_runtime` | More causal use with evidence refs | Memory registry | high-priority |
+| `MEM-005` | Semantic memory influence | `implemented_baseline` | Keep evidence-grounded selection, conflict and non-use stable | Memory registry | none |
 | `MEM-006` | Procedural memory influence | `partial_runtime` | Reusable procedures and playbooks | Memory registry, artifacts | high-priority |
 | `MEM-007` | Memory review queue | `implemented_baseline` | Keep human review stable | Observability, console | none |
 | `MEM-008` | Memory consolidation | `partial_runtime` | Separate governed manual execution with evidence | Memory lifecycle | later |
@@ -861,7 +861,7 @@ Goal: open one ordered queue for workflow policy, memory causality, decision
 attribution, governed variants and manual technology intake.
 
 Status: closed as planning/reprioritization documentation; the queue advanced
-through `MB-202` and `MB-203` is ready.
+through `MB-203`; `MB-204` is ready.
 
 ### MB-202 -- Versioned Declarative Workflow Policy
 
@@ -881,7 +881,9 @@ Map IDs: `MEM-005`, `COG-007`, `GOV-004`.
 Goal: make semantic memory selection, influence, conflict and non-use
 attributable to evidence and freshness.
 
-Status: ready after `MB-202`.
+Status: closed in `MB-203`; canonical mission state now yields bounded semantic
+candidates whose evidence, computed freshness, relevance, scope, conflict and
+non-use remain attributable across memory, planning, governance and synthesis.
 
 ### MB-204 -- Governed Procedural Playbook Influence
 
@@ -890,7 +892,7 @@ Map IDs: `MEM-006`, `EVL-007`, `GOV-004`.
 Goal: consume reviewed, scoped and versioned playbooks as bounded guidance
 without turning them into autonomous scripts.
 
-Status: planned after `MB-203`.
+Status: ready after `MB-203`.
 
 ### MB-205 -- Decision-Memory Outcome Attribution
 
