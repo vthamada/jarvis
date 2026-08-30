@@ -1,9 +1,16 @@
+from dataclasses import replace
+
 from observability_service.service import ObservabilityService
 
 from shared.contracts import (
     DomainEvalCaseResultContract,
-    WorkflowVariantEvalCaseResultContract,
 )
+from tests.unit.test_workflow_variant_eval import (
+    _pack,
+    _registry_with_candidate,
+    _with_second_case_version,
+)
+from tools.workflow_variant_eval import _evaluate_case
 
 
 def _result(case_id: str, *, passed: bool) -> DomainEvalCaseResultContract:
@@ -62,44 +69,18 @@ def test_observability_exposes_case_failure_as_readiness_blocker() -> None:
 
 
 def test_observability_aggregates_workflow_variant_as_manual_gate_evidence() -> None:
-    metrics = {
-        "success_score": 0.8,
-        "contract_adherence": 0.8,
-        "rework_rate": 0.2,
-        "checkpoint_coverage": 0.8,
-        "memory_causality": 0.7,
-    }
-    candidate_metrics = {
-        **metrics,
-        "success_score": 0.9,
-        "rework_rate": 0.1,
-    }
-    result = WorkflowVariantEvalCaseResultContract(
-        case_id="workflow-case-1",
-        scenario_ref="scenario://workflow/1",
-        workflow_profile="software_change_workflow",
-        route="software_development",
-        baseline_version_ref="workflow-version://software_change_workflow/1.0.0",
-        candidate_version_ref="workflow-version://software_change_workflow/1.1.0",
-        passed=True,
-        checks={"no_metric_regression": True},
-        baseline_metrics=metrics,
-        candidate_metrics=candidate_metrics,
-        metric_deltas={
-            key: round(candidate_metrics[key] - metrics[key], 4) for key in metrics
-        },
-        improvement_signals=["success_score_improved", "rework_rate_improved"],
-        regression_flags=[],
-        failures=[],
-        evidence_refs=["eval://workflow/1"],
+    baseline, candidate, _registry = _registry_with_candidate()
+    case_pack = _pack(baseline, candidate)
+    result = _evaluate_case(
+        case=case_pack.cases[0],
+        case_pack=case_pack,
+        baseline=baseline,
+        candidate=candidate,
     )
 
     run = ObservabilityService.build_workflow_variant_eval_run(
         run_id="workflow-eval-1",
-        workflow_profile=result.workflow_profile,
-        route=result.route,
-        baseline_version_ref=result.baseline_version_ref,
-        candidate_version_ref=result.candidate_version_ref,
+        case_pack=case_pack,
         case_results=[result],
         minimum_pass_rate=1.0,
         evidence_refs=result.evidence_refs,
@@ -110,3 +91,86 @@ def test_observability_aggregates_workflow_variant_as_manual_gate_evidence() -> 
     assert run.comparison_conclusion == "candidate_improved_without_regression"
     assert run.promotion_readiness == "manual_gate_only"
     assert run.promotion_authorized is False
+
+
+def test_observability_recomputes_forged_result_and_authority_fail_closed() -> None:
+    baseline, candidate, _registry = _registry_with_candidate()
+    case_pack = _pack(baseline, candidate)
+    valid = _evaluate_case(
+        case=case_pack.cases[0],
+        case_pack=case_pack,
+        baseline=baseline,
+        candidate=candidate,
+    )
+    forged = replace(
+        valid,
+        passed=True,
+        baseline_metrics={key: 1.0 for key in valid.baseline_metrics},
+        candidate_metrics={key: 0.0 for key in valid.candidate_metrics},
+        metric_deltas={key: 1.0 for key in valid.metric_deltas},
+        improvement_signals=["forged_improvement"],
+        regression_flags=[],
+        failures=[],
+        offline_only=False,
+        sandbox_only=False,
+        execution_allowed=True,
+        tool_dispatch_allowed=True,
+        runtime_activation_allowed=True,
+        release_authorized=True,
+        promotion_authorized=True,
+        automatic_promotion_allowed=True,
+        core_mutation_allowed=True,
+    )
+
+    run = ObservabilityService.build_workflow_variant_eval_run(
+        run_id="workflow-eval-forged",
+        case_pack=case_pack,
+        case_results=[forged],
+        minimum_pass_rate=1.0,
+        evidence_refs=forged.evidence_refs,
+        generated_at="2026-07-16T20:00:00Z",
+    )
+
+    assert run.status == "failed"
+    assert run.comparison_conclusion == "insufficient_or_invalid_evidence"
+    assert run.case_results[0].baseline_metrics == valid.baseline_metrics
+    assert run.case_results[0].candidate_metrics == valid.candidate_metrics
+    assert run.execution_allowed is False
+    assert run.tool_dispatch_allowed is False
+    assert run.runtime_activation_allowed is False
+    assert run.release_authorized is False
+    assert run.promotion_authorized is False
+    assert run.automatic_promotion_allowed is False
+    assert run.core_mutation_allowed is False
+    assert "case:software_release_evidence:source_authority_safe" in run.blockers
+
+
+def test_observability_keys_versioned_cases_by_complete_identity() -> None:
+    baseline, candidate, _registry = _registry_with_candidate()
+    versioned_pack = _with_second_case_version(_pack(baseline, candidate))
+    results = [
+        _evaluate_case(
+            case=case,
+            case_pack=versioned_pack,
+            baseline=baseline,
+            candidate=candidate,
+        )
+        for case in versioned_pack.cases
+    ]
+
+    run = ObservabilityService.build_workflow_variant_eval_run(
+        run_id="workflow-eval-versioned-cases",
+        case_pack=versioned_pack,
+        case_results=results,
+        minimum_pass_rate=1.0,
+        evidence_refs=[
+            reference for result in results for reference in result.evidence_refs
+        ],
+        generated_at="2026-07-16T20:00:00Z",
+    )
+
+    assert run.status == "passed"
+    assert run.total_cases == 2
+    assert [(result.case_id, result.case_version) for result in run.case_results] == [
+        (case.case_id, case.case_version) for case in versioned_pack.cases
+    ]

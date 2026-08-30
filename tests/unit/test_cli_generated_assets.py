@@ -33,7 +33,7 @@ def test_reference_model_is_complete_deterministic_and_path_free() -> None:
     first = render_command_reference(COMMAND_REGISTRY, parser)
     second = render_command_reference(COMMAND_REGISTRY, build_parser())
 
-    assert len(model) == len(COMMAND_REGISTRY.definitions) == 31
+    assert len(model) == len(COMMAND_REGISTRY.definitions) == 40
     assert [item.definition.command_id for item in model] == [
         item.command_id for item in COMMAND_REGISTRY.definitions
     ]
@@ -41,6 +41,7 @@ def test_reference_model_is_complete_deterministic_and_path_free() -> None:
     assert str(Path.cwd()) not in first
     assert "`command-reference`" in first
     assert "`completion`" in first
+    assert "`action-confirm`" in first
 
 
 @pytest.mark.parametrize("shell", ["powershell", "bash", "zsh"])
@@ -51,8 +52,12 @@ def test_completion_is_deterministic_and_contains_registry_commands(shell: str) 
     assert first == second
     assert "jarvis-console" in first
     assert "operator-outcomes" in first
+    assert "workflow-lifecycle" in first
+    assert "workflow-transition" in first
+    assert "action-confirm" in first
     assert "completion" in first
-    assert "eval " not in first
+    assert "\neval " not in first
+    assert "\teval " not in first
     assert "Invoke-Expression" not in first
 
 
@@ -75,3 +80,25 @@ def test_completion_rejects_unsafe_parser_choices() -> None:
 
     with pytest.raises(ValueError, match="unsafe shell completion tokens"):
         render_shell_completion(registry, parser, shell="bash")
+
+
+def test_completion_keeps_mutating_command_format_choices_text_only() -> None:
+    bash = render_shell_completion(COMMAND_REGISTRY, build_parser(), shell="bash")
+    zsh = render_shell_completion(COMMAND_REGISTRY, build_parser(), shell="zsh")
+    powershell = render_shell_completion(
+        COMMAND_REGISTRY,
+        build_parser(),
+        shell="powershell",
+    )
+
+    assert "if [[ -z $command && $prev == '--format' ]]" in bash
+    assert 'technology-experiment-pack:--format) candidates="text"' in bash
+    assert 'action-confirm:--format) candidates="text"' in bash
+    assert "if [[ -z $command && $previous == '--format' ]]" in zsh
+    assert "technology-experiment-pack:--format)" in zsh
+    assert "action-confirm:--format)" in zsh
+    assert "_values 'value' 'text'" in zsh
+    assert (
+        "'technology-experiment-pack|--format' = @('text')" in powershell
+    )
+    assert "'action-confirm|--format' = @('text')" in powershell

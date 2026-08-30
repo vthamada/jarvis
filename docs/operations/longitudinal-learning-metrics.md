@@ -1,6 +1,6 @@
 # Longitudinal Learning Metrics
 
-Status: active baseline from `MB-188`.
+Status: active baseline from `MB-188`, hardened by `MB-205` attribution.
 
 ## Purpose
 
@@ -15,19 +15,24 @@ The measured cycle is:
 
 ## Evidence Sources
 
-- reviewed memory: runtime missions that cite a reviewed guidance version;
+- reviewed memory: runtime missions whose canonical MB-205 attribution record
+  cites a reviewed guidance version;
 - reviewed memory baseline: missions in the same workflow without reviewed
   guidance influence;
 - skill candidates: sandbox eval evidence only while the candidate is inactive;
 - workflow candidates: registered version and baseline identity; runtime claims
   remain invalid while the candidate is inactive;
-- operator feedback: helpful, not helpful and correction signals correlated by
-  mission;
+- operator feedback: helpful, not helpful and correction signals joined by the
+  exact experience and matching mission;
 - regression and rollback: audit anomalies, missing events, corrective feedback
   and reviewed rollback state.
 
 Offline evals are useful evidence but are not longitudinal runtime evidence.
 Inactive versions cannot claim production impact.
+Runtime traces created without a canonical decision/outcome attribution record
+are not heuristically backfilled. `correlation_only` remains an association and
+`declared_causality` remains declared participation; neither field is itself a
+proof of gain.
 
 ## Console
 
@@ -52,7 +57,8 @@ python tools/longitudinal_learning_report.py --output-dir .jarvis_runtime/learni
 ## Interpretation
 
 - `sustained_gain`: enough candidate and baseline observations, higher success,
-  no higher rework and at least half of explicit feedback is helpful;
+  no higher rework and at least half of explicit feedback is helpful, using an
+  evidence lane that actually establishes an admissible comparator;
 - `stable_or_mixed`: sufficient evidence without a clear gain or regression;
 - `insufficient_evidence`: the version has fewer than the required observations;
 - `insufficient_baseline_evidence`: the candidate has evidence but its baseline
@@ -63,6 +69,12 @@ python tools/longitudinal_learning_report.py --output-dir .jarvis_runtime/learni
 
 Historical baseline regressions remain visible even if a newer version shows a
 comparative gain. The report is evidence for human review, not a release verdict.
+Observations sourced from MB-205 attribution carry the evidence marker
+`gain-claim-status:not_established_without_comparator`; while that marker is
+present they can expose deltas but can never become `sustained_gain`, even when
+the aggregate delta is favorable. A later governed evaluation lane must produce
+separate controlled-comparator evidence without that marker before a gain status
+is admissible.
 
 ## Safety Invariants
 
@@ -75,4 +87,3 @@ comparative gain. The report is evidence for human review, not a release verdict
 - rollback is counted once from lifecycle state, not once per later mission;
 - no registry, memory record, proposal or active workflow is changed by report
   generation.
-

@@ -93,7 +93,11 @@ def build_gate_steps(*, mode: str, include_controlled: bool) -> list[GateStep]:
         steps.append(
             GateStep(
                 label="current cut closure verification",
-                command=[RUNNER, "tools/close_repository_hygiene_and_tools_review_cut.py"],
+                command=[
+                    RUNNER,
+                    "tools/close_repository_hygiene_and_tools_review_cut.py",
+                    "--check",
+                ],
             )
         )
         steps.append(

@@ -1,18 +1,21 @@
 # ruff: noqa: E501
-"""Local evolution lab for sandbox-only comparison workflows."""
+"""Local evolution lab for sandbox comparison and governed release evidence."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field, replace
+from dataclasses import asdict, dataclass, field, replace
 from datetime import UTC, datetime
 from hashlib import sha256
+from json import dumps
 from os import getenv
 from pathlib import Path
 from uuid import uuid4
 
-from evolution_lab.repository import EvolutionLabRepository
+from evolution_lab.repository import EvolutionLabRepository, WorkflowVariantEvalRunClaim
 from shared.contracts import (
+    WORKFLOW_VARIANT_EVAL_COMPARISON_MODE,
     WORKFLOW_VARIANT_EVAL_METRICS,
+    WORKFLOW_VARIANT_EVAL_METRICS_SOURCE,
     EvolutionDecisionContract,
     EvolutionProposalContract,
     EvolutionReviewDecisionContract,
@@ -24,6 +27,7 @@ from shared.contracts import (
     PromotionGateDecisionContract,
     RecurringPatternEvidenceContract,
     ReviewedLearningGuidanceContract,
+    ReviewedProceduralPlaybookContract,
     RoutingAdaptationCandidateContract,
     SandboxToReleaseChecklistContract,
     SkillCandidateContract,
@@ -32,16 +36,23 @@ from shared.contracts import (
     SkillSandboxCaseResultContract,
     SkillSandboxEvalContract,
     TechnologyAbsorptionCandidateContract,
+    TechnologyExperimentEvalRunClaimContract,
+    TechnologyExperimentEvalRunContract,
+    TechnologyExperimentPackContract,
+    TechnologyRadarIntakeContract,
     WorkflowEvolutionBuildResultContract,
     WorkflowEvolutionRequestContract,
+    WorkflowLifecycleTransitionContract,
     WorkflowProfileVersionContract,
     WorkflowProfileVersionRegistryContract,
     WorkflowRollbackPlanContract,
     WorkflowVariantEvalCaseContract,
+    WorkflowVariantEvalCasePackContract,
     WorkflowVariantEvalCaseResultContract,
     WorkflowVariantEvalRunContract,
 )
 from shared.domain_registry import (
+    active_workflow_registry_fingerprint,
     build_active_workflow_version_registry,
     is_promoted_specialist_route,
     register_workflow_candidate_version,
@@ -50,8 +61,36 @@ from shared.domain_registry import (
 )
 from shared.eval_expansion import derive_expanded_eval_state
 from shared.optimization_state import derive_optimization_state
-from shared.technology_absorption import derive_technology_absorption_state
+from shared.technology_absorption import (
+    VALID_ABSORPTION_CLASSES,
+    derive_technology_absorption_state,
+)
+from shared.technology_experiment import (
+    require_valid_technology_experiment_eval_run,
+    require_valid_technology_experiment_pack,
+    validate_technology_experiment_eval_run_claim,
+)
+from shared.technology_radar_intake import (
+    VALID_TECHNOLOGY_SOURCE_KINDS,
+    require_valid_technology_radar_intake,
+)
 from shared.types import EvolutionDecisionId, EvolutionProposalId, RiskLevel
+from shared.versioning import parse_canonical_semver
+from shared.workflow_lifecycle import (
+    validate_workflow_lifecycle_transition,
+    workflow_lifecycle_artifact_fingerprint,
+    workflow_lifecycle_transition_fingerprint,
+)
+from shared.workflow_variant_eval import (
+    derive_workflow_variant_eval_case_checks,
+    derive_workflow_variant_eval_metric_deltas,
+    derive_workflow_variant_eval_metrics,
+    validate_workflow_variant_eval_case,
+    validate_workflow_variant_eval_case_pack,
+    validate_workflow_variant_eval_run,
+    workflow_variant_eval_case_pack_fingerprint,
+    workflow_variant_eval_control_fingerprint,
+)
 
 DEFAULT_EVOLUTION_STRATEGY = "manual_variants"
 SUPPORTED_EVOLUTION_STRATEGIES = (
@@ -262,12 +301,902 @@ class EvolutionLabService:
 
     name = "evolution-lab"
 
-    def __init__(self, database_path: str | None = None) -> None:
+    def __init__(
+        self,
+        database_path: str | None = None,
+        *,
+        read_only: bool = False,
+    ) -> None:
+        if not isinstance(read_only, bool):
+            raise TypeError("read_only must be a boolean")
         runtime_path = database_path or getenv("JARVIS_EVOLUTION_DB")
         resolved = (
             Path(runtime_path) if runtime_path else Path.cwd() / ".jarvis_runtime" / "evolution.db"
         )
-        self.repository = EvolutionLabRepository(resolved)
+        self.repository = EvolutionLabRepository(resolved, read_only=read_only)
+
+    def register_technology_radar_intake(
+        self,
+        intake: TechnologyRadarIntakeContract,
+    ) -> TechnologyRadarIntakeContract:
+        """Persist one manually reviewed, read-only technology reference."""
+
+        require_valid_technology_radar_intake(intake)
+        return self.repository.register_technology_radar_intake(intake)
+
+    def get_technology_radar_intake(
+        self,
+        *,
+        intake_id: str | None = None,
+        candidate_ref: str | None = None,
+        intake_version: str | None = None,
+    ) -> TechnologyRadarIntakeContract | None:
+        """Resolve one intake only when the supplied identity is unambiguous."""
+
+        if intake_id is None and candidate_ref is None:
+            raise ValueError(
+                "technology radar intake lookup requires intake_id or candidate_ref"
+            )
+        for field_name, value in (
+            ("intake_id", intake_id),
+            ("candidate_ref", candidate_ref),
+            ("intake_version", intake_version),
+        ):
+            if value is not None:
+                self._validate_technology_radar_value(field_name, value)
+        if (
+            intake_version is not None
+            and parse_canonical_semver(intake_version) is None
+        ):
+            raise ValueError("technology radar intake version must be canonical")
+        return self.repository.fetch_technology_radar_intake(
+            intake_id=intake_id,
+            candidate_ref=candidate_ref,
+            intake_version=intake_version,
+        )
+
+    def list_technology_radar_intakes(
+        self,
+        *,
+        source_kind: str | None = None,
+        absorption_class: str | None = None,
+        target_gap_ref: str | None = None,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> list[TechnologyRadarIntakeContract]:
+        """Return a bounded, integrity-verified page of reviewed references."""
+
+        if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 500:
+            raise ValueError("technology radar intake limit must be between 1 and 500")
+        if isinstance(offset, bool) or not isinstance(offset, int) or offset < 0:
+            raise ValueError("technology radar intake offset must be non-negative")
+        if (
+            source_kind is not None
+            and source_kind not in VALID_TECHNOLOGY_SOURCE_KINDS
+        ):
+            raise ValueError("unsupported technology radar source kind")
+        if (
+            absorption_class is not None
+            and absorption_class not in VALID_ABSORPTION_CLASSES
+        ):
+            raise ValueError("unsupported technology radar absorption class")
+        for field_name, value in (
+            ("source_kind", source_kind),
+            ("absorption_class", absorption_class),
+            ("target_gap_ref", target_gap_ref),
+        ):
+            if value is not None:
+                self._validate_technology_radar_value(field_name, value)
+        return self.repository.list_technology_radar_intakes(
+            source_kind=source_kind,
+            absorption_class=absorption_class,
+            target_gap_ref=target_gap_ref,
+            limit=limit,
+            offset=offset,
+        )
+
+    @staticmethod
+    def _validate_technology_radar_value(field_name: str, value: str) -> None:
+        max_length = (
+            500
+            if field_name in {"intake_id", "candidate_ref", "intake_version"}
+            else 1_000
+        )
+        if (
+            not isinstance(value, str)
+            or not value
+            or value != value.strip()
+            or len(value) > max_length
+        ):
+            raise ValueError(
+                f"{field_name} must be present, canonical and bounded"
+            )
+
+    def register_technology_experiment_pack(
+        self,
+        pack: TechnologyExperimentPackContract,
+    ) -> TechnologyExperimentPackContract:
+        """Append one inert sandbox pack bound to its exact reviewed intake."""
+
+        self._ensure_technology_experiment_writable()
+        intake = self.repository.fetch_technology_radar_intake(
+            intake_id=pack.intake_id,
+            candidate_ref=pack.candidate_ref,
+            intake_version=pack.intake_version,
+        )
+        if intake is None:
+            raise ValueError(
+                "technology experiment pack requires a verified radar intake"
+            )
+        require_valid_technology_experiment_pack(pack, intake=intake)
+        return self.repository.register_technology_experiment_pack(pack)
+
+    def get_technology_experiment_pack(
+        self,
+        *,
+        experiment_pack_id: str,
+        pack_version: str,
+    ) -> TechnologyExperimentPackContract | None:
+        """Resolve and integrity-check one exact experiment pack identity."""
+
+        self._validate_technology_experiment_value(
+            "experiment_pack_id", experiment_pack_id
+        )
+        self._validate_technology_experiment_version("pack_version", pack_version)
+        return self.repository.fetch_technology_experiment_pack(
+            experiment_pack_id=experiment_pack_id,
+            pack_version=pack_version,
+        )
+
+    def list_technology_experiment_packs(
+        self,
+        *,
+        intake_id: str | None = None,
+        candidate_ref: str | None = None,
+        absorption_class: str | None = None,
+        sovereign_consumer_ref: str | None = None,
+        pattern_id: str | None = None,
+        target_gap_ref: str | None = None,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> list[TechnologyExperimentPackContract]:
+        """Return verified packs after scope filtering and before bounded paging."""
+
+        self._validate_technology_experiment_page(limit=limit, offset=offset)
+        if (
+            absorption_class is not None
+            and absorption_class not in VALID_ABSORPTION_CLASSES
+        ):
+            raise ValueError("unsupported technology experiment absorption class")
+        for field_name, value in (
+            ("intake_id", intake_id),
+            ("candidate_ref", candidate_ref),
+            ("absorption_class", absorption_class),
+            ("sovereign_consumer_ref", sovereign_consumer_ref),
+            ("pattern_id", pattern_id),
+            ("target_gap_ref", target_gap_ref),
+        ):
+            if value is not None:
+                self._validate_technology_experiment_value(field_name, value)
+        return self.repository.list_technology_experiment_packs(
+            intake_id=intake_id,
+            candidate_ref=candidate_ref,
+            absorption_class=absorption_class,
+            sovereign_consumer_ref=sovereign_consumer_ref,
+            pattern_id=pattern_id,
+            target_gap_ref=target_gap_ref,
+            limit=limit,
+            offset=offset,
+        )
+
+    def claim_technology_experiment_eval_run(
+        self,
+        claim: TechnologyExperimentEvalRunClaimContract,
+    ) -> bool:
+        """Atomically reserve one run identity; an exact retry returns ``False``."""
+
+        self._ensure_technology_experiment_writable()
+        pack = self.repository.fetch_technology_experiment_pack(
+            experiment_pack_id=claim.experiment_pack_id,
+            pack_version=claim.pack_version,
+        )
+        if pack is None:
+            raise ValueError(
+                "technology experiment run claim requires a verified pack"
+            )
+        blockers = validate_technology_experiment_eval_run_claim(claim, pack=pack)
+        if blockers:
+            raise ValueError(
+                "technology experiment run claim is invalid: "
+                + "; ".join(blockers)
+            )
+        return self.repository.claim_technology_experiment_eval_run(claim)
+
+    def record_technology_experiment_eval_run(
+        self,
+        run: TechnologyExperimentEvalRunContract,
+    ) -> TechnologyExperimentEvalRunContract:
+        """Append one derived, claim-bound sandbox result without promotion effects."""
+
+        self._ensure_technology_experiment_writable()
+        pack = self.repository.fetch_technology_experiment_pack(
+            experiment_pack_id=run.experiment_pack_id,
+            pack_version=run.pack_version,
+        )
+        if pack is None:
+            raise ValueError("technology experiment eval run requires a verified pack")
+        intake = self.repository.fetch_technology_radar_intake(
+            intake_id=pack.intake_id,
+            candidate_ref=pack.candidate_ref,
+            intake_version=pack.intake_version,
+        )
+        if intake is None:
+            raise ValueError("technology experiment eval run requires a verified intake")
+        require_valid_technology_experiment_eval_run(
+            run,
+            pack=pack,
+            intake=intake,
+        )
+        return self.repository.record_technology_experiment_eval_run(run)
+
+    def get_technology_experiment_eval_run(
+        self,
+        *,
+        run_id: str,
+    ) -> TechnologyExperimentEvalRunContract | None:
+        """Resolve one hash-verified result and its immutable pack/claim chain."""
+
+        self._validate_technology_experiment_value("run_id", run_id)
+        return self.repository.fetch_technology_experiment_eval_run(run_id)
+
+    def list_technology_experiment_eval_runs(
+        self,
+        *,
+        experiment_pack_id: str | None = None,
+        pack_version: str | None = None,
+        intake_id: str | None = None,
+        candidate_ref: str | None = None,
+        pattern_id: str | None = None,
+        sovereign_consumer_ref: str | None = None,
+        status: str | None = None,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> list[TechnologyExperimentEvalRunContract]:
+        """Return verified derived results without invalid rows consuming a page."""
+
+        self._validate_technology_experiment_page(limit=limit, offset=offset)
+        if status is not None and status not in {"blocked", "passed_sandbox_only"}:
+            raise ValueError("unsupported technology experiment evaluation status")
+        for field_name, value in (
+            ("experiment_pack_id", experiment_pack_id),
+            ("intake_id", intake_id),
+            ("candidate_ref", candidate_ref),
+            ("pattern_id", pattern_id),
+            ("sovereign_consumer_ref", sovereign_consumer_ref),
+            ("status", status),
+        ):
+            if value is not None:
+                self._validate_technology_experiment_value(field_name, value)
+        if pack_version is not None:
+            self._validate_technology_experiment_version(
+                "pack_version", pack_version
+            )
+        return self.repository.list_technology_experiment_eval_runs(
+            experiment_pack_id=experiment_pack_id,
+            pack_version=pack_version,
+            intake_id=intake_id,
+            candidate_ref=candidate_ref,
+            pattern_id=pattern_id,
+            sovereign_consumer_ref=sovereign_consumer_ref,
+            status=status,
+            limit=limit,
+            offset=offset,
+        )
+
+    def _ensure_technology_experiment_writable(self) -> None:
+        if self.repository.read_only:
+            raise PermissionError("evolution lab repository is read-only")
+
+    @staticmethod
+    def _validate_technology_experiment_page(*, limit: int, offset: int) -> None:
+        if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 500:
+            raise ValueError("technology experiment limit must be between 1 and 500")
+        if isinstance(offset, bool) or not isinstance(offset, int) or offset < 0:
+            raise ValueError("technology experiment offset must be non-negative")
+
+    @staticmethod
+    def _validate_technology_experiment_version(
+        field_name: str,
+        value: str,
+    ) -> None:
+        EvolutionLabService._validate_technology_experiment_value(field_name, value)
+        if parse_canonical_semver(value) is None:
+            raise ValueError(f"technology experiment {field_name} must be canonical")
+
+    @staticmethod
+    def _validate_technology_experiment_value(field_name: str, value: str) -> None:
+        if (
+            not isinstance(value, str)
+            or not value
+            or value != value.strip()
+            or len(value) > 1_000
+        ):
+            raise ValueError(f"{field_name} must be present, canonical and bounded")
+
+    def register_workflow_variant_case_pack(
+        self,
+        case_pack: WorkflowVariantEvalCasePackContract,
+        *,
+        registry: WorkflowProfileVersionRegistryContract,
+    ) -> WorkflowVariantEvalCasePackContract:
+        """Register a pack only after binding it to an attested side registry."""
+
+        blockers = [
+            *validate_workflow_variant_eval_case_pack(case_pack),
+            *self._workflow_variant_registry_binding_blockers(
+                case_pack=case_pack,
+                registry=registry,
+            ),
+        ]
+        if blockers:
+            raise ValueError(
+                "invalid workflow variant case pack: "
+                + ",".join(self._unique_values(blockers))
+            )
+        return self.repository.register_workflow_variant_case_pack(case_pack)
+
+    def claim_workflow_variant_eval_run(
+        self,
+        *,
+        run_id: str,
+        input_fingerprint: str,
+        baseline_version_ref: str,
+        baseline_definition_hash: str,
+        candidate_version_ref: str,
+        candidate_definition_hash: str,
+        case_pack_id: str,
+        case_pack_version: str,
+        case_pack_fingerprint: str,
+        control_fingerprint: str,
+        claimed_at: str,
+    ) -> bool:
+        """Atomically bind a run id to one exact pack, pair and control snapshot."""
+
+        for field_name, value in (
+            ("run_id", run_id),
+            ("input_fingerprint", input_fingerprint),
+            ("baseline_version_ref", baseline_version_ref),
+            ("baseline_definition_hash", baseline_definition_hash),
+            ("candidate_version_ref", candidate_version_ref),
+            ("candidate_definition_hash", candidate_definition_hash),
+            ("case_pack_id", case_pack_id),
+            ("case_pack_version", case_pack_version),
+            ("case_pack_fingerprint", case_pack_fingerprint),
+            ("control_fingerprint", control_fingerprint),
+            ("claimed_at", claimed_at),
+        ):
+            self._validate_workflow_eval_identity(field_name, value)
+        case_pack = self.repository.fetch_workflow_variant_case_pack(
+            case_pack_id=case_pack_id,
+            case_pack_version=case_pack_version,
+        )
+        if case_pack is None:
+            raise ValueError("workflow variant evaluation case pack is not registered")
+        expected_pack_fingerprint = workflow_variant_eval_case_pack_fingerprint(
+            case_pack
+        )
+        expected_input_fingerprint = self.workflow_variant_eval_input_fingerprint(
+            case_pack
+        )
+        expected_control_fingerprint = self.workflow_variant_eval_control_fingerprint(
+            case_pack
+        )
+        expected_baseline_hash, expected_candidate_hash = (
+            self._workflow_variant_definition_hash_pair(case_pack)
+        )
+        if (
+            case_pack.baseline_version_ref != baseline_version_ref
+            or case_pack.candidate_version_ref != candidate_version_ref
+            or expected_pack_fingerprint != case_pack_fingerprint
+            or expected_input_fingerprint != input_fingerprint
+            or expected_control_fingerprint != control_fingerprint
+            or expected_baseline_hash != baseline_definition_hash
+            or expected_candidate_hash != candidate_definition_hash
+        ):
+            raise ValueError(
+                "workflow variant evaluation claim does not match its case pack"
+            )
+        return self.repository.claim_workflow_variant_eval_run(
+            WorkflowVariantEvalRunClaim(
+                run_id=run_id,
+                input_fingerprint=input_fingerprint,
+                baseline_version_ref=baseline_version_ref,
+                baseline_definition_hash=baseline_definition_hash,
+                candidate_version_ref=candidate_version_ref,
+                candidate_definition_hash=candidate_definition_hash,
+                case_pack_id=case_pack_id,
+                case_pack_version=case_pack_version,
+                case_pack_fingerprint=case_pack_fingerprint,
+                control_fingerprint=control_fingerprint,
+                claimed_at=claimed_at,
+            )
+        )
+
+    def record_workflow_variant_eval_run(
+        self,
+        run: WorkflowVariantEvalRunContract,
+    ) -> WorkflowVariantEvalRunContract:
+        """Persist a validated run only when it matches its immutable claim."""
+
+        case_pack = self.repository.fetch_workflow_variant_case_pack(
+            case_pack_id=run.case_pack_id,
+            case_pack_version=run.case_pack_version,
+        )
+        if case_pack is None:
+            raise ValueError("workflow variant evaluation case pack is not registered")
+        blockers = validate_workflow_variant_eval_run(run, case_pack=case_pack)
+        if blockers:
+            raise ValueError(
+                "invalid workflow variant evaluation run: " + ",".join(blockers)
+            )
+        claim = self.repository.fetch_workflow_variant_eval_run_claim(run.run_id)
+        if claim is None:
+            raise ValueError("workflow variant evaluation run requires an existing claim")
+        expected_baseline_hash, expected_candidate_hash = (
+            self._workflow_variant_definition_hash_pair(case_pack)
+        )
+        if (
+            claim.case_pack_id != run.case_pack_id
+            or claim.case_pack_version != run.case_pack_version
+            or claim.case_pack_fingerprint != run.case_pack_fingerprint
+            or claim.case_pack_fingerprint
+            != workflow_variant_eval_case_pack_fingerprint(case_pack)
+            or claim.input_fingerprint
+            != self.workflow_variant_eval_input_fingerprint(case_pack)
+            or claim.control_fingerprint
+            != self.workflow_variant_eval_control_fingerprint(case_pack)
+            or claim.baseline_version_ref != run.baseline_version_ref
+            or claim.candidate_version_ref != run.candidate_version_ref
+            or claim.baseline_definition_hash != expected_baseline_hash
+            or claim.candidate_definition_hash != expected_candidate_hash
+            or set(run.baseline_definition_hashes) != {expected_baseline_hash}
+            or set(run.candidate_definition_hashes) != {expected_candidate_hash}
+        ):
+            raise ValueError(
+                "workflow variant evaluation run does not match its immutable claim"
+            )
+        return self.repository.record_workflow_variant_eval_run(run)
+
+    def get_workflow_variant_eval_run(
+        self,
+        run_id: str,
+    ) -> WorkflowVariantEvalRunContract | None:
+        self._validate_workflow_eval_identity("run_id", run_id)
+        return self.repository.fetch_workflow_variant_eval_run(run_id)
+
+    def list_workflow_variant_eval_runs(
+        self,
+        *,
+        workflow_profile: str | None = None,
+        route: str | None = None,
+        baseline_version_ref: str | None = None,
+        candidate_version_ref: str | None = None,
+        case_pack_id: str | None = None,
+        case_pack_version: str | None = None,
+        generated_from: str | None = None,
+        generated_to: str | None = None,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> list[WorkflowVariantEvalRunContract]:
+        """Return a bounded, integrity-verified page after applying scope filters."""
+
+        if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 500:
+            raise ValueError("workflow variant evaluation limit must be between 1 and 500")
+        if isinstance(offset, bool) or not isinstance(offset, int) or offset < 0:
+            raise ValueError("workflow variant evaluation offset must be non-negative")
+        for field_name, value in (
+            ("workflow_profile", workflow_profile),
+            ("route", route),
+            ("baseline_version_ref", baseline_version_ref),
+            ("candidate_version_ref", candidate_version_ref),
+            ("case_pack_id", case_pack_id),
+            ("case_pack_version", case_pack_version),
+            ("generated_from", generated_from),
+            ("generated_to", generated_to),
+        ):
+            if value is not None:
+                self._validate_workflow_eval_identity(field_name, value)
+        return self.repository.list_workflow_variant_eval_runs(
+            workflow_profile=workflow_profile,
+            route=route,
+            baseline_version_ref=baseline_version_ref,
+            candidate_version_ref=candidate_version_ref,
+            case_pack_id=case_pack_id,
+            case_pack_version=case_pack_version,
+            generated_from=generated_from,
+            generated_to=generated_to,
+            limit=limit,
+            offset=offset,
+        )
+
+    @staticmethod
+    def workflow_variant_eval_input_fingerprint(
+        case_pack: WorkflowVariantEvalCasePackContract,
+    ) -> str:
+        """Fingerprint the ordered immutable case inputs claimed by one run."""
+
+        payload = dumps(
+            [
+                {
+                    "case_id": case.case_id,
+                    "case_version": case.case_version,
+                    "input_snapshot_fingerprint": case.input_snapshot_fingerprint,
+                }
+                for case in case_pack.cases
+            ],
+            ensure_ascii=False,
+            allow_nan=False,
+            separators=(",", ":"),
+            sort_keys=True,
+        )
+        return sha256(payload.encode("utf-8")).hexdigest()
+
+    @staticmethod
+    def workflow_variant_eval_control_fingerprint(
+        case_pack: WorkflowVariantEvalCasePackContract,
+    ) -> str:
+        payload = dumps(
+            [
+                {
+                    "case_id": case.case_id,
+                    "case_version": case.case_version,
+                    "control_fingerprint": workflow_variant_eval_control_fingerprint(
+                        case.control_snapshot
+                    ),
+                }
+                for case in case_pack.cases
+            ],
+            ensure_ascii=False,
+            allow_nan=False,
+            separators=(",", ":"),
+            sort_keys=True,
+        )
+        return sha256(payload.encode("utf-8")).hexdigest()
+
+    @staticmethod
+    def _workflow_variant_definition_hash_pair(
+        case_pack: WorkflowVariantEvalCasePackContract,
+    ) -> tuple[str, str]:
+        baseline_hashes = {
+            case.baseline_observation.definition_hash for case in case_pack.cases
+        }
+        candidate_hashes = {
+            case.candidate_observation.definition_hash for case in case_pack.cases
+        }
+        if len(baseline_hashes) != 1 or len(candidate_hashes) != 1:
+            raise ValueError(
+                "workflow variant case pack requires one definition hash per arm"
+            )
+        return baseline_hashes.pop(), candidate_hashes.pop()
+
+    @staticmethod
+    def _validate_workflow_eval_identity(field_name: str, value: str) -> None:
+        if (
+            not isinstance(value, str)
+            or not value
+            or value != value.strip()
+            or len(value) > 500
+        ):
+            raise ValueError(f"{field_name} must be present, canonical and bounded")
+
+    @classmethod
+    def _workflow_variant_registry_binding_blockers(
+        cls,
+        *,
+        case_pack: WorkflowVariantEvalCasePackContract,
+        registry: WorkflowProfileVersionRegistryContract,
+    ) -> list[str]:
+        """Bind a stored pack to one current, read-only baseline/candidate registry."""
+
+        blockers: list[str] = []
+        current_fingerprint = active_workflow_registry_fingerprint()
+        if registry.registry_status != "candidate_registered_inactive":
+            blockers.append("workflow_eval_candidate_registry_required")
+        if registry.active_registry_fingerprint != current_fingerprint:
+            blockers.append("workflow_eval_active_registry_drift")
+        if registry.blockers:
+            blockers.append("workflow_eval_registry_has_blockers")
+        if (
+            not registry.read_only
+            or not registry.human_review_required
+            or registry.active_registry_mutation_allowed
+            or registry.runtime_activation_allowed
+            or registry.automatic_promotion_allowed
+            or registry.core_mutation_allowed
+        ):
+            blockers.append("workflow_eval_registry_authority_invalid")
+        baseline_versions = [
+            version
+            for version in registry.versions
+            if version.workflow_version_id == case_pack.baseline_version_ref
+        ]
+        candidate_versions = [
+            version
+            for version in registry.versions
+            if version.workflow_version_id == case_pack.candidate_version_ref
+        ]
+        if len(baseline_versions) != 1:
+            blockers.append("workflow_eval_registry_baseline_identity_invalid")
+        if len(candidate_versions) != 1:
+            blockers.append("workflow_eval_registry_candidate_identity_invalid")
+        identities = [version.workflow_version_id for version in registry.versions]
+        profile_versions = [
+            (version.workflow_profile, version.version)
+            for version in registry.versions
+        ]
+        baseline_count = sum(
+            version.lifecycle_status == "baseline_snapshot"
+            for version in registry.versions
+        )
+        candidate_count = sum(
+            version.lifecycle_status == "candidate_inactive"
+            for version in registry.versions
+        )
+        if (
+            len(identities) != len(set(identities))
+            or len(profile_versions) != len(set(profile_versions))
+            or registry.baseline_count != baseline_count
+            or registry.candidate_count != candidate_count
+            or registry.workflow_count != baseline_count
+        ):
+            blockers.append("workflow_eval_registry_cardinality_invalid")
+        expected_registry_evidence = {
+            registry.active_registry_ref,
+            f"domain-registry-fingerprint://{current_fingerprint}",
+        }
+        if not expected_registry_evidence.issubset(registry.evidence_refs):
+            blockers.append("workflow_eval_registry_evidence_invalid")
+        if not baseline_versions or not candidate_versions:
+            return cls._unique_values(blockers)
+
+        baseline = baseline_versions[0]
+        candidate = candidate_versions[0]
+        if not set(candidate.evidence_refs).issubset(registry.evidence_refs):
+            blockers.append("workflow_eval_candidate_registry_evidence_mismatch")
+        blockers.extend(cls._canonical_workflow_baseline_blockers(baseline))
+        blockers.extend(
+            cls._workflow_variant_candidate_blockers(
+                baseline=baseline,
+                candidate=candidate,
+                active_registry_ref=registry.active_registry_ref,
+                active_registry_fingerprint=registry.active_registry_fingerprint,
+            )
+        )
+        if (
+            case_pack.workflow_profile != baseline.workflow_profile
+            or case_pack.workflow_profile != candidate.workflow_profile
+            or case_pack.route != baseline.route
+            or case_pack.route != candidate.route
+            or candidate.baseline_version_ref != baseline.workflow_version_id
+        ):
+            blockers.append("workflow_eval_pack_registry_scope_mismatch")
+        for case in case_pack.cases:
+            if not cls._workflow_eval_observation_matches_version(
+                case.baseline_observation,
+                baseline,
+            ):
+                blockers.append(
+                    f"case:{case.case_id}:baseline_registry_definition_mismatch"
+                )
+            if not cls._workflow_eval_observation_matches_version(
+                case.candidate_observation,
+                candidate,
+            ):
+                blockers.append(
+                    f"case:{case.case_id}:candidate_registry_definition_mismatch"
+                )
+            if (
+                case.control_snapshot.workflow_policy_source_registry_ref
+                != registry.active_registry_ref
+                or case.control_snapshot.workflow_policy_source_registry_fingerprint
+                != registry.active_registry_fingerprint
+            ):
+                blockers.append(
+                    f"case:{case.case_id}:control_registry_provenance_mismatch"
+                )
+        return cls._unique_values(blockers)
+
+    @staticmethod
+    def _workflow_eval_observation_matches_version(
+        observation: object,
+        version: WorkflowProfileVersionContract,
+    ) -> bool:
+        return bool(
+            getattr(observation, "workflow_version_ref", None)
+            == version.workflow_version_id
+            and getattr(observation, "definition_hash", None)
+            == version.definition_hash
+            and getattr(observation, "expected_workflow_steps", None)
+            == version.workflow_steps
+            and getattr(observation, "expected_checkpoint_refs", None)
+            == version.workflow_checkpoints
+            and getattr(observation, "expected_decision_points", None)
+            == version.workflow_decision_points
+            and getattr(observation, "expected_success_criteria", None)
+            == version.success_criteria
+        )
+
+    @staticmethod
+    def _canonical_workflow_baseline_blockers(
+        baseline: WorkflowProfileVersionContract,
+    ) -> list[str]:
+        blockers: list[str] = []
+        current_fingerprint = active_workflow_registry_fingerprint()
+        expected_hash = workflow_definition_hash(
+            workflow_steps=baseline.workflow_steps,
+            workflow_checkpoints=baseline.workflow_checkpoints,
+            workflow_decision_points=baseline.workflow_decision_points,
+            success_criteria=baseline.success_criteria,
+        )
+        if baseline.definition_hash != expected_hash:
+            blockers.append("workflow_eval_baseline_definition_hash_invalid")
+        if (
+            baseline.lifecycle_status != "baseline_snapshot"
+            or baseline.review_status != "not_applicable"
+            or baseline.runtime_binding_status != "observed_active_baseline"
+            or baseline.blockers
+            or baseline.human_review_required
+            or baseline.sandbox_required
+            or baseline.active_registry_write_allowed
+            or baseline.runtime_activation_allowed
+            or baseline.automatic_promotion_allowed
+            or baseline.core_mutation_allowed
+        ):
+            blockers.append("workflow_eval_baseline_state_invalid")
+        if baseline.source_registry_fingerprint != current_fingerprint:
+            blockers.append("workflow_eval_baseline_registry_drift")
+        if parse_canonical_semver(baseline.version) is None:
+            blockers.append("workflow_eval_baseline_version_invalid")
+            return blockers
+        try:
+            canonical_registry = build_active_workflow_version_registry(
+                registry_version=baseline.version,
+                generated_at=str(baseline.timestamp),
+                rollback_plan_ref=baseline.rollback_plan_ref,
+            )
+        except ValueError:
+            blockers.append("workflow_eval_canonical_baseline_unavailable")
+            return blockers
+        canonical_matches = [
+            version
+            for version in canonical_registry.versions
+            if version.workflow_profile == baseline.workflow_profile
+            and version.route == baseline.route
+        ]
+        if len(canonical_matches) != 1:
+            blockers.append("workflow_eval_canonical_baseline_not_registered")
+            return blockers
+        canonical = canonical_matches[0]
+        critical_snapshot = (
+            baseline.workflow_version_id,
+            baseline.workflow_profile,
+            baseline.version,
+            baseline.route,
+            baseline.definition_hash,
+            baseline.workflow_steps,
+            baseline.workflow_checkpoints,
+            baseline.workflow_decision_points,
+            baseline.success_criteria,
+            baseline.source_registry_ref,
+            baseline.source_registry_fingerprint,
+        )
+        canonical_snapshot = (
+            canonical.workflow_version_id,
+            canonical.workflow_profile,
+            canonical.version,
+            canonical.route,
+            canonical.definition_hash,
+            canonical.workflow_steps,
+            canonical.workflow_checkpoints,
+            canonical.workflow_decision_points,
+            canonical.success_criteria,
+            canonical.source_registry_ref,
+            canonical.source_registry_fingerprint,
+        )
+        if critical_snapshot != canonical_snapshot:
+            blockers.append("workflow_eval_baseline_not_canonical")
+        return blockers
+
+    @staticmethod
+    def _workflow_variant_candidate_blockers(
+        *,
+        baseline: WorkflowProfileVersionContract,
+        candidate: WorkflowProfileVersionContract,
+        active_registry_ref: str,
+        active_registry_fingerprint: str,
+    ) -> list[str]:
+        blockers: list[str] = []
+        expected_identity = (
+            f"workflow-version://{candidate.workflow_profile}/{candidate.version}"
+        )
+        expected_hash = workflow_definition_hash(
+            workflow_steps=candidate.workflow_steps,
+            workflow_checkpoints=candidate.workflow_checkpoints,
+            workflow_decision_points=candidate.workflow_decision_points,
+            success_criteria=candidate.success_criteria,
+        )
+        baseline_semver = parse_canonical_semver(baseline.version)
+        candidate_semver = parse_canonical_semver(candidate.version)
+        if (
+            candidate.workflow_version_id != expected_identity
+            or candidate.definition_hash != expected_hash
+            or candidate.definition_hash == baseline.definition_hash
+            or candidate_semver is None
+            or baseline_semver is None
+            or candidate_semver <= baseline_semver
+        ):
+            blockers.append("workflow_eval_candidate_identity_invalid")
+        if (
+            candidate.workflow_profile != baseline.workflow_profile
+            or candidate.route != baseline.route
+            or candidate.baseline_version_ref != baseline.workflow_version_id
+        ):
+            blockers.append("workflow_eval_candidate_baseline_mismatch")
+        if (
+            candidate.source_registry_ref != active_registry_ref
+            or candidate.source_registry_ref != baseline.source_registry_ref
+            or candidate.source_registry_fingerprint != active_registry_fingerprint
+            or candidate.source_registry_fingerprint
+            != baseline.source_registry_fingerprint
+        ):
+            blockers.append("workflow_eval_candidate_registry_provenance_invalid")
+        if (
+            candidate.lifecycle_status != "candidate_inactive"
+            or candidate.review_status != "needs_review"
+            or candidate.runtime_binding_status != "inactive_candidate"
+            or not candidate.human_review_required
+            or not candidate.sandbox_required
+            or candidate.blockers
+            or candidate.active_registry_write_allowed
+            or candidate.runtime_activation_allowed
+            or candidate.automatic_promotion_allowed
+            or candidate.core_mutation_allowed
+        ):
+            blockers.append("workflow_eval_candidate_state_invalid")
+        if candidate.risk_level not in {"low", "moderate"}:
+            blockers.append("workflow_eval_candidate_risk_invalid")
+        for field_name, values in (
+            ("workflow_steps", candidate.workflow_steps),
+            ("workflow_checkpoints", candidate.workflow_checkpoints),
+            ("workflow_decision_points", candidate.workflow_decision_points),
+            ("success_criteria", candidate.success_criteria),
+            ("evidence_refs", candidate.evidence_refs),
+            ("proposed_tests", candidate.proposed_tests),
+        ):
+            if (
+                not values
+                or len(values) > 50
+                or any(not value.strip() or len(value) > 500 for value in values)
+            ):
+                blockers.append(f"workflow_eval_candidate_{field_name}_invalid")
+        if (
+            not candidate.rollback_plan_ref
+            or len(candidate.rollback_plan_ref) > 500
+            or not candidate.change_summary
+            or len(candidate.change_summary) > 500
+            or not candidate.timestamp
+            or len(str(candidate.timestamp)) > 100
+        ):
+            blockers.append("workflow_eval_candidate_evidence_metadata_invalid")
+        if not any(
+            reference.startswith("recurring-pattern://")
+            for reference in candidate.evidence_refs
+        ) or not any(
+            reference.startswith("review-decision://")
+            for reference in candidate.evidence_refs
+        ):
+            blockers.append("workflow_eval_candidate_reviewed_pattern_evidence_invalid")
+        return blockers
 
     def create_proposal(
         self,
@@ -1682,9 +2611,23 @@ class EvolutionLabService:
                 "procedural_playbook_candidate": {
                     "playbook_candidate_id": candidate.playbook_candidate_id,
                     "procedure_name": candidate.procedure_name,
+                    "workflow_profile": candidate.workflow_profile,
+                    "route": candidate.route,
+                    "domain": candidate.domain,
                     "bounded_steps": bounded_steps,
+                    "evidence_refs": list(candidate.evidence_refs),
+                    "source_artifact_refs": list(candidate.source_artifact_refs),
+                    "source_reflection_refs": list(candidate.source_reflection_refs),
+                    "proposed_tests": list(candidate.proposed_tests),
                     "rollback_plan_ref": candidate.rollback_plan_ref,
+                    "risk_hint": candidate.risk_hint,
+                    "review_status": candidate.review_status,
+                    "human_review_required": candidate.human_review_required,
                     "memory_write_mode": candidate.memory_write_mode,
+                    "automatic_promotion_allowed": (
+                        candidate.automatic_promotion_allowed
+                    ),
+                    "core_mutation_allowed": candidate.core_mutation_allowed,
                 },
                 "promotion_policy": {
                     "automatic_promotion": False,
@@ -1703,6 +2646,274 @@ class EvolutionLabService:
                 "blocked_by_safety" if blockers else "sandbox_only"
             ),
             optimization_blockers=self._unique_values(blockers),
+        )
+
+    def derive_reviewed_procedural_playbook(
+        self,
+        candidate: ProceduralPlaybookCandidateContract,
+        decision: EvolutionReviewDecisionContract,
+        *,
+        version: str,
+        release_checklist: SandboxToReleaseChecklistContract,
+        promotion_gate: PromotionGateDecisionContract,
+    ) -> ReviewedProceduralPlaybookContract:
+        """Derive versioned read-only guidance from an approved human review."""
+
+        if parse_canonical_semver(version) is None:
+            raise ValueError("reviewed procedural playbook requires numeric semver")
+        if decision.candidate_version != version:
+            raise ValueError(
+                "reviewed procedural playbook version requires a new human review"
+            )
+        if decision.review_status != "approved" or decision.decision != "approve":
+            raise ValueError("runtime procedural playbook requires approved review")
+        if decision.automatic_promotion_allowed or decision.core_mutation_allowed:
+            raise ValueError("review decision cannot authorize autonomous mutation")
+        proposal = self.repository.fetch_proposal(str(decision.evolution_proposal_id))
+        if proposal is None or proposal.proposal_type != "procedural_playbook_candidate":
+            raise ValueError("review decision requires a procedural playbook proposal")
+        persisted_review_blockers = self._persisted_playbook_review_blockers(
+            proposal=proposal,
+            candidate=candidate,
+            decision=decision,
+        )
+        if persisted_review_blockers:
+            raise ValueError(
+                "reviewed procedural playbook is not bound to persisted review: "
+                + ",".join(persisted_review_blockers)
+            )
+        release_blockers = self._procedural_playbook_release_blockers(
+            proposal=proposal,
+            candidate=candidate,
+            decision=decision,
+            version=version,
+            release_checklist=release_checklist,
+            promotion_gate=promotion_gate,
+        )
+        if release_blockers:
+            raise ValueError(
+                "reviewed procedural playbook release gate is not satisfied: "
+                + ",".join(release_blockers)
+            )
+        if candidate.blockers:
+            raise ValueError("blocked procedural playbook cannot become runtime guidance")
+        if (
+            not candidate.human_review_required
+            or candidate.automatic_promotion_allowed
+            or candidate.core_mutation_allowed
+            or candidate.memory_write_mode != "through_core_only"
+        ):
+            raise ValueError("procedural playbook candidate cannot claim authority")
+        if not all((candidate.route, candidate.domain, candidate.rollback_plan_ref)):
+            raise ValueError("reviewed procedural playbook requires complete scope and rollback")
+        if (
+            not candidate.evidence_refs
+            or len(candidate.evidence_refs) > 20
+            or any(
+                not str(ref).strip() or len(str(ref)) > 240
+                for ref in candidate.evidence_refs
+            )
+        ):
+            raise ValueError("reviewed procedural playbook evidence must be bounded")
+        if (
+            not candidate.bounded_steps
+            or len(candidate.bounded_steps) > 8
+            or any(
+                not str(step).strip() or len(str(step)) > 500
+                for step in candidate.bounded_steps
+            )
+        ):
+            raise ValueError("reviewed procedural playbook steps must be bounded")
+        if (
+            not decision.evidence_refs
+            or not decision.proposed_tests
+            or any(
+                not str(value).strip() or len(str(value)) > 500
+                for value in [*decision.evidence_refs, *decision.proposed_tests]
+            )
+        ):
+            raise ValueError("approved playbook requires review evidence and tests")
+        rollback_plan_ref = decision.rollback_plan_ref or candidate.rollback_plan_ref
+        if not rollback_plan_ref:
+            raise ValueError("approved playbook requires rollback evidence")
+        safe_candidate = self._signal_value(candidate.playbook_candidate_id)
+        released_at = self.now()
+        release_context = dict(proposal.strategy_context)
+        release_context["procedural_playbook_release"] = {
+            "playbook_id": f"reviewed-playbook://{safe_candidate}",
+            "source_candidate_id": candidate.playbook_candidate_id,
+            "source_review_decision_id": decision.review_decision_id,
+            "version": version,
+            "checklist_id": release_checklist.checklist_id,
+            "promotion_gate_id": promotion_gate.promotion_gate_id,
+            "gate_status": promotion_gate.gate_status,
+            "completed_gates": list(promotion_gate.completed_gates),
+            "released_at": released_at,
+            "runtime_activation_allowed": False,
+            "execution_allowed": False,
+            "tool_dispatch_allowed": False,
+            "automatic_promotion_allowed": False,
+            "core_mutation_allowed": False,
+        }
+        self.repository.record_proposal(
+            replace(proposal, strategy_context=release_context)
+        )
+        return ReviewedProceduralPlaybookContract(
+            playbook_id=f"reviewed-playbook://{safe_candidate}",
+            version=version,
+            source_candidate_id=candidate.playbook_candidate_id,
+            source_review_decision_id=decision.review_decision_id,
+            evolution_proposal_id=proposal.evolution_proposal_id,
+            review_status="approved",
+            procedure_name=candidate.procedure_name,
+            route=str(candidate.route),
+            workflow_profile=candidate.workflow_profile,
+            domain=str(candidate.domain),
+            bounded_steps=self._unique_values(candidate.bounded_steps)[:8],
+            allowed_usage=["planning_context"],
+            evidence_refs=self._unique_values(
+                [
+                    decision.review_decision_id,
+                    release_checklist.checklist_id,
+                    promotion_gate.promotion_gate_id,
+                    *candidate.evidence_refs,
+                    *decision.evidence_refs,
+                    *proposal.baseline_refs,
+                ]
+            )[:20],
+            rollback_plan_ref=rollback_plan_ref,
+            timestamp=released_at,
+        )
+
+    def verify_persisted_reviewed_procedural_playbook(
+        self,
+        playbook: ReviewedProceduralPlaybookContract,
+    ) -> bool:
+        """Verify that guidance came from this lab's persisted review and gate."""
+
+        proposal = self.repository.fetch_proposal(
+            str(playbook.evolution_proposal_id)
+        )
+        if proposal is None or proposal.proposal_type != "procedural_playbook_candidate":
+            return False
+        candidate = dict(
+            proposal.strategy_context.get("procedural_playbook_candidate", {})
+        )
+        review = dict(proposal.strategy_context.get("evolution_review", {}))
+        history = list(review.get("review_history", []))
+        latest_review = dict(history[-1]) if history else {}
+        release = dict(
+            proposal.strategy_context.get("procedural_playbook_release", {})
+        )
+        expected_playbook_id = (
+            "reviewed-playbook://"
+            f"{self._signal_value(playbook.source_candidate_id)}"
+        )
+        base_expected_evidence = self._unique_values(
+            [
+                playbook.source_review_decision_id,
+                str(release.get("checklist_id") or ""),
+                str(release.get("promotion_gate_id") or ""),
+                *list(candidate.get("evidence_refs", [])),
+                *list(latest_review.get("evidence_refs", [])),
+                *proposal.baseline_refs,
+            ]
+        )[:20]
+        release_timestamp = str(release.get("released_at") or "")
+        try:
+            parsed_release_timestamp = datetime.fromisoformat(release_timestamp)
+        except ValueError:
+            canonical_release_timestamp = False
+        else:
+            offset = parsed_release_timestamp.utcoffset()
+            canonical_release_timestamp = bool(
+                parsed_release_timestamp.tzinfo is not None
+                and offset is not None
+                and offset.total_seconds() == 0
+                and parsed_release_timestamp.isoformat() == release_timestamp
+                and len(release_timestamp) <= 100
+            )
+        if playbook.review_status == "approved":
+            lifecycle_is_valid = (
+                playbook.revoked_at is None and playbook.revocation_ref is None
+            )
+            expected_evidence = base_expected_evidence
+        elif playbook.review_status == "revoked":
+            lifecycle_is_valid = bool(
+                playbook.revoked_at
+                and len(playbook.revoked_at) <= 100
+                and playbook.revocation_ref
+                and len(playbook.revocation_ref) <= 240
+            )
+            expected_evidence = self._unique_values(
+                [
+                    str(playbook.revocation_ref or ""),
+                    *base_expected_evidence,
+                ]
+            )[:20]
+        else:
+            lifecycle_is_valid = False
+            expected_evidence = []
+        return bool(
+            proposal.candidate_refs == [playbook.source_candidate_id]
+            and candidate.get("playbook_candidate_id")
+            == playbook.source_candidate_id
+            and candidate.get("procedure_name") == playbook.procedure_name
+            and candidate.get("workflow_profile") == playbook.workflow_profile
+            and candidate.get("route") == playbook.route
+            and candidate.get("domain") == playbook.domain
+            and list(candidate.get("bounded_steps", []))
+            == list(playbook.bounded_steps)
+            and candidate.get("rollback_plan_ref") == playbook.rollback_plan_ref
+            and not candidate.get("automatic_promotion_allowed")
+            and not candidate.get("core_mutation_allowed")
+            and candidate.get("memory_write_mode") == "through_core_only"
+            and review.get("last_review_decision_id")
+            == playbook.source_review_decision_id
+            and review.get("review_status") == "approved"
+            and review.get("last_decision") == "approve"
+            and review.get("candidate_identity_ref")
+            == playbook.source_candidate_id
+            and review.get("candidate_version") == playbook.version
+            and not review.get("blockers")
+            and latest_review.get("review_decision_id")
+            == playbook.source_review_decision_id
+            and latest_review.get("candidate_version") == playbook.version
+            and bool(latest_review.get("evidence_refs"))
+            and bool(latest_review.get("proposed_tests"))
+            and latest_review.get("rollback_plan_ref")
+            == playbook.rollback_plan_ref
+            and not latest_review.get("automatic_promotion_allowed")
+            and not latest_review.get("core_mutation_allowed")
+            and release.get("playbook_id") == expected_playbook_id
+            and release.get("source_candidate_id") == playbook.source_candidate_id
+            and release.get("source_review_decision_id")
+            == playbook.source_review_decision_id
+            and release.get("version") == playbook.version
+            and release_timestamp == playbook.timestamp
+            and canonical_release_timestamp
+            and release.get("gate_status") == "passed"
+            and {
+                "standard_engineering_gate",
+                "release_gate_before_promotion",
+            }.issubset(set(release.get("completed_gates", [])))
+            and not release.get("runtime_activation_allowed")
+            and not release.get("execution_allowed")
+            and not release.get("tool_dispatch_allowed")
+            and not release.get("automatic_promotion_allowed")
+            and not release.get("core_mutation_allowed")
+            and playbook.playbook_id == expected_playbook_id
+            and lifecycle_is_valid
+            and list(playbook.evidence_refs) == expected_evidence
+            and list(playbook.allowed_usage) == ["planning_context"]
+            and playbook.read_only
+            and playbook.human_review_required
+            and not playbook.execution_allowed
+            and not playbook.tool_dispatch_allowed
+            and playbook.memory_write_mode == "read_only"
+            and not playbook.automatic_promotion_allowed
+            and not playbook.core_mutation_allowed
+            and not proposal.optimization_blockers
         )
 
     def compare_flow_evaluations(
@@ -1774,6 +2985,7 @@ class EvolutionLabService:
         rollback_plan_ref: str | None = None,
         risk_acceptance: str | None = None,
         review_notes: list[str] | None = None,
+        release_version: str | None = None,
     ) -> EvolutionReviewDecisionContract:
         """Record a human review decision without automatic promotion."""
 
@@ -1783,6 +2995,13 @@ class EvolutionLabService:
         normalized_action = action.replace("-", "_")
         if normalized_action not in EVOLUTION_REVIEW_ACTIONS:
             raise ValueError(f"unsupported evolution review action: {action}")
+        if (
+            not isinstance(operator_ref, str)
+            or not operator_ref.strip()
+            or len(operator_ref.strip()) > 500
+        ):
+            raise ValueError("evolution review requires a bounded operator_ref")
+        safe_operator_ref = operator_ref.strip()
 
         safe_evidence_refs = self._unique_values(list(evidence_refs or []))
         safe_tests = self._unique_values(list(proposed_tests or proposal.proposed_tests))
@@ -1794,6 +3013,18 @@ class EvolutionLabService:
             proposed_tests=safe_tests,
             rollback_plan_ref=safe_rollback_ref,
         )
+        safe_release_version = (
+            release_version
+            if release_version is not None
+            and parse_canonical_semver(release_version) is not None
+            else None
+        )
+        if (
+            proposal.proposal_type == "procedural_playbook_candidate"
+            and normalized_action in RISKY_REVIEW_ACTIONS
+            and safe_release_version is None
+        ):
+            blockers.append("playbook_release_version_required")
         review_status = (
             "needs_review"
             if blockers and normalized_action in RISKY_REVIEW_ACTIONS
@@ -1802,6 +3033,11 @@ class EvolutionLabService:
         candidate_identity_ref, candidate_version = self._proposal_candidate_metadata(
             proposal
         )
+        if proposal.proposal_type == "procedural_playbook_candidate":
+            candidate_identity_ref = (
+                proposal.candidate_refs[0] if proposal.candidate_refs else None
+            )
+            candidate_version = safe_release_version
         decision = EvolutionReviewDecisionContract(
             review_decision_id=(
                 f"review-decision://{proposal.evolution_proposal_id}/{uuid4().hex[:8]}"
@@ -1809,7 +3045,7 @@ class EvolutionLabService:
             evolution_proposal_id=proposal.evolution_proposal_id,
             review_status=review_status,
             decision=normalized_action,
-            operator_ref=operator_ref,
+            operator_ref=safe_operator_ref,
             evidence_refs=safe_evidence_refs,
             proposed_tests=safe_tests,
             rollback_plan_ref=safe_rollback_ref,
@@ -1894,6 +3130,7 @@ class EvolutionLabService:
         workflow_candidate: WorkflowProfileVersionContract | None = None,
         workflow_variant_eval: WorkflowVariantEvalRunContract | None = None,
         workflow_rollback_plan: WorkflowRollbackPlanContract | None = None,
+        prefer_persisted_proposal: bool = True,
     ) -> SandboxToReleaseChecklistContract:
         """Build an executable checklist without authorizing promotion."""
 
@@ -1913,6 +3150,13 @@ class EvolutionLabService:
             or workflow_rollback_plan is not None
         ) and proposal.proposal_type != "workflow_candidate":
             raise ValueError("workflow release evidence requires a workflow proposal")
+        persisted_proposal = (
+            self.repository.fetch_proposal(str(proposal.evolution_proposal_id))
+            if prefer_persisted_proposal
+            else proposal
+        )
+        proposal = persisted_proposal or proposal
+        release_proposal = proposal
         review_context = dict(proposal.strategy_context.get("evolution_review", {}))
         human_review_status = (
             review_decision.review_status
@@ -1990,7 +3234,7 @@ class EvolutionLabService:
         if proposal.proposal_type == "skill_candidate":
             candidate_type = "skill_candidate"
             candidate_identity_ref, candidate_version = (
-                self._proposal_candidate_metadata(proposal)
+                self._proposal_candidate_metadata(release_proposal)
             )
             required_gates.append("skill_sandbox_eval")
             if not candidate_identity_ref or not candidate_version:
@@ -2040,9 +3284,6 @@ class EvolutionLabService:
             ):
                 blockers.append("workflow_review_metadata_mismatch")
             else:
-                persisted_proposal = self.repository.fetch_proposal(
-                    str(proposal.evolution_proposal_id)
-                )
                 if persisted_proposal is None:
                     blockers.append("persisted_workflow_candidate_proposal_required")
                 else:
@@ -2056,6 +3297,16 @@ class EvolutionLabService:
                 blockers.append("workflow_candidate_required")
             else:
                 baseline_version_ref = workflow_candidate.baseline_version_ref
+                candidate_snapshot_blockers = (
+                    self._workflow_release_candidate_snapshot_blockers(
+                        proposal=release_proposal,
+                        candidate=workflow_candidate,
+                        review_decision=review_decision,
+                    )
+                )
+                blockers.extend(candidate_snapshot_blockers)
+                if candidate_snapshot_blockers:
+                    blockers.append("workflow_variant_eval_scope_mismatch")
                 if workflow_candidate.workflow_profile != candidate_identity_ref:
                     blockers.append("workflow_candidate_identity_mismatch")
                 if workflow_candidate.version != candidate_version:
@@ -2080,6 +3331,47 @@ class EvolutionLabService:
             else:
                 sandbox_eval_ref = workflow_variant_eval.run_id
                 sandbox_eval_status = workflow_variant_eval.status
+                workflow_eval_pack = self.repository.fetch_workflow_variant_case_pack(
+                    case_pack_id=workflow_variant_eval.case_pack_id,
+                    case_pack_version=workflow_variant_eval.case_pack_version,
+                )
+                persisted_workflow_eval = (
+                    self.repository.fetch_workflow_variant_eval_run(
+                        workflow_variant_eval.run_id
+                    )
+                )
+                workflow_eval_validation_blockers = (
+                    validate_workflow_variant_eval_run(
+                        workflow_variant_eval,
+                        case_pack=workflow_eval_pack,
+                    )
+                    if workflow_eval_pack is not None
+                    else ["case_pack_not_registered"]
+                )
+                if workflow_eval_pack is None:
+                    blockers.append("workflow_variant_eval_case_pack_required")
+                elif (
+                    workflow_variant_eval.case_pack_fingerprint
+                    != workflow_variant_eval_case_pack_fingerprint(
+                        workflow_eval_pack
+                    )
+                ):
+                    blockers.append("workflow_variant_eval_case_pack_mismatch")
+                if workflow_eval_pack is not None and workflow_candidate is not None:
+                    baseline_binding_blockers = (
+                        self._workflow_release_baseline_binding_blockers(
+                            case_pack=workflow_eval_pack,
+                            candidate=workflow_candidate,
+                            run=workflow_variant_eval,
+                        )
+                    )
+                    blockers.extend(baseline_binding_blockers)
+                    if baseline_binding_blockers:
+                        blockers.append("workflow_variant_eval_scope_mismatch")
+                if persisted_workflow_eval != workflow_variant_eval:
+                    blockers.append("persisted_workflow_variant_eval_required")
+                if workflow_eval_validation_blockers:
+                    blockers.append("workflow_variant_eval_controlled_evidence_invalid")
                 if workflow_candidate is not None and (
                     workflow_variant_eval.candidate_version_ref
                     != workflow_candidate.workflow_version_id
@@ -2088,6 +3380,17 @@ class EvolutionLabService:
                     or workflow_variant_eval.workflow_profile
                     != workflow_candidate.workflow_profile
                     or workflow_variant_eval.route != workflow_candidate.route
+                    or workflow_candidate.definition_hash
+                    != workflow_definition_hash(
+                        workflow_steps=workflow_candidate.workflow_steps,
+                        workflow_checkpoints=workflow_candidate.workflow_checkpoints,
+                        workflow_decision_points=(
+                            workflow_candidate.workflow_decision_points
+                        ),
+                        success_criteria=workflow_candidate.success_criteria,
+                    )
+                    or set(workflow_variant_eval.candidate_definition_hashes)
+                    != {workflow_candidate.definition_hash}
                 ):
                     blockers.append("workflow_variant_eval_scope_mismatch")
                 if (
@@ -2109,16 +3412,59 @@ class EvolutionLabService:
                     )
                     or workflow_variant_eval.regression_flags
                     or workflow_variant_eval.blockers
+                    or not workflow_variant_eval.control_snapshot_ids
+                    or not workflow_variant_eval.control_snapshot_fingerprints
+                    or not workflow_variant_eval.baseline_outcome_refs
+                    or not workflow_variant_eval.candidate_outcome_refs
+                    or workflow_variant_eval.comparison_mode
+                    != WORKFLOW_VARIANT_EVAL_COMPARISON_MODE
+                    or workflow_variant_eval.metrics_source
+                    != WORKFLOW_VARIANT_EVAL_METRICS_SOURCE
                     or not workflow_variant_eval.offline_only
+                    or not workflow_variant_eval.read_only
+                    or not workflow_variant_eval.sandbox_only
                     or not workflow_variant_eval.human_review_required
+                    or workflow_variant_eval.execution_allowed
+                    or workflow_variant_eval.tool_dispatch_allowed
+                    or workflow_variant_eval.runtime_activation_allowed
+                    or workflow_variant_eval.release_authorized
                 ):
                     blockers.append("workflow_variant_eval_not_passed")
                 if (
                     workflow_variant_eval.promotion_authorized
                     or workflow_variant_eval.automatic_promotion_allowed
                     or workflow_variant_eval.core_mutation_allowed
+                    or any(
+                        (
+                            not result.offline_only
+                            or not result.read_only
+                            or not result.sandbox_only
+                            or not result.human_review_required
+                            or result.execution_allowed
+                            or result.tool_dispatch_allowed
+                            or result.runtime_activation_allowed
+                            or result.release_authorized
+                            or result.promotion_authorized
+                            or result.automatic_promotion_allowed
+                            or result.core_mutation_allowed
+                        )
+                        for result in workflow_variant_eval.case_results
+                    )
                 ):
                     blockers.append("workflow_eval_cannot_authorize_promotion")
+                if any(
+                    blocker in blockers
+                    for blocker in (
+                        "workflow_variant_eval_case_pack_required",
+                        "workflow_variant_eval_case_pack_mismatch",
+                        "persisted_workflow_variant_eval_required",
+                        "workflow_variant_eval_controlled_evidence_invalid",
+                        "workflow_variant_eval_scope_mismatch",
+                        "workflow_variant_eval_not_passed",
+                        "workflow_eval_cannot_authorize_promotion",
+                    )
+                ):
+                    sandbox_eval_status = "invalid_controlled_evidence"
             if workflow_rollback_plan is None:
                 blockers.append("workflow_rollback_plan_required")
             else:
@@ -2161,6 +3507,41 @@ class EvolutionLabService:
                 and rollback_plan_ref != workflow_candidate.rollback_plan_ref
             ):
                 blockers.append("workflow_review_rollback_mismatch")
+        elif proposal.proposal_type == "procedural_playbook_candidate":
+            candidate_type = "procedural_playbook_candidate"
+            candidate_identity_ref = (
+                proposal.candidate_refs[0] if proposal.candidate_refs else None
+            )
+            candidate_version = (
+                review_decision.candidate_version if review_decision else None
+            )
+            if review_decision is None:
+                blockers.append("playbook_human_review_decision_required")
+            elif (
+                review_decision.candidate_identity_ref != candidate_identity_ref
+                or parse_canonical_semver(review_decision.candidate_version) is None
+            ):
+                blockers.append("playbook_review_metadata_mismatch")
+            persisted_proposal = self.repository.fetch_proposal(
+                str(proposal.evolution_proposal_id)
+            )
+            persisted_review = dict(
+                persisted_proposal.strategy_context.get("evolution_review", {})
+            ) if persisted_proposal is not None else {}
+            if (
+                persisted_proposal is None
+                or persisted_review.get("last_review_decision_id")
+                != (
+                    review_decision.review_decision_id
+                    if review_decision is not None
+                    else None
+                )
+                or persisted_review.get("candidate_identity_ref")
+                != candidate_identity_ref
+                or persisted_review.get("candidate_version") != candidate_version
+                or persisted_review.get("blockers")
+            ):
+                blockers.append("persisted_playbook_review_required")
         blockers = self._unique_values(blockers)
         return SandboxToReleaseChecklistContract(
             checklist_id=(
@@ -2359,6 +3740,317 @@ class EvolutionLabService:
             "core_mutation_allowed": decision.core_mutation_allowed,
         }
 
+    def build_workflow_lifecycle_transition(
+        self,
+        *,
+        action: str,
+        proposal: EvolutionProposalContract,
+        review_decision: EvolutionReviewDecisionContract,
+        baseline: WorkflowProfileVersionContract,
+        candidate: WorkflowProfileVersionContract,
+        release_checklist: SandboxToReleaseChecklistContract,
+        promotion_gate: PromotionGateDecisionContract,
+        workflow_variant_eval: WorkflowVariantEvalRunContract,
+        rollback_plan: WorkflowRollbackPlanContract,
+        human_authorization_ref: str,
+        operator_ref: str,
+        evidence_refs: list[str],
+        completed_test_refs: list[str],
+        failure_refs: list[str] | None = None,
+        current_transition: WorkflowLifecycleTransitionContract | None = None,
+        timestamp: str | None = None,
+        transition_id: str | None = None,
+    ) -> WorkflowLifecycleTransitionContract:
+        """Build and attest one human lifecycle transition without activating it."""
+
+        if action not in {"activate_candidate", "rollback_to_baseline"}:
+            raise ValueError("unsupported workflow lifecycle action")
+        if not human_authorization_ref.startswith("human-authorization://"):
+            raise ValueError(
+                "workflow lifecycle requires a typed human authorization ref"
+            )
+        if not operator_ref.startswith("operator://"):
+            raise ValueError("workflow lifecycle requires a typed operator ref")
+        if current_transition is not None:
+            self._require_persisted_workflow_lifecycle_predecessor(
+                current_transition
+            )
+        if action == "rollback_to_baseline":
+            if current_transition is None:
+                raise ValueError(
+                    "workflow lifecycle rollback requires a persisted predecessor"
+                )
+            self._require_workflow_lifecycle_rollback_release_artifacts(
+                current_transition=current_transition,
+                proposal=proposal,
+                review_decision=review_decision,
+                baseline=baseline,
+                candidate=candidate,
+                release_checklist=release_checklist,
+                promotion_gate=promotion_gate,
+                workflow_variant_eval=workflow_variant_eval,
+                rollback_plan=rollback_plan,
+            )
+        safe_timestamp = timestamp or self.now()
+        revision = 1 if current_transition is None else current_transition.revision + 1
+        previous_transition_id = (
+            current_transition.transition_id if current_transition is not None else None
+        )
+        previous_transition_fingerprint = (
+            workflow_lifecycle_transition_fingerprint(current_transition)
+            if current_transition is not None
+            else None
+        )
+        required_test_refs = (
+            list(rollback_plan.verification_tests)
+            if action == "rollback_to_baseline"
+            else [
+                *release_checklist.proposed_tests,
+                *rollback_plan.verification_tests,
+            ]
+        )
+        safe_test_refs = self._unique_values(completed_test_refs)
+        missing_test_refs = sorted(set(required_test_refs) - set(safe_test_refs))
+        if missing_test_refs:
+            raise ValueError(
+                "workflow lifecycle completed tests missing: "
+                + ",".join(missing_test_refs)
+            )
+        safe_failure_refs = self._unique_values(failure_refs or [])
+        if action == "activate_candidate" and safe_failure_refs:
+            raise ValueError("workflow lifecycle activation cannot claim failures")
+        if action == "rollback_to_baseline" and not safe_failure_refs:
+            raise ValueError("workflow lifecycle rollback requires failure evidence")
+        lifecycle_evidence_refs = self._unique_values(
+            [
+                str(proposal.evolution_proposal_id),
+                review_decision.review_decision_id,
+                release_checklist.checklist_id,
+                promotion_gate.promotion_gate_id,
+                workflow_variant_eval.run_id,
+                rollback_plan.rollback_plan_id,
+                human_authorization_ref,
+                *candidate.evidence_refs,
+                *review_decision.evidence_refs,
+                *release_checklist.evidence_refs,
+                *promotion_gate.evidence_refs,
+                *workflow_variant_eval.evidence_refs,
+                *rollback_plan.evidence_refs,
+                *evidence_refs,
+                *safe_failure_refs,
+            ]
+        )
+        if action == "activate_candidate":
+            active = candidate
+            transition_status = "active_promoted"
+        else:
+            active = baseline
+            transition_status = "baseline_restored"
+        transition_seed = {
+            "workflow_profile": candidate.workflow_profile,
+            "route": candidate.route,
+            "action": action,
+            "revision": revision,
+            "previous_transition_id": previous_transition_id,
+            "candidate_version_ref": candidate.workflow_version_id,
+            "human_authorization_ref": human_authorization_ref,
+            "operator_ref": operator_ref,
+            "timestamp": safe_timestamp,
+        }
+        resolved_transition_id = transition_id or (
+            "workflow-lifecycle-transition://"
+            + workflow_lifecycle_artifact_fingerprint(transition_seed)[:24]
+        )
+        transition = WorkflowLifecycleTransitionContract(
+            transition_id=resolved_transition_id,
+            workflow_profile=candidate.workflow_profile,
+            route=candidate.route,
+            transition_action=action,
+            transition_status=transition_status,
+            revision=revision,
+            previous_transition_id=previous_transition_id,
+            previous_transition_fingerprint=previous_transition_fingerprint,
+            source_registry_ref=candidate.source_registry_ref,
+            source_registry_fingerprint=candidate.source_registry_fingerprint,
+            baseline_version_ref=baseline.workflow_version_id,
+            baseline_definition_hash=baseline.definition_hash,
+            candidate_version_ref=candidate.workflow_version_id,
+            candidate_definition_hash=candidate.definition_hash,
+            active_version_ref=active.workflow_version_id,
+            active_definition_hash=active.definition_hash,
+            active_workflow_steps=list(active.workflow_steps),
+            active_workflow_checkpoints=list(active.workflow_checkpoints),
+            active_workflow_decision_points=list(
+                active.workflow_decision_points
+            ),
+            active_success_criteria=list(active.success_criteria),
+            evolution_proposal_id=str(proposal.evolution_proposal_id),
+            proposal_fingerprint=workflow_lifecycle_artifact_fingerprint(proposal),
+            review_decision_id=review_decision.review_decision_id,
+            review_decision_fingerprint=workflow_lifecycle_artifact_fingerprint(
+                review_decision
+            ),
+            release_checklist_id=release_checklist.checklist_id,
+            release_checklist_fingerprint=workflow_lifecycle_artifact_fingerprint(
+                release_checklist
+            ),
+            promotion_gate_id=promotion_gate.promotion_gate_id,
+            promotion_gate_fingerprint=workflow_lifecycle_artifact_fingerprint(
+                promotion_gate
+            ),
+            workflow_eval_run_id=workflow_variant_eval.run_id,
+            workflow_eval_run_fingerprint=workflow_lifecycle_artifact_fingerprint(
+                workflow_variant_eval
+            ),
+            rollback_plan_id=rollback_plan.rollback_plan_id,
+            rollback_plan_fingerprint=workflow_lifecycle_artifact_fingerprint(
+                rollback_plan
+            ),
+            human_authorization_ref=human_authorization_ref,
+            operator_ref=operator_ref,
+            evidence_refs=lifecycle_evidence_refs,
+            completed_test_refs=safe_test_refs,
+            failure_refs=safe_failure_refs,
+            timestamp=safe_timestamp,
+        )
+        blockers = self._workflow_lifecycle_release_blockers(
+            transition=transition,
+            proposal=proposal,
+            review_decision=review_decision,
+            baseline=baseline,
+            candidate=candidate,
+            release_checklist=release_checklist,
+            promotion_gate=promotion_gate,
+            workflow_variant_eval=workflow_variant_eval,
+            rollback_plan=rollback_plan,
+            current_transition=current_transition,
+            require_live_proposal=(action == "activate_candidate"),
+        )
+        if blockers:
+            raise ValueError(
+                "workflow lifecycle transition is not release-bound: "
+                + ",".join(blockers)
+            )
+        bundle = self._workflow_lifecycle_release_bundle(
+            transition=transition,
+            proposal=proposal,
+            review_decision=review_decision,
+            baseline=baseline,
+            candidate=candidate,
+            release_checklist=release_checklist,
+            promotion_gate=promotion_gate,
+            workflow_variant_eval=workflow_variant_eval,
+            rollback_plan=rollback_plan,
+        )
+        self.repository.record_workflow_lifecycle_release_bundle(
+            transition_id=transition.transition_id,
+            workflow_profile=transition.workflow_profile,
+            route=transition.route,
+            revision=transition.revision,
+            transition_action=transition.transition_action,
+            bundle=bundle,
+        )
+        return transition
+
+    def prepare_workflow_lifecycle_transition(
+        self,
+        *,
+        action: str,
+        evolution_proposal_id: str,
+        workflow_eval_run_id: str,
+        human_authorization_ref: str,
+        operator_ref: str,
+        evidence_refs: list[str],
+        completed_test_refs: list[str],
+        completed_external_gates: list[str],
+        failure_refs: list[str] | None = None,
+        current_transition: WorkflowLifecycleTransitionContract | None = None,
+        timestamp: str | None = None,
+        transition_id: str | None = None,
+    ) -> WorkflowLifecycleTransitionContract:
+        """Reconstruct persisted evidence and prepare an operator transition."""
+
+        if action not in {"activate_candidate", "rollback_to_baseline"}:
+            raise ValueError("unsupported workflow lifecycle action")
+        required_external_gates = {
+            "standard_engineering_gate",
+            "release_gate_before_promotion",
+        }
+        if not required_external_gates.issubset(completed_external_gates):
+            raise ValueError(
+                "workflow lifecycle requires completed standard and release gates"
+            )
+        safe_timestamp = timestamp or self.now()
+        if action == "rollback_to_baseline":
+            artifacts = self._workflow_lifecycle_artifacts_from_current_bundle(
+                current_transition=current_transition,
+                evolution_proposal_id=evolution_proposal_id,
+                workflow_eval_run_id=workflow_eval_run_id,
+            )
+        else:
+            artifacts = self._workflow_lifecycle_activation_artifacts(
+                evolution_proposal_id=evolution_proposal_id,
+                workflow_eval_run_id=workflow_eval_run_id,
+                operator_ref=operator_ref,
+                evidence_refs=evidence_refs,
+                completed_external_gates=completed_external_gates,
+                generated_at=safe_timestamp,
+            )
+        return self.build_workflow_lifecycle_transition(
+            action=action,
+            proposal=artifacts["proposal"],
+            review_decision=artifacts["review_decision"],
+            baseline=artifacts["baseline"],
+            candidate=artifacts["candidate"],
+            release_checklist=artifacts["release_checklist"],
+            promotion_gate=artifacts["promotion_gate"],
+            workflow_variant_eval=artifacts["workflow_variant_eval"],
+            rollback_plan=artifacts["rollback_plan"],
+            human_authorization_ref=human_authorization_ref,
+            operator_ref=operator_ref,
+            evidence_refs=evidence_refs,
+            completed_test_refs=completed_test_refs,
+            failure_refs=failure_refs,
+            current_transition=current_transition,
+            timestamp=safe_timestamp,
+            transition_id=transition_id,
+        )
+
+    def verify_persisted_workflow_lifecycle_transition(
+        self,
+        transition: WorkflowLifecycleTransitionContract,
+    ) -> bool:
+        """Revalidate a persisted transition and the complete release bundle."""
+
+        try:
+            artifacts = self._workflow_lifecycle_artifacts_from_bundle(
+                transition.transition_id
+            )
+            persisted_transition = artifacts.pop("transition")
+            if persisted_transition != transition:
+                return False
+            current_transition = self._workflow_lifecycle_predecessor_from_bundle(
+                transition
+            )
+            return not self._workflow_lifecycle_release_blockers(
+                transition=transition,
+                current_transition=current_transition,
+                require_live_proposal=False,
+                **artifacts,
+            )
+        except (KeyError, TypeError, ValueError):
+            return False
+
+    def get_workflow_lifecycle_release_bundle(
+        self,
+        transition_id: str,
+    ) -> dict[str, object] | None:
+        """Expose one hash-verified release bundle for audit and console reads."""
+
+        return self.repository.fetch_workflow_lifecycle_release_bundle(
+            transition_id
+        )
+
     def preferred_strategy(self) -> str:
         """Return the current sandbox-first evolution strategy."""
 
@@ -2385,6 +4077,7 @@ class EvolutionLabService:
         """Persist a separately reviewable workflow version candidate."""
 
         blockers = list(candidate.blockers)
+        candidate_snapshot = self._workflow_candidate_release_snapshot(candidate)
         if candidate.lifecycle_status != "candidate_inactive":
             blockers.append("inactive_workflow_candidate_required")
         if candidate.review_status != "needs_review":
@@ -2450,29 +4143,10 @@ class EvolutionLabService:
                 ]
             ),
             evaluation_matrix={
-                "workflow_candidate": {
-                    "workflow_version_id": candidate.workflow_version_id,
-                    "workflow_profile": candidate.workflow_profile,
-                    "version": candidate.version,
-                    "route": candidate.route,
-                    "baseline_version_ref": candidate.baseline_version_ref,
-                    "definition_hash": candidate.definition_hash,
-                    "risk_level": candidate.risk_level,
-                    "lifecycle_status": candidate.lifecycle_status,
-                    "review_status": candidate.review_status,
-                    "runtime_binding_status": candidate.runtime_binding_status,
-                    "blockers": blockers,
-                }
+                "workflow_candidate": candidate_snapshot,
             },
             strategy_context={
-                "workflow_candidate": {
-                    "workflow_version_id": candidate.workflow_version_id,
-                    "workflow_profile": candidate.workflow_profile,
-                    "version": candidate.version,
-                    "route": candidate.route,
-                    "baseline_version_ref": candidate.baseline_version_ref,
-                    "rollback_plan_ref": candidate.rollback_plan_ref,
-                },
+                "workflow_candidate": candidate_snapshot,
                 "promotion_policy": {
                     "workflow_variant_eval_required": True,
                     "manual_rollback_plan_required": True,
@@ -2908,16 +4582,35 @@ class EvolutionLabService:
         baseline: WorkflowProfileVersionContract,
         candidate: WorkflowProfileVersionContract,
         case: WorkflowVariantEvalCaseContract,
+        case_pack_fingerprint: str,
     ) -> WorkflowVariantEvalCaseResultContract:
-        """Compare one equivalent offline case without binding the candidate."""
+        """Derive one paired offline result from immutable observations."""
 
-        checks = {
+        external_checks = {
             "equivalent_identity": (
                 case.workflow_profile == baseline.workflow_profile
                 == candidate.workflow_profile
                 and case.route == baseline.route == candidate.route
                 and case.baseline_version_ref == baseline.workflow_version_id
                 and case.candidate_version_ref == candidate.workflow_version_id
+            ),
+            "baseline_definition_hash_valid": (
+                baseline.definition_hash
+                == workflow_definition_hash(
+                    workflow_steps=baseline.workflow_steps,
+                    workflow_checkpoints=baseline.workflow_checkpoints,
+                    workflow_decision_points=baseline.workflow_decision_points,
+                    success_criteria=baseline.success_criteria,
+                )
+            ),
+            "candidate_definition_hash_valid": (
+                candidate.definition_hash
+                == workflow_definition_hash(
+                    workflow_steps=candidate.workflow_steps,
+                    workflow_checkpoints=candidate.workflow_checkpoints,
+                    workflow_decision_points=candidate.workflow_decision_points,
+                    success_criteria=candidate.success_criteria,
+                )
             ),
             "baseline_contract_complete": all(
                 (
@@ -3003,9 +4696,58 @@ class EvolutionLabService:
             "bounded_offline_evidence": EvolutionLabService._workflow_eval_case_is_bounded(
                 case
             ),
+            "controlled_case_valid": not validate_workflow_variant_eval_case(case),
+            "case_pack_fingerprint_present": bool(case_pack_fingerprint),
+            "paired_observation_identity": (
+                case.baseline_observation.arm == "baseline"
+                and case.candidate_observation.arm == "candidate"
+                and case.baseline_observation.case_id == case.case_id
+                and case.candidate_observation.case_id == case.case_id
+                and case.baseline_observation.case_version == case.case_version
+                and case.candidate_observation.case_version == case.case_version
+                and case.baseline_observation.workflow_version_ref
+                == baseline.workflow_version_id
+                and case.candidate_observation.workflow_version_ref
+                == candidate.workflow_version_id
+                and case.baseline_observation.definition_hash
+                == baseline.definition_hash
+                and case.candidate_observation.definition_hash
+                == candidate.definition_hash
+            ),
+            "paired_checkpoint_definitions": (
+                case.baseline_observation.expected_checkpoint_refs
+                == baseline.workflow_checkpoints
+                and case.candidate_observation.expected_checkpoint_refs
+                == candidate.workflow_checkpoints
+            ),
+            "paired_input_snapshot": (
+                case.baseline_observation.input_snapshot_fingerprint
+                == case.input_snapshot_fingerprint
+                == case.candidate_observation.input_snapshot_fingerprint
+            ),
+            "paired_control_snapshot": (
+                case.baseline_observation.control_snapshot_id
+                == case.control_snapshot.control_snapshot_id
+                == case.candidate_observation.control_snapshot_id
+                and case.baseline_observation.control_snapshot_fingerprint
+                == workflow_variant_eval_control_fingerprint(case.control_snapshot)
+                == case.candidate_observation.control_snapshot_fingerprint
+            ),
+            "paired_outcomes_present": bool(
+                case.baseline_observation.outcome_ref
+                and case.candidate_observation.outcome_ref
+                and case.baseline_observation.outcome_status
+                and case.candidate_observation.outcome_status
+            ),
             "no_authority_claims": (
                 case.offline_only
+                and case.read_only
+                and case.sandbox_only
                 and case.human_review_required
+                and not case.execution_allowed
+                and not case.tool_dispatch_allowed
+                and not case.runtime_activation_allowed
+                and not case.release_authorized
                 and not case.promotion_authorized
                 and not case.automatic_promotion_allowed
                 and not case.core_mutation_allowed
@@ -3015,57 +4757,90 @@ class EvolutionLabService:
                 and not candidate.core_mutation_allowed
             ),
         }
-        baseline_metrics, baseline_metrics_valid = (
-            EvolutionLabService._workflow_eval_metrics(case.baseline_metrics)
+        baseline_metrics = derive_workflow_variant_eval_metrics(
+            case.baseline_observation,
+            checkpoint_refs=baseline.workflow_checkpoints,
         )
-        candidate_metrics, candidate_metrics_valid = (
-            EvolutionLabService._workflow_eval_metrics(case.candidate_metrics)
+        candidate_metrics = derive_workflow_variant_eval_metrics(
+            case.candidate_observation,
+            checkpoint_refs=candidate.workflow_checkpoints,
         )
-        checks["metrics_complete"] = (
-            baseline_metrics_valid and candidate_metrics_valid
+        metric_deltas = derive_workflow_variant_eval_metric_deltas(
+            baseline_metrics,
+            candidate_metrics,
         )
-        metric_deltas = {
-            metric: round(candidate_metrics[metric] - baseline_metrics[metric], 4)
-            for metric in WORKFLOW_VARIANT_EVAL_METRICS
-        }
         regression_flags = []
         improvement_signals = []
-        if checks["metrics_complete"]:
-            for metric, delta in metric_deltas.items():
-                regressed = (
-                    delta < 0
-                    if metric in WORKFLOW_VARIANT_HIGHER_IS_BETTER
-                    else delta > 0
-                )
-                improved = (
-                    delta > 0
-                    if metric in WORKFLOW_VARIANT_HIGHER_IS_BETTER
-                    else delta < 0
-                )
-                if regressed:
-                    regression_flags.append(f"{metric}_regressed")
-                if improved:
-                    improvement_signals.append(f"{metric}_improved")
-        checks["no_metric_regression"] = not regression_flags
-        checks["measurable_improvement"] = bool(improvement_signals)
-        failures = [name for name, passed in checks.items() if not passed]
+        for metric, delta in metric_deltas.items():
+            regressed = (
+                delta < 0
+                if metric in WORKFLOW_VARIANT_HIGHER_IS_BETTER
+                else delta > 0
+            )
+            improved = (
+                delta > 0
+                if metric in WORKFLOW_VARIANT_HIGHER_IS_BETTER
+                else delta < 0
+            )
+            if regressed:
+                regression_flags.append(f"{metric}_regressed")
+            if improved:
+                improvement_signals.append(f"{metric}_improved")
         evidence_refs = EvolutionLabService._unique_values(
             [
                 case.scenario_ref,
                 baseline.workflow_version_id,
                 candidate.workflow_version_id,
+                case.baseline_observation.outcome_ref,
+                case.candidate_observation.outcome_ref,
                 *case.evidence_refs,
+                *case.baseline_observation.evidence_refs,
+                *case.candidate_observation.evidence_refs,
                 *candidate.evidence_refs,
             ]
         )[:50]
+        limitations = EvolutionLabService._unique_values(
+            [
+                *case.limitations,
+                *case.baseline_observation.limitations,
+                *case.candidate_observation.limitations,
+                *(
+                    check_name
+                    for check_name, passed in external_checks.items()
+                    if not passed
+                ),
+            ]
+        )[:50]
+        checks = derive_workflow_variant_eval_case_checks(
+            case,
+            baseline_metrics=baseline_metrics,
+            candidate_metrics=candidate_metrics,
+            limitations=limitations,
+        )
+        failures = [name for name, passed in checks.items() if not passed]
         return WorkflowVariantEvalCaseResultContract(
+            case_pack_id=case.case_pack_id,
+            case_pack_version=case.case_pack_version,
+            case_pack_fingerprint=case_pack_fingerprint,
             case_id=case.case_id,
+            case_version=case.case_version,
             scenario_ref=case.scenario_ref,
+            input_snapshot_fingerprint=case.input_snapshot_fingerprint,
             workflow_profile=case.workflow_profile,
             route=case.route,
             baseline_version_ref=case.baseline_version_ref,
             candidate_version_ref=case.candidate_version_ref,
-            passed=not failures,
+            baseline_definition_hash=baseline.definition_hash,
+            candidate_definition_hash=candidate.definition_hash,
+            control_snapshot_id=case.control_snapshot.control_snapshot_id,
+            control_snapshot_fingerprint=(
+                workflow_variant_eval_control_fingerprint(case.control_snapshot)
+            ),
+            baseline_outcome_ref=case.baseline_observation.outcome_ref,
+            candidate_outcome_ref=case.candidate_observation.outcome_ref,
+            baseline_outcome_status=case.baseline_observation.outcome_status,
+            candidate_outcome_status=case.candidate_observation.outcome_status,
+            passed=not failures and not limitations,
             checks=checks,
             baseline_metrics=baseline_metrics,
             candidate_metrics=candidate_metrics,
@@ -3073,6 +4848,7 @@ class EvolutionLabService:
             improvement_signals=improvement_signals,
             regression_flags=regression_flags,
             failures=failures,
+            limitations=limitations,
             evidence_refs=evidence_refs,
         )
 
@@ -3410,6 +5186,9 @@ class EvolutionLabService:
             blockers.append("persisted_workflow_candidate_proposal_required")
         if str(proposal.evolution_proposal_id) != str(decision.evolution_proposal_id):
             blockers.append("persisted_workflow_candidate_review_mismatch")
+        candidate_snapshot = dict(
+            proposal.evaluation_matrix.get("workflow_candidate", {})
+        )
         review = dict(proposal.strategy_context.get("evolution_review", {}))
         expected = {
             "last_review_decision_id": decision.review_decision_id,
@@ -3418,6 +5197,19 @@ class EvolutionLabService:
             "last_operator_ref": decision.operator_ref,
             "last_reviewed_at": decision.timestamp,
             "rollback_plan_ref": decision.rollback_plan_ref,
+            "candidate_identity_ref": decision.candidate_identity_ref,
+            "candidate_version": decision.candidate_version,
+            "candidate_workflow_version_id": candidate_snapshot.get(
+                "workflow_version_id"
+            ),
+            "candidate_definition_hash": candidate_snapshot.get("definition_hash"),
+            "candidate_snapshot_fingerprint": (
+                EvolutionLabService._workflow_candidate_snapshot_payload_fingerprint(
+                    candidate_snapshot
+                )
+                if candidate_snapshot
+                else None
+            ),
         }
         for field_name, expected_value in expected.items():
             if review.get(field_name) != expected_value:
@@ -3428,13 +5220,931 @@ class EvolutionLabService:
             latest.get("evidence_refs") != list(decision.evidence_refs)
             or latest.get("proposed_tests") != list(decision.proposed_tests)
             or latest.get("review_notes") != list(decision.review_notes)
+            or latest.get("candidate_workflow_version_id")
+            != candidate_snapshot.get("workflow_version_id")
+            or latest.get("candidate_definition_hash")
+            != candidate_snapshot.get("definition_hash")
+            or latest.get("candidate_snapshot_fingerprint")
+            != expected["candidate_snapshot_fingerprint"]
         ):
             blockers.append("persisted_candidate_review_evidence_mismatch")
+        if (
+            decision.candidate_identity_ref
+            != candidate_snapshot.get("workflow_profile")
+            or decision.candidate_version != candidate_snapshot.get("version")
+        ):
+            blockers.append("persisted_candidate_review_identity_mismatch")
         if review.get("blockers"):
             blockers.append("persisted_candidate_review_has_blockers")
         if decision.automatic_promotion_allowed or decision.core_mutation_allowed:
             blockers.append("candidate_review_authority_claim_not_allowed")
         return blockers
+
+    @classmethod
+    def _workflow_release_candidate_snapshot_blockers(
+        cls,
+        *,
+        proposal: EvolutionProposalContract,
+        candidate: WorkflowProfileVersionContract,
+        review_decision: EvolutionReviewDecisionContract | None,
+    ) -> list[str]:
+        """Reject candidate substitution after the persisted human review."""
+
+        blockers: list[str] = []
+        matrix = dict(proposal.evaluation_matrix.get("workflow_candidate", {}))
+        context = dict(proposal.strategy_context.get("workflow_candidate", {}))
+        expected_snapshot = cls._workflow_candidate_release_snapshot(candidate)
+        for field_name, expected_value in expected_snapshot.items():
+            if matrix.get(field_name) != expected_value:
+                blockers.append(
+                    f"persisted_workflow_candidate_{field_name}_mismatch"
+                )
+        context_expected = {
+            key: expected_snapshot[key]
+            for key in (
+                "workflow_version_id",
+                "workflow_profile",
+                "version",
+                "route",
+                "baseline_version_ref",
+                "definition_hash",
+                "workflow_steps",
+                "workflow_checkpoints",
+                "workflow_decision_points",
+                "success_criteria",
+                "evidence_refs",
+                "proposed_tests",
+                "rollback_plan_ref",
+                "source_registry_ref",
+                "source_registry_fingerprint",
+                "risk_level",
+                "review_status",
+                "runtime_binding_status",
+                "blockers",
+                "human_review_required",
+                "sandbox_required",
+            )
+        }
+        for field_name, expected_value in context_expected.items():
+            if context.get(field_name) != expected_value:
+                blockers.append(
+                    f"persisted_workflow_candidate_context_{field_name}_mismatch"
+                )
+        if proposal.candidate_refs != [
+            candidate.workflow_version_id,
+            candidate.baseline_version_ref,
+        ]:
+            blockers.append("persisted_workflow_candidate_refs_mismatch")
+        if proposal.proposed_tests != candidate.proposed_tests:
+            blockers.append("persisted_workflow_candidate_tests_mismatch")
+        if candidate.blockers:
+            blockers.append("workflow_release_candidate_has_blockers")
+        if (
+            candidate.lifecycle_status != "candidate_inactive"
+            or candidate.review_status != "needs_review"
+            or candidate.runtime_binding_status != "inactive_candidate"
+            or not candidate.human_review_required
+            or not candidate.sandbox_required
+            or candidate.active_registry_write_allowed
+            or candidate.runtime_activation_allowed
+            or candidate.automatic_promotion_allowed
+            or candidate.core_mutation_allowed
+        ):
+            blockers.append("workflow_release_candidate_state_invalid")
+        current_fingerprint = active_workflow_registry_fingerprint()
+        if (
+            candidate.source_registry_fingerprint != current_fingerprint
+            or not candidate.source_registry_ref
+        ):
+            blockers.append("workflow_release_candidate_registry_invalid")
+        expected_hash = workflow_definition_hash(
+            workflow_steps=candidate.workflow_steps,
+            workflow_checkpoints=candidate.workflow_checkpoints,
+            workflow_decision_points=candidate.workflow_decision_points,
+            success_criteria=candidate.success_criteria,
+        )
+        if candidate.definition_hash != expected_hash:
+            blockers.append("workflow_release_candidate_definition_invalid")
+        if (
+            not candidate.evidence_refs
+            or not candidate.proposed_tests
+            or not candidate.rollback_plan_ref
+            or not candidate.change_summary
+            or candidate.risk_level not in {"low", "moderate"}
+        ):
+            blockers.append("workflow_release_candidate_evidence_invalid")
+        if review_decision is not None:
+            review = dict(proposal.strategy_context.get("evolution_review", {}))
+            if (
+                review_decision.candidate_identity_ref
+                != candidate.workflow_profile
+                or review_decision.candidate_version != candidate.version
+                or review.get("candidate_workflow_version_id")
+                != candidate.workflow_version_id
+                or review.get("candidate_definition_hash")
+                != candidate.definition_hash
+                or review.get("candidate_snapshot_fingerprint")
+                != cls._workflow_candidate_snapshot_fingerprint(candidate)
+            ):
+                blockers.append("workflow_release_review_candidate_binding_mismatch")
+        return cls._unique_values(blockers)
+
+    @classmethod
+    def _workflow_release_baseline_binding_blockers(
+        cls,
+        *,
+        case_pack: WorkflowVariantEvalCasePackContract,
+        candidate: WorkflowProfileVersionContract,
+        run: WorkflowVariantEvalRunContract,
+    ) -> list[str]:
+        """Rebind release evidence to the current canonical active baseline."""
+
+        blockers: list[str] = []
+        baseline_version = case_pack.baseline_version_ref.rsplit("/", 1)[-1]
+        if parse_canonical_semver(baseline_version) is None:
+            return ["workflow_release_baseline_version_invalid"]
+        try:
+            registry = build_active_workflow_version_registry(
+                registry_version=baseline_version,
+                generated_at=str(case_pack.generated_at),
+                rollback_plan_ref=candidate.rollback_plan_ref,
+            )
+        except ValueError:
+            return ["workflow_release_canonical_baseline_unavailable"]
+        matches = [
+            version
+            for version in registry.versions
+            if version.workflow_version_id == case_pack.baseline_version_ref
+            and version.workflow_profile == case_pack.workflow_profile
+            and version.route == case_pack.route
+        ]
+        if len(matches) != 1:
+            return ["workflow_release_canonical_baseline_not_registered"]
+        baseline = matches[0]
+        blockers.extend(cls._canonical_workflow_baseline_blockers(baseline))
+        if (
+            candidate.baseline_version_ref != baseline.workflow_version_id
+            or candidate.source_registry_ref != baseline.source_registry_ref
+            or candidate.source_registry_fingerprint
+            != baseline.source_registry_fingerprint
+            or set(run.baseline_definition_hashes) != {baseline.definition_hash}
+        ):
+            blockers.append("workflow_release_candidate_baseline_binding_mismatch")
+        for case in case_pack.cases:
+            if not cls._workflow_eval_observation_matches_version(
+                case.baseline_observation,
+                baseline,
+            ):
+                blockers.append(
+                    f"case:{case.case_id}:release_baseline_definition_mismatch"
+                )
+            if (
+                case.control_snapshot.workflow_policy_source_registry_ref
+                != baseline.source_registry_ref
+                or case.control_snapshot.workflow_policy_source_registry_fingerprint
+                != baseline.source_registry_fingerprint
+            ):
+                blockers.append(
+                    f"case:{case.case_id}:release_baseline_control_mismatch"
+                )
+        return cls._unique_values(blockers)
+
+    @staticmethod
+    def _workflow_candidate_release_snapshot(
+        candidate: WorkflowProfileVersionContract,
+    ) -> dict[str, object]:
+        return {
+            "workflow_version_id": candidate.workflow_version_id,
+            "workflow_profile": candidate.workflow_profile,
+            "version": candidate.version,
+            "route": candidate.route,
+            "lifecycle_status": candidate.lifecycle_status,
+            "baseline_version_ref": candidate.baseline_version_ref,
+            "definition_hash": candidate.definition_hash,
+            "workflow_steps": list(candidate.workflow_steps),
+            "workflow_checkpoints": list(candidate.workflow_checkpoints),
+            "workflow_decision_points": list(candidate.workflow_decision_points),
+            "success_criteria": list(candidate.success_criteria),
+            "evidence_refs": list(candidate.evidence_refs),
+            "proposed_tests": list(candidate.proposed_tests),
+            "rollback_plan_ref": candidate.rollback_plan_ref,
+            "source_registry_ref": candidate.source_registry_ref,
+            "source_registry_fingerprint": candidate.source_registry_fingerprint,
+            "timestamp": candidate.timestamp,
+            "change_summary": candidate.change_summary,
+            "risk_level": candidate.risk_level,
+            "review_status": candidate.review_status,
+            "runtime_binding_status": candidate.runtime_binding_status,
+            "blockers": list(candidate.blockers),
+            "human_review_required": candidate.human_review_required,
+            "sandbox_required": candidate.sandbox_required,
+            "active_registry_write_allowed": candidate.active_registry_write_allowed,
+            "runtime_activation_allowed": candidate.runtime_activation_allowed,
+            "automatic_promotion_allowed": candidate.automatic_promotion_allowed,
+            "core_mutation_allowed": candidate.core_mutation_allowed,
+        }
+
+    @classmethod
+    def _workflow_candidate_snapshot_fingerprint(
+        cls,
+        candidate: WorkflowProfileVersionContract,
+    ) -> str:
+        return cls._workflow_candidate_snapshot_payload_fingerprint(
+            cls._workflow_candidate_release_snapshot(candidate)
+        )
+
+    @staticmethod
+    def _workflow_candidate_snapshot_payload_fingerprint(
+        snapshot: dict[str, object],
+    ) -> str:
+        payload = dumps(
+            snapshot,
+            ensure_ascii=False,
+            allow_nan=False,
+            separators=(",", ":"),
+            sort_keys=True,
+        )
+        return sha256(payload.encode("utf-8")).hexdigest()
+
+    def _workflow_lifecycle_activation_artifacts(
+        self,
+        *,
+        evolution_proposal_id: str,
+        workflow_eval_run_id: str,
+        operator_ref: str,
+        evidence_refs: list[str],
+        completed_external_gates: list[str],
+        generated_at: str,
+    ) -> dict[str, object]:
+        proposal = self.repository.fetch_proposal(evolution_proposal_id)
+        if proposal is None or proposal.proposal_type != "workflow_candidate":
+            raise ValueError("persisted workflow candidate proposal required")
+        candidate = self._workflow_candidate_from_proposal(proposal)
+        review_decision = self._workflow_review_decision_from_proposal(proposal)
+        workflow_variant_eval = self.repository.fetch_workflow_variant_eval_run(
+            workflow_eval_run_id
+        )
+        if workflow_variant_eval is None:
+            raise ValueError("persisted workflow variant evaluation required")
+        baseline = self._workflow_baseline_for_release(
+            candidate=candidate,
+            workflow_variant_eval=workflow_variant_eval,
+        )
+        rollback_plan = self.build_workflow_rollback_plan(
+            baseline=baseline,
+            candidate=candidate,
+            trigger_conditions=[
+                "promoted workflow regression or governance policy violation"
+            ],
+            verification_tests=list(candidate.proposed_tests),
+            evidence_refs=self._unique_values(
+                [*candidate.evidence_refs, *evidence_refs]
+            ),
+            operator_ref=operator_ref,
+            generated_at=generated_at,
+        )
+        release_checklist = self.build_sandbox_to_release_checklist(
+            proposal,
+            review_decision=review_decision,
+            workflow_candidate=candidate,
+            workflow_variant_eval=workflow_variant_eval,
+            workflow_rollback_plan=rollback_plan,
+        )
+        promotion_gate = self.evaluate_promotion_gate(
+            release_checklist,
+            completed_gates=completed_external_gates,
+        )
+        return {
+            "proposal": proposal,
+            "review_decision": review_decision,
+            "baseline": baseline,
+            "candidate": candidate,
+            "release_checklist": release_checklist,
+            "promotion_gate": promotion_gate,
+            "workflow_variant_eval": workflow_variant_eval,
+            "rollback_plan": rollback_plan,
+        }
+
+    def _workflow_lifecycle_artifacts_from_current_bundle(
+        self,
+        *,
+        current_transition: WorkflowLifecycleTransitionContract | None,
+        evolution_proposal_id: str,
+        workflow_eval_run_id: str,
+    ) -> dict[str, object]:
+        if current_transition is None:
+            raise ValueError("workflow lifecycle rollback requires current transition")
+        if current_transition.transition_status != "active_promoted":
+            raise ValueError("workflow lifecycle rollback requires active candidate")
+        artifacts = self._workflow_lifecycle_artifacts_from_bundle(
+            current_transition.transition_id
+        )
+        persisted_transition = artifacts.pop("transition")
+        if persisted_transition != current_transition:
+            raise ValueError("workflow lifecycle current transition is not persisted")
+        if (
+            current_transition.evolution_proposal_id != evolution_proposal_id
+            or current_transition.workflow_eval_run_id != workflow_eval_run_id
+        ):
+            raise ValueError("workflow lifecycle rollback release lineage mismatch")
+        return artifacts
+
+    def _workflow_lifecycle_artifacts_from_bundle(
+        self,
+        transition_id: str,
+    ) -> dict[str, object]:
+        bundle = self.repository.fetch_workflow_lifecycle_release_bundle(
+            transition_id
+        )
+        if bundle is None:
+            raise ValueError("persisted workflow lifecycle release bundle required")
+        run_payload = dict(bundle["workflow_variant_eval"])
+        run_payload["case_results"] = [
+            WorkflowVariantEvalCaseResultContract(**dict(item))
+            for item in run_payload.get("case_results", [])
+        ]
+        return {
+            "transition": WorkflowLifecycleTransitionContract(
+                **dict(bundle["transition"])
+            ),
+            "proposal": EvolutionProposalContract(**dict(bundle["proposal"])),
+            "review_decision": EvolutionReviewDecisionContract(
+                **dict(bundle["review_decision"])
+            ),
+            "baseline": WorkflowProfileVersionContract(**dict(bundle["baseline"])),
+            "candidate": WorkflowProfileVersionContract(
+                **dict(bundle["candidate"])
+            ),
+            "release_checklist": SandboxToReleaseChecklistContract(
+                **dict(bundle["release_checklist"])
+            ),
+            "promotion_gate": PromotionGateDecisionContract(
+                **dict(bundle["promotion_gate"])
+            ),
+            "workflow_variant_eval": WorkflowVariantEvalRunContract(**run_payload),
+            "rollback_plan": WorkflowRollbackPlanContract(
+                **dict(bundle["rollback_plan"])
+            ),
+        }
+
+    def _workflow_lifecycle_predecessor_from_bundle(
+        self,
+        transition: WorkflowLifecycleTransitionContract,
+    ) -> WorkflowLifecycleTransitionContract | None:
+        if transition.previous_transition_id is None:
+            return None
+        artifacts = self._workflow_lifecycle_artifacts_from_bundle(
+            transition.previous_transition_id
+        )
+        predecessor = artifacts["transition"]
+        if not isinstance(predecessor, WorkflowLifecycleTransitionContract):
+            raise ValueError("workflow lifecycle predecessor is invalid")
+        return predecessor
+
+    def _require_persisted_workflow_lifecycle_predecessor(
+        self,
+        current_transition: WorkflowLifecycleTransitionContract,
+    ) -> None:
+        bundle = self.repository.fetch_workflow_lifecycle_release_bundle(
+            current_transition.transition_id
+        )
+        if bundle is None:
+            raise ValueError(
+                "workflow lifecycle predecessor release bundle is not persisted"
+            )
+        try:
+            persisted = WorkflowLifecycleTransitionContract(
+                **dict(bundle["transition"])
+            )
+        except (KeyError, TypeError, ValueError) as exc:
+            raise ValueError(
+                "workflow lifecycle predecessor release bundle is invalid"
+            ) from exc
+        if persisted != current_transition:
+            raise ValueError(
+                "workflow lifecycle predecessor does not match persisted release bundle"
+            )
+        if not self.verify_persisted_workflow_lifecycle_transition(
+            current_transition
+        ):
+            raise ValueError(
+                "workflow lifecycle predecessor failed release verification"
+            )
+
+    def _require_workflow_lifecycle_rollback_release_artifacts(
+        self,
+        *,
+        current_transition: WorkflowLifecycleTransitionContract,
+        proposal: EvolutionProposalContract,
+        review_decision: EvolutionReviewDecisionContract,
+        baseline: WorkflowProfileVersionContract,
+        candidate: WorkflowProfileVersionContract,
+        release_checklist: SandboxToReleaseChecklistContract,
+        promotion_gate: PromotionGateDecisionContract,
+        workflow_variant_eval: WorkflowVariantEvalRunContract,
+        rollback_plan: WorkflowRollbackPlanContract,
+    ) -> None:
+        artifacts = self._workflow_lifecycle_artifacts_from_bundle(
+            current_transition.transition_id
+        )
+        persisted_transition = artifacts.pop("transition")
+        if persisted_transition != current_transition:
+            raise ValueError(
+                "workflow lifecycle rollback predecessor release bundle mismatch"
+            )
+        supplied = {
+            "proposal": proposal,
+            "review_decision": review_decision,
+            "baseline": baseline,
+            "candidate": candidate,
+            "release_checklist": release_checklist,
+            "promotion_gate": promotion_gate,
+            "workflow_variant_eval": workflow_variant_eval,
+            "rollback_plan": rollback_plan,
+        }
+        divergent = [
+            name for name, value in supplied.items() if artifacts.get(name) != value
+        ]
+        if divergent:
+            raise ValueError(
+                "workflow lifecycle rollback requires predecessor release artifacts: "
+                + ",".join(divergent)
+            )
+
+    @staticmethod
+    def _workflow_lifecycle_release_bundle(
+        *,
+        transition: WorkflowLifecycleTransitionContract,
+        proposal: EvolutionProposalContract,
+        review_decision: EvolutionReviewDecisionContract,
+        baseline: WorkflowProfileVersionContract,
+        candidate: WorkflowProfileVersionContract,
+        release_checklist: SandboxToReleaseChecklistContract,
+        promotion_gate: PromotionGateDecisionContract,
+        workflow_variant_eval: WorkflowVariantEvalRunContract,
+        rollback_plan: WorkflowRollbackPlanContract,
+    ) -> dict[str, object]:
+        return {
+            "transition": asdict(transition),
+            "proposal": asdict(proposal),
+            "review_decision": asdict(review_decision),
+            "baseline": asdict(baseline),
+            "candidate": asdict(candidate),
+            "release_checklist": asdict(release_checklist),
+            "promotion_gate": asdict(promotion_gate),
+            "workflow_variant_eval": asdict(workflow_variant_eval),
+            "rollback_plan": asdict(rollback_plan),
+        }
+
+    @staticmethod
+    def _workflow_candidate_from_proposal(
+        proposal: EvolutionProposalContract,
+    ) -> WorkflowProfileVersionContract:
+        snapshot = dict(proposal.evaluation_matrix.get("workflow_candidate", {}))
+        try:
+            return WorkflowProfileVersionContract(**snapshot)
+        except TypeError as exc:
+            raise ValueError(
+                "persisted workflow candidate snapshot is incomplete"
+            ) from exc
+
+    @staticmethod
+    def _workflow_review_decision_from_proposal(
+        proposal: EvolutionProposalContract,
+    ) -> EvolutionReviewDecisionContract:
+        review = dict(proposal.strategy_context.get("evolution_review", {}))
+        history = list(review.get("review_history", []))
+        if not history or not isinstance(history[-1], dict):
+            raise ValueError("persisted workflow human review required")
+        latest = dict(history[-1])
+        try:
+            return EvolutionReviewDecisionContract(
+                review_decision_id=str(latest["review_decision_id"]),
+                evolution_proposal_id=proposal.evolution_proposal_id,
+                review_status=str(latest["review_status"]),
+                decision=str(latest["decision"]),
+                operator_ref=str(latest["operator_ref"]),
+                evidence_refs=list(latest["evidence_refs"]),
+                proposed_tests=list(latest["proposed_tests"]),
+                rollback_plan_ref=(
+                    str(latest["rollback_plan_ref"])
+                    if latest.get("rollback_plan_ref") is not None
+                    else None
+                ),
+                risk_acceptance=(
+                    str(latest["risk_acceptance"])
+                    if latest.get("risk_acceptance") is not None
+                    else None
+                ),
+                review_notes=list(latest["review_notes"]),
+                candidate_identity_ref=(
+                    str(latest["candidate_identity_ref"])
+                    if latest.get("candidate_identity_ref") is not None
+                    else None
+                ),
+                candidate_version=(
+                    str(latest["candidate_version"])
+                    if latest.get("candidate_version") is not None
+                    else None
+                ),
+                timestamp=str(latest["timestamp"]),
+                automatic_promotion_allowed=bool(
+                    latest.get("automatic_promotion_allowed", False)
+                ),
+                core_mutation_allowed=bool(
+                    latest.get("core_mutation_allowed", False)
+                ),
+            )
+        except (KeyError, TypeError) as exc:
+            raise ValueError("persisted workflow human review is incomplete") from exc
+
+    def _workflow_baseline_for_release(
+        self,
+        *,
+        candidate: WorkflowProfileVersionContract,
+        workflow_variant_eval: WorkflowVariantEvalRunContract,
+    ) -> WorkflowProfileVersionContract:
+        pack = self.repository.fetch_workflow_variant_case_pack(
+            case_pack_id=workflow_variant_eval.case_pack_id,
+            case_pack_version=workflow_variant_eval.case_pack_version,
+        )
+        if pack is None:
+            raise ValueError("persisted workflow evaluation case pack required")
+        baseline_version = candidate.baseline_version_ref.rsplit("/", 1)[-1]
+        if parse_canonical_semver(baseline_version) is None:
+            raise ValueError("canonical workflow baseline version required")
+        registry = build_active_workflow_version_registry(
+            registry_version=baseline_version,
+            generated_at=str(pack.generated_at),
+            rollback_plan_ref=candidate.rollback_plan_ref,
+        )
+        matches = [
+            version
+            for version in registry.versions
+            if version.workflow_version_id == candidate.baseline_version_ref
+            and version.workflow_profile == candidate.workflow_profile
+            and version.route == candidate.route
+        ]
+        if len(matches) != 1:
+            raise ValueError("canonical workflow baseline is not registered")
+        return matches[0]
+
+    def _workflow_lifecycle_release_blockers(
+        self,
+        *,
+        transition: WorkflowLifecycleTransitionContract,
+        proposal: EvolutionProposalContract,
+        review_decision: EvolutionReviewDecisionContract,
+        baseline: WorkflowProfileVersionContract,
+        candidate: WorkflowProfileVersionContract,
+        release_checklist: SandboxToReleaseChecklistContract,
+        promotion_gate: PromotionGateDecisionContract,
+        workflow_variant_eval: WorkflowVariantEvalRunContract,
+        rollback_plan: WorkflowRollbackPlanContract,
+        current_transition: WorkflowLifecycleTransitionContract | None,
+        require_live_proposal: bool,
+    ) -> list[str]:
+        blockers = list(
+            validate_workflow_lifecycle_transition(
+                transition,
+                current_transition=current_transition,
+            )
+        )
+        if require_live_proposal:
+            persisted_proposal = self.repository.fetch_proposal(
+                str(proposal.evolution_proposal_id)
+            )
+            if persisted_proposal != proposal:
+                blockers.append("persisted_workflow_lifecycle_proposal_required")
+        if proposal.proposal_type != "workflow_candidate":
+            blockers.append("workflow_lifecycle_workflow_proposal_required")
+        blockers.extend(
+            self._persisted_candidate_review_blockers(
+                proposal=proposal,
+                decision=review_decision,
+            )
+        )
+        blockers.extend(self._canonical_workflow_baseline_blockers(baseline))
+        blockers.extend(
+            self._workflow_release_candidate_snapshot_blockers(
+                proposal=proposal,
+                candidate=candidate,
+                review_decision=review_decision,
+            )
+        )
+        case_pack = self.repository.fetch_workflow_variant_case_pack(
+            case_pack_id=workflow_variant_eval.case_pack_id,
+            case_pack_version=workflow_variant_eval.case_pack_version,
+        )
+        persisted_run = self.repository.fetch_workflow_variant_eval_run(
+            workflow_variant_eval.run_id
+        )
+        if case_pack is None:
+            blockers.append("workflow_lifecycle_persisted_eval_pack_required")
+        else:
+            blockers.extend(
+                validate_workflow_variant_eval_run(
+                    workflow_variant_eval,
+                    case_pack=case_pack,
+                )
+            )
+            blockers.extend(
+                self._workflow_release_baseline_binding_blockers(
+                    case_pack=case_pack,
+                    candidate=candidate,
+                    run=workflow_variant_eval,
+                )
+            )
+        if persisted_run != workflow_variant_eval:
+            blockers.append("workflow_lifecycle_persisted_eval_run_required")
+        if (
+            workflow_variant_eval.status != "passed"
+            or workflow_variant_eval.readiness_status
+            != "candidate_ready_for_human_gate_review"
+            or workflow_variant_eval.promotion_readiness != "manual_gate_only"
+            or workflow_variant_eval.comparison_conclusion
+            != "candidate_improved_without_regression"
+            or workflow_variant_eval.blockers
+            or workflow_variant_eval.regression_flags
+            or workflow_variant_eval.promotion_authorized
+            or workflow_variant_eval.automatic_promotion_allowed
+            or workflow_variant_eval.core_mutation_allowed
+        ):
+            blockers.append("workflow_lifecycle_eval_not_release_ready")
+        canonical_checklist = self.build_sandbox_to_release_checklist(
+            proposal,
+            review_decision=review_decision,
+            workflow_candidate=candidate,
+            workflow_variant_eval=workflow_variant_eval,
+            workflow_rollback_plan=rollback_plan,
+            prefer_persisted_proposal=require_live_proposal,
+        )
+        if canonical_checklist != release_checklist:
+            blockers.append("canonical_workflow_lifecycle_checklist_required")
+        canonical_gate = self.evaluate_promotion_gate(
+            canonical_checklist,
+            completed_gates=list(promotion_gate.completed_gates),
+        )
+        if canonical_gate != promotion_gate:
+            blockers.append("canonical_workflow_lifecycle_promotion_gate_required")
+        if (
+            release_checklist.checklist_status != "ready_for_release_review"
+            or release_checklist.human_review_status not in {"approved", "sandboxed"}
+            or release_checklist.blockers
+            or promotion_gate.gate_status != "passed"
+            or promotion_gate.decision
+            != "eligible_for_human_promotion_decision"
+            or promotion_gate.missing_gates
+            or promotion_gate.blockers
+            or not promotion_gate.promotion_eligible
+            or not promotion_gate.human_decision_required
+            or promotion_gate.promotion_authorized
+            or promotion_gate.automatic_promotion_allowed
+            or promotion_gate.core_mutation_allowed
+        ):
+            blockers.append("workflow_lifecycle_release_gate_not_passed")
+        if not {
+            "standard_engineering_gate",
+            "release_gate_before_promotion",
+        }.issubset(promotion_gate.completed_gates):
+            blockers.append("workflow_lifecycle_external_gates_required")
+        if (
+            rollback_plan.workflow_profile != candidate.workflow_profile
+            or rollback_plan.route != candidate.route
+            or rollback_plan.baseline_version_ref != baseline.workflow_version_id
+            or rollback_plan.candidate_version_ref != candidate.workflow_version_id
+            or rollback_plan.rollback_plan_ref != candidate.rollback_plan_ref
+            or rollback_plan.plan_status != "verified_for_manual_execution"
+            or rollback_plan.execution_mode != "manual_only"
+            or rollback_plan.blockers
+            or not rollback_plan.verification_tests
+            or not rollback_plan.evidence_refs
+            or not rollback_plan.human_review_required
+            or rollback_plan.execution_authorized
+            or rollback_plan.active_registry_write_allowed
+            or rollback_plan.automatic_rollback_allowed
+            or rollback_plan.automatic_promotion_allowed
+            or rollback_plan.core_mutation_allowed
+        ):
+            blockers.append("workflow_lifecycle_rollback_plan_invalid")
+        expected_fields = {
+            "evolution_proposal_id": str(proposal.evolution_proposal_id),
+            "proposal_fingerprint": workflow_lifecycle_artifact_fingerprint(proposal),
+            "review_decision_id": review_decision.review_decision_id,
+            "review_decision_fingerprint": workflow_lifecycle_artifact_fingerprint(
+                review_decision
+            ),
+            "release_checklist_id": release_checklist.checklist_id,
+            "release_checklist_fingerprint": workflow_lifecycle_artifact_fingerprint(
+                release_checklist
+            ),
+            "promotion_gate_id": promotion_gate.promotion_gate_id,
+            "promotion_gate_fingerprint": workflow_lifecycle_artifact_fingerprint(
+                promotion_gate
+            ),
+            "workflow_eval_run_id": workflow_variant_eval.run_id,
+            "workflow_eval_run_fingerprint": workflow_lifecycle_artifact_fingerprint(
+                workflow_variant_eval
+            ),
+            "rollback_plan_id": rollback_plan.rollback_plan_id,
+            "rollback_plan_fingerprint": workflow_lifecycle_artifact_fingerprint(
+                rollback_plan
+            ),
+        }
+        for field_name, expected_value in expected_fields.items():
+            if getattr(transition, field_name) != expected_value:
+                blockers.append(f"workflow_lifecycle_{field_name}_mismatch")
+        return self._unique_values(blockers)
+
+    def _procedural_playbook_release_blockers(
+        self,
+        *,
+        proposal: EvolutionProposalContract,
+        candidate: ProceduralPlaybookCandidateContract,
+        decision: EvolutionReviewDecisionContract,
+        version: str,
+        release_checklist: SandboxToReleaseChecklistContract,
+        promotion_gate: PromotionGateDecisionContract,
+    ) -> list[str]:
+        """Require the existing release gate without granting runtime authority."""
+
+        blockers: list[str] = []
+        canonical_checklist = self.build_sandbox_to_release_checklist(
+            proposal,
+            review_decision=decision,
+        )
+        canonical_gate = self.evaluate_promotion_gate(
+            canonical_checklist,
+            completed_gates=list(promotion_gate.completed_gates),
+        )
+        if release_checklist != canonical_checklist:
+            blockers.append("canonical_playbook_release_checklist_required")
+        if promotion_gate != canonical_gate:
+            blockers.append("canonical_playbook_promotion_gate_required")
+        required_external_gates = {
+            "standard_engineering_gate",
+            "release_gate_before_promotion",
+        }
+        if (
+            str(release_checklist.evolution_proposal_id)
+            != str(proposal.evolution_proposal_id)
+            or release_checklist.candidate_type
+            != "procedural_playbook_candidate"
+            or release_checklist.candidate_identity_ref
+            != candidate.playbook_candidate_id
+            or release_checklist.candidate_version != version
+        ):
+            blockers.append("playbook_release_checklist_mismatch")
+        if (
+            release_checklist.checklist_status != "ready_for_release_review"
+            or release_checklist.human_review_status != "approved"
+            or release_checklist.blockers
+        ):
+            blockers.append("playbook_release_checklist_not_ready")
+        if (
+            not release_checklist.sandbox_required
+            or not release_checklist.release_gate_required
+            or release_checklist.automatic_promotion_allowed
+            or release_checklist.core_mutation_allowed
+        ):
+            blockers.append("playbook_release_checklist_authority_invalid")
+        if (
+            decision.review_decision_id
+            not in {
+                str(item.get("review_decision_id"))
+                for item in proposal.strategy_context.get("evolution_review", {}).get(
+                    "review_history", []
+                )
+                if isinstance(item, dict)
+            }
+            or decision.candidate_version != version
+        ):
+            blockers.append("playbook_release_review_mismatch")
+        if (
+            promotion_gate.checklist_id != release_checklist.checklist_id
+            or str(promotion_gate.evolution_proposal_id)
+            != str(proposal.evolution_proposal_id)
+            or promotion_gate.gate_status != "passed"
+            or promotion_gate.decision
+            != "eligible_for_human_promotion_decision"
+            or promotion_gate.release_conclusion
+            != "release_gate_passed_pending_human_decision"
+            or not promotion_gate.promotion_eligible
+            or promotion_gate.human_review_status != "approved"
+            or promotion_gate.blockers
+            or promotion_gate.missing_gates
+        ):
+            blockers.append("playbook_promotion_gate_not_passed")
+        if (
+            not required_external_gates.issubset(promotion_gate.completed_gates)
+            or set(promotion_gate.required_gates)
+            != set(release_checklist.required_gates)
+            or promotion_gate.evidence_refs != release_checklist.evidence_refs
+        ):
+            blockers.append("playbook_promotion_gate_evidence_mismatch")
+        if (
+            not promotion_gate.human_decision_required
+            or promotion_gate.promotion_authorized
+            or promotion_gate.automatic_promotion_allowed
+            or promotion_gate.core_mutation_allowed
+        ):
+            blockers.append("playbook_promotion_gate_authority_invalid")
+        return list(dict.fromkeys(blockers))
+
+    @staticmethod
+    def _persisted_playbook_review_blockers(
+        *,
+        proposal: EvolutionProposalContract,
+        candidate: ProceduralPlaybookCandidateContract,
+        decision: EvolutionReviewDecisionContract,
+    ) -> list[str]:
+        """Bind runtime guidance to the exact candidate and human review snapshot."""
+
+        blockers: list[str] = []
+        if proposal.proposal_type != "procedural_playbook_candidate":
+            blockers.append("persisted_procedural_playbook_proposal_required")
+        if str(proposal.evolution_proposal_id) != str(decision.evolution_proposal_id):
+            blockers.append("persisted_playbook_review_proposal_mismatch")
+        if proposal.candidate_refs != [candidate.playbook_candidate_id]:
+            blockers.append("persisted_playbook_candidate_ref_mismatch")
+
+        matrix = dict(
+            proposal.evaluation_matrix.get("procedural_playbook_candidate", {})
+        )
+        expected_matrix = {
+            "procedure_name": candidate.procedure_name,
+            "workflow_profile": candidate.workflow_profile,
+            "route": candidate.route,
+            "domain": candidate.domain,
+            "bounded_step_count": len(candidate.bounded_steps),
+            "review_status": candidate.review_status,
+            "blockers": list(candidate.blockers),
+        }
+        for field_name, expected_value in expected_matrix.items():
+            if matrix.get(field_name) != expected_value:
+                blockers.append(f"persisted_playbook_{field_name}_mismatch")
+
+        context = dict(
+            proposal.strategy_context.get("procedural_playbook_candidate", {})
+        )
+        expected_context = {
+            "playbook_candidate_id": candidate.playbook_candidate_id,
+            "procedure_name": candidate.procedure_name,
+            "workflow_profile": candidate.workflow_profile,
+            "route": candidate.route,
+            "domain": candidate.domain,
+            "bounded_steps": list(candidate.bounded_steps),
+            "evidence_refs": list(candidate.evidence_refs),
+            "source_artifact_refs": list(candidate.source_artifact_refs),
+            "source_reflection_refs": list(candidate.source_reflection_refs),
+            "proposed_tests": list(candidate.proposed_tests),
+            "rollback_plan_ref": candidate.rollback_plan_ref,
+            "risk_hint": candidate.risk_hint,
+            "review_status": candidate.review_status,
+            "human_review_required": candidate.human_review_required,
+            "memory_write_mode": candidate.memory_write_mode,
+            "automatic_promotion_allowed": candidate.automatic_promotion_allowed,
+            "core_mutation_allowed": candidate.core_mutation_allowed,
+        }
+        for field_name, expected_value in expected_context.items():
+            if context.get(field_name) != expected_value:
+                blockers.append(f"persisted_playbook_{field_name}_mismatch")
+
+        if not set(candidate.evidence_refs).issubset(proposal.source_signals):
+            blockers.append("persisted_playbook_evidence_mismatch")
+        if proposal.optimization_blockers:
+            blockers.append("persisted_playbook_has_blockers")
+        if decision.rollback_plan_ref != candidate.rollback_plan_ref:
+            blockers.append("persisted_playbook_review_rollback_mismatch")
+
+        review = dict(proposal.strategy_context.get("evolution_review", {}))
+        expected_review = {
+            "last_review_decision_id": decision.review_decision_id,
+            "review_status": decision.review_status,
+            "last_decision": decision.decision,
+            "last_operator_ref": decision.operator_ref,
+            "last_reviewed_at": decision.timestamp,
+            "rollback_plan_ref": decision.rollback_plan_ref,
+            "candidate_identity_ref": decision.candidate_identity_ref,
+            "candidate_version": decision.candidate_version,
+        }
+        for field_name, expected_value in expected_review.items():
+            if review.get(field_name) != expected_value:
+                blockers.append(f"persisted_playbook_review_{field_name}_mismatch")
+        history = list(review.get("review_history", []))
+        latest = dict(history[-1]) if history else {}
+        if (
+            latest.get("evidence_refs") != list(decision.evidence_refs)
+            or latest.get("proposed_tests") != list(decision.proposed_tests)
+            or latest.get("review_notes") != list(decision.review_notes)
+            or latest.get("candidate_identity_ref")
+            != decision.candidate_identity_ref
+            or latest.get("candidate_version") != decision.candidate_version
+        ):
+            blockers.append("persisted_playbook_review_evidence_mismatch")
+        if review.get("blockers"):
+            blockers.append("persisted_playbook_review_has_blockers")
+        return list(dict.fromkeys(blockers))
 
     @staticmethod
     def _apply_workflow_delta(
@@ -3654,6 +6364,24 @@ class EvolutionLabService:
     ) -> dict[str, object]:
         context = dict(proposal.strategy_context)
         review = dict(context.get("evolution_review", {}))
+        workflow_candidate = dict(
+            proposal.evaluation_matrix.get("workflow_candidate", {})
+        )
+        workflow_candidate_binding: dict[str, object] = {}
+        if proposal.proposal_type == "workflow_candidate" and workflow_candidate:
+            workflow_candidate_binding = {
+                "candidate_workflow_version_id": workflow_candidate.get(
+                    "workflow_version_id"
+                ),
+                "candidate_definition_hash": workflow_candidate.get(
+                    "definition_hash"
+                ),
+                "candidate_snapshot_fingerprint": (
+                    EvolutionLabService._workflow_candidate_snapshot_payload_fingerprint(
+                        workflow_candidate
+                    )
+                ),
+            }
         history = list(review.get("review_history", []))
         history.append(
             {
@@ -3666,6 +6394,9 @@ class EvolutionLabService:
                 "rollback_plan_ref": decision.rollback_plan_ref,
                 "risk_acceptance": decision.risk_acceptance,
                 "review_notes": list(decision.review_notes),
+                "candidate_identity_ref": decision.candidate_identity_ref,
+                "candidate_version": decision.candidate_version,
+                **workflow_candidate_binding,
                 "timestamp": decision.timestamp,
                 "automatic_promotion_allowed": False,
                 "core_mutation_allowed": False,
@@ -3678,6 +6409,9 @@ class EvolutionLabService:
                 "last_operator_ref": decision.operator_ref,
                 "last_review_decision_id": decision.review_decision_id,
                 "last_reviewed_at": decision.timestamp,
+                "candidate_identity_ref": decision.candidate_identity_ref,
+                "candidate_version": decision.candidate_version,
+                **workflow_candidate_binding,
                 "blockers": list(blockers),
                 "rollback_plan_ref": decision.rollback_plan_ref,
                 "requires_human_review": True,

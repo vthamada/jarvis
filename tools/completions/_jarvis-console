@@ -6,22 +6,34 @@ _jarvis_console() {
     previous=$words[CURRENT-1]
     local token
     for token in $words; do
-        case $token in (ask|chat|objectives|goal-strategy|objective|work-items|work-item|open-loops|resume-loop|artifacts|artifact|technology-candidates|experience-reflections|procedural-playbooks|skill-evolution|evolution-review-queue|evolution-review|memory-review-queue|memory-review|mission-cycle|operator-dashboard|daily-workspace|operator-outcomes|command-reference|completion|readiness-dashboard|doctor|learning-report|progress-report|mission-workflow|mission-feedback) command=$token; break ;; esac
+        case $token in (ask|action-confirm|chat|objectives|goal-strategy|objective|work-items|work-item|open-loops|resume-loop|artifacts|artifact|technology-candidates|technology-radar-intake|technology-radar|technology-experiment-pack|technology-experiment-eval|technology-experiments|experience-reflections|procedural-playbooks|skill-evolution|workflow-lifecycle|workflow-transition|evolution-review-queue|evolution-review|memory-review-queue|memory-review|mission-cycle|operator-dashboard|daily-workspace|operator-outcomes|decision-attribution|command-reference|completion|readiness-dashboard|doctor|learning-report|progress-report|mission-workflow|mission-feedback) command=$token; break ;; esac
     done
-    if [[ $previous == '--format' ]]; then
+    if [[ -z $command && $previous == '--format' ]]; then
         _values 'format' text json
         return
     fi
     if [[ -z $command ]]; then
-        _values 'command' --format 'ask' 'chat' 'objectives' 'goal-strategy' 'objective' 'work-items' 'work-item' 'open-loops' 'resume-loop' 'artifacts' 'artifact' 'technology-candidates' 'experience-reflections' 'procedural-playbooks' 'skill-evolution' 'evolution-review-queue' 'evolution-review' 'memory-review-queue' 'memory-review' 'mission-cycle' 'operator-dashboard' 'daily-workspace' 'operator-outcomes' 'command-reference' 'completion' 'readiness-dashboard' 'doctor' 'learning-report' 'progress-report' 'mission-workflow' 'mission-feedback'
+        _values 'command' --format 'ask' 'action-confirm' 'chat' 'objectives' 'goal-strategy' 'objective' 'work-items' 'work-item' 'open-loops' 'resume-loop' 'artifacts' 'artifact' 'technology-candidates' 'technology-radar-intake' 'technology-radar' 'technology-experiment-pack' 'technology-experiment-eval' 'technology-experiments' 'experience-reflections' 'procedural-playbooks' 'skill-evolution' 'workflow-lifecycle' 'workflow-transition' 'evolution-review-queue' 'evolution-review' 'memory-review-queue' 'memory-review' 'mission-cycle' 'operator-dashboard' 'daily-workspace' 'operator-outcomes' 'decision-attribution' 'command-reference' 'completion' 'readiness-dashboard' 'doctor' 'learning-report' 'progress-report' 'mission-workflow' 'mission-feedback'
         return
     fi
     case "$command:$previous" in
+        ask:--requested-autonomy-level)
+            _values 'value' 'assist_only' 'confirm_before_action' 'bounded_core_action' 'supervised_external_action'
+            return ;;
+        ask:--max-autonomy-level)
+            _values 'value' 'assist_only' 'confirm_before_action' 'bounded_core_action' 'supervised_external_action'
+            return ;;
+        ask:--autonomy-confirmation-mode)
+            _values 'value' 'explicit'
+            return ;;
         ask:--format)
-            _values 'value' 'text' 'json'
+            _values 'value' 'text'
+            return ;;
+        action-confirm:--format)
+            _values 'value' 'text'
             return ;;
         chat:--format)
-            _values 'value' 'text' 'json'
+            _values 'value' 'text'
             return ;;
         objectives:--format)
             _values 'value' 'text' 'json'
@@ -33,7 +45,7 @@ _jarvis_console() {
             _values 'value' 'resume' 'pause' 'block' 'complete' 'redefine-next-action'
             return ;;
         objective:--format)
-            _values 'value' 'text' 'json'
+            _values 'value' 'text'
             return ;;
         work-items:--format)
             _values 'value' 'text' 'json'
@@ -45,13 +57,13 @@ _jarvis_console() {
             _values 'value' 'p0' 'p1' 'p2' 'p3'
             return ;;
         work-item:--format)
-            _values 'value' 'text' 'json'
+            _values 'value' 'text'
             return ;;
         open-loops:--format)
             _values 'value' 'text' 'json'
             return ;;
         resume-loop:--format)
-            _values 'value' 'text' 'json'
+            _values 'value' 'text'
             return ;;
         artifacts:--format)
             _values 'value' 'text' 'json'
@@ -60,9 +72,27 @@ _jarvis_console() {
             _values 'value' 'register' 'activate' 'archive' 'replace' 'rollback'
             return ;;
         artifact:--format)
-            _values 'value' 'text' 'json'
+            _values 'value' 'text'
             return ;;
         technology-candidates:--format)
+            _values 'value' 'text' 'json'
+            return ;;
+        technology-radar-intake:--format)
+            _values 'value' 'text'
+            return ;;
+        technology-radar:--format)
+            _values 'value' 'text' 'json'
+            return ;;
+        technology-experiment-pack:--format)
+            _values 'value' 'text'
+            return ;;
+        technology-experiment-eval:--format)
+            _values 'value' 'text'
+            return ;;
+        technology-experiments:--view)
+            _values 'value' 'packs' 'runs'
+            return ;;
+        technology-experiments:--format)
             _values 'value' 'text' 'json'
             return ;;
         experience-reflections:--format)
@@ -74,6 +104,18 @@ _jarvis_console() {
         skill-evolution:--format)
             _values 'value' 'text' 'json'
             return ;;
+        workflow-lifecycle:--format)
+            _values 'value' 'text' 'json'
+            return ;;
+        workflow-transition:--action)
+            _values 'value' 'activate_candidate' 'rollback_to_baseline'
+            return ;;
+        workflow-transition:--completed-external-gate)
+            _values 'value' 'standard_engineering_gate' 'release_gate_before_promotion'
+            return ;;
+        workflow-transition:--format)
+            _values 'value' 'text'
+            return ;;
         evolution-review-queue:--format)
             _values 'value' 'text' 'json'
             return ;;
@@ -81,7 +123,7 @@ _jarvis_console() {
             _values 'value' 'approve' 'reject' 'sandbox' 'needs-review' 'rollback'
             return ;;
         evolution-review:--format)
-            _values 'value' 'text' 'json'
+            _values 'value' 'text'
             return ;;
         memory-review-queue:--maintenance-action)
             _values 'value' 'consolidate' 'archive' 'expire'
@@ -93,7 +135,7 @@ _jarvis_console() {
             _values 'value' 'approve' 'reject' 'needs-review' 'rollback'
             return ;;
         memory-review:--format)
-            _values 'value' 'text' 'json'
+            _values 'value' 'text'
             return ;;
         mission-cycle:--format)
             _values 'value' 'text' 'json'
@@ -107,6 +149,9 @@ _jarvis_console() {
         operator-outcomes:--format)
             _values 'value' 'text' 'json'
             return ;;
+        decision-attribution:--format)
+            _values 'value' 'text' 'json'
+            return ;;
         command-reference:--format)
             _values 'value' 'text' 'json'
             return ;;
@@ -114,7 +159,7 @@ _jarvis_console() {
             _values 'value' 'powershell' 'bash' 'zsh'
             return ;;
         completion:--format)
-            _values 'value' 'text' 'json'
+            _values 'value' 'text'
             return ;;
         readiness-dashboard:--run-gate)
             _values 'value' 'quick' 'standard'
@@ -132,18 +177,21 @@ _jarvis_console() {
             _values 'value' 'text' 'json'
             return ;;
         mission-workflow:--format)
-            _values 'value' 'text' 'json'
+            _values 'value' 'text'
             return ;;
         mission-feedback:--assessment)
             _values 'value' 'helpful' 'partially-helpful' 'not-helpful' 'correction'
             return ;;
         mission-feedback:--format)
-            _values 'value' 'text' 'json'
+            _values 'value' 'text'
             return ;;
     esac
     case "$command" in
         ask)
-            _values 'option' '-h' '--help' '--session-id' '--mission-id' '--operator-identity-ref' '--canonical-user-ref' '--debug' '--format'
+            _values 'option' '-h' '--help' '--session-id' '--mission-id' '--operator-identity-ref' '--canonical-user-ref' '--requested-autonomy-level' '--max-autonomy-level' '--autonomy-confirmation-mode' '--action-confirmation-receipt-id' '--action-confirmation-origin-request-id' '--origin-request-id' '--debug' '--format'
+            ;;
+        action-confirm)
+            _values 'option' '-h' '--help' '--challenge-id' '--action-fingerprint' '--operator-identity-ref' '--format'
             ;;
         chat)
             _values 'option' '-h' '--help' '--session-id' '--mission-id' '--message' '--operator-identity-ref' '--canonical-user-ref' '--debug' '--format'
@@ -178,6 +226,21 @@ _jarvis_console() {
         technology-candidates)
             _values 'option' '-h' '--help' '--evolution-db' '--limit' '--format'
             ;;
+        technology-radar-intake)
+            _values 'option' '-h' '--help' '--evolution-db' '--intake-root' '--manifest' '--manifest-sha256' '--format'
+            ;;
+        technology-radar)
+            _values 'option' '-h' '--help' '--evolution-db' '--intake-id' '--candidate-ref' '--intake-version' '--source-kind' '--absorption-class' '--target-gap-ref' '--limit' '--offset' '--format'
+            ;;
+        technology-experiment-pack)
+            _values 'option' '-h' '--help' '--evolution-db' '--manifest-root' '--manifest' '--manifest-sha256' '--format'
+            ;;
+        technology-experiment-eval)
+            _values 'option' '-h' '--help' '--evolution-db' '--manifest-root' '--manifest' '--manifest-sha256' '--format'
+            ;;
+        technology-experiments)
+            _values 'option' '-h' '--help' '--evolution-db' '--view' '--experiment-pack-id' '--pack-version' '--run-id' '--intake-id' '--candidate-ref' '--status' '--limit' '--offset' '--format'
+            ;;
         experience-reflections)
             _values 'option' '-h' '--help' '--memory-db' '--mission-id' '--workflow-profile' '--limit' '--format'
             ;;
@@ -186,6 +249,12 @@ _jarvis_console() {
             ;;
         skill-evolution)
             _values 'option' '-h' '--help' '--memory-db' '--evolution-db' '--skill-id' '--version' '--workflow-profile' '--route' '--domain' '--limit' '--format'
+            ;;
+        workflow-lifecycle)
+            _values 'option' '-h' '--help' '--memory-db' '--evolution-db' '--workflow-profile' '--route' '--limit' '--offset' '--format'
+            ;;
+        workflow-transition)
+            _values 'option' '-h' '--help' '--memory-db' '--evolution-db' '--workflow-profile' '--route' '--action' '--proposal-id' '--workflow-eval-run-id' '--human-authorization-ref' '--operator-ref' '--evidence-ref' '--completed-test-ref' '--completed-external-gate' '--failure-ref' '--transition-id' '--format'
             ;;
         evolution-review-queue)
             _values 'option' '-h' '--help' '--evolution-db' '--limit' '--format'
@@ -210,6 +279,9 @@ _jarvis_console() {
             ;;
         operator-outcomes)
             _values 'option' '-h' '--help' '--observability-db' '--memory-db' '--period-start' '--period-end' '--event-limit' '--mission-limit' '--format'
+            ;;
+        decision-attribution)
+            _values 'option' '-h' '--help' '--observability-db' '--memory-db' '--request-id' '--mission-id' '--workflow-profile' '--limit' '--output-dir' '--format'
             ;;
         command-reference)
             _values 'option' '-h' '--help' '--format'

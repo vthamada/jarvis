@@ -363,8 +363,10 @@ Notas de leitura:
   foi repriorizada em `MB-175`, abrindo `MB-176` a `MB-189`; `MB-176` foi
   fechado e `MB-177` a `MB-189` tambem foram fechados; `MB-190` abriu
   `MB-191` a `MB-200`, e o lote foi integralmente fechado em `MB-200`;
-  `MB-201` abriu `MB-202` a `MB-210`; `MB-202` e `MB-203` foram fechados e
-  somente `MB-204` esta ready.
+  `MB-201` abriu `MB-202` a `MB-210`; o lote foi integralmente fechado em
+  `MB-210`; `MB-211` abriu Governed Action Foundation em `MB-212` a `MB-219`,
+  `MB-212` a `MB-217` foram concluidos e `MB-218` e o unico item tecnico
+  `ready`, com execucao aguardando nova solicitacao do operador.
 
 ### 5.5 Deferred verticals already mapped
 
@@ -408,9 +410,11 @@ Ordem recomendada hoje:
 1. tratar `MB-110` a `MB-159` como baseline fechado de objetivos persistentes,
    utilidade operacional, absorcao tecnologica governada, aprendizado revisado,
    higiene documental e horizonte longo minimo.
-2. tratar `MB-160` a `MB-200` como baseline fechado e executar a fila
-   `MB-202` a `MB-210` aberta por `MB-201`, seguindo WIP 1.
-3. manter `SO-001`, `TA-004`, `TA-006` e verticais `deferred` fora da fila ate
+2. tratar `MB-160` a `MB-217` como baseline fechado; a saga fisica/canonica,
+   recovery, outbox, compensacao e rollback canonico ja pertencem ao baseline.
+   `MB-218` e o proximo item WIP 1, mas nao deve ser executado antes de nova
+   solicitacao explicita do operador.
+3. manter `SFC-005`, `SO-001`, `TA-004`, `TA-006` e verticais `deferred` fora da fila ate
    haver decisao explicita de fase.
 
 Leitura correta:
@@ -490,7 +494,27 @@ Leitura correta:
 - `MB-201` abriu `MB-202` a `MB-210` para executar essa decisao e posicionou
   `KNW-006` depois dos slices causais do Core; `MB-202` fechou policy
   declarativa versionada, `MB-203` fechou causalidade semantica baseada em
-  evidencia e somente `MB-204` esta `ready`;
+  evidencia, `MB-204` fechou playbooks procedurais humanos, versionados,
+  scoped e read-only, `MB-205` fechou atribuicao auditavel entre decisao,
+  memoria e outcome com claim atomico request/session, binding exato a
+  experience persistida, payload recorded integral e nenhum ganho para
+  evidencia marcada sem comparador; `MB-206` fechou comparacao de variantes
+  sobre observacoes pareadas sob o mesmo control snapshot, com metricas
+  derivadas e sem autoridade; `MB-207` fechou lifecycle manual append-only,
+  consumo runtime e rollback humano; `MB-208` fechou intake manual versionado,
+  deduplicado e append-only do radar sem auto-trust/ingestao; `MB-209` fechou
+  packs/evals tecnologicos inertes, pareados e sandbox-only; `MB-210` fechou a
+  matriz de evidencia/readiness com fila esgotada e decidiu sequenciar
+  `GOV-007`, `GOV-005` e `ACT-005` antes de `SFC-005`, sem abrir autoridade;
+- `MB-211` materializou essa decisao em `MB-212` a `MB-219`; `MB-212` fechou
+  confirmacao exata single-use e contencao do writer; `MB-213` fechou autonomia
+  fail-closed por acao; `MB-214` fechou registry e grants exatos, append-only e
+  prepare-only; `MB-215` fechou preflight local por handles sem escrita;
+  `MB-216` fechou escrita/rollback transacional; `MB-217` fechou a consistencia
+  fisica/canonica por saga recuperavel, com lease one-shot, outbox transacional,
+  compensacao precanonica, rollback de predecessor superseded e paridade
+  SQLite/PostgreSQL materializada. `MB-218` e o unico item tecnico `ready`, mas
+  aguarda nova solicitacao, e nenhuma API foi aberta;
 - `MB-159` foi fechado como raciocinio minimo de objetivos de horizonte longo,
   movendo `COG-010` para um baseline minimo operacional;
 - `MB-160` abriu a fila maior `MB-161` a `MB-174`, priorizando memoria causal,
@@ -500,8 +524,15 @@ Leitura correta:
   `MB-173`, `MB-174` e `MB-176` foram fechados; `MB-175` abriu `MB-176` a
   `MB-189`; `MB-177` a `MB-189` tambem foram fechados; `MB-190` abriu
   `MB-191` a `MB-200`; o lote foi integralmente fechado; `MB-201` abriu
-  `MB-202` a `MB-210`; `MB-202` e `MB-203` foram fechados e somente `MB-204`
-  esta ready;
+  `MB-202` a `MB-210`; o lote foi integralmente fechado, incluindo lifecycle
+  manual, intake governado do radar, experimentos tecnologicos isolados e a
+  closure de readiness `MB-210`; `MB-211` realizou a repriorizacao seguinte,
+  `MB-212` fechou confirmacao verificavel, `MB-213` fechou autonomia fail-closed,
+  `MB-214` fechou permissoes exatas por adapter, `MB-215` fechou preflight local
+  side-effect-free, `MB-216` fechou mutacao/rollback fisico e `MB-217` fechou a
+  saga recuperavel entre receipt fisico e lifecycle canonico. `MB-218` e agora
+  o unico item tecnico `ready` da fila Governed Action Foundation, sem execucao
+  ate nova solicitacao do operador;
 - `RH-*` permanece fora do backlog implementavel.
 
 ---

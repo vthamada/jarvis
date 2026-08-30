@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import Counter
 from collections.abc import Iterable
 from datetime import UTC, datetime
 
@@ -9,6 +10,7 @@ from shared.contracts import (
     MemoryInfluencePolicyDecisionContract,
     MemoryInfluenceSignalContract,
 )
+from shared.versioning import parse_canonical_semver
 
 MEMORY_INFLUENCE_PRIORITY = (
     "reviewed_learning",
@@ -21,6 +23,7 @@ MEMORY_INFLUENCE_POLICY_REFS = (
     "policy://memory-influence/evidence-required",
     "policy://memory-influence/semantic-freshness-v1",
     "policy://memory-influence/semantic-relevance-v1",
+    "policy://memory-influence/reviewed-procedural-version-v1",
     "policy://memory-influence/conflict-fail-closed",
     "policy://governance/core-mediated-memory-only",
 )
@@ -29,7 +32,12 @@ _PRIORITY = {
     for index, source_kind in enumerate(MEMORY_INFLUENCE_PRIORITY)
 }
 _BLOCKED_LIFECYCLES = {"aging", "archived", "expired", "archive_candidate"}
-_BLOCKED_REVIEWS = {"rejected", "rolled_back", "review_recommended"}
+_BLOCKED_REVIEWS = {
+    "rejected",
+    "revoked",
+    "rolled_back",
+    "review_recommended",
+}
 _ELIGIBLE_SEMANTIC_FRESHNESS = {"current", "aging"}
 _MIN_SEMANTIC_RELEVANCE = 0.5
 
@@ -76,6 +84,7 @@ def evaluate_memory_influence_policy(
     domain: str | None,
     generated_at: str,
     max_signals: int = 16,
+    max_reviewed_procedural: int | None = None,
 ) -> MemoryInfluencePolicyDecisionContract:
     """Select bounded causal inputs and explain every non-use decision."""
 
@@ -89,18 +98,31 @@ def evaluate_memory_influence_policy(
     signal_kinds: dict[str, str] = {}
     freshness_statuses: dict[str, str] = {}
     relevance_scores: dict[str, float] = {}
+    version_refs: dict[str, str] = {}
+    review_decision_refs: dict[str, str] = {}
     if max_signals < 1 or max_signals > 16:
         max_signals = 16
         non_use_reasons["policy://input"] = "invalid_signal_limit"
-    if len(bounded) > max_signals:
-        for signal in bounded[max_signals:]:
-            ignored_refs.append(signal.signal_ref)
-            non_use_reasons[signal.signal_ref] = "signal_limit_exceeded"
-        bounded = bounded[:max_signals]
-
-    seen_refs: set[str] = set()
+    if max_reviewed_procedural is not None and (
+        max_reviewed_procedural < 1 or max_reviewed_procedural > max_signals
+    ):
+        max_reviewed_procedural = 1
+        non_use_reasons["policy://reviewed-procedural-input"] = (
+            "invalid_reviewed_procedural_limit"
+        )
+    duplicate_refs = {
+        signal_ref
+        for signal_ref, count in Counter(
+            signal.signal_ref for signal in bounded
+        ).items()
+        if count > 1
+    }
     eligible: list[MemoryInfluenceSignalContract] = []
     for signal in bounded:
+        if signal.signal_ref in duplicate_refs:
+            ignored_refs.append(signal.signal_ref)
+            non_use_reasons[signal.signal_ref] = "duplicate_signal_ref"
+            continue
         signal_kinds[signal.signal_ref] = signal.source_kind
         effective_freshness = signal.freshness_status
         freshness_claim_mismatch = False
@@ -118,6 +140,10 @@ def evaluate_memory_influence_policy(
             freshness_statuses[signal.signal_ref] = signal.freshness_status
         if signal.relevance_score is not None:
             relevance_scores[signal.signal_ref] = signal.relevance_score
+        if signal.version_ref:
+            version_refs[signal.signal_ref] = signal.version_ref
+        if signal.review_decision_ref:
+            review_decision_refs[signal.signal_ref] = signal.review_decision_ref
         reason = _ineligibility_reason(
             signal,
             route=route,
@@ -130,9 +156,6 @@ def evaluate_memory_influence_policy(
                 "semantic_freshness_claim_mismatch:"
                 f"{signal.freshness_status}:{effective_freshness}"
             )
-        if signal.signal_ref in seen_refs:
-            reason = "duplicate_signal_ref"
-        seen_refs.add(signal.signal_ref)
         if reason:
             ignored_refs.append(signal.signal_ref)
             non_use_reasons[signal.signal_ref] = reason
@@ -140,16 +163,30 @@ def evaluate_memory_influence_policy(
         eligible.append(signal)
 
     selected_by_group: dict[str, MemoryInfluenceSignalContract] = {}
+    selected_reviewed_procedural_refs: list[str] = []
     ordered = sorted(
         eligible,
         key=lambda signal: (
             -_PRIORITY[signal.source_kind],
             -(signal.relevance_score if signal.relevance_score is not None else -1.0),
+            *_descending_version_key(signal.version_ref),
             signal.signal_ref,
         ),
     )
     for signal in ordered:
         selected = selected_by_group.get(signal.conflict_group)
+        if (
+            selected is not None
+            and signal.source_kind == "procedural"
+            and signal.version_ref is not None
+        ):
+            ignored_refs.append(signal.signal_ref)
+            non_use_reasons[signal.signal_ref] = (
+                f"superseded_by_newer_version:{selected.signal_ref}"
+            )
+            if selected.directive != signal.directive:
+                conflict_refs.extend([selected.signal_ref, signal.signal_ref])
+            continue
         if selected is not None and selected.directive != signal.directive:
             ignored_refs.append(signal.signal_ref)
             conflict_refs.extend([selected.signal_ref, signal.signal_ref])
@@ -157,8 +194,27 @@ def evaluate_memory_influence_policy(
                 f"conflict_with_higher_priority:{selected.signal_ref}"
             )
             continue
+        if (
+            selected is None
+            and max_reviewed_procedural is not None
+            and _is_reviewed_procedural(signal)
+            and len(selected_reviewed_procedural_refs)
+            >= max_reviewed_procedural
+        ):
+            ignored_refs.append(signal.signal_ref)
+            non_use_reasons[signal.signal_ref] = (
+                "reviewed_procedural_application_limit_exceeded:"
+                f"{selected_reviewed_procedural_refs[0]}"
+            )
+            continue
+        if len(selected_refs) >= max_signals:
+            ignored_refs.append(signal.signal_ref)
+            non_use_reasons[signal.signal_ref] = "signal_limit_exceeded"
+            continue
         selected_by_group.setdefault(signal.conflict_group, signal)
         selected_refs.append(signal.signal_ref)
+        if _is_reviewed_procedural(signal):
+            selected_reviewed_procedural_refs.append(signal.signal_ref)
         evidence_refs.extend(signal.evidence_refs)
         use_reasons[signal.signal_ref] = (
             f"selected:{signal.source_kind}:priority={_PRIORITY[signal.source_kind]}:"
@@ -169,6 +225,12 @@ def evaluate_memory_influence_policy(
                 f"reason={signal.relevance_reason}"
                 if signal.source_kind == "semantic"
                 and signal.relevance_score is not None
+                else ""
+            )
+            + (
+                f":version={signal.version_ref}:"
+                f"review={signal.review_decision_ref}"
+                if signal.source_kind == "procedural" and signal.version_ref
                 else ""
             )
         )
@@ -208,6 +270,10 @@ def evaluate_memory_influence_policy(
         signal_kinds=signal_kinds,
         freshness_statuses=freshness_statuses,
         relevance_scores=relevance_scores,
+        version_refs=version_refs,
+        review_decision_refs=review_decision_refs,
+        execution_allowed=False,
+        tool_dispatch_allowed=False,
     )
 
 
@@ -247,11 +313,28 @@ def _ineligibility_reason(
             return "semantic_relevance_below_threshold"
         if not signal.relevance_reason or len(signal.relevance_reason) > 500:
             return "semantic_relevance_reason_missing_or_unbounded"
+    if (
+        signal.source_kind == "procedural"
+        and signal.signal_ref.startswith("playbook-candidate://")
+    ):
+        return "procedural_human_approval_required"
+    reviewed_procedural = _is_reviewed_procedural(signal)
+    if reviewed_procedural:
+        if signal.review_status in _BLOCKED_REVIEWS:
+            return f"review_status_not_eligible:{signal.review_status}"
+        if parse_canonical_semver(signal.version_ref) is None:
+            return "procedural_version_invalid"
+        if signal.review_status != "approved":
+            return "procedural_human_approval_required"
+        if not signal.review_decision_ref:
+            return "procedural_review_decision_required"
     if not signal.conflict_group or not signal.directive:
         return "conflict_contract_required"
     if (
         not signal.read_only
         or signal.memory_write_allowed
+        or signal.execution_allowed
+        or signal.tool_dispatch_allowed
         or signal.automatic_promotion_allowed
         or signal.core_mutation_allowed
     ):
@@ -284,6 +367,22 @@ def _ineligibility_reason(
     if scope_mismatch:
         return scope_mismatch
     return None
+
+
+def _is_reviewed_procedural(signal: MemoryInfluenceSignalContract) -> bool:
+    return signal.source_kind == "procedural" and (
+        signal.signal_ref.startswith("reviewed-playbook://")
+        or signal.version_ref is not None
+        or signal.review_decision_ref is not None
+    )
+
+
+def _descending_version_key(version_ref: str | None) -> tuple[int, int, int]:
+    parsed = parse_canonical_semver(version_ref)
+    if parsed is None:
+        return (0, 0, 0)
+    major, minor, patch = parsed
+    return (-major, -minor, -patch)
 
 
 def _scope_mismatch(

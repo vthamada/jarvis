@@ -1,0 +1,27 @@
+{
+  "case_pack_id": "technology-experiment-cases://bounded-handoff/1.0.0",
+  "case_pack_version": "1.0.0",
+  "cases": [
+    {
+      "case_id": "technology-experiment-case://bounded-handoff/1.0.0",
+      "case_version": "1.0.0",
+      "critical_contract_check_refs": [
+        "sovereign_consumer_preserved"
+      ],
+      "critical_isolation_check_refs": [
+        "dependencies_unchanged",
+        "external_code_not_executed",
+        "host_filesystem_unchanged",
+        "network_disabled"
+      ],
+      "input_fingerprint": "0000000000000000000000000000000000000000000000000000000000000000",
+      "scenario_ref": "technology-experiment-scenario://bounded-handoff",
+      "success_criteria_refs": [
+        "bounded_handoff"
+      ]
+    }
+  ],
+  "declarative_only": true,
+  "offline_only": true,
+  "sandbox_only": true
+}

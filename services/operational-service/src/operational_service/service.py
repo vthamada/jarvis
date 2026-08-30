@@ -2,22 +2,57 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable, Mapping
+from contextlib import AbstractContextManager
 from dataclasses import dataclass, replace
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from hashlib import sha256
+from hmac import compare_digest
 from pathlib import Path
+from re import fullmatch
+from typing import Protocol
 from uuid import uuid4
 
+from operational_service.adapters.local_text_file import LocalTextFilePreflightAdapter
+from operational_service.adapters.local_text_transaction import (
+    LocalTextClaimedAuthorizationLease,
+    LocalTextExecutionAuthorizationContext,
+    LocalTextExecutionAuthorizationRequest,
+    LocalTextMutationReceipt,
+    LocalTextMutationRequest,
+    LocalTextRollbackReceipt,
+    LocalTextRollbackRequest,
+    LocalTextStagingAuthorizationRequest,
+    LocalTextTransactionEngine,
+)
+from shared.action_confirmation import (
+    build_action_fingerprint,
+    canonical_action_confirmation_payload,
+)
+from shared.action_confirmation import (
+    build_action_intent as build_shared_action_intent,
+)
 from shared.artifact_policy import (
     canonical_artifact_states_from_mission,
     order_artifact_states,
 )
-from shared.autonomy_ladder import capability_mode_exceeds_autonomy_limit
+from shared.autonomy_ladder import evaluate_autonomy_action
 from shared.contracts import (
+    ActionIntentContract,
+    AdapterActionRequestContract,
+    AdapterExecutionRequestContract,
+    ArtifactPhysicalApplyPlanContract,
+    ArtifactPhysicalCanonicalCommitReceiptContract,
+    ArtifactPhysicalRollbackPlanContract,
     ArtifactRegistryContract,
     ArtifactResultContract,
+    AutonomyActionPolicyDecisionContract,
     DailyOperatorWorkspaceContract,
     DailyWorkspaceMissionContract,
+    LocalTextFilePreflightAttestationContract,
+    LocalTextFilePreflightContract,
+    LocalTextFilePreflightRequestContract,
+    LocalTextPhysicalStateAttestationContract,
     MissionStateContract,
     OpenLoopRegistryContract,
     OperationDispatchContract,
@@ -29,8 +64,164 @@ from shared.open_loop_policy import (
     mission_freshness,
     open_loop_resume_blockers,
 )
-from shared.types import ArtifactId, ArtifactStatus, MissionStatus, OperationStatus
+from shared.types import (
+    ArtifactId,
+    ArtifactStatus,
+    MissionStatus,
+    OperationStatus,
+    RequestId,
+    RiskLevel,
+)
 from shared.work_item_policy import canonical_work_items_from_mission, order_work_items
+
+
+class AdapterPreflightVerifierPort(Protocol):
+    """Governance-owned exact verifier consumed without importing Governance."""
+
+    def __call__(
+        self,
+        grant_id: str,
+        *,
+        subject_ref: str,
+        action_request: AdapterActionRequestContract,
+        expected_grant_fingerprint: str,
+        expected_action_fingerprint: str,
+        expected_content_digest: str,
+        expected_precondition_digest: str,
+        expected_descriptor_fingerprint: str,
+        expected_registry_fingerprint: str,
+        expected_authorization_expires_at: str,
+        preflight_expires_at: str,
+        intent_fingerprint: str,
+        verified_at: str,
+    ) -> bool: ...
+
+
+class LocalTextFilePreflightAttestorPort(Protocol):
+    """Governance-owned recorder called directly with a materialized preflight."""
+
+    def __call__(
+        self,
+        preflight: LocalTextFilePreflightContract,
+    ) -> tuple[
+        LocalTextFilePreflightAttestationContract,
+        AdapterExecutionRequestContract,
+    ]: ...
+
+
+class LocalTextStagingAuthorizationVerifierPort(Protocol):
+    """Read-only authority check that must succeed before transaction state I/O."""
+
+    def __call__(
+        self,
+        request: LocalTextStagingAuthorizationRequest,
+        verified_at: datetime,
+    ) -> bool: ...
+
+
+class LocalTextHistoricalClaimVerifierPort(Protocol):
+    """Verify an already-consumed claim for recovery without reopening authority."""
+
+    def __call__(
+        self,
+        context: LocalTextExecutionAuthorizationContext,
+        verified_at: datetime,
+    ) -> bool: ...
+
+
+class LocalTextEffectStartClaimVerifierPort(Protocol):
+    """Recheck a freshly committed claim immediately before its first effect."""
+
+    def __call__(
+        self,
+        context: LocalTextExecutionAuthorizationContext,
+        verified_at: datetime,
+    ) -> bool: ...
+
+
+class LocalTextHistoricalClaimLookupPort(Protocol):
+    """Load one exact persisted claim so recovery never reopens consumed authority."""
+
+    def __call__(
+        self,
+        request: LocalTextExecutionAuthorizationRequest,
+        verified_at: datetime,
+    ) -> LocalTextExecutionAuthorizationContext | None: ...
+
+
+class LocalTextAuthorizationLeaseProviderPort(Protocol):
+    """Atomically claim one exact execution and confirmation in Governance."""
+
+    def __call__(
+        self,
+        request: LocalTextExecutionAuthorizationRequest,
+        claimed_at: datetime,
+    ) -> LocalTextClaimedAuthorizationLease: ...
+
+
+class LocalTextTrustedTransactionClockPort(Protocol):
+    """Trusted timezone-aware clock shared with the Governance boundary."""
+
+    def __call__(self) -> datetime: ...
+
+
+class LocalTextMutationReceiptRecorderPort(Protocol):
+    """Persist the exact applied receipt in Governance, idempotently."""
+
+    def __call__(self, receipt: LocalTextMutationReceipt) -> LocalTextMutationReceipt: ...
+
+
+class LocalTextRollbackReceiptRecorderPort(Protocol):
+    """Persist the exact rollback receipt in Governance, idempotently."""
+
+    def __call__(self, receipt: LocalTextRollbackReceipt) -> LocalTextRollbackReceipt: ...
+
+
+class LocalTextMutationReceiptVerifierPort(Protocol):
+    """Verify one exact immutable mutation receipt in Governance."""
+
+    def __call__(self, receipt: LocalTextMutationReceipt) -> bool: ...
+
+
+class LocalTextRollbackReceiptVerifierPort(Protocol):
+    """Verify one exact immutable rollback receipt in Governance."""
+
+    def __call__(self, receipt: LocalTextRollbackReceipt) -> bool: ...
+
+
+class ArtifactPhysicalEffectAuthorizerPort(Protocol):
+    """Memory-owned exact reservation check for one sealed physical plan."""
+
+    def __call__(
+        self,
+        plan: ArtifactPhysicalApplyPlanContract | ArtifactPhysicalRollbackPlanContract,
+        *,
+        resource_ref: str,
+        mutation_receipt_fingerprint: str | None = None,
+    ) -> bool: ...
+
+
+class LocalTextResourcePhysicalBindingLookupPort(Protocol):
+    """Report whether Memory has a pending or canonical binding for a resource."""
+
+    def __call__(self, resource_ref: str) -> bool: ...
+
+
+class ArtifactPhysicalCanonicalCommitReceiptVerifierPort(Protocol):
+    """Verify that Memory persisted one exact canonical commit receipt."""
+
+    def __call__(self, receipt: ArtifactPhysicalCanonicalCommitReceiptContract) -> bool: ...
+
+
+class ArtifactPhysicalAttestationLeaseProviderPort(Protocol):
+    """Open one ephemeral same-thread lease around the canonical Memory callback."""
+
+    def __call__(
+        self,
+        plan: ArtifactPhysicalApplyPlanContract | ArtifactPhysicalRollbackPlanContract,
+        receipt: LocalTextMutationReceipt | LocalTextRollbackReceipt,
+        attestation: LocalTextPhysicalStateAttestationContract,
+    ) -> AbstractContextManager[None]: ...
 
 
 @dataclass
@@ -45,6 +236,11 @@ class OperationalService:
     """Execute low-risk tasks and persist text artifacts."""
 
     name = "operational-service"
+    handler_version = "legacy-text-writer/v2"
+    action_confirmation_policy_version = "action-confirmation/v2"
+    action_kind = "execute_reversible_core_action"
+    action_operation = action_kind
+    action_intent_ttl = timedelta(minutes=10)
 
     @classmethod
     def build_artifact_registry(
@@ -58,9 +254,7 @@ class OperationalService:
         )
         refs_by_status = {
             status: [
-                item.artifact_ref
-                for item in artifact_states
-                if item.artifact_status == status
+                item.artifact_ref for item in artifact_states if item.artifact_status == status
             ]
             for status in ("active", "archived", "superseded", "rolled_back")
         }
@@ -116,21 +310,13 @@ class OperationalService:
             for state in states
         }
         eligible_refs = [
-            state.open_loop_ref
-            for state in states
-            if not blocking_reasons[state.open_loop_ref]
+            state.open_loop_ref for state in states if not blocking_reasons[state.open_loop_ref]
         ]
         blocked_refs = [
-            state.open_loop_ref
-            for state in states
-            if blocking_reasons[state.open_loop_ref]
+            state.open_loop_ref for state in states if blocking_reasons[state.open_loop_ref]
         ]
         registry_status = (
-            "empty"
-            if not states
-            else "resume_available"
-            if eligible_refs
-            else "blocked"
+            "empty" if not states else "resume_available" if eligible_refs else "blocked"
         )
         return OpenLoopRegistryContract(
             mission_id=mission_state.mission_id,
@@ -149,12 +335,561 @@ class OperationalService:
             generated_at=generated_at,
         )
 
-    def __init__(self, artifact_dir: str | None = None) -> None:
+    def __init__(
+        self,
+        artifact_dir: str | None = None,
+        *,
+        action_confirmation_verifier: Callable[..., bool] | None = None,
+        adapter_preflight_verifier: AdapterPreflightVerifierPort | None = None,
+        artifact_root_alias: str = "operational-artifacts",
+        local_text_file_roots: Mapping[str, str | Path] | None = None,
+        local_text_file_allowed_extensions: tuple[str, ...] = (".md", ".txt"),
+        local_text_file_max_bytes: int = 1_048_576,
+        local_text_file_preflight_attestor: LocalTextFilePreflightAttestorPort | None = None,
+        local_text_file_transaction_roots: Mapping[str, str | Path] | None = None,
+        local_text_file_staging_authorization_verifier: LocalTextStagingAuthorizationVerifierPort
+        | None = None,
+        local_text_file_effect_start_claim_verifier: LocalTextEffectStartClaimVerifierPort
+        | None = None,
+        local_text_file_historical_claim_lookup: LocalTextHistoricalClaimLookupPort | None = None,
+        local_text_file_historical_claim_verifier: LocalTextHistoricalClaimVerifierPort
+        | None = None,
+        local_text_file_authorization_lease_provider: LocalTextAuthorizationLeaseProviderPort
+        | None = None,
+        local_text_file_trusted_transaction_clock: LocalTextTrustedTransactionClockPort
+        | None = None,
+        local_text_file_mutation_receipt_recorder: LocalTextMutationReceiptRecorderPort
+        | None = None,
+        local_text_file_rollback_receipt_recorder: LocalTextRollbackReceiptRecorderPort
+        | None = None,
+        local_text_file_mutation_receipt_verifier: LocalTextMutationReceiptVerifierPort
+        | None = None,
+        local_text_file_rollback_receipt_verifier: LocalTextRollbackReceiptVerifierPort
+        | None = None,
+        local_text_file_canonical_physical_effect_authorizer: ArtifactPhysicalEffectAuthorizerPort
+        | None = None,
+        local_text_file_resource_physical_binding_lookup: LocalTextResourcePhysicalBindingLookupPort
+        | None = None,
+        local_text_file_canonical_commit_receipt_verifier: (
+            ArtifactPhysicalCanonicalCommitReceiptVerifierPort | None
+        ) = None,
+        local_text_file_physical_attestation_lease_provider: (
+            ArtifactPhysicalAttestationLeaseProviderPort | None
+        ) = None,
+        local_text_file_transaction_failure_injector: Callable[[str], None] | None = None,
+    ) -> None:
         resolved_dir = (
             Path(artifact_dir) if artifact_dir else Path.cwd() / ".jarvis_runtime" / "artifacts"
-        )
-        resolved_dir.mkdir(parents=True, exist_ok=True)
+        ).resolve()
         self.artifact_dir = resolved_dir
+        self.artifact_root_alias = self._require_artifact_root_alias(artifact_root_alias)
+        self.action_confirmation_verifier = action_confirmation_verifier
+        self._adapter_preflight_verifier = adapter_preflight_verifier
+        self._local_text_file_preflight_attestor = local_text_file_preflight_attestor
+        self._local_text_file_mutation_receipt_recorder = local_text_file_mutation_receipt_recorder
+        self._local_text_file_rollback_receipt_recorder = local_text_file_rollback_receipt_recorder
+        self._local_text_file_canonical_physical_effect_authorizer = (
+            local_text_file_canonical_physical_effect_authorizer
+        )
+        self._local_text_file_resource_physical_binding_lookup = (
+            local_text_file_resource_physical_binding_lookup
+        )
+        self._local_text_file_preflight_adapter = (
+            None
+            if local_text_file_roots is None
+            else LocalTextFilePreflightAdapter(
+                roots=local_text_file_roots,
+                verified_context_verifier=(self._verify_local_text_file_preflight_context),
+                allowed_extensions=local_text_file_allowed_extensions,
+                max_bytes=local_text_file_max_bytes,
+            )
+        )
+        transaction_dependencies = (
+            local_text_file_staging_authorization_verifier,
+            local_text_file_effect_start_claim_verifier,
+            local_text_file_historical_claim_lookup,
+            local_text_file_historical_claim_verifier,
+            local_text_file_authorization_lease_provider,
+            local_text_file_trusted_transaction_clock,
+            local_text_file_mutation_receipt_recorder,
+            local_text_file_rollback_receipt_recorder,
+        )
+        receipt_proof_dependencies = (
+            local_text_file_mutation_receipt_verifier,
+            local_text_file_rollback_receipt_verifier,
+            local_text_file_canonical_physical_effect_authorizer,
+            local_text_file_resource_physical_binding_lookup,
+            local_text_file_canonical_commit_receipt_verifier,
+            local_text_file_physical_attestation_lease_provider,
+        )
+        if local_text_file_transaction_roots is None:
+            if any(
+                dependency is not None
+                for dependency in (*transaction_dependencies, *receipt_proof_dependencies)
+            ):
+                raise ValueError("local_text_file_transaction_roots_required")
+            if local_text_file_transaction_failure_injector is not None:
+                raise ValueError("local_text_file_transaction_roots_required")
+            self._local_text_file_transaction_engine = None
+        else:
+            if self._local_text_file_preflight_adapter is None:
+                raise ValueError("local_text_file_preflight_not_configured")
+            if any(dependency is None for dependency in transaction_dependencies):
+                raise ValueError("local_text_file_transaction_governance_ports_required")
+            self._local_text_file_transaction_engine = LocalTextTransactionEngine(
+                preflight_adapter=self._local_text_file_preflight_adapter,
+                transaction_roots={
+                    alias: str(path) for alias, path in local_text_file_transaction_roots.items()
+                },
+                staging_authorization_verifier=(local_text_file_staging_authorization_verifier),
+                effect_start_claim_verifier=local_text_file_effect_start_claim_verifier,
+                historical_claim_lookup=local_text_file_historical_claim_lookup,
+                historical_claim_verifier=local_text_file_historical_claim_verifier,
+                authorization_lease_provider=local_text_file_authorization_lease_provider,
+                trusted_transaction_clock=local_text_file_trusted_transaction_clock,
+                mutation_receipt_verifier=local_text_file_mutation_receipt_verifier,
+                rollback_receipt_verifier=local_text_file_rollback_receipt_verifier,
+                canonical_physical_effect_authorizer=(
+                    None
+                    if local_text_file_canonical_physical_effect_authorizer is None
+                    else self._authorize_local_text_file_canonical_physical_effect
+                ),
+                resource_physical_binding_lookup=(local_text_file_resource_physical_binding_lookup),
+                canonical_commit_receipt_verifier=(
+                    local_text_file_canonical_commit_receipt_verifier
+                ),
+                physical_attestation_lease_provider=(
+                    local_text_file_physical_attestation_lease_provider
+                ),
+                failure_injector=local_text_file_transaction_failure_injector,
+            )
+
+    def local_text_file_root_config_fingerprint(self) -> str:
+        """Inspect the configured root identity without preparing or executing an action."""
+
+        adapter = self._local_text_file_preflight_adapter
+        if adapter is None:
+            raise ValueError("local_text_file_preflight_not_configured")
+        return adapter.root_config_fingerprint()
+
+    def preflight_local_text_file(
+        self,
+        request: LocalTextFilePreflightRequestContract,
+        *,
+        now: datetime | None = None,
+    ) -> LocalTextFilePreflightContract:
+        """Prepare one exact local-text action without dispatching or writing it."""
+
+        adapter = self._local_text_file_preflight_adapter
+        if adapter is None:
+            raise ValueError("local_text_file_preflight_not_configured")
+        return adapter.preflight(request, now=now)
+
+    def preflight_and_attest_local_text_file(
+        self,
+        request: LocalTextFilePreflightRequestContract,
+        *,
+        now: datetime | None = None,
+    ) -> tuple[
+        LocalTextFilePreflightContract,
+        LocalTextFilePreflightAttestationContract,
+        AdapterExecutionRequestContract,
+    ]:
+        """Materialize preflight and pass it directly to the trusted recorder."""
+
+        attestor = self._local_text_file_preflight_attestor
+        if attestor is None:
+            raise ValueError("local_text_file_preflight_attestor_not_configured")
+        preflight = self.preflight_local_text_file(request, now=now)
+        attestation, execution_request = attestor(preflight)
+        if (
+            execution_request.preflight_attestation_id != attestation.attestation_id
+            or execution_request.preflight_attestation_fingerprint
+            != attestation.attestation_fingerprint
+            or execution_request.preflight_fingerprint != preflight.preflight_fingerprint
+        ):
+            raise ValueError("local_text_file_preflight_attestation_binding_mismatch")
+        return preflight, attestation, execution_request
+
+    def execute_local_text_file(
+        self,
+        request: LocalTextMutationRequest,
+    ) -> LocalTextMutationReceipt:
+        """Execute one exact governed transaction; unavailable unless explicitly wired."""
+
+        engine = self._require_local_text_file_transaction_engine()
+        receipt = engine.execute(request)
+        return self._record_local_text_mutation_receipt(receipt)
+
+    def recover_local_text_file(
+        self,
+        *,
+        root_alias: str,
+        operation_id: str,
+    ) -> LocalTextMutationReceipt:
+        """Resume one durable mutation from its content-free journal."""
+
+        engine = self._require_local_text_file_transaction_engine()
+        receipt = engine.recover(root_alias=root_alias, operation_id=operation_id)
+        return self._record_local_text_mutation_receipt(receipt)
+
+    def rollback_local_text_file(
+        self,
+        request: LocalTextRollbackRequest,
+    ) -> LocalTextRollbackReceipt:
+        """Apply a separately authorized physical rollback."""
+
+        engine = self._require_local_text_file_transaction_engine()
+        receipt = engine.rollback(request)
+        return self._record_local_text_rollback_receipt(receipt)
+
+    def recover_local_text_file_rollback(
+        self,
+        *,
+        root_alias: str,
+        operation_id: str,
+    ) -> LocalTextRollbackReceipt:
+        """Resume an already-claimed rollback without minting new authority."""
+
+        engine = self._require_local_text_file_transaction_engine()
+        receipt = engine.recover_rollback(
+            root_alias=root_alias,
+            operation_id=operation_id,
+        )
+        return self._record_local_text_rollback_receipt(receipt)
+
+    def execute_and_commit_local_text_file_apply(
+        self,
+        plan: ArtifactPhysicalApplyPlanContract,
+        request: LocalTextMutationRequest,
+        *,
+        canonical_commit: Callable[
+            [
+                ArtifactPhysicalApplyPlanContract,
+                LocalTextMutationReceipt,
+                LocalTextPhysicalStateAttestationContract,
+            ],
+            ArtifactPhysicalCanonicalCommitReceiptContract,
+        ],
+    ) -> ArtifactPhysicalCanonicalCommitReceiptContract:
+        """Apply, record physical proof, and commit Memory under one resource lock."""
+
+        engine = self._require_local_text_file_transaction_engine()
+        return engine.execute_and_commit_apply(
+            plan,
+            request,
+            receipt_recorder=self._record_local_text_mutation_receipt,
+            canonical_commit=canonical_commit,
+        )
+
+    def recover_and_commit_local_text_file_apply(
+        self,
+        *,
+        plan: ArtifactPhysicalApplyPlanContract,
+        root_alias: str,
+        operation_id: str,
+        canonical_commit: Callable[
+            [
+                ArtifactPhysicalApplyPlanContract,
+                LocalTextMutationReceipt,
+                LocalTextPhysicalStateAttestationContract,
+            ],
+            ArtifactPhysicalCanonicalCommitReceiptContract,
+        ],
+    ) -> ArtifactPhysicalCanonicalCommitReceiptContract:
+        """Recover an apply and finish its canonical commit under the same lock."""
+
+        engine = self._require_local_text_file_transaction_engine()
+        return engine.recover_and_commit_apply(
+            plan=plan,
+            root_alias=root_alias,
+            operation_id=operation_id,
+            receipt_recorder=self._record_local_text_mutation_receipt,
+            canonical_commit=canonical_commit,
+        )
+
+    def rollback_and_commit_local_text_file(
+        self,
+        plan: ArtifactPhysicalRollbackPlanContract,
+        request: LocalTextRollbackRequest,
+        *,
+        canonical_commit: Callable[
+            [
+                ArtifactPhysicalRollbackPlanContract,
+                LocalTextRollbackReceipt,
+                LocalTextPhysicalStateAttestationContract,
+            ],
+            ArtifactPhysicalCanonicalCommitReceiptContract,
+        ],
+    ) -> ArtifactPhysicalCanonicalCommitReceiptContract:
+        """Roll back, record proof, and commit Memory under one resource lock."""
+
+        engine = self._require_local_text_file_transaction_engine()
+        return engine.rollback_and_commit(
+            plan,
+            request,
+            receipt_recorder=self._record_local_text_rollback_receipt,
+            canonical_commit=canonical_commit,
+        )
+
+    def recover_and_commit_local_text_file_rollback(
+        self,
+        *,
+        plan: ArtifactPhysicalRollbackPlanContract,
+        root_alias: str,
+        operation_id: str,
+        canonical_commit: Callable[
+            [
+                ArtifactPhysicalRollbackPlanContract,
+                LocalTextRollbackReceipt,
+                LocalTextPhysicalStateAttestationContract,
+            ],
+            ArtifactPhysicalCanonicalCommitReceiptContract,
+        ],
+    ) -> ArtifactPhysicalCanonicalCommitReceiptContract:
+        """Recover a rollback and finish its canonical commit under one lock."""
+
+        engine = self._require_local_text_file_transaction_engine()
+        return engine.recover_rollback_and_commit(
+            plan=plan,
+            root_alias=root_alias,
+            operation_id=operation_id,
+            receipt_recorder=self._record_local_text_rollback_receipt,
+            canonical_commit=canonical_commit,
+        )
+
+    def verify_local_text_file_mutation_receipt_current(
+        self,
+        *,
+        root_alias: str,
+        receipt: LocalTextMutationReceipt,
+    ) -> LocalTextMutationReceipt:
+        """Verify persisted mutation proof plus its fresh physical state."""
+
+        engine = self._require_local_text_file_transaction_engine()
+        return engine.verify_mutation_receipt_current(
+            root_alias=root_alias,
+            receipt=receipt,
+        )
+
+    def commit_local_text_file_mutation_if_current(
+        self,
+        *,
+        plan: ArtifactPhysicalApplyPlanContract,
+        root_alias: str,
+        receipt: LocalTextMutationReceipt,
+        canonical_commit: Callable[
+            [
+                ArtifactPhysicalApplyPlanContract,
+                LocalTextMutationReceipt,
+                LocalTextPhysicalStateAttestationContract,
+            ],
+            ArtifactPhysicalCanonicalCommitReceiptContract,
+        ],
+    ) -> ArtifactPhysicalCanonicalCommitReceiptContract:
+        """Commit canonical state only under exact fresh mutation proof and lock."""
+
+        engine = self._require_local_text_file_transaction_engine()
+        return engine.commit_mutation_if_current(
+            plan=plan,
+            root_alias=root_alias,
+            receipt=receipt,
+            canonical_commit=canonical_commit,
+        )
+
+    def verify_local_text_file_rollback_receipt_current(
+        self,
+        *,
+        root_alias: str,
+        receipt: LocalTextRollbackReceipt,
+    ) -> LocalTextRollbackReceipt:
+        """Verify persisted rollback proof plus its fresh restored state."""
+
+        engine = self._require_local_text_file_transaction_engine()
+        return engine.verify_rollback_receipt_current(
+            root_alias=root_alias,
+            receipt=receipt,
+        )
+
+    def commit_local_text_file_rollback_if_current(
+        self,
+        *,
+        plan: ArtifactPhysicalRollbackPlanContract,
+        root_alias: str,
+        receipt: LocalTextRollbackReceipt,
+        canonical_commit: Callable[
+            [
+                ArtifactPhysicalRollbackPlanContract,
+                LocalTextRollbackReceipt,
+                LocalTextPhysicalStateAttestationContract,
+            ],
+            ArtifactPhysicalCanonicalCommitReceiptContract,
+        ],
+    ) -> ArtifactPhysicalCanonicalCommitReceiptContract:
+        """Commit canonical rollback state only under fresh proof and lock."""
+
+        engine = self._require_local_text_file_transaction_engine()
+        return engine.commit_rollback_if_current(
+            plan=plan,
+            root_alias=root_alias,
+            receipt=receipt,
+            canonical_commit=canonical_commit,
+        )
+
+    def _record_local_text_mutation_receipt(
+        self,
+        receipt: LocalTextMutationReceipt,
+    ) -> LocalTextMutationReceipt:
+        recorder = self._local_text_file_mutation_receipt_recorder
+        if recorder is None:
+            raise ValueError("local_text_file_mutation_receipt_recorder_not_configured")
+        recorded = recorder(receipt)
+        if recorded != receipt:
+            raise ValueError("local_text_file_mutation_receipt_recording_mismatch")
+        return recorded
+
+    def _record_local_text_rollback_receipt(
+        self,
+        receipt: LocalTextRollbackReceipt,
+    ) -> LocalTextRollbackReceipt:
+        recorder = self._local_text_file_rollback_receipt_recorder
+        if recorder is None:
+            raise ValueError("local_text_file_rollback_receipt_recorder_not_configured")
+        recorded = recorder(receipt)
+        if recorded != receipt:
+            raise ValueError("local_text_file_rollback_receipt_recording_mismatch")
+        return recorded
+
+    def _authorize_local_text_file_canonical_physical_effect(
+        self,
+        plan: ArtifactPhysicalApplyPlanContract | ArtifactPhysicalRollbackPlanContract,
+    ) -> bool:
+        authorizer = self._local_text_file_canonical_physical_effect_authorizer
+        if authorizer is None:
+            return False
+        mutation_receipt_fingerprint = (
+            plan.mutation_receipt_fingerprint
+            if isinstance(plan, ArtifactPhysicalRollbackPlanContract)
+            else None
+        )
+        return authorizer(
+            plan,
+            resource_ref=plan.resource_ref,
+            mutation_receipt_fingerprint=mutation_receipt_fingerprint,
+        )
+
+    def _require_local_text_file_transaction_engine(self) -> LocalTextTransactionEngine:
+        engine = self._local_text_file_transaction_engine
+        if engine is None:
+            raise ValueError("local_text_file_transaction_not_configured")
+        return engine
+
+    def _verify_local_text_file_preflight_context(
+        self,
+        request: LocalTextFilePreflightRequestContract,
+        verified_at: datetime,
+    ) -> bool:
+        verifier = self._adapter_preflight_verifier
+        if verifier is None or verified_at.tzinfo is None:
+            return False
+        canonical_verified_at = verified_at.astimezone(UTC).isoformat().replace("+00:00", "Z")
+        try:
+            desired_content_digest = sha256(
+                request.desired_text.encode("utf-8", errors="strict")
+            ).hexdigest()
+            verified = verifier(
+                request.grant_id,
+                subject_ref=request.subject_ref,
+                action_request=request.adapter_request,
+                expected_grant_fingerprint=request.grant_fingerprint,
+                expected_action_fingerprint=request.action_fingerprint,
+                expected_content_digest=desired_content_digest,
+                expected_precondition_digest=(request.expected_root_config_fingerprint),
+                intent_fingerprint=request.intent_fingerprint,
+                expected_descriptor_fingerprint=request.descriptor_fingerprint,
+                expected_registry_fingerprint=request.registry_fingerprint,
+                expected_authorization_expires_at=request.authorization_expires_at,
+                preflight_expires_at=request.expires_at,
+                verified_at=canonical_verified_at,
+            )
+        except Exception:
+            return False
+        return verified is True
+
+    def action_fingerprint_for_dispatch(
+        self,
+        dispatch: OperationDispatchContract,
+        *,
+        origin_request_id: str | None = None,
+    ) -> str:
+        """Derive the stable identity of the logical artifact action, read-only."""
+
+        fields = self._action_identity_fields(
+            dispatch,
+            origin_request_id=origin_request_id,
+        )
+        return build_action_fingerprint(**fields)
+
+    def build_action_intent(
+        self,
+        dispatch: OperationDispatchContract,
+        *,
+        issued_at: str | None = None,
+        expires_at: str | None = None,
+        nonce: str | None = None,
+        origin_request_id: str | None = None,
+    ) -> ActionIntentContract:
+        """Build a validated, non-authorizing intent without touching the writer."""
+
+        issued = self.now() if issued_at is None else issued_at
+        expires = self._default_action_intent_expiry(issued) if expires_at is None else expires_at
+        fields = self._action_identity_fields(
+            dispatch,
+            origin_request_id=origin_request_id,
+        )
+        return build_shared_action_intent(
+            intent_id=f"action-intent://{uuid4().hex}",
+            **fields,
+            nonce=uuid4().hex if nonce is None else nonce,
+            issued_at=issued,
+            expires_at=expires,
+            now=self.now(),
+        )
+
+    @classmethod
+    def action_confirmation_required_for_dispatch(
+        cls,
+        dispatch: OperationDispatchContract,
+    ) -> bool:
+        """Return whether canonical autonomy policy requires exact confirmation."""
+
+        decision = cls._autonomy_action_decision(
+            dispatch,
+            confirmation_evidence_state="absent",
+        )
+        return decision.decision == "require_confirmation"
+
+    @staticmethod
+    def _autonomy_action_decision(
+        dispatch: OperationDispatchContract,
+        *,
+        confirmation_evidence_state: str,
+    ) -> AutonomyActionPolicyDecisionContract:
+        return evaluate_autonomy_action(
+            requested_autonomy_level=dispatch.requested_autonomy_level,
+            max_autonomy_level=dispatch.max_autonomy_level,
+            effective_autonomy_level=dispatch.effective_autonomy_level,
+            autonomy_ladder_status=dispatch.autonomy_ladder_status,
+            action_kind=dispatch.autonomy_action_kind,
+            selected_capability_mode=dispatch.capability_decision_selected_mode,
+            max_capability_mode=dispatch.max_autonomy_capability_mode,
+            allowed_runtime_actions=dispatch.autonomy_allowed_runtime_actions,
+            blocked_runtime_actions=dispatch.autonomy_blocked_runtime_actions,
+            human_confirmation_required=(dispatch.autonomy_human_confirmation_required),
+            human_confirmation_mode=dispatch.autonomy_confirmation_mode,
+            confirmation_evidence_state=confirmation_evidence_state,
+            autonomy_validation_errors=dispatch.autonomy_validation_errors,
+        )
 
     @classmethod
     def build_work_item_queue(
@@ -185,13 +920,10 @@ class OperationalService:
         blocked_refs = [
             item.work_item_ref
             for item in ordered
-            if item.work_item_status != "completed"
-            and item.work_item_ref not in executable_refs
+            if item.work_item_status != "completed" and item.work_item_ref not in executable_refs
         ]
         completed_refs = [
-            item.work_item_ref
-            for item in ordered
-            if item.work_item_status == "completed"
+            item.work_item_ref for item in ordered if item.work_item_status == "completed"
         ]
         queue_status = (
             "empty"
@@ -246,11 +978,7 @@ class OperationalService:
         next_decision_refs = cls._unique_values(
             [f"review_evolution_proposal:{item}" for item in evolution_refs]
             + [f"review_memory_lifecycle:{item}" for item in memory_refs]
-            + [
-                decision
-                for mission in missions
-                for decision in mission.pending_decision_refs
-            ]
+            + [decision for mission in missions for decision in mission.pending_decision_refs]
         )
         requires_operator_decision = bool(evolution_refs or memory_refs) or any(
             mission.operator_attention_status
@@ -258,8 +986,7 @@ class OperationalService:
             for mission in missions
         )
         ready_for_next_action = any(
-            mission.next_action_status in {"ready", "derive_from_work_item"}
-            for mission in missions
+            mission.next_action_status in {"ready", "derive_from_work_item"} for mission in missions
         )
         workspace_status = (
             "operator_decision_required"
@@ -283,30 +1010,21 @@ class OperationalService:
         )
         return DailyOperatorWorkspaceContract(
             workspace_id=(
-                "daily-workspace://"
-                + sha256(fingerprint.encode("utf-8")).hexdigest()[:16]
+                "daily-workspace://" + sha256(fingerprint.encode("utf-8")).hexdigest()[:16]
             ),
             workspace_status=workspace_status,
             generated_at=safe_generated_at,
             missions=missions,
             mission_count=len(missions),
             active_objective_count=sum(
-                mission.objective_status not in {"completed", "canceled"}
-                for mission in missions
+                mission.objective_status not in {"completed", "canceled"} for mission in missions
             ),
-            active_work_item_count=sum(
-                len(mission.active_work_items) for mission in missions
-            ),
-            active_artifact_count=sum(
-                len(mission.active_artifact_refs) for mission in missions
-            ),
-            open_checkpoint_count=sum(
-                len(mission.open_checkpoint_refs) for mission in missions
-            ),
+            active_work_item_count=sum(len(mission.active_work_items) for mission in missions),
+            active_artifact_count=sum(len(mission.active_artifact_refs) for mission in missions),
+            open_checkpoint_count=sum(len(mission.open_checkpoint_refs) for mission in missions),
             pending_review_count=len(evolution_refs) + len(memory_refs),
             stale_mission_count=sum(
-                mission.freshness_status in {"stale", "unknown"}
-                for mission in missions
+                mission.freshness_status in {"stale", "unknown"} for mission in missions
             ),
             pending_evolution_review_refs=evolution_refs,
             pending_memory_review_refs=memory_refs,
@@ -329,10 +1047,7 @@ class OperationalService:
             state.updated_at,
             generated_at,
         )
-        blocked = (
-            state.mission_status == MissionStatus.BLOCKED
-            or objective_status == "blocked"
-        )
+        blocked = state.mission_status == MissionStatus.BLOCKED or objective_status == "blocked"
         paused = state.mission_status == MissionStatus.PAUSED
         pending_decisions: list[str] = []
         if blocked:
@@ -347,13 +1062,10 @@ class OperationalService:
             pending_decisions.append(f"review_blocked_work_items:{mission_id}")
         if not blocked and not paused:
             if state.next_action_ref:
-                pending_decisions.append(
-                    f"continue_mission:{mission_id}:{state.next_action_ref}"
-                )
+                pending_decisions.append(f"continue_mission:{mission_id}:{state.next_action_ref}")
             elif work_item_queue.executable_work_item_refs:
                 pending_decisions.append(
-                    "select_work_item:"
-                    + work_item_queue.executable_work_item_refs[0]
+                    "select_work_item:" + work_item_queue.executable_work_item_refs[0]
                 )
             else:
                 pending_decisions.append(f"define_next_action:{mission_id}")
@@ -401,9 +1113,7 @@ class OperationalService:
             ordered_work_item_refs=[
                 item.work_item_ref for item in work_item_queue.ordered_work_items
             ],
-            executable_work_item_refs=list(
-                work_item_queue.executable_work_item_refs
-            ),
+            executable_work_item_refs=list(work_item_queue.executable_work_item_refs),
             blocked_work_item_refs=list(work_item_queue.blocked_work_item_refs),
             artifact_refs=list(state.artifact_refs),
             active_artifact_refs=list(state.active_artifact_refs),
@@ -455,36 +1165,97 @@ class OperationalService:
         """Execute a low-risk operation using a deterministic local policy."""
 
         artifact_results: list[ArtifactResultContract] = []
-        autonomy_violation = capability_mode_exceeds_autonomy_limit(
-            selected_mode=dispatch.capability_decision_selected_mode,
-            max_capability_mode=dispatch.max_autonomy_capability_mode,
-        )
         governance_flags: list[str] = []
         errors: list[str] = []
-        if autonomy_violation:
+        confirmation_failed = False
+        confirmation_evidence_state = "absent"
+        autonomy_decision: AutonomyActionPolicyDecisionContract | None = None
+        caller_destination_rejected = dispatch.artifact_destination is not None
+        if caller_destination_rejected:
             content = (
-                "Dispatch bloqueado: capability acima do limite de autonomia "
-                "permitido."
+                "Dispatch bloqueado: o destino fisico do artefato pertence "
+                "exclusivamente a configuracao do servico."
             )
             status = OperationStatus.FAILED
-            governance_flags.append("autonomy_capability_above_limit")
-            errors.append("capability_above_autonomy_limit")
-        elif dispatch.task_type == "draft_plan":
-            content = self._build_plan_content(dispatch)
-            status = OperationStatus.COMPLETED
-        elif dispatch.task_type == "produce_analysis_brief":
-            content = self._build_analysis_content(dispatch)
-            status = OperationStatus.COMPLETED
-        elif dispatch.task_type == "general_response":
-            content = self._build_general_content(dispatch)
-            status = OperationStatus.COMPLETED
+            governance_flags.append("caller_artifact_destination_rejected")
+            errors.append("artifact_destination_not_allowed")
         else:
-            content = f"Task type nao suportado: {dispatch.task_type}"
-            status = OperationStatus.FAILED
+            supported_content = self._content_for_dispatch(dispatch)
+            if supported_content is None:
+                content = f"Task type nao suportado: {dispatch.task_type}"
+                status = OperationStatus.FAILED
+            else:
+                content = supported_content
+                autonomy_decision = self._autonomy_action_decision(
+                    dispatch,
+                    confirmation_evidence_state=confirmation_evidence_state,
+                )
+                if autonomy_decision.decision == "block":
+                    content = "Dispatch bloqueado: politica canonica de autonomia negou a acao."
+                    status = OperationStatus.FAILED
+                    governance_flags.append("autonomy_action_policy_blocked")
+                    errors.extend(autonomy_decision.reason_codes)
+                elif dispatch.autonomy_action_kind != self.action_kind:
+                    content = "Dispatch bloqueado: action kind sem writer operacional registrado."
+                    status = OperationStatus.FAILED
+                    governance_flags.append("operational_action_kind_not_supported")
+                    errors.append("operational_action_kind_not_supported")
+                elif (
+                    autonomy_decision.decision == "allow"
+                    and not autonomy_decision.side_effect_allowed
+                ):
+                    content = (
+                        "Dispatch bloqueado: a decisao de autonomia nao autoriza efeito colateral."
+                    )
+                    status = OperationStatus.FAILED
+                    governance_flags.append("autonomy_action_policy_blocked")
+                    errors.append("autonomy_action_side_effect_not_allowed")
+                else:
+                    status = OperationStatus.COMPLETED
+
+        if (
+            status == OperationStatus.COMPLETED
+            and autonomy_decision is not None
+            and autonomy_decision.decision == "require_confirmation"
+        ):
+            confirmation_error = self._action_confirmation_error(dispatch, content)
+            if confirmation_error is not None:
+                content = "Dispatch bloqueado: confirmacao humana exata nao verificada."
+                status = OperationStatus.FAILED
+                confirmation_failed = True
+                governance_flags.append("action_confirmation_not_verified")
+                errors.append(confirmation_error)
+                confirmation_evidence_state = "invalid"
+            else:
+                confirmation_evidence_state = "verified"
+
+        if status == OperationStatus.COMPLETED:
+            final_autonomy_decision = self._autonomy_action_decision(
+                dispatch,
+                confirmation_evidence_state=confirmation_evidence_state,
+            )
+            if (
+                final_autonomy_decision.decision != "allow"
+                or not final_autonomy_decision.side_effect_allowed
+                or dispatch.autonomy_action_kind != self.action_kind
+            ):
+                content = (
+                    "Dispatch bloqueado: autoridade de autonomia nao valida "
+                    "imediatamente antes do writer."
+                )
+                status = OperationStatus.FAILED
+                governance_flags.append("autonomy_action_policy_blocked")
+                errors.extend(
+                    reason
+                    for reason in final_autonomy_decision.reason_codes
+                    if reason not in errors
+                )
+                if not errors:
+                    errors.append("autonomy_action_side_effect_not_allowed")
+            else:
+                artifact_results.append(self._write_artifact(dispatch, content))
 
         outputs = [dispatch.plan_summary or content.splitlines()[0]]
-        if status == OperationStatus.COMPLETED:
-            artifact_results.append(self._write_artifact(dispatch, content))
         workflow_checkpoint_tokens = [
             f"workflow:{item}" for item in dispatch.workflow_checkpoints
         ] or [
@@ -583,11 +1354,7 @@ class OperationalService:
             next_recommendation=(
                 "continue"
                 if status == OperationStatus.COMPLETED
-                else (
-                    "request_human_confirmation"
-                    if autonomy_violation
-                    else "review_dispatch"
-                )
+                else ("request_human_confirmation" if confirmation_failed else "review_dispatch")
             ),
             governance_flags=governance_flags,
             memory_record_hints=(
@@ -604,14 +1371,12 @@ class OperationalService:
         content: str,
     ) -> ArtifactResultContract:
         artifact_id = ArtifactId(f"artifact-{uuid4().hex[:8]}")
-        target_dir = (
-            Path(dispatch.artifact_destination)
-            if dispatch.artifact_destination
-            else self.artifact_dir
-        )
+        target_dir = self.artifact_dir
         target_dir.mkdir(parents=True, exist_ok=True)
         artifact_path = target_dir / f"{artifact_id}.md"
-        artifact_path.write_text(content, encoding="utf-8")
+        # The action intent fingerprints the exact UTF-8 payload. Writing bytes
+        # avoids platform newline translation after human confirmation.
+        artifact_path.write_bytes(content.encode("utf-8"))
         return ArtifactResultContract(
             artifact_id=artifact_id,
             artifact_type="text_document",
@@ -623,6 +1388,156 @@ class OperationalService:
             format="text/markdown",
             request_id=dispatch.request_id,
         )
+
+    def _action_identity_fields(
+        self,
+        dispatch: OperationDispatchContract,
+        *,
+        origin_request_id: str | None,
+        content: str | None = None,
+    ) -> dict[str, object]:
+        if dispatch.artifact_destination is not None:
+            raise ValueError("artifact_destination_not_allowed")
+        if dispatch.autonomy_action_kind != self.action_kind:
+            raise ValueError("action_intent_action_kind_not_supported")
+        derived_content = content if content is not None else self._content_for_dispatch(dispatch)
+        if derived_content is None:
+            raise ValueError("unsupported_task_type_for_action_intent")
+        if dispatch.session_id is None:
+            raise ValueError("action_intent_session_id_required")
+        operator_identity_ref = dispatch.operator_identity_ref or dispatch.canonical_user_ref
+        if not operator_identity_ref:
+            raise ValueError("action_intent_operator_identity_ref_required")
+        resolved_origin_request_id = (
+            str(dispatch.request_id) if origin_request_id is None else origin_request_id
+        )
+        return {
+            "origin_request_id": RequestId(resolved_origin_request_id),
+            "session_id": dispatch.session_id,
+            "mission_id": dispatch.mission_id,
+            "operator_identity_ref": operator_identity_ref,
+            "handler_id": self.name,
+            "handler_version": self.handler_version,
+            "operation": self.action_kind,
+            "target_ref": f"artifact-root://{self.artifact_root_alias}",
+            "content_digest": sha256(derived_content.encode("utf-8")).hexdigest(),
+            "precondition_digest": self._managed_create_precondition_digest(),
+            "risk_level": self._risk_level_for_dispatch(dispatch),
+            "policy_version": self.action_confirmation_policy_version,
+        }
+
+    @staticmethod
+    def _risk_level_for_dispatch(
+        dispatch: OperationDispatchContract,
+    ) -> RiskLevel:
+        if dispatch.risk_hint is not None:
+            try:
+                return RiskLevel(dispatch.risk_hint)
+            except (TypeError, ValueError) as exc:
+                raise ValueError("action_intent_risk_hint_unknown") from exc
+        if dispatch.request_risk_profile is None:
+            return RiskLevel.LOW
+        planning_profiles = {
+            "bounded_confidence": RiskLevel.LOW,
+            "contained_review": RiskLevel.MODERATE,
+            "governed_caution": RiskLevel.MODERATE,
+        }
+        try:
+            return planning_profiles[dispatch.request_risk_profile]
+        except (KeyError, TypeError) as exc:
+            raise ValueError("action_intent_request_risk_profile_unknown") from exc
+
+    def _action_confirmation_error(
+        self,
+        dispatch: OperationDispatchContract,
+        content: str,
+    ) -> str | None:
+        operator_identity_ref = dispatch.operator_identity_ref or dispatch.canonical_user_ref
+        required_values = (
+            dispatch.receipt_id,
+            dispatch.claim_id,
+            dispatch.origin_request_id,
+            dispatch.action_fingerprint,
+            dispatch.intent_fingerprint,
+            dispatch.claimed_at,
+            operator_identity_ref,
+        )
+        if any(not isinstance(value, str) or not value for value in required_values):
+            return "action_confirmation_claim_incomplete"
+        try:
+            fields = self._action_identity_fields(
+                dispatch,
+                origin_request_id=str(dispatch.origin_request_id),
+                content=content,
+            )
+            expected_fingerprint = build_action_fingerprint(**fields)
+        except (TypeError, ValueError):
+            return "action_confirmation_context_invalid"
+        if not compare_digest(
+            str(dispatch.action_fingerprint),
+            expected_fingerprint,
+        ):
+            return "action_confirmation_action_fingerprint_mismatch"
+        if self.action_confirmation_verifier is None:
+            return "action_confirmation_verifier_unavailable"
+        try:
+            verified = self.action_confirmation_verifier(
+                receipt_id=str(dispatch.receipt_id),
+                claim_id=str(dispatch.claim_id),
+                operation_id=str(dispatch.operation_id),
+                origin_request_id=str(dispatch.origin_request_id),
+                expected_action_fingerprint=expected_fingerprint,
+                intent_fingerprint=str(dispatch.intent_fingerprint),
+                claimed_at=str(dispatch.claimed_at),
+                verified_at=self.now(),
+                operator_identity_ref=str(operator_identity_ref),
+            )
+        except Exception:
+            return "action_confirmation_verifier_error"
+        if verified is not True:
+            return "action_confirmation_verification_failed"
+        return None
+
+    def _managed_create_precondition_digest(self) -> str:
+        payload = canonical_action_confirmation_payload(
+            {
+                "operation": "managed_create",
+                "action_kind": self.action_kind,
+                "target_ref": f"artifact-root://{self.artifact_root_alias}",
+                "version": "operational-managed-create/v2",
+                "writer": self.name,
+            }
+        )
+        return sha256(payload.encode("utf-8")).hexdigest()
+
+    @classmethod
+    def _content_for_dispatch(
+        cls,
+        dispatch: OperationDispatchContract,
+    ) -> str | None:
+        if dispatch.task_type == "draft_plan":
+            return cls._build_plan_content(dispatch)
+        if dispatch.task_type == "produce_analysis_brief":
+            return cls._build_analysis_content(dispatch)
+        if dispatch.task_type == "general_response":
+            return cls._build_general_content(dispatch)
+        return None
+
+    @classmethod
+    def _default_action_intent_expiry(cls, issued_at: str) -> str:
+        try:
+            issued = datetime.fromisoformat(issued_at.replace("Z", "+00:00"))
+        except (AttributeError, ValueError) as exc:
+            raise ValueError("issued_at_must_be_iso8601") from exc
+        if issued.tzinfo is None or issued.utcoffset() is None:
+            raise ValueError("issued_at_must_include_timezone")
+        return (issued + cls.action_intent_ttl).isoformat()
+
+    @staticmethod
+    def _require_artifact_root_alias(value: str) -> str:
+        if fullmatch(r"[a-z0-9][a-z0-9_-]{0,62}", value) is None:
+            raise ValueError("artifact_root_alias must be a canonical root alias")
+        return value
 
     @staticmethod
     def _build_plan_content(dispatch: OperationDispatchContract) -> str:
@@ -717,10 +1632,7 @@ class OperationalService:
     @staticmethod
     def _mind_domain_specialist_lines(dispatch: OperationDispatchContract) -> str:
         status = dispatch.mind_domain_specialist_contract_status or "not_applicable"
-        summary = (
-            dispatch.mind_domain_specialist_contract_summary
-            or "contrato nao explicitado"
-        )
+        summary = dispatch.mind_domain_specialist_contract_summary or "contrato nao explicitado"
         chain = dispatch.mind_domain_specialist_contract_chain or "none"
         consumer_mode = dispatch.mind_domain_specialist_consumer_mode or "not_defined"
         framing_mode = dispatch.mind_domain_specialist_framing_mode or "not_defined"
@@ -733,7 +1645,6 @@ class OperationalService:
             f"Mind-domain-specialist framing mode: {framing_mode}\n"
             f"Mind-domain-specialist continuity mode: {continuity_mode}"
         )
-
 
     @staticmethod
     def _ecosystem_state_lines(dispatch: OperationDispatchContract) -> str:
@@ -780,7 +1691,6 @@ class OperationalService:
             if item and item not in refs:
                 refs.append(item)
         return refs
-
 
     @staticmethod
     def _workflow_lines(dispatch: OperationDispatchContract) -> str:
@@ -877,14 +1787,13 @@ class OperationalService:
         surface_presence: list[str],
     ) -> str:
         if not (
-            active_work_items
-            or active_artifact_refs
-            or open_checkpoint_refs
-            or surface_presence
+            active_work_items or active_artifact_refs or open_checkpoint_refs or surface_presence
         ):
             return "not_applicable"
-        if surface_presence and active_work_items and (
-            active_artifact_refs or open_checkpoint_refs
+        if (
+            surface_presence
+            and active_work_items
+            and (active_artifact_refs or open_checkpoint_refs)
         ):
             return "operational_state_attached"
         return "partial_operational_state"

@@ -1,9 +1,12 @@
-﻿"""Orchestrator flow integrating engines, persistence, and observability."""
+"""Orchestrator flow integrating engines, persistence, and observability."""
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from datetime import UTC, datetime
+from dataclasses import asdict, dataclass, field, replace
+from datetime import UTC, datetime, timedelta
+from hashlib import sha256
+from json import dumps
+from typing import Callable
 from uuid import uuid4
 
 from cognitive_engine.engine import CognitiveEngine
@@ -11,11 +14,23 @@ from executive_engine.engine import ExecutiveDirective, ExecutiveEngine
 from governance_service.service import GovernanceService
 from identity_engine.engine import IdentityEngine
 from knowledge_service.service import KnowledgeRetrievalResult, KnowledgeService
-from memory_service.service import MemoryRecoveryResult, MemoryService
+from memory_service.service import (
+    MemoryRecoveryResult,
+    MemoryService,
+    WorkflowLifecycleIntegrityError,
+)
 from observability_service.service import ObservabilityQuery, ObservabilityService
+from operational_service.adapters.local_text_transaction import (
+    LocalTextMutationRequest,
+    LocalTextRollbackRequest,
+)
 from operational_service.service import OperationalService
 from planning_engine.engine import PlanningContext, PlanningEngine
-from specialist_engine.engine import SpecialistEngine, SpecialistHandoffPlan, SpecialistReview
+from specialist_engine.engine import (
+    SpecialistEngine,
+    SpecialistHandoffPlan,
+    SpecialistReview,
+)
 from synthesis_engine.engine import (
     MissionProgressReportInput,
     SynthesisEngine,
@@ -23,14 +38,41 @@ from synthesis_engine.engine import (
     SynthesisResult,
 )
 
+from orchestrator_service.artifact_physical_saga import (
+    ArtifactPhysicalSagaCoordinator,
+    ArtifactPhysicalSagaRunResult,
+)
+from shared.action_confirmation import (
+    action_intent_fingerprint,
+    build_action_intent,
+)
+from shared.artifact_physical_attestation_authority import (
+    ArtifactPhysicalAttestationLeaseAuthority,
+)
 from shared.artifact_policy import canonical_artifact_states_from_mission
-from shared.autonomy_ladder import derive_autonomy_ladder
+from shared.autonomy_ladder import (
+    AUTONOMY_ACTION_POLICY_VERSION,
+    derive_autonomy_ladder,
+    evaluate_autonomy_action,
+)
 from shared.contracts import (
+    ActionConfirmationChallengeContract,
+    ActionConfirmationClaimContract,
+    ActionIntentContract,
+    AdapterActionRequestContract,
+    AdapterDescriptorContract,
+    AdapterGrantClaimContract,
+    AdapterGrantContract,
+    AdapterRegistrySnapshotContract,
     ArtifactLifecycleStateContract,
+    ArtifactPhysicalApplyPlanContract,
+    ArtifactPhysicalRollbackPlanContract,
     ArtifactResultContract,
+    AutonomyActionPolicyDecisionContract,
     AutonomyLadderContract,
     ContinuityPauseContract,
     ContinuityReplayContract,
+    DecisionOutcomeAttributionRecordContract,
     DeliberativePlanContract,
     EcosystemOperationalStateContract,
     ExperienceRecordContract,
@@ -53,9 +95,13 @@ from shared.contracts import (
     PostTaskReflectionContract,
     ProjectObjectiveContinuityContract,
     SpecialistInvocationContract,
+    WorkflowLifecycleTransitionContract,
     WorkItemStateContract,
 )
+from shared.decision_attribution import classify_decision_attribution
 from shared.domain_registry import (
+    ACTIVE_WORKFLOW_POLICY_VERSION,
+    build_active_workflow_version_registry,
     primary_canonical_domain_for_name,
     primary_route_payload,
     promoted_specialist_route_payloads,
@@ -78,8 +124,10 @@ from shared.types import (
     OperationId,
     PermissionDecision,
     RequestId,
+    RiskLevel,
     SessionId,
 )
+from shared.workflow_lifecycle import validate_workflow_lifecycle_transition_shape
 
 
 @dataclass
@@ -112,8 +160,39 @@ class OrchestratorResponse:
     specialist_review: SpecialistReview | None = None
     operation_dispatch: OperationDispatchContract | None = None
     operation_result: OperationResultContract | None = None
+    action_confirmation_challenge: ActionConfirmationChallengeContract | None = None
+    action_confirmation_claim: ActionConfirmationClaimContract | None = None
+    adapter_action_intent: ActionIntentContract | None = None
+    adapter_descriptor: AdapterDescriptorContract | None = None
+    adapter_grant: AdapterGrantContract | None = None
+    adapter_grant_claim: AdapterGrantClaimContract | None = None
     experience_record: ExperienceRecordContract | None = None
     post_task_reflection: PostTaskReflectionContract | None = None
+    decision_outcome_attribution: DecisionOutcomeAttributionRecordContract | None = None
+    events: list[InternalEventEnvelope] = field(default_factory=list)
+
+
+@dataclass
+class ActionConfirmationResolution:
+    """Fail-closed result of binding one exact action to human evidence."""
+
+    operation_dispatch: OperationDispatchContract | None
+    challenge: ActionConfirmationChallengeContract | None = None
+    claim: ActionConfirmationClaimContract | None = None
+    blocked_reason: str | None = None
+    events: list[InternalEventEnvelope] = field(default_factory=list)
+
+
+@dataclass
+class AdapterAuthorizationResolution:
+    """Metadata-only resolution of one exact governed adapter request."""
+
+    action_intent: ActionIntentContract | None = None
+    descriptor: AdapterDescriptorContract | None = None
+    grant: AdapterGrantContract | None = None
+    claim: AdapterGrantClaimContract | None = None
+    challenge: ActionConfirmationChallengeContract | None = None
+    blocked_reason: str | None = None
     events: list[InternalEventEnvelope] = field(default_factory=list)
 
 
@@ -234,6 +313,7 @@ class OrchestratorService:
     """Coordinate the current v1 flow across services and engines."""
 
     name = "orchestrator-service"
+    supported_operation_action_kinds = frozenset({"execute_reversible_core_action"})
 
     def __init__(
         self,
@@ -248,10 +328,39 @@ class OrchestratorService:
         cognitive_engine: CognitiveEngine | None = None,
         specialist_engine: SpecialistEngine | None = None,
         synthesis_engine: SynthesisEngine | None = None,
+        artifact_physical_failure_injector: Callable[[str], None] | None = None,
+        artifact_physical_clock: Callable[[], str] | None = None,
+        artifact_physical_attestation_authority: (
+            ArtifactPhysicalAttestationLeaseAuthority | None
+        ) = None,
     ) -> None:
         self.governance_service = governance_service or GovernanceService()
-        self.memory_service = memory_service or MemoryService()
-        self.operational_service = operational_service or OperationalService()
+        self._artifact_physical_attestation_authority = (
+            artifact_physical_attestation_authority or ArtifactPhysicalAttestationLeaseAuthority()
+        )
+        self.memory_service = memory_service or MemoryService(
+            artifact_physical_mutation_verifier=(
+                lambda receipt, attestation: (
+                    self.governance_service.verify_local_text_mutation_receipt_exact(receipt)
+                    and self._artifact_physical_attestation_authority.verify_and_consume(
+                        receipt,
+                        attestation,
+                    )
+                )
+            ),
+            artifact_physical_rollback_verifier=(
+                lambda receipt, attestation: (
+                    self.governance_service.verify_local_text_rollback_receipt_exact(receipt)
+                    and self._artifact_physical_attestation_authority.verify_and_consume(
+                        receipt,
+                        attestation,
+                    )
+                )
+            ),
+        )
+        self.operational_service = operational_service or OperationalService(
+            action_confirmation_verifier=(self.governance_service.verify_action_confirmation_claim)
+        )
         self.knowledge_service = knowledge_service or KnowledgeService()
         self.observability_service = observability_service or ObservabilityService()
         self.identity_engine = identity_engine or IdentityEngine()
@@ -260,6 +369,52 @@ class OrchestratorService:
         self.cognitive_engine = cognitive_engine or CognitiveEngine()
         self.specialist_engine = specialist_engine or SpecialistEngine()
         self.synthesis_engine = synthesis_engine or SynthesisEngine()
+        self.artifact_physical_sagas = ArtifactPhysicalSagaCoordinator(
+            memory=self.memory_service,
+            governance=self.governance_service,
+            operational=self.operational_service,
+            observability=self.observability_service,
+            now=artifact_physical_clock or self.now,
+            failure_injector=artifact_physical_failure_injector,
+        )
+
+    def execute_artifact_physical_apply(
+        self,
+        plan: ArtifactPhysicalApplyPlanContract,
+        request: LocalTextMutationRequest,
+    ) -> ArtifactPhysicalSagaRunResult:
+        """Execute one pre-authorized physical apply through the recoverable saga."""
+
+        return self.artifact_physical_sagas.execute_apply(plan, request)
+
+    def recover_artifact_physical_apply(
+        self,
+        saga_id: str,
+        *,
+        request: LocalTextMutationRequest | None = None,
+    ) -> ArtifactPhysicalSagaRunResult:
+        """Resume one apply from Memory and the MB-216 journal."""
+
+        return self.artifact_physical_sagas.recover_apply(saga_id, request=request)
+
+    def execute_artifact_physical_rollback(
+        self,
+        plan: ArtifactPhysicalRollbackPlanContract,
+        request: LocalTextRollbackRequest,
+    ) -> ArtifactPhysicalSagaRunResult:
+        """Execute one independently authorized physical rollback saga."""
+
+        return self.artifact_physical_sagas.execute_rollback(plan, request)
+
+    def recover_artifact_physical_rollback(
+        self,
+        saga_id: str,
+        *,
+        request: LocalTextRollbackRequest | None = None,
+    ) -> ArtifactPhysicalSagaRunResult:
+        """Resume one rollback from persisted saga and transaction evidence."""
+
+        return self.artifact_physical_sagas.recover_rollback(saga_id, request=request)
 
     def transition_objective(
         self,
@@ -308,9 +463,7 @@ class OrchestratorService:
                 "governance_checked",
                 contract,
                 {
-                    "governance_check_id": str(
-                        assessment.governance_check.governance_check_id
-                    ),
+                    "governance_check_id": str(assessment.governance_check.governance_check_id),
                     "subject_type": "objective_transition",
                     "transition": transition,
                     "decision": assessment.governance_decision.decision.value,
@@ -392,12 +545,8 @@ class OrchestratorService:
             mission_id=mission_id,
             transition=transition,
             status="updated" if updated_state else "missing",
-            previous_mission_status=(
-                current_state.mission_status.value if current_state else None
-            ),
-            previous_objective_status=(
-                current_state.objective_status if current_state else None
-            ),
+            previous_mission_status=(current_state.mission_status.value if current_state else None),
+            previous_objective_status=(current_state.objective_status if current_state else None),
             objective_status=updated_state.objective_status if updated_state else None,
             next_action_ref=updated_state.next_action_ref if updated_state else None,
             governance_check=assessment.governance_check,
@@ -469,9 +618,7 @@ class OrchestratorService:
                 "governance_checked",
                 contract,
                 {
-                    "governance_check_id": str(
-                        assessment.governance_check.governance_check_id
-                    ),
+                    "governance_check_id": str(assessment.governance_check.governance_check_id),
                     "subject_type": "work_item_transition",
                     "transition": transition,
                     "work_item_ref": work_item_ref,
@@ -515,9 +662,7 @@ class OrchestratorService:
             transition,
             previous_status=previous_status,
         )
-        transition_ref = (
-            f"work_item_transition:{transition}:{work_item_ref}:{uuid4().hex[:8]}"
-        )
+        transition_ref = f"work_item_transition:{transition}:{work_item_ref}:{uuid4().hex[:8]}"
         updated_state = self.memory_service.transition_work_item_state(
             mission_id=mission_id,
             work_item_ref=str(work_item_ref),
@@ -531,11 +676,7 @@ class OrchestratorService:
         )
         work_item_state = (
             next(
-                (
-                    item
-                    for item in updated_state.work_items
-                    if item.work_item_ref == work_item_ref
-                ),
+                (item for item in updated_state.work_items if item.work_item_ref == work_item_ref),
                 None,
             )
             if updated_state is not None and work_item_ref is not None
@@ -547,20 +688,12 @@ class OrchestratorService:
             "work_item_ref": work_item_ref,
             "previous_work_item_status": previous_status,
             "work_item_status": work_item_status,
-            "dependency_refs": (
-                list(work_item_state.dependency_refs) if work_item_state else []
-            ),
-            "priority_level": (
-                work_item_state.priority_level if work_item_state else None
-            ),
-            "blocking_state": (
-                work_item_state.blocking_state if work_item_state else None
-            ),
+            "dependency_refs": (list(work_item_state.dependency_refs) if work_item_state else []),
+            "priority_level": (work_item_state.priority_level if work_item_state else None),
+            "blocking_state": (work_item_state.blocking_state if work_item_state else None),
             "blocker_refs": list(work_item_state.blocker_refs) if work_item_state else [],
             "next_action_ref": updated_state.next_action_ref if updated_state else None,
-            "active_work_items": (
-                list(updated_state.active_work_items) if updated_state else []
-            ),
+            "active_work_items": (list(updated_state.active_work_items) if updated_state else []),
             "work_item_refs": list(updated_state.work_item_refs) if updated_state else [],
             "memory_write_mode": "through_core_only",
             "reversible_checkpoint_ref": transition_ref,
@@ -646,9 +779,7 @@ class OrchestratorService:
                 "governance_checked",
                 contract,
                 {
-                    "governance_check_id": str(
-                        assessment.governance_check.governance_check_id
-                    ),
+                    "governance_check_id": str(assessment.governance_check.governance_check_id),
                     "subject_type": "artifact_lifecycle_transition",
                     "transition": transition,
                     "artifact_ref": artifact_ref,
@@ -690,8 +821,7 @@ class OrchestratorService:
 
         artifact_status = self._artifact_transition_target_status(transition)
         transition_ref = (
-            f"artifact_lifecycle_transition:{transition}:{artifact_ref}:"
-            f"{uuid4().hex[:8]}"
+            f"artifact_lifecycle_transition:{transition}:{artifact_ref}:{uuid4().hex[:8]}"
         )
         updated_state = self.memory_service.transition_artifact_lifecycle_state(
             mission_id=mission_id,
@@ -805,14 +935,14 @@ class OrchestratorService:
             if current_state is not None
             else None
         )
-        loop_state = next(
-            (
-                item
-                for item in registry.open_loop_states
-                if item.open_loop_ref == open_loop_ref
-            ),
-            None,
-        ) if registry else None
+        loop_state = (
+            next(
+                (item for item in registry.open_loop_states if item.open_loop_ref == open_loop_ref),
+                None,
+            )
+            if registry
+            else None
+        )
         blocking_reasons = (
             list(registry.blocking_reasons.get(open_loop_ref, []))
             if registry
@@ -825,9 +955,7 @@ class OrchestratorService:
             requested_open_loop_ref=open_loop_ref,
             loop_state=loop_state,
             freshness_status=(registry.freshness_status if registry else "unknown"),
-            selected_work_item_ref=(
-                registry.selected_work_item_ref if registry else None
-            ),
+            selected_work_item_ref=(registry.selected_work_item_ref if registry else None),
             blocking_reasons=blocking_reasons,
             evidence_refs=evidence_refs,
             requested_by_service=self.name,
@@ -921,14 +1049,18 @@ class OrchestratorService:
                 mission_state=self.memory_service.get_mission_state(mission_id),
                 events=events,
             )
-        updated_loop = next(
-            (
-                item
-                for item in updated_state.open_loop_states
-                if item.open_loop_ref == open_loop_ref
-            ),
-            None,
-        ) if updated_state else None
+        updated_loop = (
+            next(
+                (
+                    item
+                    for item in updated_state.open_loop_states
+                    if item.open_loop_ref == open_loop_ref
+                ),
+                None,
+            )
+            if updated_state
+            else None
+        )
         response_text = self.synthesis_engine.compose_open_loop_resume(resume_plan)
         event_payload = {
             "open_loop_ref": open_loop_ref,
@@ -1068,9 +1200,7 @@ class OrchestratorService:
                     "memory_anchor_refs": list(strategy.memory_anchor_refs),
                     "next_action_ref": strategy.next_action_ref,
                     "evidence_refs": list(strategy.evidence_refs),
-                    "generated_from_state_refs": list(
-                        strategy.generated_from_state_refs
-                    ),
+                    "generated_from_state_refs": list(strategy.generated_from_state_refs),
                 }
             )
         events = [
@@ -1150,12 +1280,8 @@ class OrchestratorService:
                 latest_experience=latest_experience,
                 latest_reflection=latest_reflection,
                 generated_at=self.now(),
-                memory_influence_refs=list(
-                    getattr(flow_audit, "memory_influence_used_refs", [])
-                ),
-                memory_influence_reasons=list(
-                    getattr(flow_audit, "memory_influence_reasons", [])
-                ),
+                memory_influence_refs=list(getattr(flow_audit, "memory_influence_used_refs", [])),
+                memory_influence_reasons=list(getattr(flow_audit, "memory_influence_reasons", [])),
                 evidence_refs=evidence_refs,
                 pending_decisions=pending_decisions,
                 operator_usefulness_status=str(
@@ -1174,9 +1300,7 @@ class OrchestratorService:
             "mission_progress_next_action_ref": report.next_action_ref,
             "mission_progress_pending_decisions": list(report.pending_decisions),
             "mission_progress_evidence_refs": list(report.evidence_refs),
-            "mission_progress_memory_influence_refs": list(
-                report.memory_influence_refs
-            ),
+            "mission_progress_memory_influence_refs": list(report.memory_influence_refs),
             "mission_progress_learning_refs": list(report.learning_refs),
             "mission_progress_risk_refs": list(report.risk_refs),
             "memory_write_mode": report.memory_write_mode,
@@ -1217,9 +1341,7 @@ class OrchestratorService:
         request_id = RequestId(f"req-feedback-{uuid4().hex[:8]}")
         normalized_assessment = assessment.strip().lower().replace("-", "_")
         current_record = (
-            self.memory_service.get_experience_reflection(experience_id)
-            if experience_id
-            else None
+            self.memory_service.get_experience_reflection(experience_id) if experience_id else None
         )
         if current_record is None and experience_id is None:
             records = self.memory_service.list_experience_reflections(
@@ -1277,9 +1399,7 @@ class OrchestratorService:
             contract=contract,
             feedback=feedback,
             experience_mission_id=(
-                str(current_record.experience.mission_id)
-                if current_record is not None
-                else None
+                str(current_record.experience.mission_id) if current_record is not None else None
             ),
             reflection_available=(
                 current_record is not None and current_record.reflection is not None
@@ -1312,9 +1432,7 @@ class OrchestratorService:
                     "governance_blocked",
                     contract,
                     {
-                        "decision": (
-                            assessment_result.governance_decision.decision.value
-                        ),
+                        "decision": (assessment_result.governance_decision.decision.value),
                         "reason": assessment_result.governance_decision.justification,
                         "subject_type": "operator_feedback",
                         "feedback_id": feedback.feedback_id,
@@ -1365,12 +1483,8 @@ class OrchestratorService:
                     "operator_feedback_automatic_promotion_allowed": False,
                     "operator_feedback_core_mutation_allowed": False,
                     "operator_feedback_has_comment": bool(safe_feedback.comment),
-                    "operator_feedback_has_correction": bool(
-                        safe_feedback.correction
-                    ),
-                    "operator_feedback_has_next_expectation": bool(
-                        safe_feedback.next_expectation
-                    ),
+                    "operator_feedback_has_correction": bool(safe_feedback.correction),
+                    "operator_feedback_has_next_expectation": bool(safe_feedback.next_expectation),
                     "experience_reflection_status": (
                         updated_record.reflection.reflection_status
                         if updated_record.reflection is not None
@@ -1418,26 +1532,18 @@ class OrchestratorService:
         promotion_gate_status = getattr(flow_audit, "promotion_gate_status", None)
         promotion_gate_id = getattr(flow_audit, "promotion_gate_id", None)
         if promotion_gate_status == "blocked":
-            decisions.append(
-                f"resolve_promotion_gate_blockers:{promotion_gate_id or 'unknown'}"
-            )
+            decisions.append(f"resolve_promotion_gate_blockers:{promotion_gate_id or 'unknown'}")
         elif promotion_gate_status == "passed" and not bool(
             getattr(flow_audit, "promotion_gate_promotion_authorized", False)
         ):
-            decisions.append(
-                f"human_promotion_decision:{promotion_gate_id or 'unknown'}"
-            )
+            decisions.append(f"human_promotion_decision:{promotion_gate_id or 'unknown'}")
         if getattr(flow_audit, "effective_autonomy_level", None) not in {
             None,
             "",
             "not_applicable",
-        } and bool(
-            getattr(flow_audit, "autonomy_human_confirmation_required", False)
-        ):
+        } and bool(getattr(flow_audit, "autonomy_human_confirmation_required", False)):
             decisions.append("confirm_autonomy_action")
-        checkpoint_refs = list(
-            getattr(mission_state, "open_checkpoint_refs", [])
-        )
+        checkpoint_refs = list(getattr(mission_state, "open_checkpoint_refs", []))
         if checkpoint_refs:
             decisions.append(f"resolve_workflow_checkpoint:{checkpoint_refs[0]}")
         return list(dict.fromkeys(decisions))
@@ -1445,6 +1551,7 @@ class OrchestratorService:
     def handle_input(self, contract: InputContract) -> OrchestratorResponse:
         """Execute the orchestrated flow for a normalized input contract."""
 
+        self._ensure_request_has_not_been_processed(contract)
         events = [
             self.make_event(
                 "input_received",
@@ -1454,10 +1561,9 @@ class OrchestratorService:
                     "channel": contract.channel.value,
                     "requested_autonomy_level": contract.requested_autonomy_level,
                     "max_autonomy_level": contract.max_autonomy_level,
-                    "autonomy_confirmation_mode": (
-                        contract.autonomy_confirmation_mode
-                    ),
+                    "autonomy_confirmation_mode": (contract.autonomy_confirmation_mode),
                     "autonomy_policy_refs": list(contract.autonomy_policy_refs),
+                    **self._adapter_request_event_payload(contract.adapter_action_request),
                     **self._surface_identity_payload(contract),
                 },
             )
@@ -1511,15 +1617,13 @@ class OrchestratorService:
                 query=contract.content,
                 as_of=contract.timestamp,
             )
-            knowledge_evidence_governance = (
-                self.governance_service.assess_knowledge_evidence(
-                    provenance_status=knowledge_result.provenance_status,
-                    freshness_status=knowledge_result.freshness_status,
-                    conflict_status=knowledge_result.conflict_status,
-                    source_refs=knowledge_result.sources,
-                    uncertainty_notes=knowledge_result.uncertainty_notes,
-                    assessed_at=contract.timestamp,
-                )
+            knowledge_evidence_governance = self.governance_service.assess_knowledge_evidence(
+                provenance_status=knowledge_result.provenance_status,
+                freshness_status=knowledge_result.freshness_status,
+                conflict_status=knowledge_result.conflict_status,
+                source_refs=knowledge_result.sources,
+                uncertainty_notes=knowledge_result.uncertainty_notes,
+                assessed_at=contract.timestamp,
             )
             events.append(
                 self.make_event(
@@ -1589,15 +1693,9 @@ class OrchestratorService:
                     "dominant_tension": cognitive_snapshot.dominant_tension,
                     "arbitration_summary": cognitive_snapshot.arbitration_summary,
                     "arbitration_source": cognitive_snapshot.arbitration_source,
-                    "cognitive_recomposition_applied": (
-                        cognitive_snapshot.recomposition_applied
-                    ),
-                    "cognitive_recomposition_reason": (
-                        cognitive_snapshot.recomposition_reason
-                    ),
-                    "cognitive_recomposition_trigger": (
-                        cognitive_snapshot.recomposition_trigger
-                    ),
+                    "cognitive_recomposition_applied": (cognitive_snapshot.recomposition_applied),
+                    "cognitive_recomposition_reason": (cognitive_snapshot.recomposition_reason),
+                    "cognitive_recomposition_trigger": (cognitive_snapshot.recomposition_trigger),
                     "specialist_hints": cognitive_snapshot.specialist_hints,
                     "mind_domain_specialist_contract_status": (
                         cognitive_snapshot.mind_domain_specialist_contract_status
@@ -1637,9 +1735,7 @@ class OrchestratorService:
                         "supporting_minds": cognitive_snapshot.supporting_minds,
                         "primary_domain_driver": cognitive_snapshot.primary_domain_driver,
                         "arbitration_source": cognitive_snapshot.arbitration_source,
-                        "cognitive_recomposition_reason": (
-                            cognitive_snapshot.recomposition_reason
-                        ),
+                        "cognitive_recomposition_reason": (cognitive_snapshot.recomposition_reason),
                         "cognitive_recomposition_trigger": (
                             cognitive_snapshot.recomposition_trigger
                         ),
@@ -1657,16 +1753,12 @@ class OrchestratorService:
                 memory_route_guidance=memory_route_guidance,
             )
         )
-        memory_influence_decision = (
-            deliberative_plan.memory_influence_policy_decision
-        )
+        memory_influence_decision = deliberative_plan.memory_influence_policy_decision
         if memory_influence_decision is None:
             raise RuntimeError("planning omitted governed memory influence decision")
-        memory_influence_governance = (
-            self.governance_service.assess_memory_influence_policy(
-                memory_influence_decision,
-                assessed_at=str(contract.timestamp),
-            )
+        memory_influence_governance = self.governance_service.assess_memory_influence_policy(
+            memory_influence_decision,
+            assessed_at=str(contract.timestamp),
         )
         events.append(
             self.make_event(
@@ -1686,12 +1778,19 @@ class OrchestratorService:
                     "memory_influence_decision_mutation_allowed": (
                         memory_influence_governance.decision_mutation_allowed
                     ),
+                    "memory_influence_governance_execution_allowed": (
+                        memory_influence_governance.execution_allowed
+                    ),
+                    "memory_influence_governance_tool_dispatch_allowed": (
+                        memory_influence_governance.tool_dispatch_allowed
+                    ),
                 },
             )
         )
         autonomy_ladder = derive_autonomy_ladder(
             contract=contract,
             plan=deliberative_plan,
+            action_kind=self._derive_autonomy_action_kind(deliberative_plan),
         )
         self._apply_autonomy_ladder_to_plan(
             plan=deliberative_plan,
@@ -1709,12 +1808,8 @@ class OrchestratorService:
                 "plan_built",
                 contract,
                 {
-                    "contract_validation_status": (
-                        deliberative_plan.contract_validation_status
-                    ),
-                    "contract_validation_errors": (
-                        deliberative_plan.contract_validation_errors
-                    ),
+                    "contract_validation_status": (deliberative_plan.contract_validation_status),
+                    "contract_validation_errors": (deliberative_plan.contract_validation_errors),
                     "contract_validation_retry_applied": (
                         deliberative_plan.contract_validation_retry_applied
                     ),
@@ -1734,12 +1829,8 @@ class OrchestratorService:
                         deliberative_plan.metacognitive_containment_recommendation
                     ),
                     "mind_disagreement_status": deliberative_plan.mind_disagreement_status,
-                    "mind_validation_checkpoints": (
-                        deliberative_plan.mind_validation_checkpoints
-                    ),
-                    **self._memory_maintenance_event_payload(
-                        deliberative_plan=deliberative_plan
-                    ),
+                    "mind_validation_checkpoints": (deliberative_plan.mind_validation_checkpoints),
+                    **self._memory_maintenance_event_payload(deliberative_plan=deliberative_plan),
                     **self._capability_decision_event_payload(deliberative_plan),
                     **self._request_identity_policy_payload(deliberative_plan),
                     **self._autonomy_ladder_plan_payload(deliberative_plan),
@@ -1777,15 +1868,9 @@ class OrchestratorService:
                     "primary_mind_family": deliberative_plan.primary_mind_family,
                     "primary_domain_driver": deliberative_plan.primary_domain_driver,
                     "arbitration_source": deliberative_plan.arbitration_source,
-                    "cognitive_recomposition_applied": (
-                        cognitive_snapshot.recomposition_applied
-                    ),
-                    "cognitive_recomposition_reason": (
-                        cognitive_snapshot.recomposition_reason
-                    ),
-                    "cognitive_recomposition_trigger": (
-                        cognitive_snapshot.recomposition_trigger
-                    ),
+                    "cognitive_recomposition_applied": (cognitive_snapshot.recomposition_applied),
+                    "cognitive_recomposition_reason": (cognitive_snapshot.recomposition_reason),
+                    "cognitive_recomposition_trigger": (cognitive_snapshot.recomposition_trigger),
                     "primary_route": deliberative_plan.primary_route,
                     "primary_canonical_domain": deliberative_plan.primary_canonical_domain,
                     **self._workflow_policy_payload(deliberative_plan),
@@ -1793,40 +1878,26 @@ class OrchestratorService:
                     "procedural_memory_source": deliberative_plan.procedural_memory_source,
                     "semantic_memory_effects": deliberative_plan.semantic_memory_effects,
                     "procedural_memory_effects": deliberative_plan.procedural_memory_effects,
-                    "semantic_memory_lifecycle": (
-                        deliberative_plan.semantic_memory_lifecycle
-                    ),
-                    "procedural_memory_lifecycle": (
-                        deliberative_plan.procedural_memory_lifecycle
-                    ),
+                    "semantic_memory_lifecycle": (deliberative_plan.semantic_memory_lifecycle),
+                    "procedural_memory_lifecycle": (deliberative_plan.procedural_memory_lifecycle),
                     "semantic_memory_state": deliberative_plan.semantic_memory_state,
                     "procedural_memory_state": deliberative_plan.procedural_memory_state,
-                    "semantic_memory_anchor_refs": (
-                        deliberative_plan.semantic_memory_anchor_refs
-                    ),
+                    "semantic_memory_anchor_refs": (deliberative_plan.semantic_memory_anchor_refs),
                     "semantic_memory_evidence_refs": (
                         deliberative_plan.semantic_memory_evidence_refs
                     ),
-                    "semantic_memory_use_reason": (
-                        deliberative_plan.semantic_memory_use_reason
-                    ),
+                    "semantic_memory_use_reason": (deliberative_plan.semantic_memory_use_reason),
                     "semantic_memory_non_use_reason": (
                         deliberative_plan.semantic_memory_non_use_reason
                     ),
                     **self._memory_influence_policy_payload(deliberative_plan),
                     "memory_lifecycle_status": deliberative_plan.memory_lifecycle_status,
                     "memory_review_status": deliberative_plan.memory_review_status,
-                    "memory_consolidation_status": (
-                        deliberative_plan.memory_consolidation_status
-                    ),
+                    "memory_consolidation_status": (deliberative_plan.memory_consolidation_status),
                     "memory_fixation_status": deliberative_plan.memory_fixation_status,
                     "memory_archive_status": deliberative_plan.memory_archive_status,
-                    "reflection_influence_status": (
-                        deliberative_plan.reflection_influence_status
-                    ),
-                    "reflection_influence_refs": (
-                        deliberative_plan.reflection_influence_refs
-                    ),
+                    "reflection_influence_status": (deliberative_plan.reflection_influence_status),
+                    "reflection_influence_refs": (deliberative_plan.reflection_influence_refs),
                     "reflection_influence_summary": (
                         deliberative_plan.reflection_influence_summary
                     ),
@@ -1845,24 +1916,16 @@ class OrchestratorService:
                     "reviewed_learning_influence_reason": (
                         deliberative_plan.reviewed_learning_influence_reason
                     ),
-                    "procedural_artifact_status": (
-                        deliberative_plan.procedural_artifact_status
-                    ),
+                    "procedural_artifact_status": (deliberative_plan.procedural_artifact_status),
                     "procedural_artifact_ref": deliberative_plan.procedural_artifact_ref,
-                    "procedural_artifact_version": (
-                        deliberative_plan.procedural_artifact_version
-                    ),
-                    "procedural_artifact_summary": (
-                        deliberative_plan.procedural_artifact_summary
-                    ),
+                    "procedural_artifact_version": (deliberative_plan.procedural_artifact_version),
+                    "procedural_artifact_summary": (deliberative_plan.procedural_artifact_summary),
                     "mind_domain_specialist_chain": (
                         f"{deliberative_plan.primary_mind or 'none'} -> "
                         f"{deliberative_plan.primary_domain_driver or 'none'} -> "
                         f"{deliberative_plan.primary_route or 'none'}"
                     ),
-                    **self._mind_domain_specialist_contract_payload(
-                        deliberative_plan
-                    ),
+                    **self._mind_domain_specialist_contract_payload(deliberative_plan),
                     "specialist_hints": deliberative_plan.specialist_hints,
                     "continuity_action": deliberative_plan.continuity_action,
                     "continuity_source": deliberative_plan.continuity_source,
@@ -1985,28 +2048,58 @@ class OrchestratorService:
 
         operation_dispatch = None
         operation_result = None
+        action_confirmation_challenge = None
+        action_confirmation_claim = None
+        adapter_action_intent = None
+        adapter_descriptor = None
+        adapter_grant = None
+        adapter_grant_claim = None
         artifact_results: list[ArtifactResultContract] = []
         if (
-            governance_decision.decision
-            in {
-                PermissionDecision.ALLOW,
-                PermissionDecision.ALLOW_WITH_CONDITIONS,
-            }
-            and directive.should_execute_operation
-            and self._capability_allows_operation(deliberative_plan)
+            deliberative_plan.adapter_action_request is not None
+            or deliberative_plan.autonomy_action_kind
+            in {"prepare_external_action", "execute_external_action"}
         ):
+            adapter_resolution = self.resolve_adapter_authorization(
+                contract,
+                plan=deliberative_plan,
+                governance_decision=governance_decision,
+            )
+            events.extend(adapter_resolution.events)
+            adapter_action_intent = adapter_resolution.action_intent
+            adapter_descriptor = adapter_resolution.descriptor
+            adapter_grant = adapter_resolution.grant
+            adapter_grant_claim = adapter_resolution.claim
+            action_confirmation_challenge = adapter_resolution.challenge
+        should_prepare_operation = self._should_prepare_operation(
+            governance_decision=governance_decision,
+            directive_should_execute_operation=directive.should_execute_operation,
+            plan=deliberative_plan,
+            memory_influence_governance_status=(memory_influence_governance.assessment_status),
+        )
+        if should_prepare_operation:
             capability_authorization_status = self._resolve_capability_authorization_status(
                 plan=deliberative_plan,
                 governance_decision=governance_decision,
                 specialist_handoff_decision=specialist_handoff_assessment.governance_decision,
             )
-            operation_dispatch = self.build_operation_dispatch(
+            prepared_operation_dispatch = self.build_operation_dispatch(
                 contract,
                 plan=deliberative_plan,
                 specialist_review=specialist_review,
                 mission_runtime_state=mission_runtime_state,
                 authorization_status=capability_authorization_status,
             )
+            action_confirmation_resolution = self.resolve_action_confirmation(
+                contract,
+                prepared_operation_dispatch,
+            )
+            events.extend(action_confirmation_resolution.events)
+            operation_dispatch = action_confirmation_resolution.operation_dispatch
+            action_confirmation_challenge = action_confirmation_resolution.challenge
+            action_confirmation_claim = action_confirmation_resolution.claim
+
+        if operation_dispatch is not None:
             events.append(
                 self.make_event(
                     "workflow_composed",
@@ -2019,28 +2112,20 @@ class OrchestratorService:
                         "workflow_expected_deliverables": (
                             operation_dispatch.workflow_expected_deliverables
                         ),
-                        "workflow_telemetry_focus": (
-                            operation_dispatch.workflow_telemetry_focus
-                        ),
+                        "workflow_telemetry_focus": (operation_dispatch.workflow_telemetry_focus),
                         "workflow_success_focus": operation_dispatch.workflow_success_focus,
                         "workflow_response_focus": operation_dispatch.workflow_response_focus,
                         "workflow_state": operation_dispatch.workflow_state,
                         "workflow_governance_mode": operation_dispatch.workflow_governance_mode,
                         "workflow_steps": operation_dispatch.workflow_steps,
                         "workflow_checkpoints": operation_dispatch.workflow_checkpoints,
-                        "workflow_checkpoint_state": (
-                            operation_dispatch.workflow_checkpoint_state
-                        ),
+                        "workflow_checkpoint_state": (operation_dispatch.workflow_checkpoint_state),
                         "workflow_decision_points": operation_dispatch.workflow_decision_points,
                         "workflow_resume_point": operation_dispatch.workflow_resume_point,
                         "workflow_resume_status": operation_dispatch.workflow_resume_status,
-                        "workflow_resume_eligible": (
-                            operation_dispatch.workflow_resume_eligible
-                        ),
+                        "workflow_resume_eligible": (operation_dispatch.workflow_resume_eligible),
                         **self._workflow_policy_payload(operation_dispatch),
-                        **self._ecosystem_operational_state_payload(
-                            operation_dispatch
-                        ),
+                        **self._ecosystem_operational_state_payload(operation_dispatch),
                         **self._project_objective_payload(operation_dispatch),
                         **self._surface_identity_payload(operation_dispatch),
                         **self._capability_decision_event_payload(operation_dispatch),
@@ -2066,9 +2151,7 @@ class OrchestratorService:
                         ),
                         "task_type": operation_dispatch.task_type,
                         "domain_hints": operation_dispatch.domain_hints,
-                        **self._mind_domain_specialist_contract_payload(
-                            operation_dispatch
-                        ),
+                        **self._mind_domain_specialist_contract_payload(operation_dispatch),
                     },
                 )
             )
@@ -2080,9 +2163,7 @@ class OrchestratorService:
                         "operation_id": str(operation_dispatch.operation_id),
                         "workflow_profile": operation_dispatch.workflow_profile,
                         "workflow_domain_route": operation_dispatch.workflow_domain_route,
-                        **self._ecosystem_operational_state_payload(
-                            operation_dispatch
-                        ),
+                        **self._ecosystem_operational_state_payload(operation_dispatch),
                     },
                 )
             )
@@ -2110,9 +2191,7 @@ class OrchestratorService:
                         "workflow_expected_deliverables": (
                             operation_dispatch.workflow_expected_deliverables
                         ),
-                        "workflow_telemetry_focus": (
-                            operation_dispatch.workflow_telemetry_focus
-                        ),
+                        "workflow_telemetry_focus": (operation_dispatch.workflow_telemetry_focus),
                         "workflow_success_focus": operation_dispatch.workflow_success_focus,
                         "workflow_state": operation_dispatch.workflow_state,
                         "workflow_governance_mode": operation_dispatch.workflow_governance_mode,
@@ -2120,9 +2199,7 @@ class OrchestratorService:
                         "workflow_resume_status": operation_dispatch.workflow_resume_status,
                         "workflow_resume_point": operation_dispatch.workflow_resume_point,
                         **self._workflow_policy_payload(operation_dispatch),
-                        **self._ecosystem_operational_state_payload(
-                            operation_dispatch
-                        ),
+                        **self._ecosystem_operational_state_payload(operation_dispatch),
                         **self._project_objective_payload(operation_dispatch),
                         **self._surface_identity_payload(operation_dispatch),
                         **self._capability_decision_event_payload(operation_dispatch),
@@ -2134,9 +2211,7 @@ class OrchestratorService:
                         "adaptive_intervention_selected_action": (
                             operation_dispatch.adaptive_intervention_selected_action
                         ),
-                        **self._mind_domain_specialist_contract_payload(
-                            operation_dispatch
-                        ),
+                        **self._mind_domain_specialist_contract_payload(operation_dispatch),
                     },
                 )
             )
@@ -2153,26 +2228,18 @@ class OrchestratorService:
                         "workflow_expected_deliverables": (
                             operation_dispatch.workflow_expected_deliverables
                         ),
-                        "workflow_telemetry_focus": (
-                            operation_dispatch.workflow_telemetry_focus
-                        ),
+                        "workflow_telemetry_focus": (operation_dispatch.workflow_telemetry_focus),
                         "workflow_success_focus": operation_dispatch.workflow_success_focus,
                         "workflow_response_focus": operation_dispatch.workflow_response_focus,
                         "workflow_state": "dispatched",
                         **self._workflow_policy_payload(operation_dispatch),
                         "workflow_steps": operation_dispatch.workflow_steps,
-                        "workflow_checkpoint_state": (
-                            operation_dispatch.workflow_checkpoint_state
-                        ),
+                        "workflow_checkpoint_state": (operation_dispatch.workflow_checkpoint_state),
                         "workflow_decision_points": operation_dispatch.workflow_decision_points,
                         "workflow_resume_status": operation_dispatch.workflow_resume_status,
                         "workflow_resume_point": operation_dispatch.workflow_resume_point,
-                        "workflow_resume_eligible": (
-                            operation_dispatch.workflow_resume_eligible
-                        ),
-                        **self._ecosystem_operational_state_payload(
-                            operation_dispatch
-                        ),
+                        "workflow_resume_eligible": (operation_dispatch.workflow_resume_eligible),
+                        **self._ecosystem_operational_state_payload(operation_dispatch),
                         **self._project_objective_payload(operation_dispatch),
                         **self._surface_identity_payload(operation_dispatch),
                         **self._capability_decision_event_payload(operation_dispatch),
@@ -2197,9 +2264,7 @@ class OrchestratorService:
                             operation_dispatch.adaptive_intervention_effects
                         ),
                         "specialist_hints": operation_dispatch.specialist_hints,
-                        **self._mind_domain_specialist_contract_payload(
-                            operation_dispatch
-                        ),
+                        **self._mind_domain_specialist_contract_payload(operation_dispatch),
                     },
                 )
             )
@@ -2220,16 +2285,12 @@ class OrchestratorService:
                         "workflow_expected_deliverables": (
                             operation_dispatch.workflow_expected_deliverables
                         ),
-                        "workflow_telemetry_focus": (
-                            operation_dispatch.workflow_telemetry_focus
-                        ),
+                        "workflow_telemetry_focus": (operation_dispatch.workflow_telemetry_focus),
                         "workflow_response_focus": operation_dispatch.workflow_response_focus,
                         "workflow_state": operation_result.workflow_state,
                         **self._workflow_policy_payload(operation_dispatch),
                         "workflow_checkpoints": operation_dispatch.workflow_checkpoints,
-                        "workflow_checkpoint_state": (
-                            operation_result.workflow_checkpoint_state
-                        ),
+                        "workflow_checkpoint_state": (operation_result.workflow_checkpoint_state),
                         "workflow_completed_steps": operation_result.workflow_completed_steps,
                         "workflow_pending_checkpoints": (
                             operation_result.workflow_pending_checkpoints
@@ -2237,13 +2298,9 @@ class OrchestratorService:
                         "workflow_decisions": operation_result.workflow_decisions,
                         "workflow_resume_status": operation_result.workflow_resume_status,
                         "workflow_resume_point": operation_result.workflow_resume_point,
-                        **self._ecosystem_operational_state_payload(
-                            operation_result
-                        ),
+                        **self._ecosystem_operational_state_payload(operation_result),
                         **self._project_objective_payload(operation_result),
-                        **self._mind_domain_specialist_contract_payload(
-                            operation_dispatch
-                        ),
+                        **self._mind_domain_specialist_contract_payload(operation_dispatch),
                     },
                 )
             )
@@ -2259,9 +2316,7 @@ class OrchestratorService:
                         "workflow_expected_deliverables": (
                             operation_dispatch.workflow_expected_deliverables
                         ),
-                        "workflow_telemetry_focus": (
-                            operation_dispatch.workflow_telemetry_focus
-                        ),
+                        "workflow_telemetry_focus": (operation_dispatch.workflow_telemetry_focus),
                         "workflow_success_focus": operation_dispatch.workflow_success_focus,
                         "workflow_response_focus": operation_dispatch.workflow_response_focus,
                         "workflow_state": operation_result.workflow_state,
@@ -2271,21 +2326,15 @@ class OrchestratorService:
                         "workflow_decisions": operation_result.workflow_decisions,
                         "status": operation_result.status.value,
                         "checkpoints": operation_result.checkpoints,
-                        "workflow_checkpoint_state": (
-                            operation_result.workflow_checkpoint_state
-                        ),
+                        "workflow_checkpoint_state": (operation_result.workflow_checkpoint_state),
                         "workflow_pending_checkpoints": (
                             operation_result.workflow_pending_checkpoints
                         ),
                         "workflow_resume_status": operation_result.workflow_resume_status,
                         "workflow_resume_point": operation_result.workflow_resume_point,
-                        **self._ecosystem_operational_state_payload(
-                            operation_result
-                        ),
+                        **self._ecosystem_operational_state_payload(operation_result),
                         **self._project_objective_payload(operation_result),
-                        **self._mind_domain_specialist_contract_payload(
-                            operation_dispatch
-                        ),
+                        **self._mind_domain_specialist_contract_payload(operation_dispatch),
                     },
                 )
             )
@@ -2313,8 +2362,7 @@ class OrchestratorService:
             deliberative_plan,
             planned_specialists=list(deliberative_plan.specialist_hints),
             selected_specialists=[
-                contribution.specialist_type
-                for contribution in specialist_review.contributions
+                contribution.specialist_type for contribution in specialist_review.contributions
             ],
             selected_domains=[
                 invocation.linked_domain
@@ -2375,12 +2423,8 @@ class OrchestratorService:
                         deliberative_plan.metacognitive_containment_recommendation
                     ),
                     "mind_disagreement_status": deliberative_plan.mind_disagreement_status,
-                    "mind_validation_checkpoints": (
-                        deliberative_plan.mind_validation_checkpoints
-                    ),
-                    **self._memory_maintenance_event_payload(
-                        deliberative_plan=deliberative_plan
-                    ),
+                    "mind_validation_checkpoints": (deliberative_plan.mind_validation_checkpoints),
+                    **self._memory_maintenance_event_payload(deliberative_plan=deliberative_plan),
                     **self._capability_decision_event_payload(
                         deliberative_plan,
                         authorization_status=self._resolve_capability_authorization_status(
@@ -2431,15 +2475,9 @@ class OrchestratorService:
                     "cognitive_strategy_shift_effects": (
                         deliberative_plan.cognitive_strategy_shift_effects
                     ),
-                    "cognitive_recomposition_applied": (
-                        cognitive_snapshot.recomposition_applied
-                    ),
-                    "cognitive_recomposition_reason": (
-                        cognitive_snapshot.recomposition_reason
-                    ),
-                    "cognitive_recomposition_trigger": (
-                        cognitive_snapshot.recomposition_trigger
-                    ),
+                    "cognitive_recomposition_applied": (cognitive_snapshot.recomposition_applied),
+                    "cognitive_recomposition_reason": (cognitive_snapshot.recomposition_reason),
+                    "cognitive_recomposition_trigger": (cognitive_snapshot.recomposition_trigger),
                     "primary_route": deliberative_plan.primary_route,
                     "primary_canonical_domain": deliberative_plan.primary_canonical_domain,
                     "workflow_profile": deliberative_plan.route_workflow_profile,
@@ -2461,86 +2499,54 @@ class OrchestratorService:
                     "procedural_memory_source": deliberative_plan.procedural_memory_source,
                     "semantic_memory_effects": deliberative_plan.semantic_memory_effects,
                     "procedural_memory_effects": deliberative_plan.procedural_memory_effects,
-                    "semantic_memory_lifecycle": (
-                        deliberative_plan.semantic_memory_lifecycle
-                    ),
-                    "procedural_memory_lifecycle": (
-                        deliberative_plan.procedural_memory_lifecycle
-                    ),
+                    "semantic_memory_lifecycle": (deliberative_plan.semantic_memory_lifecycle),
+                    "procedural_memory_lifecycle": (deliberative_plan.procedural_memory_lifecycle),
                     "semantic_memory_state": deliberative_plan.semantic_memory_state,
                     "procedural_memory_state": deliberative_plan.procedural_memory_state,
-                    "semantic_memory_anchor_refs": (
-                        deliberative_plan.semantic_memory_anchor_refs
-                    ),
+                    "semantic_memory_anchor_refs": (deliberative_plan.semantic_memory_anchor_refs),
                     "semantic_memory_evidence_refs": (
                         deliberative_plan.semantic_memory_evidence_refs
                     ),
-                    "semantic_memory_use_reason": (
-                        deliberative_plan.semantic_memory_use_reason
-                    ),
+                    "semantic_memory_use_reason": (deliberative_plan.semantic_memory_use_reason),
                     "semantic_memory_non_use_reason": (
                         deliberative_plan.semantic_memory_non_use_reason
                     ),
                     **self._memory_influence_policy_payload(deliberative_plan),
                     "memory_lifecycle_status": deliberative_plan.memory_lifecycle_status,
                     "memory_review_status": deliberative_plan.memory_review_status,
-                    "memory_consolidation_status": (
-                        deliberative_plan.memory_consolidation_status
-                    ),
+                    "memory_consolidation_status": (deliberative_plan.memory_consolidation_status),
                     "memory_fixation_status": deliberative_plan.memory_fixation_status,
                     "memory_archive_status": deliberative_plan.memory_archive_status,
-                    "procedural_artifact_status": (
-                        deliberative_plan.procedural_artifact_status
-                    ),
+                    "procedural_artifact_status": (deliberative_plan.procedural_artifact_status),
                     "procedural_artifact_refs": (
                         [deliberative_plan.procedural_artifact_ref]
                         if deliberative_plan.procedural_artifact_ref
                         else []
                     ),
-                    "procedural_artifact_version": (
-                        deliberative_plan.procedural_artifact_version
-                    ),
-                    "procedural_artifact_summary": (
-                        deliberative_plan.procedural_artifact_summary
-                    ),
-                    "contract_validation_status": (
-                        deliberative_plan.contract_validation_status
-                    ),
-                    "contract_validation_errors": (
-                        deliberative_plan.contract_validation_errors
-                    ),
+                    "procedural_artifact_version": (deliberative_plan.procedural_artifact_version),
+                    "procedural_artifact_summary": (deliberative_plan.procedural_artifact_summary),
+                    "contract_validation_status": (deliberative_plan.contract_validation_status),
+                    "contract_validation_errors": (deliberative_plan.contract_validation_errors),
                     "contract_validation_retry_applied": (
                         deliberative_plan.contract_validation_retry_applied
                     ),
-                    "output_validation_status": (
-                        synthesis_result.output_validation_status
-                    ),
-                    "output_validation_errors": (
-                        synthesis_result.output_validation_errors
-                    ),
+                    "output_validation_status": (synthesis_result.output_validation_status),
+                    "output_validation_errors": (synthesis_result.output_validation_errors),
                     "output_validation_retry_applied": (
                         synthesis_result.output_validation_retry_applied
                     ),
                     "workflow_output_status": synthesis_result.workflow_output_status,
                     "workflow_output_errors": synthesis_result.workflow_output_errors,
-                    "semantic_memory_focus": guided_memory_runtime_hints[
-                        "semantic_memory_focus"
-                    ],
-                    "procedural_memory_hint": guided_memory_runtime_hints[
-                        "procedural_memory_hint"
-                    ],
+                    "semantic_memory_focus": guided_memory_runtime_hints["semantic_memory_focus"],
+                    "procedural_memory_hint": guided_memory_runtime_hints["procedural_memory_hint"],
                     "context_compaction_status": deliberative_plan.context_compaction_status,
                     "cross_session_recall_status": deliberative_plan.cross_session_recall_status,
                     "cross_session_recall_summary": self._extract_context_hint(
                         memory_recovery_result.recovered_items,
                         "cross_session_recall_summary=",
                     ),
-                    "reflection_influence_status": (
-                        deliberative_plan.reflection_influence_status
-                    ),
-                    "reflection_influence_refs": (
-                        deliberative_plan.reflection_influence_refs
-                    ),
+                    "reflection_influence_status": (deliberative_plan.reflection_influence_status),
+                    "reflection_influence_refs": (deliberative_plan.reflection_influence_refs),
                     "reflection_influence_summary": (
                         deliberative_plan.reflection_influence_summary
                     ),
@@ -2608,43 +2614,27 @@ class OrchestratorService:
                     ),
                     "semantic_memory_source": deliberative_plan.semantic_memory_source,
                     "procedural_memory_source": deliberative_plan.procedural_memory_source,
-                    "semantic_memory_lifecycle": (
-                        deliberative_plan.semantic_memory_lifecycle
-                    ),
-                    "procedural_memory_lifecycle": (
-                        deliberative_plan.procedural_memory_lifecycle
-                    ),
+                    "semantic_memory_lifecycle": (deliberative_plan.semantic_memory_lifecycle),
+                    "procedural_memory_lifecycle": (deliberative_plan.procedural_memory_lifecycle),
                     "semantic_memory_state": deliberative_plan.semantic_memory_state,
                     "procedural_memory_state": deliberative_plan.procedural_memory_state,
-                    "semantic_memory_anchor_refs": (
-                        deliberative_plan.semantic_memory_anchor_refs
-                    ),
+                    "semantic_memory_anchor_refs": (deliberative_plan.semantic_memory_anchor_refs),
                     "semantic_memory_evidence_refs": (
                         deliberative_plan.semantic_memory_evidence_refs
                     ),
-                    "semantic_memory_use_reason": (
-                        deliberative_plan.semantic_memory_use_reason
-                    ),
+                    "semantic_memory_use_reason": (deliberative_plan.semantic_memory_use_reason),
                     "semantic_memory_non_use_reason": (
                         deliberative_plan.semantic_memory_non_use_reason
                     ),
                     **self._memory_influence_policy_payload(deliberative_plan),
                     "memory_lifecycle_status": deliberative_plan.memory_lifecycle_status,
                     "memory_review_status": deliberative_plan.memory_review_status,
-                    **self._memory_maintenance_event_payload(
-                        deliberative_plan=deliberative_plan
-                    ),
-                    "memory_consolidation_status": (
-                        deliberative_plan.memory_consolidation_status
-                    ),
+                    **self._memory_maintenance_event_payload(deliberative_plan=deliberative_plan),
+                    "memory_consolidation_status": (deliberative_plan.memory_consolidation_status),
                     "memory_fixation_status": deliberative_plan.memory_fixation_status,
                     "memory_archive_status": deliberative_plan.memory_archive_status,
-                    "procedural_artifact_status": (
-                        memory_record_result.procedural_artifact_status
-                    ),
-                    "procedural_artifact_refs": (
-                        memory_record_result.procedural_artifact_refs
-                    ),
+                    "procedural_artifact_status": (memory_record_result.procedural_artifact_status),
+                    "procedural_artifact_refs": (memory_record_result.procedural_artifact_refs),
                     "procedural_artifact_version": (
                         memory_record_result.procedural_artifact_version
                     ),
@@ -2711,13 +2701,20 @@ class OrchestratorService:
                     "evidence_refs": experience_record.evidence_refs,
                     "reusable_memory_status": experience_record.reusable_memory_status,
                     "human_review_required": experience_record.human_review_required,
-                    "automatic_promotion_allowed": (
-                        experience_record.automatic_promotion_allowed
-                    ),
+                    "automatic_promotion_allowed": (experience_record.automatic_promotion_allowed),
                     "core_mutation_allowed": experience_record.core_mutation_allowed,
                 },
             )
         )
+        decision_outcome_attribution, attribution_event = self._record_decision_outcome_attribution(
+            contract=contract,
+            deliberative_plan=deliberative_plan,
+            memory_influence_governance=memory_influence_governance,
+            governance_decision=governance_decision,
+            experience_record=experience_record,
+            evidence_events=events,
+        )
+        events.append(attribution_event)
         post_task_reflection = self._record_post_task_reflection(
             experience_record=experience_record,
         )
@@ -2766,8 +2763,15 @@ class OrchestratorService:
                 "specialist_handoff_decision": (specialist_handoff_assessment.governance_decision),
                 "operation_dispatch": operation_dispatch,
                 "operation_result": operation_result,
+                "action_confirmation_challenge": action_confirmation_challenge,
+                "action_confirmation_claim": action_confirmation_claim,
+                "adapter_action_intent": adapter_action_intent,
+                "adapter_descriptor": adapter_descriptor,
+                "adapter_grant": adapter_grant,
+                "adapter_grant_claim": adapter_grant_claim,
                 "experience_record": experience_record,
                 "post_task_reflection": post_task_reflection,
+                "decision_outcome_attribution": decision_outcome_attribution,
                 "events": events,
                 "response_text": response_text,
             }
@@ -2779,6 +2783,37 @@ class OrchestratorService:
         from orchestrator_service.langgraph_flow import LangGraphFlowRunner
 
         return LangGraphFlowRunner(self).run(contract)
+
+    def _ensure_request_has_not_been_processed(
+        self,
+        contract: InputContract,
+    ) -> None:
+        """Fail closed before any side effect when a request identity is replayed."""
+
+        request_id = str(contract.request_id)
+        claimed = self.memory_service.claim_runtime_request(
+            request_id=request_id,
+            session_id=str(contract.session_id),
+            claimed_at=self.now(),
+        )
+        if not claimed:
+            raise ValueError(f"request_id has already been processed: {request_id}")
+        existing_attribution = self.memory_service.get_decision_outcome_attribution(
+            request_id=request_id
+        )
+        existing_events = self.observability_service.list_recent_events(
+            ObservabilityQuery(
+                request_id=request_id,
+                event_names=(
+                    "input_received",
+                    "decision_outcome_attribution_recorded",
+                    "decision_outcome_attribution_failed",
+                ),
+                limit=1,
+            )
+        )
+        if existing_attribution is not None or existing_events:
+            raise ValueError(f"request_id has already been processed: {request_id}")
 
     def _plan_specialist_handoffs(
         self,
@@ -2884,7 +2919,8 @@ class OrchestratorService:
                         item.specialist_type: (
                             selection_registry_payloads.get(item.specialist_type, {}).get(
                                 "specialist_mode"
-                            ) == item.selection_mode
+                            )
+                            == item.selection_mode
                             if item.linked_domain
                             else item.selection_mode == "standard"
                         )
@@ -2892,9 +2928,9 @@ class OrchestratorService:
                     },
                     "registry_specialist_eligibility": {
                         item.specialist_type: (
-                            selection_registry_payloads.get(
-                                item.specialist_type, {}
-                            ).get("eligible")
+                            selection_registry_payloads.get(item.specialist_type, {}).get(
+                                "eligible"
+                            )
                             is True
                             if item.linked_domain
                             else False
@@ -3456,9 +3492,7 @@ class OrchestratorService:
                             if item.selection_mode in {"guided", "active"}
                         ],
                         "boundary_summary": specialist_review.boundary_summary,
-                        **self._mind_domain_specialist_contract_payload(
-                            specialist_review
-                        ),
+                        **self._mind_domain_specialist_contract_payload(specialist_review),
                     },
                 )
             )
@@ -3505,9 +3539,7 @@ class OrchestratorService:
                             for output_hint in item.output_hints
                         ],
                         "summary": specialist_review.summary,
-                        **self._mind_domain_specialist_contract_payload(
-                            specialist_review
-                        ),
+                        **self._mind_domain_specialist_contract_payload(specialist_review),
                     },
                 )
             )
@@ -3551,9 +3583,8 @@ class OrchestratorService:
                                 invocation.specialist_type: (
                                     completed_registry_payloads.get(
                                         invocation.specialist_type, {}
-                                    ).get(
-                                        "specialist_mode"
-                                    ) == invocation.selection_mode
+                                    ).get("specialist_mode")
+                                    == invocation.selection_mode
                                 )
                                 for invocation in domain_invocation_index.values()
                                 if invocation.linked_domain
@@ -3619,9 +3650,7 @@ class OrchestratorService:
                                 )
                                 for invocation in domain_invocation_index.values()
                             },
-                            **self._mind_domain_specialist_contract_payload(
-                                specialist_review
-                            ),
+                            **self._mind_domain_specialist_contract_payload(specialist_review),
                         },
                     )
                 )
@@ -3690,12 +3719,8 @@ class OrchestratorService:
                             "cognitive_strategy_shift_effects": (
                                 refined_plan.cognitive_strategy_shift_effects
                             ),
-                            "smallest_safe_next_action": (
-                                refined_plan.smallest_safe_next_action
-                            ),
-                            **self._mind_domain_specialist_contract_payload(
-                                refined_plan
-                            ),
+                            "smallest_safe_next_action": (refined_plan.smallest_safe_next_action),
+                            **self._mind_domain_specialist_contract_payload(refined_plan),
                         },
                     )
                 )
@@ -3752,36 +3777,22 @@ class OrchestratorService:
                         else None
                     ),
                     "continuity_target_goal": mission_runtime_state.continuity_target_goal,
-                    "continuity_recommendation": (
-                        mission_runtime_state.continuity_recommendation
-                    ),
-                    "continuity_replay_status": (
-                        mission_runtime_state.continuity_replay_status
-                    ),
-                    "continuity_recovery_mode": (
-                        mission_runtime_state.continuity_recovery_mode
-                    ),
-                    "continuity_resume_point": (
-                        mission_runtime_state.continuity_resume_point
-                    ),
-                    "requires_manual_resume": (
-                        mission_runtime_state.requires_manual_resume
-                    ),
+                    "continuity_recommendation": (mission_runtime_state.continuity_recommendation),
+                    "continuity_replay_status": (mission_runtime_state.continuity_replay_status),
+                    "continuity_recovery_mode": (mission_runtime_state.continuity_recovery_mode),
+                    "continuity_resume_point": (mission_runtime_state.continuity_resume_point),
+                    "requires_manual_resume": (mission_runtime_state.requires_manual_resume),
                     "primary_route": mission_runtime_state.primary_route,
                     "workflow_profile": mission_runtime_state.workflow_profile,
                     "primary_mind": deliberative_plan.primary_mind,
                     "primary_domain_driver": deliberative_plan.primary_domain_driver,
                     "semantic_memory_source": deliberative_plan.semantic_memory_source,
                     "procedural_memory_source": deliberative_plan.procedural_memory_source,
-                    "semantic_memory_anchor_refs": (
-                        deliberative_plan.semantic_memory_anchor_refs
-                    ),
+                    "semantic_memory_anchor_refs": (deliberative_plan.semantic_memory_anchor_refs),
                     "semantic_memory_evidence_refs": (
                         deliberative_plan.semantic_memory_evidence_refs
                     ),
-                    "semantic_memory_use_reason": (
-                        deliberative_plan.semantic_memory_use_reason
-                    ),
+                    "semantic_memory_use_reason": (deliberative_plan.semantic_memory_use_reason),
                     "semantic_memory_non_use_reason": (
                         deliberative_plan.semantic_memory_non_use_reason
                     ),
@@ -3806,9 +3817,7 @@ class OrchestratorService:
                     "linked_surface_ids": mission_runtime_state.linked_surface_ids,
                     "active_surface_id": mission_runtime_state.active_surface_id,
                     "last_surface_id": mission_runtime_state.last_surface_id,
-                    "surface_continuity_status": (
-                        mission_runtime_state.surface_continuity_status
-                    ),
+                    "surface_continuity_status": (mission_runtime_state.surface_continuity_status),
                     "surface_identity_conflict_flags": (
                         mission_runtime_state.surface_identity_conflict_flags
                     ),
@@ -3823,6 +3832,511 @@ class OrchestratorService:
         )
         return mission_runtime_state, updated_events
 
+    @staticmethod
+    def _adapter_request_event_payload(
+        request: AdapterActionRequestContract | None,
+    ) -> dict[str, object]:
+        """Expose adapter routing metadata without emitting its resource target."""
+
+        return {
+            "adapter_id": request.adapter_id if request is not None else None,
+            "adapter_version": (request.adapter_version if request is not None else None),
+            "adapter_action_kind": (request.action_kind if request is not None else None),
+            "adapter_operation": request.operation if request is not None else None,
+            "adapter_resource_scope": (request.resource_scope if request is not None else None),
+            "adapter_resource_ref_redacted": request is not None,
+            "execution_allowed": False,
+            "tool_dispatch_allowed": False,
+            "runtime_activation_allowed": False,
+            "promotion_authorized": False,
+            "automatic_promotion_allowed": False,
+            "core_mutation_allowed": False,
+        }
+
+    def _block_adapter_authorization(
+        self,
+        contract: InputContract,
+        *,
+        request: AdapterActionRequestContract | None,
+        reason: str,
+    ) -> AdapterAuthorizationResolution:
+        event = self.make_event(
+            "adapter_authorization_blocked",
+            contract,
+            {
+                "reason": reason,
+                **self._adapter_request_event_payload(request),
+            },
+        )
+        return AdapterAuthorizationResolution(
+            blocked_reason=reason,
+            events=[event],
+        )
+
+    @staticmethod
+    def _adapter_digest(value: object) -> str:
+        payload = dumps(
+            asdict(value),
+            ensure_ascii=False,
+            allow_nan=False,
+            separators=(",", ":"),
+            sort_keys=True,
+        )
+        return sha256(payload.encode("utf-8")).hexdigest()
+
+    def _build_adapter_action_intent(
+        self,
+        contract: InputContract,
+        *,
+        request: AdapterActionRequestContract,
+        registry: AdapterRegistrySnapshotContract,
+        descriptor: AdapterDescriptorContract,
+        subject_ref: str,
+        issued_at: str,
+    ) -> ActionIntentContract:
+        issued = datetime.fromisoformat(issued_at.replace("Z", "+00:00"))
+        expires_at = (issued + timedelta(minutes=15)).isoformat()
+        precondition_digest = sha256(
+            dumps(
+                {
+                    "descriptor_fingerprint": descriptor.descriptor_fingerprint,
+                    "registry_fingerprint": registry.registry_fingerprint,
+                },
+                separators=(",", ":"),
+                sort_keys=True,
+            ).encode("utf-8")
+        ).hexdigest()
+        return build_action_intent(
+            intent_id=f"adapter-intent-{uuid4().hex}",
+            origin_request_id=str(contract.request_id),
+            session_id=str(contract.session_id),
+            mission_id=(str(contract.mission_id) if contract.mission_id else None),
+            operator_identity_ref=subject_ref,
+            handler_id=f"adapter://{request.adapter_id}",
+            handler_version=request.adapter_version,
+            operation=request.operation,
+            target_ref=request.resource_ref,
+            content_digest=self._adapter_digest(request),
+            precondition_digest=precondition_digest,
+            risk_level=RiskLevel.MODERATE,
+            policy_version=AUTONOMY_ACTION_POLICY_VERSION,
+            nonce=uuid4().hex,
+            issued_at=issued_at,
+            expires_at=expires_at,
+            now=issued_at,
+        )
+
+    def resolve_adapter_authorization(
+        self,
+        contract: InputContract,
+        *,
+        plan: DeliberativePlanContract,
+        governance_decision: GovernanceDecisionContract,
+    ) -> AdapterAuthorizationResolution:
+        """Resolve one exact prepare-only adapter request without executing it."""
+
+        request = plan.adapter_action_request
+        if request is None:
+            return self._block_adapter_authorization(
+                contract,
+                request=None,
+                reason="adapter_action_request_missing",
+            )
+        if (
+            request.action_kind != "prepare_external_action"
+            or plan.autonomy_action_kind != request.action_kind
+        ):
+            return self._block_adapter_authorization(
+                contract,
+                request=request,
+                reason="adapter_action_kind_unsupported_or_drifted",
+            )
+        if governance_decision.decision not in {
+            PermissionDecision.ALLOW,
+            PermissionDecision.ALLOW_WITH_CONDITIONS,
+        }:
+            return self._block_adapter_authorization(
+                contract,
+                request=request,
+                reason="adapter_action_not_governed",
+            )
+        autonomy_decision = self.evaluate_operation_autonomy(plan)
+        if autonomy_decision.decision == "block":
+            reasons = ",".join(autonomy_decision.reason_codes)
+            return self._block_adapter_authorization(
+                contract,
+                request=request,
+                reason=f"adapter_autonomy_blocked:{reasons}",
+            )
+        if (
+            plan.capability_decision_selected_mode != "core_with_supervised_external_operation"
+            or "supervised_external_adapter" not in plan.capability_decision_selected_capabilities
+        ):
+            return self._block_adapter_authorization(
+                contract,
+                request=request,
+                reason="adapter_capability_not_selected",
+            )
+        subject_ref = contract.operator_identity_ref or contract.canonical_user_ref
+        if not subject_ref:
+            return self._block_adapter_authorization(
+                contract,
+                request=request,
+                reason="adapter_subject_identity_required",
+            )
+
+        try:
+            registry, descriptor = self.governance_service.resolve_active_adapter_descriptor(
+                request
+            )
+        except Exception:
+            return self._block_adapter_authorization(
+                contract,
+                request=request,
+                reason="adapter_descriptor_unavailable_or_invalid",
+            )
+
+        issued_at = self.now()
+        try:
+            intent = self._build_adapter_action_intent(
+                contract,
+                request=request,
+                registry=registry,
+                descriptor=descriptor,
+                subject_ref=subject_ref,
+                issued_at=issued_at,
+            )
+            grant = self.governance_service.issue_adapter_grant(
+                intent,
+                request,
+                autonomy_decision,
+                expected_registry_fingerprint=registry.registry_fingerprint,
+                expected_descriptor_fingerprint=descriptor.descriptor_fingerprint,
+                issued_at=issued_at,
+                expires_at=intent.expires_at,
+            )
+            persisted = self.governance_service.load_adapter_grant_context(grant.grant_id)
+            intent = persisted.intent
+            request = persisted.action_request
+            registry = persisted.registry
+            descriptor = persisted.descriptor
+            grant = persisted.grant
+        except Exception:
+            return self._block_adapter_authorization(
+                contract,
+                request=request,
+                reason="adapter_grant_unavailable_or_invalid",
+            )
+
+        events = [
+            self.make_event(
+                "adapter_grant_issued",
+                contract,
+                {
+                    **self._adapter_request_event_payload(request),
+                    "intent_id": intent.intent_id,
+                    "intent_fingerprint": action_intent_fingerprint(intent),
+                    "action_fingerprint": intent.action_fingerprint,
+                    "descriptor_fingerprint": descriptor.descriptor_fingerprint,
+                    "registry_fingerprint": registry.registry_fingerprint,
+                    "grant_id": grant.grant_id,
+                    "grant_fingerprint": grant.grant_fingerprint,
+                    "confirmation_required": grant.confirmation_required,
+                    "read_only": grant.read_only,
+                    "immutable": grant.immutable,
+                },
+            )
+        ]
+        challenge = None
+        if autonomy_decision.decision == "require_confirmation":
+            try:
+                challenge = self.governance_service.issue_action_confirmation_challenge(intent)
+            except Exception:
+                blocked = self._block_adapter_authorization(
+                    contract,
+                    request=request,
+                    reason="adapter_confirmation_challenge_unavailable",
+                )
+                return AdapterAuthorizationResolution(
+                    action_intent=intent,
+                    descriptor=descriptor,
+                    grant=grant,
+                    blocked_reason=blocked.blocked_reason,
+                    events=[*events, *blocked.events],
+                )
+            events.append(
+                self.make_event(
+                    "adapter_confirmation_challenged",
+                    contract,
+                    {
+                        **self._adapter_request_event_payload(request),
+                        "challenge_id": challenge.challenge_id,
+                        "intent_id": challenge.intent_id,
+                        "intent_fingerprint": challenge.intent_fingerprint,
+                        "action_fingerprint": challenge.action_fingerprint,
+                        "confirmation_required": True,
+                    },
+                )
+            )
+        return AdapterAuthorizationResolution(
+            action_intent=intent,
+            descriptor=descriptor,
+            grant=grant,
+            challenge=challenge,
+            events=events,
+        )
+
+    def resolve_action_confirmation(
+        self,
+        contract: InputContract,
+        dispatch: OperationDispatchContract,
+    ) -> ActionConfirmationResolution:
+        """Claim exact human evidence before a confirmation-gated side effect."""
+
+        autonomy_policy = self.evaluate_operation_autonomy(dispatch)
+        if (
+            autonomy_policy.decision == "block"
+            or dispatch.autonomy_action_kind not in self.supported_operation_action_kinds
+        ):
+            blocked_reason = (
+                "external_action_adapter_unavailable"
+                if dispatch.autonomy_action_kind == "execute_external_action"
+                else "autonomy_action_blocked"
+            )
+            return ActionConfirmationResolution(
+                operation_dispatch=None,
+                blocked_reason=blocked_reason,
+                events=[
+                    self.make_event(
+                        "action_confirmation_blocked",
+                        contract,
+                        {
+                            "operation_id": str(dispatch.operation_id),
+                            "reason": blocked_reason,
+                            "autonomy_action_kind": dispatch.autonomy_action_kind,
+                            "autonomy_reason_codes": list(autonomy_policy.reason_codes),
+                            "execution_allowed": False,
+                            "tool_dispatch_allowed": False,
+                            "runtime_activation_allowed": False,
+                            "promotion_authorized": False,
+                            "automatic_promotion_allowed": False,
+                            "core_mutation_allowed": False,
+                        },
+                    )
+                ],
+            )
+        if autonomy_policy.decision == "allow":
+            if not autonomy_policy.side_effect_allowed:
+                return ActionConfirmationResolution(
+                    operation_dispatch=None,
+                    blocked_reason="autonomy_side_effect_not_allowed",
+                )
+            return ActionConfirmationResolution(operation_dispatch=dispatch)
+        if (
+            autonomy_policy.decision != "require_confirmation"
+            or not self.operational_service.action_confirmation_required_for_dispatch(dispatch)
+        ):
+            return ActionConfirmationResolution(
+                operation_dispatch=None,
+                blocked_reason="action_confirmation_policy_mismatch",
+            )
+
+        operator_identity_ref = dispatch.operator_identity_ref or dispatch.canonical_user_ref
+        receipt_id = contract.action_confirmation_receipt_id
+        blocked_reason = "action_confirmation_required"
+        events: list[InternalEventEnvelope] = []
+
+        if not operator_identity_ref:
+            blocked_reason = "action_confirmation_operator_identity_required"
+            events.append(
+                self.make_event(
+                    "action_confirmation_blocked",
+                    contract,
+                    {
+                        "operation_id": str(dispatch.operation_id),
+                        "reason": blocked_reason,
+                        "receipt_id": receipt_id,
+                        "execution_allowed": False,
+                        "tool_dispatch_allowed": False,
+                        "runtime_activation_allowed": False,
+                        "promotion_authorized": False,
+                        "automatic_promotion_allowed": False,
+                        "core_mutation_allowed": False,
+                    },
+                )
+            )
+            return ActionConfirmationResolution(
+                operation_dispatch=None,
+                blocked_reason=blocked_reason,
+                events=events,
+            )
+
+        if receipt_id:
+            try:
+                # Receipt presentation selects the persisted action explicitly.
+                # The freshly planned dispatch is only a routing carrier and
+                # must never replace the action the operator confirmed.
+                context = self.governance_service.load_action_confirmation_context(receipt_id)
+                confirmed_dispatch = context.prepared_dispatch
+                if confirmed_dispatch is None:
+                    raise ValueError("action confirmation prepared dispatch missing")
+                origin_request_id = str(context.intent.origin_request_id)
+                if not contract.action_confirmation_origin_request_id:
+                    raise ValueError("action confirmation origin request required")
+                if contract.action_confirmation_origin_request_id != origin_request_id:
+                    raise ValueError("action confirmation origin request mismatch")
+                if str(confirmed_dispatch.session_id) != str(dispatch.session_id):
+                    raise ValueError("action confirmation session mismatch")
+                if confirmed_dispatch.mission_id != dispatch.mission_id:
+                    raise ValueError("action confirmation mission mismatch")
+                confirmed_operator_identity_ref = (
+                    confirmed_dispatch.operator_identity_ref
+                    or confirmed_dispatch.canonical_user_ref
+                )
+                if confirmed_operator_identity_ref != operator_identity_ref:
+                    raise ValueError("action confirmation operator mismatch")
+                confirmed_autonomy_policy = self.evaluate_operation_autonomy(confirmed_dispatch)
+                if (
+                    confirmed_autonomy_policy.decision != "require_confirmation"
+                    or confirmed_dispatch.autonomy_action_kind
+                    not in self.supported_operation_action_kinds
+                    or not self.operational_service.action_confirmation_required_for_dispatch(
+                        confirmed_dispatch
+                    )
+                ):
+                    raise ValueError("prepared dispatch no longer requires confirmation")
+                expected_action_fingerprint = (
+                    self.operational_service.action_fingerprint_for_dispatch(
+                        confirmed_dispatch,
+                        origin_request_id=origin_request_id,
+                    )
+                )
+                intent_fingerprint = action_intent_fingerprint(context.intent)
+                claimed_at = self.now()
+                claim = self.governance_service.claim_action_confirmation(
+                    receipt_id,
+                    operation_id=str(confirmed_dispatch.operation_id),
+                    origin_request_id=origin_request_id,
+                    expected_action_fingerprint=expected_action_fingerprint,
+                    intent_fingerprint=intent_fingerprint,
+                    operator_identity_ref=operator_identity_ref,
+                    claimed_at=claimed_at,
+                )
+                claimed_autonomy_policy = self.evaluate_operation_autonomy(
+                    confirmed_dispatch,
+                    confirmation_evidence_state="verified",
+                )
+                if (
+                    claimed_autonomy_policy.decision != "allow"
+                    or not claimed_autonomy_policy.side_effect_allowed
+                ):
+                    raise ValueError("claimed dispatch is not authorized")
+                claimed_dispatch = replace(
+                    confirmed_dispatch,
+                    receipt_id=claim.receipt_id,
+                    claim_id=claim.claim_id,
+                    origin_request_id=claim.origin_request_id,
+                    action_fingerprint=claim.action_fingerprint,
+                    intent_fingerprint=claim.intent_fingerprint,
+                    claimed_at=claim.claimed_at,
+                )
+                events.append(
+                    self.make_event(
+                        "action_confirmation_claimed",
+                        contract,
+                        {
+                            "operation_id": str(claim.operation_id),
+                            "receipt_id": claim.receipt_id,
+                            "claim_id": claim.claim_id,
+                            "origin_request_id": str(claim.origin_request_id),
+                            "intent_fingerprint": claim.intent_fingerprint,
+                            "action_fingerprint": claim.action_fingerprint,
+                            "claimed_at": claim.claimed_at,
+                            "expires_at": claim.expires_at,
+                            "execution_allowed": False,
+                            "tool_dispatch_allowed": False,
+                            "runtime_activation_allowed": False,
+                            "promotion_authorized": False,
+                            "automatic_promotion_allowed": False,
+                            "core_mutation_allowed": False,
+                        },
+                    )
+                )
+                return ActionConfirmationResolution(
+                    operation_dispatch=claimed_dispatch,
+                    claim=claim,
+                    events=events,
+                )
+            except Exception:
+                blocked_reason = (
+                    "action_confirmation_origin_request_required"
+                    if not contract.action_confirmation_origin_request_id
+                    else "action_confirmation_evidence_invalid_or_consumed"
+                )
+
+        challenge = None
+        try:
+            issued_at = self.now()
+            intent = self.operational_service.build_action_intent(
+                dispatch,
+                issued_at=issued_at,
+                origin_request_id=str(contract.request_id),
+            )
+            challenge = self.governance_service.issue_action_confirmation_challenge(
+                intent,
+                prepared_dispatch=dispatch,
+            )
+            events.append(
+                self.make_event(
+                    "action_confirmation_challenged",
+                    contract,
+                    {
+                        "operation_id": str(dispatch.operation_id),
+                        "challenge_id": challenge.challenge_id,
+                        "intent_id": challenge.intent_id,
+                        "intent_fingerprint": challenge.intent_fingerprint,
+                        "action_fingerprint": challenge.action_fingerprint,
+                        "origin_request_id": str(challenge.origin_request_id),
+                        "operation": challenge.operation,
+                        "issued_at": challenge.issued_at,
+                        "expires_at": challenge.expires_at,
+                        "execution_allowed": False,
+                        "tool_dispatch_allowed": False,
+                        "runtime_activation_allowed": False,
+                        "promotion_authorized": False,
+                        "automatic_promotion_allowed": False,
+                        "core_mutation_allowed": False,
+                    },
+                )
+            )
+        except Exception:
+            blocked_reason = "action_confirmation_challenge_unavailable"
+
+        events.append(
+            self.make_event(
+                "action_confirmation_blocked",
+                contract,
+                {
+                    "operation_id": str(dispatch.operation_id),
+                    "reason": blocked_reason,
+                    "receipt_id": receipt_id,
+                    "challenge_id": challenge.challenge_id if challenge else None,
+                    "execution_allowed": False,
+                    "tool_dispatch_allowed": False,
+                    "runtime_activation_allowed": False,
+                    "promotion_authorized": False,
+                    "automatic_promotion_allowed": False,
+                    "core_mutation_allowed": False,
+                },
+            )
+        )
+        return ActionConfirmationResolution(
+            operation_dispatch=None,
+            challenge=challenge,
+            blocked_reason=blocked_reason,
+            events=events,
+        )
+
     def build_operation_dispatch(
         self,
         contract: InputContract,
@@ -3833,6 +4347,27 @@ class OrchestratorService:
         authorization_status: str | None = None,
     ) -> OperationDispatchContract:
         """Create the operational dispatch for an allowed request."""
+
+        memory_influence_decision = plan.memory_influence_policy_decision
+        if memory_influence_decision is not None:
+            memory_influence_governance = self.governance_service.assess_memory_influence_policy(
+                memory_influence_decision,
+                assessed_at=str(contract.timestamp),
+            )
+            if memory_influence_governance.assessment_status != "governed":
+                raise ValueError("blocked memory influence policy cannot become operation dispatch")
+        if self._reviewed_procedural_guidance_blocks_operation(plan):
+            raise ValueError(
+                "reviewed procedural playbook guidance cannot become operation dispatch"
+            )
+        autonomy_policy = self.evaluate_operation_autonomy(plan)
+        if autonomy_policy.decision == "block":
+            reasons = ",".join(autonomy_policy.reason_codes)
+            raise ValueError(f"autonomy action blocked: {reasons}")
+        if plan.autonomy_action_kind not in self.supported_operation_action_kinds:
+            if plan.autonomy_action_kind == "execute_external_action":
+                raise ValueError("external_action_adapter_unavailable")
+            raise ValueError("autonomy action is not supported by operational runtime")
 
         (
             workflow_domain_route,
@@ -3863,16 +4398,12 @@ class OrchestratorService:
         workflow_resume_eligible = bool(workflow_resume_point) and not (
             mission_runtime_state.requires_manual_resume
             if mission_runtime_state is not None
-            else plan.continuity_requires_manual_resume
+            else plan.continuity_replay_status in {"awaiting_validation", "contained"}
         )
         workflow_resume_status = (
             "resume_available"
             if workflow_resume_eligible
-            else (
-                "manual_resume_required"
-                if workflow_resume_point
-                else "fresh_start"
-            )
+            else ("manual_resume_required" if workflow_resume_point else "fresh_start")
         )
         workflow_checkpoint_state = self._initial_workflow_checkpoint_state(
             workflow_checkpoints,
@@ -3883,9 +4414,7 @@ class OrchestratorService:
             active_specialist=plan.mind_domain_specialist_active_specialist,
             planned_specialists=list(plan.specialist_hints),
             authoritative_specialist_hint=(
-                route_linked_specialist_type(plan.primary_route)
-                if plan.primary_route
-                else None
+                route_linked_specialist_type(plan.primary_route) if plan.primary_route else None
             ),
             override_mode=plan.mind_domain_specialist_override_mode,
             fallback_mode=plan.mind_domain_specialist_fallback_mode,
@@ -3927,33 +4456,17 @@ class OrchestratorService:
                 consumer_mode=mind_domain_specialist_policy.consumer_mode,
             ),
             specialist_findings=list(specialist_review.findings),
-            mind_domain_specialist_contract_status=(
-                plan.mind_domain_specialist_contract_status
-            ),
-            mind_domain_specialist_contract_summary=(
-                plan.mind_domain_specialist_contract_summary
-            ),
-            mind_domain_specialist_contract_chain=(
-                plan.mind_domain_specialist_contract_chain
-            ),
+            mind_domain_specialist_contract_status=(plan.mind_domain_specialist_contract_status),
+            mind_domain_specialist_contract_summary=(plan.mind_domain_specialist_contract_summary),
+            mind_domain_specialist_contract_chain=(plan.mind_domain_specialist_contract_chain),
             mind_domain_specialist_active_specialist=(
                 plan.mind_domain_specialist_active_specialist
             ),
-            mind_domain_specialist_override_mode=(
-                plan.mind_domain_specialist_override_mode
-            ),
-            mind_domain_specialist_fallback_mode=(
-                plan.mind_domain_specialist_fallback_mode
-            ),
-            mind_domain_specialist_consumer_mode=(
-                mind_domain_specialist_policy.consumer_mode
-            ),
-            mind_domain_specialist_framing_mode=(
-                mind_domain_specialist_policy.framing_mode
-            ),
-            mind_domain_specialist_continuity_mode=(
-                mind_domain_specialist_policy.continuity_mode
-            ),
+            mind_domain_specialist_override_mode=(plan.mind_domain_specialist_override_mode),
+            mind_domain_specialist_fallback_mode=(plan.mind_domain_specialist_fallback_mode),
+            mind_domain_specialist_consumer_mode=(mind_domain_specialist_policy.consumer_mode),
+            mind_domain_specialist_framing_mode=(mind_domain_specialist_policy.framing_mode),
+            mind_domain_specialist_continuity_mode=(mind_domain_specialist_policy.continuity_mode),
             success_criteria=list(plan.success_criteria),
             smallest_safe_next_action=plan.smallest_safe_next_action,
             requires_human_validation=plan.requires_human_validation,
@@ -3987,31 +4500,22 @@ class OrchestratorService:
             effective_autonomy_level=plan.effective_autonomy_level,
             autonomy_ladder_status=plan.autonomy_ladder_status,
             max_autonomy_capability_mode=plan.max_autonomy_capability_mode,
-            autonomy_human_confirmation_required=(
-                plan.autonomy_human_confirmation_required
-            ),
+            autonomy_human_confirmation_required=(plan.autonomy_human_confirmation_required),
             autonomy_confirmation_mode=plan.autonomy_confirmation_mode,
-            autonomy_allowed_runtime_actions=list(
-                plan.autonomy_allowed_runtime_actions
-            ),
-            autonomy_blocked_runtime_actions=list(
-                plan.autonomy_blocked_runtime_actions
-            ),
+            autonomy_action_kind=plan.autonomy_action_kind,
+            adapter_action_request=plan.adapter_action_request,
+            autonomy_validation_errors=list(plan.autonomy_validation_errors),
+            autonomy_allowed_runtime_actions=list(plan.autonomy_allowed_runtime_actions),
+            autonomy_blocked_runtime_actions=list(plan.autonomy_blocked_runtime_actions),
             autonomy_policy_refs=list(plan.autonomy_policy_refs),
             autonomy_summary=plan.autonomy_summary,
-            autonomy_automatic_promotion_allowed=(
-                plan.autonomy_automatic_promotion_allowed
-            ),
+            autonomy_automatic_promotion_allowed=(plan.autonomy_automatic_promotion_allowed),
             autonomy_core_mutation_allowed=plan.autonomy_core_mutation_allowed,
             adaptive_intervention_status=plan.adaptive_intervention_status,
             adaptive_intervention_reason=plan.adaptive_intervention_reason,
             adaptive_intervention_trigger=plan.adaptive_intervention_trigger,
-            adaptive_intervention_selected_action=(
-                plan.adaptive_intervention_selected_action
-            ),
-            adaptive_intervention_expected_effect=(
-                plan.adaptive_intervention_expected_effect
-            ),
+            adaptive_intervention_selected_action=(plan.adaptive_intervention_selected_action),
+            adaptive_intervention_expected_effect=(plan.adaptive_intervention_expected_effect),
             adaptive_intervention_effects=list(plan.adaptive_intervention_effects),
             session_id=contract.session_id,
             mission_id=contract.mission_id,
@@ -4036,6 +4540,9 @@ class OrchestratorService:
             workflow_resume_status=workflow_resume_status,
             workflow_resume_eligible=workflow_resume_eligible,
             workflow_policy_decision=workflow_policy_decision,
+            workflow_lifecycle_transition=plan.workflow_lifecycle_transition,
+            workflow_lifecycle_resolution_status=(plan.workflow_lifecycle_resolution_status),
+            workflow_lifecycle_resolution_reasons=list(plan.workflow_lifecycle_resolution_reasons),
             ecosystem_state_status=ecosystem_state.ecosystem_state_status,
             active_work_items=list(ecosystem_state.active_work_items),
             active_artifact_refs=list(ecosystem_state.active_artifact_refs),
@@ -4205,14 +4712,13 @@ class OrchestratorService:
         surface_presence: list[str],
     ) -> str:
         if not (
-            active_work_items
-            or active_artifact_refs
-            or open_checkpoint_refs
-            or surface_presence
+            active_work_items or active_artifact_refs or open_checkpoint_refs or surface_presence
         ):
             return "not_applicable"
-        if surface_presence and active_work_items and (
-            open_checkpoint_refs or active_artifact_refs
+        if (
+            surface_presence
+            and active_work_items
+            and (open_checkpoint_refs or active_artifact_refs)
         ):
             return "operational_state_attached"
         return "partial_operational_state"
@@ -4285,9 +4791,130 @@ class OrchestratorService:
     def _workflow_policy_payload(
         source: DeliberativePlanContract | OperationDispatchContract,
     ) -> dict[str, object]:
+        lifecycle = source.workflow_lifecycle_transition
+        baseline = None
+        if lifecycle is None and source.workflow_policy_decision is not None:
+            registry = build_active_workflow_version_registry(
+                registry_version=ACTIVE_WORKFLOW_POLICY_VERSION,
+                generated_at="1970-01-01T00:00:00Z",
+            )
+            baseline = next(
+                (
+                    version
+                    for version in registry.versions
+                    if version.workflow_profile == source.workflow_policy_decision.workflow_profile
+                    and version.route == source.workflow_policy_decision.route
+                ),
+                None,
+            )
+        lifecycle_payload: dict[str, object] = {
+            "workflow_lifecycle_status": (
+                lifecycle.transition_status
+                if lifecycle
+                else source.workflow_lifecycle_resolution_status
+            ),
+            "workflow_lifecycle_resolution_reasons": list(
+                source.workflow_lifecycle_resolution_reasons
+            ),
+            "workflow_lifecycle_transition_id": (lifecycle.transition_id if lifecycle else None),
+            "workflow_lifecycle_revision": lifecycle.revision if lifecycle else None,
+            "workflow_lifecycle_action": (lifecycle.transition_action if lifecycle else None),
+            "workflow_lifecycle_active_version_ref": (
+                lifecycle.active_version_ref
+                if lifecycle
+                else (baseline.workflow_version_id if baseline else None)
+            ),
+            "workflow_lifecycle_active_definition_hash": (
+                lifecycle.active_definition_hash
+                if lifecycle
+                else (baseline.definition_hash if baseline else None)
+            ),
+            "workflow_lifecycle_baseline_version_ref": (
+                lifecycle.baseline_version_ref
+                if lifecycle
+                else (baseline.workflow_version_id if baseline else None)
+            ),
+            "workflow_lifecycle_baseline_definition_hash": (
+                lifecycle.baseline_definition_hash
+                if lifecycle
+                else (baseline.definition_hash if baseline else None)
+            ),
+            "workflow_lifecycle_candidate_version_ref": (
+                lifecycle.candidate_version_ref if lifecycle else None
+            ),
+            "workflow_lifecycle_candidate_definition_hash": (
+                lifecycle.candidate_definition_hash if lifecycle else None
+            ),
+            "workflow_lifecycle_source_registry_ref": (
+                lifecycle.source_registry_ref
+                if lifecycle
+                else (baseline.source_registry_ref if baseline else None)
+            ),
+            "workflow_lifecycle_source_registry_fingerprint": (
+                lifecycle.source_registry_fingerprint
+                if lifecycle
+                else (baseline.source_registry_fingerprint if baseline else None)
+            ),
+            "workflow_lifecycle_human_authorization_ref": (
+                lifecycle.human_authorization_ref if lifecycle else None
+            ),
+            "workflow_lifecycle_human_authorized": (
+                lifecycle.human_authorized if lifecycle else False
+            ),
+            "workflow_lifecycle_operator_ref": (lifecycle.operator_ref if lifecycle else None),
+            "workflow_lifecycle_evidence_refs": (
+                list(lifecycle.evidence_refs) if lifecycle else []
+            ),
+            "workflow_lifecycle_completed_test_refs": (
+                list(lifecycle.completed_test_refs) if lifecycle else []
+            ),
+            "workflow_lifecycle_failure_refs": (list(lifecycle.failure_refs) if lifecycle else []),
+            "workflow_lifecycle_evolution_proposal_id": (
+                lifecycle.evolution_proposal_id if lifecycle else None
+            ),
+            "workflow_lifecycle_proposal_fingerprint": (
+                lifecycle.proposal_fingerprint if lifecycle else None
+            ),
+            "workflow_lifecycle_review_decision_id": (
+                lifecycle.review_decision_id if lifecycle else None
+            ),
+            "workflow_lifecycle_review_decision_fingerprint": (
+                lifecycle.review_decision_fingerprint if lifecycle else None
+            ),
+            "workflow_lifecycle_release_checklist_id": (
+                lifecycle.release_checklist_id if lifecycle else None
+            ),
+            "workflow_lifecycle_release_checklist_fingerprint": (
+                lifecycle.release_checklist_fingerprint if lifecycle else None
+            ),
+            "workflow_lifecycle_promotion_gate_id": (
+                lifecycle.promotion_gate_id if lifecycle else None
+            ),
+            "workflow_lifecycle_promotion_gate_fingerprint": (
+                lifecycle.promotion_gate_fingerprint if lifecycle else None
+            ),
+            "workflow_lifecycle_eval_run_id": (
+                lifecycle.workflow_eval_run_id if lifecycle else None
+            ),
+            "workflow_lifecycle_eval_run_fingerprint": (
+                lifecycle.workflow_eval_run_fingerprint if lifecycle else None
+            ),
+            "workflow_lifecycle_rollback_plan_id": (
+                lifecycle.rollback_plan_id if lifecycle else None
+            ),
+            "workflow_lifecycle_rollback_plan_fingerprint": (
+                lifecycle.rollback_plan_fingerprint if lifecycle else None
+            ),
+            "workflow_lifecycle_active_registry_write_allowed": False,
+            "workflow_lifecycle_runtime_execution_allowed": False,
+            "workflow_lifecycle_automatic_promotion_allowed": False,
+            "workflow_lifecycle_automatic_rollback_allowed": False,
+            "workflow_lifecycle_core_mutation_allowed": False,
+        }
         policy = source.workflow_policy_decision
         if policy is None:
             return {
+                **lifecycle_payload,
                 "workflow_policy_ref": None,
                 "workflow_policy_version": None,
                 "workflow_policy_source_registry_ref": None,
@@ -4303,24 +4930,19 @@ class OrchestratorService:
                 "workflow_policy_core_mutation_allowed": False,
             }
         return {
+            **lifecycle_payload,
             "workflow_policy_ref": policy.policy_ref,
             "workflow_policy_version": policy.policy_version,
             "workflow_policy_source_registry_ref": policy.source_registry_ref,
-            "workflow_policy_source_registry_fingerprint": (
-                policy.source_registry_fingerprint
-            ),
+            "workflow_policy_source_registry_fingerprint": (policy.source_registry_fingerprint),
             "workflow_policy_resolution_status": policy.resolution_status,
             "workflow_policy_application_status": policy.application_status,
             "workflow_policy_application_reason": policy.application_reason,
             "workflow_policy_effects": list(policy.effects),
             "workflow_policy_non_use_reason": policy.non_use_reason,
             "workflow_policy_evidence_refs": list(policy.evidence_refs),
-            "workflow_policy_autonomous_execution_allowed": (
-                policy.autonomous_execution_allowed
-            ),
-            "workflow_policy_automatic_promotion_allowed": (
-                policy.automatic_promotion_allowed
-            ),
+            "workflow_policy_autonomous_execution_allowed": (policy.autonomous_execution_allowed),
+            "workflow_policy_automatic_promotion_allowed": (policy.automatic_promotion_allowed),
             "workflow_policy_core_mutation_allowed": policy.core_mutation_allowed,
         }
 
@@ -4343,21 +4965,15 @@ class OrchestratorService:
             "effective_autonomy_level": autonomy_ladder.effective_autonomy_level,
             "autonomy_ladder_status": autonomy_ladder.autonomy_ladder_status,
             "max_autonomy_capability_mode": autonomy_ladder.max_capability_mode,
-            "autonomy_human_confirmation_required": (
-                autonomy_ladder.human_confirmation_required
-            ),
+            "autonomy_human_confirmation_required": (autonomy_ladder.human_confirmation_required),
             "autonomy_confirmation_mode": autonomy_ladder.human_confirmation_mode,
-            "autonomy_allowed_runtime_actions": list(
-                autonomy_ladder.allowed_runtime_actions
-            ),
-            "autonomy_blocked_runtime_actions": list(
-                autonomy_ladder.blocked_runtime_actions
-            ),
+            "autonomy_action_kind": autonomy_ladder.autonomy_action_kind,
+            "autonomy_validation_errors": list(autonomy_ladder.autonomy_validation_errors),
+            "autonomy_allowed_runtime_actions": list(autonomy_ladder.allowed_runtime_actions),
+            "autonomy_blocked_runtime_actions": list(autonomy_ladder.blocked_runtime_actions),
             "autonomy_policy_refs": list(autonomy_ladder.policy_refs),
             "autonomy_summary": autonomy_ladder.summary,
-            "autonomy_automatic_promotion_allowed": (
-                autonomy_ladder.automatic_promotion_allowed
-            ),
+            "autonomy_automatic_promotion_allowed": (autonomy_ladder.automatic_promotion_allowed),
             "autonomy_core_mutation_allowed": autonomy_ladder.core_mutation_allowed,
         }
 
@@ -4371,21 +4987,15 @@ class OrchestratorService:
             "effective_autonomy_level": source.effective_autonomy_level,
             "autonomy_ladder_status": source.autonomy_ladder_status,
             "max_autonomy_capability_mode": source.max_autonomy_capability_mode,
-            "autonomy_human_confirmation_required": (
-                source.autonomy_human_confirmation_required
-            ),
+            "autonomy_human_confirmation_required": (source.autonomy_human_confirmation_required),
             "autonomy_confirmation_mode": source.autonomy_confirmation_mode,
-            "autonomy_allowed_runtime_actions": list(
-                source.autonomy_allowed_runtime_actions
-            ),
-            "autonomy_blocked_runtime_actions": list(
-                source.autonomy_blocked_runtime_actions
-            ),
+            "autonomy_action_kind": source.autonomy_action_kind,
+            "autonomy_validation_errors": list(source.autonomy_validation_errors),
+            "autonomy_allowed_runtime_actions": list(source.autonomy_allowed_runtime_actions),
+            "autonomy_blocked_runtime_actions": list(source.autonomy_blocked_runtime_actions),
             "autonomy_policy_refs": list(source.autonomy_policy_refs),
             "autonomy_summary": source.autonomy_summary,
-            "autonomy_automatic_promotion_allowed": (
-                source.autonomy_automatic_promotion_allowed
-            ),
+            "autonomy_automatic_promotion_allowed": (source.autonomy_automatic_promotion_allowed),
             "autonomy_core_mutation_allowed": source.autonomy_core_mutation_allowed,
         }
 
@@ -4400,21 +5010,15 @@ class OrchestratorService:
         plan.effective_autonomy_level = autonomy_ladder.effective_autonomy_level
         plan.autonomy_ladder_status = autonomy_ladder.autonomy_ladder_status
         plan.max_autonomy_capability_mode = autonomy_ladder.max_capability_mode
-        plan.autonomy_human_confirmation_required = (
-            autonomy_ladder.human_confirmation_required
-        )
+        plan.autonomy_human_confirmation_required = autonomy_ladder.human_confirmation_required
         plan.autonomy_confirmation_mode = autonomy_ladder.human_confirmation_mode
-        plan.autonomy_allowed_runtime_actions = list(
-            autonomy_ladder.allowed_runtime_actions
-        )
-        plan.autonomy_blocked_runtime_actions = list(
-            autonomy_ladder.blocked_runtime_actions
-        )
+        plan.autonomy_action_kind = autonomy_ladder.autonomy_action_kind
+        plan.autonomy_validation_errors = list(autonomy_ladder.autonomy_validation_errors)
+        plan.autonomy_allowed_runtime_actions = list(autonomy_ladder.allowed_runtime_actions)
+        plan.autonomy_blocked_runtime_actions = list(autonomy_ladder.blocked_runtime_actions)
         plan.autonomy_policy_refs = list(autonomy_ladder.policy_refs)
         plan.autonomy_summary = autonomy_ladder.summary
-        plan.autonomy_automatic_promotion_allowed = (
-            autonomy_ladder.automatic_promotion_allowed
-        )
+        plan.autonomy_automatic_promotion_allowed = autonomy_ladder.automatic_promotion_allowed
         plan.autonomy_core_mutation_allowed = autonomy_ladder.core_mutation_allowed
 
     @staticmethod
@@ -4426,12 +5030,8 @@ class OrchestratorService:
                 None,
             ),
             "active_work_items": list(getattr(source, "active_work_items", []) or []),
-            "active_artifact_refs": list(
-                getattr(source, "active_artifact_refs", []) or []
-            ),
-            "open_checkpoint_refs": list(
-                getattr(source, "open_checkpoint_refs", []) or []
-            ),
+            "active_artifact_refs": list(getattr(source, "active_artifact_refs", []) or []),
+            "open_checkpoint_refs": list(getattr(source, "open_checkpoint_refs", []) or []),
             "surface_presence": list(getattr(source, "surface_presence", []) or []),
             "ecosystem_state_summary": getattr(
                 source,
@@ -4458,9 +5058,7 @@ class OrchestratorService:
             "surface_id": getattr(source, "surface_id", None),
             "surface_kind": getattr(source, "surface_kind", None),
             "surface_session_id": getattr(source, "surface_session_id", None),
-            "surface_capability_scope": list(
-                getattr(source, "surface_capability_scope", []) or []
-            ),
+            "surface_capability_scope": list(getattr(source, "surface_capability_scope", []) or []),
             "operator_identity_ref": getattr(source, "operator_identity_ref", None),
             "canonical_user_ref": getattr(source, "canonical_user_ref", None),
             "surface_continuity_status": getattr(
@@ -4530,10 +5128,7 @@ class OrchestratorService:
         base_summary = plan.specialist_resolution_summary or specialist_review.summary
         contract_summary = plan.mind_domain_specialist_contract_summary
         if consumer_mode == "core_only_fallback":
-            return (
-                contract_summary
-                or "fallback governado preservou o fechamento final no nucleo"
-            )
+            return contract_summary or "fallback governado preservou o fechamento final no nucleo"
         if contract_summary and base_summary:
             return f"{contract_summary}; {base_summary}"
         return contract_summary or base_summary
@@ -4543,11 +5138,94 @@ class OrchestratorService:
         return plan.capability_decision_handoff_mode == "through_core_only"
 
     @staticmethod
+    def _derive_autonomy_action_kind(plan: DeliberativePlanContract) -> str:
+        """Derive the stable action kind from the capability that would run."""
+
+        if plan.adapter_action_request is not None:
+            return plan.adapter_action_request.action_kind
+        if plan.autonomy_action_kind:
+            return plan.autonomy_action_kind
+        if plan.capability_decision_selected_mode == "core_with_supervised_external_operation":
+            return "execute_external_action"
+        if plan.capability_decision_selected_mode == "core_with_local_operation":
+            return "execute_reversible_core_action"
+        return "draft_plan"
+
+    @staticmethod
+    def evaluate_operation_autonomy(
+        source: DeliberativePlanContract | OperationDispatchContract,
+        *,
+        confirmation_evidence_state: str = "absent",
+    ) -> AutonomyActionPolicyDecisionContract:
+        """Evaluate one plan or dispatch through the canonical shared policy."""
+
+        return evaluate_autonomy_action(
+            requested_autonomy_level=source.requested_autonomy_level,
+            max_autonomy_level=source.max_autonomy_level,
+            effective_autonomy_level=source.effective_autonomy_level,
+            autonomy_ladder_status=source.autonomy_ladder_status,
+            action_kind=source.autonomy_action_kind,
+            selected_capability_mode=source.capability_decision_selected_mode,
+            max_capability_mode=source.max_autonomy_capability_mode,
+            allowed_runtime_actions=source.autonomy_allowed_runtime_actions,
+            blocked_runtime_actions=source.autonomy_blocked_runtime_actions,
+            human_confirmation_required=(source.autonomy_human_confirmation_required),
+            human_confirmation_mode=source.autonomy_confirmation_mode,
+            confirmation_evidence_state=confirmation_evidence_state,
+            autonomy_validation_errors=source.autonomy_validation_errors,
+        )
+
+    def _should_prepare_operation(
+        self,
+        *,
+        governance_decision: GovernanceDecisionContract,
+        directive_should_execute_operation: bool,
+        plan: DeliberativePlanContract,
+        memory_influence_governance_status: str,
+    ) -> bool:
+        """Return one native/LangGraph-consistent pre-dispatch decision."""
+
+        autonomy_policy = self.evaluate_operation_autonomy(plan)
+        return (
+            governance_decision.decision
+            in {
+                PermissionDecision.ALLOW,
+                PermissionDecision.ALLOW_WITH_CONDITIONS,
+            }
+            and directive_should_execute_operation
+            and autonomy_policy.decision in {"allow", "require_confirmation"}
+            and plan.autonomy_action_kind in self.supported_operation_action_kinds
+            and self._capability_allows_operation(plan)
+            and memory_influence_governance_status == "governed"
+            and not self._reviewed_procedural_guidance_blocks_operation(plan)
+        )
+
+    @staticmethod
     def _capability_allows_operation(plan: DeliberativePlanContract) -> bool:
         return (
-            plan.capability_decision_selected_mode == "core_with_local_operation"
-            and "local_safe_operation"
-            in plan.capability_decision_selected_capabilities
+            plan.autonomy_action_kind == "execute_reversible_core_action"
+            and plan.capability_decision_selected_mode == "core_with_local_operation"
+            and "local_safe_operation" in plan.capability_decision_selected_capabilities
+        )
+
+    @staticmethod
+    def _reviewed_procedural_guidance_blocks_operation(
+        plan: DeliberativePlanContract,
+    ) -> bool:
+        """Keep reviewed playbooks in planning; never turn them into dispatch."""
+
+        decision = plan.memory_influence_policy_decision
+        if decision is None:
+            return False
+        selected = set(decision.selected_refs)
+        return any(
+            ref.startswith("reviewed-playbook://")
+            or (
+                decision.signal_kinds.get(ref) == "procedural"
+                and ref in decision.version_refs
+                and ref in decision.review_decision_refs
+            )
+            for ref in selected
         )
 
     @staticmethod
@@ -4589,6 +5267,15 @@ class OrchestratorService:
     def _build_workflow_profile(
         plan: DeliberativePlanContract,
     ) -> tuple[str | None, str, list[str], list[str], list[str]]:
+        lifecycle = plan.workflow_lifecycle_transition
+        if lifecycle is not None:
+            return (
+                lifecycle.route,
+                lifecycle.workflow_profile,
+                list(lifecycle.active_workflow_steps),
+                list(lifecycle.active_workflow_checkpoints),
+                list(lifecycle.active_workflow_decision_points),
+            )
         if plan.primary_route is not None:
             primary_payload = route_metadata_payload(plan.primary_route)
             if primary_payload.get("workflow_profile"):
@@ -4685,9 +5372,7 @@ class OrchestratorService:
         current_state: MissionStateContract | None,
         next_action_ref: str | None,
     ) -> tuple[str, MissionStatus, str | None]:
-        current_objective_status = (
-            current_state.objective_status if current_state else "active"
-        )
+        current_objective_status = current_state.objective_status if current_state else "active"
         current_next_action_ref = current_state.next_action_ref if current_state else None
         current_mission_status = (
             current_state.mission_status if current_state else MissionStatus.ACTIVE
@@ -4817,14 +5502,10 @@ class OrchestratorService:
         primary_route_name = (
             primary_route_contract[0] if primary_route_contract is not None else None
         )
-        primary_route_data = (
-            primary_route_contract[1] if primary_route_contract is not None else {}
-        )
-        primary_canonical_domain = (
-            self._resolve_primary_canonical_domain(
-                active_domains=cognitive_snapshot.active_domains,
-                canonical_domains=canonical_domains,
-            )
+        primary_route_data = primary_route_contract[1] if primary_route_contract is not None else {}
+        primary_canonical_domain = self._resolve_primary_canonical_domain(
+            active_domains=cognitive_snapshot.active_domains,
+            canonical_domains=canonical_domains,
         )
         route_workflow_profile = (
             str(primary_route_data.get("workflow_profile"))
@@ -4844,6 +5525,43 @@ class OrchestratorService:
             primary_domain_driver=cognitive_snapshot.primary_domain_driver
             or primary_canonical_domain,
         )
+        reviewed_procedural_playbooks = (
+            [
+                record.playbook
+                for review_status, limit in (("approved", 100), ("revoked", 8))
+                for record in self.memory_service.list_reviewed_procedural_playbooks(
+                    workflow_profile=route_workflow_profile,
+                    route=primary_route_name,
+                    domain=(primary_canonical_domain or cognitive_snapshot.primary_domain_driver),
+                    review_status=review_status,
+                    limit=limit,
+                )
+            ]
+            if route_workflow_profile and primary_route_name
+            else []
+        )
+        (
+            workflow_lifecycle_transition,
+            workflow_lifecycle_resolution_status,
+            workflow_lifecycle_resolution_reasons,
+        ) = self._resolve_workflow_lifecycle_transition(
+            workflow_profile=route_workflow_profile,
+            route=primary_route_name,
+        )
+        if workflow_lifecycle_transition is not None:
+            route_workflow_steps = list(workflow_lifecycle_transition.active_workflow_steps)
+            route_workflow_checkpoints = list(
+                workflow_lifecycle_transition.active_workflow_checkpoints
+            )
+            route_workflow_decision_points = list(
+                workflow_lifecycle_transition.active_workflow_decision_points
+            )
+        else:
+            route_workflow_steps = list(primary_route_data.get("workflow_steps", []))
+            route_workflow_checkpoints = list(primary_route_data.get("workflow_checkpoints", []))
+            route_workflow_decision_points = list(
+                primary_route_data.get("workflow_decision_points", [])
+            )
         route_guidance = memory_route_guidance or {}
         return PlanningContext(
             intent=directive.intent,
@@ -4865,18 +5583,15 @@ class OrchestratorService:
                 if primary_route_data.get("consumer_objective") is not None
                 else None
             ),
-            route_expected_deliverables=list(
-                primary_route_data.get("expected_deliverables", [])
-            ),
+            route_expected_deliverables=list(primary_route_data.get("expected_deliverables", [])),
             route_telemetry_focus=list(primary_route_data.get("telemetry_focus", [])),
             route_workflow_profile=route_workflow_profile,
-            route_workflow_steps=list(primary_route_data.get("workflow_steps", [])),
-            route_workflow_checkpoints=list(
-                primary_route_data.get("workflow_checkpoints", [])
-            ),
-            route_workflow_decision_points=list(
-                primary_route_data.get("workflow_decision_points", [])
-            ),
+            route_workflow_steps=route_workflow_steps,
+            route_workflow_checkpoints=route_workflow_checkpoints,
+            route_workflow_decision_points=route_workflow_decision_points,
+            workflow_lifecycle_transition=workflow_lifecycle_transition,
+            workflow_lifecycle_resolution_status=(workflow_lifecycle_resolution_status),
+            workflow_lifecycle_resolution_reasons=(workflow_lifecycle_resolution_reasons),
             active_minds=cognitive_snapshot.active_minds,
             knowledge_snippets=knowledge_result.snippets if knowledge_result else [],
             risk_markers=directive.risk_markers,
@@ -4903,9 +5618,8 @@ class OrchestratorService:
             open_loops=self._extract_list_hint(recovered, "open_loops="),
             mission_semantic_brief=self._extract_context_hint(recovered, "mission_semantic_brief="),
             mission_focus=self._extract_list_hint(recovered, "mission_focus=", separator=","),
-            semantic_memory_candidates=list(
-                memory_recovery_result.semantic_memory_candidates
-            ),
+            semantic_memory_candidates=list(memory_recovery_result.semantic_memory_candidates),
+            reviewed_procedural_playbooks=reviewed_procedural_playbooks,
             last_decision_frame=self._extract_context_hint(recovered, "last_decision_frame="),
             mission_goal=self._extract_context_hint(recovered, "mission_goal="),
             mission_recommendation=self._extract_context_hint(recovered, "mission_recommendation="),
@@ -4980,9 +5694,7 @@ class OrchestratorService:
                 self._extract_context_hint(recovered, "continuity_replay_status=")
                 in {"awaiting_validation", "contained"}
             ),
-            memory_corpus_status=self._extract_context_hint(
-                recovered, "memory_corpus_status="
-            ),
+            memory_corpus_status=self._extract_context_hint(recovered, "memory_corpus_status="),
             memory_retention_pressure=self._extract_context_hint(
                 recovered, "memory_retention_pressure="
             ),
@@ -5006,9 +5718,7 @@ class OrchestratorService:
             context_compaction_summary=self._extract_context_hint(
                 recovered, "context_compaction_summary="
             ),
-            context_live_summary=self._extract_context_hint(
-                recovered, "context_live_summary="
-            ),
+            context_live_summary=self._extract_context_hint(recovered, "context_live_summary="),
             cross_session_recall_status=self._extract_context_hint(
                 recovered, "cross_session_recall_status="
             ),
@@ -5019,24 +5729,12 @@ class OrchestratorService:
             reflection_influence_refs=list(reflection_influence["refs"]),
             reflection_influence_summary=reflection_influence["summary"],
             reflection_influence_workflow_profile=route_workflow_profile,
-            reflection_influence_evidence_refs=list(
-                reflection_influence["evidence_refs"]
-            ),
-            reflection_influence_review_status=reflection_influence[
-                "review_status"
-            ],
-            reviewed_learning_influence_status=str(
-                reviewed_learning_influence["status"]
-            ),
-            reviewed_learning_influence_refs=list(
-                reviewed_learning_influence["refs"]
-            ),
-            reviewed_learning_influence_summary=reviewed_learning_influence[
-                "summary"
-            ],
-            reviewed_learning_influence_reason=reviewed_learning_influence[
-                "reason"
-            ],
+            reflection_influence_evidence_refs=list(reflection_influence["evidence_refs"]),
+            reflection_influence_review_status=reflection_influence["review_status"],
+            reviewed_learning_influence_status=str(reviewed_learning_influence["status"]),
+            reviewed_learning_influence_refs=list(reviewed_learning_influence["refs"]),
+            reviewed_learning_influence_summary=reviewed_learning_influence["summary"],
+            reviewed_learning_influence_reason=reviewed_learning_influence["reason"],
             reviewed_learning_influence_evidence_refs=list(
                 reviewed_learning_influence["evidence_refs"]
             ),
@@ -5058,9 +5756,7 @@ class OrchestratorService:
                 else "registry_only"
             ),
             memory_priority_domains=list(route_guidance.get("prioritized_domains", [])),
-            memory_priority_specialists=list(
-                route_guidance.get("prioritized_specialists", [])
-            ),
+            memory_priority_specialists=list(route_guidance.get("prioritized_specialists", [])),
             memory_priority_sources=list(route_guidance.get("sources", [])),
             memory_priority_summary=(
                 str(route_guidance.get("summary"))
@@ -5149,7 +5845,60 @@ class OrchestratorService:
             operator_identity_ref=contract.operator_identity_ref,
             canonical_user_ref=contract.canonical_user_ref,
             surface_continuity_status=contract.surface_continuity_status,
+            adapter_action_request=contract.adapter_action_request,
         )
+
+    def _active_workflow_lifecycle_transition(
+        self,
+        *,
+        workflow_profile: str | None,
+        route: str | None,
+    ) -> WorkflowLifecycleTransitionContract | None:
+        """Resolve only a canonical promoted binding; static registry remains fallback."""
+
+        transition, _, _ = self._resolve_workflow_lifecycle_transition(
+            workflow_profile=workflow_profile,
+            route=route,
+        )
+        return transition
+
+    def _resolve_workflow_lifecycle_transition(
+        self,
+        *,
+        workflow_profile: str | None,
+        route: str | None,
+    ) -> tuple[WorkflowLifecycleTransitionContract | None, str, list[str]]:
+        """Resolve one lifecycle binding and preserve any fail-closed reason."""
+
+        if not workflow_profile or not route:
+            return None, "static_baseline", []
+        try:
+            transition = self.memory_service.get_active_workflow_lifecycle(
+                workflow_profile=workflow_profile,
+                route=route,
+            )
+        except WorkflowLifecycleIntegrityError as exc:
+            return None, "static_baseline_fallback", [str(exc)]
+        except Exception as exc:
+            # This is the canonical persistence boundary. Any backend/read failure
+            # must restore the sovereign static baseline and remain observable.
+            return (
+                None,
+                "static_baseline_fallback",
+                [f"workflow_lifecycle_store_unavailable:{type(exc).__name__}"],
+            )
+        if transition is None:
+            return None, "static_baseline", []
+        if transition.workflow_profile != workflow_profile or transition.route != route:
+            return (
+                None,
+                "static_baseline_fallback",
+                ["workflow_lifecycle_scope_mismatch"],
+            )
+        failures = validate_workflow_lifecycle_transition_shape(transition)
+        if failures:
+            return None, "static_baseline_fallback", list(failures)
+        return transition, transition.transition_status, []
 
     def _reflection_influence_payload(
         self,
@@ -5192,8 +5941,7 @@ class OrchestratorService:
                 continue
             route_matches = bool(primary_route and experience.route == primary_route)
             domain_matches = bool(
-                primary_domain_driver
-                and experience.primary_domain_driver == primary_domain_driver
+                primary_domain_driver and experience.primary_domain_driver == primary_domain_driver
             )
             if not (route_matches or domain_matches):
                 continue
@@ -5364,15 +6112,9 @@ class OrchestratorService:
             "knowledge_evidence_governance_status": (
                 assessment.status if assessment else "unassessed"
             ),
-            "knowledge_evidence_use_mode": (
-                assessment.use_mode if assessment else "unassessed"
-            ),
-            "knowledge_evidence_conditions": (
-                list(assessment.conditions) if assessment else []
-            ),
-            "knowledge_evidence_blockers": (
-                list(assessment.blockers) if assessment else []
-            ),
+            "knowledge_evidence_use_mode": (assessment.use_mode if assessment else "unassessed"),
+            "knowledge_evidence_conditions": (list(assessment.conditions) if assessment else []),
+            "knowledge_evidence_blockers": (list(assessment.blockers) if assessment else []),
             "knowledge_evidence_human_review_required": (
                 assessment.human_review_required if assessment else True
             ),
@@ -5398,9 +6140,7 @@ class OrchestratorService:
             primary_canonical_domain_for_name(primary_route_name)
             if primary_route_name is not None
             else (
-                knowledge_result.registry_domains[0]
-                if knowledge_result.registry_domains
-                else None
+                knowledge_result.registry_domains[0] if knowledge_result.registry_domains else None
             )
         )
         return {
@@ -5424,8 +6164,7 @@ class OrchestratorService:
                 if metadata["specialist_mode"] is not None
             },
             "route_maturity": {
-                route_name: metadata["maturity"]
-                for route_name, metadata in route_metadata.items()
+                route_name: metadata["maturity"] for route_name, metadata in route_metadata.items()
             },
             "promoted_route_registry": promoted_route_registry,
             "linked_specialist_types": {
@@ -5548,9 +6287,7 @@ class OrchestratorService:
                 active_minds=cognitive_snapshot.active_minds,
                 active_domains=cognitive_snapshot.active_domains,
                 knowledge_snippets=knowledge_result.snippets if knowledge_result else [],
-                knowledge_source_refs=(
-                    list(knowledge_result.sources) if knowledge_result else []
-                ),
+                knowledge_source_refs=(list(knowledge_result.sources) if knowledge_result else []),
                 knowledge_provenance_status=(
                     knowledge_result.provenance_status if knowledge_result else None
                 ),
@@ -5592,15 +6329,9 @@ class OrchestratorService:
                     memory_recovery_result.recovered_items,
                     "cross_session_recall_summary=",
                 ),
-                reflection_influence_status=(
-                    deliberative_plan.reflection_influence_status
-                ),
-                reflection_influence_refs=list(
-                    deliberative_plan.reflection_influence_refs
-                ),
-                reflection_influence_summary=(
-                    deliberative_plan.reflection_influence_summary
-                ),
+                reflection_influence_status=(deliberative_plan.reflection_influence_status),
+                reflection_influence_refs=list(deliberative_plan.reflection_influence_refs),
+                reflection_influence_summary=(deliberative_plan.reflection_influence_summary),
                 reviewed_learning_influence_status=(
                     deliberative_plan.reviewed_learning_influence_status
                 ),
@@ -5613,27 +6344,13 @@ class OrchestratorService:
                 reviewed_learning_influence_reason=(
                     deliberative_plan.reviewed_learning_influence_reason
                 ),
-                guided_memory_specialists=guided_memory_runtime_hints[
-                    "guided_memory_specialists"
-                ],
-                semantic_memory_focus=guided_memory_runtime_hints[
-                    "semantic_memory_focus"
-                ],
-                semantic_memory_anchor_refs=list(
-                    deliberative_plan.semantic_memory_anchor_refs
-                ),
-                semantic_memory_evidence_refs=list(
-                    deliberative_plan.semantic_memory_evidence_refs
-                ),
-                semantic_memory_use_reason=(
-                    deliberative_plan.semantic_memory_use_reason
-                ),
-                semantic_memory_non_use_reason=(
-                    deliberative_plan.semantic_memory_non_use_reason
-                ),
-                procedural_memory_hint=guided_memory_runtime_hints[
-                    "procedural_memory_hint"
-                ],
+                guided_memory_specialists=guided_memory_runtime_hints["guided_memory_specialists"],
+                semantic_memory_focus=guided_memory_runtime_hints["semantic_memory_focus"],
+                semantic_memory_anchor_refs=list(deliberative_plan.semantic_memory_anchor_refs),
+                semantic_memory_evidence_refs=list(deliberative_plan.semantic_memory_evidence_refs),
+                semantic_memory_use_reason=(deliberative_plan.semantic_memory_use_reason),
+                semantic_memory_non_use_reason=(deliberative_plan.semantic_memory_non_use_reason),
+                procedural_memory_hint=guided_memory_runtime_hints["procedural_memory_hint"],
                 procedural_artifact_status=deliberative_plan.procedural_artifact_status,
                 procedural_artifact_ref=deliberative_plan.procedural_artifact_ref,
                 procedural_artifact_summary=deliberative_plan.procedural_artifact_summary,
@@ -5653,31 +6370,21 @@ class OrchestratorService:
                     operation_result.work_item_refs
                     if operation_result and operation_result.work_item_refs
                     else deliberative_plan.work_item_refs
-                    or (
-                        list(mission_runtime_state.work_item_refs)
-                        if mission_runtime_state
-                        else []
-                    )
+                    or (list(mission_runtime_state.work_item_refs) if mission_runtime_state else [])
                 ),
                 checkpoint_refs=list(
                     operation_result.checkpoint_refs
                     if operation_result and operation_result.checkpoint_refs
                     else deliberative_plan.checkpoint_refs
                     or (
-                        list(mission_runtime_state.checkpoint_refs)
-                        if mission_runtime_state
-                        else []
+                        list(mission_runtime_state.checkpoint_refs) if mission_runtime_state else []
                     )
                 ),
                 artifact_refs=list(
                     operation_result.artifact_refs
                     if operation_result and operation_result.artifact_refs
                     else deliberative_plan.artifact_refs
-                    or (
-                        list(mission_runtime_state.artifact_refs)
-                        if mission_runtime_state
-                        else []
-                    )
+                    or (list(mission_runtime_state.artifact_refs) if mission_runtime_state else [])
                 ),
                 objective_status=(
                     mission_runtime_state.objective_status
@@ -5687,21 +6394,13 @@ class OrchestratorService:
                     else operation_result.objective_status
                     if operation_result and operation_result.objective_status
                     else deliberative_plan.objective_status
-                    or (
-                        mission_runtime_state.objective_status
-                        if mission_runtime_state
-                        else None
-                    )
+                    or (mission_runtime_state.objective_status if mission_runtime_state else None)
                 ),
                 next_action_ref=(
                     operation_result.next_action_ref
                     if operation_result and operation_result.next_action_ref
                     else deliberative_plan.next_action_ref
-                    or (
-                        mission_runtime_state.next_action_ref
-                        if mission_runtime_state
-                        else None
-                    )
+                    or (mission_runtime_state.next_action_ref if mission_runtime_state else None)
                 ),
                 surface_id=operation_result.surface_id if operation_result else None,
                 surface_kind=operation_result.surface_kind if operation_result else None,
@@ -5709,9 +6408,7 @@ class OrchestratorService:
                     operation_result.surface_session_id if operation_result else None
                 ),
                 surface_capability_scope=(
-                    list(operation_result.surface_capability_scope)
-                    if operation_result
-                    else []
+                    list(operation_result.surface_capability_scope) if operation_result else []
                 ),
                 operator_identity_ref=(
                     operation_result.operator_identity_ref if operation_result else None
@@ -5720,9 +6417,7 @@ class OrchestratorService:
                     operation_result.canonical_user_ref if operation_result else None
                 ),
                 surface_continuity_status=(
-                    operation_result.surface_continuity_status
-                    if operation_result
-                    else None
+                    operation_result.surface_continuity_status if operation_result else None
                 ),
             )
         )
@@ -5751,6 +6446,7 @@ class OrchestratorService:
         decision = deliberative_plan.memory_influence_policy_decision
         if decision is None:
             return {
+                "memory_influence_decision_id": None,
                 "memory_influence_policy_status": "not_evaluated",
                 "memory_influence_selected_refs": [],
                 "memory_influence_ignored_refs": [],
@@ -5761,10 +6457,15 @@ class OrchestratorService:
                 "memory_influence_signal_kinds": {},
                 "memory_influence_freshness_statuses": {},
                 "memory_influence_relevance_scores": {},
+                "memory_influence_version_refs": {},
+                "memory_influence_review_decision_refs": {},
                 "memory_influence_policy_refs": [],
                 "memory_influence_memory_write_allowed": False,
+                "memory_influence_execution_allowed": False,
+                "memory_influence_tool_dispatch_allowed": False,
             }
         return {
+            "memory_influence_decision_id": decision.decision_id,
             "memory_influence_policy_status": decision.decision_status,
             "memory_influence_selected_refs": list(decision.selected_refs),
             "memory_influence_ignored_refs": list(decision.ignored_refs),
@@ -5773,12 +6474,14 @@ class OrchestratorService:
             "memory_influence_use_reasons": dict(decision.use_reasons),
             "memory_influence_non_use_reasons": dict(decision.non_use_reasons),
             "memory_influence_signal_kinds": dict(decision.signal_kinds),
-            "memory_influence_freshness_statuses": dict(
-                decision.freshness_statuses
-            ),
+            "memory_influence_freshness_statuses": dict(decision.freshness_statuses),
             "memory_influence_relevance_scores": dict(decision.relevance_scores),
+            "memory_influence_version_refs": dict(decision.version_refs),
+            "memory_influence_review_decision_refs": dict(decision.review_decision_refs),
             "memory_influence_policy_refs": list(decision.policy_refs),
             "memory_influence_memory_write_allowed": decision.memory_write_allowed,
+            "memory_influence_execution_allowed": decision.execution_allowed,
+            "memory_influence_tool_dispatch_allowed": (decision.tool_dispatch_allowed),
         }
 
     @staticmethod
@@ -5852,9 +6555,7 @@ class OrchestratorService:
         mission_recommendation = extract_context_hint("mission_recommendation=")
         last_decision_frame = extract_context_hint("last_decision_frame=")
         user_continuity_preference = extract_context_hint("user_continuity_preference=")
-        user_last_recommended_task_type = extract_context_hint(
-            "user_last_recommended_task_type="
-        )
+        user_last_recommended_task_type = extract_context_hint("user_last_recommended_task_type=")
         if (
             deliberative_plan.semantic_memory_source is not None
             or mission_focus
@@ -6091,9 +6792,7 @@ class OrchestratorService:
                         "linked_surface_ids": continuity_replay.linked_surface_ids,
                         "active_surface_id": continuity_replay.active_surface_id,
                         "last_surface_id": continuity_replay.last_surface_id,
-                        "surface_continuity_status": (
-                            continuity_replay.surface_continuity_status
-                        ),
+                        "surface_continuity_status": (continuity_replay.surface_continuity_status),
                         "surface_identity_conflict_flags": (
                             continuity_replay.surface_identity_conflict_flags
                         ),
@@ -6163,18 +6862,12 @@ class OrchestratorService:
             "active_surface_id": (
                 continuity_replay.active_surface_id if continuity_replay else None
             ),
-            "last_surface_id": (
-                continuity_replay.last_surface_id if continuity_replay else None
-            ),
+            "last_surface_id": (continuity_replay.last_surface_id if continuity_replay else None),
             "surface_continuity_status": (
-                continuity_replay.surface_continuity_status
-                if continuity_replay
-                else None
+                continuity_replay.surface_continuity_status if continuity_replay else None
             ),
             "surface_identity_conflict_flags": (
-                continuity_replay.surface_identity_conflict_flags
-                if continuity_replay
-                else []
+                continuity_replay.surface_identity_conflict_flags if continuity_replay else []
             ),
             "continuity_recommendation": (
                 continuity_context.recommended_action if continuity_context else None
@@ -6205,9 +6898,7 @@ class OrchestratorService:
             if item.selection_status == "selected"
         ]
         domain_specialists = [
-            item.specialist_type
-            for item in specialist_review.invocations
-            if item.linked_domain
+            item.specialist_type for item in specialist_review.invocations if item.linked_domain
         ]
         shadow_invocation_ids = {
             item.invocation_id
@@ -6319,9 +7010,7 @@ class OrchestratorService:
         return MissionRuntimeStateContract(
             mission_id=mission_id,
             mission_goal=(
-                mission_state.mission_goal
-                if mission_state is not None
-                else contract.content
+                mission_state.mission_goal if mission_state is not None else contract.content
             ),
             mission_status=(
                 mission_state.mission_status
@@ -6381,24 +7070,16 @@ class OrchestratorService:
                 mission_state.ecosystem_state_status if mission_state is not None else None
             ),
             active_work_items=(
-                list(mission_state.active_work_items)
-                if mission_state is not None
-                else []
+                list(mission_state.active_work_items) if mission_state is not None else []
             ),
             active_artifact_refs=(
-                list(mission_state.active_artifact_refs)
-                if mission_state is not None
-                else []
+                list(mission_state.active_artifact_refs) if mission_state is not None else []
             ),
             open_checkpoint_refs=(
-                list(mission_state.open_checkpoint_refs)
-                if mission_state is not None
-                else []
+                list(mission_state.open_checkpoint_refs) if mission_state is not None else []
             ),
             surface_presence=(
-                list(mission_state.surface_presence)
-                if mission_state is not None
-                else []
+                list(mission_state.surface_presence) if mission_state is not None else []
             ),
             ecosystem_state_summary=(
                 mission_state.ecosystem_state_summary if mission_state is not None else None
@@ -6411,30 +7092,20 @@ class OrchestratorService:
             checkpoint_refs=(
                 list(mission_state.checkpoint_refs) if mission_state is not None else []
             ),
-            artifact_refs=(
-                list(mission_state.artifact_refs) if mission_state is not None else []
-            ),
+            artifact_refs=(list(mission_state.artifact_refs) if mission_state is not None else []),
             objective_status=(
                 mission_state.objective_status if mission_state is not None else None
             ),
-            next_action_ref=(
-                mission_state.next_action_ref if mission_state is not None else None
-            ),
+            next_action_ref=(mission_state.next_action_ref if mission_state is not None else None),
             linked_surface_ids=(
-                list(mission_state.linked_surface_ids)
-                if mission_state is not None
-                else []
+                list(mission_state.linked_surface_ids) if mission_state is not None else []
             ),
             active_surface_id=(
                 mission_state.active_surface_id if mission_state is not None else None
             ),
-            last_surface_id=(
-                mission_state.last_surface_id if mission_state is not None else None
-            ),
+            last_surface_id=(mission_state.last_surface_id if mission_state is not None else None),
             surface_continuity_status=(
-                mission_state.surface_continuity_status
-                if mission_state is not None
-                else None
+                mission_state.surface_continuity_status if mission_state is not None else None
             ),
             surface_identity_conflict_flags=(
                 list(mission_state.surface_identity_conflict_flags)
@@ -6612,8 +7283,7 @@ class OrchestratorService:
             or MissionId(f"mission:{contract.request_id}")
         )
         specialist_used = [
-            contribution.specialist_type
-            for contribution in specialist_review.contributions
+            contribution.specialist_type for contribution in specialist_review.contributions
         ]
         tools_used = [
             item
@@ -6639,8 +7309,8 @@ class OrchestratorService:
             errors.append(f"governance_decision:{governance_decision.decision.value}")
 
         outcome_status = (
-            "completed"
-            if operation_result and operation_result.status.value == "completed"
+            operation_result.status.value
+            if operation_result is not None
             else "governed"
             if governance_decision.decision == PermissionDecision.ALLOW_WITH_CONDITIONS
             else governance_decision.decision.value
@@ -6704,6 +7374,288 @@ class OrchestratorService:
             ),
         )
         return self.memory_service.record_experience(experience=experience).experience
+
+    @staticmethod
+    def _experience_record_event_payload(
+        experience_record: ExperienceRecordContract,
+    ) -> dict[str, object]:
+        return {
+            "experience_id": experience_record.experience_id,
+            "mission_id": str(experience_record.mission_id),
+            "workflow_profile": experience_record.workflow_profile,
+            "outcome_status": experience_record.outcome_status,
+            "route": experience_record.route,
+            "primary_mind": experience_record.primary_mind,
+            "primary_domain_driver": experience_record.primary_domain_driver,
+            "specialist_used": list(experience_record.specialist_used),
+            "plan_summary": experience_record.plan_summary,
+            "execution_summary": experience_record.execution_summary,
+            "outcome": experience_record.outcome,
+            "errors": list(experience_record.errors),
+            "tools_used": list(experience_record.tools_used),
+            "checkpoints": list(experience_record.checkpoints),
+            "user_feedback": experience_record.user_feedback,
+            "evidence_refs": list(experience_record.evidence_refs),
+            "reusable_memory_status": experience_record.reusable_memory_status,
+            "human_review_required": experience_record.human_review_required,
+            "automatic_promotion_allowed": (experience_record.automatic_promotion_allowed),
+            "core_mutation_allowed": experience_record.core_mutation_allowed,
+        }
+
+    @staticmethod
+    def _post_task_reflection_event_payload(
+        reflection: PostTaskReflectionContract,
+    ) -> dict[str, object]:
+        return {
+            "reflection_id": reflection.reflection_id,
+            "experience_id": reflection.experience_id,
+            "reflection_status": reflection.reflection_status,
+            "learning_candidate": reflection.learning_candidate,
+            "recommendation": reflection.recommendation,
+            "proposed_change_type": reflection.proposed_change_type,
+            "evidence_refs": list(reflection.evidence_refs),
+            "proposed_tests": list(reflection.proposed_tests),
+            "blockers": list(reflection.blockers),
+            "rollback_plan_ref": reflection.rollback_plan_ref,
+            "risk_hint": reflection.risk_hint,
+            "human_review_required": reflection.human_review_required,
+            "automatic_promotion_allowed": reflection.automatic_promotion_allowed,
+            "core_mutation_allowed": reflection.core_mutation_allowed,
+        }
+
+    def _record_decision_outcome_attribution(
+        self,
+        *,
+        contract: InputContract,
+        deliberative_plan: DeliberativePlanContract,
+        memory_influence_governance: object,
+        governance_decision: GovernanceDecisionContract,
+        experience_record: ExperienceRecordContract,
+        evidence_events: list[InternalEventEnvelope],
+    ) -> tuple[
+        DecisionOutcomeAttributionRecordContract | None,
+        InternalEventEnvelope,
+    ]:
+        """Append evidence that links governed participation to one observed outcome."""
+
+        attribution_record_id = f"decision-outcome-attribution://request/{contract.request_id}"
+        evidence_refs = self._decision_attribution_evidence_refs(
+            experience_record=experience_record,
+            events=evidence_events,
+        )
+        try:
+            workflow_policy = deliberative_plan.workflow_policy_decision
+            memory_policy = deliberative_plan.memory_influence_policy_decision
+            memory_causal_use_allowed = bool(
+                memory_policy is not None
+                and getattr(memory_influence_governance, "assessment_status", None) == "governed"
+                and getattr(memory_influence_governance, "causal_use_allowed", False)
+            )
+            memory_policy_status = (
+                memory_policy.decision_status
+                if memory_policy is not None
+                and getattr(memory_influence_governance, "assessment_status", None) == "governed"
+                else "governance_blocked"
+                if memory_policy is not None
+                else "not_evaluated"
+            )
+            declared_effects_by_ref = self._decision_attribution_effects_by_ref(
+                deliberative_plan=deliberative_plan,
+            )
+            classification = classify_decision_attribution(
+                workflow_policy_ref=(workflow_policy.policy_ref if workflow_policy else None),
+                workflow_policy_application_status=(
+                    workflow_policy.application_status if workflow_policy else "not_evaluated"
+                ),
+                workflow_policy_effects=(list(workflow_policy.effects) if workflow_policy else []),
+                memory_policy_decision_ref=(memory_policy.decision_id if memory_policy else None),
+                memory_policy_status=(memory_policy_status),
+                memory_selected_refs=(list(memory_policy.selected_refs) if memory_policy else []),
+                memory_use_reasons=(dict(memory_policy.use_reasons) if memory_policy else {}),
+                memory_signal_kinds=(dict(memory_policy.signal_kinds) if memory_policy else {}),
+                memory_causal_use_allowed=memory_causal_use_allowed,
+                declared_effects_by_ref=declared_effects_by_ref,
+                outcome_ref=experience_record.experience_id,
+                outcome_status=experience_record.outcome_status,
+                evidence_refs=evidence_refs,
+                memory_write_allowed=(
+                    bool(memory_policy.memory_write_allowed) if memory_policy else False
+                ),
+                execution_allowed=(
+                    bool(
+                        (workflow_policy.autonomous_execution_allowed) if workflow_policy else False
+                    )
+                    or (bool(memory_policy.execution_allowed) if memory_policy else False)
+                ),
+                tool_dispatch_allowed=(
+                    bool(memory_policy.tool_dispatch_allowed) if memory_policy else False
+                ),
+                automatic_promotion_allowed=(
+                    bool(workflow_policy.automatic_promotion_allowed if workflow_policy else False)
+                    or bool(memory_policy.automatic_promotion_allowed if memory_policy else False)
+                ),
+                core_mutation_allowed=(
+                    bool(workflow_policy.core_mutation_allowed if workflow_policy else False)
+                    or bool(memory_policy.core_mutation_allowed if memory_policy else False)
+                ),
+            )
+            record = DecisionOutcomeAttributionRecordContract(
+                attribution_record_id=attribution_record_id,
+                request_id=RequestId(str(contract.request_id)),
+                session_id=SessionId(str(contract.session_id)),
+                mission_id=MissionId(str(experience_record.mission_id)),
+                observed_at=experience_record.timestamp,
+                governance_decision_ref=str(governance_decision.decision_id),
+                governance_decision_status=governance_decision.decision.value,
+                workflow_profile=(
+                    deliberative_plan.route_workflow_profile or experience_record.workflow_profile
+                ),
+                route=deliberative_plan.primary_route or experience_record.route,
+                outcome_ref=experience_record.experience_id,
+                outcome_status=experience_record.outcome_status,
+                experience_id=experience_record.experience_id,
+                workflow_policy_ref=(workflow_policy.policy_ref if workflow_policy else None),
+                workflow_policy_version=(
+                    workflow_policy.policy_version if workflow_policy else None
+                ),
+                workflow_policy_source_registry_ref=(
+                    workflow_policy.source_registry_ref if workflow_policy else None
+                ),
+                workflow_policy_source_registry_fingerprint=(
+                    workflow_policy.source_registry_fingerprint if workflow_policy else None
+                ),
+                workflow_policy_application_status=(
+                    workflow_policy.application_status if workflow_policy else "not_evaluated"
+                ),
+                workflow_policy_effects=(list(workflow_policy.effects) if workflow_policy else []),
+                memory_policy_decision_ref=(memory_policy.decision_id if memory_policy else None),
+                memory_policy_status=(memory_policy_status),
+                memory_policy_refs=(list(memory_policy.policy_refs) if memory_policy else []),
+                memory_selected_refs=(list(memory_policy.selected_refs) if memory_policy else []),
+                memory_ignored_refs=(list(memory_policy.ignored_refs) if memory_policy else []),
+                memory_use_reasons=(dict(memory_policy.use_reasons) if memory_policy else {}),
+                memory_non_use_reasons=(
+                    dict(memory_policy.non_use_reasons) if memory_policy else {}
+                ),
+                memory_signal_kinds=(dict(memory_policy.signal_kinds) if memory_policy else {}),
+                memory_version_refs=(dict(memory_policy.version_refs) if memory_policy else {}),
+                memory_review_decision_refs=(
+                    dict(memory_policy.review_decision_refs) if memory_policy else {}
+                ),
+                memory_causal_use_allowed=memory_causal_use_allowed,
+                declared_effects_by_ref=declared_effects_by_ref,
+                participating_refs=list(classification.participating_refs),
+                declared_causal_refs=list(classification.declared_causal_refs),
+                correlated_refs=list(classification.correlated_refs),
+                attribution_status=classification.attribution_status,
+                attribution_reasons=list(classification.attribution_reasons),
+                limitations=list(classification.limitations),
+                evidence_refs=evidence_refs,
+            )
+            persisted = self.memory_service.record_decision_outcome_attribution(record)
+        except Exception as exc:
+            failure_reason = f"{type(exc).__name__}:{str(exc)}"[:300]
+            return (
+                None,
+                self.make_event(
+                    "decision_outcome_attribution_failed",
+                    contract,
+                    {
+                        "attribution_record_id": attribution_record_id,
+                        "request_id": str(contract.request_id),
+                        "mission_id": str(experience_record.mission_id),
+                        "experience_id": experience_record.experience_id,
+                        "attribution_status": "insufficient_evidence",
+                        "failure_reason": failure_reason,
+                        "evidence_refs": evidence_refs,
+                        "causality_scope": ("runtime_declared_participation_only"),
+                        "causal_effect_proven": False,
+                        "gain_claim_status": ("not_established_without_comparator"),
+                        "read_only": True,
+                        "execution_allowed": False,
+                        "promotion_authorized": False,
+                        "automatic_promotion_allowed": False,
+                        "core_mutation_allowed": False,
+                    },
+                ),
+            )
+        return (
+            persisted,
+            self.make_event(
+                "decision_outcome_attribution_recorded",
+                contract,
+                self._decision_outcome_attribution_event_payload(persisted),
+            ),
+        )
+
+    @classmethod
+    def _decision_attribution_effects_by_ref(
+        cls,
+        *,
+        deliberative_plan: DeliberativePlanContract,
+    ) -> dict[str, list[str]]:
+        effects_by_ref: dict[str, list[str]] = {}
+        workflow_policy = deliberative_plan.workflow_policy_decision
+        if workflow_policy and workflow_policy.effects:
+            effects_by_ref[workflow_policy.policy_ref] = cls._dedupe_strings(
+                list(workflow_policy.effects)
+            )
+        memory_policy = deliberative_plan.memory_influence_policy_decision
+        if memory_policy is None:
+            return effects_by_ref
+        for ref in memory_policy.selected_refs:
+            kind = memory_policy.signal_kinds.get(ref)
+            effects: list[str] = []
+            if kind == "semantic":
+                effects.extend(deliberative_plan.semantic_memory_effects)
+            elif kind == "procedural":
+                effects.extend(deliberative_plan.procedural_memory_effects)
+            elif kind == "reflection" and deliberative_plan.reflection_influence_summary:
+                effects.append(deliberative_plan.reflection_influence_summary)
+            elif (
+                kind == "reviewed_learning"
+                and deliberative_plan.reviewed_learning_influence_summary
+            ):
+                effects.append(deliberative_plan.reviewed_learning_influence_summary)
+            use_reason = memory_policy.use_reasons.get(ref)
+            if use_reason:
+                effects.append(f"memory_policy_declared_use:{use_reason}")
+            if effects:
+                effects_by_ref[ref] = cls._dedupe_strings(effects)
+        return effects_by_ref
+
+    @classmethod
+    def _decision_attribution_evidence_refs(
+        cls,
+        *,
+        experience_record: ExperienceRecordContract,
+        events: list[InternalEventEnvelope],
+    ) -> list[str]:
+        evidence_event_names = {
+            "memory_influence_governed",
+            "plan_built",
+            "workflow_governance_declared",
+            "plan_governed",
+            "response_synthesized",
+            "memory_recorded",
+            "experience_record_declared",
+        }
+        return cls._dedupe_strings(
+            [
+                *list(experience_record.evidence_refs),
+                *[
+                    f"event://{event.event_id}"
+                    for event in events
+                    if event.event_name in evidence_event_names
+                ],
+            ]
+        )
+
+    @staticmethod
+    def _decision_outcome_attribution_event_payload(
+        record: DecisionOutcomeAttributionRecordContract,
+    ) -> dict[str, object]:
+        return asdict(record)
 
     def _record_post_task_reflection(
         self,
@@ -6797,7 +7749,14 @@ class OrchestratorService:
             specialist_review=specialist_review,
             operation_dispatch=state["operation_dispatch"],
             operation_result=state["operation_result"],
+            action_confirmation_challenge=state.get("action_confirmation_challenge"),
+            action_confirmation_claim=state.get("action_confirmation_claim"),
+            adapter_action_intent=state.get("adapter_action_intent"),
+            adapter_descriptor=state.get("adapter_descriptor"),
+            adapter_grant=state.get("adapter_grant"),
+            adapter_grant_claim=state.get("adapter_grant_claim"),
             experience_record=state.get("experience_record"),
             post_task_reflection=state.get("post_task_reflection"),
+            decision_outcome_attribution=state.get("decision_outcome_attribution"),
             events=state["events"],
         )

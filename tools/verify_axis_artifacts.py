@@ -49,12 +49,32 @@ REQUIRED_FILES = (
     / "implementation"
     / "v2-memory-gap-baseline-evidence.md",
     ROOT / "docs" / "archive" / "implementation" / "v2-memory-gap-decision.md",
-    ROOT / "docs" / "implementation" / "v2-native-memory-scope-hardening-cut-closure.md",
-    ROOT / "docs" / "implementation" / "v2-repository-hygiene-and-tools-review-cut.md",
-    ROOT / "docs" / "implementation" / "v2-repository-hygiene-inventory.md",
-    ROOT / "docs" / "implementation" / "v2-repository-hygiene-doc-decisions.md",
-    ROOT / "docs" / "implementation" / "v2-repository-hygiene-tool-decisions.md",
-    ROOT / "docs" / "implementation" / "v2-repository-hygiene-and-tools-review-cut-closure.md",
+    ROOT
+    / "docs"
+    / "archive"
+    / "implementation"
+    / "v2-native-memory-scope-hardening-cut-closure.md",
+    ROOT
+    / "docs"
+    / "archive"
+    / "implementation"
+    / "v2-repository-hygiene-and-tools-review-cut.md",
+    ROOT / "docs" / "archive" / "implementation" / "v2-repository-hygiene-inventory.md",
+    ROOT
+    / "docs"
+    / "archive"
+    / "implementation"
+    / "v2-repository-hygiene-doc-decisions.md",
+    ROOT
+    / "docs"
+    / "archive"
+    / "implementation"
+    / "v2-repository-hygiene-tool-decisions.md",
+    ROOT
+    / "docs"
+    / "archive"
+    / "implementation"
+    / "v2-repository-hygiene-and-tools-review-cut-closure.md",
     ROOT / "knowledge" / "curated" / "domain_registry.json",
     ROOT / "shared" / "mind_registry.py",
     ROOT / "shared" / "memory_registry.py",
@@ -108,23 +128,44 @@ def main() -> None:
         ROOT / "docs" / "archive" / "implementation" / "v2-native-memory-scope-hardening-cut.md"
     )
     native_memory_cut_closure = _read(
-        ROOT / "docs" / "implementation" / "v2-native-memory-scope-hardening-cut-closure.md"
+        ROOT
+        / "docs"
+        / "archive"
+        / "implementation"
+        / "v2-native-memory-scope-hardening-cut-closure.md"
     )
     repository_hygiene_cut_doc = _read(
-        ROOT / "docs" / "implementation" / "v2-repository-hygiene-and-tools-review-cut.md"
+        ROOT
+        / "docs"
+        / "archive"
+        / "implementation"
+        / "v2-repository-hygiene-and-tools-review-cut.md"
     )
     repository_hygiene_inventory_doc = _read(
-        ROOT / "docs" / "implementation" / "v2-repository-hygiene-inventory.md"
+        ROOT
+        / "docs"
+        / "archive"
+        / "implementation"
+        / "v2-repository-hygiene-inventory.md"
     )
     repository_hygiene_doc_decisions = _read(
-        ROOT / "docs" / "implementation" / "v2-repository-hygiene-doc-decisions.md"
+        ROOT
+        / "docs"
+        / "archive"
+        / "implementation"
+        / "v2-repository-hygiene-doc-decisions.md"
     )
     repository_hygiene_tool_decisions = _read(
-        ROOT / "docs" / "implementation" / "v2-repository-hygiene-tool-decisions.md"
+        ROOT
+        / "docs"
+        / "archive"
+        / "implementation"
+        / "v2-repository-hygiene-tool-decisions.md"
     )
     repository_hygiene_cut_closure = _read(
         ROOT
         / "docs"
+        / "archive"
         / "implementation"
         / "v2-repository-hygiene-and-tools-review-cut-closure.md"
     )

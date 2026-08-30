@@ -206,6 +206,9 @@ def _execute_case(  # type: ignore[no-untyped-def]
                 input_type=InputType.TEXT,
                 content=case.input_text,
                 timestamp=request_timestamp,
+                requested_autonomy_level="bounded_core_action",
+                max_autonomy_level="bounded_core_action",
+                autonomy_confirmation_mode="not_required",
                 metadata={
                     "domain_eval_pack_id": pack.eval_pack_id,
                     "domain_eval_case_id": case.case_id,

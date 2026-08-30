@@ -6,6 +6,10 @@ from shared.contracts import (
     DailyOperatorUtilityReportContract,
     DailyOperatorWorkspaceContract,
     DailyWorkspaceMissionContract,
+    DecisionAttributionClassificationContract,
+    DecisionOutcomeAttributionItemContract,
+    DecisionOutcomeAttributionRecordContract,
+    DecisionOutcomeAttributionReportContract,
     DeliberativePlanContract,
     EvolutionReviewDecisionContract,
     EvolutionReviewQueueItemContract,
@@ -29,6 +33,7 @@ from shared.contracts import (
     RecurringPatternEvidenceContract,
     RecurringPatternReportContract,
     ReviewedLearningGuidanceContract,
+    ReviewedProceduralPlaybookContract,
     SandboxToReleaseChecklistContract,
     SemanticMemoryCandidateContract,
     SkillCandidateContract,
@@ -40,6 +45,7 @@ from shared.contracts import (
     SkillSandboxEvalContract,
     SurfaceIdentityContract,
     TechnologyAbsorptionCandidateContract,
+    TechnologyRadarIntakeContract,
     WorkflowEvolutionBuildResultContract,
     WorkflowEvolutionRequestContract,
     WorkflowPolicyDecisionContract,
@@ -57,6 +63,10 @@ from shared.schemas import (
     DAILY_OPERATOR_UTILITY_REPORT_SCHEMA,
     DAILY_OPERATOR_WORKSPACE_SCHEMA,
     DAILY_WORKSPACE_MISSION_SCHEMA,
+    DECISION_ATTRIBUTION_CLASSIFICATION_SCHEMA,
+    DECISION_OUTCOME_ATTRIBUTION_ITEM_SCHEMA,
+    DECISION_OUTCOME_ATTRIBUTION_RECORD_SCHEMA,
+    DECISION_OUTCOME_ATTRIBUTION_REPORT_SCHEMA,
     DELIBERATIVE_PLAN_SCHEMA,
     EVOLUTION_REVIEW_DECISION_SCHEMA,
     EVOLUTION_REVIEW_QUEUE_ITEM_SCHEMA,
@@ -81,6 +91,7 @@ from shared.schemas import (
     RECURRING_PATTERN_REPORT_SCHEMA,
     REGRESSION_READINESS_REPORT_SCHEMA,
     REVIEWED_LEARNING_GUIDANCE_SCHEMA,
+    REVIEWED_PROCEDURAL_PLAYBOOK_SCHEMA,
     SANDBOX_TO_RELEASE_CHECKLIST_SCHEMA,
     SEMANTIC_MEMORY_CANDIDATE_SCHEMA,
     SKILL_CANDIDATE_SCHEMA,
@@ -92,6 +103,7 @@ from shared.schemas import (
     SKILL_SANDBOX_EVAL_SCHEMA,
     SURFACE_IDENTITY_SCHEMA,
     TECHNOLOGY_ABSORPTION_CANDIDATE_SCHEMA,
+    TECHNOLOGY_RADAR_INTAKE_SCHEMA,
     WORK_ITEM_QUEUE_SCHEMA,
     WORK_ITEM_STATE_SCHEMA,
     WORKFLOW_EVOLUTION_BUILD_RESULT_SCHEMA,
@@ -149,6 +161,71 @@ def test_semantic_memory_candidate_is_read_only_shared_schema() -> None:
     assert candidate.memory_write_allowed is False
     assert candidate.automatic_promotion_allowed is False
     assert candidate.core_mutation_allowed is False
+
+
+def test_decision_outcome_attribution_contracts_are_read_only_shared_schemas() -> None:
+    classification = DecisionAttributionClassificationContract(
+        attribution_status="correlation_only",
+        participating_refs=["memory://semantic/anchor-1"],
+        declared_causal_refs=[],
+        correlated_refs=["memory://semantic/anchor-1"],
+        attribution_reasons=["correlated_runtime_participation"],
+        limitations=[],
+    )
+    record = DecisionOutcomeAttributionRecordContract(
+        attribution_record_id="decision-attribution://req-1",
+        request_id=RequestId("req-1"),
+        session_id=SessionId("sess-1"),
+        mission_id=None,
+        observed_at="2026-08-11T12:00:00Z",
+        governance_decision_ref="governance-decision://req-1",
+        governance_decision_status="allow",
+        workflow_profile=None,
+        route=None,
+        outcome_ref=None,
+        outcome_status=None,
+    )
+    item = DecisionOutcomeAttributionItemContract(
+        item_id="decision-attribution-item://req-1",
+        attribution=record,
+        feedback_status="not_available",
+        feedback_refs=[],
+        feedback_assessments=[],
+        feedback_ratings=[],
+    )
+    report = DecisionOutcomeAttributionReportContract(
+        report_id="decision-attribution-report://test",
+        report_status="insufficient_evidence",
+        generated_at="2026-08-11T12:00:00Z",
+        record_count=1,
+        correlation_only_count=0,
+        declared_causality_count=0,
+        insufficient_evidence_count=1,
+        feedback_linked_count=0,
+        comparator_count=0,
+        failed_record_count=0,
+        items=[item],
+        limitations=["outcome_evidence_required"],
+        evidence_refs=[],
+    )
+
+    assert DECISION_ATTRIBUTION_CLASSIFICATION_SCHEMA.contract_name == type(
+        classification
+    ).__name__
+    assert DECISION_OUTCOME_ATTRIBUTION_RECORD_SCHEMA.contract_name == type(
+        record
+    ).__name__
+    assert DECISION_OUTCOME_ATTRIBUTION_ITEM_SCHEMA.contract_name == type(item).__name__
+    assert DECISION_OUTCOME_ATTRIBUTION_REPORT_SCHEMA.contract_name == type(
+        report
+    ).__name__
+    assert classification.causal_effect_proven is False
+    assert record.attribution_status == "insufficient_evidence"
+    assert record.immutable is True
+    assert item.gain_claim_status == "not_established_without_comparator"
+    assert report.promotion_authorized is False
+    assert report.automatic_promotion_allowed is False
+    assert report.core_mutation_allowed is False
 
 
 def test_longitudinal_learning_contracts_are_read_only_shared_schemas() -> None:
@@ -380,6 +457,54 @@ def test_technology_absorption_candidate_contract_is_subordinate_by_default() ->
     )
 
 
+def test_technology_radar_intake_schema_declares_review_and_zero_authority() -> None:
+    contract = TechnologyRadarIntakeContract(
+        intake_id="technology-radar-intake://typed-workflows/1.0.0",
+        candidate_ref="tech-candidate://typed-workflows/reference",
+        intake_version="1.0.0",
+        technology_name="Typed Workflows",
+        source_kind="article",
+        source_locator="https://example.com/typed-workflows",
+        source_version_ref="article-version://typed-workflows/2026-08-12",
+        source_content_sha256="a" * 64,
+        license_id="CC-BY-4.0",
+        license_status="declared",
+        license_evidence_ref="evidence://license/typed-workflows",
+        retrieved_at="2026-08-12T12:00:00Z",
+        claims=["Typed workflows can improve contract visibility."],
+        risks=["External semantics must remain subordinate."],
+        absorption_class="reference",
+        target_gap_refs=["KNW-006"],
+        research_approval_ref="approval://technology-radar/typed-workflows",
+        reviewed_payload_fingerprint="b" * 64,
+        reviewer_ref="operator://technology-radar/reviewer",
+        review_status="approved_for_radar_intake",
+        review_evidence_refs=["evidence://review/typed-workflows"],
+        reviewed_at="2026-08-12T12:01:00Z",
+        recorded_at="2026-08-12T12:02:00Z",
+    )
+
+    assert TECHNOLOGY_RADAR_INTAKE_SCHEMA.contract_name == type(contract).__name__
+    assert {
+        "source_content_sha256",
+        "license_id",
+        "claims",
+        "risks",
+        "reviewed_payload_fingerprint",
+        "reviewer_ref",
+    }.issubset(TECHNOLOGY_RADAR_INTAKE_SCHEMA.required_fields)
+    assert contract.read_only is True
+    assert contract.immutable is True
+    assert contract.human_review_required is True
+    assert contract.network_fetch_allowed is False
+    assert contract.knowledge_ingestion_allowed is False
+    assert contract.dependency_installation_allowed is False
+    assert contract.runtime_activation_allowed is False
+    assert contract.automatic_promotion_allowed is False
+    assert contract.core_mutation_allowed is False
+    assert contract.priority_mutation_allowed is False
+
+
 def test_governance_decision_uses_canonical_enums() -> None:
     decision = GovernanceDecisionContract(
         decision_id=GovernanceDecisionId("decision-1"),
@@ -409,6 +534,8 @@ def test_internal_event_names_include_governance_blocked() -> None:
     assert "evolution_review_decision_declared" in INTERNAL_EVENT_NAMES
     assert "reviewed_learning_guidance_declared" in INTERNAL_EVENT_NAMES
     assert "promotion_gate_evaluated" in INTERNAL_EVENT_NAMES
+    assert "decision_outcome_attribution_recorded" in INTERNAL_EVENT_NAMES
+    assert "decision_outcome_attribution_failed" in INTERNAL_EVENT_NAMES
 
 
 def test_work_item_state_contract_is_shared_schema() -> None:
@@ -1147,6 +1274,56 @@ def test_procedural_playbook_candidate_contract_is_bounded_schema() -> None:
         "ReviewedLearningGuidanceContract"
     )
     assert "allowed_usage" in REVIEWED_LEARNING_GUIDANCE_SCHEMA.required_fields
+
+
+def test_reviewed_procedural_playbook_contract_is_versioned_read_only_guidance() -> None:
+    playbook = ReviewedProceduralPlaybookContract(
+        playbook_id="reviewed-playbook://software-change/bounded-review",
+        version="1.2.0",
+        source_candidate_id="playbook-candidate://software-change/001",
+        source_review_decision_id="review-decision://proposal-1/001",
+        evolution_proposal_id="proposal-1",
+        review_status="approved",
+        procedure_name="bounded patch review",
+        route="software_engineering",
+        workflow_profile="software_change_workflow",
+        domain="engenharia_de_software",
+        bounded_steps=["collect evidence", "run targeted tests"],
+        allowed_usage=["planning_context"],
+        evidence_refs=["trace://req-playbook"],
+        rollback_plan_ref="rollback://playbook/001",
+        timestamp="2026-07-18T23:00:00Z",
+    )
+
+    assert playbook.version == "1.2.0"
+    assert playbook.source_review_decision_id == (
+        "review-decision://proposal-1/001"
+    )
+    assert playbook.read_only is True
+    assert playbook.human_review_required is True
+    assert playbook.execution_allowed is False
+    assert playbook.tool_dispatch_allowed is False
+    assert playbook.memory_write_mode == "read_only"
+    assert playbook.automatic_promotion_allowed is False
+    assert playbook.core_mutation_allowed is False
+    assert REVIEWED_PROCEDURAL_PLAYBOOK_SCHEMA.contract_name == (
+        "ReviewedProceduralPlaybookContract"
+    )
+    assert {
+        "version",
+        "source_candidate_id",
+        "source_review_decision_id",
+        "bounded_steps",
+        "allowed_usage",
+        "rollback_plan_ref",
+    }.issubset(REVIEWED_PROCEDURAL_PLAYBOOK_SCHEMA.required_fields)
+    assert {
+        "execution_allowed",
+        "tool_dispatch_allowed",
+        "memory_write_mode",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    }.issubset(REVIEWED_PROCEDURAL_PLAYBOOK_SCHEMA.optional_fields)
 
 
 def test_memory_lifecycle_review_contracts_never_authorize_maintenance() -> None:

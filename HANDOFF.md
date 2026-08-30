@@ -1,5 +1,370 @@
 # HANDOFF
 
+## Atualizacao 2026-08-30 - MB-217
+
+`MB-217` fechou a consistencia entre efeito fisico e lifecycle canonico de
+artefatos. Planos apply/rollback, checkpoints hash-chained, attestations,
+versoes imutaveis, status, lineage CAS, commit receipts e outbox agora formam
+estado normalizado em Memory; o JSON legado continua somente como projecao e
+nao pode promover artefato `logical_only` ou `unverified_legacy`.
+
+Orchestrator coordena reserva, dispatch, execucao/recovery `MB-216`, commit
+canonico, publicacao idempotente e completion. Governance exige lookup integral
+do mutation/rollback receipt persistido. Operational reabre journal e recurso
+sob o mesmo resource lock, observa o estado atual e emite uma lease efemera,
+one-shot e same-thread; Memory combina seu consumo com a prova de Governance.
+Restart invalida a lease e exige uma observacao fresca, impedindo que uma
+attestation self-sealed vire autoridade.
+
+Falha fisica nunca cria versao nem outbox. Se o efeito apply ocorreu antes do
+commit canonico, uma saga de `precanonical_compensation` com autoridade propria
+restaura o head anterior ou a ausencia fisica, fecha o apply como `compensated`
+e nao avanca a lineage. Rollback canonico existe somente depois de replace
+concluido e restaura o predecessor superseded exato. Uma nova saga para o mesmo
+recurso/lineage espera a anterior chegar a `completed`, incluindo a entrega do
+outbox; `reconciliation_required` e terminal e exige nova operacao manualmente
+governada.
+
+SQLite cobre apply/restart, compensacao create/replace, replace mais rollback
+canonico, CAS/concorrencia, tamper, overlay e ordering de outbox. A implementacao
+PostgreSQL usa locks transacionais/advisory e possui matriz controlada
+equivalente para register, compensacao, replace, rollback, reload, CAS e
+triggers append-only; os dois testes focados passaram contra PostgreSQL 17
+local. O E2E real Linux atravessa Governance, Operational, Memory, Orchestrator
+e Observability; Windows preserva o fail-closed do backend `MB-216` antes de
+journal ou efeito.
+
+Pausa bloqueia novas reservas e dispatches, mas nao abandona recovery de uma
+saga ja despachada. O runbook
+`docs/operations/physical-canonical-artifact-sagas.md` registra recovery,
+outbox, compensacao, rollback, intervencao manual, TCB e redaction.
+
+`MB-218` e o unico item tecnico `ready` para console governado e observabilidade,
+mas nao foi iniciado: a execucao aguarda a proxima solicitacao explicita do
+operador. `MB-219`, `SFC-005` e demais superficies permanecem bloqueados ou
+deferred.
+
+## Atualizacao 2026-08-30 - MB-216
+
+`MB-216` fechou a escrita e o rollback fisicos governados para texto local. O
+preflight prepare-only agora pode originar um request de execucao atestado, mas
+o efeito exige registry execution ativo, intent novo, confirmacao humana,
+grant single-use, reservation duravel e joint claim atomico. Rollback possui
+registry, request, intent, confirmacao, grant, claim e receipt distintos; nunca
+reutiliza autoridade de apply.
+
+Operational ganhou uma ponte estrutural para Governance que compara purpose,
+operacao, recurso, sujeito, preflight, root, hashes, versoes, grant, intent,
+confirmacao, reservation e mutation receipt antes de projetar autoridade para
+o executor. Verificacao ativa acontece antes de lock ou state write, e o claim
+e reverificado imediatamente antes do syscall de efeito. Callers nao controlam
+o horario: Governance e transaction engine usam a mesma fonte confiavel,
+timezone-aware, monotona e consultada novamente em cada transicao critica.
+
+O backend Linux prende roots, parents, state directory e target por dir-fds,
+nome, device e inode. Create usa `renameat2(RENAME_NOREPLACE)` e replace usa
+rename atomico no mesmo device. Stage, backup, journal SQLite WAL hash-chained,
+directory fsync e receipts content-free permitem recovery explicita depois de
+claim, inclusive apos TTL/registry drift, sem criar nova autoridade. Windows
+falha fechado no construtor antes de criar journal.
+
+O corpus Linux passou para create/replace/rollback, retry, concorrencia,
+colisao multi-root, path/identity races, disk-full, clock skew/regressao,
+versao incompatível, journal/backup tamper e tres hard crashes reais em
+subprocesso seguidos por engine nova. O E2E real atravessa Governance,
+confirmacao, bridge, mutacao, mutation receipt persistido, autorizacao de
+rollback e restauracao byte a byte. O corpus Windows confirma o fail-closed e
+os gates standard/release fecham a rodada.
+
+O runbook `docs/operations/local-text-transaction-execution.md` registra UID
+dedicado, ownership, TCB, filesystems admitidos, ponto irrevogavel, recovery,
+power-loss como limite de evidencia e pausa segura. Bind mounts no mesmo device
+continuam parte do limite operacional e sao contidos adicionalmente por rewalk
+e identidade do servico.
+
+`ACT-005` passa a `implemented_baseline`. Naquele fechamento, a fila WIP 1
+avancou para `MB-217`, que deveria ligar receipts fisicos ao lifecycle canonico
+de artefatos por saga recuperavel. Esse estado historico foi sucedido pelo
+fechamento acima.
+
+## Atualizacao 2026-08-29 - MB-215
+
+`MB-215` fechou o preflight local de `create_text` e `replace_text` sem qualquer
+mutacao. Contratos frozen ligam grant, action, intent, descriptor, registry,
+expiracao real da autorizacao, root CAS, policy/backend e hashes do estado
+before/desired. O SHA-256 UTF-8 desejado e o root CAS precisam coincidir,
+respectivamente, com `content_digest` e `precondition_digest` do intent
+persistido. O diff deterministico e explicitamente sensivel e efemero; o
+resultado, fingerprints content-free e plano de rollback nao concedem
+execucao, dispatch, promocao ou mutacao.
+
+Operational habilita roots somente por configuracao opt-in e injeta uma porta
+read-only da Governanca. O adapter valida o envelope e o instante UTC e reabre
+o grant real antes do primeiro I/O; unknown, forged, mismatch, expiry, claim,
+remocao/drift ou erro bloqueiam sem consumir evidencia. Confirmacao pendente
+permite apenas essa inspecao. Nenhum caminho cria `OperationDispatch`, claim,
+diretorio, temp, backup, journal, artefato ou arquivo.
+
+No Windows, roots, parents e target sao presos por handles, attributes, File ID,
+link count e final-path containment antes de `ReadFile`; no POSIX, a caminhada
+usa `dir_fd/openat`, `O_NOFOLLOW` e `O_NONBLOCK`. O corpus cobre absolute, UNC,
+device, ADS, traversal, reserved names, reparse/symlink/junction/hardlink/FIFO,
+swaps, limites e encoding. Testes integrados mantem o ledger e a arvore
+inalterados; auditoria adversarial, Ruff, format, diff check, runbook e gate
+padrao fecharam o slice.
+
+`ACT-005` passa a `partial_runtime`. `MB-216` e agora o unico item tecnico
+`ready`: ele deve criar uma nova autorizacao de execucao ligada ao preflight,
+revalidar handles no instante do efeito e implementar journal, backup, replace
+atomico e rollback fisico. `MB-217` a `MB-219`, `SFC-005` e demais superficies
+deferred continuam bloqueados.
+
+## Atualizacao 2026-08-29 - MB-214
+
+`MB-214` fechou o baseline de permissoes por adapter. Contratos frozen agora
+definem request tipado, descriptor prepare-only, snapshot de registry, grant
+expiravel e claim single-use. O grant fica preso ao sujeito/operador,
+recurso/alvo, `adapter://id`, versao do handler, operacao, scope, intent,
+fingerprints de registry/descriptor e versao da policy. Texto, `tool_class`,
+receipt ou confirmacao isolados nao inferem nem ampliam autoridade.
+
+Governance persiste epochs, descriptors, intents, grants e claims no mesmo
+`governance.db` append-only, com payload canonico/SHA-256, colunas revalidadas,
+triggers, WAL e `BEGIN IMMEDIATE`. Emissao exige CAS do registry/descriptor e
+retry exato deterministico; claim reabre o descriptor ativo, bloqueia
+remocao/drift/expiry/replay e, quando a confirmacao e exigida, consome receipt e
+grant na mesma transacao. Oito concorrentes produzem uma unica claim e uma
+falha posterior ao receipt reverte os dois registros.
+
+Planning somente seleciona a capability externa para
+`AdapterActionRequestContract` tipado. Native e LangGraph usam o mesmo resolver,
+recomputam autonomia e emitem intent/grant; modo explicitamente mais estrito
+adiciona challenge sobre o mesmo intent. Nenhum caminho constroi
+`OperationDispatch`, chama Operational ou cria diretorio/arquivo. O runbook
+`docs/operations/adapter-registry-and-exact-grants.md` registra operacao e
+rollback por novo snapshot sem descriptor, preservando o historico.
+
+`GOV-005` passa a `implemented_baseline`. `MB-215` e agora o unico item tecnico
+`ready`: preflight local com roots configurados, paths relativos canonicos,
+limites, hashes, diff e plano de rollback, ainda sem escrita. `MB-216` a
+`MB-219` seguem bloqueados; `SFC-005` e superficies deferred continuam fora.
+
+## Atualizacao 2026-08-29 - MB-213
+
+`MB-213` fechou autonomia fail-closed por acao. Um contrato compartilhado total
+agora cruza nivel solicitado/maximo/efetivo, action kind, capability
+selecionada/maxima, listas allowed/blocked, modo de confirmacao e erros de
+validacao. Campo ausente, desconhecido, contraditorio ou capability abaixo da
+acao produz `block` e zero efeito; `assist_only` nunca executa e receipt/claim
+nunca amplia autoridade.
+
+Governance aplica a decisao antes da preparacao, os caminhos nativo e LangGraph
+usam o mesmo predicate, external sem adapter bloqueia antes de challenge/claim
+e Operational exige `allow` mais `side_effect_allowed` imediatamente antes do
+writer. O Planejamento deixou de confundir review automatico da Governanca com
+evidencia humana, tornando `bounded_core_action` funcional sem reduzir a
+confirmacao minima de `confirm_before_action`, `supervised_external_action` ou
+de um pedido explicitamente mais estrito.
+
+Matrizes unitarias e E2E, regressao direta do writer e auditoria adversarial
+fecharam bypasses de capability insuficiente e modo ausente. O runbook
+`docs/operations/fail-closed-autonomy-actions.md` registra a matriz e o rollback.
+`MB-214` e agora o unico item tecnico `ready`: registry allowlisted e grants
+exatos, expiraveis e single-use por adapter/versao/operacao/recurso/sujeito,
+ainda sem nova mutacao fisica. `MB-215` a `MB-219` permanecem bloqueados; API e
+superficies deferred continuam fora.
+
+## Atualizacao 2026-08-29 - MB-212
+
+`MB-212` fechou confirmacao verificavel de acoes que declaram exigencia humana.
+Intent, dispatch preparado, challenge, receipt, claim e presentation formam uma
+cadeia SQLite append-only, expiravel, rederivada por fingerprint e consumivel
+uma unica vez. O orquestrador bloqueia antes do dispatch quando falta evidencia;
+o executor reverifica a claim imediatamente antes do efeito. O writer legado
+rejeita destino fornecido pelo caller e usa somente o root configurado.
+
+A nova request e um envelope de apresentacao, nao uma segunda acao candidata:
+receipt e `origin_request_id` original sao obrigatorios, o planejamento novo e
+descartado e apenas o dispatch persistido pode ser reclamado. Sessao, missao,
+operador, TTL, fingerprint, handler e versao de policy sao revalidados; isso
+evita depender de replanejamento que pode variar por memoria/continuidade.
+
+Testes de contratos, persistencia, concorrencia/restart, Operational, caminhos
+nativo/LangGraph e console provam: zero efeito antes da confirmacao, uma unica
+execucao do dispatch preparado exato, replay bloqueado e um unico artefato mesmo
+entre reinicios. Ruff, diff check, guardrails documentais, readiness e gate
+padrao fecham a rodada. A identidade do operador ainda e uma atestacao local,
+nao autenticacao criptografica; preflight fisico, TOCTOU, escrita transacional e
+rollback pertencem a `MB-215`/`MB-216`.
+
+`MB-213` e agora o unico item tecnico `ready`: ele deve tornar action kind,
+allowed/blocked actions, capability maxima e modos de confirmacao estritamente
+fail-closed nos quatro niveis, garantindo que `assist_only` nunca execute.
+`MB-214` a `MB-219` seguem bloqueados em WIP 1, e nenhuma API ou superficie
+deferred foi aberta.
+
+## Atualizacao 2026-08-29 - MB-211
+
+`MB-211` repriorizou o pos-`MB-210` e abriu Governed Action Foundation em
+`MB-212` a `MB-219`, sob WIP 1. A auditoria confirmou que a escada limitava
+capability por rank, mas a confirmacao humana ainda era textual, nao existia
+grant exato por adapter/operacao/recurso e o writer legado aceitava destino
+fornecido pelo caller. O primeiro recorte foi `MB-212`; esse estado de abertura
+foi sucedido pelo fechamento registrado na atualizacao acima.
+
+Depois seguem autonomia fail-closed, grants por adapter, preflight sem efeito,
+write/rollback transacional, reconciliacao com artifact lifecycle, console e
+prova adversarial. `SFC-005`, voz/realtime, UI rica, browser/computer use,
+scheduler e integracoes externas permanecem fora da fila.
+
+## Atualizacao 2026-08-29
+
+`MB-210` fechou a fila de aprendizado do Core e absorcao tecnologica com uma
+matriz rastreavel de `MB-202` a `MB-209`, runbook operacional e teste sintetico
+fail-closed. Document guardrails, testes focados, readiness dashboard e o gate
+padrao passaram com `queue_exhausted`, `next_ready_item=null`, zero
+drift/blockers e todas as autoridades de execucao, release, promocao, mutacao,
+adapter e API falsas.
+
+A decisao de fase sequencia Governed Action Foundation em `GOV-007` ->
+`GOV-005` -> `ACT-005`, antes de `SFC-005`. Essa sequencia nao abre poder nem
+item tecnico por inercia: a proxima fila WIP-1 exige repriorizacao separada.
+Voz/realtime, UI rica, browser/computer use, scheduler, integracoes externas,
+`SO-001`, `TA-004`, `TA-006`, `DV` e `RH` permanecem deferred.
+
+O estado abaixo de `MB-209` permanece historico e foi sucedido por este
+fechamento.
+
+## Atualizacao 2026-08-12
+
+`MB-209` implementou packs sandbox de experimento tecnologico. Cada pack nasce
+somente de um intake `MB-208` exato, elegivel e licenciado, traduz um padrao
+absorvivel para consumidor JARVIS soberano e liga controle offline
+deterministico a observacoes baseline/candidate pareadas e preproduzidas.
+Metricas, checks, deltas, blockers e readiness sao derivados; falha de outcome,
+contrato, isolamento, evidencia, cronologia ou binding bloqueia o run inteiro.
+
+Evolution persiste pack, claim atomico e run em cadeia append-only reverificada.
+Manifestos locais exigem SHA-256 destacado e o console separa mutacoes
+text-only de leituras text/JSON. O fluxo nao faz rede, instala dependencia,
+importa/executa candidato, chama Core, cria proposal generica, ativa runtime,
+promove ou muda prioridade. Auditorias adversariais e o gate padrao passaram;
+somente `MB-210` esta `ready` para fechar evidencia/readiness e decidir a fase.
+
+O estado abaixo de `MB-208` permanece historico e foi sucedido por este
+fechamento.
+
+`MB-208` implementou o intake governado do radar tecnologico. Um manifesto JSON
+local estrito e versionado liga origem HTTPS canonica, ref imutavel, SHA-256,
+licenca, data, claims, riscos, classe de absorcao, gaps, lineage e fingerprint
+da revisao humana. O Knowledge faz assessment read-only e o Evolution persiste
+uma cadeia SQLite append-only, deduplicada e reverificada sob restart/tamper.
+
+O console registra e consulta somente referencias atestadas como externas e
+nao confiaveis. Duplicate/colisao, segredo, fonte invalida, review divergente e
+lineage incoerente falham antes de ganhar efeito. O slice nao faz rede, fetch,
+ingestao, proposta evolutiva, instalacao, execucao, ativacao, promocao, mutacao
+do Core ou prioridade. `KNW-006` passa a `implemented_baseline`; somente
+`MB-209` esta `ready`, para traduzir referencias selecionadas em experimentos
+sandbox isolados.
+
+O estado abaixo de `MB-207` permanece historico e foi sucedido pelo fechamento
+de `MB-208`.
+
+`MB-207` fechou a ponte manual entre eval de variante e runtime. Evolution Lab
+congela proposal/review, definitions baseline/candidate, eval, checklist, gate,
+testes, rollback e autorizacao humana em um bundle append-only; Governance e
+Memory exigem verificacao independente desse bundle antes de registrar cada
+revisao por CAS. O console expoe leitura, ativacao e rollback humanos.
+
+Runtime nativo e LangGraph usam somente a cadeia verificada: a definicao
+promovida atravessa planning/synthesis/eventos, e rollback explicito restaura o
+baseline sem editar registry ou candidate. Store indisponivel, tamper, scope ou
+lineage invalidos fazem fallback versionado com motivo auditavel. `FlowAudit`
+rebaixa proveniencia/authority divergente. Lifecycle nao autoriza execucao,
+dispatch, registry write, promocao/rollback automaticos ou mutacao. `EVL-008`
+agora e `implemented_baseline`; somente `MB-208` esta `ready`.
+
+O estado abaixo de `MB-206` permanece historico e foi sucedido por este
+fechamento.
+
+`MB-206` implementou avaliacao controlada de variantes de workflow. Um case
+pack versionado liga baseline e candidate a duas observacoes sandbox
+preproduzidas sob o mesmo input fingerprint, fixed clock, seed e snapshots de
+workflow policy, governanca e memoria. O evaluator deriva success, contract
+adherence, rework, checkpoint coverage e memory causality; checks, deltas e
+conclusao sao recomputados no `evolution-lab` e no consumidor de
+observabilidade, sem aceitar metricas prontas do caller.
+
+Pack, claim atomico e run ficam imutaveis e append-only no store SQLite, com
+fingerprints canonicos, protecao contra colisao/tamper e leitura reverificada.
+Drift de input/control, policy, memoria, definition, checkpoint, relogio ou
+authority falha fechado. O runner nao executa Core nem tool dispatch, e
+`offline_only`, `sandbox_only`, review humana obrigatoria e todas as flags de
+release/promocao/mutacao permanecem seguras. `EVL-008` continua
+`partial_runtime` naquele recorte; esse estado foi sucedido por `MB-207`.
+
+`MB-205` implementou atribuicao auditavel entre decisao, memoria e outcome.
+Antes de qualquer outro side effect, os caminhos nativo e LangGraph fazem claim
+atomico append-only de `request_id -> session_id`; replay sequencial,
+concorrente ou cross-session falha fechado. Depois do outcome, persistem um
+`DecisionOutcomeAttributionRecordContract` imutavel que liga policy de
+workflow, decisao governada de memoria e guidance participante a uma experience
+canonica. O classificador distingue `correlation_only`, `declared_causality` e
+`insufficient_evidence`; limitacao de classificacao elimina refs causais
+declaradas, e nenhuma classe prova efeito contrafactual ou ganho.
+
+SQLite/PostgreSQL usam identidade unica por record/request, payload canonico e
+SHA-256. O append exige claim com a mesma session e experience ja persistida:
+`experience_id`, `outcome_ref`, mission, workflow, route, status e timestamp
+precisam coincidir. Outcome operacional `failed` permanece `failed`; falha ao
+gravar a attribution produz `decision_outcome_attribution_failed` sem repetir a
+operacao. Identidade e outcome da experience nao podem ser reescritos, embora
+feedback via Core possa enriquecer `user_feedback`, evidence/signal refs e a
+reflexao de forma bounded.
+
+`decision_outcome_attribution_recorded` carrega `asdict(record)` integral e o
+relatorio valida sua paridade campo a campo. `FlowAudit` apenas projeta o evento;
+relatorio, tool, CLI e consumidor longitudinal exigem o record canonico e ligam
+feedback por experience/mission exatos. Ausencia simples de feedback resulta em
+`not_available`, nao em limitacao; evento malformado, orfao, divergente ou
+conflitante permanece visivel como limitacao. O marcador
+`gain-claim-status:not_established_without_comparator` nunca produz
+`sustained_gain`, e execucao, dispatch, promocao e mutacao continuam falsas.
+
+Traces antigos nao recebem backfill heuristico. `COG-007` passa a
+`implemented_baseline`, e somente `MB-206` esta `ready` para comparar variantes
+versionadas sob as mesmas policies sem autoridade de release.
+
+`MB-204` implementou influencia governada de playbooks procedurais revisados.
+Uma nova versao runtime exige review humana `approved` persistida e vinculada
+a semver ASCII canonica sem aliases por zeros a esquerda, snapshot exato do
+candidato/proposta, checklist
+sandbox-to-release pronto e promotion gate satisfeito, ainda pendente de
+decisao humana e sem autoridade de promocao. O `evolution-lab`
+verifica essa cadeia e o timestamp de release de forma fail-closed. O revisor
+precisa ter identidade bounded nao vazia. O `memory-service` exige o
+mesmo verificador no store, revogacao e leitura, e o
+runtime de console o religa ao banco de evolution apos restart. SQLite e
+PostgreSQL inserem a identidade
+imutavel `(playbook_id, version)` e revogam uma versao por transicao atomica;
+route, workflow e domain sao filtrados antes do limite de recovery.
+
+A policy ordena todos os sinais elegiveis antes de aplicar capacidade, rejeita
+identidade duplicada e usa no maximo um playbook revisado. Planning traduz seus
+passos apenas em guidance textual read-only. Mesmo quando a request e
+executavel, os caminhos completos nativo e LangGraph aplicam o mesmo assessment
+de memoria e mantem `operation_dispatch` e `operation_result` ausentes. Trilha
+incompleta falha fechada no boundary e vira drift no `FlowAudit`. Synthesis,
+`memory_influence_governed`,
+`plan_built`, `response_synthesized` e `FlowAudit` preservam a mesma versao,
+review, aplicacao/non-use e as flags de nenhuma execucao/nenhum tool dispatch.
+A bateria unitaria e E2E cobre semver/re-review, checklist/gate, verificacao
+persistida, stores, escopo antes do limite, revogacao, mismatch, ranking,
+capacidade, telemetria e ausencia de dispatch. Esse estado foi sucedido pelo
+fechamento de `MB-205`; nenhuma superficie, autonomia ou capability deferred
+foi aberta.
+
 ## Atualizacao 2026-07-18
 
 `MB-203` implementou causalidade de memoria semantica baseada em evidencia.
@@ -10,7 +375,7 @@ registra use/non-use; stale, ausencia de candidato, mismatch e claims de
 escrita/promocao/mutacao falham fechados. Planning, synthesis e eventos
 preservam a mesma decisao auditavel. Somente `MB-204` esta `ready`, para
 consumir playbooks procedurais humanos, versionados e bounded sem execucao
-autonoma.
+autonoma. Esse estado foi sucedido pelo fechamento de `MB-204`.
 
 `MB-202` implementou policy declarativa versionada para todos os workflows
 ativos. `WorkflowPolicyDecisionContract` preserva ref, versao, fingerprint,
@@ -297,8 +662,9 @@ janela de revisao explicita; corpus sem metadata permanece `missing/unknown` e
 exige revisao, sem alterar a permissao principal da request. A sintese mostra
 uma clausula `Conhecimento:` e a trilha completa fica em
 `knowledge_retrieved`/`response_synthesized`. Resolucao automatica de conflitos
-e ingestao externa continuam fora do baseline. `MB-174` e o unico item tecnico
-`ready` naquele momento. Esse estado foi sucedido pelo fechamento de `MB-174`.
+e ingestao externa continuam fora do baseline. Naquele momento, `MB-174` era o
+unico item tecnico `ready`. Esse estado foi sucedido pelo fechamento de
+`MB-174`.
 
 `MB-172` foi concluido: contratos compartilhados agora formalizam eval case,
 pack versionado, resultado por caso e run agregado. O novo runner offline usa

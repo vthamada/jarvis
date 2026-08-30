@@ -22,7 +22,8 @@ ensure_src_paths()
 
 from evolution_lab.service import EvolutionLabService, PostTaskReflectionInput
 from governance_service.service import GovernanceService
-from memory_service.service import MemoryService
+from knowledge_service.service import KnowledgeService
+from memory_service.service import MemoryService, WorkflowLifecycleIntegrityError
 from observability_service.service import ObservabilityQuery, ObservabilityService
 from operational_service.service import OperationalService
 from orchestrator_service.service import (
@@ -45,9 +46,13 @@ from apps.jarvis_console.reference import (
     render_command_reference,
     render_shell_completion,
 )
+from shared.action_confirmation import human_confirmation_receipt_fingerprint
+from shared.autonomy_ladder import AUTONOMY_LEVEL_ORDER
 from shared.contracts import (
     DailyOperatorUtilityReportContract,
     DailyOperatorWorkspaceContract,
+    DecisionOutcomeAttributionReportContract,
+    HumanConfirmationReceiptContract,
     InputContract,
     LongHorizonGoalStrategyContract,
     LongitudinalLearningReportContract,
@@ -55,11 +60,32 @@ from shared.contracts import (
     OpenLoopRegistryContract,
     RegressionReadinessReportContract,
     SkillEvolutionOperatorViewContract,
+    TechnologyExperimentEvalRunContract,
+    TechnologyExperimentPackContract,
+    TechnologyRadarIntakeContract,
 )
 from shared.types import ChannelType, InputType, MissionId, RequestId, SessionId
 from tools.daily_operator_utility_report import build_daily_operator_utility_report
+from tools.decision_attribution_report import (
+    build_decision_attribution_report,
+)
+from tools.decision_attribution_report import (
+    save_report as save_decision_attribution_report,
+)
 from tools.longitudinal_learning_report import build_longitudinal_report
 from tools.readiness_dashboard import build_repository_readiness_report
+from tools.technology_experiment import (
+    TechnologyExperimentRegistrationResult,
+    assess_technology_experiment_pack_manifest,
+    prepare_technology_experiment_eval_manifest,
+    record_technology_experiment_eval,
+    register_technology_experiment_pack,
+)
+from tools.technology_radar_intake import (
+    TechnologyRadarIntakeRegistrationResult,
+    assess_technology_radar_intake_manifest,
+    register_technology_radar_intake,
+)
 
 CONSOLE_SURFACE_ID = "surface://jarvis_console"
 CONSOLE_SURFACE_KIND = "console"
@@ -90,16 +116,46 @@ class JarvisConsole:
         database_url: str | None = None,
     ) -> "JarvisConsole":
         if runtime_dir is None:
-            return cls(orchestrator=OrchestratorService())
+            governance_service = GovernanceService()
+            operational_service = OperationalService(
+                action_confirmation_verifier=(
+                    governance_service.verify_action_confirmation_claim
+                )
+            )
+            return cls(
+                orchestrator=OrchestratorService(
+                    governance_service=governance_service,
+                    operational_service=operational_service,
+                )
+            )
         runtime_dir.mkdir(parents=True, exist_ok=True)
         default_database_url = f"sqlite:///{(runtime_dir / 'memory.db').as_posix()}"
         resolved_database_url = database_url or default_database_url
+        evolution_service = EvolutionLabService(
+            database_path=str(runtime_dir / "evolution.db")
+        )
+        governance_service = GovernanceService(
+            action_confirmation_database_path=runtime_dir / "governance.db"
+        )
+        operational_service = OperationalService(
+            artifact_dir=str(runtime_dir / "artifacts"),
+            action_confirmation_verifier=(
+                governance_service.verify_action_confirmation_claim
+            ),
+        )
         return cls(
             orchestrator=OrchestratorService(
-                memory_service=MemoryService(database_url=resolved_database_url),
-                operational_service=OperationalService(
-                    artifact_dir=str(runtime_dir / "artifacts")
+                governance_service=governance_service,
+                memory_service=MemoryService(
+                    database_url=resolved_database_url,
+                    reviewed_procedural_playbook_verifier=(
+                        evolution_service.verify_persisted_reviewed_procedural_playbook
+                    ),
+                    workflow_lifecycle_transition_verifier=(
+                        evolution_service.verify_persisted_workflow_lifecycle_transition
+                    ),
                 ),
+                operational_service=operational_service,
                 observability_service=ObservabilityService(
                     database_path=str(runtime_dir / "observability.db")
                 ),
@@ -114,6 +170,11 @@ class JarvisConsole:
         mission_id: str | None,
         operator_identity_ref: str | None = None,
         canonical_user_ref: str | None = None,
+        requested_autonomy_level: str | None = None,
+        max_autonomy_level: str | None = None,
+        autonomy_confirmation_mode: str | None = None,
+        action_confirmation_receipt_id: str | None = None,
+        action_confirmation_origin_request_id: str | None = None,
     ) -> OrchestratorResponse:
         contract = InputContract(
             request_id=RequestId(f"req-console-{uuid4().hex[:8]}"),
@@ -132,8 +193,30 @@ class JarvisConsole:
             ),
             canonical_user_ref=canonical_user_ref or DEFAULT_CANONICAL_USER_REF,
             surface_continuity_status="single_surface",
+            requested_autonomy_level=requested_autonomy_level,
+            max_autonomy_level=max_autonomy_level,
+            autonomy_confirmation_mode=autonomy_confirmation_mode,
+            action_confirmation_receipt_id=action_confirmation_receipt_id,
+            action_confirmation_origin_request_id=(
+                action_confirmation_origin_request_id
+            ),
         )
         return self.orchestrator.handle_input(contract)
+
+    def confirm_action_challenge(
+        self,
+        *,
+        challenge_id: str,
+        action_fingerprint: str,
+        operator_identity_ref: str,
+    ) -> HumanConfirmationReceiptContract:
+        """Persist exact operator evidence without granting execution authority."""
+
+        return self.orchestrator.governance_service.confirm_action_challenge(
+            challenge_id,
+            operator_identity_ref=operator_identity_ref,
+            expected_action_fingerprint=action_fingerprint,
+        )
 
     def get_objective_state(self, *, mission_id: str) -> MissionStateContract | None:
         return self.orchestrator.inspect_objective_state(
@@ -343,7 +426,40 @@ def build_parser() -> ArgumentParser:
     ask_parser.add_argument("--mission-id")
     ask_parser.add_argument("--operator-identity-ref")
     ask_parser.add_argument("--canonical-user-ref")
+    ask_parser.add_argument(
+        "--requested-autonomy-level",
+        choices=AUTONOMY_LEVEL_ORDER,
+        help="Request one canonical bounded autonomy level.",
+    )
+    ask_parser.add_argument(
+        "--max-autonomy-level",
+        choices=AUTONOMY_LEVEL_ORDER,
+        help="Set the maximum canonical autonomy level for this request.",
+    )
+    ask_parser.add_argument(
+        "--autonomy-confirmation-mode",
+        choices=["explicit"],
+        help="Require explicit confirmation when the selected action needs it.",
+    )
+    ask_parser.add_argument(
+        "--action-confirmation-receipt-id",
+        help="Present one exact, unclaimed confirmation receipt for this retry.",
+    )
+    ask_parser.add_argument(
+        "--action-confirmation-origin-request-id",
+        "--origin-request-id",
+        dest="action_confirmation_origin_request_id",
+        help="Bind the retry to the request that produced the challenge.",
+    )
     ask_parser.add_argument("--debug", action="store_true")
+
+    action_confirm_parser = subparsers.add_parser(
+        "action-confirm",
+        help="Record exact human confirmation evidence without granting authority.",
+    )
+    action_confirm_parser.add_argument("--challenge-id", required=True)
+    action_confirm_parser.add_argument("--action-fingerprint", required=True)
+    action_confirm_parser.add_argument("--operator-identity-ref", required=True)
 
     chat_parser = subparsers.add_parser("chat", help="Run a simple multi-turn chat session.")
     chat_parser.add_argument("--session-id", default=f"console-chat-{uuid4().hex[:6]}")
@@ -484,6 +600,81 @@ def build_parser() -> ArgumentParser:
     technology_parser.add_argument("--evolution-db")
     technology_parser.add_argument("--limit", type=int, default=5)
 
+    technology_intake_parser = subparsers.add_parser(
+        "technology-radar-intake",
+        help="Register one reviewed local technology reference without fetching it.",
+    )
+    technology_intake_parser.add_argument("--evolution-db")
+    technology_intake_parser.add_argument("--intake-root", required=True)
+    technology_intake_parser.add_argument("--manifest", required=True)
+    technology_intake_parser.add_argument(
+        "--manifest-sha256",
+        required=True,
+        help="Bind registration to the detached SHA-256 reviewed by the operator.",
+    )
+
+    technology_radar_parser = subparsers.add_parser(
+        "technology-radar",
+        help="Show verified reviewed references from the technology radar.",
+    )
+    technology_radar_parser.add_argument("--evolution-db")
+    technology_radar_parser.add_argument(
+        "--intake-id",
+        help="Resolve one exact intake instead of listing the registry.",
+    )
+    technology_radar_parser.add_argument("--candidate-ref")
+    technology_radar_parser.add_argument("--intake-version")
+    technology_radar_parser.add_argument("--source-kind")
+    technology_radar_parser.add_argument("--absorption-class")
+    technology_radar_parser.add_argument("--target-gap-ref")
+    technology_radar_parser.add_argument("--limit", type=int, default=20)
+    technology_radar_parser.add_argument("--offset", type=int, default=0)
+
+    technology_experiment_pack_parser = subparsers.add_parser(
+        "technology-experiment-pack",
+        help="Register one inert sandbox experiment pack from a reviewed intake.",
+    )
+    technology_experiment_pack_parser.add_argument("--evolution-db")
+    technology_experiment_pack_parser.add_argument("--manifest-root", required=True)
+    technology_experiment_pack_parser.add_argument("--manifest", required=True)
+    technology_experiment_pack_parser.add_argument(
+        "--manifest-sha256",
+        required=True,
+        help="Bind registration to the detached SHA-256 reviewed by the operator.",
+    )
+
+    technology_experiment_eval_parser = subparsers.add_parser(
+        "technology-experiment-eval",
+        help="Derive and append one offline paired technology experiment evaluation.",
+    )
+    technology_experiment_eval_parser.add_argument("--evolution-db")
+    technology_experiment_eval_parser.add_argument("--manifest-root", required=True)
+    technology_experiment_eval_parser.add_argument("--manifest", required=True)
+    technology_experiment_eval_parser.add_argument(
+        "--manifest-sha256",
+        required=True,
+        help="Bind evaluation to the detached SHA-256 reviewed by the operator.",
+    )
+
+    technology_experiments_parser = subparsers.add_parser(
+        "technology-experiments",
+        help="Show verified inert technology experiment packs or evaluation runs.",
+    )
+    technology_experiments_parser.add_argument("--evolution-db")
+    technology_experiments_parser.add_argument(
+        "--view",
+        choices=["packs", "runs"],
+        default="packs",
+    )
+    technology_experiments_parser.add_argument("--experiment-pack-id")
+    technology_experiments_parser.add_argument("--pack-version")
+    technology_experiments_parser.add_argument("--run-id")
+    technology_experiments_parser.add_argument("--intake-id")
+    technology_experiments_parser.add_argument("--candidate-ref")
+    technology_experiments_parser.add_argument("--status")
+    technology_experiments_parser.add_argument("--limit", type=int, default=20)
+    technology_experiments_parser.add_argument("--offset", type=int, default=0)
+
     reflections_parser = subparsers.add_parser(
         "experience-reflections",
         help="Show recent bounded post-task experience reflections.",
@@ -514,6 +705,86 @@ def build_parser() -> ArgumentParser:
     skill_evolution_parser.add_argument("--route")
     skill_evolution_parser.add_argument("--domain")
     skill_evolution_parser.add_argument("--limit", type=int, default=10)
+
+    workflow_lifecycle_parser = subparsers.add_parser(
+        "workflow-lifecycle",
+        help="Show the verified active workflow binding and transition history.",
+    )
+    workflow_lifecycle_parser.add_argument(
+        "--memory-db",
+        default=str(ROOT / ".jarvis_runtime" / "console" / "memory.db"),
+        help="Use an explicit canonical memory store (defaults to the console store).",
+    )
+    workflow_lifecycle_parser.add_argument(
+        "--evolution-db",
+        default=str(ROOT / ".jarvis_runtime" / "console" / "evolution.db"),
+        help="Use the release-bundle store paired with canonical console memory.",
+    )
+    workflow_lifecycle_parser.add_argument("--workflow-profile")
+    workflow_lifecycle_parser.add_argument("--route")
+    workflow_lifecycle_parser.add_argument("--limit", type=int, default=20)
+    workflow_lifecycle_parser.add_argument("--offset", type=int, default=0)
+
+    workflow_transition_parser = subparsers.add_parser(
+        "workflow-transition",
+        help="Record an explicit governed workflow activation or rollback.",
+    )
+    workflow_transition_parser.add_argument(
+        "--memory-db",
+        default=str(ROOT / ".jarvis_runtime" / "console" / "memory.db"),
+        help="Use an explicit canonical memory store (defaults to the console store).",
+    )
+    workflow_transition_parser.add_argument(
+        "--evolution-db",
+        default=str(ROOT / ".jarvis_runtime" / "console" / "evolution.db"),
+        help="Use the release-bundle store paired with canonical console memory.",
+    )
+    workflow_transition_parser.add_argument("--workflow-profile", required=True)
+    workflow_transition_parser.add_argument("--route", required=True)
+    workflow_transition_parser.add_argument(
+        "--action",
+        required=True,
+        choices=["activate_candidate", "rollback_to_baseline"],
+    )
+    workflow_transition_parser.add_argument("--proposal-id", required=True)
+    workflow_transition_parser.add_argument("--workflow-eval-run-id", required=True)
+    workflow_transition_parser.add_argument(
+        "--human-authorization-ref",
+        required=True,
+    )
+    workflow_transition_parser.add_argument(
+        "--operator-ref",
+        default=DEFAULT_OPERATOR_IDENTITY_REF,
+    )
+    workflow_transition_parser.add_argument(
+        "--evidence-ref",
+        action="append",
+        required=True,
+        help="Bind explicit release evidence; repeat for multiple references.",
+    )
+    workflow_transition_parser.add_argument(
+        "--completed-test-ref",
+        action="append",
+        required=True,
+        help="Bind each completed candidate test exactly as reviewed.",
+    )
+    workflow_transition_parser.add_argument(
+        "--completed-external-gate",
+        action="append",
+        required=True,
+        choices=[
+            "standard_engineering_gate",
+            "release_gate_before_promotion",
+        ],
+        help="Bind each completed external release gate.",
+    )
+    workflow_transition_parser.add_argument(
+        "--failure-ref",
+        action="append",
+        default=[],
+        help="Bind an observed failure; required for rollback.",
+    )
+    workflow_transition_parser.add_argument("--transition-id")
 
     review_parser = subparsers.add_parser(
         "evolution-review-queue",
@@ -622,6 +893,27 @@ def build_parser() -> ArgumentParser:
     operator_outcomes_parser.add_argument("--period-end")
     operator_outcomes_parser.add_argument("--event-limit", type=int, default=1000)
     operator_outcomes_parser.add_argument("--mission-limit", type=int, default=200)
+
+    decision_attribution_parser = subparsers.add_parser(
+        "decision-attribution",
+        help="Show read-only decision/outcome attribution evidence.",
+    )
+    decision_attribution_parser.add_argument(
+        "--observability-db",
+        default=str(ROOT / ".jarvis_runtime" / "console" / "observability.db"),
+    )
+    decision_attribution_parser.add_argument(
+        "--memory-db",
+        default=str(ROOT / ".jarvis_runtime" / "console" / "memory.db"),
+    )
+    decision_attribution_parser.add_argument("--request-id")
+    decision_attribution_parser.add_argument("--mission-id")
+    decision_attribution_parser.add_argument("--workflow-profile")
+    decision_attribution_parser.add_argument("--limit", type=int, default=20)
+    decision_attribution_parser.add_argument(
+        "--output-dir",
+        help="Persist derived report JSON outside canonical stores.",
+    )
 
     subparsers.add_parser(
         "command-reference",
@@ -737,6 +1029,21 @@ def build_parser() -> ArgumentParser:
 
 def render_response(response: OrchestratorResponse, *, debug: bool) -> str:
     lines = [response.response_text]
+    challenge = getattr(response, "action_confirmation_challenge", None)
+    if challenge is not None:
+        lines.extend(
+            [
+                "action_confirmation_required=True",
+                f"challenge_id={safe_console_value(challenge.challenge_id)}",
+                "origin_request_id="
+                + safe_console_value(challenge.origin_request_id),
+                "action_fingerprint="
+                + safe_console_value(challenge.action_fingerprint),
+                f"expires_at={safe_console_value(challenge.expires_at)}",
+                "confirmation_evidence_only=True",
+                "confirmation_execution_allowed=False",
+            ]
+        )
     if debug:
         plan = response.deliberative_plan
         lines.extend(
@@ -755,6 +1062,40 @@ def render_response(response: OrchestratorResponse, *, debug: bool) -> str:
             ]
         )
     return "\n".join(lines)
+
+
+def render_action_confirmation_receipt(
+    receipt: HumanConfirmationReceiptContract,
+) -> str:
+    """Render non-authorizing receipt evidence without action payload or paths."""
+
+    return "\n".join(
+        [
+            f"receipt_id={safe_console_value(receipt.receipt_id)}",
+            f"challenge_id={safe_console_value(receipt.challenge_id)}",
+            "origin_request_id=" + safe_console_value(receipt.origin_request_id),
+            "action_fingerprint=" + safe_console_value(receipt.action_fingerprint),
+            "receipt_fingerprint="
+            + safe_console_value(human_confirmation_receipt_fingerprint(receipt)),
+            f"confirmed_at={safe_console_value(receipt.confirmed_at)}",
+            f"expires_at={safe_console_value(receipt.expires_at)}",
+            "confirmation_evidence_only=True",
+            f"single_use={safe_console_value(receipt.single_use)}",
+            f"read_only={safe_console_value(receipt.read_only)}",
+            f"immutable={safe_console_value(receipt.immutable)}",
+            f"execution_allowed={safe_console_value(receipt.execution_allowed)}",
+            "tool_dispatch_allowed="
+            + safe_console_value(receipt.tool_dispatch_allowed),
+            "runtime_activation_allowed="
+            + safe_console_value(receipt.runtime_activation_allowed),
+            "promotion_authorized="
+            + safe_console_value(receipt.promotion_authorized),
+            "automatic_promotion_allowed="
+            + safe_console_value(receipt.automatic_promotion_allowed),
+            "core_mutation_allowed="
+            + safe_console_value(receipt.core_mutation_allowed),
+        ]
+    )
 
 
 def safe_console_value(value: object | None) -> str:
@@ -1194,6 +1535,193 @@ def render_technology_absorption_candidates(proposals: list[object]) -> str:
     return "\n".join(lines)
 
 
+def render_technology_radar_intakes(
+    intakes: list[TechnologyRadarIntakeContract],
+) -> str:
+    if not intakes:
+        return "No reviewed technology radar intakes found."
+    lines: list[str] = []
+    for intake in intakes:
+        lines.extend(
+            [
+                f"intake_id={safe_console_value(intake.intake_id)}",
+                f"candidate_ref={safe_console_value(intake.candidate_ref)}",
+                f"intake_version={safe_console_value(intake.intake_version)}",
+                f"technology_name={safe_console_value(intake.technology_name)}",
+                f"source_kind={safe_console_value(intake.source_kind)}",
+                f"source_locator={safe_console_value(intake.source_locator)}",
+                "source_version_ref="
+                + safe_console_value(intake.source_version_ref),
+                "source_content_sha256="
+                + safe_console_value(intake.source_content_sha256),
+                f"license_id={safe_console_value(intake.license_id)}",
+                f"license_status={safe_console_value(intake.license_status)}",
+                f"retrieved_at={safe_console_value(intake.retrieved_at)}",
+                f"claims={safe_console_list(intake.claims)}",
+                f"risks={safe_console_list(intake.risks)}",
+                "absorption_class="
+                + safe_console_value(intake.absorption_class),
+                f"target_gap_refs={safe_console_list(intake.target_gap_refs)}",
+                f"review_status={safe_console_value(intake.review_status)}",
+                f"reviewer_ref={safe_console_value(intake.reviewer_ref)}",
+                f"reviewed_at={safe_console_value(intake.reviewed_at)}",
+                "source_trust_status="
+                + safe_console_value(intake.source_trust_status),
+                "network_fetch_allowed=False",
+                "knowledge_ingestion_allowed=False",
+                "dependency_installation_allowed=False",
+                "execution_allowed=False",
+                "runtime_activation_allowed=False",
+                "promotion_authorized=False",
+                "automatic_promotion_allowed=False",
+                "core_mutation_allowed=False",
+                "priority_mutation_allowed=False",
+                "---",
+            ]
+        )
+    if lines[-1] == "---":
+        lines.pop()
+    return "\n".join(lines)
+
+
+def render_technology_radar_intake_registration(
+    result: TechnologyRadarIntakeRegistrationResult,
+) -> str:
+    return "\n".join(
+        [
+            f"intake_id={safe_console_value(result.intake.intake_id)}",
+            f"candidate_ref={safe_console_value(result.intake.candidate_ref)}",
+            f"intake_version={safe_console_value(result.intake.intake_version)}",
+            f"intake_fingerprint={safe_console_value(result.intake_fingerprint)}",
+            f"assessment_status={safe_console_value(result.assessment.status)}",
+            f"persistence_status={safe_console_value(result.persistence_status)}",
+            "source_trusted=False",
+            "network_fetch_performed=False",
+            "knowledge_ingestion_performed=False",
+            "evolution_proposal_created=False",
+            "dependency_installation_performed=False",
+            "execution_performed=False",
+            "runtime_activation_performed=False",
+            "promotion_performed=False",
+            "core_mutation_performed=False",
+            "priority_mutation_performed=False",
+        ]
+    )
+
+
+def render_technology_experiment_registration(
+    result: TechnologyExperimentRegistrationResult,
+) -> str:
+    pack = result.pack
+    return "\n".join(
+        [
+            f"experiment_pack_id={safe_console_value(pack.experiment_pack_id)}",
+            f"pack_version={safe_console_value(pack.pack_version)}",
+            f"pack_fingerprint={safe_console_value(result.pack_fingerprint)}",
+            f"intake_id={safe_console_value(pack.intake_id)}",
+            f"pattern_id={safe_console_value(pack.pattern_id)}",
+            "sovereign_consumer_ref="
+            + safe_console_value(pack.sovereign_consumer_ref),
+            f"pack_status={safe_console_value(pack.pack_status)}",
+            f"persistence_status={safe_console_value(result.persistence_status)}",
+            "sandbox_only=True",
+            "source_fetched=False",
+            "dependency_installed=False",
+            "candidate_imported=False",
+            "candidate_executed=False",
+            "core_called=False",
+            "tool_dispatched=False",
+            "runtime_activated=False",
+            "promotion_performed=False",
+            "core_mutated=False",
+            "priority_mutated=False",
+        ]
+    )
+
+
+def render_technology_experiment_packs(
+    packs: list[TechnologyExperimentPackContract],
+) -> str:
+    if not packs:
+        return "No verified technology experiment packs found."
+    lines: list[str] = []
+    for pack in packs:
+        lines.extend(
+            [
+                f"experiment_pack_id={safe_console_value(pack.experiment_pack_id)}",
+                f"pack_version={safe_console_value(pack.pack_version)}",
+                f"intake_id={safe_console_value(pack.intake_id)}",
+                f"candidate_ref={safe_console_value(pack.candidate_ref)}",
+                f"pattern_id={safe_console_value(pack.pattern_id)}",
+                f"pattern_name={safe_console_value(pack.pattern_name)}",
+                f"translation_kind={safe_console_value(pack.translation_kind)}",
+                "sovereign_consumer_ref="
+                + safe_console_value(pack.sovereign_consumer_ref),
+                f"target_gap_refs={safe_console_list(pack.target_gap_refs)}",
+                f"license_id={safe_console_value(pack.license_id)}",
+                f"license_status={safe_console_value(pack.license_status)}",
+                f"pack_status={safe_console_value(pack.pack_status)}",
+                f"case_count={safe_console_value(len(pack.cases))}",
+                f"rollback_plan_ref={safe_console_value(pack.rollback_plan_ref)}",
+                "network_fetch_allowed=False",
+                "dependency_installation_allowed=False",
+                "external_code_execution_allowed=False",
+                "tool_dispatch_allowed=False",
+                "runtime_activation_allowed=False",
+                "release_authorized=False",
+                "promotion_authorized=False",
+                "automatic_promotion_allowed=False",
+                "core_mutation_allowed=False",
+                "priority_mutation_allowed=False",
+                "---",
+            ]
+        )
+    lines.pop()
+    return "\n".join(lines)
+
+
+def render_technology_experiment_runs(
+    runs: list[TechnologyExperimentEvalRunContract],
+) -> str:
+    if not runs:
+        return "No verified technology experiment evaluation runs found."
+    lines: list[str] = []
+    for run in runs:
+        lines.extend(
+            [
+                f"run_id={safe_console_value(run.run_id)}",
+                f"experiment_pack_id={safe_console_value(run.experiment_pack_id)}",
+                f"pack_version={safe_console_value(run.pack_version)}",
+                f"intake_id={safe_console_value(run.intake_id)}",
+                f"pattern_id={safe_console_value(run.pattern_id)}",
+                "sovereign_consumer_ref="
+                + safe_console_value(run.sovereign_consumer_ref),
+                f"status={safe_console_value(run.status)}",
+                f"readiness_status={safe_console_value(run.readiness_status)}",
+                "promotion_readiness="
+                + safe_console_value(run.promotion_readiness),
+                "comparison_conclusion="
+                + safe_console_value(run.comparison_conclusion),
+                f"pass_rate={safe_console_value(run.pass_rate)}",
+                f"total_cases={safe_console_value(run.total_cases)}",
+                f"regression_flags={safe_console_list(run.regression_flags)}",
+                f"limitations={safe_console_list(run.limitations)}",
+                f"blockers={safe_console_list(run.blockers)}",
+                "execution_allowed=False",
+                "tool_dispatch_allowed=False",
+                "runtime_activation_allowed=False",
+                "release_authorized=False",
+                "promotion_authorized=False",
+                "automatic_promotion_allowed=False",
+                "core_mutation_allowed=False",
+                "priority_mutation_allowed=False",
+                "---",
+            ]
+        )
+    lines.pop()
+    return "\n".join(lines)
+
+
 def render_experience_reflections(records: list[object]) -> str:
     if not records:
         return "No experience reflections found."
@@ -1338,6 +1866,217 @@ def render_skill_evolution_operator_view(
                 f"promotion_authorized={safe_console_value(item.promotion_authorized)}",
             ]
         )
+    return "\n".join(lines)
+
+
+def _render_workflow_lifecycle_transition(
+    transition: object,
+    *,
+    prefix: str = "",
+) -> list[str]:
+    return [
+        f"{prefix}transition_id="
+        + safe_console_value(getattr(transition, "transition_id", None)),
+        f"{prefix}workflow_profile="
+        + safe_console_value(getattr(transition, "workflow_profile", None)),
+        f"{prefix}route="
+        + safe_console_value(getattr(transition, "route", None)),
+        f"{prefix}transition_action="
+        + safe_console_value(getattr(transition, "transition_action", None)),
+        f"{prefix}transition_status="
+        + safe_console_value(getattr(transition, "transition_status", None)),
+        f"{prefix}revision="
+        + safe_console_value(getattr(transition, "revision", None)),
+        f"{prefix}previous_transition_id="
+        + safe_console_value(getattr(transition, "previous_transition_id", None)),
+        f"{prefix}previous_transition_fingerprint="
+        + safe_console_value(
+            getattr(transition, "previous_transition_fingerprint", None)
+        ),
+        f"{prefix}source_registry_ref="
+        + safe_console_value(getattr(transition, "source_registry_ref", None)),
+        f"{prefix}source_registry_fingerprint="
+        + safe_console_value(
+            getattr(transition, "source_registry_fingerprint", None)
+        ),
+        f"{prefix}active_version_ref="
+        + safe_console_value(getattr(transition, "active_version_ref", None)),
+        f"{prefix}active_definition_hash="
+        + safe_console_value(getattr(transition, "active_definition_hash", None)),
+        f"{prefix}baseline_version_ref="
+        + safe_console_value(getattr(transition, "baseline_version_ref", None)),
+        f"{prefix}baseline_definition_hash="
+        + safe_console_value(
+            getattr(transition, "baseline_definition_hash", None)
+        ),
+        f"{prefix}candidate_version_ref="
+        + safe_console_value(getattr(transition, "candidate_version_ref", None)),
+        f"{prefix}candidate_definition_hash="
+        + safe_console_value(
+            getattr(transition, "candidate_definition_hash", None)
+        ),
+        f"{prefix}active_workflow_steps="
+        + safe_console_list(list(getattr(transition, "active_workflow_steps", []))),
+        f"{prefix}active_workflow_checkpoints="
+        + safe_console_list(
+            list(getattr(transition, "active_workflow_checkpoints", []))
+        ),
+        f"{prefix}active_workflow_decision_points="
+        + safe_console_list(
+            list(getattr(transition, "active_workflow_decision_points", []))
+        ),
+        f"{prefix}active_success_criteria="
+        + safe_console_list(list(getattr(transition, "active_success_criteria", []))),
+        f"{prefix}evolution_proposal_id="
+        + safe_console_value(getattr(transition, "evolution_proposal_id", None)),
+        f"{prefix}proposal_fingerprint="
+        + safe_console_value(getattr(transition, "proposal_fingerprint", None)),
+        f"{prefix}review_decision_id="
+        + safe_console_value(getattr(transition, "review_decision_id", None)),
+        f"{prefix}review_decision_fingerprint="
+        + safe_console_value(
+            getattr(transition, "review_decision_fingerprint", None)
+        ),
+        f"{prefix}release_checklist_id="
+        + safe_console_value(getattr(transition, "release_checklist_id", None)),
+        f"{prefix}release_checklist_fingerprint="
+        + safe_console_value(
+            getattr(transition, "release_checklist_fingerprint", None)
+        ),
+        f"{prefix}promotion_gate_id="
+        + safe_console_value(getattr(transition, "promotion_gate_id", None)),
+        f"{prefix}promotion_gate_fingerprint="
+        + safe_console_value(
+            getattr(transition, "promotion_gate_fingerprint", None)
+        ),
+        f"{prefix}workflow_eval_run_id="
+        + safe_console_value(getattr(transition, "workflow_eval_run_id", None)),
+        f"{prefix}workflow_eval_run_fingerprint="
+        + safe_console_value(
+            getattr(transition, "workflow_eval_run_fingerprint", None)
+        ),
+        f"{prefix}rollback_plan_id="
+        + safe_console_value(getattr(transition, "rollback_plan_id", None)),
+        f"{prefix}rollback_plan_fingerprint="
+        + safe_console_value(
+            getattr(transition, "rollback_plan_fingerprint", None)
+        ),
+        f"{prefix}human_authorization_ref="
+        + safe_console_value(getattr(transition, "human_authorization_ref", None)),
+        f"{prefix}operator_ref="
+        + safe_console_value(getattr(transition, "operator_ref", None)),
+        f"{prefix}evidence_refs="
+        + safe_console_list(list(getattr(transition, "evidence_refs", []))),
+        f"{prefix}completed_test_refs="
+        + safe_console_list(list(getattr(transition, "completed_test_refs", []))),
+        f"{prefix}failure_refs="
+        + safe_console_list(list(getattr(transition, "failure_refs", []))),
+        f"{prefix}timestamp="
+        + safe_console_value(getattr(transition, "timestamp", None)),
+    ]
+
+
+def render_workflow_lifecycle_view(
+    *,
+    current_transition: object | None,
+    transitions: list[object],
+    workflow_profile: str | None,
+    route: str | None,
+    offset: int,
+    integrity_reasons: list[str] | None = None,
+) -> str:
+    integrity_reasons = list(integrity_reasons or [])
+    integrity_attention_required = bool(integrity_reasons)
+    if workflow_profile is None or route is None:
+        active_status = "scope_required"
+    elif current_transition is not None:
+        active_status = "found"
+    elif transitions or integrity_reasons:
+        active_status = "unavailable_unverified_tail"
+        integrity_attention_required = True
+    else:
+        active_status = "not_found"
+    lines = [
+        "workflow_lifecycle_view=read_only",
+        f"workflow_profile_filter={safe_console_value(workflow_profile)}",
+        f"route_filter={safe_console_value(route)}",
+        f"active_transition_status={active_status}",
+        "integrity_attention_required="
+        + safe_console_value(integrity_attention_required),
+        "integrity_reasons=" + safe_console_list(integrity_reasons),
+        f"history_offset={safe_console_value(offset)}",
+        f"history_count={safe_console_value(len(transitions))}",
+        "verified_records_only=True",
+        "memory_write_allowed=False",
+        "runtime_execution_allowed=False",
+        "tool_dispatch_allowed=False",
+        "active_registry_write_allowed=False",
+        "automatic_promotion_allowed=False",
+        "automatic_rollback_allowed=False",
+        "core_mutation_allowed=False",
+    ]
+    if current_transition is not None:
+        lines.extend(
+            _render_workflow_lifecycle_transition(
+                current_transition,
+                prefix="active_",
+            )
+        )
+    for transition in transitions:
+        lines.append("---")
+        lines.extend(_render_workflow_lifecycle_transition(transition))
+    return "\n".join(lines)
+
+
+def render_workflow_transition_result(
+    *,
+    transition: object,
+    assessment: object,
+    transition_recorded: bool,
+    release_bundle_verified: bool,
+) -> str:
+    governance_status = getattr(assessment, "status", None)
+    lines = [
+        "workflow_transition=explicit_human_action",
+        f"workflow_transition_status="
+        f"{'recorded' if transition_recorded else 'governance_blocked'}",
+        f"transition_recorded={safe_console_value(transition_recorded)}",
+        f"release_bundle_verified={safe_console_value(release_bundle_verified)}",
+        "governance_assessment_id="
+        + safe_console_value(getattr(assessment, "assessment_id", None)),
+        f"governance_status={safe_console_value(governance_status)}",
+        "governance_blockers="
+        + safe_console_list(list(getattr(assessment, "blockers", []))),
+        "governance_conditions="
+        + safe_console_list(list(getattr(assessment, "conditions", []))),
+        "governance_policy_refs="
+        + safe_console_list(list(getattr(assessment, "policy_refs", []))),
+        "human_review_required="
+        + safe_console_value(getattr(assessment, "human_review_required", None)),
+        "human_authorization_verified="
+        + safe_console_value(
+            getattr(assessment, "human_authorization_verified", None)
+        ),
+        "transition_recording_authorized="
+        + safe_console_value(
+            getattr(assessment, "transition_recording_authorized", None)
+        ),
+        "memory_write_mode="
+        + safe_console_value(getattr(assessment, "memory_write_mode", None)),
+        "active_registry_write_allowed=False",
+        "runtime_execution_allowed=False",
+        "tool_dispatch_allowed=False",
+        "automatic_promotion_allowed=False",
+        "automatic_rollback_allowed=False",
+        "core_mutation_allowed=False",
+        "next_operator_step="
+        + (
+            "verify_active_runtime_binding"
+            if transition_recorded
+            else "resolve_governance_blockers"
+        ),
+    ]
+    lines.extend(_render_workflow_lifecycle_transition(transition))
     return "\n".join(lines)
 
 
@@ -2175,6 +2914,78 @@ def render_daily_operator_utility_report(
     return "\n".join(lines)
 
 
+def render_decision_attribution_report(
+    report: DecisionOutcomeAttributionReportContract,
+) -> str:
+    lines = [
+        "decision_attribution=read_only",
+        f"report_id={safe_console_value(report.report_id)}",
+        f"report_status={safe_console_value(report.report_status)}",
+        f"generated_at={safe_console_value(report.generated_at)}",
+        f"record_count={report.record_count}",
+        f"correlation_only_count={report.correlation_only_count}",
+        f"declared_causality_count={report.declared_causality_count}",
+        f"insufficient_evidence_count={report.insufficient_evidence_count}",
+        f"feedback_linked_count={report.feedback_linked_count}",
+        f"comparator_count={report.comparator_count}",
+        f"failed_record_count={report.failed_record_count}",
+        "source_record_limit_reached="
+        f"{safe_console_value(report.source_record_limit_reached)}",
+        "source_event_limit_reached="
+        f"{safe_console_value(report.source_event_limit_reached)}",
+        f"limitations={safe_console_list(report.limitations)}",
+        f"evidence_refs={safe_console_list(report.evidence_refs)}",
+        f"read_only={safe_console_value(report.read_only)}",
+        f"causality_scope={safe_console_value(report.causality_scope)}",
+        f"causal_effect_proven={safe_console_value(report.causal_effect_proven)}",
+        f"gain_claim_status={safe_console_value(report.gain_claim_status)}",
+        "memory_write_allowed=False",
+        "execution_allowed=False",
+        "tool_dispatch_allowed=False",
+        f"promotion_authorized={safe_console_value(report.promotion_authorized)}",
+        "automatic_promotion_allowed="
+        f"{safe_console_value(report.automatic_promotion_allowed)}",
+        f"core_mutation_allowed={safe_console_value(report.core_mutation_allowed)}",
+    ]
+    for item in report.items:
+        attribution = item.attribution
+        lines.extend(
+            [
+                "---",
+                f"item_id={safe_console_value(item.item_id)}",
+                "attribution_record_id="
+                f"{safe_console_value(attribution.attribution_record_id)}",
+                f"request_id={safe_console_value(attribution.request_id)}",
+                f"mission_id={safe_console_value(attribution.mission_id)}",
+                "workflow_profile="
+                f"{safe_console_value(attribution.workflow_profile)}",
+                "attribution_status="
+                f"{safe_console_value(attribution.attribution_status)}",
+                "participating_refs="
+                f"{safe_console_list(attribution.participating_refs)}",
+                "declared_causal_refs="
+                f"{safe_console_list(attribution.declared_causal_refs)}",
+                f"correlated_refs={safe_console_list(attribution.correlated_refs)}",
+                f"feedback_status={safe_console_value(item.feedback_status)}",
+                f"feedback_refs={safe_console_list(item.feedback_refs)}",
+                f"comparator_status={safe_console_value(item.comparator_status)}",
+                f"comparator_refs={safe_console_list(item.comparator_refs)}",
+                f"item_limitations={safe_console_list(item.limitations)}",
+                f"item_read_only={safe_console_value(item.read_only)}",
+                "item_causal_effect_proven="
+                f"{safe_console_value(item.causal_effect_proven)}",
+                f"item_gain_claim_status={safe_console_value(item.gain_claim_status)}",
+                "item_promotion_authorized="
+                f"{safe_console_value(item.promotion_authorized)}",
+                "item_automatic_promotion_allowed="
+                f"{safe_console_value(item.automatic_promotion_allowed)}",
+                "item_core_mutation_allowed="
+                f"{safe_console_value(item.core_mutation_allowed)}",
+            ]
+        )
+    return "\n".join(lines)
+
+
 def render_mission_workflow_report(
     *,
     response: OrchestratorResponse,
@@ -2260,8 +3071,27 @@ def run_ask_command(console: JarvisConsole, args: Namespace) -> list[str]:
         mission_id=args.mission_id,
         operator_identity_ref=args.operator_identity_ref,
         canonical_user_ref=args.canonical_user_ref,
+        requested_autonomy_level=args.requested_autonomy_level,
+        max_autonomy_level=args.max_autonomy_level,
+        autonomy_confirmation_mode=args.autonomy_confirmation_mode,
+        action_confirmation_receipt_id=args.action_confirmation_receipt_id,
+        action_confirmation_origin_request_id=(
+            args.action_confirmation_origin_request_id
+        ),
     )
     return [render_response(response, debug=args.debug)]
+
+
+def run_action_confirm_command(
+    console: JarvisConsole,
+    args: Namespace,
+) -> list[str]:
+    receipt = console.confirm_action_challenge(
+        challenge_id=args.challenge_id,
+        action_fingerprint=args.action_fingerprint,
+        operator_identity_ref=args.operator_identity_ref,
+    )
+    return [render_action_confirmation_receipt(receipt)]
 
 
 def run_chat_command(console: JarvisConsole, args: Namespace) -> list[str]:
@@ -2409,6 +3239,167 @@ def run_technology_candidates_command(args: Namespace) -> list[str]:
     return [render_technology_absorption_candidates(proposals)]
 
 
+def run_technology_radar_intake_command(args: Namespace) -> list[str]:
+    intake, assessment = assess_technology_radar_intake_manifest(
+        args.manifest,
+        intake_root=args.intake_root,
+        expected_manifest_sha256=args.manifest_sha256,
+        knowledge_service=KnowledgeService(),
+    )
+    result = register_technology_radar_intake(
+        intake,
+        assessment=assessment,
+        evolution_service=_evolution_service_from_args(args),
+    )
+    return [render_technology_radar_intake_registration(result)]
+
+
+def run_technology_radar_command(args: Namespace) -> list[str]:
+    service = _evolution_service_from_args(args, read_only=True)
+    if args.intake_id is not None or args.candidate_ref is not None:
+        intake = service.get_technology_radar_intake(
+            intake_id=args.intake_id,
+            candidate_ref=args.candidate_ref,
+            intake_version=args.intake_version,
+        )
+        records = [intake] if intake is not None else []
+    else:
+        if args.intake_version is not None:
+            raise ValueError(
+                "intake-version requires intake-id or candidate-ref"
+            )
+        records = service.list_technology_radar_intakes(
+            source_kind=args.source_kind,
+            absorption_class=args.absorption_class,
+            target_gap_ref=args.target_gap_ref,
+            limit=args.limit,
+            offset=args.offset,
+        )
+    return [render_technology_radar_intakes(records)]
+
+
+def run_technology_experiment_pack_command(args: Namespace) -> list[str]:
+    reader = _evolution_service_from_args(args, read_only=True)
+    pack = assess_technology_experiment_pack_manifest(
+        args.manifest,
+        manifest_root=args.manifest_root,
+        expected_manifest_sha256=args.manifest_sha256,
+        intake_reader=reader,
+    )
+    intake = reader.get_technology_radar_intake(
+        intake_id=pack.intake_id,
+        intake_version=pack.intake_version,
+    )
+    if intake is None:
+        raise ValueError("technology experiment requires an exact verified intake")
+    result = register_technology_experiment_pack(
+        pack,
+        intake=intake,
+        evolution_service=_evolution_service_from_args(args),
+    )
+    return [render_technology_experiment_registration(result)]
+
+
+def run_technology_experiment_eval_command(args: Namespace) -> list[str]:
+    reader = _evolution_service_from_args(args, read_only=True)
+    pack, claim, run = prepare_technology_experiment_eval_manifest(
+        args.manifest,
+        manifest_root=args.manifest_root,
+        expected_manifest_sha256=args.manifest_sha256,
+        pack_reader=reader,
+    )
+    recorded = record_technology_experiment_eval(
+        pack=pack,
+        claim=claim,
+        run=run,
+        evolution_service=_evolution_service_from_args(args),
+    )
+    return [render_technology_experiment_runs([recorded])]
+
+
+def run_technology_experiments_command(args: Namespace) -> list[str]:
+    service = _evolution_service_from_args(args, read_only=True)
+    if (
+        isinstance(args.limit, bool)
+        or not isinstance(args.limit, int)
+        or not 1 <= args.limit <= 500
+    ):
+        raise ValueError("technology experiment limit must be between 1 and 500")
+    if (
+        isinstance(args.offset, bool)
+        or not isinstance(args.offset, int)
+        or args.offset < 0
+    ):
+        raise ValueError("technology experiment offset must be non-negative")
+    if args.view == "runs":
+        if args.run_id is not None:
+            run = service.get_technology_experiment_eval_run(run_id=args.run_id)
+            runs = (
+                [run]
+                if run is not None
+                and (
+                    args.experiment_pack_id is None
+                    or run.experiment_pack_id == args.experiment_pack_id
+                )
+                and (
+                    args.pack_version is None
+                    or run.pack_version == args.pack_version
+                )
+                and (args.intake_id is None or run.intake_id == args.intake_id)
+                and (
+                    args.candidate_ref is None
+                    or run.candidate_ref == args.candidate_ref
+                )
+                and (args.status is None or run.status == args.status)
+                else []
+            )
+            runs = runs[args.offset : args.offset + args.limit]
+        else:
+            runs = service.list_technology_experiment_eval_runs(
+                experiment_pack_id=args.experiment_pack_id,
+                pack_version=args.pack_version,
+                intake_id=args.intake_id,
+                candidate_ref=args.candidate_ref,
+                status=args.status,
+                limit=args.limit,
+                offset=args.offset,
+            )
+        return [render_technology_experiment_runs(runs)]
+    if args.run_id is not None:
+        raise ValueError("run-id requires --view runs")
+    if args.status is not None and args.status != "sandbox_ready":
+        raise ValueError("unsupported technology experiment pack status")
+    if args.experiment_pack_id is not None:
+        if args.pack_version is None:
+            raise ValueError("pack-version is required with experiment-pack-id")
+        pack = service.get_technology_experiment_pack(
+            experiment_pack_id=args.experiment_pack_id,
+            pack_version=args.pack_version,
+        )
+        packs = (
+            [pack]
+            if pack is not None
+            and (args.intake_id is None or pack.intake_id == args.intake_id)
+            and (
+                args.candidate_ref is None
+                or pack.candidate_ref == args.candidate_ref
+            )
+            and (args.status is None or pack.pack_status == args.status)
+            else []
+        )
+        packs = packs[args.offset : args.offset + args.limit]
+    else:
+        if args.pack_version is not None:
+            raise ValueError("pack-version requires experiment-pack-id")
+        packs = service.list_technology_experiment_packs(
+            intake_id=args.intake_id,
+            candidate_ref=args.candidate_ref,
+            limit=args.limit,
+            offset=args.offset,
+        )
+    return [render_technology_experiment_packs(packs)]
+
+
 def _memory_service_from_args(args: Namespace) -> MemoryService:
     memory_db = (
         Path(args.memory_db)
@@ -2421,7 +3412,11 @@ def _memory_service_from_args(args: Namespace) -> MemoryService:
     return MemoryService(database_url=f"sqlite:///{memory_db.as_posix()}")
 
 
-def _evolution_service_from_args(args: Namespace) -> EvolutionLabService:
+def _evolution_service_from_args(
+    args: Namespace,
+    *,
+    read_only: bool = False,
+) -> EvolutionLabService:
     evolution_db = (
         Path(args.evolution_db)
         if args.evolution_db
@@ -2430,7 +3425,28 @@ def _evolution_service_from_args(args: Namespace) -> EvolutionLabService:
     evolution_db = evolution_db.expanduser()
     if not evolution_db.is_absolute():
         evolution_db = (Path.cwd() / evolution_db).resolve()
-    return EvolutionLabService(database_path=str(evolution_db))
+    return EvolutionLabService(database_path=str(evolution_db), read_only=read_only)
+
+
+def _workflow_lifecycle_memory_service_from_args(
+    args: Namespace,
+    *,
+    evolution_service: EvolutionLabService,
+) -> MemoryService:
+    memory_db = (
+        Path(args.memory_db)
+        if args.memory_db
+        else ROOT / ".jarvis_runtime" / "memory.db"
+    )
+    memory_db = memory_db.expanduser()
+    if not memory_db.is_absolute():
+        memory_db = (Path.cwd() / memory_db).resolve()
+    return MemoryService(
+        database_url=f"sqlite:///{memory_db.as_posix()}",
+        workflow_lifecycle_transition_verifier=(
+            evolution_service.verify_persisted_workflow_lifecycle_transition
+        ),
+    )
 
 
 def run_experience_reflections_command(args: Namespace) -> list[str]:
@@ -2501,6 +3517,143 @@ def run_skill_evolution_command(args: Namespace) -> list[str]:
         generated_at=generated_at,
     )
     return [render_skill_evolution_operator_view(view)]
+
+
+def run_workflow_lifecycle_command(args: Namespace) -> list[str]:
+    if (args.workflow_profile is None) != (args.route is None):
+        raise ValueError(
+            "workflow lifecycle current view requires workflow profile and route together"
+        )
+    if not 1 <= args.limit <= 100:
+        raise ValueError("workflow lifecycle limit must be between 1 and 100")
+    if args.offset < 0:
+        raise ValueError("workflow lifecycle offset must be non-negative")
+    evolution_service = _evolution_service_from_args(args)
+    memory_service = _workflow_lifecycle_memory_service_from_args(
+        args,
+        evolution_service=evolution_service,
+    )
+    integrity_reasons: list[str] = []
+    try:
+        current_transition = (
+            memory_service.get_active_workflow_lifecycle(
+                workflow_profile=args.workflow_profile,
+                route=args.route,
+            )
+            if args.workflow_profile is not None and args.route is not None
+            else None
+        )
+    except WorkflowLifecycleIntegrityError as exc:
+        current_transition = None
+        integrity_reasons.append(str(exc))
+    transitions = memory_service.list_workflow_lifecycle_transitions(
+        workflow_profile=args.workflow_profile,
+        route=args.route,
+        limit=args.limit,
+        offset=args.offset,
+    )
+    visible_transitions = [
+        transition
+        for transition in [current_transition, *transitions]
+        if transition is not None
+    ]
+    verified_transition_ids: set[str] = set()
+    for transition in visible_transitions:
+        if transition.transition_id in verified_transition_ids:
+            continue
+        if not evolution_service.verify_persisted_workflow_lifecycle_transition(
+            transition
+        ):
+            raise ValueError(
+                "workflow lifecycle release bundle verification failed: "
+                + safe_console_value(transition.transition_id)
+            )
+        verified_transition_ids.add(transition.transition_id)
+    return [
+        render_workflow_lifecycle_view(
+            current_transition=current_transition,
+            transitions=list(transitions),
+            workflow_profile=args.workflow_profile,
+            route=args.route,
+            offset=args.offset,
+            integrity_reasons=integrity_reasons,
+        )
+    ]
+
+
+def run_workflow_transition_command(
+    args: Namespace,
+) -> list[str] | CommandExecutionResult:
+    failure_refs = list(args.failure_ref)
+    if args.action == "rollback_to_baseline" and not failure_refs:
+        raise ValueError("workflow rollback requires at least one failure reference")
+    if args.action == "activate_candidate" and failure_refs:
+        raise ValueError("workflow activation does not accept failure references")
+
+    evolution_service = _evolution_service_from_args(args)
+    memory_service = _workflow_lifecycle_memory_service_from_args(
+        args,
+        evolution_service=evolution_service,
+    )
+    current_transition = memory_service.get_active_workflow_lifecycle(
+        workflow_profile=args.workflow_profile,
+        route=args.route,
+    )
+    if args.action == "rollback_to_baseline" and current_transition is None:
+        raise ValueError("workflow rollback requires an active promoted transition")
+
+    transition = evolution_service.prepare_workflow_lifecycle_transition(
+        action=args.action,
+        evolution_proposal_id=args.proposal_id,
+        workflow_eval_run_id=args.workflow_eval_run_id,
+        human_authorization_ref=args.human_authorization_ref,
+        operator_ref=args.operator_ref,
+        evidence_refs=list(args.evidence_ref),
+        completed_test_refs=list(args.completed_test_ref),
+        completed_external_gates=list(args.completed_external_gate),
+        failure_refs=failure_refs,
+        current_transition=current_transition,
+        transition_id=args.transition_id,
+    )
+    release_bundle_verified = (
+        evolution_service.verify_persisted_workflow_lifecycle_transition(transition)
+    )
+    if not release_bundle_verified:
+        raise ValueError("prepared workflow lifecycle release bundle failed verification")
+    if (
+        transition.workflow_profile != args.workflow_profile
+        or transition.route != args.route
+    ):
+        raise ValueError("prepared workflow lifecycle scope does not match operator scope")
+
+    assessment = GovernanceService().assess_workflow_lifecycle_transition(
+        transition,
+        current_transition=current_transition,
+        release_bundle_verifier=(
+            evolution_service.verify_persisted_workflow_lifecycle_transition
+        ),
+    )
+    transition_recorded = False
+    if assessment.status == "approved":
+        memory_service.record_workflow_lifecycle_transition(
+            transition,
+            assessment,
+        )
+        transition_recorded = True
+    rendered = render_workflow_transition_result(
+        transition=transition,
+        assessment=assessment,
+        transition_recorded=transition_recorded,
+        release_bundle_verified=release_bundle_verified,
+    )
+    if transition_recorded:
+        return [rendered]
+    return CommandExecutionResult(
+        outputs=[rendered],
+        status="failed",
+        exit_code=int(ConsoleExitCode.GOVERNANCE_BLOCKED),
+        warnings=list(assessment.blockers),
+    )
 
 
 def run_mission_cycle_command(console: JarvisConsole, args: Namespace) -> list[str]:
@@ -2602,6 +3755,28 @@ def run_operator_outcomes_command(args: Namespace) -> list[str]:
         mission_limit=args.mission_limit,
     )
     return [render_daily_operator_utility_report(report)]
+
+
+def run_decision_attribution_command(args: Namespace) -> list[str]:
+    observability_db = Path(args.observability_db).expanduser()
+    if not observability_db.is_absolute():
+        observability_db = (Path.cwd() / observability_db).resolve()
+    report = build_decision_attribution_report(
+        observability_service=ObservabilityService(
+            database_path=str(observability_db)
+        ),
+        memory_service=_memory_service_from_args(args),
+        request_id=args.request_id,
+        mission_id=args.mission_id,
+        workflow_profile=args.workflow_profile,
+        limit=args.limit,
+    )
+    if args.output_dir:
+        output_dir = Path(args.output_dir).expanduser()
+        if not output_dir.is_absolute():
+            output_dir = (Path.cwd() / output_dir).resolve()
+        save_decision_attribution_report(report, output_dir=output_dir)
+    return [render_decision_attribution_report(report)]
 
 
 def run_command_reference_command(args: Namespace) -> list[str]:

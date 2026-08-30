@@ -12,12 +12,12 @@ from pathlib import Path
 from evolution_lab.service import EvolutionLabService
 from memory_service.service import MemoryService
 from observability_service.service import (
-    FlowAudit,
     ObservabilityQuery,
     ObservabilityService,
 )
 
 from shared.contracts import (
+    DECISION_ATTRIBUTION_GAIN_CLAIM_STATUS,
     EvolutionDecisionContract,
     EvolutionProposalContract,
     LearningOutcomeObservationContract,
@@ -43,6 +43,9 @@ def collect_longitudinal_inputs(
     proposals = evolution_service.list_recent_proposals(limit=safe_limit)
     decisions = evolution_service.list_recent_decisions(limit=safe_limit)
     guidance_records = memory_service.list_reviewed_learning_guidance(limit=safe_limit)
+    attribution_records = memory_service.list_decision_outcome_attributions(
+        limit=safe_limit
+    )
     targets = _proposal_targets(proposals, decisions)
     guidance_targets = _guidance_targets(guidance_records, decisions, generated_at)
     targets.extend(guidance_targets)
@@ -52,6 +55,7 @@ def collect_longitudinal_inputs(
         _runtime_observations(
             observability_service=observability_service,
             targets=targets,
+            attribution_records=attribution_records,
             limit=safe_limit,
         )
     )
@@ -305,6 +309,7 @@ def _runtime_observations(
     *,
     observability_service: ObservabilityService,
     targets: list[LearningVersionTargetContract],
+    attribution_records: list[object],
     limit: int,
 ) -> list[LearningOutcomeObservationContract]:
     guidance_targets = {
@@ -319,33 +324,97 @@ def _runtime_observations(
         if target.capability_kind == "reviewed_memory"
         and target.version_ref.startswith("baseline://")
     }
-    if not guidance_targets:
+    if not guidance_targets or not attribution_records:
         return []
     audits = observability_service.summarize_recent_requests(limit=limit)
-    feedback_by_mission = {
-        audit.mission_id: audit
-        for audit in audits
-        if audit.mission_id
-        and audit.operator_feedback_assessment != "not_applicable"
+    attribution_by_request = {
+        str(record.request_id): record
+        for record in attribution_records
+        if getattr(record, "attribution_status", None)
+        in {"correlation_only", "declared_causality"}
+        and getattr(record, "causal_effect_proven", None) is False
+        and getattr(record, "gain_claim_status", None)
+        == DECISION_ATTRIBUTION_GAIN_CLAIM_STATUS
+        and getattr(record, "memory_write_allowed", False) is False
+        and getattr(record, "execution_allowed", False) is False
+        and getattr(record, "tool_dispatch_allowed", False) is False
+        and getattr(record, "promotion_authorized", False) is False
+        and getattr(record, "automatic_promotion_allowed", False) is False
+        and getattr(record, "core_mutation_allowed", False) is False
     }
+    feedback_events = observability_service.list_recent_events(
+        ObservabilityQuery(
+            event_names=("operator_feedback_recorded",),
+            limit=max(100, min(limit * 4, 2000)),
+        )
+    )
+    feedback_by_experience: dict[str, list[object]] = {}
+    for event in feedback_events:
+        experience_id = str(
+            event.payload.get("operator_feedback_experience_id") or ""
+        ).strip()
+        if experience_id:
+            feedback_by_experience.setdefault(experience_id, []).append(event)
     observations: list[LearningOutcomeObservationContract] = []
     for audit in audits:
+        attribution = attribution_by_request.get(str(audit.request_id))
+        if attribution is None:
+            continue
         version_targets = [
             guidance_targets[ref]
-            for ref in audit.reviewed_learning_influence_refs
+            for ref in attribution.memory_selected_refs
             if ref in guidance_targets
         ]
-        if not version_targets and audit.workflow_profile in baseline_by_workflow:
-            version_targets = [baseline_by_workflow[str(audit.workflow_profile)]]
+        workflow_profile = attribution.workflow_profile or audit.workflow_profile
+        if not version_targets and workflow_profile in baseline_by_workflow:
+            version_targets = [baseline_by_workflow[str(workflow_profile)]]
         for target in version_targets:
-            feedback = feedback_by_mission.get(audit.mission_id)
-            assessment = (
-                feedback.operator_feedback_assessment if feedback else None
+            record_mission_id = (
+                str(attribution.mission_id)
+                if attribution.mission_id is not None
+                else None
             )
+            feedback_events_for_record = [
+                event
+                for event in feedback_by_experience.get(
+                    attribution.experience_id or "",
+                    [],
+                )
+                if record_mission_id
+                and str(
+                    event.payload.get("mission_id")
+                    or event.mission_id
+                    or ""
+                ).strip()
+                == record_mission_id
+            ]
+            assessments = [
+                str(event.payload.get("operator_feedback_assessment") or "").strip()
+                for event in feedback_events_for_record
+            ]
+            assessments = [item for item in assessments if item]
+            assessment = (
+                assessments[0] if len(set(assessments)) == 1 else None
+            )
+            ratings = [
+                event.payload.get("operator_feedback_rating")
+                for event in feedback_events_for_record
+                if isinstance(
+                    event.payload.get("operator_feedback_rating"),
+                    int,
+                )
+                and not isinstance(
+                    event.payload.get("operator_feedback_rating"),
+                    bool,
+                )
+            ]
+            rating = ratings[0] if ratings and len(set(ratings)) == 1 else None
             regression_flags = [
                 *audit.anomaly_flags,
                 *(f"missing_event:{item}" for item in audit.missing_required_events),
             ]
+            if len(set(assessments)) > 1:
+                regression_flags.append("operator_feedback:conflicting")
             if assessment in {"not_helpful", "correction"}:
                 regression_flags.append(f"operator_feedback:{assessment}")
             success = (
@@ -363,21 +432,24 @@ def _runtime_observations(
                     capability_id=target.capability_id,
                     version_ref=target.version_ref,
                     source_kind="runtime_mission",
-                    observed_at=_audit_timestamp(observability_service, audit),
+                    observed_at=attribution.observed_at,
                     success=success,
                     success_score=1.0 if success else 0.0,
                     rework_count=int(assessment in {"not_helpful", "correction"}),
                     evidence_refs=[
                         target.version_ref,
                         f"trace://{audit.request_id}",
-                        *(feedback.operator_feedback_evidence_refs if feedback else []),
+                        attribution.attribution_record_id,
+                        f"decision-attribution-status:{attribution.attribution_status}",
+                        f"gain-claim-status:{attribution.gain_claim_status}",
+                        *(event.event_id for event in feedback_events_for_record),
                     ],
-                    mission_id=audit.mission_id,
-                    request_id=audit.request_id,
-                    workflow_profile=audit.workflow_profile,
-                    route=audit.primary_route,
+                    mission_id=record_mission_id,
+                    request_id=str(attribution.request_id),
+                    workflow_profile=workflow_profile,
+                    route=attribution.route or audit.primary_route,
                     feedback_assessment=assessment,
-                    feedback_rating=feedback.operator_feedback_rating if feedback else None,
+                    feedback_rating=rating,
                     regression_flags=sorted(set(regression_flags)),
                     # The target lifecycle records the rollback once. Runtime
                     # observations must not multiply that event per mission.
@@ -389,13 +461,6 @@ def _runtime_observations(
                 )
             )
     return observations
-
-
-def _audit_timestamp(service: ObservabilityService, audit: FlowAudit) -> str:
-    events = service.list_recent_events(
-        ObservabilityQuery(request_id=audit.request_id, limit=100)
-    )
-    return events[-1].timestamp if events else datetime.now(UTC).isoformat()
 
 
 def _target(

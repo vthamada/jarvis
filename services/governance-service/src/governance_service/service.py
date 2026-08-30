@@ -1,34 +1,81 @@
-﻿"""Governance service with explicit low, moderate, and high-risk policies."""
+"""Governance service with explicit low, moderate, and high-risk policies."""
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
+from hashlib import sha256
+from pathlib import Path
 from uuid import uuid4
 
+from shared.action_confirmation import (
+    action_confirmation_challenge_fingerprint,
+    action_intent_fingerprint,
+    human_confirmation_receipt_fingerprint,
+)
+from shared.adapter_execution_permissions import (
+    LOCAL_TEXT_FILE_EXECUTION_MAX_TTL_SECONDS,
+    build_adapter_execution_grant,
+)
+from shared.adapter_permissions import build_adapter_grant
 from shared.artifact_policy import (
     canonical_artifact_states_from_mission,
     validate_artifact_lineage,
     validate_artifact_transition,
     validate_artifact_version,
 )
-from shared.autonomy_ladder import capability_mode_exceeds_autonomy_limit
+from shared.autonomy_ladder import (
+    AUTONOMY_ACTION_POLICY_VERSION,
+    evaluate_autonomy_action,
+)
 from shared.contracts import (
     WORK_ITEM_PRIORITY_LEVELS,
+    ActionConfirmationChallengeContract,
+    ActionConfirmationClaimContract,
+    ActionIntentContract,
+    AdapterActionRequestContract,
+    AdapterDescriptorContract,
+    AdapterExecutionDescriptorContract,
+    AdapterExecutionGrantClaimContract,
+    AdapterExecutionGrantContract,
+    AdapterExecutionRegistrySnapshotContract,
+    AdapterExecutionRequestContract,
+    AdapterGrantClaimContract,
+    AdapterGrantContract,
+    AdapterRegistrySnapshotContract,
+    AutonomyActionPolicyDecisionContract,
     DeliberativePlanContract,
     GovernanceCheckContract,
     GovernanceDecisionContract,
+    HumanConfirmationReceiptContract,
     InputContract,
     KnowledgeEvidenceGovernanceContract,
+    LocalTextFilePreflightAttestationContract,
+    LocalTextFilePreflightContract,
+    LocalTextFileRollbackDescriptorContract,
+    LocalTextFileRollbackGrantClaimContract,
+    LocalTextFileRollbackGrantContract,
+    LocalTextFileRollbackRegistrySnapshotContract,
+    LocalTextFileRollbackRequestContract,
+    LocalTextMutationReceipt,
+    LocalTextRollbackReceipt,
     MemoryInfluenceGovernanceAssessmentContract,
     MemoryInfluencePolicyDecisionContract,
     MemoryLifecycleCandidateContract,
     MemoryLifecycleGovernanceAssessmentContract,
     MissionStateContract,
     OpenLoopStateContract,
+    OperationDispatchContract,
     OperatorFeedbackContract,
     SpecialistInvocationContract,
     SpecialistSelectionContract,
+    WorkflowLifecycleGovernanceAssessmentContract,
+    WorkflowLifecycleTransitionContract,
+)
+from shared.local_text_rollback_permissions import (
+    LOCAL_TEXT_FILE_ROLLBACK_MAX_TTL_SECONDS,
+    build_local_text_file_rollback_grant,
 )
 from shared.types import (
     GovernanceCheckId,
@@ -44,6 +91,18 @@ from shared.work_item_policy import (
     unresolved_dependency_refs,
     validate_work_item_graph,
     validate_work_item_transition,
+)
+from shared.workflow_lifecycle import (
+    validate_workflow_lifecycle_transition,
+    workflow_lifecycle_transition_fingerprint,
+)
+
+from .repository import (
+    ActionConfirmationContext,
+    ActionConfirmationRepository,
+    AdapterExecutionGrantContext,
+    AdapterGrantContext,
+    LocalTextFileRollbackGrantContext,
 )
 
 HIGH_RISK_KEYWORDS = (
@@ -80,6 +139,934 @@ class GovernanceService:
     """Apply explicit request and memory policies for the v1 flow."""
 
     name = "governance-service"
+
+    def __init__(
+        self,
+        action_confirmation_database_path: str | Path = ":memory:",
+        *,
+        action_confirmation_repository: ActionConfirmationRepository | None = None,
+        trusted_execution_clock: Callable[[], str] | None = None,
+    ) -> None:
+        execution_clock = trusted_execution_clock or self.now
+        if not callable(execution_clock):
+            raise TypeError("trusted execution clock must be callable")
+        self.action_confirmation_repository = (
+            action_confirmation_repository
+            if action_confirmation_repository is not None
+            else ActionConfirmationRepository(
+                action_confirmation_database_path,
+                trusted_execution_clock=execution_clock,
+            )
+        )
+        self._trusted_execution_clock = execution_clock
+
+    def activate_adapter_registry(
+        self,
+        snapshot: AdapterRegistrySnapshotContract,
+        *,
+        activated_at: str | None = None,
+    ) -> AdapterRegistrySnapshotContract:
+        """Activate one exact immutable allowlist snapshot explicitly."""
+
+        return self.action_confirmation_repository.activate_adapter_registry(
+            snapshot,
+            activated_at=activated_at or self.now(),
+        )
+
+    def load_active_adapter_registry(self) -> AdapterRegistrySnapshotContract:
+        """Load the current exact allowlist snapshot."""
+
+        return self.action_confirmation_repository.load_active_adapter_registry()
+
+    def resolve_active_adapter_descriptor(
+        self,
+        action_request: AdapterActionRequestContract,
+    ) -> tuple[AdapterRegistrySnapshotContract, AdapterDescriptorContract]:
+        """Resolve one request against the current allowlist without granting it."""
+
+        return self.action_confirmation_repository.resolve_active_adapter_descriptor(action_request)
+
+    def issue_adapter_grant(
+        self,
+        intent: ActionIntentContract,
+        action_request: AdapterActionRequestContract,
+        autonomy_decision: AutonomyActionPolicyDecisionContract,
+        *,
+        expected_registry_fingerprint: str,
+        expected_descriptor_fingerprint: str,
+        issued_at: str | None = None,
+        expires_at: str | None = None,
+    ) -> AdapterGrantContract:
+        """Persist one exact metadata-only grant under the active allowlist."""
+
+        issuance_time = issued_at or str(intent.issued_at)
+        registry, descriptor = self.resolve_active_adapter_descriptor(action_request)
+        if registry.registry_fingerprint != expected_registry_fingerprint:
+            raise ValueError("adapter registry fingerprint changed before grant issuance")
+        if descriptor.descriptor_fingerprint != expected_descriptor_fingerprint:
+            raise ValueError("adapter descriptor fingerprint changed before grant issuance")
+        intent_fingerprint = action_intent_fingerprint(intent)
+        grant_identity = sha256(
+            f"{intent_fingerprint}:{intent.nonce}:adapter-grant".encode("utf-8")
+        ).hexdigest()
+        grant_nonce = sha256(
+            f"{intent.nonce}:{intent_fingerprint}:grant-nonce".encode("utf-8")
+        ).hexdigest()
+        grant = build_adapter_grant(
+            grant_id=f"adapter-grant://{grant_identity}",
+            subject_ref=intent.operator_identity_ref,
+            request=action_request,
+            descriptor=descriptor,
+            registry=registry,
+            intent=intent,
+            intent_fingerprint=intent_fingerprint,
+            autonomy_decision=autonomy_decision,
+            policy_version=AUTONOMY_ACTION_POLICY_VERSION,
+            nonce=grant_nonce,
+            issued_at=issuance_time,
+            expires_at=expires_at or intent.expires_at,
+            now=issuance_time,
+        )
+        return self.action_confirmation_repository.record_adapter_grant(
+            intent,
+            grant,
+            autonomy_decision,
+            verified_at=issuance_time,
+        )
+
+    def load_adapter_grant_context(self, grant_id: str) -> AdapterGrantContext:
+        """Load and reverify a persisted historical grant context."""
+
+        return self.action_confirmation_repository.load_adapter_grant_context(grant_id)
+
+    def verify_adapter_grant_for_preflight_exact(
+        self,
+        grant_id: str,
+        *,
+        subject_ref: str,
+        action_request: AdapterActionRequestContract,
+        expected_grant_fingerprint: str,
+        expected_action_fingerprint: str,
+        expected_content_digest: str,
+        expected_precondition_digest: str,
+        expected_descriptor_fingerprint: str,
+        expected_registry_fingerprint: str,
+        expected_authorization_expires_at: str,
+        preflight_expires_at: str,
+        intent_fingerprint: str,
+        verified_at: str,
+    ) -> bool:
+        """Verify exact prepare-only preflight authority without consuming evidence."""
+
+        return self.action_confirmation_repository.verify_adapter_grant_for_preflight_exact(
+            grant_id,
+            subject_ref=subject_ref,
+            action_request=action_request,
+            expected_grant_fingerprint=expected_grant_fingerprint,
+            expected_action_fingerprint=expected_action_fingerprint,
+            expected_content_digest=expected_content_digest,
+            expected_precondition_digest=expected_precondition_digest,
+            expected_descriptor_fingerprint=expected_descriptor_fingerprint,
+            expected_registry_fingerprint=expected_registry_fingerprint,
+            expected_authorization_expires_at=expected_authorization_expires_at,
+            preflight_expires_at=preflight_expires_at,
+            intent_fingerprint=intent_fingerprint,
+            verified_at=verified_at,
+        )
+
+    def activate_adapter_execution_registry(
+        self,
+        snapshot: AdapterExecutionRegistrySnapshotContract,
+        *,
+        activated_at: str | None = None,
+    ) -> AdapterExecutionRegistrySnapshotContract:
+        """Activate a separate execution-only adapter allowlist snapshot."""
+
+        return self.action_confirmation_repository.activate_adapter_execution_registry(
+            snapshot,
+            activated_at=activated_at or self.now(),
+        )
+
+    def load_active_adapter_execution_registry(
+        self,
+    ) -> AdapterExecutionRegistrySnapshotContract:
+        """Load the current execution-only registry snapshot."""
+
+        return self.action_confirmation_repository.load_active_adapter_execution_registry()
+
+    def resolve_active_adapter_execution_descriptor(
+        self,
+        execution_request: AdapterExecutionRequestContract,
+    ) -> tuple[
+        AdapterExecutionRegistrySnapshotContract,
+        AdapterExecutionDescriptorContract,
+    ]:
+        """Resolve an attested execution request without issuing authority."""
+
+        return self.action_confirmation_repository.resolve_active_adapter_execution_descriptor(
+            execution_request
+        )
+
+    def attest_local_text_file_preflight(
+        self,
+        preflight: LocalTextFilePreflightContract,
+    ) -> tuple[
+        LocalTextFilePreflightAttestationContract,
+        AdapterExecutionRequestContract,
+    ]:
+        """Persist trusted, content-free evidence for a materialized preflight."""
+
+        return self.action_confirmation_repository.record_local_text_file_preflight_attestation(
+            preflight,
+            attested_at=self._execution_now(),
+        )
+
+    def issue_adapter_execution_grant(
+        self,
+        intent: ActionIntentContract,
+        execution_request: AdapterExecutionRequestContract,
+        autonomy_decision: AutonomyActionPolicyDecisionContract,
+        *,
+        expected_registry_fingerprint: str,
+        expected_descriptor_fingerprint: str,
+        expires_at: str | None = None,
+    ) -> AdapterExecutionGrantContract:
+        """Issue one confirmation-required execution grant from trusted evidence."""
+
+        issuance_time = self._execution_now()
+        registry, descriptor = self.resolve_active_adapter_execution_descriptor(execution_request)
+        if registry.registry_fingerprint != expected_registry_fingerprint:
+            raise ValueError("adapter execution registry changed before grant issuance")
+        if descriptor.descriptor_fingerprint != expected_descriptor_fingerprint:
+            raise ValueError("adapter execution descriptor changed before grant issuance")
+        intent_fingerprint = action_intent_fingerprint(intent)
+        grant_identity = sha256(
+            (
+                f"{execution_request.execution_request_fingerprint}:"
+                f"{intent_fingerprint}:adapter-execution-grant"
+            ).encode("utf-8")
+        ).hexdigest()
+        grant_nonce = sha256(
+            (
+                f"{execution_request.preflight_attestation_fingerprint}:"
+                f"{intent.nonce}:execution-grant-nonce"
+            ).encode("utf-8")
+        ).hexdigest()
+        grant_id = f"adapter-execution-grant://{grant_identity}"
+        try:
+            existing = self.load_adapter_execution_grant_context(grant_id)
+        except KeyError:
+            existing = None
+        if existing is not None:
+            if (
+                existing.intent == intent
+                and existing.execution_request == execution_request
+                and existing.autonomy_decision == autonomy_decision
+                and existing.registry.registry_fingerprint == expected_registry_fingerprint
+                and existing.descriptor.descriptor_fingerprint == expected_descriptor_fingerprint
+            ):
+                return existing.grant
+            raise ValueError("adapter execution grant identity has different evidence")
+        grant = build_adapter_execution_grant(
+            grant_id=grant_id,
+            subject_ref=intent.operator_identity_ref,
+            request=execution_request,
+            descriptor=descriptor,
+            registry=registry,
+            intent=intent,
+            intent_fingerprint=intent_fingerprint,
+            autonomy_decision=autonomy_decision,
+            policy_version=AUTONOMY_ACTION_POLICY_VERSION,
+            nonce=grant_nonce,
+            issued_at=issuance_time,
+            expires_at=(
+                expires_at
+                or min(
+                    datetime.fromisoformat(issuance_time.replace("Z", "+00:00"))
+                    + timedelta(seconds=LOCAL_TEXT_FILE_EXECUTION_MAX_TTL_SECONDS),
+                    datetime.fromisoformat(str(intent.expires_at).replace("Z", "+00:00")),
+                    datetime.fromisoformat(
+                        str(execution_request.preflight_expires_at).replace("Z", "+00:00")
+                    ),
+                    datetime.fromisoformat(
+                        str(execution_request.preflight_authorization_expires_at).replace(
+                            "Z", "+00:00"
+                        )
+                    ),
+                ).isoformat()
+            ),
+            now=issuance_time,
+        )
+        return self.action_confirmation_repository.record_adapter_execution_grant(
+            intent,
+            grant,
+            autonomy_decision,
+            verified_at=issuance_time,
+        )
+
+    def load_adapter_execution_grant_context(
+        self,
+        grant_id: str,
+    ) -> AdapterExecutionGrantContext:
+        """Load historical execution evidence without reopening active authority."""
+
+        return self.action_confirmation_repository.load_adapter_execution_grant_context(grant_id)
+
+    def verify_adapter_execution_grant_for_staging_exact(
+        self,
+        grant_id: str,
+        *,
+        subject_ref: str,
+        expected_grant_fingerprint: str,
+        expected_action_fingerprint: str,
+        expected_execution_request_fingerprint: str,
+        intent_fingerprint: str,
+        confirmation_receipt_id: str,
+    ) -> bool:
+        """Verify exact active authority before journal, stage, or backup I/O."""
+
+        return self.action_confirmation_repository.verify_adapter_execution_grant_for_staging_exact(
+            grant_id,
+            subject_ref=subject_ref,
+            expected_grant_fingerprint=expected_grant_fingerprint,
+            expected_action_fingerprint=expected_action_fingerprint,
+            expected_execution_request_fingerprint=(expected_execution_request_fingerprint),
+            intent_fingerprint=intent_fingerprint,
+            confirmation_receipt_id=confirmation_receipt_id,
+            verified_at=self._execution_now(),
+        )
+
+    def claim_adapter_execution_grant_exact(
+        self,
+        grant_id: str,
+        *,
+        operation_id: str,
+        journal_reservation_fingerprint: str,
+        subject_ref: str,
+        expected_grant_fingerprint: str,
+        expected_action_fingerprint: str,
+        expected_execution_request_fingerprint: str,
+        intent_fingerprint: str,
+        confirmation_receipt_id: str,
+    ) -> AdapterExecutionGrantClaimContract:
+        """Atomically claim execution and its confirmation at trusted current time."""
+
+        return self.action_confirmation_repository.claim_adapter_execution_grant_exact(
+            grant_id,
+            operation_id=operation_id,
+            journal_reservation_fingerprint=journal_reservation_fingerprint,
+            subject_ref=subject_ref,
+            expected_grant_fingerprint=expected_grant_fingerprint,
+            expected_action_fingerprint=expected_action_fingerprint,
+            expected_execution_request_fingerprint=(expected_execution_request_fingerprint),
+            intent_fingerprint=intent_fingerprint,
+            confirmation_receipt_id=confirmation_receipt_id,
+            claimed_at=self._execution_now(),
+        )
+
+    def verify_adapter_execution_claim_for_effect_start_exact(
+        self,
+        claim: AdapterExecutionGrantClaimContract,
+        *,
+        observed_root_config_fingerprint: str,
+        observed_precondition_content_sha256: str,
+        observed_desired_content_sha256: str,
+    ) -> bool:
+        """Recheck persisted claim plus physical bindings immediately before effect."""
+
+        repository = self.action_confirmation_repository
+        return repository.verify_adapter_execution_claim_for_effect_start_exact(
+            claim,
+            observed_root_config_fingerprint=observed_root_config_fingerprint,
+            observed_precondition_content_sha256=(observed_precondition_content_sha256),
+            observed_desired_content_sha256=observed_desired_content_sha256,
+            verified_at=self._execution_now(),
+        )
+
+    def verify_adapter_execution_claim_for_recovery_exact(
+        self,
+        claim: AdapterExecutionGrantClaimContract,
+    ) -> bool:
+        """Verify historical evidence only; never authorize a new effect."""
+
+        return (
+            self.action_confirmation_repository.verify_adapter_execution_claim_for_recovery_exact(
+                claim
+            )
+        )
+
+    def load_adapter_execution_claim_for_recovery_exact(
+        self,
+        operation_id: str,
+        *,
+        journal_reservation_fingerprint: str | None = None,
+    ) -> AdapterExecutionGrantClaimContract:
+        """Find historical claim evidence by operation, with optional journal binding."""
+
+        return self.action_confirmation_repository.load_adapter_execution_claim_for_recovery_exact(
+            operation_id,
+            journal_reservation_fingerprint=journal_reservation_fingerprint,
+        )
+
+    def activate_local_text_file_rollback_registry(
+        self,
+        snapshot: LocalTextFileRollbackRegistrySnapshotContract,
+    ) -> LocalTextFileRollbackRegistrySnapshotContract:
+        """Activate a rollback-only allowlist without changing apply authority."""
+
+        return self.action_confirmation_repository.activate_local_text_file_rollback_registry(
+            snapshot,
+        )
+
+    def record_local_text_mutation_receipt(
+        self,
+        receipt: LocalTextMutationReceipt,
+    ) -> LocalTextMutationReceipt:
+        """Persist exact post-apply evidence independently of rollback intent."""
+
+        return self.action_confirmation_repository.record_local_text_mutation_receipt(receipt)
+
+    def load_local_text_mutation_receipt_exact(
+        self,
+        operation_id: str,
+        *,
+        expected_receipt_fingerprint: str,
+    ) -> LocalTextMutationReceipt:
+        """Load one exact persisted mutation proof without reopening authority."""
+
+        return self.action_confirmation_repository.load_local_text_mutation_receipt_exact(
+            operation_id,
+            expected_receipt_fingerprint=expected_receipt_fingerprint,
+        )
+
+    def verify_local_text_mutation_receipt_exact(
+        self,
+        receipt: LocalTextMutationReceipt,
+    ) -> bool:
+        """Fail closed unless a mutation receipt exactly matches the ledger."""
+
+        return self.action_confirmation_repository.verify_local_text_mutation_receipt_exact(receipt)
+
+    def load_active_local_text_file_rollback_registry(
+        self,
+    ) -> LocalTextFileRollbackRegistrySnapshotContract:
+        return self.action_confirmation_repository.load_active_local_text_file_rollback_registry()
+
+    def resolve_active_local_text_file_rollback_descriptor(
+        self,
+        request: LocalTextFileRollbackRequestContract,
+    ) -> tuple[
+        LocalTextFileRollbackRegistrySnapshotContract,
+        LocalTextFileRollbackDescriptorContract,
+    ]:
+        return (
+            self.action_confirmation_repository.resolve_active_local_text_file_rollback_descriptor(
+                request
+            )
+        )
+
+    def prepare_local_text_file_rollback(
+        self,
+        mutation_receipt: LocalTextMutationReceipt,
+        *,
+        rollback_operation_id: str,
+    ) -> LocalTextFileRollbackRequestContract:
+        """Load trusted mutation evidence and derive one dedicated rollback request."""
+
+        return self.action_confirmation_repository.prepare_local_text_file_rollback(
+            mutation_receipt,
+            rollback_operation_id=rollback_operation_id,
+        )
+
+    def issue_local_text_file_rollback_grant(
+        self,
+        intent: ActionIntentContract,
+        rollback_request: LocalTextFileRollbackRequestContract,
+        autonomy_decision: AutonomyActionPolicyDecisionContract,
+        *,
+        expected_registry_fingerprint: str,
+        expected_descriptor_fingerprint: str,
+        expires_at: str | None = None,
+    ) -> LocalTextFileRollbackGrantContract:
+        """Issue a fresh confirmation-required rollback grant from persisted evidence."""
+
+        issuance_time = self._execution_now()
+        registry, descriptor = self.resolve_active_local_text_file_rollback_descriptor(
+            rollback_request
+        )
+        if registry.registry_fingerprint != expected_registry_fingerprint:
+            raise ValueError("local text rollback registry changed before issuance")
+        if descriptor.descriptor_fingerprint != expected_descriptor_fingerprint:
+            raise ValueError("local text rollback descriptor changed before issuance")
+        intent_fingerprint = action_intent_fingerprint(intent)
+        identity = sha256(
+            (
+                f"{rollback_request.rollback_request_fingerprint}:"
+                f"{intent_fingerprint}:local-text-rollback-grant"
+            ).encode("utf-8")
+        ).hexdigest()
+        nonce = sha256(
+            (
+                f"{rollback_request.mutation_receipt_fingerprint}:"
+                f"{intent.nonce}:rollback-grant-nonce"
+            ).encode("utf-8")
+        ).hexdigest()
+        grant_id = f"local-text-rollback-grant://{identity}"
+        try:
+            existing = self.load_local_text_file_rollback_grant_context(grant_id)
+        except KeyError:
+            existing = None
+        if existing is not None:
+            if (
+                existing.intent == intent
+                and existing.rollback_request == rollback_request
+                and existing.autonomy_decision == autonomy_decision
+                and existing.registry.registry_fingerprint == expected_registry_fingerprint
+                and existing.descriptor.descriptor_fingerprint == expected_descriptor_fingerprint
+            ):
+                return existing.grant
+            raise ValueError("local text rollback grant identity has different evidence")
+        effective_expiry = (
+            expires_at
+            or min(
+                datetime.fromisoformat(issuance_time.replace("Z", "+00:00"))
+                + timedelta(seconds=LOCAL_TEXT_FILE_ROLLBACK_MAX_TTL_SECONDS),
+                datetime.fromisoformat(str(intent.expires_at).replace("Z", "+00:00")),
+                datetime.fromisoformat(str(rollback_request.expires_at).replace("Z", "+00:00")),
+            ).isoformat()
+        )
+        grant = build_local_text_file_rollback_grant(
+            grant_id=grant_id,
+            request=rollback_request,
+            descriptor=descriptor,
+            registry=registry,
+            intent=intent,
+            intent_fingerprint=intent_fingerprint,
+            autonomy_decision=autonomy_decision,
+            nonce=nonce,
+            issued_at=issuance_time,
+            expires_at=effective_expiry,
+            now=issuance_time,
+        )
+        return self.action_confirmation_repository.record_local_text_file_rollback_grant(
+            intent,
+            grant,
+            autonomy_decision,
+        )
+
+    def load_local_text_file_rollback_grant_context(
+        self,
+        grant_id: str,
+    ) -> LocalTextFileRollbackGrantContext:
+        return self.action_confirmation_repository.load_local_text_file_rollback_grant_context(
+            grant_id
+        )
+
+    def verify_local_text_file_rollback_grant_for_staging_exact(
+        self,
+        grant_id: str,
+        *,
+        subject_ref: str,
+        expected_grant_fingerprint: str,
+        expected_action_fingerprint: str,
+        expected_rollback_request_fingerprint: str,
+        intent_fingerprint: str,
+        confirmation_receipt_id: str,
+    ) -> bool:
+        repository = self.action_confirmation_repository
+        return repository.verify_local_text_file_rollback_grant_for_staging_exact(
+            grant_id,
+            subject_ref=subject_ref,
+            expected_grant_fingerprint=expected_grant_fingerprint,
+            expected_action_fingerprint=expected_action_fingerprint,
+            expected_rollback_request_fingerprint=(expected_rollback_request_fingerprint),
+            intent_fingerprint=intent_fingerprint,
+            confirmation_receipt_id=confirmation_receipt_id,
+        )
+
+    def claim_local_text_file_rollback_grant_exact(
+        self,
+        grant_id: str,
+        *,
+        rollback_operation_id: str,
+        rollback_journal_reservation_fingerprint: str,
+        subject_ref: str,
+        expected_grant_fingerprint: str,
+        expected_action_fingerprint: str,
+        expected_rollback_request_fingerprint: str,
+        intent_fingerprint: str,
+        confirmation_receipt_id: str,
+    ) -> LocalTextFileRollbackGrantClaimContract:
+        return self.action_confirmation_repository.claim_local_text_file_rollback_grant_exact(
+            grant_id,
+            rollback_operation_id=rollback_operation_id,
+            rollback_journal_reservation_fingerprint=(rollback_journal_reservation_fingerprint),
+            subject_ref=subject_ref,
+            expected_grant_fingerprint=expected_grant_fingerprint,
+            expected_action_fingerprint=expected_action_fingerprint,
+            expected_rollback_request_fingerprint=(expected_rollback_request_fingerprint),
+            intent_fingerprint=intent_fingerprint,
+            confirmation_receipt_id=confirmation_receipt_id,
+        )
+
+    def verify_local_text_file_rollback_claim_for_effect_start_exact(
+        self,
+        claim: LocalTextFileRollbackGrantClaimContract,
+        *,
+        observed_root_config_fingerprint: str,
+        observed_expected_current_sha256: str,
+        observed_restored_content_sha256: str,
+    ) -> bool:
+        repository = self.action_confirmation_repository
+        return repository.verify_local_text_file_rollback_claim_for_effect_start_exact(
+            claim,
+            observed_root_config_fingerprint=observed_root_config_fingerprint,
+            observed_expected_current_sha256=observed_expected_current_sha256,
+            observed_restored_content_sha256=observed_restored_content_sha256,
+        )
+
+    def verify_local_text_file_rollback_claim_for_recovery_exact(
+        self,
+        claim: LocalTextFileRollbackGrantClaimContract,
+    ) -> bool:
+        repository = self.action_confirmation_repository
+        return repository.verify_local_text_file_rollback_claim_for_recovery_exact(claim)
+
+    def load_local_text_file_rollback_claim_for_recovery_exact(
+        self,
+        rollback_operation_id: str,
+        *,
+        rollback_journal_reservation_fingerprint: str | None = None,
+    ) -> LocalTextFileRollbackGrantClaimContract:
+        repository = self.action_confirmation_repository
+        return repository.load_local_text_file_rollback_claim_for_recovery_exact(
+            rollback_operation_id,
+            rollback_journal_reservation_fingerprint=(rollback_journal_reservation_fingerprint),
+        )
+
+    def record_local_text_rollback_receipt(
+        self,
+        receipt: LocalTextRollbackReceipt,
+    ) -> LocalTextRollbackReceipt:
+        return self.action_confirmation_repository.record_local_text_rollback_receipt(receipt)
+
+    def load_local_text_rollback_receipt_exact(
+        self,
+        rollback_operation_id: str,
+        *,
+        expected_rollback_receipt_fingerprint: str,
+    ) -> LocalTextRollbackReceipt:
+        """Load one exact persisted rollback proof without reopening authority."""
+
+        repository = self.action_confirmation_repository
+        return repository.load_local_text_rollback_receipt_exact(
+            rollback_operation_id,
+            expected_rollback_receipt_fingerprint=(expected_rollback_receipt_fingerprint),
+        )
+
+    def verify_local_text_rollback_receipt_exact(
+        self,
+        receipt: LocalTextRollbackReceipt,
+    ) -> bool:
+        """Fail closed unless a rollback receipt exactly matches the ledger."""
+
+        return self.action_confirmation_repository.verify_local_text_rollback_receipt_exact(receipt)
+
+    def claim_adapter_grant_exact(
+        self,
+        grant_id: str,
+        *,
+        operation_id: str,
+        subject_ref: str,
+        expected_grant_fingerprint: str,
+        expected_action_fingerprint: str,
+        intent_fingerprint: str,
+        confirmation_receipt_id: str | None = None,
+        claimed_at: str | None = None,
+    ) -> AdapterGrantClaimContract:
+        """Atomically claim a grant and its exact confirmation when required."""
+
+        return self.action_confirmation_repository.claim_adapter_grant_exact(
+            grant_id,
+            operation_id=operation_id,
+            subject_ref=subject_ref,
+            expected_grant_fingerprint=expected_grant_fingerprint,
+            expected_action_fingerprint=expected_action_fingerprint,
+            intent_fingerprint=intent_fingerprint,
+            confirmation_receipt_id=confirmation_receipt_id,
+            claimed_at=claimed_at or self.now(),
+        )
+
+    def verify_adapter_grant_claim_exact(
+        self,
+        *,
+        grant_id: str,
+        claim_id: str,
+        operation_id: str,
+        subject_ref: str,
+        expected_grant_fingerprint: str,
+        expected_action_fingerprint: str,
+        intent_fingerprint: str,
+        claimed_at: str,
+        verified_at: str,
+        confirmation_receipt_id: str | None = None,
+        confirmation_claim_id: str | None = None,
+        confirmation_claim_fingerprint: str | None = None,
+    ) -> bool:
+        """Reverify one exact claim against the current allowlist and policy."""
+
+        return self.action_confirmation_repository.verify_adapter_grant_claim_exact(
+            grant_id=grant_id,
+            claim_id=claim_id,
+            operation_id=operation_id,
+            subject_ref=subject_ref,
+            expected_grant_fingerprint=expected_grant_fingerprint,
+            expected_action_fingerprint=expected_action_fingerprint,
+            intent_fingerprint=intent_fingerprint,
+            claimed_at=claimed_at,
+            verified_at=verified_at,
+            confirmation_receipt_id=confirmation_receipt_id,
+            confirmation_claim_id=confirmation_claim_id,
+            confirmation_claim_fingerprint=confirmation_claim_fingerprint,
+        )
+
+    def issue_action_confirmation_challenge(
+        self,
+        intent: ActionIntentContract,
+        *,
+        prepared_dispatch: OperationDispatchContract | None = None,
+        challenged_at: str | None = None,
+    ) -> ActionConfirmationChallengeContract:
+        """Persist one intent and emit a non-authorizing exact human challenge."""
+
+        challenge_time = challenged_at or intent.issued_at
+        if challenge_time != intent.issued_at:
+            raise ValueError("action confirmation challenge must preserve intent issuance")
+        challenge = ActionConfirmationChallengeContract(
+            challenge_id=f"confirmation-challenge://{uuid4().hex}",
+            intent_id=intent.intent_id,
+            intent_fingerprint=action_intent_fingerprint(intent),
+            action_fingerprint=intent.action_fingerprint,
+            origin_request_id=intent.origin_request_id,
+            session_id=intent.session_id,
+            mission_id=intent.mission_id,
+            operator_identity_ref=intent.operator_identity_ref,
+            operation=intent.operation,
+            nonce=intent.nonce,
+            issued_at=challenge_time,
+            expires_at=intent.expires_at,
+        )
+        return self.action_confirmation_repository.record_intent_and_challenge(
+            intent,
+            challenge,
+            prepared_dispatch=prepared_dispatch,
+        )
+
+    def confirm_action_challenge(
+        self,
+        challenge_id: str,
+        *,
+        operator_identity_ref: str,
+        expected_action_fingerprint: str,
+        confirmed_at: str | None = None,
+    ) -> HumanConfirmationReceiptContract:
+        """Record an exact human confirmation without granting execution authority."""
+
+        confirmation_time = confirmed_at or self.now()
+        intent, challenge = self.action_confirmation_repository.load_intent_and_challenge(
+            challenge_id,
+            verified_at=confirmation_time,
+        )
+        if operator_identity_ref != intent.operator_identity_ref:
+            raise ValueError("action confirmation operator mismatch")
+        if expected_action_fingerprint != intent.action_fingerprint:
+            raise ValueError("action confirmation action fingerprint mismatch")
+        receipt = HumanConfirmationReceiptContract(
+            receipt_id=f"confirmation-receipt://{uuid4().hex}",
+            challenge_id=challenge.challenge_id,
+            challenge_fingerprint=action_confirmation_challenge_fingerprint(challenge),
+            intent_id=intent.intent_id,
+            intent_fingerprint=action_intent_fingerprint(intent),
+            action_fingerprint=intent.action_fingerprint,
+            origin_request_id=intent.origin_request_id,
+            session_id=intent.session_id,
+            mission_id=intent.mission_id,
+            operator_identity_ref=intent.operator_identity_ref,
+            operation=intent.operation,
+            confirmed_at=confirmation_time,
+            expires_at=challenge.expires_at,
+        )
+        return self.action_confirmation_repository.record_receipt(
+            receipt,
+            verified_at=confirmation_time,
+        )
+
+    def load_action_confirmation_context(
+        self,
+        receipt_id: str,
+    ) -> ActionConfirmationContext:
+        """Load verified origin context for an exact confirmation retry envelope."""
+
+        return self.action_confirmation_repository.load_confirmation_context(receipt_id)
+
+    def claim_action_confirmation(
+        self,
+        receipt_id: str,
+        *,
+        operation_id: str,
+        origin_request_id: str,
+        expected_action_fingerprint: str,
+        intent_fingerprint: str,
+        operator_identity_ref: str,
+        claimed_at: str | None = None,
+    ) -> ActionConfirmationClaimContract:
+        """Atomically consume a receipt for one exact operation before side effects."""
+
+        claim_time = claimed_at or self.now()
+        context = self.action_confirmation_repository.load_confirmation_context(receipt_id)
+        intent = context.intent
+        receipt = context.receipt
+        expected_values = {
+            "origin_request_id": (origin_request_id, intent.origin_request_id),
+            "action_fingerprint": (
+                expected_action_fingerprint,
+                intent.action_fingerprint,
+            ),
+            "intent_fingerprint": (
+                intent_fingerprint,
+                action_intent_fingerprint(intent),
+            ),
+            "operator_identity_ref": (
+                operator_identity_ref,
+                intent.operator_identity_ref,
+            ),
+        }
+        for field_name, (provided, expected) in expected_values.items():
+            if provided != expected:
+                raise ValueError(f"action confirmation {field_name} mismatch")
+        claim = ActionConfirmationClaimContract(
+            claim_id=f"confirmation-claim://{uuid4().hex}",
+            receipt_id=receipt.receipt_id,
+            receipt_fingerprint=human_confirmation_receipt_fingerprint(receipt),
+            intent_id=intent.intent_id,
+            intent_fingerprint=action_intent_fingerprint(intent),
+            action_fingerprint=intent.action_fingerprint,
+            operation_id=operation_id,
+            origin_request_id=intent.origin_request_id,
+            session_id=intent.session_id,
+            mission_id=intent.mission_id,
+            operator_identity_ref=intent.operator_identity_ref,
+            operation=intent.operation,
+            claimed_at=claim_time,
+            expires_at=receipt.expires_at,
+        )
+        return self.action_confirmation_repository.record_claim(
+            claim,
+            expected_action_fingerprint=expected_action_fingerprint,
+            expected_operation_id=operation_id,
+            expected_operator_identity_ref=operator_identity_ref,
+            verified_at=claim_time,
+        )
+
+    def verify_action_confirmation_claim(
+        self,
+        *,
+        receipt_id: str,
+        claim_id: str,
+        operation_id: str,
+        origin_request_id: str,
+        expected_action_fingerprint: str,
+        intent_fingerprint: str,
+        claimed_at: str,
+        verified_at: str,
+        operator_identity_ref: str,
+    ) -> bool:
+        """Reopen and reverify the claimed receipt as defense in depth."""
+
+        return self.action_confirmation_repository.verify_claim_exact(
+            receipt_id=receipt_id,
+            claim_id=claim_id,
+            operation_id=operation_id,
+            origin_request_id=origin_request_id,
+            expected_action_fingerprint=expected_action_fingerprint,
+            intent_fingerprint=intent_fingerprint,
+            claimed_at=claimed_at,
+            verified_at=verified_at,
+            operator_identity_ref=operator_identity_ref,
+        )
+
+    def assess_workflow_lifecycle_transition(
+        self,
+        transition: WorkflowLifecycleTransitionContract,
+        *,
+        current_transition: WorkflowLifecycleTransitionContract | None = None,
+        release_bundle_verifier: (
+            Callable[[WorkflowLifecycleTransitionContract], bool] | None
+        ) = None,
+        assessed_at: str | None = None,
+    ) -> WorkflowLifecycleGovernanceAssessmentContract:
+        """Authorize only an append-only, explicitly human-reviewed binding record."""
+
+        blockers = validate_workflow_lifecycle_transition(
+            transition,
+            current_transition=current_transition,
+        )
+        release_bundle_verified = False
+        if release_bundle_verifier is not None and not blockers:
+            try:
+                release_bundle_verified = bool(release_bundle_verifier(transition))
+            except (TypeError, ValueError, RuntimeError):
+                release_bundle_verified = False
+        if not release_bundle_verified:
+            blockers.append("workflow_lifecycle_release_bundle_not_verified")
+        assessment_timestamp = assessed_at or self.now()
+        try:
+            transition_time = datetime.fromisoformat(transition.timestamp.replace("Z", "+00:00"))
+            assessment_time = datetime.fromisoformat(assessment_timestamp.replace("Z", "+00:00"))
+            if (
+                transition_time.tzinfo is None
+                or assessment_time.tzinfo is None
+                or assessment_time < transition_time
+            ):
+                blockers.append("workflow_lifecycle_assessment_time_invalid")
+                assessment_timestamp = transition.timestamp
+        except (AttributeError, ValueError):
+            blockers.append("workflow_lifecycle_assessment_time_invalid")
+            assessment_timestamp = transition.timestamp
+        blockers = list(dict.fromkeys(blockers))
+        approved = not blockers
+        return WorkflowLifecycleGovernanceAssessmentContract(
+            assessment_id=f"workflow-lifecycle-assessment://{uuid4().hex[:12]}",
+            transition_id=transition.transition_id,
+            transition_action=transition.transition_action,
+            transition_fingerprint=workflow_lifecycle_transition_fingerprint(transition),
+            status="approved" if approved else "blocked",
+            blockers=blockers,
+            conditions=[
+                "Record the transition append-only through canonical memory and Core.",
+                "Keep the sovereign static workflow registry unchanged.",
+                "Grant no execution authority from the lifecycle record itself.",
+                "Require a new human-authorized transition for activation or rollback.",
+            ],
+            policy_refs=[
+                "policy://workflow-lifecycle/human-authorization-required",
+                "policy://workflow-lifecycle/append-only-cas",
+                "policy://workflow-lifecycle/sovereign-registry-immutable",
+                "policy://workflow-lifecycle/manual-rollback-only",
+                "policy://memory/write-through-core-only",
+            ],
+            timestamp=assessment_timestamp,
+            human_review_required=True,
+            human_authorization_verified=approved,
+            transition_recording_authorized=approved,
+            memory_write_mode="through_core_only",
+            read_only=True,
+            active_registry_write_allowed=False,
+            runtime_execution_allowed=False,
+            automatic_promotion_allowed=False,
+            automatic_rollback_allowed=False,
+            core_mutation_allowed=False,
+        )
 
     def assess_memory_lifecycle_review(
         self,
@@ -158,10 +1145,23 @@ class GovernanceService:
         if (
             not decision.read_only
             or decision.memory_write_allowed
+            or decision.execution_allowed
+            or decision.tool_dispatch_allowed
             or decision.automatic_promotion_allowed
             or decision.core_mutation_allowed
         ):
             blockers.append("memory_influence_authority_claim_not_allowed")
+        reviewed_playbook_refs = [
+            ref for ref in decision.selected_refs if ref.startswith("reviewed-playbook://")
+        ]
+        if reviewed_playbook_refs and not all(
+            ref in decision.version_refs for ref in reviewed_playbook_refs
+        ):
+            blockers.append("reviewed_procedural_version_trace_required")
+        if reviewed_playbook_refs and not all(
+            ref in decision.review_decision_refs for ref in reviewed_playbook_refs
+        ):
+            blockers.append("reviewed_procedural_human_review_trace_required")
         if decision.selected_refs and not all(
             ref in decision.use_reasons for ref in decision.selected_refs
         ):
@@ -187,8 +1187,7 @@ class GovernanceService:
         causal_use_allowed = bool(
             not blockers
             and decision.selected_refs
-            and decision.decision_status
-            in {"applied", "applied_with_conflict_resolution"}
+            and decision.decision_status in {"applied", "applied_with_conflict_resolution"}
         )
         return MemoryInfluenceGovernanceAssessmentContract(
             assessment_id=f"memory-influence-assessment://{uuid4().hex[:12]}",
@@ -202,6 +1201,8 @@ class GovernanceService:
             timestamp=assessed_at or self.now(),
             causal_use_allowed=causal_use_allowed,
             human_review_required=bool(blockers),
+            execution_allowed=False,
+            tool_dispatch_allowed=False,
         )
 
     def assess_knowledge_evidence(
@@ -286,6 +1287,9 @@ class GovernanceService:
         continuity_hint = self._continuity_hint(plan)
         request_confirmation_mode = plan.request_confirmation_mode if plan else None
         request_reversibility_mode = plan.request_reversibility_mode if plan else None
+        autonomy_action_policy = (
+            self.evaluate_plan_autonomy_action(plan) if plan is not None else None
+        )
         identity_guardrail = self._identity_guardrail(
             intent=intent,
             proposed_effect=proposed_effect,
@@ -302,9 +1306,7 @@ class GovernanceService:
                 "input_type": contract.input_type.value,
                 "recommended_task_type": plan.recommended_task_type if plan else None,
                 "plan_summary": plan.plan_summary if plan else None,
-                "capability_decision_status": (
-                    plan.capability_decision_status if plan else None
-                ),
+                "capability_decision_status": (plan.capability_decision_status if plan else None),
                 "capability_decision_selected_mode": (
                     plan.capability_decision_selected_mode if plan else None
                 ),
@@ -317,47 +1319,31 @@ class GovernanceService:
                 "capability_decision_handoff_mode": (
                     plan.capability_decision_handoff_mode if plan else None
                 ),
-                "request_identity_status": (
-                    plan.request_identity_status if plan else None
-                ),
-                "request_active_mission": (
-                    plan.request_active_mission if plan else None
-                ),
-                "request_executive_posture": (
-                    plan.request_executive_posture if plan else None
-                ),
-                "request_authority_level": (
-                    plan.request_authority_level if plan else None
-                ),
-                "request_risk_profile": (
-                    plan.request_risk_profile if plan else None
-                ),
+                "request_identity_status": (plan.request_identity_status if plan else None),
+                "request_active_mission": (plan.request_active_mission if plan else None),
+                "request_executive_posture": (plan.request_executive_posture if plan else None),
+                "request_authority_level": (plan.request_authority_level if plan else None),
+                "request_risk_profile": (plan.request_risk_profile if plan else None),
                 "request_reversibility_mode": request_reversibility_mode,
                 "request_confirmation_mode": request_confirmation_mode,
-                "request_identity_summary": (
-                    plan.request_identity_summary if plan else None
-                ),
+                "request_identity_summary": (plan.request_identity_summary if plan else None),
                 "request_identity_policy_refs": (
                     list(plan.request_identity_policy_refs) if plan else []
                 ),
-                "requested_autonomy_level": (
-                    plan.requested_autonomy_level if plan else None
-                ),
+                "requested_autonomy_level": (plan.requested_autonomy_level if plan else None),
                 "max_autonomy_level": plan.max_autonomy_level if plan else None,
-                "effective_autonomy_level": (
-                    plan.effective_autonomy_level if plan else None
-                ),
-                "autonomy_ladder_status": (
-                    plan.autonomy_ladder_status if plan else None
-                ),
+                "effective_autonomy_level": (plan.effective_autonomy_level if plan else None),
+                "autonomy_ladder_status": (plan.autonomy_ladder_status if plan else None),
                 "max_autonomy_capability_mode": (
                     plan.max_autonomy_capability_mode if plan else None
                 ),
                 "autonomy_human_confirmation_required": (
                     plan.autonomy_human_confirmation_required if plan else None
                 ),
-                "autonomy_confirmation_mode": (
-                    plan.autonomy_confirmation_mode if plan else None
+                "autonomy_confirmation_mode": (plan.autonomy_confirmation_mode if plan else None),
+                "autonomy_action_kind": (plan.autonomy_action_kind if plan else None),
+                "autonomy_validation_errors": (
+                    list(plan.autonomy_validation_errors) if plan else []
                 ),
                 "autonomy_allowed_runtime_actions": (
                     list(plan.autonomy_allowed_runtime_actions) if plan else []
@@ -365,9 +1351,7 @@ class GovernanceService:
                 "autonomy_blocked_runtime_actions": (
                     list(plan.autonomy_blocked_runtime_actions) if plan else []
                 ),
-                "autonomy_policy_refs": (
-                    list(plan.autonomy_policy_refs) if plan else []
-                ),
+                "autonomy_policy_refs": (list(plan.autonomy_policy_refs) if plan else []),
                 "autonomy_summary": plan.autonomy_summary if plan else None,
                 "autonomy_automatic_promotion_allowed": (
                     plan.autonomy_automatic_promotion_allowed if plan else False
@@ -375,15 +1359,23 @@ class GovernanceService:
                 "autonomy_core_mutation_allowed": (
                     plan.autonomy_core_mutation_allowed if plan else False
                 ),
-                "continuity_replay_status": (
-                    plan.continuity_replay_status if plan else None
+                "autonomy_action_policy_applicable": plan is not None,
+                "autonomy_action_policy_decision": (
+                    autonomy_action_policy.decision if autonomy_action_policy is not None else None
                 ),
-                "continuity_recovery_mode": (
-                    plan.continuity_recovery_mode if plan else None
+                "autonomy_action_policy_reason_codes": (
+                    list(autonomy_action_policy.reason_codes)
+                    if autonomy_action_policy is not None
+                    else []
                 ),
-                "continuity_resume_point": (
-                    plan.continuity_resume_point if plan else None
+                "autonomy_action_side_effect_allowed": (
+                    autonomy_action_policy.side_effect_allowed
+                    if autonomy_action_policy is not None
+                    else False
                 ),
+                "continuity_replay_status": (plan.continuity_replay_status if plan else None),
+                "continuity_recovery_mode": (plan.continuity_recovery_mode if plan else None),
+                "continuity_resume_point": (plan.continuity_resume_point if plan else None),
                 "identity_mode": identity_mode,
                 "identity_signature": identity_signature,
                 "response_style": response_style,
@@ -423,9 +1415,7 @@ class GovernanceService:
     ) -> GovernanceAssessment:
         """Govern bounded operator-driven objective state changes."""
 
-        current_status = (
-            current_state.mission_status.value if current_state is not None else None
-        )
+        current_status = current_state.mission_status.value if current_state is not None else None
         current_objective_status = (
             current_state.objective_status if current_state is not None else None
         )
@@ -456,9 +1446,7 @@ class GovernanceService:
         )
 
         decision = PermissionDecision.ALLOW_WITH_CONDITIONS
-        justification = (
-            "Transicao operacional bounded permitida pelo nucleo com memoria canonica."
-        )
+        justification = "Transicao operacional bounded permitida pelo nucleo com memoria canonica."
         conditions = [
             "Persistir somente via memoria canonica.",
             "Registrar evento auditavel com estado anterior e novo.",
@@ -476,11 +1464,10 @@ class GovernanceService:
             requires_rollback_plan = True
             containment_hint = "block_missing_mission_state"
             policy_refs = ["policy://objective-transition/missing-state"]
-        elif (
-            requested_transition == "resume"
-            and current_state.mission_status
-            in {MissionStatus.COMPLETED, MissionStatus.CANCELED}
-        ):
+        elif requested_transition == "resume" and current_state.mission_status in {
+            MissionStatus.COMPLETED,
+            MissionStatus.CANCELED,
+        }:
             decision = PermissionDecision.BLOCK
             justification = "Missao finalizada nao pode ser retomada por comando bounded."
             conditions = ["Abrir nova missao ou revisao explicita em vez de reativar estado final."]
@@ -660,28 +1647,23 @@ class GovernanceService:
     ) -> GovernanceAssessment:
         """Govern bounded operator-driven work item state changes."""
 
-        current_status = (
-            current_state.mission_status.value if current_state is not None else None
-        )
+        current_status = current_state.mission_status.value if current_state is not None else None
         existing_refs = set(current_state.work_item_refs if current_state else [])
         active_refs = set(current_state.active_work_items if current_state else [])
         current_items = canonical_work_items_from_mission(current_state)
         current_item = next(
-            (
-                item
-                for item in current_items
-                if item.work_item_ref == requested_work_item_ref
-            ),
+            (item for item in current_items if item.work_item_ref == requested_work_item_ref),
             None,
         )
         effective_dependency_refs = (
             list(requested_dependency_refs)
             if requested_dependency_refs is not None
-            else list(current_item.dependency_refs) if current_item else []
+            else list(current_item.dependency_refs)
+            if current_item
+            else []
         )
-        effective_priority_level = (
-            requested_priority_level
-            or (current_item.priority_level if current_item else "p2")
+        effective_priority_level = requested_priority_level or (
+            current_item.priority_level if current_item else "p2"
         )
         blocker_refs = list(requested_blocker_refs or [])
         governance_check = GovernanceCheckContract(
@@ -716,9 +1698,7 @@ class GovernanceService:
         )
 
         decision = PermissionDecision.ALLOW_WITH_CONDITIONS
-        justification = (
-            "Transicao bounded de work item permitida via nucleo e memoria canonica."
-        )
+        justification = "Transicao bounded de work item permitida via nucleo e memoria canonica."
         conditions = [
             "Persistir somente via MissionStateContract canonico.",
             "Registrar evento auditavel com work item, transicao e checkpoint.",
@@ -788,12 +1768,8 @@ class GovernanceService:
             requires_rollback_plan = True
             containment_hint = "block_invalid_work_item_priority"
             policy_refs = ["policy://work-item-transition/invalid-priority"]
-        elif (
-            requested_transition not in {"create", "update"}
-            and (
-                requested_dependency_refs is not None
-                or requested_priority_level is not None
-            )
+        elif requested_transition not in {"create", "update"} and (
+            requested_dependency_refs is not None or requested_priority_level is not None
         ):
             decision = PermissionDecision.BLOCK
             justification = "Dependencias e prioridade so mudam por create ou update."
@@ -840,8 +1816,10 @@ class GovernanceService:
             requires_rollback_plan = True
             containment_hint = "block_invalid_work_item_graph"
             policy_refs = ["policy://work-item-transition/dependency-graph"]
-        elif requested_transition in {"resume", "complete"} and current_item and (
-            unresolved := unresolved_dependency_refs(current_item, current_items)
+        elif (
+            requested_transition in {"resume", "complete"}
+            and current_item
+            and (unresolved := unresolved_dependency_refs(current_item, current_items))
         ):
             decision = PermissionDecision.BLOCK
             justification = "Work item possui dependencias ainda nao concluidas."
@@ -892,11 +1870,7 @@ class GovernanceService:
 
         artifact_states = canonical_artifact_states_from_mission(current_state)
         current_artifact = next(
-            (
-                item
-                for item in artifact_states
-                if item.artifact_ref == requested_artifact_ref
-            ),
+            (item for item in artifact_states if item.artifact_ref == requested_artifact_ref),
             None,
         )
         existing_refs = {item.artifact_ref for item in artifact_states}
@@ -989,9 +1963,7 @@ class GovernanceService:
             requires_rollback_plan = True
             containment_hint = "block_unbounded_rollback_ref"
             policy_refs = ["policy://artifact-lifecycle/unbounded-rollback"]
-        elif requested_work_item_ref and not self._is_bounded_reference(
-            requested_work_item_ref
-        ):
+        elif requested_work_item_ref and not self._is_bounded_reference(requested_work_item_ref):
             decision = PermissionDecision.BLOCK
             justification = "Source work item fora do formato bounded permitido."
             conditions = ["Usar uma referencia curta e bounded de work item."]
@@ -1000,9 +1972,7 @@ class GovernanceService:
             policy_refs = ["policy://artifact-lifecycle/unbounded-work-item"]
         elif (
             transition_error := validate_artifact_transition(
-                current_status=(
-                    current_artifact.artifact_status if current_artifact else None
-                ),
+                current_status=(current_artifact.artifact_status if current_artifact else None),
                 requested_transition=requested_transition,
             )
         ) is not None:
@@ -1016,9 +1986,7 @@ class GovernanceService:
             version_error := validate_artifact_version(
                 requested_transition=requested_transition,
                 requested_version=requested_artifact_version,
-                current_version=(
-                    current_artifact.artifact_version if current_artifact else None
-                ),
+                current_version=(current_artifact.artifact_version if current_artifact else None),
             )
         ) is not None:
             decision = PermissionDecision.BLOCK
@@ -1098,8 +2066,10 @@ class GovernanceService:
             requires_rollback_plan = True
             containment_hint = "block_missing_rollback_ref"
             policy_refs = ["policy://artifact-lifecycle/missing-rollback"]
-        elif requested_transition == "rollback" and current_artifact and not (
-            current_artifact.replacement_artifact_ref
+        elif (
+            requested_transition == "rollback"
+            and current_artifact
+            and not (current_artifact.replacement_artifact_ref)
         ):
             decision = PermissionDecision.BLOCK
             justification = "Artefato sem sucessor canonico nao pode receber rollback."
@@ -1130,9 +2100,7 @@ class GovernanceService:
     def _is_bounded_reference(value: str) -> bool:
         if not value or len(value) > 160:
             return False
-        allowed = set(
-            "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:/._-"
-        )
+        allowed = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789:/._-")
         return all(character in allowed for character in value)
 
     def assess_operator_feedback(
@@ -1180,9 +2148,7 @@ class GovernanceService:
             mission_continuity_hint="post_mission_operator_learning",
         )
         decision = PermissionDecision.ALLOW_WITH_CONDITIONS
-        justification = (
-            "Feedback explicito bounded permitido via nucleo e memoria canonica."
-        )
+        justification = "Feedback explicito bounded permitido via nucleo e memoria canonica."
         conditions = [
             "Persistir o feedback somente via experiencia/reflexao canonica.",
             "Enviar qualquer proposta evolutiva para revisao humana.",
@@ -1217,9 +2183,7 @@ class GovernanceService:
             containment_hint = "block_unsupported_assessment"
             policy_refs = ["policy://operator-feedback/unsupported-assessment"]
         elif feedback.rating is not None and (
-            isinstance(feedback.rating, bool)
-            or feedback.rating < 1
-            or feedback.rating > 5
+            isinstance(feedback.rating, bool) or feedback.rating < 1 or feedback.rating > 5
         ):
             decision = PermissionDecision.BLOCK
             justification = "Rating deve estar entre 1 e 5."
@@ -1431,9 +2395,8 @@ class GovernanceService:
         open_loops = list(governance_check.open_loops)
         continuity_hint = governance_check.mission_continuity_hint or "sem_continuidade"
         decision_frame = governance_check.decision_frame or "analysis"
-        request_confirmation_mode = governance_check.context.get(
-            "request_confirmation_mode"
-        )
+        request_confirmation_mode = governance_check.context.get("request_confirmation_mode")
+        autonomy_action_policy = self._autonomy_action_policy_decision(governance_check)
         autonomy_violation = self._autonomy_ladder_violation(governance_check)
 
         if risk_level in {RiskLevel.HIGH, RiskLevel.CRITICAL}:
@@ -1473,6 +2436,22 @@ class GovernanceService:
             requires_audit = True
             requires_rollback_plan = True
             containment_hint = "defer_capability_above_autonomy_limit"
+        elif autonomy_action_policy is not None and autonomy_action_policy.decision == "block":
+            decision = PermissionDecision.BLOCK
+            justification = (
+                "A projecao de autonomia da acao e ausente, desconhecida ou "
+                "incompativel; nenhum efeito pode ser preparado."
+            )
+            conditions = [
+                "Corrigir o contrato de autonomia antes de preparar a acao.",
+                *[
+                    f"Resolver bloqueio de autonomia: {reason}."
+                    for reason in autonomy_action_policy.reason_codes
+                ],
+            ]
+            policy_refs = ["policy://autonomy-action/fail-closed"]
+            requires_audit = True
+            containment_hint = "block_autonomy_action"
         elif self._should_defer(governance_check, proposed_effect, open_loops, continuity_hint):
             decision = PermissionDecision.DEFER_FOR_VALIDATION
             if continuity_hint == "checkpoint_contido":
@@ -1503,6 +2482,22 @@ class GovernanceService:
             requires_audit = True
             requires_rollback_plan = True
             containment_hint = "defer_open_loop_reframe"
+        elif (
+            autonomy_action_policy is not None
+            and autonomy_action_policy.decision == "require_confirmation"
+        ):
+            decision = PermissionDecision.ALLOW_WITH_CONDITIONS
+            justification = (
+                "A acao pode somente ser preparada para confirmacao humana exata; "
+                "a evidencia ainda nao autoriza efeito."
+            )
+            conditions = [
+                "Preparar challenge vinculado a acao exata.",
+                "Exigir claim valido antes de emitir qualquer efeito operacional.",
+            ]
+            policy_refs = ["policy://autonomy-action/exact-confirmation"]
+            requires_audit = True
+            containment_hint = "prepare_exact_action_confirmation"
         elif self._should_allow_with_conditions(
             proposed_effect=proposed_effect,
             risk_level=risk_level,
@@ -1516,9 +2511,7 @@ class GovernanceService:
                 "Restringir a artefatos locais e reversiveis.",
             ]
             if request_confirmation_mode == "explicit_confirmation_required":
-                conditions.append(
-                    "Nao ampliar a autonomia sem confirmacao explicita do operador."
-                )
+                conditions.append("Nao ampliar a autonomia sem confirmacao explicita do operador.")
             if open_loops:
                 conditions.append(
                     "Fechar explicitamente o loop principal da missao nesta resposta."
@@ -1553,12 +2546,73 @@ class GovernanceService:
             return "forbidden_autonomy_claim"
         if context.get("autonomy_core_mutation_allowed") is True:
             return "forbidden_autonomy_claim"
-        if capability_mode_exceeds_autonomy_limit(
-            selected_mode=str(context.get("capability_decision_selected_mode") or ""),
-            max_capability_mode=str(context.get("max_autonomy_capability_mode") or ""),
+        policy_decision = GovernanceService._autonomy_action_policy_decision(governance_check)
+        if policy_decision is not None and (
+            "capability_above_autonomy_limit" in policy_decision.reason_codes
         ):
             return "capability_above_autonomy_limit"
         return None
+
+    @staticmethod
+    def evaluate_plan_autonomy_action(
+        plan: DeliberativePlanContract,
+        *,
+        confirmation_evidence_state: str = "absent",
+    ) -> AutonomyActionPolicyDecisionContract:
+        """Evaluate the exact action projected by one materialized plan."""
+
+        return evaluate_autonomy_action(
+            requested_autonomy_level=plan.requested_autonomy_level,
+            max_autonomy_level=plan.max_autonomy_level,
+            effective_autonomy_level=plan.effective_autonomy_level,
+            autonomy_ladder_status=plan.autonomy_ladder_status,
+            action_kind=plan.autonomy_action_kind,
+            selected_capability_mode=plan.capability_decision_selected_mode,
+            max_capability_mode=plan.max_autonomy_capability_mode,
+            allowed_runtime_actions=plan.autonomy_allowed_runtime_actions,
+            blocked_runtime_actions=plan.autonomy_blocked_runtime_actions,
+            human_confirmation_required=(plan.autonomy_human_confirmation_required),
+            human_confirmation_mode=plan.autonomy_confirmation_mode,
+            confirmation_evidence_state=confirmation_evidence_state,
+            autonomy_validation_errors=plan.autonomy_validation_errors,
+        )
+
+    @staticmethod
+    def _autonomy_action_policy_decision(
+        governance_check: GovernanceCheckContract,
+    ) -> AutonomyActionPolicyDecisionContract | None:
+        context = governance_check.context
+        if context.get("autonomy_action_policy_applicable") is not True:
+            return None
+
+        def text_value(name: str) -> str | None:
+            value = context.get(name)
+            return value if isinstance(value, str) else None
+
+        def string_sequence(name: str) -> list[str] | tuple[str, ...] | None:
+            value = context.get(name)
+            if isinstance(value, (list, tuple)):
+                return value
+            return None
+
+        confirmation_required = context.get("autonomy_human_confirmation_required")
+        return evaluate_autonomy_action(
+            requested_autonomy_level=text_value("requested_autonomy_level"),
+            max_autonomy_level=text_value("max_autonomy_level"),
+            effective_autonomy_level=text_value("effective_autonomy_level"),
+            autonomy_ladder_status=text_value("autonomy_ladder_status"),
+            action_kind=text_value("autonomy_action_kind"),
+            selected_capability_mode=text_value("capability_decision_selected_mode"),
+            max_capability_mode=text_value("max_autonomy_capability_mode"),
+            allowed_runtime_actions=string_sequence("autonomy_allowed_runtime_actions"),
+            blocked_runtime_actions=string_sequence("autonomy_blocked_runtime_actions"),
+            human_confirmation_required=(
+                confirmation_required if isinstance(confirmation_required, bool) else None
+            ),
+            human_confirmation_mode=text_value("autonomy_confirmation_mode"),
+            confirmation_evidence_state="absent",
+            autonomy_validation_errors=string_sequence("autonomy_validation_errors"),
+        )
 
     @staticmethod
     def proposed_effect(intent: str, plan: DeliberativePlanContract | None) -> str:
@@ -1731,6 +2785,18 @@ class GovernanceService:
             policy_refs=policy_refs,
         )
         return GovernanceAssessment(governance_check=check, governance_decision=governance_decision)
+
+    def _execution_now(self) -> str:
+        value = self._trusted_execution_clock()
+        if not isinstance(value, str):
+            raise TypeError("trusted execution clock must return an ISO-8601 string")
+        try:
+            parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        except ValueError as exc:
+            raise ValueError("trusted execution clock returned an invalid timestamp") from exc
+        if parsed.tzinfo is None or parsed.utcoffset() is None:
+            raise ValueError("trusted execution clock must be timezone-aware")
+        return parsed.astimezone(UTC).isoformat()
 
     @staticmethod
     def now() -> str:

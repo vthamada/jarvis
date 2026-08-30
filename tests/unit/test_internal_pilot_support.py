@@ -5,8 +5,9 @@ from tools.internal_pilot_support import default_pilot_scenarios, run_pilot_scen
 
 def test_default_pilot_scenarios_cover_allowed_and_blocked_paths() -> None:
     scenarios = default_pilot_scenarios()
+    operational_scenarios = [item for item in scenarios if item.expected_operation]
 
-    assert any(item.expected_operation for item in scenarios)
+    assert operational_scenarios
     assert any(item.expected_decision == "block" for item in scenarios)
     assert any(item.mission_key for item in scenarios)
     assert any(item.expected_decision == "defer_for_validation" for item in scenarios)
@@ -23,6 +24,18 @@ def test_default_pilot_scenarios_cover_allowed_and_blocked_paths() -> None:
     assert any("dominant_tension" in item.coverage_tags for item in scenarios)
     assert any("specialist_subflow" in item.coverage_tags for item in scenarios)
     assert any("mission_runtime_state" in item.coverage_tags for item in scenarios)
+    assert all(
+        item.requested_autonomy_level == "bounded_core_action"
+        for item in operational_scenarios
+    )
+    assert all(
+        item.max_autonomy_level == "bounded_core_action"
+        for item in operational_scenarios
+    )
+    assert all(
+        item.autonomy_confirmation_mode == "not_required"
+        for item in operational_scenarios
+    )
 
 
 def test_run_pilot_scenarios_returns_structured_results() -> None:

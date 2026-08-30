@@ -40,6 +40,55 @@ def audit(
     )
 
 
+def attribution(
+    *,
+    request_id: str,
+    mission_id: str,
+    guidance_ref: str | None,
+    attribution_status: str = "declared_causality",
+) -> SimpleNamespace:
+    return SimpleNamespace(
+        attribution_record_id=f"decision-outcome-attribution://request/{request_id}",
+        request_id=request_id,
+        session_id=f"session:{request_id}",
+        mission_id=mission_id,
+        experience_id=f"experience://{mission_id}/{request_id}",
+        workflow_profile="software_change_workflow",
+        route="software_development",
+        memory_selected_refs=[guidance_ref] if guidance_ref else [],
+        attribution_status=attribution_status,
+        gain_claim_status="not_established_without_comparator",
+        causal_effect_proven=False,
+        memory_write_allowed=False,
+        execution_allowed=False,
+        tool_dispatch_allowed=False,
+        promotion_authorized=False,
+        automatic_promotion_allowed=False,
+        core_mutation_allowed=False,
+        observed_at="2026-07-10T12:00:00Z",
+    )
+
+
+def feedback_event(
+    *,
+    request_id: str,
+    mission_id: str,
+    assessment: str,
+) -> SimpleNamespace:
+    return SimpleNamespace(
+        event_id=f"feedback-event:{request_id}",
+        event_name="operator_feedback_recorded",
+        mission_id=mission_id,
+        payload={
+            "operator_feedback_experience_id": (
+                f"experience://{mission_id}/{request_id}"
+            ),
+            "operator_feedback_assessment": assessment,
+            "operator_feedback_rating": 5 if assessment == "helpful" else 2,
+        },
+    )
+
+
 def test_report_collector_compares_reviewed_memory_against_runtime_baseline() -> None:
     guidance_ref = "reviewed-learning-guidance://software-change/1.0.0"
     guidance = SimpleNamespace(
@@ -82,14 +131,31 @@ def test_report_collector_compares_reviewed_memory_against_runtime_baseline() ->
             feedback="helpful",
         ),
     ]
+    attributions = [
+        attribution(
+            request_id=item.request_id,
+            mission_id=item.mission_id,
+            guidance_ref=(
+                guidance_ref if item.request_id.startswith("guidance-") else None
+            ),
+        )
+        for item in audits
+    ]
+    feedback_events = [
+        feedback_event(
+            request_id=item.request_id,
+            mission_id=item.mission_id,
+            assessment=item.operator_feedback_assessment,
+        )
+        for item in audits
+    ]
     observability = SimpleNamespace(
         summarize_recent_requests=lambda limit: audits[:limit],
-        list_recent_events=lambda query: [
-            SimpleNamespace(timestamp="2026-07-10T12:00:00Z")
-        ],
+        list_recent_events=lambda query: feedback_events[: query.limit],
     )
     memory = SimpleNamespace(
-        list_reviewed_learning_guidance=lambda limit: [SimpleNamespace(guidance=guidance)]
+        list_reviewed_learning_guidance=lambda limit: [SimpleNamespace(guidance=guidance)],
+        list_decision_outcome_attributions=lambda limit: attributions[:limit],
     )
     evolution = SimpleNamespace(
         list_recent_proposals=lambda limit: [],
@@ -106,15 +172,66 @@ def test_report_collector_compares_reviewed_memory_against_runtime_baseline() ->
     candidate = next(
         metric for metric in report.version_metrics if metric.version_ref == guidance_ref
     )
-    # Historical baseline regressions remain visible even when the reviewed
-    # version shows a sustained comparative gain.
+    # Historical baseline regressions remain visible, but runtime attribution
+    # without a controlled comparator cannot become a gain claim.
     assert report.report_status == "attention_required"
     assert candidate.runtime_observation_count == 2
     assert candidate.mission_count == 2
-    assert candidate.trend_status == "sustained_gain"
+    assert candidate.trend_status == "stable_or_mixed"
     assert candidate.success_rate_delta == 0.5
     assert candidate.rework_rate_delta == -1.0
     assert report.promotion_authorized is False
+    assert (
+        "decision_attribution_does_not_establish_gain_without_comparator"
+        in report.limitations
+    )
+
+
+def test_runtime_trace_without_canonical_attribution_is_not_backfilled() -> None:
+    guidance_ref = "reviewed-learning-guidance://software-change/1.0.0"
+    guidance = SimpleNamespace(
+        guidance_id=guidance_ref,
+        workflow_profile="software_change_workflow",
+        review_status="approved",
+        source_review_decision_id="review-decision://guidance/1",
+        evolution_proposal_id="evolution-proposal://guidance/1",
+        evidence_refs=["reflection://guidance/1"],
+        rollback_plan_ref="rollback://guidance/1",
+        timestamp="2026-07-01T12:00:00Z",
+    )
+    legacy_audit = audit(
+        request_id="legacy-without-attribution",
+        mission_id="legacy-without-attribution",
+        guidance_ref=guidance_ref,
+        success=True,
+        feedback="helpful",
+    )
+    observability = SimpleNamespace(
+        summarize_recent_requests=lambda limit: [legacy_audit],
+        list_recent_events=lambda query: [],
+    )
+    memory = SimpleNamespace(
+        list_reviewed_learning_guidance=lambda limit: [SimpleNamespace(guidance=guidance)],
+        list_decision_outcome_attributions=lambda limit: [],
+    )
+    evolution = SimpleNamespace(
+        list_recent_proposals=lambda limit: [],
+        list_recent_decisions=lambda limit: [],
+    )
+
+    report = build_longitudinal_report(
+        observability_service=observability,
+        memory_service=memory,
+        evolution_service=evolution,
+        minimum_observations=2,
+        generated_at="2026-07-16T12:00:00Z",
+    )
+
+    candidate = next(
+        metric for metric in report.version_metrics if metric.version_ref == guidance_ref
+    )
+    assert candidate.runtime_observation_count == 0
+    assert candidate.trend_status == "insufficient_evidence"
 
 
 def test_report_collector_keeps_inactive_skill_eval_out_of_runtime_claims() -> None:
@@ -142,7 +259,10 @@ def test_report_collector_keeps_inactive_skill_eval_out_of_runtime_claims() -> N
         },
     )
     observability = SimpleNamespace(summarize_recent_requests=lambda limit: [])
-    memory = SimpleNamespace(list_reviewed_learning_guidance=lambda limit: [])
+    memory = SimpleNamespace(
+        list_reviewed_learning_guidance=lambda limit: [],
+        list_decision_outcome_attributions=lambda limit: [],
+    )
     evolution = SimpleNamespace(
         list_recent_proposals=lambda limit: [proposal],
         list_recent_decisions=lambda limit: [],
@@ -167,6 +287,7 @@ def test_save_report_writes_latest_and_immutable_history_evidence() -> None:
     empty = SimpleNamespace(
         summarize_recent_requests=lambda limit: [],
         list_reviewed_learning_guidance=lambda limit: [],
+        list_decision_outcome_attributions=lambda limit: [],
         list_recent_proposals=lambda limit: [],
         list_recent_decisions=lambda limit: [],
     )

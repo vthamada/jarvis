@@ -59,6 +59,9 @@ class PilotScenario:
     expected_decision: str
     expected_operation: bool
     session_key: str
+    requested_autonomy_level: str | None = None
+    max_autonomy_level: str | None = None
+    autonomy_confirmation_mode: str | None = None
     mission_key: str | None = None
     expected_continuity_action: str | None = None
     expected_route: str | None = None
@@ -262,6 +265,9 @@ def default_pilot_scenarios() -> list[PilotScenario]:
             expected_decision=PermissionDecision.ALLOW_WITH_CONDITIONS.value,
             expected_operation=True,
             session_key="pilot-main",
+            requested_autonomy_level="bounded_core_action",
+            max_autonomy_level="bounded_core_action",
+            autonomy_confirmation_mode="not_required",
             mission_key="mission-pilot-v1",
             expected_continuity_action="continuar",
             expected_route="operational_readiness",
@@ -283,6 +289,9 @@ def default_pilot_scenarios() -> list[PilotScenario]:
             expected_decision=PermissionDecision.ALLOW_WITH_CONDITIONS.value,
             expected_operation=True,
             session_key="pilot-summary",
+            requested_autonomy_level="bounded_core_action",
+            max_autonomy_level="bounded_core_action",
+            autonomy_confirmation_mode="not_required",
             expected_continuity_action="continuar",
         ),
         PilotScenario(
@@ -330,6 +339,9 @@ def default_pilot_scenarios() -> list[PilotScenario]:
             expected_decision=PermissionDecision.ALLOW_WITH_CONDITIONS.value,
             expected_operation=True,
             session_key="pilot-main",
+            requested_autonomy_level="bounded_core_action",
+            max_autonomy_level="bounded_core_action",
+            autonomy_confirmation_mode="not_required",
             mission_key="mission-pilot-v1",
             expected_continuity_action="continuar",
             expected_route="operational_readiness",
@@ -518,6 +530,9 @@ def run_pilot_scenarios(
             input_type=InputType.TEXT,
             content=scenario.content,
             timestamp="2026-03-19T00:00:00+00:00",
+            requested_autonomy_level=scenario.requested_autonomy_level,
+            max_autonomy_level=scenario.max_autonomy_level,
+            autonomy_confirmation_mode=scenario.autonomy_confirmation_mode,
             metadata={
                 "pilot_scenario_id": scenario.scenario_id,
                 "pilot_expectation": scenario.expectation,

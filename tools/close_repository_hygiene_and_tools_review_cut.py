@@ -40,6 +40,11 @@ def parse_args() -> Namespace:
         default="text",
         help="Output format for stdout.",
     )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Validate the historical closure without writing regenerated artifacts.",
+    )
     return parser.parse_args()
 
 
@@ -253,6 +258,28 @@ def render_markdown(payload: dict[str, object]) -> str:
 
 def main() -> None:
     args = parse_args()
+    if args.check:
+        archived_closure = (
+            ROOT
+            / "docs"
+            / "archive"
+            / "implementation"
+            / "v2-repository-hygiene-and-tools-review-cut-closure.md"
+        )
+        historical = archived_closure.read_text(encoding="utf-8")
+        required_markers = (
+            "complete_v2_repository_hygiene_and_tools_review_cut",
+            "tools/close_repository_hygiene_and_tools_review_cut.py",
+            "docs de recortes encerrados migraram para docs/archive/implementation",
+        )
+        missing = [marker for marker in required_markers if marker not in historical]
+        if missing:
+            raise RuntimeError(
+                "repository hygiene historical closure is incomplete: "
+                + ", ".join(missing)
+            )
+        print("decision=repository_hygiene_historical_closure_verified")
+        return
     output_dir = Path(args.output_dir)
     if not output_dir.is_absolute():
         output_dir = ROOT / output_dir

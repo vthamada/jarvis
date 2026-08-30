@@ -3867,7 +3867,7 @@ Fora de escopo:
 
 - `id`: `MB-204`
 - `prioridade`: `P1`
-- `status`: `ready`
+- `status`: `completed`
 - `eixo_do_mestre`: `memoria procedural`, `playbooks`, `governanca`
 - `map_ids`: `MEM-006`, `EVL-007`, `GOV-004`
 - `workflow_profile_afetado`: workflows promovidos com playbook revisado elegivel
@@ -3880,48 +3880,54 @@ Fora de escopo:
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `high`
 - `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: playbooks procedurais somente se tornam guidance runtime depois de review humana persistida vinculada a semver ASCII canonica, checklist e promotion gate; o registro versionado/revogavel e reverificado na leitura por escopo antes do limite, e a policy aplica no maximo um playbook como texto read-only sem conceder execucao ou dispatch.
+- `evidencia_de_fechamento`: `ReviewedProceduralPlaybookContract`, identidade bounded do revisor, semver ASCII canonica e derivacao/verificacao fail-closed no `evolution-lab`, reverificacao em store/revogacao/leitura, stores SQLite/PostgreSQL, policy com ranking antes do cap e duplicidade bloqueada, planning, governance, synthesis, `FlowAudit` e E2E completos nativo/LangGraph preservam versao, review, use/non-use e ausencia de execucao; governanca incompleta bloqueia o dispatch e vira drift observavel, e a bateria cobre eligibility, semver/re-review, checklist/gate, imutabilidade, revogacao, mismatch, capacidade e nenhum dispatch automatico.
 
 ### MB-205
 
 - `id`: `MB-205`
 - `prioridade`: `P1`
-- `status`: `planned`
+- `status`: `completed`
 - `eixo_do_mestre`: `decision memory`, `atribuicao`, `observabilidade`
 - `map_ids`: `COG-007`, `MEM-005`, `MEM-006`, `OBS-009`
 - `workflow_profile_afetado`: workflows com guidance de memoria elegivel
 - `micro_objetivo`: ligar policy/memory refs a decisoes e outcomes observados, distinguindo correlacao, causalidade declarada e evidencia insuficiente.
 - `justificativa_arquitetural`: evolucao governada precisa saber qual guidance participou de qual decisao antes de propor refinamento.
-- `arquivos/servicos_principais`: `orchestrator-service`, `observability-service`, `memory-service`, `tools`, `tests`
+- `arquivos/servicos_principais`: `shared`, `orchestrator-service`, `observability-service`, `memory-service`, `jarvis_console`, `tools`, `tests`
 - `dependencias`: `MB-204`
 - `criterio_de_aceite`: relatorio read-only correlaciona decisao, policy, memoria, outcome e feedback; nao atribui ganho sem comparador e nunca autoriza promocao.
 - `gate_minimo`: testes de atribuicao/non-attribution, stores imutaveis, CLI/tool e gate padrao
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `high`
 - `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: cada request aceita faz claim atomico append-only de `request_id -> session_id` antes de qualquer outro side effect e pode gerar uma evidencia imutavel que liga policy de workflow, decisao governada de memoria e guidance participante ao outcome exato de uma experience ja persistida; operation `failed` permanece `failed`, e a classificacao distingue correlacao, participacao causal declarada e evidencia insuficiente sem provar efeito ou ganho.
+- `evidencia_de_fechamento`: contratos/schemas frozen, classificador fail-closed, claim request/session, binding exato entre `experience_id`, `outcome_ref`, mission, workflow, route, status e timestamp, stores SQLite/PostgreSQL append-only, evento recorded com `asdict(record)` integral e paridade reverificada, evento attribution-failed separado da falha operacional e E2E nativo/LangGraph com replay concorrente e operation failed; `FlowAudit` apenas projeta o evento, enquanto relatorio/tool/CLI/longitudinal exigem record canonico e ligam feedback por experience/mission exatos. Identidade/outcome permanecem imutaveis, enriquecimento de feedback e bounded, ausencia simples nao limita, nenhum marcador sem comparador vira `sustained_gain`, e execucao, dispatch, promocao e mutacao permanecem falsas.
 
 ### MB-206
 
 - `id`: `MB-206`
 - `prioridade`: `P2`
-- `status`: `planned`
+- `status`: `completed`
 - `eixo_do_mestre`: `workflow variants`, `evals`, `evolucao`
 - `map_ids`: `EVL-008`, `EVL-005`, `OBS-009`
 - `workflow_profile_afetado`: workflow candidato sob avaliacao
 - `micro_objetivo`: comparar baseline e variante de workflow sobre casos versionados usando a mesma politica de memoria e governanca.
 - `justificativa_arquitetural`: variantes so devem avancar com evidencia comparavel, nao por preferencia narrativa.
-- `arquivos/servicos_principais`: `evolution-lab`, `observability-service`, `tools`, `tests`
+- `arquivos/servicos_principais`: `shared`, `evolution-lab`, `observability-service`, `tools`, `tests`
 - `dependencias`: `MB-205`
 - `criterio_de_aceite`: eval registra versoes, casos, outcomes, regressions e limitacoes; variante permanece sandbox-only e sem autoridade de release.
 - `gate_minimo`: evals deterministicas, testes de regressao/authority e gate padrao
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `high`
 - `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: casos versionados agora ligam duas observacoes sandbox preproduzidas a mesma entrada, relogio, seed e snapshots de workflow policy, governanca e memoria; metricas, checks, deltas e conclusao sao derivados e reverificados, enquanto pack, claim e run permanecem imutaveis e sem execucao, dispatch, release ou promocao.
+- `evidencia_de_fechamento`: contratos/schemas frozen, fingerprints canonicos, validacao fail-closed de identidade, authority, input/control, definitions, checkpoints e fixed clock, store SQLite append-only com claim atomico/restart/tamper guards, evaluator sem API de metricas fornecidas pelo caller e agregador observavel que rederiva resultado hostil; testes cobrem regressao, spoof, drift de control/policy/memoria/definition, colisao concorrente e comprovam `offline_only`, `sandbox_only`, review humana obrigatoria e todas as autoridades falsas.
 
 ### MB-207
 
 - `id`: `MB-207`
 - `prioridade`: `P2`
-- `status`: `planned`
+- `status`: `completed`
 - `eixo_do_mestre`: `workflow lifecycle`, `revisao humana`, `rollback`
 - `map_ids`: `EVL-006`, `EVL-008`, `GOV-009`
 - `workflow_profile_afetado`: variantes com eval concluida
@@ -3934,12 +3940,14 @@ Fora de escopo:
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `high`
 - `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: bundles de release append-only agora ligam review, eval, gate, testes, rollback e autorizacao humana a transicoes CAS; runtime usa a definicao promovida integral ou o baseline versionado com motivo auditavel, sem alterar o registry nem ganhar autoridade operacional.
+- `evidencia_de_fechamento`: contratos/schemas/fingerprints, verifier independente em Evolution/Governance/Memory, storage SQLite/PostgreSQL append-only, console real de ativacao/rollback, consumo nativo/LangGraph, synthesis recovery, eventos/FlowAudit e testes adversariais cobrem tamper, concorrencia, fallback e todas as autoridades falsas.
 
 ### MB-208
 
 - `id`: `MB-208`
 - `prioridade`: `P2`
-- `status`: `planned`
+- `status`: `completed`
 - `eixo_do_mestre`: `technology radar`, `knowledge`, `absorção governada`
 - `map_ids`: `KNW-006`, `EVL-001`, `DOC-006`
 - `workflow_profile_afetado`: `technology_absorption_workflow`
@@ -3952,12 +3960,14 @@ Fora de escopo:
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `high`
 - `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: referencias externas revisadas agora entram por manifesto local estrito em um registry Evolution append-only, depois de assessment read-only no Knowledge; origem, versao, hash, licenca, claims, riscos, classe, gaps, lineage e review humana ficam auditaveis sem fetch, ingestao, proposta, instalacao, execucao, ativacao, promocao, mutacao do Core ou prioridade.
+- `evidencia_de_fechamento`: contrato/schema/fingerprints e validator fail-closed; store SQLite com deduplicacao canonica, lineage semver, retry exato, restart, concorrencia, triggers e leitura reverificada; tool/console real, redaction, runbook e testes adversariais cobrem fonte/segredo/manifesto/tamper sem criar autoridade.
 
 ### MB-209
 
 - `id`: `MB-209`
 - `prioridade`: `P2`
-- `status`: `planned`
+- `status`: `completed`
 - `eixo_do_mestre`: `experimentos tecnologicos`, `skills`, `sandbox`
 - `map_ids`: `KNW-006`, `EVL-001`, `EVL-005`
 - `workflow_profile_afetado`: `technology_absorption_workflow`
@@ -3970,12 +3980,14 @@ Fora de escopo:
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `high`
 - `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: referencias MB-208 selecionadas agora podem ser traduzidas em packs inertes de padroes absorviveis, ligados a consumidor soberano, controle offline deterministico e observacoes pareadas preproduzidas; resultados derivados permanecem sandbox-only e sem proposta, execucao, ativacao ou promocao.
+- `evidencia_de_fechamento`: contratos/schemas frozen, validator fail-closed com intake exato e cronologia, store Evolution append-only para pack/claim/run, manifestos locais com SHA-256 destacado, eval declarativo, console text/JSON seguro, restart/E2E e auditoria adversarial cobrem outcome, isolamento, soberania, spoof, tamper, threshold e filtros sem criar autoridade.
 
 ### MB-210
 
 - `id`: `MB-210`
 - `prioridade`: `P2`
-- `status`: `planned`
+- `status`: `completed`
 - `eixo_do_mestre`: `readiness`, `documentacao`, `decisao de fase`
 - `map_ids`: `OBS-007`, `OBS-008`, `DOC-010`
 - `workflow_profile_afetado`: `operational_readiness_workflow`
@@ -3987,6 +3999,193 @@ Fora de escopo:
 - `gate_minimo`: dashboard com gate padrao, guardrails documentais e closure test
 - `depende_do_operador`: `nao`
 - `modo_de_raciocinio_recomendado`: `medium`
+- `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: a fila `MB-202` a `MB-210` agora possui matriz de evidencia executavel, runbook de fechamento, dashboard sincronizado, limitacoes explicitas e decisao de fase sem converter readiness em autoridade.
+- `evidencia_de_fechamento`: closure e runbook `MB-210`, teste sintetico de fila esgotada/fail-closed, document guardrails e engineering gate padrao comprovam `queue_exhausted`, `next_ready_item=null`, zero drift/blockers e todas as autoridades falsas; Governed Action Foundation fica apenas sequenciada para repriorizacao separada.
+
+### MB-211
+
+- `id`: `MB-211`
+- `prioridade`: `P0`
+- `status`: `completed`
+- `eixo_do_mestre`: `repriorizacao`, `governanca`, `acoes`, `seguranca`
+- `map_ids`: `GOV-007`, `GOV-005`, `ACT-005`, `ACT-004`, `SFC-005`
+- `workflow_profile_afetado`: workflows com operacao local governada
+- `micro_objetivo`: abrir a fila WIP-1 de Governed Action Foundation para fechar confirmacao verificavel, autonomia fail-closed, grants por adapter e operacao local reversivel antes de qualquer API publica.
+- `justificativa_arquitetural`: a auditoria provou que `human_confirmation_required` ainda e textual, modos desconhecidos podem falhar abertos e o writer legado aceita destino fornecido pelo caller; ampliar superficies antes de fechar esses limites exporia uma seam insegura.
+- `arquivos/servicos_principais`: `docs/implementation`, `HANDOFF.md`, `CHANGELOG.md`
+- `dependencias`: `MB-210`
+- `criterio_de_aceite`: existe fila ordenada `MB-212` a `MB-219`, somente `MB-212` ready, cada slice possui dependencia, aceite, gate e rollback, e `SFC-005` permanece fora ate a prova adversarial final.
+- `gate_minimo`: readiness sem drift, document guardrails e gate padrao
+- `rollback`: restaurar `queue_exhausted` e manter toda acao que exige confirmacao em deny/defer; nenhuma capability ou autoridade e promovida pela repriorizacao.
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: Governed Action Foundation passa a ter uma fila curta, sequencial e auditavel; API, browser, computer use, scheduler, integracoes externas e superficies ricas continuam deferred.
+- `evidencia_de_fechamento`: auditoria read-only do baseline, prova reproduzivel de bypass de confirmacao/destino e sincronizacao do mapa mestre, backlog micro, backlog macro, snapshot, handoff e changelog abrem `MB-212` como unico item ready.
+
+### MB-212
+
+- `id`: `MB-212`
+- `prioridade`: `P0`
+- `status`: `completed`
+- `eixo_do_mestre`: `confirmacao humana`, `autonomia`, `dispatch`, `contencao local`
+- `map_ids`: `GOV-007`, `GOV-005`, `ACT-002`, `ACT-003`
+- `workflow_profile_afetado`: workflows com acao que exige confirmacao
+- `micro_objetivo`: tornar confirmacao humana uma evidencia vinculada a uma acao exata, consumivel uma unica vez, e conter o writer legado no root configurado antes de qualquer dispatch.
+- `justificativa_arquitetural`: o runtime hoje propaga a exigencia de confirmacao sem exigir receipt verificavel e permite que um caller interno forneca o destino fisico.
+- `arquivos/servicos_principais`: `shared`, `governance-service`, `orchestrator-service`, `operational-service`, `jarvis_console`, `tests`, `docs/operations`
+- `dependencias`: `MB-211`, `ACT-002`, `ACT-003`
+- `criterio_de_aceite`: intent/challenge/receipt possuem fingerprint exato, validade e nonce; ledger e append-only e single-use sob concorrencia/restart; receipt ausente, expirado, reusado ou divergente produz zero side effect; receipt exato permite uma execucao; o destino livre do caller e rejeitado e somente o root configurado pode ser usado.
+- `gate_minimo`: testes de contratos, persistencia, governanca, fluxos nativo/LangGraph, operacional, console, concorrencia/restart e gate padrao
+- `rollback`: desabilitar emissao/consumo e deferir toda acao que exige confirmacao; preservar o ledger append-only e nunca restaurar execucao sem receipt.
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: confirmacao humana passa a ser evidencia exata, expiravel, append-only e single-use, ligada ao dispatch preparado e verificada novamente imediatamente antes do efeito; o writer legado rejeita destino fornecido pelo caller e permanece no root configurado.
+- `evidencia_de_fechamento`: contratos frozen e fingerprints rederivados cobrem intent/challenge/receipt/claim; Governance persiste intent, dispatch preparado, receipt, claim e presentation em ledger SQLite append-only; claims e presentations atomicas sobrevivem a concorrencia/restart; o envelope exige receipt e origem original explicitos e nunca substitui o dispatch confirmado por um novo planejamento; fluxos nativo, LangGraph e console comprovam challenge sem efeito, confirmacao, uma execucao exata, replay bloqueado e um unico artefato; receipt ausente, sem origem, expirado, adulterado, divergente ou reusado e verifier indisponivel produzem zero side effect; testes focados, Ruff, diff check, guardrails e gate padrao fecharam o slice.
+
+### MB-213
+
+- `id`: `MB-213`
+- `prioridade`: `P0`
+- `status`: `completed`
+- `eixo_do_mestre`: `autonomia fail-closed`, `governanca`, `dispatch`
+- `map_ids`: `GOV-007`, `ACT-002`, `ACT-003`
+- `workflow_profile_afetado`: todos os workflows com acao executavel
+- `micro_objetivo`: aplicar action kind, allowed/blocked actions, capability maxima e confirmacao exata de forma fail-closed em governanca, predicate e executor.
+- `justificativa_arquitetural`: nivel, modo ou acao ausente/desconhecido nao pode herdar permissao implicita.
+- `arquivos/servicos_principais`: `shared/autonomy_ladder.py`, `governance-service`, `orchestrator-service`, `operational-service`, `tests`
+- `dependencias`: `MB-212`
+- `criterio_de_aceite`: combinacoes ausentes, desconhecidas ou contraditorias bloqueiam sem side effect; os quatro niveis possuem matriz E2E e `assist_only` nunca executa.
+- `gate_minimo`: matriz parametrizada/property tests, E2E dos quatro niveis e gate padrao
+- `rollback`: aplicar `assist_only`, guidance-only e adapters disabled; nunca restaurar defaults fail-open.
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: os quatro niveis de autonomia agora sao avaliados por action kind canonico, capability minima/maxima, listas de politica e confirmacao coerente em um contrato total compartilhado; Governance, caminhos nativo/LangGraph e Operational falham fechados, e nenhuma confirmacao amplia autoridade.
+- `evidencia_de_fechamento`: matriz literal nivel x action kind x capability, casos ausentes/desconhecidos/contraditorios, E2E dos quatro niveis e auditoria adversarial provaram zero efeito para `assist_only`, capability insuficiente, modo ausente, receipt indevido e external sem adapter; o writer revalida `allow` mais `side_effect_allowed` imediatamente antes da escrita. Planejamento distingue review de governanca de evidencia humana, preservando bounded local real sem enfraquecer modos explicitos. Testes focados integrados, Ruff, diff check, documentacao operacional e gate padrao fecharam o slice.
+
+### MB-214
+
+- `id`: `MB-214`
+- `prioridade`: `P0`
+- `status`: `completed`
+- `eixo_do_mestre`: `permissoes por adapter`, `grants`, `governanca`
+- `map_ids`: `GOV-005`, `ACT-002`, `ACT-003`
+- `workflow_profile_afetado`: workflows com adapter governado
+- `micro_objetivo`: criar registry allowlisted de adapters e grants exatos por adapter, versao, operacao, recurso, sujeito e validade, claimaveis uma unica vez.
+- `justificativa_arquitetural`: `tool_class` e condicao textual nao delimitam uma acao fisica concreta.
+- `arquivos/servicos_principais`: `shared`, `planning-engine`, `governance-service`, `orchestrator-service`, `tests`, `docs/operations`
+- `dependencias`: `MB-213`
+- `criterio_de_aceite`: adapter/version/op/scope desconhecido, wildcard implicito, grant expirado/reusado ou fingerprint divergente bloqueia; grant valido serve somente a acao exata e ainda nao cria nova mutacao fisica.
+- `gate_minimo`: contratos, registry, stores com restart/concorrencia, integracao planning/governance/orchestrator e gate padrao
+- `rollback`: pausar/remover descriptor e bloquear novos claims, preservando grants historicos.
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: registry soberano de adapters, descriptors exatos e grants expiraveis/single-use passam a ser contratos runtime e evidencia append-only no mesmo ledger de governanca; autonomia, grant e confirmacao permanecem fatores conjuntivos sem executor, dispatch ou mutacao fisica.
+- `evidencia_de_fechamento`: contratos frozen e fingerprints prendem sujeito, recurso, adapter, versao, operacao, scope, intent e policy; CAS de registry/descriptor, payload SHA-256, triggers append-only, restart, retry deterministico, oito claims concorrentes, expiry/replay/tamper, remocao/drift e claim dupla atomica passaram. Planning, native e LangGraph preservam o request tipado, bloqueiam inferencia textual e param antes de `OperationDispatch`/Operational; testes integrados, Ruff, diff check, runbook e gate padrao fecham o slice.
+
+### MB-215
+
+- `id`: `MB-215`
+- `prioridade`: `P0`
+- `status`: `completed`
+- `eixo_do_mestre`: `adapter de arquivos`, `preflight`, `dry-run`
+- `map_ids`: `ACT-005`, `GOV-005`, `GOV-007`
+- `workflow_profile_afetado`: operacao local de arquivo preparada pelo operador
+- `micro_objetivo`: introduzir adapter local prepare-only com roots configurados, paths relativos canonicos, allowlist de create/replace text e plano de rollback, sem escrita.
+- `justificativa_arquitetural`: a politica de path e escopo deve ser provada sem side effects antes da mutacao transacional.
+- `arquivos/servicos_principais`: `operational-service/adapters`, `shared`, `governance-service`, `tests`, `docs/operations`
+- `dependencias`: `MB-214`
+- `criterio_de_aceite`: absolute/UNC/device/ADS/traversal, reparse/symlink/junction/hardlink e limites de extensao/tamanho/encoding falham; preflight reproduz fingerprint, hashes e diff sem criar diretorio, temp ou arquivo.
+- `gate_minimo`: testes unitarios, corpus adversarial Windows, integracao de permissao e gate padrao
+- `rollback`: desabilitar/remover o descriptor; nenhuma restauracao de dados e necessaria porque o slice e side-effect free.
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: `ACT-005` passa a `partial_runtime`: Operational oferece preflight opt-in de create/replace text, autorizado pela Governanca antes de I/O e limitado a roots configurados, ainda sem dispatch, claim ou escrita.
+- `evidencia_de_fechamento`: contratos frozen e schemas ligam grant/action/intent/descriptor/registry, expiracao real, SHA-256 desejado ao `content_digest`, root CAS ao `precondition_digest`, policy/backend e conteudo por hashes. Windows usa handles com atributos/File ID/final-path containment antes de `ReadFile`; POSIX usa `dir_fd/openat` com `O_NOFOLLOW|O_NONBLOCK`. Corpus lexical, reparse/symlink/junction/hardlink/FIFO, swaps, desired/root rebinding, forged/expired/claimed grants, diff sensivel efemero, fingerprints/rollback, zero-write e ledger inalterado passaram; auditoria adversarial, Ruff, format, diff check, runbook e gate padrao fecharam o slice.
+
+### MB-216
+
+- `id`: `MB-216`
+- `prioridade`: `P0`
+- `status`: `completed`
+- `eixo_do_mestre`: `escrita transacional`, `journal`, `rollback fisico`
+- `map_ids`: `ACT-005`, `GOV-005`, `GOV-007`
+- `workflow_profile_afetado`: operacao local de arquivo confirmada
+- `micro_objetivo`: executar create/replace text com claim atomico, revalidacao no instante da mutacao, replace atomico, journal duravel, backup e rollback condicionado a hashes.
+- `justificativa_arquitetural`: preflight nao fecha TOCTOU, concorrencia, crash nem restauracao segura.
+- `arquivos/servicos_principais`: `operational-service/adapters`, `operational-service/repository`, `governance-service`, `orchestrator-service`, `tests`
+- `dependencias`: `MB-215`
+- `criterio_de_aceite`: retry/concorrencia gera exatamente uma mutacao; precondition stale, link swap ou falha de disco nao sobrescreve estado inesperado; restart recupera journal; rollback restaura bytes exatos e recusa sobrescrever edicao posterior.
+- `gate_minimo`: failure injection, concorrencia/crash/restart, E2E e engineering gate release
+- `rollback`: desabilitar operacoes mutantes, reconciliar somente pelo journal e preservar backups/receipts para auditoria.
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: `ACT-005` passa a oferecer mutacao local transacional real em Linux, opt-in e supervisionada, com grants execution/rollback separados, joint claims atomicos, journal hash-chained, backup, receipts persistidos e recovery explicita; Windows permanece fail-closed.
+- `evidencia_de_fechamento`: bridge purpose-aware prende contexto fisico a grants e claims Governance; relogio confiavel nao e controlavel pelo caller e e renovado em cada transicao; corpus Linux cobre create/replace/rollback, concorrencia, dois roots, syscall/identity/path races, disk-full, journal e backup tamper, tres hard crashes em subprocesso, restart e E2E real Governance->Operational->receipt->rollback. Corpus Windows confirma fail-closed; Ruff, format, diff, runbook e engineering gate release fecham o slice.
+
+### MB-217
+
+- `id`: `MB-217`
+- `prioridade`: `P0`
+- `status`: `completed`
+- `eixo_do_mestre`: `artifact lifecycle`, `saga`, `reconciliacao`
+- `map_ids`: `ACT-004`, `ACT-005`, `OP-005`
+- `workflow_profile_afetado`: lifecycle de artefato com efeito fisico
+- `micro_objetivo`: ligar receipt fisico a versao/owner/work item canonicos e coordenar ativacao, falha, compensacao e rollback por saga recuperavel.
+- `justificativa_arquitetural`: estado canonico nao pode alegar artefato ativo ou restaurado sem prova do efeito fisico correspondente.
+- `arquivos/servicos_principais`: `memory-service`, `operational-service`, `orchestrator-service`, `shared`, `tests`, `docs/operations`
+- `dependencias`: `MB-216`, `ACT-004`, `OP-005`
+- `criterio_de_aceite`: write falho nunca ativa versao; rollback canonico exige receipt fisico; falhas entre etapas recuperam apos restart; ownership/version permanecem imutaveis em SQLite/PostgreSQL.
+- `gate_minimo`: fault injection por boundary, matriz de persistencia, integracao memory/operational/orchestrator e gate padrao
+- `rollback`: parar novas sagas, preservar receipts/checkpoints e permitir apenas reconciliacao segura/manual.
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.3-codex`
+- `impacto_no_baseline`: receipts e estado fisico fresco agora se ligam a versoes canonicas imutaveis por saga recuperavel; Memory normaliza plano, eventos, attestation, lineage, commit e outbox, enquanto Operational conserva o resource lock e concede uma lease one-shot somente ao callback canonico. Write falho nao ativa versao, compensacao precanonica nao inventa lifecycle, e rollback canonico restaura apenas predecessor superseded.
+- `evidencia_de_fechamento`: contratos/state machine, lookup integral em Governance, lease efemera same-thread, coordenador apply/rollback/recovery, outbox de identidade estavel, projecao legada subordinada e persistencia SQLite/PostgreSQL foram materializados. A bateria focada fecha apply/restart, falha sem ativacao, retry/outbox, compensacao create/replace, replace mais rollback canonico, CAS/concorrencia, append-only/tamper e E2E real Linux; os dois testes PostgreSQL focados passaram localmente contra PostgreSQL 17, cobrindo schema e o ciclo completo com reload/outbox/CAS/triggers.
+
+### MB-218
+
+- `id`: `MB-218`
+- `prioridade`: `P1`
+- `status`: `ready`
+- `eixo_do_mestre`: `console operador`, `observabilidade`, `recovery`
+- `map_ids`: `SFC-001`, `OBS-001`, `GOV-005`, `ACT-005`
+- `workflow_profile_afetado`: fluxo humano de operacao local
+- `micro_objetivo`: expor `prepare -> inspect -> confirm -> execute -> rollback/status` no console e telemetria redigida, sem abrir API publica.
+- `justificativa_arquitetural`: confirmar e executar devem ser atos separados, inspecionaveis e retomaveis pelo operador.
+- `arquivos/servicos_principais`: `apps/jarvis_console`, `observability-service`, `tests`, `docs/operations`
+- `dependencias`: `MB-217`
+- `criterio_de_aceite`: console mostra alvo relativo/root alias, operacao, diff/resumo, hashes, risco e validade antes de confirmar; comandos mutantes exigem challenge exato; status/recovery sobrevive restart e eventos nao vazam bytes, path absoluto ou segredo.
+- `gate_minimo`: console unit/golden/E2E, redaction, observabilidade e gate padrao
+- `rollback`: desregistrar comandos mutantes e preservar inspect/status, ledgers e runtime.
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
+- `modelo_recomendado`: `gpt-5.3-codex`
+
+### MB-219
+
+- `id`: `MB-219`
+- `prioridade`: `P1`
+- `status`: `blocked`
+- `eixo_do_mestre`: `seguranca adversarial`, `readiness`, `decisao de fase`
+- `map_ids`: `GOV-005`, `GOV-007`, `ACT-005`, `OBS-007`, `SFC-005`
+- `workflow_profile_afetado`: Governed Action Foundation completa
+- `micro_objetivo`: fechar threat model, corpus adversarial, runbook e readiness da fundacao e somente entao decidir se a API `SFC-005` pode entrar na proxima repriorizacao.
+- `justificativa_arquitetural`: a seam fisica precisa provar zero-side-effect ou recovery explicita sob path attacks, replay, race, crash e tamper antes de ganhar boundary externo.
+- `arquivos/servicos_principais`: `tests`, `tools`, `docs/security`, `docs/operations`, `docs/implementation`, `HANDOFF.md`, `CHANGELOG.md`
+- `dependencias`: `MB-218`
+- `criterio_de_aceite`: corpus Windows, replay/expiry/clock skew, concorrencia, crash/disk-full, journal/backup tamper e rollback apos edicao humana passam; eventos/receipts/registry permanecem coerentes; API continua ausente e a decisao seguinte e explicita.
+- `gate_minimo`: suite completa, engineering gates standard e release, security diff/threat-model audit e document guardrails
+- `rollback`: desabilitar adapters e voltar a guidance/read-only, preservando journals e dados para recovery/auditoria.
+- `depende_do_operador`: `nao`
+- `modo_de_raciocinio_recomendado`: `high`
 - `modelo_recomendado`: `gpt-5.3-codex`
 
 ## 5. Regras de manutencao da fila
@@ -4097,6 +4296,7 @@ Estado atual da fila:
 - `MB-175` foi concluido como repriorizacao pos-`MB-174`, abrindo a fila governada de skill/workflow evolution `MB-176` a `MB-189`;
 - `MB-176` a `MB-189` foram concluidos como cadeia de skill/workflow, routing, politica causal, revisao humana de memoria, medicao longitudinal e fechamento de readiness;
 - `MB-190` repriorizou o Daily Operator Loop e abriu `MB-191` a `MB-200`; o lote foi integralmente fechado;
-- `MB-201` repriorizou o pos-Daily Operator Loop e abriu `MB-202` a `MB-210`; `MB-202` foi concluido como policy declarativa versionada, `MB-203` fechou causalidade semantica baseada em evidencia e somente `MB-204` esta `ready`;
+- `MB-201` repriorizou o pos-Daily Operator Loop e abriu `MB-202` a `MB-210`; o lote foi integralmente concluido em `MB-210`, com fila esgotada, zero drift/blockers e todas as autoridades falsas; a proxima fila depende de repriorizacao explicita;
+- `MB-211` repriorizou Governed Action Foundation e abriu `MB-212` a `MB-219`; `MB-212` a `MB-217` foram concluidos e `MB-218` e o unico item tecnico `ready`, mas sua execucao aguarda nova solicitacao explicita do operador; `SFC-005` permanece fora ate a prova adversarial `MB-219`;
 - `SO-001`, `TA-004`, `TA-006` e verticais `deferred` continuam fora da fila sem mudanca explicita de fase;
 - `protective intelligence foundation` continua `deferred` e a matriz da Onda 2 segue como insumo, nao como gatilho automatico para abrir nova vertical.

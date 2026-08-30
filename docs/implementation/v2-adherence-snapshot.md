@@ -28,10 +28,10 @@ Leitura correta:
 
 Estado de referencia desta revisao:
 
-- data da fotografia: `2026-07-18`
-- ultimo recorte funcional fechado: `v2-native-memory-scope-hardening-cut`
+- data da fotografia: `2026-08-30`
+- ultimo recorte funcional fechado: `v2-physical-canonical-artifact-consistency`
 - ultimo recorte estrutural fechado: `v2-repository-hygiene-and-tools-review-cut`
-- passo funcional em andamento: lotes `MB-062` a `MB-150` concluidos ate leitura operacional e medicao de aprendizado revisado; `MB-151` foi fechado como auditoria documental governada oficial; `MB-152` foi fechado como mapa de backlinks e sincronizacao segura de docs ativos; `MB-153` foi fechado como archive fisico conservador de historico de implementacao; `MB-154` foi fechado como mapa mestre de implementacao; `MB-155` foi fechado como dashboard textual minimo do operador; `MB-156` foi fechado como ciclo governado minimo de work items; `MB-157` foi fechado como lifecycle minimo de artefatos vivos; `MB-158` foi fechado como metricas de utilidade operacional; `MB-159` foi fechado como raciocinio minimo de objetivos de horizonte longo; `MB-160` abriu a fila maior `MB-161` a `MB-174`; `MB-161` foi fechado como anchors de evidencia de memoria semantica; `MB-162` foi fechado como candidatos bounded de playbook procedural; `MB-163` foi fechado como auditoria de influencia de memoria; `MB-164` foi fechado como contrato runtime de autonomia; `MB-165` foi fechado como enforcement minimo do autonomy ladder; `MB-166` foi fechado como checklist sandbox-to-release; `MB-167` foi fechado como enforcement observavel do promotion gate; `MB-168` foi fechado como cockpit textual consolidado; `MB-169` foi fechado como relatorio humano de progresso; `MB-170` foi fechado como feedback explicito governado do operador; `MB-171` foi fechado como protocolo governado de onboarding de dominios; `MB-172` foi fechado como baseline offline de eval pack por dominio/rota; `MB-173` foi fechado como proveniencia/freshness governada; `MB-174` foi fechado como dashboard integrado de regressao/readiness; `MB-175` abriu a fila `MB-176` a `MB-189`; `MB-176` a `MB-184` fecharam a cadeia de skill e workflow ate gate/rollback manual; `MB-185` fechou evidencia revisavel de adaptacao de routing; `MB-186` fechou a politica causal de prioridade/conflito/non-use de memoria; `MB-187` fechou a fila humana de lifecycle; `MB-188` fechou a medicao longitudinal; `MB-189` fechou readiness/documentacao; `MB-190` abriu `MB-191` a `MB-200`; `MB-191` fechou command registry; `MB-192` fechou runtime/output; `MB-193` fechou doctor/preflight local; `MB-194` fechou workspace diario multi-missao; `MB-195` fechou dependencias, prioridade e blocking state canonicos de work items; `MB-196` fechou versionamento, ownership e lineage canonicos de artefatos; `MB-197` fechou retomada governada de open loops entre sessoes; `MB-198` fechou outcomes diarios sem claim de tempo economizado; `MB-199` fechou referencia/completion derivadas do registry e golden outputs deterministicos; `MB-200` fechou readiness e runbook do Daily Operator Loop; `MB-201` abriu `MB-202` a `MB-210`; `MB-202` fechou policy declarativa versionada; `MB-203` fechou causalidade semantica baseada em evidencia e somente `MB-204` esta `ready`.
+- passo funcional em andamento: o historico `MB-062` a `MB-217` permanece fechado; `MB-211` abriu a fila WIP-1 Governed Action Foundation `MB-212` a `MB-219`, e `MB-217` fechou a ligacao recuperavel entre receipts fisicos e lifecycle canonico. `MB-218` e o unico item tecnico `ready`, mas sua execucao aguarda nova solicitacao explicita do operador. API e demais superficies deferred continuam fora.
 
 Leitura executiva:
 
@@ -63,7 +63,7 @@ Leitura executiva:
   feedback e latencia observada sao correlacionados sem mutar stores; dado
   ausente permanece limitacao e tempo economizado nao e estimado sem baseline
   controlado.
-- `MB-199` gerou a referencia dos 31 comandos e completion PowerShell/Bash/Zsh
+- `MB-199` gerou a referencia inicial; o registry atual deriva 39 comandos e completion PowerShell/Bash/Zsh
   a partir do registry/parser validados; assets byte a byte e goldens text/JSON
   bloqueiam drift sem construir o Core ou alterar autoridade.
 - `MB-200` fechou o slice com runbook ponta a ponta, dashboard integrado,
@@ -81,6 +81,74 @@ Leitura executiva:
   relevancia e escopo elegiveis. Planning, governanca, synthesis e eventos
   preservam use/non-use e conflito; ausencia, stale, mismatch e autoridade
   forjada permanecem sem efeitos.
+- `MB-204` fechou o consumo de playbook procedural revisado: review humana
+  persistida vincula semver ASCII canonica, candidato, checklist e release gate; o store
+  versionado/revogavel e consultado por escopo, e somente um guidance textual
+  read-only pode influenciar planning. Versao, review, non-use e ausencia de
+  execucao/tool dispatch atravessam synthesis, eventos e `FlowAudit`.
+- `MB-208` fechou o intake governado do radar e `MB-209` o traduziu, somente
+  quando elegivel e licenciado, em packs inertes com consumidor soberano,
+  observacoes pareadas preproduzidas, metricas derivadas e resultado
+  sandbox-only. Intake, pack, claim e run sao reverificados sem fetch,
+  dependencia, execucao, proposta, ativacao, promocao ou mutacao.
+- `MB-210` consolidou a matriz de evidencia `MB-202` a `MB-209`, o runbook e o
+  dashboard de fechamento; o gate padrao confirmou fila esgotada, zero
+  drift/blockers e todas as autoridades falsas. A decisao de fase ordena
+  `GOV-007` -> `GOV-005` -> `ACT-005` antes de `SFC-005`, sem abrir a fila por
+  inercia.
+- `MB-211` auditou as seams reais e abriu `MB-212` a `MB-219`: confirmacao
+  humana verificavel, autonomia fail-closed e grants exatos precedem preflight,
+  escrita/rollback, reconciliacao, console e prova adversarial; `SFC-005`
+  permanece fora ate uma nova decisao depois do fechamento.
+- `MB-212` tornou confirmacao uma cadeia append-only ligada ao dispatch exato,
+  com receipt/claim single-use revalidado antes da escrita, persistencia entre
+  reinicios e replay bloqueado; o writer rejeita destino do caller e fica no
+  root configurado.
+- `MB-213` tornou autonomia uma politica total por acao, capability e modo de
+  confirmacao, aplicada por Governance, Orchestrator nativo/LangGraph e
+  Operational. Projecao ausente, desconhecida, contraditoria ou subdimensionada
+  bloqueia sem efeito, `assist_only` nunca executa e external sem adapter para
+  antes de challenge/claim.
+- `MB-214` tornou permissoes de adapter contratos exatos, expiraveis e
+  single-use, com registry versionado, ledger append-only, CAS, claim atomica e
+  paridade native/LangGraph. O fluxo termina em metadata prepare-only, sem
+  dispatch ou efeito fisico; `MB-215` fechou o preflight local prepare-only,
+  `MB-216` fechou escrita e rollback fisicos governados em Linux.
+- `MB-217` fechou consistencia fisica/canonica: planos, eventos, attestations,
+  versoes, lineage, commits e outbox formam estado normalizado imutavel;
+  Governance prova receipts exatos, Operational observa o recurso sob lock e
+  entrega uma lease one-shot ao callback de Memory, e Orchestrator recupera
+  cada boundary sem repetir efeito. Compensacao precanonica nao avanca lineage;
+  rollback canonico restaura somente o predecessor superseded. SQLite possui
+  cobertura executada e os dois testes PostgreSQL focados passaram localmente
+  contra PostgreSQL 17, incluindo schema, register, compensacao, replace,
+  rollback canonico, outbox/reload, CAS e trigger append-only.
+- `MB-205` fechou atribuicao entre policy, memoria e outcome: um record imutavel
+  nasce somente depois do claim atomico `request_id -> session_id`, antes de
+  qualquer outro side effect, e do binding exato a uma experience/outcome ja
+  persistida; replay concorrente falha antes de dispatch e operation `failed`
+  permanece `failed`. O evento recorded carrega `asdict(record)` integral e a
+  falha de attribution gera evento separado sem reexecutar a operacao.
+  `FlowAudit` apenas projeta o evento; relatorio, tool, CLI e longitudinal exigem
+  record canonico e fazem join exato de feedback. Identidade/outcome continuam
+  imutaveis sob enriquecimento bounded, ausencia simples de feedback nao limita
+  e o marcador sem comparador nunca vira `sustained_gain`; efeito causal,
+  dispatch e promocao permanecem falsos.
+- `MB-206` substituiu metricas declaradas pelo caller por duas observacoes
+  sandbox pareadas e versionadas. Baseline e candidate compartilham input,
+  fixed clock, seed e snapshots de workflow policy, governanca e memoria;
+  metricas, checks, deltas e conclusao sao derivados e reverificados contra as
+  definitions. Packs, claims e runs sao imutaveis/append-only, e nenhuma
+  superficie do eval executa workflow, faz dispatch, ativa ou promove variante.
+- `MB-207` ligou review, eval, checklist/gate, testes, rollback e autorizacao
+  humana em bundles/transicoes append-only. Runtime nativo/LangGraph usa apenas
+  a definicao verificada; rollback humano restaura o baseline, e fallback,
+  eventos e audit preservam a causa sem registry write ou autoridade automatica.
+- `MB-208` fechou o intake manual do radar: manifesto local estrito e revisado
+  liga origem HTTPS canonica, versao imutavel, SHA-256, licenca, claims, riscos,
+  classe, gaps e lineage. Knowledge apenas qualifica; Evolution registra a
+  cadeia append-only/deduplicada e o console a expoe sem fetch, ingestao,
+  proposta, instalacao, execucao, ativacao, promocao ou mutacao/prioridade.
 - a malha dominio->especialista tambem avancou: packets guiados de memoria agora nascem da rota promovida elegivel do registry e sao validados contra o contrato canonico da rota antes da convocacao especializada.
 - a continuidade de projetos/objetivos agora existe como baseline minimo: `project_ref`, `objective_ref`, work items, checkpoints, artefatos, `objective_status` e `next_action_ref` atravessam runtime, memoria, replay, eventos e observabilidade sem abrir autonomia longa.
 - o console agora expoe esse estado por `objectives --mission-id ...` e permite transicoes bounded por `objective --mission-id ... --action ...`, sempre via governanca, memoria canonica e evento auditavel, sem transformar objetivos em scheduler autonomo.
@@ -198,8 +266,9 @@ Leitura executiva:
   `MB-174` tambem foi fechado; `MB-175` abriu a fila seguinte, `MB-176` foi
   fechado e `MB-177` a `MB-189` tambem foram fechados; `MB-190` abriu a fila
   seguinte; `MB-191` a `MB-200` foram fechados; `MB-201` abriu `MB-202` a
-  `MB-210`; `MB-202` e `MB-203` foram fechados e somente `MB-204` esta
-  `ready`.
+  `MB-210`; todo o lote foi fechado; `MB-211` abriu `MB-212` a `MB-219`;
+  `MB-212` a `MB-217` foram fechados e somente `MB-218` esta `ready`, sem
+  execucao antes de nova solicitacao do operador.
 - `MB-161` adicionou anchors de evidencia para memoria semantica:
   `semantic_memory_anchor_refs`, `semantic_memory_evidence_refs`,
   `semantic_memory_use_reason` e `semantic_memory_non_use_reason` atravessam
@@ -418,7 +487,8 @@ Leitura:
 
 ### 3.5 Memorias canonicas
 
-**Status:** `runtime parcial` - avancou bastante, sem divergencia de visao
+**Status:** `baseline implementado` para influencia causal; lifecycle amplo
+continua parcial, sem divergencia de visao
 
 O que esta aderente:
 
@@ -430,13 +500,18 @@ O que esta aderente:
 
 Gap relevante:
 
-- `semantic` e `procedural` agora entram como `runtime_partial` em packets guiados por dominio quando existe evidencia persistida e compatibilidade canonica;
-- o runtime final ja usa essas classes de forma mais explicita por `workflow_profile`, e a camada de especialista passou a receber `procedural` apenas quando a politica soberana da rota realmente exige isso.
-- a politica que libera essas classes saiu de decisao espalhada no servi?o e passou a viver mais explicitamente no `memory_registry`;
-- `planning` e `synthesis` ja usam esse apoio sem bypassar governanca, inclusive quando o hint nasce do recovery soberano da propria missao e nao apenas de handoff especializado, enquanto especialistas continuam presos ao contrato elegivel da rota promovida;
-- esse uso deixou de ser apenas ornamental: o `planning` agora prioriza passos guiados de framing/continuidade e a `smallest_safe_next_action` preserva o fio procedural quando a rota ativa depende dele, enquanto a `synthesis` ancora o framing final e cobra continuidade explicita da proxima acao;
-- o baseline agora tambem distingue fonte, efeitos, lifecycle e revisao de `semantic`/`procedural`, deixando consolidacao, promocao, retencao e review como sinais soberanos do runtime e da observabilidade;
-- a camada multicamada nativa ainda pode crescer antes de qualquer absorcao futura, mas isso ja e maturacao incremental, nao correcao urgente.
+- `semantic` e `procedural` possuem influencia causal bounded no runtime quando
+  evidencia, compatibilidade canonica e policy soberana permitem;
+- playbook procedural runtime exige review humana persistida, semver ASCII canonica, checklist
+  e release gate, permanece read-only/revogavel e aplica no maximo um guidance
+  textual por plano;
+- `planning`, `synthesis`, governanca e observabilidade preservam fonte,
+  versao, review, efeitos e non-use, enquanto os caminhos nativo e LangGraph
+  bloqueiam execucao e tool dispatch originados pelo playbook;
+- consolidacao, expiracao e retencao de memoria continuam como lifecycle
+  parcial separado; a camada multicamada nativa ainda pode crescer antes de
+  qualquer absorcao futura, mas isso e maturacao incremental, nao correcao
+  urgente.
 
 Leitura:
 
@@ -546,6 +621,7 @@ Leitura:
 | Governanca | runtime parcial | solida | baixa |
 | Especialistas | runtime parcial | malha promovida fechada e auditavel | media |
 | Observabilidade | runtime parcial | forte | baixa |
+| Acoes / Artefatos | runtime parcial | escrita transacional e saga fisica/canonica fechadas; superficie do operador ainda pendente | alta |
 | Evolucao / Benchmark | deferido por fase | corretamente subordinado, mas pronto para amadurecer com sinais do nucleo | media |
 | Voz / Realtime | deferido por fase | corretamente adiado | nao aplicavel |
 
@@ -599,8 +675,9 @@ Foco:
 - o lote `MB-082` a `MB-086` foi fechado e o lote `MB-087` a `MB-091` tambem ja
   foi absorvido como baseline comparativo controlado para evals expandidas e
   lane da Onda 2;
-- a fila micro voltou a ficar sem item `ready`, e a proxima puxada correta
-  agora exige repriorizacao explicita a partir do backlog macro.
+- a fila Governed Action Foundation avancou ate `MB-217`; `MB-218` e o unico
+  item `ready`, mas a execucao foi interrompida no limite solicitado pelo
+  operador e depende de uma nova solicitacao.
 
 ### Passo 5 - manter frentes fora da fila micro ate mudanca explicita de fase
 
@@ -653,6 +730,12 @@ multissuperficie ja foi fechada no lote `MB-102` a `MB-106`, a repriorizacao
 superficies amplas, voz, web, API publica, memoria temporal rica,
 autoexecucao longa e substrate operacional amplo fora de fase.
 
+No recorte funcional mais recente, `MB-217` tornou coerentes o efeito fisico e
+o lifecycle canonico por uma saga recuperavel, outbox idempotente e evidencia
+content-free. A fila permanece em WIP 1 com `MB-218` apenas como proximo item
+`ready`; este fechamento nao executa console, nova API ou repriorizacao alem
+desse limite.
+
 ---
 
 ## 8. Referencias
@@ -661,8 +744,8 @@ autoexecucao longa e substrate operacional amplo fora de fase.
 - [HANDOFF.md](../../HANDOFF.md)
 - [matriz-de-aderencia-mestre.md](../documentation/matriz-de-aderencia-mestre.md)
 - [unified-gap-and-absorption-backlog.md](./unified-gap-and-absorption-backlog.md)
-- [v2-native-memory-scope-hardening-cut-closure.md](./v2-native-memory-scope-hardening-cut-closure.md)
-- [v2-repository-hygiene-and-tools-review-cut.md](./v2-repository-hygiene-and-tools-review-cut.md)
-- [v2-repository-hygiene-and-tools-review-cut-closure.md](./v2-repository-hygiene-and-tools-review-cut-closure.md)
+- [v2-native-memory-scope-hardening-cut-closure.md](../archive/implementation/v2-native-memory-scope-hardening-cut-closure.md)
+- [v2-repository-hygiene-and-tools-review-cut.md](../archive/implementation/v2-repository-hygiene-and-tools-review-cut.md)
+- [v2-repository-hygiene-and-tools-review-cut-closure.md](../archive/implementation/v2-repository-hygiene-and-tools-review-cut-closure.md)
 - [programa-ate-v3.md](../roadmap/programa-ate-v3.md)
 - [technology-study.md](../architecture/technology-study.md)

@@ -43,6 +43,49 @@ O relatorio salva `latest.json` e historico timestamped em
 `.jarvis_runtime/observability/operator-utility/`. As definicoes e limitacoes
 estao em `docs/operations/daily-operator-utility-outcomes.md`.
 
+Para gerar um relatorio read-only de atribuicao entre decisoes, participacao
+de politicas/memoria e outcomes observados:
+
+```powershell
+python tools/decision_attribution_report.py --mission-id mission-demo
+python -m apps.jarvis_console decision-attribution --mission-id mission-demo
+```
+
+O intake manual do radar tecnologico usa manifesto JSON local estrito, assessment
+read-only no Knowledge e registro append-only no Evolution, sem fetch, ingestao,
+instalacao ou promocao:
+
+```powershell
+python -m apps.jarvis_console technology-radar-intake --intake-root .\reviewed-technology-intake --manifest candidate-v1.json --manifest-sha256 <lowercase-sha256-of-reviewed-json>
+python -m apps.jarvis_console technology-radar --target-gap-ref KNW-006
+```
+
+O contrato e as limitacoes operacionais estao em
+`docs/technology/technology-radar-intake.md`.
+
+Os packs de experimento tecnologico traduzem somente um padrao absorvivel de um
+intake exato e licenciado. Os dois comandos mutantes exigem manifesto JSON local
+e SHA-256 destacado; a avaliacao deriva metricas de observacoes pareadas
+pre-produzidas e nao executa, importa ou instala a tecnologia candidata:
+
+```powershell
+python -m apps.jarvis_console technology-experiment-pack --manifest-root .\reviewed-technology-experiments --manifest pack-v1.json --manifest-sha256 <lowercase-sha256-of-reviewed-pack-json>
+python -m apps.jarvis_console technology-experiment-eval --manifest-root .\reviewed-technology-experiments --manifest run-v1.json --manifest-sha256 <lowercase-sha256-of-reviewed-run-json>
+python -m apps.jarvis_console technology-experiments --view runs --format json
+```
+
+O fluxo registra pack, claim e resultado append-only no Evolution sem criar
+proposal generica, chamar Core ou autorizar runtime/promocao. O contrato,
+criterios derivados e limites de autenticidade da atestacao estao em
+`docs/technology/technology-experiment-packs.md`.
+
+Use `--request-id`, `--workflow-profile` e `--limit` para restringir a leitura;
+`--observability-db` e `--memory-db` selecionam os stores canonicos. O script
+salva `latest.json` e historico em
+`.jarvis_runtime/observability/decision-attribution/`, ou no diretorio passado
+por `--output-dir`. O relatorio nao prova efeito causal ou ganho, nao escreve
+nos stores e nao autoriza dispatch, promocao automatica ou mutacao do nucleo.
+
 Para regenerar a referencia do console e completion para PowerShell, Bash e
 Zsh a partir do registry/parser validados:
 
@@ -80,6 +123,20 @@ python -m apps.jarvis_console chat --session-id demo --mission-id mission-demo
 ```
 
 Use `--debug` para expor apenas metadados minimos de request e governanca.
+
+Para uma acao que exige confirmacao humana explicita, preserve o mesmo
+prompt, sessao, missao e identidade entre a preparacao e a nova tentativa:
+
+```powershell
+python -m apps.jarvis_console ask "Prepare the bounded local action." --session-id demo --mission-id mission-demo --operator-identity-ref operator://local_console --requested-autonomy-level supervised_external_action --max-autonomy-level supervised_external_action --autonomy-confirmation-mode explicit
+python -m apps.jarvis_console action-confirm --challenge-id <challenge-id> --action-fingerprint <action-fingerprint> --operator-identity-ref operator://local_console
+python -m apps.jarvis_console ask "Prepare the bounded local action." --session-id demo --mission-id mission-demo --operator-identity-ref operator://local_console --requested-autonomy-level supervised_external_action --max-autonomy-level supervised_external_action --autonomy-confirmation-mode explicit --action-confirmation-receipt-id <receipt-id> --origin-request-id <origin-request-id>
+```
+
+`action-confirm` registra somente evidencia local, imutavel e de uso unico;
+nao concede autoridade de execucao. O fluxo, os limites de autenticidade e o
+procedimento de falha segura estao em
+`docs/operations/verifiable-action-confirmation.md`.
 
 ## Benchmarks
 

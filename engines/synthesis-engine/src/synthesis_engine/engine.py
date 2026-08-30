@@ -383,6 +383,10 @@ class SynthesisEngine:
         """Create a response that reflects identity, context, and outcome."""
 
         response_text = self._compose_raw_response(synthesis_input)
+        response_text = self._append_workflow_lifecycle_provenance(
+            response_text,
+            synthesis_input=synthesis_input,
+        )
         validation_errors = self._validate_output(response_text)
         (
             adaptive_intervention_summary,
@@ -556,7 +560,28 @@ class SynthesisEngine:
         limitation = self._limitation_line(synthesis_input)
         if limitation:
             repaired = f"{repaired}. Limite atual: {limitation}"
-        return repaired
+        return self._append_workflow_lifecycle_provenance(
+            repaired,
+            synthesis_input=synthesis_input,
+        )
+
+    @staticmethod
+    def _append_workflow_lifecycle_provenance(
+        response_text: str,
+        *,
+        synthesis_input: SynthesisInput,
+    ) -> str:
+        plan = synthesis_input.deliberative_plan
+        lifecycle = plan.workflow_lifecycle_transition if plan is not None else None
+        if lifecycle is None:
+            return response_text
+        active_version_clause = f"versao ativa: {lifecycle.active_version_ref}"
+        if active_version_clause in response_text:
+            return response_text
+        return (
+            f"{response_text}; versao ativa: {lifecycle.active_version_ref}; "
+            f"transicao de workflow: {lifecycle.transition_id}"
+        )
 
     def _assess_workflow_output(
         self,
@@ -601,6 +626,16 @@ class SynthesisEngine:
                     clause_name="workflow_profile",
                     clause_prefix="workflow ativo:",
                     expected_value=workflow_label,
+                )
+            )
+        lifecycle = plan.workflow_lifecycle_transition
+        if lifecycle is not None:
+            errors.extend(
+                self._validate_expected_clause(
+                    response_text,
+                    clause_name="workflow_active_version",
+                    clause_prefix="versao ativa:",
+                    expected_value=lifecycle.active_version_ref,
                 )
             )
         response_focus = self._present_contract_label(guidance.response_focus)
@@ -925,11 +960,91 @@ class SynthesisEngine:
                 parts.append(f"freshness {freshness}")
             if relevance is not None:
                 parts.append(f"relevancia {relevance:.2f}")
+            version_ref = cls._safe_operational_value(
+                decision.version_refs.get(selected)
+            )
+            review_ref = cls._safe_operational_value(
+                decision.review_decision_refs.get(selected)
+            )
+            if version_ref:
+                parts.append(f"versao {version_ref}")
+            if review_ref:
+                parts.append(f"revisao_humana {review_ref}")
+        reviewed_playbook = next(
+            (
+                ref
+                for ref in decision.selected_refs
+                if decision.signal_kinds.get(ref) == "procedural"
+                and ref in decision.version_refs
+                and ref in decision.review_decision_refs
+            ),
+            None,
+        )
+        if reviewed_playbook:
+            safe_playbook = cls._safe_operational_value(reviewed_playbook)
+            safe_version = cls._safe_operational_value(
+                decision.version_refs[reviewed_playbook]
+            )
+            safe_review = cls._safe_operational_value(
+                decision.review_decision_refs[reviewed_playbook]
+            )
+            if safe_playbook:
+                parts.append(f"playbook_usado {safe_playbook}")
+            if safe_version:
+                parts.append(f"playbook_versao {safe_version}")
+            if safe_review:
+                parts.append(f"playbook_revisao_humana {safe_review}")
         if ignored:
             parts.append(f"ignorado {ignored}")
+            ignored_version = cls._safe_operational_value(
+                decision.version_refs.get(ignored)
+            )
+            ignored_review = cls._safe_operational_value(
+                decision.review_decision_refs.get(ignored)
+            )
+            if ignored_version:
+                parts.append(f"versao_ignorada {ignored_version}")
+            if ignored_review:
+                parts.append(f"revisao_ignorada {ignored_review}")
+        ignored_reviewed_playbook = next(
+            (
+                ref
+                for ref in decision.ignored_refs
+                if decision.signal_kinds.get(ref) == "procedural"
+                and ref in decision.version_refs
+                and ref in decision.review_decision_refs
+            ),
+            None,
+        )
+        if ignored_reviewed_playbook:
+            safe_ignored_playbook = cls._safe_operational_value(
+                ignored_reviewed_playbook
+            )
+            safe_ignored_version = cls._safe_operational_value(
+                decision.version_refs.get(ignored_reviewed_playbook)
+            )
+            safe_ignored_review = cls._safe_operational_value(
+                decision.review_decision_refs.get(ignored_reviewed_playbook)
+            )
+            if safe_ignored_playbook:
+                parts.append(f"playbook_ignorado {safe_ignored_playbook}")
+            if safe_ignored_version:
+                parts.append(
+                    f"playbook_versao_ignorada {safe_ignored_version}"
+                )
+            if safe_ignored_review:
+                parts.append(
+                    "playbook_revisao_humana_ignorada "
+                    f"{safe_ignored_review}"
+                )
+            ignored_reason = cls._safe_operational_value(
+                decision.non_use_reasons.get(ignored_reviewed_playbook)
+            )
+            if ignored_reason:
+                parts.append(f"playbook_motivo_nao_uso {ignored_reason}")
         if non_use:
             parts.append(f"motivo_nao_uso {non_use}")
-        parts.append("read_only")
+        parts.extend(["read_only", "no_execution", "no_tool_dispatch"])
         return "; ".join(parts)
 
     @staticmethod
@@ -1034,6 +1149,11 @@ class SynthesisEngine:
         objective_line = self._objective_state_line(synthesis_input)
         if objective_line:
             response = f"{response}. Estado do objetivo: {objective_line}"
+        memory_policy_line = self._memory_influence_policy_line(synthesis_input)
+        if memory_policy_line:
+            response = (
+                f"{response}. Politica causal de memoria: {memory_policy_line}"
+            )
         knowledge_evidence_line = self._knowledge_evidence_line(synthesis_input)
         if knowledge_evidence_line:
             response = f"{response}. Conhecimento: {knowledge_evidence_line}"

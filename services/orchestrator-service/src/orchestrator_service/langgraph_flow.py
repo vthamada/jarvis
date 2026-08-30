@@ -22,6 +22,7 @@ class OrchestratorFlowState(TypedDict, total=False):
     knowledge_evidence_governance: object | None
     cognitive_snapshot: object
     deliberative_plan: object
+    memory_influence_governance: object
     specialist_review: object
     specialist_handoff_check: object | None
     specialist_handoff_decision: object | None
@@ -30,8 +31,18 @@ class OrchestratorFlowState(TypedDict, total=False):
     governance_decision: object
     operation_dispatch: object | None
     operation_result: object | None
+    action_confirmation_challenge: object | None
+    action_confirmation_claim: object | None
+    adapter_action_intent: object | None
+    adapter_descriptor: object | None
+    adapter_grant: object | None
+    adapter_grant_claim: object | None
     artifact_results: list[object]
     memory_record_result: object
+    synthesis_result: object
+    experience_record: object
+    post_task_reflection: object
+    decision_outcome_attribution: object | None
     response_text: str
     events: list[object]
     continuity_replay: object | None
@@ -53,6 +64,7 @@ class LangGraphFlowRunner:
 
     def run(self, contract: InputContract) -> OrchestratorResponse:
         state_graph, start_token, end_token = _load_langgraph()
+        self.orchestrator._ensure_request_has_not_been_processed(contract)
         graph = state_graph(OrchestratorFlowState)
         graph.add_node("run_continuity_subflow", self._run_continuity_subflow)
         graph.add_node("classify_directive", self._classify_directive)
@@ -64,6 +76,9 @@ class LangGraphFlowRunner:
         graph.add_node("execute_operation", self._execute_operation)
         graph.add_node("synthesize_response", self._synthesize_response)
         graph.add_node("record_memory", self._record_memory)
+        graph.add_node(
+            "record_outcome_attribution", self._record_outcome_attribution
+        )
         graph.add_edge(start_token, "run_continuity_subflow")
         graph.add_edge("run_continuity_subflow", "classify_directive")
         graph.add_edge("classify_directive", "retrieve_knowledge")
@@ -74,7 +89,8 @@ class LangGraphFlowRunner:
         graph.add_edge("govern_plan", "execute_operation")
         graph.add_edge("execute_operation", "synthesize_response")
         graph.add_edge("synthesize_response", "record_memory")
-        graph.add_edge("record_memory", end_token)
+        graph.add_edge("record_memory", "record_outcome_attribution")
+        graph.add_edge("record_outcome_attribution", end_token)
         runner = graph.compile()
         final_state = runner.invoke(
             {
@@ -86,6 +102,19 @@ class LangGraphFlowRunner:
                         {
                             "content": contract.content,
                             "channel": contract.channel.value,
+                            "requested_autonomy_level": (
+                                contract.requested_autonomy_level
+                            ),
+                            "max_autonomy_level": contract.max_autonomy_level,
+                            "autonomy_confirmation_mode": (
+                                contract.autonomy_confirmation_mode
+                            ),
+                            "autonomy_policy_refs": list(
+                                contract.autonomy_policy_refs
+                            ),
+                            **self.orchestrator._adapter_request_event_payload(
+                                contract.adapter_action_request
+                            ),
                             **self.orchestrator._surface_identity_payload(contract),
                         },
                     )
@@ -254,15 +283,58 @@ class LangGraphFlowRunner:
                 knowledge_result=knowledge_result,
             )
         )
+        memory_influence_decision = (
+            deliberative_plan.memory_influence_policy_decision
+        )
+        if memory_influence_decision is None:
+            raise RuntimeError("planning omitted governed memory influence decision")
+        memory_influence_governance = (
+            self.orchestrator.governance_service.assess_memory_influence_policy(
+                memory_influence_decision,
+                assessed_at=str(contract.timestamp),
+            )
+        )
         autonomy_ladder = derive_autonomy_ladder(
             contract=contract,
             plan=deliberative_plan,
+            action_kind=self.orchestrator._derive_autonomy_action_kind(
+                deliberative_plan
+            ),
         )
         self.orchestrator._apply_autonomy_ladder_to_plan(
             plan=deliberative_plan,
             autonomy_ladder=autonomy_ladder,
         )
         events = list(state["events"])
+        events.append(
+            self.orchestrator.make_event(
+                "memory_influence_governed",
+                contract,
+                {
+                    **self.orchestrator._memory_influence_policy_payload(
+                        deliberative_plan
+                    ),
+                    "memory_influence_governance_status": (
+                        memory_influence_governance.assessment_status
+                    ),
+                    "memory_influence_governance_blockers": list(
+                        memory_influence_governance.blockers
+                    ),
+                    "memory_influence_causal_use_allowed": (
+                        memory_influence_governance.causal_use_allowed
+                    ),
+                    "memory_influence_decision_mutation_allowed": (
+                        memory_influence_governance.decision_mutation_allowed
+                    ),
+                    "memory_influence_governance_execution_allowed": (
+                        memory_influence_governance.execution_allowed
+                    ),
+                    "memory_influence_governance_tool_dispatch_allowed": (
+                        memory_influence_governance.tool_dispatch_allowed
+                    ),
+                },
+            )
+        )
         events.append(
             self.orchestrator.make_event(
                 "autonomy_ladder_declared",
@@ -287,6 +359,9 @@ class LangGraphFlowRunner:
                     "recommended_task_type": deliberative_plan.recommended_task_type,
                     "requires_human_validation": deliberative_plan.requires_human_validation,
                     "steps": deliberative_plan.steps,
+                    **self.orchestrator._memory_influence_policy_payload(
+                        deliberative_plan
+                    ),
                     **self.orchestrator._workflow_policy_payload(
                         deliberative_plan
                     ),
@@ -336,7 +411,11 @@ class LangGraphFlowRunner:
                 },
             )
         )
-        return {"deliberative_plan": deliberative_plan, "events": events}
+        return {
+            "deliberative_plan": deliberative_plan,
+            "memory_influence_governance": memory_influence_governance,
+            "events": events,
+        }
 
     def _review_specialists(self, state: OrchestratorFlowState) -> OrchestratorFlowState:
         contract = state["contract"]
@@ -467,17 +546,39 @@ class LangGraphFlowRunner:
         events = list(state["events"])
         operation_dispatch = None
         operation_result = None
+        action_confirmation_challenge = None
+        action_confirmation_claim = None
+        adapter_action_intent = None
+        adapter_descriptor = None
+        adapter_grant = None
+        adapter_grant_claim = None
         artifact_results: list[object] = []
         mission_runtime_state = state.get("mission_runtime_state")
         if (
-            governance_decision.decision
-            in {
-                PermissionDecision.ALLOW,
-                PermissionDecision.ALLOW_WITH_CONDITIONS,
-            }
-            and directive.should_execute_operation
-            and self.orchestrator._capability_allows_operation(deliberative_plan)
+            deliberative_plan.adapter_action_request is not None
+            or deliberative_plan.autonomy_action_kind
+            in {"prepare_external_action", "execute_external_action"}
         ):
+            adapter_resolution = self.orchestrator.resolve_adapter_authorization(
+                contract,
+                plan=deliberative_plan,
+                governance_decision=governance_decision,
+            )
+            events.extend(adapter_resolution.events)
+            adapter_action_intent = adapter_resolution.action_intent
+            adapter_descriptor = adapter_resolution.descriptor
+            adapter_grant = adapter_resolution.grant
+            adapter_grant_claim = adapter_resolution.claim
+            action_confirmation_challenge = adapter_resolution.challenge
+        should_prepare_operation = self.orchestrator._should_prepare_operation(
+            governance_decision=governance_decision,
+            directive_should_execute_operation=directive.should_execute_operation,
+            plan=deliberative_plan,
+            memory_influence_governance_status=(
+                state["memory_influence_governance"].assessment_status
+            ),
+        )
+        if should_prepare_operation:
             capability_authorization_status = (
                 self.orchestrator._resolve_capability_authorization_status(
                     plan=deliberative_plan,
@@ -485,13 +586,25 @@ class LangGraphFlowRunner:
                     specialist_handoff_decision=state.get("specialist_handoff_decision"),
                 )
             )
-            operation_dispatch = self.orchestrator.build_operation_dispatch(
+            prepared_operation_dispatch = self.orchestrator.build_operation_dispatch(
                 contract,
                 plan=deliberative_plan,
                 specialist_review=specialist_review,
                 mission_runtime_state=mission_runtime_state,
                 authorization_status=capability_authorization_status,
             )
+            action_confirmation_resolution = (
+                self.orchestrator.resolve_action_confirmation(
+                    contract,
+                    prepared_operation_dispatch,
+                )
+            )
+            events.extend(action_confirmation_resolution.events)
+            operation_dispatch = action_confirmation_resolution.operation_dispatch
+            action_confirmation_challenge = action_confirmation_resolution.challenge
+            action_confirmation_claim = action_confirmation_resolution.claim
+
+        if operation_dispatch is not None:
             events.append(
                 self.orchestrator.make_event(
                     "workflow_composed",
@@ -740,6 +853,12 @@ class LangGraphFlowRunner:
         return {
             "operation_dispatch": operation_dispatch,
             "operation_result": operation_result,
+            "action_confirmation_challenge": action_confirmation_challenge,
+            "action_confirmation_claim": action_confirmation_claim,
+            "adapter_action_intent": adapter_action_intent,
+            "adapter_descriptor": adapter_descriptor,
+            "adapter_grant": adapter_grant,
+            "adapter_grant_claim": adapter_grant_claim,
             "artifact_results": artifact_results,
             "events": events,
         }
@@ -792,6 +911,9 @@ class LangGraphFlowRunner:
                     ),
                     "workflow_output_status": synthesis_result.workflow_output_status,
                     "workflow_output_errors": synthesis_result.workflow_output_errors,
+                    **self.orchestrator._memory_influence_policy_payload(
+                        state["deliberative_plan"]
+                    ),
                     **self.orchestrator._workflow_policy_payload(
                         state["deliberative_plan"]
                     ),
@@ -874,7 +996,11 @@ class LangGraphFlowRunner:
                 },
             )
         )
-        return {"response_text": response_text, "events": events}
+        return {
+            "synthesis_result": synthesis_result,
+            "response_text": response_text,
+            "events": events,
+        }
 
     def _record_memory(self, state: OrchestratorFlowState) -> OrchestratorFlowState:
         contract = state["contract"]
@@ -904,6 +1030,9 @@ class LangGraphFlowRunner:
                         if state["deliberative_plan"].continuity_target_mission_id
                         else None
                     ),
+                    **self.orchestrator._memory_influence_policy_payload(
+                        state["deliberative_plan"]
+                    ),
                     **self.orchestrator._surface_identity_payload(
                         state.get("operation_result")
                         or state.get("operation_dispatch")
@@ -918,6 +1047,63 @@ class LangGraphFlowRunner:
             )
         )
         return {"memory_record_result": memory_record_result, "events": events}
+
+    def _record_outcome_attribution(
+        self,
+        state: OrchestratorFlowState,
+    ) -> OrchestratorFlowState:
+        contract = state["contract"]
+        experience_record = self.orchestrator._record_operator_experience(
+            contract=contract,
+            directive=state["directive"],
+            deliberative_plan=state["deliberative_plan"],
+            governance_decision=state["governance_decision"],
+            specialist_review=state["specialist_review"],
+            operation_result=state.get("operation_result"),
+            synthesis_result=state["synthesis_result"],
+            memory_record_id=str(
+                state["memory_record_result"].record_contract.memory_record_id
+            ),
+        )
+        events = list(state["events"])
+        events.append(
+            self.orchestrator.make_event(
+                "experience_record_declared",
+                contract,
+                self.orchestrator._experience_record_event_payload(
+                    experience_record
+                ),
+            )
+        )
+        decision_outcome_attribution, attribution_event = (
+            self.orchestrator._record_decision_outcome_attribution(
+                contract=contract,
+                deliberative_plan=state["deliberative_plan"],
+                memory_influence_governance=state["memory_influence_governance"],
+                governance_decision=state["governance_decision"],
+                experience_record=experience_record,
+                evidence_events=events,
+            )
+        )
+        events.append(attribution_event)
+        post_task_reflection = self.orchestrator._record_post_task_reflection(
+            experience_record=experience_record,
+        )
+        events.append(
+            self.orchestrator.make_event(
+                "post_task_reflection_declared",
+                contract,
+                self.orchestrator._post_task_reflection_event_payload(
+                    post_task_reflection
+                ),
+            )
+        )
+        return {
+            "experience_record": experience_record,
+            "decision_outcome_attribution": decision_outcome_attribution,
+            "post_task_reflection": post_task_reflection,
+            "events": events,
+        }
 
 
 class LangGraphContinuityFlowRunner:

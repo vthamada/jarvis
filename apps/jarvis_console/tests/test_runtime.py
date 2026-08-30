@@ -173,6 +173,40 @@ def test_runtime_error_uses_stderr_stable_code_and_redaction() -> None:
     )
 
 
+@pytest.mark.parametrize(
+    ("unsafe", "safe"),
+    [
+        ("github_pat_1234567890abcdefghijkl", "<redacted-credential>"),
+        ("glpat-1234567890abcdefghij", "<redacted-credential>"),
+        ("xoxb-1234567890abcdefghijkl", "<redacted-credential>"),
+        ("sk_live_1234567890abcdefghijkl", "<redacted-credential>"),
+        ("AIza1234567890abcdefghijklmnopqrstuv", "<redacted-credential>"),
+        ("npm_1234567890abcdefghijkl", "<redacted-credential>"),
+        ("client_secret=top-secret", "client_secret=<redacted>"),
+        ("aws_secret_access_key=top-secret", "aws_secret_access_key=<redacted>"),
+        ("private_key=top-secret", "private_key=<redacted>"),
+        ("Authorization: Basic dXNlcjpwYXNz", "Authorization: <redacted>"),
+        (
+            "-----BEGIN PRIVATE KEY-----\nMIIEFAKE\n-----END PRIVATE KEY-----",
+            "<redacted-private-key>",
+        ),
+        ("C:/Users/operator/.ssh/id_rsa", "<redacted-path>"),
+        ("/root/.ssh/id_rsa", "<redacted-path>"),
+        ("/opt/secrets/api-key", "<redacted-path>"),
+        ("/run/secrets/token", "<redacted-path>"),
+    ],
+)
+def test_runtime_redacts_standalone_credentials_private_keys_and_forward_paths(
+    unsafe: str,
+    safe: str,
+) -> None:
+    redacted, changed = ConsoleRuntime(output_format="text").redact(unsafe)
+
+    assert changed is True
+    assert unsafe not in redacted
+    assert safe in redacted
+
+
 def test_governance_blocked_error_has_distinct_exit_code() -> None:
     stderr = StringIO()
     runtime = ConsoleRuntime(
@@ -372,6 +406,37 @@ def test_main_rejects_json_for_state_change_before_core_build(
     payload = loads(captured.err)
     assert exit_code == ConsoleExitCode.USAGE_ERROR
     assert captured.out == ""
+    assert payload["error_code"] == "json_not_supported"
+
+
+def test_main_rejects_json_action_confirmation_before_core_build(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    def fail_build(*args, **kwargs):
+        raise AssertionError("unsupported confirmation JSON constructed Core")
+
+    monkeypatch.setattr(cli.JarvisConsole, "build", fail_build)
+
+    exit_code = cli.main(
+        [
+            "action-confirm",
+            "--challenge-id",
+            "confirmation-challenge://runtime-json",
+            "--action-fingerprint",
+            "a" * 64,
+            "--operator-identity-ref",
+            "operator://runtime-json",
+            "--format",
+            "json",
+        ]
+    )
+
+    captured = capsys.readouterr()
+    payload = loads(captured.err)
+    assert exit_code == ConsoleExitCode.USAGE_ERROR
+    assert captured.out == ""
+    assert payload["command_id"] == "action-confirm"
     assert payload["error_code"] == "json_not_supported"
 
 

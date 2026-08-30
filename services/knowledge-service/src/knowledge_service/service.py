@@ -15,6 +15,7 @@ from shared.contracts import (
     DomainRegistryEntryContract,
     DomainSpecialistRouteContract,
     KnowledgeSourceEvidenceContract,
+    TechnologyRadarIntakeContract,
 )
 from shared.domain_onboarding import (
     DEFAULT_DOMAIN_ONBOARDING_BASELINE_PATH,
@@ -29,6 +30,11 @@ from shared.domain_registry import (
     route_routing_source,
 )
 from shared.specialist_registry import CANONICAL_SPECIALIST_TYPES
+from shared.technology_radar_intake import (
+    technology_radar_intake_fingerprint,
+    technology_radar_source_identity,
+    validate_technology_radar_intake,
+)
 
 
 @dataclass(frozen=True)
@@ -58,6 +64,32 @@ class KnowledgeRetrievalResult:
     freshness_status: str = "unknown"
     conflict_status: str = "unknown"
     uncertainty_notes: list[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class TechnologyRadarIntakeAssessment:
+    """Read-only intake qualification that grants no registry or runtime authority."""
+
+    intake_id: str
+    intake_version: str
+    status: str
+    blockers: list[str]
+    source_identity: tuple[str, str] | None
+    intake_fingerprint: str
+    eligible_for_reviewed_registry: bool
+    source_trusted: bool = False
+    read_only: bool = True
+    registry_write_authorized: bool = False
+    network_fetch_allowed: bool = False
+    knowledge_ingestion_allowed: bool = False
+    evolution_proposal_allowed: bool = False
+    dependency_installation_allowed: bool = False
+    execution_allowed: bool = False
+    runtime_activation_allowed: bool = False
+    promotion_authorized: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+    priority_mutation_allowed: bool = False
 
 
 DEFAULT_CORPUS_PATH = Path.cwd() / "knowledge" / "curated" / "v1_corpus.json"
@@ -278,6 +310,37 @@ class KnowledgeService:
         """Expose runtime route labels currently wired into retrieval."""
 
         return list(self.domain_routes.keys())
+
+    def assess_technology_radar_intake(
+        self,
+        intake: TechnologyRadarIntakeContract,
+    ) -> TechnologyRadarIntakeAssessment:
+        """Qualify one reviewed reference without storing, fetching or ingesting it."""
+
+        blockers = validate_technology_radar_intake(intake)
+        eligible = not blockers
+        source_identity = None
+        try:
+            resolved_source_identity = technology_radar_source_identity(
+                intake.source_locator,
+                intake.source_version_ref,
+            )
+        except ValueError:
+            pass
+        else:
+            if "source_locator_not_canonical" not in blockers:
+                source_identity = resolved_source_identity
+        return TechnologyRadarIntakeAssessment(
+            intake_id=intake.intake_id,
+            intake_version=intake.intake_version,
+            status=(
+                "eligible_for_reviewed_registry" if eligible else "blocked"
+            ),
+            blockers=list(blockers),
+            source_identity=source_identity,
+            intake_fingerprint=technology_radar_intake_fingerprint(intake),
+            eligible_for_reviewed_registry=eligible,
+        )
 
     def assess_domain_onboarding(
         self,

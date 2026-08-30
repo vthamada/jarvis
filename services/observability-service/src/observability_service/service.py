@@ -3,7 +3,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field, replace
+from collections import Counter
+from dataclasses import asdict, dataclass, field, replace
 from datetime import UTC, datetime
 from os import getenv
 from pathlib import Path
@@ -15,10 +16,16 @@ from observability_service.agentic import (
 )
 from observability_service.repository import ObservabilityRepository
 from shared.contracts import (
+    DECISION_ATTRIBUTION_CAUSALITY_SCOPE,
+    DECISION_ATTRIBUTION_GAIN_CLAIM_STATUS,
+    DECISION_ATTRIBUTION_STATUSES,
     WORKFLOW_VARIANT_EVAL_METRICS,
     CapabilityReadinessContract,
     DailyOperatorMissionOutcomeContract,
     DailyOperatorUtilityReportContract,
+    DecisionOutcomeAttributionItemContract,
+    DecisionOutcomeAttributionRecordContract,
+    DecisionOutcomeAttributionReportContract,
     DomainEvalCaseResultContract,
     DomainEvalRunContract,
     EvolutionProposalContract,
@@ -37,9 +44,11 @@ from shared.contracts import (
     SkillCandidateContract,
     SkillEvolutionOperatorItemContract,
     SkillEvolutionOperatorViewContract,
+    WorkflowVariantEvalCasePackContract,
     WorkflowVariantEvalCaseResultContract,
     WorkflowVariantEvalRunContract,
 )
+from shared.decision_attribution import validate_decision_attribution_record
 from shared.domain_registry import (
     is_promoted_specialist_route,
     route_metadata_payload,
@@ -48,6 +57,16 @@ from shared.domain_registry import (
 from shared.eval_expansion import derive_expanded_eval_state
 from shared.events import InternalEventEnvelope
 from shared.recurring_patterns import build_recurring_pattern_report
+from shared.workflow_variant_eval import (
+    derive_workflow_variant_eval_case_checks,
+    derive_workflow_variant_eval_metric_deltas,
+    derive_workflow_variant_eval_metrics,
+    validate_workflow_variant_eval_case_pack,
+    validate_workflow_variant_eval_case_result,
+    validate_workflow_variant_eval_run,
+    workflow_variant_eval_case_pack_fingerprint,
+    workflow_variant_eval_control_fingerprint,
+)
 
 
 @dataclass(frozen=True)
@@ -60,6 +79,613 @@ class FlowMetrics:
     memory_writes: int
     error_events: int
     duration_seconds: float
+
+
+_WORKFLOW_LIFECYCLE_SOURCE_EVENT_NAMES = (
+    "plan_built",
+    "response_synthesized",
+    "workflow_composed",
+    "workflow_governance_declared",
+    "operation_dispatched",
+    "operation_completed",
+    "workflow_completed",
+)
+_WORKFLOW_LIFECYCLE_PROJECTION_FIELDS = {
+    "status": "workflow_lifecycle_status",
+    "resolution_reasons": "workflow_lifecycle_resolution_reasons",
+    "transition_id": "workflow_lifecycle_transition_id",
+    "revision": "workflow_lifecycle_revision",
+    "action": "workflow_lifecycle_action",
+    "active_version_ref": "workflow_lifecycle_active_version_ref",
+    "active_definition_hash": "workflow_lifecycle_active_definition_hash",
+    "baseline_version_ref": "workflow_lifecycle_baseline_version_ref",
+    "baseline_definition_hash": "workflow_lifecycle_baseline_definition_hash",
+    "candidate_version_ref": "workflow_lifecycle_candidate_version_ref",
+    "candidate_definition_hash": "workflow_lifecycle_candidate_definition_hash",
+    "source_registry_ref": "workflow_lifecycle_source_registry_ref",
+    "source_registry_fingerprint": (
+        "workflow_lifecycle_source_registry_fingerprint"
+    ),
+    "human_authorization_ref": "workflow_lifecycle_human_authorization_ref",
+    "human_authorized": "workflow_lifecycle_human_authorized",
+    "operator_ref": "workflow_lifecycle_operator_ref",
+    "evidence_refs": "workflow_lifecycle_evidence_refs",
+    "completed_test_refs": "workflow_lifecycle_completed_test_refs",
+    "failure_refs": "workflow_lifecycle_failure_refs",
+    "evolution_proposal_id": "workflow_lifecycle_evolution_proposal_id",
+    "proposal_fingerprint": "workflow_lifecycle_proposal_fingerprint",
+    "review_decision_id": "workflow_lifecycle_review_decision_id",
+    "review_decision_fingerprint": (
+        "workflow_lifecycle_review_decision_fingerprint"
+    ),
+    "release_checklist_id": "workflow_lifecycle_release_checklist_id",
+    "release_checklist_fingerprint": (
+        "workflow_lifecycle_release_checklist_fingerprint"
+    ),
+    "promotion_gate_id": "workflow_lifecycle_promotion_gate_id",
+    "promotion_gate_fingerprint": (
+        "workflow_lifecycle_promotion_gate_fingerprint"
+    ),
+    "eval_run_id": "workflow_lifecycle_eval_run_id",
+    "eval_run_fingerprint": "workflow_lifecycle_eval_run_fingerprint",
+    "rollback_plan_id": "workflow_lifecycle_rollback_plan_id",
+    "rollback_plan_fingerprint": (
+        "workflow_lifecycle_rollback_plan_fingerprint"
+    ),
+    "active_registry_write_allowed": (
+        "workflow_lifecycle_active_registry_write_allowed"
+    ),
+    "runtime_execution_allowed": "workflow_lifecycle_runtime_execution_allowed",
+    "automatic_promotion_allowed": (
+        "workflow_lifecycle_automatic_promotion_allowed"
+    ),
+    "automatic_rollback_allowed": (
+        "workflow_lifecycle_automatic_rollback_allowed"
+    ),
+    "core_mutation_allowed": "workflow_lifecycle_core_mutation_allowed",
+}
+_WORKFLOW_LIFECYCLE_AUTHORITY_DRIFT = {
+    "workflow_lifecycle_active_registry_write_allowed": (
+        "workflow_lifecycle_active_registry_write_claim_not_allowed"
+    ),
+    "workflow_lifecycle_runtime_execution_allowed": (
+        "workflow_lifecycle_runtime_execution_claim_not_allowed"
+    ),
+    "workflow_lifecycle_automatic_promotion_allowed": (
+        "workflow_lifecycle_automatic_promotion_claim_not_allowed"
+    ),
+    "workflow_lifecycle_automatic_rollback_allowed": (
+        "workflow_lifecycle_automatic_rollback_claim_not_allowed"
+    ),
+    "workflow_lifecycle_core_mutation_allowed": (
+        "workflow_lifecycle_core_mutation_claim_not_allowed"
+    ),
+}
+
+
+@dataclass(frozen=True)
+class _WorkflowLifecycleAudit:
+    status: str
+    trace_status: str
+    resolution_reasons: list[str]
+    action: str | None
+    transition_id: str | None
+    revision: int | None
+    active_version_ref: str | None
+    active_definition_hash: str | None
+    baseline_version_ref: str | None
+    baseline_definition_hash: str | None
+    candidate_version_ref: str | None
+    candidate_definition_hash: str | None
+    source_registry_ref: str | None
+    source_registry_fingerprint: str | None
+    human_authorization_ref: str | None
+    human_authorized: bool
+    operator_ref: str | None
+    evidence_refs: list[str]
+    completed_test_refs: list[str]
+    failure_refs: list[str]
+    evolution_proposal_id: str | None
+    proposal_fingerprint: str | None
+    review_decision_id: str | None
+    review_decision_fingerprint: str | None
+    release_checklist_id: str | None
+    release_checklist_fingerprint: str | None
+    promotion_gate_id: str | None
+    promotion_gate_fingerprint: str | None
+    eval_run_id: str | None
+    eval_run_fingerprint: str | None
+    rollback_plan_id: str | None
+    rollback_plan_fingerprint: str | None
+    authority_safe: bool
+    drift_flags: list[str]
+
+
+def _workflow_lifecycle_optional_text(
+    payload: dict[str, object],
+    key: str,
+) -> str | None:
+    value = payload.get(key)
+    if not isinstance(value, str):
+        return None
+    normalized = value.strip()
+    return normalized or None
+
+
+def _workflow_lifecycle_text_list(
+    payload: dict[str, object],
+    key: str,
+) -> list[str]:
+    value = payload.get(key)
+    if not isinstance(value, (list, tuple)):
+        return []
+    return [str(item).strip() for item in value if str(item).strip()]
+
+
+def _workflow_lifecycle_valid_fingerprint(value: str | None) -> bool:
+    return bool(
+        value
+        and len(value) == 64
+        and all(character in "0123456789abcdef" for character in value)
+    )
+
+
+def _project_workflow_lifecycle(
+    events: list[InternalEventEnvelope],
+) -> _WorkflowLifecycleAudit:
+    """Project the runtime lifecycle chain and fail closed on telemetry drift."""
+
+    source_events = [
+        event
+        for event in events
+        if event.event_name in _WORKFLOW_LIFECYCLE_SOURCE_EVENT_NAMES
+    ]
+    projection_keys = tuple(_WORKFLOW_LIFECYCLE_PROJECTION_FIELDS.values())
+    projected_events = [
+        event
+        for event in source_events
+        if any(key in event.payload for key in projection_keys)
+    ]
+    if not projected_events:
+        return _WorkflowLifecycleAudit(
+            status="static_baseline",
+            trace_status="static_inferred",
+            resolution_reasons=[],
+            action=None,
+            transition_id=None,
+            revision=None,
+            active_version_ref=None,
+            active_definition_hash=None,
+            baseline_version_ref=None,
+            baseline_definition_hash=None,
+            candidate_version_ref=None,
+            candidate_definition_hash=None,
+            source_registry_ref=None,
+            source_registry_fingerprint=None,
+            human_authorization_ref=None,
+            human_authorized=False,
+            operator_ref=None,
+            evidence_refs=[],
+            completed_test_refs=[],
+            failure_refs=[],
+            evolution_proposal_id=None,
+            proposal_fingerprint=None,
+            review_decision_id=None,
+            review_decision_fingerprint=None,
+            release_checklist_id=None,
+            release_checklist_fingerprint=None,
+            promotion_gate_id=None,
+            promotion_gate_fingerprint=None,
+            eval_run_id=None,
+            eval_run_fingerprint=None,
+            rollback_plan_id=None,
+            rollback_plan_fingerprint=None,
+            authority_safe=True,
+            drift_flags=[],
+        )
+
+    drift_flags: list[str] = []
+    events_by_name = {
+        event_name: [
+            event for event in source_events if event.event_name == event_name
+        ]
+        for event_name in _WORKFLOW_LIFECYCLE_SOURCE_EVENT_NAMES
+    }
+    expected_event_names = ["plan_built", "response_synthesized"]
+    if events_by_name["operation_dispatched"] or events_by_name["operation_completed"]:
+        expected_event_names.extend(["operation_dispatched", "operation_completed"])
+
+    for event_name in expected_event_names:
+        if not events_by_name[event_name]:
+            drift_flags.append(f"workflow_lifecycle_event_missing:{event_name}")
+
+    for event in source_events:
+        if any(key not in event.payload for key in projection_keys):
+            drift_flags.append(
+                f"workflow_lifecycle_projection_missing:{event.event_name}"
+            )
+
+    complete_events = [
+        event
+        for event in source_events
+        if all(key in event.payload for key in projection_keys)
+    ]
+    canonical_event = next(
+        (
+            event
+            for event in complete_events
+            if event.event_name == "plan_built"
+        ),
+        complete_events[0] if complete_events else projected_events[0],
+    )
+    canonical_payload = canonical_event.payload
+
+    for label, key in _WORKFLOW_LIFECYCLE_PROJECTION_FIELDS.items():
+        if not complete_events:
+            break
+        first_value = complete_events[0].payload.get(key)
+        if any(event.payload.get(key) != first_value for event in complete_events[1:]):
+            drift_flags.append(
+                f"workflow_lifecycle_projection_mismatch:{label}"
+            )
+
+    raw_status = canonical_payload.get("workflow_lifecycle_status")
+    status = raw_status.strip() if isinstance(raw_status, str) else "invalid"
+    resolution_reasons = _workflow_lifecycle_text_list(
+        canonical_payload,
+        "workflow_lifecycle_resolution_reasons",
+    )
+    action = _workflow_lifecycle_optional_text(
+        canonical_payload,
+        "workflow_lifecycle_action",
+    )
+    transition_id = _workflow_lifecycle_optional_text(
+        canonical_payload,
+        "workflow_lifecycle_transition_id",
+    )
+    raw_revision = canonical_payload.get("workflow_lifecycle_revision")
+    revision = raw_revision if type(raw_revision) is int else None
+    active_version_ref = _workflow_lifecycle_optional_text(
+        canonical_payload,
+        "workflow_lifecycle_active_version_ref",
+    )
+    active_definition_hash = _workflow_lifecycle_optional_text(
+        canonical_payload,
+        "workflow_lifecycle_active_definition_hash",
+    )
+    baseline_version_ref = _workflow_lifecycle_optional_text(
+        canonical_payload,
+        "workflow_lifecycle_baseline_version_ref",
+    )
+    baseline_definition_hash = _workflow_lifecycle_optional_text(
+        canonical_payload,
+        "workflow_lifecycle_baseline_definition_hash",
+    )
+    candidate_version_ref = _workflow_lifecycle_optional_text(
+        canonical_payload,
+        "workflow_lifecycle_candidate_version_ref",
+    )
+    candidate_definition_hash = _workflow_lifecycle_optional_text(
+        canonical_payload,
+        "workflow_lifecycle_candidate_definition_hash",
+    )
+    source_registry_ref = _workflow_lifecycle_optional_text(
+        canonical_payload,
+        "workflow_lifecycle_source_registry_ref",
+    )
+    source_registry_fingerprint = _workflow_lifecycle_optional_text(
+        canonical_payload,
+        "workflow_lifecycle_source_registry_fingerprint",
+    )
+    human_authorization_ref = _workflow_lifecycle_optional_text(
+        canonical_payload,
+        "workflow_lifecycle_human_authorization_ref",
+    )
+    human_authorized = (
+        canonical_payload.get("workflow_lifecycle_human_authorized") is True
+    )
+    operator_ref = _workflow_lifecycle_optional_text(
+        canonical_payload,
+        "workflow_lifecycle_operator_ref",
+    )
+    evidence_refs = _workflow_lifecycle_text_list(
+        canonical_payload,
+        "workflow_lifecycle_evidence_refs",
+    )
+    completed_test_refs = _workflow_lifecycle_text_list(
+        canonical_payload,
+        "workflow_lifecycle_completed_test_refs",
+    )
+    failure_refs = _workflow_lifecycle_text_list(
+        canonical_payload,
+        "workflow_lifecycle_failure_refs",
+    )
+    evolution_proposal_id = _workflow_lifecycle_optional_text(
+        canonical_payload,
+        "workflow_lifecycle_evolution_proposal_id",
+    )
+    proposal_fingerprint = _workflow_lifecycle_optional_text(
+        canonical_payload,
+        "workflow_lifecycle_proposal_fingerprint",
+    )
+    review_decision_id = _workflow_lifecycle_optional_text(
+        canonical_payload,
+        "workflow_lifecycle_review_decision_id",
+    )
+    review_decision_fingerprint = _workflow_lifecycle_optional_text(
+        canonical_payload,
+        "workflow_lifecycle_review_decision_fingerprint",
+    )
+    release_checklist_id = _workflow_lifecycle_optional_text(
+        canonical_payload,
+        "workflow_lifecycle_release_checklist_id",
+    )
+    release_checklist_fingerprint = _workflow_lifecycle_optional_text(
+        canonical_payload,
+        "workflow_lifecycle_release_checklist_fingerprint",
+    )
+    promotion_gate_id = _workflow_lifecycle_optional_text(
+        canonical_payload,
+        "workflow_lifecycle_promotion_gate_id",
+    )
+    promotion_gate_fingerprint = _workflow_lifecycle_optional_text(
+        canonical_payload,
+        "workflow_lifecycle_promotion_gate_fingerprint",
+    )
+    eval_run_id = _workflow_lifecycle_optional_text(
+        canonical_payload,
+        "workflow_lifecycle_eval_run_id",
+    )
+    eval_run_fingerprint = _workflow_lifecycle_optional_text(
+        canonical_payload,
+        "workflow_lifecycle_eval_run_fingerprint",
+    )
+    rollback_plan_id = _workflow_lifecycle_optional_text(
+        canonical_payload,
+        "workflow_lifecycle_rollback_plan_id",
+    )
+    rollback_plan_fingerprint = _workflow_lifecycle_optional_text(
+        canonical_payload,
+        "workflow_lifecycle_rollback_plan_fingerprint",
+    )
+
+    for label, key in (
+        ("resolution_reasons", "workflow_lifecycle_resolution_reasons"),
+        ("evidence_refs", "workflow_lifecycle_evidence_refs"),
+        ("completed_test_refs", "workflow_lifecycle_completed_test_refs"),
+        ("failure_refs", "workflow_lifecycle_failure_refs"),
+    ):
+        raw_value = canonical_payload.get(key)
+        if not isinstance(raw_value, list) or any(
+            not isinstance(item, str) or not item.strip() for item in raw_value
+        ):
+            drift_flags.append(f"workflow_lifecycle_{label}_invalid")
+
+    authority_safe = not any(
+        flag.startswith("workflow_lifecycle_event_missing:")
+        or flag.startswith("workflow_lifecycle_projection_missing:")
+        for flag in drift_flags
+    )
+    for event in source_events:
+        for key, drift_flag in _WORKFLOW_LIFECYCLE_AUTHORITY_DRIFT.items():
+            if key not in event.payload:
+                authority_safe = False
+            elif event.payload.get(key) is not False:
+                authority_safe = False
+                drift_flags.append(drift_flag)
+
+    expected_action_by_status = {
+        "active_promoted": "activate_candidate",
+        "baseline_restored": "rollback_to_baseline",
+    }
+    if resolution_reasons:
+        for reason in resolution_reasons:
+            drift_flags.append(f"workflow_lifecycle_resolution_reason:{reason}")
+
+    if status in {"static_baseline", "static_baseline_fallback"}:
+        static_binding_fields = (
+            "workflow_lifecycle_transition_id",
+            "workflow_lifecycle_revision",
+            "workflow_lifecycle_action",
+            "workflow_lifecycle_candidate_version_ref",
+            "workflow_lifecycle_candidate_definition_hash",
+            "workflow_lifecycle_human_authorization_ref",
+            "workflow_lifecycle_operator_ref",
+            "workflow_lifecycle_evolution_proposal_id",
+            "workflow_lifecycle_proposal_fingerprint",
+            "workflow_lifecycle_review_decision_id",
+            "workflow_lifecycle_review_decision_fingerprint",
+            "workflow_lifecycle_release_checklist_id",
+            "workflow_lifecycle_release_checklist_fingerprint",
+            "workflow_lifecycle_promotion_gate_id",
+            "workflow_lifecycle_promotion_gate_fingerprint",
+            "workflow_lifecycle_eval_run_id",
+            "workflow_lifecycle_eval_run_fingerprint",
+            "workflow_lifecycle_rollback_plan_id",
+            "workflow_lifecycle_rollback_plan_fingerprint",
+        )
+        if any(canonical_payload.get(key) is not None for key in static_binding_fields):
+            drift_flags.append(
+                "workflow_lifecycle_static_binding_claim_not_allowed"
+            )
+        if canonical_payload.get("workflow_lifecycle_human_authorized") is not False:
+            drift_flags.append(
+                "workflow_lifecycle_static_human_authorization_not_allowed"
+            )
+        if evidence_refs or completed_test_refs or failure_refs:
+            drift_flags.append(
+                "workflow_lifecycle_static_transition_evidence_not_allowed"
+            )
+        if not active_version_ref or not active_version_ref.startswith(
+            "workflow-version://"
+        ):
+            drift_flags.append("workflow_lifecycle_active_version_ref_invalid")
+        if not _workflow_lifecycle_valid_fingerprint(active_definition_hash):
+            drift_flags.append(
+                "workflow_lifecycle_active_definition_hash_invalid"
+            )
+        if not baseline_version_ref or not baseline_version_ref.startswith(
+            "workflow-version://"
+        ):
+            drift_flags.append("workflow_lifecycle_baseline_version_ref_invalid")
+        if not _workflow_lifecycle_valid_fingerprint(baseline_definition_hash):
+            drift_flags.append(
+                "workflow_lifecycle_baseline_definition_hash_invalid"
+            )
+        if (
+            active_version_ref != baseline_version_ref
+            or active_definition_hash != baseline_definition_hash
+        ):
+            drift_flags.append("workflow_lifecycle_static_baseline_binding_mismatch")
+        if source_registry_ref is None:
+            drift_flags.append("workflow_lifecycle_source_registry_ref_missing")
+        if not _workflow_lifecycle_valid_fingerprint(source_registry_fingerprint):
+            drift_flags.append(
+                "workflow_lifecycle_source_registry_fingerprint_invalid"
+            )
+        if status == "static_baseline":
+            if resolution_reasons:
+                drift_flags.append(
+                    "workflow_lifecycle_static_resolution_reasons_not_allowed"
+                )
+        else:
+            drift_flags.append("workflow_lifecycle_static_baseline_fallback")
+            if not resolution_reasons:
+                drift_flags.append(
+                    "workflow_lifecycle_fallback_resolution_reasons_missing"
+                )
+    elif status in expected_action_by_status:
+        if resolution_reasons:
+            drift_flags.append(
+                "workflow_lifecycle_active_resolution_reasons_not_allowed"
+            )
+        if action != expected_action_by_status[status]:
+            drift_flags.append("workflow_lifecycle_action_status_mismatch")
+        if not transition_id or not transition_id.startswith(
+            "workflow-lifecycle-transition://"
+        ):
+            drift_flags.append("workflow_lifecycle_transition_id_invalid")
+        if revision is None or revision < 1:
+            drift_flags.append("workflow_lifecycle_revision_invalid")
+        if not active_version_ref or not active_version_ref.startswith(
+            "workflow-version://"
+        ):
+            drift_flags.append("workflow_lifecycle_active_version_ref_invalid")
+        if not _workflow_lifecycle_valid_fingerprint(active_definition_hash):
+            drift_flags.append(
+                "workflow_lifecycle_active_definition_hash_invalid"
+            )
+        if not baseline_version_ref or not baseline_version_ref.startswith(
+            "workflow-version://"
+        ):
+            drift_flags.append("workflow_lifecycle_baseline_version_ref_invalid")
+        if not _workflow_lifecycle_valid_fingerprint(baseline_definition_hash):
+            drift_flags.append(
+                "workflow_lifecycle_baseline_definition_hash_invalid"
+            )
+        if not candidate_version_ref or not candidate_version_ref.startswith(
+            "workflow-version://"
+        ):
+            drift_flags.append("workflow_lifecycle_candidate_version_ref_invalid")
+        if not _workflow_lifecycle_valid_fingerprint(candidate_definition_hash):
+            drift_flags.append(
+                "workflow_lifecycle_candidate_definition_hash_invalid"
+            )
+        if status == "active_promoted" and (
+            active_version_ref != candidate_version_ref
+            or active_definition_hash != candidate_definition_hash
+        ):
+            drift_flags.append("workflow_lifecycle_candidate_binding_mismatch")
+        if status == "baseline_restored" and (
+            active_version_ref != baseline_version_ref
+            or active_definition_hash != baseline_definition_hash
+        ):
+            drift_flags.append("workflow_lifecycle_rollback_binding_mismatch")
+        if source_registry_ref is None:
+            drift_flags.append("workflow_lifecycle_source_registry_ref_missing")
+        if not _workflow_lifecycle_valid_fingerprint(source_registry_fingerprint):
+            drift_flags.append(
+                "workflow_lifecycle_source_registry_fingerprint_invalid"
+            )
+        if not human_authorization_ref or not human_authorization_ref.startswith(
+            "human-authorization://"
+        ):
+            drift_flags.append(
+                "workflow_lifecycle_human_authorization_ref_invalid"
+            )
+        if canonical_payload.get("workflow_lifecycle_human_authorized") is not True:
+            drift_flags.append("workflow_lifecycle_human_authorization_missing")
+        if operator_ref is None:
+            drift_flags.append("workflow_lifecycle_operator_ref_missing")
+        if not evidence_refs:
+            drift_flags.append("workflow_lifecycle_evidence_refs_missing")
+        if not completed_test_refs:
+            drift_flags.append("workflow_lifecycle_completed_test_refs_missing")
+        if status == "baseline_restored" and not failure_refs:
+            drift_flags.append("workflow_lifecycle_rollback_failure_refs_missing")
+        artifact_pairs = (
+            ("evolution_proposal", evolution_proposal_id, proposal_fingerprint),
+            (
+                "review_decision",
+                review_decision_id,
+                review_decision_fingerprint,
+            ),
+            (
+                "release_checklist",
+                release_checklist_id,
+                release_checklist_fingerprint,
+            ),
+            ("promotion_gate", promotion_gate_id, promotion_gate_fingerprint),
+            ("eval_run", eval_run_id, eval_run_fingerprint),
+            ("rollback_plan", rollback_plan_id, rollback_plan_fingerprint),
+        )
+        for label, artifact_id, fingerprint in artifact_pairs:
+            if artifact_id is None:
+                drift_flags.append(f"workflow_lifecycle_{label}_id_missing")
+            if not _workflow_lifecycle_valid_fingerprint(fingerprint):
+                drift_flags.append(
+                    f"workflow_lifecycle_{label}_fingerprint_invalid"
+                )
+    else:
+        drift_flags.append("workflow_lifecycle_status_invalid")
+
+    drift_flags = list(dict.fromkeys(drift_flags))
+    return _WorkflowLifecycleAudit(
+        status=status,
+        trace_status="attention_required" if drift_flags else "healthy",
+        resolution_reasons=resolution_reasons,
+        action=action,
+        transition_id=transition_id,
+        revision=revision,
+        active_version_ref=active_version_ref,
+        active_definition_hash=active_definition_hash,
+        baseline_version_ref=baseline_version_ref,
+        baseline_definition_hash=baseline_definition_hash,
+        candidate_version_ref=candidate_version_ref,
+        candidate_definition_hash=candidate_definition_hash,
+        source_registry_ref=source_registry_ref,
+        source_registry_fingerprint=source_registry_fingerprint,
+        human_authorization_ref=human_authorization_ref,
+        human_authorized=human_authorized,
+        operator_ref=operator_ref,
+        evidence_refs=evidence_refs,
+        completed_test_refs=completed_test_refs,
+        failure_refs=failure_refs,
+        evolution_proposal_id=evolution_proposal_id,
+        proposal_fingerprint=proposal_fingerprint,
+        review_decision_id=review_decision_id,
+        review_decision_fingerprint=review_decision_fingerprint,
+        release_checklist_id=release_checklist_id,
+        release_checklist_fingerprint=release_checklist_fingerprint,
+        promotion_gate_id=promotion_gate_id,
+        promotion_gate_fingerprint=promotion_gate_fingerprint,
+        eval_run_id=eval_run_id,
+        eval_run_fingerprint=eval_run_fingerprint,
+        rollback_plan_id=rollback_plan_id,
+        rollback_plan_fingerprint=rollback_plan_fingerprint,
+        authority_safe=authority_safe,
+        drift_flags=drift_flags,
+    )
 
 
 DEFAULT_REQUIRED_FLOW_EVENTS = (
@@ -373,6 +999,60 @@ class FlowAudit:
     mission_progress_memory_influence_refs: list[str] = field(default_factory=list)
     mission_progress_learning_refs: list[str] = field(default_factory=list)
     mission_progress_risk_refs: list[str] = field(default_factory=list)
+    memory_influence_selected_refs: list[str] = field(default_factory=list)
+    memory_influence_non_use_reasons: dict[str, str] = field(default_factory=dict)
+    memory_influence_signal_kinds: dict[str, str] = field(default_factory=dict)
+    memory_influence_version_refs: dict[str, str] = field(default_factory=dict)
+    memory_influence_review_decision_refs: dict[str, str] = field(default_factory=dict)
+    memory_influence_execution_allowed: bool = False
+    memory_influence_tool_dispatch_allowed: bool = False
+    memory_influence_governance_status: str | None = None
+    memory_influence_governance_blockers: list[str] = field(default_factory=list)
+    memory_influence_governance_drift_flags: list[str] = field(default_factory=list)
+    selected_reviewed_procedural_playbook_refs: list[str] = field(
+        default_factory=list
+    )
+    decision_outcome_attribution_record_id: str | None = None
+    decision_outcome_attribution_status: str = "not_applicable"
+    decision_outcome_attribution_evidence_refs: list[str] = field(
+        default_factory=list
+    )
+    causal_effect_proven: bool = False
+    gain_claim_status: str = "not_applicable"
+    workflow_lifecycle_status: str = "static_baseline"
+    workflow_lifecycle_trace_status: str = "static_inferred"
+    workflow_lifecycle_resolution_reasons: list[str] = field(default_factory=list)
+    workflow_lifecycle_action: str | None = None
+    workflow_lifecycle_transition_id: str | None = None
+    workflow_lifecycle_revision: int | None = None
+    workflow_lifecycle_active_version_ref: str | None = None
+    workflow_lifecycle_active_definition_hash: str | None = None
+    workflow_lifecycle_baseline_version_ref: str | None = None
+    workflow_lifecycle_baseline_definition_hash: str | None = None
+    workflow_lifecycle_candidate_version_ref: str | None = None
+    workflow_lifecycle_candidate_definition_hash: str | None = None
+    workflow_lifecycle_source_registry_ref: str | None = None
+    workflow_lifecycle_source_registry_fingerprint: str | None = None
+    workflow_lifecycle_human_authorization_ref: str | None = None
+    workflow_lifecycle_human_authorized: bool = False
+    workflow_lifecycle_operator_ref: str | None = None
+    workflow_lifecycle_evidence_refs: list[str] = field(default_factory=list)
+    workflow_lifecycle_completed_test_refs: list[str] = field(default_factory=list)
+    workflow_lifecycle_failure_refs: list[str] = field(default_factory=list)
+    workflow_lifecycle_evolution_proposal_id: str | None = None
+    workflow_lifecycle_proposal_fingerprint: str | None = None
+    workflow_lifecycle_review_decision_id: str | None = None
+    workflow_lifecycle_review_decision_fingerprint: str | None = None
+    workflow_lifecycle_release_checklist_id: str | None = None
+    workflow_lifecycle_release_checklist_fingerprint: str | None = None
+    workflow_lifecycle_promotion_gate_id: str | None = None
+    workflow_lifecycle_promotion_gate_fingerprint: str | None = None
+    workflow_lifecycle_eval_run_id: str | None = None
+    workflow_lifecycle_eval_run_fingerprint: str | None = None
+    workflow_lifecycle_rollback_plan_id: str | None = None
+    workflow_lifecycle_rollback_plan_fingerprint: str | None = None
+    workflow_lifecycle_authority_safe: bool = True
+    workflow_lifecycle_drift_flags: list[str] = field(default_factory=list)
 
     @property
     def trace_complete(self) -> bool:
@@ -444,6 +1124,9 @@ class FlowAudit:
                 "rolled_back",
             }
             and self.promotion_gate_status in {"not_applicable", "passed", "blocked"}
+            and self.workflow_lifecycle_trace_status
+            in {"healthy", "static_inferred"}
+            and not self.workflow_lifecycle_drift_flags
         )
 
 
@@ -461,6 +1144,40 @@ class IncidentEvidence:
     missing_required_events: list[str]
     recommended_operator_action: str
     source_services: list[str]
+    workflow_lifecycle_status: str = "static_baseline"
+    workflow_lifecycle_trace_status: str = "static_inferred"
+    workflow_lifecycle_resolution_reasons: list[str] = field(default_factory=list)
+    workflow_lifecycle_action: str | None = None
+    workflow_lifecycle_transition_id: str | None = None
+    workflow_lifecycle_revision: int | None = None
+    workflow_lifecycle_active_version_ref: str | None = None
+    workflow_lifecycle_active_definition_hash: str | None = None
+    workflow_lifecycle_baseline_version_ref: str | None = None
+    workflow_lifecycle_baseline_definition_hash: str | None = None
+    workflow_lifecycle_candidate_version_ref: str | None = None
+    workflow_lifecycle_candidate_definition_hash: str | None = None
+    workflow_lifecycle_source_registry_ref: str | None = None
+    workflow_lifecycle_source_registry_fingerprint: str | None = None
+    workflow_lifecycle_human_authorization_ref: str | None = None
+    workflow_lifecycle_human_authorized: bool = False
+    workflow_lifecycle_operator_ref: str | None = None
+    workflow_lifecycle_evidence_refs: list[str] = field(default_factory=list)
+    workflow_lifecycle_completed_test_refs: list[str] = field(default_factory=list)
+    workflow_lifecycle_failure_refs: list[str] = field(default_factory=list)
+    workflow_lifecycle_evolution_proposal_id: str | None = None
+    workflow_lifecycle_proposal_fingerprint: str | None = None
+    workflow_lifecycle_review_decision_id: str | None = None
+    workflow_lifecycle_review_decision_fingerprint: str | None = None
+    workflow_lifecycle_release_checklist_id: str | None = None
+    workflow_lifecycle_release_checklist_fingerprint: str | None = None
+    workflow_lifecycle_promotion_gate_id: str | None = None
+    workflow_lifecycle_promotion_gate_fingerprint: str | None = None
+    workflow_lifecycle_eval_run_id: str | None = None
+    workflow_lifecycle_eval_run_fingerprint: str | None = None
+    workflow_lifecycle_rollback_plan_id: str | None = None
+    workflow_lifecycle_rollback_plan_fingerprint: str | None = None
+    workflow_lifecycle_authority_safe: bool = True
+    workflow_lifecycle_drift_flags: list[str] = field(default_factory=list)
 
 
 @dataclass(frozen=True)
@@ -473,6 +1190,7 @@ class ObservabilityQuery:
     mission_id: str | None = None
     correlation_id: str | None = None
     operation_id: str | None = None
+    event_names: tuple[str, ...] = ()
 
 
 class ObservabilityService:
@@ -510,6 +1228,7 @@ class ObservabilityService:
         filters = query or ObservabilityQuery()
         return self.repository.list_events(
             limit=filters.limit,
+            event_names=filters.event_names,
             request_id=filters.request_id,
             session_id=filters.session_id,
             mission_id=filters.mission_id,
@@ -623,100 +1342,257 @@ class ObservabilityService:
     def build_workflow_variant_eval_run(
         *,
         run_id: str,
-        workflow_profile: str,
-        route: str,
-        baseline_version_ref: str,
-        candidate_version_ref: str,
+        case_pack: WorkflowVariantEvalCasePackContract,
         case_results: list[WorkflowVariantEvalCaseResultContract],
         minimum_pass_rate: float,
         evidence_refs: list[str],
         generated_at: str,
         blockers: list[str] | None = None,
     ) -> WorkflowVariantEvalRunContract:
-        """Aggregate equivalent workflow comparisons without release authority."""
+        """Revalidate paired observations and aggregate only derived evidence."""
 
+        pack_failures = validate_workflow_variant_eval_case_pack(case_pack)
+        if pack_failures:
+            raise ValueError(
+                "invalid workflow variant evaluation case pack: "
+                + ",".join(pack_failures)
+            )
         resolved_blockers = list(blockers or [])
         if not 0.0 < minimum_pass_rate <= 1.0:
             resolved_blockers.append("invalid_minimum_pass_rate")
         if not case_results:
-            resolved_blockers.append("no_workflow_variant_eval_results")
+            raise ValueError("workflow variant evaluation requires case results")
         if len(case_results) > 32:
-            resolved_blockers.append("too_many_workflow_variant_eval_results")
-        case_ids = [result.case_id for result in case_results]
-        if len(case_ids) != len(set(case_ids)):
-            resolved_blockers.append("duplicate_workflow_variant_case_id")
-        regression_flags: list[str] = []
-        for result in case_results:
-            if (
-                result.workflow_profile != workflow_profile
-                or result.route != route
-                or result.baseline_version_ref != baseline_version_ref
-                or result.candidate_version_ref != candidate_version_ref
-            ):
-                resolved_blockers.append(f"case:{result.case_id}:scope_mismatch")
-            if (
-                set(result.baseline_metrics) != set(WORKFLOW_VARIANT_EVAL_METRICS)
-                or set(result.candidate_metrics) != set(WORKFLOW_VARIANT_EVAL_METRICS)
-                or set(result.metric_deltas) != set(WORKFLOW_VARIANT_EVAL_METRICS)
-            ):
+            raise ValueError("workflow variant evaluation result limit exceeded")
+
+        case_pack_fingerprint = workflow_variant_eval_case_pack_fingerprint(case_pack)
+        cases_by_identity = {
+            (case.case_id, case.case_version): case for case in case_pack.cases
+        }
+        result_identities = [
+            (result.case_id, result.case_version) for result in case_results
+        ]
+        if len(result_identities) != len(set(result_identities)):
+            raise ValueError("duplicate workflow variant case result")
+        if set(result_identities) != set(cases_by_identity):
+            raise ValueError("workflow variant case result set mismatch")
+
+        normalized_results: list[WorkflowVariantEvalCaseResultContract] = []
+        all_regressions: list[str] = []
+        all_limitations: list[str] = []
+        for supplied in case_results:
+            case = cases_by_identity.get((supplied.case_id, supplied.case_version))
+            if case is None:
                 resolved_blockers.append(
-                    f"case:{result.case_id}:metric_dimensions_mismatch"
+                    f"case:{supplied.case_id}:{supplied.case_version}:not_in_case_pack"
+                )
+                continue
+
+            validation_failures = validate_workflow_variant_eval_case_result(
+                supplied,
+                case=case,
+            )
+            baseline_metrics = derive_workflow_variant_eval_metrics(
+                case.baseline_observation,
+                checkpoint_refs=case.baseline_observation.expected_checkpoint_refs,
+            )
+            candidate_metrics = derive_workflow_variant_eval_metrics(
+                case.candidate_observation,
+                checkpoint_refs=case.candidate_observation.expected_checkpoint_refs,
+            )
+            metric_deltas = derive_workflow_variant_eval_metric_deltas(
+                baseline_metrics,
+                candidate_metrics,
+            )
+            regressions = [
+                f"{metric}_regressed"
+                for metric, delta in metric_deltas.items()
+                if (metric == "rework_rate" and delta > 0.0)
+                or (metric != "rework_rate" and delta < 0.0)
+            ]
+            improvements = [
+                f"{metric}_improved"
+                for metric, delta in metric_deltas.items()
+                if (metric == "rework_rate" and delta < 0.0)
+                or (metric != "rework_rate" and delta > 0.0)
+            ]
+            limitations = list(
+                dict.fromkeys(
+                    [
+                        *case.limitations,
+                        *case.baseline_observation.limitations,
+                        *case.candidate_observation.limitations,
+                        *supplied.limitations,
+                    ]
+                )
+            )
+            control_fingerprint = workflow_variant_eval_control_fingerprint(
+                case.control_snapshot
+            )
+            source_authority_safe = (
+                supplied.offline_only
+                and supplied.read_only
+                and supplied.sandbox_only
+                and supplied.human_review_required
+                and not supplied.execution_allowed
+                and not supplied.tool_dispatch_allowed
+                and not supplied.runtime_activation_allowed
+                and not supplied.release_authorized
+                and not supplied.promotion_authorized
+                and not supplied.automatic_promotion_allowed
+                and not supplied.core_mutation_allowed
+            )
+            checks = derive_workflow_variant_eval_case_checks(
+                case,
+                baseline_metrics=baseline_metrics,
+                candidate_metrics=candidate_metrics,
+                limitations=limitations,
+            )
+            failures = [name for name, passed in checks.items() if not passed]
+            normalized_evidence = list(
+                dict.fromkeys(
+                    [
+                        case.scenario_ref,
+                        case.baseline_observation.outcome_ref,
+                        case.candidate_observation.outcome_ref,
+                        *case.evidence_refs,
+                        *case.baseline_observation.evidence_refs,
+                        *case.candidate_observation.evidence_refs,
+                    ]
+                )
+            )[:100]
+            normalized = replace(
+                supplied,
+                case_pack_id=case_pack.case_pack_id,
+                case_pack_version=case_pack.case_pack_version,
+                case_pack_fingerprint=case_pack_fingerprint,
+                case_id=case.case_id,
+                case_version=case.case_version,
+                scenario_ref=case.scenario_ref,
+                input_snapshot_fingerprint=case.input_snapshot_fingerprint,
+                workflow_profile=case.workflow_profile,
+                route=case.route,
+                baseline_version_ref=case.baseline_version_ref,
+                candidate_version_ref=case.candidate_version_ref,
+                baseline_definition_hash=case.baseline_observation.definition_hash,
+                candidate_definition_hash=case.candidate_observation.definition_hash,
+                control_snapshot_id=case.control_snapshot.control_snapshot_id,
+                control_snapshot_fingerprint=control_fingerprint,
+                baseline_outcome_ref=case.baseline_observation.outcome_ref,
+                candidate_outcome_ref=case.candidate_observation.outcome_ref,
+                baseline_outcome_status=case.baseline_observation.outcome_status,
+                candidate_outcome_status=case.candidate_observation.outcome_status,
+                baseline_metrics=baseline_metrics,
+                candidate_metrics=candidate_metrics,
+                metric_deltas=metric_deltas,
+                checks=checks,
+                passed=bool(improvements)
+                and not (failures or regressions or limitations),
+                improvement_signals=improvements,
+                regression_flags=regressions,
+                failures=failures,
+                limitations=limitations,
+                evidence_refs=normalized_evidence,
+                offline_only=True,
+                read_only=True,
+                sandbox_only=True,
+                human_review_required=True,
+                execution_allowed=False,
+                tool_dispatch_allowed=False,
+                runtime_activation_allowed=False,
+                release_authorized=False,
+                promotion_authorized=False,
+                automatic_promotion_allowed=False,
+                core_mutation_allowed=False,
+            )
+            normalized_results.append(normalized)
+            all_regressions.extend(
+                f"case:{normalized.case_id}:{flag}" for flag in regressions
+            )
+            all_limitations.extend(
+                f"case:{normalized.case_id}:{limitation}" for limitation in limitations
+            )
+            resolved_blockers.extend(
+                f"case:{normalized.case_id}:source_result:{failure}"
+                for failure in validation_failures
+            )
+            if not source_authority_safe:
+                resolved_blockers.append(
+                    f"case:{normalized.case_id}:source_authority_safe"
                 )
             resolved_blockers.extend(
-                f"case:{result.case_id}:{failure}" for failure in result.failures
-            )
-            regression_flags.extend(
-                f"case:{result.case_id}:{flag}" for flag in result.regression_flags
+                f"case:{normalized.case_id}:{failure}" for failure in failures
             )
 
-        total_cases = len(case_results)
-        passed_cases = sum(result.passed for result in case_results)
+        total_cases = len(normalized_results)
+        passed_cases = sum(result.passed for result in normalized_results)
         failed_cases = total_cases - passed_cases
         pass_rate = round(passed_cases / total_cases, 4) if total_cases else 0.0
 
         def aggregate(attribute: str) -> dict[str, float]:
-            if not total_cases:
+            if not normalized_results:
                 return {metric: 0.0 for metric in WORKFLOW_VARIANT_EVAL_METRICS}
             return {
                 metric: round(
-                    sum(
-                        getattr(result, attribute).get(metric, 0.0)
-                        for result in case_results
-                    )
-                    / total_cases,
+                    sum(getattr(result, attribute)[metric] for result in normalized_results)
+                    / len(normalized_results),
                     4,
                 )
                 for metric in WORKFLOW_VARIANT_EVAL_METRICS
             }
 
-        baseline_metrics = aggregate("baseline_metrics")
-        candidate_metrics = aggregate("candidate_metrics")
-        metric_deltas = {
-            metric: round(candidate_metrics[metric] - baseline_metrics[metric], 4)
-            for metric in WORKFLOW_VARIANT_EVAL_METRICS
-        }
-        resolved_blockers.extend(regression_flags)
-        resolved_blockers = sorted(set(resolved_blockers))
+        aggregate_baseline = aggregate("baseline_metrics")
+        aggregate_candidate = aggregate("candidate_metrics")
+        aggregate_deltas = derive_workflow_variant_eval_metric_deltas(
+            aggregate_baseline,
+            aggregate_candidate,
+        )
+        resolved_blockers = list(
+            dict.fromkeys([*resolved_blockers, *all_regressions])
+        )
+        all_limitations = list(dict.fromkeys(all_limitations))
         passed = (
-            not resolved_blockers
+            passed_cases == total_cases
+            and not resolved_blockers
+            and not all_limitations
             and pass_rate >= minimum_pass_rate
-            and all(result.improvement_signals for result in case_results)
         )
         comparison_conclusion = (
             "candidate_improved_without_regression"
             if passed
             else (
                 "candidate_regression_detected"
-                if regression_flags
+                if all_regressions
                 else "insufficient_or_invalid_evidence"
             )
         )
-        return WorkflowVariantEvalRunContract(
+        run = WorkflowVariantEvalRunContract(
             run_id=run_id,
-            workflow_profile=workflow_profile,
-            route=route,
-            baseline_version_ref=baseline_version_ref,
-            candidate_version_ref=candidate_version_ref,
+            case_pack_id=case_pack.case_pack_id,
+            case_pack_version=case_pack.case_pack_version,
+            case_pack_fingerprint=case_pack_fingerprint,
+            workflow_profile=case_pack.workflow_profile,
+            route=case_pack.route,
+            baseline_version_ref=case_pack.baseline_version_ref,
+            candidate_version_ref=case_pack.candidate_version_ref,
+            baseline_definition_hashes=[
+                result.baseline_definition_hash for result in normalized_results
+            ],
+            candidate_definition_hashes=[
+                result.candidate_definition_hash for result in normalized_results
+            ],
+            control_snapshot_ids=[
+                result.control_snapshot_id for result in normalized_results
+            ],
+            control_snapshot_fingerprints=[
+                result.control_snapshot_fingerprint for result in normalized_results
+            ],
+            baseline_outcome_refs=[
+                result.baseline_outcome_ref for result in normalized_results
+            ],
+            candidate_outcome_refs=[
+                result.candidate_outcome_ref for result in normalized_results
+            ],
             status="passed" if passed else "failed",
             readiness_status=(
                 "candidate_ready_for_human_gate_review"
@@ -729,14 +1605,22 @@ class ObservabilityService:
             total_cases=total_cases,
             passed_cases=passed_cases,
             failed_cases=failed_cases,
-            aggregate_baseline_metrics=baseline_metrics,
-            aggregate_candidate_metrics=candidate_metrics,
-            aggregate_metric_deltas=metric_deltas,
-            case_results=list(case_results),
-            regression_flags=sorted(set(regression_flags)),
+            aggregate_baseline_metrics=aggregate_baseline,
+            aggregate_candidate_metrics=aggregate_candidate,
+            aggregate_metric_deltas=aggregate_deltas,
+            case_results=normalized_results,
+            regression_flags=list(dict.fromkeys(all_regressions)),
+            limitations=all_limitations,
             evidence_refs=list(dict.fromkeys(evidence_refs))[:100],
             blockers=resolved_blockers,
             generated_at=generated_at,
+        )
+        run_failures = validate_workflow_variant_eval_run(run, case_pack=case_pack)
+        if not run_failures:
+            return run
+        raise ValueError(
+            "invalid workflow variant evaluation aggregate: "
+            + ",".join(run_failures)
         )
 
     @staticmethod
@@ -1218,6 +2102,623 @@ class ObservabilityService:
         )
 
     @staticmethod
+    def build_decision_outcome_attribution_report(
+        *,
+        report_id: str,
+        records: list[DecisionOutcomeAttributionRecordContract],
+        events: list[InternalEventEnvelope],
+        generated_at: str,
+        source_record_limit_reached: bool = False,
+        source_event_limit_reached: bool = False,
+    ) -> DecisionOutcomeAttributionReportContract:
+        """Correlate canonical attribution records without inferring causal gain."""
+
+        def add_once(values: list[str], value: str) -> None:
+            if value and value not in values:
+                values.append(value)
+
+        def payload_text(
+            event: InternalEventEnvelope,
+            field_name: str,
+        ) -> str | None:
+            value = event.payload.get(field_name)
+            if value is None:
+                return None
+            text = str(value).strip()
+            return text or None
+
+        def payload_list(
+            event: InternalEventEnvelope,
+            field_name: str,
+        ) -> list[str]:
+            value = event.payload.get(field_name, [])
+            if not isinstance(value, list):
+                return []
+            return [text for item in value if (text := str(item).strip())]
+
+        def effective_mission_id(
+            event: InternalEventEnvelope,
+        ) -> tuple[str | None, bool]:
+            payload_mission_id = payload_text(event, "mission_id")
+            envelope_mission_id = (
+                str(event.mission_id).strip() if event.mission_id else None
+            )
+            conflict = bool(
+                payload_mission_id
+                and envelope_mission_id
+                and payload_mission_id != envelope_mission_id
+            )
+            return payload_mission_id or envelope_mission_id, conflict
+
+        attribution_events = [
+            event
+            for event in events
+            if event.event_name
+            in {
+                "decision_outcome_attribution_recorded",
+                "decision_outcome_attribution_failed",
+            }
+        ]
+        feedback_events = [
+            event
+            for event in events
+            if event.event_name == "operator_feedback_recorded"
+        ]
+        report_limitations: list[str] = []
+        report_evidence_refs: list[str] = []
+        if source_record_limit_reached:
+            add_once(report_limitations, "source_record_limit_reached")
+        if source_event_limit_reached:
+            add_once(report_limitations, "source_event_limit_reached")
+
+        record_id_counts = Counter(
+            record.attribution_record_id for record in records
+        )
+        canonical_record_ids = set(record_id_counts)
+        canonical_experience_ids = {
+            record.experience_id for record in records if record.experience_id
+        }
+        valid_failed_event_ids: set[str] = set()
+        seen_failed_event_ids: set[str] = set()
+        for event in attribution_events:
+            if event.event_name != "decision_outcome_attribution_failed":
+                continue
+            if event.event_id in seen_failed_event_ids:
+                add_once(
+                    report_limitations,
+                    f"duplicate_failed_event_id:{event.event_id}",
+                )
+            seen_failed_event_ids.add(event.event_id)
+            failed_event_valid = bool(
+                event.event_id
+                and payload_text(event, "attribution_status")
+                == "insufficient_evidence"
+                and payload_text(event, "failure_reason")
+                and event.payload.get("causal_effect_proven") is False
+                and payload_text(event, "gain_claim_status")
+                == DECISION_ATTRIBUTION_GAIN_CLAIM_STATUS
+                and event.payload.get("read_only") is True
+                and all(
+                    event.payload.get(field_name) is False
+                    for field_name in (
+                        "execution_allowed",
+                        "promotion_authorized",
+                        "automatic_promotion_allowed",
+                        "core_mutation_allowed",
+                    )
+                )
+            )
+            if failed_event_valid:
+                valid_failed_event_ids.add(event.event_id)
+            else:
+                add_once(
+                    report_limitations,
+                    f"invalid_failed_event:{event.event_id}",
+                )
+            add_once(report_evidence_refs, event.event_id)
+
+        attribution_events_by_record: dict[str, list[InternalEventEnvelope]] = {}
+        for event in attribution_events:
+            record_id = payload_text(event, "attribution_record_id")
+            if record_id is None:
+                if event.event_name == "decision_outcome_attribution_failed":
+                    add_once(report_limitations, "failed_without_record")
+                    add_once(
+                        report_limitations,
+                        f"failed_without_record:{event.event_id}",
+                    )
+                else:
+                    add_once(
+                        report_limitations,
+                        f"attribution_event_missing_record_id:{event.event_id}",
+                    )
+                add_once(report_evidence_refs, event.event_id)
+                continue
+            if record_id not in canonical_record_ids:
+                if event.event_name == "decision_outcome_attribution_failed":
+                    add_once(report_limitations, "failed_without_record")
+                    add_once(
+                        report_limitations,
+                        f"failed_without_record:{event.event_id}",
+                    )
+                else:
+                    add_once(
+                        report_limitations,
+                        f"attribution_event_without_canonical_record:{event.event_id}",
+                    )
+                add_once(report_evidence_refs, event.event_id)
+                continue
+            attribution_events_by_record.setdefault(record_id, []).append(event)
+
+        feedback_metadata: list[
+            tuple[InternalEventEnvelope, str | None, str | None, bool]
+        ] = []
+        for event in feedback_events:
+            experience_id = payload_text(
+                event,
+                "operator_feedback_experience_id",
+            )
+            mission_id, mission_conflict = effective_mission_id(event)
+            feedback_metadata.append(
+                (event, experience_id, mission_id, mission_conflict)
+            )
+            if experience_id is None:
+                add_once(
+                    report_limitations,
+                    f"feedback_event_missing_experience_id:{event.event_id}",
+                )
+            elif experience_id not in canonical_experience_ids:
+                add_once(
+                    report_limitations,
+                    f"feedback_without_canonical_experience:{event.event_id}",
+                )
+            if mission_id is None:
+                add_once(
+                    report_limitations,
+                    f"feedback_event_missing_mission_id:{event.event_id}",
+                )
+            if mission_conflict:
+                add_once(
+                    report_limitations,
+                    f"feedback_event_mission_conflict:{event.event_id}",
+                )
+
+        items: list[DecisionOutcomeAttributionItemContract] = []
+        valid_record_count = 0
+        effective_attribution_statuses: list[str] = []
+        matched_feedback_event_ids: set[str] = set()
+        for position, record in enumerate(records, start=1):
+            item_limitations = list(dict.fromkeys(record.limitations))
+            invalid_record_limitations: list[str] = []
+            canonical_record_valid = True
+            item_evidence_refs = list(
+                dict.fromkeys(
+                    [record.attribution_record_id, *record.evidence_refs]
+                )
+            )
+            try:
+                validate_decision_attribution_record(record)
+            except ValueError:
+                canonical_record_valid = False
+                add_once(
+                    item_limitations,
+                    "canonical_record_validation_failed",
+                )
+                add_once(
+                    invalid_record_limitations,
+                    "canonical_record_validation_failed",
+                )
+            if record_id_counts[record.attribution_record_id] > 1:
+                add_once(item_limitations, "duplicate_attribution_record_id")
+                add_once(
+                    invalid_record_limitations,
+                    "duplicate_attribution_record_id",
+                )
+            if record.attribution_status not in DECISION_ATTRIBUTION_STATUSES:
+                add_once(item_limitations, "invalid_attribution_status")
+                add_once(invalid_record_limitations, "invalid_attribution_status")
+            if record.causality_scope != DECISION_ATTRIBUTION_CAUSALITY_SCOPE:
+                add_once(item_limitations, "invalid_causality_scope")
+                add_once(invalid_record_limitations, "invalid_causality_scope")
+            if record.causal_effect_proven:
+                add_once(item_limitations, "causal_effect_claim_not_allowed")
+                add_once(
+                    invalid_record_limitations,
+                    "causal_effect_claim_not_allowed",
+                )
+            if record.gain_claim_status != DECISION_ATTRIBUTION_GAIN_CLAIM_STATUS:
+                add_once(item_limitations, "gain_claim_not_allowed")
+                add_once(invalid_record_limitations, "gain_claim_not_allowed")
+            if (
+                not record.read_only
+                or not record.immutable
+                or record.memory_write_allowed
+                or record.execution_allowed
+                or record.tool_dispatch_allowed
+                or record.promotion_authorized
+                or record.automatic_promotion_allowed
+                or record.core_mutation_allowed
+            ):
+                add_once(item_limitations, "attribution_record_authority_claim_not_allowed")
+                add_once(
+                    invalid_record_limitations,
+                    "attribution_record_authority_claim_not_allowed",
+                )
+            if not set(record.declared_causal_refs).issubset(
+                set(record.participating_refs)
+            ):
+                add_once(
+                    item_limitations,
+                    "declared_causal_refs_not_in_participating_refs",
+                )
+                add_once(
+                    invalid_record_limitations,
+                    "declared_causal_refs_not_in_participating_refs",
+                )
+            if not set(record.correlated_refs).issubset(
+                set(record.participating_refs)
+            ):
+                add_once(
+                    item_limitations,
+                    "correlated_refs_not_in_participating_refs",
+                )
+                add_once(
+                    invalid_record_limitations,
+                    "correlated_refs_not_in_participating_refs",
+                )
+            if (
+                record.attribution_status == "declared_causality"
+                and not record.declared_causal_refs
+            ):
+                add_once(
+                    item_limitations,
+                    "declared_causality_without_declared_refs",
+                )
+                add_once(
+                    invalid_record_limitations,
+                    "declared_causality_without_declared_refs",
+                )
+            if (
+                record.attribution_status == "correlation_only"
+                and record.declared_causal_refs
+            ):
+                add_once(
+                    item_limitations,
+                    "correlation_classification_conflicts_with_declared_refs",
+                )
+                add_once(
+                    invalid_record_limitations,
+                    "correlation_classification_conflicts_with_declared_refs",
+                )
+            if canonical_record_valid:
+                valid_record_count += 1
+
+            matching_events = attribution_events_by_record.get(
+                record.attribution_record_id,
+                [],
+            )
+            recorded_events = [
+                event
+                for event in matching_events
+                if event.event_name == "decision_outcome_attribution_recorded"
+            ]
+            failed_events = [
+                event
+                for event in matching_events
+                if event.event_name == "decision_outcome_attribution_failed"
+            ]
+            attribution_trail_invalid = bool(invalid_record_limitations)
+            if not matching_events:
+                add_once(item_limitations, "attribution_event_missing")
+            if not recorded_events:
+                add_once(item_limitations, "recorded_attribution_event_missing")
+                attribution_trail_invalid = True
+            elif len(recorded_events) > 1:
+                add_once(
+                    item_limitations,
+                    "duplicate_recorded_attribution_event",
+                )
+                attribution_trail_invalid = True
+            if len(matching_events) > 1:
+                add_once(item_limitations, "multiple_attribution_events_for_record")
+            if failed_events:
+                add_once(item_limitations, "attribution_failed_event_observed")
+                attribution_trail_invalid = True
+
+            expected_event_values = {
+                "request_id": str(record.request_id),
+                "session_id": str(record.session_id),
+                "mission_id": (
+                    str(record.mission_id) if record.mission_id is not None else None
+                ),
+                "experience_id": record.experience_id,
+                "governance_decision_ref": record.governance_decision_ref,
+                "workflow_policy_ref": record.workflow_policy_ref,
+                "memory_policy_decision_ref": record.memory_policy_decision_ref,
+                "outcome_ref": record.outcome_ref,
+                "outcome_status": record.outcome_status,
+                "attribution_status": record.attribution_status,
+            }
+            expected_recorded_payload = asdict(record)
+            for event in matching_events:
+                add_once(item_evidence_refs, event.event_id)
+                for evidence_ref in payload_list(event, "evidence_refs"):
+                    add_once(item_evidence_refs, evidence_ref)
+                mission_id, mission_conflict = effective_mission_id(event)
+                if mission_conflict:
+                    add_once(
+                        item_limitations,
+                        f"attribution_event_mission_conflict:{event.event_id}",
+                    )
+                    attribution_trail_invalid = True
+                for field_name, expected_value in expected_event_values.items():
+                    if field_name == "mission_id":
+                        observed_value = mission_id
+                    elif field_name == "request_id":
+                        payload_value = payload_text(event, field_name)
+                        envelope_value = (
+                            str(event.request_id).strip() if event.request_id else None
+                        )
+                        if (
+                            payload_value
+                            and envelope_value
+                            and payload_value != envelope_value
+                        ):
+                            add_once(
+                                item_limitations,
+                                f"attribution_event_request_id_envelope_conflict:{event.event_id}",
+                            )
+                            attribution_trail_invalid = True
+                        observed_value = payload_value or envelope_value
+                    elif field_name == "session_id":
+                        payload_value = payload_text(event, field_name)
+                        envelope_value = (
+                            str(event.session_id).strip() if event.session_id else None
+                        )
+                        if (
+                            payload_value
+                            and envelope_value
+                            and payload_value != envelope_value
+                        ):
+                            add_once(
+                                item_limitations,
+                                f"attribution_event_session_id_envelope_conflict:{event.event_id}",
+                            )
+                            attribution_trail_invalid = True
+                        observed_value = payload_value or envelope_value
+                    else:
+                        observed_value = payload_text(event, field_name)
+                    if (
+                        event.event_name == "decision_outcome_attribution_failed"
+                        and observed_value is None
+                    ):
+                        continue
+                    if observed_value != expected_value:
+                        add_once(
+                            item_limitations,
+                            f"attribution_event_{field_name}_mismatch:{event.event_id}",
+                        )
+                        attribution_trail_invalid = True
+                if event.payload.get("causal_effect_proven") is True:
+                    add_once(
+                        item_limitations,
+                        f"attribution_event_causal_effect_claim:{event.event_id}",
+                    )
+                    attribution_trail_invalid = True
+                event_gain_claim = payload_text(event, "gain_claim_status")
+                if event_gain_claim not in {
+                    None,
+                    DECISION_ATTRIBUTION_GAIN_CLAIM_STATUS,
+                }:
+                    add_once(
+                        item_limitations,
+                        f"attribution_event_gain_claim:{event.event_id}",
+                    )
+                    attribution_trail_invalid = True
+                if any(
+                    event.payload.get(field_name) is True
+                    for field_name in (
+                        "execution_allowed",
+                        "promotion_authorized",
+                        "automatic_promotion_allowed",
+                        "core_mutation_allowed",
+                    )
+                ):
+                    add_once(
+                        item_limitations,
+                        f"attribution_event_authority_claim:{event.event_id}",
+                    )
+                    attribution_trail_invalid = True
+                if event.event_name == "decision_outcome_attribution_recorded":
+                    if set(event.payload) != set(expected_recorded_payload):
+                        add_once(
+                            item_limitations,
+                            (
+                                "attribution_event_payload_keys_mismatch:"
+                                f"{event.event_id}"
+                            ),
+                        )
+                        attribution_trail_invalid = True
+                    for field_name, expected_value in expected_recorded_payload.items():
+                        if (
+                            field_name not in event.payload
+                            or event.payload[field_name] != expected_value
+                        ):
+                            add_once(
+                                item_limitations,
+                                (
+                                    "attribution_event_"
+                                    f"{field_name}_mismatch:{event.event_id}"
+                                ),
+                            )
+                            attribution_trail_invalid = True
+
+            effective_attribution_status = record.attribution_status
+            if attribution_trail_invalid:
+                effective_attribution_status = "insufficient_evidence"
+                if record.attribution_status != "insufficient_evidence":
+                    add_once(
+                        item_limitations,
+                        "effective_attribution_downgraded_to_insufficient_evidence",
+                    )
+            effective_attribution_statuses.append(effective_attribution_status)
+
+            exact_feedback_events: list[InternalEventEnvelope] = []
+            record_mission_id = (
+                str(record.mission_id) if record.mission_id is not None else None
+            )
+            if record.experience_id:
+                for event, experience_id, mission_id, mission_conflict in feedback_metadata:
+                    if experience_id != record.experience_id:
+                        continue
+                    if (
+                        mission_conflict
+                        or mission_id is None
+                        or record_mission_id is None
+                        or mission_id != record_mission_id
+                    ):
+                        add_once(
+                            item_limitations,
+                            f"feedback_mission_mismatch:{event.event_id}",
+                        )
+                        continue
+                    exact_feedback_events.append(event)
+                    matched_feedback_event_ids.add(event.event_id)
+
+            feedback_refs: list[str] = []
+            feedback_assessments: list[str] = []
+            feedback_ratings: list[int] = []
+            for event in exact_feedback_events:
+                feedback_ref = payload_text(event, "operator_feedback_id")
+                if feedback_ref is None:
+                    add_once(
+                        item_limitations,
+                        f"feedback_id_missing:{event.event_id}",
+                    )
+                    feedback_ref = event.event_id
+                feedback_refs.append(feedback_ref)
+                add_once(item_evidence_refs, event.event_id)
+                for evidence_ref in payload_list(
+                    event,
+                    "operator_feedback_evidence_refs",
+                ):
+                    add_once(item_evidence_refs, evidence_ref)
+                assessment = payload_text(
+                    event,
+                    "operator_feedback_assessment",
+                )
+                if assessment is None:
+                    add_once(
+                        item_limitations,
+                        f"feedback_assessment_missing:{event.event_id}",
+                    )
+                else:
+                    feedback_assessments.append(assessment)
+                rating = event.payload.get("operator_feedback_rating")
+                if isinstance(rating, int) and not isinstance(rating, bool):
+                    feedback_ratings.append(rating)
+                elif rating is not None:
+                    add_once(
+                        item_limitations,
+                        f"feedback_rating_invalid:{event.event_id}",
+                    )
+
+            feedback_status = "not_available"
+            if exact_feedback_events:
+                feedback_status = (
+                    "conflicting"
+                    if len(set(feedback_assessments)) > 1
+                    else "linked"
+                )
+            if feedback_status == "conflicting":
+                add_once(item_limitations, "feedback_assessment_conflict")
+
+            for limitation in item_limitations:
+                add_once(
+                    report_limitations,
+                    f"record:{record.attribution_record_id}:{limitation}",
+                )
+            item = DecisionOutcomeAttributionItemContract(
+                item_id=f"{report_id}#item-{position}",
+                attribution=record,
+                feedback_status=feedback_status,
+                feedback_refs=feedback_refs,
+                feedback_assessments=feedback_assessments,
+                feedback_ratings=feedback_ratings,
+                comparator_status="not_available",
+                comparator_refs=[],
+                gain_claim_status=DECISION_ATTRIBUTION_GAIN_CLAIM_STATUS,
+                limitations=item_limitations,
+                evidence_refs=item_evidence_refs[:500],
+                causal_effect_proven=False,
+                read_only=True,
+                human_review_required=True,
+                promotion_authorized=False,
+                automatic_promotion_allowed=False,
+                core_mutation_allowed=False,
+            )
+            items.append(item)
+            for evidence_ref in item.evidence_refs:
+                add_once(report_evidence_refs, evidence_ref)
+
+        for event, experience_id, mission_id, mission_conflict in feedback_metadata:
+            if event.event_id in matched_feedback_event_ids:
+                continue
+            if (
+                experience_id in canonical_experience_ids
+                and mission_id is not None
+                and not mission_conflict
+            ):
+                add_once(
+                    report_limitations,
+                    f"feedback_mission_mismatch:{event.event_id}",
+                )
+            add_once(report_evidence_refs, event.event_id)
+
+        if not records or valid_record_count == 0:
+            report_status = "insufficient_evidence"
+        elif report_limitations:
+            report_status = "measured_with_limitations"
+        else:
+            report_status = "attribution_observed"
+        correlation_only_count = effective_attribution_statuses.count(
+            "correlation_only"
+        )
+        declared_causality_count = effective_attribution_statuses.count(
+            "declared_causality"
+        )
+        insufficient_evidence_count = effective_attribution_statuses.count(
+            "insufficient_evidence"
+        )
+        return DecisionOutcomeAttributionReportContract(
+            report_id=report_id,
+            report_status=report_status,
+            generated_at=generated_at,
+            record_count=len(records),
+            correlation_only_count=correlation_only_count,
+            declared_causality_count=declared_causality_count,
+            insufficient_evidence_count=insufficient_evidence_count,
+            feedback_linked_count=sum(
+                item.feedback_status in {"linked", "conflicting"} for item in items
+            ),
+            comparator_count=0,
+            failed_record_count=len(valid_failed_event_ids),
+            items=items,
+            limitations=report_limitations[:1000],
+            evidence_refs=report_evidence_refs[:1000],
+            source_record_limit_reached=source_record_limit_reached,
+            source_event_limit_reached=source_event_limit_reached,
+            causality_scope=DECISION_ATTRIBUTION_CAUSALITY_SCOPE,
+            causal_effect_proven=False,
+            gain_claim_status=DECISION_ATTRIBUTION_GAIN_CLAIM_STATUS,
+            read_only=True,
+            human_review_required=True,
+            promotion_authorized=False,
+            automatic_promotion_allowed=False,
+            core_mutation_allowed=False,
+        )
+
+    @staticmethod
     def build_daily_operator_utility_report(
         *,
         report_id: str,
@@ -1677,6 +3178,10 @@ class ObservabilityService:
         }
         resolved_metrics: list[LongitudinalVersionMetricsContract] = []
         for metric in metrics:
+            gain_claim_limited = (
+                f"gain-claim-status:{DECISION_ATTRIBUTION_GAIN_CLAIM_STATUS}"
+                in metric.evidence_refs
+            )
             baseline = (
                 metric_by_key.get(
                     (
@@ -1720,6 +3225,8 @@ class ObservabilityService:
             elif rework_delta is not None and rework_delta > 0:
                 trend_status = "regression_detected"
             elif (
+                not gain_claim_limited
+                and
                 success_delta is not None
                 and success_delta > 0
                 and rework_delta is not None
@@ -1779,6 +3286,14 @@ class ObservabilityService:
         ]
         observed_at_values = sorted(observation.observed_at for observation in observations)
         limitations = ["measurement_does_not_authorize_promotion"]
+        if any(
+            f"gain-claim-status:{DECISION_ATTRIBUTION_GAIN_CLAIM_STATUS}"
+            in metric.evidence_refs
+            for metric in resolved_metrics
+        ):
+            limitations.append(
+                "decision_attribution_does_not_establish_gain_without_comparator"
+            )
         if any(metric.offline_observation_count for metric in resolved_metrics):
             limitations.append("offline_eval_is_not_longitudinal_runtime_evidence")
         if any(metric.runtime_status.startswith("inactive") for metric in resolved_metrics):
@@ -1980,8 +3495,13 @@ class ObservabilityService:
     ) -> FlowAudit:
         """Audit a correlated flow for trace completeness and operational anomalies."""
 
-        events = self.list_recent_events(query)
-        metrics = self.summarize_flow(query)
+        audit_query = (
+            query
+            if query.event_names or query.limit >= 100
+            else replace(query, limit=100)
+        )
+        events = self.list_recent_events(audit_query)
+        metrics = self.summarize_flow(audit_query)
         if not events:
             return FlowAudit(
                 request_id=query.request_id,
@@ -2134,9 +3654,22 @@ class ObservabilityService:
             )
 
         event_names = [event.event_name for event in events]
+        workflow_lifecycle_audit = _project_workflow_lifecycle(events)
         governance_event = self._first_event(events, "governance_checked")
         operation_event = self._first_event(events, "operation_completed")
         operation_dispatched_event = self._first_event(events, "operation_dispatched")
+        decision_outcome_attribution_recorded_event = self._first_event(
+            events,
+            "decision_outcome_attribution_recorded",
+        )
+        decision_outcome_attribution_failed_event = self._first_event(
+            events,
+            "decision_outcome_attribution_failed",
+        )
+        decision_outcome_attribution_event = (
+            decision_outcome_attribution_recorded_event
+            or decision_outcome_attribution_failed_event
+        )
         continuity_event = self._first_event(events, "continuity_decided")
         continuity_runtime_event = self._first_event(events, "continuity_subflow_completed")
         specialist_subflow_event = self._first_event(events, "specialist_subflow_completed")
@@ -2865,6 +4398,146 @@ class ObservabilityService:
                 else []
             )
         ]
+        memory_influence_governance_event = self._first_event(
+            events,
+            "memory_influence_governed",
+        )
+        memory_influence_selected_refs = self._dedupe_payload_list(
+            events,
+            "memory_influence_selected_refs",
+        )
+        policy_memory_influence_ignored_refs = self._dedupe_payload_list(
+            events,
+            "memory_influence_ignored_refs",
+        )
+        memory_influence_non_use_reasons = self._dedupe_payload_str_map(
+            events,
+            "memory_influence_non_use_reasons",
+        )
+        memory_influence_signal_kinds = self._dedupe_payload_str_map(
+            events,
+            "memory_influence_signal_kinds",
+        )
+        memory_influence_version_refs = self._dedupe_payload_str_map(
+            events,
+            "memory_influence_version_refs",
+        )
+        memory_influence_review_decision_refs = self._dedupe_payload_str_map(
+            events,
+            "memory_influence_review_decision_refs",
+        )
+        memory_influence_execution_allowed = self._payload_any_true(
+            events,
+            "memory_influence_execution_allowed",
+        )
+        memory_influence_tool_dispatch_allowed = self._payload_any_true(
+            events,
+            "memory_influence_tool_dispatch_allowed",
+        )
+        memory_influence_governance_status = self._payload_str(
+            memory_influence_governance_event,
+            "memory_influence_governance_status",
+            "",
+        ) or None
+        memory_influence_governance_blockers = self._dedupe_payload_list(
+            [memory_influence_governance_event]
+            if memory_influence_governance_event is not None
+            else [],
+            "memory_influence_governance_blockers",
+        )
+        selected_reviewed_procedural_playbook_refs = [
+            ref
+            for ref in memory_influence_selected_refs
+            if ref.startswith("reviewed-playbook://")
+        ]
+        memory_influence_governance_drift_flags: list[str] = []
+        if (
+            memory_influence_selected_refs
+            and memory_influence_governance_event is None
+        ):
+            memory_influence_governance_drift_flags.append(
+                "memory_influence_governance_event_missing"
+            )
+        if (
+            memory_influence_governance_status == "blocked"
+            or memory_influence_governance_blockers
+        ):
+            memory_influence_governance_drift_flags.append(
+                "memory_influence_governance_blocked"
+            )
+        if any(
+            not memory_influence_version_refs.get(ref)
+            for ref in selected_reviewed_procedural_playbook_refs
+        ):
+            memory_influence_governance_drift_flags.append(
+                "reviewed_procedural_version_trace_missing"
+            )
+        if any(
+            not memory_influence_review_decision_refs.get(ref)
+            for ref in selected_reviewed_procedural_playbook_refs
+        ):
+            memory_influence_governance_drift_flags.append(
+                "reviewed_procedural_human_review_trace_missing"
+            )
+        if memory_influence_execution_allowed:
+            memory_influence_governance_drift_flags.append(
+                "memory_influence_execution_authority_claim_not_allowed"
+            )
+        if memory_influence_tool_dispatch_allowed:
+            memory_influence_governance_drift_flags.append(
+                "memory_influence_tool_dispatch_authority_claim_not_allowed"
+            )
+        if (
+            selected_reviewed_procedural_playbook_refs
+            and operation_dispatched_event is not None
+        ):
+            memory_influence_governance_drift_flags.append(
+                "reviewed_procedural_playbook_dispatched"
+            )
+        decision_outcome_attribution_record_id = self._payload_optional_str(
+            decision_outcome_attribution_event,
+            "attribution_record_id",
+        )
+        decision_outcome_attribution_status = self._payload_str(
+            decision_outcome_attribution_event,
+            "attribution_status",
+            "not_applicable",
+        )
+        decision_outcome_attribution_evidence_refs = self._dedupe_payload_list(
+            [decision_outcome_attribution_event]
+            if decision_outcome_attribution_event is not None
+            else [],
+            "evidence_refs",
+        )
+        if (
+            decision_outcome_attribution_event is not None
+            and decision_outcome_attribution_event.event_id
+        ):
+            decision_outcome_attribution_evidence_refs = list(
+                dict.fromkeys(
+                    [
+                        decision_outcome_attribution_event.event_id,
+                        *decision_outcome_attribution_evidence_refs,
+                    ]
+                )
+            )
+        causal_effect_claimed = bool(
+            decision_outcome_attribution_event is not None
+            and decision_outcome_attribution_event.payload.get(
+                "causal_effect_proven"
+            )
+            is True
+        )
+        raw_gain_claim_status = self._payload_optional_str(
+            decision_outcome_attribution_event,
+            "gain_claim_status",
+        )
+        causal_effect_proven = False
+        gain_claim_status = (
+            "not_applicable"
+            if decision_outcome_attribution_event is None
+            else "not_established_without_comparator"
+        )
         registry_domains = (
             [str(item) for item in domain_registry_event.payload.get("registry_domains", [])]
             if domain_registry_event
@@ -2915,6 +4588,22 @@ class ObservabilityService:
             anomaly_flags.append("output_validation_failed")
         if workflow_output_status == "misaligned":
             anomaly_flags.append("workflow_output_misaligned")
+        anomaly_flags.extend(workflow_lifecycle_audit.drift_flags)
+        anomaly_flags.extend(memory_influence_governance_drift_flags)
+        if decision_outcome_attribution_failed_event is not None:
+            anomaly_flags.append("decision_outcome_attribution_failed")
+        if (
+            decision_outcome_attribution_recorded_event is not None
+            and decision_outcome_attribution_failed_event is not None
+        ):
+            anomaly_flags.append("decision_outcome_attribution_event_conflict")
+        if causal_effect_claimed:
+            anomaly_flags.append("decision_outcome_causal_effect_claim_not_allowed")
+        if raw_gain_claim_status not in {
+            None,
+            "not_established_without_comparator",
+        }:
+            anomaly_flags.append("decision_outcome_gain_claim_not_allowed")
 
         if continuity_event is None:
             missing_continuity_signals.append("continuity_decided")
@@ -3856,6 +5545,18 @@ class ObservabilityService:
                 )
             )
         )
+        reviewed_procedural_playbook_refs = {
+            ref
+            for ref, signal_kind in memory_influence_signal_kinds.items()
+            if signal_kind == "procedural"
+            and memory_influence_version_refs.get(ref)
+            and memory_influence_review_decision_refs.get(ref)
+        }
+        ignored_reviewed_procedural_playbook_refs = [
+            ref
+            for ref in policy_memory_influence_ignored_refs
+            if ref in reviewed_procedural_playbook_refs
+        ]
         memory_influence_used_refs = list(semantic_memory_anchor_refs)
         memory_influence_ignored_refs: list[str] = []
         memory_influence_reasons: list[str] = []
@@ -3873,6 +5574,17 @@ class ObservabilityService:
             memory_influence_reasons.append(
                 f"semantic_ignored:{semantic_memory_non_use_reason}"
             )
+        memory_influence_used_refs.extend(memory_influence_selected_refs)
+        memory_influence_ignored_refs.extend(policy_memory_influence_ignored_refs)
+        memory_influence_reasons.extend(
+            f"reviewed_procedural_playbook_used:{ref}"
+            for ref in selected_reviewed_procedural_playbook_refs
+        )
+        memory_influence_reasons.extend(
+            "reviewed_procedural_playbook_ignored:"
+            f"{ref}:{memory_influence_non_use_reasons.get(ref, 'reason_not_recorded')}"
+            for ref in ignored_reviewed_procedural_playbook_refs
+        )
         if procedural_artifact_refs_for_audit:
             memory_influence_used_refs.extend(procedural_artifact_refs_for_audit)
             memory_influence_evidence_refs.extend(procedural_artifact_refs_for_audit)
@@ -3887,7 +5599,7 @@ class ObservabilityService:
             memory_influence_reasons.append(
                 "procedural_used:source_available_without_artifact_ref"
             )
-        else:
+        elif not reviewed_procedural_playbook_refs:
             memory_influence_ignored_refs.append("memory://procedural")
             memory_influence_reasons.append(
                 "procedural_ignored:no_procedural_artifact_or_source"
@@ -4077,6 +5789,126 @@ class ObservabilityService:
             ),
             mission_progress_learning_refs=mission_progress_learning_refs,
             mission_progress_risk_refs=mission_progress_risk_refs,
+            memory_influence_selected_refs=memory_influence_selected_refs,
+            memory_influence_non_use_reasons=memory_influence_non_use_reasons,
+            memory_influence_signal_kinds=memory_influence_signal_kinds,
+            memory_influence_version_refs=memory_influence_version_refs,
+            memory_influence_review_decision_refs=memory_influence_review_decision_refs,
+            memory_influence_execution_allowed=memory_influence_execution_allowed,
+            memory_influence_tool_dispatch_allowed=(
+                memory_influence_tool_dispatch_allowed
+            ),
+            memory_influence_governance_status=(
+                memory_influence_governance_status
+            ),
+            memory_influence_governance_blockers=(
+                memory_influence_governance_blockers
+            ),
+            memory_influence_governance_drift_flags=(
+                memory_influence_governance_drift_flags
+            ),
+            selected_reviewed_procedural_playbook_refs=(
+                selected_reviewed_procedural_playbook_refs
+            ),
+            decision_outcome_attribution_record_id=(
+                decision_outcome_attribution_record_id
+            ),
+            decision_outcome_attribution_status=(
+                decision_outcome_attribution_status
+            ),
+            decision_outcome_attribution_evidence_refs=(
+                decision_outcome_attribution_evidence_refs
+            ),
+            causal_effect_proven=causal_effect_proven,
+            gain_claim_status=gain_claim_status,
+            workflow_lifecycle_status=workflow_lifecycle_audit.status,
+            workflow_lifecycle_trace_status=workflow_lifecycle_audit.trace_status,
+            workflow_lifecycle_resolution_reasons=(
+                workflow_lifecycle_audit.resolution_reasons
+            ),
+            workflow_lifecycle_action=workflow_lifecycle_audit.action,
+            workflow_lifecycle_transition_id=(
+                workflow_lifecycle_audit.transition_id
+            ),
+            workflow_lifecycle_revision=workflow_lifecycle_audit.revision,
+            workflow_lifecycle_active_version_ref=(
+                workflow_lifecycle_audit.active_version_ref
+            ),
+            workflow_lifecycle_active_definition_hash=(
+                workflow_lifecycle_audit.active_definition_hash
+            ),
+            workflow_lifecycle_baseline_version_ref=(
+                workflow_lifecycle_audit.baseline_version_ref
+            ),
+            workflow_lifecycle_baseline_definition_hash=(
+                workflow_lifecycle_audit.baseline_definition_hash
+            ),
+            workflow_lifecycle_candidate_version_ref=(
+                workflow_lifecycle_audit.candidate_version_ref
+            ),
+            workflow_lifecycle_candidate_definition_hash=(
+                workflow_lifecycle_audit.candidate_definition_hash
+            ),
+            workflow_lifecycle_source_registry_ref=(
+                workflow_lifecycle_audit.source_registry_ref
+            ),
+            workflow_lifecycle_source_registry_fingerprint=(
+                workflow_lifecycle_audit.source_registry_fingerprint
+            ),
+            workflow_lifecycle_human_authorization_ref=(
+                workflow_lifecycle_audit.human_authorization_ref
+            ),
+            workflow_lifecycle_human_authorized=(
+                workflow_lifecycle_audit.human_authorized
+            ),
+            workflow_lifecycle_operator_ref=workflow_lifecycle_audit.operator_ref,
+            workflow_lifecycle_evidence_refs=(
+                workflow_lifecycle_audit.evidence_refs
+            ),
+            workflow_lifecycle_completed_test_refs=(
+                workflow_lifecycle_audit.completed_test_refs
+            ),
+            workflow_lifecycle_failure_refs=workflow_lifecycle_audit.failure_refs,
+            workflow_lifecycle_evolution_proposal_id=(
+                workflow_lifecycle_audit.evolution_proposal_id
+            ),
+            workflow_lifecycle_proposal_fingerprint=(
+                workflow_lifecycle_audit.proposal_fingerprint
+            ),
+            workflow_lifecycle_review_decision_id=(
+                workflow_lifecycle_audit.review_decision_id
+            ),
+            workflow_lifecycle_review_decision_fingerprint=(
+                workflow_lifecycle_audit.review_decision_fingerprint
+            ),
+            workflow_lifecycle_release_checklist_id=(
+                workflow_lifecycle_audit.release_checklist_id
+            ),
+            workflow_lifecycle_release_checklist_fingerprint=(
+                workflow_lifecycle_audit.release_checklist_fingerprint
+            ),
+            workflow_lifecycle_promotion_gate_id=(
+                workflow_lifecycle_audit.promotion_gate_id
+            ),
+            workflow_lifecycle_promotion_gate_fingerprint=(
+                workflow_lifecycle_audit.promotion_gate_fingerprint
+            ),
+            workflow_lifecycle_eval_run_id=workflow_lifecycle_audit.eval_run_id,
+            workflow_lifecycle_eval_run_fingerprint=(
+                workflow_lifecycle_audit.eval_run_fingerprint
+            ),
+            workflow_lifecycle_rollback_plan_id=(
+                workflow_lifecycle_audit.rollback_plan_id
+            ),
+            workflow_lifecycle_rollback_plan_fingerprint=(
+                workflow_lifecycle_audit.rollback_plan_fingerprint
+            ),
+            workflow_lifecycle_authority_safe=(
+                workflow_lifecycle_audit.authority_safe
+            ),
+            workflow_lifecycle_drift_flags=(
+                workflow_lifecycle_audit.drift_flags
+            ),
             experiment_lane_status=expanded_eval_state["experiment_lane_status"],
             wave2_candidate_class=expanded_eval_state["wave2_candidate_class"],
             experiment_entry_status=expanded_eval_state["experiment_entry_status"],
@@ -4187,7 +6019,9 @@ class ObservabilityService:
             f"events={audit.total_events}; duration_seconds={audit.duration_seconds}; "
             f"operation_status={audit.operation_status or 'none'}; "
             f"continuity_action={audit.continuity_action or 'none'}; "
-            f"continuity_status={audit.continuity_trace_status}"
+            f"continuity_status={audit.continuity_trace_status}; "
+            f"workflow_lifecycle_status={audit.workflow_lifecycle_status}; "
+            f"workflow_lifecycle_trace_status={audit.workflow_lifecycle_trace_status}"
         )
         return IncidentEvidence(
             request_id=audit.request_id,
@@ -4200,6 +6034,98 @@ class ObservabilityService:
             missing_required_events=list(audit.missing_required_events),
             recommended_operator_action=recommended_operator_action,
             source_services=list(audit.source_services),
+            workflow_lifecycle_status=audit.workflow_lifecycle_status,
+            workflow_lifecycle_trace_status=audit.workflow_lifecycle_trace_status,
+            workflow_lifecycle_resolution_reasons=(
+                list(audit.workflow_lifecycle_resolution_reasons)
+            ),
+            workflow_lifecycle_action=audit.workflow_lifecycle_action,
+            workflow_lifecycle_transition_id=(
+                audit.workflow_lifecycle_transition_id
+            ),
+            workflow_lifecycle_revision=audit.workflow_lifecycle_revision,
+            workflow_lifecycle_active_version_ref=(
+                audit.workflow_lifecycle_active_version_ref
+            ),
+            workflow_lifecycle_active_definition_hash=(
+                audit.workflow_lifecycle_active_definition_hash
+            ),
+            workflow_lifecycle_baseline_version_ref=(
+                audit.workflow_lifecycle_baseline_version_ref
+            ),
+            workflow_lifecycle_baseline_definition_hash=(
+                audit.workflow_lifecycle_baseline_definition_hash
+            ),
+            workflow_lifecycle_candidate_version_ref=(
+                audit.workflow_lifecycle_candidate_version_ref
+            ),
+            workflow_lifecycle_candidate_definition_hash=(
+                audit.workflow_lifecycle_candidate_definition_hash
+            ),
+            workflow_lifecycle_source_registry_ref=(
+                audit.workflow_lifecycle_source_registry_ref
+            ),
+            workflow_lifecycle_source_registry_fingerprint=(
+                audit.workflow_lifecycle_source_registry_fingerprint
+            ),
+            workflow_lifecycle_human_authorization_ref=(
+                audit.workflow_lifecycle_human_authorization_ref
+            ),
+            workflow_lifecycle_human_authorized=(
+                audit.workflow_lifecycle_human_authorized
+            ),
+            workflow_lifecycle_operator_ref=audit.workflow_lifecycle_operator_ref,
+            workflow_lifecycle_evidence_refs=(
+                list(audit.workflow_lifecycle_evidence_refs)
+            ),
+            workflow_lifecycle_completed_test_refs=(
+                list(audit.workflow_lifecycle_completed_test_refs)
+            ),
+            workflow_lifecycle_failure_refs=(
+                list(audit.workflow_lifecycle_failure_refs)
+            ),
+            workflow_lifecycle_evolution_proposal_id=(
+                audit.workflow_lifecycle_evolution_proposal_id
+            ),
+            workflow_lifecycle_proposal_fingerprint=(
+                audit.workflow_lifecycle_proposal_fingerprint
+            ),
+            workflow_lifecycle_review_decision_id=(
+                audit.workflow_lifecycle_review_decision_id
+            ),
+            workflow_lifecycle_review_decision_fingerprint=(
+                audit.workflow_lifecycle_review_decision_fingerprint
+            ),
+            workflow_lifecycle_release_checklist_id=(
+                audit.workflow_lifecycle_release_checklist_id
+            ),
+            workflow_lifecycle_release_checklist_fingerprint=(
+                audit.workflow_lifecycle_release_checklist_fingerprint
+            ),
+            workflow_lifecycle_promotion_gate_id=(
+                audit.workflow_lifecycle_promotion_gate_id
+            ),
+            workflow_lifecycle_promotion_gate_fingerprint=(
+                audit.workflow_lifecycle_promotion_gate_fingerprint
+            ),
+            workflow_lifecycle_eval_run_id=(
+                audit.workflow_lifecycle_eval_run_id
+            ),
+            workflow_lifecycle_eval_run_fingerprint=(
+                audit.workflow_lifecycle_eval_run_fingerprint
+            ),
+            workflow_lifecycle_rollback_plan_id=(
+                audit.workflow_lifecycle_rollback_plan_id
+            ),
+            workflow_lifecycle_rollback_plan_fingerprint=(
+                audit.workflow_lifecycle_rollback_plan_fingerprint
+            ),
+            workflow_lifecycle_authority_safe=(
+                audit.workflow_lifecycle_authority_safe
+            ),
+            workflow_lifecycle_drift_flags=(
+                list(audit.workflow_lifecycle_drift_flags)
+            ),
         )
 
     def summarize_recent_requests(
@@ -4332,6 +6258,32 @@ class ObservabilityService:
                 if text and text not in values:
                     values.append(text)
         return values
+
+    @staticmethod
+    def _dedupe_payload_str_map(
+        events: list[InternalEventEnvelope],
+        field_name: str,
+    ) -> dict[str, str]:
+        values: dict[str, str] = {}
+        for event in events:
+            payload_value = event.payload.get(field_name, {})
+            if not isinstance(payload_value, dict):
+                continue
+            for key, value in payload_value.items():
+                if value is None:
+                    continue
+                key_text = str(key).strip()
+                value_text = str(value).strip()
+                if key_text and value_text and key_text not in values:
+                    values[key_text] = value_text
+        return values
+
+    @staticmethod
+    def _payload_any_true(
+        events: list[InternalEventEnvelope],
+        field_name: str,
+    ) -> bool:
+        return any(event.payload.get(field_name) is True for event in events)
 
     @staticmethod
     def _evolution_review_limits(

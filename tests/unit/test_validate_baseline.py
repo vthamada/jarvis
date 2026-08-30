@@ -1,5 +1,6 @@
 from pathlib import Path
 from tempfile import gettempdir
+from types import SimpleNamespace
 
 import pytest
 
@@ -9,6 +10,7 @@ from tools.validate_baseline import (
     collect_preflight,
     resolve_database_url,
     resolve_ruff_command,
+    run_governed_mission_smoke,
 )
 
 
@@ -77,3 +79,54 @@ def test_collect_preflight_aggregates_detected_issues(monkeypatch: pytest.Monkey
     assert issues == ["missing ruff", "database offline"]
     assert ruff_command is None
     assert database_url is None
+
+
+def test_governed_mission_smoke_declares_bounded_autonomy(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    captured_contracts = []
+    accepted_plan = SimpleNamespace(
+        plan_summary="Controlled rollout plan",
+        open_loops=["review rollout evidence"],
+    )
+
+    class FakeMemoryService:
+        def get_mission_state(self, mission_id: str) -> SimpleNamespace:
+            assert mission_id.startswith("mission-validate-")
+            return SimpleNamespace(
+                mission_goal="Plan the controlled rollout.",
+                last_recommendation=accepted_plan.plan_summary,
+                open_loops=accepted_plan.open_loops,
+            )
+
+    class FakeOrchestrator:
+        def __init__(self) -> None:
+            self.memory_service = FakeMemoryService()
+
+        def handle_input(self, contract: object) -> SimpleNamespace:
+            captured_contracts.append(contract)
+            content = contract.content
+            if content == "Plan the controlled rollout.":
+                decision = validate_baseline.PermissionDecision.ALLOW_WITH_CONDITIONS
+            elif content == "Start a new marketing campaign instead.":
+                decision = validate_baseline.PermissionDecision.DEFER_FOR_VALIDATION
+            else:
+                decision = validate_baseline.PermissionDecision.BLOCK
+            return SimpleNamespace(
+                governance_decision=SimpleNamespace(decision=decision),
+                deliberative_plan=accepted_plan,
+            )
+
+    monkeypatch.setattr(
+        validate_baseline,
+        "build_validation_orchestrator",
+        lambda **kwargs: FakeOrchestrator(),
+    )
+
+    run_governed_mission_smoke("development", "sqlite:///ignored.db")
+
+    assert len(captured_contracts) == 3
+    assert {
+        (contract.requested_autonomy_level, contract.max_autonomy_level)
+        for contract in captured_contracts
+    } == {("bounded_core_action", "bounded_core_action")}

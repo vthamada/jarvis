@@ -36,6 +36,19 @@ WORKFLOW_VARIANT_EVAL_METRICS = (
     "checkpoint_coverage",
     "memory_causality",
 )
+WORKFLOW_VARIANT_EVAL_COMPARISON_MODE = "controlled_paired_offline"
+WORKFLOW_VARIANT_EVAL_METRICS_SOURCE = "derived_from_paired_observations"
+
+TECHNOLOGY_EXPERIMENT_METRICS = (
+    "success_score",
+    "contract_adherence",
+    "isolation_compliance",
+    "sovereign_consumer_preservation",
+    "rework_rate",
+)
+TECHNOLOGY_EXPERIMENT_COMPARISON_MODE = "controlled_paired_offline_attestation"
+TECHNOLOGY_EXPERIMENT_METRICS_SOURCE = "derived_from_paired_observations"
+TECHNOLOGY_EXPERIMENT_ISOLATION_PROFILE = "technology-isolation://offline-paired-attestation/v1"
 
 WORK_ITEM_PRIORITY_LEVELS = ("p0", "p1", "p2", "p3")
 ARTIFACT_LIFECYCLE_STATUSES = (
@@ -44,6 +57,36 @@ ARTIFACT_LIFECYCLE_STATUSES = (
     "superseded",
     "rolled_back",
 )
+ARTIFACT_PHYSICAL_SAGA_PURPOSES = ("apply", "rollback")
+ARTIFACT_PHYSICAL_APPLY_PHASES = (
+    "reserved",
+    "effect_dispatched",
+    "physical_applied",
+    "canonical_committed",
+    "completed",
+    "failed",
+    "reconciliation_required",
+    "compensation_required",
+    "compensated",
+)
+ARTIFACT_PHYSICAL_ROLLBACK_PHASES = (
+    "rollback_reserved",
+    "rollback_effect_dispatched",
+    "physically_rolled_back",
+    "canonical_rolled_back",
+    "compensation_committed",
+    "completed",
+    "failed",
+    "reconciliation_required",
+)
+
+DECISION_ATTRIBUTION_STATUSES = (
+    "correlation_only",
+    "declared_causality",
+    "insufficient_evidence",
+)
+DECISION_ATTRIBUTION_CAUSALITY_SCOPE = "runtime_declared_participation_only"
+DECISION_ATTRIBUTION_GAIN_CLAIM_STATUS = "not_established_without_comparator"
 
 
 @dataclass
@@ -112,6 +155,12 @@ class ArtifactLifecycleStateContract:
     supersedes_artifact_ref: str | None = None
     replacement_artifact_ref: str | None = None
     rollback_plan_ref: str | None = None
+    physical_version_fingerprint: str | None = None
+    mutation_receipt_fingerprint: str | None = None
+    canonical_saga_id: str | None = None
+    physical_resource_ref: str | None = None
+    physical_state_attestation_fingerprint: str | None = None
+    physical_consistency_status: str | None = None
     created_at: CreatedAt | None = None
     updated_at: UpdatedAt | None = None
     checkpoint_refs: list[str] = field(default_factory=list)
@@ -132,6 +181,251 @@ class ArtifactRegistryContract:
     memory_write_mode: str = "read_only"
     read_only: bool = True
     external_file_mutation_allowed: bool = False
+
+
+@dataclass(frozen=True)
+class ArtifactPhysicalApplyPlanContract:
+    """Content-free immutable reservation for one canonical physical version apply."""
+
+    saga_id: str
+    mission_id: MissionId
+    artifact_ref: str
+    artifact_version: int
+    owner_mission_id: MissionId
+    objective_ref: str | None
+    work_item_ref: str
+    lineage_root_ref: str
+    supersedes_artifact_ref: str | None
+    transition: str
+    physical_operation_id: str
+    resource_ref: str
+    root_alias: str
+    preflight_fingerprint: str
+    root_config_fingerprint: str
+    preflight_policy_version: str
+    transaction_policy_version: str
+    transaction_backend_version: str
+    adapter_backend_version: str
+    before_content_sha256: str
+    desired_content_sha256: str
+    rollback_plan_ref: str
+    expected_lineage_revision: int
+    created_at: CreatedAt
+    plan_fingerprint: str
+    purpose: str = "apply"
+    contains_content: bool = False
+    read_only: bool = True
+    immutable: bool = True
+
+
+@dataclass(frozen=True)
+class ArtifactPhysicalRollbackPlanContract:
+    """Content-free immutable reservation for one separately authorized rollback."""
+
+    saga_id: str
+    mission_id: MissionId
+    active_artifact_ref: str
+    active_artifact_version: int
+    restored_artifact_ref: str | None
+    restored_artifact_version: int | None
+    owner_mission_id: MissionId
+    objective_ref: str | None
+    work_item_ref: str
+    lineage_root_ref: str
+    physical_operation_id: str
+    mutation_operation_id: str
+    source_apply_saga_id: str
+    rollback_mode: str
+    canonical_effect_expected: bool
+    mutation_receipt_fingerprint: str
+    resource_ref: str
+    root_alias: str
+    expected_current_sha256: str
+    restored_content_sha256: str
+    expected_lineage_revision: int
+    created_at: CreatedAt
+    plan_fingerprint: str
+    purpose: str = "rollback"
+    contains_content: bool = False
+    read_only: bool = True
+    immutable: bool = True
+
+
+@dataclass(frozen=True)
+class ArtifactPhysicalSagaEventContract:
+    """One content-free append-only and hash-chained saga checkpoint."""
+
+    event_id: str
+    saga_id: str
+    purpose: str
+    phase: str
+    sequence: int
+    plan_fingerprint: str
+    physical_operation_id: str
+    occurred_at: Timestamp
+    previous_event_fingerprint: str | None
+    mutation_receipt_fingerprint: str | None
+    rollback_receipt_fingerprint: str | None
+    physical_state_attestation_fingerprint: str | None
+    event_fingerprint: str
+    contains_content: bool = False
+    read_only: bool = True
+    immutable: bool = True
+
+
+@dataclass(frozen=True)
+class ArtifactPhysicalSagaStateContract:
+    """Read-only projection of the latest verified saga checkpoint."""
+
+    saga_id: str
+    purpose: str
+    mission_id: MissionId
+    physical_operation_id: str
+    plan_fingerprint: str
+    phase: str
+    latest_sequence: int
+    latest_event_fingerprint: str
+    mutation_receipt_fingerprint: str | None
+    rollback_receipt_fingerprint: str | None
+    physical_state_attestation_fingerprint: str | None
+    updated_at: UpdatedAt
+    state_fingerprint: str
+    contains_content: bool = False
+    read_only: bool = True
+    immutable: bool = True
+
+
+@dataclass(frozen=True)
+class PhysicalArtifactVersionContract:
+    """Immutable physical binding for one canonical artifact version."""
+
+    mission_id: MissionId
+    artifact_ref: str
+    artifact_version: int
+    owner_mission_id: MissionId
+    objective_ref: str | None
+    work_item_ref: str
+    lineage_root_ref: str
+    supersedes_artifact_ref: str | None
+    physical_operation_id: str
+    mutation_receipt_fingerprint: str
+    resource_ref: str
+    root_alias: str
+    preflight_fingerprint: str
+    root_config_fingerprint: str
+    preflight_policy_version: str
+    transaction_policy_version: str
+    transaction_backend_version: str
+    adapter_backend_version: str
+    before_content_sha256: str
+    desired_content_sha256: str
+    rollback_plan_ref: str
+    physical_state_attestation_fingerprint: str
+    canonical_saga_id: str
+    canonicalized_at: Timestamp
+    version_fingerprint: str
+    contains_content: bool = False
+    read_only: bool = True
+    immutable: bool = True
+
+
+@dataclass(frozen=True)
+class ArtifactPhysicalLineageContract:
+    """CAS-protected active head for one normalized physical artifact lineage."""
+
+    mission_id: MissionId
+    lineage_root_ref: str
+    revision: int
+    active_artifact_ref: str
+    last_saga_id: str
+    last_event_fingerprint: str
+    updated_at: UpdatedAt
+    lineage_fingerprint: str
+    read_only: bool = True
+
+
+@dataclass(frozen=True)
+class ArtifactPhysicalOutboxItemContract:
+    """Immutable content-free publication item created with the canonical commit."""
+
+    outbox_id: str
+    saga_id: str
+    purpose: str
+    event_name: str
+    mission_id: MissionId
+    artifact_ref: str
+    lineage_root_ref: str
+    canonical_event_fingerprint: str
+    created_at: CreatedAt
+    outbox_fingerprint: str
+    contains_content: bool = False
+    read_only: bool = True
+    immutable: bool = True
+
+
+@dataclass(frozen=True)
+class ArtifactPhysicalOutboxDeliveryContract:
+    """Append-only proof that one canonical outbox item was published."""
+
+    delivery_id: str
+    outbox_id: str
+    publisher_ref: str
+    published_at: Timestamp
+    delivery_fingerprint: str
+    read_only: bool = True
+    immutable: bool = True
+
+
+@dataclass(frozen=True)
+class ArtifactPhysicalCanonicalCommitReceiptContract:
+    """Content-free proof that Memory atomically committed one canonical saga step."""
+
+    commit_id: str
+    purpose: str
+    saga_id: str
+    plan_fingerprint: str
+    mission_id: MissionId
+    artifact_ref: str | None
+    artifact_version: int | None
+    lineage_root_ref: str
+    lineage_revision: int
+    physical_operation_id: str
+    resource_ref: str
+    root_alias: str
+    mutation_receipt_fingerprint: str
+    rollback_receipt_fingerprint: str | None
+    physical_state_attestation_fingerprint: str
+    canonical_event_fingerprint: str
+    committed_at: Timestamp
+    commit_fingerprint: str
+    contains_content: bool = False
+    read_only: bool = True
+    immutable: bool = True
+
+
+@dataclass(frozen=True)
+class LocalTextPhysicalStateAttestationContract:
+    """Fresh content-free handle-safe observation bound to a physical receipt."""
+
+    attestation_id: str
+    purpose: str
+    receipt_fingerprint: str
+    mutation_operation_id: str
+    rollback_operation_id: str | None
+    resource_ref: str
+    root_alias: str
+    root_config_fingerprint: str
+    physical_state: str
+    observed_content_sha256: str
+    observed_identity_fingerprint: str
+    journal_event_fingerprint: str
+    transaction_policy_version: str
+    transaction_backend_version: str
+    verified_at: Timestamp
+    attestation_fingerprint: str
+    contains_content: bool = False
+    read_only: bool = True
+    immutable: bool = True
 
 
 @dataclass
@@ -202,6 +496,349 @@ class TechnologyAbsorptionCandidateContract:
     human_review_required: bool = True
     rollback_plan_ref: str | None = None
     blockers: list[str] = field(default_factory=list)
+
+
+@dataclass(frozen=True)
+class TechnologyRadarIntakeContract:
+    """Reviewed external reference that has no runtime or promotion authority."""
+
+    intake_id: str
+    candidate_ref: str
+    intake_version: str
+    technology_name: str
+    source_kind: str
+    source_locator: str
+    source_version_ref: str
+    source_content_sha256: str
+    license_id: str
+    license_status: str
+    license_evidence_ref: str
+    retrieved_at: Timestamp
+    claims: list[str]
+    risks: list[str]
+    absorption_class: str
+    target_gap_refs: list[str]
+    research_approval_ref: str
+    reviewed_payload_fingerprint: str
+    reviewer_ref: str
+    review_status: str
+    review_evidence_refs: list[str]
+    reviewed_at: Timestamp
+    recorded_at: Timestamp
+    previous_intake_id: str | None = None
+    previous_intake_fingerprint: str | None = None
+    source_trust_status: str = "operator_attested_untrusted_reference"
+    intake_status: str = "reviewed_reference"
+    read_only: bool = True
+    immutable: bool = True
+    human_review_required: bool = True
+    network_fetch_allowed: bool = False
+    knowledge_ingestion_allowed: bool = False
+    dependency_installation_allowed: bool = False
+    execution_allowed: bool = False
+    runtime_activation_allowed: bool = False
+    promotion_authorized: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+    priority_mutation_allowed: bool = False
+
+
+@dataclass(frozen=True)
+class TechnologyExperimentControlSnapshotContract:
+    """Deterministic, offline controls shared by both experiment arms."""
+
+    control_snapshot_id: str
+    input_fingerprint: str
+    sandbox_policy_ref: str
+    sandbox_policy_version: str
+    evaluator_version: str
+    deterministic_seed: int
+    fixed_clock: Timestamp
+    isolation_profile_ref: str
+    isolation_fingerprint: str
+    environment_fingerprint: str
+    offline_only: bool = True
+    sandbox_only: bool = True
+    read_only: bool = True
+    network_fetch_allowed: bool = False
+    subprocess_allowed: bool = False
+    dependency_installation_allowed: bool = False
+    external_code_execution_allowed: bool = False
+    tool_dispatch_allowed: bool = False
+    host_filesystem_write_allowed: bool = False
+    knowledge_ingestion_allowed: bool = False
+    memory_write_allowed: bool = False
+    runtime_activation_allowed: bool = False
+    registry_write_allowed: bool = False
+    release_authorized: bool = False
+    promotion_authorized: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+    priority_mutation_allowed: bool = False
+
+
+@dataclass(frozen=True)
+class TechnologyExperimentObservationContract:
+    """Pre-produced inert observation; never an executable experiment request."""
+
+    observation_id: str
+    experiment_pack_id: str
+    pack_version: str
+    case_id: str
+    case_version: str
+    arm: str
+    definition_ref: str
+    definition_hash: str
+    input_fingerprint: str
+    control_snapshot_id: str
+    control_snapshot_fingerprint: str
+    outcome_ref: str
+    outcome_status: str
+    contract_checks: dict[str, bool]
+    isolation_checks: dict[str, bool]
+    success_criteria_results: dict[str, bool]
+    action_count: int
+    rework_count: int
+    evidence_refs: list[str]
+    limitations: list[str]
+    observed_at: Timestamp
+    source_mode: str = "preproduced_sandbox_attestation"
+    offline_only: bool = True
+    sandbox_only: bool = True
+    read_only: bool = True
+    network_fetch_allowed: bool = False
+    subprocess_allowed: bool = False
+    dependency_installation_allowed: bool = False
+    external_code_execution_allowed: bool = False
+    tool_dispatch_allowed: bool = False
+    host_filesystem_write_allowed: bool = False
+    knowledge_ingestion_allowed: bool = False
+    memory_write_allowed: bool = False
+    runtime_activation_allowed: bool = False
+    registry_write_allowed: bool = False
+    release_authorized: bool = False
+    promotion_authorized: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+    priority_mutation_allowed: bool = False
+
+
+@dataclass(frozen=True)
+class TechnologyExperimentCaseContract:
+    """One controlled comparison over identical input and isolation controls."""
+
+    experiment_pack_id: str
+    pack_version: str
+    case_id: str
+    case_version: str
+    scenario_ref: str
+    input_fingerprint: str
+    baseline_definition_ref: str
+    baseline_definition_hash: str
+    candidate_definition_ref: str
+    candidate_definition_hash: str
+    critical_contract_check_refs: list[str]
+    critical_isolation_check_refs: list[str]
+    success_criteria_refs: list[str]
+    control_snapshot: TechnologyExperimentControlSnapshotContract
+    baseline_observation: TechnologyExperimentObservationContract
+    candidate_observation: TechnologyExperimentObservationContract
+    evidence_refs: list[str]
+    limitations: list[str] = field(default_factory=list)
+    comparison_mode: str = TECHNOLOGY_EXPERIMENT_COMPARISON_MODE
+    metrics_source: str = TECHNOLOGY_EXPERIMENT_METRICS_SOURCE
+    offline_only: bool = True
+    sandbox_only: bool = True
+    read_only: bool = True
+    human_review_required: bool = True
+    execution_allowed: bool = False
+    tool_dispatch_allowed: bool = False
+    runtime_activation_allowed: bool = False
+    release_authorized: bool = False
+    promotion_authorized: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+    priority_mutation_allowed: bool = False
+
+
+@dataclass(frozen=True)
+class TechnologyExperimentPackContract:
+    """Immutable translation of one reviewed reference into an inert sandbox pack."""
+
+    experiment_pack_id: str
+    pack_version: str
+    intake_id: str
+    intake_version: str
+    intake_fingerprint: str
+    reviewed_payload_fingerprint: str
+    candidate_ref: str
+    technology_name: str
+    source_content_sha256: str
+    absorption_class: str
+    translation_kind: str
+    pattern_id: str
+    pattern_name: str
+    pattern_summary: str
+    selected_claim_fingerprints: list[str]
+    selected_risk_fingerprints: list[str]
+    hypothesis: str
+    expected_gain: str
+    sovereign_consumer_kind: str
+    sovereign_consumer_ref: str
+    consumer_contract_ref: str
+    bounded_integration_seam: str
+    target_gap_refs: list[str]
+    baseline_definition_ref: str
+    baseline_definition_hash: str
+    candidate_definition_ref: str
+    candidate_definition_hash: str
+    isolation_profile_ref: str
+    risk_control_refs: list[str]
+    mitigation_refs: list[str]
+    stop_condition_refs: list[str]
+    license_id: str
+    license_status: str
+    license_evidence_ref: str
+    rollback_plan_ref: str
+    rollback_steps: list[str]
+    rollback_verification_refs: list[str]
+    selection_review_ref: str
+    selected_by_ref: str
+    cases: list[TechnologyExperimentCaseContract]
+    required_pass_rate: float
+    evidence_refs: list[str]
+    generated_at: Timestamp
+    pack_status: str = "sandbox_ready"
+    source_mode: str = "registered_intake_only"
+    external_framework_role: str = "subordinate_reference"
+    requested_core_role: str = "subordinate"
+    sandbox_only: bool = True
+    read_only: bool = True
+    immutable: bool = True
+    human_review_required: bool = True
+    network_fetch_allowed: bool = False
+    subprocess_allowed: bool = False
+    dependency_installation_allowed: bool = False
+    external_code_execution_allowed: bool = False
+    tool_dispatch_allowed: bool = False
+    host_filesystem_write_allowed: bool = False
+    knowledge_ingestion_allowed: bool = False
+    memory_write_allowed: bool = False
+    runtime_activation_allowed: bool = False
+    registry_write_allowed: bool = False
+    evolution_proposal_allowed: bool = False
+    release_authorized: bool = False
+    promotion_authorized: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+    priority_mutation_allowed: bool = False
+
+
+@dataclass(frozen=True)
+class TechnologyExperimentCaseResultContract:
+    """Canonical comparison derived from one paired case."""
+
+    experiment_pack_id: str
+    pack_version: str
+    pack_fingerprint: str
+    case_id: str
+    case_version: str
+    scenario_ref: str
+    input_fingerprint: str
+    control_snapshot_id: str
+    control_snapshot_fingerprint: str
+    baseline_outcome_ref: str
+    baseline_outcome_status: str
+    candidate_outcome_ref: str
+    candidate_outcome_status: str
+    passed: bool
+    checks: dict[str, bool]
+    baseline_metrics: dict[str, float]
+    candidate_metrics: dict[str, float]
+    metric_deltas: dict[str, float]
+    improvement_signals: list[str]
+    regression_flags: list[str]
+    failures: list[str]
+    limitations: list[str]
+    evidence_refs: list[str]
+    comparison_mode: str = TECHNOLOGY_EXPERIMENT_COMPARISON_MODE
+    metrics_source: str = TECHNOLOGY_EXPERIMENT_METRICS_SOURCE
+    offline_only: bool = True
+    sandbox_only: bool = True
+    read_only: bool = True
+    human_review_required: bool = True
+    execution_allowed: bool = False
+    tool_dispatch_allowed: bool = False
+    runtime_activation_allowed: bool = False
+    release_authorized: bool = False
+    promotion_authorized: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+    priority_mutation_allowed: bool = False
+
+
+@dataclass(frozen=True)
+class TechnologyExperimentEvalRunClaimContract:
+    """Atomic reservation of one pack/input/control evaluation identity."""
+
+    run_id: str
+    experiment_pack_id: str
+    pack_version: str
+    pack_fingerprint: str
+    intake_id: str
+    intake_fingerprint: str
+    input_fingerprint: str
+    control_fingerprint: str
+    claimed_at: Timestamp
+
+
+@dataclass(frozen=True)
+class TechnologyExperimentEvalRunContract:
+    """Append-only aggregate derived from a verified experiment pack."""
+
+    run_id: str
+    experiment_pack_id: str
+    pack_version: str
+    pack_fingerprint: str
+    intake_id: str
+    intake_version: str
+    intake_fingerprint: str
+    candidate_ref: str
+    pattern_id: str
+    sovereign_consumer_ref: str
+    input_fingerprint: str
+    control_fingerprint: str
+    status: str
+    readiness_status: str
+    promotion_readiness: str
+    comparison_conclusion: str
+    pass_rate: float
+    total_cases: int
+    passed_cases: int
+    failed_cases: int
+    aggregate_baseline_metrics: dict[str, float]
+    aggregate_candidate_metrics: dict[str, float]
+    aggregate_metric_deltas: dict[str, float]
+    case_results: list[TechnologyExperimentCaseResultContract]
+    regression_flags: list[str]
+    limitations: list[str]
+    evidence_refs: list[str]
+    blockers: list[str]
+    generated_at: Timestamp
+    comparison_mode: str = TECHNOLOGY_EXPERIMENT_COMPARISON_MODE
+    metrics_source: str = TECHNOLOGY_EXPERIMENT_METRICS_SOURCE
+    offline_only: bool = True
+    sandbox_only: bool = True
+    read_only: bool = True
+    human_review_required: bool = True
+    execution_allowed: bool = False
+    tool_dispatch_allowed: bool = False
+    runtime_activation_allowed: bool = False
+    release_authorized: bool = False
+    promotion_authorized: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+    priority_mutation_allowed: bool = False
 
 
 @dataclass
@@ -631,10 +1268,80 @@ class WorkflowEvolutionBuildResultContract:
     core_mutation_allowed: bool = False
 
 
-@dataclass
-class WorkflowVariantEvalCaseContract:
+@dataclass(frozen=True)
+class WorkflowVariantEvalControlSnapshotContract:
+    control_snapshot_id: str
+    workflow_policy_ref: str
+    workflow_policy_version: str
+    workflow_policy_source_registry_ref: str
+    workflow_policy_source_registry_fingerprint: str
+    governance_policy_ref: str
+    governance_policy_version: str
+    input_fingerprint: str
+    memory_policy_refs: list[str]
+    memory_policy_version_refs: dict[str, str]
+    memory_input_fingerprint: str
+    evaluator_version: str
+    deterministic_seed: int
+    fixed_clock: Timestamp
+    offline_only: bool = True
+    read_only: bool = True
+    sandbox_only: bool = True
+    execution_allowed: bool = False
+    tool_dispatch_allowed: bool = False
+    runtime_activation_allowed: bool = False
+    release_authorized: bool = False
+    promotion_authorized: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass(frozen=True)
+class WorkflowVariantEvalObservationContract:
+    observation_id: str
     case_id: str
+    case_version: str
+    arm: str
+    workflow_version_ref: str
+    definition_hash: str
+    input_snapshot_fingerprint: str
+    control_snapshot_id: str
+    control_snapshot_fingerprint: str
+    outcome_ref: str
+    outcome_status: str
+    contract_checks: dict[str, bool]
+    action_count: int
+    rework_count: int
+    expected_workflow_steps: list[str]
+    expected_checkpoint_refs: list[str]
+    expected_decision_points: list[str]
+    expected_success_criteria: list[str]
+    observed_checkpoint_refs: list[str]
+    memory_participating_refs: list[str]
+    memory_declared_causal_refs: list[str]
+    evidence_refs: list[str]
+    limitations: list[str]
+    observed_at: Timestamp
+    offline_only: bool = True
+    read_only: bool = True
+    sandbox_only: bool = True
+    execution_allowed: bool = False
+    tool_dispatch_allowed: bool = False
+    runtime_activation_allowed: bool = False
+    release_authorized: bool = False
+    promotion_authorized: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass(frozen=True)
+class WorkflowVariantEvalCaseContract:
+    case_pack_id: str
+    case_pack_version: str
+    case_id: str
+    case_version: str
     scenario_ref: str
+    input_snapshot_fingerprint: str
     workflow_profile: str
     route: str
     baseline_version_ref: str
@@ -643,24 +1350,75 @@ class WorkflowVariantEvalCaseContract:
     required_candidate_checkpoints: list[str]
     required_candidate_decision_points: list[str]
     required_candidate_success_criteria: list[str]
-    baseline_metrics: dict[str, float]
-    candidate_metrics: dict[str, float]
+    contract_check_refs: list[str]
+    control_snapshot: WorkflowVariantEvalControlSnapshotContract
+    baseline_observation: WorkflowVariantEvalObservationContract
+    candidate_observation: WorkflowVariantEvalObservationContract
     evidence_refs: list[str]
+    limitations: list[str] = field(default_factory=list)
+    comparison_mode: str = WORKFLOW_VARIANT_EVAL_COMPARISON_MODE
+    metrics_source: str = WORKFLOW_VARIANT_EVAL_METRICS_SOURCE
     offline_only: bool = True
+    read_only: bool = True
+    sandbox_only: bool = True
     human_review_required: bool = True
+    execution_allowed: bool = False
+    tool_dispatch_allowed: bool = False
+    runtime_activation_allowed: bool = False
+    release_authorized: bool = False
     promotion_authorized: bool = False
     automatic_promotion_allowed: bool = False
     core_mutation_allowed: bool = False
 
 
-@dataclass
-class WorkflowVariantEvalCaseResultContract:
-    case_id: str
-    scenario_ref: str
+@dataclass(frozen=True)
+class WorkflowVariantEvalCasePackContract:
+    case_pack_id: str
+    case_pack_version: str
     workflow_profile: str
     route: str
     baseline_version_ref: str
     candidate_version_ref: str
+    scope_refs: list[str]
+    cases: list[WorkflowVariantEvalCaseContract]
+    evidence_refs: list[str]
+    generated_at: Timestamp
+    comparison_mode: str = WORKFLOW_VARIANT_EVAL_COMPARISON_MODE
+    metrics_source: str = WORKFLOW_VARIANT_EVAL_METRICS_SOURCE
+    offline_only: bool = True
+    read_only: bool = True
+    sandbox_only: bool = True
+    human_review_required: bool = True
+    execution_allowed: bool = False
+    tool_dispatch_allowed: bool = False
+    runtime_activation_allowed: bool = False
+    release_authorized: bool = False
+    promotion_authorized: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass(frozen=True)
+class WorkflowVariantEvalCaseResultContract:
+    case_pack_id: str
+    case_pack_version: str
+    case_pack_fingerprint: str
+    case_id: str
+    case_version: str
+    scenario_ref: str
+    input_snapshot_fingerprint: str
+    workflow_profile: str
+    route: str
+    baseline_version_ref: str
+    candidate_version_ref: str
+    baseline_definition_hash: str
+    candidate_definition_hash: str
+    control_snapshot_id: str
+    control_snapshot_fingerprint: str
+    baseline_outcome_ref: str
+    candidate_outcome_ref: str
+    baseline_outcome_status: str
+    candidate_outcome_status: str
     passed: bool
     checks: dict[str, bool]
     baseline_metrics: dict[str, float]
@@ -669,18 +1427,39 @@ class WorkflowVariantEvalCaseResultContract:
     improvement_signals: list[str]
     regression_flags: list[str]
     failures: list[str]
+    limitations: list[str]
     evidence_refs: list[str]
+    comparison_mode: str = WORKFLOW_VARIANT_EVAL_COMPARISON_MODE
+    metrics_source: str = WORKFLOW_VARIANT_EVAL_METRICS_SOURCE
     offline_only: bool = True
+    read_only: bool = True
+    sandbox_only: bool = True
+    human_review_required: bool = True
+    execution_allowed: bool = False
+    tool_dispatch_allowed: bool = False
+    runtime_activation_allowed: bool = False
+    release_authorized: bool = False
     promotion_authorized: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
 
 
-@dataclass
+@dataclass(frozen=True)
 class WorkflowVariantEvalRunContract:
     run_id: str
+    case_pack_id: str
+    case_pack_version: str
+    case_pack_fingerprint: str
     workflow_profile: str
     route: str
     baseline_version_ref: str
     candidate_version_ref: str
+    baseline_definition_hashes: list[str]
+    candidate_definition_hashes: list[str]
+    control_snapshot_ids: list[str]
+    control_snapshot_fingerprints: list[str]
+    baseline_outcome_refs: list[str]
+    candidate_outcome_refs: list[str]
     status: str
     readiness_status: str
     promotion_readiness: str
@@ -694,11 +1473,20 @@ class WorkflowVariantEvalRunContract:
     aggregate_metric_deltas: dict[str, float]
     case_results: list[WorkflowVariantEvalCaseResultContract]
     regression_flags: list[str]
+    limitations: list[str]
     evidence_refs: list[str]
     blockers: list[str]
     generated_at: Timestamp
+    comparison_mode: str = WORKFLOW_VARIANT_EVAL_COMPARISON_MODE
+    metrics_source: str = WORKFLOW_VARIANT_EVAL_METRICS_SOURCE
     offline_only: bool = True
+    read_only: bool = True
+    sandbox_only: bool = True
     human_review_required: bool = True
+    execution_allowed: bool = False
+    tool_dispatch_allowed: bool = False
+    runtime_activation_allowed: bool = False
+    release_authorized: bool = False
     promotion_authorized: bool = False
     automatic_promotion_allowed: bool = False
     core_mutation_allowed: bool = False
@@ -729,6 +1517,84 @@ class WorkflowRollbackPlanContract:
     core_mutation_allowed: bool = False
 
 
+@dataclass(frozen=True)
+class WorkflowLifecycleTransitionContract:
+    """Append-only human-authorized binding beside the sovereign route registry."""
+
+    transition_id: str
+    workflow_profile: str
+    route: str
+    transition_action: str
+    transition_status: str
+    revision: int
+    previous_transition_id: str | None
+    previous_transition_fingerprint: str | None
+    source_registry_ref: str
+    source_registry_fingerprint: str
+    baseline_version_ref: str
+    baseline_definition_hash: str
+    candidate_version_ref: str
+    candidate_definition_hash: str
+    active_version_ref: str
+    active_definition_hash: str
+    active_workflow_steps: list[str]
+    active_workflow_checkpoints: list[str]
+    active_workflow_decision_points: list[str]
+    active_success_criteria: list[str]
+    evolution_proposal_id: str
+    proposal_fingerprint: str
+    review_decision_id: str
+    review_decision_fingerprint: str
+    release_checklist_id: str
+    release_checklist_fingerprint: str
+    promotion_gate_id: str
+    promotion_gate_fingerprint: str
+    workflow_eval_run_id: str
+    workflow_eval_run_fingerprint: str
+    rollback_plan_id: str
+    rollback_plan_fingerprint: str
+    human_authorization_ref: str
+    operator_ref: str
+    evidence_refs: list[str]
+    completed_test_refs: list[str]
+    failure_refs: list[str]
+    timestamp: Timestamp
+    read_only: bool = True
+    immutable: bool = True
+    human_authorized: bool = True
+    memory_write_mode: str = "through_core_only"
+    active_registry_write_allowed: bool = False
+    runtime_execution_allowed: bool = False
+    automatic_promotion_allowed: bool = False
+    automatic_rollback_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass(frozen=True)
+class WorkflowLifecycleGovernanceAssessmentContract:
+    """Fail-closed governance decision for recording one lifecycle transition."""
+
+    assessment_id: str
+    transition_id: str
+    transition_action: str
+    transition_fingerprint: str
+    status: str
+    blockers: list[str]
+    conditions: list[str]
+    policy_refs: list[str]
+    timestamp: Timestamp
+    human_review_required: bool = True
+    human_authorization_verified: bool = False
+    transition_recording_authorized: bool = False
+    memory_write_mode: str = "through_core_only"
+    read_only: bool = True
+    active_registry_write_allowed: bool = False
+    runtime_execution_allowed: bool = False
+    automatic_promotion_allowed: bool = False
+    automatic_rollback_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
 @dataclass
 class ProceduralPlaybookCandidateContract:
     playbook_candidate_id: str
@@ -750,6 +1616,150 @@ class ProceduralPlaybookCandidateContract:
     automatic_promotion_allowed: bool = False
     core_mutation_allowed: bool = False
     memory_write_mode: str = "through_core_only"
+
+
+@dataclass
+class ReviewedProceduralPlaybookContract:
+    playbook_id: str
+    version: str
+    source_candidate_id: str
+    source_review_decision_id: str
+    evolution_proposal_id: EvolutionProposalId
+    review_status: str
+    procedure_name: str
+    route: str
+    workflow_profile: str
+    domain: str
+    bounded_steps: list[str]
+    allowed_usage: list[str]
+    evidence_refs: list[str]
+    rollback_plan_ref: str
+    timestamp: Timestamp
+    revoked_at: Timestamp | None = None
+    revocation_ref: str | None = None
+    read_only: bool = True
+    human_review_required: bool = True
+    execution_allowed: bool = False
+    tool_dispatch_allowed: bool = False
+    memory_write_mode: str = "read_only"
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass(frozen=True)
+class ActionIntentContract:
+    """Exact, expiring action identity awaiting independent authorization."""
+
+    intent_id: str
+    origin_request_id: RequestId
+    session_id: SessionId
+    mission_id: MissionId | None
+    operator_identity_ref: str
+    handler_id: str
+    handler_version: str
+    operation: str
+    target_ref: str
+    content_digest: str
+    precondition_digest: str
+    risk_level: RiskLevel
+    policy_version: str
+    nonce: str
+    issued_at: Timestamp
+    expires_at: Timestamp
+    action_fingerprint: str
+    single_use: bool = True
+    read_only: bool = True
+    immutable: bool = True
+    execution_allowed: bool = False
+    tool_dispatch_allowed: bool = False
+    runtime_activation_allowed: bool = False
+    promotion_authorized: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass(frozen=True)
+class ActionConfirmationChallengeContract:
+    """Operator-visible challenge bound to one exact, expiring action intent."""
+
+    challenge_id: str
+    intent_id: str
+    intent_fingerprint: str
+    action_fingerprint: str
+    origin_request_id: RequestId
+    session_id: SessionId
+    mission_id: MissionId | None
+    operator_identity_ref: str
+    operation: str
+    nonce: str
+    issued_at: Timestamp
+    expires_at: Timestamp
+    single_use: bool = True
+    read_only: bool = True
+    immutable: bool = True
+    execution_allowed: bool = False
+    tool_dispatch_allowed: bool = False
+    runtime_activation_allowed: bool = False
+    promotion_authorized: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass(frozen=True)
+class HumanConfirmationReceiptContract:
+    """Local operator attestation; it is evidence and never execution authority."""
+
+    receipt_id: str
+    challenge_id: str
+    challenge_fingerprint: str
+    intent_id: str
+    intent_fingerprint: str
+    action_fingerprint: str
+    origin_request_id: RequestId
+    session_id: SessionId
+    mission_id: MissionId | None
+    operator_identity_ref: str
+    operation: str
+    confirmed_at: Timestamp
+    expires_at: Timestamp
+    single_use: bool = True
+    read_only: bool = True
+    immutable: bool = True
+    execution_allowed: bool = False
+    tool_dispatch_allowed: bool = False
+    runtime_activation_allowed: bool = False
+    promotion_authorized: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass(frozen=True)
+class ActionConfirmationClaimContract:
+    """Single-use claim binding one receipt to one concrete runtime operation."""
+
+    claim_id: str
+    receipt_id: str
+    receipt_fingerprint: str
+    intent_id: str
+    intent_fingerprint: str
+    action_fingerprint: str
+    operation_id: OperationId
+    origin_request_id: RequestId
+    session_id: SessionId
+    mission_id: MissionId | None
+    operator_identity_ref: str
+    operation: str
+    claimed_at: Timestamp
+    expires_at: Timestamp
+    single_use: bool = True
+    read_only: bool = True
+    immutable: bool = True
+    execution_allowed: bool = False
+    tool_dispatch_allowed: bool = False
+    runtime_activation_allowed: bool = False
+    promotion_authorized: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
 
 
 @dataclass
@@ -784,6 +1794,9 @@ class InputContract:
     max_autonomy_level: str | None = None
     autonomy_confirmation_mode: str | None = None
     autonomy_policy_refs: list[str] = field(default_factory=list)
+    action_confirmation_receipt_id: str | None = None
+    action_confirmation_origin_request_id: str | None = None
+    adapter_action_request: "AdapterActionRequestContract | None" = None
 
 
 @dataclass
@@ -795,10 +1808,652 @@ class AutonomyLadderContract:
     max_capability_mode: str
     human_confirmation_required: bool
     human_confirmation_mode: str
+    autonomy_action_kind: str | None = None
+    autonomy_validation_errors: list[str] = field(default_factory=list)
     allowed_runtime_actions: list[str] = field(default_factory=list)
     blocked_runtime_actions: list[str] = field(default_factory=list)
     policy_refs: list[str] = field(default_factory=list)
     summary: str | None = None
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass(frozen=True)
+class AutonomyActionPolicyDecisionContract:
+    """Fail-closed policy result for one canonical runtime action."""
+
+    policy_version: str
+    decision: str
+    requested_autonomy_level: str | None
+    max_autonomy_level: str | None
+    effective_autonomy_level: str | None
+    autonomy_ladder_status: str | None
+    action_kind: str | None
+    selected_capability_mode: str | None
+    max_capability_mode: str | None
+    confirmation_required: bool
+    confirmation_requirement: str
+    confirmation_evidence_state: str
+    side_effect_allowed: bool
+    reason_codes: tuple[str, ...]
+    read_only: bool = True
+    immutable: bool = True
+    execution_allowed: bool = False
+    tool_dispatch_allowed: bool = False
+    runtime_activation_allowed: bool = False
+    promotion_authorized: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass(frozen=True)
+class AdapterActionRequestContract:
+    """Exact adapter action requested by a caller; metadata only."""
+
+    adapter_id: str
+    adapter_version: str
+    action_kind: str
+    operation: str
+    resource_scope: str
+    resource_ref: str
+
+
+@dataclass(frozen=True)
+class AdapterDescriptorContract:
+    """Allowlisted prepare-only adapter metadata; never an executor."""
+
+    adapter_id: str
+    adapter_version: str
+    action_kind: str
+    allowed_operations: tuple[str, ...]
+    allowed_resource_scopes: tuple[str, ...]
+    descriptor_fingerprint: str
+    prepare_only: bool = True
+    executor_ref: str | None = None
+    read_only: bool = True
+    immutable: bool = True
+    execution_allowed: bool = False
+    tool_dispatch_allowed: bool = False
+    runtime_activation_allowed: bool = False
+    promotion_authorized: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass(frozen=True)
+class AdapterRegistrySnapshotContract:
+    """Immutable exact-key adapter allowlist snapshot."""
+
+    registry_id: str
+    registry_version: str
+    descriptors: tuple[AdapterDescriptorContract, ...]
+    registry_fingerprint: str
+    read_only: bool = True
+    immutable: bool = True
+    execution_allowed: bool = False
+    tool_dispatch_allowed: bool = False
+    runtime_activation_allowed: bool = False
+    promotion_authorized: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass(frozen=True)
+class AdapterGrantContract:
+    """Expiring single-use permission bound to one exact prepared action."""
+
+    grant_id: str
+    subject_ref: str
+    adapter_request: AdapterActionRequestContract
+    descriptor_fingerprint: str
+    registry_fingerprint: str
+    intent_id: str
+    intent_fingerprint: str
+    action_fingerprint: str
+    autonomy_policy_decision_fingerprint: str
+    policy_version: str
+    nonce: str
+    confirmation_required: bool
+    issued_at: Timestamp
+    expires_at: Timestamp
+    grant_fingerprint: str
+    single_use: bool = True
+    read_only: bool = True
+    immutable: bool = True
+    execution_allowed: bool = False
+    tool_dispatch_allowed: bool = False
+    runtime_activation_allowed: bool = False
+    promotion_authorized: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass(frozen=True)
+class AdapterGrantClaimContract:
+    """Single-use claim of one grant; confirmation is evidence only."""
+
+    claim_id: str
+    grant_id: str
+    grant_fingerprint: str
+    operation_id: OperationId
+    subject_ref: str
+    adapter_request: AdapterActionRequestContract
+    intent_id: str
+    intent_fingerprint: str
+    action_fingerprint: str
+    claimed_at: Timestamp
+    expires_at: Timestamp
+    claim_fingerprint: str
+    confirmation_receipt_id: str | None = None
+    confirmation_claim_id: str | None = None
+    confirmation_claim_fingerprint: str | None = None
+    single_use: bool = True
+    read_only: bool = True
+    immutable: bool = True
+    execution_allowed: bool = False
+    tool_dispatch_allowed: bool = False
+    runtime_activation_allowed: bool = False
+    promotion_authorized: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass(frozen=True)
+class LocalTextFilePreflightRequestContract:
+    """Ephemeral, exactly bound input for a side-effect-free text-file preflight."""
+
+    grant_id: str
+    grant_fingerprint: str
+    action_fingerprint: str
+    intent_fingerprint: str
+    descriptor_fingerprint: str
+    registry_fingerprint: str
+    subject_ref: str
+    adapter_request: AdapterActionRequestContract
+    desired_text: str
+    expected_root_config_fingerprint: str
+    preflight_policy_version: str
+    diff_algorithm: str
+    diff_algorithm_version: str
+    prepared_at: Timestamp
+    expires_at: Timestamp
+    authorization_expires_at: Timestamp
+    expected_current_sha256: str | None = None
+    persistence_allowed: bool = False
+    telemetry_allowed: bool = False
+    contains_sensitive_content: bool = True
+
+
+@dataclass(frozen=True)
+class LocalTextFileRollbackPlanContract:
+    """Content-free rollback metadata for a prepared local text-file action."""
+
+    strategy: str
+    operation: str
+    resource_ref: str
+    root_config_fingerprint: str
+    before_content_sha256: str
+    desired_content_sha256: str
+    preflight_policy_version: str
+    precondition_content_sha256: str
+    restore_content_sha256: str | None
+    rollback_fingerprint: str
+    manual_execution_required: bool = True
+    read_only: bool = True
+    immutable: bool = True
+    execution_allowed: bool = False
+    tool_dispatch_allowed: bool = False
+    runtime_activation_allowed: bool = False
+    promotion_authorized: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass(frozen=True)
+class LocalTextFilePreflightContract:
+    """Immutable metadata prepared without writing to the configured text root."""
+
+    grant_id: str
+    grant_fingerprint: str
+    action_fingerprint: str
+    intent_fingerprint: str
+    descriptor_fingerprint: str
+    registry_fingerprint: str
+    subject_ref: str
+    adapter_request: AdapterActionRequestContract
+    operation: str
+    resource_ref: str
+    root_alias: str
+    relative_path: str
+    expected_current_sha256: str | None
+    before_exists: bool
+    before_content_sha256: str
+    desired_content_sha256: str
+    before_size_bytes: int
+    desired_size_bytes: int
+    unified_diff: str
+    diff_sha256: str
+    root_config_fingerprint: str
+    filesystem_snapshot_fingerprint: str
+    rollback_plan: LocalTextFileRollbackPlanContract
+    preflight_fingerprint: str
+    preflight_policy_version: str
+    diff_algorithm: str
+    diff_algorithm_version: str
+    prepared_at: Timestamp
+    expires_at: Timestamp
+    authorization_expires_at: Timestamp
+    filesystem_snapshot_algorithm: str
+    filesystem_snapshot_algorithm_version: str
+    adapter_backend_version: str
+    change_status: str
+    encoding: str = "utf-8"
+    execution_grant_required: bool = True
+    preflight_grant_reusable_for_execution: bool = False
+    persistence_allowed: bool = False
+    telemetry_allowed: bool = False
+    contains_sensitive_diff: bool = True
+    read_only: bool = True
+    immutable: bool = True
+    execution_allowed: bool = False
+    tool_dispatch_allowed: bool = False
+    runtime_activation_allowed: bool = False
+    promotion_authorized: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass(frozen=True)
+class AdapterExecutionDescriptorContract:
+    """Versioned mutating capability metadata; never authority by itself."""
+
+    adapter_id: str
+    adapter_version: str
+    action_kind: str
+    allowed_operations: tuple[str, ...]
+    allowed_resource_scopes: tuple[str, ...]
+    executor_ref: str
+    execution_policy_version: str
+    execution_backend_version: str
+    descriptor_fingerprint: str
+    execution_only: bool = True
+    read_only: bool = True
+    immutable: bool = True
+    execution_allowed: bool = False
+    tool_dispatch_allowed: bool = False
+    runtime_activation_allowed: bool = False
+    promotion_authorized: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass(frozen=True)
+class AdapterExecutionRegistrySnapshotContract:
+    """Immutable allowlist for mutating adapter versions, separate from prepare."""
+
+    registry_id: str
+    registry_version: str
+    descriptors: tuple[AdapterExecutionDescriptorContract, ...]
+    registry_fingerprint: str
+    read_only: bool = True
+    immutable: bool = True
+    execution_allowed: bool = False
+    tool_dispatch_allowed: bool = False
+    runtime_activation_allowed: bool = False
+    promotion_authorized: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass(frozen=True)
+class LocalTextFilePreflightAttestationContract:
+    """Content-free trusted-boundary evidence emitted for one exact preflight."""
+
+    attestation_id: str
+    attestation_nonce: str
+    trusted_boundary_ref: str
+    subject_ref: str
+    operation: str
+    resource_scope: str
+    resource_ref: str
+    source_preflight_grant_id: str
+    source_preflight_grant_fingerprint: str
+    source_action_fingerprint: str
+    source_intent_fingerprint: str
+    source_descriptor_fingerprint: str
+    source_registry_fingerprint: str
+    preflight_fingerprint: str
+    preflight_prepared_at: Timestamp
+    preflight_expires_at: Timestamp
+    preflight_authorization_expires_at: Timestamp
+    root_config_fingerprint: str
+    filesystem_snapshot_fingerprint: str
+    rollback_fingerprint: str
+    before_exists: bool
+    expected_current_sha256: str | None
+    before_content_sha256: str
+    desired_content_sha256: str
+    preflight_policy_version: str
+    preflight_backend_version: str
+    attested_at: Timestamp
+    attestation_fingerprint: str
+    read_only: bool = True
+    immutable: bool = True
+    execution_allowed: bool = False
+    tool_dispatch_allowed: bool = False
+    runtime_activation_allowed: bool = False
+    promotion_authorized: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass(frozen=True)
+class AdapterExecutionRequestContract:
+    """Content-free exact projection of one valid local-text preflight."""
+
+    adapter_id: str
+    adapter_version: str
+    action_kind: str
+    operation: str
+    resource_scope: str
+    resource_ref: str
+    subject_ref: str
+    preflight_attestation_id: str
+    preflight_attestation_fingerprint: str
+    source_preflight_grant_id: str
+    source_preflight_grant_fingerprint: str
+    source_action_fingerprint: str
+    source_intent_fingerprint: str
+    source_descriptor_fingerprint: str
+    source_registry_fingerprint: str
+    preflight_fingerprint: str
+    preflight_prepared_at: Timestamp
+    preflight_expires_at: Timestamp
+    preflight_authorization_expires_at: Timestamp
+    root_config_fingerprint: str
+    filesystem_snapshot_fingerprint: str
+    rollback_fingerprint: str
+    before_exists: bool
+    expected_current_sha256: str | None
+    before_content_sha256: str
+    precondition_content_sha256: str
+    desired_content_sha256: str
+    postcondition_content_sha256: str
+    preflight_policy_version: str
+    preflight_backend_version: str
+    execution_policy_version: str
+    execution_backend_version: str
+    requested_at: Timestamp
+    execution_request_fingerprint: str
+    read_only: bool = True
+    immutable: bool = True
+    execution_allowed: bool = False
+    tool_dispatch_allowed: bool = False
+    runtime_activation_allowed: bool = False
+    promotion_authorized: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass(frozen=True)
+class AdapterExecutionGrantContract:
+    """Expiring single-effect authority evidence bound to one preflight."""
+
+    grant_id: str
+    subject_ref: str
+    execution_request: AdapterExecutionRequestContract
+    descriptor_fingerprint: str
+    registry_fingerprint: str
+    intent_id: str
+    intent_fingerprint: str
+    action_fingerprint: str
+    autonomy_policy_decision_fingerprint: str
+    policy_version: str
+    nonce: str
+    confirmation_required: bool
+    issued_at: Timestamp
+    expires_at: Timestamp
+    grant_fingerprint: str
+    single_use: bool = True
+    read_only: bool = True
+    immutable: bool = True
+    execution_allowed: bool = False
+    tool_dispatch_allowed: bool = False
+    runtime_activation_allowed: bool = False
+    promotion_authorized: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass(frozen=True)
+class AdapterExecutionGrantClaimContract:
+    """Atomic claim evidence; active verification still gates effect start."""
+
+    claim_id: str
+    grant_id: str
+    grant_fingerprint: str
+    operation_id: OperationId
+    journal_reservation_fingerprint: str
+    subject_ref: str
+    execution_request: AdapterExecutionRequestContract
+    intent_id: str
+    intent_fingerprint: str
+    action_fingerprint: str
+    claimed_at: Timestamp
+    expires_at: Timestamp
+    claim_fingerprint: str
+    confirmation_receipt_id: str
+    confirmation_claim_id: str
+    confirmation_claim_fingerprint: str
+    single_use: bool = True
+    read_only: bool = True
+    immutable: bool = True
+    execution_allowed: bool = False
+    tool_dispatch_allowed: bool = False
+    runtime_activation_allowed: bool = False
+    promotion_authorized: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass(frozen=True)
+class LocalTextMutationReceipt:
+    """Content-free durable evidence that one governed local-text mutation applied."""
+
+    operation_id: str
+    execution_grant_id: str
+    execution_claim_id: str
+    operation: str
+    resource_ref: str
+    subject_ref: str
+    preflight_fingerprint: str
+    before_content_sha256: str
+    desired_content_sha256: str
+    root_config_fingerprint: str
+    applied_event_fingerprint: str
+    committed_at: str
+    mutation_status: str
+    receipt_fingerprint: str
+    rollback_available: bool = True
+    read_only: bool = True
+    immutable: bool = True
+    execution_allowed: bool = False
+
+
+@dataclass(frozen=True)
+class LocalTextRollbackReceipt:
+    """Content-free durable evidence that one separately governed rollback applied."""
+
+    operation_id: str
+    mutation_operation_id: str
+    rollback_grant_id: str
+    rollback_claim_id: str
+    mutation_receipt_fingerprint: str
+    resource_ref: str
+    restored_content_sha256: str
+    rolled_back_at: str
+    rolled_back_event_fingerprint: str
+    rollback_receipt_fingerprint: str
+    read_only: bool = True
+    immutable: bool = True
+    execution_allowed: bool = False
+
+
+@dataclass(frozen=True)
+class LocalTextFileRollbackDescriptorContract:
+    """Versioned rollback-only adapter metadata; never authority by itself."""
+
+    adapter_id: str
+    adapter_version: str
+    action_kind: str
+    purpose: str
+    allowed_operations: tuple[str, ...]
+    allowed_resource_scopes: tuple[str, ...]
+    executor_ref: str
+    rollback_policy_version: str
+    rollback_backend_version: str
+    descriptor_fingerprint: str
+    rollback_only: bool = True
+    read_only: bool = True
+    immutable: bool = True
+    execution_allowed: bool = False
+    tool_dispatch_allowed: bool = False
+    runtime_activation_allowed: bool = False
+    promotion_authorized: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass(frozen=True)
+class LocalTextFileRollbackRegistrySnapshotContract:
+    """Immutable allowlist dedicated to local-text rollback capability versions."""
+
+    registry_id: str
+    registry_version: str
+    descriptors: tuple[LocalTextFileRollbackDescriptorContract, ...]
+    registry_fingerprint: str
+    read_only: bool = True
+    immutable: bool = True
+    execution_allowed: bool = False
+    tool_dispatch_allowed: bool = False
+    runtime_activation_allowed: bool = False
+    promotion_authorized: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass(frozen=True)
+class LocalTextFileRollbackRequestContract:
+    """Exact rollback request derived from a persisted mutation receipt and EXEC chain."""
+
+    purpose: str
+    adapter_id: str
+    adapter_version: str
+    action_kind: str
+    operation: str
+    resource_scope: str
+    resource_ref: str
+    subject_ref: str
+    rollback_operation_id: OperationId
+    mutation_operation_id: OperationId
+    mutation_receipt_fingerprint: str
+    mutation_applied_event_fingerprint: str
+    mutation_committed_at: Timestamp
+    source_execution_grant_id: str
+    source_execution_grant_fingerprint: str
+    source_execution_claim_id: str
+    source_execution_claim_fingerprint: str
+    source_execution_request_fingerprint: str
+    source_preflight_attestation_id: str
+    source_preflight_attestation_fingerprint: str
+    source_preflight_fingerprint: str
+    source_action_fingerprint: str
+    source_intent_fingerprint: str
+    original_operation: str
+    root_config_fingerprint: str
+    expected_current_sha256: str
+    restored_content_sha256: str
+    original_before_content_sha256: str
+    original_desired_content_sha256: str
+    rollback_plan_fingerprint: str
+    source_preflight_policy_version: str
+    source_preflight_backend_version: str
+    source_execution_policy_version: str
+    source_execution_backend_version: str
+    transaction_policy_version: str
+    transaction_backend_version: str
+    rollback_policy_version: str
+    rollback_backend_version: str
+    requested_at: Timestamp
+    expires_at: Timestamp
+    rollback_request_fingerprint: str
+    read_only: bool = True
+    immutable: bool = True
+    execution_allowed: bool = False
+    tool_dispatch_allowed: bool = False
+    runtime_activation_allowed: bool = False
+    promotion_authorized: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass(frozen=True)
+class LocalTextFileRollbackGrantContract:
+    """Confirmation-required single-use rollback authority for one mutation receipt."""
+
+    grant_id: str
+    subject_ref: str
+    rollback_request: LocalTextFileRollbackRequestContract
+    descriptor_fingerprint: str
+    registry_fingerprint: str
+    intent_id: str
+    intent_fingerprint: str
+    action_fingerprint: str
+    autonomy_policy_decision_fingerprint: str
+    policy_version: str
+    nonce: str
+    confirmation_required: bool
+    issued_at: Timestamp
+    expires_at: Timestamp
+    grant_fingerprint: str
+    single_use: bool = True
+    read_only: bool = True
+    immutable: bool = True
+    execution_allowed: bool = False
+    tool_dispatch_allowed: bool = False
+    runtime_activation_allowed: bool = False
+    promotion_authorized: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass(frozen=True)
+class LocalTextFileRollbackGrantClaimContract:
+    """Atomic rollback and confirmation claim with a distinct journal reservation."""
+
+    claim_id: str
+    grant_id: str
+    grant_fingerprint: str
+    rollback_operation_id: OperationId
+    rollback_journal_reservation_fingerprint: str
+    subject_ref: str
+    rollback_request: LocalTextFileRollbackRequestContract
+    intent_id: str
+    intent_fingerprint: str
+    action_fingerprint: str
+    claimed_at: Timestamp
+    expires_at: Timestamp
+    claim_fingerprint: str
+    confirmation_receipt_id: str
+    confirmation_claim_id: str
+    confirmation_claim_fingerprint: str
+    single_use: bool = True
+    read_only: bool = True
+    immutable: bool = True
+    execution_allowed: bool = False
+    tool_dispatch_allowed: bool = False
+    runtime_activation_allowed: bool = False
+    promotion_authorized: bool = False
     automatic_promotion_allowed: bool = False
     core_mutation_allowed: bool = False
 
@@ -870,9 +2525,13 @@ class MemoryInfluenceSignalContract:
     freshness_status: str | None = None
     relevance_score: float | None = None
     relevance_reason: str | None = None
+    version_ref: str | None = None
+    review_decision_ref: str | None = None
     allowed_usage: list[str] = field(default_factory=lambda: ["planning_context"])
     read_only: bool = True
     memory_write_allowed: bool = False
+    execution_allowed: bool = False
+    tool_dispatch_allowed: bool = False
     automatic_promotion_allowed: bool = False
     core_mutation_allowed: bool = False
 
@@ -896,8 +2555,12 @@ class MemoryInfluencePolicyDecisionContract:
     signal_kinds: dict[str, str] = field(default_factory=dict)
     freshness_statuses: dict[str, str] = field(default_factory=dict)
     relevance_scores: dict[str, float] = field(default_factory=dict)
+    version_refs: dict[str, str] = field(default_factory=dict)
+    review_decision_refs: dict[str, str] = field(default_factory=dict)
     read_only: bool = True
     memory_write_allowed: bool = False
+    execution_allowed: bool = False
+    tool_dispatch_allowed: bool = False
     automatic_promotion_allowed: bool = False
     core_mutation_allowed: bool = False
 
@@ -914,6 +2577,130 @@ class MemoryInfluenceGovernanceAssessmentContract:
     human_review_required: bool = False
     decision_mutation_allowed: bool = False
     memory_write_allowed: bool = False
+    execution_allowed: bool = False
+    tool_dispatch_allowed: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass(frozen=True)
+class DecisionAttributionClassificationContract:
+    attribution_status: str
+    participating_refs: list[str]
+    declared_causal_refs: list[str]
+    correlated_refs: list[str]
+    attribution_reasons: list[str]
+    limitations: list[str]
+    causality_scope: str = DECISION_ATTRIBUTION_CAUSALITY_SCOPE
+    causal_effect_proven: bool = False
+    gain_claim_status: str = DECISION_ATTRIBUTION_GAIN_CLAIM_STATUS
+    read_only: bool = True
+    human_review_required: bool = True
+    memory_write_allowed: bool = False
+    execution_allowed: bool = False
+    tool_dispatch_allowed: bool = False
+    promotion_authorized: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass(frozen=True)
+class DecisionOutcomeAttributionRecordContract:
+    attribution_record_id: str
+    request_id: RequestId
+    session_id: SessionId
+    mission_id: MissionId | None
+    observed_at: Timestamp
+    governance_decision_ref: str
+    governance_decision_status: str
+    workflow_profile: str | None
+    route: str | None
+    outcome_ref: str | None
+    outcome_status: str | None
+    experience_id: str | None = None
+    workflow_policy_ref: str | None = None
+    workflow_policy_version: str | None = None
+    workflow_policy_source_registry_ref: str | None = None
+    workflow_policy_source_registry_fingerprint: str | None = None
+    workflow_policy_application_status: str = "not_evaluated"
+    workflow_policy_effects: list[str] = field(default_factory=list)
+    memory_policy_decision_ref: str | None = None
+    memory_policy_status: str = "not_evaluated"
+    memory_policy_refs: list[str] = field(default_factory=list)
+    memory_selected_refs: list[str] = field(default_factory=list)
+    memory_ignored_refs: list[str] = field(default_factory=list)
+    memory_use_reasons: dict[str, str] = field(default_factory=dict)
+    memory_non_use_reasons: dict[str, str] = field(default_factory=dict)
+    memory_signal_kinds: dict[str, str] = field(default_factory=dict)
+    memory_version_refs: dict[str, str] = field(default_factory=dict)
+    memory_review_decision_refs: dict[str, str] = field(default_factory=dict)
+    memory_causal_use_allowed: bool = False
+    declared_effects_by_ref: dict[str, list[str]] = field(default_factory=dict)
+    participating_refs: list[str] = field(default_factory=list)
+    declared_causal_refs: list[str] = field(default_factory=list)
+    correlated_refs: list[str] = field(default_factory=list)
+    attribution_status: str = "insufficient_evidence"
+    attribution_reasons: list[str] = field(default_factory=list)
+    limitations: list[str] = field(default_factory=list)
+    evidence_refs: list[str] = field(default_factory=list)
+    causality_scope: str = DECISION_ATTRIBUTION_CAUSALITY_SCOPE
+    causal_effect_proven: bool = False
+    gain_claim_status: str = DECISION_ATTRIBUTION_GAIN_CLAIM_STATUS
+    read_only: bool = True
+    immutable: bool = True
+    human_review_required: bool = True
+    memory_write_allowed: bool = False
+    execution_allowed: bool = False
+    tool_dispatch_allowed: bool = False
+    promotion_authorized: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass(frozen=True)
+class DecisionOutcomeAttributionItemContract:
+    item_id: str
+    attribution: DecisionOutcomeAttributionRecordContract
+    feedback_status: str
+    feedback_refs: list[str]
+    feedback_assessments: list[str]
+    feedback_ratings: list[int]
+    comparator_status: str = "not_available"
+    comparator_refs: list[str] = field(default_factory=list)
+    gain_claim_status: str = DECISION_ATTRIBUTION_GAIN_CLAIM_STATUS
+    limitations: list[str] = field(default_factory=list)
+    evidence_refs: list[str] = field(default_factory=list)
+    causal_effect_proven: bool = False
+    read_only: bool = True
+    human_review_required: bool = True
+    promotion_authorized: bool = False
+    automatic_promotion_allowed: bool = False
+    core_mutation_allowed: bool = False
+
+
+@dataclass(frozen=True)
+class DecisionOutcomeAttributionReportContract:
+    report_id: str
+    report_status: str
+    generated_at: Timestamp
+    record_count: int
+    correlation_only_count: int
+    declared_causality_count: int
+    insufficient_evidence_count: int
+    feedback_linked_count: int
+    comparator_count: int
+    failed_record_count: int
+    items: list[DecisionOutcomeAttributionItemContract]
+    limitations: list[str]
+    evidence_refs: list[str]
+    source_record_limit_reached: bool = False
+    source_event_limit_reached: bool = False
+    causality_scope: str = DECISION_ATTRIBUTION_CAUSALITY_SCOPE
+    causal_effect_proven: bool = False
+    gain_claim_status: str = DECISION_ATTRIBUTION_GAIN_CLAIM_STATUS
+    read_only: bool = True
+    human_review_required: bool = True
+    promotion_authorized: bool = False
     automatic_promotion_allowed: bool = False
     core_mutation_allowed: bool = False
 
@@ -967,6 +2754,9 @@ class DeliberativePlanContract:
     route_workflow_checkpoints: list[str] = field(default_factory=list)
     route_workflow_decision_points: list[str] = field(default_factory=list)
     workflow_policy_decision: WorkflowPolicyDecisionContract | None = None
+    workflow_lifecycle_transition: WorkflowLifecycleTransitionContract | None = None
+    workflow_lifecycle_resolution_status: str = "static_baseline"
+    workflow_lifecycle_resolution_reasons: list[str] = field(default_factory=list)
     tensions_considered: list[str] = field(default_factory=list)
     specialist_hints: list[str] = field(default_factory=list)
     success_criteria: list[str] = field(default_factory=list)
@@ -1043,6 +2833,9 @@ class DeliberativePlanContract:
     max_autonomy_capability_mode: str | None = None
     autonomy_human_confirmation_required: bool = True
     autonomy_confirmation_mode: str | None = None
+    autonomy_action_kind: str | None = None
+    adapter_action_request: AdapterActionRequestContract | None = None
+    autonomy_validation_errors: list[str] = field(default_factory=list)
     autonomy_allowed_runtime_actions: list[str] = field(default_factory=list)
     autonomy_blocked_runtime_actions: list[str] = field(default_factory=list)
     autonomy_policy_refs: list[str] = field(default_factory=list)
@@ -1739,6 +3532,9 @@ class OperationDispatchContract:
     max_autonomy_capability_mode: str | None = None
     autonomy_human_confirmation_required: bool = True
     autonomy_confirmation_mode: str | None = None
+    autonomy_action_kind: str | None = None
+    adapter_action_request: AdapterActionRequestContract | None = None
+    autonomy_validation_errors: list[str] = field(default_factory=list)
     autonomy_allowed_runtime_actions: list[str] = field(default_factory=list)
     autonomy_blocked_runtime_actions: list[str] = field(default_factory=list)
     autonomy_policy_refs: list[str] = field(default_factory=list)
@@ -1776,6 +3572,9 @@ class OperationDispatchContract:
     workflow_resume_status: str | None = None
     workflow_resume_eligible: bool = False
     workflow_policy_decision: WorkflowPolicyDecisionContract | None = None
+    workflow_lifecycle_transition: WorkflowLifecycleTransitionContract | None = None
+    workflow_lifecycle_resolution_status: str = "static_baseline"
+    workflow_lifecycle_resolution_reasons: list[str] = field(default_factory=list)
     ecosystem_state_status: str | None = None
     active_work_items: list[str] = field(default_factory=list)
     active_artifact_refs: list[str] = field(default_factory=list)
@@ -1799,6 +3598,12 @@ class OperationDispatchContract:
     deadline_hint: str | None = None
     priority_hint: str | None = None
     artifact_destination: str | None = None
+    receipt_id: str | None = None
+    claim_id: str | None = None
+    origin_request_id: RequestId | None = None
+    action_fingerprint: str | None = None
+    intent_fingerprint: str | None = None
+    claimed_at: Timestamp | None = None
 
 
 @dataclass

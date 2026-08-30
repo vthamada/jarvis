@@ -3,6 +3,10 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 .pytest_tmp/
+.pytest_*/
+.test-tmp*/
+.audit_*/
+.tmp_*/
 .ruff_cache/
 .mypy_cache/
 .coverage
@@ -11,6 +15,7 @@ htmlcov/
 .venv/
 venv/
 pytest-cache-files-*/
+mb*-test-temp*/
 
 # Node
 node_modules/

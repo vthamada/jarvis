@@ -25,6 +25,7 @@ from shared.types import (
     PermissionDecision,
     RiskLevel,
 )
+from tests.unit.test_workflow_lifecycle import _activation
 
 
 def test_synthesis_engine_name() -> None:
@@ -251,6 +252,91 @@ def test_synthesis_engine_exposes_semantic_freshness_and_relevance() -> None:
     assert f"usado {anchor_ref}" in response
     assert "freshness current" in response
     assert "relevancia 0.95" in response
+
+
+def test_synthesis_preserves_reviewed_playbook_provenance_across_other_signals() -> None:
+    plan = sample_plan()
+    reviewed_learning_ref = "reviewed-learning://strategy/primary"
+    playbook_ref = "reviewed-playbook://strategy/checkpoint@2.0.0"
+    stale_semantic_ref = "memory://mission/stale/semantic"
+    revoked_playbook_ref = "reviewed-playbook://strategy/revoked@1.0.0"
+    plan.memory_influence_policy_decision = MemoryInfluencePolicyDecisionContract(
+        decision_id="memory-influence-decision://multi-signal/test",
+        decision_status="applied",
+        route="strategy",
+        workflow_profile="strategic_direction_workflow",
+        domain="estrategia_e_pensamento_sistemico",
+        selected_refs=[reviewed_learning_ref, playbook_ref],
+        ignored_refs=[stale_semantic_ref, revoked_playbook_ref],
+        priority_order=[
+            "reviewed_learning",
+            "procedural",
+            "semantic",
+            "reflection",
+        ],
+        conflict_refs=[],
+        use_reasons={
+            reviewed_learning_ref: "selected:reviewed_learning",
+            playbook_ref: "selected:procedural",
+        },
+        non_use_reasons={
+            stale_semantic_ref: "freshness_not_eligible:stale",
+            revoked_playbook_ref: "review_status_not_eligible:revoked",
+        },
+        evidence_refs=["evidence://reviewed-playbook/checkpoint"],
+        policy_refs=["policy://memory-influence/reviewed-procedural-version-v1"],
+        generated_at="2026-07-18T12:00:00Z",
+        signal_kinds={
+            reviewed_learning_ref: "reviewed_learning",
+            playbook_ref: "procedural",
+            stale_semantic_ref: "semantic",
+            revoked_playbook_ref: "procedural",
+        },
+        version_refs={
+            playbook_ref: "2.0.0",
+            revoked_playbook_ref: "1.0.0",
+        },
+        review_decision_refs={
+            playbook_ref: "review-decision://strategy/checkpoint-v2",
+            revoked_playbook_ref: "review-decision://strategy/revoked-v1",
+        },
+    )
+
+    response = SynthesisEngine().compose(
+        SynthesisInput(
+            intent="planning",
+            identity_profile=IdentityEngine().get_profile(),
+            response_style="estruturado",
+            governance_decision=GovernanceDecisionContract(
+                decision_id=GovernanceDecisionId("decision-playbook-provenance"),
+                governance_check_id=GovernanceCheckId("check-playbook-provenance"),
+                risk_level=RiskLevel.LOW,
+                decision=PermissionDecision.DEFER_FOR_VALIDATION,
+                justification="manual validation required",
+                timestamp="2026-07-18T12:00:00Z",
+            ),
+            recovered_context=[],
+            active_minds=["mente_decisoria"],
+            active_domains=["strategy"],
+            knowledge_snippets=[],
+            deliberative_plan=plan,
+            specialist_contributions=[],
+            operation_result=None,
+        )
+    )
+
+    assert f"playbook_usado {playbook_ref}" in response
+    assert "playbook_versao 2.0.0" in response
+    assert "playbook_revisao_humana review-decision://strategy/checkpoint-v2" in response
+    assert f"playbook_ignorado {revoked_playbook_ref}" in response
+    assert "playbook_versao_ignorada 1.0.0" in response
+    assert (
+        "playbook_revisao_humana_ignorada "
+        "review-decision://strategy/revoked-v1"
+    ) in response
+    assert "playbook_motivo_nao_uso review_status_not_eligible:revoked" in response
+    assert "no_execution" in response
+    assert "no_tool_dispatch" in response
 
 
 def test_synthesis_engine_surfaces_governed_knowledge_evidence() -> None:
@@ -502,6 +588,45 @@ def test_synthesis_engine_repairs_output_when_plan_is_missing() -> None:
     assert "Leitura do objetivo:" in result.response_text
     assert "Julgamento:" in result.response_text
     assert "Recomendacao:" in result.response_text
+
+
+def test_synthesis_repair_preserves_promoted_workflow_provenance() -> None:
+    engine = SynthesisEngine()
+    engine._compose_raw_response = lambda _input: "output outside the contract"
+    transition = _activation()
+    plan = replace(
+        sample_plan(),
+        workflow_lifecycle_transition=transition,
+    )
+
+    result = engine.compose_result(
+        SynthesisInput(
+            intent="planning",
+            identity_profile=IdentityEngine().get_profile(),
+            response_style="estruturado",
+            governance_decision=GovernanceDecisionContract(
+                decision_id=GovernanceDecisionId("decision-lifecycle-repair"),
+                governance_check_id=GovernanceCheckId("check-lifecycle-repair"),
+                risk_level=RiskLevel.LOW,
+                decision=PermissionDecision.ALLOW,
+                justification="ok",
+                timestamp="2026-08-12T10:45:00Z",
+            ),
+            recovered_context=[],
+            active_minds=["mente_executiva"],
+            active_domains=["software_development"],
+            knowledge_snippets=[],
+            deliberative_plan=plan,
+            specialist_contributions=[],
+            operation_result=None,
+            identity_mode="structured_planning",
+        )
+    )
+
+    assert result.output_validation_status == "repaired"
+    assert result.workflow_output_status == "coherent"
+    assert transition.active_version_ref in result.response_text
+    assert transition.transition_id in result.response_text
 
 
 def test_synthesis_engine_marks_workflow_output_partial_when_workflow_clauses_are_missing() -> None:

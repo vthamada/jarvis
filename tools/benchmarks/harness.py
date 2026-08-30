@@ -108,6 +108,12 @@ class NullObservabilityService:
     def ingest_events(self, events: list[object]) -> None:
         _ = events
 
+    def list_recent_events(self, query: object | None = None) -> list[object]:
+        """Preserve the read seam used by replay guards without retaining events."""
+
+        _ = query
+        return []
+
 
 class BenchmarkHarness:
     """Run directed benchmarks against the current v1 baseline."""
@@ -609,6 +615,15 @@ class BenchmarkHarness:
                 input_type=InputType.TEXT,
                 content=scenario.content,
                 timestamp=f"2026-03-19T00:00:0{index}Z",
+                requested_autonomy_level=(
+                    "bounded_core_action" if scenario.expects_operation else None
+                ),
+                max_autonomy_level=(
+                    "bounded_core_action" if scenario.expects_operation else None
+                ),
+                autonomy_confirmation_mode=(
+                    "not_required" if scenario.expects_operation else None
+                ),
             )
             start = perf_counter()
             response = service.handle_input(contract)

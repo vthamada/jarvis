@@ -1,5 +1,9 @@
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import replace
 from pathlib import Path
+from sqlite3 import IntegrityError
 from tempfile import gettempdir
+from threading import Barrier
 from uuid import uuid4
 
 import memory_service.repository as memory_repository
@@ -8,29 +12,49 @@ from governance_service.service import GovernanceService
 from memory_service.repository import (
     PostgresMemoryRepository,
     SqliteMemoryRepository,
+    StoredReviewedProceduralPlaybook,
     StoredSpecialistSharedMemory,
+    StoredWorkflowLifecycleTransition,
     build_memory_repository,
     normalize_database_url,
     parse_sqlite_database_path,
 )
-from memory_service.service import MemoryRecordResult, MemoryRecoveryResult, MemoryService
+from memory_service.service import (
+    MemoryRecordResult,
+    MemoryRecoveryResult,
+    MemoryService,
+    WorkflowLifecycleIntegrityError,
+)
 
 from shared.contracts import (
+    DecisionOutcomeAttributionRecordContract,
     DeliberativePlanContract,
+    ExperienceRecordContract,
     InputContract,
     MemoryLifecycleGovernanceAssessmentContract,
     MissionStateContract,
     OperationDispatchContract,
     OperationResultContract,
+    OperatorFeedbackContract,
+    PostTaskReflectionContract,
     ProceduralPlaybookCandidateContract,
     ReviewedLearningGuidanceContract,
+    ReviewedProceduralPlaybookContract,
     SkillCandidateContract,
     SpecialistContributionContract,
     SpecialistSharedMemoryContextContract,
+    WorkflowLifecycleGovernanceAssessmentContract,
+    WorkflowLifecycleTransitionContract,
+)
+from shared.decision_attribution import (
+    canonical_decision_attribution_payload,
+    canonicalize_decision_attribution_record,
+    decision_attribution_fingerprint,
 )
 from shared.memory_registry import DEFAULT_MEMORY_SCOPES, memory_lifecycle_decision
 from shared.types import (
     ChannelType,
+    EvolutionProposalId,
     InputType,
     MissionId,
     MissionStatus,
@@ -41,6 +65,12 @@ from shared.types import (
     RiskLevel,
     SessionId,
 )
+from shared.workflow_lifecycle import (
+    canonical_workflow_lifecycle_payload,
+    workflow_lifecycle_artifact_fingerprint,
+    workflow_lifecycle_transition_fingerprint,
+)
+from tests.unit.test_workflow_lifecycle import _activation, _rollback
 
 
 def runtime_dir(name: str) -> Path:
@@ -86,15 +116,122 @@ def sample_specialist_contributions() -> list[SpecialistContributionContract]:
     ]
 
 
+def sample_reviewed_procedural_playbook(
+    *,
+    playbook_id: str = "reviewed-playbook://software-change/bounded-review",
+    version: str = "1.0.0",
+    route: str = "software_engineering",
+    workflow_profile: str = "software_change_workflow",
+    domain: str = "software_engineering",
+    timestamp: str = "2026-07-18T12:00:00Z",
+) -> ReviewedProceduralPlaybookContract:
+    source_suffix = playbook_id.removeprefix("reviewed-playbook://")
+    return ReviewedProceduralPlaybookContract(
+        playbook_id=playbook_id,
+        version=version,
+        source_candidate_id=f"playbook-candidate://{source_suffix}",
+        source_review_decision_id=(f"evolution-review-decision://{source_suffix}/{version}"),
+        evolution_proposal_id=EvolutionProposalId(f"evolution-proposal://{source_suffix}"),
+        review_status="approved",
+        procedure_name=f"bounded review for {source_suffix}",
+        route=route,
+        workflow_profile=workflow_profile,
+        domain=domain,
+        bounded_steps=[
+            "collect reviewed evidence",
+            "apply bounded planning guidance",
+            "preserve the rollback path",
+        ],
+        allowed_usage=["planning_context"],
+        evidence_refs=[f"evidence://{source_suffix}/{version}"],
+        rollback_plan_ref=f"rollback://{source_suffix}/{version}",
+        timestamp=timestamp,
+    )
+
+
+def reviewed_playbook_memory_service(database_url: str) -> MemoryService:
+    return MemoryService(
+        database_url=database_url,
+        reviewed_procedural_playbook_verifier=lambda _playbook: True,
+    )
+
+
+def sample_decision_outcome_attribution(
+    *,
+    suffix: str = "001",
+    request_id: str | None = None,
+    mission_id: str | None = "mission-attribution",
+    workflow_profile: str | None = "software_change_workflow",
+    observed_at: str = "2026-08-11T12:00:00Z",
+) -> DecisionOutcomeAttributionRecordContract:
+    resolved_request_id = request_id or f"req-attribution-{suffix}"
+    resolved_mission_id = mission_id or "mission-attribution"
+    experience_id = f"experience://{resolved_mission_id}/{resolved_request_id}"
+    record = DecisionOutcomeAttributionRecordContract(
+        attribution_record_id=f"decision-attribution://{suffix}",
+        request_id=RequestId(resolved_request_id),
+        session_id=SessionId(f"sess-attribution-{suffix}"),
+        mission_id=MissionId(resolved_mission_id),
+        observed_at=observed_at,
+        governance_decision_ref=f"governance-decision://{suffix}",
+        governance_decision_status="allow_with_conditions",
+        workflow_profile=workflow_profile,
+        route="software_engineering",
+        outcome_ref=experience_id,
+        outcome_status="completed",
+        experience_id=experience_id,
+        workflow_policy_ref="workflow-policy://software-change",
+        workflow_policy_version="1.0.0",
+        workflow_policy_source_registry_ref="registry://domains/v1",
+        workflow_policy_source_registry_fingerprint="sha256:registry-v1",
+        workflow_policy_application_status="applied",
+        workflow_policy_effects=["bounded_patch"],
+        memory_policy_decision_ref=f"memory-policy-decision://{suffix}",
+        memory_policy_status="applied",
+        memory_policy_refs=[f"memory://reviewed/{suffix}"],
+        memory_selected_refs=[f"memory://reviewed/{suffix}"],
+        memory_use_reasons={f"memory://reviewed/{suffix}": "declared_planning_context"},
+        memory_signal_kinds={f"memory://reviewed/{suffix}": "semantic"},
+        memory_causal_use_allowed=True,
+        declared_effects_by_ref={f"memory://reviewed/{suffix}": ["bounded_patch"]},
+        participating_refs=[f"memory://reviewed/{suffix}"],
+        declared_causal_refs=[f"memory://reviewed/{suffix}"],
+        attribution_status="declared_causality",
+        attribution_reasons=["runtime_declared_causal_use"],
+        evidence_refs=[f"trace://{suffix}"],
+    )
+    return canonicalize_decision_attribution_record(record)
+
+
+def persist_attribution_experience(
+    service: MemoryService,
+    record: DecisionOutcomeAttributionRecordContract,
+) -> None:
+    service.claim_runtime_request(
+        request_id=str(record.request_id),
+        session_id=str(record.session_id),
+        claimed_at=record.observed_at,
+    )
+    service.record_experience(
+        experience=ExperienceRecordContract(
+            experience_id=str(record.experience_id),
+            mission_id=MissionId(str(record.mission_id)),
+            workflow_profile=str(record.workflow_profile),
+            outcome_status=str(record.outcome_status),
+            timestamp=record.observed_at,
+            route=record.route,
+            evidence_refs=[f"experience-evidence://{record.request_id}"],
+        )
+    )
+
+
 def test_memory_service_name() -> None:
     assert MemoryService.name == "memory-service"
 
 
 def test_memory_service_transitions_work_item_in_canonical_mission_state() -> None:
     temp_dir = runtime_dir("memory-work-item-transition")
-    service = MemoryService(
-        database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
-    )
+    service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
     contract = InputContract(
         request_id=RequestId("req-work-item-memory"),
         session_id=SessionId("sess-work-item-memory"),
@@ -127,28 +264,18 @@ def test_memory_service_transitions_work_item_in_canonical_mission_state() -> No
         work_item_ref="work-item://mission-work-item-memory/validate-plan",
         work_item_status="paused",
         transition_ref=(
-            "work_item_transition:pause:"
-            "work-item://mission-work-item-memory/validate-plan:def67890"
+            "work_item_transition:pause:work-item://mission-work-item-memory/validate-plan:def67890"
         ),
     )
 
     assert created is not None
     assert created.next_action_ref == "next_action:validate-plan"
     assert "work-item://mission-work-item-memory/validate-plan" in created.work_item_refs
-    assert (
-        "work-item://mission-work-item-memory/validate-plan"
-        in created.active_work_items
-    )
+    assert "work-item://mission-work-item-memory/validate-plan" in created.active_work_items
     assert paused is not None
     assert "work-item://mission-work-item-memory/validate-plan" in paused.work_item_refs
-    assert (
-        "work-item://mission-work-item-memory/validate-plan"
-        not in paused.active_work_items
-    )
-    assert any(
-        ref.startswith("work_item_transition:pause:")
-        for ref in paused.checkpoint_refs
-    )
+    assert "work-item://mission-work-item-memory/validate-plan" not in paused.active_work_items
+    assert any(ref.startswith("work_item_transition:pause:") for ref in paused.checkpoint_refs)
 
 
 def test_memory_service_persists_work_item_graph_and_refreshes_readiness() -> None:
@@ -217,9 +344,7 @@ def test_memory_service_persists_work_item_graph_and_refreshes_readiness() -> No
 
 def test_memory_service_transitions_artifact_lifecycle_in_mission_state() -> None:
     temp_dir = runtime_dir("memory-artifact-lifecycle")
-    service = MemoryService(
-        database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
-    )
+    service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
     contract = InputContract(
         request_id=RequestId("req-artifact-memory"),
         session_id=SessionId("sess-artifact-memory"),
@@ -295,20 +420,11 @@ def test_memory_service_transitions_artifact_lifecycle_in_mission_state() -> Non
 
     assert registered is not None
     assert "artifact://mission-artifact-memory/plan/v1" in registered.artifact_refs
-    assert (
-        "artifact://mission-artifact-memory/plan/v1"
-        in registered.active_artifact_refs
-    )
+    assert "artifact://mission-artifact-memory/plan/v1" in registered.active_artifact_refs
     assert replaced is not None
     assert "artifact://mission-artifact-memory/plan/v2" in replaced.artifact_refs
-    assert (
-        "artifact://mission-artifact-memory/plan/v2"
-        in replaced.active_artifact_refs
-    )
-    assert (
-        "artifact://mission-artifact-memory/plan/v1"
-        not in replaced.active_artifact_refs
-    )
+    assert "artifact://mission-artifact-memory/plan/v2" in replaced.active_artifact_refs
+    assert "artifact://mission-artifact-memory/plan/v1" not in replaced.active_artifact_refs
     assert len(replaced.artifact_states) == 2
     version_one = next(
         item
@@ -338,13 +454,9 @@ def test_memory_service_transitions_artifact_lifecycle_in_mission_state() -> Non
     assert reloaded_v1.artifact_version == 1
     assert reloaded_v1.created_at == version_one.created_at
     assert archived is not None
-    assert (
-        "artifact://mission-artifact-memory/plan/v1"
-        not in archived.active_artifact_refs
-    )
+    assert "artifact://mission-artifact-memory/plan/v1" not in archived.active_artifact_refs
     assert any(
-        ref.startswith("artifact_lifecycle_transition:archive:")
-        for ref in archived.checkpoint_refs
+        ref.startswith("artifact_lifecycle_transition:archive:") for ref in archived.checkpoint_refs
     )
 
 
@@ -396,6 +508,1026 @@ def test_postgres_mission_upsert_keeps_columns_and_placeholders_in_sync() -> Non
     assert captured["committed"] is True
 
 
+def test_postgres_reviewed_playbook_uses_atomic_insert_and_revoke_sql() -> None:
+    captured_queries: list[str] = []
+
+    class FakeCursor:
+        rowcount = 1
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def execute(self, query: str, _params: tuple[object, ...]) -> None:
+            captured_queries.append(query)
+
+    class FakeConnection:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def cursor(self) -> FakeCursor:
+            return FakeCursor()
+
+        def commit(self) -> None:
+            return None
+
+    repository = PostgresMemoryRepository.__new__(PostgresMemoryRepository)
+    repository._connect = lambda: FakeConnection()
+    playbook = sample_reviewed_procedural_playbook()
+    created = repository._insert_reviewed_procedural_playbook(
+        StoredReviewedProceduralPlaybook(playbook=playbook)
+    )
+    revoked = repository._transition_reviewed_procedural_playbook_to_revoked(
+        StoredReviewedProceduralPlaybook(
+            playbook=replace(
+                playbook,
+                review_status="revoked",
+                evidence_refs=[*playbook.evidence_refs, "human-review://revoke/pg"],
+                revoked_at="2026-07-18T13:00:00Z",
+                revocation_ref="human-review://revoke/pg",
+            )
+        )
+    )
+
+    assert created is True
+    assert revoked is True
+    assert "ON CONFLICT (playbook_id, version) DO NOTHING" in captured_queries[0]
+    assert "AND review_status = 'approved'" in captured_queries[1]
+
+
+def test_postgres_decision_attribution_uses_atomic_append_and_scoped_paging() -> None:
+    captured: list[tuple[str, tuple[object, ...]]] = []
+
+    class FakeCursor:
+        rowcount = 1
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def execute(self, query: str, params: tuple[object, ...]) -> None:
+            captured.append((query, params))
+
+        def fetchall(self) -> list[dict[str, object]]:
+            return []
+
+    class FakeConnection:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def cursor(self) -> FakeCursor:
+            return FakeCursor()
+
+        def commit(self) -> None:
+            return None
+
+    repository = PostgresMemoryRepository.__new__(PostgresMemoryRepository)
+    repository._connect = lambda: FakeConnection()
+    record = sample_decision_outcome_attribution(suffix="postgres-sql")
+
+    assert repository._insert_decision_outcome_attribution(record) is True
+    assert (
+        repository._claim_runtime_request(
+            request_id=str(record.request_id),
+            session_id=str(record.session_id),
+            claimed_at=record.observed_at,
+        )
+        is True
+    )
+    assert (
+        repository.list_decision_outcome_attributions(
+            request_id=str(record.request_id),
+            mission_id=str(record.mission_id),
+            workflow_profile=record.workflow_profile,
+            limit=3,
+            offset=2,
+        )
+        == []
+    )
+
+    insert_query, insert_params = captured[0]
+    claim_query, claim_params = captured[1]
+    list_query, list_params = captured[2]
+    assert "ON CONFLICT DO NOTHING" in insert_query
+    assert "UPDATE" not in insert_query.upper()
+    assert "DELETE" not in insert_query.upper()
+    assert len(insert_params) == insert_query.count("%s") == 16
+    assert "FROM runtime_request_claims" in insert_query
+    assert "request_id = %s AND session_id = %s" in insert_query
+    assert "FROM experience_reflections" in insert_query
+    assert "outcome_status IS NOT DISTINCT FROM %s" in insert_query
+    assert "INSERT INTO runtime_request_claims" in claim_query
+    assert "ON CONFLICT DO NOTHING" in claim_query
+    assert claim_params == (
+        str(record.request_id),
+        str(record.session_id),
+        record.observed_at,
+    )
+    assert list_query.index("WHERE") < list_query.index("LIMIT")
+    assert "request_id = %s" in list_query
+    assert "mission_id = %s" in list_query
+    assert "workflow_profile = %s" in list_query
+    assert list_params == (
+        str(record.request_id),
+        str(record.mission_id),
+        record.workflow_profile,
+        3,
+        2,
+    )
+
+
+def workflow_lifecycle_assessment(
+    transition: WorkflowLifecycleTransitionContract,
+    *,
+    assessed_at: str | None = None,
+) -> WorkflowLifecycleGovernanceAssessmentContract:
+    return GovernanceService().assess_workflow_lifecycle_transition(
+        transition,
+        current_transition=None if transition.revision == 1 else _activation(),
+        release_bundle_verifier=lambda candidate: candidate == transition,
+        assessed_at=assessed_at
+        or ("2026-08-12T10:31:00Z" if transition.revision == 1 else "2026-08-12T11:01:00Z"),
+    )
+
+
+def workflow_lifecycle_memory_service(database_url: str) -> MemoryService:
+    return MemoryService(
+        database_url=database_url,
+        workflow_lifecycle_transition_verifier=lambda _transition: True,
+    )
+
+
+def test_workflow_lifecycle_transition_is_idempotent_and_survives_restart() -> None:
+    temp_dir = runtime_dir("workflow-lifecycle-restart")
+    database_url = f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+    activation = _activation()
+    assessment = workflow_lifecycle_assessment(activation)
+    service = workflow_lifecycle_memory_service(database_url)
+
+    assert service.record_workflow_lifecycle_transition(activation, assessment) == activation
+    assert service.record_workflow_lifecycle_transition(activation, assessment) == activation
+    reloaded = workflow_lifecycle_memory_service(database_url)
+
+    assert (
+        reloaded.get_active_workflow_lifecycle(
+            workflow_profile=activation.workflow_profile,
+            route=activation.route,
+        )
+        == activation
+    )
+    assert reloaded.list_workflow_lifecycle_transitions(
+        workflow_profile=activation.workflow_profile,
+        route=activation.route,
+    ) == [activation]
+
+    changed = replace(
+        activation,
+        evidence_refs=[*activation.evidence_refs, "evidence://forged/collision"],
+    )
+    changed_assessment = workflow_lifecycle_assessment(changed)
+    with pytest.raises(ValueError, match="identity is immutable"):
+        reloaded.record_workflow_lifecycle_transition(changed, changed_assessment)
+
+
+def test_workflow_lifecycle_storage_requires_independent_release_bundle_verification() -> None:
+    temp_dir = runtime_dir("workflow-lifecycle-release-verifier")
+    database_url = f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+    activation = _activation()
+    assessment = workflow_lifecycle_assessment(activation)
+
+    for service in (
+        MemoryService(database_url=database_url),
+        MemoryService(
+            database_url=database_url,
+            workflow_lifecycle_transition_verifier=lambda _transition: False,
+        ),
+    ):
+        with pytest.raises(ValueError, match="verified persisted release bundle"):
+            service.record_workflow_lifecycle_transition(activation, assessment)
+
+
+def test_workflow_lifecycle_rollback_restores_baseline_without_registry_write() -> None:
+    temp_dir = runtime_dir("workflow-lifecycle-rollback")
+    service = workflow_lifecycle_memory_service(
+        f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+    )
+    activation = _activation()
+    rollback = _rollback(activation)
+    service.record_workflow_lifecycle_transition(
+        activation,
+        workflow_lifecycle_assessment(activation),
+    )
+    rollback_assessment = GovernanceService().assess_workflow_lifecycle_transition(
+        rollback,
+        current_transition=activation,
+        release_bundle_verifier=lambda candidate: candidate == rollback,
+        assessed_at="2026-08-12T11:01:00Z",
+    )
+
+    assert (
+        service.record_workflow_lifecycle_transition(
+            rollback,
+            rollback_assessment,
+        )
+        == rollback
+    )
+    assert (
+        service.get_active_workflow_lifecycle(
+            workflow_profile=activation.workflow_profile,
+            route=activation.route,
+        )
+        == rollback
+    )
+    assert service.list_workflow_lifecycle_transitions(
+        workflow_profile=activation.workflow_profile,
+        route=activation.route,
+    ) == [rollback, activation]
+    assert service.list_workflow_lifecycle_transitions(
+        workflow_profile=activation.workflow_profile,
+        route=activation.route,
+        limit=1,
+        offset=1,
+    ) == [activation]
+    assert rollback.active_version_ref == rollback.baseline_version_ref
+    assert rollback.active_definition_hash == rollback.baseline_definition_hash
+
+
+def test_workflow_lifecycle_concurrent_cas_allows_one_revision_winner() -> None:
+    temp_dir = runtime_dir("workflow-lifecycle-concurrent-cas")
+    database_url = f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+    activation = _activation()
+    workflow_lifecycle_memory_service(database_url).record_workflow_lifecycle_transition(
+        activation,
+        workflow_lifecycle_assessment(activation),
+    )
+    first = _rollback(activation)
+    second = replace(
+        first,
+        transition_id="workflow-lifecycle-transition://software-change/competing-2",
+        human_authorization_ref="human-authorization://workflow/software-change/rollback/2",
+        operator_ref="operator://secondary",
+    )
+    barrier = Barrier(2)
+
+    def record(candidate: WorkflowLifecycleTransitionContract) -> str:
+        service = workflow_lifecycle_memory_service(database_url)
+        assessment = GovernanceService().assess_workflow_lifecycle_transition(
+            candidate,
+            current_transition=activation,
+            release_bundle_verifier=lambda transition: transition == candidate,
+            assessed_at="2026-08-12T11:01:00Z",
+        )
+        barrier.wait()
+        try:
+            service.record_workflow_lifecycle_transition(candidate, assessment)
+        except ValueError:
+            return "lost"
+        return candidate.transition_id
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        outcomes = list(executor.map(record, (first, second)))
+
+    assert outcomes.count("lost") == 1
+    winner = workflow_lifecycle_memory_service(
+        database_url
+    ).get_active_workflow_lifecycle(
+        workflow_profile=activation.workflow_profile,
+        route=activation.route,
+    )
+    assert winner is not None
+    assert winner.transition_id in {first.transition_id, second.transition_id}
+    assert winner.revision == 2
+
+
+def test_workflow_lifecycle_fails_closed_on_tail_or_lineage_tamper() -> None:
+    temp_dir = runtime_dir("workflow-lifecycle-tamper")
+    database_url = f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+    service = workflow_lifecycle_memory_service(database_url)
+    activation = _activation()
+    rollback = _rollback(activation)
+    service.record_workflow_lifecycle_transition(
+        activation,
+        workflow_lifecycle_assessment(activation),
+    )
+    service.record_workflow_lifecycle_transition(
+        rollback,
+        GovernanceService().assess_workflow_lifecycle_transition(
+            rollback,
+            current_transition=activation,
+            release_bundle_verifier=lambda candidate: candidate == rollback,
+            assessed_at="2026-08-12T11:01:00Z",
+        ),
+    )
+    with service.repository._connect() as connection:
+        connection.execute("DROP TRIGGER workflow_lifecycle_transitions_no_update")
+        connection.execute(
+            """
+            UPDATE workflow_lifecycle_transitions
+            SET transition_payload_json = ?
+            WHERE revision = 1
+            """,
+            (canonical_workflow_lifecycle_payload(replace(activation, operator_ref="forged")),),
+        )
+        connection.commit()
+
+    reader = workflow_lifecycle_memory_service(database_url)
+    with pytest.raises(
+        WorkflowLifecycleIntegrityError,
+        match="workflow_lifecycle_persisted_chain_rejected",
+    ):
+        reader.get_active_workflow_lifecycle(
+            workflow_profile=activation.workflow_profile,
+            route=activation.route,
+        )
+    assert (
+        reader.list_workflow_lifecycle_transitions(
+            workflow_profile=activation.workflow_profile,
+            route=activation.route,
+        )
+        == []
+    )
+
+
+def test_workflow_lifecycle_repository_paging_skips_invalid_rows_without_starvation() -> None:
+    temp_dir = runtime_dir("workflow-lifecycle-starvation")
+    service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
+    activation = _activation()
+    assessment = workflow_lifecycle_assessment(activation)
+    stored = StoredWorkflowLifecycleTransition(
+        transition=activation,
+        governance_assessment=assessment,
+        transition_fingerprint=workflow_lifecycle_transition_fingerprint(activation),
+        governance_assessment_fingerprint=workflow_lifecycle_artifact_fingerprint(assessment),
+    )
+    assert service.repository._insert_workflow_lifecycle_transition(stored) is True
+    with service.repository._connect() as connection:
+        connection.execute("DROP TRIGGER workflow_lifecycle_transitions_no_update")
+        connection.execute(
+            """
+            UPDATE workflow_lifecycle_transitions
+            SET transition_fingerprint = ?
+            WHERE transition_id = ?
+            """,
+            ("0" * 64, activation.transition_id),
+        )
+        connection.commit()
+
+    assert service.repository.list_workflow_lifecycle_transitions(limit=1) == []
+
+
+def test_workflow_lifecycle_storage_rejects_blocked_or_mismatched_assessment() -> None:
+    temp_dir = runtime_dir("workflow-lifecycle-governance")
+    service = workflow_lifecycle_memory_service(
+        f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+    )
+    activation = _activation()
+    approved = workflow_lifecycle_assessment(activation)
+    blocked = replace(
+        approved,
+        status="blocked",
+        blockers=["human_authorization_missing"],
+        human_authorization_verified=False,
+        transition_recording_authorized=False,
+    )
+
+    with pytest.raises(ValueError, match="approved governance authorization"):
+        service.record_workflow_lifecycle_transition(activation, blocked)
+    with pytest.raises(ValueError, match="governance assessment is invalid"):
+        service.record_workflow_lifecycle_transition(
+            activation,
+            replace(approved, transition_id="forged-transition"),
+        )
+
+
+def test_workflow_lifecycle_sqlite_triggers_block_update_and_delete() -> None:
+    temp_dir = runtime_dir("workflow-lifecycle-append-only")
+    service = workflow_lifecycle_memory_service(
+        f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+    )
+    activation = _activation()
+    service.record_workflow_lifecycle_transition(
+        activation,
+        workflow_lifecycle_assessment(activation),
+    )
+
+    with pytest.raises(IntegrityError, match="append-only"):
+        with service.repository._connect() as connection:
+            connection.execute("UPDATE workflow_lifecycle_transitions SET route = 'forged'")
+    with pytest.raises(IntegrityError, match="append-only"):
+        with service.repository._connect() as connection:
+            connection.execute("DELETE FROM workflow_lifecycle_transitions")
+
+
+def test_postgres_workflow_lifecycle_uses_atomic_cas_and_scoped_paging() -> None:
+    captured: list[tuple[str, tuple[object, ...]]] = []
+
+    class FakeCursor:
+        rowcount = 1
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def execute(self, query: str, params: tuple[object, ...]) -> None:
+            captured.append((query, params))
+
+        def fetchall(self) -> list[dict[str, object]]:
+            return []
+
+    class FakeConnection:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def cursor(self) -> FakeCursor:
+            return FakeCursor()
+
+        def commit(self) -> None:
+            return None
+
+    repository = PostgresMemoryRepository.__new__(PostgresMemoryRepository)
+    repository._connect = lambda: FakeConnection()
+    transition = _activation()
+    assessment = workflow_lifecycle_assessment(transition)
+    stored = StoredWorkflowLifecycleTransition(
+        transition=transition,
+        governance_assessment=assessment,
+        transition_fingerprint=workflow_lifecycle_transition_fingerprint(transition),
+        governance_assessment_fingerprint=workflow_lifecycle_artifact_fingerprint(assessment),
+    )
+
+    assert repository._insert_workflow_lifecycle_transition(stored) is True
+    assert (
+        repository.list_workflow_lifecycle_transitions(
+            workflow_profile=transition.workflow_profile,
+            route=transition.route,
+            limit=3,
+            offset=2,
+        )
+        == []
+    )
+    insert_query, insert_params = captured[0]
+    list_query, list_params = captured[1]
+    assert "ON CONFLICT DO NOTHING" in insert_query
+    assert "predecessor.transition_fingerprint = %s" in insert_query
+    assert "NOT EXISTS" in insert_query
+    assert insert_query.count("%s") == len(insert_params)
+    assert "workflow_profile = %s" in list_query
+    assert "route = %s" in list_query
+    assert list_params == (
+        transition.workflow_profile,
+        transition.route,
+        50,
+        0,
+    )
+
+
+def test_postgres_schema_creates_guarded_experience_storage() -> None:
+    captured_queries: list[str] = []
+
+    class FakeCursor:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def execute(
+            self,
+            query: str,
+            _params: tuple[object, ...] | None = None,
+        ) -> None:
+            captured_queries.append(query)
+
+    class FakeConnection:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *_args):
+            return False
+
+        def cursor(self) -> FakeCursor:
+            return FakeCursor()
+
+        def commit(self) -> None:
+            return None
+
+    repository = PostgresMemoryRepository.__new__(PostgresMemoryRepository)
+    repository._connect = lambda: FakeConnection()
+
+    repository._init_schema()
+
+    schema = "\n".join(captured_queries)
+    assert "CREATE TABLE IF NOT EXISTS experience_reflections" in schema
+    assert "experience_id TEXT PRIMARY KEY" in schema
+    assert "outcome_status TEXT NOT NULL" in schema
+    assert "reflection_core_mutation_allowed BOOLEAN" in schema
+    assert "enforce_experience_reflection_immutability" in schema
+    assert "experience_reflections is append-only" in schema
+    assert "experience identity and outcome are immutable" in schema
+    assert "CREATE TABLE IF NOT EXISTS workflow_lifecycle_transitions" in schema
+    assert "UNIQUE (workflow_profile, route, revision)" in schema
+    assert "reject_workflow_lifecycle_transition_mutation" in schema
+    assert "workflow_lifecycle_transitions is append-only" in schema
+
+
+def test_decision_outcome_attribution_is_idempotent_and_survives_reload() -> None:
+    temp_dir = runtime_dir("decision-attribution-reload")
+    database_url = f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+    service = MemoryService(database_url=database_url)
+    record = sample_decision_outcome_attribution()
+    persist_attribution_experience(service, record)
+
+    assert service.record_decision_outcome_attribution(record) == record
+    assert service.record_decision_outcome_attribution(record) == record
+
+    reloaded = MemoryService(database_url=database_url)
+    assert (
+        reloaded.get_decision_outcome_attribution(
+            attribution_record_id=record.attribution_record_id
+        )
+        == record
+    )
+    assert reloaded.get_decision_outcome_attribution(request_id=str(record.request_id)) == record
+    assert reloaded.list_decision_outcome_attributions() == [record]
+    assert reloaded.list_decision_outcome_attributions(
+        request_id=str(record.request_id),
+        limit=1,
+    ) == [record]
+
+    with pytest.raises(ValueError, match="identity is immutable"):
+        reloaded.record_decision_outcome_attribution(replace(record, outcome_status="failed"))
+    with pytest.raises(ValueError, match="identity is immutable"):
+        reloaded.record_decision_outcome_attribution(
+            replace(record, attribution_record_id="decision-attribution://other")
+        )
+    with pytest.raises(ValueError, match="does not match request and mission identity"):
+        reloaded.record_decision_outcome_attribution(
+            replace(record, request_id=RequestId("req-attribution-other"))
+        )
+
+
+def test_decision_outcome_attribution_binds_claim_and_persisted_experience() -> None:
+    temp_dir = runtime_dir("decision-attribution-bound-identities")
+    service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
+    record = sample_decision_outcome_attribution(suffix="bound-identities")
+
+    with pytest.raises(ValueError, match="requires a runtime request claim"):
+        service.record_decision_outcome_attribution(record)
+
+    service.claim_runtime_request(
+        request_id=str(record.request_id),
+        session_id="sess-different",
+        claimed_at=record.observed_at,
+    )
+    with pytest.raises(ValueError, match="session does not match"):
+        service.record_decision_outcome_attribution(record)
+
+    matching = replace(record, session_id=SessionId("sess-different"))
+    with pytest.raises(ValueError, match="requires a persisted experience"):
+        service.record_decision_outcome_attribution(matching)
+
+
+def test_repository_attribution_insert_requires_exact_claim_and_experience() -> None:
+    temp_dir = runtime_dir("decision-attribution-repository-links")
+    service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
+    record = sample_decision_outcome_attribution(suffix="repository-links")
+
+    assert service.repository._insert_decision_outcome_attribution(record) is False
+    service.record_experience(
+        experience=ExperienceRecordContract(
+            experience_id=str(record.experience_id),
+            mission_id=MissionId(str(record.mission_id)),
+            workflow_profile=str(record.workflow_profile),
+            outcome_status=str(record.outcome_status),
+            timestamp=record.observed_at,
+            route=record.route,
+            evidence_refs=["experience-evidence://repository-links"],
+        )
+    )
+    assert service.repository._insert_decision_outcome_attribution(record) is False
+    service.claim_runtime_request(
+        request_id=str(record.request_id),
+        session_id="sess-wrong",
+        claimed_at=record.observed_at,
+    )
+    assert service.repository._insert_decision_outcome_attribution(record) is False
+
+    mismatch_dir = runtime_dir("decision-attribution-repository-experience-mismatch")
+    mismatch_service = MemoryService(
+        database_url=f"sqlite:///{(mismatch_dir / 'memory.db').as_posix()}"
+    )
+    mismatch_service.claim_runtime_request(
+        request_id=str(record.request_id),
+        session_id=str(record.session_id),
+        claimed_at=record.observed_at,
+    )
+    mismatch_service.record_experience(
+        experience=ExperienceRecordContract(
+            experience_id=str(record.experience_id),
+            mission_id=MissionId(str(record.mission_id)),
+            workflow_profile=str(record.workflow_profile),
+            outcome_status=str(record.outcome_status),
+            timestamp=record.observed_at,
+            route="different_route",
+            evidence_refs=["experience-evidence://repository-links-mismatch"],
+        )
+    )
+    assert mismatch_service.repository._insert_decision_outcome_attribution(record) is False
+
+
+def test_attributed_experience_outcome_is_immutable_at_repository_boundary() -> None:
+    temp_dir = runtime_dir("attributed-experience-immutable")
+    service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
+    record = sample_decision_outcome_attribution(suffix="experience-immutable")
+    persist_attribution_experience(service, record)
+    service.record_decision_outcome_attribution(record)
+    stored = service.get_experience_reflection(str(record.experience_id))
+    assert stored is not None
+    changed_outcome = replace(stored.experience, outcome_status="failed")
+
+    with pytest.raises(ValueError, match="experience identity is immutable"):
+        service.record_experience(experience=changed_outcome)
+
+    service.repository.record_experience(changed_outcome)
+    after_direct_repository_call = service.get_experience_reflection(str(record.experience_id))
+    assert after_direct_repository_call is not None
+    assert after_direct_repository_call.experience == stored.experience
+
+    repository = service.repository
+    assert isinstance(repository, SqliteMemoryRepository)
+    with pytest.raises(IntegrityError, match="identity and outcome are immutable"):
+        with repository._connect() as connection:
+            connection.execute(
+                """
+                UPDATE experience_reflections
+                SET outcome_status = 'failed'
+                WHERE experience_id = ?
+                """,
+                (record.experience_id,),
+            )
+    with repository._connect() as connection:
+        connection.execute(
+            """
+            UPDATE experience_reflections
+            SET user_feedback = ?, reflection_id = ?, reflection_status = 'candidate',
+                learning_candidate = 'retain bounded operator evidence',
+                recommendation = 'review the bounded feedback',
+                reflection_human_review_required = 1,
+                reflection_automatic_promotion_allowed = 0,
+                reflection_core_mutation_allowed = 0
+            WHERE experience_id = ?
+            """,
+            (
+                "feedback_id=operator-feedback://storage/allowed",
+                "reflection://storage/allowed",
+                record.experience_id,
+            ),
+        )
+        connection.commit()
+    enriched = service.get_experience_reflection(str(record.experience_id))
+    assert enriched is not None
+    assert enriched.experience.outcome_status == "completed"
+    assert "operator-feedback://storage/allowed" in (enriched.experience.user_feedback or "")
+    assert enriched.reflection is not None
+    assert enriched.reflection.reflection_id == "reflection://storage/allowed"
+
+    with pytest.raises(IntegrityError, match="enrichment must remain bounded"):
+        with repository._connect() as connection:
+            connection.execute(
+                """
+                UPDATE experience_reflections
+                SET user_feedback = ?
+                WHERE experience_id = ?
+                """,
+                ("x" * 2001, record.experience_id),
+            )
+    with pytest.raises(IntegrityError, match="append-only"):
+        with repository._connect() as connection:
+            connection.execute(
+                """
+                DELETE FROM experience_reflections
+                WHERE experience_id = ?
+                """,
+                (record.experience_id,),
+            )
+
+
+def test_operator_feedback_compare_and_swap_preserves_concurrent_feedback() -> None:
+    temp_dir = runtime_dir("operator-feedback-concurrency")
+    database_url = f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+    experience_id = "experience://mission-feedback-race/request-feedback-race"
+    mission_id = MissionId("mission-feedback-race")
+    seed = MemoryService(database_url=database_url)
+    seed.record_experience_reflection(
+        experience=ExperienceRecordContract(
+            experience_id=experience_id,
+            mission_id=mission_id,
+            workflow_profile="software_change_workflow",
+            outcome_status="completed",
+            evidence_refs=["trace://feedback-race"],
+            timestamp="2026-08-11T18:00:00Z",
+        ),
+        reflection=PostTaskReflectionContract(
+            reflection_id="reflection://mission-feedback-race/request-feedback-race",
+            experience_id=experience_id,
+            reflection_status="candidate",
+            learning_candidate="preserve concurrent operator feedback",
+            recommendation="merge feedback through canonical memory",
+            evidence_refs=["trace://feedback-race"],
+            timestamp="2026-08-11T18:00:01Z",
+        ),
+    )
+    services = [
+        MemoryService(database_url=database_url),
+        MemoryService(database_url=database_url),
+    ]
+    first_read_barrier = Barrier(2)
+
+    def synchronized_first_read(service: MemoryService):
+        original = service.get_experience_reflection
+        state = {"first": True}
+
+        def read(experience_ref: str):
+            current = original(experience_ref)
+            if state["first"]:
+                state["first"] = False
+                first_read_barrier.wait()
+            return current
+
+        return read
+
+    for service in services:
+        service.get_experience_reflection = synchronized_first_read(service)
+
+    feedback = [
+        OperatorFeedbackContract(
+            feedback_id=f"operator-feedback://feedback-race/{index}",
+            mission_id=mission_id,
+            experience_id=experience_id,
+            assessment="helpful",
+            operator_ref=f"operator://feedback-race/{index}",
+            evidence_refs=[f"evidence://feedback-race/{index}"],
+            timestamp=f"2026-08-11T18:00:0{index + 1}Z",
+        )
+        for index in (1, 2)
+    ]
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        futures = [
+            executor.submit(service.record_operator_feedback, item)
+            for service, item in zip(services, feedback, strict=True)
+        ]
+        results = [future.result() for future in futures]
+
+    assert len(results) == 2
+    stored = seed.get_experience_reflection(experience_id)
+    assert stored is not None
+    for index in (1, 2):
+        feedback_id = f"operator-feedback://feedback-race/{index}"
+        assert feedback_id in (stored.experience.user_feedback or "")
+        assert feedback_id in stored.experience.evidence_refs
+        assert feedback_id in stored.experience.signal_refs
+    assert stored.reflection is not None
+    assert stored.reflection.evidence_refs == stored.experience.evidence_refs
+
+
+def test_decision_outcome_attribution_append_is_concurrency_idempotent() -> None:
+    temp_dir = runtime_dir("decision-attribution-concurrency")
+    database_url = f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+    record = sample_decision_outcome_attribution(suffix="concurrent")
+    services = [
+        MemoryService(database_url=database_url),
+        MemoryService(database_url=database_url),
+    ]
+    persist_attribution_experience(services[0], record)
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        results = list(
+            executor.map(
+                lambda service: service.record_decision_outcome_attribution(record),
+                services,
+            )
+        )
+
+    assert results == [record, record]
+    assert services[0].list_decision_outcome_attributions() == [record]
+
+    competing = (
+        sample_decision_outcome_attribution(suffix="race-left", request_id="req-attribution-race"),
+        sample_decision_outcome_attribution(suffix="race-right", request_id="req-attribution-race"),
+    )
+    persist_attribution_experience(services[0], competing[0])
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        futures = [
+            executor.submit(
+                service.record_decision_outcome_attribution,
+                candidate,
+            )
+            for service, candidate in zip(services, competing, strict=True)
+        ]
+    successes = [future.result() for future in futures if future.exception() is None]
+    failures = [future.exception() for future in futures if future.exception() is not None]
+    assert len(successes) == 1
+    assert len(failures) == 1
+    assert isinstance(failures[0], ValueError)
+    assert (
+        services[0].get_decision_outcome_attribution(request_id="req-attribution-race") in competing
+    )
+
+
+def test_runtime_request_claim_is_atomic_across_memory_service_instances() -> None:
+    temp_dir = runtime_dir("runtime-request-claim-concurrency")
+    database_url = f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+    services = [
+        MemoryService(database_url=database_url),
+        MemoryService(database_url=database_url),
+    ]
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        results = list(
+            executor.map(
+                lambda service: service.claim_runtime_request(
+                    request_id="req-atomic-claim",
+                    session_id="sess-atomic-claim",
+                    claimed_at="2026-08-11T16:00:00+00:00",
+                ),
+                services,
+            )
+        )
+
+    assert sorted(results) == [False, True]
+    assert (
+        services[0].claim_runtime_request(
+            request_id="req-atomic-claim",
+            session_id="sess-atomic-claim",
+            claimed_at="2026-08-11T16:00:01+00:00",
+        )
+        is False
+    )
+
+
+def test_decision_outcome_attribution_table_rejects_mutation_and_tamper() -> None:
+    temp_dir = runtime_dir("decision-attribution-immutable")
+    database_url = f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+    service = MemoryService(database_url=database_url)
+    record = sample_decision_outcome_attribution(suffix="immutable")
+    persist_attribution_experience(service, record)
+    service.record_decision_outcome_attribution(record)
+    repository = service.repository
+    assert isinstance(repository, SqliteMemoryRepository)
+
+    with pytest.raises(IntegrityError, match="append-only"):
+        with repository._connect() as connection:
+            connection.execute(
+                """
+                UPDATE decision_outcome_attributions
+                SET observed_at = '2026-08-11T13:00:00Z'
+                WHERE attribution_record_id = ?
+                """,
+                (record.attribution_record_id,),
+            )
+    with pytest.raises(IntegrityError, match="append-only"):
+        with repository._connect() as connection:
+            connection.execute(
+                """
+                DELETE FROM decision_outcome_attributions
+                WHERE attribution_record_id = ?
+                """,
+                (record.attribution_record_id,),
+            )
+
+    tampered = sample_decision_outcome_attribution(suffix="tampered")
+    with repository._connect() as connection:
+        connection.execute(
+            """
+            INSERT INTO decision_outcome_attributions (
+                attribution_record_id, request_id, session_id, mission_id,
+                workflow_profile, observed_at, payload_json, payload_sha256
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                tampered.attribution_record_id,
+                str(tampered.request_id),
+                str(tampered.session_id),
+                str(tampered.mission_id),
+                tampered.workflow_profile,
+                tampered.observed_at,
+                canonical_decision_attribution_payload(tampered),
+                "0" * 64,
+            ),
+        )
+    with pytest.raises(ValueError, match="integrity check failed"):
+        service.get_decision_outcome_attribution(
+            attribution_record_id=tampered.attribution_record_id
+        )
+
+
+def test_decision_outcome_attribution_scope_precedes_limit_and_offset() -> None:
+    temp_dir = runtime_dir("decision-attribution-scope")
+    service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
+    target_old = sample_decision_outcome_attribution(
+        suffix="target-old",
+        mission_id="mission-target",
+        observed_at="2026-08-11T10:00:00Z",
+    )
+    target_new = sample_decision_outcome_attribution(
+        suffix="target-new",
+        mission_id="mission-target",
+        observed_at="2026-08-11T11:00:00Z",
+    )
+    global_newest = sample_decision_outcome_attribution(
+        suffix="other-newest",
+        mission_id="mission-other",
+        workflow_profile="other_workflow",
+        observed_at="2026-08-11T12:00:00Z",
+    )
+    for record in (target_old, target_new, global_newest):
+        persist_attribution_experience(service, record)
+        service.record_decision_outcome_attribution(record)
+
+    forged = canonicalize_decision_attribution_record(
+        replace(
+            target_new,
+            attribution_record_id="decision-attribution://target-forged",
+            request_id=RequestId("req-attribution-target-forged"),
+            observed_at="2026-08-11T13:00:00Z",
+            execution_allowed=True,
+        )
+    )
+    repository = service.repository
+    assert isinstance(repository, SqliteMemoryRepository)
+    with repository._connect() as connection:
+        connection.execute(
+            """
+            INSERT INTO decision_outcome_attributions (
+                attribution_record_id, request_id, session_id, mission_id,
+                workflow_profile, observed_at, payload_json, payload_sha256
+            )
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                forged.attribution_record_id,
+                str(forged.request_id),
+                str(forged.session_id),
+                str(forged.mission_id),
+                forged.workflow_profile,
+                forged.observed_at,
+                canonical_decision_attribution_payload(forged),
+                decision_attribution_fingerprint(forged),
+            ),
+        )
+
+    with pytest.raises(ValueError):
+        service.get_decision_outcome_attribution(attribution_record_id=forged.attribution_record_id)
+
+    assert service.list_decision_outcome_attributions(mission_id="mission-target", limit=1) == [
+        target_new
+    ]
+    assert service.list_decision_outcome_attributions(
+        mission_id="mission-target",
+        workflow_profile="software_change_workflow",
+        limit=1,
+        offset=1,
+    ) == [target_old]
+
+
+def test_decision_outcome_attribution_never_enters_input_recovery() -> None:
+    temp_dir = runtime_dir("decision-attribution-recovery-isolation")
+    service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
+    record = sample_decision_outcome_attribution(suffix="recovery-isolation")
+    persist_attribution_experience(service, record)
+    service.record_decision_outcome_attribution(record)
+
+    recovered = service.recover_for_input(
+        InputContract(
+            request_id=record.request_id,
+            session_id=record.session_id,
+            mission_id=record.mission_id,
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Continue without consuming attribution telemetry.",
+            timestamp="2026-08-11T12:01:00Z",
+        )
+    )
+
+    assert all(record.attribution_record_id not in item for item in recovered.recovered_items)
+
+
 def test_memory_service_recovers_empty_context_for_new_session() -> None:
     temp_dir = runtime_dir("memory-empty")
     service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
@@ -417,9 +1549,7 @@ def test_memory_service_recovers_empty_context_for_new_session() -> None:
 
 def test_memory_service_recovers_evidence_grounded_semantic_candidates() -> None:
     temp_dir = runtime_dir("memory-semantic-candidates")
-    service = MemoryService(
-        database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
-    )
+    service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
     service.repository.upsert_mission_state(
         MissionStateContract(
             mission_id=MissionId("mission-semantic-current"),
@@ -449,9 +1579,7 @@ def test_memory_service_recovers_evidence_grounded_semantic_candidates() -> None
 
     assert len(recovered.semantic_memory_candidates) == 1
     candidate = recovered.semantic_memory_candidates[0]
-    assert candidate.anchor_ref == (
-        "memory://mission/mission-semantic-current/semantic"
-    )
+    assert candidate.anchor_ref == ("memory://mission/mission-semantic-current/semantic")
     assert candidate.source_kind == "active_mission"
     assert candidate.observed_at == "2026-07-18T11:00:00Z"
     assert candidate.freshness_status == "current"
@@ -468,9 +1596,7 @@ def test_memory_service_recovers_evidence_grounded_semantic_candidates() -> None
 
 def test_memory_service_marks_stale_semantic_candidate_without_using_it() -> None:
     temp_dir = runtime_dir("memory-semantic-stale")
-    service = MemoryService(
-        database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
-    )
+    service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
     service.repository.upsert_mission_state(
         MissionStateContract(
             mission_id=MissionId("mission-semantic-stale"),
@@ -513,7 +1639,7 @@ def test_memory_service_records_and_recovers_session_history_across_instances() 
         content="Please plan the sprint.",
         timestamp="2026-03-17T00:00:00Z",
     )
-    writer = MemoryService(database_url=database_url)
+    writer = reviewed_playbook_memory_service(database_url)
     record = writer.record_turn(
         contract,
         intent="planning",
@@ -691,21 +1817,13 @@ def test_memory_service_recovers_bounded_ecosystem_state_for_continuity() -> Non
         for item in recovered.recovered_items
     )
     assert any(
-        item.startswith("mission_open_checkpoint_refs=")
-        for item in recovered.recovered_items
+        item.startswith("mission_open_checkpoint_refs=") for item in recovered.recovered_items
     )
+    assert any(item == "mission_objective_status=completed" for item in recovered.recovered_items)
     assert any(
-        item == "mission_objective_status=completed"
-        for item in recovered.recovered_items
+        item == "mission_project_ref=project://mission-eco" for item in recovered.recovered_items
     )
-    assert any(
-        item == "mission_project_ref=project://mission-eco"
-        for item in recovered.recovered_items
-    )
-    assert any(
-        item.startswith("mission_work_item_refs=")
-        for item in recovered.recovered_items
-    )
+    assert any(item.startswith("mission_work_item_refs=") for item in recovered.recovered_items)
     assert any(
         item == "mission_active_surface_id=surface://jarvis_console"
         for item in recovered.recovered_items
@@ -1181,11 +2299,353 @@ def test_memory_service_records_bounded_procedural_playbook_candidate() -> None:
     assert records[1].candidate.memory_write_mode == "through_core_only"
 
 
+def test_memory_service_persists_reviewed_procedural_playbook_idempotently() -> None:
+    temp_dir = runtime_dir("memory-reviewed-playbook-persistence")
+    database_url = f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+    playbook = sample_reviewed_procedural_playbook()
+    writer = reviewed_playbook_memory_service(database_url)
+
+    stored = writer.record_reviewed_procedural_playbook(playbook)
+    idempotent = writer.record_reviewed_procedural_playbook(playbook)
+    unverified_reload = MemoryService(database_url=database_url).list_reviewed_procedural_playbooks(
+        workflow_profile=playbook.workflow_profile,
+        route=playbook.route,
+        domain=playbook.domain,
+        review_status="approved",
+    )
+    reloaded = reviewed_playbook_memory_service(database_url).list_reviewed_procedural_playbooks(
+        workflow_profile=playbook.workflow_profile,
+        route=playbook.route,
+        domain=playbook.domain,
+        review_status="approved",
+    )
+
+    assert idempotent == stored
+    assert unverified_reload == []
+    assert reloaded == [stored]
+    assert reloaded[0].playbook == playbook
+
+
+@pytest.mark.parametrize(
+    ("case_id", "version"),
+    [
+        ("leading-major-zero", "01.0.0"),
+        ("leading-minor-zero", "1.01.0"),
+        ("leading-patch-zero", "1.0.01"),
+        ("arabic-indic-digit", "١.2.3"),
+        ("fullwidth-digit", "１.2.3"),
+    ],
+)
+def test_memory_service_rejects_noncanonical_reviewed_playbook_semver(
+    case_id: str,
+    version: str,
+) -> None:
+    temp_dir = runtime_dir(f"memory-reviewed-playbook-semver-{case_id}")
+    service = reviewed_playbook_memory_service(f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
+
+    with pytest.raises(ValueError, match="numeric semver"):
+        service.record_reviewed_procedural_playbook(
+            replace(sample_reviewed_procedural_playbook(), version=version)
+        )
+
+    assert service.list_reviewed_procedural_playbooks() == []
+
+
+def test_memory_service_fails_closed_without_persisted_evolution_verifier() -> None:
+    temp_dir = runtime_dir("memory-reviewed-playbook-verifier")
+    playbook = sample_reviewed_procedural_playbook()
+    unverified = MemoryService(database_url=f"sqlite:///{(temp_dir / 'unverified.db').as_posix()}")
+    rejected = MemoryService(
+        database_url=f"sqlite:///{(temp_dir / 'rejected.db').as_posix()}",
+        reviewed_procedural_playbook_verifier=lambda _playbook: False,
+    )
+
+    for service in (unverified, rejected):
+        with pytest.raises(ValueError, match="persisted evolution verification"):
+            service.record_reviewed_procedural_playbook(playbook)
+        assert service.list_reviewed_procedural_playbooks() == []
+
+
+def test_memory_service_filters_repository_rows_that_fail_evolution_verification() -> None:
+    temp_dir = runtime_dir("memory-reviewed-playbook-read-verification")
+    database_url = f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+    reviewed = sample_reviewed_procedural_playbook()
+    service = MemoryService(
+        database_url=database_url,
+        reviewed_procedural_playbook_verifier=lambda playbook: playbook == reviewed,
+    )
+    stored = service.record_reviewed_procedural_playbook(reviewed)
+    forged_rows = [
+        replace(
+            reviewed,
+            playbook_id=(f"reviewed-playbook://software-change/forged-{index:02d}"),
+            bounded_steps=["unreviewed runtime guidance"],
+            timestamp=f"9999-12-31T23:{index:02d}:00Z",
+        )
+        for index in range(25)
+    ]
+    for forged in forged_rows:
+        assert (
+            service.repository._insert_reviewed_procedural_playbook(
+                StoredReviewedProceduralPlaybook(playbook=forged)
+            )
+            is True
+        )
+
+    assert service.list_reviewed_procedural_playbooks(limit=20) == [stored]
+    with pytest.raises(ValueError, match="persisted evolution verification"):
+        service.revoke_reviewed_procedural_playbook(
+            playbook_id=forged_rows[0].playbook_id,
+            version=forged_rows[0].version,
+            revocation_ref="human-review://forged/revoke",
+            revoked_at="2026-07-19T00:00:00Z",
+        )
+
+
+def test_reviewed_playbook_repository_create_and_revoke_are_atomic() -> None:
+    temp_dir = runtime_dir("memory-reviewed-playbook-atomic")
+    service = reviewed_playbook_memory_service(f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
+    original = sample_reviewed_procedural_playbook()
+    changed = replace(original, bounded_steps=["overwrite immutable guidance"])
+
+    assert (
+        service.repository._insert_reviewed_procedural_playbook(
+            StoredReviewedProceduralPlaybook(playbook=original)
+        )
+        is True
+    )
+    assert (
+        service.repository._insert_reviewed_procedural_playbook(
+            StoredReviewedProceduralPlaybook(playbook=changed)
+        )
+        is False
+    )
+    assert service.repository.fetch_reviewed_procedural_playbook(
+        original.playbook_id,
+        original.version,
+    ) == StoredReviewedProceduralPlaybook(playbook=original)
+
+    first_revocation = replace(
+        original,
+        review_status="revoked",
+        evidence_refs=[*original.evidence_refs, "human-review://revoke/first"],
+        revoked_at="2026-07-18T13:00:00Z",
+        revocation_ref="human-review://revoke/first",
+    )
+    competing_revocation = replace(
+        first_revocation,
+        evidence_refs=[*original.evidence_refs, "human-review://revoke/second"],
+        revocation_ref="human-review://revoke/second",
+    )
+    assert (
+        service.repository._transition_reviewed_procedural_playbook_to_revoked(
+            StoredReviewedProceduralPlaybook(playbook=first_revocation)
+        )
+        is True
+    )
+    assert (
+        service.repository._transition_reviewed_procedural_playbook_to_revoked(
+            StoredReviewedProceduralPlaybook(playbook=competing_revocation)
+        )
+        is False
+    )
+    assert service.repository.fetch_reviewed_procedural_playbook(
+        original.playbook_id,
+        original.version,
+    ) == StoredReviewedProceduralPlaybook(playbook=first_revocation)
+
+
+def test_memory_service_keeps_reviewed_playbook_version_immutable() -> None:
+    temp_dir = runtime_dir("memory-reviewed-playbook-immutable")
+    service = reviewed_playbook_memory_service(f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
+    playbook = sample_reviewed_procedural_playbook()
+    service.record_reviewed_procedural_playbook(playbook)
+
+    with pytest.raises(ValueError, match="version is immutable"):
+        service.record_reviewed_procedural_playbook(
+            replace(
+                playbook,
+                bounded_steps=["replace approved guidance in place"],
+            )
+        )
+
+    persisted = service.list_reviewed_procedural_playbooks(
+        workflow_profile=playbook.workflow_profile,
+        route=playbook.route,
+        domain=playbook.domain,
+    )
+    assert [record.playbook for record in persisted] == [playbook]
+
+
+def test_memory_service_filters_reviewed_playbooks_by_scope_and_status() -> None:
+    temp_dir = runtime_dir("memory-reviewed-playbook-filters")
+    service = reviewed_playbook_memory_service(f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
+    relevant = sample_reviewed_procedural_playbook(
+        playbook_id="reviewed-playbook://software-change/relevant",
+        timestamp="2026-07-18T12:00:00Z",
+    )
+    other_route = sample_reviewed_procedural_playbook(
+        playbook_id="reviewed-playbook://software-change/other-route",
+        route="strategic_reasoning",
+        timestamp="2026-07-18T12:01:00Z",
+    )
+    other_workflow = sample_reviewed_procedural_playbook(
+        playbook_id="reviewed-playbook://software-change/other-workflow",
+        workflow_profile="strategic_reasoning_workflow",
+        timestamp="2026-07-18T12:02:00Z",
+    )
+    other_domain = sample_reviewed_procedural_playbook(
+        playbook_id="reviewed-playbook://software-change/other-domain",
+        domain="strategy",
+        timestamp="2026-07-18T12:03:00Z",
+    )
+    revoked = sample_reviewed_procedural_playbook(
+        playbook_id="reviewed-playbook://software-change/revoked",
+        timestamp="2026-07-18T12:04:00Z",
+    )
+    for playbook in (
+        relevant,
+        other_route,
+        other_workflow,
+        other_domain,
+        revoked,
+    ):
+        service.record_reviewed_procedural_playbook(playbook)
+    service.revoke_reviewed_procedural_playbook(
+        playbook_id=revoked.playbook_id,
+        version=revoked.version,
+        revocation_ref="human-review://software-change/revoke-filtered",
+        revoked_at="2026-07-18T13:00:00Z",
+    )
+
+    approved_for_scope = service.list_reviewed_procedural_playbooks(
+        workflow_profile=relevant.workflow_profile,
+        route=relevant.route,
+        domain=relevant.domain,
+        review_status="approved",
+    )
+    revoked_for_scope = service.list_reviewed_procedural_playbooks(
+        workflow_profile=relevant.workflow_profile,
+        route=relevant.route,
+        domain=relevant.domain,
+        review_status="revoked",
+    )
+
+    assert [record.playbook.playbook_id for record in approved_for_scope] == [relevant.playbook_id]
+    assert [record.playbook.playbook_id for record in revoked_for_scope] == [revoked.playbook_id]
+
+
+def test_memory_service_revocation_preserves_artifact_and_blocks_reactivation() -> None:
+    temp_dir = runtime_dir("memory-reviewed-playbook-revocation")
+    database_url = f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+    service = reviewed_playbook_memory_service(database_url)
+    playbook = sample_reviewed_procedural_playbook()
+    service.record_reviewed_procedural_playbook(playbook)
+    revocation_ref = "human-review://software-change/revoke-bounded-review"
+
+    revoked = service.revoke_reviewed_procedural_playbook(
+        playbook_id=playbook.playbook_id,
+        version=playbook.version,
+        revocation_ref=revocation_ref,
+        revoked_at="2026-07-18T13:00:00Z",
+    )
+    reader = reviewed_playbook_memory_service(database_url)
+    reloaded = reader.list_reviewed_procedural_playbooks(
+        workflow_profile=playbook.workflow_profile,
+        route=playbook.route,
+        domain=playbook.domain,
+        review_status="revoked",
+    )
+
+    assert reloaded == [revoked]
+    assert revoked.playbook.playbook_id == playbook.playbook_id
+    assert revoked.playbook.version == playbook.version
+    assert revoked.playbook.source_candidate_id == playbook.source_candidate_id
+    assert revoked.playbook.bounded_steps == playbook.bounded_steps
+    assert revoked.playbook.review_status == "revoked"
+    assert revoked.playbook.revoked_at == "2026-07-18T13:00:00Z"
+    assert revoked.playbook.revocation_ref == revocation_ref
+    assert revocation_ref in revoked.playbook.evidence_refs
+
+    with pytest.raises(ValueError, match="version is immutable"):
+        reader.record_reviewed_procedural_playbook(playbook)
+
+    assert (
+        reader.list_reviewed_procedural_playbooks(
+            workflow_profile=playbook.workflow_profile,
+            route=playbook.route,
+            domain=playbook.domain,
+            review_status="approved",
+        )
+        == []
+    )
+
+
+@pytest.mark.parametrize(
+    ("field_name", "unsafe_value"),
+    [
+        ("read_only", False),
+        ("execution_allowed", True),
+        ("tool_dispatch_allowed", True),
+        ("memory_write_mode", "through_core_only"),
+        ("automatic_promotion_allowed", True),
+        ("core_mutation_allowed", True),
+    ],
+)
+def test_memory_service_rejects_reviewed_playbook_authority_flags(
+    field_name: str,
+    unsafe_value: object,
+) -> None:
+    temp_dir = runtime_dir(f"memory-reviewed-playbook-authority-{field_name}")
+    service = reviewed_playbook_memory_service(f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
+    unsafe_playbook = replace(
+        sample_reviewed_procedural_playbook(),
+        **{field_name: unsafe_value},
+    )
+
+    with pytest.raises(ValueError, match="cannot claim authority"):
+        service.record_reviewed_procedural_playbook(unsafe_playbook)
+
+    assert service.list_reviewed_procedural_playbooks() == []
+
+
+def test_memory_service_scoped_playbook_query_avoids_global_limit_starvation() -> None:
+    temp_dir = runtime_dir("memory-reviewed-playbook-scoped-limit")
+    service = reviewed_playbook_memory_service(f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
+    relevant = sample_reviewed_procedural_playbook(
+        playbook_id="reviewed-playbook://software-change/old-but-relevant",
+        timestamp="2026-07-18T00:00:00Z",
+    )
+    service.record_reviewed_procedural_playbook(relevant)
+    for index in range(12):
+        service.record_reviewed_procedural_playbook(
+            sample_reviewed_procedural_playbook(
+                playbook_id=f"reviewed-playbook://strategy/unrelated-{index:02d}",
+                route="strategic_reasoning",
+                workflow_profile="strategic_reasoning_workflow",
+                domain="strategy",
+                timestamp=f"2026-07-18T12:{index:02d}:00Z",
+            )
+        )
+
+    globally_limited = service.list_reviewed_procedural_playbooks(limit=8)
+    assert relevant.playbook_id not in {record.playbook.playbook_id for record in globally_limited}
+
+    # Route-aware recovery consumes this seam after routing; scope filters must
+    # therefore be applied before LIMIT instead of slicing a global snapshot.
+    scoped = service.list_reviewed_procedural_playbooks(
+        workflow_profile=relevant.workflow_profile,
+        route=relevant.route,
+        domain=relevant.domain,
+        review_status="approved",
+        limit=1,
+    )
+    assert [record.playbook.playbook_id for record in scoped] == [relevant.playbook_id]
+
+
 def test_memory_service_registers_versioned_inactive_skill_candidate() -> None:
     temp_dir = runtime_dir("memory-skill-candidate")
-    service = MemoryService(
-        database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
-    )
+    service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
     candidate = SkillCandidateContract(
         skill_candidate_id="skill-candidate://release-evidence/1.0.0",
         skill_id="skill://release-evidence",
@@ -1231,9 +2691,7 @@ def test_memory_service_registers_versioned_inactive_skill_candidate() -> None:
 
 def test_memory_service_contains_unsafe_skill_candidate_claims() -> None:
     temp_dir = runtime_dir("memory-skill-candidate-contained")
-    service = MemoryService(
-        database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
-    )
+    service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
 
     stored = service.record_skill_candidate(
         SkillCandidateContract(
@@ -1274,9 +2732,7 @@ def test_memory_service_contains_unsafe_skill_candidate_claims() -> None:
     assert stored.candidate.automatic_promotion_allowed is False
     assert stored.candidate.core_mutation_allowed is False
     assert stored.candidate.memory_write_mode == "through_core_only"
-    assert "high_risk_candidate_requires_explicit_sandbox_review" in (
-        stored.candidate.blockers
-    )
+    assert "high_risk_candidate_requires_explicit_sandbox_review" in (stored.candidate.blockers)
     assert "activation_status_forced_inactive" in stored.candidate.blockers
     assert "automatic_activation_not_allowed" in stored.candidate.blockers
     assert "allowed_tools_must_be_explicit" in stored.candidate.blockers
@@ -1284,9 +2740,7 @@ def test_memory_service_contains_unsafe_skill_candidate_claims() -> None:
 
 def test_memory_service_rejects_skill_candidate_version_collisions_and_mutation() -> None:
     temp_dir = runtime_dir("memory-skill-candidate-immutable")
-    service = MemoryService(
-        database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
-    )
+    service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
 
     def candidate(candidate_id: str, *, name: str) -> SkillCandidateContract:
         return SkillCandidateContract(
@@ -1606,7 +3060,6 @@ def test_memory_service_preserves_accepted_mission_state_on_defer_and_block() ->
     assert mission_state.last_decision_frame == "planning"
 
 
-
 def test_memory_service_builds_guided_domain_memory_packet_for_analysis_specialist() -> None:
     temp_dir = runtime_dir("memory-guided-analysis")
     service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
@@ -1664,7 +3117,6 @@ def test_memory_service_builds_guided_domain_memory_packet_for_analysis_speciali
     )
     assert persisted is not None
     assert persisted.consumer_mode == "domain_guided_memory_packet"
-
 
 
 def test_memory_service_prefers_first_eligible_route_when_specialist_is_shared() -> None:
@@ -1756,9 +3208,7 @@ def sample_operation_dispatch(
         ecosystem_state_status="operational_state_attached",
         active_work_items=["mission_task:Plan milestone M3"],
         active_artifact_refs=["artifact://procedural/strategy/milestone-plan/v1"],
-        open_checkpoint_refs=[
-            "workflow_checkpoint:close_readiness_checkpoint:pending"
-        ],
+        open_checkpoint_refs=["workflow_checkpoint:close_readiness_checkpoint:pending"],
         surface_presence=["surface:chat", f"session:{session_id}", f"mission:{mission_id}"],
         ecosystem_state_summary="work_items=1; artifacts=1; open_checkpoints=1; surfaces=3",
         surface_id="surface://jarvis_console",
@@ -1785,9 +3235,7 @@ def sample_operation_result(*, operation_id: str, artifact_ref: str) -> Operatio
             "artifact://procedural/strategy/milestone-plan/v1",
             artifact_ref,
         ],
-        open_checkpoint_refs=[
-            "workflow_checkpoint:close_readiness_checkpoint:pending"
-        ],
+        open_checkpoint_refs=["workflow_checkpoint:close_readiness_checkpoint:pending"],
         surface_presence=["surface:chat", "session:sess-eco", "mission:mission-eco"],
         ecosystem_state_summary="work_items=1; artifacts=2; open_checkpoints=1; surfaces=3",
         surface_id="surface://jarvis_console",
@@ -1870,9 +3318,7 @@ def test_memory_service_recovery_marks_archivable_procedural_artifact_for_review
     assert "procedural_artifact_status=archivable" in recovered.plan_hints
     assert "memory_recovery_mode=review_before_reuse" in recovered.plan_hints
     assert not any(item.startswith("procedural_artifact_ref=") for item in recovered.plan_hints)
-    assert not any(
-        item.startswith("procedural_artifact_summary=") for item in recovered.plan_hints
-    )
+    assert not any(item.startswith("procedural_artifact_summary=") for item in recovered.plan_hints)
 
 
 def test_memory_service_blocks_auto_reuse_of_archivable_recurrent_specialist_memory(
@@ -1984,7 +3430,6 @@ def test_memory_service_builds_guided_domain_memory_packet_for_governance_specia
     assert "workflow_profile=governance_boundary_workflow" in guided.domain_context_brief
 
 
-
 def test_memory_service_builds_guided_packet_for_readiness_specialist() -> None:
     temp_dir = runtime_dir("memory-guided-readiness")
     service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
@@ -2034,7 +3479,6 @@ def test_memory_service_builds_guided_packet_for_readiness_specialist() -> None:
     assert guided.domain_context_brief is not None
     assert "active_domains=operational_readiness,observability" in guided.domain_context_brief
     assert "workflow_profile=operational_readiness_workflow" in guided.domain_context_brief
-
 
 
 def test_memory_service_builds_guided_packet_for_strategy_specialist() -> None:
@@ -2137,8 +3581,6 @@ def test_memory_service_builds_guided_packet_for_decision_risk_specialist() -> N
     assert guided.domain_context_brief is not None
     assert "active_domains=decision_risk,governance" in guided.domain_context_brief
     assert "workflow_profile=decision_risk_workflow" in guided.domain_context_brief
-
-
 
 
 def test_memory_service_builds_recoverable_recurrent_specialist_context() -> None:
@@ -2245,21 +3687,16 @@ def test_memory_service_recovers_recoverable_user_scope_context() -> None:
         for item in recovered.session_context
     )
     assert any(item.startswith("context_live_summary=") for item in recovered.session_context)
+    assert any(item == "cross_session_recall_status=active" for item in recovered.recovered_items)
     assert any(
-        item == "cross_session_recall_status=active" for item in recovered.recovered_items
-    )
-    assert any(
-        item.startswith("cross_session_recall_summary=")
-        for item in recovered.recovered_items
+        item.startswith("cross_session_recall_summary=") for item in recovered.recovered_items
     )
     assert any(str(scope.value) == "user" for scope in recovered.recovery_contract.requested_scopes)
 
 
 def test_memory_lifecycle_queue_requires_human_review_and_never_mutates_sources() -> None:
     temp_dir = runtime_dir("memory-lifecycle-review")
-    service = MemoryService(
-        database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
-    )
+    service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
     service.repository.upsert_specialist_shared_memory(
         StoredSpecialistSharedMemory(
             session_id="sess-memory-consolidating",

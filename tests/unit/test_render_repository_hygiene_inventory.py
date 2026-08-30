@@ -25,3 +25,15 @@ def test_render_repository_hygiene_inventory_markdown() -> None:
     assert "v2-repository-hygiene-and-tools-review-cut.md" in rendered
     assert "## Tool Inventory" in rendered
     assert "tools/archive e docs/archive preservam historico regeneravel" in rendered
+
+
+def test_release_gate_checks_historical_closure_without_rewriting_it() -> None:
+    from tools.engineering_gate import build_gate_steps
+
+    closure_step = next(
+        step
+        for step in build_gate_steps(mode="release", include_controlled=False)
+        if step.label == "current cut closure verification"
+    )
+
+    assert closure_step.command[-1] == "--check"

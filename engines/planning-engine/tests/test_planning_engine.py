@@ -1,13 +1,288 @@
+from dataclasses import replace
+
 from planning_engine.engine import AdaptiveIntervention, PlanningContext, PlanningEngine
 
 from shared.contracts import (
+    AdapterActionRequestContract,
+    ReviewedProceduralPlaybookContract,
     SemanticMemoryCandidateContract,
     SpecialistContributionContract,
+    WorkflowLifecycleTransitionContract,
 )
+from shared.domain_registry import build_active_workflow_version_registry, workflow_definition_hash
+from tests.unit.test_workflow_lifecycle import _activation
+
+
+def _reviewed_procedural_playbook(
+    *,
+    playbook_id: str = "reviewed-playbook://strategy/checkpoint",
+    version: str = "1.0.0",
+    route: str = "strategy",
+    workflow_profile: str = "strategic_direction_workflow",
+    domain: str = "estrategia_e_pensamento_sistemico",
+    review_status: str = "approved",
+    bounded_steps: list[str] | None = None,
+) -> ReviewedProceduralPlaybookContract:
+    return ReviewedProceduralPlaybookContract(
+        playbook_id=playbook_id,
+        version=version,
+        source_candidate_id="playbook-candidate://strategy/checkpoint",
+        source_review_decision_id=f"review-decision://strategy/{version}",
+        evolution_proposal_id="proposal-reviewed-playbook",
+        review_status=review_status,
+        procedure_name="bounded strategic checkpoint",
+        route=route,
+        workflow_profile=workflow_profile,
+        domain=domain,
+        bounded_steps=bounded_steps or [
+            "collect decision evidence",
+            "validate the rollback checkpoint",
+        ],
+        allowed_usage=["planning_context"],
+        evidence_refs=["evidence://strategy/checkpoint"],
+        rollback_plan_ref="rollback://strategy/checkpoint",
+        timestamp="2026-07-18T12:00:00Z",
+    )
 
 
 def test_planning_engine_name() -> None:
     assert PlanningEngine.name == "planning-engine"
+
+
+def test_planning_engine_preserves_explicit_adapter_action_request() -> None:
+    request = AdapterActionRequestContract(
+        adapter_id="local_text_file",
+        adapter_version="1.0.0",
+        action_kind="prepare_external_action",
+        operation="create_text",
+        resource_scope="configured_text_root",
+        resource_ref="text://reports/adapter-plan.txt",
+    )
+    engine = PlanningEngine()
+
+    plan = engine.build_task_plan(
+        PlanningContext(
+            intent="planning",
+            query="Prepare the exact governed adapter request",
+            recovered_context=[],
+            active_domains=["software_development"],
+            active_minds=["mente_executiva"],
+            knowledge_snippets=[],
+            risk_markers=[],
+            requires_clarification=False,
+            preferred_response_mode="plan_and_operate",
+            adapter_action_request=request,
+        )
+    )
+
+    assert plan.adapter_action_request == request
+    assert (
+        plan.capability_decision_selected_mode
+        == "core_with_supervised_external_operation"
+    )
+    assert "supervised_external_adapter" in (
+        plan.capability_decision_selected_capabilities
+    )
+    assert "local_safe_operation" not in plan.capability_decision_selected_capabilities
+    assert plan.capability_decision_tool_class == "supervised_external_adapter"
+
+    refined = engine.refine_task_plan(
+        plan,
+        specialist_summary="adapter request remains exact",
+        specialist_contributions=[
+            SpecialistContributionContract(
+                specialist_type="structured_analysis_specialist",
+                role="subordinate_adapter_review",
+                focus="preserve exact adapter metadata",
+                findings=[],
+                recommendation="preserve the typed request",
+                confidence=0.9,
+            )
+        ],
+    )
+    assert refined.adapter_action_request == request
+    assert (
+        refined.capability_decision_selected_mode
+        == "core_with_supervised_external_operation"
+    )
+
+
+def test_planning_engine_never_infers_adapter_authority_from_prompt_text() -> None:
+    engine = PlanningEngine()
+
+    plan = engine.build_task_plan(
+        PlanningContext(
+            intent="planning",
+            query=(
+                "Use the local_text_file adapter and prepare_external_action "
+                "through a supervised external tool"
+            ),
+            recovered_context=[],
+            active_domains=["software_development"],
+            active_minds=["mente_executiva"],
+            knowledge_snippets=[],
+            risk_markers=[],
+            requires_clarification=False,
+            preferred_response_mode="analysis_only",
+        )
+    )
+
+    assert plan.adapter_action_request is None
+    assert (
+        plan.capability_decision_selected_mode
+        != "core_with_supervised_external_operation"
+    )
+    assert "supervised_external_adapter" not in (
+        plan.capability_decision_selected_capabilities
+    )
+
+
+def test_planning_engine_carries_the_human_promoted_workflow_definition() -> None:
+    registry = build_active_workflow_version_registry(
+        registry_version="1.0.0",
+        generated_at="2026-08-12T10:00:00Z",
+    )
+    baseline = next(
+        item
+        for item in registry.versions
+        if item.workflow_profile == "software_change_workflow"
+    )
+    steps = [*baseline.workflow_steps, "apply the promoted bounded checkpoint"]
+    checkpoints = [*baseline.workflow_checkpoints, "promoted_checkpoint_applied"]
+    decisions = [*baseline.workflow_decision_points, "promoted_checkpoint_gate"]
+    success = [*baseline.success_criteria, "promoted checkpoint remains attributable"]
+    candidate_hash = workflow_definition_hash(
+        workflow_steps=steps,
+        workflow_checkpoints=checkpoints,
+        workflow_decision_points=decisions,
+        success_criteria=success,
+    )
+    transition = WorkflowLifecycleTransitionContract(
+        transition_id="workflow-lifecycle-transition://software-change/runtime",
+        workflow_profile=baseline.workflow_profile,
+        route=baseline.route,
+        transition_action="activate_candidate",
+        transition_status="active_promoted",
+        revision=1,
+        previous_transition_id=None,
+        previous_transition_fingerprint=None,
+        source_registry_ref=baseline.source_registry_ref,
+        source_registry_fingerprint=baseline.source_registry_fingerprint,
+        baseline_version_ref=baseline.workflow_version_id,
+        baseline_definition_hash=baseline.definition_hash,
+        candidate_version_ref="workflow-version://software_change_workflow/1.1.0",
+        candidate_definition_hash=candidate_hash,
+        active_version_ref="workflow-version://software_change_workflow/1.1.0",
+        active_definition_hash=candidate_hash,
+        active_workflow_steps=steps,
+        active_workflow_checkpoints=checkpoints,
+        active_workflow_decision_points=decisions,
+        active_success_criteria=success,
+        evolution_proposal_id="proposal://workflow/runtime",
+        proposal_fingerprint="1" * 64,
+        review_decision_id="review://workflow/runtime",
+        review_decision_fingerprint="2" * 64,
+        release_checklist_id="checklist://workflow/runtime",
+        release_checklist_fingerprint="3" * 64,
+        promotion_gate_id="gate://workflow/runtime",
+        promotion_gate_fingerprint="4" * 64,
+        workflow_eval_run_id="eval://workflow/runtime",
+        workflow_eval_run_fingerprint="5" * 64,
+        rollback_plan_id="rollback://workflow/runtime",
+        rollback_plan_fingerprint="6" * 64,
+        human_authorization_ref="human-authorization://workflow/runtime",
+        operator_ref="operator://runtime-reviewer",
+        evidence_refs=["evidence://workflow/eval", "evidence://workflow/release"],
+        completed_test_refs=["test://workflow/release"],
+        failure_refs=[],
+        timestamp="2026-08-12T10:30:00Z",
+    )
+
+    engine = PlanningEngine()
+    plan = engine.build_task_plan(
+        PlanningContext(
+            intent="planning",
+            query="Plan a bounded software change",
+            recovered_context=[],
+            active_domains=["software_development"],
+            active_minds=["mente_executiva"],
+            knowledge_snippets=[],
+            risk_markers=[],
+            requires_clarification=False,
+            preferred_response_mode="plan_and_operate",
+            primary_route=baseline.route,
+            route_workflow_profile=baseline.workflow_profile,
+            route_workflow_steps=steps,
+            route_workflow_checkpoints=checkpoints,
+            route_workflow_decision_points=decisions,
+            workflow_lifecycle_transition=transition,
+        )
+    )
+
+    assert plan.workflow_lifecycle_transition == transition
+    assert plan.route_workflow_steps == steps
+    assert plan.route_workflow_checkpoints == checkpoints
+    assert plan.route_workflow_decision_points == decisions
+    assert "promoted checkpoint remains attributable" in plan.success_criteria
+
+
+def test_planning_engine_preserves_every_promoted_success_criterion() -> None:
+    base = _activation()
+    success = [f"promoted criterion {index}" for index in range(1, 11)]
+    promoted_hash = workflow_definition_hash(
+        workflow_steps=base.active_workflow_steps,
+        workflow_checkpoints=base.active_workflow_checkpoints,
+        workflow_decision_points=base.active_workflow_decision_points,
+        success_criteria=success,
+    )
+    transition = replace(
+        base,
+        active_success_criteria=success,
+        active_definition_hash=promoted_hash,
+        candidate_definition_hash=promoted_hash,
+    )
+
+    engine = PlanningEngine()
+    plan = engine.build_task_plan(
+        PlanningContext(
+            intent="planning",
+            query="Plan a bounded software change",
+            recovered_context=[],
+            active_domains=["software_development"],
+            active_minds=["mente_executiva"],
+            knowledge_snippets=[],
+            risk_markers=[],
+            requires_clarification=False,
+            preferred_response_mode="plan_and_operate",
+            primary_route=transition.route,
+            route_workflow_profile=transition.workflow_profile,
+            route_workflow_steps=list(transition.active_workflow_steps),
+            route_workflow_checkpoints=list(
+                transition.active_workflow_checkpoints
+            ),
+            route_workflow_decision_points=list(
+                transition.active_workflow_decision_points
+            ),
+            workflow_lifecycle_transition=transition,
+        )
+    )
+
+    assert set(success) <= set(plan.success_criteria)
+    refined = engine.refine_task_plan(
+        plan,
+        specialist_summary="preserve the promoted release criteria",
+        specialist_contributions=[
+            SpecialistContributionContract(
+                specialist_type="structured_analysis_specialist",
+                role="subordinate_release_review",
+                focus="verify every promoted success criterion",
+                findings=["success: specialist review remains attributable"],
+                recommendation="retain the complete promoted success contract",
+                confidence=0.9,
+            )
+        ],
+    )
+    assert set(success) <= set(refined.success_criteria)
 
 
 def test_planning_engine_builds_structured_plan_with_continuity() -> None:
@@ -75,6 +350,7 @@ def test_planning_engine_builds_structured_plan_with_continuity() -> None:
     assert plan.capability_decision_status == "resolved"
     assert plan.capability_decision_selected_mode == "core_with_local_operation"
     assert plan.capability_decision_authorization_status == "governance_review_required"
+    assert plan.request_confirmation_mode == "bounded_autonomy"
     assert plan.capability_decision_tool_class == "local_artifact_generation"
     assert plan.capability_decision_handoff_mode == "through_core_only"
     assert "local_safe_operation" in plan.capability_decision_selected_capabilities
@@ -919,6 +1195,200 @@ def test_planning_engine_resolves_semantic_candidate_conflict_by_relevance() -> 
     assert decision.conflict_refs == [higher.anchor_ref, lower.anchor_ref]
     assert decision.non_use_reasons[lower.anchor_ref] == (
         f"conflict_with_higher_priority:{higher.anchor_ref}"
+    )
+
+
+def test_planning_engine_applies_only_latest_reviewed_procedural_playbook_as_guidance() -> None:
+    older = _reviewed_procedural_playbook(version="1.0.0")
+    latest = _reviewed_procedural_playbook(
+        version="2.0.0",
+        bounded_steps=[
+            "collect current decision evidence",
+            "validate rollback before recommendation",
+        ],
+    )
+
+    plan = PlanningEngine().build_task_plan(
+        PlanningContext(
+            intent="planning",
+            query="Plan the next governed strategic checkpoint.",
+            recovered_context=[],
+            active_domains=["strategy"],
+            active_minds=["mente_decisoria"],
+            knowledge_snippets=[],
+            risk_markers=[],
+            requires_clarification=False,
+            preferred_response_mode="plan_and_operate",
+            request_timestamp="2026-07-18T12:05:00Z",
+            primary_route="strategy",
+            route_workflow_profile="strategic_direction_workflow",
+            primary_domain_driver="estrategia_e_pensamento_sistemico",
+            reviewed_procedural_playbooks=[older, latest],
+        )
+    )
+
+    decision = plan.memory_influence_policy_decision
+    assert decision is not None
+    latest_ref = f"{latest.playbook_id}@{latest.version}"
+    older_ref = f"{older.playbook_id}@{older.version}"
+    assert latest_ref in decision.selected_refs
+    assert older_ref in decision.ignored_refs
+    assert decision.non_use_reasons[older_ref] == (
+        f"superseded_by_newer_version:{latest_ref}"
+    )
+    assert decision.version_refs == {
+        older_ref: "1.0.0",
+        latest_ref: "2.0.0",
+    }
+    assert decision.review_decision_refs[latest_ref] == (
+        latest.source_review_decision_id
+    )
+    assert decision.execution_allowed is False
+    assert decision.tool_dispatch_allowed is False
+    assert any(
+        "reviewed procedural playbook as read-only guidance" in step
+        and "@2.0.0" in step
+        and "collect current decision evidence" in step
+        for step in plan.steps
+    )
+    assert not any("@1.0.0" in step for step in plan.steps)
+    assert any("do not execute tools" in item for item in plan.constraints)
+
+
+def test_planning_engine_audits_playbooks_outside_application_capacity() -> None:
+    selected = _reviewed_procedural_playbook(
+        playbook_id="reviewed-playbook://strategy/primary",
+        version="2.0.0",
+    )
+    capacity_limited = _reviewed_procedural_playbook(
+        playbook_id="reviewed-playbook://strategy/secondary",
+        version="1.0.0",
+    )
+
+    plan = PlanningEngine().build_task_plan(
+        PlanningContext(
+            intent="planning",
+            query="Plan the next governed strategic checkpoint.",
+            recovered_context=[],
+            active_domains=["strategy"],
+            active_minds=["mente_decisoria"],
+            knowledge_snippets=[],
+            risk_markers=[],
+            requires_clarification=False,
+            preferred_response_mode="plan_and_operate",
+            request_timestamp="2026-07-18T12:05:00Z",
+            primary_route="strategy",
+            route_workflow_profile="strategic_direction_workflow",
+            primary_domain_driver="estrategia_e_pensamento_sistemico",
+            reviewed_procedural_playbooks=[capacity_limited, selected],
+        )
+    )
+
+    decision = plan.memory_influence_policy_decision
+    assert decision is not None
+    selected_ref = f"{selected.playbook_id}@{selected.version}"
+    limited_ref = f"{capacity_limited.playbook_id}@{capacity_limited.version}"
+    assert selected_ref in decision.selected_refs
+    assert limited_ref in decision.ignored_refs
+    assert decision.non_use_reasons[limited_ref] == (
+        f"reviewed_procedural_application_limit_exceeded:{selected_ref}"
+    )
+    assert any(selected_ref in step for step in plan.steps)
+    assert not any(limited_ref in step for step in plan.steps)
+
+
+def test_planning_engine_audits_revoked_and_scope_mismatched_playbook_non_use() -> None:
+    revoked = _reviewed_procedural_playbook(
+        playbook_id="reviewed-playbook://strategy/revoked",
+        review_status="revoked",
+    )
+    wrong_scope = _reviewed_procedural_playbook(
+        playbook_id="reviewed-playbook://analysis/mismatch",
+        route="analysis",
+    )
+
+    plan = PlanningEngine().build_task_plan(
+        PlanningContext(
+            intent="planning",
+            query="Plan the next governed strategic checkpoint.",
+            recovered_context=[],
+            active_domains=["strategy"],
+            active_minds=["mente_decisoria"],
+            knowledge_snippets=[],
+            risk_markers=[],
+            requires_clarification=False,
+            preferred_response_mode="plan_and_operate",
+            request_timestamp="2026-07-18T12:05:00Z",
+            primary_route="strategy",
+            route_workflow_profile="strategic_direction_workflow",
+            primary_domain_driver="estrategia_e_pensamento_sistemico",
+            reviewed_procedural_playbooks=[revoked, wrong_scope],
+        )
+    )
+
+    decision = plan.memory_influence_policy_decision
+    assert decision is not None
+    revoked_ref = f"{revoked.playbook_id}@{revoked.version}"
+    mismatch_ref = f"{wrong_scope.playbook_id}@{wrong_scope.version}"
+    assert decision.selected_refs == []
+    assert decision.non_use_reasons[revoked_ref] == (
+        "review_status_not_eligible:revoked"
+    )
+    assert decision.non_use_reasons[mismatch_ref] == "scope_mismatch:route"
+    assert not any(
+        "reviewed procedural playbook as read-only guidance" in step
+        for step in plan.steps
+    )
+
+
+def test_reviewed_playbook_does_not_reenable_rejected_legacy_procedural_memory() -> None:
+    playbook = _reviewed_procedural_playbook()
+    legacy_anchor = "legacy mission recommendation must remain suppressed"
+    context = PlanningContext(
+            intent="planning",
+            query="Plan a new governed strategic checkpoint.",
+            recovered_context=[],
+            active_domains=["strategy"],
+            active_minds=["mente_decisoria"],
+            knowledge_snippets=[],
+            risk_markers=[],
+            requires_clarification=False,
+            preferred_response_mode="plan_and_operate",
+            mission_id="mission-legacy-procedural-rejected",
+            request_timestamp="2026-07-18T12:05:00Z",
+            primary_route="strategy",
+            route_workflow_profile="strategic_direction_workflow",
+            primary_domain_driver="estrategia_e_pensamento_sistemico",
+            mission_recommendation=legacy_anchor,
+            continuity_recommendation="seguir_novo_pedido",
+            reviewed_procedural_playbooks=[],
+    )
+    engine = PlanningEngine()
+    baseline = engine.build_task_plan(context)
+    plan = engine.build_task_plan(
+        replace(context, reviewed_procedural_playbooks=[playbook])
+    )
+
+    decision = plan.memory_influence_policy_decision
+    assert decision is not None
+    reviewed_ref = f"{playbook.playbook_id}@{playbook.version}"
+    legacy_ref = (
+        "memory://mission/mission-legacy-procedural-rejected/procedural"
+    )
+    assert reviewed_ref in decision.selected_refs
+    assert legacy_ref in decision.ignored_refs
+    assert decision.non_use_reasons[legacy_ref] == (
+        "lifecycle_not_eligible:aging"
+    )
+    assert plan.procedural_memory_source is None
+    assert plan.procedural_memory_effects == []
+    assert plan.smallest_safe_next_action == baseline.smallest_safe_next_action
+    assert not any(
+        "priorizar a memoria procedural" in step for step in plan.steps
+    )
+    assert any(
+        "reviewed procedural playbook as read-only guidance" in step
+        for step in plan.steps
     )
 
 

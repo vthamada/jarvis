@@ -105,7 +105,7 @@ Goal: deepen the reasoning core without replacing it with external frameworks.
 | `COG-004` | Metacognitive guidance | `implemented_baseline` | Stronger operator-visible reasoning traces | Planning/synthesis | candidate |
 | `COG-005` | Adaptive intervention mid-flow | `implemented_baseline` | More scenario coverage | Observability/evals | candidate |
 | `COG-006` | Workflow profile as behavioral policy | `implemented_baseline` | Keep versioned policy resolution stable | Domain registry | none |
-| `COG-007` | Decision memory shaping planning | `partial_runtime` | Evidence-based policy choice | Memory lifecycle | candidate |
+| `COG-007` | Decision memory shaping planning | `implemented_baseline` | Keep governed participation/outcome attribution stable | Memory lifecycle, observability | none |
 | `COG-008` | Conflict handling between active mission and new request | `implemented_baseline` | Keep stable | Mission state | none |
 | `COG-009` | Causal route comparison | `missing` | Compare alternative route/plan choices before finalizing | Planning, evals | later |
 | `COG-010` | Long-horizon goal reasoning | `minimum_baseline` | Multi-step goal strategy across sessions | Project/objective state | expand after operator validation |
@@ -121,7 +121,7 @@ Goal: make memory reliable, causal, reviewable and useful over long time.
 | `MEM-003` | Experience/reflection memory | `implemented_baseline` | Keep stable | Operator Learning Loop | none |
 | `MEM-004` | Reviewed-learning guidance memory | `implemented_baseline` | Keep stable | Human review | none |
 | `MEM-005` | Semantic memory influence | `implemented_baseline` | Keep evidence-grounded selection, conflict and non-use stable | Memory registry | none |
-| `MEM-006` | Procedural memory influence | `partial_runtime` | Reusable procedures and playbooks | Memory registry, artifacts | high-priority |
+| `MEM-006` | Procedural memory influence | `implemented_baseline` | Keep reviewed, scoped, versioned and read-only playbook influence stable | Memory registry, artifacts | none |
 | `MEM-007` | Memory review queue | `implemented_baseline` | Keep human review stable | Observability, console | none |
 | `MEM-008` | Memory consolidation | `partial_runtime` | Separate governed manual execution with evidence | Memory lifecycle | later |
 | `MEM-009` | Memory expiration/forgetting | `partial_runtime` | Separate governed retention/archive execution | Memory registry | later |
@@ -142,7 +142,7 @@ Goal: make improvement continuous, measured and governed.
 | `EVL-005` | Baseline vs assisted evals | `implemented_baseline` | Keep stable | Observability/tools | none |
 | `EVL-006` | Promotion gate from sandbox to runtime | `implemented_baseline` | Validate with real release candidates | Engineering gate | none |
 | `EVL-007` | Skill evolution from repeated patterns | `minimum_baseline` | Reusable skills/playbooks from reviewed evidence | Memory, artifacts | candidate |
-| `EVL-008` | Workflow optimization loop | `partial_runtime` | Compare and promote workflow variants manually | Evolution lab | candidate |
+| `EVL-008` | Workflow optimization loop | `implemented_baseline` | Keep controlled eval, manual activation and rollback stable | Evolution lab | none |
 | `EVL-009` | Parametric adaptation | `research_only` | Isolated components only | Future V3+ | not now |
 | `EVL-010` | Deep self-modification | `research_only` | Research only, no production mutation | Human decision | not now |
 
@@ -156,7 +156,7 @@ Goal: let JARVIS act safely beyond text generation.
 | `ACT-002` | Capability/tool decision contract | `implemented_baseline` | Keep stable | Planning/governance | none |
 | `ACT-003` | Tool authorization and denial reasons | `implemented_baseline` | Keep stable | Governance | none |
 | `ACT-004` | Artifact lifecycle and registry | `implemented_baseline` | Keep governed version lineage stable | OP-005, memory | none |
-| `ACT-005` | File operations through governed adapter | `missing` | Safe local file adapter with allowlist and rollback | Governance, artifacts | later |
+| `ACT-005` | File operations through governed adapter | `implemented_baseline` | Keep transactional writes and physical/canonical reconciliation stable | Governance, artifacts | `MB-218` |
 | `ACT-006` | Browser automation | `deferred_by_phase` | Bounded tool, not core replacement | TA-006 | not now |
 | `ACT-007` | Computer use | `deferred_by_phase` | Bounded tool, not autonomy bypass | TA-006 | not now |
 | `ACT-008` | Software specialist substrate | `deferred_by_phase` | OpenHands-like subordinate specialist | Specialist governance | later |
@@ -192,7 +192,7 @@ Goal: keep JARVIS current and useful without uncontrolled ingestion.
 | `KNW-003` | Knowledge freshness policy | `implemented_baseline` | Temporal validity and review status | Memory/knowledge | none |
 | `KNW-004` | Source provenance in answers | `implemented_baseline` | Stronger provenance and evidence refs | Synthesis, knowledge | none |
 | `KNW-005` | External research ingestion | `missing` | Governed import queue, no auto-trust | Governance | later |
-| `KNW-006` | Technology radar refresh loop | `minimum_baseline` | Scheduled/manual technology review cycle | Tech absorption | candidate |
+| `KNW-006` | Technology radar refresh loop | `implemented_baseline` | Keep reviewed intake and sandbox experiment chain stable | Tech absorption | none |
 | `KNW-007` | Domain knowledge packs | `minimum_baseline` | Expand reviewed versioned packs after eval evidence | Domain onboarding | later |
 | `KNW-008` | Knowledge conflict resolution | `minimum_baseline` | Compare sources and surface uncertainty | Governance, synthesis | later |
 
@@ -223,9 +223,9 @@ Goal: preserve control while increasing autonomy.
 | `GOV-002` | Allow/condition/block/defer decisions | `implemented_baseline` | Keep stable | Governance service | none |
 | `GOV-003` | Human review for evolution | `implemented_baseline` | Keep stable | Evolution lab | none |
 | `GOV-004` | Policy for memory mutation | `partial_runtime` | Explicit memory governance by class and risk | Memory registry | candidate |
-| `GOV-005` | Tool permission model | `minimum_baseline` | Per-adapter scopes and confirmations | ACT tracks | candidate |
+| `GOV-005` | Tool permission model | `implemented_baseline` | Keep exact adapter grants stable while physical adapters mature | ACT tracks | MB-216 execution binding |
 | `GOV-006` | Incident response for documentation/runtime | `minimum_baseline` | Practical incident drills and recovery | Operations docs | later |
-| `GOV-007` | Autonomy ladder enforcement | `partial_runtime_enforced` | Runtime-enforced autonomy levels | Mission policy | high-priority |
+| `GOV-007` | Autonomy ladder enforcement | `implemented_baseline` | Keep per-action fail-closed enforcement stable | Mission policy | none |
 | `GOV-008` | Secrets and sensitive data policy | `partial_runtime` | Stronger local rules and tests | Security | later |
 | `GOV-009` | Release promotion workflow | `implemented_baseline` | Keep human authorization separate from gate evaluation | Evolution, gates | none |
 | `GOV-010` | Protective intelligence controls | `deferred_by_phase` | SecurityOS-like vertical only after core readiness | DV-001 | not now |
@@ -861,7 +861,8 @@ Goal: open one ordered queue for workflow policy, memory causality, decision
 attribution, governed variants and manual technology intake.
 
 Status: closed as planning/reprioritization documentation; the queue advanced
-through `MB-203`; `MB-204` is ready.
+through `MB-210` and is now exhausted. No technical item is ready until a
+separate reprioritization opens the next WIP-1 queue.
 
 ### MB-202 -- Versioned Declarative Workflow Policy
 
@@ -892,7 +893,10 @@ Map IDs: `MEM-006`, `EVL-007`, `GOV-004`.
 Goal: consume reviewed, scoped and versioned playbooks as bounded guidance
 without turning them into autonomous scripts.
 
-Status: ready after `MB-203`.
+Status: closed in `MB-204`; persisted human review binds a canonical ASCII semver to
+the candidate, checklist and promotion-gate evidence. Scoped
+recovery, causal policy, planning, synthesis and audit preserve the same
+version/review/non-use trail while execution and tool dispatch remain false.
 
 ### MB-205 -- Decision-Memory Outcome Attribution
 
@@ -901,7 +905,18 @@ Map IDs: `COG-007`, `MEM-005`, `MEM-006`, `OBS-009`.
 Goal: correlate policy and memory participation with decisions and observed
 outcomes while separating evidence from causal claims.
 
-Status: planned after `MB-204`.
+Status: closed in `MB-205`; native and LangGraph runtime atomically claim
+`request_id -> session_id` before any other side effect and append one immutable
+record only after exact binding to a persisted experience/outcome. Concurrent
+replay fails before dispatch and failed operations remain `failed`.
+`decision_outcome_attribution_recorded` carries the complete `asdict(record)`;
+an attribution-write failure emits a separate bounded failure event without
+retrying the operation. `FlowAudit` only projects the event, while the
+report/tool/CLI/longitudinal surfaces require the canonical record and join
+feedback by exact experience/mission. Bounded feedback enrichment cannot change
+identity or outcome, absence alone is not a limitation, and evidence marked as
+having no comparator cannot become `sustained_gain`; causal-effect, execution,
+promotion and mutation claims remain false.
 
 ### MB-206 -- Controlled Workflow Variant Evaluation
 
@@ -910,7 +925,13 @@ Map IDs: `EVL-008`, `EVL-005`, `OBS-009`.
 Goal: compare versioned baseline and candidate workflows under the same
 governance and memory policy without promotion authority.
 
-Status: planned after `MB-205`.
+Status: closed in `MB-206`; immutable versioned case packs bind baseline and
+candidate observations to the same input, fixed clock, seed, workflow policy,
+governance and memory controls. Metrics, checks, deltas and conclusions are
+derived and independently revalidated; atomic claims and append-only runs
+preserve the comparison while execution, dispatch, release and promotion
+authority remain false. This evaluation baseline is consumed by the manual
+lifecycle and rollback bridge closed in `MB-207`.
 
 ### MB-207 -- Manual Workflow Lifecycle And Rollback
 
@@ -919,7 +940,12 @@ Map IDs: `EVL-006`, `EVL-008`, `GOV-009`.
 Goal: bind human review, release evidence, activation and rollback to one
 auditable workflow-variant lifecycle.
 
-Status: planned after `MB-206`.
+Status: closed in `MB-207`; immutable release bundles bind persisted human
+review, controlled eval, checklist/gate, tests, rollback and independent human
+authorization. Governance and canonical Memory reverifiy the bundle before an
+append-only CAS transition; native/LangGraph runtime consumes only the verified
+definition and explicit rollback restores the versioned static baseline without
+registry mutation or operational authority.
 
 ### MB-208 -- Governed Technology Radar Intake
 
@@ -928,7 +954,12 @@ Map IDs: `KNW-006`, `EVL-001`, `DOC-006`.
 Goal: register reviewed repositories, skills, standards and articles as
 versioned evidence without auto-trust or autonomous ingestion.
 
-Status: planned after `MB-207`.
+Status: closed in `MB-208`; a strict local manifest binds canonical source,
+immutable version ref, content hash, license, claims, risks, absorption class,
+target gaps and an exact human-review fingerprint. Knowledge assesses without
+writing; Evolution stores a deduplicated append-only lineage and the console
+registers/reads it without fetch, ingestion, proposal, install, activation,
+promotion, Core mutation or priority authority.
 
 ### MB-209 -- Sandboxed Technology Experiment Packs
 
@@ -937,7 +968,11 @@ Map IDs: `KNW-006`, `EVL-001`, `EVL-005`.
 Goal: translate selected external patterns into isolated, testable experiments
 with a sovereign consumer and no central dependency or automatic promotion.
 
-Status: planned after `MB-208`.
+Status: closed in `MB-209`; exact reviewed intakes translate only into inert
+absorbable-pattern packs with a sovereign consumer, deterministic offline
+controls and paired preproduced observations. Evolution stores pack, atomic
+claim and derived run append-only; a passing result remains sandbox-only and
+cannot execute, propose, activate, promote or mutate the Core.
 
 ### MB-210 -- Core Learning And Technology Readiness Closure
 
@@ -946,7 +981,11 @@ Map IDs: `OBS-007`, `OBS-008`, `DOC-010`.
 Goal: close the queue with evidence, readiness, runbooks, limitations and an
 explicit phase decision.
 
-Status: planned after `MB-209`.
+Status: closed in `MB-210`; the evidence matrix, closure runbook, document
+guardrails and standard gate confirm `queue_exhausted`, no next ready item,
+zero drift/blockers and no autonomous authority. The next phase decision is
+Governed Action Foundation in the order `GOV-007` -> `GOV-005` -> `ACT-005`,
+before `SFC-005`, but it requires a separate reprioritization.
 
 ## 15. What Must Not Be Pulled Next By Inertia
 
@@ -964,7 +1003,129 @@ Do not open these without explicit phase decision:
 - model weight changes;
 - autonomous promotion of evolution proposals.
 
-## 16. Maintenance Policy
+## 16. MB-211 Governed Action Foundation Reprioritization
+
+The `MB-210` phase decision is now an executable WIP-1 queue. Audit evidence
+showed that human confirmation is currently transported as text rather than a
+single-use receipt, unknown autonomy modes can fail open and the legacy writer
+accepts a caller-selected destination. These boundaries must close before any
+public API can expose action seams.
+
+### MB-211 -- Open Governed Action Foundation
+
+Map IDs: `GOV-007`, `GOV-005`, `ACT-005`, `ACT-004`, `SFC-005`.
+
+Goal: derive a sequential, reversible and evidence-backed action-safety queue.
+
+Status: closed as reprioritization documentation; `MB-212` to `MB-217` are
+complete. `MB-218` is the next technical item, but execution waits for a new
+operator request.
+
+### MB-212 -- Verifiable Human Confirmation And Legacy Writer Containment
+
+Map IDs: `GOV-007`, `GOV-005`, `ACT-002`, `ACT-003`.
+
+Goal: bind an exact action intent to an expiring, single-use confirmation
+receipt and enforce it before dispatch and again at execution; reject a
+caller-selected artifact destination.
+
+Status: closed in `MB-212`; an exact, expiring action fingerprint now binds an
+append-only intent, prepared dispatch, challenge, receipt, atomic claim and
+one-time execution presentation. Native, LangGraph and console restart tests
+prove zero effect before confirmation, exactly one confirmed execution and
+blocked replay. Caller-selected physical destinations are rejected.
+
+### MB-213 -- Fail-Closed Autonomy Enforcement Per Action
+
+Map IDs: `GOV-007`, `ACT-002`, `ACT-003`.
+
+Goal: enforce canonical action kinds, allowed/blocked actions, maximum
+capability and confirmation across Governance, dispatch and execution.
+
+Status: closed in `MB-213`; the shared total policy is enforced by Governance,
+native/LangGraph predicates and Operational immediately before the writer.
+Missing, unknown, contradictory or under-capable projections have zero effect,
+and confirmation never expands authority.
+
+### MB-214 -- Per-Adapter Registry And Permission Grants
+
+Map IDs: `GOV-005`, `ACT-002`, `ACT-003`.
+
+Goal: authorize an exact adapter/version/operation/resource through bounded,
+time-limited, claimable grants; confirmation remains an additional condition.
+
+Status: closed in `MB-214`; frozen metadata-only contracts bind the exact
+subject, resource, adapter, version, operation, scope, intent, registry,
+descriptor and autonomy policy. Governance persists immutable epochs, grants
+and claims in the append-only confirmation ledger, rechecks the active
+descriptor transactionally and atomically consumes confirmation plus grant
+when both are required. Planning and native/LangGraph orchestration issue only
+prepare-only evidence and never build an operation dispatch or invoke an
+adapter.
+
+### MB-215 -- Safe Local-File Preflight And Dry-Run
+
+Map IDs: `ACT-005`, `GOV-005`, `GOV-007`.
+
+Goal: validate configured roots, canonical relative paths, content limits,
+preconditions and rollback plans without performing a write.
+
+Status: closed in `MB-215`; Governance reopens the exact active, unclaimed
+prepare-only grant before filesystem I/O and Operational exposes only an
+opt-in local-text preflight. Canonical paths, root CAS, strict UTF-8/NFC,
+content limits, expected hashes, handle containment, deterministic diff,
+content-free fingerprints and a non-authorizing rollback plan are proven with
+zero writes. Windows CreateFile handles and POSIX dir-fd traversal reject path
+escapes, links, unsafe nodes and races before content is read.
+
+### MB-216 -- Transactional Local-File Write And Physical Rollback
+
+Map IDs: `ACT-005`, `GOV-005`, `GOV-007`.
+
+Goal: perform only confirmed create/replace operations through atomic claims,
+same-root atomic replacement, durable journal, exact backup and hash-guarded
+rollback.
+
+Status: closed in `MB-216`; execution and rollback have independent registries,
+grants, confirmations and atomic claims. A Linux-only engine binds pinned
+handles to a durable hash-chained journal, exact stages/backups, trusted clock,
+content-free receipts and explicit recovery. Windows remains fail-closed.
+
+### MB-217 -- Physical And Canonical Artifact Consistency
+
+Map IDs: `ACT-004`, `ACT-005`, `OP-005`.
+
+Goal: coordinate physical receipts with the canonical artifact lifecycle by a
+recoverable saga that never claims an effect it cannot prove.
+
+Status: closed in `MB-217`; immutable physical plans, exact Governance receipt
+proof, fresh under-lock attestations, a one-shot in-process lease, normalized
+SQLite/PostgreSQL saga state, lineage CAS and transactional outbox now bind the
+physical effect to canonical apply, compensation and rollback. Recovery reads
+durable evidence after restart, and canonical rollback is limited to restoring
+the exact superseded predecessor.
+
+### MB-218 -- Governed Operator Console And Observability
+
+Map IDs: `SFC-001`, `OBS-001`, `GOV-005`, `ACT-005`.
+
+Goal: expose separate prepare, inspect, confirm, execute, rollback and status
+steps with redacted, restart-safe evidence; no public API is added.
+
+Status: ready after `MB-217`; it is the only next technical item, and must not
+start until the operator sends a new request.
+
+### MB-219 -- Adversarial Readiness And Next-Phase Decision
+
+Map IDs: `GOV-005`, `GOV-007`, `ACT-005`, `OBS-007`, `SFC-005`.
+
+Goal: close the threat model, Windows adversarial corpus, recovery proof and
+release/readiness gates before deciding whether `SFC-005` can enter a later
+queue.
+
+Status: blocked by `MB-218`; API remains out of scope.
+
+## 17. Maintenance Policy
 
 This map should be updated when:
 
@@ -977,19 +1138,20 @@ This map should be updated when:
 The `execution-backlog.md` should remain the only micro queue. This map should
 remain the complete capability decomposition.
 
-## 17. Executive Conclusion
+## 18. Executive Conclusion
 
 The system is no longer just scattered infrastructure. It has a governed core,
 memory, planning, synthesis, observability, evolution lab, console and learning
 loop.
 
-The next strategic challenge is product utility: making JARVIS a daily
-operator-facing system that can manage missions, objectives, work items,
-artifacts and learning over time.
+The governed physical-action foundation is now closed through physical and
+canonical consistency. Confirmation, autonomy, adapter permission, file
+mutation, rollback, recovery and canonical artifact evidence remain subordinate
+to the sovereign Core.
 
 The strongest next direction is therefore:
 
-`operator dashboard -> work item lifecycle -> artifact lifecycle -> usefulness metrics -> long-horizon goal reasoning`
+`closed foundation through MB-217 -> operator console/observability -> adversarial readiness`
 
-That path increases real utility without violating the sovereign core or
-prematurely pulling voice, browser, computer use or strong self-evolution.
+That path increases real utility without prematurely exposing a public API,
+voice, browser, computer use, scheduler or strong self-evolution.

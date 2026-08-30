@@ -37,12 +37,62 @@ def low_risk_plan() -> DeliberativePlanContract:
         recommended_task_type="draft_plan",
         requires_human_validation=False,
         rationale="contexto=nenhum; apoio=baseline local",
+        capability_decision_selected_mode="core_with_local_operation",
+        requested_autonomy_level="bounded_core_action",
+        max_autonomy_level="bounded_core_action",
+        effective_autonomy_level="bounded_core_action",
+        autonomy_ladder_status="within_limit",
+        max_autonomy_capability_mode="core_with_local_operation",
+        autonomy_human_confirmation_required=False,
+        autonomy_confirmation_mode="not_required",
+        autonomy_action_kind="execute_reversible_core_action",
+        autonomy_allowed_runtime_actions=[
+            "read_context",
+            "draft_plan",
+            "explain_limits",
+            "prepare_local_action",
+            "execute_reversible_core_action",
+        ],
+        autonomy_blocked_runtime_actions=[
+            "prepare_external_action",
+            "execute_external_action",
+            "irreversible_action",
+            "automatic_promotion",
+            "core_mutation",
+        ],
         success_criteria=["plano deve indicar a menor proxima acao segura"],
         dominant_tension="equilibrar ambicao estrategica com a menor proxima acao segura",
         smallest_safe_next_action="definir objetivo",
         continuity_action="continuar",
         open_loops=["alinhar checkpoint principal"],
     )
+
+
+def assist_only_plan(plan: DeliberativePlanContract) -> DeliberativePlanContract:
+    plan.capability_decision_selected_mode = "contained_guidance"
+    plan.requested_autonomy_level = "assist_only"
+    plan.max_autonomy_level = "assist_only"
+    plan.effective_autonomy_level = "assist_only"
+    plan.autonomy_ladder_status = "within_limit"
+    plan.max_autonomy_capability_mode = "contained_guidance"
+    plan.autonomy_human_confirmation_required = False
+    plan.autonomy_confirmation_mode = "not_required"
+    plan.autonomy_action_kind = "draft_plan"
+    plan.autonomy_allowed_runtime_actions = [
+        "read_context",
+        "draft_plan",
+        "explain_limits",
+    ]
+    plan.autonomy_blocked_runtime_actions = [
+        "prepare_local_action",
+        "execute_reversible_core_action",
+        "prepare_external_action",
+        "execute_external_action",
+        "irreversible_action",
+        "automatic_promotion",
+        "core_mutation",
+    ]
+    return plan
 
 
 def work_item_input(mission_id: str, transition: str) -> InputContract:
@@ -120,6 +170,29 @@ def test_governance_service_allows_reversible_analysis_requests() -> None:
             recommended_task_type="produce_analysis_brief",
             requires_human_validation=False,
             rationale="contexto=nenhum; apoio=baseline local",
+            capability_decision_selected_mode="contained_guidance",
+            requested_autonomy_level="assist_only",
+            max_autonomy_level="assist_only",
+            effective_autonomy_level="assist_only",
+            autonomy_ladder_status="within_limit",
+            max_autonomy_capability_mode="contained_guidance",
+            autonomy_human_confirmation_required=False,
+            autonomy_confirmation_mode="not_required",
+            autonomy_action_kind="read_context",
+            autonomy_allowed_runtime_actions=[
+                "read_context",
+                "draft_plan",
+                "explain_limits",
+            ],
+            autonomy_blocked_runtime_actions=[
+                "prepare_local_action",
+                "execute_reversible_core_action",
+                "prepare_external_action",
+                "execute_external_action",
+                "irreversible_action",
+                "automatic_promotion",
+                "core_mutation",
+            ],
             success_criteria=["conclusao deve explicitar o trade-off dominante"],
             dominant_tension="equilibrar profundidade analitica com conclusao util",
             smallest_safe_next_action="explicitar o trade-off dominante antes de recomendar",
@@ -165,11 +238,20 @@ def test_governance_service_carries_autonomy_ladder_context() -> None:
     plan.max_autonomy_level = "confirm_before_action"
     plan.effective_autonomy_level = "confirm_before_action"
     plan.autonomy_ladder_status = "downgraded_to_max"
-    plan.max_autonomy_capability_mode = "core_with_specialist_handoff"
+    plan.max_autonomy_capability_mode = "core_with_local_operation"
     plan.autonomy_human_confirmation_required = True
-    plan.autonomy_confirmation_mode = "explicit"
+    plan.autonomy_confirmation_mode = "explicit_confirmation_required"
+    plan.autonomy_allowed_runtime_actions = [
+        "read_context",
+        "draft_plan",
+        "explain_limits",
+        "prepare_local_action",
+        "execute_reversible_core_action",
+    ]
     plan.autonomy_blocked_runtime_actions = [
-        "execute_without_confirmation",
+        "prepare_external_action",
+        "execute_external_action",
+        "irreversible_action",
         "automatic_promotion",
         "core_mutation",
     ]
@@ -201,6 +283,16 @@ def test_governance_service_carries_autonomy_ladder_context() -> None:
         "autonomy_automatic_promotion_allowed"
     ] is False
     assert result.governance_check.context["autonomy_core_mutation_allowed"] is False
+    assert result.governance_check.context["autonomy_action_kind"] == (
+        "execute_reversible_core_action"
+    )
+    assert result.governance_check.context["autonomy_validation_errors"] == []
+    assert result.governance_decision.decision == (
+        PermissionDecision.ALLOW_WITH_CONDITIONS
+    )
+    assert result.governance_decision.containment_hint == (
+        "prepare_exact_action_confirmation"
+    )
 
 
 def test_governance_service_defers_capability_above_autonomy_limit() -> None:
@@ -233,6 +325,63 @@ def test_governance_service_defers_capability_above_autonomy_limit() -> None:
     assert "policy://autonomy-ladder/enforce-max-capability" in (
         result.governance_decision.policy_refs
     )
+
+
+def test_governance_blocks_missing_unknown_and_incompatible_autonomy_actions() -> None:
+    service = GovernanceService()
+    cases: list[tuple[str, str, object]] = [
+        ("missing-action", "autonomy_action_kind", None),
+        ("unknown-action", "autonomy_action_kind", "run_anything"),
+        ("unknown-level", "requested_autonomy_level", "unbounded"),
+        ("effective-mismatch", "effective_autonomy_level", "assist_only"),
+        ("missing-capability", "max_autonomy_capability_mode", None),
+        ("unknown-capability", "capability_decision_selected_mode", "root_shell"),
+        ("unknown-mode", "autonomy_confirmation_mode", "silent"),
+        (
+            "validation-error",
+            "autonomy_validation_errors",
+            ["autonomy_contract_tampered"],
+        ),
+        (
+            "list-overlap",
+            "autonomy_allowed_runtime_actions",
+            [
+                "read_context",
+                "draft_plan",
+                "explain_limits",
+                "prepare_local_action",
+                "execute_reversible_core_action",
+                "core_mutation",
+            ],
+        ),
+    ]
+
+    for case_name, field_name, invalid_value in cases:
+        plan = low_risk_plan()
+        setattr(plan, field_name, invalid_value)
+        result = service.assess_request(
+            InputContract(
+                request_id=RequestId(f"req-autonomy-{case_name}"),
+                session_id=SessionId("sess-autonomy-invalid"),
+                channel=ChannelType.CHAT,
+                input_type=InputType.TEXT,
+                content="Attempt one invalid projected action.",
+                timestamp="2026-08-29T16:00:00Z",
+            ),
+            intent="planning",
+            requested_by_service="orchestrator-service",
+            plan=plan,
+        )
+
+        assert result.governance_decision.decision == PermissionDecision.BLOCK, (
+            case_name,
+            result.governance_check.context[
+                "autonomy_action_policy_reason_codes"
+            ],
+        )
+        assert result.governance_decision.containment_hint == (
+            "block_autonomy_action"
+        )
 
 
 def test_governance_allows_bounded_work_item_creation() -> None:
@@ -495,7 +644,7 @@ def test_governance_blocks_artifact_replacement_without_replacement_ref() -> Non
 
 def test_governance_service_defers_when_reframing_goal_with_open_loop() -> None:
     service = GovernanceService()
-    plan = DeliberativePlanContract(
+    plan = assist_only_plan(DeliberativePlanContract(
         plan_summary="reformular objetivo com impacto operacional",
         goal="Plan the next release.",
         steps=["avaliar impacto", "validar rollout", "autorizar mudanca"],
@@ -511,7 +660,7 @@ def test_governance_service_defers_when_reframing_goal_with_open_loop() -> None:
         smallest_safe_next_action="reformular a missao atual antes de autorizar qualquer desvio",
         continuity_action="reformular",
         open_loops=["release anterior ainda aberta"],
-    )
+    ))
     result = service.assess_request(
         InputContract(
             request_id=RequestId("req-3"),
@@ -531,7 +680,7 @@ def test_governance_service_defers_when_reframing_goal_with_open_loop() -> None:
 
 def test_governance_service_defers_when_related_resumption_competes_with_open_loop() -> None:
     service = GovernanceService()
-    plan = DeliberativePlanContract(
+    plan = assist_only_plan(DeliberativePlanContract(
         plan_summary="retomar continuidade relacionada com impacto em missao ativa",
         goal="Retomar analise relacionada.",
         steps=["retomar missao relacionada", "comparar impacto com loop ativo"],
@@ -551,7 +700,7 @@ def test_governance_service_defers_when_related_resumption_competes_with_open_lo
         continuity_target_mission_id="mission-related",
         continuity_target_goal="Analyze rollout risks.",
         open_loops=["release anterior ainda aberta"],
-    )
+    ))
     result = service.assess_request(
         InputContract(
             request_id=RequestId("req-3b"),
@@ -600,7 +749,7 @@ def test_governance_service_defers_critical_memory_mutation() -> None:
 
 def test_governance_service_defers_governed_replay_recovery() -> None:
     service = GovernanceService()
-    plan = DeliberativePlanContract(
+    plan = assist_only_plan(DeliberativePlanContract(
         plan_summary="retomar checkpoint governado da continuidade",
         goal="Continue the sprint plan.",
         steps=["revisar ponto de retomada", "pedir validacao antes de continuar"],
@@ -617,7 +766,7 @@ def test_governance_service_defers_governed_replay_recovery() -> None:
         continuity_recovery_mode="governed_review",
         continuity_resume_point="continuar:fechar checkpoint principal",
         open_loops=["fechar checkpoint principal"],
-    )
+    ))
     result = service.assess_request(
         InputContract(
             request_id=RequestId("req-5"),

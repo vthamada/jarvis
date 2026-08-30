@@ -68,14 +68,35 @@ class GovernanceBlockedConsoleError(ConsoleCommandError):
 
 
 _SENSITIVE_ASSIGNMENT = compile_pattern(
-    r"\b(api[-_]?key|access[-_]?token|token|password|secret)\s*[:=]\s*([^\s,;]+)",
+    r"\b(api[-_]?key|access[-_]?token|auth[-_]?token|client[-_]?secret|"
+    r"aws[-_]?secret[-_]?access[-_]?key|private[-_]?key|token|password|passwd|secret)"
+    r"\s*[:=]\s*([^\s,;]+)",
     IGNORECASE,
 )
 _BEARER_TOKEN = compile_pattern(r"\bBearer\s+[^\s,;]+", IGNORECASE)
+_AUTHORIZATION_HEADER = compile_pattern(
+    r"\bAuthorization\s*:\s*(?:Basic|Api[- ]?Key)\s+[^\s,;]+",
+    IGNORECASE,
+)
 _AUTHENTICATED_URL = compile_pattern(r"(://[^\s:/]+:)[^@\s]+(@)")
-_WINDOWS_PATH = compile_pattern(r"\b[A-Za-z]:\\[^\r\n\s,;]+")
+_WINDOWS_PATH = compile_pattern(r"\b[A-Za-z]:[\\/][^\r\n\s,;]+")
 _SENSITIVE_UNIX_PATH = compile_pattern(
-    r"(?<![:\w])/(?:Users|home|tmp|var|etc)/[^\r\n,;]+"
+    r"(?<![:\w])/(?:Users|home|root|tmp|var|etc|run|opt)/[^\r\n,;]+"
+)
+_PRIVATE_KEY_BLOCK = compile_pattern(
+    r"-----BEGIN(?: [A-Z0-9]+)? PRIVATE KEY-----[\s\S]*?"
+    r"-----END(?: [A-Z0-9]+)? PRIVATE KEY-----",
+    IGNORECASE,
+)
+_STANDALONE_CREDENTIAL = compile_pattern(
+    r"(?:\b(?:gh[pousr]|github_pat)_[A-Za-z0-9_]{16,255}\b"
+    r"|\bsk-(?:proj-|svcacct-)?[A-Za-z0-9_-]{16,255}\b"
+    r"|\b(?:AKIA|ASIA)[A-Z0-9]{16}\b"
+    r"|\bglpat-[A-Za-z0-9_-]{16,255}\b"
+    r"|\bxox[baprs]-[A-Za-z0-9-]{16,255}\b"
+    r"|\b(?:sk|rk)_live_[A-Za-z0-9]{16,255}\b"
+    r"|\bAIza[0-9A-Za-z_-]{31,255}\b"
+    r"|\bnpm_[A-Za-z0-9]{16,255}\b)",
 )
 
 
@@ -187,7 +208,10 @@ class ConsoleRuntime:
             redacted,
         )
         redacted = _BEARER_TOKEN.sub("Bearer <redacted>", redacted)
+        redacted = _AUTHORIZATION_HEADER.sub("Authorization: <redacted>", redacted)
         redacted = _AUTHENTICATED_URL.sub(r"\1<redacted>\2", redacted)
+        redacted = _PRIVATE_KEY_BLOCK.sub("<redacted-private-key>", redacted)
+        redacted = _STANDALONE_CREDENTIAL.sub("<redacted-credential>", redacted)
         redacted = _WINDOWS_PATH.sub("<redacted-path>", redacted)
         redacted = _SENSITIVE_UNIX_PATH.sub("<redacted-path>", redacted)
         return redacted, redacted != value

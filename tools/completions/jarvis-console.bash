@@ -5,66 +5,82 @@ _jarvis_console() {
     prev="${COMP_WORDS[COMP_CWORD-1]}"
     command=''
     for token in "${COMP_WORDS[@]:1}"; do
-        if [[ " ask chat objectives goal-strategy objective work-items work-item open-loops resume-loop artifacts artifact technology-candidates experience-reflections procedural-playbooks skill-evolution evolution-review-queue evolution-review memory-review-queue memory-review mission-cycle operator-dashboard daily-workspace operator-outcomes command-reference completion readiness-dashboard doctor learning-report progress-report mission-workflow mission-feedback " == *" $token "* ]]; then
+        if [[ " ask action-confirm chat objectives goal-strategy objective work-items work-item open-loops resume-loop artifacts artifact technology-candidates technology-radar-intake technology-radar technology-experiment-pack technology-experiment-eval technology-experiments experience-reflections procedural-playbooks skill-evolution workflow-lifecycle workflow-transition evolution-review-queue evolution-review memory-review-queue memory-review mission-cycle operator-dashboard daily-workspace operator-outcomes decision-attribution command-reference completion readiness-dashboard doctor learning-report progress-report mission-workflow mission-feedback " == *" $token "* ]]; then
             command="$token"
             break
         fi
     done
-    if [[ $prev == '--format' ]]; then
+    if [[ -z $command && $prev == '--format' ]]; then
         COMPREPLY=( $(compgen -W "text json" -- "$cur") )
         return
     fi
     if [[ -z $command ]]; then
-        COMPREPLY=( $(compgen -W "--format ask chat objectives goal-strategy objective work-items work-item open-loops resume-loop artifacts artifact technology-candidates experience-reflections procedural-playbooks skill-evolution evolution-review-queue evolution-review memory-review-queue memory-review mission-cycle operator-dashboard daily-workspace operator-outcomes command-reference completion readiness-dashboard doctor learning-report progress-report mission-workflow mission-feedback" -- "$cur") )
+        COMPREPLY=( $(compgen -W "--format ask action-confirm chat objectives goal-strategy objective work-items work-item open-loops resume-loop artifacts artifact technology-candidates technology-radar-intake technology-radar technology-experiment-pack technology-experiment-eval technology-experiments experience-reflections procedural-playbooks skill-evolution workflow-lifecycle workflow-transition evolution-review-queue evolution-review memory-review-queue memory-review mission-cycle operator-dashboard daily-workspace operator-outcomes decision-attribution command-reference completion readiness-dashboard doctor learning-report progress-report mission-workflow mission-feedback" -- "$cur") )
         return
     fi
     case "$command:$prev" in
-        ask:--format) candidates="text json" ;;
-        chat:--format) candidates="text json" ;;
+        ask:--requested-autonomy-level) candidates="assist_only confirm_before_action bounded_core_action supervised_external_action" ;;
+        ask:--max-autonomy-level) candidates="assist_only confirm_before_action bounded_core_action supervised_external_action" ;;
+        ask:--autonomy-confirmation-mode) candidates="explicit" ;;
+        ask:--format) candidates="text" ;;
+        action-confirm:--format) candidates="text" ;;
+        chat:--format) candidates="text" ;;
         objectives:--format) candidates="text json" ;;
         goal-strategy:--format) candidates="text json" ;;
         objective:--action) candidates="resume pause block complete redefine-next-action" ;;
-        objective:--format) candidates="text json" ;;
+        objective:--format) candidates="text" ;;
         work-items:--format) candidates="text json" ;;
         work-item:--action) candidates="create update resume pause block complete redefine-next-action" ;;
         work-item:--priority) candidates="p0 p1 p2 p3" ;;
-        work-item:--format) candidates="text json" ;;
+        work-item:--format) candidates="text" ;;
         open-loops:--format) candidates="text json" ;;
-        resume-loop:--format) candidates="text json" ;;
+        resume-loop:--format) candidates="text" ;;
         artifacts:--format) candidates="text json" ;;
         artifact:--action) candidates="register activate archive replace rollback" ;;
-        artifact:--format) candidates="text json" ;;
+        artifact:--format) candidates="text" ;;
         technology-candidates:--format) candidates="text json" ;;
+        technology-radar-intake:--format) candidates="text" ;;
+        technology-radar:--format) candidates="text json" ;;
+        technology-experiment-pack:--format) candidates="text" ;;
+        technology-experiment-eval:--format) candidates="text" ;;
+        technology-experiments:--view) candidates="packs runs" ;;
+        technology-experiments:--format) candidates="text json" ;;
         experience-reflections:--format) candidates="text json" ;;
         procedural-playbooks:--format) candidates="text json" ;;
         skill-evolution:--format) candidates="text json" ;;
+        workflow-lifecycle:--format) candidates="text json" ;;
+        workflow-transition:--action) candidates="activate_candidate rollback_to_baseline" ;;
+        workflow-transition:--completed-external-gate) candidates="standard_engineering_gate release_gate_before_promotion" ;;
+        workflow-transition:--format) candidates="text" ;;
         evolution-review-queue:--format) candidates="text json" ;;
         evolution-review:--action) candidates="approve reject sandbox needs-review rollback" ;;
-        evolution-review:--format) candidates="text json" ;;
+        evolution-review:--format) candidates="text" ;;
         memory-review-queue:--maintenance-action) candidates="consolidate archive expire" ;;
         memory-review-queue:--format) candidates="text json" ;;
         memory-review:--action) candidates="approve reject needs-review rollback" ;;
-        memory-review:--format) candidates="text json" ;;
+        memory-review:--format) candidates="text" ;;
         mission-cycle:--format) candidates="text json" ;;
         operator-dashboard:--format) candidates="text json" ;;
         daily-workspace:--format) candidates="text json" ;;
         operator-outcomes:--format) candidates="text json" ;;
+        decision-attribution:--format) candidates="text json" ;;
         command-reference:--format) candidates="text json" ;;
         completion:--shell) candidates="powershell bash zsh" ;;
-        completion:--format) candidates="text json" ;;
+        completion:--format) candidates="text" ;;
         readiness-dashboard:--run-gate) candidates="quick standard" ;;
         readiness-dashboard:--format) candidates="text json" ;;
         doctor:--format) candidates="text json" ;;
         learning-report:--format) candidates="text json" ;;
         progress-report:--format) candidates="text json" ;;
-        mission-workflow:--format) candidates="text json" ;;
+        mission-workflow:--format) candidates="text" ;;
         mission-feedback:--assessment) candidates="helpful partially-helpful not-helpful correction" ;;
-        mission-feedback:--format) candidates="text json" ;;
+        mission-feedback:--format) candidates="text" ;;
         *) candidates='' ;;
     esac
     if [[ -z $candidates ]]; then
         case "$command" in
-            ask) candidates="-h --help --session-id --mission-id --operator-identity-ref --canonical-user-ref --debug --format" ;;
+            ask) candidates="-h --help --session-id --mission-id --operator-identity-ref --canonical-user-ref --requested-autonomy-level --max-autonomy-level --autonomy-confirmation-mode --action-confirmation-receipt-id --action-confirmation-origin-request-id --origin-request-id --debug --format" ;;
+            action-confirm) candidates="-h --help --challenge-id --action-fingerprint --operator-identity-ref --format" ;;
             chat) candidates="-h --help --session-id --mission-id --message --operator-identity-ref --canonical-user-ref --debug --format" ;;
             objectives) candidates="-h --help --mission-id --format" ;;
             goal-strategy) candidates="-h --help --mission-id --session-id --operator-identity-ref --canonical-user-ref --format" ;;
@@ -76,9 +92,16 @@ _jarvis_console() {
             artifacts) candidates="-h --help --mission-id --format" ;;
             artifact) candidates="-h --help --mission-id --session-id --action --artifact-ref --artifact-version --work-item-ref --replacement-artifact-ref --rollback-plan-ref --operator-identity-ref --canonical-user-ref --format" ;;
             technology-candidates) candidates="-h --help --evolution-db --limit --format" ;;
+            technology-radar-intake) candidates="-h --help --evolution-db --intake-root --manifest --manifest-sha256 --format" ;;
+            technology-radar) candidates="-h --help --evolution-db --intake-id --candidate-ref --intake-version --source-kind --absorption-class --target-gap-ref --limit --offset --format" ;;
+            technology-experiment-pack) candidates="-h --help --evolution-db --manifest-root --manifest --manifest-sha256 --format" ;;
+            technology-experiment-eval) candidates="-h --help --evolution-db --manifest-root --manifest --manifest-sha256 --format" ;;
+            technology-experiments) candidates="-h --help --evolution-db --view --experiment-pack-id --pack-version --run-id --intake-id --candidate-ref --status --limit --offset --format" ;;
             experience-reflections) candidates="-h --help --memory-db --mission-id --workflow-profile --limit --format" ;;
             procedural-playbooks) candidates="-h --help --memory-db --workflow-profile --review-status --limit --format" ;;
             skill-evolution) candidates="-h --help --memory-db --evolution-db --skill-id --version --workflow-profile --route --domain --limit --format" ;;
+            workflow-lifecycle) candidates="-h --help --memory-db --evolution-db --workflow-profile --route --limit --offset --format" ;;
+            workflow-transition) candidates="-h --help --memory-db --evolution-db --workflow-profile --route --action --proposal-id --workflow-eval-run-id --human-authorization-ref --operator-ref --evidence-ref --completed-test-ref --completed-external-gate --failure-ref --transition-id --format" ;;
             evolution-review-queue) candidates="-h --help --evolution-db --limit --format" ;;
             evolution-review) candidates="-h --help --evolution-db --proposal-id --action --operator-ref --evidence-ref --proposed-test --rollback-plan-ref --risk-acceptance --note --format" ;;
             memory-review-queue) candidates="-h --help --memory-db --maintenance-action --review-status --limit --format" ;;
@@ -87,6 +110,7 @@ _jarvis_console() {
             operator-dashboard) candidates="-h --help --mission-id --memory-db --evolution-db --workflow-profile --limit --format" ;;
             daily-workspace) candidates="-h --help --memory-db --evolution-db --limit --format" ;;
             operator-outcomes) candidates="-h --help --observability-db --memory-db --period-start --period-end --event-limit --mission-limit --format" ;;
+            decision-attribution) candidates="-h --help --observability-db --memory-db --request-id --mission-id --workflow-profile --limit --output-dir --format" ;;
             command-reference) candidates="-h --help --format" ;;
             completion) candidates="-h --help --shell --format" ;;
             readiness-dashboard) candidates="-h --help --run-gate --longitudinal-report --format" ;;

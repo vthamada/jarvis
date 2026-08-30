@@ -50,7 +50,7 @@ def test_registry_matches_every_parser_command_help_and_handler() -> None:
 
     COMMAND_REGISTRY.validate_parser_commands(parser_help)
 
-    assert len(COMMAND_REGISTRY.definitions) == 31
+    assert len(COMMAND_REGISTRY.definitions) == 40
     assert set(parser_help) == {
         item.command_id for item in COMMAND_REGISTRY.definitions
     }
@@ -59,6 +59,13 @@ def test_registry_matches_every_parser_command_help_and_handler() -> None:
         for item in COMMAND_REGISTRY.definitions
     )
     assert "if args.command ==" not in getsource(cli.main)
+    assert COMMAND_REGISTRY.require("workflow-lifecycle").supports_json is True
+    assert COMMAND_REGISTRY.require("workflow-transition").supports_json is False
+    assert COMMAND_REGISTRY.require("action-confirm").supports_json is False
+    assert (
+        COMMAND_REGISTRY.require("action-confirm").execution_mode
+        == CommandExecutionMode.CORE
+    )
 
 
 def test_registry_rejects_duplicate_ids_and_parser_drift() -> None:

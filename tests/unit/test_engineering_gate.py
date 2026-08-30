@@ -39,3 +39,4 @@ def test_engineering_gate_release_mode_with_controlled() -> None:
         "baseline validation controlled",
     ]
     assert "--basetemp" in steps[3].command
+    assert steps[7].command[-1] == "--check"

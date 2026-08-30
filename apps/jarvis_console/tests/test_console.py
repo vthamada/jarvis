@@ -1,4 +1,7 @@
-﻿from json import dumps
+from dataclasses import asdict
+from datetime import UTC, datetime, timedelta
+from hashlib import sha256
+from json import dumps, loads
 from pathlib import Path
 from tempfile import gettempdir
 from types import SimpleNamespace
@@ -17,9 +20,12 @@ from apps.jarvis_console.cli import (
     JarvisConsole,
     LongHorizonGoalStrategyResult,
     build_parser,
+    main,
+    render_action_confirmation_receipt,
     render_artifacts_state,
     render_daily_operator_utility_report,
     render_daily_operator_workspace,
+    render_decision_attribution_report,
     render_evolution_review_queue,
     render_experience_reflections,
     render_goal_strategy,
@@ -32,10 +38,15 @@ from apps.jarvis_console.cli import (
     render_response,
     render_skill_evolution_operator_view,
     render_work_items_state,
+    render_workflow_lifecycle_view,
+    render_workflow_transition_result,
+    run_action_confirm_command,
     run_artifact_command,
     run_artifacts_command,
+    run_ask_command,
     run_chat_command,
     run_daily_workspace_command,
+    run_decision_attribution_command,
     run_evolution_review_command,
     run_evolution_review_queue_command,
     run_experience_reflections_command,
@@ -55,12 +66,20 @@ from apps.jarvis_console.cli import (
     run_readiness_dashboard_command,
     run_skill_evolution_command,
     run_technology_candidates_command,
+    run_technology_experiment_eval_command,
+    run_technology_experiment_pack_command,
+    run_technology_experiments_command,
+    run_technology_radar_command,
+    run_technology_radar_intake_command,
     run_work_item_command,
     run_work_items_command,
 )
+from shared.action_confirmation import build_action_intent
 from shared.contracts import (
+    ActionIntentContract,
     DailyOperatorMissionOutcomeContract,
     DailyOperatorUtilityReportContract,
+    DecisionOutcomeAttributionReportContract,
     ExperienceRecordContract,
     LongitudinalLearningReportContract,
     MissionStateContract,
@@ -71,7 +90,13 @@ from shared.contracts import (
     SkillEvolutionOperatorViewContract,
 )
 from shared.events import InternalEventEnvelope
-from shared.types import MissionId, MissionStatus
+from shared.technology_experiment import technology_experiment_pack_fingerprint
+from shared.types import MissionId, MissionStatus, RequestId, RiskLevel, SessionId
+from tests.unit.test_technology_experiment_tool import (
+    _intake as _experiment_intake,
+)
+from tests.unit.test_technology_experiment_tool import _pack_selection
+from tests.unit.test_technology_radar_intake_tool import _intake
 
 
 def runtime_dir(name: str) -> Path:
@@ -80,6 +105,42 @@ def runtime_dir(name: str) -> Path:
     target = base_dir / f"{name}-{uuid4().hex[:8]}"
     target.mkdir(parents=True, exist_ok=True)
     return target
+
+
+def ask_with_bounded_autonomy(
+    console: JarvisConsole,
+    prompt: str,
+    **kwargs: object,
+):
+    """Make operation-producing test intent explicit at the console boundary."""
+
+    kwargs.setdefault("requested_autonomy_level", "bounded_core_action")
+    kwargs.setdefault("max_autonomy_level", "bounded_core_action")
+    kwargs.setdefault("autonomy_confirmation_mode", "not_required")
+    return console.ask(prompt, **kwargs)
+
+
+def action_confirmation_intent() -> ActionIntentContract:
+    issued_at = datetime.now(UTC)
+    return build_action_intent(
+        intent_id=f"action-intent://console/{uuid4().hex}",
+        origin_request_id=RequestId("request://console/confirmation-origin"),
+        session_id=SessionId("session://console/confirmation"),
+        mission_id=MissionId("mission://console/confirmation"),
+        operator_identity_ref="operator://console/confirmation",
+        handler_id="handler://operational/local-file",
+        handler_version="1.0.0",
+        operation="write_local_file",
+        target_ref="artifact://operational/confirmation-test",
+        content_digest="a" * 64,
+        precondition_digest="b" * 64,
+        risk_level=RiskLevel.MODERATE,
+        policy_version="action-confirmation/v1",
+        nonce=f"nonce_{uuid4().hex}",
+        issued_at=issued_at.isoformat(),
+        expires_at=(issued_at + timedelta(minutes=5)).isoformat(),
+        now=issued_at,
+    )
 
 
 def test_console_readiness_dashboard_is_read_only_and_does_not_run_gate() -> None:
@@ -344,9 +405,109 @@ def test_console_operator_outcomes_renderer_exposes_unavailable_metrics() -> Non
     assert "historical_stale_loop_snapshot_not_available" in rendered
 
 
+def test_console_decision_attribution_renderer_is_explicitly_non_authoritative() -> None:
+    rendered = render_decision_attribution_report(
+        DecisionOutcomeAttributionReportContract(
+            report_id="decision-outcome-attribution-report://console-test",
+            report_status="insufficient_evidence",
+            generated_at="2026-08-11T13:00:00Z",
+            record_count=0,
+            correlation_only_count=0,
+            declared_causality_count=0,
+            insufficient_evidence_count=0,
+            feedback_linked_count=0,
+            comparator_count=0,
+            failed_record_count=0,
+            items=[],
+            limitations=["canonical_attribution_record_required"],
+            evidence_refs=[],
+        )
+    )
+
+    assert "decision_attribution=read_only" in rendered
+    assert "report_status=insufficient_evidence" in rendered
+    assert "causality_scope=runtime_declared_participation_only" in rendered
+    assert "causal_effect_proven=False" in rendered
+    assert "gain_claim_status=not_established_without_comparator" in rendered
+    assert "memory_write_allowed=False" in rendered
+    assert "execution_allowed=False" in rendered
+    assert "tool_dispatch_allowed=False" in rendered
+    assert "promotion_authorized=False" in rendered
+    assert "automatic_promotion_allowed=False" in rendered
+    assert "core_mutation_allowed=False" in rendered
+
+
+def test_console_decision_attribution_reads_stores_and_saves_derived_report() -> None:
+    temp_dir = runtime_dir("console-decision-attribution-empty")
+    memory_db = temp_dir / "memory.db"
+    observability_db = temp_dir / "observability.db"
+    MemoryService(database_url=f"sqlite:///{memory_db.as_posix()}")
+    ObservabilityService(database_path=str(observability_db))
+    before = {
+        memory_db: memory_db.read_bytes(),
+        observability_db: observability_db.read_bytes(),
+    }
+    args = build_parser().parse_args(
+        [
+            "decision-attribution",
+            "--memory-db",
+            str(memory_db),
+            "--observability-db",
+            str(observability_db),
+            "--request-id",
+            "request-console-filter",
+            "--mission-id",
+            "mission-console-filter",
+            "--workflow-profile",
+            "software_change_workflow",
+            "--limit",
+            "5",
+            "--output-dir",
+            str(temp_dir / "reports"),
+        ]
+    )
+
+    rendered = run_decision_attribution_command(args)[0]
+
+    assert "decision_attribution=read_only" in rendered
+    assert "report_status=insufficient_evidence" in rendered
+    assert "record_count=0" in rendered
+    assert "causal_effect_proven=False" in rendered
+    assert (temp_dir / "reports" / "latest.json").exists()
+    assert memory_db.read_bytes() == before[memory_db]
+    assert observability_db.read_bytes() == before[observability_db]
+
+
+def test_console_decision_attribution_supports_json_envelope(capsys) -> None:
+    temp_dir = runtime_dir("console-decision-attribution-json")
+    exit_code = main(
+        [
+            "decision-attribution",
+            "--memory-db",
+            str(temp_dir / "memory.db"),
+            "--observability-db",
+            str(temp_dir / "observability.db"),
+            "--format",
+            "json",
+        ]
+    )
+
+    captured = capsys.readouterr()
+    payload = loads(captured.out)
+    assert exit_code == 0
+    assert captured.err == ""
+    assert payload["schema_version"] == "jarvis-console/v1"
+    assert payload["command_id"] == "decision-attribution"
+    assert payload["status"] == "success"
+    assert "decision_attribution=read_only" in payload["outputs"][0]
+    assert "causal_effect_proven=False" in payload["outputs"][0]
+    assert "promotion_authorized=False" in payload["outputs"][0]
+
+
 def test_console_ask_returns_orchestrated_response() -> None:
     console = JarvisConsole.build(runtime_dir=runtime_dir("console-ask"))
-    response = console.ask(
+    response = ask_with_bounded_autonomy(
+        console,
         "Plan the controlled rollout.",
         session_id="sess-console",
         mission_id="mission-console",
@@ -368,9 +529,161 @@ def test_console_ask_returns_orchestrated_response() -> None:
     assert response.operation_dispatch.surface_continuity_status == "single_surface"
 
 
+def test_console_ask_cli_forwards_exact_action_confirmation_context() -> None:
+    captured_contracts: list[object] = []
+    response = SimpleNamespace(response_text="confirmation context captured")
+    orchestrator = SimpleNamespace(
+        handle_input=lambda contract: captured_contracts.append(contract) or response
+    )
+    console = JarvisConsole(orchestrator=orchestrator)  # type: ignore[arg-type]
+    args = build_parser().parse_args(
+        [
+            "ask",
+            "Prepare the bounded action.",
+            "--session-id",
+            "session-confirmation-cli",
+            "--mission-id",
+            "mission-confirmation-cli",
+            "--operator-identity-ref",
+            "operator://confirmation-cli",
+            "--requested-autonomy-level",
+            "supervised_external_action",
+            "--max-autonomy-level",
+            "supervised_external_action",
+            "--autonomy-confirmation-mode",
+            "explicit",
+            "--action-confirmation-receipt-id",
+            "confirmation-receipt://exact",
+            "--origin-request-id",
+            "request://confirmation/origin",
+        ]
+    )
+
+    outputs = run_ask_command(console, args)
+
+    assert outputs == ["confirmation context captured"]
+    assert len(captured_contracts) == 1
+    contract = captured_contracts[0]
+    assert contract.requested_autonomy_level == "supervised_external_action"
+    assert contract.max_autonomy_level == "supervised_external_action"
+    assert contract.autonomy_confirmation_mode == "explicit"
+    assert (
+        contract.action_confirmation_receipt_id
+        == "confirmation-receipt://exact"
+    )
+    assert (
+        contract.action_confirmation_origin_request_id
+        == "request://confirmation/origin"
+    )
+
+
+def test_console_renders_only_safe_confirmation_challenge_metadata() -> None:
+    challenge = SimpleNamespace(
+        challenge_id="confirmation-challenge://console-safe",
+        origin_request_id="request://console/safe-origin",
+        action_fingerprint="a" * 64,
+        expires_at="2026-08-29T23:00:00+00:00",
+        target_ref="C:\\private\\should-not-render.txt",
+        content="should-not-render",
+    )
+    response = SimpleNamespace(
+        response_text="Explicit confirmation is required.",
+        action_confirmation_challenge=challenge,
+    )
+
+    rendered = render_response(response, debug=False)  # type: ignore[arg-type]
+
+    assert "challenge_id=confirmation-challenge://console-safe" in rendered
+    assert "origin_request_id=request://console/safe-origin" in rendered
+    assert f"action_fingerprint={'a' * 64}" in rendered
+    assert "expires_at=2026-08-29T23:00:00+00:00" in rendered
+    assert "confirmation_evidence_only=True" in rendered
+    assert "confirmation_execution_allowed=False" in rendered
+    assert "should-not-render" not in rendered
+    assert "C:\\private" not in rendered
+
+
+def test_console_runtime_wires_workflow_lifecycle_verifier_to_paired_store() -> None:
+    temp_dir = runtime_dir("console-workflow-lifecycle-verifier")
+    console = JarvisConsole.build(runtime_dir=temp_dir)
+
+    verifier = (
+        console.orchestrator.memory_service._workflow_lifecycle_transition_verifier
+    )
+
+    assert callable(verifier)
+    assert verifier.__self__.repository.database_path == temp_dir / "evolution.db"
+
+
+def test_console_runtime_persists_and_wires_action_confirmation_ledger() -> None:
+    temp_dir = runtime_dir("console-action-confirmation-wiring")
+    console = JarvisConsole.build(runtime_dir=temp_dir)
+    governance = console.orchestrator.governance_service
+    verifier = console.orchestrator.operational_service.action_confirmation_verifier
+
+    assert Path(governance.action_confirmation_repository.database_path) == (
+        temp_dir / "governance.db"
+    )
+    assert (temp_dir / "governance.db").is_file()
+    assert callable(verifier)
+    assert verifier == governance.verify_action_confirmation_claim
+
+
+def test_action_confirm_command_records_non_authorizing_receipt_after_restart() -> None:
+    temp_dir = runtime_dir("console-action-confirmation-command")
+    initial_console = JarvisConsole.build(runtime_dir=temp_dir)
+    intent = action_confirmation_intent()
+    challenge = initial_console.orchestrator.governance_service.issue_action_confirmation_challenge(
+        intent
+    )
+    restarted_console = JarvisConsole.build(runtime_dir=temp_dir)
+    args = build_parser().parse_args(
+        [
+            "action-confirm",
+            "--challenge-id",
+            challenge.challenge_id,
+            "--action-fingerprint",
+            intent.action_fingerprint,
+            "--operator-identity-ref",
+            intent.operator_identity_ref,
+        ]
+    )
+
+    outputs = run_action_confirm_command(restarted_console, args)
+
+    assert len(outputs) == 1
+    rendered = outputs[0]
+    assert "receipt_id=confirmation-receipt://" in rendered
+    assert f"challenge_id={challenge.challenge_id}" in rendered
+    assert f"origin_request_id={intent.origin_request_id}" in rendered
+    assert f"action_fingerprint={intent.action_fingerprint}" in rendered
+    assert "receipt_fingerprint=" in rendered
+    assert "confirmation_evidence_only=True" in rendered
+    assert "single_use=True" in rendered
+    assert "execution_allowed=False" in rendered
+    assert "tool_dispatch_allowed=False" in rendered
+    assert "runtime_activation_allowed=False" in rendered
+    assert "promotion_authorized=False" in rendered
+    assert "automatic_promotion_allowed=False" in rendered
+    assert "core_mutation_allowed=False" in rendered
+
+    receipt_id = next(
+        line.partition("=")[2]
+        for line in rendered.splitlines()
+        if line.startswith("receipt_id=")
+    )
+    context = restarted_console.orchestrator.governance_service.load_action_confirmation_context(
+        receipt_id
+    )
+    assert context.intent == intent
+    assert context.challenge == challenge
+    assert render_action_confirmation_receipt(context.receipt) == rendered
+
+
 def test_console_accepts_operator_surface_identity_overrides() -> None:
     console = JarvisConsole.build(runtime_dir=runtime_dir("console-surface"))
-    response = console.ask(
+    response = ask_with_bounded_autonomy(
+        console,
         "Plan the controlled rollout.",
         session_id="sess-console-surface",
         mission_id="mission-console-surface",
@@ -386,7 +699,8 @@ def test_console_accepts_operator_surface_identity_overrides() -> None:
 def test_console_objectives_shows_persisted_project_objective_state() -> None:
     console = JarvisConsole.build(runtime_dir=runtime_dir("console-objectives"))
     mission_id = "mission-console-objectives"
-    console.ask(
+    ask_with_bounded_autonomy(
+        console,
         "Plan the controlled rollout.",
         session_id="sess-console-objectives",
         mission_id=mission_id,
@@ -420,7 +734,8 @@ def test_console_goal_strategy_shows_read_only_long_horizon_state() -> None:
     mission_id = "mission-console-goal-strategy"
     work_item_ref = "work-item://mission-console-goal-strategy/validate-plan"
     artifact_ref = "artifact://mission-console-goal-strategy/plan/v1"
-    console.ask(
+    ask_with_bounded_autonomy(
+        console,
         "Plan the controlled rollout.",
         session_id="sess-console-goal-strategy",
         mission_id=mission_id,
@@ -517,6 +832,489 @@ def test_console_technology_candidates_shows_recent_absorption_candidate() -> No
     assert "core_replacement_allowed=False" in outputs[0]
 
 
+def test_console_technology_radar_registers_and_reads_reviewed_manifest() -> None:
+    temp_dir = runtime_dir("console-technology-radar")
+    intake_root = temp_dir / "intake"
+    intake_root.mkdir()
+    manifest = intake_root / "reviewed-reference.json"
+    manifest.write_text(
+        dumps(asdict(_intake()), ensure_ascii=False, sort_keys=True),
+        encoding="utf-8",
+    )
+    evolution_db = temp_dir / "evolution.db"
+    intake_args = build_parser().parse_args(
+        [
+            "technology-radar-intake",
+            "--evolution-db",
+            str(evolution_db),
+            "--intake-root",
+            str(intake_root),
+            "--manifest",
+            manifest.name,
+            "--manifest-sha256",
+            sha256(manifest.read_bytes()).hexdigest(),
+        ]
+    )
+
+    intake_output = run_technology_radar_intake_command(intake_args)[0]
+
+    assert "assessment_status=eligible_for_reviewed_registry" in intake_output
+    assert "source_trusted=False" in intake_output
+    assert "network_fetch_performed=False" in intake_output
+    assert "knowledge_ingestion_performed=False" in intake_output
+    assert "evolution_proposal_created=False" in intake_output
+    assert "runtime_activation_performed=False" in intake_output
+    assert "promotion_performed=False" in intake_output
+    read_args = build_parser().parse_args(
+        [
+            "technology-radar",
+            "--evolution-db",
+            str(evolution_db),
+            "--target-gap-ref",
+            "KNW-006",
+        ]
+    )
+    rendered = run_technology_radar_command(read_args)[0]
+    assert "intake_id=technology-intake://openai-agents-sdk/1.0.0" in rendered
+    assert "license_id=MIT" in rendered
+    assert "source_trust_status=operator_attested_untrusted_reference" in rendered
+    assert "automatic_promotion_allowed=False" in rendered
+
+
+def test_console_technology_radar_rejects_json_for_mutating_intake(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    exit_code = main(
+        [
+            "technology-radar-intake",
+            "--evolution-db",
+            str(tmp_path / "evolution.db"),
+            "--intake-root",
+            str(tmp_path),
+            "--manifest",
+            "missing.json",
+            "--manifest-sha256",
+            "0" * 64,
+            "--format",
+            "json",
+        ]
+    )
+
+    assert exit_code == 2
+    envelope = loads(capsys.readouterr().err)
+    assert envelope["error_code"] == "json_not_supported"
+    assert envelope["command_id"] == "technology-radar-intake"
+
+
+def test_console_technology_radar_rejects_secret_without_persistence_or_echo(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    intake_root = tmp_path / "intake"
+    intake_root.mkdir()
+    secret = "never-persist-or-echo-this-secret"
+    unsafe = _intake()
+    unsafe_payload = asdict(unsafe)
+    unsafe_payload["claims"] = [f"api_key={secret}"]
+    manifest = intake_root / "unsafe.json"
+    manifest.write_text(dumps(unsafe_payload), encoding="utf-8")
+    evolution_db = tmp_path / "evolution.db"
+
+    exit_code = main(
+        [
+            "technology-radar-intake",
+            "--evolution-db",
+            str(evolution_db),
+            "--intake-root",
+            str(intake_root),
+            "--manifest",
+            manifest.name,
+            "--manifest-sha256",
+            sha256(manifest.read_bytes()).hexdigest(),
+        ]
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 2
+    assert secret not in captured.out
+    assert secret not in captured.err
+    assert "sensitive_material_detected" in captured.err
+    assert EvolutionLabService(
+        database_path=str(evolution_db)
+    ).list_technology_radar_intakes() == []
+
+
+def test_console_technology_radar_read_does_not_create_missing_store(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    evolution_db = tmp_path / "missing" / "evolution.db"
+
+    exit_code = main(
+        [
+            "technology-radar",
+            "--evolution-db",
+            str(evolution_db),
+            "--format",
+            "json",
+        ]
+    )
+
+    envelope = loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert envelope["status"] == "success"
+    assert envelope["outputs"] == ["No reviewed technology radar intakes found."]
+    assert not evolution_db.exists()
+    assert not evolution_db.parent.exists()
+
+
+def test_console_invalid_intake_fails_before_creating_writer_store(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    intake_root = tmp_path / "intake"
+    intake_root.mkdir()
+    manifest = intake_root / "invalid.json"
+    manifest.write_text("[]", encoding="utf-8")
+    evolution_db = tmp_path / "missing" / "evolution.db"
+
+    exit_code = main(
+        [
+            "technology-radar-intake",
+            "--evolution-db",
+            str(evolution_db),
+            "--intake-root",
+            str(intake_root),
+            "--manifest",
+            manifest.name,
+            "--manifest-sha256",
+            sha256(manifest.read_bytes()).hexdigest(),
+        ]
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 2
+    assert "manifest root must be an object" in captured.err
+    assert not evolution_db.exists()
+    assert not evolution_db.parent.exists()
+
+
+def test_console_manifest_digest_mismatch_fails_before_creating_writer_store(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    intake_root = tmp_path / "intake"
+    intake_root.mkdir()
+    manifest = intake_root / "reviewed.json"
+    manifest.write_text(dumps(asdict(_intake())), encoding="utf-8")
+    evolution_db = tmp_path / "missing" / "evolution.db"
+
+    exit_code = main(
+        [
+            "technology-radar-intake",
+            "--evolution-db",
+            str(evolution_db),
+            "--intake-root",
+            str(intake_root),
+            "--manifest",
+            manifest.name,
+            "--manifest-sha256",
+            "f" * 64,
+        ]
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 2
+    assert "manifest SHA-256 mismatch" in captured.err
+    assert not evolution_db.exists()
+    assert not evolution_db.parent.exists()
+
+
+def test_console_technology_experiment_full_reviewed_intake_to_restart_read(
+    tmp_path: Path,
+    capsys,
+    monkeypatch,
+) -> None:
+    manifests = tmp_path / "manifests"
+    manifests.mkdir()
+    evolution_db = tmp_path / "evolution.db"
+    intake = _experiment_intake()
+
+    def forbidden(*_args, **_kwargs):  # type: ignore[no-untyped-def]
+        raise AssertionError("technology experiment crossed an execution boundary")
+
+    monkeypatch.setattr("os.system", forbidden)
+    monkeypatch.setattr("subprocess.run", forbidden)
+    monkeypatch.setattr("subprocess.Popen", forbidden)
+    monkeypatch.setattr("urllib.request.urlopen", forbidden)
+    monkeypatch.setattr("socket.socket", forbidden)
+
+    intake_manifest = manifests / "intake.json"
+    intake_manifest.write_text(
+        dumps(asdict(intake), ensure_ascii=False, sort_keys=True),
+        encoding="utf-8",
+    )
+    intake_args = build_parser().parse_args(
+        [
+            "technology-radar-intake",
+            "--evolution-db",
+            str(evolution_db),
+            "--intake-root",
+            str(manifests),
+            "--manifest",
+            intake_manifest.name,
+            "--manifest-sha256",
+            sha256(intake_manifest.read_bytes()).hexdigest(),
+        ]
+    )
+    assert "assessment_status=eligible_for_reviewed_registry" in (
+        run_technology_radar_intake_command(intake_args)[0]
+    )
+
+    pack_manifest = manifests / "pack.json"
+    pack_manifest.write_text(
+        dumps(_pack_selection(intake), ensure_ascii=False, sort_keys=True),
+        encoding="utf-8",
+    )
+    pack_args = build_parser().parse_args(
+        [
+            "technology-experiment-pack",
+            "--evolution-db",
+            str(evolution_db),
+            "--manifest-root",
+            str(manifests),
+            "--manifest",
+            pack_manifest.name,
+            "--manifest-sha256",
+            sha256(pack_manifest.read_bytes()).hexdigest(),
+        ]
+    )
+    pack_output = run_technology_experiment_pack_command(pack_args)[0]
+    assert "pack_status=sandbox_ready" in pack_output
+    assert "candidate_executed=False" in pack_output
+    assert "promotion_performed=False" in pack_output
+    assert "core_mutated=False" in pack_output
+
+    restarted = EvolutionLabService(database_path=str(evolution_db))
+    pack = restarted.get_technology_experiment_pack(
+        experiment_pack_id="technology-experiment-pack://handoff/1.0.0",
+        pack_version="1.0.0",
+    )
+    assert pack is not None
+    proposal_snapshot = restarted.list_recent_proposals()
+    decision_snapshot = restarted.list_recent_decisions()
+
+    eval_manifest = manifests / "eval.json"
+    eval_manifest.write_text(
+        dumps(
+            {
+                "run_id": "technology-experiment-run://handoff/console/1.0.0",
+                "experiment_pack_id": pack.experiment_pack_id,
+                "pack_version": pack.pack_version,
+                "pack_fingerprint": technology_experiment_pack_fingerprint(pack),
+                "generated_at": "2026-08-12T10:11:00Z",
+            },
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    eval_args = build_parser().parse_args(
+        [
+            "technology-experiment-eval",
+            "--evolution-db",
+            str(evolution_db),
+            "--manifest-root",
+            str(manifests),
+            "--manifest",
+            eval_manifest.name,
+            "--manifest-sha256",
+            sha256(eval_manifest.read_bytes()).hexdigest(),
+        ]
+    )
+    run_output = run_technology_experiment_eval_command(eval_args)[0]
+    assert "status=passed_sandbox_only" in run_output
+    assert "readiness_status=eligible_for_human_experiment_review" in run_output
+    assert "promotion_readiness=not_applicable" in run_output
+    assert "execution_allowed=False" in run_output
+    assert "promotion_authorized=False" in run_output
+
+    read_args = build_parser().parse_args(
+        [
+            "technology-experiments",
+            "--evolution-db",
+            str(evolution_db),
+            "--view",
+            "runs",
+            "--run-id",
+            "technology-experiment-run://handoff/console/1.0.0",
+        ]
+    )
+    assert "status=passed_sandbox_only" in (
+        run_technology_experiments_command(read_args)[0]
+    )
+    filtered_run_args = build_parser().parse_args(
+        [
+            "technology-experiments",
+            "--evolution-db",
+            str(evolution_db),
+            "--view",
+            "runs",
+            "--pack-version",
+            pack.pack_version,
+            "--candidate-ref",
+            pack.candidate_ref,
+        ]
+    )
+    assert "status=passed_sandbox_only" in (
+        run_technology_experiments_command(filtered_run_args)[0]
+    )
+    wrong_scope_args = build_parser().parse_args(
+        [
+            "technology-experiments",
+            "--evolution-db",
+            str(evolution_db),
+            "--view",
+            "runs",
+            "--run-id",
+            "technology-experiment-run://handoff/console/1.0.0",
+            "--intake-id",
+            "technology-intake://different/1.0.0",
+        ]
+    )
+    assert run_technology_experiments_command(wrong_scope_args) == [
+        "No verified technology experiment evaluation runs found."
+    ]
+    wrong_pack_scope_args = build_parser().parse_args(
+        [
+            "technology-experiments",
+            "--evolution-db",
+            str(evolution_db),
+            "--experiment-pack-id",
+            pack.experiment_pack_id,
+            "--pack-version",
+            pack.pack_version,
+            "--candidate-ref",
+            "technology-candidate://different",
+        ]
+    )
+    assert run_technology_experiments_command(wrong_pack_scope_args) == [
+        "No verified technology experiment packs found."
+    ]
+    assert main(
+        [
+            "technology-experiments",
+            "--evolution-db",
+            str(evolution_db),
+            "--view",
+            "runs",
+            "--format",
+            "json",
+        ]
+    ) == 0
+    envelope = loads(capsys.readouterr().out)
+    assert envelope["status"] == "success"
+    assert "status=passed_sandbox_only" in envelope["outputs"][0]
+
+    after_restart = EvolutionLabService(database_path=str(evolution_db))
+    assert after_restart.list_recent_proposals() == proposal_snapshot == []
+    assert after_restart.list_recent_decisions() == decision_snapshot == []
+    assert sorted(
+        path.relative_to(tmp_path).as_posix()
+        for path in tmp_path.rglob("*")
+        if path.is_file()
+    ) == [
+        "evolution.db",
+        "manifests/eval.json",
+        "manifests/intake.json",
+        "manifests/pack.json",
+    ]
+
+
+def test_console_technology_experiment_reads_are_json_safe_and_non_creating(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    evolution_db = tmp_path / "missing" / "evolution.db"
+
+    exit_code = main(
+        [
+            "technology-experiments",
+            "--evolution-db",
+            str(evolution_db),
+            "--format",
+            "json",
+        ]
+    )
+
+    envelope = loads(capsys.readouterr().out)
+    assert exit_code == 0
+    assert envelope["status"] == "success"
+    assert envelope["outputs"] == [
+        "No verified technology experiment packs found."
+    ]
+    assert not evolution_db.exists()
+    assert not evolution_db.parent.exists()
+
+
+def test_console_technology_experiment_mutations_reject_json_before_writes(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    evolution_db = tmp_path / "evolution.db"
+    common = [
+        "--evolution-db",
+        str(evolution_db),
+        "--manifest-root",
+        str(tmp_path),
+        "--manifest",
+        "missing.json",
+        "--manifest-sha256",
+        "0" * 64,
+        "--format",
+        "json",
+    ]
+
+    for command in ("technology-experiment-pack", "technology-experiment-eval"):
+        assert main([command, *common]) == 2
+        envelope = loads(capsys.readouterr().err)
+        assert envelope["error_code"] == "json_not_supported"
+        assert envelope["command_id"] == command
+
+    assert not evolution_db.exists()
+
+
+def test_console_invalid_experiment_pack_fails_before_writer_store(
+    tmp_path: Path,
+    capsys,
+) -> None:
+    manifests = tmp_path / "manifests"
+    manifests.mkdir()
+    manifest = manifests / "invalid.json"
+    manifest.write_text("[]", encoding="utf-8")
+    evolution_db = tmp_path / "missing" / "evolution.db"
+
+    exit_code = main(
+        [
+            "technology-experiment-pack",
+            "--evolution-db",
+            str(evolution_db),
+            "--manifest-root",
+            str(manifests),
+            "--manifest",
+            manifest.name,
+            "--manifest-sha256",
+            sha256(manifest.read_bytes()).hexdigest(),
+        ]
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 2
+    assert "manifest root must be an object" in captured.err
+    assert not evolution_db.exists()
+    assert not evolution_db.parent.exists()
+
+
 def test_console_evolution_review_queue_shows_human_review_items() -> None:
     temp_dir = runtime_dir("console-review-queue")
     evolution_db = temp_dir / "evolution.db"
@@ -606,6 +1404,149 @@ def test_console_skill_evolution_renderer_sanitizes_persisted_values() -> None:
     assert "view_blockers=bounded blocker" in rendered
 
 
+def test_console_workflow_lifecycle_renderer_is_read_only_and_sanitizes_refs() -> None:
+    transition = SimpleNamespace(
+        transition_id=(
+            "workflow-lifecycle-transition://safe\nworkflow_transition=forged"
+        ),
+        workflow_profile="software_change_workflow",
+        route="software_development",
+        transition_action="activate_candidate",
+        transition_status="active_promoted",
+        revision=1,
+        previous_transition_id=None,
+        active_version_ref="workflow-version://software_change_workflow/1.1.0",
+        active_definition_hash="a" * 64,
+        baseline_version_ref="workflow-version://software_change_workflow/1.0.0",
+        candidate_version_ref="workflow-version://software_change_workflow/1.1.0",
+        evolution_proposal_id="evolution-proposal://workflow/1",
+        workflow_eval_run_id="workflow-eval-run://workflow/1",
+        human_authorization_ref="human-authorization://workflow/1",
+        operator_ref="operator://primary",
+        evidence_refs=["evidence://workflow/1"],
+        completed_test_refs=["test://workflow/1"],
+        failure_refs=[],
+        timestamp="2026-08-12T10:30:00Z",
+    )
+
+    rendered = render_workflow_lifecycle_view(
+        current_transition=transition,
+        transitions=[transition],
+        workflow_profile="software_change_workflow",
+        route="software_development",
+        offset=0,
+    )
+
+    assert "workflow_lifecycle_view=read_only" in rendered
+    assert "active_transition_status=found" in rendered
+    assert "integrity_attention_required=False" in rendered
+    assert "history_count=1" in rendered
+    assert "verified_records_only=True" in rendered
+    assert "memory_write_allowed=False" in rendered
+    assert "runtime_execution_allowed=False" in rendered
+    assert "active_registry_write_allowed=False" in rendered
+    assert "automatic_promotion_allowed=False" in rendered
+    assert "automatic_rollback_allowed=False" in rendered
+    assert "core_mutation_allowed=False" in rendered
+    assert "safe workflow_transition=forged" in rendered
+    assert "\nworkflow_transition=forged\n" not in rendered
+
+
+def test_console_workflow_transition_renderer_exposes_governed_manual_boundary() -> None:
+    transition = SimpleNamespace(
+        transition_id="workflow-lifecycle-transition://software-change/1",
+        workflow_profile="software_change_workflow",
+        route="software_development",
+        transition_action="activate_candidate",
+        transition_status="active_promoted",
+        revision=1,
+        previous_transition_id=None,
+        active_version_ref="workflow-version://software_change_workflow/1.1.0",
+        active_definition_hash="a" * 64,
+        baseline_version_ref="workflow-version://software_change_workflow/1.0.0",
+        candidate_version_ref="workflow-version://software_change_workflow/1.1.0",
+        evolution_proposal_id="evolution-proposal://workflow/1",
+        workflow_eval_run_id="workflow-eval-run://workflow/1",
+        human_authorization_ref="human-authorization://workflow/1",
+        operator_ref="operator://primary",
+        evidence_refs=["evidence://workflow/1"],
+        completed_test_refs=["test://workflow/1"],
+        failure_refs=[],
+        timestamp="2026-08-12T10:30:00Z",
+    )
+    assessment = SimpleNamespace(
+        assessment_id="workflow-lifecycle-assessment://workflow/1",
+        status="approved",
+        blockers=[],
+        human_authorization_verified=True,
+        transition_recording_authorized=True,
+    )
+
+    rendered = render_workflow_transition_result(
+        transition=transition,
+        assessment=assessment,
+        transition_recorded=True,
+        release_bundle_verified=True,
+    )
+
+    assert "workflow_transition=explicit_human_action" in rendered
+    assert "workflow_transition_status=recorded" in rendered
+    assert "release_bundle_verified=True" in rendered
+    assert "human_authorization_verified=True" in rendered
+    assert "transition_recording_authorized=True" in rendered
+    assert "runtime_execution_allowed=False" in rendered
+    assert "tool_dispatch_allowed=False" in rendered
+    assert "automatic_promotion_allowed=False" in rendered
+    assert "automatic_rollback_allowed=False" in rendered
+    assert "next_operator_step=verify_active_runtime_binding" in rendered
+
+
+def test_console_workflow_rollback_requires_explicit_failure_before_store_access(
+    capsys,
+) -> None:
+    temp_dir = runtime_dir("console-workflow-rollback-missing-failure")
+    memory_db = temp_dir / "memory.db"
+    evolution_db = temp_dir / "evolution.db"
+
+    exit_code = main(
+        [
+            "workflow-transition",
+            "--memory-db",
+            str(memory_db),
+            "--evolution-db",
+            str(evolution_db),
+            "--workflow-profile",
+            "software_change_workflow",
+            "--route",
+            "software_development",
+            "--action",
+            "rollback_to_baseline",
+            "--proposal-id",
+            "evolution-proposal://workflow/software-change/1",
+            "--workflow-eval-run-id",
+            "workflow-eval-run://software-change/1",
+            "--human-authorization-ref",
+            "human-authorization://workflow/software-change/rollback/1",
+            "--evidence-ref",
+            "evidence://workflow/software-change/rollback/1",
+            "--completed-test-ref",
+            "test://workflow/software-change/release",
+            "--completed-external-gate",
+            "standard_engineering_gate",
+            "--completed-external-gate",
+            "release_gate_before_promotion",
+        ]
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 2
+    assert captured.out == ""
+    assert "error[invalid_command_input]" in captured.err
+    assert "rollback requires at least one failure reference" in captured.err
+    assert not memory_db.exists()
+    assert not evolution_db.exists()
+
+
 def test_console_evolution_review_approves_with_evidence_and_rollback() -> None:
     temp_dir = runtime_dir("console-review-decision")
     evolution_db = temp_dir / "evolution.db"
@@ -692,7 +1633,8 @@ def test_console_mission_cycle_shows_operator_learning_loop() -> None:
     evolution_db = temp_dir / "evolution.db"
     console = JarvisConsole.build(runtime_dir=temp_dir)
     mission_id = "mission-console-cycle"
-    response = console.ask(
+    response = ask_with_bounded_autonomy(
+        console,
         "Plan the controlled rollout.",
         session_id="sess-console-cycle",
         mission_id=mission_id,
@@ -813,7 +1755,8 @@ def test_console_operator_dashboard_shows_daily_state_for_mission() -> None:
     evolution_db = temp_dir / "evolution.db"
     console = JarvisConsole.build(runtime_dir=temp_dir)
     mission_id = "mission-console-dashboard"
-    response = console.ask(
+    response = ask_with_bounded_autonomy(
+        console,
         "Plan the controlled rollout.",
         session_id="sess-console-dashboard",
         mission_id=mission_id,
@@ -967,8 +1910,15 @@ def test_console_operator_dashboard_handles_empty_global_state() -> None:
     assert "next_operator_step=start_governed_mission" in rendered
 
 
-def test_console_daily_workspace_reads_multiple_sessions_without_mutation() -> None:
+def test_console_daily_workspace_reads_multiple_sessions_without_mutation(
+    monkeypatch,
+) -> None:
     temp_dir = runtime_dir("console-daily-workspace")
+    monkeypatch.setattr(
+        OperationalService,
+        "now",
+        staticmethod(lambda: "2026-07-18T03:00:00+00:00"),
+    )
     memory_db = temp_dir / "memory.db"
     evolution_db = temp_dir / "evolution.db"
     memory_service = MemoryService(database_url=f"sqlite:///{memory_db.as_posix()}")
@@ -1054,7 +2004,8 @@ def test_console_progress_report_synthesizes_canonical_mission_state() -> None:
     temp_dir = runtime_dir("console-progress-report")
     console = JarvisConsole.build(runtime_dir=temp_dir)
     mission_id = "mission-console-progress-report"
-    response = console.ask(
+    response = ask_with_bounded_autonomy(
+        console,
         "Plan and review the controlled release.",
         session_id="sess-console-progress-report",
         mission_id=mission_id,
@@ -1103,10 +2054,20 @@ def test_console_progress_report_synthesizes_canonical_mission_state() -> None:
     assert "Proxima acao: next_action:operator-review" in outputs[0]
 
 
-def test_console_mission_workflow_runs_governed_loop_end_to_end() -> None:
+def test_console_mission_workflow_runs_governed_loop_end_to_end(monkeypatch) -> None:
     temp_dir = runtime_dir("console-mission-workflow")
     evolution_db = temp_dir / "evolution.db"
     console = JarvisConsole.build(runtime_dir=temp_dir)
+    bounded_console = JarvisConsole(orchestrator=console.orchestrator)
+    monkeypatch.setattr(
+        console,
+        "ask",
+        lambda prompt, **kwargs: ask_with_bounded_autonomy(
+            bounded_console,
+            prompt,
+            **kwargs,
+        ),
+    )
     args = build_parser().parse_args(
         [
             "mission-workflow",
@@ -1283,6 +2244,74 @@ def test_console_procedural_playbooks_shows_bounded_candidates() -> None:
     assert "core_mutation_allowed=False" in rendered
 
 
+def test_console_runtime_reloads_only_evolution_verified_reviewed_playbooks() -> None:
+    temp_dir = runtime_dir("console-reviewed-playbook-verifier")
+    evolution = EvolutionLabService(database_path=str(temp_dir / "evolution.db"))
+    candidate = ProceduralPlaybookCandidateContract(
+        playbook_candidate_id="playbook-candidate://console/reviewed-001",
+        procedure_name="reviewed console planning guidance",
+        workflow_profile="software_change_workflow",
+        route="software_development",
+        domain="computacao_e_desenvolvimento",
+        bounded_steps=[
+            "collect contract evidence",
+            "keep the rollback path explicit",
+        ],
+        evidence_refs=["evidence://console/reviewed-001"],
+        proposed_tests=["pytest apps/jarvis_console/tests/test_console.py"],
+        rollback_plan_ref="rollback://console/reviewed-001",
+        timestamp="2026-07-18T12:00:00Z",
+    )
+    proposal = evolution.create_proposal_from_procedural_playbook_candidate(
+        candidate
+    )
+    review = evolution.review_proposal(
+        evolution_proposal_id=str(proposal.evolution_proposal_id),
+        action="approve",
+        operator_ref="operator://local_console",
+        evidence_refs=["evidence://console/reviewed-001/human-review"],
+        proposed_tests=list(candidate.proposed_tests),
+        rollback_plan_ref=candidate.rollback_plan_ref,
+        release_version="1.0.0",
+    )
+    checklist = evolution.build_sandbox_to_release_checklist(
+        proposal,
+        review_decision=review,
+    )
+    gate = evolution.evaluate_promotion_gate(
+        checklist,
+        completed_gates=[
+            "standard_engineering_gate",
+            "release_gate_before_promotion",
+        ],
+    )
+    playbook = evolution.derive_reviewed_procedural_playbook(
+        candidate,
+        review,
+        version="1.0.0",
+        release_checklist=checklist,
+        promotion_gate=gate,
+    )
+
+    first_console = JarvisConsole.build(runtime_dir=temp_dir)
+    stored = (
+        first_console.orchestrator.memory_service.record_reviewed_procedural_playbook(
+            playbook
+        )
+    )
+    reloaded_console = JarvisConsole.build(runtime_dir=temp_dir)
+
+    assert (
+        reloaded_console.orchestrator.memory_service.list_reviewed_procedural_playbooks(
+            workflow_profile=candidate.workflow_profile,
+            route=str(candidate.route),
+            domain=str(candidate.domain),
+            review_status="approved",
+        )
+        == [stored]
+    )
+
+
 def test_console_experience_reflections_shows_pending_reflection() -> None:
     temp_dir = runtime_dir("console-experience-pending")
     memory_db = temp_dir / "memory.db"
@@ -1342,7 +2371,8 @@ def test_console_work_item_cycle_updates_state_through_governed_core() -> None:
     console = JarvisConsole.build(runtime_dir=runtime_dir("console-work-item-cycle"))
     mission_id = "mission-console-work-item-cycle"
     work_item_ref = "work-item://mission-console-work-item-cycle/validate-plan"
-    console.ask(
+    ask_with_bounded_autonomy(
+        console,
         "Plan the controlled rollout.",
         session_id="sess-console-work-item-cycle",
         mission_id=mission_id,
@@ -1402,7 +2432,8 @@ def test_console_work_item_cycle_updates_state_through_governed_core() -> None:
 def test_console_work_item_blocks_unbounded_ref() -> None:
     console = JarvisConsole.build(runtime_dir=runtime_dir("console-work-item-block"))
     mission_id = "mission-console-work-item-block"
-    console.ask(
+    ask_with_bounded_autonomy(
+        console,
         "Plan the controlled rollout.",
         session_id="sess-console-work-item-block",
         mission_id=mission_id,
@@ -1450,7 +2481,8 @@ def test_console_artifact_lifecycle_updates_state_through_governed_core() -> Non
     mission_id = "mission-console-artifact-cycle"
     artifact_v1 = "artifact://mission-console-artifact-cycle/plan/v1"
     artifact_v2 = "artifact://mission-console-artifact-cycle/plan/v2"
-    console.ask(
+    ask_with_bounded_autonomy(
+        console,
         "Plan the controlled rollout.",
         session_id="sess-console-artifact-cycle",
         mission_id=mission_id,
@@ -1530,7 +2562,8 @@ def test_console_artifact_blocks_missing_replacement_ref() -> None:
     console = JarvisConsole.build(runtime_dir=runtime_dir("console-artifact-block"))
     mission_id = "mission-console-artifact-block"
     artifact_v1 = "artifact://mission-console-artifact-block/plan/v1"
-    console.ask(
+    ask_with_bounded_autonomy(
+        console,
         "Plan the controlled rollout.",
         session_id="sess-console-artifact-block",
         mission_id=mission_id,
@@ -1603,7 +2636,8 @@ def test_console_artifacts_handles_empty_state() -> None:
 def test_console_objective_pause_updates_state_through_governed_core() -> None:
     console = JarvisConsole.build(runtime_dir=runtime_dir("console-objective-pause"))
     mission_id = "mission-console-objective-pause"
-    console.ask(
+    ask_with_bounded_autonomy(
+        console,
         "Plan the controlled rollout.",
         session_id="sess-console-objective-pause",
         mission_id=mission_id,
@@ -1644,7 +2678,8 @@ def test_console_objective_pause_updates_state_through_governed_core() -> None:
 def test_console_objective_redefine_next_action_requires_explicit_ref() -> None:
     console = JarvisConsole.build(runtime_dir=runtime_dir("console-objective-next"))
     mission_id = "mission-console-objective-next"
-    console.ask(
+    ask_with_bounded_autonomy(
+        console,
         "Plan the controlled rollout.",
         session_id="sess-console-objective-next",
         mission_id=mission_id,
@@ -1675,7 +2710,8 @@ def test_console_objective_redefine_next_action_requires_explicit_ref() -> None:
 def test_console_objective_blocks_unbounded_next_action_ref() -> None:
     console = JarvisConsole.build(runtime_dir=runtime_dir("console-objective-unsafe-ref"))
     mission_id = "mission-console-objective-unsafe-ref"
-    console.ask(
+    ask_with_bounded_autonomy(
+        console,
         "Plan the controlled rollout.",
         session_id="sess-console-objective-unsafe-ref",
         mission_id=mission_id,
@@ -1709,7 +2745,8 @@ def test_console_objective_blocks_unbounded_next_action_ref() -> None:
 def test_console_objective_blocks_unsafe_terminal_resume() -> None:
     console = JarvisConsole.build(runtime_dir=runtime_dir("console-objective-block"))
     mission_id = "mission-console-objective-block"
-    console.ask(
+    ask_with_bounded_autonomy(
+        console,
         "Plan the controlled rollout.",
         session_id="sess-console-objective-block",
         mission_id=mission_id,
@@ -1752,7 +2789,8 @@ def test_console_objective_blocks_unsafe_terminal_resume() -> None:
 def test_console_ask_surfaces_active_objective_state_in_final_synthesis() -> None:
     console = JarvisConsole.build(runtime_dir=runtime_dir("console-objective-synthesis"))
     mission_id = "mission-console-objective-synthesis"
-    console.ask(
+    ask_with_bounded_autonomy(
+        console,
         "Plan the controlled rollout.",
         session_id="sess-console-objective-synthesis",
         mission_id=mission_id,

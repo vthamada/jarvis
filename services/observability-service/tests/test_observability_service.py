@@ -1,13 +1,16 @@
-﻿from json import loads
+﻿from dataclasses import asdict, replace
+from json import loads
 from pathlib import Path
 from tempfile import gettempdir
 from uuid import uuid4
 
+import pytest
 from observability_service.agentic import JsonlAgenticMirrorAdapter, LangSmithObservabilityAdapter
 from observability_service.service import ObservabilityQuery, ObservabilityService
 
 from shared.contracts import (
     CapabilityReadinessContract,
+    DecisionOutcomeAttributionRecordContract,
     EvolutionProposalContract,
     ExperienceRecordContract,
     LearningOutcomeObservationContract,
@@ -18,6 +21,7 @@ from shared.contracts import (
     RecurringPatternReportContract,
     SkillCandidateContract,
 )
+from shared.decision_attribution import canonicalize_decision_attribution_record
 from shared.events import InternalEventEnvelope
 from shared.types import MissionStatus, RiskLevel
 
@@ -81,6 +85,97 @@ def runtime_dir(name: str) -> Path:
     target = base_dir / f"{name}-{uuid4().hex[:8]}"
     target.mkdir(parents=True, exist_ok=True)
     return target
+
+
+def decision_attribution_record(
+    *,
+    suffix: str,
+    attribution_status: str = "correlation_only",
+    attribution_record_id: str | None = None,
+) -> DecisionOutcomeAttributionRecordContract:
+    workflow_policy_ref = f"workflow-policy://software/{suffix}"
+    memory_ref = f"semantic-memory://software/{suffix}"
+    participating_refs = [workflow_policy_ref, memory_ref]
+    if attribution_status not in {"correlation_only", "declared_causality"}:
+        raise ValueError("test attribution_status must be canonical and observable")
+    record = DecisionOutcomeAttributionRecordContract(
+        attribution_record_id=(
+            attribution_record_id
+            or f"decision-outcome-attribution://{suffix}"
+        ),
+        request_id=f"req-attribution-{suffix}",
+        session_id=f"sess-attribution-{suffix}",
+        mission_id=f"mission-attribution-{suffix}",
+        observed_at="2026-08-11T12:00:00+00:00",
+        governance_decision_ref=f"governance-decision://{suffix}",
+        governance_decision_status="allow",
+        workflow_profile="software_change_workflow",
+        route="software_development",
+        outcome_ref=(
+            f"experience://mission-attribution-{suffix}/"
+            f"req-attribution-{suffix}"
+        ),
+        outcome_status="completed",
+        experience_id=(
+            f"experience://mission-attribution-{suffix}/"
+            f"req-attribution-{suffix}"
+        ),
+        workflow_policy_ref=workflow_policy_ref,
+        workflow_policy_version="1.0.0",
+        workflow_policy_source_registry_ref="workflow-policy-registry://v1",
+        workflow_policy_source_registry_fingerprint="sha256:test",
+        workflow_policy_application_status="applied",
+        workflow_policy_effects=(
+            ["require_targeted_tests"]
+            if attribution_status == "declared_causality"
+            else []
+        ),
+        memory_policy_decision_ref=f"memory-influence-decision://{suffix}",
+        memory_policy_status="applied",
+        memory_policy_refs=["policy://memory/causal-use"],
+        memory_selected_refs=[memory_ref],
+        memory_use_reasons={memory_ref: "eligible_scoped_guidance"},
+        memory_signal_kinds={memory_ref: "semantic"},
+        memory_causal_use_allowed=(attribution_status == "declared_causality"),
+        declared_effects_by_ref=(
+            {memory_ref: ["planning_context"]}
+            if attribution_status == "declared_causality"
+            else {}
+        ),
+        evidence_refs=[f"evidence://attribution/{suffix}"],
+    )
+    canonical = canonicalize_decision_attribution_record(record)
+    assert canonical.participating_refs == participating_refs
+    assert canonical.attribution_status == attribution_status
+    return canonical
+
+
+def decision_attribution_event(
+    record: DecisionOutcomeAttributionRecordContract,
+    *,
+    event_id: str,
+    event_name: str = "decision_outcome_attribution_recorded",
+    mission_id: str | None = None,
+    payload_overrides: dict[str, object] | None = None,
+) -> InternalEventEnvelope:
+    payload: dict[str, object] = asdict(record)
+    payload.update(payload_overrides or {})
+    resolved_mission_id = (
+        mission_id
+        if mission_id is not None
+        else str(record.mission_id) if record.mission_id is not None else None
+    )
+    return InternalEventEnvelope(
+        event_id=event_id,
+        event_name=event_name,
+        timestamp="2026-08-11T12:00:01+00:00",
+        source_service="orchestrator-service",
+        payload=payload,
+        request_id=str(record.request_id),
+        session_id=str(record.session_id),
+        mission_id=resolved_mission_id,
+        correlation_id=str(record.request_id),
+    )
 
 
 def test_observability_service_name() -> None:
@@ -778,6 +873,613 @@ def test_observability_service_persists_and_filters_events() -> None:
     assert len(filtered) == 1
     assert filtered[0].event_name == "input_received"
     assert filtered[0].operation_id == "op-1"
+
+
+def test_observability_event_delivery_is_exactly_idempotent() -> None:
+    temp_dir = runtime_dir("observability-idempotent-delivery")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    event = InternalEventEnvelope(
+        event_id="evt-outbox-stable",
+        event_name="artifact_lifecycle_state_changed",
+        timestamp="2026-08-30T12:00:00Z",
+        source_service="orchestrator-service",
+        payload={"outbox_id": "outbox://artifact/physical/stable"},
+        mission_id="mission-artifact-physical",
+        operation_id="operation-artifact-physical",
+    )
+
+    service.ingest_events([event, event])
+
+    persisted = service.list_recent_events(
+        ObservabilityQuery(mission_id="mission-artifact-physical")
+    )
+    assert persisted == [event]
+
+    with pytest.raises(ValueError, match="event identity is immutable"):
+        service.ingest_events(
+            [
+                replace(
+                    event,
+                    payload={"outbox_id": "outbox://artifact/physical/divergent"},
+                )
+            ]
+        )
+
+
+def test_observability_service_filters_event_names_before_limit() -> None:
+    temp_dir = runtime_dir("observability-event-name-limit")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    relevant = InternalEventEnvelope(
+        event_id="evt-relevant-before-noise",
+        event_name="experience_recorded",
+        timestamp="2026-03-18T00:00:00Z",
+        source_service="orchestrator-service",
+        payload={"experience_id": "experience://mission/1"},
+        mission_id="mission-event-filter",
+    )
+    noise = [
+        InternalEventEnvelope(
+            event_id=f"evt-noise-{index}",
+            event_name="unrelated_event",
+            timestamp=f"2026-03-18T00:00:{index + 1:02d}Z",
+            source_service="orchestrator-service",
+            payload={},
+            mission_id="mission-event-filter",
+        )
+        for index in range(10)
+    ]
+    service.ingest_events([relevant, *noise])
+
+    filtered = service.list_recent_events(
+        ObservabilityQuery(
+            mission_id="mission-event-filter",
+            event_names=("experience_recorded",),
+            limit=1,
+        )
+    )
+
+    assert [event.event_id for event in filtered] == [relevant.event_id]
+
+
+def test_decision_outcome_attribution_report_links_only_exact_feedback() -> None:
+    correlation = decision_attribution_record(suffix="correlation")
+    declared = decision_attribution_record(
+        suffix="declared",
+        attribution_status="declared_causality",
+    )
+    feedback_events = [
+        InternalEventEnvelope(
+            event_id=f"evt-feedback-{index}",
+            event_name="operator_feedback_recorded",
+            timestamp=f"2026-08-11T12:00:0{index + 2}+00:00",
+            source_service="orchestrator-service",
+            payload={
+                "operator_feedback_id": f"feedback://correlation/{index}",
+                "operator_feedback_experience_id": correlation.experience_id,
+                "operator_feedback_assessment": "helpful",
+                "operator_feedback_rating": rating,
+                "operator_feedback_evidence_refs": [
+                    f"feedback-evidence://correlation/{index}"
+                ],
+            },
+            mission_id=str(correlation.mission_id),
+        )
+        for index, rating in enumerate((5, 4), start=1)
+    ]
+    report = ObservabilityService.build_decision_outcome_attribution_report(
+        report_id="decision-outcome-attribution-report://exact-feedback",
+        records=[correlation, declared],
+        events=[
+            decision_attribution_event(
+                correlation,
+                event_id="evt-attribution-correlation",
+            ),
+            decision_attribution_event(
+                declared,
+                event_id="evt-attribution-declared",
+            ),
+            *feedback_events,
+            InternalEventEnvelope(
+                event_id="evt-unrelated-noise",
+                event_name="response_synthesized",
+                timestamp="2026-08-11T12:00:09+00:00",
+                source_service="orchestrator-service",
+                payload={"gain_claim_status": "gain_proven"},
+                mission_id=str(correlation.mission_id),
+            ),
+        ],
+        generated_at="2026-08-11T13:00:00+00:00",
+    )
+
+    assert report.report_status == "attribution_observed"
+    assert report.record_count == 2
+    assert report.correlation_only_count == 1
+    assert report.declared_causality_count == 1
+    assert report.insufficient_evidence_count == 0
+    assert report.feedback_linked_count == 1
+    assert report.comparator_count == 0
+    assert report.failed_record_count == 0
+    assert report.limitations == []
+    correlation_item = report.items[0]
+    assert correlation_item.attribution == correlation
+    assert correlation_item.attribution.attribution_status == "correlation_only"
+    assert correlation_item.feedback_status == "linked"
+    assert correlation_item.feedback_refs == [
+        "feedback://correlation/1",
+        "feedback://correlation/2",
+    ]
+    assert correlation_item.feedback_assessments == ["helpful", "helpful"]
+    assert correlation_item.feedback_ratings == [5, 4]
+    assert correlation_item.comparator_status == "not_available"
+    assert correlation_item.comparator_refs == []
+    assert correlation_item.causal_effect_proven is False
+    assert correlation_item.gain_claim_status == (
+        "not_established_without_comparator"
+    )
+    assert correlation_item.promotion_authorized is False
+    assert correlation_item.automatic_promotion_allowed is False
+    assert report.causal_effect_proven is False
+    assert report.gain_claim_status == "not_established_without_comparator"
+    assert report.promotion_authorized is False
+    assert report.automatic_promotion_allowed is False
+
+
+def test_decision_outcome_attribution_report_contains_mismatch_and_conflict() -> None:
+    record = decision_attribution_record(
+        suffix="adversarial",
+        attribution_status="declared_causality",
+    )
+    unsafe_recorded = replace(
+        decision_attribution_event(
+            record,
+            event_id="evt-attribution-unsafe",
+            mission_id="mission-other",
+            payload_overrides={
+                "mission_id": "mission-other",
+                "causal_effect_proven": True,
+                "gain_claim_status": "gain_proven",
+                "promotion_authorized": True,
+            },
+        ),
+        request_id="req-attribution-wrong-envelope",
+    )
+    failed = decision_attribution_event(
+        record,
+        event_id="evt-attribution-failed",
+        event_name="decision_outcome_attribution_failed",
+        payload_overrides={
+            "attribution_status": "insufficient_evidence",
+            "failure_reason": "canonical_record_write_failed",
+        },
+    )
+    exact_feedback = [
+        InternalEventEnvelope(
+            event_id=f"evt-feedback-conflict-{index}",
+            event_name="operator_feedback_recorded",
+            timestamp=f"2026-08-11T12:01:0{index}+00:00",
+            source_service="orchestrator-service",
+            payload={
+                "operator_feedback_id": f"feedback://adversarial/{index}",
+                "operator_feedback_experience_id": record.experience_id,
+                "operator_feedback_assessment": assessment,
+                "operator_feedback_rating": rating,
+            },
+            mission_id=str(record.mission_id),
+        )
+        for index, (assessment, rating) in enumerate(
+            (("helpful", 5), ("not_helpful", 1)),
+            start=1,
+        )
+    ]
+    wrong_mission_feedback = InternalEventEnvelope(
+        event_id="evt-feedback-wrong-mission",
+        event_name="operator_feedback_recorded",
+        timestamp="2026-08-11T12:01:10+00:00",
+        source_service="orchestrator-service",
+        payload={
+            "operator_feedback_id": "feedback://wrong-mission",
+            "operator_feedback_experience_id": record.experience_id,
+            "operator_feedback_assessment": "helpful",
+        },
+        mission_id="mission-other",
+    )
+    wrong_experience_feedback = InternalEventEnvelope(
+        event_id="evt-feedback-wrong-experience",
+        event_name="operator_feedback_recorded",
+        timestamp="2026-08-11T12:01:11+00:00",
+        source_service="orchestrator-service",
+        payload={
+            "operator_feedback_id": "feedback://wrong-experience",
+            "operator_feedback_experience_id": "experience://unknown",
+            "operator_feedback_assessment": "helpful",
+        },
+        mission_id=str(record.mission_id),
+    )
+
+    report = ObservabilityService.build_decision_outcome_attribution_report(
+        report_id="decision-outcome-attribution-report://adversarial",
+        records=[record],
+        events=[
+            unsafe_recorded,
+            failed,
+            *exact_feedback,
+            wrong_mission_feedback,
+            wrong_experience_feedback,
+        ],
+        generated_at="2026-08-11T13:00:00+00:00",
+        source_event_limit_reached=True,
+    )
+
+    item = report.items[0]
+    assert report.report_status == "measured_with_limitations"
+    assert report.failed_record_count == 1
+    assert report.feedback_linked_count == 1
+    assert report.declared_causality_count == 0
+    assert report.insufficient_evidence_count == 1
+    assert item.attribution is record
+    assert item.attribution.attribution_status == "declared_causality"
+    assert (
+        "effective_attribution_downgraded_to_insufficient_evidence"
+        in item.limitations
+    )
+    assert item.feedback_status == "conflicting"
+    assert item.feedback_refs == [
+        "feedback://adversarial/1",
+        "feedback://adversarial/2",
+    ]
+    assert item.feedback_assessments == ["helpful", "not_helpful"]
+    assert item.feedback_ratings == [5, 1]
+    assert "multiple_attribution_events_for_record" in item.limitations
+    assert "attribution_failed_event_observed" in item.limitations
+    assert "feedback_assessment_conflict" in item.limitations
+    assert (
+        "feedback_mission_mismatch:evt-feedback-wrong-mission"
+        in item.limitations
+    )
+    assert any(
+        "attribution_event_mission_id_mismatch" in limitation
+        for limitation in item.limitations
+    )
+    assert any(
+        "attribution_event_request_id_envelope_conflict" in limitation
+        for limitation in item.limitations
+    )
+    assert any(
+        "attribution_event_causal_effect_claim" in limitation
+        for limitation in item.limitations
+    )
+    assert any(
+        "attribution_event_gain_claim" in limitation
+        for limitation in item.limitations
+    )
+    assert any(
+        "attribution_event_authority_claim" in limitation
+        for limitation in item.limitations
+    )
+    assert "source_event_limit_reached" in report.limitations
+    assert any(
+        "feedback_without_canonical_experience:evt-feedback-wrong-experience"
+        == limitation
+        for limitation in report.limitations
+    )
+    assert wrong_mission_feedback.event_id not in item.evidence_refs
+    assert wrong_experience_feedback.event_id not in item.evidence_refs
+    assert item.causal_effect_proven is False
+    assert item.gain_claim_status == "not_established_without_comparator"
+    assert report.causal_effect_proven is False
+    assert report.promotion_authorized is False
+
+
+def test_decision_outcome_attribution_report_preserves_duplicate_records() -> None:
+    record = decision_attribution_record(suffix="duplicate")
+    report = ObservabilityService.build_decision_outcome_attribution_report(
+        report_id="decision-outcome-attribution-report://duplicates",
+        records=[record, record],
+        events=[
+            decision_attribution_event(
+                record,
+                event_id="evt-attribution-duplicate",
+            )
+        ],
+        generated_at="2026-08-11T13:00:00+00:00",
+    )
+
+    assert report.report_status == "measured_with_limitations"
+    assert report.record_count == 2
+    assert report.correlation_only_count == 0
+    assert report.insufficient_evidence_count == 2
+    assert len(report.items) == 2
+    assert [item.attribution for item in report.items] == [record, record]
+    assert report.items[0].item_id != report.items[1].item_id
+    assert all(
+        "duplicate_attribution_record_id" in item.limitations
+        for item in report.items
+    )
+
+
+def test_decision_outcome_attribution_report_downgrades_missing_or_duplicate_event() -> None:
+    missing = decision_attribution_record(suffix="missing-recorded-event")
+    duplicate = decision_attribution_record(
+        suffix="duplicate-recorded-event",
+        attribution_status="declared_causality",
+    )
+    report = ObservabilityService.build_decision_outcome_attribution_report(
+        report_id="decision-outcome-attribution-report://event-cardinality",
+        records=[missing, duplicate],
+        events=[
+            decision_attribution_event(
+                duplicate,
+                event_id="evt-attribution-duplicate-recorded-1",
+            ),
+            decision_attribution_event(
+                duplicate,
+                event_id="evt-attribution-duplicate-recorded-2",
+            ),
+        ],
+        generated_at="2026-08-11T13:00:00+00:00",
+    )
+
+    assert report.report_status == "measured_with_limitations"
+    assert report.correlation_only_count == 0
+    assert report.declared_causality_count == 0
+    assert report.insufficient_evidence_count == 2
+    assert "recorded_attribution_event_missing" in report.items[0].limitations
+    assert (
+        "duplicate_recorded_attribution_event"
+        in report.items[1].limitations
+    )
+    assert all(
+        "effective_attribution_downgraded_to_insufficient_evidence"
+        in item.limitations
+        for item in report.items
+    )
+
+
+def test_decision_outcome_attribution_report_validates_canonical_classification() -> None:
+    canonical = decision_attribution_record(
+        suffix="classification-drift",
+        attribution_status="declared_causality",
+    )
+    drifted = replace(canonical, workflow_policy_effects=[])
+    report = ObservabilityService.build_decision_outcome_attribution_report(
+        report_id="decision-outcome-attribution-report://classification-drift",
+        records=[drifted],
+        events=[
+            decision_attribution_event(
+                drifted,
+                event_id="evt-attribution-classification-drift",
+            )
+        ],
+        generated_at="2026-08-11T13:00:00+00:00",
+    )
+
+    assert report.report_status == "insufficient_evidence"
+    assert report.declared_causality_count == 0
+    assert report.insufficient_evidence_count == 1
+    assert report.items[0].attribution is drifted
+    assert (
+        "canonical_record_validation_failed"
+        in report.items[0].limitations
+    )
+    assert (
+        "effective_attribution_downgraded_to_insufficient_evidence"
+        in report.items[0].limitations
+    )
+
+
+def test_decision_outcome_attribution_report_rejects_extra_event_payload_keys() -> None:
+    record = decision_attribution_record(
+        suffix="unexpected-event-key",
+        attribution_status="declared_causality",
+    )
+    event = decision_attribution_event(
+        record,
+        event_id="evt-attribution-unexpected-key",
+        payload_overrides={"unexpected_effect_claim": True},
+    )
+
+    report = ObservabilityService.build_decision_outcome_attribution_report(
+        report_id="decision-outcome-attribution-report://unexpected-event-key",
+        records=[record],
+        events=[event],
+        generated_at="2026-08-11T13:00:00+00:00",
+    )
+
+    assert report.report_status == "measured_with_limitations"
+    assert report.declared_causality_count == 0
+    assert report.insufficient_evidence_count == 1
+    assert (
+        "attribution_event_payload_keys_mismatch:evt-attribution-unexpected-key"
+        in report.items[0].limitations
+    )
+    assert (
+        "effective_attribution_downgraded_to_insufficient_evidence"
+        in report.items[0].limitations
+    )
+
+
+def test_decision_outcome_attribution_report_requires_observed_feedback_mission() -> None:
+    record = decision_attribution_record(suffix="missing-feedback-mission")
+    feedback = InternalEventEnvelope(
+        event_id="evt-feedback-without-mission",
+        event_name="operator_feedback_recorded",
+        timestamp="2026-08-11T12:01:00+00:00",
+        source_service="orchestrator-service",
+        payload={
+            "operator_feedback_id": "feedback://missing-mission",
+            "operator_feedback_experience_id": record.experience_id,
+            "operator_feedback_assessment": "helpful",
+        },
+    )
+    report = ObservabilityService.build_decision_outcome_attribution_report(
+        report_id="decision-outcome-attribution-report://missing-feedback-mission",
+        records=[record],
+        events=[
+            decision_attribution_event(
+                record,
+                event_id="evt-attribution-missing-feedback-mission",
+            ),
+            feedback,
+        ],
+        generated_at="2026-08-11T13:00:00+00:00",
+    )
+
+    assert report.report_status == "measured_with_limitations"
+    assert report.feedback_linked_count == 0
+    assert report.items[0].feedback_status == "not_available"
+    assert report.items[0].feedback_refs == []
+    assert (
+        "feedback_mission_mismatch:evt-feedback-without-mission"
+        in report.items[0].limitations
+    )
+    assert (
+        "feedback_event_missing_mission_id:evt-feedback-without-mission"
+        in report.limitations
+    )
+
+
+def test_decision_outcome_attribution_report_never_materializes_event_only_item() -> None:
+    unpersisted = decision_attribution_record(suffix="event-only")
+    event = decision_attribution_event(
+        unpersisted,
+        event_id="evt-attribution-without-canonical-record",
+    )
+
+    report = ObservabilityService.build_decision_outcome_attribution_report(
+        report_id="decision-outcome-attribution-report://event-only",
+        records=[],
+        events=[event],
+        generated_at="2026-08-11T13:00:00+00:00",
+    )
+
+    assert report.report_status == "insufficient_evidence"
+    assert report.record_count == 0
+    assert report.items == []
+    assert report.failed_record_count == 0
+    assert report.limitations == [
+        "attribution_event_without_canonical_record:"
+        "evt-attribution-without-canonical-record"
+    ]
+    assert report.causal_effect_proven is False
+    assert report.gain_claim_status == "not_established_without_comparator"
+    assert report.promotion_authorized is False
+
+
+def test_decision_outcome_attribution_report_counts_unique_failed_without_record() -> None:
+    unpersisted = decision_attribution_record(suffix="failed-without-record")
+    failed = decision_attribution_event(
+        unpersisted,
+        event_id="evt-attribution-failed-without-record",
+        event_name="decision_outcome_attribution_failed",
+        payload_overrides={
+            "attribution_status": "insufficient_evidence",
+            "failure_reason": "canonical_record_write_failed",
+        },
+    )
+    duplicate_failed = replace(
+        failed,
+        timestamp="2026-08-11T12:00:02+00:00",
+    )
+
+    report = ObservabilityService.build_decision_outcome_attribution_report(
+        report_id="decision-outcome-attribution-report://failed-without-record",
+        records=[],
+        events=[failed, duplicate_failed],
+        generated_at="2026-08-11T13:00:00+00:00",
+    )
+
+    assert report.report_status == "insufficient_evidence"
+    assert report.record_count == 0
+    assert report.items == []
+    assert report.failed_record_count == 1
+    assert "failed_without_record" in report.limitations
+    assert (
+        "failed_without_record:evt-attribution-failed-without-record"
+        in report.limitations
+    )
+    assert (
+        "duplicate_failed_event_id:evt-attribution-failed-without-record"
+        in report.limitations
+    )
+    assert report.evidence_refs == [
+        "evt-attribution-failed-without-record"
+    ]
+
+
+def test_flow_audit_projects_decision_outcome_attribution_safely() -> None:
+    temp_dir = runtime_dir("observability-decision-outcome-attribution-audit")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    recorded = decision_attribution_record(suffix="audit-recorded")
+    failed = decision_attribution_record(suffix="audit-failed")
+    recorded_event = decision_attribution_event(
+        recorded,
+        event_id="evt-attribution-audit-recorded",
+    )
+    failed_event = decision_attribution_event(
+        failed,
+        event_id="evt-attribution-audit-failed",
+        event_name="decision_outcome_attribution_failed",
+        payload_overrides={
+            "attribution_status": "insufficient_evidence",
+            "failure_reason": "canonical_record_unavailable",
+            "causal_effect_proven": True,
+            "gain_claim_status": "gain_proven",
+        },
+    )
+    legacy_event = InternalEventEnvelope(
+        event_id="evt-attribution-audit-legacy",
+        event_name="response_synthesized",
+        timestamp="2026-08-11T12:02:00+00:00",
+        source_service="orchestrator-service",
+        payload={},
+        request_id="req-attribution-legacy",
+        session_id="sess-attribution-legacy",
+        mission_id="mission-attribution-legacy",
+    )
+    service.ingest_events([recorded_event, failed_event, legacy_event])
+
+    recorded_audit = service.audit_flow(
+        ObservabilityQuery(request_id=str(recorded.request_id))
+    )
+    failed_audit = service.audit_flow(
+        ObservabilityQuery(request_id=str(failed.request_id))
+    )
+    legacy_audit = service.audit_flow(
+        ObservabilityQuery(request_id="req-attribution-legacy")
+    )
+
+    assert recorded_audit.decision_outcome_attribution_record_id == (
+        recorded.attribution_record_id
+    )
+    assert recorded_audit.decision_outcome_attribution_status == "correlation_only"
+    assert recorded_audit.decision_outcome_attribution_evidence_refs == [
+        recorded_event.event_id,
+        *recorded.evidence_refs,
+    ]
+    assert recorded_audit.causal_effect_proven is False
+    assert recorded_audit.gain_claim_status == (
+        "not_established_without_comparator"
+    )
+    assert "decision_outcome_attribution_failed" not in recorded_audit.anomaly_flags
+
+    assert failed_audit.decision_outcome_attribution_record_id == (
+        failed.attribution_record_id
+    )
+    assert failed_audit.decision_outcome_attribution_status == "insufficient_evidence"
+    assert failed_audit.causal_effect_proven is False
+    assert failed_audit.gain_claim_status == "not_established_without_comparator"
+    assert "decision_outcome_attribution_failed" in failed_audit.anomaly_flags
+    assert (
+        "decision_outcome_causal_effect_claim_not_allowed"
+        in failed_audit.anomaly_flags
+    )
+    assert "decision_outcome_gain_claim_not_allowed" in failed_audit.anomaly_flags
+
+    assert legacy_audit.decision_outcome_attribution_record_id is None
+    assert legacy_audit.decision_outcome_attribution_status == "not_applicable"
+    assert legacy_audit.decision_outcome_attribution_evidence_refs == []
+    assert legacy_audit.causal_effect_proven is False
+    assert legacy_audit.gain_claim_status == "not_applicable"
 
 
 def test_observability_service_exports_trace_view() -> None:
@@ -4538,6 +5240,294 @@ def test_observability_service_tracks_memory_causality_status() -> None:
     assert audit.memory_archive_status == "active_memory"
 
 
+def test_observability_service_audits_reviewed_playbook_separately_from_legacy_artifact() -> None:
+    temp_dir = runtime_dir("observability-reviewed-procedural-playbook")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    playbook_ref = "reviewed-playbook://software/release@2.1.0"
+    review_decision_ref = "review-decision://software/release-v2.1.0"
+    legacy_artifact_ref = "artifact://procedural/software-release/v1"
+    service.ingest_events(
+        [
+            InternalEventEnvelope(
+                event_id="evt-reviewed-playbook-governed",
+                event_name="memory_influence_governed",
+                timestamp="2026-07-18T13:04:59+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "memory_influence_governance_status": "governed",
+                    "memory_influence_governance_blockers": [],
+                },
+                request_id="req-reviewed-playbook-selected",
+                session_id="sess-reviewed-playbook-selected",
+                correlation_id="req-reviewed-playbook-selected",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-reviewed-playbook-selected",
+                event_name="response_synthesized",
+                timestamp="2026-07-18T13:05:00+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "memory_influence_selected_refs": [playbook_ref],
+                    "memory_influence_ignored_refs": [],
+                    "memory_influence_non_use_reasons": {},
+                    "memory_influence_signal_kinds": {playbook_ref: "procedural"},
+                    "memory_influence_version_refs": {playbook_ref: "2.1.0"},
+                    "memory_influence_review_decision_refs": {
+                        playbook_ref: review_decision_ref
+                    },
+                    "memory_influence_execution_allowed": False,
+                    "memory_influence_tool_dispatch_allowed": False,
+                    "procedural_artifact_status": "candidate",
+                    "procedural_artifact_refs": [legacy_artifact_ref],
+                    "procedural_artifact_version": 1,
+                },
+                request_id="req-reviewed-playbook-selected",
+                session_id="sess-reviewed-playbook-selected",
+                correlation_id="req-reviewed-playbook-selected",
+            )
+        ]
+    )
+
+    audit = service.audit_flow(
+        ObservabilityQuery(request_id="req-reviewed-playbook-selected")
+    )
+
+    assert audit.memory_influence_selected_refs == [playbook_ref]
+    assert audit.memory_influence_non_use_reasons == {}
+    assert audit.memory_influence_signal_kinds == {playbook_ref: "procedural"}
+    assert audit.memory_influence_version_refs == {playbook_ref: "2.1.0"}
+    assert audit.memory_influence_review_decision_refs == {
+        playbook_ref: review_decision_ref
+    }
+    assert audit.memory_influence_execution_allowed is False
+    assert audit.memory_influence_tool_dispatch_allowed is False
+    assert audit.memory_influence_governance_status == "governed"
+    assert audit.memory_influence_governance_blockers == []
+    assert audit.memory_influence_governance_drift_flags == []
+    assert audit.selected_reviewed_procedural_playbook_refs == [playbook_ref]
+    assert audit.memory_influence_used_refs == [
+        playbook_ref,
+        legacy_artifact_ref,
+    ]
+    assert audit.memory_influence_ignored_refs == []
+    assert audit.memory_influence_reasons == [
+        f"reviewed_procedural_playbook_used:{playbook_ref}",
+        "procedural_artifact_used:candidate",
+    ]
+    assert audit.procedural_artifact_refs == [legacy_artifact_ref]
+    assert audit.procedural_artifact_version == 1
+    assert audit.operation_status is None
+
+
+def test_observability_service_flags_reviewed_playbook_governance_drift() -> None:
+    temp_dir = runtime_dir("observability-reviewed-playbook-governance-drift")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    playbook_ref = "reviewed-playbook://software/release@3.0.0"
+    service.ingest_events(
+        [
+            InternalEventEnvelope(
+                event_id="evt-reviewed-playbook-unsafe-plan",
+                event_name="plan_built",
+                timestamp="2026-07-18T13:05:30+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "memory_influence_selected_refs": [playbook_ref],
+                    "memory_influence_signal_kinds": {playbook_ref: "procedural"},
+                    "memory_influence_execution_allowed": True,
+                    "memory_influence_tool_dispatch_allowed": True,
+                },
+                request_id="req-reviewed-playbook-governance-drift",
+                session_id="sess-reviewed-playbook-governance-drift",
+                correlation_id="req-reviewed-playbook-governance-drift",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-reviewed-playbook-unsafe-dispatch",
+                event_name="operation_dispatched",
+                timestamp="2026-07-18T13:05:31+00:00",
+                source_service="orchestrator-service",
+                payload={},
+                request_id="req-reviewed-playbook-governance-drift",
+                session_id="sess-reviewed-playbook-governance-drift",
+                correlation_id="req-reviewed-playbook-governance-drift",
+            ),
+        ]
+    )
+
+    audit = service.audit_flow(
+        ObservabilityQuery(request_id="req-reviewed-playbook-governance-drift")
+    )
+
+    expected_drift = [
+        "memory_influence_governance_event_missing",
+        "reviewed_procedural_version_trace_missing",
+        "reviewed_procedural_human_review_trace_missing",
+        "memory_influence_execution_authority_claim_not_allowed",
+        "memory_influence_tool_dispatch_authority_claim_not_allowed",
+        "reviewed_procedural_playbook_dispatched",
+    ]
+    assert audit.memory_influence_governance_status is None
+    assert audit.memory_influence_governance_blockers == []
+    assert audit.selected_reviewed_procedural_playbook_refs == [playbook_ref]
+    assert audit.memory_influence_governance_drift_flags == expected_drift
+    assert all(flag in audit.anomaly_flags for flag in expected_drift)
+    assert audit.trace_complete is False
+
+
+def test_observability_service_flags_blocked_memory_influence_governance() -> None:
+    temp_dir = runtime_dir("observability-memory-influence-governance-blocked")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    playbook_ref = "reviewed-playbook://strategy/checkpoint@1.2.0"
+    blocker = "memory_influence_priority_policy_mismatch"
+    service.ingest_events(
+        [
+            InternalEventEnvelope(
+                event_id="evt-reviewed-playbook-governance-blocked",
+                event_name="memory_influence_governed",
+                timestamp="2026-07-18T13:05:45+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "memory_influence_selected_refs": [playbook_ref],
+                    "memory_influence_signal_kinds": {playbook_ref: "procedural"},
+                    "memory_influence_version_refs": {playbook_ref: "1.2.0"},
+                    "memory_influence_review_decision_refs": {
+                        playbook_ref: "review-decision://strategy/checkpoint-v1.2.0"
+                    },
+                    "memory_influence_governance_status": "blocked",
+                    "memory_influence_governance_blockers": [blocker],
+                    "memory_influence_execution_allowed": False,
+                    "memory_influence_tool_dispatch_allowed": False,
+                },
+                request_id="req-memory-influence-governance-blocked",
+                session_id="sess-memory-influence-governance-blocked",
+                correlation_id="req-memory-influence-governance-blocked",
+            )
+        ]
+    )
+
+    audit = service.audit_flow(
+        ObservabilityQuery(request_id="req-memory-influence-governance-blocked")
+    )
+
+    assert audit.memory_influence_governance_status == "blocked"
+    assert audit.memory_influence_governance_blockers == [blocker]
+    assert audit.memory_influence_governance_drift_flags == [
+        "memory_influence_governance_blocked"
+    ]
+    assert "memory_influence_governance_blocked" in audit.anomaly_flags
+    assert audit.trace_complete is False
+
+
+def test_observability_service_audits_revoked_and_mismatched_playbook_non_use() -> None:
+    temp_dir = runtime_dir("observability-reviewed-playbook-non-use")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    revoked_ref = "reviewed-playbook://strategy/revoked@1.0.0"
+    mismatch_ref = "reviewed-playbook://analysis/mismatch@1.3.0"
+    non_use_reasons = {
+        revoked_ref: "review_status_not_eligible:revoked",
+        mismatch_ref: "scope_mismatch:route",
+    }
+    service.ingest_events(
+        [
+            InternalEventEnvelope(
+                event_id="evt-reviewed-playbook-ignored",
+                event_name="plan_built",
+                timestamp="2026-07-18T13:06:00+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "memory_influence_selected_refs": [],
+                    "memory_influence_ignored_refs": [revoked_ref, mismatch_ref],
+                    "memory_influence_non_use_reasons": non_use_reasons,
+                    "memory_influence_signal_kinds": {
+                        revoked_ref: "procedural",
+                        mismatch_ref: "procedural",
+                    },
+                    "memory_influence_version_refs": {
+                        revoked_ref: "1.0.0",
+                        mismatch_ref: "1.3.0",
+                    },
+                    "memory_influence_review_decision_refs": {
+                        revoked_ref: "review-decision://strategy/revoked",
+                        mismatch_ref: "review-decision://analysis/mismatch",
+                    },
+                    "memory_influence_execution_allowed": False,
+                    "memory_influence_tool_dispatch_allowed": False,
+                },
+                request_id="req-reviewed-playbook-ignored",
+                session_id="sess-reviewed-playbook-ignored",
+                correlation_id="req-reviewed-playbook-ignored",
+            )
+        ]
+    )
+
+    audit = service.audit_flow(
+        ObservabilityQuery(request_id="req-reviewed-playbook-ignored")
+    )
+
+    assert audit.memory_influence_selected_refs == []
+    assert audit.memory_influence_used_refs == []
+    assert audit.memory_influence_ignored_refs == [revoked_ref, mismatch_ref]
+    assert audit.memory_influence_non_use_reasons == non_use_reasons
+    assert audit.memory_influence_reasons == [
+        "reviewed_procedural_playbook_ignored:"
+        f"{revoked_ref}:review_status_not_eligible:revoked",
+        "reviewed_procedural_playbook_ignored:"
+        f"{mismatch_ref}:scope_mismatch:route",
+    ]
+    assert audit.procedural_artifact_refs == []
+    assert audit.memory_influence_execution_allowed is False
+    assert audit.memory_influence_tool_dispatch_allowed is False
+    assert audit.operation_status is None
+
+
+def test_observability_service_surfaces_unsafe_memory_influence_authority_flags() -> None:
+    temp_dir = runtime_dir("observability-memory-influence-authority")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    service.ingest_events(
+        [
+            InternalEventEnvelope(
+                event_id="evt-memory-authority-safe",
+                event_name="memory_influence_governed",
+                timestamp="2026-07-18T13:07:00+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "memory_influence_execution_allowed": False,
+                    "memory_influence_tool_dispatch_allowed": False,
+                },
+                request_id="req-memory-authority",
+                session_id="sess-memory-authority",
+                correlation_id="req-memory-authority",
+            ),
+            InternalEventEnvelope(
+                event_id="evt-memory-authority-unsafe",
+                event_name="plan_built",
+                timestamp="2026-07-18T13:07:01+00:00",
+                source_service="orchestrator-service",
+                payload={
+                    "memory_influence_execution_allowed": True,
+                    "memory_influence_tool_dispatch_allowed": True,
+                },
+                request_id="req-memory-authority",
+                session_id="sess-memory-authority",
+                correlation_id="req-memory-authority",
+            ),
+        ]
+    )
+
+    audit = service.audit_flow(ObservabilityQuery(request_id="req-memory-authority"))
+
+    assert audit.memory_influence_execution_allowed is True
+    assert audit.memory_influence_tool_dispatch_allowed is True
+    assert audit.memory_influence_governance_drift_flags == [
+        "memory_influence_execution_authority_claim_not_allowed",
+        "memory_influence_tool_dispatch_authority_claim_not_allowed",
+    ]
+    assert all(
+        flag in audit.anomaly_flags
+        for flag in audit.memory_influence_governance_drift_flags
+    )
+    assert audit.operation_status is None
+
+
 def test_observability_service_flags_archivable_guided_memory_reuse() -> None:
     temp_dir = runtime_dir("observability-archivable-guided-memory")
     service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
@@ -5369,6 +6359,686 @@ def test_observability_service_marks_workflow_priority_as_policy_aligned() -> No
 
     assert audit.adaptive_intervention_status == "healthy"
     assert audit.adaptive_intervention_policy_status == "policy_aligned"
+
+
+def _workflow_lifecycle_payload(
+    *,
+    status: str,
+    action: str | None,
+    transition_id: str | None,
+    revision: int | None,
+    active_version_ref: str | None,
+    active_definition_hash: str | None,
+    human_authorized: bool,
+    operator_ref: str | None,
+    resolution_reasons: list[str] | None = None,
+) -> dict[str, object]:
+    lifecycle_recorded = status in {"active_promoted", "baseline_restored"}
+    resolved_active_version_ref = active_version_ref or (
+        "workflow-version://software_change_workflow/1.0.0"
+    )
+    resolved_active_definition_hash = active_definition_hash or "0" * 64
+    baseline_version_ref = (
+        resolved_active_version_ref
+        if status in {"static_baseline", "static_baseline_fallback", "baseline_restored"}
+        else "workflow-version://software_change_workflow/1.0.0"
+    )
+    baseline_definition_hash = (
+        resolved_active_definition_hash
+        if status in {"static_baseline", "static_baseline_fallback", "baseline_restored"}
+        else "0" * 64
+    )
+    candidate_version_ref = (
+        resolved_active_version_ref
+        if status == "active_promoted"
+        else (
+            "workflow-version://software_change_workflow/1.1.0"
+            if status == "baseline_restored"
+            else None
+        )
+    )
+    candidate_definition_hash = (
+        resolved_active_definition_hash
+        if status == "active_promoted"
+        else "a" * 64 if status == "baseline_restored" else None
+    )
+    human_authorization_ref = (
+        "human-authorization://workflow/software-change/test"
+        if lifecycle_recorded
+        else None
+    )
+    evolution_proposal_id = (
+        "proposal://workflow/software-change/test" if lifecycle_recorded else None
+    )
+    review_decision_id = (
+        "review://workflow/software-change/test" if lifecycle_recorded else None
+    )
+    release_checklist_id = (
+        "checklist://workflow/software-change/test" if lifecycle_recorded else None
+    )
+    promotion_gate_id = (
+        "gate://workflow/software-change/test" if lifecycle_recorded else None
+    )
+    eval_run_id = (
+        "eval://workflow/software-change/test" if lifecycle_recorded else None
+    )
+    rollback_plan_id = (
+        "rollback://workflow/software-change/test" if lifecycle_recorded else None
+    )
+    evidence_refs = (
+        [
+            evolution_proposal_id,
+            review_decision_id,
+            release_checklist_id,
+            promotion_gate_id,
+            eval_run_id,
+            rollback_plan_id,
+            human_authorization_ref,
+        ]
+        if lifecycle_recorded
+        else []
+    )
+    return {
+        "workflow_lifecycle_status": status,
+        "workflow_lifecycle_resolution_reasons": list(resolution_reasons or []),
+        "workflow_lifecycle_transition_id": transition_id,
+        "workflow_lifecycle_revision": revision,
+        "workflow_lifecycle_action": action,
+        "workflow_lifecycle_active_version_ref": resolved_active_version_ref,
+        "workflow_lifecycle_active_definition_hash": resolved_active_definition_hash,
+        "workflow_lifecycle_baseline_version_ref": baseline_version_ref,
+        "workflow_lifecycle_baseline_definition_hash": baseline_definition_hash,
+        "workflow_lifecycle_candidate_version_ref": candidate_version_ref,
+        "workflow_lifecycle_candidate_definition_hash": candidate_definition_hash,
+        "workflow_lifecycle_source_registry_ref": "active-workflow-registry://v1",
+        "workflow_lifecycle_source_registry_fingerprint": "9" * 64,
+        "workflow_lifecycle_human_authorization_ref": human_authorization_ref,
+        "workflow_lifecycle_human_authorized": human_authorized,
+        "workflow_lifecycle_operator_ref": operator_ref,
+        "workflow_lifecycle_evidence_refs": evidence_refs,
+        "workflow_lifecycle_completed_test_refs": (
+            ["test://workflow/software-change/release"]
+            if lifecycle_recorded
+            else []
+        ),
+        "workflow_lifecycle_failure_refs": (
+            ["failure://workflow/software-change/regression"]
+            if status == "baseline_restored"
+            else []
+        ),
+        "workflow_lifecycle_evolution_proposal_id": evolution_proposal_id,
+        "workflow_lifecycle_proposal_fingerprint": (
+            "1" * 64 if lifecycle_recorded else None
+        ),
+        "workflow_lifecycle_review_decision_id": review_decision_id,
+        "workflow_lifecycle_review_decision_fingerprint": (
+            "2" * 64 if lifecycle_recorded else None
+        ),
+        "workflow_lifecycle_release_checklist_id": release_checklist_id,
+        "workflow_lifecycle_release_checklist_fingerprint": (
+            "3" * 64 if lifecycle_recorded else None
+        ),
+        "workflow_lifecycle_promotion_gate_id": promotion_gate_id,
+        "workflow_lifecycle_promotion_gate_fingerprint": (
+            "4" * 64 if lifecycle_recorded else None
+        ),
+        "workflow_lifecycle_eval_run_id": eval_run_id,
+        "workflow_lifecycle_eval_run_fingerprint": (
+            "5" * 64 if lifecycle_recorded else None
+        ),
+        "workflow_lifecycle_rollback_plan_id": rollback_plan_id,
+        "workflow_lifecycle_rollback_plan_fingerprint": (
+            "6" * 64 if lifecycle_recorded else None
+        ),
+        "workflow_lifecycle_active_registry_write_allowed": False,
+        "workflow_lifecycle_runtime_execution_allowed": False,
+        "workflow_lifecycle_automatic_promotion_allowed": False,
+        "workflow_lifecycle_automatic_rollback_allowed": False,
+        "workflow_lifecycle_core_mutation_allowed": False,
+    }
+
+
+def _workflow_lifecycle_event(
+    *,
+    request_id: str,
+    event_name: str,
+    position: int,
+    payload: dict[str, object],
+) -> InternalEventEnvelope:
+    return InternalEventEnvelope(
+        event_id=f"evt-{request_id}-{event_name}",
+        event_name=event_name,
+        timestamp=f"2026-08-12T12:00:{position:02d}+00:00",
+        source_service="orchestrator-service",
+        payload=payload,
+        request_id=request_id,
+        session_id=f"session-{request_id}",
+        correlation_id=request_id,
+    )
+
+
+def _audit_workflow_lifecycle(
+    service: ObservabilityService,
+    *,
+    request_id: str,
+):
+    return service.audit_flow(
+        ObservabilityQuery(request_id=request_id),
+        required_events=("plan_built", "response_synthesized"),
+    )
+
+
+def test_flow_audit_projects_active_workflow_lifecycle_across_runtime_stages() -> None:
+    temp_dir = runtime_dir("observability-workflow-lifecycle-active")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    request_id = "req-workflow-lifecycle-active"
+    payload = _workflow_lifecycle_payload(
+        status="active_promoted",
+        action="activate_candidate",
+        transition_id="workflow-lifecycle-transition://software-change/1",
+        revision=1,
+        active_version_ref="workflow-version://software_change_workflow/1.1.0",
+        active_definition_hash="a" * 64,
+        human_authorized=True,
+        operator_ref="operator://primary",
+    )
+    service.ingest_events(
+        [
+            _workflow_lifecycle_event(
+                request_id=request_id,
+                event_name=event_name,
+                position=position,
+                payload=dict(payload),
+            )
+            for position, event_name in enumerate(
+                (
+                    "plan_built",
+                    "response_synthesized",
+                    "operation_dispatched",
+                    "operation_completed",
+                ),
+                start=1,
+            )
+        ]
+    )
+
+    audit = _audit_workflow_lifecycle(service, request_id=request_id)
+    report = service.build_incident_evidence(
+        ObservabilityQuery(request_id=request_id),
+        required_events=("plan_built", "response_synthesized"),
+    )
+
+    assert audit.workflow_lifecycle_status == "active_promoted"
+    assert audit.workflow_lifecycle_action == "activate_candidate"
+    assert audit.workflow_lifecycle_transition_id == (
+        "workflow-lifecycle-transition://software-change/1"
+    )
+    assert audit.workflow_lifecycle_revision == 1
+    assert audit.workflow_lifecycle_active_version_ref == (
+        "workflow-version://software_change_workflow/1.1.0"
+    )
+    assert audit.workflow_lifecycle_active_definition_hash == "a" * 64
+    assert audit.workflow_lifecycle_baseline_version_ref.endswith("/1.0.0")
+    assert audit.workflow_lifecycle_baseline_definition_hash == "0" * 64
+    assert audit.workflow_lifecycle_candidate_version_ref == (
+        audit.workflow_lifecycle_active_version_ref
+    )
+    assert audit.workflow_lifecycle_candidate_definition_hash == "a" * 64
+    assert audit.workflow_lifecycle_source_registry_ref == (
+        "active-workflow-registry://v1"
+    )
+    assert audit.workflow_lifecycle_source_registry_fingerprint == "9" * 64
+    assert audit.workflow_lifecycle_human_authorization_ref == (
+        "human-authorization://workflow/software-change/test"
+    )
+    assert audit.workflow_lifecycle_human_authorized is True
+    assert audit.workflow_lifecycle_operator_ref == "operator://primary"
+    assert audit.workflow_lifecycle_authority_safe is True
+    assert audit.workflow_lifecycle_trace_status == "healthy"
+    assert audit.workflow_lifecycle_drift_flags == []
+    assert audit.workflow_lifecycle_evolution_proposal_id == (
+        "proposal://workflow/software-change/test"
+    )
+    assert audit.workflow_lifecycle_proposal_fingerprint == "1" * 64
+    assert audit.workflow_lifecycle_review_decision_fingerprint == "2" * 64
+    assert audit.workflow_lifecycle_release_checklist_fingerprint == "3" * 64
+    assert audit.workflow_lifecycle_promotion_gate_fingerprint == "4" * 64
+    assert audit.workflow_lifecycle_eval_run_fingerprint == "5" * 64
+    assert audit.workflow_lifecycle_rollback_plan_fingerprint == "6" * 64
+    assert report.workflow_lifecycle_status == "active_promoted"
+    assert report.workflow_lifecycle_action == "activate_candidate"
+    assert report.workflow_lifecycle_transition_id == (
+        audit.workflow_lifecycle_transition_id
+    )
+    assert report.workflow_lifecycle_revision == 1
+    assert report.workflow_lifecycle_active_version_ref == (
+        audit.workflow_lifecycle_active_version_ref
+    )
+    assert report.workflow_lifecycle_active_definition_hash == "a" * 64
+    assert report.workflow_lifecycle_baseline_definition_hash == "0" * 64
+    assert report.workflow_lifecycle_candidate_definition_hash == "a" * 64
+    assert report.workflow_lifecycle_human_authorization_ref == (
+        audit.workflow_lifecycle_human_authorization_ref
+    )
+    assert report.workflow_lifecycle_proposal_fingerprint == "1" * 64
+    assert report.workflow_lifecycle_rollback_plan_fingerprint == "6" * 64
+    assert report.workflow_lifecycle_human_authorized is True
+    assert report.workflow_lifecycle_operator_ref == "operator://primary"
+    assert report.workflow_lifecycle_authority_safe is True
+    assert report.workflow_lifecycle_drift_flags == []
+
+
+def test_flow_audit_projects_human_workflow_rollback() -> None:
+    temp_dir = runtime_dir("observability-workflow-lifecycle-rollback")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    request_id = "req-workflow-lifecycle-rollback"
+    payload = _workflow_lifecycle_payload(
+        status="baseline_restored",
+        action="rollback_to_baseline",
+        transition_id="workflow-lifecycle-transition://software-change/2",
+        revision=2,
+        active_version_ref="workflow-version://software_change_workflow/1.0.0",
+        active_definition_hash="b" * 64,
+        human_authorized=True,
+        operator_ref="operator://primary",
+    )
+    service.ingest_events(
+        [
+            _workflow_lifecycle_event(
+                request_id=request_id,
+                event_name=event_name,
+                position=position,
+                payload=dict(payload),
+            )
+            for position, event_name in enumerate(
+                ("plan_built", "response_synthesized"),
+                start=1,
+            )
+        ]
+    )
+
+    audit = _audit_workflow_lifecycle(service, request_id=request_id)
+
+    assert audit.workflow_lifecycle_status == "baseline_restored"
+    assert audit.workflow_lifecycle_action == "rollback_to_baseline"
+    assert audit.workflow_lifecycle_revision == 2
+    assert audit.workflow_lifecycle_active_version_ref.endswith("/1.0.0")
+    assert audit.workflow_lifecycle_human_authorized is True
+    assert audit.workflow_lifecycle_trace_status == "healthy"
+    assert audit.workflow_lifecycle_drift_flags == []
+
+
+def test_flow_audit_projects_explicit_and_inferred_static_workflow_baseline() -> None:
+    temp_dir = runtime_dir("observability-workflow-lifecycle-static")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    explicit_request_id = "req-workflow-lifecycle-static-explicit"
+    inferred_request_id = "req-workflow-lifecycle-static-inferred"
+    static_payload = _workflow_lifecycle_payload(
+        status="static_baseline",
+        action=None,
+        transition_id=None,
+        revision=None,
+        active_version_ref=None,
+        active_definition_hash=None,
+        human_authorized=False,
+        operator_ref=None,
+    )
+    service.ingest_events(
+        [
+            *[
+                _workflow_lifecycle_event(
+                    request_id=explicit_request_id,
+                    event_name=event_name,
+                    position=position,
+                    payload=dict(static_payload),
+                )
+                for position, event_name in enumerate(
+                    ("plan_built", "response_synthesized"),
+                    start=1,
+                )
+            ],
+            *[
+                _workflow_lifecycle_event(
+                    request_id=inferred_request_id,
+                    event_name=event_name,
+                    position=position,
+                    payload={},
+                )
+                for position, event_name in enumerate(
+                    ("plan_built", "response_synthesized"),
+                    start=1,
+                )
+            ],
+        ]
+    )
+
+    explicit = _audit_workflow_lifecycle(service, request_id=explicit_request_id)
+    inferred = _audit_workflow_lifecycle(service, request_id=inferred_request_id)
+
+    assert explicit.workflow_lifecycle_status == "static_baseline"
+    assert explicit.workflow_lifecycle_trace_status == "healthy"
+    assert explicit.workflow_lifecycle_active_version_ref == (
+        explicit.workflow_lifecycle_baseline_version_ref
+    )
+    assert explicit.workflow_lifecycle_active_definition_hash == (
+        explicit.workflow_lifecycle_baseline_definition_hash
+    )
+    assert explicit.workflow_lifecycle_source_registry_ref == (
+        "active-workflow-registry://v1"
+    )
+    assert explicit.workflow_lifecycle_source_registry_fingerprint == "9" * 64
+    assert explicit.workflow_lifecycle_transition_id is None
+    assert explicit.workflow_lifecycle_human_authorization_ref is None
+    assert explicit.workflow_lifecycle_operator_ref is None
+    assert explicit.workflow_lifecycle_human_authorized is False
+    assert explicit.workflow_lifecycle_authority_safe is True
+    assert explicit.workflow_lifecycle_drift_flags == []
+    assert inferred.workflow_lifecycle_status == "static_baseline"
+    assert inferred.workflow_lifecycle_trace_status == "static_inferred"
+    assert inferred.workflow_lifecycle_drift_flags == []
+
+
+def test_flow_audit_fails_closed_when_lifecycle_runtime_event_is_missing() -> None:
+    temp_dir = runtime_dir("observability-workflow-lifecycle-missing")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    request_id = "req-workflow-lifecycle-missing"
+    payload = _workflow_lifecycle_payload(
+        status="active_promoted",
+        action="activate_candidate",
+        transition_id="workflow-lifecycle-transition://software-change/missing",
+        revision=3,
+        active_version_ref="workflow-version://software_change_workflow/1.2.0",
+        active_definition_hash="c" * 64,
+        human_authorized=True,
+        operator_ref="operator://primary",
+    )
+    service.ingest_events(
+        [
+            _workflow_lifecycle_event(
+                request_id=request_id,
+                event_name="plan_built",
+                position=1,
+                payload=payload,
+            )
+        ]
+    )
+
+    audit = _audit_workflow_lifecycle(service, request_id=request_id)
+
+    assert audit.workflow_lifecycle_trace_status == "attention_required"
+    assert audit.workflow_lifecycle_drift_flags == [
+        "workflow_lifecycle_event_missing:response_synthesized"
+    ]
+    assert all(
+        flag in audit.anomaly_flags
+        for flag in audit.workflow_lifecycle_drift_flags
+    )
+    assert audit.trace_complete is False
+
+
+def test_flow_audit_fails_closed_on_lifecycle_projection_mismatch() -> None:
+    temp_dir = runtime_dir("observability-workflow-lifecycle-mismatch")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    request_id = "req-workflow-lifecycle-mismatch"
+    plan_payload = _workflow_lifecycle_payload(
+        status="active_promoted",
+        action="activate_candidate",
+        transition_id="workflow-lifecycle-transition://software-change/mismatch",
+        revision=4,
+        active_version_ref="workflow-version://software_change_workflow/1.3.0",
+        active_definition_hash="d" * 64,
+        human_authorized=True,
+        operator_ref="operator://primary",
+    )
+    response_payload = dict(plan_payload)
+    response_payload["workflow_lifecycle_active_version_ref"] = (
+        "workflow-version://software_change_workflow/forged"
+    )
+    service.ingest_events(
+        [
+            _workflow_lifecycle_event(
+                request_id=request_id,
+                event_name="plan_built",
+                position=1,
+                payload=plan_payload,
+            ),
+            _workflow_lifecycle_event(
+                request_id=request_id,
+                event_name="response_synthesized",
+                position=2,
+                payload=response_payload,
+            ),
+        ]
+    )
+
+    audit = _audit_workflow_lifecycle(service, request_id=request_id)
+
+    assert audit.workflow_lifecycle_trace_status == "attention_required"
+    assert (
+        "workflow_lifecycle_projection_mismatch:active_version_ref"
+        in audit.workflow_lifecycle_drift_flags
+    )
+    assert audit.trace_complete is False
+
+
+def test_flow_audit_compares_optional_workflow_lifecycle_runtime_events() -> None:
+    temp_dir = runtime_dir("observability-workflow-lifecycle-intermediate-mismatch")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    request_id = "req-workflow-lifecycle-intermediate-mismatch"
+    payload = _workflow_lifecycle_payload(
+        status="active_promoted",
+        action="activate_candidate",
+        transition_id="workflow-lifecycle-transition://software-change/intermediate",
+        revision=7,
+        active_version_ref="workflow-version://software_change_workflow/1.6.0",
+        active_definition_hash="7" * 64,
+        human_authorized=True,
+        operator_ref="operator://primary",
+    )
+    workflow_composed_payload = dict(payload)
+    workflow_composed_payload["workflow_lifecycle_active_version_ref"] = (
+        "workflow-version://software_change_workflow/9.9.9"
+    )
+    workflow_governance_payload = dict(payload)
+    workflow_governance_payload["workflow_lifecycle_promotion_gate_fingerprint"] = (
+        "f" * 64
+    )
+    service.ingest_events(
+        [
+            _workflow_lifecycle_event(
+                request_id=request_id,
+                event_name=event_name,
+                position=position,
+                payload=(
+                    workflow_composed_payload
+                    if event_name == "workflow_composed"
+                    else (
+                        workflow_governance_payload
+                        if event_name == "workflow_governance_declared"
+                        else dict(payload)
+                    )
+                ),
+            )
+            for position, event_name in enumerate(
+                (
+                    "plan_built",
+                    "workflow_composed",
+                    "workflow_governance_declared",
+                    "operation_dispatched",
+                    "operation_completed",
+                    "workflow_completed",
+                    "response_synthesized",
+                ),
+                start=1,
+            )
+        ]
+    )
+
+    audit = _audit_workflow_lifecycle(service, request_id=request_id)
+
+    assert audit.workflow_lifecycle_trace_status == "attention_required"
+    assert (
+        "workflow_lifecycle_projection_mismatch:active_version_ref"
+        in audit.workflow_lifecycle_drift_flags
+    )
+    assert (
+        "workflow_lifecycle_projection_mismatch:promotion_gate_fingerprint"
+        in audit.workflow_lifecycle_drift_flags
+    )
+    assert audit.trace_complete is False
+
+
+def test_flow_audit_surfaces_static_baseline_fallback_as_anomaly() -> None:
+    temp_dir = runtime_dir("observability-workflow-lifecycle-fallback")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    request_id = "req-workflow-lifecycle-fallback"
+    fallback_reason = "workflow_lifecycle_store_unavailable:RuntimeError"
+    payload = _workflow_lifecycle_payload(
+        status="static_baseline_fallback",
+        action=None,
+        transition_id=None,
+        revision=None,
+        active_version_ref="workflow-version://software_change_workflow/1.0.0",
+        active_definition_hash="8" * 64,
+        human_authorized=False,
+        operator_ref=None,
+        resolution_reasons=[fallback_reason],
+    )
+    service.ingest_events(
+        [
+            _workflow_lifecycle_event(
+                request_id=request_id,
+                event_name=event_name,
+                position=position,
+                payload=dict(payload),
+            )
+            for position, event_name in enumerate(
+                ("plan_built", "response_synthesized"),
+                start=1,
+            )
+        ]
+    )
+
+    audit = _audit_workflow_lifecycle(service, request_id=request_id)
+
+    assert audit.workflow_lifecycle_status == "static_baseline_fallback"
+    assert audit.workflow_lifecycle_resolution_reasons == [fallback_reason]
+    assert audit.workflow_lifecycle_active_version_ref.endswith("/1.0.0")
+    assert audit.workflow_lifecycle_baseline_version_ref == (
+        audit.workflow_lifecycle_active_version_ref
+    )
+    assert audit.workflow_lifecycle_source_registry_fingerprint == "9" * 64
+    assert audit.workflow_lifecycle_trace_status == "attention_required"
+    assert "workflow_lifecycle_static_baseline_fallback" in (
+        audit.workflow_lifecycle_drift_flags
+    )
+    assert f"workflow_lifecycle_resolution_reason:{fallback_reason}" in (
+        audit.anomaly_flags
+    )
+    assert audit.trace_complete is False
+
+
+def test_flow_audit_rejects_lifecycle_authority_claims() -> None:
+    temp_dir = runtime_dir("observability-workflow-lifecycle-authority")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    request_id = "req-workflow-lifecycle-authority"
+    unsafe_payload = _workflow_lifecycle_payload(
+        status="active_promoted",
+        action="activate_candidate",
+        transition_id="workflow-lifecycle-transition://software-change/unsafe",
+        revision=5,
+        active_version_ref="workflow-version://software_change_workflow/1.4.0",
+        active_definition_hash="e" * 64,
+        human_authorized=True,
+        operator_ref="operator://primary",
+    )
+    unsafe_payload.update(
+        {
+            "workflow_lifecycle_active_registry_write_allowed": True,
+            "workflow_lifecycle_runtime_execution_allowed": True,
+            "workflow_lifecycle_automatic_promotion_allowed": True,
+            "workflow_lifecycle_automatic_rollback_allowed": True,
+            "workflow_lifecycle_core_mutation_allowed": True,
+        }
+    )
+    service.ingest_events(
+        [
+            _workflow_lifecycle_event(
+                request_id=request_id,
+                event_name=event_name,
+                position=position,
+                payload=dict(unsafe_payload),
+            )
+            for position, event_name in enumerate(
+                ("plan_built", "response_synthesized"),
+                start=1,
+            )
+        ]
+    )
+
+    audit = _audit_workflow_lifecycle(service, request_id=request_id)
+    report = service.build_incident_evidence(
+        ObservabilityQuery(request_id=request_id),
+        required_events=("plan_built", "response_synthesized"),
+    )
+
+    expected_authority_drift = {
+        "workflow_lifecycle_active_registry_write_claim_not_allowed",
+        "workflow_lifecycle_runtime_execution_claim_not_allowed",
+        "workflow_lifecycle_automatic_promotion_claim_not_allowed",
+        "workflow_lifecycle_automatic_rollback_claim_not_allowed",
+        "workflow_lifecycle_core_mutation_claim_not_allowed",
+    }
+    assert audit.workflow_lifecycle_authority_safe is False
+    assert audit.workflow_lifecycle_trace_status == "attention_required"
+    assert expected_authority_drift.issubset(audit.workflow_lifecycle_drift_flags)
+    assert expected_authority_drift.issubset(audit.anomaly_flags)
+    assert report.workflow_lifecycle_trace_status == "attention_required"
+    assert report.workflow_lifecycle_authority_safe is False
+    assert expected_authority_drift.issubset(
+        report.workflow_lifecycle_drift_flags
+    )
+    assert audit.trace_complete is False
+
+
+def test_flow_audit_requires_human_authorization_for_lifecycle() -> None:
+    temp_dir = runtime_dir("observability-workflow-lifecycle-human-authorization")
+    service = ObservabilityService(database_path=str(temp_dir / "observability.db"))
+    request_id = "req-workflow-lifecycle-human-authorization"
+    unauthorized_payload = _workflow_lifecycle_payload(
+        status="active_promoted",
+        action="activate_candidate",
+        transition_id="workflow-lifecycle-transition://software-change/no-human",
+        revision=6,
+        active_version_ref="workflow-version://software_change_workflow/1.5.0",
+        active_definition_hash="f" * 64,
+        human_authorized=False,
+        operator_ref="operator://primary",
+    )
+    service.ingest_events(
+        [
+            _workflow_lifecycle_event(
+                request_id=request_id,
+                event_name=event_name,
+                position=position,
+                payload=dict(unauthorized_payload),
+            )
+            for position, event_name in enumerate(
+                ("plan_built", "response_synthesized"),
+                start=1,
+            )
+        ]
+    )
+
+    audit = _audit_workflow_lifecycle(service, request_id=request_id)
+
+    assert audit.workflow_lifecycle_human_authorized is False
+    assert audit.workflow_lifecycle_trace_status == "attention_required"
+    assert audit.workflow_lifecycle_drift_flags == [
+        "workflow_lifecycle_human_authorization_missing"
+    ]
+    assert "workflow_lifecycle_human_authorization_missing" in audit.anomaly_flags
+    assert audit.trace_complete is False
 
 
 def test_observability_service_marks_mandatory_override_for_clarification() -> None:

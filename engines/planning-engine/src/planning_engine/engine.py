@@ -7,12 +7,15 @@ from hashlib import sha256
 
 from shared.contract_validation import validate_contract_instance
 from shared.contracts import (
+    AdapterActionRequestContract,
     DeliberativePlanContract,
     MemoryInfluencePolicyDecisionContract,
     MemoryInfluenceSignalContract,
     OpenLoopResumePlanContract,
+    ReviewedProceduralPlaybookContract,
     SemanticMemoryCandidateContract,
     SpecialistContributionContract,
+    WorkflowLifecycleTransitionContract,
 )
 from shared.domain_registry import resolve_workflow_policy, workflow_runtime_guidance
 from shared.memory_influence_policy import evaluate_memory_influence_policy
@@ -115,6 +118,9 @@ class PlanningContext:
     route_workflow_steps: list[str] | None = None
     route_workflow_checkpoints: list[str] | None = None
     route_workflow_decision_points: list[str] | None = None
+    workflow_lifecycle_transition: WorkflowLifecycleTransitionContract | None = None
+    workflow_lifecycle_resolution_status: str = "static_baseline"
+    workflow_lifecycle_resolution_reasons: list[str] | None = None
     cognitive_rationale: str = ""
     tensions: list[str] | None = None
     specialist_hints: list[str] | None = None
@@ -135,6 +141,9 @@ class PlanningContext:
     mission_semantic_brief: str | None = None
     mission_focus: list[str] | None = None
     semantic_memory_candidates: list[SemanticMemoryCandidateContract] | None = None
+    reviewed_procedural_playbooks: list[
+        ReviewedProceduralPlaybookContract
+    ] | None = None
     last_decision_frame: str | None = None
     mission_goal: str | None = None
     mission_recommendation: str | None = None
@@ -199,6 +208,7 @@ class PlanningContext:
     operator_identity_ref: str | None = None
     canonical_user_ref: str | None = None
     surface_continuity_status: str | None = None
+    adapter_action_request: AdapterActionRequestContract | None = None
 
 
 @dataclass(frozen=True)
@@ -439,6 +449,7 @@ class PlanningEngine:
             workflow_profile=context.route_workflow_profile,
             domain=context.primary_domain_driver or context.primary_canonical_domain,
             generated_at=context.request_timestamp or "runtime",
+            max_reviewed_procedural=1,
         )
         semantic_memory_source = memory_decision.semantic_source
         if context.semantic_memory_candidates is not None:
@@ -549,6 +560,15 @@ class PlanningEngine:
             memory_influence_policy_decision=memory_influence_policy_decision,
             memory_influence_signals=memory_influence_signals,
         )
+        steps, constraints, success_criteria = (
+            self._apply_reviewed_procedural_playbook_guidance(
+                steps=steps,
+                constraints=constraints,
+                success_criteria=success_criteria,
+                context=context,
+                memory_influence_policy_decision=memory_influence_policy_decision,
+            )
+        )
         steps, constraints, success_criteria = self._apply_reflection_influence(
             steps=steps,
             constraints=constraints,
@@ -607,6 +627,10 @@ class PlanningEngine:
             success_criteria=success_criteria,
             smallest_safe_next_action=smallest_safe_next_action,
             adaptive_intervention=adaptive_intervention,
+        )
+        success_criteria = self._apply_workflow_lifecycle_success_criteria(
+            success_criteria,
+            context=context,
         )
         recommended_task_type = self._recommended_task_type(
             context,
@@ -836,9 +860,22 @@ class PlanningEngine:
             route_workflow_decision_points=list(
                 context.route_workflow_decision_points or []
             ),
+            workflow_lifecycle_transition=context.workflow_lifecycle_transition,
+            workflow_lifecycle_resolution_status=(
+                context.workflow_lifecycle_resolution_status
+            ),
+            workflow_lifecycle_resolution_reasons=list(
+                context.workflow_lifecycle_resolution_reasons or []
+            ),
             workflow_policy_decision=workflow_policy_decision,
             risks=risks,
             recommended_task_type=recommended_task_type,
+            adapter_action_request=context.adapter_action_request,
+            autonomy_action_kind=(
+                context.adapter_action_request.action_kind
+                if context.adapter_action_request is not None
+                else None
+            ),
             requires_human_validation=requires_human_validation,
             rationale=rationale,
             tensions_considered=tensions[:3],
@@ -854,7 +891,17 @@ class PlanningEngine:
                 metacognitive_guidance.containment_recommendation
             ),
             semantic_memory_source=semantic_memory_source,
-            procedural_memory_source=memory_decision.procedural_source,
+            procedural_memory_source=(
+                memory_decision.procedural_source
+                if self._policy_selects_ref(
+                    memory_influence_policy_decision,
+                    self._procedural_memory_policy_ref(
+                        context,
+                        source=memory_decision.procedural_source,
+                    ),
+                )
+                else None
+            ),
             semantic_memory_effects=(
                 list(memory_decision.semantic_effects)
                 if self._policy_selects_kind(
@@ -866,10 +913,12 @@ class PlanningEngine:
             ),
             procedural_memory_effects=(
                 list(memory_decision.procedural_effects)
-                if self._policy_selects_kind(
+                if self._policy_selects_ref(
                     memory_influence_policy_decision,
-                    memory_influence_signals,
-                    "procedural",
+                    self._procedural_memory_policy_ref(
+                        context,
+                        source=memory_decision.procedural_source,
+                    ),
                 )
                 else []
             ),
@@ -1102,13 +1151,24 @@ class PlanningEngine:
             specialist_contributions,
             specialist_summary,
         )
+        if plan.workflow_lifecycle_transition is not None:
+            refined_success_criteria: list[str] = []
+            for criterion in [
+                *plan.workflow_lifecycle_transition.active_success_criteria,
+                *success_criteria,
+            ]:
+                normalized = criterion.strip()
+                if normalized and normalized not in refined_success_criteria:
+                    refined_success_criteria.append(normalized)
+        else:
+            refined_success_criteria = success_criteria[:8]
         return replace(
             plan,
             steps=refined_steps[:6],
             constraints=refined_constraints[:9],
             risks=refined_risks,
             requires_human_validation=requires_human_validation,
-            success_criteria=success_criteria[:8],
+            success_criteria=refined_success_criteria,
             specialist_resolution_summary=resolution_summary,
             open_loops=open_loop_hints[:3],
             smallest_safe_next_action=refined_next_action,
@@ -1337,6 +1397,10 @@ class PlanningEngine:
         if local_operation_eligible:
             eligible_capabilities.append("local_safe_operation")
 
+        external_adapter_eligible = context.adapter_action_request is not None
+        if external_adapter_eligible:
+            eligible_capabilities.append("supervised_external_adapter")
+
         if adaptive_intervention.selected_action == "clarification_checkpoint":
             return CapabilityDecision(
                 status="contained",
@@ -1397,6 +1461,24 @@ class PlanningEngine:
                 authorization_status="human_validation_required",
                 fallback_mode="analysis_only",
                 tool_class=None,
+                handoff_mode=handoff_mode,
+                eligible_capabilities=eligible_capabilities,
+                selected_capabilities=selected_capabilities,
+            )
+
+        if external_adapter_eligible:
+            selected_capabilities.append("supervised_external_adapter")
+            return CapabilityDecision(
+                status="resolved",
+                objective=objective,
+                reason=(
+                    f"workflow {workflow_profile} recebeu pedido tipado de adapter; "
+                    "qualquer autorizacao permanece sujeita a registry e governanca"
+                ),
+                selected_mode="core_with_supervised_external_operation",
+                authorization_status="governance_review_required",
+                fallback_mode="core_guidance_without_adapter_grant",
+                tool_class="supervised_external_adapter",
                 handoff_mode=handoff_mode,
                 eligible_capabilities=eligible_capabilities,
                 selected_capabilities=selected_capabilities,
@@ -1471,6 +1553,8 @@ class PlanningEngine:
             ),
             route_consumer_objective=plan.route_consumer_objective,
             route_workflow_profile=plan.route_workflow_profile,
+            workflow_lifecycle_transition=plan.workflow_lifecycle_transition,
+            adapter_action_request=plan.adapter_action_request,
         )
         return self._capability_decision(
             context,
@@ -1587,10 +1671,15 @@ class PlanningEngine:
     ) -> str:
         if requires_human_validation or capability_decision.authorization_status in {
             "human_validation_required",
-            "governance_review_required",
             "clarification_required",
         }:
             return "explicit_confirmation_required"
+        # Governance review is an in-runtime policy decision, not human evidence.
+        # The autonomy ladder raises this bounded recommendation to exact
+        # confirmation for confirm-before-action, supervised external actions,
+        # or an explicitly stricter operator request.
+        if capability_decision.authorization_status == "governance_review_required":
+            return "bounded_autonomy"
         if capability_decision.authorization_status == "authorized_with_conditions":
             return "conditional_confirmation"
         return "bounded_autonomy"
@@ -2473,6 +2562,23 @@ class PlanningEngine:
         elif context.route_workflow_profile and len(criteria) < 7:
             criteria.append(f"saida deve sustentar {guidance.success_focus}")
         return criteria[:7]
+
+    @staticmethod
+    def _apply_workflow_lifecycle_success_criteria(
+        success_criteria: list[str],
+        *,
+        context: PlanningContext,
+    ) -> list[str]:
+        lifecycle = context.workflow_lifecycle_transition
+        if lifecycle is None:
+            return success_criteria
+
+        merged: list[str] = []
+        for criterion in [*lifecycle.active_success_criteria, *success_criteria]:
+            normalized = criterion.strip()
+            if normalized and normalized not in merged:
+                merged.append(normalized)
+        return merged
 
     def _recommended_task_type(
         self,
@@ -3480,6 +3586,61 @@ class PlanningEngine:
                     **scope,
                 )
             )
+        for playbook in (context.reviewed_procedural_playbooks or [])[:100]:
+            signal_ref = self._reviewed_procedural_playbook_signal_ref(playbook)
+            directive = " -> ".join(playbook.bounded_steps)[:1000]
+            active_playbook_domains = {
+                value
+                for value in (
+                    context.primary_domain_driver,
+                    context.primary_canonical_domain,
+                    *(context.canonical_domains or []),
+                )
+                if value
+            }
+            active_playbook_domain = (
+                context.primary_domain_driver or context.primary_canonical_domain
+            )
+            signals.append(
+                MemoryInfluenceSignalContract(
+                    signal_ref=signal_ref,
+                    source_kind="procedural",
+                    summary=(
+                        f"{playbook.procedure_name}: {directive}"
+                    )[:1000],
+                    evidence_refs=list(playbook.evidence_refs),
+                    conflict_group=(
+                        "reviewed_procedural_playbook:"
+                        f"{playbook.playbook_id}"
+                    ),
+                    directive=directive,
+                    route=playbook.route,
+                    workflow_profile=playbook.workflow_profile,
+                    domain=(
+                        active_playbook_domain
+                        if playbook.domain in active_playbook_domains
+                        else playbook.domain
+                    ),
+                    lifecycle_status=(
+                        "revoked"
+                        if playbook.review_status == "revoked"
+                        else "reviewed"
+                    ),
+                    review_status=playbook.review_status,
+                    observed_at=playbook.timestamp,
+                    version_ref=playbook.version,
+                    review_decision_ref=playbook.source_review_decision_id,
+                    allowed_usage=list(playbook.allowed_usage),
+                    read_only=playbook.read_only,
+                    memory_write_allowed=(playbook.memory_write_mode != "read_only"),
+                    execution_allowed=playbook.execution_allowed,
+                    tool_dispatch_allowed=playbook.tool_dispatch_allowed,
+                    automatic_promotion_allowed=(
+                        playbook.automatic_promotion_allowed
+                    ),
+                    core_mutation_allowed=playbook.core_mutation_allowed,
+                )
+            )
         procedural_ref = self._procedural_memory_policy_ref(
             context,
             source=memory_decision.procedural_source,
@@ -3562,6 +3723,12 @@ class PlanningEngine:
         return signals
 
     @staticmethod
+    def _reviewed_procedural_playbook_signal_ref(
+        playbook: ReviewedProceduralPlaybookContract,
+    ) -> str:
+        return f"{playbook.playbook_id}@{playbook.version}"
+
+    @staticmethod
     def _procedural_memory_policy_ref(
         context: PlanningContext,
         *,
@@ -3589,6 +3756,13 @@ class PlanningEngine:
             for signal in signals
         )
 
+    @staticmethod
+    def _policy_selects_ref(
+        decision: MemoryInfluencePolicyDecisionContract,
+        signal_ref: str | None,
+    ) -> bool:
+        return bool(signal_ref and signal_ref in decision.selected_refs)
+
     def _apply_guided_memory_to_next_action(
         self,
         action: str,
@@ -3598,13 +3772,16 @@ class PlanningEngine:
         memory_influence_policy_decision: MemoryInfluencePolicyDecisionContract,
         memory_influence_signals: list[MemoryInfluenceSignalContract],
     ) -> str:
+        procedural_ref = self._procedural_memory_policy_ref(
+            context,
+            source=memory_decision.procedural_source,
+        )
         if (
             not memory_decision.procedural_source
             or "next_action" not in memory_decision.procedural_effects
-            or not self._policy_selects_kind(
+            or not self._policy_selects_ref(
                 memory_influence_policy_decision,
-                memory_influence_signals,
-                "procedural",
+                procedural_ref,
             )
         ):
             return action
@@ -3635,10 +3812,12 @@ class PlanningEngine:
             memory_influence_signals,
             "semantic",
         )
-        procedural_selected = self._policy_selects_kind(
+        procedural_selected = self._policy_selects_ref(
             memory_influence_policy_decision,
-            memory_influence_signals,
-            "procedural",
+            self._procedural_memory_policy_ref(
+                context,
+                source=memory_decision.procedural_source,
+            ),
         )
         if semantic_selected and "priority" in memory_decision.semantic_effects:
             semantic_step = (
@@ -3681,6 +3860,46 @@ class PlanningEngine:
             if procedural_criterion not in updated_success:
                 updated_success.append(procedural_criterion)
 
+        return updated_steps[:7], updated_constraints[:10], updated_success[:9]
+
+    def _apply_reviewed_procedural_playbook_guidance(
+        self,
+        *,
+        steps: list[str],
+        constraints: list[str],
+        success_criteria: list[str],
+        context: PlanningContext,
+        memory_influence_policy_decision: MemoryInfluencePolicyDecisionContract,
+    ) -> tuple[list[str], list[str], list[str]]:
+        """Apply reviewed procedures as text guidance, never executable steps."""
+
+        updated_steps = list(steps)
+        updated_constraints = list(constraints)
+        updated_success = list(success_criteria)
+        selected = set(memory_influence_policy_decision.selected_refs)
+        for playbook in (context.reviewed_procedural_playbooks or [])[:100]:
+            signal_ref = self._reviewed_procedural_playbook_signal_ref(playbook)
+            if signal_ref not in selected:
+                continue
+            bounded_guidance = " -> ".join(playbook.bounded_steps)
+            step = (
+                "consider reviewed procedural playbook as read-only guidance "
+                f"{playbook.playbook_id}@{playbook.version}: {bounded_guidance}"
+            )[:1000]
+            constraint = (
+                "reviewed procedural playbook is guidance only; do not execute "
+                "tools, dispatch actions, write memory, or promote automatically"
+            )
+            success = (
+                "plan records reviewed procedural playbook version and human "
+                f"review ref: {playbook.version}; {playbook.source_review_decision_id}"
+            )[:500]
+            if step not in updated_steps:
+                updated_steps.insert(0, step)
+            if constraint not in updated_constraints:
+                updated_constraints.insert(0, constraint)
+            if success not in updated_success:
+                updated_success.insert(0, success)
         return updated_steps[:7], updated_constraints[:10], updated_success[:9]
 
     def _apply_reflection_influence(

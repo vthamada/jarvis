@@ -1,3 +1,5 @@
+from copy import deepcopy
+from dataclasses import replace
 from json import dumps
 from pathlib import Path
 from tempfile import gettempdir
@@ -5,7 +7,12 @@ from uuid import uuid4
 
 from knowledge_service.service import KnowledgeService
 
+from shared.contracts import TechnologyRadarIntakeContract
 from shared.domain_registry import FALLBACK_RUNTIME_ROUTE
+from shared.technology_radar_intake import (
+    technology_radar_intake_fingerprint,
+    technology_radar_review_subject_fingerprint,
+)
 
 
 def runtime_dir(name: str) -> Path:
@@ -14,6 +21,44 @@ def runtime_dir(name: str) -> Path:
     target = base_dir / f"{name}-{uuid4().hex[:8]}"
     target.mkdir(parents=True, exist_ok=True)
     return target
+
+
+def technology_radar_intake(**overrides: object) -> TechnologyRadarIntakeContract:
+    values: dict[str, object] = {
+        "intake_id": "technology-radar-intake://openai-agents-sdk/1.0.0",
+        "candidate_ref": "tech-candidate://openai-agents-sdk/handoff-adapters",
+        "intake_version": "1.0.0",
+        "technology_name": "OpenAI Agents SDK",
+        "source_kind": "repository",
+        "source_locator": "https://github.com/openai/openai-agents-python",
+        "source_version_ref": "commit://openai-agents-python/0123456789abcdef",
+        "source_content_sha256": "a" * 64,
+        "license_id": "MIT",
+        "license_status": "declared",
+        "license_evidence_ref": "evidence://technology/license/openai-agents-sdk",
+        "retrieved_at": "2026-08-12T12:00:00Z",
+        "claims": ["Handoffs expose bounded delegation semantics."],
+        "risks": ["The full runtime cannot replace the sovereign Core."],
+        "absorption_class": "reference",
+        "target_gap_refs": ["TA-005"],
+        "research_approval_ref": "approval://technology-radar/openai-agents-sdk",
+        "reviewed_payload_fingerprint": "0" * 64,
+        "reviewer_ref": "operator://technology-radar/reviewer-1",
+        "review_status": "approved_for_radar_intake",
+        "review_evidence_refs": ["evidence://technology/review/openai-agents-sdk"],
+        "reviewed_at": "2026-08-12T12:05:00Z",
+        "recorded_at": "2026-08-12T12:06:00Z",
+    }
+    values.update(overrides)
+    intake = TechnologyRadarIntakeContract(**values)  # type: ignore[arg-type]
+    if "reviewed_payload_fingerprint" not in overrides:
+        intake = replace(
+            intake,
+            reviewed_payload_fingerprint=(
+                technology_radar_review_subject_fingerprint(intake)
+            ),
+        )
+    return intake
 
 
 def test_knowledge_service_name() -> None:
@@ -467,3 +512,90 @@ def test_knowledge_service_surfaces_stale_and_conflicting_source_evidence() -> N
     assert result.conflict_status == "conflict_detected"
     assert result.source_evidence[0].conflict_refs == ["source://conflicting-review"]
     assert any("freshness expired" in note for note in result.uncertainty_notes)
+
+
+def test_knowledge_service_qualifies_reviewed_technology_radar_intake_read_only() -> None:
+    service = KnowledgeService()
+    intake = technology_radar_intake()
+    domains_before = deepcopy(service.domains)
+    canonical_registry_before = deepcopy(service.canonical_domain_registry)
+    route_registry_before = deepcopy(service.domain_routes)
+
+    assessment = service.assess_technology_radar_intake(intake)
+
+    assert assessment.status == "eligible_for_reviewed_registry"
+    assert assessment.blockers == []
+    assert assessment.source_identity == (
+        "https://github.com/openai/openai-agents-python",
+        "commit://openai-agents-python/0123456789abcdef",
+    )
+    assert assessment.intake_fingerprint == technology_radar_intake_fingerprint(
+        intake
+    )
+    assert assessment.eligible_for_reviewed_registry is True
+    assert assessment.source_trusted is False
+    assert assessment.read_only is True
+    assert assessment.registry_write_authorized is False
+    assert assessment.network_fetch_allowed is False
+    assert assessment.knowledge_ingestion_allowed is False
+    assert assessment.evolution_proposal_allowed is False
+    assert assessment.dependency_installation_allowed is False
+    assert assessment.execution_allowed is False
+    assert assessment.runtime_activation_allowed is False
+    assert assessment.promotion_authorized is False
+    assert assessment.automatic_promotion_allowed is False
+    assert assessment.core_mutation_allowed is False
+    assert assessment.priority_mutation_allowed is False
+    assert service.domains == domains_before
+    assert service.canonical_domain_registry == canonical_registry_before
+    assert service.domain_routes == route_registry_before
+
+
+def test_knowledge_service_blocks_tampered_or_sensitive_radar_intake() -> None:
+    service = KnowledgeService()
+
+    tampered = service.assess_technology_radar_intake(
+        technology_radar_intake(reviewed_payload_fingerprint="f" * 64)
+    )
+    sensitive = service.assess_technology_radar_intake(
+        technology_radar_intake(
+            claims=["api_key=top-secret must never enter the reviewed registry"]
+        )
+    )
+
+    assert tampered.status == "blocked"
+    assert tampered.eligible_for_reviewed_registry is False
+    assert "reviewed_payload_fingerprint_mismatch" in tampered.blockers
+    assert sensitive.status == "blocked"
+    assert sensitive.eligible_for_reviewed_registry is False
+    assert "sensitive_material_detected:claims" in sensitive.blockers
+    assert sensitive.registry_write_authorized is False
+    assert sensitive.knowledge_ingestion_allowed is False
+    assert sensitive.evolution_proposal_allowed is False
+
+
+def test_knowledge_service_hides_invalid_radar_source_identity_and_grants_no_authority() -> None:
+    service = KnowledgeService()
+    invalid = technology_radar_intake(
+        source_locator="https://operator:password@example.com/repository",
+        network_fetch_allowed=True,
+        execution_allowed=True,
+    )
+
+    assessment = service.assess_technology_radar_intake(invalid)
+
+    assert assessment.status == "blocked"
+    assert assessment.source_identity is None
+    assert "source_locator_userinfo_forbidden" in assessment.blockers
+    assert "network_fetch_allowed_must_be_false" in assessment.blockers
+    assert "execution_allowed_must_be_false" in assessment.blockers
+    assert assessment.intake_fingerprint == technology_radar_intake_fingerprint(
+        invalid
+    )
+    assert assessment.registry_write_authorized is False
+    assert assessment.network_fetch_allowed is False
+    assert assessment.knowledge_ingestion_allowed is False
+    assert assessment.execution_allowed is False
+    assert assessment.runtime_activation_allowed is False
+    assert assessment.promotion_authorized is False
+    assert assessment.core_mutation_allowed is False

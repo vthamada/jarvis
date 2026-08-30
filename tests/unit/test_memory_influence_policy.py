@@ -54,6 +54,22 @@ def _signal(
     )
 
 
+def _reviewed_playbook_signal(
+    version: str,
+    *,
+    suffix: str,
+) -> MemoryInfluenceSignalContract:
+    return replace(
+        _signal("procedural", summary="apply the bounded patch review"),
+        signal_ref=f"reviewed-playbook://software-change/{suffix}",
+        conflict_group="bounded_patch_review",
+        lifecycle_status="reviewed",
+        review_status="approved",
+        version_ref=version,
+        review_decision_ref=f"review-decision://playbook/{suffix}",
+    )
+
+
 def _evaluate(signals):  # type: ignore[no-untyped-def]
     return evaluate_memory_influence_policy(
         decision_id="memory-influence-decision://test/1",
@@ -101,6 +117,163 @@ def test_memory_influence_policy_prioritizes_reviewed_guidance_and_audits_confli
         decision,
         schema=MEMORY_INFLUENCE_POLICY_DECISION_SCHEMA,
     ).status == "coherent"
+
+
+def test_memory_influence_policy_prefers_newest_reviewed_playbook_version() -> None:
+    older = _reviewed_playbook_signal("1.9.0", suffix="older")
+    newer = _reviewed_playbook_signal("1.10.0", suffix="newer")
+
+    decision = _evaluate([older, newer])
+
+    assert decision.decision_status == "applied"
+    assert decision.selected_refs == [newer.signal_ref]
+    assert decision.ignored_refs == [older.signal_ref]
+    assert decision.non_use_reasons[older.signal_ref] == (
+        f"superseded_by_newer_version:{newer.signal_ref}"
+    )
+    assert decision.version_refs == {
+        older.signal_ref: "1.9.0",
+        newer.signal_ref: "1.10.0",
+    }
+    assert decision.review_decision_refs == {
+        older.signal_ref: older.review_decision_ref,
+        newer.signal_ref: newer.review_decision_ref,
+    }
+    assert "version=1.10.0" in decision.use_reasons[newer.signal_ref]
+    assert newer.review_decision_ref in decision.use_reasons[newer.signal_ref]
+    assert "policy://memory-influence/reviewed-procedural-version-v1" in (
+        decision.policy_refs
+    )
+    assert decision.execution_allowed is False
+    assert decision.tool_dispatch_allowed is False
+
+
+def test_policy_rejects_noncanonical_reviewed_playbook_versions() -> None:
+    invalid_versions = ["01.0.0", "1.01.0", "1.0.01", "١.2.3", "１.2.3"]
+    signals = [
+        _reviewed_playbook_signal(version, suffix=f"invalid-semver-{index}")
+        for index, version in enumerate(invalid_versions)
+    ]
+
+    decision = _evaluate(signals)
+
+    assert decision.selected_refs == []
+    assert decision.ignored_refs == [signal.signal_ref for signal in signals]
+    assert all(
+        decision.non_use_reasons[signal.signal_ref] == "procedural_version_invalid"
+        for signal in signals
+    )
+
+
+def test_policy_ranks_all_candidates_before_bounded_selection() -> None:
+    versions = [
+        _reviewed_playbook_signal(f"1.{index}.0", suffix=f"version-{index}")
+        for index in range(20)
+    ]
+    reviewed_learning = replace(
+        _signal("reviewed_learning", summary="preserve human-reviewed framing"),
+        signal_ref="reviewed-learning://late-input/high-priority",
+        conflict_group="reviewed_learning_late_input",
+    )
+
+    decision = _evaluate([*versions, reviewed_learning])
+
+    newest = versions[-1]
+    assert decision.selected_refs == [reviewed_learning.signal_ref, newest.signal_ref]
+    assert reviewed_learning.signal_ref not in decision.ignored_refs
+    assert decision.signal_kinds[reviewed_learning.signal_ref] == "reviewed_learning"
+    assert decision.version_refs[newest.signal_ref] == "1.19.0"
+    for older in versions[:-1]:
+        assert decision.non_use_reasons[older.signal_ref] == (
+            f"superseded_by_newer_version:{newest.signal_ref}"
+        )
+
+
+def test_policy_rejects_all_cross_kind_duplicate_refs_fail_closed() -> None:
+    playbook = _reviewed_playbook_signal("1.0.0", suffix="duplicate")
+    forged_reviewed_learning = replace(
+        _signal("reviewed_learning"),
+        signal_ref=playbook.signal_ref,
+        conflict_group="forged_duplicate",
+    )
+
+    decision = _evaluate([playbook, forged_reviewed_learning])
+
+    assert decision.selected_refs == []
+    assert decision.ignored_refs == [playbook.signal_ref]
+    assert decision.non_use_reasons[playbook.signal_ref] == "duplicate_signal_ref"
+    assert playbook.signal_ref not in decision.signal_kinds
+    assert playbook.signal_ref not in decision.version_refs
+    assert playbook.signal_ref not in decision.review_decision_refs
+
+
+def test_memory_influence_policy_fails_closed_for_unreviewed_playbook_inputs() -> None:
+    candidate = replace(
+        _reviewed_playbook_signal("1.0.0", suffix="candidate"),
+        review_status="candidate",
+    )
+    raw_candidate = replace(
+        _signal("procedural"),
+        signal_ref="playbook-candidate://software-change/raw",
+        review_status="candidate",
+    )
+    revoked = replace(
+        _reviewed_playbook_signal("1.0.0", suffix="revoked"),
+        review_status="revoked",
+    )
+    invalid_version = replace(
+        _reviewed_playbook_signal("1.0.0", suffix="invalid-version"),
+        version_ref="v1",
+    )
+    missing_review = replace(
+        _reviewed_playbook_signal("1.0.0", suffix="missing-review"),
+        review_decision_ref=None,
+    )
+    scope_mismatch = replace(
+        _reviewed_playbook_signal("1.0.0", suffix="scope-mismatch"),
+        route="analysis",
+    )
+    authority_claim = replace(
+        _reviewed_playbook_signal("1.0.0", suffix="authority"),
+        execution_allowed=True,
+        tool_dispatch_allowed=True,
+    )
+
+    decision = _evaluate(
+        [
+            candidate,
+            raw_candidate,
+            revoked,
+            invalid_version,
+            missing_review,
+            scope_mismatch,
+            authority_claim,
+        ]
+    )
+
+    assert decision.decision_status == "blocked_no_eligible_signal"
+    assert decision.selected_refs == []
+    assert decision.non_use_reasons[candidate.signal_ref] == (
+        "procedural_human_approval_required"
+    )
+    assert decision.non_use_reasons[raw_candidate.signal_ref] == (
+        "procedural_human_approval_required"
+    )
+    assert decision.non_use_reasons[revoked.signal_ref] == (
+        "review_status_not_eligible:revoked"
+    )
+    assert decision.non_use_reasons[invalid_version.signal_ref] == (
+        "procedural_version_invalid"
+    )
+    assert decision.non_use_reasons[missing_review.signal_ref] == (
+        "procedural_review_decision_required"
+    )
+    assert decision.non_use_reasons[scope_mismatch.signal_ref] == (
+        "scope_mismatch:route"
+    )
+    assert decision.non_use_reasons[authority_claim.signal_ref] == (
+        "authority_claim_not_allowed"
+    )
 
 
 def test_memory_influence_policy_records_scope_evidence_and_authority_non_use() -> None:

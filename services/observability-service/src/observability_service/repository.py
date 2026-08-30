@@ -20,9 +20,9 @@ class ObservabilityRepository:
 
     def record_event(self, event: InternalEventEnvelope) -> None:
         with self._connect() as connection:
-            connection.execute(
+            cursor = connection.execute(
                 """
-                INSERT INTO internal_events (
+                INSERT OR IGNORE INTO internal_events (
                     event_id, event_name, timestamp, source_service, payload,
                     correlation_id, request_id, session_id, mission_id, operation_id, tags
                 )
@@ -42,12 +42,26 @@ class ObservabilityRepository:
                     dumps(event.tags),
                 ),
             )
+            if cursor.rowcount == 0:
+                row = connection.execute(
+                    """
+                    SELECT event_id, event_name, timestamp, source_service, payload,
+                           correlation_id, request_id, session_id, mission_id,
+                           operation_id, tags
+                    FROM internal_events
+                    WHERE event_id = ?
+                    """,
+                    (event.event_id,),
+                ).fetchone()
+                if row is None or self._row_to_event(row) != event:
+                    raise ValueError("observability event identity is immutable")
             connection.commit()
 
     def list_events(
         self,
         *,
         limit: int = 20,
+        event_names: tuple[str, ...] = (),
         request_id: str | None = None,
         session_id: str | None = None,
         mission_id: str | None = None,
@@ -56,6 +70,13 @@ class ObservabilityRepository:
     ) -> list[InternalEventEnvelope]:
         clauses = []
         params: list[object] = []
+        normalized_event_names = tuple(
+            dict.fromkeys(name.strip() for name in event_names if name.strip())
+        )
+        if normalized_event_names:
+            placeholders = ", ".join("?" for _ in normalized_event_names)
+            clauses.append(f"event_name IN ({placeholders})")
+            params.extend(normalized_event_names)
         if request_id:
             clauses.append("request_id = ?")
             params.append(request_id)

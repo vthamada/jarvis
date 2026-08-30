@@ -1,24 +1,41 @@
+import sqlite3
+from concurrent.futures import ThreadPoolExecutor
+from dataclasses import asdict, replace
 from json import dumps
 from pathlib import Path
 from tempfile import gettempdir
+from threading import Barrier
 from uuid import uuid4
 
+import pytest
+from evolution_lab.service import EvolutionLabService
 from governance_service.service import GovernanceService
 from knowledge_service.service import KnowledgeService
+from memory_service.repository import StoredReviewedProceduralPlaybook
 from memory_service.service import MemoryService
 from observability_service.service import ObservabilityQuery, ObservabilityService
 from operational_service.service import OperationalService
+from orchestrator_service.langgraph_flow import LangGraphFlowRunner
 from orchestrator_service.service import OrchestratorResponse, OrchestratorService
 from specialist_engine.engine import SpecialistReview
 from synthesis_engine.engine import SynthesisResult
 
+from shared.adapter_permissions import (
+    SEEDED_ADAPTER_REGISTRY,
+    build_adapter_registry_snapshot,
+)
 from shared.contracts import (
+    AdapterActionRequestContract,
     DeliberativePlanContract,
     ExperienceRecordContract,
     InputContract,
     PostTaskReflectionContract,
+    ProceduralPlaybookCandidateContract,
     ReviewedLearningGuidanceContract,
+    ReviewedProceduralPlaybookContract,
+    WorkflowLifecycleTransitionContract,
 )
+from shared.domain_registry import build_active_workflow_version_registry, workflow_definition_hash
 from shared.types import (
     ChannelType,
     InputType,
@@ -27,6 +44,10 @@ from shared.types import (
     PermissionDecision,
     RequestId,
     SessionId,
+)
+from shared.workflow_lifecycle import (
+    validate_workflow_lifecycle_transition_shape,
+    workflow_lifecycle_transition_fingerprint,
 )
 
 
@@ -38,8 +59,663 @@ def runtime_dir(name: str) -> Path:
     return target
 
 
+def bounded_input(**values: object) -> InputContract:
+    """Build an explicit bounded-autonomy fixture for executable legacy tests."""
+
+    fields: dict[str, object] = {
+        "requested_autonomy_level": "bounded_core_action",
+        "max_autonomy_level": "bounded_core_action",
+        "autonomy_confirmation_mode": "not_required",
+    }
+    fields.update(values)
+    return InputContract(**fields)  # type: ignore[arg-type]
+
+
+def adapter_action_request(**values: str) -> AdapterActionRequestContract:
+    fields = {
+        "adapter_id": "local_text_file",
+        "adapter_version": "1.0.0",
+        "action_kind": "prepare_external_action",
+        "operation": "create_text",
+        "resource_scope": "configured_text_root",
+        "resource_ref": "text:notes/exact-grant.txt",
+    }
+    fields.update(values)
+    return AdapterActionRequestContract(**fields)
+
+
+def supervised_adapter_input(**values: object) -> InputContract:
+    fields: dict[str, object] = {
+        "requested_autonomy_level": "supervised_external_action",
+        "max_autonomy_level": "supervised_external_action",
+        "autonomy_confirmation_mode": "not_required",
+        "operator_identity_ref": "operator://local/adapter-reviewer",
+        "adapter_action_request": adapter_action_request(),
+    }
+    fields.update(values)
+    return InputContract(**fields)  # type: ignore[arg-type]
+
+
 def test_orchestrator_service_name() -> None:
     assert OrchestratorService.name == "orchestrator-service"
+
+
+def test_orchestrator_issues_exact_prepare_only_adapter_grant_without_dispatch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    temp_dir = runtime_dir("orchestrator-adapter-grant")
+    governance = GovernanceService(temp_dir / "governance.db")
+    governance.activate_adapter_registry(SEEDED_ADAPTER_REGISTRY)
+    artifact_dir = temp_dir / "artifacts"
+    service = OrchestratorService(
+        governance_service=governance,
+        memory_service=MemoryService(
+            database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+        ),
+        operational_service=OperationalService(artifact_dir=str(artifact_dir)),
+        observability_service=ObservabilityService(
+            database_path=str(temp_dir / "observability.db")
+        ),
+    )
+
+    def forbidden(*_args, **_kwargs):  # type: ignore[no-untyped-def]
+        pytest.fail("prepare-only adapter flow reached the operational writer")
+
+    monkeypatch.setattr(service, "build_operation_dispatch", forbidden)
+    monkeypatch.setattr(service.operational_service, "execute", forbidden)
+    request = adapter_action_request()
+    result = service.handle_input(
+        supervised_adapter_input(
+            request_id=RequestId("req-adapter-grant-native"),
+            session_id=SessionId("sess-adapter-grant-native"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Prepare the exact governed adapter request.",
+            timestamp="2026-08-29T17:00:00Z",
+            adapter_action_request=request,
+        )
+    )
+
+    assert result.deliberative_plan.adapter_action_request == request
+    assert result.deliberative_plan.autonomy_action_kind == "prepare_external_action"
+    assert result.deliberative_plan.capability_decision_selected_mode == (
+        "core_with_supervised_external_operation"
+    )
+    assert "supervised_external_adapter" in (
+        result.deliberative_plan.capability_decision_selected_capabilities
+    )
+    assert result.adapter_action_intent is not None
+    assert result.adapter_descriptor is not None
+    assert result.adapter_grant is not None
+    assert result.adapter_grant.adapter_request == request
+    assert result.adapter_grant.confirmation_required is False
+    assert result.adapter_grant.intent_id == result.adapter_action_intent.intent_id
+    assert result.adapter_grant_claim is None
+    assert result.action_confirmation_challenge is None
+    assert result.operation_dispatch is None
+    assert result.operation_result is None
+    assert result.artifact_results == []
+    assert not artifact_dir.exists()
+    assert not any(
+        (
+            result.adapter_grant.execution_allowed,
+            result.adapter_grant.tool_dispatch_allowed,
+            result.adapter_grant.runtime_activation_allowed,
+            result.adapter_grant.promotion_authorized,
+            result.adapter_grant.automatic_promotion_allowed,
+            result.adapter_grant.core_mutation_allowed,
+        )
+    )
+    grant_event = next(
+        event for event in result.events if event.event_name == "adapter_grant_issued"
+    )
+    assert "resource_ref" not in grant_event.payload
+    assert grant_event.payload["adapter_resource_ref_redacted"] is True
+    assert grant_event.payload["grant_fingerprint"] == (
+        result.adapter_grant.grant_fingerprint
+    )
+    assert "operation_dispatched" not in {
+        event.event_name for event in result.events
+    }
+
+
+def test_orchestrator_issues_confirmation_challenge_for_stricter_adapter_policy(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    temp_dir = runtime_dir("orchestrator-adapter-confirmation")
+    governance = GovernanceService(temp_dir / "governance.db")
+    governance.activate_adapter_registry(SEEDED_ADAPTER_REGISTRY)
+    service = OrchestratorService(
+        governance_service=governance,
+        memory_service=MemoryService(
+            database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+        ),
+        operational_service=OperationalService(
+            artifact_dir=str(temp_dir / "artifacts")
+        ),
+        observability_service=ObservabilityService(
+            database_path=str(temp_dir / "observability.db")
+        ),
+    )
+
+    def forbidden(*_args, **_kwargs):  # type: ignore[no-untyped-def]
+        pytest.fail("adapter challenge flow reached dispatch or execution")
+
+    monkeypatch.setattr(service, "build_operation_dispatch", forbidden)
+    monkeypatch.setattr(service.operational_service, "execute", forbidden)
+    result = service.handle_input(
+        supervised_adapter_input(
+            request_id=RequestId("req-adapter-confirm-native"),
+            session_id=SessionId("sess-adapter-confirm-native"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Prepare the exact governed adapter request.",
+            timestamp="2026-08-29T17:05:00Z",
+            autonomy_confirmation_mode="explicit",
+            action_confirmation_receipt_id="receipt://cannot-replace-adapter-grant",
+            action_confirmation_origin_request_id="req-unrelated-origin",
+        )
+    )
+
+    assert result.adapter_action_intent is not None
+    assert result.adapter_grant is not None
+    assert result.adapter_grant.confirmation_required is True
+    assert result.action_confirmation_challenge is not None
+    assert result.action_confirmation_challenge.intent_id == (
+        result.adapter_action_intent.intent_id
+    )
+    assert result.action_confirmation_challenge.intent_fingerprint == (
+        result.adapter_grant.intent_fingerprint
+    )
+    assert result.action_confirmation_challenge.action_fingerprint == (
+        result.adapter_grant.action_fingerprint
+    )
+    assert result.adapter_grant_claim is None
+    assert result.action_confirmation_claim is None
+    assert result.operation_dispatch is None
+    assert result.operation_result is None
+    assert not (temp_dir / "artifacts").exists()
+
+
+@pytest.mark.parametrize(
+    ("case_name", "adapter_request", "autonomy_overrides", "activate_registry"),
+    [
+        (
+            "assist-only",
+            adapter_action_request(),
+            {
+                "requested_autonomy_level": "assist_only",
+                "max_autonomy_level": "assist_only",
+                "autonomy_confirmation_mode": "not_required",
+            },
+            True,
+        ),
+        (
+            "unknown-adapter",
+            adapter_action_request(adapter_id="unknown_adapter"),
+            {},
+            True,
+        ),
+        (
+            "wildcard-version",
+            adapter_action_request(adapter_version="*"),
+            {},
+            True,
+        ),
+        (
+            "resource-drift",
+            adapter_action_request(resource_ref="text:notes/../escape.txt"),
+            {},
+            True,
+        ),
+        (
+            "external-execute",
+            adapter_action_request(action_kind="execute_external_action"),
+            {"autonomy_confirmation_mode": "explicit"},
+            True,
+        ),
+        ("missing-registry", adapter_action_request(), {}, False),
+    ],
+)
+def test_orchestrator_adapter_requests_fail_closed_before_any_runtime_boundary(
+    monkeypatch: pytest.MonkeyPatch,
+    case_name: str,
+    adapter_request: AdapterActionRequestContract,
+    autonomy_overrides: dict[str, object],
+    activate_registry: bool,
+) -> None:
+    temp_dir = runtime_dir(f"orchestrator-adapter-block-{case_name}")
+    governance = GovernanceService(temp_dir / "governance.db")
+    if activate_registry:
+        governance.activate_adapter_registry(SEEDED_ADAPTER_REGISTRY)
+    service = OrchestratorService(
+        governance_service=governance,
+        memory_service=MemoryService(
+            database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+        ),
+        operational_service=OperationalService(
+            artifact_dir=str(temp_dir / "artifacts")
+        ),
+        observability_service=ObservabilityService(
+            database_path=str(temp_dir / "observability.db")
+        ),
+    )
+
+    def forbidden(*_args, **_kwargs):  # type: ignore[no-untyped-def]
+        pytest.fail("blocked adapter request reached dispatch or execution")
+
+    monkeypatch.setattr(service, "build_operation_dispatch", forbidden)
+    monkeypatch.setattr(service.operational_service, "execute", forbidden)
+    result = service.handle_input(
+        supervised_adapter_input(
+            request_id=RequestId(f"req-adapter-block-{case_name}"),
+            session_id=SessionId(f"sess-adapter-block-{case_name}"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Prepare the exact governed adapter request.",
+            timestamp="2026-08-29T17:10:00Z",
+            adapter_action_request=adapter_request,
+            **autonomy_overrides,
+        )
+    )
+
+    assert result.adapter_action_intent is None
+    assert result.adapter_descriptor is None
+    assert result.adapter_grant is None
+    assert result.adapter_grant_claim is None
+    assert result.action_confirmation_challenge is None
+    assert result.operation_dispatch is None
+    assert result.operation_result is None
+    assert not (temp_dir / "artifacts").exists()
+    event_names = {event.event_name for event in result.events}
+    assert "adapter_authorization_blocked" in event_names
+    assert "adapter_grant_issued" not in event_names
+    assert "operation_dispatched" not in event_names
+
+
+def test_orchestrator_blocks_adapter_registry_rotation_between_resolve_and_issue(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    temp_dir = runtime_dir("orchestrator-adapter-registry-race")
+    governance = GovernanceService(temp_dir / "governance.db")
+    governance.activate_adapter_registry(SEEDED_ADAPTER_REGISTRY)
+    rotated_registry = build_adapter_registry_snapshot(
+        registry_id=SEEDED_ADAPTER_REGISTRY.registry_id,
+        registry_version="1.0.1",
+        descriptors=SEEDED_ADAPTER_REGISTRY.descriptors,
+    )
+    issue_adapter_grant = governance.issue_adapter_grant
+
+    def rotate_before_issue(*args, **kwargs):  # type: ignore[no-untyped-def]
+        governance.activate_adapter_registry(rotated_registry)
+        return issue_adapter_grant(*args, **kwargs)
+
+    monkeypatch.setattr(governance, "issue_adapter_grant", rotate_before_issue)
+    service = OrchestratorService(
+        governance_service=governance,
+        memory_service=MemoryService(
+            database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+        ),
+        operational_service=OperationalService(
+            artifact_dir=str(temp_dir / "artifacts")
+        ),
+        observability_service=ObservabilityService(
+            database_path=str(temp_dir / "observability.db")
+        ),
+    )
+
+    result = service.handle_input(
+        supervised_adapter_input(
+            request_id=RequestId("req-adapter-registry-race"),
+            session_id=SessionId("sess-adapter-registry-race"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Prepare the exact governed adapter request.",
+            timestamp="2026-08-29T17:15:00Z",
+        )
+    )
+
+    assert result.adapter_grant is None
+    assert result.action_confirmation_challenge is None
+    assert result.operation_dispatch is None
+    assert not (temp_dir / "artifacts").exists()
+    assert "adapter_grant_issued" not in {
+        event.event_name for event in result.events
+    }
+
+
+def test_orchestrator_receipt_and_prompt_never_infer_adapter_authority() -> None:
+    temp_dir = runtime_dir("orchestrator-no-adapter-request")
+    governance = GovernanceService(temp_dir / "governance.db")
+    governance.activate_adapter_registry(SEEDED_ADAPTER_REGISTRY)
+    service = OrchestratorService(
+        governance_service=governance,
+        memory_service=MemoryService(
+            database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+        ),
+        operational_service=OperationalService(
+            artifact_dir=str(temp_dir / "artifacts")
+        ),
+        observability_service=ObservabilityService(
+            database_path=str(temp_dir / "observability.db")
+        ),
+    )
+
+    result = service.handle_input(
+        bounded_input(
+            request_id=RequestId("req-adapter-not-inferred"),
+            session_id=SessionId("sess-adapter-not-inferred"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content=(
+                "Explain local_text_file prepare_external_action without "
+                "performing any action."
+            ),
+            timestamp="2026-08-29T17:20:00Z",
+            requested_autonomy_level="assist_only",
+            max_autonomy_level="assist_only",
+            action_confirmation_receipt_id="receipt://not-an-adapter-grant",
+            action_confirmation_origin_request_id="req-unrelated-adapter-origin",
+        )
+    )
+
+    assert result.deliberative_plan.adapter_action_request is None
+    assert result.adapter_action_intent is None
+    assert result.adapter_descriptor is None
+    assert result.adapter_grant is None
+    assert result.adapter_grant_claim is None
+    assert result.operation_dispatch is None
+    assert "adapter_grant_issued" not in {
+        event.event_name for event in result.events
+    }
+
+
+def _runtime_workflow_lifecycle_transition() -> WorkflowLifecycleTransitionContract:
+    registry = build_active_workflow_version_registry(
+        registry_version="1.0.0",
+        generated_at="2026-08-12T10:00:00Z",
+    )
+    baseline = next(
+        item
+        for item in registry.versions
+        if item.workflow_profile == "software_change_workflow"
+    )
+    steps = [*baseline.workflow_steps, "apply the promoted runtime checkpoint"]
+    checkpoints = [*baseline.workflow_checkpoints, "promoted_runtime_checkpoint"]
+    decisions = [*baseline.workflow_decision_points, "promoted_runtime_gate"]
+    success = [*baseline.success_criteria, "promoted runtime version remains attributable"]
+    candidate_hash = workflow_definition_hash(
+        workflow_steps=steps,
+        workflow_checkpoints=checkpoints,
+        workflow_decision_points=decisions,
+        success_criteria=success,
+    )
+    return WorkflowLifecycleTransitionContract(
+        transition_id="workflow-lifecycle-transition://software-change/runtime",
+        workflow_profile=baseline.workflow_profile,
+        route=baseline.route,
+        transition_action="activate_candidate",
+        transition_status="active_promoted",
+        revision=1,
+        previous_transition_id=None,
+        previous_transition_fingerprint=None,
+        source_registry_ref=baseline.source_registry_ref,
+        source_registry_fingerprint=baseline.source_registry_fingerprint,
+        baseline_version_ref=baseline.workflow_version_id,
+        baseline_definition_hash=baseline.definition_hash,
+        candidate_version_ref="workflow-version://software_change_workflow/1.1.0",
+        candidate_definition_hash=candidate_hash,
+        active_version_ref="workflow-version://software_change_workflow/1.1.0",
+        active_definition_hash=candidate_hash,
+        active_workflow_steps=steps,
+        active_workflow_checkpoints=checkpoints,
+        active_workflow_decision_points=decisions,
+        active_success_criteria=success,
+        evolution_proposal_id="proposal://workflow/runtime",
+        proposal_fingerprint="1" * 64,
+        review_decision_id="review://workflow/runtime",
+        review_decision_fingerprint="2" * 64,
+        release_checklist_id="checklist://workflow/runtime",
+        release_checklist_fingerprint="3" * 64,
+        promotion_gate_id="gate://workflow/runtime",
+        promotion_gate_fingerprint="4" * 64,
+        workflow_eval_run_id="eval://workflow/runtime",
+        workflow_eval_run_fingerprint="5" * 64,
+        rollback_plan_id="rollback://workflow/runtime",
+        rollback_plan_fingerprint="6" * 64,
+        human_authorization_ref="human-authorization://workflow/runtime",
+        operator_ref="operator://runtime-reviewer",
+        evidence_refs=[
+            "proposal://workflow/runtime",
+            "review://workflow/runtime",
+            "checklist://workflow/runtime",
+            "gate://workflow/runtime",
+            "eval://workflow/runtime",
+            "rollback://workflow/runtime",
+            "human-authorization://workflow/runtime",
+            "evidence://workflow/release",
+        ],
+        completed_test_refs=["test://workflow/release"],
+        failure_refs=[],
+        timestamp="2026-08-12T10:30:00Z",
+    )
+
+
+class _WorkflowLifecycleMemoryStub:
+    def __init__(self, transition: WorkflowLifecycleTransitionContract | None) -> None:
+        self.transition = transition
+
+    def get_active_workflow_lifecycle(
+        self,
+        *,
+        workflow_profile: str,
+        route: str,
+    ) -> WorkflowLifecycleTransitionContract | None:
+        if (
+            self.transition is not None
+            and self.transition.workflow_profile == workflow_profile
+            and self.transition.route == route
+        ):
+            return self.transition
+        return None
+
+
+class _UnavailableWorkflowLifecycleMemoryStub:
+    def get_active_workflow_lifecycle(
+        self,
+        *,
+        workflow_profile: str,
+        route: str,
+    ) -> WorkflowLifecycleTransitionContract | None:
+        del workflow_profile, route
+        raise RuntimeError("canonical workflow lifecycle store unavailable")
+
+
+class _LockedWorkflowLifecycleMemoryStub:
+    def get_active_workflow_lifecycle(
+        self,
+        *,
+        workflow_profile: str,
+        route: str,
+    ) -> WorkflowLifecycleTransitionContract | None:
+        del workflow_profile, route
+        raise sqlite3.OperationalError("database is locked")
+
+
+def test_orchestrator_resolves_only_the_valid_promoted_workflow_binding() -> None:
+    transition = _runtime_workflow_lifecycle_transition()
+    assert validate_workflow_lifecycle_transition_shape(transition) == []
+    service = OrchestratorService()
+    service.memory_service = _WorkflowLifecycleMemoryStub(transition)  # type: ignore[assignment]
+
+    resolved = service._active_workflow_lifecycle_transition(
+        workflow_profile=transition.workflow_profile,
+        route=transition.route,
+    )
+
+    assert resolved == transition
+    assert resolved.active_workflow_steps[-1] == "apply the promoted runtime checkpoint"
+    assert service._active_workflow_lifecycle_transition(
+        workflow_profile="strategic_direction_workflow",
+        route=transition.route,
+    ) is None
+
+
+def test_orchestrator_fails_closed_to_static_baseline_for_tampered_binding() -> None:
+    transition = _runtime_workflow_lifecycle_transition()
+    tampered = replace(
+        transition,
+        active_definition_hash="0" * 64,
+    )
+    service = OrchestratorService()
+    service.memory_service = _WorkflowLifecycleMemoryStub(tampered)  # type: ignore[assignment]
+
+    assert service._active_workflow_lifecycle_transition(
+        workflow_profile=transition.workflow_profile,
+        route=transition.route,
+    ) is None
+    assert workflow_lifecycle_transition_fingerprint(tampered) != (
+        workflow_lifecycle_transition_fingerprint(transition)
+    )
+    resolved, status, reasons = service._resolve_workflow_lifecycle_transition(
+        workflow_profile=transition.workflow_profile,
+        route=transition.route,
+    )
+    assert resolved is None
+    assert status == "static_baseline_fallback"
+    assert reasons
+
+
+def test_orchestrator_store_failure_falls_back_with_auditable_reason() -> None:
+    service = OrchestratorService()
+    service.memory_service = _UnavailableWorkflowLifecycleMemoryStub()  # type: ignore[assignment]
+
+    transition, status, reasons = service._resolve_workflow_lifecycle_transition(
+        workflow_profile="software_change_workflow",
+        route="software_development",
+    )
+
+    assert transition is None
+    assert status == "static_baseline_fallback"
+    assert reasons == ["workflow_lifecycle_store_unavailable:RuntimeError"]
+
+
+def test_orchestrator_sqlite_store_failure_falls_back_with_auditable_reason() -> None:
+    service = OrchestratorService()
+    service.memory_service = _LockedWorkflowLifecycleMemoryStub()  # type: ignore[assignment]
+
+    transition, status, reasons = service._resolve_workflow_lifecycle_transition(
+        workflow_profile="software_change_workflow",
+        route="software_development",
+    )
+
+    assert transition is None
+    assert status == "static_baseline_fallback"
+    assert reasons == ["workflow_lifecycle_store_unavailable:OperationalError"]
+
+
+def test_orchestrator_rejected_persisted_chain_falls_back_with_integrity_reason() -> None:
+    temp_dir = runtime_dir("orchestrator-workflow-lifecycle-rejected")
+    database_url = f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+    transition = _runtime_workflow_lifecycle_transition()
+    writer = MemoryService(
+        database_url=database_url,
+        workflow_lifecycle_transition_verifier=lambda candidate: candidate == transition,
+    )
+    assessment = GovernanceService().assess_workflow_lifecycle_transition(
+        transition,
+        release_bundle_verifier=lambda candidate: candidate == transition,
+        assessed_at="2026-08-12T10:31:00Z",
+    )
+    writer.record_workflow_lifecycle_transition(transition, assessment)
+    service = OrchestratorService(
+        memory_service=MemoryService(
+            database_url=database_url,
+            workflow_lifecycle_transition_verifier=lambda _candidate: False,
+        )
+    )
+
+    resolved, status, reasons = service._resolve_workflow_lifecycle_transition(
+        workflow_profile=transition.workflow_profile,
+        route=transition.route,
+    )
+
+    assert resolved is None
+    assert status == "static_baseline_fallback"
+    assert reasons == ["workflow_lifecycle_persisted_chain_rejected"]
+
+
+def test_orchestrator_uses_persisted_human_promoted_workflow_end_to_end() -> None:
+    temp_dir = runtime_dir("orchestrator-workflow-lifecycle")
+    memory = MemoryService(
+        database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}",
+        workflow_lifecycle_transition_verifier=lambda candidate: (
+            candidate == transition
+        ),
+    )
+    governance = GovernanceService()
+    transition = _runtime_workflow_lifecycle_transition()
+    assessment = governance.assess_workflow_lifecycle_transition(
+        transition,
+        release_bundle_verifier=lambda candidate: candidate == transition,
+        assessed_at=transition.timestamp,
+    )
+    memory.record_workflow_lifecycle_transition(transition, assessment)
+    service = OrchestratorService(
+        governance_service=governance,
+        memory_service=memory,
+        operational_service=OperationalService(
+            artifact_dir=str(temp_dir / "artifacts")
+        ),
+        observability_service=ObservabilityService(
+            database_path=str(temp_dir / "observability.db")
+        ),
+    )
+
+    result = service.handle_input(
+        bounded_input(
+            request_id=RequestId("req-workflow-lifecycle-runtime"),
+            session_id=SessionId("sess-workflow-lifecycle-runtime"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content=(
+                "Plan the Python service API rollout and implement the safest "
+                "bounded change with tests and rollback."
+            ),
+            timestamp="2026-08-12T10:45:00Z",
+        )
+    )
+
+    plan = result.deliberative_plan
+    assert plan.workflow_lifecycle_transition == transition
+    assert plan.route_workflow_steps == transition.active_workflow_steps
+    assert plan.route_workflow_checkpoints == transition.active_workflow_checkpoints
+    assert plan.route_workflow_decision_points == (
+        transition.active_workflow_decision_points
+    )
+    assert "promoted runtime version remains attributable" in plan.success_criteria
+    assert transition.active_version_ref in result.response_text
+    assert result.operation_dispatch is None
+    assert result.operation_result is None
+    events_by_name = {event.event_name: event for event in result.events}
+    expected_lifecycle_events = {
+        "plan_built",
+        "response_synthesized",
+    }
+    assert expected_lifecycle_events <= set(events_by_name)
+    for event_name in expected_lifecycle_events:
+        event = events_by_name[event_name]
+        assert event.payload["workflow_lifecycle_status"] == "active_promoted"
+        assert event.payload["workflow_lifecycle_transition_id"] == (
+            transition.transition_id
+        )
+        assert event.payload["workflow_lifecycle_active_version_ref"] == (
+            transition.active_version_ref
+        )
+        assert event.payload["workflow_lifecycle_human_authorized"] is True
+        assert event.payload["workflow_lifecycle_runtime_execution_allowed"] is False
+        assert event.payload["workflow_lifecycle_automatic_promotion_allowed"] is False
+        assert event.payload["workflow_lifecycle_automatic_rollback_allowed"] is False
 
 
 def test_orchestrator_propagates_current_knowledge_evidence_end_to_end() -> None:
@@ -58,7 +734,7 @@ def test_orchestrator_propagates_current_knowledge_evidence_end_to_end() -> None
     )
 
     result = service.handle_input(
-        InputContract(
+        bounded_input(
             request_id=RequestId("req-knowledge-evidence"),
             session_id=SessionId("sess-knowledge-evidence"),
             mission_id=MissionId("mission-knowledge-evidence"),
@@ -120,7 +796,7 @@ def test_orchestrator_surfaces_missing_provenance_without_mutating_permission() 
     )
 
     result = service.handle_input(
-        InputContract(
+        bounded_input(
             request_id=RequestId("req-missing-provenance"),
             session_id=SessionId("sess-missing-provenance"),
             mission_id=MissionId("mission-missing-provenance"),
@@ -163,7 +839,7 @@ def test_orchestrator_records_operator_feedback_through_governed_memory() -> Non
     )
     mission_id = "mission-orchestrator-feedback"
     mission_response = service.handle_input(
-        InputContract(
+        bounded_input(
             request_id=RequestId("req-orchestrator-feedback-mission"),
             session_id=SessionId("sess-orchestrator-feedback"),
             mission_id=MissionId(mission_id),
@@ -230,19 +906,18 @@ def test_orchestrator_declares_and_propagates_autonomy_ladder() -> None:
             database_path=str(temp_dir / "observability.db")
         ),
     )
-
     result = service.handle_input(
-        InputContract(
+        bounded_input(
             request_id=RequestId("req-orchestrator-autonomy"),
             session_id=SessionId("sess-orchestrator-autonomy"),
             mission_id=MissionId("mission-orchestrator-autonomy"),
             channel=ChannelType.CHAT,
             input_type=InputType.TEXT,
-            content="Plan the governed rollout before any external action.",
+            content="Please plan the first governed milestone.",
             timestamp="2026-07-04T00:00:00Z",
             requested_autonomy_level="supervised_external_action",
             max_autonomy_level="bounded_core_action",
-            autonomy_confirmation_mode="explicit",
+            autonomy_confirmation_mode="not_required",
             autonomy_policy_refs=["policy://operator/max-bounded-core-action"],
         )
     )
@@ -250,16 +925,31 @@ def test_orchestrator_declares_and_propagates_autonomy_ladder() -> None:
 
     assert result.deliberative_plan.requested_autonomy_level == (
         "supervised_external_action"
-    )
+    ), result.deliberative_plan.autonomy_validation_errors
     assert result.deliberative_plan.effective_autonomy_level == (
         "bounded_core_action"
     )
     assert result.deliberative_plan.autonomy_ladder_status == "downgraded_to_max"
     assert result.deliberative_plan.autonomy_automatic_promotion_allowed is False
     assert result.deliberative_plan.autonomy_core_mutation_allowed is False
-    assert result.operation_dispatch is not None
+    assert result.deliberative_plan.autonomy_action_kind == (
+        "execute_reversible_core_action"
+    )
+    assert result.deliberative_plan.autonomy_validation_errors == []
+    assert result.operation_dispatch is not None, (
+        result.governance_decision,
+        result.governance_check.context.get(
+            "autonomy_action_policy_reason_codes"
+        ),
+        result.directive,
+        result.deliberative_plan.capability_decision_selected_mode,
+        result.deliberative_plan.capability_decision_selected_capabilities,
+    )
     assert result.operation_dispatch.effective_autonomy_level == (
         "bounded_core_action"
+    )
+    assert result.operation_dispatch.autonomy_action_kind == (
+        "execute_reversible_core_action"
     )
     autonomy_event = event_by_name["autonomy_ladder_declared"]
     assert autonomy_event.payload["effective_autonomy_level"] == (
@@ -269,6 +959,135 @@ def test_orchestrator_declares_and_propagates_autonomy_ladder() -> None:
     assert autonomy_event.payload["autonomy_automatic_promotion_allowed"] is False
     plan_event = event_by_name["plan_built"]
     assert plan_event.payload["max_autonomy_level"] == "bounded_core_action"
+
+
+def test_orchestrator_executes_exact_confirmation_once_across_restart() -> None:
+    temp_dir = runtime_dir("orchestrator-action-confirmation")
+    governance_path = temp_dir / "governance.db"
+    memory_url = f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+    observability_path = str(temp_dir / "observability.db")
+    artifact_dir = str(temp_dir / "artifacts")
+
+    def build_service() -> OrchestratorService:
+        governance = GovernanceService(governance_path)
+        return OrchestratorService(
+            governance_service=governance,
+            memory_service=MemoryService(database_url=memory_url),
+            operational_service=OperationalService(
+                artifact_dir=artifact_dir,
+                action_confirmation_verifier=(
+                    governance.verify_action_confirmation_claim
+                ),
+            ),
+            observability_service=ObservabilityService(
+                database_path=observability_path
+            ),
+        )
+
+    def contract(
+        request_id: str,
+        *,
+        receipt_id: str | None = None,
+        origin_request_id: str | None = None,
+    ) -> InputContract:
+        return bounded_input(
+            request_id=RequestId(request_id),
+            session_id=SessionId("sess-orchestrator-action-confirmation"),
+            mission_id=MissionId("mission-orchestrator-action-confirmation"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Plan the exact governed rollout.",
+            timestamp="2026-08-29T12:00:00Z",
+            operator_identity_ref="operator://local/action-confirmation",
+            requested_autonomy_level="confirm_before_action",
+            max_autonomy_level="confirm_before_action",
+            autonomy_confirmation_mode="explicit",
+            action_confirmation_receipt_id=receipt_id,
+            action_confirmation_origin_request_id=origin_request_id,
+        )
+
+    first_service = build_service()
+    first = first_service.handle_input(contract("req-action-confirmation-1"))
+
+    assert first.action_confirmation_challenge is not None
+    assert first.action_confirmation_claim is None
+    assert first.operation_dispatch is None
+    assert first.operation_result is None
+    assert first.artifact_results == []
+    first_event_names = [event.event_name for event in first.events]
+    assert "action_confirmation_challenged" in first_event_names
+    assert "action_confirmation_blocked" in first_event_names
+    assert "operation_dispatched" not in first_event_names
+    assert list((temp_dir / "artifacts").glob("*.md")) == []
+
+    challenge = first.action_confirmation_challenge
+    receipt = first_service.governance_service.confirm_action_challenge(
+        challenge.challenge_id,
+        operator_identity_ref="operator://local/action-confirmation",
+        expected_action_fingerprint=challenge.action_fingerprint,
+    )
+
+    restarted_service = build_service()
+    missing_origin = restarted_service.handle_input(
+        contract(
+            "req-action-confirmation-missing-origin",
+            receipt_id=receipt.receipt_id,
+        )
+    )
+
+    assert missing_origin.action_confirmation_claim is None
+    assert missing_origin.operation_dispatch is None
+    assert missing_origin.operation_result is None
+    assert missing_origin.artifact_results == []
+    missing_origin_blocked = next(
+        event
+        for event in missing_origin.events
+        if event.event_name == "action_confirmation_blocked"
+    )
+    assert missing_origin_blocked.payload["reason"] == (
+        "action_confirmation_origin_request_required"
+    )
+    assert list((temp_dir / "artifacts").glob("*.md")) == []
+
+    second = restarted_service.handle_input(
+        contract(
+            "req-action-confirmation-2",
+            receipt_id=receipt.receipt_id,
+            origin_request_id=str(challenge.origin_request_id),
+        )
+    )
+
+    assert second.action_confirmation_challenge is None
+    assert second.action_confirmation_claim is not None
+    assert second.operation_dispatch is not None
+    assert str(second.operation_dispatch.request_id) == "req-action-confirmation-1"
+    assert second.operation_result is not None
+    assert second.operation_result.status == OperationStatus.COMPLETED
+    assert len(second.artifact_results) == 1
+    second_event_names = [event.event_name for event in second.events]
+    assert "action_confirmation_claimed" in second_event_names
+    assert second_event_names.count("operation_dispatched") == 1
+    assert second_event_names.count("operation_completed") == 1
+    assert len(list((temp_dir / "artifacts").glob("*.md"))) == 1
+
+    third = restarted_service.handle_input(
+        contract(
+            "req-action-confirmation-3",
+            receipt_id=receipt.receipt_id,
+            origin_request_id=str(challenge.origin_request_id),
+        )
+    )
+
+    assert third.action_confirmation_claim is None
+    assert third.action_confirmation_challenge is not None
+    assert third.operation_dispatch is None
+    assert third.operation_result is None
+    assert third.artifact_results == []
+    third_event_names = [event.event_name for event in third.events]
+    assert "action_confirmation_blocked" in third_event_names
+    assert "operation_dispatched" not in third_event_names
+    assert "operation_completed" not in third_event_names
+    assert len(list((temp_dir / "artifacts").glob("*.md"))) == 1
 
 
 def test_orchestrator_defers_operation_above_autonomy_limit() -> None:
@@ -286,7 +1105,7 @@ def test_orchestrator_defers_operation_above_autonomy_limit() -> None:
     )
 
     result = service.handle_input(
-        InputContract(
+        bounded_input(
             request_id=RequestId("req-orchestrator-autonomy-defer"),
             session_id=SessionId("sess-orchestrator-autonomy-defer"),
             mission_id=MissionId("mission-orchestrator-autonomy-defer"),
@@ -312,6 +1131,226 @@ def test_orchestrator_defers_operation_above_autonomy_limit() -> None:
     assert plan_governed_event.payload["effective_autonomy_level"] == "assist_only"
 
 
+def test_orchestrator_assist_only_never_dispatches_even_with_receipt() -> None:
+    temp_dir = runtime_dir("orchestrator-assist-only-no-dispatch")
+    service = OrchestratorService(
+        memory_service=MemoryService(
+            database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+        ),
+        operational_service=OperationalService(
+            artifact_dir=str(temp_dir / "artifacts")
+        ),
+        observability_service=ObservabilityService(
+            database_path=str(temp_dir / "observability.db")
+        ),
+    )
+
+    result = service.handle_input(
+        bounded_input(
+            request_id=RequestId("req-assist-only-no-dispatch"),
+            session_id=SessionId("sess-assist-only-no-dispatch"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Please plan the first milestone.",
+            timestamp="2026-08-29T16:10:00Z",
+            requested_autonomy_level="assist_only",
+            max_autonomy_level="assist_only",
+            autonomy_confirmation_mode="not_required",
+            operator_identity_ref="operator://local/assist-only",
+            action_confirmation_receipt_id="receipt://must-not-expand-authority",
+            action_confirmation_origin_request_id="req-origin-assist-only",
+        )
+    )
+
+    assert result.deliberative_plan.autonomy_action_kind == (
+        "execute_reversible_core_action"
+    )
+    assert result.operation_dispatch is None
+    assert result.operation_result is None
+    assert result.action_confirmation_challenge is None
+    assert result.action_confirmation_claim is None
+    assert result.artifact_results == []
+    assert list((temp_dir / "artifacts").glob("*.md")) == []
+    event_names = [event.event_name for event in result.events]
+    assert "operation_dispatched" not in event_names
+    assert "operation_completed" not in event_names
+
+
+def test_orchestrator_blocks_external_action_before_confirmation_challenge(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    temp_dir = runtime_dir("orchestrator-external-adapter-unavailable")
+    service = OrchestratorService(
+        memory_service=MemoryService(
+            database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+        ),
+        operational_service=OperationalService(
+            artifact_dir=str(temp_dir / "artifacts")
+        ),
+        observability_service=ObservabilityService(
+            database_path=str(temp_dir / "observability.db")
+        ),
+    )
+    monkeypatch.setattr(
+        service,
+        "_derive_autonomy_action_kind",
+        lambda _plan: "execute_external_action",
+    )
+    execute_specialist_handoffs = service._execute_specialist_handoffs
+
+    def execute_external_capability(*args, **kwargs):  # type: ignore[no-untyped-def]
+        specialist_review, plan, events = execute_specialist_handoffs(
+            *args,
+            **kwargs,
+        )
+        plan.capability_decision_selected_mode = (
+            "core_with_supervised_external_operation"
+        )
+        plan.capability_decision_selected_capabilities = [
+            "core_reasoning",
+            "supervised_external_operation",
+        ]
+        return specialist_review, plan, events
+
+    monkeypatch.setattr(
+        service,
+        "_execute_specialist_handoffs",
+        execute_external_capability,
+    )
+
+    result = service.handle_input(
+        bounded_input(
+            request_id=RequestId("req-external-adapter-unavailable"),
+            session_id=SessionId("sess-external-adapter-unavailable"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Please plan the first milestone.",
+            timestamp="2026-08-29T16:20:00Z",
+            requested_autonomy_level="supervised_external_action",
+            max_autonomy_level="supervised_external_action",
+            autonomy_confirmation_mode="explicit",
+            operator_identity_ref="operator://local/external-action",
+        )
+    )
+
+    assert result.deliberative_plan.autonomy_action_kind == (
+        "execute_external_action"
+    )
+    assert result.deliberative_plan.capability_decision_selected_mode == (
+        "core_with_supervised_external_operation"
+    )
+    assert result.deliberative_plan.max_autonomy_capability_mode == (
+        "core_with_supervised_external_operation"
+    )
+    assert result.governance_decision.decision == (
+        PermissionDecision.ALLOW_WITH_CONDITIONS
+    )
+    assert result.operation_dispatch is None
+    assert result.action_confirmation_challenge is None
+    assert result.action_confirmation_claim is None
+    assert result.operation_result is None
+    assert list((temp_dir / "artifacts").glob("*.md")) == []
+    event_names = [event.event_name for event in result.events]
+    assert "operation_dispatched" not in event_names
+    assert "operation_completed" not in event_names
+
+
+@pytest.mark.parametrize(
+    ("case_name", "field_name", "invalid_value"),
+    [
+        ("missing-level", "requested_autonomy_level", None),
+        ("missing-action", "autonomy_action_kind", None),
+        (
+            "effective-mismatch",
+            "effective_autonomy_level",
+            "supervised_external_action",
+        ),
+        (
+            "unknown-capability",
+            "capability_decision_selected_mode",
+            "root_shell",
+        ),
+        ("missing-max-capability", "max_autonomy_capability_mode", None),
+        ("unknown-mode", "autonomy_confirmation_mode", "silent"),
+        (
+            "list-overlap",
+            "autonomy_allowed_runtime_actions",
+            [
+                "read_context",
+                "draft_plan",
+                "explain_limits",
+                "prepare_local_action",
+                "execute_reversible_core_action",
+                "core_mutation",
+            ],
+        ),
+        (
+            "declared-validation-error",
+            "autonomy_validation_errors",
+            ["autonomy_projection_tampered"],
+        ),
+    ],
+)
+def test_orchestrator_blocks_invalid_autonomy_projection_before_dispatch(
+    monkeypatch: pytest.MonkeyPatch,
+    case_name: str,
+    field_name: str,
+    invalid_value: object,
+) -> None:
+    temp_dir = runtime_dir(f"orchestrator-invalid-autonomy-{case_name}")
+    service = OrchestratorService(
+        memory_service=MemoryService(
+            database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+        ),
+        operational_service=OperationalService(
+            artifact_dir=str(temp_dir / "artifacts")
+        ),
+        observability_service=ObservabilityService(
+            database_path=str(temp_dir / "observability.db")
+        ),
+    )
+    execute_specialist_handoffs = service._execute_specialist_handoffs
+
+    def execute_with_tampered_autonomy(*args, **kwargs):  # type: ignore[no-untyped-def]
+        specialist_review, plan, events = execute_specialist_handoffs(
+            *args,
+            **kwargs,
+        )
+        setattr(plan, field_name, invalid_value)
+        return specialist_review, plan, events
+
+    monkeypatch.setattr(
+        service,
+        "_execute_specialist_handoffs",
+        execute_with_tampered_autonomy,
+    )
+
+    result = service.handle_input(
+        bounded_input(
+            request_id=RequestId(f"req-invalid-autonomy-{case_name}"),
+            session_id=SessionId(f"sess-invalid-autonomy-{case_name}"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Please plan the first governed milestone.",
+            timestamp="2026-08-29T16:40:00Z",
+            requested_autonomy_level="bounded_core_action",
+            max_autonomy_level="bounded_core_action",
+            autonomy_confirmation_mode="not_required",
+        )
+    )
+
+    assert result.governance_decision.decision == PermissionDecision.BLOCK
+    assert result.governance_decision.containment_hint == "block_autonomy_action"
+    assert result.operation_dispatch is None
+    assert result.operation_result is None
+    assert result.action_confirmation_challenge is None
+    assert result.artifact_results == []
+    assert list((temp_dir / "artifacts").glob("*.md")) == []
+    event_names = [event.event_name for event in result.events]
+    assert "operation_dispatched" not in event_names
+    assert "operation_completed" not in event_names
+
+
 def test_orchestrator_transitions_work_item_through_governed_core() -> None:
     temp_dir = runtime_dir("orchestrator-work-item")
     service = OrchestratorService(
@@ -327,7 +1366,7 @@ def test_orchestrator_transitions_work_item_through_governed_core() -> None:
     )
     mission_id = "mission-orchestrator-work-item"
     service.handle_input(
-        InputContract(
+        bounded_input(
             request_id=RequestId("req-orchestrator-work-item"),
             session_id=SessionId("sess-orchestrator-work-item"),
             mission_id=MissionId(mission_id),
@@ -391,7 +1430,7 @@ def test_orchestrator_transitions_artifact_lifecycle_through_governed_core() -> 
     )
     mission_id = "mission-orchestrator-artifact"
     service.handle_input(
-        InputContract(
+        bounded_input(
             request_id=RequestId("req-orchestrator-artifact"),
             session_id=SessionId("sess-orchestrator-artifact"),
             mission_id=MissionId(mission_id),
@@ -475,7 +1514,7 @@ def test_orchestrator_inspects_long_horizon_goal_strategy_read_only() -> None:
     )
     mission_id = "mission-orchestrator-long-horizon"
     service.handle_input(
-        InputContract(
+        bounded_input(
             request_id=RequestId("req-orchestrator-long-horizon"),
             session_id=SessionId("sess-orchestrator-long-horizon"),
             mission_id=MissionId(mission_id),
@@ -532,7 +1571,7 @@ def test_orchestrator_synthesizes_mission_progress_report_read_only() -> None:
     )
     mission_id = "mission-orchestrator-progress-report"
     response = service.handle_input(
-        InputContract(
+        bounded_input(
             request_id=RequestId("req-orchestrator-progress-report"),
             session_id=SessionId("sess-orchestrator-progress-report"),
             mission_id=MissionId(mission_id),
@@ -625,7 +1664,7 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
         observability_service=observability,
     )
     result = service.handle_input(
-        InputContract(
+        bounded_input(
             request_id=RequestId("req-1"),
             session_id=SessionId("sess-1"),
             channel=ChannelType.CHAT,
@@ -668,7 +1707,7 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     )
     assert (
         result.operation_dispatch.request_confirmation_mode
-        == "explicit_confirmation_required"
+        == "bounded_autonomy"
     )
     assert result.operation_dispatch.request_identity_summary
     assert result.operation_dispatch.request_identity_policy_refs == [
@@ -805,7 +1844,7 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     )
     assert (
         result.deliberative_plan.request_confirmation_mode
-        == "explicit_confirmation_required"
+        == "bounded_autonomy"
     )
     assert result.deliberative_plan.request_identity_summary
     assert result.deliberative_plan.request_identity_policy_refs == [
@@ -840,6 +1879,26 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
         "trace://request/req-1",
         f"memory://record/{result.memory_record.memory_record_id}",
     ]
+    assert result.decision_outcome_attribution is not None
+    attribution = result.decision_outcome_attribution
+    assert attribution.request_id == RequestId("req-1")
+    assert attribution.experience_id == result.experience_record.experience_id
+    assert attribution.outcome_ref == result.experience_record.experience_id
+    assert attribution.workflow_policy_ref == (
+        result.deliberative_plan.workflow_policy_decision.policy_ref
+    )
+    assert attribution.attribution_status == "declared_causality"
+    assert attribution.workflow_policy_ref in attribution.declared_causal_refs
+    assert attribution.causality_scope == "runtime_declared_participation_only"
+    assert attribution.causal_effect_proven is False
+    assert attribution.gain_claim_status == "not_established_without_comparator"
+    assert attribution.execution_allowed is False
+    assert attribution.promotion_authorized is False
+    assert attribution.automatic_promotion_allowed is False
+    assert attribution.core_mutation_allowed is False
+    assert service.memory_service.get_decision_outcome_attribution(
+        request_id="req-1"
+    ) == attribution
     stored_experiences = service.memory_service.list_experience_reflections(
         mission_id="mission:req-1"
     )
@@ -891,6 +1950,7 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     assert "plan_refined" in event_names
     assert "plan_governed" in event_names
     assert "experience_record_declared" in event_names
+    assert "decision_outcome_attribution_recorded" in event_names
     assert "post_task_reflection_declared" in event_names
     experience_event = next(
         event for event in stored_events if event.event_name == "experience_record_declared"
@@ -898,6 +1958,21 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     assert experience_event.payload["experience_id"] == "experience://mission:req-1/req-1"
     assert experience_event.payload["automatic_promotion_allowed"] is False
     assert experience_event.payload["core_mutation_allowed"] is False
+    attribution_event = next(
+        event
+        for event in stored_events
+        if event.event_name == "decision_outcome_attribution_recorded"
+    )
+    assert attribution_event.payload["attribution_record_id"] == (
+        attribution.attribution_record_id
+    )
+    assert attribution_event.payload == asdict(attribution)
+    assert attribution_event.payload["attribution_status"] == "declared_causality"
+    assert attribution_event.payload["causal_effect_proven"] is False
+    assert attribution_event.payload["gain_claim_status"] == (
+        "not_established_without_comparator"
+    )
+    assert attribution_event.payload["promotion_authorized"] is False
     reflection_event = next(
         event for event in stored_events if event.event_name == "post_task_reflection_declared"
     )
@@ -931,12 +2006,238 @@ def test_orchestrator_service_handles_unitary_deliberative_planning() -> None:
     assert specialist_subflow_event.payload["governance_status"] == "approved"
     assert specialist_subflow_event.payload["completion_status"] == "completed"
     assert registry_event.payload["specialist_mode"]["strategy"] == "guided"
-    assert registry_event.payload["workflow_profile"]["strategy"] == "strategic_direction_workflow"
+    assert registry_event.payload["workflow_profile"]["strategy"] == (
+        "strategic_direction_workflow"
+    )
     assert (
-        registry_event.payload["promoted_route_registry"]["strategy"]["linked_specialist_type"]
+        registry_event.payload["promoted_route_registry"]["strategy"][
+            "linked_specialist_type"
+        ]
         == "structured_analysis_specialist"
     )
-    assert registry_event.payload["promoted_route_registry"]["strategy"]["eligible"] is True
+    assert registry_event.payload["promoted_route_registry"]["strategy"][
+        "eligible"
+    ] is True
+
+
+def test_orchestrator_contains_attribution_store_failure_without_reexecution(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    temp_dir = runtime_dir("orchestrator-attribution-failure")
+    memory = MemoryService(
+        database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+    )
+    observability = ObservabilityService(
+        database_path=str(temp_dir / "observability.db")
+    )
+    service = OrchestratorService(
+        governance_service=GovernanceService(),
+        memory_service=memory,
+        operational_service=OperationalService(
+            artifact_dir=str(temp_dir / "artifacts")
+        ),
+        observability_service=observability,
+    )
+
+    def fail_attribution_store(_record):  # type: ignore[no-untyped-def]
+        raise ValueError("simulated immutable attribution conflict")
+
+    monkeypatch.setattr(
+        memory,
+        "record_decision_outcome_attribution",
+        fail_attribution_store,
+    )
+
+    result = service.handle_input(
+        bounded_input(
+            request_id=RequestId("req-attribution-store-failure"),
+            session_id=SessionId("sess-attribution-store-failure"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Please plan the first bounded milestone.",
+            timestamp="2026-08-11T16:00:00+00:00",
+        )
+    )
+
+    event_names = [event.event_name for event in result.events]
+    assert result.operation_result is not None
+    assert result.decision_outcome_attribution is None
+    assert event_names.count("operation_dispatched") == 1
+    assert event_names.count("operation_completed") == 1
+    assert "decision_outcome_attribution_recorded" not in event_names
+    failed_event = next(
+        event
+        for event in result.events
+        if event.event_name == "decision_outcome_attribution_failed"
+    )
+    assert failed_event.payload["attribution_status"] == "insufficient_evidence"
+    assert failed_event.payload["causal_effect_proven"] is False
+    assert failed_event.payload["gain_claim_status"] == (
+        "not_established_without_comparator"
+    )
+    assert failed_event.payload["execution_allowed"] is False
+    assert failed_event.payload["promotion_authorized"] is False
+    assert failed_event.payload["automatic_promotion_allowed"] is False
+    assert failed_event.payload["core_mutation_allowed"] is False
+
+
+def test_orchestrator_attributes_failed_operation_as_failed_outcome(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    temp_dir = runtime_dir("orchestrator-failed-outcome-attribution")
+    operational = OperationalService(
+        artifact_dir=str(temp_dir / "artifacts")
+    )
+    original_execute = operational.execute
+
+    def execute_as_failed(dispatch):  # type: ignore[no-untyped-def]
+        execution = original_execute(dispatch)
+        return replace(
+            execution,
+            operation_result=replace(
+                execution.operation_result,
+                status=OperationStatus.FAILED,
+                errors=["simulated_runtime_failure"],
+            ),
+        )
+
+    monkeypatch.setattr(operational, "execute", execute_as_failed)
+    service = OrchestratorService(
+        memory_service=MemoryService(
+            database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+        ),
+        operational_service=operational,
+        observability_service=ObservabilityService(
+            database_path=str(temp_dir / "observability.db")
+        ),
+    )
+
+    result = service.handle_input(
+        bounded_input(
+            request_id=RequestId("req-failed-outcome-attribution"),
+            session_id=SessionId("sess-failed-outcome-attribution"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Please plan the bounded failure simulation.",
+            timestamp="2026-08-11T16:20:00+00:00",
+        )
+    )
+
+    assert result.operation_result is not None
+    assert result.operation_result.status == OperationStatus.FAILED
+    assert result.experience_record is not None
+    assert result.experience_record.outcome_status == "failed"
+    assert "operation_status:failed" in result.experience_record.errors
+    assert result.decision_outcome_attribution is not None
+    assert result.decision_outcome_attribution.outcome_status == "failed"
+
+
+def test_orchestrator_rejects_duplicate_request_before_any_runtime_side_effect() -> None:
+    temp_dir = runtime_dir("orchestrator-duplicate-request")
+    memory = MemoryService(
+        database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+    )
+    observability = ObservabilityService(
+        database_path=str(temp_dir / "observability.db")
+    )
+    service = OrchestratorService(
+        governance_service=GovernanceService(),
+        memory_service=memory,
+        operational_service=OperationalService(
+            artifact_dir=str(temp_dir / "artifacts")
+        ),
+        observability_service=observability,
+    )
+    contract = bounded_input(
+        request_id=RequestId("req-duplicate-runtime"),
+        session_id=SessionId("sess-duplicate-runtime"),
+        channel=ChannelType.CHAT,
+        input_type=InputType.TEXT,
+        content="Please plan the bounded rollout.",
+        timestamp="2026-08-11T16:30:00+00:00",
+    )
+
+    first = service.handle_input(contract)
+    assert first.experience_record is not None
+    experience_before = memory.get_experience_reflection(
+        first.experience_record.experience_id
+    )
+
+    with pytest.raises(ValueError, match="request_id has already been processed"):
+        service.handle_input(contract)
+
+    stored_events = observability.list_recent_events(
+        ObservabilityQuery(request_id="req-duplicate-runtime", limit=200)
+    )
+    assert [event.event_name for event in stored_events].count(
+        "operation_dispatched"
+    ) == 1
+    assert [event.event_name for event in stored_events].count(
+        "decision_outcome_attribution_recorded"
+    ) == 1
+    assert not any(
+        event.event_name == "decision_outcome_attribution_failed"
+        for event in stored_events
+    )
+    assert memory.get_experience_reflection(
+        first.experience_record.experience_id
+    ) == experience_before
+
+
+def test_orchestrator_claims_duplicate_request_atomically_before_dispatch() -> None:
+    temp_dir = runtime_dir("orchestrator-concurrent-duplicate-request")
+    database_url = f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+    observability_path = str(temp_dir / "observability.db")
+    services = [
+        OrchestratorService(
+            governance_service=GovernanceService(),
+            memory_service=MemoryService(database_url=database_url),
+            operational_service=OperationalService(
+                artifact_dir=str(temp_dir / "artifacts")
+            ),
+            observability_service=ObservabilityService(
+                database_path=observability_path
+            ),
+        )
+        for _ in range(2)
+    ]
+    contract = bounded_input(
+        request_id=RequestId("req-concurrent-duplicate-runtime"),
+        session_id=SessionId("sess-concurrent-duplicate-runtime"),
+        channel=ChannelType.CHAT,
+        input_type=InputType.TEXT,
+        content="Please plan the bounded concurrent rollout.",
+        timestamp="2026-08-11T16:40:00+00:00",
+    )
+    barrier = Barrier(2)
+
+    def run_once(service: OrchestratorService) -> object:
+        barrier.wait()
+        try:
+            return service.handle_input(contract)
+        except ValueError as exc:
+            return exc
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+        outcomes = list(executor.map(run_once, services))
+
+    responses = [item for item in outcomes if isinstance(item, OrchestratorResponse)]
+    failures = [item for item in outcomes if isinstance(item, ValueError)]
+    assert len(responses) == 1
+    assert len(failures) == 1
+    assert "request_id has already been processed" in str(failures[0])
+    stored_events = ObservabilityService(
+        database_path=observability_path
+    ).list_recent_events(
+        ObservabilityQuery(
+            request_id="req-concurrent-duplicate-runtime",
+            limit=200,
+        )
+    )
+    event_names = [event.event_name for event in stored_events]
+    assert event_names.count("operation_dispatched") == 1
+    assert event_names.count("operation_completed") == 1
+    assert event_names.count("decision_outcome_attribution_recorded") == 1
 
 
 def test_orchestrator_service_applies_relevant_post_task_reflection() -> None:
@@ -973,7 +2274,7 @@ def test_orchestrator_service_applies_relevant_post_task_reflection() -> None:
     )
 
     result = service.handle_input(
-        InputContract(
+        bounded_input(
             request_id=RequestId("req-reflection"),
             session_id=SessionId("sess-reflection"),
             mission_id=MissionId("mission-reflection"),
@@ -1026,7 +2327,7 @@ def test_orchestrator_service_applies_relevant_post_task_reflection() -> None:
     )
     assert (
         workflow_event.payload["request_confirmation_mode"]
-        == "explicit_confirmation_required"
+        == "bounded_autonomy"
     )
     assert workflow_event.payload["request_identity_summary"]
     assert workflow_event.payload["request_identity_policy_refs"] == [
@@ -1529,7 +2830,7 @@ def test_orchestrator_service_applies_relevant_reviewed_learning_guidance() -> N
     )
 
     result = service.handle_input(
-        InputContract(
+        bounded_input(
             request_id=RequestId("req-reviewed-learning"),
             session_id=SessionId("sess-reviewed-learning"),
             mission_id=MissionId("mission-reviewed-learning"),
@@ -1591,7 +2892,7 @@ def test_orchestrator_service_blocks_reviewed_learning_guidance_outside_scope() 
     )
 
     result = service.handle_input(
-        InputContract(
+        bounded_input(
             request_id=RequestId("req-reviewed-learning-blocked"),
             session_id=SessionId("sess-reviewed-learning-blocked"),
             mission_id=MissionId("mission-reviewed-learning-blocked"),
@@ -1664,7 +2965,7 @@ def test_orchestrator_prioritizes_reviewed_learning_over_conflicting_reflection(
     )
 
     result = service.handle_input(
-        InputContract(
+        bounded_input(
             request_id=RequestId("req-memory-policy"),
             session_id=SessionId("sess-memory-policy"),
             mission_id=MissionId("mission-memory-policy"),
@@ -1719,7 +3020,7 @@ def test_orchestrator_service_requests_clarification_without_operation() -> None
         ),
     )
     result = service.handle_input(
-        InputContract(
+        bounded_input(
             request_id=RequestId("req-2"),
             session_id=SessionId("sess-2"),
             channel=ChannelType.CHAT,
@@ -1761,7 +3062,7 @@ def test_orchestrator_service_tracks_promoted_domain_specialist_without_breaking
         observability_service=observability,
     )
     result = service.handle_input(
-        InputContract(
+        bounded_input(
             request_id=RequestId("req-shadow"),
             session_id=SessionId("sess-shadow"),
             channel=ChannelType.CHAT,
@@ -1844,6 +3145,359 @@ def test_orchestrator_service_tracks_promoted_domain_specialist_without_breaking
     assert result.response_text
 
 
+def test_orchestrator_applies_reviewed_playbook_without_automatic_dispatch() -> None:
+    temp_dir = runtime_dir("orchestrator-reviewed-procedural-playbook")
+    observability = ObservabilityService(
+        database_path=str(temp_dir / "observability.db")
+    )
+    evolution = EvolutionLabService(
+        database_path=str(temp_dir / "evolution.db")
+    )
+    candidate = ProceduralPlaybookCandidateContract(
+        playbook_candidate_id="playbook-candidate://software/safe-change",
+        procedure_name="safe bounded software change",
+        route="software_development",
+        workflow_profile="software_change_workflow",
+        domain="computacao_e_desenvolvimento",
+        bounded_steps=[
+            "collect contract evidence",
+            "run focused regression checks",
+            "preserve rollback evidence",
+        ],
+        evidence_refs=["evidence://software/safe-change/candidate"],
+        proposed_tests=["pytest services/orchestrator-service/tests"],
+        rollback_plan_ref="rollback://software/safe-change/1.2.0",
+        timestamp="2026-07-18T13:00:00Z",
+    )
+    proposal = evolution.create_proposal_from_procedural_playbook_candidate(
+        candidate
+    )
+    review = evolution.review_proposal(
+        evolution_proposal_id=str(proposal.evolution_proposal_id),
+        action="approve",
+        operator_ref="operator://local_console",
+        evidence_refs=["evidence://software/safe-change/reviewed"],
+        proposed_tests=list(candidate.proposed_tests),
+        rollback_plan_ref=candidate.rollback_plan_ref,
+        release_version="1.2.0",
+    )
+    checklist = evolution.build_sandbox_to_release_checklist(
+        proposal,
+        review_decision=review,
+    )
+    gate = evolution.evaluate_promotion_gate(
+        checklist,
+        completed_gates=[
+            "standard_engineering_gate",
+            "release_gate_before_promotion",
+        ],
+    )
+    playbook = evolution.derive_reviewed_procedural_playbook(
+        candidate,
+        review,
+        version="1.2.0",
+        release_checklist=checklist,
+        promotion_gate=gate,
+    )
+    trusted_test_fixture_ids: set[str] = set()
+
+    def verify_reviewed_playbook(
+        candidate_playbook: ReviewedProceduralPlaybookContract,
+    ) -> bool:
+        return (
+            evolution.verify_persisted_reviewed_procedural_playbook(
+                candidate_playbook
+            )
+            or candidate_playbook.playbook_id in trusted_test_fixture_ids
+        )
+
+    memory = MemoryService(
+        database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}",
+        reviewed_procedural_playbook_verifier=verify_reviewed_playbook,
+    )
+    memory.record_reviewed_procedural_playbook(playbook)
+    for index in range(105):
+        decoy = replace(
+            playbook,
+            playbook_id=f"reviewed-playbook://software/wrong-domain-{index:03d}",
+            domain="estrategia_e_pensamento_sistemico",
+            timestamp=(
+                f"2026-07-19T{index // 60:02d}:{index % 60:02d}:00Z"
+            ),
+        )
+        trusted_test_fixture_ids.add(decoy.playbook_id)
+        assert memory.repository._insert_reviewed_procedural_playbook(
+            StoredReviewedProceduralPlaybook(playbook=decoy)
+        ) is True
+    for index in range(105):
+        revoked_decoy = replace(
+            playbook,
+            playbook_id=f"reviewed-playbook://software/revoked-{index:03d}",
+            review_status="revoked",
+            evidence_refs=[
+                *playbook.evidence_refs,
+                f"human-review://software/revoked-{index:03d}",
+            ],
+            timestamp=(
+                f"2026-07-20T{index // 60:02d}:{index % 60:02d}:00Z"
+            ),
+            revoked_at="2026-07-20T02:00:00Z",
+            revocation_ref=f"human-review://software/revoked-{index:03d}",
+        )
+        trusted_test_fixture_ids.add(revoked_decoy.playbook_id)
+        assert memory.repository._insert_reviewed_procedural_playbook(
+            StoredReviewedProceduralPlaybook(playbook=revoked_decoy)
+        ) is True
+    service = OrchestratorService(
+        governance_service=GovernanceService(),
+        memory_service=memory,
+        operational_service=OperationalService(
+            artifact_dir=str(temp_dir / "artifacts")
+        ),
+        observability_service=observability,
+    )
+
+    contract = bounded_input(
+            request_id=RequestId("req-reviewed-procedural-playbook"),
+            session_id=SessionId("sess-reviewed-procedural-playbook"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content=(
+                "Please plan the Python service API rollout and safest bounded change."
+            ),
+            timestamp="2026-07-18T13:01:00Z",
+    )
+    result = service.handle_input(contract)
+
+    signal_ref = f"{playbook.playbook_id}@{playbook.version}"
+    decision = result.deliberative_plan.memory_influence_policy_decision
+    assert decision is not None
+    assert signal_ref in decision.selected_refs, (
+        decision.non_use_reasons,
+        decision.signal_kinds,
+        decision.version_refs,
+    )
+    assert decision.version_refs[signal_ref] == playbook.version
+    assert decision.review_decision_refs[signal_ref] == (
+        playbook.source_review_decision_id
+    )
+    revoked_non_use = {
+        ref: reason
+        for ref, reason in decision.non_use_reasons.items()
+        if ref.startswith("reviewed-playbook://software/revoked-")
+    }
+    assert len(revoked_non_use) == 8
+    assert set(revoked_non_use.values()) == {
+        "review_status_not_eligible:revoked"
+    }
+    assert decision.execution_allowed is False
+    assert decision.tool_dispatch_allowed is False
+    assert result.directive.should_execute_operation is True
+    assert any(
+        "reviewed procedural playbook as read-only guidance" in step
+        for step in result.deliberative_plan.steps
+    )
+    assert result.operation_dispatch is None
+    assert result.operation_result is None
+    attribution = result.decision_outcome_attribution
+    assert attribution is not None
+    assert attribution.attribution_status == "declared_causality"
+    assert signal_ref in attribution.participating_refs
+    assert signal_ref in attribution.declared_causal_refs
+    assert attribution.memory_version_refs[signal_ref] == playbook.version
+    assert attribution.memory_review_decision_refs[signal_ref] == (
+        playbook.source_review_decision_id
+    )
+    assert attribution.declared_effects_by_ref[signal_ref]
+    assert attribution.causal_effect_proven is False
+    assert attribution.gain_claim_status == "not_established_without_comparator"
+    with pytest.raises(ValueError, match="cannot become operation dispatch"):
+        service.build_operation_dispatch(
+            contract,
+            plan=result.deliberative_plan,
+            specialist_review=result.specialist_review,
+        )
+    tampered_plan = replace(
+        result.deliberative_plan,
+        memory_influence_policy_decision=replace(
+            decision,
+            version_refs={},
+            review_decision_refs={},
+        ),
+    )
+    tampered_assessment = service.governance_service.assess_memory_influence_policy(
+        tampered_plan.memory_influence_policy_decision,
+        assessed_at=str(contract.timestamp),
+    )
+    assert tampered_assessment.assessment_status == "blocked"
+    assert service._reviewed_procedural_guidance_blocks_operation(tampered_plan) is True
+    with pytest.raises(ValueError, match="blocked memory influence policy"):
+        service.build_operation_dispatch(
+            contract,
+            plan=tampered_plan,
+            specialist_review=result.specialist_review,
+        )
+
+    langgraph_execution = LangGraphFlowRunner(service)._execute_operation(
+        {
+            "contract": contract,
+            "directive": result.directive,
+            "governance_decision": result.governance_decision,
+            "deliberative_plan": result.deliberative_plan,
+            "memory_influence_governance": (
+                service.governance_service.assess_memory_influence_policy(decision)
+            ),
+            "specialist_review": result.specialist_review,
+            "events": [],
+            "mission_runtime_state": result.mission_runtime_state,
+        }
+    )
+    assert langgraph_execution["operation_dispatch"] is None
+    assert langgraph_execution["operation_result"] is None
+
+    events = observability.list_recent_events(
+        ObservabilityQuery(
+            request_id="req-reviewed-procedural-playbook",
+            limit=100,
+        )
+    )
+    for event_name in (
+        "memory_influence_governed",
+        "plan_built",
+        "response_synthesized",
+    ):
+        event = next(event for event in events if event.event_name == event_name)
+        assert event.payload["memory_influence_version_refs"][signal_ref] == (
+            playbook.version
+        )
+        assert event.payload["memory_influence_review_decision_refs"][
+            signal_ref
+        ] == playbook.source_review_decision_id
+        assert event.payload["memory_influence_execution_allowed"] is False
+        assert event.payload["memory_influence_tool_dispatch_allowed"] is False
+    governed = next(
+        event for event in events if event.event_name == "memory_influence_governed"
+    )
+    assert governed.payload["memory_influence_governance_status"] == "governed"
+    assert governed.payload["memory_influence_causal_use_allowed"] is True
+    assert governed.payload["memory_influence_governance_execution_allowed"] is False
+    assert (
+        governed.payload["memory_influence_governance_tool_dispatch_allowed"]
+        is False
+    )
+    assert "versao 1.2.0" in result.response_text
+    assert "no_tool_dispatch" in result.response_text
+    assert not any(event.event_name == "operation_dispatched" for event in events)
+    attribution_event = next(
+        event
+        for event in events
+        if event.event_name == "decision_outcome_attribution_recorded"
+    )
+    assert attribution_event.payload["memory_policy_decision_ref"] == decision.decision_id
+    assert signal_ref in attribution_event.payload["declared_causal_refs"]
+    assert attribution_event.payload["causal_effect_proven"] is False
+    assert attribution_event.payload["promotion_authorized"] is False
+    flow_audit = observability.audit_flow(
+        ObservabilityQuery(
+            request_id="req-reviewed-procedural-playbook",
+            limit=100,
+        )
+    )
+    assert flow_audit.memory_influence_selected_refs == [signal_ref]
+    assert flow_audit.memory_influence_version_refs[signal_ref] == playbook.version
+    assert flow_audit.memory_influence_review_decision_refs[signal_ref] == (
+        playbook.source_review_decision_id
+    )
+    assert flow_audit.memory_influence_execution_allowed is False
+    assert flow_audit.memory_influence_tool_dispatch_allowed is False
+    assert flow_audit.memory_influence_governance_status == "governed"
+    assert flow_audit.memory_influence_governance_blockers == []
+    assert flow_audit.memory_influence_governance_drift_flags == []
+    assert flow_audit.selected_reviewed_procedural_playbook_refs == [signal_ref]
+    assert flow_audit.decision_outcome_attribution_record_id == (
+        attribution.attribution_record_id
+    )
+    assert flow_audit.decision_outcome_attribution_status == "declared_causality"
+    assert flow_audit.decision_outcome_attribution_evidence_refs
+    assert flow_audit.causal_effect_proven is False
+    assert flow_audit.gain_claim_status == "not_established_without_comparator"
+    assert flow_audit.operation_status is None
+
+
+def test_orchestrator_blocks_dispatch_when_memory_governance_is_blocked(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    temp_dir = runtime_dir("orchestrator-memory-governance-gate")
+    observability = ObservabilityService(
+        database_path=str(temp_dir / "observability.db")
+    )
+    service = OrchestratorService(
+        governance_service=GovernanceService(),
+        memory_service=MemoryService(
+            database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}"
+        ),
+        operational_service=OperationalService(
+            artifact_dir=str(temp_dir / "artifacts")
+        ),
+        observability_service=observability,
+    )
+    original_build_task_plan = service.planning_engine.build_task_plan
+
+    def build_tampered_plan(context):  # type: ignore[no-untyped-def]
+        plan = original_build_task_plan(context)
+        decision = plan.memory_influence_policy_decision
+        assert decision is not None
+        return replace(
+            plan,
+            memory_influence_policy_decision=replace(
+                decision,
+                priority_order=[
+                    "procedural",
+                    "reviewed_learning",
+                    "semantic",
+                    "reflection",
+                ],
+            ),
+        )
+
+    monkeypatch.setattr(
+        service.planning_engine,
+        "build_task_plan",
+        build_tampered_plan,
+    )
+    contract = bounded_input(
+        request_id=RequestId("req-memory-governance-gate"),
+        session_id=SessionId("sess-memory-governance-gate"),
+        channel=ChannelType.CHAT,
+        input_type=InputType.TEXT,
+        content="Please plan the Python service API rollout and safest bounded change.",
+        timestamp="2026-08-11T14:00:00+00:00",
+    )
+
+    result = service.handle_input(contract)
+
+    assert result.directive.should_execute_operation is True
+    assert result.operation_dispatch is None
+    assert result.operation_result is None
+    assert result.decision_outcome_attribution is not None
+    assert not (
+        set(result.decision_outcome_attribution.memory_selected_refs)
+        & set(result.decision_outcome_attribution.declared_causal_refs)
+    )
+    governed_event = next(
+        event
+        for event in result.events
+        if event.event_name == "memory_influence_governed"
+    )
+    assert governed_event.payload["memory_influence_governance_status"] == "blocked"
+    assert "memory_influence_priority_policy_mismatch" in governed_event.payload[
+        "memory_influence_governance_blockers"
+    ]
+    assert not any(
+        event.event_name == "operation_dispatched" for event in result.events
+    )
+
+
 def test_orchestrator_service_blocks_sensitive_action() -> None:
     temp_dir = runtime_dir("orchestrator-block")
     service = OrchestratorService(
@@ -1857,7 +3511,7 @@ def test_orchestrator_service_blocks_sensitive_action() -> None:
         ),
     )
     result = service.handle_input(
-        InputContract(
+        bounded_input(
             request_id=RequestId("req-3"),
             session_id=SessionId("sess-3"),
             channel=ChannelType.CHAT,
@@ -1889,7 +3543,7 @@ def test_orchestrator_service_recovers_mission_continuity_across_instances() -> 
         operational_service=OperationalService(artifact_dir=artifact_dir),
         observability_service=ObservabilityService(database_path=observability_db),
     )
-    first_contract = InputContract(
+    first_contract = bounded_input(
         request_id=RequestId("req-4"),
         session_id=SessionId("sess-4"),
         mission_id=MissionId("mission-1"),
@@ -1898,7 +3552,7 @@ def test_orchestrator_service_recovers_mission_continuity_across_instances() -> 
         content="Please plan the sprint.",
         timestamp="2026-03-17T00:00:00Z",
     )
-    second_contract = InputContract(
+    second_contract = bounded_input(
         request_id=RequestId("req-5"),
         session_id=SessionId("sess-4"),
         mission_id=MissionId("mission-1"),
@@ -1964,7 +3618,7 @@ def test_orchestrator_service_surfaces_related_mission_candidate_in_same_session
         observability_service=ObservabilityService(database_path=observability_db),
     )
     service.handle_input(
-        InputContract(
+        bounded_input(
             request_id=RequestId("req-related-a"),
             session_id=SessionId("sess-related"),
             mission_id=MissionId("mission-a"),
@@ -1975,7 +3629,7 @@ def test_orchestrator_service_surfaces_related_mission_candidate_in_same_session
         )
     )
     result = service.handle_input(
-        InputContract(
+        bounded_input(
             request_id=RequestId("req-related-b"),
             session_id=SessionId("sess-related"),
             mission_id=MissionId("mission-b"),
@@ -2026,7 +3680,7 @@ def test_orchestrator_service_reformulates_conflicting_request_in_active_mission
         observability_service=ObservabilityService(database_path=observability_db),
     )
     first.handle_input(
-        InputContract(
+        bounded_input(
             request_id=RequestId("req-6"),
             session_id=SessionId("sess-5"),
             mission_id=MissionId("mission-2"),
@@ -2037,7 +3691,7 @@ def test_orchestrator_service_reformulates_conflicting_request_in_active_mission
         )
     )
     result = second.handle_input(
-        InputContract(
+        bounded_input(
             request_id=RequestId("req-7"),
             session_id=SessionId("sess-5"),
             mission_id=MissionId("mission-2"),
@@ -2054,7 +3708,13 @@ def test_orchestrator_service_reformulates_conflicting_request_in_active_mission
         result.deliberative_plan.capability_decision_authorization_status
         == "human_validation_required"
     )
-    assert result.governance_decision.decision == PermissionDecision.DEFER_FOR_VALIDATION
+    assert result.governance_decision.decision == PermissionDecision.DEFER_FOR_VALIDATION, (
+        result.governance_check.open_loops,
+        result.governance_check.mission_continuity_hint,
+        result.governance_check.context.get(
+            "autonomy_action_policy_reason_codes"
+        ),
+    )
     assert result.operation_result is None
     assert "tensiona a missao ativa" in result.response_text
     plan_governed_event = next(
@@ -2083,7 +3743,7 @@ def test_orchestrator_service_closes_active_loop_explicitly() -> None:
         observability_service=ObservabilityService(database_path=observability_db),
     )
     first.handle_input(
-        InputContract(
+        bounded_input(
             request_id=RequestId("req-close-1"),
             session_id=SessionId("sess-close"),
             mission_id=MissionId("mission-close"),
@@ -2094,7 +3754,7 @@ def test_orchestrator_service_closes_active_loop_explicitly() -> None:
         )
     )
     result = second.handle_input(
-        InputContract(
+        bounded_input(
             request_id=RequestId("req-close-2"),
             session_id=SessionId("sess-close"),
             mission_id=MissionId("mission-close"),
@@ -2137,7 +3797,7 @@ def test_orchestrator_service_blocks_invalid_specialist_handoff_and_continues_wi
     monkeypatch.setattr(service.specialist_engine, "plan_handoffs", invalid_boundary_plan)
 
     result = service.handle_input(
-        InputContract(
+        bounded_input(
             request_id=RequestId("req-specialist-block"),
             session_id=SessionId("sess-specialist-block"),
             channel=ChannelType.CHAT,
@@ -2172,7 +3832,7 @@ def test_orchestrator_service_preserves_mission_state_after_blocked_followup() -
         observability_service=ObservabilityService(database_path=observability_db),
     )
     first_result = first.handle_input(
-        InputContract(
+        bounded_input(
             request_id=RequestId("req-8"),
             session_id=SessionId("sess-6"),
             mission_id=MissionId("mission-3"),
@@ -2183,7 +3843,7 @@ def test_orchestrator_service_preserves_mission_state_after_blocked_followup() -
         )
     )
     second.handle_input(
-        InputContract(
+        bounded_input(
             request_id=RequestId("req-9"),
             session_id=SessionId("sess-6"),
             mission_id=MissionId("mission-3"),
@@ -2219,7 +3879,7 @@ def test_orchestrator_service_governs_replay_when_checkpoint_awaits_validation()
         observability_service=ObservabilityService(database_path=observability_db),
     )
     first.handle_input(
-        InputContract(
+        bounded_input(
             request_id=RequestId("req-replay-1"),
             session_id=SessionId("sess-replay-governed"),
             mission_id=MissionId("mission-replay-governed"),
@@ -2230,7 +3890,7 @@ def test_orchestrator_service_governs_replay_when_checkpoint_awaits_validation()
         )
     )
     first.handle_input(
-        InputContract(
+        bounded_input(
             request_id=RequestId("req-replay-2"),
             session_id=SessionId("sess-replay-governed"),
             mission_id=MissionId("mission-replay-governed"),
@@ -2241,7 +3901,7 @@ def test_orchestrator_service_governs_replay_when_checkpoint_awaits_validation()
         )
     )
     result = second.handle_input(
-        InputContract(
+        bounded_input(
             request_id=RequestId("req-replay-3"),
             session_id=SessionId("sess-replay-governed"),
             mission_id=MissionId("mission-replay-governed"),
@@ -2287,7 +3947,7 @@ def test_orchestrator_service_tracks_manual_resolution_of_continuity_pause() -> 
         observability_service=ObservabilityService(database_path=observability_db),
     )
     first.handle_input(
-        InputContract(
+        bounded_input(
             request_id=RequestId("req-resolve-1"),
             session_id=SessionId("sess-replay-resolved"),
             mission_id=MissionId("mission-replay-resolved"),
@@ -2298,7 +3958,7 @@ def test_orchestrator_service_tracks_manual_resolution_of_continuity_pause() -> 
         )
     )
     first.handle_input(
-        InputContract(
+        bounded_input(
             request_id=RequestId("req-resolve-2"),
             session_id=SessionId("sess-replay-resolved"),
             mission_id=MissionId("mission-replay-resolved"),
@@ -2309,7 +3969,7 @@ def test_orchestrator_service_tracks_manual_resolution_of_continuity_pause() -> 
         )
     )
     result = second.handle_input(
-        InputContract(
+        bounded_input(
             request_id=RequestId("req-resolve-3"),
             session_id=SessionId("sess-replay-resolved"),
             mission_id=MissionId("mission-replay-resolved"),
@@ -2355,7 +4015,7 @@ def test_orchestrator_service_tracks_guided_analysis_domain_specialist() -> None
         observability_service=observability,
     )
     result = service.handle_input(
-        InputContract(
+        bounded_input(
             request_id=RequestId("req-analysis-domain"),
             session_id=SessionId("sess-analysis-domain"),
             channel=ChannelType.CHAT,
@@ -2402,7 +4062,7 @@ def test_orchestrator_service_tracks_guided_governance_domain_specialist() -> No
         observability_service=observability,
     )
     result = service.handle_input(
-        InputContract(
+        bounded_input(
             request_id=RequestId("req-governance-domain"),
             session_id=SessionId("sess-governance-domain"),
             channel=ChannelType.CHAT,
@@ -2452,7 +4112,7 @@ def test_orchestrator_service_tracks_guided_operational_readiness_specialist() -
         observability_service=observability,
     )
     result = service.handle_input(
-        InputContract(
+        bounded_input(
             request_id=RequestId("req-readiness-domain"),
             session_id=SessionId("sess-readiness-domain"),
             channel=ChannelType.CHAT,
@@ -2502,7 +4162,7 @@ def test_orchestrator_service_tracks_guided_strategy_specialist() -> None:
         observability_service=observability,
     )
     result = service.handle_input(
-        InputContract(
+        bounded_input(
             request_id=RequestId("req-strategy-domain"),
             session_id=SessionId("sess-strategy-domain"),
             channel=ChannelType.CHAT,
@@ -2551,7 +4211,7 @@ def test_orchestrator_service_tracks_guided_decision_risk_specialist() -> None:
         observability_service=observability,
     )
     result = service.handle_input(
-        InputContract(
+        bounded_input(
             request_id=RequestId("req-decision-risk-domain"),
             session_id=SessionId("sess-decision-risk-domain"),
             channel=ChannelType.CHAT,
@@ -2602,7 +4262,7 @@ def test_orchestrator_service_emits_recurrent_specialist_memory_signals() -> Non
         observability_service=observability,
     )
     service.handle_input(
-        InputContract(
+        bounded_input(
             request_id=RequestId("req-specialist-scope-1"),
             session_id=SessionId("sess-specialist-scope-1"),
             mission_id=MissionId("mission-specialist-scope-1"),
@@ -2614,7 +4274,7 @@ def test_orchestrator_service_emits_recurrent_specialist_memory_signals() -> Non
         )
     )
     second = service.handle_input(
-        InputContract(
+        bounded_input(
             request_id=RequestId("req-specialist-scope-2"),
             session_id=SessionId("sess-specialist-scope-2"),
             mission_id=MissionId("mission-specialist-scope-2"),
@@ -2655,7 +4315,7 @@ def test_orchestrator_service_emits_user_scope_memory_signals() -> None:
         observability_service=observability,
     )
     service.handle_input(
-        InputContract(
+        bounded_input(
             request_id=RequestId("req-user-scope-1"),
             session_id=SessionId("sess-user-scope-1"),
             mission_id=MissionId("mission-user-scope-1"),
@@ -2667,7 +4327,7 @@ def test_orchestrator_service_emits_user_scope_memory_signals() -> None:
         )
     )
     second = service.handle_input(
-        InputContract(
+        bounded_input(
             request_id=RequestId("req-user-scope-2"),
             session_id=SessionId("sess-user-scope-2"),
             mission_id=MissionId("mission-user-scope-2"),
@@ -2797,7 +4457,7 @@ def test_orchestrator_service_applies_auditable_semantic_memory_on_next_turn() -
     mission_id = MissionId("mission-semantic-causality")
 
     first = service.handle_input(
-        InputContract(
+        bounded_input(
             request_id=RequestId("req-semantic-causality-1"),
             session_id=SessionId("sess-semantic-causality"),
             mission_id=mission_id,
@@ -2808,7 +4468,7 @@ def test_orchestrator_service_applies_auditable_semantic_memory_on_next_turn() -
         )
     )
     second = service.handle_input(
-        InputContract(
+        bounded_input(
             request_id=RequestId("req-semantic-causality-2"),
             session_id=SessionId("sess-semantic-causality"),
             mission_id=mission_id,

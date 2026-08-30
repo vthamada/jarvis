@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from hashlib import sha256
@@ -17,12 +18,27 @@ from memory_service.repository import (
     StoredMemoryLifecycleReviewDecision,
     StoredProceduralPlaybookCandidate,
     StoredReviewedLearningGuidance,
+    StoredReviewedProceduralPlaybook,
     StoredSkillCandidate,
     StoredSpecialistSharedMemory,
     StoredTurn,
     StoredUserScopeSnapshot,
+    StoredWorkflowLifecycleTransition,
     build_memory_repository,
     continuity_checkpoint_to_contract,
+)
+from shared.artifact_physical_saga import (
+    require_valid_artifact_physical_apply_plan,
+    require_valid_artifact_physical_canonical_commit_receipt,
+    require_valid_artifact_physical_rollback_plan,
+    require_valid_local_text_physical_state_attestation,
+    saga_state_from_event,
+    seal_artifact_physical_canonical_commit_receipt,
+    seal_artifact_physical_lineage,
+    seal_artifact_physical_outbox_delivery,
+    seal_artifact_physical_outbox_item,
+    seal_artifact_physical_saga_event,
+    seal_physical_artifact_version,
 )
 from shared.artifact_policy import (
     canonical_artifact_states_from_mission,
@@ -33,13 +49,25 @@ from shared.artifact_policy import (
 from shared.contracts import (
     WORK_ITEM_PRIORITY_LEVELS,
     ArtifactLifecycleStateContract,
+    ArtifactPhysicalApplyPlanContract,
+    ArtifactPhysicalCanonicalCommitReceiptContract,
+    ArtifactPhysicalLineageContract,
+    ArtifactPhysicalOutboxDeliveryContract,
+    ArtifactPhysicalOutboxItemContract,
+    ArtifactPhysicalRollbackPlanContract,
+    ArtifactPhysicalSagaEventContract,
+    ArtifactPhysicalSagaStateContract,
     ContinuityCheckpointContract,
     ContinuityPauseContract,
     ContinuityReplayContract,
+    DecisionOutcomeAttributionRecordContract,
     DeliberativePlanContract,
     EcosystemOperationalStateContract,
     ExperienceRecordContract,
     InputContract,
+    LocalTextMutationReceipt,
+    LocalTextPhysicalStateAttestationContract,
+    LocalTextRollbackReceipt,
     LongHorizonGoalStrategyContract,
     MemoryInfluencePolicyDecisionContract,
     MemoryInfluenceSignalContract,
@@ -56,21 +84,33 @@ from shared.contracts import (
     OperationDispatchContract,
     OperationResultContract,
     OperatorFeedbackContract,
+    PhysicalArtifactVersionContract,
     PostTaskReflectionContract,
     ProceduralPlaybookCandidateContract,
     RecurringPatternReportContract,
     ReviewedLearningGuidanceContract,
+    ReviewedProceduralPlaybookContract,
     SemanticMemoryCandidateContract,
     SkillCandidateContract,
     SpecialistContributionContract,
     SpecialistSharedMemoryContextContract,
     UserScopeContextContract,
+    WorkflowLifecycleGovernanceAssessmentContract,
+    WorkflowLifecycleTransitionContract,
     WorkItemStateContract,
+)
+from shared.decision_attribution import (
+    decision_attribution_fingerprint,
+    validate_decision_attribution_record,
 )
 from shared.domain_registry import (
     primary_route_payload,
     specialist_eligible_route,
     specialist_route_payload,
+)
+from shared.local_text_rollback_permissions import (
+    require_valid_local_text_mutation_receipt,
+    require_valid_local_text_rollback_receipt,
 )
 from shared.memory_influence_policy import (
     evaluate_memory_influence_policy,
@@ -112,10 +152,17 @@ from shared.types import (
     SessionId,
     TimeWindow,
 )
+from shared.versioning import parse_canonical_semver
 from shared.work_item_policy import (
     canonical_work_items_from_mission,
     refresh_work_item_blocking_states,
     validate_work_item_graph,
+)
+from shared.workflow_lifecycle import (
+    validate_workflow_lifecycle_governance_assessment,
+    validate_workflow_lifecycle_transition,
+    workflow_lifecycle_artifact_fingerprint,
+    workflow_lifecycle_transition_fingerprint,
 )
 
 
@@ -133,9 +180,7 @@ class MemoryRecoveryResult:
     organization_scope_reopen_signal: str
     continuity_context: MissionContinuityContextContract | None = None
     user_scope_context: UserScopeContextContract | None = None
-    semantic_memory_candidates: list[SemanticMemoryCandidateContract] = field(
-        default_factory=list
-    )
+    semantic_memory_candidates: list[SemanticMemoryCandidateContract] = field(default_factory=list)
 
     @property
     def recovered_items(self) -> list[str]:
@@ -183,6 +228,10 @@ class OperatorFeedbackMemoryResult:
     record: StoredExperienceReflection
 
 
+class WorkflowLifecycleIntegrityError(RuntimeError):
+    """Signal that a persisted lifecycle binding exists but cannot be trusted."""
+
+
 class MemoryService:
     """Handles contextual continuity with persistent episodic and mission memory."""
 
@@ -194,9 +243,61 @@ class MemoryService:
         "rollback": "rolled_back",
     }
 
-    def __init__(self, database_url: str | None = None) -> None:
+    def __init__(
+        self,
+        database_url: str | None = None,
+        *,
+        reviewed_procedural_playbook_verifier: (
+            Callable[[ReviewedProceduralPlaybookContract], bool] | None
+        ) = None,
+        workflow_lifecycle_transition_verifier: (
+            Callable[[WorkflowLifecycleTransitionContract], bool] | None
+        ) = None,
+        artifact_physical_mutation_verifier: (
+            Callable[
+                [LocalTextMutationReceipt, LocalTextPhysicalStateAttestationContract],
+                bool,
+            ]
+            | None
+        ) = None,
+        artifact_physical_rollback_verifier: (
+            Callable[
+                [LocalTextRollbackReceipt, LocalTextPhysicalStateAttestationContract],
+                bool,
+            ]
+            | None
+        ) = None,
+    ) -> None:
         configured_url = database_url or getenv("DATABASE_URL")
         self.repository = build_memory_repository(configured_url)
+        self._reviewed_procedural_playbook_verifier = reviewed_procedural_playbook_verifier
+        self._workflow_lifecycle_transition_verifier = workflow_lifecycle_transition_verifier
+        self._artifact_physical_mutation_verifier = artifact_physical_mutation_verifier
+        self._artifact_physical_rollback_verifier = artifact_physical_rollback_verifier
+
+    def _verified_reviewed_procedural_playbook(
+        self,
+        playbook: ReviewedProceduralPlaybookContract,
+    ) -> bool:
+        verifier = self._reviewed_procedural_playbook_verifier
+        if verifier is None:
+            return False
+        try:
+            return bool(verifier(playbook))
+        except (TypeError, ValueError, RuntimeError):
+            return False
+
+    def _verified_workflow_lifecycle_transition(
+        self,
+        transition: WorkflowLifecycleTransitionContract,
+    ) -> bool:
+        verifier = self._workflow_lifecycle_transition_verifier
+        if verifier is None:
+            return False
+        try:
+            return bool(verifier(transition))
+        except (TypeError, ValueError, RuntimeError):
+            return False
 
     def record_experience_reflection(
         self,
@@ -235,7 +336,9 @@ class MemoryService:
             experience=sanitized_experience,
             reflection=sanitized_reflection,
         )
+        self._assert_experience_identity_is_immutable(sanitized_experience)
         self.repository.record_experience_reflection(record)
+        self._assert_experience_was_persisted_exactly(sanitized_experience)
         return record
 
     def record_experience(
@@ -263,8 +366,33 @@ class MemoryService:
             reusable_memory_status=reusable_status,
         )
         record = StoredExperienceReflection(experience=sanitized_experience)
+        self._assert_experience_identity_is_immutable(sanitized_experience)
         self.repository.record_experience(sanitized_experience)
+        self._assert_experience_was_persisted_exactly(sanitized_experience)
         return record
+
+    def _assert_experience_identity_is_immutable(
+        self,
+        experience: ExperienceRecordContract,
+    ) -> None:
+        existing = self.repository.fetch_experience_reflection(experience.experience_id)
+        if existing is not None:
+            allowed_enrichment = replace(
+                experience,
+                user_feedback=existing.experience.user_feedback,
+                evidence_refs=list(existing.experience.evidence_refs),
+                signal_refs=list(existing.experience.signal_refs),
+            )
+            if existing.experience != allowed_enrichment:
+                raise ValueError("experience identity is immutable")
+
+    def _assert_experience_was_persisted_exactly(
+        self,
+        experience: ExperienceRecordContract,
+    ) -> None:
+        stored = self.repository.fetch_experience_reflection(experience.experience_id)
+        if stored is None or stored.experience != experience:
+            raise ValueError("experience identity is immutable")
 
     def list_experience_reflections(
         self,
@@ -311,9 +439,7 @@ class MemoryService:
         return build_recurring_pattern_report(
             report_id=report_id or f"recurring-pattern-report://{uuid4().hex[:12]}",
             experiences=[record.experience for record in records],
-            reflections=[
-                record.reflection for record in records if record.reflection is not None
-            ],
+            reflections=[record.reflection for record in records if record.reflection is not None],
             minimum_occurrences=minimum_occurrences,
             generated_at=resolved_at,
             workflow_profile=workflow_profile,
@@ -344,9 +470,7 @@ class MemoryService:
         }:
             raise ValueError("unsupported operator feedback assessment")
         if feedback.rating is not None and (
-            isinstance(feedback.rating, bool)
-            or feedback.rating < 1
-            or feedback.rating > 5
+            isinstance(feedback.rating, bool) or feedback.rating < 1 or feedback.rating > 5
         ):
             raise ValueError("operator feedback rating must be between 1 and 5")
         if feedback.assessment == "correction" and not feedback.correction:
@@ -379,54 +503,69 @@ class MemoryService:
             core_mutation_allowed=False,
         )
         feedback_summary = self._operator_feedback_summary(safe_feedback)
-        prior_feedback = record.experience.user_feedback or ""
-        combined_feedback = " | ".join(
-            item for item in (prior_feedback, feedback_summary) if item
-        )[-2000:]
         feedback_signals = [
             safe_feedback.feedback_id,
             f"operator-feedback://assessment/{safe_feedback.assessment}",
         ]
         if safe_feedback.rating is not None:
-            feedback_signals.append(
-                f"operator-feedback://rating/{safe_feedback.rating}"
+            feedback_signals.append(f"operator-feedback://rating/{safe_feedback.rating}")
+
+        for _attempt in range(16):
+            if record is None:
+                raise ValueError("operator feedback requires an existing experience")
+            if str(record.experience.mission_id) != str(safe_feedback.mission_id):
+                raise ValueError("operator feedback mission does not match experience")
+            if record.reflection is None:
+                raise ValueError("operator feedback requires an existing reflection")
+            prior_feedback = record.experience.user_feedback or ""
+            combined_feedback = " | ".join(
+                item for item in (prior_feedback, feedback_summary) if item
+            )[-2000:]
+            evidence_refs = self._merge_unique_strings(
+                record.experience.evidence_refs,
+                [safe_feedback.feedback_id],
+                safe_feedback.evidence_refs,
             )
-        evidence_refs = self._merge_unique_strings(
-            record.experience.evidence_refs,
-            [safe_feedback.feedback_id],
-            safe_feedback.evidence_refs,
-        )
-        updated_experience = replace(
-            record.experience,
-            user_feedback=combined_feedback,
-            evidence_refs=evidence_refs,
-            signal_refs=self._merge_unique_strings(
-                record.experience.signal_refs,
-                feedback_signals,
-            ),
-            human_review_required=True,
-            automatic_promotion_allowed=False,
-            core_mutation_allowed=False,
-        )
-        updated_reflection = replace(
-            record.reflection,
-            evidence_refs=evidence_refs,
-            proposed_tests=self._merge_unique_strings(
-                record.reflection.proposed_tests,
-                ["evaluate_decision_against_explicit_operator_feedback"],
-            ),
-            human_review_required=True,
-            automatic_promotion_allowed=False,
-            core_mutation_allowed=False,
-        )
-        updated_record = self.record_experience_reflection(
-            experience=updated_experience,
-            reflection=updated_reflection,
-        )
-        return OperatorFeedbackMemoryResult(
-            feedback=safe_feedback,
-            record=updated_record,
-        )
+            updated_experience = replace(
+                record.experience,
+                user_feedback=combined_feedback,
+                evidence_refs=evidence_refs,
+                signal_refs=self._merge_unique_strings(
+                    record.experience.signal_refs,
+                    feedback_signals,
+                ),
+                human_review_required=True,
+                automatic_promotion_allowed=False,
+                core_mutation_allowed=False,
+            )
+            updated_reflection = replace(
+                record.reflection,
+                evidence_refs=evidence_refs,
+                proposed_tests=self._merge_unique_strings(
+                    record.reflection.proposed_tests,
+                    ["evaluate_decision_against_explicit_operator_feedback"],
+                ),
+                human_review_required=True,
+                automatic_promotion_allowed=False,
+                core_mutation_allowed=False,
+            )
+            replacement = StoredExperienceReflection(
+                experience=updated_experience,
+                reflection=updated_reflection,
+            )
+            if self.repository.compare_and_swap_operator_feedback(
+                expected=record,
+                replacement=replacement,
+            ):
+                persisted = self.get_experience_reflection(safe_feedback.experience_id)
+                if persisted is None:
+                    raise RuntimeError("operator feedback persistence disappeared")
+                return OperatorFeedbackMemoryResult(
+                    feedback=safe_feedback,
+                    record=persisted,
+                )
+            record = self.get_experience_reflection(safe_feedback.experience_id)
+        raise RuntimeError("operator feedback contention limit exceeded")
 
     def record_reviewed_learning_guidance(
         self,
@@ -485,8 +624,7 @@ class MemoryService:
         candidates: list[MemoryLifecycleCandidateContract] = []
         if corpus.consolidating_records > 0:
             evidence_refs = [
-                "memory-telemetry://consolidating-records/"
-                f"{corpus.consolidating_records}",
+                f"memory-telemetry://consolidating-records/{corpus.consolidating_records}",
             ]
             candidates.append(
                 self._memory_lifecycle_candidate(
@@ -662,19 +800,14 @@ class MemoryService:
             limit=1,
         )
         if normalized_action == "rollback" and (
-            not previous_decisions
-            or previous_decisions[0].decision.review_status != "approved"
+            not previous_decisions or previous_decisions[0].decision.review_status != "approved"
         ):
             raise ValueError("approved memory lifecycle review required before rollback")
 
         review_timestamp = self.now()
-        review_identity = sha256(
-            f"{candidate_id}|{review_timestamp}".encode()
-        ).hexdigest()[:16]
+        review_identity = sha256(f"{candidate_id}|{review_timestamp}".encode()).hexdigest()[:16]
         decision = MemoryLifecycleReviewDecisionContract(
-            review_decision_id=(
-                f"memory-lifecycle-review://{review_identity}"
-            ),
+            review_decision_id=(f"memory-lifecycle-review://{review_identity}"),
             candidate_id=candidate.candidate_id,
             maintenance_action=candidate.maintenance_action,
             decision_action=normalized_action,
@@ -788,6 +921,649 @@ class MemoryService:
             review_status=review_status,
             limit=max(1, limit),
         )
+
+    def record_reviewed_procedural_playbook(
+        self,
+        playbook: ReviewedProceduralPlaybookContract,
+    ) -> StoredReviewedProceduralPlaybook:
+        """Persist immutable reviewed guidance without granting execution authority."""
+
+        if not self._verified_reviewed_procedural_playbook(playbook):
+            raise ValueError(
+                "reviewed procedural playbook requires persisted evolution verification"
+            )
+
+        if parse_canonical_semver(playbook.version) is None:
+            raise ValueError("reviewed procedural playbook requires numeric semver")
+        if playbook.review_status != "approved":
+            raise ValueError("new reviewed procedural playbook must be approved")
+        identity_and_scope = {
+            "playbook_id": playbook.playbook_id,
+            "source_candidate_id": playbook.source_candidate_id,
+            "source_review_decision_id": playbook.source_review_decision_id,
+            "evolution_proposal_id": str(playbook.evolution_proposal_id),
+            "procedure_name": playbook.procedure_name,
+            "route": playbook.route,
+            "workflow_profile": playbook.workflow_profile,
+            "domain": playbook.domain,
+            "rollback_plan_ref": playbook.rollback_plan_ref,
+            "timestamp": playbook.timestamp,
+        }
+        if any(
+            not str(value).strip() or len(str(value)) > 500 for value in identity_and_scope.values()
+        ):
+            raise ValueError("reviewed procedural playbook scope is incomplete")
+        if len(f"{playbook.playbook_id}@{playbook.version}") > 240 or any(
+            len(str(identity_and_scope[field_name])) > 240
+            for field_name in (
+                "source_candidate_id",
+                "source_review_decision_id",
+                "evolution_proposal_id",
+                "rollback_plan_ref",
+            )
+        ):
+            raise ValueError("reviewed procedural playbook refs must be bounded")
+        if (
+            not playbook.bounded_steps
+            or len(playbook.bounded_steps) > 8
+            or any(
+                not isinstance(step, str) or not step.strip() or len(step) > 500
+                for step in playbook.bounded_steps
+            )
+        ):
+            raise ValueError("reviewed procedural playbook steps must be bounded")
+        if (
+            not playbook.evidence_refs
+            or len(playbook.evidence_refs) > 20
+            or any(
+                not isinstance(ref, str) or not ref.strip() or len(ref) > 240
+                for ref in playbook.evidence_refs
+            )
+        ):
+            raise ValueError("reviewed procedural playbook evidence is invalid")
+        if any(not isinstance(value, str) for value in playbook.allowed_usage) or set(
+            playbook.allowed_usage
+        ) != {"planning_context"}:
+            raise ValueError("reviewed procedural playbook is planning guidance only")
+        if (
+            not playbook.read_only
+            or not playbook.human_review_required
+            or playbook.execution_allowed
+            or playbook.tool_dispatch_allowed
+            or playbook.memory_write_mode != "read_only"
+            or playbook.automatic_promotion_allowed
+            or playbook.core_mutation_allowed
+        ):
+            raise ValueError("reviewed procedural playbook cannot claim authority")
+        safe_playbook = replace(
+            playbook,
+            bounded_steps=self._merge_unique_strings(playbook.bounded_steps, [])[:8],
+            allowed_usage=self._merge_unique_strings(playbook.allowed_usage, []),
+            evidence_refs=self._merge_unique_strings(playbook.evidence_refs, []),
+            revoked_at=None,
+            revocation_ref=None,
+            read_only=True,
+            human_review_required=True,
+            execution_allowed=False,
+            tool_dispatch_allowed=False,
+            memory_write_mode="read_only",
+            automatic_promotion_allowed=False,
+            core_mutation_allowed=False,
+        )
+        existing = self.repository.fetch_reviewed_procedural_playbook(
+            safe_playbook.playbook_id,
+            safe_playbook.version,
+        )
+        if existing is not None and existing.playbook != safe_playbook:
+            raise ValueError("reviewed procedural playbook version is immutable")
+        record = StoredReviewedProceduralPlaybook(playbook=safe_playbook)
+        if existing is None:
+            inserted = self.repository._insert_reviewed_procedural_playbook(record)
+            if inserted:
+                return record
+            existing = self.repository.fetch_reviewed_procedural_playbook(
+                safe_playbook.playbook_id,
+                safe_playbook.version,
+            )
+        if existing is None or existing.playbook != safe_playbook:
+            raise ValueError("reviewed procedural playbook version is immutable")
+        return existing
+
+    def revoke_reviewed_procedural_playbook(
+        self,
+        *,
+        playbook_id: str,
+        version: str,
+        revocation_ref: str,
+        revoked_at: str,
+    ) -> StoredReviewedProceduralPlaybook:
+        """Revoke causal eligibility while preserving the reviewed artifact."""
+
+        record = self.repository.fetch_reviewed_procedural_playbook(
+            playbook_id,
+            version,
+        )
+        if record is None:
+            raise ValueError("unknown reviewed procedural playbook")
+        if not self._verified_reviewed_procedural_playbook(record.playbook):
+            raise ValueError(
+                "reviewed procedural playbook requires persisted evolution verification"
+            )
+        if not revocation_ref or len(revocation_ref) > 240:
+            raise ValueError("revocation requires a bounded human decision ref")
+        if not revoked_at or len(revoked_at) > 100:
+            raise ValueError("revocation requires a bounded timestamp")
+        if record.playbook.review_status == "revoked":
+            if record.playbook.revocation_ref != revocation_ref:
+                raise ValueError("playbook version already revoked by another decision")
+            return record
+        revoked = replace(
+            record.playbook,
+            review_status="revoked",
+            evidence_refs=self._merge_unique_strings(
+                [revocation_ref],
+                record.playbook.evidence_refs,
+            )[:20],
+            revoked_at=revoked_at,
+            revocation_ref=revocation_ref,
+            execution_allowed=False,
+            tool_dispatch_allowed=False,
+        )
+        revoked_record = StoredReviewedProceduralPlaybook(playbook=revoked)
+        if self.repository._transition_reviewed_procedural_playbook_to_revoked(revoked_record):
+            return revoked_record
+        winner = self.repository.fetch_reviewed_procedural_playbook(
+            playbook_id,
+            version,
+        )
+        if (
+            winner is not None
+            and winner.playbook.review_status == "revoked"
+            and winner.playbook.revocation_ref == revocation_ref
+        ):
+            return winner
+        raise ValueError("playbook version was revoked by another decision")
+
+    def list_reviewed_procedural_playbooks(
+        self,
+        *,
+        workflow_profile: str | None = None,
+        route: str | None = None,
+        domain: str | None = None,
+        review_status: str | None = None,
+        limit: int = 20,
+    ) -> list[StoredReviewedProceduralPlaybook]:
+        """Return reviewed and revoked guidance for governed policy evaluation."""
+
+        requested_limit = max(1, min(limit, 100))
+        page_size = max(20, requested_limit)
+        verified_records: list[StoredReviewedProceduralPlaybook] = []
+        offset = 0
+        while len(verified_records) < requested_limit:
+            page = self.repository.list_reviewed_procedural_playbooks(
+                workflow_profile=workflow_profile,
+                route=route,
+                domain=domain,
+                review_status=review_status,
+                limit=page_size,
+                offset=offset,
+            )
+            if not page:
+                break
+            verified_records.extend(
+                record
+                for record in page
+                if self._verified_reviewed_procedural_playbook(record.playbook)
+            )
+            offset += len(page)
+            if len(page) < page_size:
+                break
+        return verified_records[:requested_limit]
+
+    @staticmethod
+    def _validate_decision_outcome_attribution(
+        record: DecisionOutcomeAttributionRecordContract,
+    ) -> None:
+        validate_decision_attribution_record(record)
+        required_refs = (
+            ("attribution_record_id", record.attribution_record_id),
+            ("request_id", record.request_id),
+            ("session_id", record.session_id),
+            ("observed_at", record.observed_at),
+            ("governance_decision_ref", record.governance_decision_ref),
+            ("governance_decision_status", record.governance_decision_status),
+        )
+        for field_name, value in required_refs:
+            if not str(value).strip() or len(str(value)) > 500:
+                raise ValueError(f"{field_name} must be present and bounded")
+        for field_name in ("mission_id", "workflow_profile", "route"):
+            value = getattr(record, field_name)
+            if value is not None and (not str(value).strip() or len(str(value)) > 500):
+                raise ValueError(f"{field_name} must be bounded when present")
+        if (
+            not record.read_only
+            or not record.immutable
+            or not record.human_review_required
+            or record.memory_write_allowed
+            or record.execution_allowed
+            or record.tool_dispatch_allowed
+            or record.promotion_authorized
+            or record.automatic_promotion_allowed
+            or record.core_mutation_allowed
+            or record.causal_effect_proven
+        ):
+            raise ValueError("decision outcome attribution cannot claim authority")
+        if record.causality_scope != "runtime_declared_participation_only":
+            raise ValueError("decision outcome attribution causality scope is invalid")
+        if record.gain_claim_status != "not_established_without_comparator":
+            raise ValueError("decision outcome attribution cannot claim unmeasured gain")
+        decision_attribution_fingerprint(record)
+
+    def record_decision_outcome_attribution(
+        self,
+        record: DecisionOutcomeAttributionRecordContract,
+    ) -> DecisionOutcomeAttributionRecordContract:
+        """Append one immutable outcome attribution, idempotently by both ids."""
+
+        self._validate_decision_outcome_attribution(record)
+        expected_fingerprint = decision_attribution_fingerprint(record)
+
+        def exact_match(
+            existing: DecisionOutcomeAttributionRecordContract | None,
+        ) -> bool:
+            return (
+                existing is not None
+                and existing == record
+                and decision_attribution_fingerprint(existing) == expected_fingerprint
+            )
+
+        existing_by_id = self.repository.fetch_decision_outcome_attribution(
+            attribution_record_id=record.attribution_record_id
+        )
+        existing_by_request = self.repository.fetch_decision_outcome_attribution(
+            request_id=str(record.request_id)
+        )
+        if existing_by_id is not None or existing_by_request is not None:
+            if exact_match(existing_by_id) and exact_match(existing_by_request):
+                self._validate_decision_outcome_storage_links(record)
+                return record
+            raise ValueError("decision outcome attribution identity is immutable")
+
+        self._validate_decision_outcome_storage_links(record)
+
+        if self.repository._insert_decision_outcome_attribution(record):
+            return record
+
+        winner_by_id = self.repository.fetch_decision_outcome_attribution(
+            attribution_record_id=record.attribution_record_id
+        )
+        winner_by_request = self.repository.fetch_decision_outcome_attribution(
+            request_id=str(record.request_id)
+        )
+        if exact_match(winner_by_id) and exact_match(winner_by_request):
+            self._validate_decision_outcome_storage_links(record)
+            return record
+        raise ValueError("decision outcome attribution identity is immutable")
+
+    def _validate_decision_outcome_storage_links(
+        self,
+        record: DecisionOutcomeAttributionRecordContract,
+    ) -> None:
+        runtime_claim = self.repository.fetch_runtime_request_claim(str(record.request_id))
+        if runtime_claim is None:
+            raise ValueError("decision outcome attribution requires a runtime request claim")
+        if runtime_claim.session_id != str(record.session_id):
+            raise ValueError(
+                "decision outcome attribution session does not match runtime request claim"
+            )
+        stored_experience = self.repository.fetch_experience_reflection(str(record.experience_id))
+        if stored_experience is None:
+            raise ValueError("decision outcome attribution requires a persisted experience")
+        experience = stored_experience.experience
+        if (
+            experience.experience_id != record.experience_id
+            or experience.mission_id != record.mission_id
+            or experience.workflow_profile != record.workflow_profile
+            or experience.route != record.route
+            or experience.outcome_status != record.outcome_status
+            or experience.timestamp != record.observed_at
+        ):
+            raise ValueError("decision outcome attribution does not match persisted experience")
+
+    def claim_runtime_request(
+        self,
+        *,
+        request_id: str,
+        session_id: str,
+        claimed_at: str,
+    ) -> bool:
+        """Atomically reserve a request identity before any runtime side effect."""
+
+        for field_name, value in (
+            ("request_id", request_id),
+            ("session_id", session_id),
+            ("claimed_at", claimed_at),
+        ):
+            if not isinstance(value, str) or not value.strip() or value != value.strip():
+                raise ValueError(f"{field_name} must be present and canonical")
+            if len(value) > 500:
+                raise ValueError(f"{field_name} must be bounded")
+        return self.repository._claim_runtime_request(
+            request_id=request_id,
+            session_id=session_id,
+            claimed_at=claimed_at,
+        )
+
+    def get_decision_outcome_attribution(
+        self,
+        *,
+        attribution_record_id: str | None = None,
+        request_id: str | None = None,
+    ) -> DecisionOutcomeAttributionRecordContract | None:
+        """Load one verified attribution by exactly one canonical identity."""
+
+        if (attribution_record_id is None) == (request_id is None):
+            raise ValueError("exactly one attribution identity is required")
+        identity = attribution_record_id if attribution_record_id is not None else request_id
+        if identity is None or not identity.strip() or len(identity) > 500:
+            raise ValueError("attribution identity must be present and bounded")
+        record = self.repository.fetch_decision_outcome_attribution(
+            attribution_record_id=attribution_record_id,
+            request_id=request_id,
+        )
+        if record is not None:
+            self._validate_decision_outcome_attribution(record)
+            self._validate_decision_outcome_storage_links(record)
+        return record
+
+    def list_decision_outcome_attributions(
+        self,
+        *,
+        request_id: str | None = None,
+        mission_id: str | None = None,
+        workflow_profile: str | None = None,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> list[DecisionOutcomeAttributionRecordContract]:
+        """List verified attribution records after applying storage scope filters."""
+
+        for field_name, value in (
+            ("request_id", request_id),
+            ("mission_id", mission_id),
+            ("workflow_profile", workflow_profile),
+        ):
+            if value is not None and (not value.strip() or len(value) > 500):
+                raise ValueError(f"{field_name} must be bounded when present")
+        requested_limit = max(1, min(limit, 100))
+        requested_offset = max(0, offset)
+        storage_offset = 0
+        valid_records_seen = 0
+        verified_records: list[DecisionOutcomeAttributionRecordContract] = []
+        while len(verified_records) < requested_limit:
+            try:
+                page = self.repository.list_decision_outcome_attributions(
+                    request_id=request_id,
+                    mission_id=mission_id,
+                    workflow_profile=workflow_profile,
+                    limit=1,
+                    offset=storage_offset,
+                )
+            except ValueError:
+                storage_offset += 1
+                continue
+            if not page:
+                break
+            storage_offset += 1
+            record = page[0]
+            try:
+                self._validate_decision_outcome_attribution(record)
+                self._validate_decision_outcome_storage_links(record)
+            except ValueError:
+                continue
+            if valid_records_seen < requested_offset:
+                valid_records_seen += 1
+                continue
+            verified_records.append(record)
+        return verified_records
+
+    @staticmethod
+    def _validate_workflow_lifecycle_scope(*, workflow_profile: str, route: str) -> None:
+        for field_name, value in (
+            ("workflow_profile", workflow_profile),
+            ("route", route),
+        ):
+            if not isinstance(value, str) or not value.strip() or len(value) > 500:
+                raise ValueError(f"{field_name} must be present and bounded")
+
+    def _load_validated_workflow_lifecycle_chain(
+        self,
+        *,
+        workflow_profile: str,
+        route: str,
+        through_revision: int | None = None,
+    ) -> list[StoredWorkflowLifecycleTransition]:
+        """Rebuild one chain from genesis so callers never trust an isolated tail."""
+
+        if through_revision is not None:
+            if through_revision < 1:
+                return []
+            target_revision = through_revision
+        else:
+            latest = self.repository.fetch_latest_workflow_lifecycle_transition(
+                workflow_profile=workflow_profile,
+                route=route,
+            )
+            if latest is None:
+                return []
+            target_revision = latest.transition.revision
+        chain: list[StoredWorkflowLifecycleTransition] = []
+        current: WorkflowLifecycleTransitionContract | None = None
+        for revision in range(1, target_revision + 1):
+            stored = self.repository.fetch_workflow_lifecycle_transition(
+                workflow_profile=workflow_profile,
+                route=route,
+                revision=revision,
+            )
+            if stored is None:
+                return []
+            if not self._verified_workflow_lifecycle_transition(stored.transition):
+                return []
+            transition_failures = validate_workflow_lifecycle_transition(
+                stored.transition,
+                current_transition=current,
+            )
+            assessment_failures = validate_workflow_lifecycle_governance_assessment(
+                stored.governance_assessment,
+                transition=stored.transition,
+                current_transition=current,
+            )
+            if transition_failures or assessment_failures:
+                return []
+            if (
+                stored.transition_fingerprint
+                != workflow_lifecycle_transition_fingerprint(stored.transition)
+                or stored.governance_assessment_fingerprint
+                != workflow_lifecycle_artifact_fingerprint(stored.governance_assessment)
+            ):
+                return []
+            chain.append(stored)
+            current = stored.transition
+        return chain
+
+    def record_workflow_lifecycle_transition(
+        self,
+        transition: WorkflowLifecycleTransitionContract,
+        governance_assessment: WorkflowLifecycleGovernanceAssessmentContract,
+    ) -> WorkflowLifecycleTransitionContract:
+        """Append one exact, human-authorized transition through canonical memory."""
+
+        self._validate_workflow_lifecycle_scope(
+            workflow_profile=transition.workflow_profile,
+            route=transition.route,
+        )
+        existing_by_id = self.repository.fetch_workflow_lifecycle_transition(
+            transition_id=transition.transition_id
+        )
+        existing_by_revision = self.repository.fetch_workflow_lifecycle_transition(
+            workflow_profile=transition.workflow_profile,
+            route=transition.route,
+            revision=transition.revision,
+        )
+        if existing_by_id is not None or existing_by_revision is not None:
+            if (
+                existing_by_id is not None
+                and existing_by_revision is not None
+                and existing_by_id == existing_by_revision
+                and existing_by_id.transition == transition
+                and existing_by_id.governance_assessment == governance_assessment
+                and self._load_validated_workflow_lifecycle_chain(
+                    workflow_profile=transition.workflow_profile,
+                    route=transition.route,
+                    through_revision=transition.revision,
+                )
+            ):
+                return transition
+            raise ValueError("workflow lifecycle transition identity is immutable")
+
+        if not self._verified_workflow_lifecycle_transition(transition):
+            raise ValueError(
+                "workflow lifecycle transition requires a verified persisted release bundle"
+            )
+
+        current_chain = self._load_validated_workflow_lifecycle_chain(
+            workflow_profile=transition.workflow_profile,
+            route=transition.route,
+        )
+        current = current_chain[-1].transition if current_chain else None
+        transition_failures = validate_workflow_lifecycle_transition(
+            transition,
+            current_transition=current,
+        )
+        assessment_failures = validate_workflow_lifecycle_governance_assessment(
+            governance_assessment,
+            transition=transition,
+            current_transition=current,
+        )
+        if transition_failures:
+            raise ValueError(
+                "workflow lifecycle transition is invalid: " + "; ".join(transition_failures)
+            )
+        if assessment_failures:
+            raise ValueError(
+                "workflow lifecycle governance assessment is invalid: "
+                + "; ".join(assessment_failures)
+            )
+        if (
+            governance_assessment.status != "approved"
+            or not governance_assessment.human_authorization_verified
+            or not governance_assessment.transition_recording_authorized
+        ):
+            raise ValueError(
+                "workflow lifecycle transition requires approved governance authorization"
+            )
+        stored = StoredWorkflowLifecycleTransition(
+            transition=transition,
+            governance_assessment=governance_assessment,
+            transition_fingerprint=workflow_lifecycle_transition_fingerprint(transition),
+            governance_assessment_fingerprint=workflow_lifecycle_artifact_fingerprint(
+                governance_assessment
+            ),
+        )
+        if self.repository._insert_workflow_lifecycle_transition(stored):
+            return transition
+
+        winner_by_id = self.repository.fetch_workflow_lifecycle_transition(
+            transition_id=transition.transition_id
+        )
+        winner_by_revision = self.repository.fetch_workflow_lifecycle_transition(
+            workflow_profile=transition.workflow_profile,
+            route=transition.route,
+            revision=transition.revision,
+        )
+        if (
+            winner_by_id is not None
+            and winner_by_revision is not None
+            and winner_by_id == winner_by_revision == stored
+            and self._load_validated_workflow_lifecycle_chain(
+                workflow_profile=transition.workflow_profile,
+                route=transition.route,
+                through_revision=transition.revision,
+            )
+        ):
+            return transition
+        raise ValueError("workflow lifecycle transition lost compare-and-swap")
+
+    def get_active_workflow_lifecycle(
+        self,
+        *,
+        workflow_profile: str,
+        route: str,
+    ) -> WorkflowLifecycleTransitionContract | None:
+        """Return the active tail only after validating every link from genesis."""
+
+        self._validate_workflow_lifecycle_scope(
+            workflow_profile=workflow_profile,
+            route=route,
+        )
+        latest = self.repository.fetch_latest_workflow_lifecycle_transition(
+            workflow_profile=workflow_profile,
+            route=route,
+        )
+        if latest is None:
+            return None
+        chain = self._load_validated_workflow_lifecycle_chain(
+            workflow_profile=workflow_profile,
+            route=route,
+            through_revision=latest.transition.revision,
+        )
+        if not chain or chain[-1] != latest:
+            raise WorkflowLifecycleIntegrityError("workflow_lifecycle_persisted_chain_rejected")
+        return chain[-1].transition
+
+    def list_workflow_lifecycle_transitions(
+        self,
+        *,
+        workflow_profile: str | None = None,
+        route: str | None = None,
+        limit: int = 20,
+        offset: int = 0,
+    ) -> list[WorkflowLifecycleTransitionContract]:
+        """List verified transitions in stable scope order, newest revision first."""
+
+        for field_name, value in (
+            ("workflow_profile", workflow_profile),
+            ("route", route),
+        ):
+            if value is not None and (not value.strip() or len(value) > 500):
+                raise ValueError(f"{field_name} must be bounded when present")
+        requested_limit = max(1, min(limit, 100))
+        requested_offset = max(0, offset)
+        storage_offset = 0
+        valid_records_seen = 0
+        verified: list[WorkflowLifecycleTransitionContract] = []
+        while len(verified) < requested_limit:
+            page = self.repository.list_workflow_lifecycle_transitions(
+                workflow_profile=workflow_profile,
+                route=route,
+                limit=1,
+                offset=storage_offset,
+            )
+            if not page:
+                break
+            storage_offset += 1
+            stored = page[0]
+            chain = self._load_validated_workflow_lifecycle_chain(
+                workflow_profile=stored.transition.workflow_profile,
+                route=stored.transition.route,
+                through_revision=stored.transition.revision,
+            )
+            if not chain or chain[-1] != stored:
+                continue
+            if valid_records_seen < requested_offset:
+                valid_records_seen += 1
+                continue
+            verified.append(stored.transition)
+        return verified
 
     def record_skill_candidate(
         self,
@@ -908,9 +1684,7 @@ class MemoryService:
             core_mutation_allowed=False,
             memory_write_mode="through_core_only",
         )
-        existing = self.repository.fetch_skill_candidate(
-            safe_candidate.skill_candidate_id
-        )
+        existing = self.repository.fetch_skill_candidate(safe_candidate.skill_candidate_id)
         if existing is not None:
             if existing.candidate == safe_candidate:
                 return existing
@@ -1028,8 +1802,7 @@ class MemoryService:
                     relevance_reason=related.continuity_reason,
                 )
                 if candidate is not None and all(
-                    existing.anchor_ref != candidate.anchor_ref
-                    for existing in candidates
+                    existing.anchor_ref != candidate.anchor_ref for existing in candidates
                 ):
                     candidates.append(candidate)
         return sorted(
@@ -1049,8 +1822,7 @@ class MemoryService:
         if state is None or not (state.semantic_brief or state.semantic_focus):
             return None
         summary = state.semantic_brief or (
-            f"objective={state.mission_goal}; "
-            f"focus={','.join(state.semantic_focus[:4])}"
+            f"objective={state.mission_goal}; focus={','.join(state.semantic_focus[:4])}"
         )
         observed_at = str(state.updated_at)
         freshness = semantic_memory_freshness_status(observed_at, generated_at)
@@ -1347,11 +2119,7 @@ class MemoryService:
         memory_anchor_refs = self._merge_unique_strings(
             list(mission_state.related_memories),
             [f"semantic_focus:{item}" for item in mission_state.semantic_focus],
-            (
-                [f"project_ref:{mission_state.project_ref}"]
-                if mission_state.project_ref
-                else []
-            ),
+            ([f"project_ref:{mission_state.project_ref}"] if mission_state.project_ref else []),
             (
                 [f"objective_ref:{mission_state.objective_ref}"]
                 if mission_state.objective_ref
@@ -1366,11 +2134,7 @@ class MemoryService:
         )[:8]
         generated_from_state_refs = self._merge_unique_strings(
             [f"mission:{mission_state.mission_id}"],
-            (
-                [f"objective:{mission_state.objective_ref}"]
-                if mission_state.objective_ref
-                else []
-            ),
+            ([f"objective:{mission_state.objective_ref}"] if mission_state.objective_ref else []),
             milestone_refs,
             evidence_refs,
         )[:10]
@@ -1455,9 +2219,10 @@ class MemoryService:
             return None
         if current.updated_at != expected_updated_at:
             raise ValueError("mission state changed after resume revalidation")
-        if current.mission_status != MissionStatus.ACTIVE or (
-            current.objective_status or "active"
-        ) != "active":
+        if (
+            current.mission_status != MissionStatus.ACTIVE
+            or (current.objective_status or "active") != "active"
+        ):
             raise ValueError("mission objective is not active for open loop resume")
 
         open_loop_states = list(current.open_loop_states)
@@ -1511,9 +2276,7 @@ class MemoryService:
         ]
         updated = replace(
             current,
-            open_loops=[
-                item for item in current.open_loops if item != selected.loop_summary
-            ],
+            open_loops=[item for item in current.open_loops if item != selected.loop_summary],
             open_loop_states=open_loop_states,
             next_action_ref=plan.next_action_ref,
             checkpoints=[*current.checkpoints, f"open_loop_resume:{checkpoint_ref}"][-5:],
@@ -1542,9 +2305,7 @@ class MemoryService:
         if current is None:
             return None
 
-        transition_name = transition or self._work_item_transition_from_ref(
-            transition_ref
-        )
+        transition_name = transition or self._work_item_transition_from_ref(transition_ref)
         work_items = canonical_work_items_from_mission(current)
         existing = next(
             (item for item in work_items if item.work_item_ref == work_item_ref),
@@ -1553,11 +2314,11 @@ class MemoryService:
         effective_dependency_refs = (
             list(dependency_refs)
             if dependency_refs is not None
-            else list(existing.dependency_refs) if existing else []
+            else list(existing.dependency_refs)
+            if existing
+            else []
         )
-        effective_priority = priority_level or (
-            existing.priority_level if existing else "p2"
-        )
+        effective_priority = priority_level or (existing.priority_level if existing else "p2")
         if effective_priority not in WORK_ITEM_PRIORITY_LEVELS:
             raise ValueError("invalid work item priority")
         graph_errors = validate_work_item_graph(
@@ -1566,9 +2327,7 @@ class MemoryService:
             dependency_refs=effective_dependency_refs,
         )
         if graph_errors:
-            raise ValueError(
-                "invalid work item dependency graph: " + ",".join(graph_errors)
-            )
+            raise ValueError("invalid work item dependency graph: " + ",".join(graph_errors))
         effective_blocker_refs = (
             []
             if transition_name == "resume"
@@ -1590,7 +2349,9 @@ class MemoryService:
             next_action_ref=(
                 next_action_ref
                 if next_action_ref is not None
-                else existing.next_action_ref if existing else None
+                else existing.next_action_ref
+                if existing
+                else None
             ),
             dependency_refs=effective_dependency_refs,
             priority_level=effective_priority,
@@ -1601,8 +2362,7 @@ class MemoryService:
             work_items.append(updated_item)
         else:
             work_items = [
-                updated_item if item.work_item_ref == work_item_ref else item
-                for item in work_items
+                updated_item if item.work_item_ref == work_item_ref else item for item in work_items
             ]
         work_items = refresh_work_item_blocking_states(work_items)
         structured_refs = {item.work_item_ref for item in work_items}
@@ -1611,14 +2371,8 @@ class MemoryService:
             [item.work_item_ref for item in work_items],
         )
         active_work_items = [
-            item_ref
-            for item_ref in current.active_work_items
-            if item_ref not in structured_refs
-        ] + [
-            item.work_item_ref
-            for item in work_items
-            if item.work_item_status == "active"
-        ]
+            item_ref for item_ref in current.active_work_items if item_ref not in structured_refs
+        ] + [item.work_item_ref for item in work_items if item.work_item_status == "active"]
         active_work_items = self._merge_unique_strings(active_work_items)
         checkpoint_refs = [
             *list(current.checkpoint_refs),
@@ -1646,6 +2400,844 @@ class MemoryService:
         parts = transition_ref.split(":", 2)
         return parts[1] if len(parts) > 1 else "update"
 
+    @staticmethod
+    def _artifact_physical_event(
+        *,
+        plan: ArtifactPhysicalApplyPlanContract | ArtifactPhysicalRollbackPlanContract,
+        phase: str,
+        occurred_at: str,
+        previous: ArtifactPhysicalSagaEventContract | None,
+        mutation_receipt_fingerprint: str | None = None,
+        rollback_receipt_fingerprint: str | None = None,
+        physical_state_attestation_fingerprint: str | None = None,
+    ) -> ArtifactPhysicalSagaEventContract:
+        sequence = 1 if previous is None else previous.sequence + 1
+        event = ArtifactPhysicalSagaEventContract(
+            event_id=f"{plan.saga_id}:event:{sequence}:{phase}",
+            saga_id=plan.saga_id,
+            purpose=plan.purpose,
+            phase=phase,
+            sequence=sequence,
+            plan_fingerprint=plan.plan_fingerprint,
+            physical_operation_id=plan.physical_operation_id,
+            occurred_at=occurred_at,
+            previous_event_fingerprint=(None if previous is None else previous.event_fingerprint),
+            mutation_receipt_fingerprint=mutation_receipt_fingerprint,
+            rollback_receipt_fingerprint=rollback_receipt_fingerprint,
+            physical_state_attestation_fingerprint=(physical_state_attestation_fingerprint),
+            event_fingerprint="",
+        )
+        return seal_artifact_physical_saga_event(event)
+
+    def _require_artifact_physical_plan_scope(
+        self,
+        plan: ArtifactPhysicalApplyPlanContract | ArtifactPhysicalRollbackPlanContract,
+    ) -> None:
+        mission = self.repository.fetch_mission_state(str(plan.mission_id))
+        if mission is None:
+            raise KeyError("unknown mission for artifact physical saga")
+        if str(plan.owner_mission_id) != str(mission.mission_id):
+            raise ValueError("artifact_physical_owner_mission_mismatch")
+        if plan.objective_ref != mission.objective_ref:
+            raise ValueError("artifact_physical_objective_scope_mismatch")
+        if mission.mission_status != MissionStatus.ACTIVE:
+            raise ValueError("artifact_physical_mission_not_active")
+        work_item = next(
+            (item for item in mission.work_items if item.work_item_ref == plan.work_item_ref),
+            None,
+        )
+        if (
+            work_item is None
+            or str(work_item.mission_id) != str(mission.mission_id)
+            or work_item.work_item_status != "active"
+            or work_item.blocking_state != "ready"
+        ):
+            raise ValueError("artifact_physical_work_item_scope_mismatch")
+
+    def reserve_artifact_physical_apply(
+        self,
+        plan: ArtifactPhysicalApplyPlanContract,
+    ) -> ArtifactPhysicalSagaStateContract:
+        require_valid_artifact_physical_apply_plan(plan)
+        existing = self.repository.fetch_artifact_physical_saga_plan(plan.saga_id)
+        if existing is not None:
+            if existing != plan:
+                raise ValueError("artifact_physical_saga_reservation_collision")
+            return self.get_artifact_physical_saga(plan.saga_id)
+        self._require_artifact_physical_plan_scope(plan)
+        if (
+            plan.transition == "register"
+            and self.repository.is_local_text_resource_physically_bound(plan.resource_ref)
+        ):
+            raise ValueError("artifact_physical_resource_already_bound")
+        if self.repository.fetch_physical_artifact_version(artifact_ref=plan.artifact_ref):
+            raise ValueError("artifact_physical_artifact_ref_already_bound")
+        current = self.repository.fetch_artifact_physical_lineage(
+            mission_id=str(plan.mission_id),
+            lineage_root_ref=plan.lineage_root_ref,
+        )
+        if plan.transition == "register":
+            if current is not None or plan.expected_lineage_revision != 0:
+                raise ValueError("artifact_physical_apply_lineage_cas_failed")
+            mission = self.repository.fetch_mission_state(str(plan.mission_id))
+            assert mission is not None
+            if any(item.artifact_ref == plan.artifact_ref for item in mission.artifact_states):
+                raise ValueError("artifact_physical_register_ref_not_free")
+        elif (
+            current is None
+            or current.revision != plan.expected_lineage_revision
+            or current.active_artifact_ref != plan.supersedes_artifact_ref
+        ):
+            # Legacy logical heads are intentionally not bootstrapped implicitly.
+            raise ValueError("artifact_physical_replace_requires_normalized_head")
+        else:
+            predecessor = self.repository.fetch_physical_artifact_version(
+                artifact_ref=current.active_artifact_ref
+            )
+            latest = self.repository.fetch_latest_physical_artifact_version_for_lineage(
+                mission_id=str(plan.mission_id),
+                lineage_root_ref=plan.lineage_root_ref,
+            )
+            if (
+                predecessor is None
+                or latest is None
+                or predecessor.artifact_ref != plan.supersedes_artifact_ref
+                or latest.artifact_version + 1 != plan.artifact_version
+                or str(predecessor.mission_id) != str(plan.mission_id)
+                or predecessor.lineage_root_ref != plan.lineage_root_ref
+                or predecessor.resource_ref != plan.resource_ref
+                or predecessor.root_alias != plan.root_alias
+                or predecessor.desired_content_sha256 != plan.before_content_sha256
+                or predecessor.root_config_fingerprint != plan.root_config_fingerprint
+                or predecessor.transaction_policy_version != plan.transaction_policy_version
+                or predecessor.transaction_backend_version != plan.transaction_backend_version
+                or predecessor.adapter_backend_version != plan.adapter_backend_version
+            ):
+                raise ValueError("artifact_physical_replace_predecessor_mismatch")
+        genesis = self._artifact_physical_event(
+            plan=plan,
+            phase="reserved",
+            occurred_at=plan.created_at,
+            previous=None,
+        )
+        self.repository.reserve_artifact_physical_saga(plan, genesis)
+        return self.get_artifact_physical_saga(plan.saga_id)
+
+    def reserve_artifact_physical_rollback(
+        self,
+        plan: ArtifactPhysicalRollbackPlanContract,
+    ) -> ArtifactPhysicalSagaStateContract:
+        require_valid_artifact_physical_rollback_plan(plan)
+        existing = self.repository.fetch_artifact_physical_saga_plan(plan.saga_id)
+        if existing is not None:
+            if existing != plan:
+                raise ValueError("artifact_physical_saga_reservation_collision")
+            return self.get_artifact_physical_saga(plan.saga_id)
+        self._require_artifact_physical_plan_scope(plan)
+        source_plan = self.get_artifact_physical_apply_plan(plan.source_apply_saga_id)
+        source_state = self.get_artifact_physical_saga(plan.source_apply_saga_id)
+        if (
+            source_plan.artifact_ref != plan.active_artifact_ref
+            or source_plan.artifact_version != plan.active_artifact_version
+            or str(source_plan.owner_mission_id) != str(plan.owner_mission_id)
+            or source_plan.objective_ref != plan.objective_ref
+            or source_plan.work_item_ref != plan.work_item_ref
+            or source_plan.physical_operation_id != plan.mutation_operation_id
+            or source_plan.resource_ref != plan.resource_ref
+            or source_plan.root_alias != plan.root_alias
+            or str(source_plan.mission_id) != str(plan.mission_id)
+            or source_plan.lineage_root_ref != plan.lineage_root_ref
+        ):
+            raise ValueError("artifact_physical_rollback_source_plan_mismatch")
+        source_version = self.repository.fetch_physical_artifact_version(
+            artifact_ref=plan.active_artifact_ref
+        )
+        if plan.rollback_mode == "canonical_rollback":
+            if source_state.phase != "completed":
+                raise ValueError("artifact_physical_rollback_source_not_completed")
+            if source_version is None:
+                raise ValueError("artifact_physical_rollback_source_missing")
+            if plan.restored_artifact_ref is None:
+                raise ValueError("artifact_physical_rollback_restored_version_required")
+            restored_version = self.repository.fetch_physical_artifact_version(
+                artifact_ref=plan.restored_artifact_ref
+            )
+            if (
+                source_version.artifact_version != plan.active_artifact_version
+                or str(source_version.mission_id) != str(plan.mission_id)
+                or str(source_version.owner_mission_id) != str(plan.owner_mission_id)
+                or source_version.objective_ref != plan.objective_ref
+                or source_version.work_item_ref != plan.work_item_ref
+                or source_version.lineage_root_ref != plan.lineage_root_ref
+                or source_version.resource_ref != plan.resource_ref
+                or source_version.root_alias != plan.root_alias
+                or source_version.physical_operation_id != plan.mutation_operation_id
+                or source_version.mutation_receipt_fingerprint != plan.mutation_receipt_fingerprint
+                or source_version.desired_content_sha256 != plan.expected_current_sha256
+                or source_version.before_content_sha256 != plan.restored_content_sha256
+                or restored_version is None
+                or restored_version.artifact_version != plan.restored_artifact_version
+                or str(restored_version.mission_id) != str(plan.mission_id)
+                or str(restored_version.owner_mission_id) != str(plan.owner_mission_id)
+                or restored_version.lineage_root_ref != plan.lineage_root_ref
+                or restored_version.resource_ref != plan.resource_ref
+                or restored_version.root_alias != plan.root_alias
+                or source_version.supersedes_artifact_ref != restored_version.artifact_ref
+                or restored_version.desired_content_sha256 != plan.restored_content_sha256
+            ):
+                raise ValueError("artifact_physical_rollback_version_binding_mismatch")
+        else:
+            if (
+                source_state.phase
+                not in {"effect_dispatched", "physical_applied", "compensation_required"}
+                or source_version is not None
+                or source_plan.before_content_sha256 != plan.restored_content_sha256
+                or source_plan.desired_content_sha256 != plan.expected_current_sha256
+                or source_plan.supersedes_artifact_ref != plan.restored_artifact_ref
+            ):
+                raise ValueError("artifact_physical_compensation_source_mismatch")
+            if plan.restored_artifact_ref is None:
+                if (
+                    source_plan.transition != "register"
+                    or plan.restored_artifact_version is not None
+                    or plan.expected_lineage_revision != 0
+                ):
+                    raise ValueError("artifact_physical_compensation_restore_mismatch")
+            else:
+                restored_version = self.repository.fetch_physical_artifact_version(
+                    artifact_ref=plan.restored_artifact_ref
+                )
+                if (
+                    source_plan.transition != "replace"
+                    or restored_version is None
+                    or plan.restored_artifact_version is None
+                    or restored_version.artifact_version != plan.restored_artifact_version
+                    or str(restored_version.mission_id) != str(plan.mission_id)
+                    or str(restored_version.owner_mission_id) != str(plan.owner_mission_id)
+                    or restored_version.objective_ref != plan.objective_ref
+                    or restored_version.work_item_ref != plan.work_item_ref
+                    or restored_version.lineage_root_ref != plan.lineage_root_ref
+                    or restored_version.resource_ref != plan.resource_ref
+                    or restored_version.root_alias != plan.root_alias
+                    or restored_version.desired_content_sha256 != plan.restored_content_sha256
+                    or source_plan.before_content_sha256 != restored_version.desired_content_sha256
+                ):
+                    raise ValueError("artifact_physical_compensation_restore_mismatch")
+        current = self.repository.fetch_artifact_physical_lineage(
+            mission_id=str(plan.mission_id),
+            lineage_root_ref=plan.lineage_root_ref,
+        )
+        if plan.rollback_mode == "canonical_rollback":
+            if (
+                current is None
+                or current.revision != plan.expected_lineage_revision
+                or current.active_artifact_ref != plan.active_artifact_ref
+            ):
+                raise ValueError("artifact_physical_rollback_lineage_cas_failed")
+        elif (
+            (current is None) != (plan.expected_lineage_revision == 0)
+            or current is not None
+            and (
+                current.revision != plan.expected_lineage_revision
+                or current.active_artifact_ref != plan.restored_artifact_ref
+            )
+        ):
+            raise ValueError("artifact_physical_compensation_lineage_cas_failed")
+        genesis = self._artifact_physical_event(
+            plan=plan,
+            phase="rollback_reserved",
+            occurred_at=plan.created_at,
+            previous=None,
+            mutation_receipt_fingerprint=plan.mutation_receipt_fingerprint,
+        )
+        self.repository.reserve_artifact_physical_saga(plan, genesis)
+        return self.get_artifact_physical_saga(plan.saga_id)
+
+    def get_artifact_physical_apply_plan(
+        self,
+        saga_id: str,
+    ) -> ArtifactPhysicalApplyPlanContract:
+        plan = self.repository.fetch_artifact_physical_saga_plan(saga_id)
+        if not isinstance(plan, ArtifactPhysicalApplyPlanContract):
+            raise KeyError("unknown artifact physical apply saga")
+        require_valid_artifact_physical_apply_plan(plan)
+        return plan
+
+    def get_artifact_physical_rollback_plan(
+        self,
+        saga_id: str,
+    ) -> ArtifactPhysicalRollbackPlanContract:
+        plan = self.repository.fetch_artifact_physical_saga_plan(saga_id)
+        if not isinstance(plan, ArtifactPhysicalRollbackPlanContract):
+            raise KeyError("unknown artifact physical rollback saga")
+        require_valid_artifact_physical_rollback_plan(plan)
+        return plan
+
+    def get_artifact_physical_saga(
+        self,
+        saga_id: str,
+    ) -> ArtifactPhysicalSagaStateContract:
+        plan = self.repository.fetch_artifact_physical_saga_plan(saga_id)
+        if plan is None:
+            raise KeyError("unknown artifact physical saga")
+        events = self.repository.list_artifact_physical_saga_events(saga_id)
+        if not events:
+            raise ValueError("artifact physical saga has no checkpoints")
+        return saga_state_from_event(
+            events[-1],
+            plan=plan,
+            previous_event=events[-2] if len(events) > 1 else None,
+        )
+
+    def _advance_artifact_physical_saga(
+        self,
+        *,
+        saga_id: str,
+        phase: str,
+        occurred_at: str,
+        purpose: str,
+    ) -> ArtifactPhysicalSagaStateContract:
+        plan = self.repository.fetch_artifact_physical_saga_plan(saga_id)
+        if plan is None or plan.purpose != purpose:
+            raise KeyError(f"unknown artifact physical {purpose} saga")
+        allowed = (
+            {"effect_dispatched", "failed", "reconciliation_required"}
+            if purpose == "apply"
+            else {"rollback_effect_dispatched", "failed", "reconciliation_required"}
+        )
+        if phase not in allowed:
+            raise ValueError("physical and canonical checkpoints require atomic commit API")
+        if phase in {"effect_dispatched", "rollback_effect_dispatched"}:
+            self._require_artifact_physical_plan_scope(plan)
+        events = self.repository.list_artifact_physical_saga_events(saga_id)
+        previous = events[-1]
+        event = self._artifact_physical_event(
+            plan=plan,
+            phase=phase,
+            occurred_at=occurred_at,
+            previous=previous,
+            mutation_receipt_fingerprint=previous.mutation_receipt_fingerprint,
+            rollback_receipt_fingerprint=previous.rollback_receipt_fingerprint,
+            physical_state_attestation_fingerprint=(
+                previous.physical_state_attestation_fingerprint
+            ),
+        )
+        self.repository.append_artifact_physical_saga_event(event)
+        return self.get_artifact_physical_saga(saga_id)
+
+    def advance_artifact_physical_apply(
+        self,
+        saga_id: str,
+        *,
+        phase: str,
+        occurred_at: str,
+    ) -> ArtifactPhysicalSagaStateContract:
+        return self._advance_artifact_physical_saga(
+            saga_id=saga_id,
+            phase=phase,
+            occurred_at=occurred_at,
+            purpose="apply",
+        )
+
+    def advance_artifact_physical_rollback(
+        self,
+        saga_id: str,
+        *,
+        phase: str,
+        occurred_at: str,
+    ) -> ArtifactPhysicalSagaStateContract:
+        return self._advance_artifact_physical_saga(
+            saga_id=saga_id,
+            phase=phase,
+            occurred_at=occurred_at,
+            purpose="rollback",
+        )
+
+    def _require_verified_mutation(
+        self,
+        receipt: LocalTextMutationReceipt,
+        attestation: LocalTextPhysicalStateAttestationContract,
+    ) -> None:
+        require_valid_local_text_mutation_receipt(receipt)
+        require_valid_local_text_physical_state_attestation(attestation)
+        verifier = self._artifact_physical_mutation_verifier
+        if verifier is None:
+            raise ValueError("artifact_physical_mutation_verifier_required")
+        try:
+            verified = verifier(receipt, attestation) is True
+        except (TypeError, ValueError, RuntimeError):
+            verified = False
+        if not verified:
+            raise ValueError("artifact_physical_mutation_receipt_not_verified")
+
+    def _require_verified_rollback(
+        self,
+        receipt: LocalTextRollbackReceipt,
+        attestation: LocalTextPhysicalStateAttestationContract,
+    ) -> None:
+        require_valid_local_text_rollback_receipt(receipt)
+        require_valid_local_text_physical_state_attestation(attestation)
+        verifier = self._artifact_physical_rollback_verifier
+        if verifier is None:
+            raise ValueError("artifact_physical_rollback_verifier_required")
+        try:
+            verified = verifier(receipt, attestation) is True
+        except (TypeError, ValueError, RuntimeError):
+            verified = False
+        if not verified:
+            raise ValueError("artifact_physical_rollback_receipt_not_verified")
+
+    def commit_artifact_physical_apply(
+        self,
+        saga_id: str,
+        *,
+        receipt: LocalTextMutationReceipt,
+        attestation: LocalTextPhysicalStateAttestationContract,
+    ) -> ArtifactPhysicalCanonicalCommitReceiptContract:
+        plan = self.get_artifact_physical_apply_plan(saga_id)
+        self._require_verified_mutation(receipt, attestation)
+        if (
+            receipt.operation_id != plan.physical_operation_id
+            or receipt.resource_ref != plan.resource_ref
+            or receipt.preflight_fingerprint != plan.preflight_fingerprint
+            or receipt.root_config_fingerprint != plan.root_config_fingerprint
+            or receipt.before_content_sha256 != plan.before_content_sha256
+            or receipt.desired_content_sha256 != plan.desired_content_sha256
+            or receipt.mutation_status != "applied"
+            or attestation.purpose != "mutation_current"
+            or attestation.receipt_fingerprint != receipt.receipt_fingerprint
+            or attestation.mutation_operation_id != receipt.operation_id
+            or attestation.rollback_operation_id is not None
+            or attestation.resource_ref != plan.resource_ref
+            or attestation.root_alias != plan.root_alias
+            or attestation.root_config_fingerprint != plan.root_config_fingerprint
+            or attestation.physical_state != "applied"
+            or attestation.observed_content_sha256 != plan.desired_content_sha256
+            or attestation.journal_event_fingerprint != receipt.applied_event_fingerprint
+            or attestation.transaction_policy_version != plan.transaction_policy_version
+            or attestation.transaction_backend_version != plan.transaction_backend_version
+        ):
+            raise ValueError("artifact_physical_apply_physical_binding_mismatch")
+        stored_commit = self.repository.fetch_artifact_physical_commit_receipt(saga_id)
+        if stored_commit is not None:
+            if (
+                stored_commit.mutation_receipt_fingerprint != receipt.receipt_fingerprint
+                or stored_commit.physical_state_attestation_fingerprint
+                != attestation.attestation_fingerprint
+            ):
+                raise ValueError("artifact_physical_apply_idempotency_mismatch")
+            return stored_commit
+        events = self.repository.list_artifact_physical_saga_events(saga_id)
+        if not events or events[-1].phase != "effect_dispatched":
+            raise ValueError("artifact_physical_apply_not_ready_for_commit")
+        physical_event = self._artifact_physical_event(
+            plan=plan,
+            phase="physical_applied",
+            occurred_at=attestation.verified_at,
+            previous=events[-1],
+            mutation_receipt_fingerprint=receipt.receipt_fingerprint,
+            physical_state_attestation_fingerprint=attestation.attestation_fingerprint,
+        )
+        canonical_event = self._artifact_physical_event(
+            plan=plan,
+            phase="canonical_committed",
+            occurred_at=attestation.verified_at,
+            previous=physical_event,
+            mutation_receipt_fingerprint=receipt.receipt_fingerprint,
+            physical_state_attestation_fingerprint=attestation.attestation_fingerprint,
+        )
+        version = seal_physical_artifact_version(
+            PhysicalArtifactVersionContract(
+                mission_id=plan.mission_id,
+                artifact_ref=plan.artifact_ref,
+                artifact_version=plan.artifact_version,
+                owner_mission_id=plan.owner_mission_id,
+                objective_ref=plan.objective_ref,
+                work_item_ref=plan.work_item_ref,
+                lineage_root_ref=plan.lineage_root_ref,
+                supersedes_artifact_ref=plan.supersedes_artifact_ref,
+                physical_operation_id=plan.physical_operation_id,
+                mutation_receipt_fingerprint=receipt.receipt_fingerprint,
+                resource_ref=plan.resource_ref,
+                root_alias=plan.root_alias,
+                preflight_fingerprint=plan.preflight_fingerprint,
+                root_config_fingerprint=plan.root_config_fingerprint,
+                preflight_policy_version=plan.preflight_policy_version,
+                transaction_policy_version=plan.transaction_policy_version,
+                transaction_backend_version=plan.transaction_backend_version,
+                adapter_backend_version=plan.adapter_backend_version,
+                before_content_sha256=plan.before_content_sha256,
+                desired_content_sha256=plan.desired_content_sha256,
+                rollback_plan_ref=plan.rollback_plan_ref,
+                physical_state_attestation_fingerprint=(attestation.attestation_fingerprint),
+                canonical_saga_id=plan.saga_id,
+                canonicalized_at=attestation.verified_at,
+                version_fingerprint="",
+            )
+        )
+        lineage = seal_artifact_physical_lineage(
+            ArtifactPhysicalLineageContract(
+                mission_id=plan.mission_id,
+                lineage_root_ref=plan.lineage_root_ref,
+                revision=plan.expected_lineage_revision + 1,
+                active_artifact_ref=plan.artifact_ref,
+                last_saga_id=plan.saga_id,
+                last_event_fingerprint=canonical_event.event_fingerprint,
+                updated_at=attestation.verified_at,
+                lineage_fingerprint="",
+            )
+        )
+        outbox = seal_artifact_physical_outbox_item(
+            ArtifactPhysicalOutboxItemContract(
+                outbox_id=f"{plan.saga_id}:outbox:canonical",
+                saga_id=plan.saga_id,
+                purpose="apply",
+                event_name="artifact_lifecycle_state_changed",
+                mission_id=plan.mission_id,
+                artifact_ref=plan.artifact_ref,
+                lineage_root_ref=plan.lineage_root_ref,
+                canonical_event_fingerprint=canonical_event.event_fingerprint,
+                created_at=attestation.verified_at,
+                outbox_fingerprint="",
+            )
+        )
+        commit = seal_artifact_physical_canonical_commit_receipt(
+            ArtifactPhysicalCanonicalCommitReceiptContract(
+                commit_id=f"{plan.saga_id}:canonical-commit",
+                purpose="apply",
+                saga_id=plan.saga_id,
+                plan_fingerprint=plan.plan_fingerprint,
+                mission_id=plan.mission_id,
+                artifact_ref=plan.artifact_ref,
+                artifact_version=plan.artifact_version,
+                lineage_root_ref=plan.lineage_root_ref,
+                lineage_revision=lineage.revision,
+                physical_operation_id=plan.physical_operation_id,
+                resource_ref=plan.resource_ref,
+                root_alias=plan.root_alias,
+                mutation_receipt_fingerprint=receipt.receipt_fingerprint,
+                rollback_receipt_fingerprint=None,
+                physical_state_attestation_fingerprint=(attestation.attestation_fingerprint),
+                canonical_event_fingerprint=canonical_event.event_fingerprint,
+                committed_at=attestation.verified_at,
+                commit_fingerprint="",
+            )
+        )
+        self.repository.commit_artifact_physical_apply(
+            physical_event=physical_event,
+            canonical_event=canonical_event,
+            version=version,
+            lineage=lineage,
+            attestation=attestation,
+            outbox=outbox,
+            commit_receipt=commit,
+        )
+        stored = self.repository.fetch_artifact_physical_commit_receipt(saga_id)
+        if stored != commit:
+            raise ValueError("artifact_physical_apply_commit_not_persisted_exactly")
+        return stored
+
+    def commit_artifact_physical_rollback(
+        self,
+        saga_id: str,
+        *,
+        receipt: LocalTextRollbackReceipt,
+        attestation: LocalTextPhysicalStateAttestationContract,
+    ) -> ArtifactPhysicalCanonicalCommitReceiptContract:
+        plan = self.get_artifact_physical_rollback_plan(saga_id)
+        self._require_verified_rollback(receipt, attestation)
+        source = self.get_artifact_physical_apply_plan(plan.source_apply_saga_id)
+        if (
+            receipt.operation_id != plan.physical_operation_id
+            or receipt.mutation_operation_id != plan.mutation_operation_id
+            or receipt.mutation_receipt_fingerprint != plan.mutation_receipt_fingerprint
+            or receipt.resource_ref != plan.resource_ref
+            or receipt.restored_content_sha256 != plan.restored_content_sha256
+            or attestation.purpose != "rollback_current"
+            or attestation.receipt_fingerprint != receipt.rollback_receipt_fingerprint
+            or attestation.mutation_operation_id != plan.mutation_operation_id
+            or attestation.rollback_operation_id != plan.physical_operation_id
+            or attestation.resource_ref != plan.resource_ref
+            or attestation.root_alias != plan.root_alias
+            or attestation.root_config_fingerprint != source.root_config_fingerprint
+            or attestation.physical_state not in {"restored", "absent"}
+            or attestation.observed_content_sha256 != plan.restored_content_sha256
+            or attestation.journal_event_fingerprint != receipt.rolled_back_event_fingerprint
+            or attestation.transaction_policy_version != source.transaction_policy_version
+            or attestation.transaction_backend_version != source.transaction_backend_version
+        ):
+            raise ValueError("artifact_physical_rollback_physical_binding_mismatch")
+        stored_commit = self.repository.fetch_artifact_physical_commit_receipt(saga_id)
+        if stored_commit is not None:
+            if (
+                stored_commit.rollback_receipt_fingerprint != receipt.rollback_receipt_fingerprint
+                or stored_commit.physical_state_attestation_fingerprint
+                != attestation.attestation_fingerprint
+            ):
+                raise ValueError("artifact_physical_rollback_idempotency_mismatch")
+            return stored_commit
+        events = self.repository.list_artifact_physical_saga_events(saga_id)
+        if not events or events[-1].phase != "rollback_effect_dispatched":
+            raise ValueError("artifact_physical_rollback_not_ready_for_commit")
+        physical_event = self._artifact_physical_event(
+            plan=plan,
+            phase="physically_rolled_back",
+            occurred_at=attestation.verified_at,
+            previous=events[-1],
+            mutation_receipt_fingerprint=plan.mutation_receipt_fingerprint,
+            rollback_receipt_fingerprint=receipt.rollback_receipt_fingerprint,
+            physical_state_attestation_fingerprint=attestation.attestation_fingerprint,
+        )
+        terminal_phase = (
+            "canonical_rolled_back"
+            if plan.rollback_mode == "canonical_rollback"
+            else "compensation_committed"
+        )
+        canonical_event = self._artifact_physical_event(
+            plan=plan,
+            phase=terminal_phase,
+            occurred_at=attestation.verified_at,
+            previous=physical_event,
+            mutation_receipt_fingerprint=plan.mutation_receipt_fingerprint,
+            rollback_receipt_fingerprint=receipt.rollback_receipt_fingerprint,
+            physical_state_attestation_fingerprint=attestation.attestation_fingerprint,
+        )
+        lineage: ArtifactPhysicalLineageContract | None = None
+        if plan.rollback_mode == "canonical_rollback":
+            lineage = seal_artifact_physical_lineage(
+                ArtifactPhysicalLineageContract(
+                    mission_id=plan.mission_id,
+                    lineage_root_ref=plan.lineage_root_ref,
+                    revision=plan.expected_lineage_revision + 1,
+                    active_artifact_ref=plan.restored_artifact_ref,
+                    last_saga_id=plan.saga_id,
+                    last_event_fingerprint=canonical_event.event_fingerprint,
+                    updated_at=attestation.verified_at,
+                    lineage_fingerprint="",
+                )
+            )
+        artifact_ref = (
+            plan.restored_artifact_ref if plan.rollback_mode == "canonical_rollback" else None
+        )
+        artifact_version = (
+            plan.restored_artifact_version if plan.rollback_mode == "canonical_rollback" else None
+        )
+        outbox = seal_artifact_physical_outbox_item(
+            ArtifactPhysicalOutboxItemContract(
+                outbox_id=f"{plan.saga_id}:outbox:canonical",
+                saga_id=plan.saga_id,
+                purpose="rollback",
+                event_name=(
+                    "artifact_lifecycle_state_changed"
+                    if plan.rollback_mode == "canonical_rollback"
+                    else "artifact_physical_apply_compensated"
+                ),
+                mission_id=plan.mission_id,
+                artifact_ref=(artifact_ref or plan.active_artifact_ref),
+                lineage_root_ref=plan.lineage_root_ref,
+                canonical_event_fingerprint=canonical_event.event_fingerprint,
+                created_at=attestation.verified_at,
+                outbox_fingerprint="",
+            )
+        )
+        commit = seal_artifact_physical_canonical_commit_receipt(
+            ArtifactPhysicalCanonicalCommitReceiptContract(
+                commit_id=f"{plan.saga_id}:canonical-commit",
+                purpose="rollback",
+                saga_id=plan.saga_id,
+                plan_fingerprint=plan.plan_fingerprint,
+                mission_id=plan.mission_id,
+                artifact_ref=artifact_ref,
+                artifact_version=artifact_version,
+                lineage_root_ref=plan.lineage_root_ref,
+                lineage_revision=(
+                    lineage.revision if lineage is not None else plan.expected_lineage_revision
+                ),
+                physical_operation_id=plan.physical_operation_id,
+                resource_ref=plan.resource_ref,
+                root_alias=plan.root_alias,
+                mutation_receipt_fingerprint=plan.mutation_receipt_fingerprint,
+                rollback_receipt_fingerprint=receipt.rollback_receipt_fingerprint,
+                physical_state_attestation_fingerprint=(attestation.attestation_fingerprint),
+                canonical_event_fingerprint=canonical_event.event_fingerprint,
+                committed_at=attestation.verified_at,
+                commit_fingerprint="",
+            )
+        )
+        source_compensated_event = None
+        if plan.rollback_mode == "precanonical_compensation":
+            source_events = self.repository.list_artifact_physical_saga_events(
+                plan.source_apply_saga_id
+            )
+            if not source_events:
+                raise ValueError("artifact_physical_compensation_source_missing")
+            source_compensated_event = self._artifact_physical_event(
+                plan=source,
+                phase="compensated",
+                occurred_at=attestation.verified_at,
+                previous=source_events[-1],
+                mutation_receipt_fingerprint=plan.mutation_receipt_fingerprint,
+                rollback_receipt_fingerprint=receipt.rollback_receipt_fingerprint,
+                physical_state_attestation_fingerprint=(attestation.attestation_fingerprint),
+            )
+        self.repository.commit_artifact_physical_rollback(
+            physical_event=physical_event,
+            canonical_event=canonical_event,
+            lineage=lineage,
+            attestation=attestation,
+            outbox=outbox,
+            commit_receipt=commit,
+            source_compensated_event=source_compensated_event,
+        )
+        stored = self.repository.fetch_artifact_physical_commit_receipt(saga_id)
+        if stored != commit:
+            raise ValueError("artifact_physical_rollback_commit_not_persisted_exactly")
+        return stored
+
+    def get_artifact_physical_version(
+        self,
+        artifact_ref: str,
+    ) -> PhysicalArtifactVersionContract | None:
+        return self.repository.fetch_physical_artifact_version(artifact_ref=artifact_ref)
+
+    def get_artifact_physical_lineage(
+        self,
+        mission_id: str,
+        lineage_root_ref: str,
+    ) -> ArtifactPhysicalLineageContract | None:
+        return self.repository.fetch_artifact_physical_lineage(
+            mission_id=mission_id,
+            lineage_root_ref=lineage_root_ref,
+        )
+
+    def verify_artifact_physical_canonical_commit_receipt(
+        self,
+        receipt: ArtifactPhysicalCanonicalCommitReceiptContract,
+    ) -> bool:
+        try:
+            require_valid_artifact_physical_canonical_commit_receipt(receipt)
+            stored = self.repository.fetch_artifact_physical_commit_receipt(receipt.saga_id)
+            return stored == receipt
+        except (KeyError, TypeError, ValueError, RuntimeError):
+            return False
+
+    def get_artifact_physical_canonical_commit_receipt(
+        self,
+        saga_id: str,
+    ) -> ArtifactPhysicalCanonicalCommitReceiptContract | None:
+        return self.repository.fetch_artifact_physical_commit_receipt(saga_id)
+
+    def get_artifact_physical_outbox_for_saga(
+        self,
+        saga_id: str,
+    ) -> ArtifactPhysicalOutboxItemContract | None:
+        return self.repository.fetch_artifact_physical_outbox_for_saga(saga_id)
+
+    def list_pending_artifact_physical_outbox(
+        self,
+        *,
+        limit: int = 20,
+    ) -> list[ArtifactPhysicalOutboxItemContract]:
+        return self.repository.list_pending_artifact_physical_outbox(limit=limit)
+
+    def mark_artifact_physical_outbox_published(
+        self,
+        outbox_id: str,
+        *,
+        publisher_ref: str,
+        published_at: str,
+    ) -> ArtifactPhysicalOutboxDeliveryContract:
+        item = self.repository.fetch_artifact_physical_outbox(outbox_id)
+        if item is None:
+            raise KeyError("unknown artifact physical outbox item")
+        existing = self.repository.fetch_artifact_physical_outbox_delivery(outbox_id)
+        if existing is not None:
+            if existing.publisher_ref != publisher_ref:
+                raise ValueError("artifact_physical_outbox_delivery_collision")
+            return existing
+        plan = self.repository.fetch_artifact_physical_saga_plan(item.saga_id)
+        if plan is None:
+            raise ValueError("artifact physical outbox has no saga plan")
+        events = self.repository.list_artifact_physical_saga_events(item.saga_id)
+        if not events:
+            raise ValueError("artifact physical outbox has no saga checkpoints")
+        previous = events[-1]
+        completion = self._artifact_physical_event(
+            plan=plan,
+            phase="completed",
+            occurred_at=published_at,
+            previous=previous,
+            mutation_receipt_fingerprint=previous.mutation_receipt_fingerprint,
+            rollback_receipt_fingerprint=previous.rollback_receipt_fingerprint,
+            physical_state_attestation_fingerprint=(
+                previous.physical_state_attestation_fingerprint
+            ),
+        )
+        delivery = seal_artifact_physical_outbox_delivery(
+            ArtifactPhysicalOutboxDeliveryContract(
+                delivery_id=f"{outbox_id}:delivery",
+                outbox_id=outbox_id,
+                publisher_ref=publisher_ref,
+                published_at=published_at,
+                delivery_fingerprint="",
+            )
+        )
+        self.repository.record_artifact_physical_outbox_delivery(
+            delivery,
+            completion,
+        )
+        stored = self.repository.fetch_artifact_physical_outbox_delivery(outbox_id)
+        if stored != delivery:
+            raise ValueError("artifact_physical_delivery_not_persisted_exactly")
+        return stored
+
+    def authorize_artifact_physical_effect(
+        self,
+        plan: ArtifactPhysicalApplyPlanContract | ArtifactPhysicalRollbackPlanContract,
+        *,
+        resource_ref: str,
+        mutation_receipt_fingerprint: str | None = None,
+    ) -> bool:
+        try:
+            stored = self.repository.fetch_artifact_physical_saga_plan(plan.saga_id)
+            if stored != plan or plan.resource_ref != resource_ref:
+                return False
+            state = self.get_artifact_physical_saga(plan.saga_id)
+            expected_phase = (
+                "effect_dispatched"
+                if isinstance(plan, ArtifactPhysicalApplyPlanContract)
+                else "rollback_effect_dispatched"
+            )
+            if state.phase != expected_phase:
+                return False
+            if isinstance(plan, ArtifactPhysicalRollbackPlanContract):
+                if mutation_receipt_fingerprint != plan.mutation_receipt_fingerprint:
+                    return False
+            elif mutation_receipt_fingerprint is not None:
+                return False
+            current = self.repository.fetch_artifact_physical_lineage(
+                mission_id=str(plan.mission_id),
+                lineage_root_ref=plan.lineage_root_ref,
+            )
+            if plan.expected_lineage_revision == 0:
+                return current is None
+            if isinstance(plan, ArtifactPhysicalApplyPlanContract):
+                expected_active = plan.supersedes_artifact_ref
+            elif plan.rollback_mode == "canonical_rollback":
+                expected_active = plan.active_artifact_ref
+            else:
+                expected_active = plan.restored_artifact_ref
+            return (
+                current is not None
+                and current.revision == plan.expected_lineage_revision
+                and current.active_artifact_ref == expected_active
+            )
+        except (KeyError, TypeError, ValueError, RuntimeError):
+            return False
+
+    def is_local_text_resource_physically_bound(self, resource_ref: str) -> bool:
+        return self.repository.is_local_text_resource_physically_bound(resource_ref)
+
     def transition_artifact_lifecycle_state(
         self,
         *,
@@ -1665,9 +3257,16 @@ class MemoryService:
         if current is None:
             return None
 
-        transition_name = transition or self._artifact_transition_from_ref(
-            transition_ref
-        )
+        physical_refs = [artifact_ref]
+        if replacement_artifact_ref is not None:
+            physical_refs.append(replacement_artifact_ref)
+        if any(
+            self.repository.fetch_physical_artifact_version(artifact_ref=ref) is not None
+            for ref in physical_refs
+        ):
+            raise ValueError("physical_artifact_lifecycle_requires_saga")
+
+        transition_name = transition or self._artifact_transition_from_ref(transition_ref)
         expected_status = "archived" if transition_name == "archive" else "active"
         if artifact_status != expected_status:
             raise ValueError("artifact status does not match lifecycle transition")
@@ -1708,19 +3307,13 @@ class MemoryService:
         canonical_work_item_refs = {
             item.work_item_ref for item in canonical_work_items_from_mission(current)
         }
-        effective_work_item_ref = work_item_ref or (
-            existing.work_item_ref if existing else None
-        )
+        effective_work_item_ref = work_item_ref or (existing.work_item_ref if existing else None)
         if not effective_work_item_ref or effective_work_item_ref not in canonical_work_item_refs:
             raise ValueError("artifact source work item must belong to the mission")
-        if transition_name == "replace" and (
-            not replacement_artifact_ref or not rollback_plan_ref
-        ):
+        if transition_name == "replace" and (not replacement_artifact_ref or not rollback_plan_ref):
             raise ValueError("artifact replacement requires replacement and rollback refs")
         if transition_name == "rollback" and (
-            existing is None
-            or not existing.replacement_artifact_ref
-            or not rollback_plan_ref
+            existing is None or not existing.replacement_artifact_ref or not rollback_plan_ref
         ):
             raise ValueError("artifact rollback requires canonical successor and rollback ref")
 
@@ -1831,14 +3424,8 @@ class MemoryService:
         )
         structured_refs = {item.artifact_ref for item in artifact_states}
         active_artifact_refs = [
-            item
-            for item in current.active_artifact_refs
-            if item not in structured_refs
-        ] + [
-            item.artifact_ref
-            for item in artifact_states
-            if item.artifact_status == "active"
-        ]
+            item for item in current.active_artifact_refs if item not in structured_refs
+        ] + [item.artifact_ref for item in artifact_states if item.artifact_status == "active"]
         active_artifact_refs = self._merge_unique_strings(active_artifact_refs)
         mission_checkpoint_refs = [
             *list(current.checkpoint_refs),
@@ -1969,9 +3556,7 @@ class MemoryService:
             active_surface_id=checkpoint.active_surface_id,
             last_surface_id=checkpoint.last_surface_id,
             surface_continuity_status=checkpoint.surface_continuity_status,
-            surface_identity_conflict_flags=list(
-                checkpoint.surface_identity_conflict_flags
-            ),
+            surface_identity_conflict_flags=list(checkpoint.surface_identity_conflict_flags),
         )
         self.repository.upsert_continuity_checkpoint(updated_checkpoint)
         replay = self.get_session_continuity_replay(session_id)
@@ -2138,7 +3723,9 @@ class MemoryService:
             ecosystem_state_status=(
                 operation_result.ecosystem_state_status
                 if operation_result and operation_result.ecosystem_state_status is not None
-                else operation_dispatch.ecosystem_state_status if operation_dispatch else None
+                else operation_dispatch.ecosystem_state_status
+                if operation_dispatch
+                else None
             ),
             active_work_items=active_work_items,
             active_artifact_refs=active_artifact_refs,
@@ -2262,8 +3849,7 @@ class MemoryService:
         objective_status = self._first_text(
             getattr(operation_result, "objective_status", None),
             "completed"
-            if operation_result is not None
-            and operation_result.status == OperationStatus.COMPLETED
+            if operation_result is not None and operation_result.status == OperationStatus.COMPLETED
             else None,
             getattr(operation_dispatch, "objective_status", None),
             contract.objective_status,
@@ -2334,9 +3920,7 @@ class MemoryService:
                 f"user_scope_interaction_count={user_scope_context.interaction_count}"
             )
             if user_scope_context.user_context_brief:
-                user_hints.append(
-                    f"user_context_brief={user_scope_context.user_context_brief}"
-                )
+                user_hints.append(f"user_context_brief={user_scope_context.user_context_brief}")
             if user_scope_context.recent_intents:
                 user_hints.append(
                     f"user_recent_intents={','.join(user_scope_context.recent_intents[:3])}"
@@ -2356,8 +3940,7 @@ class MemoryService:
                 )
             if user_scope_context.continuity_preference:
                 user_hints.append(
-                    "user_continuity_preference="
-                    f"{user_scope_context.continuity_preference}"
+                    f"user_continuity_preference={user_scope_context.continuity_preference}"
                 )
         summary = self.repository.fetch_context_summary(str(contract.session_id))
         if summary:
@@ -2381,13 +3964,11 @@ class MemoryService:
             continuity_hints.append(f"session_continuity_mode={session_continuity.continuity_mode}")
             if session_continuity.ecosystem_state_status:
                 continuity_hints.append(
-                    "ecosystem_state_status="
-                    f"{session_continuity.ecosystem_state_status}"
+                    f"ecosystem_state_status={session_continuity.ecosystem_state_status}"
                 )
             if session_continuity.ecosystem_state_summary:
                 continuity_hints.append(
-                    "ecosystem_state_summary="
-                    f"{session_continuity.ecosystem_state_summary}"
+                    f"ecosystem_state_summary={session_continuity.ecosystem_state_summary}"
                 )
             if session_continuity.active_work_items:
                 continuity_hints.append(
@@ -2411,21 +3992,15 @@ class MemoryService:
                 )
             if session_continuity.linked_surface_ids:
                 continuity_hints.append(
-                    "linked_surface_ids="
-                    f"{';'.join(session_continuity.linked_surface_ids[:3])}"
+                    f"linked_surface_ids={';'.join(session_continuity.linked_surface_ids[:3])}"
                 )
             if session_continuity.active_surface_id:
-                continuity_hints.append(
-                    f"active_surface_id={session_continuity.active_surface_id}"
-                )
+                continuity_hints.append(f"active_surface_id={session_continuity.active_surface_id}")
             if session_continuity.last_surface_id:
-                continuity_hints.append(
-                    f"last_surface_id={session_continuity.last_surface_id}"
-                )
+                continuity_hints.append(f"last_surface_id={session_continuity.last_surface_id}")
             if session_continuity.surface_continuity_status:
                 continuity_hints.append(
-                    "surface_continuity_status="
-                    f"{session_continuity.surface_continuity_status}"
+                    f"surface_continuity_status={session_continuity.surface_continuity_status}"
                 )
             if session_continuity.surface_identity_conflict_flags:
                 continuity_hints.append(
@@ -2437,9 +4012,7 @@ class MemoryService:
             if session_continuity.objective_ref:
                 continuity_hints.append(f"objective_ref={session_continuity.objective_ref}")
             if session_continuity.objective_status:
-                continuity_hints.append(
-                    f"objective_status={session_continuity.objective_status}"
-                )
+                continuity_hints.append(f"objective_status={session_continuity.objective_status}")
             if session_continuity.work_item_refs:
                 continuity_hints.append(
                     f"work_item_refs={','.join(session_continuity.work_item_refs[:3])}"
@@ -2453,9 +4026,7 @@ class MemoryService:
                     f"artifact_refs={','.join(session_continuity.artifact_refs[:3])}"
                 )
             if session_continuity.next_action_ref:
-                continuity_hints.append(
-                    f"next_action_ref={session_continuity.next_action_ref}"
-                )
+                continuity_hints.append(f"next_action_ref={session_continuity.next_action_ref}")
             if session_continuity.anchor_mission_id:
                 continuity_hints.append(
                     f"session_anchor_mission_id={session_continuity.anchor_mission_id}"
@@ -2499,8 +4070,7 @@ class MemoryService:
                 )
             if continuity_checkpoint.active_surface_id:
                 continuity_hints.append(
-                    "continuity_active_surface_id="
-                    f"{continuity_checkpoint.active_surface_id}"
+                    f"continuity_active_surface_id={continuity_checkpoint.active_surface_id}"
                 )
             if continuity_checkpoint.surface_identity_conflict_flags:
                 continuity_hints.append(
@@ -2509,8 +4079,7 @@ class MemoryService:
                 )
             if continuity_checkpoint.objective_status:
                 continuity_hints.append(
-                    "continuity_objective_status="
-                    f"{continuity_checkpoint.objective_status}"
+                    f"continuity_objective_status={continuity_checkpoint.objective_status}"
                 )
             if continuity_checkpoint.next_action_ref:
                 continuity_hints.append(
@@ -2523,8 +4092,7 @@ class MemoryService:
             continuity_hints.append(f"continuity_resume_point={continuity_replay.resume_point}")
             if continuity_replay.ecosystem_state_status:
                 continuity_hints.append(
-                    "continuity_ecosystem_state_status="
-                    f"{continuity_replay.ecosystem_state_status}"
+                    f"continuity_ecosystem_state_status={continuity_replay.ecosystem_state_status}"
                 )
             if continuity_replay.surface_continuity_status:
                 continuity_hints.append(
@@ -2561,8 +4129,7 @@ class MemoryService:
                     )
                 if mission_state.active_work_items:
                     mission_hints.append(
-                        "mission_active_work_items="
-                        f"{';'.join(mission_state.active_work_items[:3])}"
+                        f"mission_active_work_items={';'.join(mission_state.active_work_items[:3])}"
                     )
                 if mission_state.active_artifact_refs:
                     mission_hints.append(
@@ -2605,8 +4172,7 @@ class MemoryService:
                     )
                 if mission_state.active_work_items:
                     mission_hints.append(
-                        "mission_active_work_items="
-                        f"{';'.join(mission_state.active_work_items[:3])}"
+                        f"mission_active_work_items={';'.join(mission_state.active_work_items[:3])}"
                     )
                 if mission_state.active_artifact_refs:
                     mission_hints.append(
@@ -2625,22 +4191,17 @@ class MemoryService:
                 if mission_state.project_ref:
                     mission_hints.append(f"mission_project_ref={mission_state.project_ref}")
                 if mission_state.objective_ref:
-                    mission_hints.append(
-                        f"mission_objective_ref={mission_state.objective_ref}"
-                    )
+                    mission_hints.append(f"mission_objective_ref={mission_state.objective_ref}")
                 if mission_state.checkpoint_refs:
                     mission_hints.append(
-                        "mission_checkpoint_refs="
-                        f"{','.join(mission_state.checkpoint_refs[:3])}"
+                        f"mission_checkpoint_refs={','.join(mission_state.checkpoint_refs[:3])}"
                     )
                 if mission_state.artifact_refs:
                     mission_hints.append(
                         f"mission_artifact_refs={','.join(mission_state.artifact_refs[:3])}"
                     )
                 if mission_state.next_action_ref:
-                    mission_hints.append(
-                        f"mission_next_action_ref={mission_state.next_action_ref}"
-                    )
+                    mission_hints.append(f"mission_next_action_ref={mission_state.next_action_ref}")
                 if mission_state.linked_surface_ids:
                     mission_hints.append(
                         "mission_linked_surface_ids="
@@ -2651,9 +4212,7 @@ class MemoryService:
                         f"mission_active_surface_id={mission_state.active_surface_id}"
                     )
                 if mission_state.last_surface_id:
-                    mission_hints.append(
-                        f"mission_last_surface_id={mission_state.last_surface_id}"
-                    )
+                    mission_hints.append(f"mission_last_surface_id={mission_state.last_surface_id}")
                 if mission_state.surface_continuity_status:
                     mission_hints.append(
                         "mission_surface_continuity_status="
@@ -2675,38 +4234,32 @@ class MemoryService:
                     mission_hints.append(
                         f"mission_steps={' ; '.join(mission_state.recent_plan_steps[:3])}"
                     )
-                latest_artifact = self._latest_procedural_artifact(
-                    mission_state.related_artifacts
-                )
+                latest_artifact = self._latest_procedural_artifact(mission_state.related_artifacts)
                 if latest_artifact is not None:
                     if latest_artifact.get("artifact_status") is not None:
                         plan_hints.append(
-                            "procedural_artifact_status="
-                            f"{latest_artifact['artifact_status']}"
+                            f"procedural_artifact_status={latest_artifact['artifact_status']}"
                         )
                     if (
                         latest_artifact.get("artifact_ref") is not None
                         and latest_artifact.get("artifact_status") != "archivable"
                     ):
                         plan_hints.append(
-                            "procedural_artifact_ref="
-                            f"{latest_artifact['artifact_ref']}"
+                            f"procedural_artifact_ref={latest_artifact['artifact_ref']}"
                         )
                     if (
                         latest_artifact.get("summary") is not None
                         and latest_artifact.get("artifact_status") != "archivable"
                     ):
                         plan_hints.append(
-                            "procedural_artifact_summary="
-                            f"{latest_artifact['summary']}"
+                            f"procedural_artifact_summary={latest_artifact['summary']}"
                         )
                     if (
                         latest_artifact.get("version") is not None
                         and latest_artifact.get("artifact_status") != "archivable"
                     ):
                         plan_hints.append(
-                            "procedural_artifact_version="
-                            f"{latest_artifact['version']}"
+                            f"procedural_artifact_version={latest_artifact['version']}"
                         )
                 continuity_context = self._build_continuity_context(contract, mission_state)
                 if continuity_context and continuity_context.related_candidates:
@@ -2752,9 +4305,7 @@ class MemoryService:
                 user_scope_context.interaction_count if user_scope_context is not None else 0
             ),
             has_session_continuity=session_continuity is not None,
-            has_related_mission=bool(
-                continuity_context and continuity_context.related_candidates
-            ),
+            has_related_mission=bool(continuity_context and continuity_context.related_candidates),
             has_mission_context=mission_state is not None,
         )
         corpus_summary = self.repository.summarize_memory_corpus()
@@ -2796,8 +4347,7 @@ class MemoryService:
             cross_session_recall_status=context_policy.cross_session_recall_status,
         )
         if (
-            latest_artifact is not None
-            and latest_artifact.get("artifact_status") == "archivable"
+            latest_artifact is not None and latest_artifact.get("artifact_status") == "archivable"
         ) or corpus_telemetry.retention_pressure != "low":
             plan_hints.extend(
                 [
@@ -2875,8 +4425,7 @@ class MemoryService:
                 [
                     f"memory_maintenance_status={memory_maintenance.status}",
                     f"memory_maintenance_reason={memory_maintenance.reason}",
-                    "memory_maintenance_fallback_mode="
-                    f"{memory_maintenance.fallback_mode}",
+                    f"memory_maintenance_fallback_mode={memory_maintenance.fallback_mode}",
                 ]
             )
         final_session_context: list[str] = []
@@ -2886,12 +4435,8 @@ class MemoryService:
             or trimmed_continuity_hints
             or context_policy.cross_session_recall_status != "not_applicable"
         ):
-            user_scope_label = (
-                user_scope_context.context_status if user_scope_context else "none"
-            )
-            continuity_label = (
-                session_continuity.continuity_mode if session_continuity else "none"
-            )
+            user_scope_label = user_scope_context.context_status if user_scope_context else "none"
+            continuity_label = session_continuity.continuity_mode if session_continuity else "none"
             final_session_context.extend(
                 [
                     f"context_compaction_status={context_policy.compaction_status}",
@@ -2905,14 +4450,12 @@ class MemoryService:
                     f"continuity={continuity_label};"
                     f"cross_session={context_policy.cross_session_recall_status}",
                     f"memory_maintenance_status={memory_maintenance.status}",
-                    "memory_maintenance_fallback_mode="
-                    f"{memory_maintenance.fallback_mode}",
+                    f"memory_maintenance_fallback_mode={memory_maintenance.fallback_mode}",
                 ]
             )
             if context_policy.cross_session_recall_status != "not_applicable":
                 final_session_context.append(
-                    "cross_session_recall_status="
-                    f"{context_policy.cross_session_recall_status}"
+                    f"cross_session_recall_status={context_policy.cross_session_recall_status}"
                 )
             if summary:
                 final_session_context.insert(0, f"context_summary={summary}")
@@ -2959,10 +4502,10 @@ class MemoryService:
         continuity_context: MissionContinuityContextContract | None,
     ) -> list[str]:
         sources: list[str] = []
-        if (
-            user_scope_context is not None
-            and user_scope_context.context_status not in {"tracked_only", "not_applicable"}
-        ):
+        if user_scope_context is not None and user_scope_context.context_status not in {
+            "tracked_only",
+            "not_applicable",
+        }:
             sources.append("user_scope")
         if session_continuity is not None:
             sources.append("session_continuity")
@@ -3002,17 +4545,14 @@ class MemoryService:
                 f"{cls._shorten_memory_hint(continuity_context.related_candidates[0].mission_goal)}"
             )
         elif mission_state is not None and mission_state.semantic_brief:
-            fragments.append(
-                f"mission={cls._shorten_memory_hint(mission_state.semantic_brief)}"
-            )
+            fragments.append(f"mission={cls._shorten_memory_hint(mission_state.semantic_brief)}")
         if (
             mission_state is not None
             and mission_state.ecosystem_state_status not in {None, "not_applicable"}
             and mission_state.ecosystem_state_summary
         ):
             fragments.append(
-                "ecosystem="
-                f"{cls._shorten_memory_hint(mission_state.ecosystem_state_summary)}"
+                f"ecosystem={cls._shorten_memory_hint(mission_state.ecosystem_state_summary)}"
             )
         if not fragments:
             return None
@@ -3163,11 +4703,7 @@ class MemoryService:
         runtime_review_status = memory_decision.review_status
         runtime_archive_status = memory_decision.archive_status
         if previous_context is not None:
-            if (
-                mission_state is None
-                and not related_states
-                and user_scope_snapshot is None
-            ):
+            if mission_state is None and not related_states and user_scope_snapshot is None:
                 runtime_semantic_state = (
                     previous_context.semantic_memory_state or runtime_semantic_state
                 )
@@ -3333,9 +4869,7 @@ class MemoryService:
             promoted_route_payload.get("consumer_objective") if promoted_route else None
         )
         expected_deliverables = (
-            list(promoted_route_payload.get("expected_deliverables", []))
-            if promoted_route
-            else []
+            list(promoted_route_payload.get("expected_deliverables", [])) if promoted_route else []
         )
         telemetry_focus = (
             list(promoted_route_payload.get("telemetry_focus", [])) if promoted_route else []
@@ -3487,9 +5021,11 @@ class MemoryService:
         route_refs = set(getattr(promoted_route, "canonical_refs", ()) or ())
         route_name = getattr(promoted_route, "domain_name", None)
         semantic_signal = bool(semantic_evidence)
-        domain_compatible = not route_refs or any(
-            ref in semantic_evidence for ref in route_refs
-        ) or (route_name in semantic_evidence if route_name else False)
+        domain_compatible = (
+            not route_refs
+            or any(ref in semantic_evidence for ref in route_refs)
+            or (route_name in semantic_evidence if route_name else False)
+        )
         procedural_signal = bool(procedural_evidence)
         continuity_source = (
             "related_mission"
@@ -3552,9 +5088,7 @@ class MemoryService:
             limit=6,
         )
         continuity_modes = self._merge_recent_values(
-            previous_context.recurrent_continuity_modes
-            if previous_context and allow_reuse
-            else [],
+            previous_context.recurrent_continuity_modes if previous_context and allow_reuse else [],
             [continuity_mode],
             limit=3,
         )
@@ -3568,8 +5102,7 @@ class MemoryService:
         brief_parts = [
             f"specialist={specialist_type}",
             f"interactions={interaction_count}",
-            "reuse="
-            f"{recurrent_reuse_status if stale_previous_context else 'enabled'}",
+            f"reuse={recurrent_reuse_status if stale_previous_context else 'enabled'}",
         ]
         if domain_focus:
             brief_parts.append(f"domains={','.join(domain_focus[:3])}")
@@ -3642,26 +5175,20 @@ class MemoryService:
             ecosystem_state_status=(
                 ecosystem_state.ecosystem_state_status if ecosystem_state else None
             ),
-            active_work_items=(
-                list(ecosystem_state.active_work_items) if ecosystem_state else []
-            ),
+            active_work_items=(list(ecosystem_state.active_work_items) if ecosystem_state else []),
             active_artifact_refs=(
                 list(ecosystem_state.active_artifact_refs) if ecosystem_state else []
             ),
             open_checkpoint_refs=(
                 list(ecosystem_state.open_checkpoint_refs) if ecosystem_state else []
             ),
-            surface_presence=(
-                list(ecosystem_state.surface_presence) if ecosystem_state else []
-            ),
+            surface_presence=(list(ecosystem_state.surface_presence) if ecosystem_state else []),
             ecosystem_state_summary=(ecosystem_state.state_summary if ecosystem_state else None),
             linked_surface_ids=list(surface_state.linked_surface_ids),
             active_surface_id=surface_state.active_surface_id,
             last_surface_id=surface_state.last_surface_id,
             surface_continuity_status=surface_state.surface_continuity_status,
-            surface_identity_conflict_flags=list(
-                surface_state.surface_identity_conflict_flags
-            ),
+            surface_identity_conflict_flags=list(surface_state.surface_identity_conflict_flags),
             project_ref=objective_state.project_ref,
             objective_ref=objective_state.objective_ref,
             work_item_refs=list(objective_state.work_item_refs),
@@ -3800,8 +5327,7 @@ class MemoryService:
                 if ecosystem_state
                 else (previous.ecosystem_state_summary if previous else None)
             ),
-            project_ref=objective_state.project_ref
-            or (previous.project_ref if previous else None),
+            project_ref=objective_state.project_ref or (previous.project_ref if previous else None),
             objective_ref=objective_state.objective_ref
             or (previous.objective_ref if previous else None),
             work_item_refs=(
@@ -3846,9 +5372,7 @@ class MemoryService:
             surface_identity_conflict_flags=(
                 list(surface_state.surface_identity_conflict_flags)
                 if surface_state.surface_identity_conflict_flags
-                else (
-                    list(previous.surface_identity_conflict_flags) if previous else []
-                )
+                else (list(previous.surface_identity_conflict_flags) if previous else [])
             ),
             owner_context=contract.user_id or str(contract.session_id),
             updated_at=self.now(),
@@ -3907,13 +5431,14 @@ class MemoryService:
         if latest is not None and latest.get("content_signature") == content_signature:
             version = int(latest.get("version", 1) or 1)
         else:
-            version = max(
-                [int(item.get("version", 0) or 0) for item in matching],
-                default=0,
-            ) + 1
-        artifact_ref = (
-            f"artifact://procedural/{artifact_route}/{workflow_profile}/v{version}"
-        )
+            version = (
+                max(
+                    [int(item.get("version", 0) or 0) for item in matching],
+                    default=0,
+                )
+                + 1
+            )
+        artifact_ref = f"artifact://procedural/{artifact_route}/{workflow_profile}/v{version}"
         return {
             "artifact_ref": artifact_ref,
             "artifact_key": artifact_key,
@@ -4062,26 +5587,20 @@ class MemoryService:
             ecosystem_state_status=(
                 ecosystem_state.ecosystem_state_status if ecosystem_state else None
             ),
-            active_work_items=(
-                list(ecosystem_state.active_work_items) if ecosystem_state else []
-            ),
+            active_work_items=(list(ecosystem_state.active_work_items) if ecosystem_state else []),
             active_artifact_refs=(
                 list(ecosystem_state.active_artifact_refs) if ecosystem_state else []
             ),
             open_checkpoint_refs=(
                 list(ecosystem_state.open_checkpoint_refs) if ecosystem_state else []
             ),
-            surface_presence=(
-                list(ecosystem_state.surface_presence) if ecosystem_state else []
-            ),
+            surface_presence=(list(ecosystem_state.surface_presence) if ecosystem_state else []),
             ecosystem_state_summary=(ecosystem_state.state_summary if ecosystem_state else None),
             linked_surface_ids=list(surface_state.linked_surface_ids),
             active_surface_id=surface_state.active_surface_id,
             last_surface_id=surface_state.last_surface_id,
             surface_continuity_status=surface_state.surface_continuity_status,
-            surface_identity_conflict_flags=list(
-                surface_state.surface_identity_conflict_flags
-            ),
+            surface_identity_conflict_flags=list(surface_state.surface_identity_conflict_flags),
             project_ref=objective_state.project_ref,
             objective_ref=objective_state.objective_ref,
             work_item_refs=list(objective_state.work_item_refs),
@@ -4161,9 +5680,7 @@ class MemoryService:
             active_surface_id=checkpoint.active_surface_id,
             last_surface_id=checkpoint.last_surface_id,
             surface_continuity_status=checkpoint.surface_continuity_status,
-            surface_identity_conflict_flags=list(
-                checkpoint.surface_identity_conflict_flags
-            ),
+            surface_identity_conflict_flags=list(checkpoint.surface_identity_conflict_flags),
             requires_manual_resume=replay_status != "resumable",
         )
 
@@ -4520,9 +6037,7 @@ class MemoryService:
             f"fonte={source}; alvo={target_goal}"
         )
         if continuity_snapshot.ecosystem_state_summary:
-            summary = (
-                f"{summary}; ecosystem={continuity_snapshot.ecosystem_state_summary}"
-            )
+            summary = f"{summary}; ecosystem={continuity_snapshot.ecosystem_state_summary}"
         return summary
 
     @staticmethod
@@ -4612,10 +6127,15 @@ class MemoryService:
 
     @staticmethod
     def _bounded_memory_review_ref(value: str) -> bool:
-        return bool(value) and len(value) <= 160 and fullmatch(
-            r"[A-Za-z0-9:/._-]+",
-            value,
-        ) is not None
+        return (
+            bool(value)
+            and len(value) <= 160
+            and fullmatch(
+                r"[A-Za-z0-9:/._-]+",
+                value,
+            )
+            is not None
+        )
 
     @staticmethod
     def _memory_lifecycle_candidate(
@@ -4628,9 +6148,7 @@ class MemoryService:
         rollback_plan_ref: str,
         generated_at: str,
     ) -> MemoryLifecycleCandidateContract:
-        identity = "|".join(
-            [maintenance_action, target_scope, *target_refs, *evidence_refs]
-        )
+        identity = "|".join([maintenance_action, target_scope, *target_refs, *evidence_refs])
         candidate_id = (
             "memory-lifecycle-candidate://"
             f"{maintenance_action}/{sha256(identity.encode()).hexdigest()[:16]}"
@@ -4893,9 +6411,7 @@ class MemoryService:
             if item
         )
         context_status = (
-            "recoverable"
-            if interaction_count >= 2 and evidence_signals >= 2
-            else "seeded"
+            "recoverable" if interaction_count >= 2 and evidence_signals >= 2 else "seeded"
         )
         brief_parts = [f"intents={','.join(recent_intents[:3])}"]
         if recent_domain_focus:

@@ -7,6 +7,7 @@ SUSPICIOUS_TOKENS = ("Ã", "Â", "�")
 TEXT_EXTENSIONS = {".md", ".txt"}
 SPECIAL_NAMES = {"README", "README.md", "HANDOFF.md", "CHANGELOG.md"}
 SKIP_PARTS = {".git", ".venv", "node_modules", ".jarvis_runtime", "__pycache__"}
+SKIP_PREFIXES = (".audit_", ".pytest_", ".tmp_")
 
 
 def iter_files(root: Path) -> list[Path]:
@@ -14,7 +15,10 @@ def iter_files(root: Path) -> list[Path]:
     for path in root.rglob("*"):
         if not path.is_file():
             continue
-        if any(part in SKIP_PARTS for part in path.parts):
+        if any(
+            part in SKIP_PARTS or part.startswith(SKIP_PREFIXES)
+            for part in path.parts
+        ):
             continue
         if path.suffix.lower() in TEXT_EXTENSIONS or path.name in SPECIAL_NAMES:
             files.append(path)

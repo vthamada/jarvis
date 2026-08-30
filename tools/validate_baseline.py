@@ -361,6 +361,8 @@ def run_governed_mission_smoke(profile: str, database_url: str) -> None:
         input_type=InputType.TEXT,
         content="Plan the controlled rollout.",
         timestamp=now(),
+        requested_autonomy_level="bounded_core_action",
+        max_autonomy_level="bounded_core_action",
     )
     deferred_contract = InputContract(
         request_id=RequestId(f"req-validate-defer-{suffix}"),
@@ -370,6 +372,8 @@ def run_governed_mission_smoke(profile: str, database_url: str) -> None:
         input_type=InputType.TEXT,
         content="Start a new marketing campaign instead.",
         timestamp=now(),
+        requested_autonomy_level="bounded_core_action",
+        max_autonomy_level="bounded_core_action",
     )
     blocked_contract = InputContract(
         request_id=RequestId(f"req-validate-block-{suffix}"),
@@ -379,6 +383,8 @@ def run_governed_mission_smoke(profile: str, database_url: str) -> None:
         input_type=InputType.TEXT,
         content="Delete all mission records now.",
         timestamp=now(),
+        requested_autonomy_level="bounded_core_action",
+        max_autonomy_level="bounded_core_action",
     )
 
     accepted = first.handle_input(accepted_contract)

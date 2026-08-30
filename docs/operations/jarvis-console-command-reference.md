@@ -10,6 +10,7 @@ This file is generated from the typed command registry and its validated
 | Command | Category | Execution | Output | JSON | Description |
 | --- | --- | --- | --- | --- | --- |
 | `ask` | `mission` | `core` | `single` | `no` | Execute a single prompt. |
+| `action-confirm` | `work` | `core` | `single` | `no` | Record exact human confirmation evidence without granting authority. |
 | `chat` | `mission` | `core` | `chat` | `no` | Run a simple multi-turn chat session. |
 | `objectives` | `objective` | `core` | `single` | `yes` | Show the persisted objective state for a mission. |
 | `goal-strategy` | `objective` | `core` | `single` | `yes` | Show read-only long-horizon strategy for a mission. |
@@ -21,9 +22,16 @@ This file is generated from the typed command registry and its validated
 | `artifacts` | `artifact` | `core` | `single` | `yes` | Show governed living artifacts for a mission. |
 | `artifact` | `artifact` | `core` | `single` | `no` | Apply a bounded lifecycle transition to a mission artifact. |
 | `technology-candidates` | `evolution` | `standalone` | `single` | `yes` | Show recent governed technology absorption candidates. |
+| `technology-radar-intake` | `evolution` | `standalone` | `single` | `no` | Register one reviewed local technology reference without fetching it. |
+| `technology-radar` | `evolution` | `standalone` | `single` | `yes` | Show verified reviewed references from the technology radar. |
+| `technology-experiment-pack` | `evolution` | `standalone` | `single` | `no` | Register one inert sandbox experiment pack from a reviewed intake. |
+| `technology-experiment-eval` | `evolution` | `standalone` | `single` | `no` | Derive and append one offline paired technology experiment evaluation. |
+| `technology-experiments` | `evolution` | `standalone` | `single` | `yes` | Show verified inert technology experiment packs or evaluation runs. |
 | `experience-reflections` | `memory` | `standalone` | `single` | `yes` | Show recent bounded post-task experience reflections. |
 | `procedural-playbooks` | `memory` | `standalone` | `single` | `yes` | Show bounded procedural playbook candidates without activating them. |
 | `skill-evolution` | `evolution` | `standalone` | `single` | `yes` | Show the read-only skill evidence, review and sandbox chain. |
+| `workflow-lifecycle` | `evolution` | `standalone` | `single` | `yes` | Show the verified active workflow binding and transition history. |
+| `workflow-transition` | `evolution` | `standalone` | `single` | `no` | Record an explicit governed workflow activation or rollback. |
 | `evolution-review-queue` | `evolution` | `standalone` | `single` | `yes` | Show human-review evolution proposals without promoting them. |
 | `evolution-review` | `evolution` | `standalone` | `single` | `no` | Apply a human review decision to an evolution proposal. |
 | `memory-review-queue` | `memory` | `standalone` | `single` | `yes` | Show human-only consolidation, archive and expiration candidates. |
@@ -32,6 +40,7 @@ This file is generated from the typed command registry and its validated
 | `operator-dashboard` | `mission` | `core` | `single` | `yes` | Show a read-only daily operator dashboard. |
 | `daily-workspace` | `mission` | `standalone` | `single` | `yes` | Show a read-only cross-session operator workspace. |
 | `operator-outcomes` | `observability` | `standalone` | `single` | `yes` | Show evidence-backed daily operator utility outcomes. |
+| `decision-attribution` | `observability` | `standalone` | `single` | `yes` | Show read-only decision/outcome attribution evidence. |
 | `command-reference` | `observability` | `standalone` | `single` | `yes` | Show the deterministic registry-derived command reference. |
 | `completion` | `observability` | `standalone` | `single` | `no` | Generate deterministic shell completion from the command registry. |
 | `readiness-dashboard` | `observability` | `standalone` | `single` | `yes` | Show repository regression and readiness signals. |
@@ -47,7 +56,7 @@ This file is generated from the typed command registry and its validated
 
 Execute a single prompt.
 
-Usage: `jarvis-console ask <prompt> [--session-id <value>] [--mission-id <value>] [--operator-identity-ref <value>] [--canonical-user-ref <value>] [--debug] [--format <value>]`
+Usage: `jarvis-console ask <prompt> [--session-id <value>] [--mission-id <value>] [--operator-identity-ref <value>] [--canonical-user-ref <value>] [--requested-autonomy-level <value>] [--max-autonomy-level <value>] [--autonomy-confirmation-mode <value>] [--action-confirmation-receipt-id <value>] [--origin-request-id <value>] [--debug] [--format <value>]`
 
 | Argument | Required | Values | Repeatable | Description |
 | --- | --- | --- | --- | --- |
@@ -56,8 +65,26 @@ Usage: `jarvis-console ask <prompt> [--session-id <value>] [--mission-id <value>
 | `--mission-id` | no | value | no | - |
 | `--operator-identity-ref` | no | value | no | - |
 | `--canonical-user-ref` | no | value | no | - |
+| `--requested-autonomy-level` | no | `assist_only`, `confirm_before_action`, `bounded_core_action`, `supervised_external_action` | no | Request one canonical bounded autonomy level. |
+| `--max-autonomy-level` | no | `assist_only`, `confirm_before_action`, `bounded_core_action`, `supervised_external_action` | no | Set the maximum canonical autonomy level for this request. |
+| `--autonomy-confirmation-mode` | no | `explicit` | no | Require explicit confirmation when the selected action needs it. |
+| `--action-confirmation-receipt-id` | no | value | no | Present one exact, unclaimed confirmation receipt for this retry. |
+| `--action-confirmation-origin-request-id`, `--origin-request-id` | no | value | no | Bind the retry to the request that produced the challenge. |
 | `--debug` | no | flag | no | - |
-| `--format` | no | `text`, `json` | no | Select human text or supported machine-readable JSON output. |
+| `--format` | no | `text` | no | Use text output; JSON is rejected for this state-changing command. |
+
+### `action-confirm`
+
+Record exact human confirmation evidence without granting authority.
+
+Usage: `jarvis-console action-confirm --challenge-id <value> --action-fingerprint <value> --operator-identity-ref <value> [--format <value>]`
+
+| Argument | Required | Values | Repeatable | Description |
+| --- | --- | --- | --- | --- |
+| `--challenge-id` | yes | value | no | - |
+| `--action-fingerprint` | yes | value | no | - |
+| `--operator-identity-ref` | yes | value | no | - |
+| `--format` | no | `text` | no | Use text output; JSON is rejected for this state-changing command. |
 
 ### `chat`
 
@@ -73,7 +100,7 @@ Usage: `jarvis-console chat [--session-id <value>] [--mission-id <value>] [--mes
 | `--operator-identity-ref` | no | value | no | - |
 | `--canonical-user-ref` | no | value | no | - |
 | `--debug` | no | flag | no | - |
-| `--format` | no | `text`, `json` | no | Select human text or supported machine-readable JSON output. |
+| `--format` | no | `text` | no | Use text output; JSON is rejected for this state-changing command. |
 
 ### `objectives`
 
@@ -114,7 +141,7 @@ Usage: `jarvis-console objective --mission-id <value> [--session-id <value>] --a
 | `--next-action-ref` | no | value | no | - |
 | `--operator-identity-ref` | no | value | no | - |
 | `--canonical-user-ref` | no | value | no | - |
-| `--format` | no | `text`, `json` | no | Select human text or supported machine-readable JSON output. |
+| `--format` | no | `text` | no | Use text output; JSON is rejected for this state-changing command. |
 
 ### `work-items`
 
@@ -146,7 +173,7 @@ Usage: `jarvis-console work-item --mission-id <value> [--session-id <value>] --a
 | `--blocker-ref` | no | value | yes | Declare an explicit blocker; required by the block action. |
 | `--operator-identity-ref` | no | value | no | - |
 | `--canonical-user-ref` | no | value | no | - |
-| `--format` | no | `text`, `json` | no | Select human text or supported machine-readable JSON output. |
+| `--format` | no | `text` | no | Use text output; JSON is rejected for this state-changing command. |
 
 ### `open-loops`
 
@@ -172,7 +199,7 @@ Usage: `jarvis-console resume-loop --mission-id <value> --open-loop-ref <value> 
 | `--session-id` | no | value | no | - |
 | `--operator-identity-ref` | no | value | no | - |
 | `--canonical-user-ref` | no | value | no | - |
-| `--format` | no | `text`, `json` | no | Select human text or supported machine-readable JSON output. |
+| `--format` | no | `text` | no | Use text output; JSON is rejected for this state-changing command. |
 
 ### `artifacts`
 
@@ -203,7 +230,7 @@ Usage: `jarvis-console artifact --mission-id <value> [--session-id <value>] --ac
 | `--rollback-plan-ref` | no | value | no | - |
 | `--operator-identity-ref` | no | value | no | - |
 | `--canonical-user-ref` | no | value | no | - |
-| `--format` | no | `text`, `json` | no | Select human text or supported machine-readable JSON output. |
+| `--format` | no | `text` | no | Use text output; JSON is rejected for this state-changing command. |
 
 ### `technology-candidates`
 
@@ -215,6 +242,87 @@ Usage: `jarvis-console technology-candidates [--evolution-db <value>] [--limit <
 | --- | --- | --- | --- | --- |
 | `--evolution-db` | no | value | no | - |
 | `--limit` | no | value | no | - |
+| `--format` | no | `text`, `json` | no | Select human text or supported machine-readable JSON output. |
+
+### `technology-radar-intake`
+
+Register one reviewed local technology reference without fetching it.
+
+Usage: `jarvis-console technology-radar-intake [--evolution-db <value>] --intake-root <value> --manifest <value> --manifest-sha256 <value> [--format <value>]`
+
+| Argument | Required | Values | Repeatable | Description |
+| --- | --- | --- | --- | --- |
+| `--evolution-db` | no | value | no | - |
+| `--intake-root` | yes | value | no | - |
+| `--manifest` | yes | value | no | - |
+| `--manifest-sha256` | yes | value | no | Bind registration to the detached SHA-256 reviewed by the operator. |
+| `--format` | no | `text` | no | Use text output; JSON is rejected for this state-changing command. |
+
+### `technology-radar`
+
+Show verified reviewed references from the technology radar.
+
+Usage: `jarvis-console technology-radar [--evolution-db <value>] [--intake-id <value>] [--candidate-ref <value>] [--intake-version <value>] [--source-kind <value>] [--absorption-class <value>] [--target-gap-ref <value>] [--limit <value>] [--offset <value>] [--format <value>]`
+
+| Argument | Required | Values | Repeatable | Description |
+| --- | --- | --- | --- | --- |
+| `--evolution-db` | no | value | no | - |
+| `--intake-id` | no | value | no | Resolve one exact intake instead of listing the registry. |
+| `--candidate-ref` | no | value | no | - |
+| `--intake-version` | no | value | no | - |
+| `--source-kind` | no | value | no | - |
+| `--absorption-class` | no | value | no | - |
+| `--target-gap-ref` | no | value | no | - |
+| `--limit` | no | value | no | - |
+| `--offset` | no | value | no | - |
+| `--format` | no | `text`, `json` | no | Select human text or supported machine-readable JSON output. |
+
+### `technology-experiment-pack`
+
+Register one inert sandbox experiment pack from a reviewed intake.
+
+Usage: `jarvis-console technology-experiment-pack [--evolution-db <value>] --manifest-root <value> --manifest <value> --manifest-sha256 <value> [--format <value>]`
+
+| Argument | Required | Values | Repeatable | Description |
+| --- | --- | --- | --- | --- |
+| `--evolution-db` | no | value | no | - |
+| `--manifest-root` | yes | value | no | - |
+| `--manifest` | yes | value | no | - |
+| `--manifest-sha256` | yes | value | no | Bind registration to the detached SHA-256 reviewed by the operator. |
+| `--format` | no | `text` | no | Use text output; JSON is rejected for this state-changing command. |
+
+### `technology-experiment-eval`
+
+Derive and append one offline paired technology experiment evaluation.
+
+Usage: `jarvis-console technology-experiment-eval [--evolution-db <value>] --manifest-root <value> --manifest <value> --manifest-sha256 <value> [--format <value>]`
+
+| Argument | Required | Values | Repeatable | Description |
+| --- | --- | --- | --- | --- |
+| `--evolution-db` | no | value | no | - |
+| `--manifest-root` | yes | value | no | - |
+| `--manifest` | yes | value | no | - |
+| `--manifest-sha256` | yes | value | no | Bind evaluation to the detached SHA-256 reviewed by the operator. |
+| `--format` | no | `text` | no | Use text output; JSON is rejected for this state-changing command. |
+
+### `technology-experiments`
+
+Show verified inert technology experiment packs or evaluation runs.
+
+Usage: `jarvis-console technology-experiments [--evolution-db <value>] [--view <value>] [--experiment-pack-id <value>] [--pack-version <value>] [--run-id <value>] [--intake-id <value>] [--candidate-ref <value>] [--status <value>] [--limit <value>] [--offset <value>] [--format <value>]`
+
+| Argument | Required | Values | Repeatable | Description |
+| --- | --- | --- | --- | --- |
+| `--evolution-db` | no | value | no | - |
+| `--view` | no | `packs`, `runs` | no | - |
+| `--experiment-pack-id` | no | value | no | - |
+| `--pack-version` | no | value | no | - |
+| `--run-id` | no | value | no | - |
+| `--intake-id` | no | value | no | - |
+| `--candidate-ref` | no | value | no | - |
+| `--status` | no | value | no | - |
+| `--limit` | no | value | no | - |
+| `--offset` | no | value | no | - |
 | `--format` | no | `text`, `json` | no | Select human text or supported machine-readable JSON output. |
 
 ### `experience-reflections`
@@ -263,6 +371,46 @@ Usage: `jarvis-console skill-evolution [--memory-db <value>] [--evolution-db <va
 | `--limit` | no | value | no | - |
 | `--format` | no | `text`, `json` | no | Select human text or supported machine-readable JSON output. |
 
+### `workflow-lifecycle`
+
+Show the verified active workflow binding and transition history.
+
+Usage: `jarvis-console workflow-lifecycle [--memory-db <value>] [--evolution-db <value>] [--workflow-profile <value>] [--route <value>] [--limit <value>] [--offset <value>] [--format <value>]`
+
+| Argument | Required | Values | Repeatable | Description |
+| --- | --- | --- | --- | --- |
+| `--memory-db` | no | value | no | Use an explicit canonical memory store (defaults to the console store). |
+| `--evolution-db` | no | value | no | Use the release-bundle store paired with canonical console memory. |
+| `--workflow-profile` | no | value | no | - |
+| `--route` | no | value | no | - |
+| `--limit` | no | value | no | - |
+| `--offset` | no | value | no | - |
+| `--format` | no | `text`, `json` | no | Select human text or supported machine-readable JSON output. |
+
+### `workflow-transition`
+
+Record an explicit governed workflow activation or rollback.
+
+Usage: `jarvis-console workflow-transition [--memory-db <value>] [--evolution-db <value>] --workflow-profile <value> --route <value> --action <value> --proposal-id <value> --workflow-eval-run-id <value> --human-authorization-ref <value> [--operator-ref <value>] --evidence-ref <value> ... --completed-test-ref <value> ... --completed-external-gate <value> ... [--failure-ref <value> ...] [--transition-id <value>] [--format <value>]`
+
+| Argument | Required | Values | Repeatable | Description |
+| --- | --- | --- | --- | --- |
+| `--memory-db` | no | value | no | Use an explicit canonical memory store (defaults to the console store). |
+| `--evolution-db` | no | value | no | Use the release-bundle store paired with canonical console memory. |
+| `--workflow-profile` | yes | value | no | - |
+| `--route` | yes | value | no | - |
+| `--action` | yes | `activate_candidate`, `rollback_to_baseline` | no | - |
+| `--proposal-id` | yes | value | no | - |
+| `--workflow-eval-run-id` | yes | value | no | - |
+| `--human-authorization-ref` | yes | value | no | - |
+| `--operator-ref` | no | value | no | - |
+| `--evidence-ref` | yes | value | yes | Bind explicit release evidence; repeat for multiple references. |
+| `--completed-test-ref` | yes | value | yes | Bind each completed candidate test exactly as reviewed. |
+| `--completed-external-gate` | yes | `standard_engineering_gate`, `release_gate_before_promotion` | yes | Bind each completed external release gate. |
+| `--failure-ref` | no | value | yes | Bind an observed failure; required for rollback. |
+| `--transition-id` | no | value | no | - |
+| `--format` | no | `text` | no | Use text output; JSON is rejected for this state-changing command. |
+
 ### `evolution-review-queue`
 
 Show human-review evolution proposals without promoting them.
@@ -292,7 +440,7 @@ Usage: `jarvis-console evolution-review [--evolution-db <value>] --proposal-id <
 | `--rollback-plan-ref` | no | value | no | - |
 | `--risk-acceptance` | no | value | no | - |
 | `--note` | no | value | yes | - |
-| `--format` | no | `text`, `json` | no | Select human text or supported machine-readable JSON output. |
+| `--format` | no | `text` | no | Use text output; JSON is rejected for this state-changing command. |
 
 ### `memory-review-queue`
 
@@ -323,7 +471,7 @@ Usage: `jarvis-console memory-review [--memory-db <value>] --candidate-id <value
 | `--evidence-ref` | no | value | yes | - |
 | `--rollback-plan-ref` | no | value | no | - |
 | `--note` | no | value | yes | - |
-| `--format` | no | `text`, `json` | no | Select human text or supported machine-readable JSON output. |
+| `--format` | no | `text` | no | Use text output; JSON is rejected for this state-changing command. |
 
 ### `mission-cycle`
 
@@ -384,6 +532,23 @@ Usage: `jarvis-console operator-outcomes [--observability-db <value>] [--memory-
 | `--mission-limit` | no | value | no | - |
 | `--format` | no | `text`, `json` | no | Select human text or supported machine-readable JSON output. |
 
+### `decision-attribution`
+
+Show read-only decision/outcome attribution evidence.
+
+Usage: `jarvis-console decision-attribution [--observability-db <value>] [--memory-db <value>] [--request-id <value>] [--mission-id <value>] [--workflow-profile <value>] [--limit <value>] [--output-dir <value>] [--format <value>]`
+
+| Argument | Required | Values | Repeatable | Description |
+| --- | --- | --- | --- | --- |
+| `--observability-db` | no | value | no | - |
+| `--memory-db` | no | value | no | - |
+| `--request-id` | no | value | no | - |
+| `--mission-id` | no | value | no | - |
+| `--workflow-profile` | no | value | no | - |
+| `--limit` | no | value | no | - |
+| `--output-dir` | no | value | no | Persist derived report JSON outside canonical stores. |
+| `--format` | no | `text`, `json` | no | Select human text or supported machine-readable JSON output. |
+
 ### `command-reference`
 
 Show the deterministic registry-derived command reference.
@@ -403,7 +568,7 @@ Usage: `jarvis-console completion --shell <value> [--format <value>]`
 | Argument | Required | Values | Repeatable | Description |
 | --- | --- | --- | --- | --- |
 | `--shell` | yes | `powershell`, `bash`, `zsh` | no | Select the target shell. |
-| `--format` | no | `text`, `json` | no | Select human text or supported machine-readable JSON output. |
+| `--format` | no | `text` | no | Use text output; JSON is rejected for this state-changing command. |
 
 ### `readiness-dashboard`
 
@@ -474,7 +639,7 @@ Usage: `jarvis-console mission-workflow <prompt> [--session-id <value>] --missio
 | `--evolution-db` | no | value | no | - |
 | `--operator-identity-ref` | no | value | no | - |
 | `--canonical-user-ref` | no | value | no | - |
-| `--format` | no | `text`, `json` | no | Select human text or supported machine-readable JSON output. |
+| `--format` | no | `text` | no | Use text output; JSON is rejected for this state-changing command. |
 
 ### `mission-feedback`
 
@@ -496,7 +661,7 @@ Usage: `jarvis-console mission-feedback --mission-id <value> [--session-id <valu
 | `--evolution-db` | no | value | no | - |
 | `--operator-identity-ref` | no | value | no | - |
 | `--canonical-user-ref` | no | value | no | - |
-| `--format` | no | `text`, `json` | no | Select human text or supported machine-readable JSON output. |
+| `--format` | no | `text` | no | Use text output; JSON is rejected for this state-changing command. |
 
 ## Boundaries
 

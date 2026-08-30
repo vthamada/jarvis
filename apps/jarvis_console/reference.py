@@ -53,7 +53,10 @@ def build_reference_model(
     for definition in registry.definitions:
         command_parser = subparsers[definition.command_id]
         arguments = tuple(
-            _argument_reference(action)
+            _argument_reference(
+                action,
+                supports_json=definition.supports_json,
+            )
             for action in command_parser._actions
             if action.dest != "help" and action.help != SUPPRESS
         )
@@ -174,13 +177,21 @@ def _command_parsers(
     return action, choices
 
 
-def _argument_reference(action: Action) -> CommandArgumentReference:
+def _argument_reference(
+    action: Action,
+    *,
+    supports_json: bool,
+) -> CommandArgumentReference:
     positional = not action.option_strings
     required = bool(action.required) or (
         positional and action.nargs not in {"?", "*"}
     )
     takes_value = action.nargs != 0
     choices = tuple(str(item) for item in (action.choices or ()))
+    help_text = str(action.help) if action.help else None
+    if action.dest == "output_format" and not supports_json:
+        choices = ("text",)
+        help_text = "Use text output; JSON is rejected for this state-changing command."
     return CommandArgumentReference(
         name=str(action.dest),
         option_strings=tuple(action.option_strings),
@@ -188,7 +199,7 @@ def _argument_reference(action: Action) -> CommandArgumentReference:
         takes_value=takes_value,
         choices=choices,
         repeatable=action.__class__.__name__ == "_AppendAction",
-        help_text=str(action.help) if action.help else None,
+        help_text=help_text,
     )
 
 
@@ -308,7 +319,7 @@ def _bash_completion(model: tuple[CommandReference, ...]) -> str:
         "            break",
         "        fi",
         "    done",
-        "    if [[ $prev == '--format' ]]; then",
+        "    if [[ -z $command && $prev == '--format' ]]; then",
         "        COMPREPLY=( $(compgen -W \"text json\" -- \"$cur\") )",
         "        return",
         "    fi",
@@ -360,7 +371,7 @@ def _zsh_completion(model: tuple[CommandReference, ...]) -> str:
         "    for token in $words; do",
         f"        case $token in ({command_pattern}) command=$token; break ;; esac",
         "    done",
-        "    if [[ $previous == '--format' ]]; then",
+        "    if [[ -z $command && $previous == '--format' ]]; then",
         "        _values 'format' text json",
         "        return",
         "    fi",

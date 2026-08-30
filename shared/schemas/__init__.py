@@ -52,6 +52,832 @@ INPUT_SCHEMA = CanonicalSchema(
         "max_autonomy_level",
         "autonomy_confirmation_mode",
         "autonomy_policy_refs",
+        "action_confirmation_receipt_id",
+        "action_confirmation_origin_request_id",
+        "adapter_action_request",
+    ),
+)
+
+ADAPTER_ACTION_REQUEST_SCHEMA = CanonicalSchema(
+    name="AdapterActionRequestSchema",
+    contract_name="AdapterActionRequestContract",
+    required_fields=(
+        "adapter_id",
+        "adapter_version",
+        "action_kind",
+        "operation",
+        "resource_scope",
+        "resource_ref",
+    ),
+)
+
+ADAPTER_DESCRIPTOR_SCHEMA = CanonicalSchema(
+    name="AdapterDescriptorSchema",
+    contract_name="AdapterDescriptorContract",
+    required_fields=(
+        "adapter_id",
+        "adapter_version",
+        "action_kind",
+        "allowed_operations",
+        "allowed_resource_scopes",
+        "descriptor_fingerprint",
+    ),
+    optional_fields=(
+        "prepare_only",
+        "executor_ref",
+        "read_only",
+        "immutable",
+        "execution_allowed",
+        "tool_dispatch_allowed",
+        "runtime_activation_allowed",
+        "promotion_authorized",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+)
+
+ADAPTER_REGISTRY_SNAPSHOT_SCHEMA = CanonicalSchema(
+    name="AdapterRegistrySnapshotSchema",
+    contract_name="AdapterRegistrySnapshotContract",
+    required_fields=("registry_id", "registry_version", "descriptors", "registry_fingerprint"),
+    optional_fields=(
+        "read_only",
+        "immutable",
+        "execution_allowed",
+        "tool_dispatch_allowed",
+        "runtime_activation_allowed",
+        "promotion_authorized",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Registry version is an epoch; absent descriptors are paused or removed "
+        "while historical snapshots remain immutable.",
+    ),
+)
+
+ADAPTER_GRANT_SCHEMA = CanonicalSchema(
+    name="AdapterGrantSchema",
+    contract_name="AdapterGrantContract",
+    required_fields=(
+        "grant_id",
+        "subject_ref",
+        "adapter_request",
+        "descriptor_fingerprint",
+        "registry_fingerprint",
+        "intent_id",
+        "intent_fingerprint",
+        "action_fingerprint",
+        "autonomy_policy_decision_fingerprint",
+        "policy_version",
+        "nonce",
+        "confirmation_required",
+        "issued_at",
+        "expires_at",
+        "grant_fingerprint",
+    ),
+    optional_fields=(
+        "single_use",
+        "read_only",
+        "immutable",
+        "execution_allowed",
+        "tool_dispatch_allowed",
+        "runtime_activation_allowed",
+        "promotion_authorized",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+)
+
+LOCAL_TEXT_FILE_PREFLIGHT_REQUEST_SCHEMA = CanonicalSchema(
+    name="LocalTextFilePreflightRequestSchema",
+    contract_name="LocalTextFilePreflightRequestContract",
+    required_fields=(
+        "grant_id",
+        "grant_fingerprint",
+        "action_fingerprint",
+        "intent_fingerprint",
+        "descriptor_fingerprint",
+        "registry_fingerprint",
+        "subject_ref",
+        "adapter_request",
+        "desired_text",
+        "expected_root_config_fingerprint",
+        "preflight_policy_version",
+        "diff_algorithm",
+        "diff_algorithm_version",
+        "prepared_at",
+        "expires_at",
+        "authorization_expires_at",
+    ),
+    optional_fields=(
+        "expected_current_sha256",
+        "persistence_allowed",
+        "telemetry_allowed",
+        "contains_sensitive_content",
+    ),
+    notes=(
+        "Desired text is not a standalone result field; unified_diff is sensitive and "
+        "ephemeral and may contain before/desired lines, so persistence and telemetry "
+        "are forbidden.",
+    ),
+)
+
+LOCAL_TEXT_FILE_ROLLBACK_PLAN_SCHEMA = CanonicalSchema(
+    name="LocalTextFileRollbackPlanSchema",
+    contract_name="LocalTextFileRollbackPlanContract",
+    required_fields=(
+        "strategy",
+        "operation",
+        "resource_ref",
+        "root_config_fingerprint",
+        "before_content_sha256",
+        "desired_content_sha256",
+        "preflight_policy_version",
+        "precondition_content_sha256",
+        "restore_content_sha256",
+        "rollback_fingerprint",
+    ),
+    optional_fields=(
+        "manual_execution_required",
+        "read_only",
+        "immutable",
+        "execution_allowed",
+        "tool_dispatch_allowed",
+        "runtime_activation_allowed",
+        "promotion_authorized",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+)
+
+LOCAL_TEXT_FILE_PREFLIGHT_SCHEMA = CanonicalSchema(
+    name="LocalTextFilePreflightSchema",
+    contract_name="LocalTextFilePreflightContract",
+    required_fields=(
+        "grant_id",
+        "grant_fingerprint",
+        "action_fingerprint",
+        "intent_fingerprint",
+        "descriptor_fingerprint",
+        "registry_fingerprint",
+        "subject_ref",
+        "adapter_request",
+        "operation",
+        "resource_ref",
+        "root_alias",
+        "relative_path",
+        "expected_current_sha256",
+        "before_exists",
+        "before_content_sha256",
+        "desired_content_sha256",
+        "before_size_bytes",
+        "desired_size_bytes",
+        "unified_diff",
+        "diff_sha256",
+        "root_config_fingerprint",
+        "filesystem_snapshot_fingerprint",
+        "rollback_plan",
+        "preflight_fingerprint",
+        "preflight_policy_version",
+        "diff_algorithm",
+        "diff_algorithm_version",
+        "prepared_at",
+        "expires_at",
+        "authorization_expires_at",
+        "filesystem_snapshot_algorithm",
+        "filesystem_snapshot_algorithm_version",
+        "adapter_backend_version",
+        "change_status",
+    ),
+    optional_fields=(
+        "encoding",
+        "execution_grant_required",
+        "preflight_grant_reusable_for_execution",
+        "persistence_allowed",
+        "telemetry_allowed",
+        "contains_sensitive_diff",
+        "read_only",
+        "immutable",
+        "execution_allowed",
+        "tool_dispatch_allowed",
+        "runtime_activation_allowed",
+        "promotion_authorized",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=("Contains no configured absolute root path and grants no execution authority.",),
+)
+
+ADAPTER_EXECUTION_DESCRIPTOR_SCHEMA = CanonicalSchema(
+    name="AdapterExecutionDescriptorSchema",
+    contract_name="AdapterExecutionDescriptorContract",
+    required_fields=(
+        "adapter_id",
+        "adapter_version",
+        "action_kind",
+        "allowed_operations",
+        "allowed_resource_scopes",
+        "executor_ref",
+        "execution_policy_version",
+        "execution_backend_version",
+        "descriptor_fingerprint",
+    ),
+    optional_fields=(
+        "execution_only",
+        "read_only",
+        "immutable",
+        "execution_allowed",
+        "tool_dispatch_allowed",
+        "runtime_activation_allowed",
+        "promotion_authorized",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+)
+
+ADAPTER_EXECUTION_REGISTRY_SNAPSHOT_SCHEMA = CanonicalSchema(
+    name="AdapterExecutionRegistrySnapshotSchema",
+    contract_name="AdapterExecutionRegistrySnapshotContract",
+    required_fields=(
+        "registry_id",
+        "registry_version",
+        "descriptors",
+        "registry_fingerprint",
+    ),
+    optional_fields=(
+        "read_only",
+        "immutable",
+        "execution_allowed",
+        "tool_dispatch_allowed",
+        "runtime_activation_allowed",
+        "promotion_authorized",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+)
+
+LOCAL_TEXT_FILE_PREFLIGHT_ATTESTATION_SCHEMA = CanonicalSchema(
+    name="LocalTextFilePreflightAttestationSchema",
+    contract_name="LocalTextFilePreflightAttestationContract",
+    required_fields=(
+        "attestation_id",
+        "attestation_nonce",
+        "trusted_boundary_ref",
+        "subject_ref",
+        "operation",
+        "resource_scope",
+        "resource_ref",
+        "source_preflight_grant_id",
+        "source_preflight_grant_fingerprint",
+        "source_action_fingerprint",
+        "source_intent_fingerprint",
+        "source_descriptor_fingerprint",
+        "source_registry_fingerprint",
+        "preflight_fingerprint",
+        "preflight_prepared_at",
+        "preflight_expires_at",
+        "preflight_authorization_expires_at",
+        "root_config_fingerprint",
+        "filesystem_snapshot_fingerprint",
+        "rollback_fingerprint",
+        "before_exists",
+        "expected_current_sha256",
+        "before_content_sha256",
+        "desired_content_sha256",
+        "preflight_policy_version",
+        "preflight_backend_version",
+        "attested_at",
+        "attestation_fingerprint",
+    ),
+    optional_fields=(
+        "read_only",
+        "immutable",
+        "execution_allowed",
+        "tool_dispatch_allowed",
+        "runtime_activation_allowed",
+        "promotion_authorized",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=("Contains no diff, desired bytes, backup bytes, or absolute path.",),
+)
+
+ADAPTER_EXECUTION_REQUEST_SCHEMA = CanonicalSchema(
+    name="AdapterExecutionRequestSchema",
+    contract_name="AdapterExecutionRequestContract",
+    required_fields=(
+        "adapter_id",
+        "adapter_version",
+        "action_kind",
+        "operation",
+        "resource_scope",
+        "resource_ref",
+        "subject_ref",
+        "preflight_attestation_id",
+        "preflight_attestation_fingerprint",
+        "source_preflight_grant_id",
+        "source_preflight_grant_fingerprint",
+        "source_action_fingerprint",
+        "source_intent_fingerprint",
+        "source_descriptor_fingerprint",
+        "source_registry_fingerprint",
+        "preflight_fingerprint",
+        "preflight_prepared_at",
+        "preflight_expires_at",
+        "preflight_authorization_expires_at",
+        "root_config_fingerprint",
+        "filesystem_snapshot_fingerprint",
+        "rollback_fingerprint",
+        "before_exists",
+        "expected_current_sha256",
+        "before_content_sha256",
+        "precondition_content_sha256",
+        "desired_content_sha256",
+        "postcondition_content_sha256",
+        "preflight_policy_version",
+        "preflight_backend_version",
+        "execution_policy_version",
+        "execution_backend_version",
+        "requested_at",
+        "execution_request_fingerprint",
+    ),
+    optional_fields=(
+        "read_only",
+        "immutable",
+        "execution_allowed",
+        "tool_dispatch_allowed",
+        "runtime_activation_allowed",
+        "promotion_authorized",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Content-free projection of one exact preflight; the request fingerprint is "
+        "the execution intent precondition digest.",
+    ),
+)
+
+ADAPTER_EXECUTION_GRANT_SCHEMA = CanonicalSchema(
+    name="AdapterExecutionGrantSchema",
+    contract_name="AdapterExecutionGrantContract",
+    required_fields=(
+        "grant_id",
+        "subject_ref",
+        "execution_request",
+        "descriptor_fingerprint",
+        "registry_fingerprint",
+        "intent_id",
+        "intent_fingerprint",
+        "action_fingerprint",
+        "autonomy_policy_decision_fingerprint",
+        "policy_version",
+        "nonce",
+        "confirmation_required",
+        "issued_at",
+        "expires_at",
+        "grant_fingerprint",
+    ),
+    optional_fields=(
+        "single_use",
+        "read_only",
+        "immutable",
+        "execution_allowed",
+        "tool_dispatch_allowed",
+        "runtime_activation_allowed",
+        "promotion_authorized",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+)
+
+ADAPTER_EXECUTION_GRANT_CLAIM_SCHEMA = CanonicalSchema(
+    name="AdapterExecutionGrantClaimSchema",
+    contract_name="AdapterExecutionGrantClaimContract",
+    required_fields=(
+        "claim_id",
+        "grant_id",
+        "grant_fingerprint",
+        "operation_id",
+        "journal_reservation_fingerprint",
+        "subject_ref",
+        "execution_request",
+        "intent_id",
+        "intent_fingerprint",
+        "action_fingerprint",
+        "claimed_at",
+        "expires_at",
+        "claim_fingerprint",
+        "confirmation_receipt_id",
+        "confirmation_claim_id",
+        "confirmation_claim_fingerprint",
+    ),
+    optional_fields=(
+        "single_use",
+        "read_only",
+        "immutable",
+        "execution_allowed",
+        "tool_dispatch_allowed",
+        "runtime_activation_allowed",
+        "promotion_authorized",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Historical claim evidence does not by itself reopen effect-start authority after expiry.",
+    ),
+)
+
+LOCAL_TEXT_MUTATION_RECEIPT_SCHEMA = CanonicalSchema(
+    name="LocalTextMutationReceiptSchema",
+    contract_name="LocalTextMutationReceipt",
+    required_fields=(
+        "operation_id",
+        "execution_grant_id",
+        "execution_claim_id",
+        "operation",
+        "resource_ref",
+        "subject_ref",
+        "preflight_fingerprint",
+        "before_content_sha256",
+        "desired_content_sha256",
+        "root_config_fingerprint",
+        "applied_event_fingerprint",
+        "committed_at",
+        "mutation_status",
+        "receipt_fingerprint",
+    ),
+    optional_fields=("rollback_available", "read_only", "immutable", "execution_allowed"),
+    notes=("Contains no text bytes, diff, backup bytes, or absolute path.",),
+)
+
+LOCAL_TEXT_ROLLBACK_RECEIPT_SCHEMA = CanonicalSchema(
+    name="LocalTextRollbackReceiptSchema",
+    contract_name="LocalTextRollbackReceipt",
+    required_fields=(
+        "operation_id",
+        "mutation_operation_id",
+        "rollback_grant_id",
+        "rollback_claim_id",
+        "mutation_receipt_fingerprint",
+        "resource_ref",
+        "restored_content_sha256",
+        "rolled_back_at",
+        "rolled_back_event_fingerprint",
+        "rollback_receipt_fingerprint",
+        "physical_state_attestation_fingerprint",
+    ),
+    optional_fields=("read_only", "immutable", "execution_allowed"),
+)
+
+LOCAL_TEXT_FILE_ROLLBACK_DESCRIPTOR_SCHEMA = CanonicalSchema(
+    name="LocalTextFileRollbackDescriptorSchema",
+    contract_name="LocalTextFileRollbackDescriptorContract",
+    required_fields=(
+        "adapter_id",
+        "adapter_version",
+        "action_kind",
+        "purpose",
+        "allowed_operations",
+        "allowed_resource_scopes",
+        "executor_ref",
+        "rollback_policy_version",
+        "rollback_backend_version",
+        "descriptor_fingerprint",
+    ),
+    optional_fields=(
+        "rollback_only",
+        "read_only",
+        "immutable",
+        "execution_allowed",
+        "tool_dispatch_allowed",
+        "runtime_activation_allowed",
+        "promotion_authorized",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+)
+
+LOCAL_TEXT_FILE_ROLLBACK_REGISTRY_SCHEMA = CanonicalSchema(
+    name="LocalTextFileRollbackRegistrySnapshotSchema",
+    contract_name="LocalTextFileRollbackRegistrySnapshotContract",
+    required_fields=(
+        "registry_id",
+        "registry_version",
+        "descriptors",
+        "registry_fingerprint",
+    ),
+    optional_fields=(
+        "read_only",
+        "immutable",
+        "execution_allowed",
+        "tool_dispatch_allowed",
+        "runtime_activation_allowed",
+        "promotion_authorized",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+)
+
+LOCAL_TEXT_FILE_ROLLBACK_REQUEST_SCHEMA = CanonicalSchema(
+    name="LocalTextFileRollbackRequestSchema",
+    contract_name="LocalTextFileRollbackRequestContract",
+    required_fields=(
+        "purpose",
+        "adapter_id",
+        "adapter_version",
+        "action_kind",
+        "operation",
+        "resource_scope",
+        "resource_ref",
+        "subject_ref",
+        "rollback_operation_id",
+        "mutation_operation_id",
+        "mutation_receipt_fingerprint",
+        "mutation_applied_event_fingerprint",
+        "mutation_committed_at",
+        "source_execution_grant_id",
+        "source_execution_grant_fingerprint",
+        "source_execution_claim_id",
+        "source_execution_claim_fingerprint",
+        "source_execution_request_fingerprint",
+        "source_preflight_attestation_id",
+        "source_preflight_attestation_fingerprint",
+        "source_preflight_fingerprint",
+        "source_action_fingerprint",
+        "source_intent_fingerprint",
+        "original_operation",
+        "root_config_fingerprint",
+        "expected_current_sha256",
+        "restored_content_sha256",
+        "original_before_content_sha256",
+        "original_desired_content_sha256",
+        "rollback_plan_fingerprint",
+        "source_preflight_policy_version",
+        "source_preflight_backend_version",
+        "source_execution_policy_version",
+        "source_execution_backend_version",
+        "transaction_policy_version",
+        "transaction_backend_version",
+        "rollback_policy_version",
+        "rollback_backend_version",
+        "requested_at",
+        "expires_at",
+        "rollback_request_fingerprint",
+    ),
+    optional_fields=(
+        "read_only",
+        "immutable",
+        "execution_allowed",
+        "tool_dispatch_allowed",
+        "runtime_activation_allowed",
+        "promotion_authorized",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+)
+
+LOCAL_TEXT_FILE_ROLLBACK_GRANT_SCHEMA = CanonicalSchema(
+    name="LocalTextFileRollbackGrantSchema",
+    contract_name="LocalTextFileRollbackGrantContract",
+    required_fields=(
+        "grant_id",
+        "subject_ref",
+        "rollback_request",
+        "descriptor_fingerprint",
+        "registry_fingerprint",
+        "intent_id",
+        "intent_fingerprint",
+        "action_fingerprint",
+        "autonomy_policy_decision_fingerprint",
+        "policy_version",
+        "nonce",
+        "confirmation_required",
+        "issued_at",
+        "expires_at",
+        "grant_fingerprint",
+    ),
+    optional_fields=(
+        "single_use",
+        "read_only",
+        "immutable",
+        "execution_allowed",
+        "tool_dispatch_allowed",
+        "runtime_activation_allowed",
+        "promotion_authorized",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+)
+
+LOCAL_TEXT_FILE_ROLLBACK_GRANT_CLAIM_SCHEMA = CanonicalSchema(
+    name="LocalTextFileRollbackGrantClaimSchema",
+    contract_name="LocalTextFileRollbackGrantClaimContract",
+    required_fields=(
+        "claim_id",
+        "grant_id",
+        "grant_fingerprint",
+        "rollback_operation_id",
+        "rollback_journal_reservation_fingerprint",
+        "subject_ref",
+        "rollback_request",
+        "intent_id",
+        "intent_fingerprint",
+        "action_fingerprint",
+        "claimed_at",
+        "expires_at",
+        "claim_fingerprint",
+        "confirmation_receipt_id",
+        "confirmation_claim_id",
+        "confirmation_claim_fingerprint",
+    ),
+    optional_fields=(
+        "single_use",
+        "read_only",
+        "immutable",
+        "execution_allowed",
+        "tool_dispatch_allowed",
+        "runtime_activation_allowed",
+        "promotion_authorized",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+)
+
+ADAPTER_GRANT_CLAIM_SCHEMA = CanonicalSchema(
+    name="AdapterGrantClaimSchema",
+    contract_name="AdapterGrantClaimContract",
+    required_fields=(
+        "claim_id",
+        "grant_id",
+        "grant_fingerprint",
+        "operation_id",
+        "subject_ref",
+        "adapter_request",
+        "intent_id",
+        "intent_fingerprint",
+        "action_fingerprint",
+        "claimed_at",
+        "expires_at",
+        "claim_fingerprint",
+    ),
+    optional_fields=(
+        "confirmation_receipt_id",
+        "confirmation_claim_id",
+        "confirmation_claim_fingerprint",
+        "single_use",
+        "read_only",
+        "immutable",
+        "execution_allowed",
+        "tool_dispatch_allowed",
+        "runtime_activation_allowed",
+        "promotion_authorized",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+)
+
+ACTION_INTENT_SCHEMA = CanonicalSchema(
+    name="ActionIntentSchema",
+    contract_name="ActionIntentContract",
+    required_fields=(
+        "intent_id",
+        "origin_request_id",
+        "session_id",
+        "operator_identity_ref",
+        "handler_id",
+        "handler_version",
+        "operation",
+        "target_ref",
+        "content_digest",
+        "precondition_digest",
+        "risk_level",
+        "policy_version",
+        "nonce",
+        "issued_at",
+        "expires_at",
+        "action_fingerprint",
+    ),
+    optional_fields=(
+        "mission_id",
+        "single_use",
+        "read_only",
+        "immutable",
+        "execution_allowed",
+        "tool_dispatch_allowed",
+        "runtime_activation_allowed",
+        "promotion_authorized",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Exact action identity; nonce and validity window are bound by the intent fingerprint.",
+        "The intent is single-use evidence and grants no execution authority.",
+    ),
+)
+
+ACTION_CONFIRMATION_CHALLENGE_SCHEMA = CanonicalSchema(
+    name="ActionConfirmationChallengeSchema",
+    contract_name="ActionConfirmationChallengeContract",
+    required_fields=(
+        "challenge_id",
+        "intent_id",
+        "intent_fingerprint",
+        "action_fingerprint",
+        "origin_request_id",
+        "session_id",
+        "operator_identity_ref",
+        "operation",
+        "nonce",
+        "issued_at",
+        "expires_at",
+    ),
+    optional_fields=(
+        "mission_id",
+        "single_use",
+        "read_only",
+        "immutable",
+        "execution_allowed",
+        "tool_dispatch_allowed",
+        "runtime_activation_allowed",
+        "promotion_authorized",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Operator-visible challenge linked to one exact action intent.",
+        "A challenge never authorizes dispatch or execution.",
+    ),
+)
+
+HUMAN_CONFIRMATION_RECEIPT_SCHEMA = CanonicalSchema(
+    name="HumanConfirmationReceiptSchema",
+    contract_name="HumanConfirmationReceiptContract",
+    required_fields=(
+        "receipt_id",
+        "challenge_id",
+        "challenge_fingerprint",
+        "intent_id",
+        "intent_fingerprint",
+        "action_fingerprint",
+        "origin_request_id",
+        "session_id",
+        "operator_identity_ref",
+        "operation",
+        "confirmed_at",
+        "expires_at",
+    ),
+    optional_fields=(
+        "mission_id",
+        "single_use",
+        "read_only",
+        "immutable",
+        "execution_allowed",
+        "tool_dispatch_allowed",
+        "runtime_activation_allowed",
+        "promotion_authorized",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Local human-attestation evidence bound to one exact challenge and intent.",
+        "The receipt remains separate from governance authorization.",
+    ),
+)
+
+ACTION_CONFIRMATION_CLAIM_SCHEMA = CanonicalSchema(
+    name="ActionConfirmationClaimSchema",
+    contract_name="ActionConfirmationClaimContract",
+    required_fields=(
+        "claim_id",
+        "receipt_id",
+        "receipt_fingerprint",
+        "intent_id",
+        "intent_fingerprint",
+        "action_fingerprint",
+        "operation_id",
+        "origin_request_id",
+        "session_id",
+        "operator_identity_ref",
+        "operation",
+        "claimed_at",
+        "expires_at",
+    ),
+    optional_fields=(
+        "mission_id",
+        "single_use",
+        "read_only",
+        "immutable",
+        "execution_allowed",
+        "tool_dispatch_allowed",
+        "runtime_activation_allowed",
+        "promotion_authorized",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Single-use receipt claim bound to one concrete runtime operation.",
+        "The claim is confirmation evidence and never standalone execution authority.",
     ),
 )
 
@@ -68,6 +894,9 @@ AUTONOMY_LADDER_SCHEMA = CanonicalSchema(
         "human_confirmation_mode",
     ),
     optional_fields=(
+        "autonomy_action_kind",
+        "adapter_action_request",
+        "autonomy_validation_errors",
         "allowed_runtime_actions",
         "blocked_runtime_actions",
         "policy_refs",
@@ -78,6 +907,41 @@ AUTONOMY_LADDER_SCHEMA = CanonicalSchema(
     notes=(
         "Runtime autonomy declaration only; enforcement belongs to governance.",
         "No autonomy level grants automatic promotion or core mutation.",
+    ),
+)
+
+AUTONOMY_ACTION_POLICY_DECISION_SCHEMA = CanonicalSchema(
+    name="AutonomyActionPolicyDecisionSchema",
+    contract_name="AutonomyActionPolicyDecisionContract",
+    required_fields=(
+        "policy_version",
+        "decision",
+        "confirmation_required",
+        "confirmation_requirement",
+        "confirmation_evidence_state",
+        "side_effect_allowed",
+        "reason_codes",
+    ),
+    optional_fields=(
+        "requested_autonomy_level",
+        "max_autonomy_level",
+        "effective_autonomy_level",
+        "autonomy_ladder_status",
+        "action_kind",
+        "selected_capability_mode",
+        "max_capability_mode",
+        "read_only",
+        "immutable",
+        "execution_allowed",
+        "tool_dispatch_allowed",
+        "runtime_activation_allowed",
+        "promotion_authorized",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Fail-closed decision for one canonical action and autonomy projection.",
+        "The decision is evidence only and grants no standalone execution authority.",
     ),
 )
 
@@ -102,9 +966,7 @@ SEMANTIC_MEMORY_CANDIDATE_SCHEMA = CanonicalSchema(
         "automatic_promotion_allowed",
         "core_mutation_allowed",
     ),
-    notes=(
-        "Recovered candidate only; policy evaluation is required before causal use.",
-    ),
+    notes=("Recovered candidate only; policy evaluation is required before causal use.",),
 )
 
 MEMORY_INFLUENCE_SIGNAL_SCHEMA = CanonicalSchema(
@@ -128,15 +990,17 @@ MEMORY_INFLUENCE_SIGNAL_SCHEMA = CanonicalSchema(
         "freshness_status",
         "relevance_score",
         "relevance_reason",
+        "version_ref",
+        "review_decision_ref",
         "allowed_usage",
         "read_only",
         "memory_write_allowed",
+        "execution_allowed",
+        "tool_dispatch_allowed",
         "automatic_promotion_allowed",
         "core_mutation_allowed",
     ),
-    notes=(
-        "Bounded candidate influence; retrieval does not imply causal use.",
-    ),
+    notes=("Bounded candidate influence; retrieval does not imply causal use.",),
 )
 
 MEMORY_INFLUENCE_POLICY_DECISION_SCHEMA = CanonicalSchema(
@@ -162,14 +1026,16 @@ MEMORY_INFLUENCE_POLICY_DECISION_SCHEMA = CanonicalSchema(
         "signal_kinds",
         "freshness_statuses",
         "relevance_scores",
+        "version_refs",
+        "review_decision_refs",
         "read_only",
         "memory_write_allowed",
+        "execution_allowed",
+        "tool_dispatch_allowed",
         "automatic_promotion_allowed",
         "core_mutation_allowed",
     ),
-    notes=(
-        "Read-only causal decision with explicit priority, conflict, use and non-use.",
-    ),
+    notes=("Read-only causal decision with explicit priority, conflict, use and non-use.",),
 )
 
 MEMORY_INFLUENCE_GOVERNANCE_ASSESSMENT_SCHEMA = CanonicalSchema(
@@ -188,11 +1054,169 @@ MEMORY_INFLUENCE_GOVERNANCE_ASSESSMENT_SCHEMA = CanonicalSchema(
         "human_review_required",
         "decision_mutation_allowed",
         "memory_write_allowed",
+        "execution_allowed",
+        "tool_dispatch_allowed",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=("Governance validates the policy trail but cannot mutate memory or promote it.",),
+)
+
+DECISION_ATTRIBUTION_CLASSIFICATION_SCHEMA = CanonicalSchema(
+    name="DecisionAttributionClassificationSchema",
+    contract_name="DecisionAttributionClassificationContract",
+    required_fields=(
+        "attribution_status",
+        "participating_refs",
+        "declared_causal_refs",
+        "correlated_refs",
+        "attribution_reasons",
+        "limitations",
+    ),
+    optional_fields=(
+        "causality_scope",
+        "causal_effect_proven",
+        "gain_claim_status",
+        "read_only",
+        "human_review_required",
+        "memory_write_allowed",
+        "execution_allowed",
+        "tool_dispatch_allowed",
+        "promotion_authorized",
         "automatic_promotion_allowed",
         "core_mutation_allowed",
     ),
     notes=(
-        "Governance validates the policy trail but cannot mutate memory or promote it.",
+        "Declared causality means declared runtime participation only.",
+        "The classification never proves causal effect or gain and grants no authority.",
+    ),
+)
+
+DECISION_OUTCOME_ATTRIBUTION_RECORD_SCHEMA = CanonicalSchema(
+    name="DecisionOutcomeAttributionRecordSchema",
+    contract_name="DecisionOutcomeAttributionRecordContract",
+    required_fields=(
+        "attribution_record_id",
+        "request_id",
+        "session_id",
+        "mission_id",
+        "observed_at",
+        "governance_decision_ref",
+        "governance_decision_status",
+        "workflow_profile",
+        "route",
+        "outcome_ref",
+        "outcome_status",
+    ),
+    optional_fields=(
+        "experience_id",
+        "workflow_policy_ref",
+        "workflow_policy_version",
+        "workflow_policy_source_registry_ref",
+        "workflow_policy_source_registry_fingerprint",
+        "workflow_policy_application_status",
+        "workflow_policy_effects",
+        "memory_policy_decision_ref",
+        "memory_policy_status",
+        "memory_policy_refs",
+        "memory_selected_refs",
+        "memory_ignored_refs",
+        "memory_use_reasons",
+        "memory_non_use_reasons",
+        "memory_signal_kinds",
+        "memory_version_refs",
+        "memory_review_decision_refs",
+        "memory_causal_use_allowed",
+        "declared_effects_by_ref",
+        "participating_refs",
+        "declared_causal_refs",
+        "correlated_refs",
+        "attribution_status",
+        "attribution_reasons",
+        "limitations",
+        "evidence_refs",
+        "causality_scope",
+        "causal_effect_proven",
+        "gain_claim_status",
+        "read_only",
+        "immutable",
+        "human_review_required",
+        "memory_write_allowed",
+        "execution_allowed",
+        "tool_dispatch_allowed",
+        "promotion_authorized",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Immutable evidence record with a pure fail-closed classification.",
+        "No comparator means gain is not established; no promotion or mutation follows.",
+    ),
+)
+
+DECISION_OUTCOME_ATTRIBUTION_ITEM_SCHEMA = CanonicalSchema(
+    name="DecisionOutcomeAttributionItemSchema",
+    contract_name="DecisionOutcomeAttributionItemContract",
+    required_fields=(
+        "item_id",
+        "attribution",
+        "feedback_status",
+        "feedback_refs",
+        "feedback_assessments",
+        "feedback_ratings",
+    ),
+    optional_fields=(
+        "comparator_status",
+        "comparator_refs",
+        "gain_claim_status",
+        "limitations",
+        "evidence_refs",
+        "causal_effect_proven",
+        "read_only",
+        "human_review_required",
+        "promotion_authorized",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Read-only attribution joined to exact feedback and comparator references.",
+        "Feedback association is not proof of causal effect or gain.",
+    ),
+)
+
+DECISION_OUTCOME_ATTRIBUTION_REPORT_SCHEMA = CanonicalSchema(
+    name="DecisionOutcomeAttributionReportSchema",
+    contract_name="DecisionOutcomeAttributionReportContract",
+    required_fields=(
+        "report_id",
+        "report_status",
+        "generated_at",
+        "record_count",
+        "correlation_only_count",
+        "declared_causality_count",
+        "insufficient_evidence_count",
+        "feedback_linked_count",
+        "comparator_count",
+        "failed_record_count",
+        "items",
+        "limitations",
+        "evidence_refs",
+    ),
+    optional_fields=(
+        "source_record_limit_reached",
+        "source_event_limit_reached",
+        "causality_scope",
+        "causal_effect_proven",
+        "gain_claim_status",
+        "read_only",
+        "human_review_required",
+        "promotion_authorized",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Operator-facing measurement report; it grants no execution or promotion authority.",
+        "Counts and associations remain observational unless participation was declared.",
     ),
 )
 
@@ -210,9 +1234,7 @@ SURFACE_IDENTITY_SCHEMA = CanonicalSchema(
         "canonical_user_ref",
         "surface_continuity_status",
     ),
-    notes=(
-        "Minimum sovereign surface identity contract for bounded multisurface continuity.",
-    ),
+    notes=("Minimum sovereign surface identity contract for bounded multisurface continuity.",),
 )
 
 PROJECT_OBJECTIVE_CONTINUITY_SCHEMA = CanonicalSchema(
@@ -292,9 +1314,7 @@ MISSION_PROGRESS_REPORT_SCHEMA = CanonicalSchema(
         "memory_write_mode",
         "autonomous_execution_allowed",
     ),
-    notes=(
-        "Read-only human progress report derived from canonical mission state.",
-    ),
+    notes=("Read-only human progress report derived from canonical mission state.",),
 )
 
 TECHNOLOGY_ABSORPTION_CANDIDATE_SCHEMA = CanonicalSchema(
@@ -324,6 +1344,392 @@ TECHNOLOGY_ABSORPTION_CANDIDATE_SCHEMA = CanonicalSchema(
     notes=(
         "External technology enters first as reference, experiment or controlled "
         "complement; promotion is manual and evidence-bound.",
+    ),
+)
+
+TECHNOLOGY_RADAR_INTAKE_SCHEMA = CanonicalSchema(
+    name="TechnologyRadarIntakeSchema",
+    contract_name="TechnologyRadarIntakeContract",
+    required_fields=(
+        "intake_id",
+        "candidate_ref",
+        "intake_version",
+        "technology_name",
+        "source_kind",
+        "source_locator",
+        "source_version_ref",
+        "source_content_sha256",
+        "license_id",
+        "license_status",
+        "license_evidence_ref",
+        "retrieved_at",
+        "claims",
+        "risks",
+        "absorption_class",
+        "target_gap_refs",
+        "research_approval_ref",
+        "reviewed_payload_fingerprint",
+        "reviewer_ref",
+        "review_status",
+        "review_evidence_refs",
+        "reviewed_at",
+        "recorded_at",
+    ),
+    optional_fields=(
+        "previous_intake_id",
+        "previous_intake_fingerprint",
+        "source_trust_status",
+        "intake_status",
+        "read_only",
+        "immutable",
+        "human_review_required",
+        "network_fetch_allowed",
+        "knowledge_ingestion_allowed",
+        "dependency_installation_allowed",
+        "execution_allowed",
+        "runtime_activation_allowed",
+        "promotion_authorized",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+        "priority_mutation_allowed",
+    ),
+    notes=(
+        "Manually reviewed, versioned and immutable external reference intake; "
+        "never trust, ingest, install, execute, activate, promote or reprioritize it "
+        "automatically.",
+    ),
+)
+
+TECHNOLOGY_EXPERIMENT_CONTROL_SNAPSHOT_SCHEMA = CanonicalSchema(
+    name="TechnologyExperimentControlSnapshotSchema",
+    contract_name="TechnologyExperimentControlSnapshotContract",
+    required_fields=(
+        "control_snapshot_id",
+        "input_fingerprint",
+        "sandbox_policy_ref",
+        "sandbox_policy_version",
+        "evaluator_version",
+        "deterministic_seed",
+        "fixed_clock",
+        "isolation_profile_ref",
+        "isolation_fingerprint",
+        "environment_fingerprint",
+    ),
+    optional_fields=(
+        "offline_only",
+        "sandbox_only",
+        "read_only",
+        "network_fetch_allowed",
+        "subprocess_allowed",
+        "dependency_installation_allowed",
+        "external_code_execution_allowed",
+        "tool_dispatch_allowed",
+        "host_filesystem_write_allowed",
+        "knowledge_ingestion_allowed",
+        "memory_write_allowed",
+        "runtime_activation_allowed",
+        "registry_write_allowed",
+        "release_authorized",
+        "promotion_authorized",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+        "priority_mutation_allowed",
+    ),
+    notes=(
+        "Deterministic shared control for both inert experiment arms; all runtime "
+        "and mutation authority remains disabled.",
+    ),
+)
+
+TECHNOLOGY_EXPERIMENT_OBSERVATION_SCHEMA = CanonicalSchema(
+    name="TechnologyExperimentObservationSchema",
+    contract_name="TechnologyExperimentObservationContract",
+    required_fields=(
+        "observation_id",
+        "experiment_pack_id",
+        "pack_version",
+        "case_id",
+        "case_version",
+        "arm",
+        "definition_ref",
+        "definition_hash",
+        "input_fingerprint",
+        "control_snapshot_id",
+        "control_snapshot_fingerprint",
+        "outcome_ref",
+        "outcome_status",
+        "contract_checks",
+        "isolation_checks",
+        "success_criteria_results",
+        "action_count",
+        "rework_count",
+        "evidence_refs",
+        "limitations",
+        "observed_at",
+    ),
+    optional_fields=(
+        "source_mode",
+        "offline_only",
+        "sandbox_only",
+        "read_only",
+        "network_fetch_allowed",
+        "subprocess_allowed",
+        "dependency_installation_allowed",
+        "external_code_execution_allowed",
+        "tool_dispatch_allowed",
+        "host_filesystem_write_allowed",
+        "knowledge_ingestion_allowed",
+        "memory_write_allowed",
+        "runtime_activation_allowed",
+        "registry_write_allowed",
+        "release_authorized",
+        "promotion_authorized",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+        "priority_mutation_allowed",
+    ),
+    notes=("Pre-produced sandbox attestation only; it is data, never an execution request.",),
+)
+
+TECHNOLOGY_EXPERIMENT_CASE_SCHEMA = CanonicalSchema(
+    name="TechnologyExperimentCaseSchema",
+    contract_name="TechnologyExperimentCaseContract",
+    required_fields=(
+        "experiment_pack_id",
+        "pack_version",
+        "case_id",
+        "case_version",
+        "scenario_ref",
+        "input_fingerprint",
+        "baseline_definition_ref",
+        "baseline_definition_hash",
+        "candidate_definition_ref",
+        "candidate_definition_hash",
+        "critical_contract_check_refs",
+        "critical_isolation_check_refs",
+        "success_criteria_refs",
+        "control_snapshot",
+        "baseline_observation",
+        "candidate_observation",
+        "evidence_refs",
+    ),
+    optional_fields=(
+        "limitations",
+        "comparison_mode",
+        "metrics_source",
+        "offline_only",
+        "sandbox_only",
+        "read_only",
+        "human_review_required",
+        "execution_allowed",
+        "tool_dispatch_allowed",
+        "runtime_activation_allowed",
+        "release_authorized",
+        "promotion_authorized",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+        "priority_mutation_allowed",
+    ),
+    notes=("Paired baseline/candidate observations share one deterministic input and control.",),
+)
+
+TECHNOLOGY_EXPERIMENT_PACK_SCHEMA = CanonicalSchema(
+    name="TechnologyExperimentPackSchema",
+    contract_name="TechnologyExperimentPackContract",
+    required_fields=(
+        "experiment_pack_id",
+        "pack_version",
+        "intake_id",
+        "intake_version",
+        "intake_fingerprint",
+        "reviewed_payload_fingerprint",
+        "candidate_ref",
+        "technology_name",
+        "source_content_sha256",
+        "absorption_class",
+        "translation_kind",
+        "pattern_id",
+        "pattern_name",
+        "pattern_summary",
+        "selected_claim_fingerprints",
+        "selected_risk_fingerprints",
+        "hypothesis",
+        "expected_gain",
+        "sovereign_consumer_kind",
+        "sovereign_consumer_ref",
+        "consumer_contract_ref",
+        "bounded_integration_seam",
+        "target_gap_refs",
+        "baseline_definition_ref",
+        "baseline_definition_hash",
+        "candidate_definition_ref",
+        "candidate_definition_hash",
+        "isolation_profile_ref",
+        "risk_control_refs",
+        "mitigation_refs",
+        "stop_condition_refs",
+        "license_id",
+        "license_status",
+        "license_evidence_ref",
+        "rollback_plan_ref",
+        "rollback_steps",
+        "rollback_verification_refs",
+        "selection_review_ref",
+        "selected_by_ref",
+        "cases",
+        "required_pass_rate",
+        "evidence_refs",
+        "generated_at",
+    ),
+    optional_fields=(
+        "pack_status",
+        "source_mode",
+        "external_framework_role",
+        "requested_core_role",
+        "sandbox_only",
+        "read_only",
+        "immutable",
+        "human_review_required",
+        "network_fetch_allowed",
+        "subprocess_allowed",
+        "dependency_installation_allowed",
+        "external_code_execution_allowed",
+        "tool_dispatch_allowed",
+        "host_filesystem_write_allowed",
+        "knowledge_ingestion_allowed",
+        "memory_write_allowed",
+        "runtime_activation_allowed",
+        "registry_write_allowed",
+        "evolution_proposal_allowed",
+        "release_authorized",
+        "promotion_authorized",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+        "priority_mutation_allowed",
+    ),
+    notes=(
+        "Immutable absorbable-pattern translation bound to one verified MB-208 intake; "
+        "framework substitution and automatic promotion are forbidden.",
+    ),
+)
+
+TECHNOLOGY_EXPERIMENT_CASE_RESULT_SCHEMA = CanonicalSchema(
+    name="TechnologyExperimentCaseResultSchema",
+    contract_name="TechnologyExperimentCaseResultContract",
+    required_fields=(
+        "experiment_pack_id",
+        "pack_version",
+        "pack_fingerprint",
+        "case_id",
+        "case_version",
+        "scenario_ref",
+        "input_fingerprint",
+        "control_snapshot_id",
+        "control_snapshot_fingerprint",
+        "baseline_outcome_ref",
+        "baseline_outcome_status",
+        "candidate_outcome_ref",
+        "candidate_outcome_status",
+        "passed",
+        "checks",
+        "baseline_metrics",
+        "candidate_metrics",
+        "metric_deltas",
+        "improvement_signals",
+        "regression_flags",
+        "failures",
+        "limitations",
+        "evidence_refs",
+    ),
+    optional_fields=(
+        "comparison_mode",
+        "metrics_source",
+        "offline_only",
+        "sandbox_only",
+        "read_only",
+        "human_review_required",
+        "execution_allowed",
+        "tool_dispatch_allowed",
+        "runtime_activation_allowed",
+        "release_authorized",
+        "promotion_authorized",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+        "priority_mutation_allowed",
+    ),
+    notes=("Derived result only; caller-provided metrics or conclusions are invalid.",),
+)
+
+TECHNOLOGY_EXPERIMENT_EVAL_RUN_CLAIM_SCHEMA = CanonicalSchema(
+    name="TechnologyExperimentEvalRunClaimSchema",
+    contract_name="TechnologyExperimentEvalRunClaimContract",
+    required_fields=(
+        "run_id",
+        "experiment_pack_id",
+        "pack_version",
+        "pack_fingerprint",
+        "intake_id",
+        "intake_fingerprint",
+        "input_fingerprint",
+        "control_fingerprint",
+        "claimed_at",
+    ),
+    notes=("Atomic identity reservation; it grants no execution or promotion authority.",),
+)
+
+TECHNOLOGY_EXPERIMENT_EVAL_RUN_SCHEMA = CanonicalSchema(
+    name="TechnologyExperimentEvalRunSchema",
+    contract_name="TechnologyExperimentEvalRunContract",
+    required_fields=(
+        "run_id",
+        "experiment_pack_id",
+        "pack_version",
+        "pack_fingerprint",
+        "intake_id",
+        "intake_version",
+        "intake_fingerprint",
+        "candidate_ref",
+        "pattern_id",
+        "sovereign_consumer_ref",
+        "input_fingerprint",
+        "control_fingerprint",
+        "status",
+        "readiness_status",
+        "promotion_readiness",
+        "comparison_conclusion",
+        "pass_rate",
+        "total_cases",
+        "passed_cases",
+        "failed_cases",
+        "aggregate_baseline_metrics",
+        "aggregate_candidate_metrics",
+        "aggregate_metric_deltas",
+        "case_results",
+        "regression_flags",
+        "limitations",
+        "evidence_refs",
+        "blockers",
+        "generated_at",
+    ),
+    optional_fields=(
+        "comparison_mode",
+        "metrics_source",
+        "offline_only",
+        "sandbox_only",
+        "read_only",
+        "human_review_required",
+        "execution_allowed",
+        "tool_dispatch_allowed",
+        "runtime_activation_allowed",
+        "release_authorized",
+        "promotion_authorized",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+        "priority_mutation_allowed",
+    ),
+    notes=(
+        "Append-only aggregate derived from verified inert evidence; passing remains "
+        "sandbox-only and never authorizes promotion.",
     ),
 )
 
@@ -364,9 +1770,7 @@ EXPERIENCE_RECORD_SCHEMA = CanonicalSchema(
         "automatic_promotion_allowed",
         "core_mutation_allowed",
     ),
-    notes=(
-        "Bounded operational experience record; not a self-modification permit.",
-    ),
+    notes=("Bounded operational experience record; not a self-modification permit.",),
 )
 
 POST_TASK_REFLECTION_SCHEMA = CanonicalSchema(
@@ -391,9 +1795,7 @@ POST_TASK_REFLECTION_SCHEMA = CanonicalSchema(
         "automatic_promotion_allowed",
         "core_mutation_allowed",
     ),
-    notes=(
-        "Post-task reflection feeds sandbox proposals and manual review only.",
-    ),
+    notes=("Post-task reflection feeds sandbox proposals and manual review only.",),
 )
 
 OPERATOR_FEEDBACK_SCHEMA = CanonicalSchema(
@@ -459,9 +1861,7 @@ RECURRING_PATTERN_EVIDENCE_SCHEMA = CanonicalSchema(
         "automatic_promotion_allowed",
         "core_mutation_allowed",
     ),
-    notes=(
-        "Bounded recurrence evidence only; it cannot create or activate a skill.",
-    ),
+    notes=("Bounded recurrence evidence only; it cannot create or activate a skill.",),
 )
 
 RECURRING_PATTERN_REPORT_SCHEMA = CanonicalSchema(
@@ -489,9 +1889,7 @@ RECURRING_PATTERN_REPORT_SCHEMA = CanonicalSchema(
         "automatic_promotion_allowed",
         "core_mutation_allowed",
     ),
-    notes=(
-        "Read-only recurring-pattern report over compatible experience scopes.",
-    ),
+    notes=("Read-only recurring-pattern report over compatible experience scopes.",),
 )
 
 SKILL_CANDIDATE_SCHEMA = CanonicalSchema(
@@ -529,9 +1927,7 @@ SKILL_CANDIDATE_SCHEMA = CanonicalSchema(
         "core_mutation_allowed",
         "memory_write_mode",
     ),
-    notes=(
-        "Versioned inactive skill candidate; registration is not activation or promotion.",
-    ),
+    notes=("Versioned inactive skill candidate; registration is not activation or promotion.",),
 )
 
 SKILL_MINING_REQUEST_SCHEMA = CanonicalSchema(
@@ -561,9 +1957,7 @@ SKILL_MINING_REQUEST_SCHEMA = CanonicalSchema(
         "automatic_promotion_allowed",
         "core_mutation_allowed",
     ),
-    notes=(
-        "Bounded explicit mining specification; it grants no runtime authority.",
-    ),
+    notes=("Bounded explicit mining specification; it grants no runtime authority.",),
 )
 
 SKILL_MINING_RESULT_SCHEMA = CanonicalSchema(
@@ -588,9 +1982,7 @@ SKILL_MINING_RESULT_SCHEMA = CanonicalSchema(
         "automatic_promotion_allowed",
         "core_mutation_allowed",
     ),
-    notes=(
-        "Blocked mining returns no candidate; successful mining remains inactive.",
-    ),
+    notes=("Blocked mining returns no candidate; successful mining remains inactive.",),
 )
 
 SKILL_SANDBOX_CASE_RESULT_SCHEMA = CanonicalSchema(
@@ -637,9 +2029,7 @@ SKILL_SANDBOX_EVAL_SCHEMA = CanonicalSchema(
         "automatic_promotion_allowed",
         "core_mutation_allowed",
     ),
-    notes=(
-        "Sandbox evidence only; a passing eval remains pending release and human gates.",
-    ),
+    notes=("Sandbox evidence only; a passing eval remains pending release and human gates.",),
 )
 
 SKILL_EVOLUTION_OPERATOR_ITEM_SCHEMA = CanonicalSchema(
@@ -685,9 +2075,7 @@ SKILL_EVOLUTION_OPERATOR_ITEM_SCHEMA = CanonicalSchema(
         "automatic_promotion_allowed",
         "core_mutation_allowed",
     ),
-    notes=(
-        "Read-only correlated skill evolution item; it grants no runtime authority.",
-    ),
+    notes=("Read-only correlated skill evolution item; it grants no runtime authority.",),
 )
 
 SKILL_EVOLUTION_OPERATOR_VIEW_SCHEMA = CanonicalSchema(
@@ -713,9 +2101,7 @@ SKILL_EVOLUTION_OPERATOR_VIEW_SCHEMA = CanonicalSchema(
         "automatic_promotion_allowed",
         "core_mutation_allowed",
     ),
-    notes=(
-        "Operator projection only; human review and release gates remain mandatory.",
-    ),
+    notes=("Operator projection only; human review and release gates remain mandatory.",),
 )
 
 WORKFLOW_POLICY_DECISION_SCHEMA = CanonicalSchema(
@@ -747,9 +2133,7 @@ WORKFLOW_POLICY_DECISION_SCHEMA = CanonicalSchema(
         "automatic_promotion_allowed",
         "core_mutation_allowed",
     ),
-    notes=(
-        "Read-only runtime policy resolution; it cannot execute, promote or mutate.",
-    ),
+    notes=("Read-only runtime policy resolution; it cannot execute, promote or mutate.",),
 )
 
 WORKFLOW_PROFILE_VERSION_SCHEMA = CanonicalSchema(
@@ -787,9 +2171,7 @@ WORKFLOW_PROFILE_VERSION_SCHEMA = CanonicalSchema(
         "automatic_promotion_allowed",
         "core_mutation_allowed",
     ),
-    notes=(
-        "Version snapshot or inactive candidate; it cannot mutate the active registry.",
-    ),
+    notes=("Version snapshot or inactive candidate; it cannot mutate the active registry.",),
 )
 
 WORKFLOW_PROFILE_VERSION_REGISTRY_SCHEMA = CanonicalSchema(
@@ -817,9 +2199,7 @@ WORKFLOW_PROFILE_VERSION_REGISTRY_SCHEMA = CanonicalSchema(
         "automatic_promotion_allowed",
         "core_mutation_allowed",
     ),
-    notes=(
-        "Immutable side registry over the sovereign active workflow registry.",
-    ),
+    notes=("Immutable side registry over the sovereign active workflow registry.",),
 )
 
 WORKFLOW_EVOLUTION_REQUEST_SCHEMA = CanonicalSchema(
@@ -854,9 +2234,7 @@ WORKFLOW_EVOLUTION_REQUEST_SCHEMA = CanonicalSchema(
         "automatic_promotion_allowed",
         "core_mutation_allowed",
     ),
-    notes=(
-        "Explicit reviewed workflow delta; it grants no registry or runtime authority.",
-    ),
+    notes=("Explicit reviewed workflow delta; it grants no registry or runtime authority.",),
 )
 
 WORKFLOW_EVOLUTION_BUILD_RESULT_SCHEMA = CanonicalSchema(
@@ -888,46 +2266,183 @@ WORKFLOW_EVOLUTION_BUILD_RESULT_SCHEMA = CanonicalSchema(
     ),
 )
 
-WORKFLOW_VARIANT_EVAL_CASE_SCHEMA = CanonicalSchema(
-    name="WorkflowVariantEvalCaseSchema",
-    contract_name="WorkflowVariantEvalCaseContract",
+WORKFLOW_VARIANT_EVAL_CONTROL_SNAPSHOT_SCHEMA = CanonicalSchema(
+    name="WorkflowVariantEvalControlSnapshotSchema",
+    contract_name="WorkflowVariantEvalControlSnapshotContract",
     required_fields=(
-        "case_id",
-        "scenario_ref",
-        "workflow_profile",
-        "route",
-        "baseline_version_ref",
-        "candidate_version_ref",
-        "baseline_metrics",
-        "candidate_metrics",
-        "evidence_refs",
+        "control_snapshot_id",
+        "workflow_policy_ref",
+        "workflow_policy_version",
+        "workflow_policy_source_registry_ref",
+        "workflow_policy_source_registry_fingerprint",
+        "governance_policy_ref",
+        "governance_policy_version",
+        "input_fingerprint",
+        "memory_policy_refs",
+        "memory_policy_version_refs",
+        "memory_input_fingerprint",
+        "evaluator_version",
+        "deterministic_seed",
+        "fixed_clock",
     ),
     optional_fields=(
-        "required_candidate_steps",
-        "required_candidate_checkpoints",
-        "required_candidate_decision_points",
-        "required_candidate_success_criteria",
         "offline_only",
-        "human_review_required",
+        "read_only",
+        "sandbox_only",
+        "execution_allowed",
+        "tool_dispatch_allowed",
+        "runtime_activation_allowed",
+        "release_authorized",
         "promotion_authorized",
         "automatic_promotion_allowed",
         "core_mutation_allowed",
     ),
-    notes=(
-        "Equivalent offline evidence for one baseline/candidate workflow scenario.",
+    notes=("One immutable control shared by both arms; it grants no runtime authority.",),
+)
+
+WORKFLOW_VARIANT_EVAL_OBSERVATION_SCHEMA = CanonicalSchema(
+    name="WorkflowVariantEvalObservationSchema",
+    contract_name="WorkflowVariantEvalObservationContract",
+    required_fields=(
+        "observation_id",
+        "case_id",
+        "case_version",
+        "arm",
+        "workflow_version_ref",
+        "definition_hash",
+        "input_snapshot_fingerprint",
+        "control_snapshot_id",
+        "control_snapshot_fingerprint",
+        "outcome_ref",
+        "outcome_status",
+        "contract_checks",
+        "action_count",
+        "rework_count",
+        "expected_workflow_steps",
+        "expected_checkpoint_refs",
+        "expected_decision_points",
+        "expected_success_criteria",
+        "observed_checkpoint_refs",
+        "memory_participating_refs",
+        "memory_declared_causal_refs",
+        "evidence_refs",
+        "observed_at",
     ),
+    optional_fields=(
+        "limitations",
+        "offline_only",
+        "read_only",
+        "sandbox_only",
+        "execution_allowed",
+        "tool_dispatch_allowed",
+        "runtime_activation_allowed",
+        "release_authorized",
+        "promotion_authorized",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=("Raw sandbox outcome evidence; fixed metrics are derived rather than supplied.",),
+)
+
+WORKFLOW_VARIANT_EVAL_CASE_SCHEMA = CanonicalSchema(
+    name="WorkflowVariantEvalCaseSchema",
+    contract_name="WorkflowVariantEvalCaseContract",
+    required_fields=(
+        "case_pack_id",
+        "case_pack_version",
+        "case_id",
+        "case_version",
+        "scenario_ref",
+        "input_snapshot_fingerprint",
+        "workflow_profile",
+        "route",
+        "baseline_version_ref",
+        "candidate_version_ref",
+        "required_candidate_steps",
+        "required_candidate_checkpoints",
+        "required_candidate_decision_points",
+        "required_candidate_success_criteria",
+        "contract_check_refs",
+        "control_snapshot",
+        "baseline_observation",
+        "candidate_observation",
+        "evidence_refs",
+    ),
+    optional_fields=(
+        "limitations",
+        "comparison_mode",
+        "metrics_source",
+        "offline_only",
+        "read_only",
+        "sandbox_only",
+        "human_review_required",
+        "execution_allowed",
+        "tool_dispatch_allowed",
+        "runtime_activation_allowed",
+        "release_authorized",
+        "promotion_authorized",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=("Versioned paired evidence using one exact workflow, governance and memory control.",),
+)
+
+WORKFLOW_VARIANT_EVAL_CASE_PACK_SCHEMA = CanonicalSchema(
+    name="WorkflowVariantEvalCasePackSchema",
+    contract_name="WorkflowVariantEvalCasePackContract",
+    required_fields=(
+        "case_pack_id",
+        "case_pack_version",
+        "workflow_profile",
+        "route",
+        "baseline_version_ref",
+        "candidate_version_ref",
+        "scope_refs",
+        "cases",
+        "evidence_refs",
+        "generated_at",
+    ),
+    optional_fields=(
+        "comparison_mode",
+        "metrics_source",
+        "offline_only",
+        "read_only",
+        "sandbox_only",
+        "human_review_required",
+        "execution_allowed",
+        "tool_dispatch_allowed",
+        "runtime_activation_allowed",
+        "release_authorized",
+        "promotion_authorized",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=("Immutable bounded case pack for one baseline/candidate workflow pair.",),
 )
 
 WORKFLOW_VARIANT_EVAL_CASE_RESULT_SCHEMA = CanonicalSchema(
     name="WorkflowVariantEvalCaseResultSchema",
     contract_name="WorkflowVariantEvalCaseResultContract",
     required_fields=(
+        "case_pack_id",
+        "case_pack_version",
+        "case_pack_fingerprint",
         "case_id",
+        "case_version",
         "scenario_ref",
+        "input_snapshot_fingerprint",
         "workflow_profile",
         "route",
         "baseline_version_ref",
         "candidate_version_ref",
+        "baseline_definition_hash",
+        "candidate_definition_hash",
+        "control_snapshot_id",
+        "control_snapshot_fingerprint",
+        "baseline_outcome_ref",
+        "candidate_outcome_ref",
+        "baseline_outcome_status",
+        "candidate_outcome_status",
         "passed",
         "checks",
         "baseline_metrics",
@@ -939,12 +2454,22 @@ WORKFLOW_VARIANT_EVAL_CASE_RESULT_SCHEMA = CanonicalSchema(
     optional_fields=(
         "regression_flags",
         "failures",
+        "limitations",
+        "comparison_mode",
+        "metrics_source",
         "offline_only",
+        "read_only",
+        "sandbox_only",
+        "human_review_required",
+        "execution_allowed",
+        "tool_dispatch_allowed",
+        "runtime_activation_allowed",
+        "release_authorized",
         "promotion_authorized",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
     ),
-    notes=(
-        "Per-case comparison evidence; pass status never authorizes promotion.",
-    ),
+    notes=("Per-case comparison evidence; pass status never authorizes promotion.",),
 )
 
 WORKFLOW_VARIANT_EVAL_RUN_SCHEMA = CanonicalSchema(
@@ -952,10 +2477,19 @@ WORKFLOW_VARIANT_EVAL_RUN_SCHEMA = CanonicalSchema(
     contract_name="WorkflowVariantEvalRunContract",
     required_fields=(
         "run_id",
+        "case_pack_id",
+        "case_pack_version",
+        "case_pack_fingerprint",
         "workflow_profile",
         "route",
         "baseline_version_ref",
         "candidate_version_ref",
+        "baseline_definition_hashes",
+        "candidate_definition_hashes",
+        "control_snapshot_ids",
+        "control_snapshot_fingerprints",
+        "baseline_outcome_refs",
+        "candidate_outcome_refs",
         "status",
         "readiness_status",
         "promotion_readiness",
@@ -973,16 +2507,23 @@ WORKFLOW_VARIANT_EVAL_RUN_SCHEMA = CanonicalSchema(
     ),
     optional_fields=(
         "regression_flags",
+        "limitations",
         "blockers",
+        "comparison_mode",
+        "metrics_source",
         "offline_only",
+        "read_only",
+        "sandbox_only",
         "human_review_required",
+        "execution_allowed",
+        "tool_dispatch_allowed",
+        "runtime_activation_allowed",
+        "release_authorized",
         "promotion_authorized",
         "automatic_promotion_allowed",
         "core_mutation_allowed",
     ),
-    notes=(
-        "A green workflow eval is manual gate evidence, never promotion authority.",
-    ),
+    notes=("A green workflow eval is manual gate evidence, never promotion authority.",),
 )
 
 WORKFLOW_ROLLBACK_PLAN_SCHEMA = CanonicalSchema(
@@ -1018,6 +2559,100 @@ WORKFLOW_ROLLBACK_PLAN_SCHEMA = CanonicalSchema(
     ),
 )
 
+WORKFLOW_LIFECYCLE_TRANSITION_SCHEMA = CanonicalSchema(
+    name="WorkflowLifecycleTransitionSchema",
+    contract_name="WorkflowLifecycleTransitionContract",
+    required_fields=(
+        "transition_id",
+        "workflow_profile",
+        "route",
+        "transition_action",
+        "transition_status",
+        "revision",
+        "source_registry_ref",
+        "source_registry_fingerprint",
+        "baseline_version_ref",
+        "baseline_definition_hash",
+        "candidate_version_ref",
+        "candidate_definition_hash",
+        "active_version_ref",
+        "active_definition_hash",
+        "active_workflow_steps",
+        "active_workflow_checkpoints",
+        "active_workflow_decision_points",
+        "active_success_criteria",
+        "evolution_proposal_id",
+        "proposal_fingerprint",
+        "review_decision_id",
+        "review_decision_fingerprint",
+        "release_checklist_id",
+        "release_checklist_fingerprint",
+        "promotion_gate_id",
+        "promotion_gate_fingerprint",
+        "workflow_eval_run_id",
+        "workflow_eval_run_fingerprint",
+        "rollback_plan_id",
+        "rollback_plan_fingerprint",
+        "human_authorization_ref",
+        "operator_ref",
+        "evidence_refs",
+        "completed_test_refs",
+        "failure_refs",
+        "timestamp",
+    ),
+    optional_fields=(
+        "previous_transition_id",
+        "previous_transition_fingerprint",
+        "read_only",
+        "immutable",
+        "human_authorized",
+        "memory_write_mode",
+        "active_registry_write_allowed",
+        "runtime_execution_allowed",
+        "automatic_promotion_allowed",
+        "automatic_rollback_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Append-only human-authorized runtime binding stored through Core.",
+        "The sovereign static route registry remains immutable and execution "
+        "authority is not granted.",
+    ),
+)
+
+WORKFLOW_LIFECYCLE_GOVERNANCE_ASSESSMENT_SCHEMA = CanonicalSchema(
+    name="WorkflowLifecycleGovernanceAssessmentSchema",
+    contract_name="WorkflowLifecycleGovernanceAssessmentContract",
+    required_fields=(
+        "assessment_id",
+        "transition_id",
+        "transition_action",
+        "transition_fingerprint",
+        "status",
+        "blockers",
+        "conditions",
+        "policy_refs",
+        "timestamp",
+    ),
+    optional_fields=(
+        "human_review_required",
+        "human_authorization_verified",
+        "transition_recording_authorized",
+        "memory_write_mode",
+        "read_only",
+        "active_registry_write_allowed",
+        "runtime_execution_allowed",
+        "automatic_promotion_allowed",
+        "automatic_rollback_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=(
+        "Governance may authorize only append-only recording through canonical memory.",
+        "It never mutates the registry, grants dispatch, or performs automatic "
+        "promotion or rollback.",
+    ),
+)
+
 ROUTING_ADAPTATION_OBSERVATION_SCHEMA = CanonicalSchema(
     name="RoutingAdaptationObservationSchema",
     contract_name="RoutingAdaptationObservationContract",
@@ -1047,9 +2682,7 @@ ROUTING_ADAPTATION_OBSERVATION_SCHEMA = CanonicalSchema(
         "automatic_promotion_allowed",
         "core_mutation_allowed",
     ),
-    notes=(
-        "Read-only comparison evidence; it cannot mutate the active router.",
-    ),
+    notes=("Read-only comparison evidence; it cannot mutate the active router.",),
 )
 
 ROUTING_ADAPTATION_CANDIDATE_SCHEMA = CanonicalSchema(
@@ -1083,9 +2716,7 @@ ROUTING_ADAPTATION_CANDIDATE_SCHEMA = CanonicalSchema(
         "automatic_promotion_allowed",
         "core_mutation_allowed",
     ),
-    notes=(
-        "Recurring routing mismatch candidate; human review and sandbox remain mandatory.",
-    ),
+    notes=("Recurring routing mismatch candidate; human review and sandbox remain mandatory.",),
 )
 
 ROUTING_ADAPTATION_REPORT_SCHEMA = CanonicalSchema(
@@ -1113,9 +2744,7 @@ ROUTING_ADAPTATION_REPORT_SCHEMA = CanonicalSchema(
         "automatic_promotion_allowed",
         "core_mutation_allowed",
     ),
-    notes=(
-        "Bounded adaptation report; candidates never authorize routing changes.",
-    ),
+    notes=("Bounded adaptation report; candidates never authorize routing changes.",),
 )
 
 PROCEDURAL_PLAYBOOK_CANDIDATE_SCHEMA = CanonicalSchema(
@@ -1150,6 +2779,40 @@ PROCEDURAL_PLAYBOOK_CANDIDATE_SCHEMA = CanonicalSchema(
     ),
 )
 
+REVIEWED_PROCEDURAL_PLAYBOOK_SCHEMA = CanonicalSchema(
+    name="ReviewedProceduralPlaybookSchema",
+    contract_name="ReviewedProceduralPlaybookContract",
+    required_fields=(
+        "playbook_id",
+        "version",
+        "source_candidate_id",
+        "source_review_decision_id",
+        "evolution_proposal_id",
+        "review_status",
+        "procedure_name",
+        "route",
+        "workflow_profile",
+        "domain",
+        "bounded_steps",
+        "allowed_usage",
+        "evidence_refs",
+        "rollback_plan_ref",
+        "timestamp",
+    ),
+    optional_fields=(
+        "revoked_at",
+        "revocation_ref",
+        "read_only",
+        "human_review_required",
+        "execution_allowed",
+        "tool_dispatch_allowed",
+        "memory_write_mode",
+        "automatic_promotion_allowed",
+        "core_mutation_allowed",
+    ),
+    notes=("Human-reviewed versioned procedural guidance; never an executable script.",),
+)
+
 DOMAIN_KNOWLEDGE_PACK_SCHEMA = CanonicalSchema(
     name="DomainKnowledgePackSchema",
     contract_name="DomainKnowledgePackContract",
@@ -1171,9 +2834,7 @@ DOMAIN_KNOWLEDGE_PACK_SCHEMA = CanonicalSchema(
         "automatic_activation_allowed",
         "core_mutation_allowed",
     ),
-    notes=(
-        "Versioned candidate knowledge pack; it cannot activate a runtime route by itself.",
-    ),
+    notes=("Versioned candidate knowledge pack; it cannot activate a runtime route by itself.",),
 )
 
 DOMAIN_ONBOARDING_CANDIDATE_SCHEMA = CanonicalSchema(
@@ -1208,9 +2869,7 @@ DOMAIN_ONBOARDING_CANDIDATE_SCHEMA = CanonicalSchema(
         "automatic_promotion_allowed",
         "core_mutation_allowed",
     ),
-    notes=(
-        "Bounded domain onboarding candidate; assessment never writes to active registries.",
-    ),
+    notes=("Bounded domain onboarding candidate; assessment never writes to active registries.",),
 )
 
 DOMAIN_ONBOARDING_ASSESSMENT_SCHEMA = CanonicalSchema(
@@ -1237,9 +2896,7 @@ DOMAIN_ONBOARDING_ASSESSMENT_SCHEMA = CanonicalSchema(
         "automatic_promotion_allowed",
         "core_mutation_allowed",
     ),
-    notes=(
-        "Assessment is advisory and human-review-bound; it is not a promotion permit.",
-    ),
+    notes=("Assessment is advisory and human-review-bound; it is not a promotion permit.",),
 )
 
 DOMAIN_EVAL_PACK_SCHEMA = CanonicalSchema(
@@ -1263,9 +2920,7 @@ DOMAIN_EVAL_PACK_SCHEMA = CanonicalSchema(
         "automatic_promotion_allowed",
         "core_mutation_allowed",
     ),
-    notes=(
-        "Versioned offline eval pack for a governed promoted route/domain.",
-    ),
+    notes=("Versioned offline eval pack for a governed promoted route/domain.",),
 )
 
 DOMAIN_EVAL_RUN_SCHEMA = CanonicalSchema(
@@ -1295,9 +2950,7 @@ DOMAIN_EVAL_RUN_SCHEMA = CanonicalSchema(
         "automatic_promotion_allowed",
         "core_mutation_allowed",
     ),
-    notes=(
-        "A passing run is evidence for human review, never a promotion authorization.",
-    ),
+    notes=("A passing run is evidence for human review, never a promotion authorization.",),
 )
 
 KNOWLEDGE_SOURCE_EVIDENCE_SCHEMA = CanonicalSchema(
@@ -1320,9 +2973,7 @@ KNOWLEDGE_SOURCE_EVIDENCE_SCHEMA = CanonicalSchema(
         "conflict_refs",
         "uncertainty_notes",
     ),
-    notes=(
-        "Per-source evidence metadata; unknown or missing provenance must remain explicit.",
-    ),
+    notes=("Per-source evidence metadata; unknown or missing provenance must remain explicit.",),
 )
 
 KNOWLEDGE_EVIDENCE_GOVERNANCE_SCHEMA = CanonicalSchema(
@@ -1347,9 +2998,7 @@ KNOWLEDGE_EVIDENCE_GOVERNANCE_SCHEMA = CanonicalSchema(
         "automatic_promotion_allowed",
         "core_mutation_allowed",
     ),
-    notes=(
-        "Qualifies knowledge use without mutating the request permission decision.",
-    ),
+    notes=("Qualifies knowledge use without mutating the request permission decision.",),
 )
 
 CAPABILITY_READINESS_SCHEMA = CanonicalSchema(
@@ -1368,9 +3017,7 @@ CAPABILITY_READINESS_SCHEMA = CanonicalSchema(
         "evidence_refs",
     ),
     optional_fields=("blockers",),
-    notes=(
-        "Read-only projection of one capability from the implementation master map.",
-    ),
+    notes=("Read-only projection of one capability from the implementation master map.",),
 )
 
 REGRESSION_READINESS_REPORT_SCHEMA = CanonicalSchema(
@@ -1402,9 +3049,7 @@ REGRESSION_READINESS_REPORT_SCHEMA = CanonicalSchema(
         "read_only",
         "autonomous_release_allowed",
     ),
-    notes=(
-        "Aggregates existing readiness signals; it never authorizes release autonomously.",
-    ),
+    notes=("Aggregates existing readiness signals; it never authorizes release autonomously.",),
 )
 
 LEARNING_VERSION_TARGET_SCHEMA = CanonicalSchema(
@@ -1528,9 +3173,7 @@ LONGITUDINAL_LEARNING_REPORT_SCHEMA = CanonicalSchema(
         "automatic_promotion_allowed",
         "core_mutation_allowed",
     ),
-    notes=(
-        "Longitudinal measurement is read-only and cannot authorize promotion or mutation.",
-    ),
+    notes=("Longitudinal measurement is read-only and cannot authorize promotion or mutation.",),
 )
 
 DAILY_OPERATOR_MISSION_OUTCOME_SCHEMA = CanonicalSchema(
@@ -1555,9 +3198,7 @@ DAILY_OPERATOR_MISSION_OUTCOME_SCHEMA = CanonicalSchema(
         "stale_open_loop_count",
     ),
     optional_fields=("evidence_refs", "limitations"),
-    notes=(
-        "Read-only mission outcome projection derived from observable evidence.",
-    ),
+    notes=("Read-only mission outcome projection derived from observable evidence.",),
 )
 
 DAILY_OPERATOR_UTILITY_REPORT_SCHEMA = CanonicalSchema(
@@ -1599,9 +3240,7 @@ DAILY_OPERATOR_UTILITY_REPORT_SCHEMA = CanonicalSchema(
         "memory_write_mode",
         "autonomous_action_allowed",
     ),
-    notes=(
-        "Period utility report; missing evidence is a limitation, never a gain claim.",
-    ),
+    notes=("Period utility report; missing evidence is a limitation, never a gain claim.",),
 )
 
 EVOLUTION_REVIEW_QUEUE_ITEM_SCHEMA = CanonicalSchema(
@@ -1624,9 +3263,7 @@ EVOLUTION_REVIEW_QUEUE_ITEM_SCHEMA = CanonicalSchema(
         "proposed_tests",
         "rollback_plan_ref",
     ),
-    notes=(
-        "Human review queue view over sandbox evolution proposals; not a promotion permit.",
-    ),
+    notes=("Human review queue view over sandbox evolution proposals; not a promotion permit.",),
 )
 
 EVOLUTION_REVIEW_DECISION_SCHEMA = CanonicalSchema(
@@ -1651,9 +3288,7 @@ EVOLUTION_REVIEW_DECISION_SCHEMA = CanonicalSchema(
         "automatic_promotion_allowed",
         "core_mutation_allowed",
     ),
-    notes=(
-        "Human evolution review decision; does not authorize automatic promotion.",
-    ),
+    notes=("Human evolution review decision; does not authorize automatic promotion.",),
 )
 
 MEMORY_LIFECYCLE_CANDIDATE_SCHEMA = CanonicalSchema(
@@ -1901,6 +3536,9 @@ OPERATION_DISPATCH_SCHEMA = CanonicalSchema(
         "max_autonomy_capability_mode",
         "autonomy_human_confirmation_required",
         "autonomy_confirmation_mode",
+        "autonomy_action_kind",
+        "adapter_action_request",
+        "autonomy_validation_errors",
         "autonomy_allowed_runtime_actions",
         "autonomy_blocked_runtime_actions",
         "autonomy_policy_refs",
@@ -1934,6 +3572,15 @@ OPERATION_DISPATCH_SCHEMA = CanonicalSchema(
         "objective_status",
         "next_action_ref",
         "workflow_policy_decision",
+        "workflow_lifecycle_transition",
+        "workflow_lifecycle_resolution_status",
+        "workflow_lifecycle_resolution_reasons",
+        "receipt_id",
+        "claim_id",
+        "origin_request_id",
+        "action_fingerprint",
+        "intent_fingerprint",
+        "claimed_at",
     ),
 )
 
@@ -2009,6 +3656,9 @@ DELIBERATIVE_PLAN_SCHEMA = CanonicalSchema(
         "route_workflow_checkpoints",
         "route_workflow_decision_points",
         "workflow_policy_decision",
+        "workflow_lifecycle_transition",
+        "workflow_lifecycle_resolution_status",
+        "workflow_lifecycle_resolution_reasons",
         "tensions_considered",
         "specialist_hints",
         "specialist_resolution_summary",
@@ -2081,6 +3731,8 @@ DELIBERATIVE_PLAN_SCHEMA = CanonicalSchema(
         "max_autonomy_capability_mode",
         "autonomy_human_confirmation_required",
         "autonomy_confirmation_mode",
+        "autonomy_action_kind",
+        "autonomy_validation_errors",
         "autonomy_allowed_runtime_actions",
         "autonomy_blocked_runtime_actions",
         "autonomy_policy_refs",
@@ -2229,9 +3881,7 @@ DAILY_OPERATOR_WORKSPACE_SCHEMA = CanonicalSchema(
         "autonomous_resume_allowed",
         "autonomous_scheduling_allowed",
     ),
-    notes=(
-        "Derived workspace only; it never schedules, resumes or mutates missions.",
-    ),
+    notes=("Derived workspace only; it never schedules, resumes or mutates missions.",),
 )
 
 WORK_ITEM_STATE_SCHEMA = CanonicalSchema(
@@ -2293,6 +3943,12 @@ ARTIFACT_LIFECYCLE_STATE_SCHEMA = CanonicalSchema(
         "supersedes_artifact_ref",
         "replacement_artifact_ref",
         "rollback_plan_ref",
+        "physical_version_fingerprint",
+        "mutation_receipt_fingerprint",
+        "canonical_saga_id",
+        "physical_resource_ref",
+        "physical_state_attestation_fingerprint",
+        "physical_consistency_status",
         "created_at",
         "updated_at",
         "checkpoint_refs",
@@ -2320,6 +3976,278 @@ ARTIFACT_REGISTRY_SCHEMA = CanonicalSchema(
         "external_file_mutation_allowed",
     ),
     notes=("Read-only projection of immutable artifact versions and lifecycle state.",),
+)
+
+ARTIFACT_PHYSICAL_APPLY_PLAN_SCHEMA = CanonicalSchema(
+    name="ArtifactPhysicalApplyPlanSchema",
+    contract_name="ArtifactPhysicalApplyPlanContract",
+    required_fields=(
+        "saga_id",
+        "mission_id",
+        "artifact_ref",
+        "artifact_version",
+        "owner_mission_id",
+        "work_item_ref",
+        "lineage_root_ref",
+        "transition",
+        "physical_operation_id",
+        "resource_ref",
+        "root_alias",
+        "preflight_fingerprint",
+        "root_config_fingerprint",
+        "preflight_policy_version",
+        "transaction_policy_version",
+        "transaction_backend_version",
+        "adapter_backend_version",
+        "before_content_sha256",
+        "desired_content_sha256",
+        "rollback_plan_ref",
+        "expected_lineage_revision",
+        "created_at",
+        "plan_fingerprint",
+    ),
+    optional_fields=(
+        "objective_ref",
+        "supersedes_artifact_ref",
+        "purpose",
+        "contains_content",
+        "read_only",
+        "immutable",
+    ),
+    notes=("Content-free immutable apply reservation; never execution authority.",),
+)
+
+ARTIFACT_PHYSICAL_ROLLBACK_PLAN_SCHEMA = CanonicalSchema(
+    name="ArtifactPhysicalRollbackPlanSchema",
+    contract_name="ArtifactPhysicalRollbackPlanContract",
+    required_fields=(
+        "saga_id",
+        "mission_id",
+        "active_artifact_ref",
+        "active_artifact_version",
+        "owner_mission_id",
+        "work_item_ref",
+        "lineage_root_ref",
+        "physical_operation_id",
+        "mutation_operation_id",
+        "source_apply_saga_id",
+        "rollback_mode",
+        "canonical_effect_expected",
+        "mutation_receipt_fingerprint",
+        "resource_ref",
+        "root_alias",
+        "expected_current_sha256",
+        "restored_content_sha256",
+        "expected_lineage_revision",
+        "created_at",
+        "plan_fingerprint",
+    ),
+    optional_fields=(
+        "objective_ref",
+        "restored_artifact_ref",
+        "restored_artifact_version",
+        "purpose",
+        "contains_content",
+        "read_only",
+        "immutable",
+    ),
+    notes=("Distinct rollback-purpose reservation bound to one mutation receipt.",),
+)
+
+ARTIFACT_PHYSICAL_SAGA_EVENT_SCHEMA = CanonicalSchema(
+    name="ArtifactPhysicalSagaEventSchema",
+    contract_name="ArtifactPhysicalSagaEventContract",
+    required_fields=(
+        "event_id",
+        "saga_id",
+        "purpose",
+        "phase",
+        "sequence",
+        "plan_fingerprint",
+        "physical_operation_id",
+        "occurred_at",
+        "event_fingerprint",
+    ),
+    optional_fields=(
+        "previous_event_fingerprint",
+        "mutation_receipt_fingerprint",
+        "rollback_receipt_fingerprint",
+        "physical_state_attestation_fingerprint",
+        "contains_content",
+        "read_only",
+        "immutable",
+    ),
+    notes=("Append-only hash-chained content-free saga checkpoint.",),
+)
+
+ARTIFACT_PHYSICAL_SAGA_STATE_SCHEMA = CanonicalSchema(
+    name="ArtifactPhysicalSagaStateSchema",
+    contract_name="ArtifactPhysicalSagaStateContract",
+    required_fields=(
+        "saga_id",
+        "purpose",
+        "mission_id",
+        "physical_operation_id",
+        "plan_fingerprint",
+        "phase",
+        "latest_sequence",
+        "latest_event_fingerprint",
+        "updated_at",
+        "state_fingerprint",
+    ),
+    optional_fields=(
+        "mutation_receipt_fingerprint",
+        "rollback_receipt_fingerprint",
+        "physical_state_attestation_fingerprint",
+        "contains_content",
+        "read_only",
+        "immutable",
+    ),
+)
+
+PHYSICAL_ARTIFACT_VERSION_SCHEMA = CanonicalSchema(
+    name="PhysicalArtifactVersionSchema",
+    contract_name="PhysicalArtifactVersionContract",
+    required_fields=(
+        "mission_id",
+        "artifact_ref",
+        "artifact_version",
+        "owner_mission_id",
+        "work_item_ref",
+        "lineage_root_ref",
+        "physical_operation_id",
+        "mutation_receipt_fingerprint",
+        "resource_ref",
+        "root_alias",
+        "preflight_fingerprint",
+        "root_config_fingerprint",
+        "preflight_policy_version",
+        "transaction_policy_version",
+        "transaction_backend_version",
+        "adapter_backend_version",
+        "before_content_sha256",
+        "desired_content_sha256",
+        "rollback_plan_ref",
+        "physical_state_attestation_fingerprint",
+        "canonical_saga_id",
+        "canonicalized_at",
+        "version_fingerprint",
+    ),
+    optional_fields=(
+        "objective_ref",
+        "supersedes_artifact_ref",
+        "contains_content",
+        "read_only",
+        "immutable",
+    ),
+    notes=("Normalized immutable source of truth for one physical artifact version.",),
+)
+
+ARTIFACT_PHYSICAL_LINEAGE_SCHEMA = CanonicalSchema(
+    name="ArtifactPhysicalLineageSchema",
+    contract_name="ArtifactPhysicalLineageContract",
+    required_fields=(
+        "mission_id",
+        "lineage_root_ref",
+        "revision",
+        "active_artifact_ref",
+        "last_saga_id",
+        "last_event_fingerprint",
+        "updated_at",
+        "lineage_fingerprint",
+    ),
+    optional_fields=("read_only",),
+)
+
+ARTIFACT_PHYSICAL_OUTBOX_ITEM_SCHEMA = CanonicalSchema(
+    name="ArtifactPhysicalOutboxItemSchema",
+    contract_name="ArtifactPhysicalOutboxItemContract",
+    required_fields=(
+        "outbox_id",
+        "saga_id",
+        "purpose",
+        "event_name",
+        "mission_id",
+        "artifact_ref",
+        "lineage_root_ref",
+        "canonical_event_fingerprint",
+        "created_at",
+        "outbox_fingerprint",
+    ),
+    optional_fields=("contains_content", "read_only", "immutable"),
+)
+
+ARTIFACT_PHYSICAL_OUTBOX_DELIVERY_SCHEMA = CanonicalSchema(
+    name="ArtifactPhysicalOutboxDeliverySchema",
+    contract_name="ArtifactPhysicalOutboxDeliveryContract",
+    required_fields=(
+        "delivery_id",
+        "outbox_id",
+        "publisher_ref",
+        "published_at",
+        "delivery_fingerprint",
+    ),
+    optional_fields=("read_only", "immutable"),
+)
+
+LOCAL_TEXT_PHYSICAL_STATE_ATTESTATION_SCHEMA = CanonicalSchema(
+    name="LocalTextPhysicalStateAttestationSchema",
+    contract_name="LocalTextPhysicalStateAttestationContract",
+    required_fields=(
+        "attestation_id",
+        "purpose",
+        "receipt_fingerprint",
+        "mutation_operation_id",
+        "resource_ref",
+        "root_alias",
+        "root_config_fingerprint",
+        "physical_state",
+        "observed_content_sha256",
+        "observed_identity_fingerprint",
+        "journal_event_fingerprint",
+        "transaction_policy_version",
+        "transaction_backend_version",
+        "verified_at",
+        "attestation_fingerprint",
+    ),
+    optional_fields=(
+        "rollback_operation_id",
+        "contains_content",
+        "read_only",
+        "immutable",
+    ),
+    notes=("Fresh content-free handle-safe physical state observation.",),
+)
+
+ARTIFACT_PHYSICAL_CANONICAL_COMMIT_RECEIPT_SCHEMA = CanonicalSchema(
+    name="ArtifactPhysicalCanonicalCommitReceiptSchema",
+    contract_name="ArtifactPhysicalCanonicalCommitReceiptContract",
+    required_fields=(
+        "commit_id",
+        "purpose",
+        "saga_id",
+        "plan_fingerprint",
+        "mission_id",
+        "lineage_root_ref",
+        "lineage_revision",
+        "physical_operation_id",
+        "resource_ref",
+        "root_alias",
+        "mutation_receipt_fingerprint",
+        "physical_state_attestation_fingerprint",
+        "canonical_event_fingerprint",
+        "committed_at",
+        "commit_fingerprint",
+    ),
+    optional_fields=(
+        "artifact_ref",
+        "artifact_version",
+        "rollback_receipt_fingerprint",
+        "contains_content",
+        "read_only",
+        "immutable",
+    ),
+    notes=("Exact content-free proof of one atomic canonical Memory commit.",),
 )
 
 OPEN_LOOP_STATE_SCHEMA = CanonicalSchema(
@@ -2432,9 +4360,7 @@ SANDBOX_TO_RELEASE_CHECKLIST_SCHEMA = CanonicalSchema(
         "automatic_promotion_allowed",
         "core_mutation_allowed",
     ),
-    notes=(
-        "Executable sandbox-to-release checklist; not a promotion authorization.",
-    ),
+    notes=("Executable sandbox-to-release checklist; not a promotion authorization.",),
 )
 
 PROMOTION_GATE_DECISION_SCHEMA = CanonicalSchema(
@@ -2462,9 +4388,7 @@ PROMOTION_GATE_DECISION_SCHEMA = CanonicalSchema(
         "automatic_promotion_allowed",
         "core_mutation_allowed",
     ),
-    notes=(
-        "Executable promotion gate decision; never a human promotion authorization.",
-    ),
+    notes=("Executable promotion gate decision; never a human promotion authorization.",),
 )
 
 EVOLUTION_PROPOSAL_SCHEMA = CanonicalSchema(
