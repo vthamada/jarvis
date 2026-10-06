@@ -909,6 +909,15 @@ class GovernanceService:
 
         return self.action_confirmation_repository.load_confirmation_context(receipt_id)
 
+    def load_action_confirmation_context_for_challenge(
+        self,
+        challenge_id: str,
+    ) -> ActionConfirmationContext | None:
+        """Read a persisted confirmation for reconciliation, without issuing one."""
+        return self.action_confirmation_repository.load_confirmation_context_for_challenge(
+            challenge_id
+        )
+
     def claim_action_confirmation(
         self,
         receipt_id: str,

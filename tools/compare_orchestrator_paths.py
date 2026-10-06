@@ -1,4 +1,4 @@
-﻿"""Compare the baseline orchestrator flow with the optional LangGraph flow."""
+"""Compare the baseline orchestrator flow with the optional LangGraph flow."""
 # ruff: noqa: E402
 
 from __future__ import annotations
@@ -2638,9 +2638,10 @@ def render_text(payload: dict[str, object]) -> str:
                     ),
                     (
                         "baseline_mind_domain_specialist_mismatch_flags="
-                        f"{','.join(
-                            item['baseline']['mind_domain_specialist_mismatch_flags']
-                        ) or 'none'}"
+                        + (
+                            ",".join(item['baseline']['mind_domain_specialist_mismatch_flags'])
+                            or "none"
+                        )
                     ),
                     (
                         "baseline_specialist_subflow_status="
@@ -3030,9 +3031,10 @@ def render_text(payload: dict[str, object]) -> str:
                     ),
                     (
                         "candidate_mind_domain_specialist_mismatch_flags="
-                        f"{','.join(
-                            item['candidate']['mind_domain_specialist_mismatch_flags']
-                        ) or 'none'}"
+                        + (
+                            ",".join(item['candidate']['mind_domain_specialist_mismatch_flags'])
+                            or "none"
+                        )
                         if item["candidate"]
                         else "candidate_mind_domain_specialist_mismatch_flags=n/a"
                     ),

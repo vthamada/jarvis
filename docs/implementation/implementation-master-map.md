@@ -1,7 +1,7 @@
 # Implementation Master Map
 
 Status: active implementation planning map
-Date: 2026-07-02
+Date: 2026-10-02 (baseline MB-217; product-gap audit)
 Owner: governed execution backlog
 Sovereign source: `documento_mestre_jarvis.md`
 
@@ -53,6 +53,85 @@ Documento-Mestre wins.
 
 ## 4. Current Baseline Reading
 
+MB228 (2026-10-05) done local: review request-scoped -> Knowledge/Governance/
+Synthesis/Memory, fonte unverified isolada da instrucao/roteamento. Final exata
+retida; projecao Planning omite literal nao confiavel. CLI opt-in com readback,
+619 focados/zero skips e gate standard global Windows completo passaram.
+Auditoria sem bloqueador conhecido; sem modelo externo/capability promovida.
+MB229 ready: complemento generativo analysis/core-only naturalmente ALLOW,
+sem elevar autonomia ou substituir sintese/governanca. Sistema completo aberto.
+Runbook: docs/operations/reviewed-source-core.md. MB227 e seguintes historicos.
+
+MB227 (2026-10-05) done local: leitor/CLI HTTPS opt-in de URL e pin publico
+fixados, TLS nativo e framing bounded; dados nao confiaveis sem autoridade.
+699 focados distintos passaram/zero skips com TLS real sintetico; auditoria
+sem bloqueador e gate standard global Windows completo passou.
+Sem campanha externa/Core live/promocao. cryptography somente dev para certs
+sinteticos; runner Linux ajustado/22 testes, sem rebuild/prova Linux nova.
+Runbook: docs/operations/credentialless-https-observation.md. MB228 ready para
+fonte revisada request-scoped -> Knowledge/Governance/Synthesis/Memory; export
+declarado/unverified, sem auto-trust/corpus import ou nova superficie publica.
+Notas MB226 e anteriores abaixo sao historicas, nao status atual da fila.
+
+
+MB226 (2026-10-05): player Web manual600s/32MiB done no recorte local,
+preparacao PCM interrompivel e RIFF strict; sem autoimport/upload/mic/API.
+344 JS/173 Python focados passaram/zero skips; agregadoPython->NodePCM/digest
+exatos e IAB sintetico/RMS0.033/cancelstarting/mobile sem overflow verificados.
+Gate standard global Windows final passou. Qualidade vocal/conta/Corelive nao aprovados.
+MB227 ready: observacao HTTPS credentialless de escopo fechado, nao browser engine.
+Runbook: docs/operations/long-local-wav-web-playback.md. Notas abaixo historicas.
+
+MB225 (2026-10-05): lote integral opt-in done local, sem truncar
+final canonica (ate6000 codepoints/16 partes,32MiB/600s). Uma carga de modelo,
+deadline unico, agregado exclusivo e nenhuma repeticao Core.732 testes focados,
+13 registry/assets e172 JS passaram/zero skips; gate standard global Windows
+final passou, auditoria sem bloqueador. Refusals pos-audit/cleanup cobertas.
+Qualidade vocal/modelo real nao aprovados.
+Runbook: docs/operations/full-final-local-tts-batch.md. MB226 ready: compatibilidade
+Web manual para agregado longo; esfera/RMS ja existe, limite atual120s e gap.
+Notas MB224 e anteriores sao historicas.
+
+Update MB224 (2026-10-05): persistent final to explicitly enabled local TTS
+was integrated with three workers and coordinator, using existing lab
+profiles. Canonical text remains exact; the 600-character lab limit is still
+a long-response product gap.542 focused tests passed/zero skips; Windows
+standard gate passed, MB224 done locally. MB225 ready for exact segmentation;
+no voice-quality/model promotion. See docs/operations/persistent-final-local-tts.md.
+
+Update MB223 (2026-10-05): offline transcript review/export in Web UI and explicit
+standalone CLI47 handoff to persistent native Core with canonical memory/final.
+Untrusted packages never authorize actions; no browser API/send, no external
+observability mirror.273 Python/172 JS tests passed, actual synthetic picker
+and mobile inspected; Windows standard gate passed, MB223 done locally.
+Conversation remains fixture.
+Next MB224: persisted final to opt-in local TTS, not a vocal-quality claim.
+See docs/operations/reviewed-transcript-web-to-core.md.
+
+Update MB222 (2026-10-05): explicit local PKCE/JWT/loopback, private credential
+store, serialized refresh, account catalog and standalone CLI46 implemented.
+RSA/Windows DPAPI/socket proofs are real synthetic local tests; HTTPS/browser
+injected, no real account/model promotion.613 focused passed/6 skips, storage
+final82/6 passed; Windows standard gate passed, MB222 done locally. Account
+identity supplies no JARVIS operator/action authority. Next MB223 is reviewed
+ASR local surface. See docs/operations/siwc-local-account-and-catalog.md.
+Earlier wave notes below are historical.
+
+Update MB221 (2026-10-05): opt-in fixed HTTPS/SSE SIWC adapter, exact ASR text
+review with one-shot Core handoff, standalone existing-job inspection. Local
+integration validated:472 focused passed/2 Windows symlink skips and global
+Windows standard gate passed. MB221 done locally; no live OAuth/model/hardware
+or scheduler promotion. MB222 OAuth/catalog planned. See
+docs/operations/parallel-wave-transport-transcript-and-job-inspection.md.
+
+Update MB220 (2026-10-05): existing code/knowledge tracks now offer standalone
+code-review/research-review commands over explicitly supplied bounded input.
+Exact draft diff/citations are opt-in; sensitive content withheld as a whole.
+310 focused tests and28 repeated CLI tests passed; Windows standard gate passed,
+MB220 done. No Core synthesis,
+model/fetch/patch application or capability promotion. Operational guide:
+`docs/operations/local-review-products.md`. MB218/219 local closure is unchanged.
+
 The current baseline has closed:
 
 - governed orchestration through core services and engines;
@@ -74,9 +153,58 @@ The current system is not yet a fluid daily product. The main gap is no longer
 "does the core exist?". The main gap is "can an operator use it every day as a
 practical mission partner across knowledge, tools, artifacts, goals and time?".
 
+The [2026-10-02 product-gap audit](2026-10-02-gap-map-and-parallel-program.md)
+adds an explicit reading of missing inference/auth, console composition,
+Linux-only transactional execution and live evolution experiments. Its eight
+parallel work packages are proposals, not new ready items or promoted
+capabilities. The current 114 rows contain 77 implemented baselines and 37
+limited states; this is not a percentage of product completion.
+
+The operator subsequently requested executable work packages for development
+agents. See [parallel implementation map](parallel-implementation-map.md):
+13 product fronts plus security, quality and platform responsibilities.
+Independent clients/adapters can be developed in isolation before phase
+promotion; runtime integration and activation keep their gates. The map
+does not change the capability statuses or close MB-218/219.
+
+First implementation wave now exists in isolation: bounded inference port and
+injected Responses parser, fixture Web cockpit and restricted in-memory code
+interpreter. A vertical offline pilot routes only allowlisted evidence through
+the real Core, governance, memory and final synthesis. See
+[local pilot runbook](../operations/parallel-wave-local-pilot.md). This is not
+authenticated inference, a Core-connected Web API or an OS coding sandbox;
+the 114 capability statuses remain unchanged pending real promotion evidence.
+
 ## 5. Implementation Tracks
 
+Second implementation wave adds an opt-in physical operator console (MB-218
+in_progress), offline read-only Core export -> Web import and durable fixture
+jobs with CAS/fencing. See [second-wave runbook](../operations/parallel-wave-core-snapshots-and-jobs.md).
+No live API/auth, physical proof on this Windows host or real scheduler is
+claimed by that wave; capability statuses remain unchanged. Linux E2E and release
+validation were still pending then; see the 2026-10-05 platform update below.
+
+Third wave adds reviewed synthetic voice, an isolated real-Core voice pilot
+and real bounded loopback HTTP fixture observation. These do not implement
+hardware STT/TTS, browser engines/control, authentication or capability promotion.
+MB-218 confirmation-cache recovery and Linux runtime anchors are hardened;
+the Linux validation runner was locally tested, but infrastructure execution
+was deferred at that point after a Windows Docker socket failure; the operator
+resumed the proof in the 2026-10-05 update below.
+See [third-wave runbook](../operations/parallel-wave-voice-and-local-observation.md).
+Next independent slices: voice review UI fixture, local read-only MCP client
+and empirical isolated evolution runner. The governed API cut remains dependent.
+
 ### Track A -- Operator Product Loop
+
+Current platform update (2026-10-05): the operator resumed Docker Linux proof
+and authorized Docker Desktop 4.93.0. Final corpus: 224 passed/5 Windows-only
+skips on an exclusive ext4 Docker volume. Six separate-container CLI stages,
+process pause fencing and concrete storage fault/reload tests passed.
+MB218/219 are technically closed for local Linux/SQLite opt-in only; Linux release
+and Windows standard gates passed. No public mutating API, human authentication
+or power-loss guarantee was promoted. This supersedes earlier deferral notes.
+See [readiness evidence](../operations/mb218-mb219-persistent-readiness-2026-10-05.md).
 
 Goal: make JARVIS useful to a human operator in daily work.
 
@@ -139,10 +267,10 @@ Goal: make improvement continuous, measured and governed.
 | `EVL-002` | Post-task reflection proposal | `implemented_baseline` | Keep stable | Memory/evolution lab | none |
 | `EVL-003` | Human review decision | `implemented_baseline` | Keep stable | Console/evolution lab | none |
 | `EVL-004` | Reviewed-learning guidance | `implemented_baseline` | Keep stable | Review decisions | none |
-| `EVL-005` | Baseline vs assisted evals | `implemented_baseline` | Keep stable | Observability/tools | none |
+| `EVL-005` | Baseline vs assisted evals | `implemented_baseline` | Preserve bounded evals; add live task-quality comparisons separately | Observability/tools, inference consumer | candidate after reprioritization |
 | `EVL-006` | Promotion gate from sandbox to runtime | `implemented_baseline` | Validate with real release candidates | Engineering gate | none |
 | `EVL-007` | Skill evolution from repeated patterns | `minimum_baseline` | Reusable skills/playbooks from reviewed evidence | Memory, artifacts | candidate |
-| `EVL-008` | Workflow optimization loop | `implemented_baseline` | Keep controlled eval, manual activation and rollback stable | Evolution lab | none |
+| `EVL-008` | Workflow optimization loop | `implemented_baseline` | Preserve lifecycle; add trusted live comparative execution separately | Evolution lab, inference consumer | candidate after reprioritization |
 | `EVL-009` | Parametric adaptation | `research_only` | Isolated components only | Future V3+ | not now |
 | `EVL-010` | Deep self-modification | `research_only` | Research only, no production mutation | Human decision | not now |
 
@@ -223,7 +351,7 @@ Goal: preserve control while increasing autonomy.
 | `GOV-002` | Allow/condition/block/defer decisions | `implemented_baseline` | Keep stable | Governance service | none |
 | `GOV-003` | Human review for evolution | `implemented_baseline` | Keep stable | Evolution lab | none |
 | `GOV-004` | Policy for memory mutation | `partial_runtime` | Explicit memory governance by class and risk | Memory registry | candidate |
-| `GOV-005` | Tool permission model | `implemented_baseline` | Keep exact adapter grants stable while physical adapters mature | ACT tracks | MB-216 execution binding |
+| `GOV-005` | Tool permission model | `implemented_baseline` | Keep exact adapter grants and MB-216/217 execution bindings stable | ACT tracks | none |
 | `GOV-006` | Incident response for documentation/runtime | `minimum_baseline` | Practical incident drills and recovery | Operations docs | later |
 | `GOV-007` | Autonomy ladder enforcement | `implemented_baseline` | Keep per-action fail-closed enforcement stable | Mission policy | none |
 | `GOV-008` | Secrets and sensitive data policy | `partial_runtime` | Stronger local rules and tests | Security | later |
@@ -273,14 +401,17 @@ Goal: keep planning clear without turning documentation into bureaucracy.
 The next functional phase should focus on making the system useful to an
 operator, not on adding speculative technology.
 
-Highest-value gaps after `MB-189`:
+Current reading after `MB-217`:
 
-1. Stabilize CLI dispatch/output before adding more daily operator commands.
-2. Close multi-session daily continuity around objectives, work items,
-   artifacts and open loops.
-3. Measure whether the daily loop reduces rework and improves task completion.
-4. Preserve the closed learning/evolution slice before expanding domains or
-   deferred surfaces.
+1. Close `MB-218` console composition and `MB-219` adversarial/phase review.
+2. Add a subordinate inference/auth adapter and an actual conversational
+   consumer; these gaps are not yet represented as dedicated rows above.
+3. Demonstrate one useful task across sessions and choose an operational
+   platform: existing Linux backend or separately verified Windows parity.
+4. Execute live baseline/candidate comparisons before claiming evolutionary
+   performance gains; preserve the existing review/lifecycle controls.
+5. Open research, API/UI and durable work only with consumer evidence and the
+   corresponding phase decision. The parallel proposal does not change WIP-1.
 
 ## 7. Dependency Map
 
@@ -297,14 +428,14 @@ These are already present and should be preserved:
 
 ### Next functional chain
 
-Recommended chain for the next implementation slice:
+The typed CLI, doctor/preflight, daily workspace, work-item lineage,
+continuation and readiness chain was closed in `MB-190` to `MB-200`.
+Do not reopen it as absent work.
 
-1. typed CLI registry and output/runtime contract;
-2. read-only doctor/preflight;
-3. daily workspace snapshot and governed resume;
-4. work-item dependency/priority and artifact version lineage;
-5. open-loop continuation and utility measurement;
-6. golden/reference evidence and readiness closure.
+Current chain: `MB-218` -> `MB-219` -> formal product reprioritization ->
+subordinate inference -> useful conversational/task consumer -> live measured
+improvement. Independent provider experiments and utility fixtures may be
+prepared without promoting runtime or opening deferred surfaces.
 
 Why this order:
 
@@ -317,8 +448,8 @@ Why this order:
 
 Only after the operator product loop is useful:
 
-1. richer temporal/relational memory (`TA-004`);
-2. governed file/tool adapters;
+1. richer temporal/relational memory (`TA-004`), only with retrieval pressure;
+2. additional governed tool/platform adapters (local-text Linux already exists);
 3. software specialist substrate (`TA-006`);
 4. API/web surfaces;
 5. voice/realtime;
@@ -333,6 +464,11 @@ Only after the operator product loop is useful:
 | `v2_to_v3_bridge` | Add richer state and controlled adapters | temporal memory, file/tool adapters, API skeleton | High autonomy, core mutation |
 | `v3_product_surface` | Expose the same entity across surfaces | web/API/voice if core is stable | parallel brains, identity split |
 | `post_v3_research` | Advanced self-evolution | isolated research, parametric components | unsupervised core self-modification |
+
+These phase limits govern active runtime capabilities, not a blanket ban on
+isolated implementation/testing of future clients and adapters. The operator's
+parallel-development direction is detailed in `parallel-implementation-map.md`;
+development evidence must remain separate from promotion and product evidence.
 
 ## 9. Rules For Deriving Micro Backlog Items
 
@@ -1112,8 +1248,11 @@ Map IDs: `SFC-001`, `OBS-001`, `GOV-005`, `ACT-005`.
 Goal: expose separate prepare, inspect, confirm, execute, rollback and status
 steps with redacted, restart-safe evidence; no public API is added.
 
-Status: ready after `MB-217`; it is the only next technical item, and must not
-start until the operator sends a new request.
+Status: closed on 2026-10-05. Actual CLI preview/confirmation/physical recovery/
+independent rollback passed across separate containers sharing an exclusive
+ext4 volume, with canonical receipts/outbox and redacted output verified.
+Technical acceptance meets the backlog criteria, not human authentication,
+general deployment or power-loss/controller durability guarantees.
 
 ### MB-219 -- Adversarial Readiness And Next-Phase Decision
 
@@ -1123,7 +1262,11 @@ Goal: close the threat model, Windows adversarial corpus, recovery proof and
 release/readiness gates before deciding whether `SFC-005` can enter a later
 queue.
 
-Status: blocked by `MB-218`; API remains out of scope.
+Status: closed on 2026-10-05 after MB-218. Persistent corpus224 passed/5 Windows
+skips, cross-process first-effect fencing, six storage faults/reload, security
+audit/runbook and Linux release/Windows standard gates passed. Decision:
+go_for_bounded_local_linux_sqlite_opt_in, no_go_for_public_mutating_api.
+API remains out of scope; closure does not automatically activate another phase.
 
 ## 17. Maintenance Policy
 

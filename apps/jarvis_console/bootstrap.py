@@ -15,6 +15,8 @@ SRC_DIRS = [
     ROOT / "services" / "operational-service" / "src",
     ROOT / "services" / "knowledge-service" / "src",
     ROOT / "services" / "observability-service" / "src",
+    ROOT / "services" / "inference-service" / "src",
+    ROOT / "services" / "job-service" / "src",
     ROOT / "engines" / "identity-engine" / "src",
     ROOT / "engines" / "executive-engine" / "src",
     ROOT / "engines" / "cognitive-engine" / "src",

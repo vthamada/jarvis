@@ -1,5 +1,205 @@
 # CHANGELOG
 
+## 2026-10-05
+
+- MB228 done local: fonte revisada request-scoped no Core, consentimento
+  one-shot, query/source separados, evidencia nao verificada e citacao literal
+  sob decisao nativa. Final retida, projecao Planning sem literal de fonte;
+  CLI com readback e redacao integral;619 focados/zero skips e gate standard
+  global Windows completo passaram apos corrigir compatibilidade legada;
+  auditoria sem bloqueador conhecido. MB229 ready para analise generativa
+  subordinada; sem modelo externo/capability promovida/prova Linux nova.
+  Runbook reviewed-source-core.md.
+
+- MB227 done local: adapter/CLI HTTPS opt-in, pin publico/host443 e bindings
+  exatos, TLS nativo sem DNS/proxy/redirect/retry/keylog ambiente; parser
+  CL OU chunked bounded/EOF. Dados UTF8/proveniencia sem autoridade, JSON
+  default content-free.699 focados distintos passaram/zero skips com TLS sintetico
+  real; auditoria sem bloqueador e gate standard global Windows passou.
+  cryptography somente dev para certs; imagem Linux ajustada/22 testes,
+  sem rebuild ou prova Linux nova. Nenhum Core/grant/store humano/alvo externo
+  ou campanha promovido. MB228 ready para fonte revisada integrada ao Core.
+
+- MB226 done local: player Web manual aceita WAV600s/32MiB com
+  RIFF strict e preparacao PCM em macrotarefas interrompiveis; callbacks/erros
+  privados/reentrancia cercados, picker sem nome retido ou autoplay.344 JS/
+  173 Python focados passaram/zero skips, interop PCM/digest Python->Node e
+  browser IAB com tons sinteticos/RMS/mobile verificados. Gate standard global
+  Windows final passou;56 MCP regressões passaram apos corrigir budget de teste
+  de evidencia, sem alterar runtime. MB227 ready para HTTPS delimitado.
+  Qualidade vocal/Core live continuam separados; runbook long-local-wav-web-playback.
+
+- MB225 done local: TTS batch opt-in de final persistida exata,
+  ate6000 codepoints/16 partes, uma carga de modelo e deadline global;
+  agregado WAV ate32MiB/600s, publicacao exclusiva sem parcial como sucesso.
+  Texto/memoria soberanos preservados; testes fixture nao aprovam voz/modelo.
+  732 focados/13 registry-assets/172 JS passed/zero skips; gate standard global
+  Windows final passou, auditoria sem bloqueador. Recusas pos-audit/cleanup
+  cobertas. Proximo MB226 compatibilidade manual Web para agregado longo.
+  Runbook full-final-local-tts-batch.md em operations.
+
+- MB224 done local: transcript-review aceita TTS com consentimento separado,
+  laboratorio Chatterbox/Qwen e perfis existentes; final canonica exata,
+  fallback textual sem retry Core e localizador temporario opt-in sem path
+  privado.542 testes focados/zero skips e gate standard global Windows passaram;
+  auditoria/bindings/concorrencia/WAV/readback sem bloqueador restante.
+  Limite600 nao e truncagem nem qualidade vocal aprovada; MB225 ready para
+  segmentacao exata de finais longas. Nenhum modelo ou audio humano usado.
+
+- MB223: painel offline de transcricao importavel/editavel/exportavel, SHA de
+  bytes/texto exatos, consentimento/prazo/revisao/exportunico sem upload ou auth;
+- transcript-review standalone47 revalida stdin antes de bootstrap do Core
+  persistente, assist_only/scope vazio e observabilidade local sem mirror;
+  texto/final exatos opt-in ou omitidos integralmente se sensiveis;
+-273 testes Python/172 JS passaram, browser picker/export/discard sinteticos e
+  mobile sem overflow verificados; gate standard global Windows passou,
+  MB223 done local. Conversa Web fixture,
+  OAuth/modelo/mic/qualidade vocal e API mutante continuam gaps separados.
+
+- MB222 implementado: OAuth publico opt-in state/nonce/PKCE, callback real
+  bounded, JWT RS256/JWKS por extra PyJWT[crypto], store DPAPI Windows privado,
+  perfis opacos e refresh serializado, catalogo por conta; CLI standalone46;
+- testes RSA/DPAPI/loopback reais e HTTPS/browser injetados, sem login/modelo
+  humano;613 focados/6 skips e storage final82/6 aprovados; gate standard
+  global Windows passou, MB222 done local. Identidade externa nao e autoridade Core,
+  revoke remoto/qualidade vocal/UI continuam pendentes.
+
+- MB221: transporte SIWC HTTPS/SSE opt-in, credencial em memoria e endpoint
+  publico fixo/sem proxy/redirect/retry/fallback pago; login/modelo real pendentes;
+- revisao local ASR exige texto/hash/revisao exatos e handoff atomico para Core,
+  sem replay/downgrade/autoridade; job-inspect standalone readonly sem init,
+  reconciliacao ou execucao, metadata default e refs opt-in;
+- MB221 done local:472 focados passaram/2 skips symlink Windows, auditorias
+  finais sem bloqueador e gate standard global Windows aprovado. OAuth real,
+  qualidade vocal/UI e scheduler continuam gaps; MB222 OAuth/catalogo planned.
+
+- MB220: comandos code-review/research-review standalone com stdin JSON limitado,
+  schemas estritos, diff/citacoes exatos opt-in e redacao integral segura;
+  nenhuma execucao, Core, fetch, autoridade ou promocao;
+- MB220 fechado:310 focados/zero skips,28 CLI reexecutados e gate standard
+  global Windows passaram; auditoria independente sem bloqueador. Timeout
+  inicial de subprocess resolveu-se com budget de teste60s, sem alterar runtime.
+
+- MB218 fechado por aceite tecnico real CLI em seis containers/ext4: prepare/inspect/confirm separados, crash86/recovery original e replace/rollback com verificacao canonica/redacao;
+- MB219 fechado no escopo local Linux/SQLite opt-in: 224 passed/5 skips Windows em volume persistente, quatro casos de pausa concorrente por processo e seis falhas storage/reload sem nova autoridade; gates release Linux/standard Windows finais passaram;
+- runner persistent cria apenas volume proprio, pina imagem/fontes, revalida ownership por fase e preserva dados em falha; cleanup confirmado para volumes/containers sinteticos; API mutante, auth multiusuario e garantias de power-loss continuam fora;
+
+- Docker Desktop atualizado com autorizacao explicita para 4.93.0; backend Linux real disponivel, sem novo reset ou reboot;
+- corrigida recovery do rollback interrompido antes da reserva fisica: journal da mutacao fonte nao concede autoridade historica; retry exato revalida missao e preserva confirmacao;
+- prova fisica Docker Linux:202 passed/5 skips exclusivos de Windows, com regressoes restart/idempotencia/pausa/plano estrangeiro; runner exibe contagens e motivos dos skips;
+- ferramentas de relatorio agora preservam sintaxe compativel com Python3.11 declarado, sem alterar formato de saida;33 testes report/grammar e20 testes runner Windows passaram;
+- runner usa interpreter real da imagem sem relaxar guardas de symlink; Git ausente fica unknown e testes PostgreSQL sem backend fazem skip explicito antes do import;
+- manifest declarativo agora compara duas leituras bounded do mesmo descritor contra alteracoes same-size/coarse-clock, preservando guards de hash/path; fixture traversal POSIX ajustada;64 testes Windows focados passaram/6 skips PG;
+- gate release chama active-cut como modulo sem exigir install editable; teste CLI em subprocess sem site/PYTHONPATH e bateria MCP/verificadores: 63 testes passaram; teste de redacao usa timeout 10s sem alterar default runtime ou guardas de expiracao;
+- gates Linux standard/release passaram, incluindo baseline development e smokes SQLite; bateria fisica repetida na imagem final: 202 passed/5 skips Windows; gate standard Windows final passou e cleanup dos containers aprovados foi confirmado;
+- MB218/219, aceite operacional e storage persistente nao fechados por esta bateria tmpfs.
+
+## 2026-10-04
+
+- Executive: keyword families/negacao local/draft textual/read-only; mixed/quotes/controles pedem clarification sem apagar riskmarkers ou autorizar operacao;
+- inferencia extrativa opt-in integrada a Synthesis/Core native+optional nodes: quotes exatas da entrada, strictschema/binding/budgets, markup escapado e fallback nativo; defaultoff/semtransport/modeloreal;
+- 259 testes focados passaram; corpus/grader intactos, piloto Core apos mudanca5finais/136eventos/3needs_decision sem ganho de produto promovido; gate standard global final Windows passou, sem commit/push ou retomada Linux;
+
+- recall lexical readonly com escopo exato, frescor/budgets/lifecycle explicito; console memory-recall inspeciona banco existente/quiescente sem criar Core e so inclui conteudo bounded opt-in;
+- patch review em memoria com allowlist, snapshot/preimage/hash/diff deterministico e verify stale/tamper; nao aplica nem concede grant;
+- corrigida exposicao cruzada de sujeito em contexto/replay/missoes: guardas metadata-only whole-history antes de request claim, resolucao de pause, recall e specialist; referencias de missoes de continuidade verificadas e related candidates filtrados;
+- inicializacao PostgreSQL de pause resolutions alinhada ao contrato existente; apenas paridade SQL estrutural, sem prova PostgreSQL real;
+- origem de contexto especialista recorrente revalidada antes do reuso;34 regressões centrais e177 testes focados passaram/1 skip Windows, mantendo lifecycle e prova canonica de ownership;
+- gate standard global final Windows passou apos as correcoes/revisao; auth, first-use concorrente atomico, modelo real e recall semantico nao promovidos; MB218/219 e Linux continuam abertos, sem commit/push.
+
+- MB218: desired-file seguro/bounded por descritor, publicacao inicial do request store via staging/no-overwrite e receipt cache exato;
+- MB219: revalidacao de missao/objective/owner/workitem antes de claim nova sob fence SQLite; recovery historico separado e provider obrigatorio, sem fallback PostgreSQL;
+- threat model, runbook e corpus adversarial novos; lock entre conexoes SQLite reais, prova fisica Linux ainda pendente;
+- WP-QUALITY-01: tres tarefas versionadas/scorer independente/metricas redigidas; Core real fez 5 finais/121 eventos e retornou needs_decision nas tres tarefas, sem ganho promovido;
+- corrigida race de leituras independentes id/request no registro idempotente de decision attribution; counterpart ausente so e relido quando o registro presente e exato, conflitos continuam recusados;
+- gates standard e release globais Windows passaram apos corrigir race, incluindo baseline development; MB218 in_progress/MB219 blocked e Linux deferred preservados, sem promocao ou commit/push.
+
+- redesign do cockpit: esfera sem card, tipografia mais legível, composer prioritário, contexto calmo e laboratório secundário;
+- exemplos apenas preenchem o campo; histórico abre/hero compacta no pedido simulado, reset restaura e navegação acompanha o hash; sem mudança de autoridade/Core;
+- redesign validado por 52 JS/39 Python Web, smoke desktop/tablet/mobile incluindo WAV e importação JSON pelo picker, gate standard global Windows passou; aceite estético ainda depende do operador;
+- esfera de partículas Canvas2D inspirada na imagem do operador, integrada ao cockpit, sem nova dependência;
+- ensaio WAV PCM16 local opt-in com reprodução real/analyser/envelope; fala fixture permanece simulada, sem confundir com Core live;
+- pausa/reduced-motion/mobile, cleanup/generation, limites de arquivo e diagnóstico redigido; sem mic/upload/persistência;
+- 52 testes JS/36 Python Web passaram, smoke IAB confirmou nível positivo e zero após interrupção; gate standard global Windows passou.
+
+## 2026-10-03
+
+### Referencias C e pilotos Core paralelos
+
+- sugestoes read-only limitadas por energia nas bordas; testes de janela/extracao/limites, sem afirmar fala limpa ou palavras completas;
+- Whisper Turbo publico pinned/hash verificado; Small/Turbo discordaram nos tres cortes exatos, transcricao nunca confirmada automaticamente;
+- quatro inferencias reais Qwen locais CUDA: tres ICL draft perto de C e controle x-vector-only, sem atestar melhora; original preservado/copias privadas conferidas;
+- memoria entre sessoes com isolamento de sujeito e evidencia canonica; tracking persistiu, recall semantico util nao demonstrado;
+- task duravel Core assist_only com bindings exatos/fencing/pausa/cancel/sem replay e resultado conferido com eventos/memoria; governanca adiada continua needs_decision;
+- MCP stdio proprio composto com Core real via metadados enumerados; bruto hostil fora de memoria, cancel/prazo recusam entrada, sem grants/despacho governado;
+- 345 testes Python focados passaram/1 skip Windows e42 JS passaram; gate standard global Windows passou apos estabilizacao, sem promocao, commit/push ou retomada Linux.
+
+## 2026-10-02
+
+### Comparacao experimental de referencias vocais
+
+- operador pediu selecao/teste de trechos; 3 referencias de 10s, dois motores, mesma frase/seed, seis inferencias reais locais CUDA concluiram;
+- perfil qwen_icl_draft separado do ICL confirmado, ASR nao revisado explicitamente marcado no metadata, sem fingir confirmacao/revisao; janela exata e nenhuma promocao;
+- amostras mono PCM16/24kHz; Chatter A/B/C=13.16/9.76/10.44s, Qwen A/B/C=8.00/8.88/8.32s; qualidade ainda nao julgada pelo operador;
+- copias de entrega fora de Git/OneDrive com hashes conferidos; 149 testes focados passaram/1 skip Windows e gate standard global Windows passou; sem upload ou commit/push.
+
+### Qualidade vocal e rascunho de transcricao local
+
+- primeiras amostras rejeitadas pelo operador como roboticas; janela explicita/seed e perfis Chatter conversational/Qwen ICL implementados sem alegar qualidade aceita;
+- Qwen ICL exige transcricao revisada e confirmada, nunca confirma automaticamente rascunho ASR;
+- transcritor Whisper-small offline isolado, pesos publicos pinned/hash verificados, TXT/JSON privados fora do workspace e original somente leitura;
+- primeiro passe apresentou repeticoes artificiais; reprocessamento real concluiu em 84.2s com 25 janelas cobrindo 498.25s, timestamps aproximados e erros textuais ainda presentes; revisao humana obrigatoria;
+- gate standard global Windows passou; 140 testes focados passaram/1 skip Windows; sem promocao ou commit/push.
+
+### Quarta onda local validada: TTS e frentes paralelas
+
+- laboratorio opt-in Chatterbox PT-BR V3/Qwen3-TTS com SDKs separados, downloads publicos pinned/hash verificados e audio privado fora do workspace OneDrive;
+- Web com revisao exata da transcricao/consentimento/final/playback fixture, sem captura real;
+- cliente MCP stdio real contra subprocess fixture readonly proprio, schemas/bindings/cancelamento;
+- runner empirico e piloto com dois Core reais isolados de mesma revisao: 12 medicoes, sem ganho demonstrado/promocao;
+- duas amostras TTS reais locais CUDA concluiram (Chatter 5.12s, Qwen 5.68s PCM16/24kHz); fidelidade nao atestada e conversa Core->fala ainda limitada pelo tamanho do final;
+- gate standard global final Windows passou; 241 Python focados passed/1 skip de symlink Windows e 42 JS passed; MB218/219 e Linux deferred preservados, sem commit/push.
+
+### Terceira onda: voz revisada, observacao local e recovery
+
+- harness de voz fixture com consentimento/exata revisao, limites, cancelamento, alternativa textual e interrupcao simulada; piloto do integrador passa texto revisado por Core/governanca/memoria/sintese reais em runtime temporario;
+- reader HTTP fixture com GET loopback real, bindings exatos, provenance, limites/cancelamento e conteudo nao confiavel; sem browser engine, cliques, auth ou egress;
+- recovery de cache de confirmacao usa exclusivamente receipt existente/exato da Governance; runtime fisico Linux valida ownership/permissoes de ancestors;
+- runner Linux sem host mount preparado com arquivo source-only bounded, sem links/reparse e cleanup container best-effort; execucao Docker/Linux adiada explicitamente pelo operador apos erro de socket Windows 1920;
+- gate standard global Windows passou; bateria focada 263 Python passed/11 skips e 25 JS passed; MB218/219 continuam abertos, sem hardware/modelo real, promocao ou commit/push.
+
+### Segunda onda: composicao fisica em andamento e consumidores offline
+
+- console physical com preparacao, bindings exatos, status, recovery e rollback delimitado, composicao explicita de autoridades MB217; backend Windows permanece recusado;
+- snapshots readonly de objetivos/work items/artefatos reais do Core importados na Web, com fonte nao autenticada, limites e protecao de concorrencia de imports;
+- job-service SQLite fixture com CAS/fencing, leases/deadline/cancel/retry e reopen sem scheduler ou autoexecucao;
+- revisao cruzada endurece caminhos de runtime e recusa SQLite WAL no exportador para evitar sidecars; nenhuma migracao de banco humano antigo;
+- registro CLI/completions sincronizados e testes do console incluidos no gate global; MB218 in_progress, MB219 bloqueado, prova fisica Linux e gate release pendentes.
+- gate standard global final passou; bateria focada 154 Python passed/8 skips e 25 JS passed; importacao visual pelo file chooser nao comprovada nesta maquina.
+
+### Primeira onda implementada em paralelo, isolada
+
+- port de inferencia bounded, providers fixture/transporte Responses injetado e parser fail-closed;
+- cockpit local Web original com fixture permanente, controller testavel e servidor loopback allowlisted;
+- patch CAS e interpretador AST aritmetico restrito em memoria, sem execucao arbitraria ou escrita de patch;
+- piloto vertical passa evidencia allowlisted pelo Core real, governanca, memoria e sintese, sem dispatch;
+- conexoes SQLite Memory/Observability fecham apos commit/rollback; runtime temporario nao herda tracing/bancos do operador;
+- 240 testes Python locais, 13 JS, browser desktop/mobile e gate standard passaram; revisao cruzada. Sem auth/modelo real, promocao de capability, fechamento MB218/219 ou commit/push.
+
+### Mapa executavel para agentes implementadores
+
+- desdobra 13 frentes e tres responsabilidades transversais com WP iniciais, entradas/saidas, ownership exclusivo, dependencias, testes, aceite e ondas de ate tres workers mais coordenador;
+- formaliza desenvolvimento isolado em paralelo, separado de integracao/ativacao; preserva backlog micro unico, WIP integrado 1 e MB218/219 abertos;
+- detalha Web, voz falada/entrada, mobile, browser/computer, code, integracoes e MCP; registra identidade vocal desejada como etapa futura autorizada, sem dependencia arquitetural da imitacao;
+- sincroniza programa V3, mapas, backlog macro/micro e HANDOFF; corrige ownership de contratos para `shared/contracts/__init__.py`; nenhuma capability runtime promovida nesta rodada.
+
+### Auditoria de lacunas, OAuth, Dots e autoevolucao
+
+- registra inventario de capabilities limitadas e lacunas de produto nao representadas, sem converter contagem de baselines em percentual de conclusao;
+- pesquisa fontes primarias Hermes/OpenAI e propoe SIWC direto como inferencia subordinada; explicita diferencas de auth, restricoes de preview e incompatibilidade com `multi_agent` da API geral;
+- diferencia aprendizado procedural governado de melhoria real demonstrada e propoe oito frentes delimitadas com dependencias, ownership, E2E e marcos de utilidade;
+- sincroniza mapa mestre, referencia evolutiva e HANDOFF; sem runtime novo, autenticacao, promocao, mudanca da fila WIP-1 ou commit/push.
+
 ## 2026-08-30
 
 ### MB-217 fecha consistencia fisica e canonica de artefatos

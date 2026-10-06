@@ -20,11 +20,14 @@ SRC_DIRS = [
     ROOT / "services" / "operational-service" / "src",
     ROOT / "services" / "knowledge-service" / "src",
     ROOT / "services" / "observability-service" / "src",
+    ROOT / "services" / "inference-service" / "src",
+    ROOT / "services" / "job-service" / "src",
     ROOT / "engines" / "identity-engine" / "src",
     ROOT / "engines" / "executive-engine" / "src",
     ROOT / "engines" / "cognitive-engine" / "src",
     ROOT / "engines" / "planning-engine" / "src",
     ROOT / "engines" / "synthesis-engine" / "src",
+    ROOT / "engines" / "specialist-engine" / "src",
 ]
 
 for src_dir in SRC_DIRS:

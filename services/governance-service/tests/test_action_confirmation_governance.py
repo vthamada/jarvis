@@ -203,6 +203,66 @@ def test_governance_confirmation_chain_is_exact_and_non_authorizing() -> None:
         assert evidence.core_mutation_allowed is False
 
 
+def test_challenge_receipt_lookup_is_read_only_exact_and_survives_restart(tmp_path) -> None:
+    database_path = tmp_path / "governance.db"
+    service = GovernanceService(database_path)
+    intent = action_intent()
+    challenge = service.issue_action_confirmation_challenge(intent)
+    assert service.load_action_confirmation_context_for_challenge(challenge.challenge_id) is None
+    with pytest.raises(KeyError):
+        service.load_action_confirmation_context_for_challenge("challenge://unknown")
+    receipt = service.confirm_action_challenge(
+        challenge.challenge_id,
+        operator_identity_ref=intent.operator_identity_ref,
+        expected_action_fingerprint=intent.action_fingerprint,
+        confirmed_at=CONFIRMED_AT,
+    )
+    restarted = GovernanceService(database_path)
+    expected = restarted.load_action_confirmation_context(receipt.receipt_id)
+    assert expected.claim is None
+    for _ in range(2):
+        assert restarted.load_action_confirmation_context_for_challenge(challenge.challenge_id) == (
+            expected
+        )
+    # Historical lookup preserves expiration and existing claims, but cannot
+    # renew a receipt or consume a claim. Fixtures are deliberately in the past.
+    claim = claim_receipt(restarted, intent, receipt.receipt_id)
+    context = GovernanceService(database_path).load_action_confirmation_context_for_challenge(
+        challenge.challenge_id
+    )
+    assert context.claim == claim and context.receipt.expires_at == EXPIRES_AT
+    with connect(database_path) as connection:
+        assert (
+            connection.execute("SELECT COUNT(*) FROM human_confirmation_receipts").fetchone()[0]
+            == 1
+        )
+        assert (
+            connection.execute("SELECT COUNT(*) FROM action_confirmation_claims").fetchone()[0] == 1
+        )
+        assert (
+            connection.execute("SELECT COUNT(*) FROM action_confirmation_presentations").fetchone()[
+                0
+            ]
+            == 0
+        )
+
+
+def test_challenge_receipt_lookup_rejects_tampered_persisted_receipt(tmp_path) -> None:
+    database_path = tmp_path / "governance.db"
+    service = GovernanceService(database_path)
+    challenge, receipt = confirmed_receipt(service, action_intent())
+    with connect(database_path) as connection:
+        connection.execute("DROP TRIGGER human_confirmation_receipts_no_update")
+        connection.execute(
+            "UPDATE human_confirmation_receipts SET payload_sha256 = ? WHERE receipt_id = ?",
+            ("0" * 64, receipt.receipt_id),
+        )
+    with pytest.raises(ValueError, match="payload hash mismatch"):
+        GovernanceService(database_path).load_action_confirmation_context_for_challenge(
+            challenge.challenge_id
+        )
+
+
 def test_confirmation_rejects_spoof_drift_expiry_and_replay() -> None:
     service = GovernanceService()
     intent = action_intent()
@@ -271,17 +331,20 @@ def test_confirmation_rejects_spoof_drift_expiry_and_replay() -> None:
             operation_id="operation://mb212/replay",
         )
     assert verify_claim(service, intent, claim, verified_at=EXPIRES_AT) is False
-    assert service.verify_action_confirmation_claim(
-        receipt_id=claim.receipt_id,
-        claim_id=claim.claim_id,
-        operation_id="operation://mb212/substituted",
-        origin_request_id=claim.origin_request_id,
-        expected_action_fingerprint=intent.action_fingerprint,
-        intent_fingerprint=action_intent_fingerprint(intent),
-        claimed_at=claim.claimed_at,
-        verified_at=VERIFIED_AT,
-        operator_identity_ref=claim.operator_identity_ref,
-    ) is False
+    assert (
+        service.verify_action_confirmation_claim(
+            receipt_id=claim.receipt_id,
+            claim_id=claim.claim_id,
+            operation_id="operation://mb212/substituted",
+            origin_request_id=claim.origin_request_id,
+            expected_action_fingerprint=intent.action_fingerprint,
+            intent_fingerprint=action_intent_fingerprint(intent),
+            claimed_at=claim.claimed_at,
+            verified_at=VERIFIED_AT,
+            operator_identity_ref=claim.operator_identity_ref,
+        )
+        is False
+    )
 
 
 def test_confirmation_reverifies_action_payload_before_persistence() -> None:
@@ -314,9 +377,7 @@ def test_prepared_dispatch_roundtrips_with_nested_contracts_after_restart() -> N
         confirmed_at=CONFIRMED_AT,
     )
 
-    context = GovernanceService(database_path).load_action_confirmation_context(
-        receipt.receipt_id
-    )
+    context = GovernanceService(database_path).load_action_confirmation_context(receipt.receipt_id)
     assert context.prepared_dispatch == dispatch
     assert isinstance(
         context.prepared_dispatch.workflow_policy_decision,
@@ -407,9 +468,7 @@ def test_prepared_dispatch_is_append_only_tamper_evident_and_non_authorizing() -
         connection.commit()
 
     with pytest.raises(ValueError, match="stored dispatch_fingerprint mismatch"):
-        GovernanceService(database_path).load_action_confirmation_context(
-            receipt.receipt_id
-        )
+        GovernanceService(database_path).load_action_confirmation_context(receipt.receipt_id)
     with connect(database_path) as connection:
         connection.execute("DROP TRIGGER action_confirmation_prepared_no_update")
         connection.execute(
@@ -424,9 +483,7 @@ def test_prepared_dispatch_is_append_only_tamper_evident_and_non_authorizing() -
         connection.commit()
 
     with pytest.raises(ValueError, match="prepared dispatch payload hash mismatch"):
-        GovernanceService(database_path).load_action_confirmation_context(
-            receipt.receipt_id
-        )
+        GovernanceService(database_path).load_action_confirmation_context(receipt.receipt_id)
 
 
 def test_confirmation_ledger_survives_restart_and_detects_tamper() -> None:

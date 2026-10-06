@@ -26,12 +26,118 @@ Leitura correta:
 
 ## 2. Fotografia atual
 
+MB228 (2026-10-05) done local: review request-scoped -> Knowledge/Governance/
+Synthesis/Memory, fonte unverified isolada da instrucao/roteamento. Final exata
+retida; projecao Planning omite literal nao confiavel. CLI opt-in com readback,
+619 focados/zero skips e gate standard global Windows completo passaram.
+Auditoria sem bloqueador conhecido; sem modelo externo/capability promovida.
+MB229 ready: complemento generativo analysis/core-only naturalmente ALLOW,
+sem elevar autonomia ou substituir sintese/governanca. Sistema completo aberto.
+Runbook: docs/operations/reviewed-source-core.md. MB227 e seguintes historicos.
+
+MB227 (2026-10-05) done local: leitor/CLI HTTPS opt-in de URL e pin publico
+fixados, TLS nativo e framing bounded; dados nao confiaveis sem autoridade.
+699 focados distintos passaram/zero skips com TLS real sintetico; auditoria
+sem bloqueador e gate standard global Windows completo passou.
+Sem campanha externa/Core live/promocao. cryptography somente dev para certs
+sinteticos; runner Linux ajustado/22 testes, sem rebuild/prova Linux nova.
+Runbook: docs/operations/credentialless-https-observation.md. MB228 ready para
+fonte revisada request-scoped -> Knowledge/Governance/Synthesis/Memory; export
+declarado/unverified, sem auto-trust/corpus import ou nova superficie publica.
+Notas MB226 e anteriores abaixo sao historicas, nao status atual da fila.
+
+
+MB226 (2026-10-05): player Web manual600s/32MiB done no recorte local,
+preparacao PCM interrompivel e RIFF strict; sem autoimport/upload/mic/API.
+344 JS/173 Python focados passaram/zero skips; agregadoPython->NodePCM/digest
+exatos e IAB sintetico/RMS0.033/cancelstarting/mobile sem overflow verificados.
+Gate standard global Windows final passou. Qualidade vocal/conta/Corelive nao aprovados.
+MB227 ready: observacao HTTPS credentialless de escopo fechado, nao browser engine.
+Runbook: docs/operations/long-local-wav-web-playback.md. Notas abaixo historicas.
+
+MB225 (2026-10-05): lote integral opt-in done local, sem truncar
+final canonica (ate6000 codepoints/16 partes,32MiB/600s). Uma carga de modelo,
+deadline unico, agregado exclusivo e nenhuma repeticao Core.732 testes focados,
+13 registry/assets e172 JS passaram/zero skips; gate standard global Windows
+final passou, auditoria sem bloqueador. Refusals pos-audit/cleanup cobertas.
+Qualidade vocal/modelo real nao aprovados.
+Runbook: docs/operations/full-final-local-tts-batch.md. MB226 ready: compatibilidade
+Web manual para agregado longo; esfera/RMS ja existe, limite atual120s e gap.
+Notas MB224 e anteriores sao historicas.
+
+Atualizacao MB224 (2026-10-05): TTS local de final persistida integrado,
+consentimento separado, laboratorio existente e fallback textual sem retry.
+Limite600 e qualidade vocal permanecem gaps explicitos.542 focados/zero skips
+e gate standard global Windows passaram; MB224 done local, MB225 ready para
+segmentacao exata. Nenhum modelo/reference humano usado. Runbook:
+docs/operations/persistent-final-local-tts.md.
+
+Atualizacao MB223 (2026-10-05): revisao offline Web/arquivo -> pacote nao-auth
+-> transcript-review opt-in -> Core persistente, memoria/governanca/final
+canonicos assist_only/scope vazio.273 Python/172 JS passaram e browser sintetico/
+mobile verificados; gate standard global Windows passou, MB223 done local.
+Web conversa fixture/mic/qualidade
+vocal/API mutante permanecem gaps. Runbook:
+docs/operations/reviewed-transcript-web-to-core.md.
+
+Atualizacao MB222 (2026-10-05): fluxo OAuth PKCE/callback/JWT, DPAPI Windows,
+refresh por lock entre processos e catalogo por conta implementados opt-in;
+CLI46 standalone, nenhuma autoridade Core. Provas locais reais sinteticas e
+HTTPS/browser injetados,613 focados/6 skips e storage final82/6 aprovados;
+gate standard global Windows passou, MB222 done local; sem login/modelo real ou
+revogacao remota. Proximo MB223 review ASR F07/F06, qualidade vocal separada.
+Runbook: docs/operations/siwc-local-account-and-catalog.md.
+Notas anteriores abaixo sao historicas.
+
+Atualizacao MB221 (2026-10-05): transporte HTTPS/SSE opt-in, revisao ASR exata
+com consumo atomico -> Core e inspecao standalone de jobs existentes readonly.
+472 focados passaram/2 skips symlink Windows e gate standard global Windows
+passou. MB221 done local, MB222 OAuth/catalogo planned. Sem login/modelo real,
+qualidade vocal/hardware ou scheduler promovidos. Memoria/governanca/final
+soberanos. Runbook:
+docs/operations/parallel-wave-transport-transcript-and-job-inspection.md.
+
+Atualizacao MB220 (2026-10-05): console code-review/research-review standalone
+torna revisao offline de patches/textos fornecidos utilizavel; diff/citacoes
+exatos opt-in, stdin bounded e metadata default.310 focados passaram/zero skips,
+28 CLI reexecutados apos ajuste de timeout do teste; gate standard Windows passou,
+MB220 done.
+Nao muda governanca/memoria/sintese, nao promove modelo/API/fetch/patchapply.
+MB218/219 permanecem done no escopo local anterior. Evidencia/exemplos:
+docs/operations/local-review-products.md.
+
 Estado de referencia desta revisao:
+
+Atualizacao 2026-10-05: MB218/219 tecnicamente fechados no escopo local Linux/
+SQLite opt-in. Aceite CLI entre containers/ext4, corpus224 passed/5 skips Windows,
+pausa concorrente por processo, seis falhas storage/reload e gates release Linux/
+standard Windows aprovados. Readiness limitada: nao abre SFC005/API mutante,
+auth multiusuario, executor Windows, PostgreSQL first-effect ou power-loss.
+Evidencia: `docs/operations/mb218-mb219-persistent-readiness-2026-10-05.md`.
+As notas das ondas anteriores abaixo sao historicas e nao o estado da fila atual.
+
+Atualizacao quarta onda 2026-10-02: dois modelos TTS locais geraram amostras
+reais autorizadas (Chatter PT-BR 5.12s, Qwen3-TTS 5.68s), sem upload e com
+audio privado no TEMP fora OneDrive. Nao estao promovidos ao runtime nem
+validados perceptualmente. Final padrao do Core excede limite600 do piloto;
+fala da conversa integral ainda aberta. Web voice fixture, MCP stdio proprio
+e runner empirico estao implementados: controle mesma revisao executou 12
+medicoes Core reais, sem melhoria demonstrada ou autopromocao. Gate standard
+global Windows passou. Runbook: `docs/operations/parallel-wave-local-tts-and-empirical.md`.
+
+Atualizacao incremental 2026-10-02: terceira onda implementa voz fixture com
+revisao e piloto Core real, observacao HTTP loopback delimitada, recovery de
+cache de receipt exato e endurecimento de ancestors Linux. Infra Docker/Linux
+foi explicitamente adiada pelo operador; runner preparado nao e prova fisica.
+MB218/219 seguem abertos, sem promocao de capability, auth ou audio real.
+Detalhes em `docs/operations/parallel-wave-voice-and-local-observation.md`;
+gate standard global Windows passou. A fotografia historica abaixo
+nao e uma nova auditoria integral nem percentual de conclusao do produto.
 
 - data da fotografia: `2026-08-30`
 - ultimo recorte funcional fechado: `v2-physical-canonical-artifact-consistency`
 - ultimo recorte estrutural fechado: `v2-repository-hygiene-and-tools-review-cut`
-- passo funcional em andamento: o historico `MB-062` a `MB-217` permanece fechado; `MB-211` abriu a fila WIP-1 Governed Action Foundation `MB-212` a `MB-219`, e `MB-217` fechou a ligacao recuperavel entre receipts fisicos e lifecycle canonico. `MB-218` e o unico item tecnico `ready`, mas sua execucao aguarda nova solicitacao explicita do operador. API e demais superficies deferred continuam fora.
+- passo funcional atual: o historico `MB-062` a `MB-219` permanece fechado no escopo documentado; `MB-211` abriu Governed Action Foundation `MB-212` a `MB-219`, fechada com console e readiness local em 2026-10-05. Fila esgotada, proxima repriorizacao pelo mapa macro; API mutante e demais superficies deferred nao entram automaticamente.
 
 Leitura executiva:
 
@@ -267,8 +373,8 @@ Leitura executiva:
   fechado e `MB-177` a `MB-189` tambem foram fechados; `MB-190` abriu a fila
   seguinte; `MB-191` a `MB-200` foram fechados; `MB-201` abriu `MB-202` a
   `MB-210`; todo o lote foi fechado; `MB-211` abriu `MB-212` a `MB-219`;
-  `MB-212` a `MB-217` foram fechados e somente `MB-218` esta `ready`, sem
-  execucao antes de nova solicitacao do operador.
+  `MB-212` a `MB-219` foram fechados, com console e readiness local Linux/SQLite
+  em 2026-10-05; nenhuma API mutante ou auth foi promovida por esse fechamento.
 - `MB-161` adicionou anchors de evidencia para memoria semantica:
   `semantic_memory_anchor_refs`, `semantic_memory_evidence_refs`,
   `semantic_memory_use_reason` e `semantic_memory_non_use_reason` atravessam
@@ -675,9 +781,9 @@ Foco:
 - o lote `MB-082` a `MB-086` foi fechado e o lote `MB-087` a `MB-091` tambem ja
   foi absorvido como baseline comparativo controlado para evals expandidas e
   lane da Onda 2;
-- a fila Governed Action Foundation avancou ate `MB-217`; `MB-218` e o unico
-  item `ready`, mas a execucao foi interrompida no limite solicitado pelo
-  operador e depende de uma nova solicitacao.
+- a fila Governed Action Foundation foi fechada ate `MB-219` em 2026-10-05;
+  a continuacao solicitada pelo operador produziu aceite CLI, corpus persistente
+  e gates, com API mutante ainda fora por decisao explicita de fase.
 
 ### Passo 5 - manter frentes fora da fila micro ate mudanca explicita de fase
 
@@ -730,11 +836,10 @@ multissuperficie ja foi fechada no lote `MB-102` a `MB-106`, a repriorizacao
 superficies amplas, voz, web, API publica, memoria temporal rica,
 autoexecucao longa e substrate operacional amplo fora de fase.
 
-No recorte funcional mais recente, `MB-217` tornou coerentes o efeito fisico e
-o lifecycle canonico por uma saga recuperavel, outbox idempotente e evidencia
-content-free. A fila permanece em WIP 1 com `MB-218` apenas como proximo item
-`ready`; este fechamento nao executa console, nova API ou repriorizacao alem
-desse limite.
+No recorte atual, `MB-217` liga efeito e lifecycle por saga/outbox recuperaveis;
+`MB-218` fecha o console e `MB-219` a readiness local Linux/SQLite. A fila foi
+esgotada apos gates e corpus persistente; o proximo recorte deve partir do mapa
+macro de produto diario, sem ativar automaticamente API mutante ou auth.
 
 ---
 

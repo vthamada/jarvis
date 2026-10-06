@@ -1,5 +1,637 @@
 # HANDOFF
 
+## Consolidacao Git autorizada - 2026-10-05
+
+Operador confirmou commit e push de todas as implementacoes pendentes ate
+MB228 na main. Nao havia branch separada: esta entrega consolida o trabalho
+local sobre o baseline MB217, sem nova implementacao de MB229. Gate standard
+global Windows completo e619 testes novos do MB228 passaram na rodada anterior;
+codigo permaneceu inalterado nesta consolidacao. Dados privados, modelos,
+audios e stores/artefatos de runtime ignorados nao integram o snapshot.
+Identidade e resultado do envio devem ser conferidos em git log/status/remoto.
+
+## Atualizacao 2026-10-05 - MB228 concluido localmente
+
+Fonte revisada local request-scoped implementada nos contratos opcionais e
+Knowledge/Orchestrator/Synthesis; tres workers entregam intake, consumer e
+TLS->Core/restart. Texto remoto nao entra em query/snippets/roteamento; evidencia
+permanece caller_declared, unknown e unverified. Governance assist_only nativa
+pode DEFER; citacao literal para revisao nao conclui tarefa nem concede efeito.
+Final citada retida normalmente; projecao de turnos para Planning omite somente
+o bloco literal nao confiavel, sem apagar a memoria canonica.
+CLI opt-in implementada com readback da final/eventos e redacao integral
+inclusive quote crua; auditoria sem bloqueador restante.619 novos testes
+consolidados passaram/zero skips;151 relacionados passaram apos falha do
+primeiro standard26% (input legado sem campo opcional, fallback None corrigido).
+Novo standard global Windows completo passou100% com runtime congelado;
+MB228 done neste recorte local, sem promocao do sistema inteiro.
+MB229 ready apos repriorizacao: complemento generativo no
+subset analysis/core-only naturalmente ALLOW, sem elevar autonomia/efeitos.
+Sem fetch externo/modelo humano/capability promovida/commit/push nesta rodada.
+Runbook: docs/operations/reviewed-source-core.md. Notas seguintes historicas.
+
+## Atualizacao 2026-10-05 - MB227 HTTPS concluido localmente
+
+Adapter credentialless e CLI standalone implementados; URL/IPv4 publico443,
+bindings exatos, TLS nativo sem DNS/proxy/redirect/retry/keylog ambiente.
+Parser CL OU chunked bounded/EOF, observacao UTF8 exata sem autoridade e
+default content-free.699 testes focados distintos passaram/zero skips; TLS real com CA
+sintetica/loopback proprio, nenhum alvo externo ou Core/store humano acionado.
+Tres workers entregaram parser/transporte/corpus; auditoria cruzada sem
+bloqueador e runner Linux dev ajustado (22 testes; sem rebuild/prova Linux nova).
+Gate standard global Windows passou completo; MB227 done no recorte local,
+sem promocao de capability ou aceite externo. CLI endurecida contra texto
+forjado oversized antes de encode; 78 CLI/runner passaram apos ajuste.
+Runbook: docs/operations/credentialless-https-observation.md.
+MB228 ready: fonte revisada request-scoped -> conhecimento/Core/sintese/memoria,
+nao autoimportar corpus nem tratar envelope exportado como prova autenticada.
+Ownership intake, consumer e E2E disjuntos, centros com coordenador.
+MB226 e notas seguintes historicas; objetivo do sistema completo aberto.
+
+## Atualizacao 2026-10-05 - MB226 player Web longo concluido localmente
+
+Tres workers disjuntos: playback/RIFF, parser adversarial e lifecycle/UI tests.
+Coordenador: app/HTML, Pythonaggregate->Node, browser e docs/gates.600s/32MiB,
+PCM16mono/stereo, preparacao em macrotarefas cancelaveis, sem autoplay/upload.
+344 JS e173 Python focados passaram/zero skips;126s/600s reais assembler->JS
+com PCM/digest exatos. IAB selecionou600s sintetico, speaking_local/RMS0.033,
+cancel durante preparacao idle/0; mobile390 sem overflow, override restaurado.
+Gate standard global Windows final passou; MB226 done no recorte local.
+Teste MCP de evidencia recebeu budget10s e contador de consulta;56 MCP passed,
+sem alterar runtime/prazo default. Tentativas/gate no runbook. Nenhum audio/modelo/store humano,
+Core live, conta/API mutante ou commit/push. Naturalidade da voz nao avaliada.
+Runbook: docs/operations/long-local-wav-web-playback.md. MB225 e anteriores
+abaixo sao historicos; objetivo do sistema completo permanece aberto.
+Proximo MB227 ready: leitor HTTPS credentialless de escopo fechado; contratos,
+limites e referencias TLS/HTTP verificados. Nao e browser engine/navegacao autonoma.
+
+## Atualizacao 2026-10-05 - MB225 lote integral concluido localmente
+
+Workers disjuntos entregaram segmentador/assembler, SDK batch, E2E e bateria
+publica do supervisor; coordenador integrou adapter/CLI/docs. `--tts-batch`
+recompoe exatamente final ate6000 codepoints/16 partes600; uma carga de modelo,
+deadline unico e agregado ate32MiB/600s, sem retry Core/playback automatico.
+Core nativo final1097 chega ao lote fixture, memoria/restart preservados.
+732 testes focados/zero skips,13 registry/assets e172 JS passaram. Regressões
+de prazo pos-audit/cleanup, leitura readback e recusa corretiva tambem passaram.
+Gate standard global Windows final passou; MB225 done no recorte local.
+Auditoria cruzada final sem bloqueador restante. Gate iniciado antes das duas
+correcoes de prazo foi interrompido e substituido por nova execucao completa.
+Nenhum modelo/audio/store humano/login ou commit/push acionado. Qualidade
+vocal nao aprovada. Runbook: docs/operations/full-final-local-tts-batch.md.
+Proximo MB226: compatibilidade manual Web para agregado longo; esfera/RMS ja
+existe, player atual120s nao cobre teto600s, nenhum autoimport/upload planejado.
+Notas abaixo sao historicas, nao fila atual.
+
+## Atualizacao 2026-10-05 - MB224 final persistida -> TTS local
+
+Rodada concluida com tres workers: adapter/bindings/audio/tests, opcoes CLI/tests,
+e E2E/auditoria. Coordenador integra transcript-review, localizador temporario,
+docs/gates. Autorizacao vocal separada, paths/config antes IO, memoria/final
+exatas antes laboratorio, nenhuma truncagem ou retry Core.542 testes focados
+passaram/zero skips (93 adapter,154 options,57 E2E e238 regressoes relacionadas).
+Auditoria endureceu consumo atomico, volume local, preflight sem probe de temp
+e eventos locais com readback; falha de audit impede sucesso de audio.
+Gate standard global Windows passou; MB224 done no recorte local. Final nativa
+sintetica observada com1097 caracteres ultrapassa limite600: segmentacao exata
+sera MB225 ready, nao encurtar final para alegar voz completa.
+Runbook: docs/operations/persistent-final-local-tts.md. Nenhum modelo/reference
+humano/mic/playback/store humano/conta externa ou commit/push acionado.
+
+## Atualizacao 2026-10-05 - MB223 transcricao Web -> Core
+
+Tres workers disjuntos entregaram controller/testes JS, CLI/validador e E2E/DOM;
+coordenador integrou painel, app handlers, registry47/asset e factory persistente
+local sem mirror externo. Consentimento/prazo/export unico no browser; pacote
+nao e auth/ticket. Console revalida bytes/schema/hash, revisao nova MB221 e
+Core real assist_only/scope vazio/memoria/governanca/final.273 Python e172 JS
+focados passaram/zero skips; browser picker/export/discard sinteticos/CRLF e
+mobile sem overflow verificados. Gate standard global Windows passou;
+MB223 done no recorte local, auditorias finais sem bloqueador.
+Runbook: docs/operations/reviewed-transcript-web-to-core.md. Sem conta/modelo,
+audio/mic humanos, API mutante, commit/push ou bootstrap em store humano.
+Web conversa continua fixture; apenas handoff manual explicito chega ao Core.
+Proximo MB224: final persistida -> fala local opt-in, qualidade vocal separada.
+
+## Atualizacao 2026-10-05 - MB222 OAuth e catalogo locais
+
+Tres workers disjuntos: PKCE/callback/CLI E2E, JWT real/storage adversarial,
+HTTPS/catalogo/session E2E. Coordenador: contratos, DPAPI/store/lock, composicao
+e CLI standalone chatgpt-account (46 comandos). Cliente publico explicito,
+state/nonce/PKCE, ID token RS256/JWKS por PyJWT opcional, perfis opacos e
+refresh serializado entre processos. Account switch/refresh/disconnect cercam
+providers antigos; nenhuma autoridade Core. Cancel apos commit atomico mantem
+sessao/disco consistentes. Tests RSA/loopback/DPAPI reais com dados sinteticos,
+HTTPS/browser injetados;613 focados passaram/6 skips POSIX/symlink Windows;
+storage final82 passed/6 skips apos ultima regressao e auditoria sem bloqueador.
+Gate standard global Windows passou; MB222 done no recorte local. Sem
+login/request/modelo real, token humano,
+revogacao remota ou API mutante. Runbook/threat model/rollback:
+docs/operations/siwc-local-account-and-catalog.md. Extra siwc PyJWT[crypto]
+instalado somente no venv para prova; sem dependencia central no Core.
+Proximo recorte MB223: revisao ASR em superficie local F07/F06; qualidade
+vocal permanece aceite separado. MB218/219 local e no-go API intactos.
+Sem commit/push ou stores humanos alterados.
+
+## Atualizacao 2026-10-05 - MB221 transporte/revisao/jobs
+
+Tres workers disjuntos: HTTPS/SSE SIWC opt-in sem login/modelo real, bridge ASR
+review exato sem envio automatico e ledger readonly existente. Coordenador:
+job-inspect standalone (45 comandos), Core port com consumo atomico/no replay/
+downgrade e erros/status content-free. Revisao cruzada corrigiu downgrade do
+modo local para fixture; nenhuma autoridade nova. Core continua assist_only,
+scope vazio, memoria/governanca/sintese soberanas.472 focados passed/2 skips
+symlink indisponivel no Windows; gate standard global Windows passou. MB221
+done no escopo local, auditorias finais sem bloqueador. Nao melhora voz nem ativa conta/
+API mutante. Runbook: docs/operations/parallel-wave-transport-transcript-and-job-inspection.md.
+Sem commit/push, request externo/modelo, mic ou stores humanos. MB218/219 done
+local e no_go_for_public_mutating_api intactos.
+Estado historico desta onda: MB222 planned, depois implementado na nota acima;
+superficie de revisao ASR F07/F06. Qualidade vocal exige aceite proprio.
+
+## Atualizacao 2026-10-05 - MB220 produtos locais de revisao
+
+Pos-MB219: utilidade diaria nas frentes existentes code/knowledge, sem API ou
+autoridade nova. Dois workers disjuntos, terceiro auditor read-only. Coordenador
+integrou code-review/research-review standalone, stdinUTF8 bounded/duplicates/
+depth/nonfinite guard, erros fixos e conteudo opt-in JSON escapado. Redacao
+necessaria => conteudo inteiro omitido, nunca quote/diff alterado com hash antigo.
+Assets/completions regenerados;44 comandos. Patch usa reviewer existente sem
+host read/test/apply. Research: spans Unicode/hash exatos por overlap lexical,
+validade declarada unknown/current, stale/future withheld, verdade/conflito nao
+avaliados. Nao e sintese Core, modelo, ingestion ou capability promovida.
+310 testes focados passaram/zero skips; auditoria sem bloqueador; Ruff global ok.
+Gate standard global Windows final passou; MB220 done. Exemplos/limites:
+docs/operations/local-review-products.md. Sem commit/push, rede/contas ou stores
+humanos alterados. MB218/219 done e no_go_for_public_mutating_api intactos.
+Primeiro gate teve timeout30s de subprocess novo; budget de startup do teste
+agora60s (runtime/guards intactos);28 CLI passaram em39.24s; standard repetido
+e aprovado. Quick final verifica somente docs apos sincronizacao; nao e
+release Linux nova, promocao Core ou conclusao do JARVIS inteiro.
+
+## Atualizacao 2026-10-05 - MB218/MB219 fechados no escopo local
+
+Continuidade com dois workers disjuntos: aceite CLI entre containers e auditoria/
+corpus de concorrencia/storage. Coordenador implementou runner opt-in persistent:
+volume Docker novo com nonce/labels, local driver sem Options, ownership revalidado
+por fase, mount fixo sem host bind, image SHA/source archive pinados, rede none.
+Erro/interrupcao preserva volume; cleanup nao confirmado nao vira sucesso.
+
+Seis fases reais em containers distintos/ext4: prepare/inspect/diff opt-in,
+confirm/replay refusal, os._exit86 apos efeito antes do commit, recover com a
+mesma autorizacao, replace/rollback independente e verify de Governance/Memory/
+lineage/outbox/eventos redigidos. Corpus final no volume:224 passed/5 skips
+exclusivos Windows,274.60s. Tmpfs final:224/5 em30.95s. Windows focado:74/13
+skips Linux. Gate release Linux e standard Windows finais passaram; doc quick
+gate segue a sincronizacao. Volumes/containers finais ausentes por inspect exato;
+somente dados sinteticos removidos, imagens/cache preservados. Sem commit/push.
+
+Novas provas: apply/rollback com writer em OUTRO processo SQLite recebe busy/locked
+durante claim/rename; pausa antes => zero claim/efeito. Seis falhas storage:
+ENOSPC no fsync staging e EIO no commit journal/receipt/canonical; reload real,
+preclaim sem efeito, apos efeito recovery historico mesmo pausado sem nova claim.
+Seams pontuais nao provam disco realmente cheio, VFS/fsync C ou perda de energia.
+Auditoria de binding/fallback/first-effect scope nao encontrou bypass concreto.
+
+MB218 done: os criterios de aceite tecnico automatizado do console local foram
+cumpridos; nao exigiam homologacao humana no backlog. MB219 done: corpus,
+runbook/security audit e gates satisfeitos, decisao go_for_bounded_local_linux_sqlite_opt_in
+e no_go_for_public_mutating_api. Nao confundir fechamento com sistema completo,
+autenticacao humana, executor Windows, PostgreSQL first-effect ou deploy geral.
+SFC005/API mutante continua ausente; identidades sao bindings locais/TCB.
+Garantias de power loss/host reboot exigem campanha propria antes de ampliacao.
+
+Evidencia/criterios/limites:
+docs/operations/mb218-mb219-persistent-readiness-2026-10-05.md.
+Fila MB212-219 esgotada; proxima repriorizacao deve focar produto diario pelas
+frentes mapeadas, sem abrir SFC005 automaticamente nem promover fixtures.
+
+## Atualizacao 2026-10-05 - Docker recuperado e prova fisica Linux
+
+Operador retomou explicitamente a prova Docker/Linux, confirmou que o reset
+acidental pela interface atingiu somente ambiente de testes e autorizou update.
+Docker Desktop atualizado via WinGet/instalador oficial com hash verificado:
+4.36.0 -> 4.93.0; Engine 29.8.1 linux/amd64. Sem novo reset, reboot do Windows,
+limpeza manual de sockets, contas ou mounts do host. O backend Linux subiu.
+
+Primeira prova encontrou falha real: rollback antes de sua reserva fisica
+confundia journal da mutacao fonte com journal de rollback. Kernel agora
+distingue somente receipt/cleaned sem metadata de rollback, confere vinculo
+exato e receipt Governance, e exige pedido original; console revalida missao
+antes de retry, sem nova confirmacao nem autoridade historica inventada.
+Regressoes reais: restart/retry/idempotencia, missao pausada e plano estrangeiro.
+Runner physical agora mostra contagens e motivos dos skips.
+
+67 testes Windows focados passaram antes da ultima ampliacao do corpus;
+prova Docker final: 202 passed/5 skipped em 28.77s na imagem dos gates,
+todos os skips exclusivos de Windows; primeira prova aprovada levou 18.24s.
+Python 3.11.17, tmpfs temporario/rede none/read-only/caps none, fontes selecionadas.
+Primeiro gate Linux expôs sintaxe multiline f-string Python3.12 em tres tools,
+incompativel com minimo3.11 declarado. Expressoes corrigidas sem mudar saida;
+33 testes report/grammar e20 testes runner Windows passaram. Gate intermediario
+tambem detectou linha longa, corrigida. Gates standard e release Linux passaram.
+Primeira suite global completa expôs11 falhas: interpreter symlink na imagem,
+Git ausente, dois imports psycopg antes da guarda e duas bordas de manifest.
+Runner resolve apenas seu interpreter confiado; guardas voz/modelos/sources
+nao relaxadas. Git ausente registra unknown; PG sem backend continua skip.
+Fixture traversal agora cria nested para POSIX; manifest rele o mesmo descritor
+bounded e compara bytes, mantendo metadata/hash/path e sem alegar snapshot
+contra adversario same-UID. 64 testes Windows focados passaram/6 skips PG.
+Release chama active-cut como modulo, sem depender de install editable; regressao
+CLI em subprocess sem site/PYTHONPATH. Baseline development e smokes SQLite
+passaram no container, sem PostgreSQL/Node controlados. Active-cut: 8 cenarios,
+7/7 route matches e 7/7 workflow matches; nenhuma promocao atual inferida disso.
+Teste de redacao MCP Windows excedeu 3s sob carga, recusando corretamente;
+reteste isolado passou. Esse teste agora usa timeout 10s explicito, sem mudar
+runtime/default nem testes de expiracao/cancelamento. 63 testes focados passaram.
+Gate standard Windows final passou: encoding, guardrails, Ruff e suite completa.
+Cleanup dos containers temporarios aprovados confirmado por nomes exatos;
+imagem/cache de desenvolvimento preservados. Nenhum commit/push nesta rodada.
+MB218 in_progress/MB219 blocked e API SFC005 ausente preservados: aceite
+operacional, auditoria/readiness e campanha em storage persistente sao distintos.
+Evidencia/reproducao: docs/operations/linux-physical-validation-2026-10-05.md.
+
+## Atualizacao 2026-10-04 - intent readonly e inferencia extrativa integrada
+
+Continuidade com tres workers/coordenador. Executive usa familias de palavras e
+negacao local: draft textual nao e execucao, planning readonly nao e operacao.
+Positivo misto, quotes/sources, negacao dupla, controles e oversized pedem
+clarification; markers highrisk continuam conservadores. Planning legado sem
+restricao e preservado; diretiva nao concede grant nem autorizacao.
+
+Synthesis opt-in ModelInferencePort complementar aceita somente refs/offsets/quotes
+exatos da entrada atual. Default off; composicao confiada vincula provider e
+evidence mode, somente fixture/injected_transport, sem HTTP/conta/modelo real.
+Final nativo nunca substituido; quotes verificadas rotuladas untrusted/escapadas,
+nao fatos. Guarda: exatamente allow, native coherent, analysis, sem operacao,
+adapter, clarification, confirmacao pendente ou objetivo contido. Snapshots de
+request contra tamper; fallback exato se invalid/late/failed. Campos observaveis
+fixed status/code/mode/count; Memory persiste o mesmo final. Common native e
+LangGraph; scheduler opcional e fixture, nao prova LangGraph controlado.
+Deadline exige port cooperativo; nao mata Python arbitrario.
+
+259 testes focados passaram (100 intent/Core +27 Synthesis +49 adversarial
++8 flow +75 harness). Core TEMP positivo: bounded_core_action explicito na
+fixture, allow e zero Operational dispatch; assist_only/default off fazem zero
+infer calls. Duas falhas de review fechadas: markup ativo e mutation de
+request binding/output budget. Corpus/grader intactos: antes5 finais/121 eventos,
+depois5 finais/136 eventos;3 needs_decision permanecem, agora1 allow_with_conditions
+e4 defer nos5 turnos. Nenhum produto util ou modelo real promovido.
+Gate standard global final Windows passou: mojibake, guardrails, ruff e suite
+completa.3344 testes coletados, nao3344 passes; skips de plataforma/optional
+backend permanecem sem prova. Quick gate final verifica docs sincronizadas.
+Runbook: docs/operations/parallel-wave-intent-and-extractive-synthesis.md.
+MB218 in_progress/MB219 blocked/Linux deferred/SFC005 API ausente preservados.
+Sem commit/push, rede, contas, arquivos humanos ou mudanca Web/voz.
+
+## Atualizacao 2026-10-04 - recall lexical, patch review e fronteira de sujeito
+
+Continuidade autorizada com tres workers disjuntos. Seletor lexical readonly
+de StoredTurn com scope/frescor/budgets/correcoes explicitas e evidencia
+untrusted; comando standalone memory-recall inspeciona SQLite existente
+quiescente com snapshot/whole-history subject check, conteudo opt-in e saida
+redigida. Nenhum Core/default DB criado pelo comando. PatchReviewer em memoria
+gera diff/preimages/hashes revisaveis e verifica stale/tamper; nao aplica patch,
+executa host code ou concede autoridade. Sem dependencia central nova.
+
+Auditoria encontrou exposicao cruzada session_id: corrigida verificacao
+metadata-only de todo historico antes de request claim/resolucao de pause,
+recover e specialist shared memory. Sessao/missao estrangeira, mista, legacy
+unbound com sujeito explicito ou orfa e recusada. Referencias de missoes em
+turnos/continuity/checkpoint tambem verificadas antes de replay; related mission
+nao herda owner por session_origin. Origem de specialist previous context
+revalidada antes do reuso: exact user_id da row nao sobrevive a contaminacao
+posterior da sessao/refs de missao. Historico proprio continua elegivel,
+reutilizacao concreta ainda obedece lifecycle nativo. Entradas opcionais
+LangGraph cobertas; fixture antiga agora tem turno canonico de origem.
+Nao e autenticacao nem reserva atomica de first-use; user_id=None permanece
+legacy/unbound. PG recebeu inicializacao faltante de pause resolutions existente;
+paridade SQL estrutural nao substitui banco PostgreSQL real.
+
+Auditoria confirmou por que operator_tasks continuam needs_decision:
+classificacao lexical confunde negacoes/draft com execucao; planejamento pede
+clarificacao e Governance preserva isso. Sintese nativa ainda estrutural, nao
+produto pedido. Nao enfraquecer governance/grader; proximo recorte util deve
+melhorar interpretacao e integrar candidato de inferencia pela sintese soberana.
+177 testes focados passaram/1 skip Windows;34 regressões centrais passaram.
+Gate standard global final Windows passou com codigo congelado apos as ultimas
+correcoes: mojibake, guardrails, ruff e suite completa.3192 testes coletados no
+estado final; isso nao significa3192 passes, ha skips opcionais/plataforma.
+Quick gate documental final confirma a sincronizacao sem nova mudanca de runtime.
+Runbook: docs/operations/parallel-wave-recall-and-patch-review.md.
+MB218 in_progress/MB219 blocked, Linux deferred/API SFC005 ausente mantidos.
+Sem commit/push, rede, contas, arquivos humanos ou promocao.
+
+## Atualizacao 2026-10-04 - MB218/219 e avaliacao de utilidade paralela
+
+Operador pediu implementacoes pendentes MB218/219 e pacotes independentes.
+Tres workers disjuntos entregaram hardening console, corpus/runbook seguranca
+e operator tasks; coordenador integrou guarda Memory/Operational/kernel.
+Dispatch marker nao basta para novo efeito: scope canonico revalidado sob
+BEGIN IMMEDIATE SQLite antes da claim, mantido ate efeito/receipt e liberado
+antes do callback Memory. Recovery de claim historica exata continua possivel
+apos pausa; modo derivado do kernel, nao UI. Provider obrigatorio/failclosed;
+PostgreSQL sem scope nao recebe fallback. Sem dependencia central nova.
+
+Console: desired-file descriptor/regular/single-link/bounded, staging atomico
+inclusive primeiro save/no-overwrite e receipt cache exato. Corpus reproduziu
+dez allows indevidos antes da guarda; agora nega drift de missao/workitem.
+WP-QUALITY-01: tres produtos versionados/scorer independente/redaction.
+Piloto Core real isolado: 5 finais/121 eventos, tres needs_decision; utilidade
+e recall semantico ainda nao demonstrados. Nao alterar grader para esconder isso.
+
+Validacao integrada inicial:203passed/29skipped, mais21fixtures de modo kernel
+passaram separadamente. Piloto Core reexecutado pelo integrador confirmou
+os cinco finais/121eventos e os tres needs_decision. Primeiro gate standard
+falhou na race preexistente de leituras por id/request de decision attribution;
+releitura restrita de counterpart ausente/exato corrige idempotencia sem aceitar
+conflitos. Doze testes da area passaram, incluindo seis regressões
+deterministicas reais SQLite. Gate standard global repetido passou (mojibake,
+guardrails, ruff, suite completa). Gate release global Windows passou:
+suite completa, axis artifacts, release signal, active cut, closure historico
+e validation development (nova suite completa + smokes SQLite TEMP).
+Runner physical Linux agora inclui suites MB219 e wiring/receipt proof;
+19 testes locais do runner passaram, sem execucao Docker. 3014 testes foram
+coletados no estado final; coleta nao equivale a 3014 passes, ha skips de
+plataforma/permissoes/optional backend. Release e baseline development sao
+evidencia local, nao prova fisica Linux nem promocao desta fronteira.
+Runbook: docs/operations/parallel-wave-physical-boundary-and-task-evals.md.
+MB218 in_progress/MB219 blocked, Linux/Docker deferred e API SFC-005 ausente.
+Sem commit/push, contas, rede, arquivo humano ou mudanca em Web/voz.
+
+## Atualizacao 2026-10-04 - redesign da experiencia Web
+
+Pedido do operador: frontend ainda precisa melhorar bastante. HTML/CSS
+reorganizados com esfera integrada/contorno mais legivel, conversa central,
+campo de pedido prioritario, contexto secundario e laboratorio local recolhido.
+Historico de exemplo nativo inicialmente recolhido; pedido simulado o abre e
+compacta hero. Exemplos so preenchem/focam, sem envio; nav acompanha hash e
+abre painel de voz. Aviso de demonstracao/sem Core e controles seguros mantidos.
+Sem dependencia nova, Core/live integration, commit/push ou retomada Linux.
+README operacional e bateria DOM sincronizados; verificacao desta rodada
+registrada em apps/jarvis_web/tests/design-browser-verification.md.
+52 JS/39 Python Web passaram; gate standard global Windows passou (mojibake,
+guardrails documentais, ruff, pytest). Smoke IAB desktop1440/tablet900/mobile390
+sem overflow; exemplos sem submit, conversa/reset, dialog/foco, voz simulada,
+WAV sintetico level0.015/stop/remove e picker JSON offline confirmados.
+Screenshots em Codex visualizations/redesign-20261004, fora Git/OneDrive;
+viewport temporario restaurado. Previa propria65238 mantida para inspecao.
+Aceite estetico do operador ainda nao aferido. MB218/219 preservados.
+
+## Atualizacao 2026-10-04 - identidade visual com esfera reativa
+
+Operador forneceu imagem e propôs esfera de partículas que vibra durante fala.
+Implementada no cockpit Web: Canvas2D ciano/translucido, contorno fluido/core,
+repouso sutil, envelope de amplitude, pause/reduced-motion/visibility e mobile.
+Sem dependência central nova. Fala fixture continua simulada/rotulada; ensaio
+separado WAV PCM16 escolhido explicitamente toca apenas ao clicar, RMS real,
+sem mic/upload/URLs/persistência/arquivo do dublador. Não é Core->TTS live.
+
+Smoke IAB real: WAV sintético local speaking_local/level0.011, interrupção idle/0;
+picker TEMP inicial recusou por acesso, cópia de fixture acessível passou.
+Mobile390x844 sem overflow; 52 JS e36 Python Web passaram. Gate standard global
+Windows passou; README operacional apps/jarvis_web/README.md sincronizado.
+Prévia usa servidor próprio loopback/porta efêmera, sem reiniciar8765; servidor
+e tab de entrega podem ser encerrados sem alterar runtime. Sem commit/push,
+capability promovida ou retomada Docker/Linux. MB218/219 preservados.
+
+## Atualizacao 2026-10-03 - referencias C e composicao Core paralela
+
+Operador pediu aproveitar melhor o material e continuar frentes multiagentes.
+Selecao limitada/read-only por energia20ms implementada; tres referencias perto
+de C com bordas quietas, sem afirmar frase completa/voz limpa. Small e Turbo
+publicos pinned/hash verificado rodaram offline em cada janela exata; discordaram
+nas tres, nenhum rascunho confirmado. Qwen Base0.6B/seed42 gerou tres ICL draft
+(8.72/9.68/10s) e controle C2 x-vector-only10.4s, sequenciais CUDA/24kHz monoPCM16.
+Original498.25s manteve hash; copias Codex visualizations conferidas fora Git/
+OneDrive. Sem upload/playback automatico, nova escuta ou qualidade promovida.
+
+Tres workers entregaram pilotos isolados Core real/SQLite TEMP: memoria entre
+sessoes (4turnos/115eventos, tracking2 do mesmo sujeito/0 distinto, recall
+semantico util NAO demonstrado); jobs com fencing/max_attempts1/sem replay
+(30eventos, governance defer_for_validation/needs_decision persistido/reaberto);
+MCP readonly proprio -> metadados nao confiaveis -> final canonico
+(3eventosMCP/29Core, defer_for_validation). MCP ainda nao e chamada governada
+pelo Core; bindings locais nao sao auth. Pausa/cancel nao desfazem memoria
+ja persistida. Todos opt-in, nenhuma capability promovida ou efeito externo.
+
+Bateria conjunta345 Python passed/1 skip Windows +42 JS passed; gate standard
+global Windows passou apos estabilizacao dos workers. Runbook:
+docs/operations/parallel-wave-refined-voice-and-core-pilots.md.
+MB218 in_progress/MB219 blocked, Docker/Linux deferred; porta8765/bancos humanos
+preservados. Sem commit/push. Proximo resultado de produto: inferencia/conversa
+util subordinada ao Core e recall util, nao mais um piloto confundido com fechamento.
+
+## Atualizacao 2026-10-02 - comparacao de referencias vocais
+
+Operador pediu escolha de trechos e testes. Comparacao local concluida com
+3 referencias de 10s (44–54, 220–230, 360–370), mesma frase/seed42 nos dois
+motores, sequenciais CUDA. Selecao exploratoria baseada no rascunho, nao escuta
+ou prova de fala limpa. Chatter conversational preserva watermark.
+Perfil qwen_icl_draft explicitamente separado do ICL confirmado: ref_text ASR
+nao revisado, transcript_confirmed=False, metadata review_required=True e
+reference_transcript_reviewed=False. qwen_icl segue exigindo texto confirmado;
+nenhuma capacidade promovida. Janela ICL exata/read-only, texto em stdin privado.
+Seis inferencias reais concluiram em CUDA, mono PCM16/24kHz. Duracoes Chatter
+A/B/C=13.16/9.76/10.44s; Qwen A/B/C=8.00/8.88/8.32s. Isso nao mede fidelidade
+ou integridade da fala por escuta. Qualidade ainda depende do operador.
+Artefatos originais no TEMP, copias de entrega no diretorio Codex visualizations
+fora de Git/OneDrive, com hashes conferidos. Manifest privado preserva parametros.
+149 testes focados passaram/1 skip Windows; gate standard global Windows passou.
+Sem commit/push, upload ou retomada Linux.
+
+## Atualizacao 2026-10-02 - qualidade vocal e transcricao local
+
+Operador rejeitou primeiras amostras como roboticas e pediu transcricao do WAV
+original. Perfis experimentais implementados: janela explicita/seed, Chatter
+conversational e Qwen ICL com texto revisado/confirmacao obrigatoria. Nova amostra
+Chatter real CUDA: 5.32s, PCM16 mono/24kHz, ainda sem aprovacao perceptual.
+Nao tratar como problema resolvido. Qwen ICL ainda nao executado com referencia
+confirmada; rascunho ASR nunca equivale a texto exato autorizado.
+
+Whisper-small publico pinned/hash verificado em ambiente separado; transcritor
+offline escreve TXT/JSON privado no TEMP, original somente leitura, sem upload
+ou identificacao de falantes. Primeiro passe de 498.25s concluiu em 200.33s,
+mas apresentou repeticoes artificiais/timestamps deficientes na conferencia.
+Reexecucao em 25 janelas independentes de ate20s concluiu em 84.2s, cobrindo
+0–498.25s; repetições longas do primeiro passe ausentes, mas palavras/frases
+ainda incorretas. Rascunho nao apto a ICL sem revisao; marcas aproximadas de
+janelas, nao alinhamento fonetico. Validacao focada: 140 passed/1 skip Windows;
+gate standard global desta rodada passou no Windows. Rascunho entregue tambem
+como arquivo de visualizacao fora do repositorio/OneDrive para acesso do operador.
+Nenhuma promocao, commit/push ou retomada de Docker/Linux.
+
+## Atualizacao 2026-10-02 - quarta onda local validada
+
+Operador autorizou Chatterbox PT-BR e Qwen3-TTS local com seu WAV e continuidade
+multiagente. Pesos publicos fixados/hash verificados, SDKs em ambientes separados
+ignorados. Referencias/amostras privadas no TEMP fora do workspace OneDrive;
+nenhum upload, hardware de audio aberto ou capability promovida. Chatter PT-BR gerou
+5.12s e Qwen3-TTS 5.68s reais, sequenciais CUDA, mono PCM16/24kHz; hashes
+relidos. Fidelidade ainda depende de escuta, nao atestada. Final padrao Core
+excede limite600 do piloto; composicao recusa sem truncar, integracao fisica
+de conversa/fala ainda aberta.
+
+Web inclui consentimento/revisao exata/final/playback fixture. MCP stdio chama
+servidor readonly proprio real, sem auth/grant/servidores pessoais. Runner empirico
+executa baseline/candidato; piloto Core real fez 12/12 medicoes, mesma revisao,
+6 turnos canonicos/155 eventos por braco, score exato 0/6, nenhum dispatch.
+Isso prova pipeline, nao ganho de inteligencia. Runbook:
+`docs/operations/parallel-wave-local-tts-and-empirical.md`.
+Gate standard global final passou no Windows; 241 testes Python focados passaram
+com 1 skip de symlink Windows, e 42 JS passaram. Primeira coleta concorrente
+falhou no mock de stdout ainda em alteracao; gate repetido apos estabilizacao
+passou integralmente. Piloto Core->TTS valida somente final canonico; fluxo
+positivo dos testes usa sintese/worker explicitamente fixture e default real
+recusa final3227, sem truncamento. MB218/219 abertos; Docker/Linux deferred.
+Sem commit/push; servidor humano 8765 preservado.
+
+## Atualizacao 2026-10-02 - terceira onda, Linux adiado pelo operador
+
+Docker nao iniciou: socket userAnalyticsOtlpHttp.sock inacessivel (erro 1920).
+Tentativas pontuais falharam sem remover socket/dados; sem reset/reboot/imagens.
+Operador pediu adiar infraestrutura e continuar. Nao retomar Docker/WSL sem
+nova solicitacao. MB218 continua in_progress e MB219 blocked; sem prova Linux.
+
+Multiagentes implementaram voz fixture com consentimento/revisao/exato submit,
+final/TTS simulado e leitura HTTP real de fixture loopback delimitada, sem
+cliques/browser engine. Coordenador compoe voz revisada com Core real,
+governanca, memoria temporaria/sintese final, assist_only e nenhum dispatch.
+Sem hardware, autenticacao, provider real ou clonagem vocal. Porta 8765 e
+bancos humanos preservados. Cancelamento nao desfaz request ja entregue ao Core.
+
+Recovery de confirmacao agora reconcilia cache somente de receipt exato ja
+persistido pela Governance; nao cria/renova autorizacao. Ancestors Linux do
+runtime endurecidos; corrida central precheck/claim/pausa permanece MB219.
+Runner Linux source-only preparado com testes locais, sem container executado;
+README limita privacidade de arquivos visiveis e cleanup best-effort.
+
+Runbook: `docs/operations/parallel-wave-voice-and-local-observation.md`.
+Gate standard global passou no Windows. Bateria focada: 263 Python passed e
+11 skipped (dez Linux, um symlink OS); 25 JS passaram. Piloto de voz/Core CLI
+completou com sintese real e speech sintetico, sem dispatch. Sem release/
+promocao ou commit/push. Proximos slices independentes:
+revisao de voz na UI, MCP local readonly, evolucao empirica isolada. API/auth e
+efeitos seguem fronteira governada; Linux deferred por decisao do operador.
+
+## Atualizacao 2026-10-02 - segunda onda implementada, gate standard passou
+
+Multiagentes entregaram console fisico MB218, Web com importacao readonly de
+snapshot real e job-service duravel fixture. Coordenador integrou CLI/registry,
+composicao opt-in com mesmas autoridades MB217, contrato compartilhado e
+exportador readonly pelo Core. Referencia/completions CLI regeneradas; pytest
+global passa a incluir testes do console.
+
+Revisao cruzada corrigiu symlink/hardlink/reparse de ledgers e leitura WAL que
+criava sidecars. Exportacao aceita somente DB quiescente DELETE-mode, sem
+migracao da origem; arquivo offline nunca autentica/autoriza. Requests Linux
+guardam input sensivel owned 0600, nao preflight/diff efemero. Windows CLI so
+prepare, metadata runtime opt-in e request ephemeral; nenhuma execucao fisica.
+
+MB218 esta in_progress; MB219 bloqueado. WSL docker-desktop sem Python e daemon
+Docker parado impedem prova Linux nesta maquina sem nova preparacao externa.
+Nao simular plataforma ou marcar done por skips. Ainda falta gate release para
+fechar composicao fisica; nenhuma capability foi promovida. Sem OAuth/API,
+agendamento real, memoria humana multiusuario duravel ou nova prova autoevolutiva.
+
+Recovery sem journal revalida escopo atual no console antes de primeiro efeito;
+recovery historico permanece permitido apos pausa. Revisao registrou em MB219
+distincao central entre claim novo e reconciliacao, inclusive corrida pausa entre
+precheck e claim: nao considerar esse risco resolvido no kernel pela guarda local.
+
+Runbook: `docs/operations/parallel-wave-core-snapshots-and-jobs.md`. Testes locais
+e E2E exportador -> controller passaram; gate standard global final passou.
+Bateria focada: 154 Python passed, 8 skipped (sete dependem Linux e um symlink
+requer privilegio OS); 25 JS passaram. Browser confirmou DOM inicial; file
+chooser nao completou, portanto nao ha prova de importacao visual nesta rodada.
+O servidor Web ja aberto precisa reinicio manual para carregar novo allowlist;
+nao foi encerrado. Bases humanas antigas e claim experimental preservadas.
+Sem commit/push. Historico abaixo descreve ondas e estados anteriores.
+
+## Atualizacao 2026-10-02 - primeira onda implementada com multiagentes
+
+Tres implementadores entregaram inferencia offline, cockpit Web fixture e code
+AST restrito. Coordenador integrou contrato bounded e piloto proposta -> patch ->
+testes -> metadados -> Core real (governanca, memoria, sintese), com runtime
+temporario e assist_only. Nenhum dispatch ou patch fisico; sem novos deps.
+
+Revisao cruzada corrigiu falhas de consistencia do parser e injeção de console
+de producao no piloto. Memory/Observability agora fecham conexoes SQLite apos
+commit/rollback, evitando handles presos na limpeza Windows. Schema local legado
+nao foi migrado. Gate standard global passou no Windows; 240 testes Python da
+nova onda e 13 JS passaram, mais browser desktop/mobile. Skips Windows nao
+comprovam backend Linux; nao houve gate release ou promocao runtime.
+
+Probe inicial pelo builder padrao falhou no schema legado e deixou uma claim
+experimental na tabela runtime_request_claims (sessao isolated-code-pilot),
+sem turno final. Consulta readonly confirmou o registro; nao foi removido.
+Piloto final usa exclusivamente seu runtime temporario, com cleanup verificado.
+
+Comandos, testes, limites e rollback:
+`docs/operations/parallel-wave-local-pilot.md`. MB218/219 continuam abertos;
+nenhuma capability promovida. OAuth/HTTP/API real, sandbox de SO, voz, demais
+frentes e autoevolucao empirica ainda precisam implementacao. Sem commit/push.
+
+Proximo recorte de produto: fronteira readonly cliente/Core autenticada e provider com
+consentimento; preservar fixture ate existir evidencia real. Historico abaixo
+descreve planejamento anterior, nao estado atual dos novos pacotes.
+
+## Atualizacao 2026-10-02 - mapa executavel multiagente
+
+O pedido seguinte do operador desdobrou as oito macrofrentes da auditoria em
+13 frentes de produto e tres transversais, detalhadas em
+`docs/implementation/parallel-implementation-map.md`. Cada frente tem primeiro
+WP, inputs/outputs, ownership real/proposto, dependencias, testes, criterio de
+aceite e proximo slice. O mapa cobre Web, voz, mobile, browser/computer, code,
+integracoes e MCP, alem de Core/API/inferencia, memoria, pesquisa, jobs e evolucao.
+
+Desenvolvimento isolado e integracao agora sao distinguidos no planejamento:
+ate tres workers + coordenador por onda, WIP integrado 1 e fila micro unica.
+Contratos reais estao em `shared/contracts/__init__.py`; composicao/servicos
+centrais pertencem ao coordenador. Novos caminhos do mapa ainda nao existem.
+
+Voz inclui entrada e saida; identidade Eduardo Borgerth e requisito desejado
+para etapa futura autorizada/licenciada, com pipeline provisoria independente.
+Nao houve login, contato, clonagem, deploy ou pacote runtime iniciado.
+MB217 continua baseline; MB218 unico ready e MB219 dependente, ambos abertos.
+Proxima execucao deve fatiar o lote inicial no backlog e despachar implementadores,
+nao repetir a auditoria nem gerar outro mapa equivalente.
+
+Fechamento documental: tres revisoes independentes aprovaram o mapa apos
+correcao da leitura Linux/WSL; contagem local confirma 13 frentes, tres
+transversais e 16 fichas iniciais. Gate standard completo passou via Python
+da `.venv`, assim como diff check e guardrails. Skips Windows nao comprovam
+backend Linux nesta rodada; nao houve gate release ou promocao runtime.
+
+## Atualizacao 2026-10-02 - auditoria de produto e programa paralelo
+
+Auditoria read-only por tres agentes e pesquisa primaria de Hermes/OpenAI
+registradas em
+`docs/implementation/2026-10-02-gap-map-and-parallel-program.md`.
+O relatorio cobre todos os 37 estados limitados do mapa, lacunas adicionais
+de inferencia/composicao/plataforma e oito frentes com ownership, dependencias,
+testes e marcos de utilidade. Baseline implementado continua `MB-217`.
+
+SIWC oficial via Responses e o caminho proposto de OAuth, condicionado a
+registro/consentimento/elegibilidade; nao copiar client ID ou credenciais
+Codex/Hermes. A preview rejeita `multi_agent` e `max_output_tokens`; a API
+geral e o fluxo de plano nao sao intercambiaveis. Dots entra como referencia
+para responsabilidades, delegacao e contexto, nao como cerebro instalado.
+
+Autoevolucao atual possui registros, reflexao template, review, guidance e
+lifecycle verificavel. Avaliacoes offline/preproduzidas nao demonstram ganho
+real; o proximo consumer deve executar baseline/candidato em tarefas reais.
+Documentacao do mapa e da referencia evolutiva foi sincronizada sem mudar
+status de capabilities ou fila. `MB-218` continua unico `ready`; nao iniciado.
+Nenhum runtime, login, permissao ou superficie deferred foi promovido nesta
+rodada. A implementacao paralela permanece proposta, nao trabalho executado.
+
+Validacao documental: `git diff --check`, mojibake/BOM e document guardrails
+passaram. Gate standard completo passou via `.venv/Scripts/python.exe` no
+Windows (o alias global `python` nao estava executavel). Os skips desta
+plataforma nao constituem nova prova fisica Linux; nao houve gate release ou
+inferencia autenticada nesta rodada de planejamento.
+
 ## Atualizacao 2026-08-30 - MB-217
 
 `MB-217` fechou a consistencia entre efeito fisico e lifecycle canonico de
@@ -39,9 +671,8 @@ saga ja despachada. O runbook
 `docs/operations/physical-canonical-artifact-sagas.md` registra recovery,
 outbox, compensacao, rollback, intervencao manual, TCB e redaction.
 
-`MB-218` e o unico item tecnico `ready` para console governado e observabilidade,
-mas nao foi iniciado: a execucao aguarda a proxima solicitacao explicita do
-operador. `MB-219`, `SFC-005` e demais superficies permanecem bloqueados ou
+Estado anterior: MB218 estava pronto e aguardava solicitacao. Na rodada atual,
+esta `in_progress`, sem fechamento Linux. `MB-219`, `SFC-005` e demais superficies permanecem bloqueados ou
 deferred.
 
 ## Atualizacao 2026-08-30 - MB-216

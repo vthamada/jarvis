@@ -149,6 +149,18 @@ def test_status_sync_accepts_explicitly_exhausted_queue(tmp_path: Path) -> None:
     assert drift == []
 
 
+def test_active_work_is_synchronized_not_exhausted(tmp_path: Path) -> None:
+    backlog = BACKLOG_READY.replace("`ready`", "`in_progress`")
+    _write_repository_fixture(tmp_path, backlog=backlog)
+    active_map = MASTER_MAP.replace("Status: ready", "Status: in_progress")
+    assert assess_status_sync(
+        root=tmp_path, backlog_text=backlog, master_map_text=active_map,
+    ) == ("synchronized", None, [])
+    assert assess_status_sync(
+        root=tmp_path, backlog_text=backlog, master_map_text=MASTER_MAP,
+    ) == ("status_drift", None, ["master_map_in_progress_mismatch:MB-174"])
+
+
 def test_build_repository_readiness_report_uses_explicit_gate_evidence(
     tmp_path: Path,
 ) -> None:

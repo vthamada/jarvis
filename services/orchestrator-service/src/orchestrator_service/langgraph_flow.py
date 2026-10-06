@@ -19,6 +19,7 @@ class OrchestratorFlowState(TypedDict, total=False):
     directive: object
     memory_recovery_result: object
     knowledge_result: object | None
+    reviewed_knowledge: object | None
     knowledge_evidence_governance: object | None
     cognitive_snapshot: object
     deliberative_plan: object
@@ -62,7 +63,13 @@ class LangGraphFlowRunner:
     def __init__(self, orchestrator: OrchestratorService) -> None:
         self.orchestrator = orchestrator
 
-    def run(self, contract: InputContract) -> OrchestratorResponse:
+    def run(
+        self, contract: InputContract, *, reviewed_knowledge=None, knowledge_review=None,
+    ) -> OrchestratorResponse:
+        contract, reviewed_knowledge = self.orchestrator._prepare_reviewed_knowledge(
+            contract, reviewed_knowledge, knowledge_review,
+        )
+        self.orchestrator.memory_service.validate_input_subject_scope(contract)
         state_graph, start_token, end_token = _load_langgraph()
         self.orchestrator._ensure_request_has_not_been_processed(contract)
         graph = state_graph(OrchestratorFlowState)
@@ -95,6 +102,7 @@ class LangGraphFlowRunner:
         final_state = runner.invoke(
             {
                 "contract": contract,
+                "reviewed_knowledge": reviewed_knowledge,
                 "events": [
                     self.orchestrator.make_event(
                         "input_received",
@@ -180,6 +188,9 @@ class LangGraphFlowRunner:
                 intent=directive.intent,
                 query=contract.content,
                 as_of=contract.timestamp,
+                **({"reviewed_knowledge": state["reviewed_knowledge"],
+                    "reviewed_as_of": self.orchestrator.now()}
+                   if state.get("reviewed_knowledge") is not None else {}),
             )
             knowledge_evidence_governance = (
                 self.orchestrator.governance_service.assess_knowledge_evidence(
@@ -867,6 +878,7 @@ class LangGraphFlowRunner:
         contract = state["contract"]
         directive = state["directive"]
         synthesis_result = self.orchestrator._compose_response(
+            contract=contract,
             directive=directive,
             governance_decision=state["governance_decision"],
             memory_recovery_result=state["memory_recovery_result"],
@@ -887,6 +899,7 @@ class LangGraphFlowRunner:
                 contract,
                 {
                     "intent": directive.intent,
+                    **self.orchestrator._extractive_response_payload(synthesis_result),
                     **self.orchestrator._knowledge_evidence_event_payload(
                         state.get("knowledge_result"),
                         state.get("knowledge_evidence_governance"),
@@ -1118,6 +1131,7 @@ class LangGraphContinuityFlowRunner:
         contract: InputContract,
         events: list[object],
     ) -> ContinuityFlowState:
+        self.orchestrator.memory_service.validate_input_subject_scope(contract)
         state_graph, start_token, end_token = _load_langgraph()
         graph = state_graph(ContinuityFlowState)
         graph.add_node("resolve_pause", self._resolve_pause)

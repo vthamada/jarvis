@@ -12,6 +12,8 @@ dependencies = []
 
 [project.optional-dependencies]
 dev = [
+  # Synthetic certificate generation for real TLS tests; not a runtime dependency.
+  "cryptography>=46",
   "langsmith>=0.1",
   "pytest>=8.3",
   "ruff>=0.11.0",
@@ -22,9 +24,15 @@ postgres = [
 langgraph = [
   "langgraph>=0.4",
 ]
+siwc = [
+  "PyJWT[crypto]>=2.10,<3",
+]
 
 [tool.setuptools]
 include-package-data = true
+
+[tool.setuptools.package-data]
+"apps.jarvis_web" = ["*.html", "*.css", "*.mjs"]
 
 [tool.setuptools.packages.find]
 where = [
@@ -36,6 +44,8 @@ where = [
   "services/operational-service/src",
   "services/knowledge-service/src",
   "services/observability-service/src",
+  "services/inference-service/src",
+  "services/job-service/src",
   "engines/identity-engine/src",
   "engines/executive-engine/src",
   "engines/cognitive-engine/src",
@@ -48,6 +58,10 @@ where = [
 minversion = "8.0"
 addopts = "-q -p no:cacheprovider"
 testpaths = [
+  "apps/jarvis_console/tests",
+  "apps/jarvis_web/tests",
+  "apps/jarvis_voice/tests",
+  "apps/jarvis_mcp/tests",
   "tests",
   "evolution",
   "services",

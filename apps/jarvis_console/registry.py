@@ -57,6 +57,13 @@ JSON_OUTPUT_COMMAND_IDS = frozenset(
         "doctor",
         "learning-report",
         "progress-report",
+        "physical",
+        "memory-recall",
+        "code-review",
+        "research-review",
+        "job-inspect",
+        "chatgpt-account",
+        "transcript-review",
     }
 )
 
@@ -232,6 +239,36 @@ STANDALONE = CommandExecutionMode.STANDALONE
 
 COMMAND_REGISTRY = CommandRegistry(
     (
+        _command(
+            "transcript-review",
+            "Revalidate supplied transcript text before explicit local Core handoff.",
+            "run_transcript_review_command", CommandCategory.MEMORY, STANDALONE,
+        ),
+        _command(
+            "chatgpt-account",
+            "Manage an explicit private ChatGPT provider account; no Core authority.",
+            "run_chatgpt_account_command", CommandCategory.OBSERVABILITY, STANDALONE,
+        ),
+        _command(
+            "job-inspect", "Inspect exact jobs in an existing read-only ledger; never execute.",
+            "run_job_inspect_command", CommandCategory.WORK, STANDALONE,
+        ),
+        _command(
+            "code-review", "Review a bounded in-memory patch supplied on stdin; never apply.",
+            "run_code_review_command", CommandCategory.ARTIFACT, STANDALONE,
+        ),
+        _command(
+            "research-review", "Review lexical evidence from supplied texts; never fetch or trust.",
+            "run_research_review_command", CommandCategory.OBSERVABILITY, STANDALONE,
+        ),
+        _command(
+            "memory-recall", "Inspect bounded read-only canonical turn evidence.",
+            "run_memory_recall_command", CommandCategory.MEMORY, STANDALONE,
+        ),
+        _command(
+            "physical", "Inspect and control exact opt-in physical artifact operations.",
+            "run_physical_command", CommandCategory.ARTIFACT, STANDALONE,
+        ),
         _command(
             "ask",
             "Execute a single prompt.",

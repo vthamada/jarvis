@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
+from contextlib import AbstractContextManager, contextmanager
 from dataclasses import asdict, dataclass, field, replace
 from json import dumps, loads
 from pathlib import Path
 from sqlite3 import Connection, IntegrityError, OperationalError, Row
 from sqlite3 import connect as sqlite_connect
+from typing import Iterator
 from urllib.parse import urlparse
 
 from shared.artifact_physical_saga import (
@@ -61,6 +63,7 @@ from shared.decision_attribution import (
     validate_decision_attribution_record,
 )
 from shared.memory_registry import memory_lifecycle_support_signals
+from shared.sqlite_connection import ClosingSqliteConnection
 from shared.types import EvolutionProposalId, MissionId, MissionStatus, RiskLevel
 from shared.workflow_lifecycle import (
     canonical_workflow_lifecycle_payload,
@@ -952,8 +955,109 @@ class MemoryCorpusSummary:
     consolidating_records: int
 
 
+_SESSION_SUBJECT_SCOPE_QUERY = """
+WITH scope AS (SELECT ? AS session_id, ? AS subject_id),
+referenced_missions AS (
+    SELECT mission_id FROM interaction_turns WHERE session_id = (SELECT session_id FROM scope)
+    UNION SELECT anchor_mission_id FROM session_continuity
+          WHERE session_id = (SELECT session_id FROM scope)
+    UNION SELECT related_mission_id FROM session_continuity
+          WHERE session_id = (SELECT session_id FROM scope)
+    UNION SELECT mission_id FROM continuity_checkpoints
+          WHERE session_id = (SELECT session_id FROM scope)
+    UNION SELECT target_mission_id FROM continuity_checkpoints
+          WHERE session_id = (SELECT session_id FROM scope)
+    UNION SELECT source_mission_id FROM specialist_shared_memory
+          WHERE session_id = (SELECT session_id FROM scope)
+)
+SELECT CASE WHEN
+    NOT EXISTS (SELECT 1 FROM interaction_turns
+                WHERE session_id = (SELECT session_id FROM scope)
+                AND (user_id IS NULL OR user_id <> (SELECT subject_id FROM scope)))
+    AND NOT EXISTS (SELECT 1 FROM specialist_shared_memory
+                    WHERE session_id = (SELECT session_id FROM scope)
+                    AND (user_id IS NULL OR user_id <> (SELECT subject_id FROM scope)))
+    AND (EXISTS (SELECT 1 FROM interaction_turns
+                 WHERE session_id = (SELECT session_id FROM scope))
+         OR NOT (EXISTS (SELECT 1 FROM session_context
+                        WHERE session_id = (SELECT session_id FROM scope))
+                 OR EXISTS (SELECT 1 FROM session_continuity
+                            WHERE session_id = (SELECT session_id FROM scope))
+                 OR EXISTS (SELECT 1 FROM continuity_checkpoints
+                            WHERE session_id = (SELECT session_id FROM scope))
+                 OR EXISTS (SELECT 1 FROM continuity_pause_resolutions
+                            WHERE session_id = (SELECT session_id FROM scope))
+                 OR EXISTS (SELECT 1 FROM specialist_shared_memory
+                            WHERE session_id = (SELECT session_id FROM scope))))
+    AND NOT EXISTS (
+        SELECT 1 FROM referenced_missions AS refs WHERE refs.mission_id IS NOT NULL AND (
+            EXISTS (SELECT 1 FROM interaction_turns AS turns
+                    WHERE turns.mission_id = refs.mission_id
+                    AND (turns.user_id IS NULL
+                         OR turns.user_id <> (SELECT subject_id FROM scope)))
+            OR (EXISTS (SELECT 1 FROM mission_states AS missions
+                        WHERE missions.mission_id = refs.mission_id)
+                AND NOT EXISTS (SELECT 1 FROM interaction_turns AS turns
+                                WHERE turns.mission_id = refs.mission_id))
+        )
+    )
+THEN 1 ELSE 0 END AS compatible
+"""
+
+_MISSION_SUBJECT_SCOPE_QUERY = """
+SELECT CASE WHEN
+    NOT EXISTS (SELECT 1 FROM interaction_turns WHERE mission_id = ?
+                AND (user_id IS NULL OR user_id <> ?))
+    AND (EXISTS (SELECT 1 FROM interaction_turns WHERE mission_id = ?)
+         OR NOT EXISTS (SELECT 1 FROM mission_states WHERE mission_id = ?))
+THEN 1 ELSE 0 END AS compatible
+"""
+
+
 class MemoryRepository(ABC):
     """Persistence contract for episodic, contextual, and mission memory."""
+
+    def artifact_physical_effect_scope(self) -> AbstractContextManager[None]:
+        """Fence canonical state changes through a first physical effect.
+
+        Unsupported repositories fail closed; a no-op lock is not a fallback.
+        """
+        raise RuntimeError("artifact_physical_effect_scope_backend_unavailable")
+
+    def session_subject_is_compatible(self, session_id: str, subject_id: str) -> bool:
+        """Check entire canonical turn ownership without loading content.
+
+        This is a consistency check, not authentication or a first-use lock.
+        Unsupported backends must not infer ownership from a recent window.
+        """
+        raise RuntimeError("subject_scope_backend_unavailable")
+
+    def mission_subject_is_compatible(self, mission_id: str, subject_id: str) -> bool:
+        """Refuse mixed, unbound, or ownerless persisted mission state."""
+        raise RuntimeError("subject_scope_backend_unavailable")
+
+    def _specialist_source_matches_subject(self, row, subject_id: str) -> bool:
+        """Revalidate historical source refs before returning recurrent context.
+
+        The public context omits source session identity, so this check must
+        happen while the persisted row still carries it. No older-row fallback.
+        """
+        if not self.session_subject_is_compatible(row["session_id"], subject_id):
+            return False
+        try:
+            related = loads(row["related_mission_ids"] or "[]")
+        except (ValueError, TypeError):
+            return False
+        if not isinstance(related, list) or len(related) > 32:
+            return False
+        refs = [*related]
+        if row["source_mission_id"] is not None:
+            refs.append(row["source_mission_id"])
+        return all(
+            isinstance(ref, str) and bool(ref)
+            and self.mission_subject_is_compatible(ref, subject_id)
+            for ref in refs
+        )
 
     @abstractmethod
     def record_turn(self, turn: StoredTurn) -> None:
@@ -2541,6 +2645,18 @@ class SqliteMemoryRepository(MemoryRepository):
         self.database_path.parent.mkdir(parents=True, exist_ok=True)
         self._init_schema()
 
+    @contextmanager
+    def artifact_physical_effect_scope(self) -> Iterator[None]:
+        # A database lock, not just an in-process mutex: other connections and
+        # processes cannot pause/rebind the mission during claim + first effect.
+        # No canonical writes here; release before the canonical commit callback.
+        with self._connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            try:
+                yield
+            finally:
+                connection.rollback()
+
     def record_turn(self, turn: StoredTurn) -> None:
         with self._connect() as connection:
             connection.execute(
@@ -2603,6 +2719,22 @@ class SqliteMemoryRepository(MemoryRepository):
                 (session_id,),
             ).fetchone()
         return None if row is None else str(row["recent_summary"])
+
+    def session_subject_is_compatible(self, session_id: str, subject_id: str) -> bool:
+        with self._connect() as connection:
+            row = connection.execute(
+                _SESSION_SUBJECT_SCOPE_QUERY,
+                (session_id, subject_id),
+            ).fetchone()
+        return bool(row["compatible"])
+
+    def mission_subject_is_compatible(self, mission_id: str, subject_id: str) -> bool:
+        with self._connect() as connection:
+            row = connection.execute(
+                _MISSION_SUBJECT_SCOPE_QUERY,
+                (mission_id, subject_id, mission_id, mission_id),
+            ).fetchone()
+        return bool(row["compatible"])
 
     def upsert_user_scope_snapshot(self, snapshot: StoredUserScopeSnapshot) -> None:
         with self._connect() as connection:
@@ -4299,6 +4431,8 @@ class SqliteMemoryRepository(MemoryRepository):
         query += "\n                ORDER BY updated_at DESC\n                LIMIT 1"
         with self._connect() as connection:
             row = connection.execute(query, tuple(params)).fetchone()
+        if row is not None and not self._specialist_source_matches_subject(row, user_id):
+            return None
         return None if row is None else self._row_to_specialist_shared_memory(row)
 
     def fetch_mission_state(self, mission_id: str) -> MissionStateContract | None:
@@ -4524,7 +4658,7 @@ class SqliteMemoryRepository(MemoryRepository):
         )
 
     def _connect(self) -> Connection:
-        connection = sqlite_connect(self.database_path)
+        connection = sqlite_connect(self.database_path, factory=ClosingSqliteConnection)
         connection.row_factory = Row
         return connection
 
@@ -5986,6 +6120,24 @@ class PostgresMemoryRepository(MemoryRepository):
             )
             row = cursor.fetchone()
         return None if row is None else str(row["recent_summary"])
+
+    def session_subject_is_compatible(self, session_id: str, subject_id: str) -> bool:
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                _SESSION_SUBJECT_SCOPE_QUERY.replace("?", "%s"),
+                (session_id, subject_id),
+            )
+            row = cursor.fetchone()
+        return bool(row["compatible"])
+
+    def mission_subject_is_compatible(self, mission_id: str, subject_id: str) -> bool:
+        with self._connect() as connection, connection.cursor() as cursor:
+            cursor.execute(
+                _MISSION_SUBJECT_SCOPE_QUERY.replace("?", "%s"),
+                (mission_id, subject_id, mission_id, mission_id),
+            )
+            row = cursor.fetchone()
+        return bool(row["compatible"])
 
     def upsert_user_scope_snapshot(self, snapshot: StoredUserScopeSnapshot) -> None:
         with self._connect() as connection, connection.cursor() as cursor:
@@ -7748,7 +7900,7 @@ class PostgresMemoryRepository(MemoryRepository):
         with self._connect() as connection, connection.cursor() as cursor:
             cursor.execute(query, tuple(params))
             row = cursor.fetchone()
-        if row is None:
+        if row is None or not self._specialist_source_matches_subject(row, user_id):
             return None
         lifecycle_support = memory_lifecycle_support_signals(
             semantic_lifecycle=row["semantic_memory_lifecycle"],
@@ -8162,6 +8314,18 @@ class PostgresMemoryRepository(MemoryRepository):
                     surface_continuity_status TEXT,
                     surface_identity_conflict_flags TEXT NOT NULL DEFAULT '[]',
                     updated_at TEXT NOT NULL
+                )
+                """
+            )
+            cursor.execute(
+                """
+                CREATE TABLE IF NOT EXISTS continuity_pause_resolutions (
+                    session_id TEXT PRIMARY KEY,
+                    checkpoint_id TEXT NOT NULL,
+                    resolution_status TEXT NOT NULL,
+                    resolved_by TEXT,
+                    resolution_note TEXT,
+                    resolved_at TEXT NOT NULL
                 )
                 """
             )

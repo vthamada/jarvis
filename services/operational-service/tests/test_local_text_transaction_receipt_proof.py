@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import threading
+from contextlib import nullcontext
 from dataclasses import replace
 from pathlib import Path
 
@@ -219,7 +220,9 @@ def _enable_receipt_proof(engine: LocalTextTransactionEngine) -> _ReceiptProofLe
     ledger = _ReceiptProofLedger()
     engine._mutation_receipt_verifier = ledger.verify_mutation
     engine._rollback_receipt_verifier = ledger.verify_rollback
-    engine._canonical_physical_effect_authorizer = lambda _plan: True
+    engine._canonical_physical_effect_authorizer = lambda _plan, *, effect_mode="new_effect": True
+    # Explicit fixture authority doubles; these are not live Memory fences.
+    engine._canonical_physical_effect_scope_provider = lambda _plan: nullcontext()
     engine._resource_physical_binding_lookup = lambda _resource_ref: False
     engine._canonical_commit_receipt_verifier = ledger.verify_canonical_commit
     engine._physical_attestation_lease_provider = ledger.attestation_authority.issue
@@ -244,7 +247,8 @@ def _restart(
         trusted_transaction_clock=authority.clock,
         mutation_receipt_verifier=ledger.verify_mutation,
         rollback_receipt_verifier=ledger.verify_rollback,
-        canonical_physical_effect_authorizer=lambda _plan: True,
+        canonical_physical_effect_authorizer=lambda _plan, *, effect_mode="new_effect": True,
+        canonical_physical_effect_scope_provider=lambda _plan: nullcontext(),
         resource_physical_binding_lookup=lambda _resource_ref: False,
         canonical_commit_receipt_verifier=ledger.verify_canonical_commit,
         physical_attestation_lease_provider=ledger.attestation_authority.issue,
@@ -631,9 +635,9 @@ def test_atomic_apply_records_exact_proof_and_blocks_bound_raw_retry(tmp_path: P
     binding_lookups = []
     resource_bound = False
 
-    def authorize(bound_plan: object) -> bool:
-        authorized_plans.append(bound_plan)
-        return bound_plan == plan
+    def authorize(bound_plan: object, *, effect_mode: str = "new_effect") -> bool:
+        authorized_plans.append((bound_plan, effect_mode))
+        return bound_plan == plan and effect_mode in {"new_effect", "historical_recovery"}
 
     engine._canonical_physical_effect_authorizer = authorize
 
@@ -657,7 +661,7 @@ def test_atomic_apply_records_exact_proof_and_blocks_bound_raw_retry(tmp_path: P
     assert result in ledger.canonical_commits
     assert callback_observations[0][0] == callback_observations[0][1]
     require_valid_local_text_physical_state_attestation(callback_observations[0][2])
-    assert authorized_plans == [plan, plan]
+    assert authorized_plans == [(plan, "new_effect"), (plan, "historical_recovery")]
     assert target.read_bytes() == b"atomic\n"
 
     with pytest.raises(ValueError, match="resource_scope_mismatch"):

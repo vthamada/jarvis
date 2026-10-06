@@ -763,15 +763,13 @@ def build_payload(args: Namespace) -> dict[str, object]:
                     ),
                     (
                         "mind_domain_specialist_effectiveness="
-                        f"{item.get(
-                            'baseline_mind_domain_specialist_effectiveness_assessment',
-                            'n/a',
-                        )}"
-                        "->"
-                        f"{item.get(
-                            'candidate_mind_domain_specialist_effectiveness_assessment',
-                            'n/a',
-                        )}"
+                        + str(item.get(
+                            'baseline_mind_domain_specialist_effectiveness_assessment', 'n/a'
+                        ))
+                        + "->"
+                        + str(item.get(
+                            'candidate_mind_domain_specialist_effectiveness_assessment', 'n/a'
+                        ))
                     ),
                     (
                         "mind_domain_specialist_mismatch="
@@ -1049,15 +1047,13 @@ def render_text(payload: dict[str, object]) -> str:
                     ),
                     (
                         "mind_domain_specialist_effectiveness="
-                        f"{item.get(
-                            'baseline_mind_domain_specialist_effectiveness_assessment',
-                            'n/a',
-                        )}"
-                        "->"
-                        f"{item.get(
-                            'candidate_mind_domain_specialist_effectiveness_assessment',
-                            'n/a',
-                        )}"
+                        + str(item.get(
+                            'baseline_mind_domain_specialist_effectiveness_assessment', 'n/a'
+                        ))
+                        + "->"
+                        + str(item.get(
+                            'candidate_mind_domain_specialist_effectiveness_assessment', 'n/a'
+                        ))
                     ),
                     (
                         "mind_domain_specialist_mismatch="

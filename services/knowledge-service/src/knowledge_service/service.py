@@ -29,6 +29,7 @@ from shared.domain_registry import (
     load_domain_registries,
     route_routing_source,
 )
+from shared.reviewed_knowledge import ReviewedKnowledgeContext
 from shared.specialist_registry import CANONICAL_SPECIALIST_TYPES
 from shared.technology_radar_intake import (
     technology_radar_intake_fingerprint,
@@ -64,6 +65,7 @@ class KnowledgeRetrievalResult:
     freshness_status: str = "unknown"
     conflict_status: str = "unknown"
     uncertainty_notes: list[str] = field(default_factory=list)
+    reviewed_knowledge: ReviewedKnowledgeContext | None = field(default=None, repr=False)
 
 
 @dataclass(frozen=True)
@@ -127,6 +129,8 @@ class KnowledgeService:
         intent: str,
         query: str,
         as_of: str | None = None,
+        reviewed_knowledge: ReviewedKnowledgeContext | None = None,
+        reviewed_as_of: str | None = None,
     ) -> KnowledgeRetrievalResult:
         """Return the most relevant domains and snippets for the given intent."""
 
@@ -168,7 +172,7 @@ class KnowledgeService:
             )
         )
         specialist_routes = self._resolve_specialist_routes(active_domains)
-        return KnowledgeRetrievalResult(
+        result = KnowledgeRetrievalResult(
             intent=intent,
             query=query,
             active_domains=active_domains,
@@ -182,6 +186,15 @@ class KnowledgeService:
             conflict_status=conflict_status,
             uncertainty_notes=uncertainty_notes,
         )
+        if reviewed_knowledge is not None:
+            from .request_evidence import attach_reviewed_evidence
+
+            return attach_reviewed_evidence(
+                result, reviewed_knowledge,
+                as_of=(datetime.now(UTC).isoformat()
+                       if reviewed_as_of is None else reviewed_as_of),
+            )
+        return result
 
     def _build_source_evidence(
         self,

@@ -1,5 +1,73 @@
 # Unified Gap and Absorption Backlog
 
+MB228 (2026-10-05) done local: review request-scoped -> Knowledge/Governance/
+Synthesis/Memory, fonte unverified isolada da instrucao/roteamento. Final exata
+retida; projecao Planning omite literal nao confiavel. CLI opt-in com readback,
+619 focados/zero skips e gate standard global Windows completo passaram.
+Auditoria sem bloqueador conhecido; sem modelo externo/capability promovida.
+MB229 ready: complemento generativo analysis/core-only naturalmente ALLOW,
+sem elevar autonomia ou substituir sintese/governanca. Sistema completo aberto.
+Runbook: docs/operations/reviewed-source-core.md. MB227 e seguintes historicos.
+
+MB227 (2026-10-05) done local: leitor/CLI HTTPS opt-in de URL e pin publico
+fixados, TLS nativo e framing bounded; dados nao confiaveis sem autoridade.
+699 focados distintos passaram/zero skips com TLS real sintetico; auditoria
+sem bloqueador e gate standard global Windows completo passou.
+Sem campanha externa/Core live/promocao. cryptography somente dev para certs
+sinteticos; runner Linux ajustado/22 testes, sem rebuild/prova Linux nova.
+Runbook: docs/operations/credentialless-https-observation.md. MB228 ready para
+fonte revisada request-scoped -> Knowledge/Governance/Synthesis/Memory; export
+declarado/unverified, sem auto-trust/corpus import ou nova superficie publica.
+Notas MB226 e anteriores abaixo sao historicas, nao status atual da fila.
+
+
+MB226 (2026-10-05): player Web manual600s/32MiB done no recorte local,
+preparacao PCM interrompivel e RIFF strict; sem autoimport/upload/mic/API.
+344 JS/173 Python focados passaram/zero skips; agregadoPython->NodePCM/digest
+exatos e IAB sintetico/RMS0.033/cancelstarting/mobile sem overflow verificados.
+Gate standard global Windows final passou. Qualidade vocal/conta/Corelive nao aprovados.
+MB227 ready: observacao HTTPS credentialless de escopo fechado, nao browser engine.
+Runbook: docs/operations/long-local-wav-web-playback.md. Notas abaixo historicas.
+
+MB225 (2026-10-05): lote integral opt-in done local, sem truncar
+final canonica (ate6000 codepoints/16 partes,32MiB/600s). Uma carga de modelo,
+deadline unico, agregado exclusivo e nenhuma repeticao Core.732 testes focados,
+13 registry/assets e172 JS passaram/zero skips; gate standard global Windows
+final passou, auditoria sem bloqueador. Refusals pos-audit/cleanup cobertas.
+Qualidade vocal/modelo real nao aprovados.
+Runbook: docs/operations/full-final-local-tts-batch.md. MB226 ready: compatibilidade
+Web manual para agregado longo; esfera/RMS ja existe, limite atual120s e gap.
+Notas MB224 e anteriores sao historicas.
+
+Atualizacao MB224 (2026-10-05): final persistida -> TTS local opt-in integrado;
+542 testes focados/zero skips e gate standard global Windows passaram.
+MB224 done local, sem qualidade vocal aprovada. MB225 ready para segmentacao
+exata de final longa; fala integral continua gap ate esse recorte ser provado.
+Runbook: docs/operations/persistent-final-local-tts.md.
+
+Atualizacao MB223 (2026-10-05): F07/F06 conecta revisao offline de transcricao
+Web ao Core persistente por CLI explicita, nao API/auth/browser live.273 Python/
+172 JS passaram, browser sintetico/mobile inspecionados; gate standard global
+Windows passou, MB223 done no recorte local.
+Proximo MB224 final persistida -> TTS local opt-in; qualidade, mic, conversa
+live e fronteira publica ainda precisam evidencia propria. Runbook:
+docs/operations/reviewed-transcript-web-to-core.md. Notas anteriores historicas.
+
+Atualizacao MB222 (2026-10-05): F01 agora tem OAuth/catalogo/refresh/store/CLI
+opt-in implementados localmente, JWT/DPAPI/loopback reais com dados sinteticos,
+HTTPS/browser injetados.613 focados/6 skips e storage final82/6 aprovados;
+gate standard global Windows passou, MB222 done local. OAuth/modelo reais, revoke
+remoto, UI de conta/voz e scheduler ainda gaps separados. Proximo MB223 review
+ASR F07/F06. Nenhuma identidade externa concede autoridade Core. Runbook:
+docs/operations/siwc-local-account-and-catalog.md. Notas abaixo historicas.
+
+Atualizacao MB221 (2026-10-05): frentes existentes F01/F07/F05 agora tem adapter
+HTTPS/SSE opt-in, bridge review ASR -> Core e job-inspect readonly;472 focados
+passed/2 skips symlink Windows e gate standard global Windows passou. MB221
+done local, MB222 OAuth/catalogo planned. OAuth real/catalogo/refresh, voz/UI e scheduler continuam
+gaps distintos, nenhuma promocao por fixtures. Runbook:
+docs/operations/parallel-wave-transport-transcript-and-job-inspection.md.
+
 ## 1. Objetivo
 
 Este documento mapeia, em um unico backlog macro, o que ainda falta para o
@@ -29,6 +97,18 @@ Leitura correta:
 - nenhum item daqui vira `ready` automaticamente;
 - toda puxada continua exigindo recorte pequeno, criterio de aceite e gate
   minimo no backlog micro.
+
+Direcao de planejamento 2026-10-02: o
+[mapa executavel paralelo](parallel-implementation-map.md) desdobra as frentes
+para agentes implementadores desta sessao, conforme pedido do operador.
+Clientes/adapters podem ser preparados em isolamento com ownership exclusivo;
+as restricoes de fase abaixo continuam para promocao, ativacao e exposicao.
+Os WP do mapa nao sao nova fila micro nem capabilities promovidas.
+
+O primeiro recorte de inferencia, Web e code ja foi implementado isoladamente:
+providers offline, cockpit fixture e interpretador AST bounded, com piloto
+vertical no Core. Ver `docs/operations/parallel-wave-local-pilot.md`. Auth,
+modelo real, fronteira Web/Core e sandbox de SO continuam gaps, sem promocao.
 
 ---
 
@@ -86,6 +166,14 @@ Hierarquia correta:
 ---
 
 ## 4. Leitura executiva do estado atual
+
+Atualizacao MB220: apos fechamento local MB218/219, frentes existentes code e
+knowledge recebem comandos standalone de revisao offline com diff/citacoes
+exatos opt-in. Nao e mudanca de fase ou ampliacao de autoridade; integracao
+Core/modelo/fetch/apply continua futura.310 testes focados e28 CLI reexecutados
+passaram; gate standard Windows passou, MB220 done. Guia:
+docs/operations/local-review-products.md. Backlog micro unico
+registra este recorte integrado, nao outra fila paralela.
 
 - o baseline do `v2` ja fechou os lotes `MB-067` a `MB-081`, cobrindo decisao
   soberana de capacidades, manutencao ativa de memoria viva e arbitragem
@@ -365,8 +453,8 @@ Notas de leitura:
   `MB-191` a `MB-200`, e o lote foi integralmente fechado em `MB-200`;
   `MB-201` abriu `MB-202` a `MB-210`; o lote foi integralmente fechado em
   `MB-210`; `MB-211` abriu Governed Action Foundation em `MB-212` a `MB-219`,
-  `MB-212` a `MB-217` foram concluidos e `MB-218` e o unico item tecnico
-  `ready`, com execucao aguardando nova solicitacao do operador.
+  `MB-212` a `MB-219` foram concluidos no escopo local Linux/SQLite em
+  2026-10-05, com aceite CLI/corpus persistente/gates; API mutante nao promovida.
 
 ### 5.5 Deferred verticals already mapped
 
@@ -410,10 +498,10 @@ Ordem recomendada hoje:
 1. tratar `MB-110` a `MB-159` como baseline fechado de objetivos persistentes,
    utilidade operacional, absorcao tecnologica governada, aprendizado revisado,
    higiene documental e horizonte longo minimo.
-2. tratar `MB-160` a `MB-217` como baseline fechado; a saga fisica/canonica,
-   recovery, outbox, compensacao e rollback canonico ja pertencem ao baseline.
-   `MB-218` e o proximo item WIP 1, mas nao deve ser executado antes de nova
-   solicitacao explicita do operador.
+2. tratar `MB-160` a `MB-219` como baseline fechado no escopo documentado; saga,
+   recovery/outbox, console e readiness local Linux/SQLite pertencem ao baseline.
+   A fila esta esgotada; repriorizar pelos gaps de produto diario e frentes
+   paralelas, sem abrir API mutante automaticamente.
 3. manter `SFC-005`, `SO-001`, `TA-004`, `TA-006` e verticais `deferred` fora da fila ate
    haver decisao explicita de fase.
 
@@ -513,8 +601,9 @@ Leitura correta:
   `MB-216` fechou escrita/rollback transacional; `MB-217` fechou a consistencia
   fisica/canonica por saga recuperavel, com lease one-shot, outbox transacional,
   compensacao precanonica, rollback de predecessor superseded e paridade
-  SQLite/PostgreSQL materializada. `MB-218` e o unico item tecnico `ready`, mas
-  aguarda nova solicitacao, e nenhuma API foi aberta;
+  SQLite/PostgreSQL materializada. `MB-218` e `MB-219` fecharam console e
+  readiness local Linux/SQLite em 2026-10-05, sem promover primeiro efeito
+  PostgreSQL, auth ou API; evidencia no runbook de campanha persistente;
 - `MB-159` foi fechado como raciocinio minimo de objetivos de horizonte longo,
   movendo `COG-010` para um baseline minimo operacional;
 - `MB-160` abriu a fila maior `MB-161` a `MB-174`, priorizando memoria causal,
@@ -530,9 +619,9 @@ Leitura correta:
   `MB-212` fechou confirmacao verificavel, `MB-213` fechou autonomia fail-closed,
   `MB-214` fechou permissoes exatas por adapter, `MB-215` fechou preflight local
   side-effect-free, `MB-216` fechou mutacao/rollback fisico e `MB-217` fechou a
-  saga recuperavel entre receipt fisico e lifecycle canonico. `MB-218` e agora
-  o unico item tecnico `ready` da fila Governed Action Foundation, sem execucao
-  ate nova solicitacao do operador;
+  saga recuperavel entre receipt fisico e lifecycle canonico. `MB-218` e `MB-219`
+  foram fechados pela continuidade solicitada, com224 passed/5 skips Windows em
+  volume ext4 e gates aprovados. Fila Governed Action Foundation esgotada;
 - `RH-*` permanece fora do backlog implementavel.
 
 ---

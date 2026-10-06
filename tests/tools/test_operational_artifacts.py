@@ -1,5 +1,6 @@
 ﻿from json import loads
 
+from tools import operational_artifacts
 from tools.operational_artifacts import (
     create_baseline_snapshot,
     create_containment_drill,
@@ -7,6 +8,14 @@ from tools.operational_artifacts import (
     write_baseline_snapshot,
     write_containment_drill,
 )
+
+
+def test_git_identity_is_explicitly_unknown_without_git_executable(monkeypatch) -> None:
+    def unavailable(*args, **kwargs):
+        raise FileNotFoundError("private environment diagnostic")
+
+    monkeypatch.setattr(operational_artifacts, "run", unavailable)
+    assert operational_artifacts.git_sha() == "unknown"
 
 
 def test_operational_artifacts_write_and_read_baseline_snapshot() -> None:

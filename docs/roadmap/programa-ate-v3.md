@@ -200,6 +200,25 @@ Regra pratica:
 - primeiro se prova a lacuna no nucleo;
 - depois se decide absorver, usar como referencia ou rejeitar.
 
+Direcao de desenvolvimento paralelo (2026-10-02): o operador pediu que agentes
+desta sessao implementem as frentes do JARVIS. O detalhamento preparatorio e o
+[mapa executavel paralelo](../implementation/parallel-implementation-map.md).
+Construir e testar clientes/adapters isolados pode avancar em paralelo;
+isso nao muda a ordem de promocao/ativacao do runtime nem transfere soberania.
+Web, voz, mobile e tools nao precisam esperar todo o Core estar completo para
+ter seus primeiros pacotes; precisam de ports, testes e integracao governada.
+
+Primeira onda implementada isoladamente: inferencia offline, Web fixture e
+code AST restrito, com piloto vertical no Core. O
+[runbook local](../operations/parallel-wave-local-pilot.md) distingue estas
+entregas de auth/modelo real, API Web e sandbox de SO ainda ausentes. Nao houve
+promocao de capability nem fechamento de MB218/219.
+
+Continuidade 2026-10-05: MB218/219 foram tecnicamente fechados no recorte local
+Linux/SQLite, com aceite CLI, corpus persistente224 passed/5 skips Windows e
+gates aprovados. Nao altera promocoes/fases deste programa: API mutante/auth e
+garantias de hardware continuam fora. [Evidencia de readiness](../operations/mb218-mb219-persistent-readiness-2026-10-05.md).
+
 ---
 
 ## 6. Regra oficial de absorcao de estudos externos

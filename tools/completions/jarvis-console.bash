@@ -5,7 +5,7 @@ _jarvis_console() {
     prev="${COMP_WORDS[COMP_CWORD-1]}"
     command=''
     for token in "${COMP_WORDS[@]:1}"; do
-        if [[ " ask action-confirm chat objectives goal-strategy objective work-items work-item open-loops resume-loop artifacts artifact technology-candidates technology-radar-intake technology-radar technology-experiment-pack technology-experiment-eval technology-experiments experience-reflections procedural-playbooks skill-evolution workflow-lifecycle workflow-transition evolution-review-queue evolution-review memory-review-queue memory-review mission-cycle operator-dashboard daily-workspace operator-outcomes decision-attribution command-reference completion readiness-dashboard doctor learning-report progress-report mission-workflow mission-feedback " == *" $token "* ]]; then
+        if [[ " transcript-review chatgpt-account job-inspect code-review research-review memory-recall physical ask action-confirm chat objectives goal-strategy objective work-items work-item open-loops resume-loop artifacts artifact technology-candidates technology-radar-intake technology-radar technology-experiment-pack technology-experiment-eval technology-experiments experience-reflections procedural-playbooks skill-evolution workflow-lifecycle workflow-transition evolution-review-queue evolution-review memory-review-queue memory-review mission-cycle operator-dashboard daily-workspace operator-outcomes decision-attribution command-reference completion readiness-dashboard doctor learning-report progress-report mission-workflow mission-feedback " == *" $token "* ]]; then
             command="$token"
             break
         fi
@@ -15,10 +15,20 @@ _jarvis_console() {
         return
     fi
     if [[ -z $command ]]; then
-        COMPREPLY=( $(compgen -W "--format ask action-confirm chat objectives goal-strategy objective work-items work-item open-loops resume-loop artifacts artifact technology-candidates technology-radar-intake technology-radar technology-experiment-pack technology-experiment-eval technology-experiments experience-reflections procedural-playbooks skill-evolution workflow-lifecycle workflow-transition evolution-review-queue evolution-review memory-review-queue memory-review mission-cycle operator-dashboard daily-workspace operator-outcomes decision-attribution command-reference completion readiness-dashboard doctor learning-report progress-report mission-workflow mission-feedback" -- "$cur") )
+        COMPREPLY=( $(compgen -W "--format transcript-review chatgpt-account job-inspect code-review research-review memory-recall physical ask action-confirm chat objectives goal-strategy objective work-items work-item open-loops resume-loop artifacts artifact technology-candidates technology-radar-intake technology-radar technology-experiment-pack technology-experiment-eval technology-experiments experience-reflections procedural-playbooks skill-evolution workflow-lifecycle workflow-transition evolution-review-queue evolution-review memory-review-queue memory-review mission-cycle operator-dashboard daily-workspace operator-outcomes decision-attribution command-reference completion readiness-dashboard doctor learning-report progress-report mission-workflow mission-feedback" -- "$cur") )
         return
     fi
     case "$command:$prev" in
+        transcript-review:--format) candidates="text json" ;;
+        chatgpt-account:--action) candidates="connect profiles catalog refresh" ;;
+        chatgpt-account:--format) candidates="text json" ;;
+        job-inspect:--format) candidates="text json" ;;
+        code-review:--format) candidates="text json" ;;
+        research-review:--format) candidates="text json" ;;
+        memory-recall:--format) candidates="text json" ;;
+        physical:--action) candidates="prepare inspect confirm execute status recover prepare-rollback confirm-rollback rollback" ;;
+        physical:--operation) candidates="create_text replace_text" ;;
+        physical:--format) candidates="text json" ;;
         ask:--requested-autonomy-level) candidates="assist_only confirm_before_action bounded_core_action supervised_external_action" ;;
         ask:--max-autonomy-level) candidates="assist_only confirm_before_action bounded_core_action supervised_external_action" ;;
         ask:--autonomy-confirmation-mode) candidates="explicit" ;;
@@ -79,6 +89,13 @@ _jarvis_console() {
     esac
     if [[ -z $candidates ]]; then
         case "$command" in
+            transcript-review) candidates="-h --help --authorized --session-id --include-content --tts-authorized --tts-batch --tts-engine --tts-reference --tts-model-dir --tts-python --tts-workspace --tts-device --tts-sdk-source-dir --tts-timeout --tts-voice-profile --tts-reference-start --tts-reference-duration --tts-reference-transcript --tts-transcript-confirmed --tts-seed --tts-show-output-path --format" ;;
+            chatgpt-account) candidates="-h --help --authorized --credential-dir --action --profile-ref --timeout-seconds --format" ;;
+            job-inspect) candidates="-h --help --job-db --actor-ref --session-ref --job-id --include-refs --format" ;;
+            code-review) candidates="-h --help --include-content --format" ;;
+            research-review) candidates="-h --help --include-content --format" ;;
+            memory-recall) candidates="-h --help --memory-db --subject-id --session-id --query --limit --include-content --format" ;;
+            physical) candidates="-h --help --runtime-dir --root --enable-execution --action --request-id --mission-id --work-item-ref --artifact-ref --resource-ref --desired-file --operation --expected-current-sha256 --supersedes-artifact-ref --challenge-id --action-fingerprint --confirmation-receipt-id --session-id --operator-identity-ref --canonical-user-ref --show-diff --format" ;;
             ask) candidates="-h --help --session-id --mission-id --operator-identity-ref --canonical-user-ref --requested-autonomy-level --max-autonomy-level --autonomy-confirmation-mode --action-confirmation-receipt-id --action-confirmation-origin-request-id --origin-request-id --debug --format" ;;
             action-confirm) candidates="-h --help --challenge-id --action-fingerprint --operator-identity-ref --format" ;;
             chat) candidates="-h --help --session-id --mission-id --message --operator-identity-ref --canonical-user-ref --debug --format" ;;

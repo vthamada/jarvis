@@ -573,6 +573,10 @@ def _mission_runtime_state_assessment(status: str | None) -> str:
 
 
 def _render_summary(summary: PilotTraceSummary) -> str:
+    selected_capabilities = (
+        ",".join(getattr(summary, "capability_decision_selected_capabilities", []) or [])
+        or "none"
+    )
     subflow_status = getattr(summary, "specialist_subflow_status", None)
     subflow_assessment = _specialist_subflow_assessment(subflow_status)
     mission_status = getattr(summary, "mission_runtime_state_status", None)
@@ -739,9 +743,7 @@ def _render_summary(summary: PilotTraceSummary) -> str:
         "capability_decision_handoff_mode="
         f"{getattr(summary, 'capability_decision_handoff_mode', None) or 'none'} "
         "capability_decision_selected_capabilities="
-        f"{','.join((
-            getattr(summary, 'capability_decision_selected_capabilities', []) or []
-        )) or 'none'} "
+        f"{selected_capabilities} "
         "capability_effectiveness="
         f"{getattr(summary, 'capability_effectiveness', 'not_applicable')} "
         "handoff_adapter_status="

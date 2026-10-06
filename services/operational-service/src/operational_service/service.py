@@ -198,7 +198,17 @@ class ArtifactPhysicalEffectAuthorizerPort(Protocol):
         *,
         resource_ref: str,
         mutation_receipt_fingerprint: str | None = None,
+        effect_mode: str = "new_effect",
     ) -> bool: ...
+
+
+class ArtifactPhysicalEffectScopeProviderPort(Protocol):
+    """Memory-owned lock across a fresh claim and its first physical effect."""
+
+    def __call__(
+        self,
+        plan: ArtifactPhysicalApplyPlanContract | ArtifactPhysicalRollbackPlanContract,
+    ) -> AbstractContextManager[None]: ...
 
 
 class LocalTextResourcePhysicalBindingLookupPort(Protocol):
@@ -368,6 +378,9 @@ class OperationalService:
         | None = None,
         local_text_file_canonical_physical_effect_authorizer: ArtifactPhysicalEffectAuthorizerPort
         | None = None,
+        local_text_file_canonical_physical_effect_scope_provider: (
+            ArtifactPhysicalEffectScopeProviderPort | None
+        ) = None,
         local_text_file_resource_physical_binding_lookup: LocalTextResourcePhysicalBindingLookupPort
         | None = None,
         local_text_file_canonical_commit_receipt_verifier: (
@@ -418,6 +431,7 @@ class OperationalService:
             local_text_file_mutation_receipt_verifier,
             local_text_file_rollback_receipt_verifier,
             local_text_file_canonical_physical_effect_authorizer,
+            local_text_file_canonical_physical_effect_scope_provider,
             local_text_file_resource_physical_binding_lookup,
             local_text_file_canonical_commit_receipt_verifier,
             local_text_file_physical_attestation_lease_provider,
@@ -453,6 +467,9 @@ class OperationalService:
                     None
                     if local_text_file_canonical_physical_effect_authorizer is None
                     else self._authorize_local_text_file_canonical_physical_effect
+                ),
+                canonical_physical_effect_scope_provider=(
+                    local_text_file_canonical_physical_effect_scope_provider
                 ),
                 resource_physical_binding_lookup=(local_text_file_resource_physical_binding_lookup),
                 canonical_commit_receipt_verifier=(
@@ -763,6 +780,8 @@ class OperationalService:
     def _authorize_local_text_file_canonical_physical_effect(
         self,
         plan: ArtifactPhysicalApplyPlanContract | ArtifactPhysicalRollbackPlanContract,
+        *,
+        effect_mode: str = "new_effect",
     ) -> bool:
         authorizer = self._local_text_file_canonical_physical_effect_authorizer
         if authorizer is None:
@@ -776,6 +795,7 @@ class OperationalService:
             plan,
             resource_ref=plan.resource_ref,
             mutation_receipt_fingerprint=mutation_receipt_fingerprint,
+            effect_mode=effect_mode,
         )
 
     def _require_local_text_file_transaction_engine(self) -> LocalTextTransactionEngine:

@@ -37,6 +37,7 @@ from synthesis_engine.engine import (
     SynthesisInput,
     SynthesisResult,
 )
+from synthesis_engine.extractive_inference import ExtractiveContext
 
 from orchestrator_service.artifact_physical_saga import (
     ArtifactPhysicalSagaCoordinator,
@@ -115,6 +116,12 @@ from shared.domain_registry import (
 from shared.events import InternalEventEnvelope
 from shared.mind_domain_specialist_contract import (
     build_mind_domain_specialist_runtime_policy,
+)
+from shared.reviewed_knowledge import (
+    KnowledgeReviewBinding,
+    ReviewedKnowledgeContext,
+    context_fingerprint,
+    validate_context,
 )
 from shared.types import (
     ChannelType,
@@ -1548,9 +1555,15 @@ class OrchestratorService:
             decisions.append(f"resolve_workflow_checkpoint:{checkpoint_refs[0]}")
         return list(dict.fromkeys(decisions))
 
-    def handle_input(self, contract: InputContract) -> OrchestratorResponse:
+    def handle_input(
+        self, contract: InputContract, *,
+        reviewed_knowledge: ReviewedKnowledgeContext | None = None, knowledge_review=None,
+    ) -> OrchestratorResponse:
         """Execute the orchestrated flow for a normalized input contract."""
 
+        contract, reviewed_knowledge = self._prepare_reviewed_knowledge(
+            contract, reviewed_knowledge, knowledge_review,
+        )
         self._ensure_request_has_not_been_processed(contract)
         events = [
             self.make_event(
@@ -1616,6 +1629,8 @@ class OrchestratorService:
                 intent=directive.intent,
                 query=contract.content,
                 as_of=contract.timestamp,
+                **({"reviewed_knowledge": reviewed_knowledge, "reviewed_as_of": self.now()}
+                   if reviewed_knowledge is not None else {}),
             )
             knowledge_evidence_governance = self.governance_service.assess_knowledge_evidence(
                 provenance_status=knowledge_result.provenance_status,
@@ -2371,6 +2386,7 @@ class OrchestratorService:
             ],
         )
         synthesis_result = self._compose_response(
+            contract=contract,
             directive=directive,
             governance_decision=governance_decision,
             memory_recovery_result=memory_recovery_result,
@@ -2389,6 +2405,7 @@ class OrchestratorService:
                 contract,
                 {
                     "intent": directive.intent,
+                    **self._extractive_response_payload(synthesis_result),
                     **self._knowledge_evidence_event_payload(
                         knowledge_result,
                         knowledge_evidence_governance,
@@ -2777,12 +2794,88 @@ class OrchestratorService:
             }
         )
 
-    def handle_input_langgraph_flow(self, contract: InputContract) -> OrchestratorResponse:
+    def handle_input_langgraph_flow(
+        self, contract: InputContract, *,
+        reviewed_knowledge: ReviewedKnowledgeContext | None = None, knowledge_review=None,
+    ) -> OrchestratorResponse:
         """Run the optional LangGraph flow without changing the default v1 path."""
 
+        if reviewed_knowledge is None and knowledge_review is None:
+            self.memory_service.validate_input_subject_scope(contract)
         from orchestrator_service.langgraph_flow import LangGraphFlowRunner
 
-        return LangGraphFlowRunner(self).run(contract)
+        return LangGraphFlowRunner(self).run(
+            contract, reviewed_knowledge=reviewed_knowledge, knowledge_review=knowledge_review,
+        )
+
+    def _prepare_reviewed_knowledge(self, contract, context, review):
+        """Fresh local review before request claim; no consent from input metadata.
+
+        Only the optional path snapshots its contract; the legacy default is
+        unchanged. Review consumption cannot retract an already handed-off turn.
+        """
+        if context is None and review is None:
+            return contract, None
+        try:
+            from knowledge_service.source_review import LocalKnowledgeReview
+
+            if type(contract) is not InputContract or type(review) is not LocalKnowledgeReview:
+                raise ValueError()
+            # Snapshot lists used by this read-only admission before callbacks.
+            contract = replace(
+                contract, surface_capability_scope=list(contract.surface_capability_scope),
+                metadata=dict(contract.metadata), attachments=list(contract.attachments),
+                work_item_refs=list(contract.work_item_refs),
+                checkpoint_refs=list(contract.checkpoint_refs),
+                artifact_refs=list(contract.artifact_refs),
+                autonomy_policy_refs=list(contract.autonomy_policy_refs),
+            )
+            if (any(type(getattr(contract, name)) is not str for name in (
+                    "user_id", "canonical_user_ref", "request_id", "session_id",
+                    "surface_session_id", "surface_kind", "surface_id",
+                    "requested_autonomy_level", "max_autonomy_level",
+                )) or not contract.user_id
+                    or contract.canonical_user_ref != contract.user_id
+                    or contract.surface_session_id != str(contract.session_id)
+                    or contract.requested_autonomy_level != "assist_only"
+                    or contract.max_autonomy_level != "assist_only"
+                    or contract.surface_kind != "console"
+                    or contract.input_type != InputType.TEXT
+                    or contract.channel not in {ChannelType.CONSOLE, ChannelType.CHAT}
+                    or contract.metadata != {}
+                    or contract.attachments != []
+                    or contract.mission_id is not None
+                    or contract.project_ref is not None or contract.objective_ref is not None
+                    or contract.next_action_ref is not None
+                    or contract.work_item_refs != [] or contract.checkpoint_refs != []
+                    or contract.artifact_refs != [] or contract.autonomy_policy_refs != []
+                    or contract.surface_capability_scope != []
+                    or contract.adapter_action_request is not None
+                    or contract.action_confirmation_receipt_id is not None
+                    or contract.action_confirmation_origin_request_id is not None):
+                raise ValueError()
+            binding = KnowledgeReviewBinding(
+                contract.user_id, str(contract.session_id), str(contract.request_id),
+            )
+            snapshot = validate_context(
+                context, binding=binding, query=contract.content, as_of=self.now(),
+            )
+            directive = self.executive_engine.direct(contract)
+            if (directive.intent != "analysis" or directive.requires_clarification
+                    or not directive.should_query_knowledge or directive.should_execute_operation):
+                raise ValueError()
+            # Ownership is checked before consuming even a local review ticket.
+            self.memory_service.validate_input_subject_scope(contract)
+            if review.take_context(context) is not True:
+                raise ValueError()
+            after = validate_context(
+                context, binding=binding, query=contract.content, as_of=self.now(),
+            )
+            if context_fingerprint(after) != context_fingerprint(snapshot):
+                raise ValueError()
+            return contract, snapshot
+        except Exception:
+            raise ValueError("reviewed_knowledge_admission_refused") from None
 
     def _ensure_request_has_not_been_processed(
         self,
@@ -2790,6 +2883,7 @@ class OrchestratorService:
     ) -> None:
         """Fail closed before any side effect when a request identity is replayed."""
 
+        self.memory_service.validate_input_subject_scope(contract)
         request_id = str(contract.request_id)
         claimed = self.memory_service.claim_runtime_request(
             request_id=request_id,
@@ -6263,6 +6357,7 @@ class OrchestratorService:
         specialist_review: SpecialistReview,
         operation_result: OperationResultContract | None,
         mission_runtime_state: MissionRuntimeStateContract | None = None,
+        contract: InputContract | None = None,
     ) -> SynthesisResult:
         identity_profile = self.identity_engine.get_profile()
         guided_memory_runtime_hints = self._guided_memory_runtime_hints(
@@ -6272,6 +6367,21 @@ class OrchestratorService:
         )
         return self.synthesis_engine.compose_result(
             SynthesisInput(
+                reviewed_knowledge=(knowledge_result.reviewed_knowledge
+                                    if knowledge_result is not None else None),
+                reviewed_knowledge_binding=(
+                    KnowledgeReviewBinding(contract.user_id, str(contract.session_id),
+                                           str(contract.request_id))
+                    if contract is not None and knowledge_result is not None
+                    and knowledge_result.reviewed_knowledge is not None else None
+                ),
+                reviewed_knowledge_query=(contract.content if contract is not None else None),
+                extractive_context=(
+                    ExtractiveContext(str(contract.request_id), contract.content)
+                    if contract is not None and not directive.requires_clarification
+                    and not directive.should_execute_operation
+                    and contract.adapter_action_request is None else None
+                ),
                 intent=directive.intent,
                 identity_profile=identity_profile,
                 response_style=self.identity_engine.build_response_style(
@@ -6421,6 +6531,23 @@ class OrchestratorService:
                 ),
             )
         )
+
+    @staticmethod
+    def _extractive_response_payload(result: SynthesisResult) -> dict[str, object]:
+        """Fixed statuses/counts only: no candidate, quote, model or provider strings."""
+        payload = {
+            "extractive_status": result.extractive_status,
+            "extractive_error_code": result.extractive_error_code,
+            "extractive_evidence_mode": result.extractive_evidence_mode,
+            "extractive_excerpt_count": result.extractive_excerpt_count,
+        }
+        if result.reviewed_source_status != "not_requested":
+            payload.update({
+                "reviewed_source_status": result.reviewed_source_status,
+                "reviewed_source_error_code": result.reviewed_source_error_code,
+                "reviewed_source_quote_characters": result.reviewed_source_quote_characters,
+            })
+        return payload
 
     @staticmethod
     def _adaptive_intervention_response_payload(

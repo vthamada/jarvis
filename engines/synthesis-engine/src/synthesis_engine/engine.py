@@ -2,7 +2,8 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
+from datetime import UTC, datetime
 
 from identity_engine.engine import IdentityProfile
 
@@ -28,7 +29,14 @@ from shared.domain_registry import (
 from shared.mind_domain_specialist_contract import (
     build_mind_domain_specialist_runtime_policy,
 )
+from shared.reviewed_knowledge import (
+    KnowledgeReviewBinding,
+    ReviewedKnowledgeContext,
+    render_reviewed_evidence,
+    validate_context,
+)
 from shared.types import MissionId, PermissionDecision
+from synthesis_engine.extractive_inference import ExtractiveContext, select_input_excerpts
 
 
 @dataclass(frozen=True)
@@ -92,6 +100,10 @@ class SynthesisInput:
     operator_identity_ref: str | None = None
     canonical_user_ref: str | None = None
     surface_continuity_status: str | None = None
+    extractive_context: ExtractiveContext | None = field(default=None, repr=False)
+    reviewed_knowledge: ReviewedKnowledgeContext | None = field(default=None, repr=False)
+    reviewed_knowledge_binding: KnowledgeReviewBinding | None = field(default=None, repr=False)
+    reviewed_knowledge_query: str | None = field(default=None, repr=False)
 
 
 @dataclass(frozen=True)
@@ -124,12 +136,30 @@ class SynthesisResult:
     adaptive_intervention_workflow_priority_summary: str | None
     adaptive_intervention_preserved_checkpoint: str | None
     adaptive_intervention_preserved_gate: str | None
+    extractive_status: str = "disabled"
+    extractive_error_code: str | None = None
+    extractive_evidence_mode: str | None = None
+    extractive_excerpt_count: int = 0
+    reviewed_source_status: str = "not_requested"
+    reviewed_source_error_code: str | None = None
+    reviewed_source_quote_characters: int = 0
 
 
 class SynthesisEngine:
     """Compose the final textual synthesis of the current flow."""
 
     name = "synthesis-engine"
+
+    def __init__(
+        self, *, inference_port=None, inference_model: str | None = None,
+        inference_provider_id: str = "fixture", inference_evidence_mode: str = "fixture",
+    ) -> None:
+        if (inference_port is None) != (inference_model is None):
+            raise ValueError("extractive_configuration_incomplete")
+        self._inference_port = inference_port
+        self._inference_model = inference_model
+        self._inference_provider_id = inference_provider_id
+        self._inference_evidence_mode = inference_evidence_mode
 
     @staticmethod
     def _resolved_workflow_guidance(
@@ -380,6 +410,115 @@ class SynthesisEngine:
         )
 
     def compose_result(self, synthesis_input: SynthesisInput) -> SynthesisResult:
+        """Keep native synthesis sovereign; optionally append verified input excerpts."""
+        native = self._annotate_reviewed_source(
+            self._compose_native_result(synthesis_input), synthesis_input,
+        )
+        if self._inference_port is None:
+            return native
+        plan = synthesis_input.deliberative_plan
+        if (synthesis_input.extractive_context is None
+                or synthesis_input.governance_decision.decision != PermissionDecision.ALLOW
+                or native.output_validation_status != "coherent"
+                or native.workflow_output_errors
+                or native.workflow_output_status not in {"coherent", "not_applicable"}
+                or synthesis_input.operation_result is not None
+                or synthesis_input.intent != "analysis"
+                or plan is None or plan.requires_human_validation
+                or plan.adapter_action_request is not None
+                or plan.autonomy_human_confirmation_required
+                or plan.autonomy_confirmation_mode not in {"not_required", "bounded_autonomy"}
+                or plan.capability_decision_authorization_status == "clarification_required"
+                or plan.primary_route == "clarification"
+                or synthesis_input.objective_status not in {None, "active", "ready"}
+                or plan.objective_status not in {None, "active", "ready"}
+                or plan.request_confirmation_mode not in {"not_required", "bounded_autonomy"}):
+            return replace(
+                native, extractive_status="withheld", extractive_error_code="scope_denied",
+            )
+        outcome = select_input_excerpts(
+            self._inference_port, model=self._inference_model,
+            context=synthesis_input.extractive_context,
+            expected_provider_id=self._inference_provider_id,
+            expected_evidence_mode=self._inference_evidence_mode,
+        )
+        return replace(
+            native,
+            response_text=(native.response_text + "\n\n" + outcome.render()
+                           if outcome.status == "accepted" else native.response_text),
+            extractive_status=outcome.status, extractive_error_code=outcome.error_code,
+            extractive_evidence_mode=outcome.evidence_mode,
+            extractive_excerpt_count=len(outcome.excerpts),
+        )
+
+    @staticmethod
+    def _annotate_reviewed_source(native, synthesis_input):
+        """Append only exact untrusted data, never an answer/authority from the source.
+
+        A deferred native response stays deferred. The literal excerpt is for
+        local review, not execution or factual grounding; BLOCK withholds it.
+        """
+        context = getattr(synthesis_input, "reviewed_knowledge", None)
+        if context is None:
+            return native
+        plan = synthesis_input.deliberative_plan
+        assessment = synthesis_input.knowledge_evidence_governance
+        # A governed deferral deliberately does not emit completed workflow
+        # clauses. A literal review annotation must not invent those clauses or
+        # repair their status. Other workflow failures still withhold the data.
+        deferred_missing_clauses = (
+            synthesis_input.governance_decision.decision
+            == PermissionDecision.DEFER_FOR_VALIDATION
+            and native.workflow_output_status == "partial"
+            and bool(native.workflow_output_errors)
+            and all(error in {
+                "missing_clause:workflow_profile", "missing_clause:workflow_checkpoint",
+                "missing_clause:workflow_response_focus",
+                "missing_clause:workflow_gate", "missing_clause:workflow_deliverable",
+                "missing_clause:workflow_telemetry_focus",
+            } for error in native.workflow_output_errors)
+        )
+        if (synthesis_input.intent != "analysis" or plan is None
+                or synthesis_input.governance_decision.decision not in {
+                    PermissionDecision.ALLOW, PermissionDecision.DEFER_FOR_VALIDATION,
+                }
+                or native.output_validation_status != "coherent"
+                or native.output_validation_errors
+                or (native.workflow_output_errors and not deferred_missing_clauses)
+                or (native.workflow_output_status not in {"coherent", "not_applicable"}
+                    and not deferred_missing_clauses)
+                or synthesis_input.operation_result is not None
+                or plan.adapter_action_request is not None
+                or synthesis_input.reviewed_knowledge_binding is None
+                or synthesis_input.reviewed_knowledge_query is None
+                or assessment is None or assessment.request_decision_mutation_allowed
+                or assessment.automatic_promotion_allowed or assessment.core_mutation_allowed
+                or assessment.use_mode not in {
+                    "qualified_grounding", "bounded_grounding", "do_not_assert_as_verified",
+                    "historical_context_only",
+                }):
+            return replace(native, reviewed_source_status="withheld",
+                           reviewed_source_error_code="scope_denied")
+        try:
+            snapshot = validate_context(
+                context, binding=synthesis_input.reviewed_knowledge_binding,
+                query=synthesis_input.reviewed_knowledge_query,
+                as_of=datetime.now(UTC).isoformat(),
+            )
+            if snapshot.source.source_ref not in assessment.source_refs:
+                raise ValueError()
+            rendered = render_reviewed_evidence(snapshot)
+            validate_context(snapshot, as_of=datetime.now(UTC).isoformat())
+            return replace(
+                native, response_text=native.response_text + "\n\n" + rendered,
+                reviewed_source_status="quoted_for_review",
+                reviewed_source_quote_characters=len(snapshot.quote),
+            )
+        except Exception:
+            return replace(native, reviewed_source_status="refused",
+                           reviewed_source_error_code="invalid_reviewed_knowledge")
+
+    def _compose_native_result(self, synthesis_input: SynthesisInput) -> SynthesisResult:
         """Create a response that reflects identity, context, and outcome."""
 
         response_text = self._compose_raw_response(synthesis_input)

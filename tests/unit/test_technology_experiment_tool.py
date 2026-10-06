@@ -344,6 +344,7 @@ def test_local_manifest_loader_rejects_traversal_symlink_and_hardlink(
         _load(outside, root)
 
     valid = _write_json(root, {"pack_id": "technology-experiment://inside/1.0.0"})
+    (root / "nested").mkdir()  # POSIX resolves nested before reaching '..'.
     with pytest.raises(ValueError, match="traversal or streams"):
         _load(root / "nested" / ".." / valid.name, root)
 
@@ -383,9 +384,11 @@ def test_local_manifest_loader_rejects_remote_or_device_root_before_access(
         )
 
 
+@pytest.mark.parametrize("stable_metadata", [False, True])
 def test_local_manifest_loader_detects_same_size_toctou_before_any_writer(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    stable_metadata: bool,
 ) -> None:
     root = tmp_path / "manifests"
     root.mkdir()
@@ -399,6 +402,9 @@ def test_local_manifest_loader_detects_same_size_toctou_before_any_writer(
         return raw
 
     monkeypatch.setattr(tool, "_read_bounded", read_then_swap)
+    if stable_metadata:
+        # Declared metadata seam; real I/O still must detect content mutation.
+        monkeypatch.setattr(tool, "_require_same_file", lambda *args, **kwargs: None)
 
     with pytest.raises(ValueError, match="changed while being read"):
         tool._load_local_manifest_payload(

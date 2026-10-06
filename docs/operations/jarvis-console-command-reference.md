@@ -9,6 +9,13 @@ This file is generated from the typed command registry and its validated
 
 | Command | Category | Execution | Output | JSON | Description |
 | --- | --- | --- | --- | --- | --- |
+| `transcript-review` | `memory` | `standalone` | `single` | `yes` | Revalidate supplied transcript text before explicit local Core handoff. |
+| `chatgpt-account` | `observability` | `standalone` | `single` | `yes` | Manage an explicit private ChatGPT provider account; no Core authority. |
+| `job-inspect` | `work` | `standalone` | `single` | `yes` | Inspect exact jobs in an existing read-only ledger; never execute. |
+| `code-review` | `artifact` | `standalone` | `single` | `yes` | Review a bounded in-memory patch supplied on stdin; never apply. |
+| `research-review` | `observability` | `standalone` | `single` | `yes` | Review lexical evidence from supplied texts; never fetch or trust. |
+| `memory-recall` | `memory` | `standalone` | `single` | `yes` | Inspect bounded read-only canonical turn evidence. |
+| `physical` | `artifact` | `standalone` | `single` | `yes` | Inspect and control exact opt-in physical artifact operations. |
 | `ask` | `mission` | `core` | `single` | `no` | Execute a single prompt. |
 | `action-confirm` | `work` | `core` | `single` | `no` | Record exact human confirmation evidence without granting authority. |
 | `chat` | `mission` | `core` | `chat` | `no` | Run a simple multi-turn chat session. |
@@ -51,6 +58,134 @@ This file is generated from the typed command registry and its validated
 | `mission-feedback` | `mission` | `core` | `single` | `no` | Record explicit bounded operator feedback after a mission. |
 
 ## Commands
+
+### `transcript-review`
+
+Revalidate supplied transcript text before explicit local Core handoff.
+
+Usage: `jarvis-console transcript-review [--authorized] [--session-id <value>] [--include-content] [--tts-authorized] [--tts-batch] [--tts-engine <value>] [--tts-reference <value>] [--tts-model-dir <value>] [--tts-python <value>] [--tts-workspace <value>] [--tts-device <value>] [--tts-sdk-source-dir <value>] [--tts-timeout <value>] [--tts-voice-profile <value>] [--tts-reference-start <value>] [--tts-reference-duration <value>] [--tts-reference-transcript <value>] [--tts-transcript-confirmed] [--tts-seed <value>] [--tts-show-output-path] [--format <value>]`
+
+| Argument | Required | Values | Repeatable | Description |
+| --- | --- | --- | --- | --- |
+| `--authorized` | no | flag | no | Opt into a new canonical Core turn after validation. |
+| `--session-id` | no | value | no | Local session binding, not operator authentication. |
+| `--include-content` | no | flag | no | Display exact reviewed text and Core final if safe. |
+| `--tts-authorized` | no | flag | no | Authorize local synthesis separately from the Core turn. |
+| `--tts-batch` | no | flag | no | Render the exact complete final in one bounded local SDK campaign. |
+| `--tts-engine` | no | value | no | - |
+| `--tts-reference` | no | value | no | - |
+| `--tts-model-dir` | no | value | no | - |
+| `--tts-python` | no | value | no | - |
+| `--tts-workspace` | no | value | no | - |
+| `--tts-device` | no | value | no | - |
+| `--tts-sdk-source-dir` | no | value | no | - |
+| `--tts-timeout` | no | value | no | - |
+| `--tts-voice-profile` | no | value | no | - |
+| `--tts-reference-start` | no | value | no | - |
+| `--tts-reference-duration` | no | value | no | - |
+| `--tts-reference-transcript` | no | value | no | - |
+| `--tts-transcript-confirmed` | no | flag | no | - |
+| `--tts-seed` | no | value | no | - |
+| `--tts-show-output-path` | no | flag | no | Display a safe temporary artifact locator when available (private paths stay redacted). |
+| `--format` | no | `text`, `json` | no | Select human text or supported machine-readable JSON output. |
+
+### `chatgpt-account`
+
+Manage an explicit private ChatGPT provider account; no Core authority.
+
+Usage: `jarvis-console chatgpt-account [--authorized] --credential-dir <value> --action <value> [--profile-ref <value>] [--timeout-seconds <value>] [--format <value>]`
+
+| Argument | Required | Values | Repeatable | Description |
+| --- | --- | --- | --- | --- |
+| `--authorized` | no | flag | no | Explicit opt-in before storage, browser or network use. |
+| `--credential-dir` | yes | value | no | Absolute private directory outside Git/OneDrive; parent exists. |
+| `--action` | yes | `connect`, `profiles`, `catalog`, `refresh` | no | - |
+| `--profile-ref` | no | value | no | Opaque reference from profiles/connect. |
+| `--timeout-seconds` | no | value | no | Loopback authorization budget (1..600 seconds). |
+| `--format` | no | `text`, `json` | no | Select human text or supported machine-readable JSON output. |
+
+### `job-inspect`
+
+Inspect exact jobs in an existing read-only ledger; never execute.
+
+Usage: `jarvis-console job-inspect --job-db <value> --actor-ref <value> --session-ref <value> --job-id <value> ... [--include-refs] [--format <value>]`
+
+| Argument | Required | Values | Repeatable | Description |
+| --- | --- | --- | --- | --- |
+| `--job-db` | yes | value | no | Explicit existing absolute quiescent SQLite database. |
+| `--actor-ref` | yes | value | no | - |
+| `--session-ref` | yes | value | no | - |
+| `--job-id` | yes | value | yes | - |
+| `--include-refs` | no | flag | no | Opt into bounded caller-scoped ledger references. |
+| `--format` | no | `text`, `json` | no | Select human text or supported machine-readable JSON output. |
+
+### `code-review`
+
+Review a bounded in-memory patch supplied on stdin; never apply.
+
+Usage: `jarvis-console code-review [--include-content] [--format <value>]`
+
+| Argument | Required | Values | Repeatable | Description |
+| --- | --- | --- | --- | --- |
+| `--include-content` | no | flag | no | Opt into escaped untrusted diff or exact evidence excerpts. |
+| `--format` | no | `text`, `json` | no | Select human text or supported machine-readable JSON output. |
+
+### `research-review`
+
+Review lexical evidence from supplied texts; never fetch or trust.
+
+Usage: `jarvis-console research-review [--include-content] [--format <value>]`
+
+| Argument | Required | Values | Repeatable | Description |
+| --- | --- | --- | --- | --- |
+| `--include-content` | no | flag | no | Opt into escaped untrusted diff or exact evidence excerpts. |
+| `--format` | no | `text`, `json` | no | Select human text or supported machine-readable JSON output. |
+
+### `memory-recall`
+
+Inspect bounded read-only canonical turn evidence.
+
+Usage: `jarvis-console memory-recall --memory-db <value> --subject-id <value> --session-id <value> ... --query <value> [--limit <value>] [--include-content] [--format <value>]`
+
+| Argument | Required | Values | Repeatable | Description |
+| --- | --- | --- | --- | --- |
+| `--memory-db` | yes | value | no | Explicit existing absolute quiescent SQLite database. |
+| `--subject-id` | yes | value | no | - |
+| `--session-id` | yes | value | yes | Explicit canonical session; repeat to allow another. |
+| `--query` | yes | value | no | - |
+| `--limit` | no | value | no | - |
+| `--include-content` | no | flag | no | Opt into bounded untrusted evidence excerpts. |
+| `--format` | no | `text`, `json` | no | Select human text or supported machine-readable JSON output. |
+
+### `physical`
+
+Inspect and control exact opt-in physical artifact operations.
+
+Usage: `jarvis-console physical --runtime-dir <value> --root <value> ... [--enable-execution] --action <value> [--request-id <value>] [--mission-id <value>] [--work-item-ref <value>] [--artifact-ref <value>] [--resource-ref <value>] [--desired-file <value>] [--operation <value>] [--expected-current-sha256 <value>] [--supersedes-artifact-ref <value>] [--challenge-id <value>] [--action-fingerprint <value>] [--confirmation-receipt-id <value>] [--session-id <value>] [--operator-identity-ref <value>] [--canonical-user-ref <value>] [--show-diff] [--format <value>]`
+
+| Argument | Required | Values | Repeatable | Description |
+| --- | --- | --- | --- | --- |
+| `--runtime-dir` | yes | value | no | - |
+| `--root` | yes | value | yes | Explicit alias=absolute-directory; repeat for each root. |
+| `--enable-execution` | no | flag | no | Opt into Linux physical execution; Windows refuses. |
+| `--action` | yes | `prepare`, `inspect`, `confirm`, `execute`, `status`, `recover`, `prepare-rollback`, `confirm-rollback`, `rollback` | no | - |
+| `--request-id` | no | value | no | - |
+| `--mission-id` | no | value | no | - |
+| `--work-item-ref` | no | value | no | - |
+| `--artifact-ref` | no | value | no | - |
+| `--resource-ref` | no | value | no | - |
+| `--desired-file` | no | value | no | - |
+| `--operation` | no | `create_text`, `replace_text` | no | - |
+| `--expected-current-sha256` | no | value | no | - |
+| `--supersedes-artifact-ref` | no | value | no | - |
+| `--challenge-id` | no | value | no | - |
+| `--action-fingerprint` | no | value | no | - |
+| `--confirmation-receipt-id` | no | value | no | - |
+| `--session-id` | no | value | no | - |
+| `--operator-identity-ref` | no | value | no | - |
+| `--canonical-user-ref` | no | value | no | - |
+| `--show-diff` | no | flag | no | Print sensitive ephemeral diff explicitly; never telemetry. |
+| `--format` | no | `text`, `json` | no | Select human text or supported machine-readable JSON output. |
 
 ### `ask`
 

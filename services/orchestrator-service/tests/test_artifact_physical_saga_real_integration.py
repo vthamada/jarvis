@@ -204,6 +204,9 @@ def _compose(
         local_text_file_canonical_physical_effect_authorizer=(
             memory.authorize_artifact_physical_effect
         ),
+        local_text_file_canonical_physical_effect_scope_provider=(
+            memory.artifact_physical_effect_scope
+        ),
         local_text_file_resource_physical_binding_lookup=(
             memory.is_local_text_resource_physically_bound
         ),

@@ -6,17 +6,47 @@ _jarvis_console() {
     previous=$words[CURRENT-1]
     local token
     for token in $words; do
-        case $token in (ask|action-confirm|chat|objectives|goal-strategy|objective|work-items|work-item|open-loops|resume-loop|artifacts|artifact|technology-candidates|technology-radar-intake|technology-radar|technology-experiment-pack|technology-experiment-eval|technology-experiments|experience-reflections|procedural-playbooks|skill-evolution|workflow-lifecycle|workflow-transition|evolution-review-queue|evolution-review|memory-review-queue|memory-review|mission-cycle|operator-dashboard|daily-workspace|operator-outcomes|decision-attribution|command-reference|completion|readiness-dashboard|doctor|learning-report|progress-report|mission-workflow|mission-feedback) command=$token; break ;; esac
+        case $token in (transcript-review|chatgpt-account|job-inspect|code-review|research-review|memory-recall|physical|ask|action-confirm|chat|objectives|goal-strategy|objective|work-items|work-item|open-loops|resume-loop|artifacts|artifact|technology-candidates|technology-radar-intake|technology-radar|technology-experiment-pack|technology-experiment-eval|technology-experiments|experience-reflections|procedural-playbooks|skill-evolution|workflow-lifecycle|workflow-transition|evolution-review-queue|evolution-review|memory-review-queue|memory-review|mission-cycle|operator-dashboard|daily-workspace|operator-outcomes|decision-attribution|command-reference|completion|readiness-dashboard|doctor|learning-report|progress-report|mission-workflow|mission-feedback) command=$token; break ;; esac
     done
     if [[ -z $command && $previous == '--format' ]]; then
         _values 'format' text json
         return
     fi
     if [[ -z $command ]]; then
-        _values 'command' --format 'ask' 'action-confirm' 'chat' 'objectives' 'goal-strategy' 'objective' 'work-items' 'work-item' 'open-loops' 'resume-loop' 'artifacts' 'artifact' 'technology-candidates' 'technology-radar-intake' 'technology-radar' 'technology-experiment-pack' 'technology-experiment-eval' 'technology-experiments' 'experience-reflections' 'procedural-playbooks' 'skill-evolution' 'workflow-lifecycle' 'workflow-transition' 'evolution-review-queue' 'evolution-review' 'memory-review-queue' 'memory-review' 'mission-cycle' 'operator-dashboard' 'daily-workspace' 'operator-outcomes' 'decision-attribution' 'command-reference' 'completion' 'readiness-dashboard' 'doctor' 'learning-report' 'progress-report' 'mission-workflow' 'mission-feedback'
+        _values 'command' --format 'transcript-review' 'chatgpt-account' 'job-inspect' 'code-review' 'research-review' 'memory-recall' 'physical' 'ask' 'action-confirm' 'chat' 'objectives' 'goal-strategy' 'objective' 'work-items' 'work-item' 'open-loops' 'resume-loop' 'artifacts' 'artifact' 'technology-candidates' 'technology-radar-intake' 'technology-radar' 'technology-experiment-pack' 'technology-experiment-eval' 'technology-experiments' 'experience-reflections' 'procedural-playbooks' 'skill-evolution' 'workflow-lifecycle' 'workflow-transition' 'evolution-review-queue' 'evolution-review' 'memory-review-queue' 'memory-review' 'mission-cycle' 'operator-dashboard' 'daily-workspace' 'operator-outcomes' 'decision-attribution' 'command-reference' 'completion' 'readiness-dashboard' 'doctor' 'learning-report' 'progress-report' 'mission-workflow' 'mission-feedback'
         return
     fi
     case "$command:$previous" in
+        transcript-review:--format)
+            _values 'value' 'text' 'json'
+            return ;;
+        chatgpt-account:--action)
+            _values 'value' 'connect' 'profiles' 'catalog' 'refresh'
+            return ;;
+        chatgpt-account:--format)
+            _values 'value' 'text' 'json'
+            return ;;
+        job-inspect:--format)
+            _values 'value' 'text' 'json'
+            return ;;
+        code-review:--format)
+            _values 'value' 'text' 'json'
+            return ;;
+        research-review:--format)
+            _values 'value' 'text' 'json'
+            return ;;
+        memory-recall:--format)
+            _values 'value' 'text' 'json'
+            return ;;
+        physical:--action)
+            _values 'value' 'prepare' 'inspect' 'confirm' 'execute' 'status' 'recover' 'prepare-rollback' 'confirm-rollback' 'rollback'
+            return ;;
+        physical:--operation)
+            _values 'value' 'create_text' 'replace_text'
+            return ;;
+        physical:--format)
+            _values 'value' 'text' 'json'
+            return ;;
         ask:--requested-autonomy-level)
             _values 'value' 'assist_only' 'confirm_before_action' 'bounded_core_action' 'supervised_external_action'
             return ;;
@@ -187,6 +217,27 @@ _jarvis_console() {
             return ;;
     esac
     case "$command" in
+        transcript-review)
+            _values 'option' '-h' '--help' '--authorized' '--session-id' '--include-content' '--tts-authorized' '--tts-batch' '--tts-engine' '--tts-reference' '--tts-model-dir' '--tts-python' '--tts-workspace' '--tts-device' '--tts-sdk-source-dir' '--tts-timeout' '--tts-voice-profile' '--tts-reference-start' '--tts-reference-duration' '--tts-reference-transcript' '--tts-transcript-confirmed' '--tts-seed' '--tts-show-output-path' '--format'
+            ;;
+        chatgpt-account)
+            _values 'option' '-h' '--help' '--authorized' '--credential-dir' '--action' '--profile-ref' '--timeout-seconds' '--format'
+            ;;
+        job-inspect)
+            _values 'option' '-h' '--help' '--job-db' '--actor-ref' '--session-ref' '--job-id' '--include-refs' '--format'
+            ;;
+        code-review)
+            _values 'option' '-h' '--help' '--include-content' '--format'
+            ;;
+        research-review)
+            _values 'option' '-h' '--help' '--include-content' '--format'
+            ;;
+        memory-recall)
+            _values 'option' '-h' '--help' '--memory-db' '--subject-id' '--session-id' '--query' '--limit' '--include-content' '--format'
+            ;;
+        physical)
+            _values 'option' '-h' '--help' '--runtime-dir' '--root' '--enable-execution' '--action' '--request-id' '--mission-id' '--work-item-ref' '--artifact-ref' '--resource-ref' '--desired-file' '--operation' '--expected-current-sha256' '--supersedes-artifact-ref' '--challenge-id' '--action-fingerprint' '--confirmation-receipt-id' '--session-id' '--operator-identity-ref' '--canonical-user-ref' '--show-diff' '--format'
+            ;;
         ask)
             _values 'option' '-h' '--help' '--session-id' '--mission-id' '--operator-identity-ref' '--canonical-user-ref' '--requested-autonomy-level' '--max-autonomy-level' '--autonomy-confirmation-mode' '--action-confirmation-receipt-id' '--action-confirmation-origin-request-id' '--origin-request-id' '--debug' '--format'
             ;;

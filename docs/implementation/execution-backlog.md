@@ -59,6 +59,28 @@ Politicas obrigatorias:
 - docs vivas entram na fila apenas quando refletem mudanca real de runtime, gate ou baseline;
 - nenhuma tarefa vaga entra em `ready`.
 
+### Desenvolvimento paralelo e integracao (direcao 2026-10-02)
+
+O operador pediu o mapa das frentes para implementacao com multiagentes desta
+sessao. O detalhamento fica em
+`docs/implementation/parallel-implementation-map.md`: 13 frentes de produto,
+tres transversais e pacotes pequenos com ownership disjunto.
+
+- WIP 1 continua aplicado ao item integrado. MB218/219 foram fechados em
+  2026-10-05 no escopo local Linux/SQLite apos corpus persistente e gates;
+  nas ondas anteriores MB219 permanecia dependente de MB218.
+- Desenvolvimento isolado pode ter ate tres workers mais um coordenador,
+  com subtarefas/pacotes registrados no recorte desta fila unica antes do
+  dispatch. Nao criar outro backlog micro nem alterar centros compartilhados
+  simultaneamente.
+- Desenvolvimento de cliente/adapter/fixture nao e promocao de capability;
+  Web, voz, mobile, code, browser/computer, integracoes e MCP podem ser
+  preparados isoladamente sem esperar o Core inteiro ficar completo.
+- Ativacao e exposicao externas seguem seus criterios, testes, gates e
+  decisao de fase. Cada superficie precisa de testes proprios alem do pytest.
+- IDs WP sao decomposicao planejada, nao novos itens MB ready. A solicitacao
+  seguinte autorizou a primeira onda isolada, registrada abaixo.
+
 Politica de modelo recomendado:
 
 - novos itens com recomendacao explicita de modelo devem, por padrao, usar apenas `gpt-5.4`, `gpt-5.3-codex` ou `gpt-5.4-mini`, salvo repriorizacao tecnica deliberada;
@@ -120,6 +142,636 @@ Escalar ao operador quando:
 ---
 
 ## 4. Fila ativa
+
+### MB221 - transporte de inferencia, revisao de voz e tarefas readonly
+
+- status: done
+- micro_objetivo: preparar transporte HTTPS/SSE opt-in SIWC subordinado ao port
+  existente; unir documento de ASR local a revisao textual exata antes de Core;
+  disponibilizar inspecao readonly do ledger de tarefas existente sem init/replay.
+- justificativa: frentes F01/F07/F05 ja autorizadas; reduzir gaps de transporte
+  e integracao local, sem API mutante, prosa livre promovida ou novo scheduler.
+- depende_do_operador: nao para implementar/testar isoladamente; sim para OAuth
+  real, consentimento/credenciais, inferencia externa e aceite perceptual de voz.
+- ownership: workers transport modulo novo/tests; voice review modulo novo/tests;
+  job readonly modulo novo/tests; coordenador CLI, E2E, revisao e docs/gate.
+- criterio_de_aceite: transporte fixed origin/certificados/sem proxy/redirect/
+  retries ou fallback pago, SSE bounded e no partial final; voz exige review
+  exato/binding/deadline, nenhum envio automatico; jobs nao cria/migra/claim/
+  executa stores, scope exato e conteudo redigido. Falhas sem dados privados.
+- validacao: baterias locais/adversariais e E2E afetados; rede apenas fixture
+  injetada sem socket/rede real, nenhum request OpenAI/modelo humano.472 passed/
+  2 skips de criacao de symlink Windows; Ruff global/diff check passaram.
+- gate_minimo: python tools/engineering_gate.py --mode standard
+- evidencia_de_fechamento: gate standard global Windows passou;472 testes
+  focados passaram/2 skips symlink Windows; auditorias finais sem bloqueador.
+  Runbook: docs/operations/parallel-wave-transport-transcript-and-job-inspection.md.
+- limites: sem leitura de tokens de outros apps, login/ID-token validado,
+  credenciais persistidas, microfone, TTS perceptualmente aprovado, HTTP Core
+  publico ou scheduler. Nenhuma capability promovida por fixtures.
+- desativacao: nao injetar adapters/retirar comandos novos; stores intactos.
+
+### MB222 - OAuth local validado e catalogo SIWC
+
+- status: done
+- micro_objetivo: preparar cliente OAuth local isolado com state/nonce/PKCE,
+  validacao dos bindings/token/scope/expiry e catalogo por conta; nao importar
+  credenciais de outro app nem ativar fallback pago. Sem login automatico.
+- justificativa: MB221 resolve framing/transporte, nao autentica uma conta;
+  utilidade conversacional real depende dessa fronteira e de sintese governada.
+- depende_de: MB221 fechado; contrato oficial/elegibilidade revalidado antes
+  de implementar. Armazenamento/refresh precisam recorte e threat model claros.
+- depende_do_operador: nao para codigo/testes offline; sim para login externo,
+  consentimento real, selecao de modelo e campanha de inferencia real.
+- criterio_de_aceite: login/refresh/catalogo nunca implicitos; callback limitado
+  e correlacao exata, refusals/replay/scope/expiry testados; rede simulada nao
+  promove OAuth. Gate standard e docs/rollback antes de fechar o recorte.
+- ownership: coordenador contratos/composicao/session/storage/listener/CLI/E2E;
+  workers novosmodulos flowPKCE, verificador JWT e HTTPS/catalogo; testes
+  disjuntos. Ninguem altera os centros compartilhados sem coordenacao.
+- dependencia_opcional: PyJWT[crypto] no extra siwc; biblioteca JWT mantida
+  para assinatura JWKS, sem dependencia nova no Core. Sem crypto caseiro.
+- validacao: rede externa nao exercida; JWTs assinados reais com chaves
+  sinteticas, HTTPS injetado e loopback real quando testado. Gate standard.
+- evidencia_de_fechamento:613 testes focados passaram/6 skips (POSIX e
+  symlink indisponivel Windows); storage final82 passed/6 skips inclui ultima
+  regressao de cleanup de lock. Auditorias sem bloqueador, gate standard global
+  Windows passou. Runbook: docs/operations/siwc-local-account-and-catalog.md.
+- desativacao: nao invocar comandos/injetar sessao/provider opt-in; Core e
+  stores preservados. Disconnect apenas local, sem revoke remoto.
+- limites: texto generativo livre, UI/microfone,
+  scheduler/producao e API mutante nao sao habilitados pelo OAuth.
+
+Repriorizacao pos-MB222: primeiro homologacao de conta/modelo F01 somente com
+operador; codigo/testes locais avancam review ASR em superficie revisavel F07/F06,
+mantendo qualidade
+vocal como aceite proprio; jobs F05 continua ledger, scheduler so com escopo/
+permissao/recuperacao definidos. Browser/code/integracoes/MCP/mobile continuam
+no mapa paralelo, sem promover fixtures nem declarar JARVIS completo.
+
+### MB223 - revisao de transcricao na superficie local
+
+- status: done
+- micro_objetivo: conectar o review textual MB221 a Web UI local existente,
+  com importacao/edicao/exportacao local e CLI que revalida texto/documento/hash
+  antes de reconstruir revisao e handoff one-shot ao Core; nenhum envio
+  automatico, ticket de autoridade persistido ou HTTP mutante publico.
+- justificativa: frentes F07/F06 autorizadas, transformar bridge local em uso
+  visivel; nao abrir superficie HTTP mutante publica nem prometer qualidade TTS.
+- depende_de: MB221 fechado; MB222 integrado/gate, WIP1 respeitado.
+- depende_do_operador: nao para implementacao/testes; sim para microfone,
+  voces reais e aceite perceptual.
+- ownership: workers componentes UI/tests, contratos bridge/tests e auditoria
+  disjunta; coordenador integracao/runbook/gates.
+- contrato_da_rodada: jarvis-transcript-handoff-v1 com authority=none,
+  source_origin=unverified, document_utf8_b64 canonical, source_sha256,
+  reviewed_text/reviewed_sha256 e review_revision declarada (nao ticket).
+  Fonte ate32768 bytes UTF8, envelope ate131072 bytes, texto ate4000 codepoints.
+  JS possui consentimento/revisao/prazo120s/export unico local. CLI standalone
+  exige --authorized, revalida bytes/schema/hashes antes de bootstrap Core,
+  cria revisao nova e consome uma vez. Novo uso humano explicito do mesmo
+  arquivo e novo turno, nao replay de receipt nem deduplicacao entre processos.
+  Core persistente existente via factory tardia, assist_only/scope vazio;
+  conteudo/final somente com --include-content e redacao integral segura.
+- criterio_de_aceite: texto exato revisavel, estado/replay/deadline recusados;
+  export e dado nao confiavel, nao receipt nem prova da origem WAV/ASR. Console
+  exige opt-in e revisao local vigente; browser fixture continua fixture,
+  servidor apenas GET/HEAD e CSP sem conexoes; sem auto-send ou nova auth.
+- validacao: testes UI/bridge e E2E local review -> Core, screenshots/checagem
+  visual se UI mudar; gate standard e bateria especifica de superficie.
+- gate_minimo: python tools/engineering_gate.py --mode standard
+- desativacao: desligar surface/bridge opt-in, preservando Core e stores.
+- evidencia_de_fechamento:273 testes Python focados/zero skips,172 JS/zero
+  skips, picker/export/discard sinteticos no browser e mobile sem overflow.
+  Node real -> pacote -> CLI -> Core/SQLite/restart, observabilidade local sem
+  egress. Gate standard global Windows passou, auditorias sem bloqueador.
+  Runbook: docs/operations/reviewed-transcript-web-to-core.md.
+
+### MB224 - fala local opt-in da sintese persistida
+
+- status: done
+- micro_objetivo: conectar o handoff textual persistente MB223 a fala local
+  explicitamente habilitada, usando laboratorio Chatterbox/Qwen existente e
+  binding da final/memoria canonicos; nenhuma truncagem/substituicao da final.
+- justificativa: piloto Core->TTS existente usa runtime temporario; transformar
+  uso revisado em continuidade persistente, sem declarar voz natural aprovada.
+- depende_de: MB223 fechado/gate; modelos/venv/reference declarados pelo caller.
+- depende_do_operador: nao para codigo/testes; sim para execucao vocal real,
+  consentimento de referencia/configuracao e aceite perceptual.
+- ownership: workers adapter final->TTS/tests, CLI options/tests e auditoria/E2E;
+  coordenador contratos/integracao/gates. Nao alterar laboratorio/shared centers
+  simultaneamente sem coordenacao.
+- criterio_de_aceite: sem TTS implicito, paths/config/consent validados antes
+  de IO, somente final persistida exata; limite/falha conserva alternativa
+  textual sem nova chamada Core/retry. Nada de audio parcial como sucesso,
+  clone sem consentimento, ferramenta ou API mutante publica.
+- validacao: testes locais adversariais/E2E Core real -> lab injetado com
+  evidencia fixture, opcional modelo real somente com autorizacao/campanha
+  propria; metadata/paths redigidos por padrao, docs/rollback explicitos.
+- gate_minimo: python tools/engineering_gate.py --mode standard
+- desativacao: sem injecao/flags TTS opt-in; final e memoria canonicas intactas.
+- evidencia_de_fechamento:542 testes focados passaram/zero skips, incluindo
+  93 adapter/154 options/57 E2E novos. CLI real -> Core/SQLite/restart -> lab
+  fixture com WAV validado; bindings/auditfail/race/reentrancia/volume local
+  e preflight readonly antes Core. Gate standard global Windows passou;
+  auditorias sem bloqueador. Sem modelo/reference humano/conta/store humano.
+  Runbook: docs/operations/persistent-final-local-tts.md.
+
+### MB225 - fala integral de finais longas sem truncagem
+
+- status: done
+- micro_objetivo: segmentar a final canonica exata em partes bounded para o
+  laboratorio existente e publicar somente audio completo agregado, sem resumir,
+  omitir, normalizar ou reenviar texto ao Core; runtime de modelo carregado
+  uma vez por campanha quando o SDK permitir, nao um novo cerebro.
+- justificativa: E2E MB224 com Core nativo produziu final1097 caracteres;
+  limite600 faz recusa correta mas ainda impede fala integral de respostas reais.
+  Este recorte elimina esse gap F07, sem fingir qualidade vocal aprovada.
+- depende_de: MB224 fechado/gate; SDK/laboratorio existentes.
+- depende_do_operador: nao para implementar/testar; sim para campanha vocal
+  real, configuracao/modelo/referencia/consentimento e aceite perceptual.
+- ownership: workers segmentacao/assembler/tests, worker SDK batch/tests e
+  worker E2E/auditoria; coordenador composicao, contratos locais, docs e gates.
+- criterio_de_aceite: concatenacao dos substrings == final original Unicode,
+  no maximo6000 codepoints/16 partes, cada parte ate600; WAV agregado ate32MiB/
+  600s; deadline total ate1800s, sem reset por parte. Preservar
+  engine/profile/ref/seed e bindings canonicos. Uma falha intermediaria impede
+  publicar parcial como sucesso; texto integral preservado, nenhum retry Core,
+  modelo externo ou playback automatico. Sem dependencia central nova.
+- validacao: baterias adversariais de segmentacao/WAV e E2E Core nativo longo
+  sem test double de final -> lab worker injetado -> agregado valido completo;
+  falhas por parte, timeout, cancel, audio incompatível, privacidade/restart.
+  Modelo real/qualidade apenas evidencia separada com operador.
+- gate_minimo: python tools/engineering_gate.py --mode standard
+- desativacao: sem modo batch opt-in; MB224 e texto canonico intactos.
+- evidencia_de_fechamento:732 testes focados/zero skips,13 registry/assets e
+  172 JS passaram;39 E2E inclui Core nativo final1097/SQLite/restart, Unicode,
+  manifesto/PCM exatos e refusals pos-audit/cleanup sem segundo turno. Gate
+  standard global Windows final passou; auditorias sem bloqueador restante.
+  SDKs/subprocesso simulados, nenhum modelo/audio/login/store humano usado.
+  Runbook: docs/operations/full-final-local-tts-batch.md. MB226 ready apenas
+  para compatibilidade manual Web, nao qualidade vocal ou API nova.
+
+### MB226 - compatibilidade Web manual para WAV agregado longo
+
+- status: done
+- micro_objetivo: permitir ensaio manual do WAV agregado MB225 no picker/player
+  local existente, ate32MiB/600s; manter RMS real da esfera, sem autoimport ou
+  servidor que exponha arquivos do laboratorio.
+- justificativa: esfera/RMS e playback manual ja implementados/testados;
+  player120s recusa agregado valido600s. Compatibilidade pequena F06/F07,
+  sem nova superficie, API ou promocao de qualidade vocal.
+- depende_de: MB225 fechado/gate; antes disso nao puxar pelo WIP1.
+- depende_do_operador: nao para codigo/fixture; sim para ouvir voz humana/modelo.
+- ownership: worker playback/RIFF em local-voice-playback.mjs e teste legado;
+  worker bateria parser em arquivo novo; worker lifecycle/UI em testes novos;
+  coordenador app/HTML/docs, E2E Python->Node e browser smoke sintetico.
+  Nao alterar Core/SDK batch nem centros compartilhados simultaneamente.
+- criterio_de_aceite: agregado PCM16 mono MB225 valido selecionavel ate600s,
+  limites bytes/duracao/canais/rate/RIFF strict; sem autoplay/upload/microfone;
+  stop/clear/pagehide/cancel/late callbacks invalidam audio/RMS corretamente.
+  Conversao PCM->Float32 longa permite cancelamento entre macrotarefas,
+  sem AudioBuffer/start obsoleto;32MiB PCM e ate64MiB buffer, sem elevar bytes
+  para aceitar600s em rate alto. Compatibilidade stereo existente preservada.
+  Conversa fixture continua rotulada, WAV nao concede autoridade ou autenticidade.
+- validacao: fixture Python aggregate -> parser JS real, testes adversariais
+  incluindo seis partes sinteticas100s ate600s e RIFF data-antes-fmt recusado;
+  de limites e lifecycle, browser WebAudio/sphere com WAV sintetico e sem
+  overflow; nenhuma selecao automatica do WAV humano. Gate standard e JS.
+- gate_minimo: python tools/engineering_gate.py --mode standard
+- evidencia_de_fechamento: 344 JS e173 Python focados passaram/zero skips;
+  assembler Python -> parser Node real com PCM/digest exatos126s/600s. IAB
+  sintetico mostrou RMS real, cancelstarting e mobile sem overflow. Gate
+  standard global Windows final passou, sem selecionar subconjunto de testes;
+  maxfail1 so anteciparia diagnostico de falha.56 MCP passaram apos ajustar
+  budget de teste de evidencia, runtime intacto. Tentativas registradas em
+  docs/operations/long-local-wav-web-playback.md. Sem qualidade vocal promovida.
+- desativacao: nao selecionar WAV/reproduzir; Core e audio original intactos.
+
+Repriorizacao pos-MB226: compatibilidade vocal local estabilizada; retornar a
+F09 ja autorizada, avancando observacao de fonte HTTPS externa de escopo
+fechado. Nao transformar outra fixture/renomeacao em prova de browser real.
+Login/modelo/qualidade de voz e API mutante continuam aceites separados.
+
+### MB227 - observacao HTTPS externa de escopo fechado
+
+- status: done
+- micro_objetivo: implementar adapter novo credentialless para uma leitura
+  HTTPS de URL canonica exata, host e IPv4 publico fixados no scope; transportar
+  texto bounded como observacao nao confiavel, sem executar HTML/JS ou promover
+  conteudo a instrucao/memoria/governanca. Preservar fixture_reader existente.
+- justificativa: F09 no mapa paralelo ja previa leitura externa de escopo
+  fechado; HTTPloopback existe, nao oferece observacao externa. Slice material
+  de transporte/consumer tipado, nao browser engine, clique ou formulario.
+- depende_de: MB226 fechado/gate; docs primarias TLS/HTTP verificadas antes
+  de implementar. Nenhuma dependencia central nova ou SDK browser escolhido.
+- referencias_verificadas: 2026-10-05, [Python3.11 ssl](https://docs.python.org/3.11/library/ssl.html)
+  (PROTOCOL_TLS_CLIENT, CERT_REQUIRED/check_hostname e nonblocking SSLWantRead/
+  Write) e [RFC9112](https://www.rfc-editor.org/rfc/rfc9112.html) sec6-8
+  (framing, chunk extensions/trailers e mensagens incompletas). Politica local
+  pode recusar framing ambiguo/duplicado mesmo quando RFC permite normalizacao.
+- depende_do_operador: nao para codigo/testes sinteticos; sim para alvo/pin e
+  campanha externa real. Nenhum login/requisicao externa automatica nesta onda.
+- ownership: worker parser HTTP em https_protocol.py/testes proprios; worker
+  TLS/pinnedtransport em https_transport.py/testes proprios; worker corpus/E2E
+  em testes novos/fixtures TLS; coordenador https_contracts.py/https_reader.py,
+  CLI standalone consumer, testes CLI/threat model/docs/gates. Nao alterar
+  fixture_reader, Core, registries ou centros compartilhados simultaneamente.
+- criterio_de_aceite: opt-in explicito, principal/session/scope/purpose/url
+  exatos; socket IPv4 publico numerico443 sem DNS/proxy/rebinding, TLS native
+  cert chain/hostname/SNI obrigatorios; sem redirect/retry/cookiejar/credenciais.
+  Contexto TLS nao herda escrita de keylog por SSLKEYLOGFILE; nao alterar
+  ambiente global nem aceitar CA/contexto inseguros na API de produto.
+  Status3xx/401/407 recusados, headers benignos ignorados sem armazena-los.
+  Framing Content-Length OU chunked bounded, nunca ambos; limites bytes,
+  chunkcount/line/extension/trailer/overhead e prazo/cancel global, sem parcial
+  como sucesso: corpo ate256KiB, headers16KiB, trailers8KiB, chunkline4KiB,
+  4096chunks e overhead64KiB; deadline default10s/teto60s, polling<=100ms.
+  Accept-Encodingidentity, gzip recusado nesta fase. UTF8/texto
+  exatos, binding/digest/provenance e erros content-free; sem grant/autonomia.
+- validacao: parser adversarial, requests consent/subject/scope/noDNS/egress,
+  TLS com certs sinteticos/loopback real por seams internas test-only, sem flag
+  productionallow_private/insecure. Timeout/cancel/race/EOF/framing/leftovers,
+  hostname/IPpin/badCA/expiredcert e E2E consumer real; fixture nao promove
+  browser live ou campanha externa. Stdlib crypto/TLS, sem crypto caseiro.
+- gate_minimo: python tools/engineering_gate.py --mode standard
+- desativacao: nao injetar/invocar adapter opt-in; Core/HTTPfixture preservados.
+- evidencia_de_fechamento:699 testes focados distintos passaram/zero skips,
+  incluindo TLS real sintetico/CLI/parser/HTTPfixture e22 runner. Auditoria
+  independente sem bloqueador; gate standard global Windows completo passou.
+  cryptography somente dev, imagem Linux declarada mas nao reconstruida nesta
+  rodada; sem campanha externa/promocao/Core/store humano/commit/push.
+  Runbook docs/operations/credentialless-https-observation.md.
+
+Repriorizacao pos-MB227: transporte F09 fechado localmente; lacuna de produto
+comprovada em F03 e F01: https_read_cli/research-review ainda terminam fora do
+Core, Knowledge recupera corpus curado e Synthesis nao consome trechos desses
+produtos. Priorizar integracao real das fontes revisadas, nao outra demo isolada.
+Conta/modelo generativo, code sandbox real e cockpit canonico seguem no mapa;
+campanhas externas e API mutante mantem aceites proprios.
+
+### MB228 - fonte revisada request-scoped integrada ao Core
+
+- status: done
+- micro_objetivo: aceitar uma fonte textual revisada e bounded no caminho
+  local assist_only de analise; entregar citacao exata a Knowledge/Governance/
+  Synthesis e persistir a final canonicamente. Nao concatenar fonte a instrucao
+  do Executive, nao autoimportar corpus ou criar fatos verificados.
+- justificativa: WP-KNOWLEDGE-01 ja previa review -> consumo canonico; MB220
+  e MB227 entregam selecao/transporte, mas ainda nao chegam a resposta soberana.
+  Mudanca de integracao no runtime existente, nao nova vertical/registry.
+- depende_de: MB227 fechado/gate; contratos do slice congelados pelo
+  coordenador antes de dispatch, defaults e caminhos sem fonte preservados.
+- depende_do_operador: nao para codigo/corpus sintetico; sim para campanha
+  externa, uso de dados humanos e homologacao perceptual/modelo quando forem
+  solicitados. Nao acionar login/modelo/rede externa automaticamente.
+- ownership: worker intake/revisao em modulo novo knowledge_service e testes;
+  worker consumer request-scoped em modulo novo e testes; worker corpus/E2E
+  TLS->review->Core/restart em testes novos. Coordenador contratos opcionais,
+  KnowledgeService/Orchestrator/Synthesis/composicao local/CLI/docs/gate.
+  Nenhum centro compartilhado editado por workers concorrentes.
+- criterio_de_aceite: opt-in local fresco, query/bytes/hash/URL/data/revisao
+  revalidados e bindings principal/session/request reconstruidos pelo caller
+  confiado, nao por metadata ou envelope exportado. Entrada declarada continua
+  unverified; observed_at nao demonstra verdade, atualidade ou autenticacao.
+  Fonte unica ate16KiB UTF8 e citacao ate512 caracteres, sem truncar para caber;
+  restringir reader a16KiB antes de eventual fetch do fluxo. Ticket/revisao
+  one-shot com prazo, mismatch/tamper/replay recusados antes do claim/turno/
+  eventos/efeitos da tarefa. Validacao inicial do CLI precede fabrica/store;
+  expiracao durante a construcao ainda recusa o request, nao desfaz bootstrap.
+  Contexto temporario request-scoped sem monkeypatch global do KnowledgeService
+  ou estado compartilhado entre turnos; comportamento default inalterado.
+  Governance nativa continua qualificando evidencia; Synthesis revalida span,
+  rotula untrusted/unverified e escapa markup/controles. Sem prosa de fonte como
+  instrucao, afirmacao verificada ou recibo de efeito. Sem grants/operacao,
+  scope de capability vazio/assist_only; falha preserva fallback nativo.
+  Memoria canonica/eventos existentes consomem a final soberana, sem store
+  paralelo. Telemetria bounded content-free e display opt-in/redacao integral.
+- validacao: slice local/adversarial e E2E TLS sintetico real -> observacao ->
+  revisao fresca -> Core persistente -> sintese citada -> memoria/restart;
+  sessao estrangeira, bytes/hash/spans adulterados, stale/future/prazo/replay,
+  injection e zero efeitos. Regressao sem fontes e equivalencia dos caminhos
+  nativo/LangGraph quando aplicavel; sem campanha externa/modelo humano.
+- gate_minimo: python tools/engineering_gate.py --mode standard
+- desativacao: nao compor fonte opt-in; defaults preservados, nenhum novo
+  registry/memory type ou corpus importado para migrar.
+- evidencia_de_fechamento:619 testes novos consolidados passaram/zero skips
+  (138 review,103 evidence,103 contratos/E2E,92 synthesis,173 CLI,10 projection).
+  TLS sintetico real -> review -> Core SQLite -> final exata -> restart; default
+  e Graph scheduler fixture preservados, nenhum efeito/fonte externa/modelo.
+  Auditoria final sem bloqueador conhecido; corrigidos expiry exato, workflow
+  deferred annotation, summary readprojection e display rawquote sensivel.
+  Primeiro standard falhou26% por input legado sem campo opcional; fallback
+  None e151 relacionados passaram, depois NOVO standard global Windows completo
+  passou100%. Runbook docs/operations/reviewed-source-core.md. Sem promocao,
+  store humano, nova prova Linux, commit ou push.
+
+Repriorizacao preparada pos-MB228: citacao verificavel nao substitui resposta
+generativa util. Retornar F01 para complemento de analise sem tools, apenas
+subset naturalmente ALLOW; nao forcar autonomia ou remover especialistas para
+acionar modelo. F11 sandbox real e F06 cockpit canonico mantem lacunas proprias.
+Homologacao externa de conta/modelo, naturalidade vocal e API mutante separadas.
+
+### MB229 - complemento generativo de analise subordinado
+
+- status: ready
+- micro_objetivo: produzir prosa nova bounded para analise local naturalmente
+  ALLOW/core_guidance_only, mantendo resposta e decisao nativas soberanas e
+  persistindo uma unica final. Nao outra extracao literal nem demo fora do Core.
+- justificativa: F01/WP-CORE-01 ainda nao tem conversa generativa integrada;
+  Synthesis usa port opcional extrativo. MB228 conecta fonte mas nao interpreta
+  pergunta por modelo. Inspecao Core real isolado confirmou assist_only ALLOW
+  para "Compare documentation and observability pilot reports." e review de
+  documentation/telemetry/pilot baseline, sem efeito ou configoverride.
+  Consultas cotidianas/PT podem continuar DEFER; nao alegar cobertura ampla.
+- depende_de: fechamento/gate MB228; congelar contrato minimo de candidato
+  e elegibilidade antes dispatch. MB228 fechado; proximo corte pronto.
+- depende_do_operador: nao para codigo/servico HTTPS sintetico/SQLite isolado;
+  sim para login, conta/provedor/modelo escolhido e aceite real. Nao conectar
+  conta, ler tokens de outros apps ou iniciar refresh/modelo externamente.
+- ownership: worker modulo generative_analysis.py e testes (prompt/validator/
+  rendering); worker session_inference_port.py e composicao CLI leaf explicita
+  (lazy catalog/provider); worker corpus/E2E comparando baseline nativo com
+  candidato no Core real. Coordenador shared/engine/orchestrator/CLI central/
+  docs/gate. Preservar fonte review e fluxo extrativo/default existentes.
+- criterio_de_aceite: um infer request bounded, current input e quote revisada
+  ate512 somente; nunca body/corpus/historico bruto, identidade/segredo ou tools.
+  JSON strict analysis/assumptions/limitations/citations sem fields actions/
+  grants/state. Schema/count/quote/refs/correlation/provider/terminal completion
+  e prazo/cancel global revalidados; invalid/partial/timeout/cancel/cleanup
+  retornam final nativa exata. Prosa model-generated nao verificada rotulada,
+  sem prometer validador semantico universal de verdade/injection.
+  Elegibilidade ALLOW/analysis/core-only, sem pending confirmation/operacao/
+  adapter/missioneffect; DEFER/BLOCK nunca chamam modelo/catalogo nem elevam
+  autonomia. Catalogo lazy e infer compartilham budget; sem refresh/login/retry
+  automatico ou token ambiental. Synthesis seleciona/renderiza final, modelo
+  nunca escreve memoria/policy, escolhe principal ou concede grant.
+  Eventos fixed status/code/mode/count sem texto/model/account/URL; Memory
+  recebe final unica/restart exato. Evidencia fixture nao vira live_model
+  por renomeacao; promocao depende de campanha autorizada com modelo real.
+- validacao: bateria slice/adversarial + E2E Core persistente/HTTPS sintetico
+  e pipeline completo, default/DEFER/BLOCK sem chamadas, candidatos forjados,
+  conclusao parcial, egress/identity/account mismatches e nenhum efeito. Gate
+  standard global, docs/rollback; sem nova dependencia central por conveniencia.
+- gate_minimo: python tools/engineering_gate.py --mode standard
+- desativacao: nao compor port generativo opcional; native final/default intactos.
+
+### MB220 - produtos locais de revisao e evidencia (2026-10-05)
+
+- status: done
+- micro_objetivo: tornar WP-CODE-01 e WP-KNOWLEDGE-01 utilizaveis por comandos
+  standalone do console, com entrada JSON limitada por stdin e saida redigida
+  por padrao; diff/citacoes somente com include-content explicito.
+- justificativa: fila MB212-219 encerrada; direcao paralela existente prioriza
+  utilidade diaria sem ampliar superficie HTTP, autoridade ou dependencias.
+- depende_do_operador: nao
+- ownership: worker code em code_review_cli.py/testes novos; worker knowledge
+  em knowledge_service/research.py, research_cli.py/testes novos; coordenador
+  em leitura stdin, registry/parser, testes E2E e docs; revisao cruzada ao final.
+- criterio_de_aceite: stdin real -> validacao -> patch preview existente ou
+  selecao lexical de fontes fornecidas -> JSON revisavel; rejeitar duplicatas,
+  campos extras, excesso, preimage/hash falsos e fonte invalida; nenhum Core
+  construido, rede, escrita em arquivos, teste de codigo ou autoridade.
+- validacao: baterias locais/adversariais e subprocess CLI ponta a ponta;
+  testes de registry/completions/reference e guardas de dados nao confiaveis.
+- gate_minimo: python tools/engineering_gate.py --mode standard
+- evidencia_de_fechamento: 310 testes focados/zero skips e28 CLI reexecutados
+  apos timeout inicial30s do teste (startup budget60s, runtime intacto);
+  gate standard global Windows final passou. Guia/exemplos/auditoria:
+  docs/operations/local-review-products.md. Nenhum modelo ou capability promovido.
+- limites: ferramentas offline declaradas, nao sintese soberana, modelo real,
+  pesquisa web, verificacao de fatos, aplicacao de patch ou capability promovida.
+- desativacao: remover comandos standalone da composicao; sem migration/dados
+  humanos alterados. MB218/219 e decisao no_go_for_public_mutating_api intactos.
+
+### Fechamento local MB218/MB219 - 2026-10-05
+
+MB218 done por aceite tecnico CLI entre containers, preview opt-in, challenge
+exato, restart/recovery e redacao. MB219 done por auditoria, corpus persistente
+224 passed/5 skips Windows, pausa concorrente real por processo, seis falhas
+storage/reload, runbook e gates release Linux/standard Windows aprovados.
+Decisao: go_for_bounded_local_linux_sqlite_opt_in; no_go_for_public_mutating_api.
+SFC005 nao entra automaticamente. Limites hardware/power-loss, autenticacao
+multiusuario e PostgreSQL first-effect nao foram promovidos. Fila MB212-219
+esgotada; proxima fila requer repriorizacao pelo mapa macro de produto diario.
+Evidencia: docs/operations/mb218-mb219-persistent-readiness-2026-10-05.md.
+
+### Prova Docker Linux autorizada 2026-10-05
+
+Docker Desktop atualizado4.36.0 ->4.93.0 com autorizacao explicita; Engine Linux
+real disponivel. Corpus physical final202 passed/5 skips exclusivos de Windows,
+apos corrigir retry de rollback anterior a reserva fisica sem inventar claim
+historica. Gates standard/release Linux passaram, incluindo baseline development
+SQLite; gate standard Windows final passou. O adiamento anterior
+foi revogado para esta prova; MB218 in_progress/MB219 blocked, aceite operacional,
+storage persistente e API SFC005 ausente permanecem. Evidencia/limites em
+docs/operations/linux-physical-validation-2026-10-05.md.
+
+### Continuidade 2026-10-04 - interpretacao readonly e inferencia extrativa
+
+Operador pediu prosseguir. Workers disjuntos: Executive intent/negacao local,
+corpus adversarial + fluxo Core independente, auditoria de inferencia/sintese.
+Coordenador integra inferencia opt-in extrativa pela sintese soberana: somente
+refs/offsets/quotes da entrada atual, nunca prosa livre com autoridade.
+Ownership: worker Executive e seus testes; worker testes Core novos; auditor
+read-only/doc propria; coordenador Synthesis/Orchestrator/modulo novo e testes.
+Sem novos shared contracts/dependencias, runtime defaultoff, sem rede/modelo
+real/contas/API/arquivos humanos/commit/push ou retomada Linux.
+Governance, grader e corpus operator_tasks nao sao flexibilizados. MB218
+in_progress/MB219 blocked preservados; nenhum slice fecha frentes completas.
+Aceite: negacao nao autoriza positivo posterior, markers highrisk preservados;
+candidato malformado/stale/late/mismatched/extra-fields recusado, final nativo
+canonico e eventos redigidos. Gate standard global antes do fechamento.
+
+Evidencia local:259 testes focados passaram. Worker intent/negacao entregou
+100 testes com corpus independente e Core TEMP; auditor extrativo49 regressões;
+integrador27 Synthesis +8 fluxos +75 harness. Inferencia integrada e defaultoff,
+provider fixture explicito, sem modelo real. Optional graph e schedulerfixture.
+Harness reexecutado sem alteracao:3needs_decision,5finais/136eventos; corpus
+digest preservado. Nao ha produto util promovido. Gate standard global final
+Windows passou. Slices intent e extrativo local_verified, sem promocao de
+capability;3344 testes coletados nao equivalem a3344 passes nem prova Linux/PG.
+
+### Continuidade 2026-10-04 — recall inspecionavel e patch revisavel
+
+Operador pediu prosseguir. Linux permanece deferred e MB218/219 abertos.
+Workers desenvolvem pacotes independentes; coordenador integra inspecao local,
+revisa entregas e executa gate. Nenhuma memoria paralela/modelo externo, API,
+login, efeito em repositorio humano ou promocao de capability.
+
+| Subpacote | Ownership | Estado | Aceite |
+| --- | --- | --- | --- |
+| WP-MEMORY-01/readonly selection | worker: novo memory_service/recall.py e testes exclusivos | isolated_slice_validated | 30 testes; StoredTurn canonico, scope/freshness/budgets/reasons/correcao explicita sem heuristica de autoridade |
+| WP-CODE-01/patch review | worker: novo code_sandbox/patch_review.py e testes exclusivos | isolated_slice_validated | 93 testes novos; snapshots/preimages/diff exatos, stale/tamper negados; nenhuma escrita/execucao |
+| Core/readiness audit | worker auditoria + regressões; coordenador central Memory/Core/SQL | local_verified | 34 regressões de sujeito/historico/orfaos/links de missao/origem recorrente e guard antes de efeitos; nao altera autonomia/grader |
+| Console/recall inspection | worker selector recebeu CLI/registry/assets; coordenador integrou guardas | isolated_slice_validated | 61 testes combinados/1 skip, mais safety pos-review; foco CLI final20passed/1skip, readonly/redaction, sem Core factory ou banco humano |
+
+Estado de slice nao fecha frentes inteiras; Core/modelo real e recall semantico
+continuam exigindo integracao e evidencia proprias. Sem commit/push.
+Runbook: docs/operations/parallel-wave-recall-and-patch-review.md. Auth e
+reserva atomica de primeiro uso concorrente nao demonstrados; legacy unbound
+nao recebe owner automaticamente. MB218/219 e Linux permanecem abertos.
+Integracao focada final:177passed/1skip Windows; gate standard global final
+Windows passou apos ultimas correcoes.3192 testes coletados, nao3192 passes;
+skips de plataforma/backends nao substituem prova fisica Linux/PG.
+
+### Rodada autorizada 2026-10-04 — MB218/219 e qualidade independente
+
+Operador pediu implementar pendencias MB218/219 e pacotes independentes em
+paralelo. WIP integrado permanece MB218; desenvolvimento adversarial MB219
+nao implica fechamento/promocao antes da dependencia. Linux/Docker continuam
+adiados, sem reset/restart/execucao fisica ficticia. Ate tres workers e coordenador.
+
+| Subpacote | Ownership exclusivo | Estado da entrega | Aceite da rodada |
+| --- | --- | --- | --- |
+| MB218/console-hardening | worker console: physical_operations/physical_cli/physical_bootstrap, testes dedicados e PHYSICAL_OPERATIONS.md | local_verified_linux_pending | 67 passed/18 skipped; desired-file descriptor/bounded, staging inicial atomico/no-overwrite, receipt exato |
+| MB219/security-review | worker security: novos testes adversariais e docs/security; codigo central somente lido | local_verified_linux_pending | 41 testes SQLite/decisao kernel passaram; 4 testes fisicos Linux skipped, threat model/runbook, sem readiness promovida |
+| MB219/kernel-hardening | coordenador: kernel/autoridade/services/repos centrais, composicao e docs de estado | local_verified_linux_pending | fresh scope obrigatorio antes de claim/efeito, BEGIN IMMEDIATE impede pausa concorrente, historical somente kernel/claim exata; gates standard/release Windows passaram |
+| WP-QUALITY-01/operator-tasks | worker quality: evals/operator_tasks e testes novos tests/unit/test_operator_tasks.py/tests/integration/test_operator_tasks_flow.py | isolated_slice_validated | 75 testes; tres tarefas versionadas/scorer independente; Core real 5 finais/121eventos, tres needs_decision, nenhuma utilidade promovida |
+
+Sem HTTP publico, credenciais/OAuth, efeitos em arquivos humanos, promocao
+automatica, commit/push ou alteracao das frentes Web/voz desta rodada.
+
+Runbook/evidencia: docs/operations/parallel-wave-physical-boundary-and-task-evals.md.
+Gates standard/release globais Windows passaram; detalhes no HANDOFF. Skips Windows nao fecham MB218
+nem desbloqueiam/promovem MB219. Proximos recortes independentes devem mirar
+produto util/recall ligado a inferencia soberana, mantendo esses denials visiveis.
+
+### Recorte Web 2026-10-04 — redesign orientado a conversa
+
+Pedido de melhoria visual do operador, coordenador/sem novos workers ou item MB.
+WP-WEB-01/design = isolated_slice_validated: esfera integrada/mais legivel,
+composer prioritario, tipografia/contraste, contexto secundario, laboratorio
+recolhido e scroll unico. Exemplos apenas preenchem; pedido simulado abre
+historico/compacta hero, reset restaura; nav acompanha hash/abre voz.
+52 JS/39 Python Web passaram; IAB real desktop1440/tablet900/mobile390 sem
+overflow, dialog/foco, teclado/texto hostil, voz simulada, WAV e JSON picker
+offline confirmados. Gate standard global Windows passou. Evidencia no README
+Web e tests/design-browser-verification.md. Aceite estetico nao aferido;
+nao fecha integracao live nem MB218/219. Docker/Linux deferred preservado.
+
+### Recorte Web 2026-10-04 — esfera de particulas
+
+Pedido visual do operador implementado pelo coordenador, sem workers adicionais
+ou alteracao do WIP integrado. WP-WEB-01/presence = isolated_slice_validated:
+Canvas2D ciano/ondas/core, repouso e deformacao RMS de WAV local escolhido e
+reproduzido explicitamente; fala fixture rotulada.52 JS/36 Python Web passaram,
+smoke IAB real amplitude>0 e stop0, mobile sem overflow; gate standard global Windows passou.
+Sem promover Core->TTS live, auth, mic ou upload; rollback local/operacao no
+README Web. MB218 in_progress/MB219 blocked e Linux deferred preservados.
+
+### Recorte paralelo 2026-10-03 — referencias vocais e composicao util
+
+Operador pediu aproveitar melhor o WAV e continuar outras frentes em paralelo.
+Qwen/C foi preferido, mas qualidade ainda insuficiente. Linux/Docker deferred;
+MB218/219 e WIP integrado preservados, sem promocao, OAuth ou commit/push.
+
+| Subpacote | Ownership | Estado | Aceite |
+| --- | --- | --- | --- |
+| WP-VOICE-IDENTITY-03 | coordenador: apps/jarvis_voice_lab, downloader/testes e docs centrais | local_lab_validated | tres recortes C/ASR Small+Turbo divergentes, tres Qwen ICL draft + controle x-vector-only reais; qualidade nao aprovada |
+| WP-MEMORY-01/recall pilot | worker: novo apps/jarvis_console/memory_recall_pilot.py e testes exclusivos | isolated_slice_validated | quatro turnos/115eventos Core reais, tracking2 mesmo sujeito/0 distinto; recall semantico util NAO demonstrado |
+| WP-JOBS-01/core pilot | worker: novo apps/jarvis_console/job_pilot.py, job-service e testes exclusivos | isolated_slice_validated | Core assist_only/30eventos, fencing/pausa/cancel/sem replay; defer_for_validation persiste como needs_decision |
+| WP-MCP-01/core evidence pilot | worker: novo apps/jarvis_console/mcp_pilot.py e testes exclusivos | isolated_slice_validated | 3eventosMCP/29Core, bruto hostil omitido/governanca/final canonico; sem grants/auth ou chamada governada |
+
+Ownership compartilhado/composicao geral, HANDOFF, backlog, pyproject e gates
+permanecem exclusivamente no coordenador. Workers nao tocam no WAV/GPU,
+credenciais, servidores humanos ou bancos de producao. Pilotos nao representam
+superficies autenticadas/promovidas; evidencias fixture sao rotuladas.
+345 Python focados passed/1 skip Windows,42 JS passed; gate standard global
+Windows passou apos estabilizacao. Estado do slice nao fecha a frente inteira. Evidencia/limites/proximos
+recortes: docs/operations/parallel-wave-refined-voice-and-core-pilots.md.
+
+### Recorte paralelo 2026-10-02 — quarta onda, TTS local autorizado
+
+Operador forneceu WAV local, declarou autorizacao do dono da voz e pediu
+prosseguir com Chatterbox PT-BR e Qwen3-TTS, mantendo outras frentes paralelas.
+Sem upload de audio ou nuvem; Docker/Linux continua deferred. MB218 integrado
+segue in_progress, MB219 blocked; nenhum novo MB ou capability promovida.
+
+| Subpacote | Ownership | Estado | Aceite |
+| --- | --- | --- | --- |
+| WP-VOICE-IDENTITY-02/local lab | apps/jarvis_voice_lab + downloader/testes; SDK/pesos publicos .research, audio privado TEMP | local_lab_validated | duas amostras CUDA model_real geradas; conversa final Core -> TTS fisico ainda aberta pelo limite600; sem atestar fidelidade |
+| WP-WEB-01/voice review | worker Web: assets/controller/tests exclusivos | isolated_slice_validated | 42 JS/34 Python e smoke visual consent/revisao/exato submit; sem microfone/upload/API |
+| WP-MCP-01 | worker MCP: novo apps/jarvis_mcp | isolated_slice_validated | 43 testes stdio real com servidor fixture proprio readonly, bounds/cancel/identity, nenhum grant externo |
+| WP-EVOLUTION-01 | worker evolucao: novo evolution/empirical_runner + piloto Core isolado | isolated_slice_validated | 12 medicoes reais mesma revisao; scorer 0/6 por braco nao prova ganho; holdout/versao/ports testados |
+
+Coordenador mantem shared/composicao/packaging/allowlist Web, revisao cruzada,
+gates e docs. WAV humano nunca entra Git/telemetria/corpus; declaracao de
+autorizacao do operador nao e verificacao biometrica ou identidade autentica.
+Downloads de dependencias/pesos publicos sao distintos de envio de audio;
+inferencia deve usar caches locais sem autenticacao/token herdado.
+Runbook/evidencias: `docs/operations/parallel-wave-local-tts-and-empirical.md`.
+Gate standard global final Windows passou; 241 Python focados passed/1 skip e
+42 JS passed. Esses estados WP nao alteram o WIP/estado dos itens MB.
+
+### Recorte paralelo 2026-10-02 — terceira onda e infraestrutura adiada
+
+Operador autorizou preparar Docker; inicializacao falhou no socket temporario
+userAnalyticsOtlpHttp.sock (Windows erro 1920), sem reset/dados removidos.
+Em seguida pediu explicitamente adiar Docker/Linux e continuar outras questoes.
+MB218 permanece in_progress; nenhum backend sera simulado ou promovido.
+
+| Subpacote | Ownership | Estado | Aceite |
+| --- | --- | --- | --- |
+| MB218/confirmation-recovery | physical console, lookup Governance e testes exclusivos | local_verified_linux_pending | falha ledger -> cache reconciliada somente por receipt existente/exato; sem nova confirmacao/claim |
+| WP-PLATFORM-01/Linux runner | tools/run_linux_validation.py, tools/linux_validation e testes | local_verified_execution_deferred | arquivo de fontes allowlisted, sem host mount/rede no teste, tmp Linux; prova container real adiada |
+| WP-VOICE-01 | novo apps/jarvis_voice e piloto Core/testes pelo coordenador | isolated_core_verified | consentimento, audio fixture, revisao/exato submit, Core real/memoria/sintese final e playback fixture cancelavel; nenhum hardware/clone/provider real |
+| WP-BROWSER-01 | novo operational_service/adapters/browser e teste exclusivo | isolated_verified | HTTP fixture local allowlisted real, observacao/provenance bounded; redirects/host/tamanho/cancel negados, zero clique/escrita |
+
+Coordenador mantem composicao, isolamento, ancestors de runtime, E2E/Core real,
+packaging e docs/gate global. Linux adiado nao impede estes slices isolados;
+eles nao abrem API, tool dispatch, OAuth ou novas capabilities promovidas.
+Runbook: `docs/operations/parallel-wave-voice-and-local-observation.md`.
+Proximos slices independentes: UI de revisao voice fixture, MCP local readonly,
+runner evolutivo empirico isolado. Gate standard global Windows passou;
+263 Python passed/11 skips na bateria focada e 25 JS passed. Nao marcar MB218
+done nem tratar skips como prova fisica Linux.
+
+### Recorte paralelo 2026-10-02 — segunda onda
+
+Solicitacao: prosseguir implementacoes. MB218 e o item integrado em trabalho;
+API ativa depende de MB219, portanto nao sera exposta por este recorte.
+
+| Subpacote | Ownership | Estado da entrega | Aceite |
+| --- | --- | --- | --- |
+| MB218/physical-console | novo physical_operations.py e testes exclusivos | implemented_linux_validation_pending | prepare/inspect/confirm separados; binding exato; status/recovery; Windows failclosed; testes reais Linux pendentes |
+| WP-WEB-01/snapshot | apps/jarvis_web e testes | offline_verified | importar snapshot exportado do Core; validation bounded; texto seguro; modo readonly/offline explicito; nenhuma chamada/autoridade |
+| WP-JOBS-01/store | novo job-service e testes | isolated_verified | SQLite CAS/fencing/lease/retry/cancel/restart, executor fixture; nenhum scheduler/efeito externo |
+
+Coordenador: composicao confiavel, contrato snapshot, exportador, packaging e
+E2E/gates/docs. Sem login/token, API publica, mutacao em banco legado ou deploy.
+Runbook e limites: `docs/operations/parallel-wave-core-snapshots-and-jobs.md`.
+MB218 nao esta done: WSL disponivel nao tem Python e Docker daemon esta parado;
+prova Linux e gate release ainda precisam ambiente real. API aguarda MB219.
+Gate standard global final passou; bateria focada 154 Python/25 JS passou,
+com 8 skips explicitos. Importacao Core -> Web controller passou; browser
+confirmou DOM inicial, nao file picker/importacao visual. Nenhuma promocao.
+
+### Recorte paralelo 2026-10-02 — primeira onda isolada
+
+Solicitacao explicita: implementar as frentes com multiagentes. Estes sao
+subpacotes de desenvolvimento isolado, nao itens MB adicionais em ready nem
+capabilities promovidas. O coordenador mantem contratos/composicao/documentacao;
+os implementadores possuem arquivos exclusivos. MB218/219 nao estao fechados.
+
+| Pacote | Owner | Estado da entrega | Arquivos exclusivos | Aceite/gate |
+| --- | --- | --- | --- | --- |
+| WP-CORE-01/inference | inference implementer | isolated_verified | novo inference-service e testes proprios | adapter fixture + parser Responses com transporte injetado; falhas/cancelamento/limites sem texto publicado; testes locais e E2E harness |
+| WP-WEB-01 | web implementer | isolated_verified | novo apps/jarvis_web e testes/assets proprios | cockpit local fixture, estados reais de UI, escape e cancelamento; testes JS/servidor e browser smoke |
+| WP-CODE-01 | code implementer | isolated_verified | novo operational_service/adapters/code_sandbox e testes proprios | patches em workspace em memoria e avaliador restrito; sem execucao de codigo arbitrario/host writes; teste positivo e adversarial |
+
+Modo: isolated. Contrato inicial `shared/model_inference.py` pelo coordenador.
+Nao usar credenciais, provider remoto, shell arbitrario, servico publico ou
+acao fisica por estes pacotes. Cada frente entrega README, eventos content-free,
+local tests e E2E proporcional; coordenador roda gate standard antes de fechar.
+Rollback: remover/desativar harnesses sem tocar ledgers/memoria/arquivos humanos.
+
+Integracao do coordenador: piloto `apps.jarvis_console.code_pilot` com runtime
+temporario, metadados allowlisted ao Core real, memoria/sintese e nenhum dispatch.
+WP-CORE-01 ainda nao entrega API/auth/modelo real; WP-CODE-01 nao e sandbox de SO.
+Runbook: `docs/operations/parallel-wave-local-pilot.md`. Gate standard passou
+no Windows; nova onda: 240 testes Python e 13 JS passaram, mais browser smoke.
+Nao houve gate release nem execucao fisica Linux ou modelo real nesta rodada.
 
 ### MB-000
 
@@ -4154,11 +4806,14 @@ Fora de escopo:
 
 - `id`: `MB-218`
 - `prioridade`: `P1`
-- `status`: `ready`
+- `status`: `done`
 - `eixo_do_mestre`: `console operador`, `observabilidade`, `recovery`
 - `map_ids`: `SFC-001`, `OBS-001`, `GOV-005`, `ACT-005`
 - `workflow_profile_afetado`: fluxo humano de operacao local
 - `micro_objetivo`: expor `prepare -> inspect -> confirm -> execute -> rollback/status` no console e telemetria redigida, sem abrir API publica.
+- `progresso_2026_10_04`: console e bootstrap locais materializados, desired-file/store/receipt hardened e bateria integrada Windows validada; prova fisica Linux/restart e aceite operacional pendentes, sem fechamento deste MB.
+- `progresso_2026_10_05`: prova physical real Docker Linux: 202 passed/5 skips somente Windows; retry de rollback antes da reserva corrigido e restart/idempotencia/pausa/plano estrangeiro validados. Gates standard/release Linux passaram; aceite operacional/storage persistente pendentes, sem fechamento.
+- `evidencia_de_fechamento`: campanha posterior de aceite tecnico CLI entre seis containers com volume ext4, preview/redacao/confirmacao/replay/recovery/rollback e verificacao Governance/Memory/outbox reais; corpus final persistente 224 passed/5 skips exclusivos Windows e gates release Linux/standard Windows aprovados. Criterios desta ficha satisfeitos sem exigir auth humana ou power-loss fora de escopo; evidencia em docs/operations/mb218-mb219-persistent-readiness-2026-10-05.md.
 - `justificativa_arquitetural`: confirmar e executar devem ser atos separados, inspecionaveis e retomaveis pelo operador.
 - `arquivos/servicos_principais`: `apps/jarvis_console`, `observability-service`, `tests`, `docs/operations`
 - `dependencias`: `MB-217`
@@ -4173,7 +4828,7 @@ Fora de escopo:
 
 - `id`: `MB-219`
 - `prioridade`: `P1`
-- `status`: `blocked`
+- `status`: `done`
 - `eixo_do_mestre`: `seguranca adversarial`, `readiness`, `decisao de fase`
 - `map_ids`: `GOV-005`, `GOV-007`, `ACT-005`, `OBS-007`, `SFC-005`
 - `workflow_profile_afetado`: Governed Action Foundation completa
@@ -4181,6 +4836,9 @@ Fora de escopo:
 - `justificativa_arquitetural`: a seam fisica precisa provar zero-side-effect ou recovery explicita sob path attacks, replay, race, crash e tamper antes de ganhar boundary externo.
 - `arquivos/servicos_principais`: `tests`, `tools`, `docs/security`, `docs/operations`, `docs/implementation`, `HANDOFF.md`, `CHANGELOG.md`
 - `dependencias`: `MB-218`
+- `achado_para_validacao`: authorizer revalida escopo canonico e primeiro claim/efeito entra sob scope SQLite; historical recovery deriva de journal/claim exata no kernel. 41 testes SQLite/decisao kernel passaram; corpus fisico Linux e gates standard/release passaram em 2026-10-05. Storage campaign/readiness e dependencia MB218 permanecem antes de exposicao externa.
+- `progresso_2026_10_05`: corpus physical Linux integrado: 202 passed/5 skips somente Windows; gates standard/release Linux passaram. Storage persistente, auditoria/readiness e dependencia MB218 permanecem antes de exposicao externa.
+- `evidencia_de_fechamento`: MB218 fechado; threat-model/security diff audit sem bypass concreto, corpus fisico final 224 passed/5 skips Windows em ext4, quatro provas apply/rollback com writer concorrente em outro processo, seis falhas pontuais storage com reload e autoridade historica intacta, runbook e gates release Linux/standard Windows aprovados. Decisao explicita: go_for_bounded_local_linux_sqlite_opt_in e no_go_for_public_mutating_api; SFC005 permanece fora, sem auth multiusuario, Windows executor, PostgreSQL first-effect ou garantia de perda de energia promovidos. Evidencia: docs/operations/mb218-mb219-persistent-readiness-2026-10-05.md.
 - `criterio_de_aceite`: corpus Windows, replay/expiry/clock skew, concorrencia, crash/disk-full, journal/backup tamper e rollback apos edicao humana passam; eventos/receipts/registry permanecem coerentes; API continua ausente e a decisao seguinte e explicita.
 - `gate_minimo`: suite completa, engineering gates standard e release, security diff/threat-model audit e document guardrails
 - `rollback`: desabilitar adapters e voltar a guidance/read-only, preservando journals e dados para recovery/auditoria.
@@ -4297,6 +4955,6 @@ Estado atual da fila:
 - `MB-176` a `MB-189` foram concluidos como cadeia de skill/workflow, routing, politica causal, revisao humana de memoria, medicao longitudinal e fechamento de readiness;
 - `MB-190` repriorizou o Daily Operator Loop e abriu `MB-191` a `MB-200`; o lote foi integralmente fechado;
 - `MB-201` repriorizou o pos-Daily Operator Loop e abriu `MB-202` a `MB-210`; o lote foi integralmente concluido em `MB-210`, com fila esgotada, zero drift/blockers e todas as autoridades falsas; a proxima fila depende de repriorizacao explicita;
-- `MB-211` repriorizou Governed Action Foundation e abriu `MB-212` a `MB-219`; `MB-212` a `MB-217` foram concluidos e `MB-218` e o unico item tecnico `ready`, mas sua execucao aguarda nova solicitacao explicita do operador; `SFC-005` permanece fora ate a prova adversarial `MB-219`;
+- `MB-211` repriorizou Governed Action Foundation e abriu `MB-212` a `MB-219`; o lote foi fechado em 2026-10-05 com console CLI, corpus persistente e gates aprovados. `SFC-005` permanece fora por decisao no_go_for_public_mutating_api, nao entra automaticamente pelo fechamento de `MB-219`;
 - `SO-001`, `TA-004`, `TA-006` e verticais `deferred` continuam fora da fila sem mudanca explicita de fase;
 - `protective intelligence foundation` continua `deferred` e a matriz da Onda 2 segue como insumo, nao como gatilho automatico para abrir nova vertical.

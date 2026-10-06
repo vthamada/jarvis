@@ -8,6 +8,7 @@ from sqlite3 import Connection, Row
 from sqlite3 import connect as sqlite_connect
 
 from shared.events import InternalEventEnvelope
+from shared.sqlite_connection import ClosingSqliteConnection
 
 
 class ObservabilityRepository:
@@ -107,7 +108,7 @@ class ObservabilityRepository:
         return [self._row_to_event(row) for row in reversed(rows)]
 
     def _connect(self) -> Connection:
-        connection = sqlite_connect(self.database_path)
+        connection = sqlite_connect(self.database_path, factory=ClosingSqliteConnection)
         connection.row_factory = Row
         return connection
 

@@ -27,7 +27,39 @@ Leitura correta:
 - os estudos externos são insumos de tradução disciplinada, não autorização para
   substituir o cérebro soberano do sistema.
 
-Estado atual em 2026-05-17:
+Estado verificado em 2026-10-02 (baseline `MB-217`):
+
+- experiencia, reflexao pos-tarefa, recorrencia, candidatos de skills, review,
+  guidance consumido por Planning e lifecycle manual de workflow existem;
+- a reflexao automatica atual e um template de erro/ausencia de erro, nao uma
+  verificacao de sucesso substantivo; o minerador
+  compila instrucoes fornecidas em candidatos inativos, nao descobre skills
+  autonomamente;
+- eval de workflow compara observacoes preproduzidas, e eval de skill recebe
+  checks fornecidos; esses caminhos nao executam candidatos ao vivo;
+- domain eval executa Core, mas seus criterios de rota/contrato/fragmentos
+  ainda nao demonstram qualidade substantiva de tarefas abertas;
+- atribuicao de guidance registra participacao, nao ganho causal provado;
+  ganho sustentado exige comparador real e varias observacoes;
+- falta integrar inferencia e executar o ciclo tarefa real -> candidato ->
+  comparacao confiavel -> review -> reutilizacao -> melhoria medida;
+- adaptacao parametrica e automodificacao profunda continuam pesquisa, sem
+  mutacao autonoma do nucleo. Dots e Hermes sao referencias/substratos externos,
+  nao alteram essa fronteira.
+
+O [mapa de lacunas e programa paralelo](../implementation/2026-10-02-gap-map-and-parallel-program.md)
+detalha evidencias e proximos pacotes. Este registro nao abre fila nova nem
+promove capabilities. A fila registrada aqui era historica; MB218/219 fecharam
+console/readiness local Linux/SQLite em 2026-10-05, sem promover autoevolucao,
+modelo real ou API mutante. Fila atual: execution-backlog.
+
+A primeira onda posterior implementou providers offline, code AST restrito
+e cockpit fixture. O piloto ja interpreta testes de candidatos em memoria e
+submete metadados ao Core; isso e fundacao testavel, nao comparador evolutivo
+de tarefas reais nem evidencia de ganho sustentado. Nenhuma skill/workflow
+foi automaticamente promovida por esse piloto.
+
+Snapshot historico em 2026-05-17 (nao e a fila atual):
 
 - o projeto já possui partes da fundação evolutiva em `evolution-lab`,
   observabilidade, comparadores, verificadores de baseline/release, memória

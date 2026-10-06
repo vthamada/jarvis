@@ -6,6 +6,14 @@ from dataclasses import dataclass
 
 from shared.contracts import InputContract
 
+from .intent_scope import (
+    MAX_ROUTING_CHARS,
+    inspect_intent_scope,
+    keyword_hits,
+    matching_keywords,
+    normalize_routing_text,
+)
+
 HIGH_RISK_KEYWORDS = (
     "delete",
     "drop",
@@ -52,9 +60,6 @@ EXECUTION_KEYWORDS = (
     "execute",
     "run",
     "apply",
-    "draft",
-    "prepare",
-    "gerar",
     "executar",
 )
 
@@ -93,15 +98,17 @@ class ExecutiveEngine:
     def direct(self, contract: InputContract) -> ExecutiveDirective:
         """Return a directive for knowledge, deliberation, and operation routing."""
 
-        lowered = contract.content.lower()
-        planning_hits = sum(1 for keyword in PLANNING_KEYWORDS if keyword in lowered)
-        analysis_hits = sum(1 for keyword in ANALYSIS_KEYWORDS if keyword in lowered)
-        execution_hits = sum(1 for keyword in EXECUTION_KEYWORDS if keyword in lowered)
+        scope = inspect_intent_scope(contract.content)
+        lowered = scope.normalized
+        planning_hits = keyword_hits(lowered, PLANNING_KEYWORDS)
+        analysis_hits = keyword_hits(lowered, ANALYSIS_KEYWORDS)
+        execution_hits = scope.execution_hits
         risk_markers = self.extract_risk_markers(contract.content)
         intent = self.classify_intent(
             contract.content,
             planning_hits=planning_hits,
             analysis_hits=analysis_hits,
+            risk_markers=risk_markers,
         )
         dominant_goal = self.dominant_goal(contract.content, intent)
         secondary_goals = self.secondary_goals(
@@ -110,7 +117,7 @@ class ExecutiveEngine:
             planning_hits=planning_hits,
             analysis_hits=analysis_hits,
         )
-        ambiguity_reason = self.ambiguity_reason(
+        ambiguity_reason = scope.uncertainty or self.ambiguity_reason(
             lowered,
             intent=intent,
             planning_hits=planning_hits,
@@ -122,6 +129,7 @@ class ExecutiveEngine:
             intent=intent,
             requires_clarification=requires_clarification,
             analysis_hits=analysis_hits,
+            read_only=scope.read_only,
         )
         identity_mode = self.identity_mode(
             intent=intent,
@@ -152,11 +160,19 @@ class ExecutiveEngine:
             identity_mode=identity_mode,
         )
 
-    def classify_intent(self, content: str, *, planning_hits: int, analysis_hits: int) -> str:
+    def classify_intent(
+        self,
+        content: str,
+        *,
+        planning_hits: int,
+        analysis_hits: int,
+        risk_markers: list[str] | None = None,
+    ) -> str:
         """Map free text to the current canonical intent set."""
 
-        lowered = content.lower()
-        if any(keyword in lowered for keyword in HIGH_RISK_KEYWORDS):
+        lowered = normalize_routing_text(content[:MAX_ROUTING_CHARS])
+        markers = self.extract_risk_markers(content) if risk_markers is None else risk_markers
+        if any(keyword in markers for keyword in HIGH_RISK_KEYWORDS):
             return "sensitive_action"
         if analysis_hits > 0 and lowered.startswith(("analyze", "analyse", "analise", "analis")):
             return "analysis"
@@ -171,20 +187,20 @@ class ExecutiveEngine:
     def extract_risk_markers(self, content: str) -> list[str]:
         """Collect risk markers without making the final governance decision."""
 
-        lowered = content.lower()
-        markers = [keyword for keyword in HIGH_RISK_KEYWORDS if keyword in lowered]
-        markers.extend(keyword for keyword in MODERATE_RISK_KEYWORDS if keyword in lowered)
+        lowered = normalize_routing_text(content)
+        markers = matching_keywords(lowered, HIGH_RISK_KEYWORDS)
+        markers.extend(matching_keywords(lowered, MODERATE_RISK_KEYWORDS))
         return markers
 
     def dominant_goal(self, content: str, intent: str) -> str:
-        lowered = content.lower().strip()
+        lowered = normalize_routing_text(content[:MAX_ROUTING_CHARS]).strip()
         if intent == "analysis":
             return "produzir leitura confiavel antes de agir"
         if intent == "planning":
             return "definir um caminho executavel e seguro"
         if intent == "sensitive_action":
             return "preservar limites e evitar mudanca destrutiva"
-        if any(keyword in lowered for keyword in EXECUTION_KEYWORDS):
+        if keyword_hits(lowered, EXECUTION_KEYWORDS):
             return "entregar orientacao pratica sem ampliar escopo"
         return "responder com orientacao util e coerente"
 
@@ -199,11 +215,11 @@ class ExecutiveEngine:
         goals: list[str] = []
         if planning_hits > 0 and analysis_hits > 0:
             goals.append("preservar espaco para analise antes de executar")
-        if intent == "planning" and "compare" in lowered:
+        if intent == "planning" and keyword_hits(lowered, ("compare",)):
             goals.append("comparar opcoes sem perder a proxima acao")
-        if intent == "analysis" and any(keyword in lowered for keyword in ("plan", "planej")):
+        if intent == "analysis" and keyword_hits(lowered, ("plan", "planej")):
             goals.append("indicar caminho pratico apos a analise")
-        if any(keyword in lowered for keyword in MODERATE_RISK_KEYWORDS):
+        if keyword_hits(lowered, MODERATE_RISK_KEYWORDS):
             goals.append("manter operacao local e rastreavel")
         return goals[:2]
 
@@ -216,7 +232,7 @@ class ExecutiveEngine:
         analysis_hits: int,
         execution_hits: int,
     ) -> str | None:
-        if any(keyword in lowered for keyword in AMBIGUOUS_KEYWORDS):
+        if keyword_hits(lowered, AMBIGUOUS_KEYWORDS):
             return "objetivo insuficientemente especificado"
         if intent == "general_assistance" and len(lowered.split()) <= 4:
             return "pedido curto demais para orientar a resposta"
@@ -224,11 +240,10 @@ class ExecutiveEngine:
             intent == "planning"
             and planning_hits > 0
             and analysis_hits > 0
-            and "primeiro" not in lowered
-            and "first" not in lowered
+            and not keyword_hits(lowered, ("primeiro", "first"))
         ):
             return "pedido mistura planejamento e analise sem prioridade explicita"
-        if execution_hits > 0 and intent == "analysis":
+        if execution_hits > 0 and analysis_hits > 0:
             return "pedido mistura analise e execucao sem criterio de precedencia"
         return None
 
@@ -238,9 +253,12 @@ class ExecutiveEngine:
         intent: str,
         requires_clarification: bool,
         analysis_hits: int,
+        read_only: bool = False,
     ) -> str:
         if requires_clarification:
             return "clarifying_guidance"
+        if read_only:
+            return "analysis_only"
         if intent == "analysis" or analysis_hits > 0:
             return "analysis_only"
         if intent == "planning":

@@ -2909,6 +2909,28 @@ class ActionConfirmationRepository:
         with closing(self._new_connection()) as connection:
             return self._load_confirmation_context(connection, receipt_id=receipt_id)
 
+    def load_confirmation_context_for_challenge(
+        self,
+        challenge_id: str,
+    ) -> ActionConfirmationContext | None:
+        """Read an existing verified receipt; never issue or renew confirmation.
+
+        An absent receipt is distinct from an unknown or corrupted challenge.
+        Historical lookup intentionally does not grant fresh execution authority.
+        """
+        with closing(self._new_connection()) as connection:
+            self._load_intent_and_challenge(connection, challenge_id=challenge_id)
+            row = connection.execute(
+                "SELECT receipt_id FROM human_confirmation_receipts WHERE challenge_id = ?",
+                (challenge_id,),
+            ).fetchone()
+            if row is None:
+                return None
+            context = self._load_confirmation_context(connection, receipt_id=row["receipt_id"])
+            if context.challenge.challenge_id != challenge_id:
+                raise ValueError("action confirmation receipt challenge mismatch")
+            return context
+
     def record_claim(
         self,
         claim: ActionConfirmationClaimContract,

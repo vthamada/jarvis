@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import json
 from argparse import SUPPRESS, ArgumentParser, Namespace
 from dataclasses import dataclass
 from datetime import UTC, datetime
@@ -104,6 +105,12 @@ class ConsoleArgumentParser(ArgumentParser):
         )
 
 
+class _LocalConsoleObservability(ObservabilityService):
+    @staticmethod
+    def _build_agentic_adapter():
+        return None
+
+
 @dataclass
 class JarvisConsole:
     orchestrator: OrchestratorService
@@ -114,7 +121,13 @@ class JarvisConsole:
         *,
         runtime_dir: Path | None = None,
         database_url: str | None = None,
+        local_observability_only: bool = False,
     ) -> "JarvisConsole":
+        if type(local_observability_only) is not bool:
+            raise ValueError("invalid_local_observability_option")
+        observability_type = (
+            _LocalConsoleObservability if local_observability_only else ObservabilityService
+        )
         if runtime_dir is None:
             governance_service = GovernanceService()
             operational_service = OperationalService(
@@ -126,6 +139,7 @@ class JarvisConsole:
                 orchestrator=OrchestratorService(
                     governance_service=governance_service,
                     operational_service=operational_service,
+                    observability_service=observability_type(),
                 )
             )
         runtime_dir.mkdir(parents=True, exist_ok=True)
@@ -156,7 +170,7 @@ class JarvisConsole:
                     ),
                 ),
                 operational_service=operational_service,
-                observability_service=ObservabilityService(
+                observability_service=observability_type(
                     database_path=str(runtime_dir / "observability.db")
                 ),
             )
@@ -419,6 +433,100 @@ def build_parser() -> ArgumentParser:
         help="Select human text or supported machine-readable JSON output.",
     )
     subparsers = parser.add_subparsers(dest="command", required=True)
+
+    transcript_parser = subparsers.add_parser(
+        "transcript-review",
+        help="Revalidate supplied transcript text before explicit local Core handoff.",
+    )
+    transcript_parser.add_argument("--authorized", action="store_true",
+                                   help="Opt into a new canonical Core turn after validation.")
+    transcript_parser.add_argument("--session-id", default="transcript-review",
+                                   help="Local session binding, not operator authentication.")
+    transcript_parser.add_argument("--include-content", action="store_true",
+                                   help="Display exact reviewed text and Core final if safe.")
+    from apps.jarvis_console.transcript_tts_options import add_transcript_tts_arguments
+
+    add_transcript_tts_arguments(transcript_parser)
+
+    account_parser = subparsers.add_parser(
+        "chatgpt-account",
+        help="Manage an explicit private ChatGPT provider account; no Core authority.",
+    )
+    account_parser.add_argument("--authorized", action="store_true",
+                                help="Explicit opt-in before storage, browser or network use.")
+    account_parser.add_argument("--credential-dir", required=True, type=Path,
+                                help="Absolute private directory outside Git/OneDrive; "
+                                "parent exists.")
+    account_parser.add_argument("--action", required=True,
+                                choices=["connect", "profiles", "catalog", "refresh"])
+    account_parser.add_argument("--profile-ref", help="Opaque reference from profiles/connect.")
+    account_parser.add_argument("--timeout-seconds", type=int, default=300,
+                                help="Loopback authorization budget (1..600 seconds).")
+
+    jobs_parser = subparsers.add_parser(
+        "job-inspect", help="Inspect exact jobs in an existing read-only ledger; never execute.",
+    )
+    jobs_parser.add_argument("--job-db", required=True, type=Path,
+                             help="Explicit existing absolute quiescent SQLite database.")
+    jobs_parser.add_argument("--actor-ref", required=True)
+    jobs_parser.add_argument("--session-ref", required=True)
+    jobs_parser.add_argument("--job-id", required=True, action="append")
+    jobs_parser.add_argument("--include-refs", action="store_true",
+                             help="Opt into bounded caller-scoped ledger references.")
+
+    for command_id, help_text in (
+        ("code-review", "Review a bounded in-memory patch supplied on stdin; never apply."),
+        ("research-review", "Review lexical evidence from supplied texts; never fetch or trust."),
+    ):
+        review_parser = subparsers.add_parser(command_id, help=help_text)
+        review_parser.add_argument(
+            "--include-content", action="store_true",
+            help="Opt into escaped untrusted diff or exact evidence excerpts.",
+        )
+
+    recall_parser = subparsers.add_parser(
+        "memory-recall", help="Inspect bounded read-only canonical turn evidence.",
+    )
+    recall_parser.add_argument("--memory-db", required=True, type=Path,
+                               help="Explicit existing absolute quiescent SQLite database.")
+    recall_parser.add_argument("--subject-id", required=True)
+    recall_parser.add_argument("--session-id", required=True, action="append",
+                               help="Explicit canonical session; repeat to allow another.")
+    recall_parser.add_argument("--query", required=True)
+    recall_parser.add_argument("--limit", type=int, default=4)
+    recall_parser.add_argument("--include-content", action="store_true",
+                               help="Opt into bounded untrusted evidence excerpts.")
+
+    physical_parser = subparsers.add_parser(
+        "physical", help="Inspect and control exact opt-in physical artifact operations.",
+    )
+    physical_parser.add_argument("--runtime-dir", required=True, type=Path)
+    physical_parser.add_argument("--root", action="append", required=True,
+                                 help="Explicit alias=absolute-directory; repeat for each root.")
+    physical_parser.add_argument("--enable-execution", action="store_true",
+                                 help="Opt into Linux physical execution; Windows refuses.")
+    physical_parser.add_argument("--action", required=True, choices=[
+        "prepare", "inspect", "confirm", "execute", "status", "recover",
+        "prepare-rollback", "confirm-rollback", "rollback",
+    ])
+    physical_parser.add_argument("--request-id")
+    physical_parser.add_argument("--mission-id")
+    physical_parser.add_argument("--work-item-ref")
+    physical_parser.add_argument("--artifact-ref")
+    physical_parser.add_argument("--resource-ref")
+    physical_parser.add_argument("--desired-file", type=Path)
+    physical_parser.add_argument("--operation", choices=["create_text", "replace_text"],
+                                 default="create_text")
+    physical_parser.add_argument("--expected-current-sha256")
+    physical_parser.add_argument("--supersedes-artifact-ref")
+    physical_parser.add_argument("--challenge-id")
+    physical_parser.add_argument("--action-fingerprint")
+    physical_parser.add_argument("--confirmation-receipt-id")
+    physical_parser.add_argument("--session-id", default="console-physical")
+    physical_parser.add_argument("--operator-identity-ref", default=DEFAULT_OPERATOR_IDENTITY_REF)
+    physical_parser.add_argument("--canonical-user-ref", default=DEFAULT_CANONICAL_USER_REF)
+    physical_parser.add_argument("--show-diff", action="store_true",
+                                 help="Print sensitive ephemeral diff explicitly; never telemetry.")
 
     ask_parser = subparsers.add_parser("ask", help="Execute a single prompt.")
     ask_parser.add_argument("prompt", help="Single prompt to send to JARVIS.")
@@ -4037,6 +4145,74 @@ def run_memory_lifecycle_review_command(args: Namespace) -> list[str]:
     ]
 
 
+def run_physical_command(args: Namespace) -> list[str] | CommandExecutionResult:
+    from apps.jarvis_console.physical_cli import run_physical
+
+    return run_physical(args)
+
+
+def run_memory_recall_command(args: Namespace) -> CommandExecutionResult:
+    from apps.jarvis_console.recall_cli import run_memory_recall
+
+    return run_memory_recall(args)
+
+
+def run_code_review_command(args: Namespace) -> CommandExecutionResult:
+    from apps.jarvis_console.code_review_cli import build_code_review
+    from apps.jarvis_console.review_input import run_review_product
+
+    return run_review_product(args, build_code_review)
+
+
+def run_chatgpt_account_command(args: Namespace) -> CommandExecutionResult:
+    from apps.jarvis_console.chatgpt_account_cli import run_chatgpt_account
+
+    return run_chatgpt_account(args)
+
+
+def run_transcript_review_command(args: Namespace) -> CommandExecutionResult:
+    from apps.jarvis_console.transcript_review_cli import run_transcript_review
+
+    return run_transcript_review(
+        args, core_factory=lambda: JarvisConsole.build(
+            runtime_dir=ROOT / ".jarvis_runtime" / "console",
+            local_observability_only=True,
+        ).orchestrator,
+    )
+
+
+def run_job_inspect_command(args: Namespace) -> CommandExecutionResult:
+    from apps.jarvis_console.job_inspect_cli import build_job_inspection
+    from apps.jarvis_console.review_input import _requires_redaction
+
+    try:
+        options = dict(actor_ref=args.actor_ref, session_ref=args.session_ref,
+                       job_ids=tuple(args.job_id))
+        product = build_job_inspection(args.job_db, **options, include_refs=args.include_refs)
+        redactor = ConsoleRuntime(
+            output_format="json", sensitive_paths=(str(ROOT), str(Path.home())),
+        )
+        if _requires_redaction(product, redactor):
+            product = build_job_inspection(args.job_db, **options, include_refs=False)
+            product["references_withheld"] = True
+        encoded = json.dumps(product, ensure_ascii=True, allow_nan=False, sort_keys=True)
+        if len(encoded.encode("utf-8")) > 262_144 or redactor.redact(encoded)[1]:
+            raise ValueError("job_inspection_output_refused")
+        return CommandExecutionResult(outputs=[encoded])
+    except Exception:
+        raise ConsoleCommandError(
+            "Job inspection refused; supply exact scope and a valid quiescent ledger.",
+            error_code="job_inspection_refused", exit_code=ConsoleExitCode.USAGE_ERROR,
+        ) from None
+
+
+def run_research_review_command(args: Namespace) -> CommandExecutionResult:
+    from apps.jarvis_console.research_cli import build_research_dossier
+    from apps.jarvis_console.review_input import run_review_product
+
+    return run_review_product(args, build_research_dossier)
+
+
 BOUND_COMMAND_REGISTRY = COMMAND_REGISTRY.bind(globals())
 
 
@@ -4046,12 +4222,21 @@ def main(argv: list[str] | None = None) -> int:
     try:
         args = build_parser().parse_args(raw_argv)
     except ConsoleCommandError as exc:
+        safe_error = exc
+        if _requested_command_id(raw_argv) in {
+            "memory-recall", "code-review", "research-review", "job-inspect", "chatgpt-account",
+            "transcript-review",
+        }:
+            safe_error = ConsoleCommandError(
+                "Invalid review command usage; consult command help.",
+                error_code="invalid_cli_usage", exit_code=ConsoleExitCode.USAGE_ERROR,
+            )
         return ConsoleRuntime(
             output_format=requested_format,
             sensitive_paths=(str(ROOT), str(Path.home())),
         ).report_error(
             command_id=_requested_command_id(raw_argv),
-            error=exc,
+            error=safe_error,
         )
     runtime = ConsoleRuntime(
         output_format=args.output_format,

@@ -3,14 +3,17 @@
 from __future__ import annotations
 
 from collections.abc import Callable
+from contextlib import contextmanager
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from hashlib import sha256
 from os import getenv
 from re import fullmatch
+from typing import Iterator
 from uuid import uuid4
 
 from memory_service.repository import (
+    MemoryRepository,
     SessionContinuitySnapshot,
     StoredContinuityCheckpoint,
     StoredContinuityPauseResolution,
@@ -133,6 +136,7 @@ from shared.memory_registry import (
 )
 from shared.open_loop_policy import canonical_open_loop_states_from_mission
 from shared.recurring_patterns import build_recurring_pattern_report
+from shared.reviewed_knowledge import REVIEWED_EVIDENCE_MARKER, response_for_planning
 from shared.specialist_registry import (
     canonical_specialist_type,
     legacy_specialist_type,
@@ -247,6 +251,7 @@ class MemoryService:
         self,
         database_url: str | None = None,
         *,
+        repository: MemoryRepository | None = None,
         reviewed_procedural_playbook_verifier: (
             Callable[[ReviewedProceduralPlaybookContract], bool] | None
         ) = None,
@@ -268,8 +273,11 @@ class MemoryService:
             | None
         ) = None,
     ) -> None:
-        configured_url = database_url or getenv("DATABASE_URL")
-        self.repository = build_memory_repository(configured_url)
+        self.repository = (
+            repository
+            if repository is not None
+            else build_memory_repository(database_url or getenv("DATABASE_URL"))
+        )
         self._reviewed_procedural_playbook_verifier = reviewed_procedural_playbook_verifier
         self._workflow_lifecycle_transition_verifier = workflow_lifecycle_transition_verifier
         self._artifact_physical_mutation_verifier = artifact_physical_mutation_verifier
@@ -1184,6 +1192,17 @@ class MemoryService:
             request_id=str(record.request_id)
         )
         if existing_by_id is not None or existing_by_request is not None:
+            # Independent reads can straddle an immutable concurrent insert.
+            # Recheck only a missing counterpart of an exact record; never
+            # retry or accept a conflicting identity/payload as idempotency.
+            if existing_by_id is None and exact_match(existing_by_request):
+                existing_by_id = self.repository.fetch_decision_outcome_attribution(
+                    attribution_record_id=record.attribution_record_id
+                )
+            elif existing_by_request is None and exact_match(existing_by_id):
+                existing_by_request = self.repository.fetch_decision_outcome_attribution(
+                    request_id=str(record.request_id)
+                )
             if exact_match(existing_by_id) and exact_match(existing_by_request):
                 self._validate_decision_outcome_storage_links(record)
                 return record
@@ -1728,9 +1747,39 @@ class MemoryService:
             limit=max(1, min(limit, 100)),
         )
 
+    def validate_input_subject_scope(self, contract: InputContract) -> None:
+        """Check canonical ownership before recovery or Core side effects.
+
+        Legacy unbound input remains unbound. This check neither authenticates
+        the caller nor reserves an empty session against concurrent first use.
+        """
+        self._validate_subject_scope(
+            session_id=str(contract.session_id),
+            mission_id=str(contract.mission_id) if contract.mission_id else None,
+            subject_id=contract.user_id,
+        )
+
+    def _validate_subject_scope(
+        self, *, session_id: str, mission_id: str | None, subject_id: str | None,
+    ) -> None:
+        if subject_id is None:
+            return
+        if not isinstance(subject_id, str) or not subject_id.strip() or len(subject_id) > 512:
+            raise ValueError("invalid_subject_scope")
+        if not self.repository.session_subject_is_compatible(session_id, subject_id):
+            raise ValueError("session_subject_scope_mismatch")
+        if mission_id and not self.repository.mission_subject_is_compatible(mission_id, subject_id):
+            raise ValueError("mission_subject_scope_mismatch")
+
+    def _mission_matches_subject(self, mission_id: str, subject_id: str | None) -> bool:
+        return subject_id is None or self.repository.mission_subject_is_compatible(
+            mission_id, subject_id,
+        )
+
     def recover_for_input(self, contract: InputContract) -> MemoryRecoveryResult:
         """Recover contextual, episodic, and mission hints for the current session."""
 
+        self.validate_input_subject_scope(contract)
         recovery_contract = MemoryRecoveryContract(
             memory_query_id=MemoryQueryId(f"mem-query-{uuid4().hex[:8]}"),
             recovery_type=RecoveryType.CONTEXTUAL,
@@ -1793,6 +1842,8 @@ class MemoryService:
 
         if continuity_context is not None:
             for related in continuity_context.related_candidates[:2]:
+                if not self._mission_matches_subject(str(related.mission_id), contract.user_id):
+                    continue
                 state = self.repository.fetch_mission_state(str(related.mission_id))
                 candidate = self._semantic_candidate_from_mission_state(
                     state=state,
@@ -3197,8 +3248,11 @@ class MemoryService:
         *,
         resource_ref: str,
         mutation_receipt_fingerprint: str | None = None,
+        effect_mode: str = "new_effect",
     ) -> bool:
         try:
+            if effect_mode not in {"new_effect", "historical_recovery"}:
+                return False
             stored = self.repository.fetch_artifact_physical_saga_plan(plan.saga_id)
             if stored != plan or plan.resource_ref != resource_ref:
                 return False
@@ -3210,6 +3264,8 @@ class MemoryService:
             )
             if state.phase != expected_phase:
                 return False
+            if effect_mode == "new_effect":
+                self._require_artifact_physical_plan_scope(plan)
             if isinstance(plan, ArtifactPhysicalRollbackPlanContract):
                 if mutation_receipt_fingerprint != plan.mutation_receipt_fingerprint:
                     return False
@@ -3234,6 +3290,30 @@ class MemoryService:
             )
         except (KeyError, TypeError, ValueError, RuntimeError):
             return False
+
+    @contextmanager
+    def artifact_physical_effect_scope(
+        self,
+        plan: ArtifactPhysicalApplyPlanContract | ArtifactPhysicalRollbackPlanContract,
+    ) -> Iterator[None]:
+        """Revalidate and fence live scope until claim/first effect finishes.
+
+        Historical recovery uses journal + consumed Governance claim instead;
+        neither a dispatch marker nor this read check creates fresh authority.
+        """
+        with self.repository.artifact_physical_effect_scope():
+            fingerprint = (
+                plan.mutation_receipt_fingerprint
+                if isinstance(plan, ArtifactPhysicalRollbackPlanContract)
+                else None
+            )
+            if not self.authorize_artifact_physical_effect(
+                plan,
+                resource_ref=plan.resource_ref,
+                mutation_receipt_fingerprint=fingerprint,
+            ):
+                raise ValueError("artifact_physical_first_effect_not_authorized")
+            yield
 
     def is_local_text_resource_physically_bound(self, resource_ref: str) -> bool:
         return self.repository.is_local_text_resource_physically_bound(resource_ref)
@@ -3578,12 +3658,16 @@ class MemoryService:
 
         if not specialist_hints:
             return {}
+        self._validate_subject_scope(
+            session_id=session_id, mission_id=mission_id, subject_id=user_id,
+        )
         mission_state = self.repository.fetch_mission_state(mission_id) if mission_id else None
         continuity_snapshot = self.repository.fetch_session_continuity(session_id)
         related_states = self._resolve_related_states(
             session_id=session_id,
             mission_id=mission_id,
             continuity_context=continuity_context,
+            user_id=user_id,
         )
         continuity_mode = (
             continuity_snapshot.continuity_mode
@@ -3943,14 +4027,24 @@ class MemoryService:
                     f"user_continuity_preference={user_scope_context.continuity_preference}"
                 )
         summary = self.repository.fetch_context_summary(str(contract.session_id))
+        turns = self.repository.fetch_recent_turns(str(contract.session_id), max(limit, 3))
+        if summary and REVIEWED_EVIDENCE_MARKER in summary:
+            # Rebuild only the derived read-side view. Preserve canonical turns
+            # and their plan fields, including summaries recorded before this
+            # projector existed. Do not parse delimiters inside supplied text.
+            summary = " || ".join(
+                f"intent={turn.intent} user={turn.request_content} "
+                f"response={response_for_planning(turn.response_text)}"
+                + (f" plan={turn.plan_summary}" if turn.plan_summary else "")
+                for turn in turns[-3:]
+            )
         if summary:
             session_context.append(f"context_summary={summary}")
-        turns = self.repository.fetch_recent_turns(str(contract.session_id), max(limit, 3))
         for turn in turns:
             session_context.append(
                 "user="
                 f"{turn.request_content} | intent={turn.intent} | "
-                f"response={turn.response_text}"
+                f"response={response_for_planning(turn.response_text)}"
             )
             if turn.plan_summary:
                 plan_hints.append(f"prior_plan={turn.plan_summary}")
@@ -4590,11 +4684,14 @@ class MemoryService:
         session_id: str,
         mission_id: str | None,
         continuity_context: MissionContinuityContextContract | None,
+        user_id: str | None = None,
     ) -> list[MissionStateContract]:
         states: list[MissionStateContract] = []
         seen: set[str] = set()
         if continuity_context:
             for candidate in continuity_context.related_candidates[:2]:
+                if not self._mission_matches_subject(str(candidate.mission_id), user_id):
+                    continue
                 state = self.repository.fetch_mission_state(str(candidate.mission_id))
                 if state is not None and str(state.mission_id) not in seen:
                     states.append(state)
@@ -4605,6 +4702,8 @@ class MemoryService:
                 exclude_mission_id=mission_id,
                 limit=2,
             ):
+                if not self._mission_matches_subject(str(state.mission_id), user_id):
+                    continue
                 if str(state.mission_id) not in seen:
                     states.append(state)
                     seen.add(str(state.mission_id))
@@ -5725,6 +5824,8 @@ class MemoryService:
         )
         candidates: list[MissionContinuityCandidateContract] = []
         for related_state in related_states:
+            if not self._mission_matches_subject(str(related_state.mission_id), contract.user_id):
+                continue
             candidate = self._build_related_candidate(current_mission_state, related_state)
             if candidate is not None:
                 candidates.append(candidate)
@@ -5759,6 +5860,8 @@ class MemoryService:
         current_tokens = self._meaningful_tokens(contract.content)
         candidates: list[MissionContinuityCandidateContract] = []
         for related_state in related_states:
+            if not self._mission_matches_subject(str(related_state.mission_id), contract.user_id):
+                continue
             token_overlap = sorted(
                 current_tokens.intersection(self._meaningful_tokens(related_state.mission_goal))
             )

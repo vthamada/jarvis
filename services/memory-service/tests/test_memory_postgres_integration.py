@@ -96,10 +96,10 @@ def test_memory_service_persists_session_history_in_postgres() -> None:
 
 
 def test_decision_outcome_attribution_is_immutable_across_postgres_instances() -> None:
+    database_url = postgres_url()
     import psycopg
 
     suffix = uuid4().hex
-    database_url = postgres_url()
     request_id = f"postgres-attribution-request-{suffix}"
     mission_id = f"postgres-attribution-mission-{suffix}"
     experience_id = f"experience://{mission_id}/{request_id}"
@@ -181,9 +181,9 @@ def test_decision_outcome_attribution_is_immutable_across_postgres_instances() -
 
 
 def test_workflow_lifecycle_is_cas_safe_and_append_only_in_postgres() -> None:
+    database_url = postgres_url()
     import psycopg
 
-    database_url = postgres_url()
     suffix = uuid4().hex[:10]
     service = MemoryService(
         database_url=database_url,

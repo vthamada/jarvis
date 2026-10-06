@@ -33,7 +33,7 @@ def test_reference_model_is_complete_deterministic_and_path_free() -> None:
     first = render_command_reference(COMMAND_REGISTRY, parser)
     second = render_command_reference(COMMAND_REGISTRY, build_parser())
 
-    assert len(model) == len(COMMAND_REGISTRY.definitions) == 40
+    assert len(model) == len(COMMAND_REGISTRY.definitions) == 47
     assert [item.definition.command_id for item in model] == [
         item.command_id for item in COMMAND_REGISTRY.definitions
     ]

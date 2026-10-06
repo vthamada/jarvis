@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>JARVIS · Cockpit local</title>
+  <link rel="stylesheet" href="/styles.css">
+  <script type="module" src="/app.mjs"></script>
+</head>
+<body>
+  <a class="skip" href="#conversation">Pular para a conversa</a>
+  <div class="shell">
+    <aside class="sidebar" aria-label="Workspace">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">J</span><div>JARVIS<small>Seu espaço de trabalho</small></div></div>
+      <div class="workspace-label">NAVEGAR</div>
+      <nav aria-label="Seções do cockpit">
+        <a class="nav-item selected" href="#conversation" aria-current="page"><span aria-hidden="true">◈</span> Conversa <span class="key">01</span></a>
+        <a class="nav-item" href="#objective"><span aria-hidden="true">◎</span> Objetivo</a>
+        <a class="nav-item" href="#activity"><span aria-hidden="true">≋</span> Atividade</a>
+        <a class="nav-item" href="#voice-panel"><span aria-hidden="true">◉</span> Voz · ensaio</a>
+        <a class="nav-item" href="#artifacts"><span aria-hidden="true">▤</span> Artefatos</a>
+        <a class="nav-item" href="#approvals"><span aria-hidden="true">◇</span> Decisões</a>
+      </nav>
+      <div class="sidebar-section"><div class="workspace-label">SESSÃO DE EXEMPLO</div><p class="session-title">Construir um JARVIS útil</p><p class="muted">Conversa e contexto em um só lugar.</p></div>
+      <div class="sidebar-footer"><span class="avatar">OP</span><div>Operador de exemplo<small>Sem conta conectada</small></div></div>
+    </aside>
+    <main>
+      <header class="topbar"><div class="workspace-name"><span class="muted">Meu workspace</span><span class="divider">/</span><span>Conversa</span></div><div class="topbar-actions"><span class="connection"><span aria-hidden="true"></span>Modo local</span><button id="reset" class="secondary" aria-label="Reiniciar demonstração">Reiniciar</button></div></header>
+      <div class="mode-banner"><span aria-hidden="true">◇</span><p><strong>Demonstração isolada.</strong> Sem Core, modelo, memória canônica ou ferramentas. Nenhuma ação real pode ser autorizada aqui.</p></div>
+      <details class="snapshot-tools">
+        <summary>Dados da sessão <span class="summary-meta">Snapshot offline · somente leitura</span></summary>
+      <section class="snapshot-bar" aria-label="Importar snapshot local">
+        <div><label for="snapshot-file">Snapshot local/offline</label><small>Importação explícita de JSON · até 64 KiB · somente leitura</small></div>
+        <input id="snapshot-file" type="file" accept=".json,application/json" aria-describedby="snapshot-notice">
+        <p id="snapshot-notice" role="status" aria-live="polite">Nenhum snapshot importado. Origem de arquivos não é verificada.</p>
+      </section>
+      </details>
+      <div class="workspace-grid">
+        <section id="conversation" class="conversation" aria-labelledby="conversation-title" tabindex="-1">
+          <div class="section-heading"><p class="eyebrow">CONVERSA / 01</p><span class="badge fixture-badge">SESSÃO DE EXEMPLO</span></div>
+          <section class="presence" aria-labelledby="presence-title">
+            <h2 id="presence-title" class="sr-only">Presença visual do JARVIS</h2>
+            <div class="presence-orb"><canvas id="particle-sphere" aria-hidden="true"></canvas></div>
+            <div class="presence-copy"><h1 id="conversation-title">O que vamos fazer hoje?</h1><p class="presence-description">Um espaço para pensar, planejar e dar o próximo passo.</p><div class="presence-controls"><p id="presence-status" class="presence-status" role="status" aria-live="polite">Em repouso · visual local</p><button id="presence-motion" class="quiet-button" type="button" aria-pressed="false">Pausar animação</button></div></div>
+          </section>
+          <div class="suggestions" aria-label="Exemplos para preencher o pedido, sem enviar"><span class="suggestion-label">EXPERIMENTE SIMULAR</span><div><button type="button" class="suggestion" data-prompt="JARVIS, ajude a organizar os próximos passos deste objetivo.">Organizar próximos passos <span aria-hidden="true">↗</span></button><button type="button" class="suggestion" data-prompt="JARVIS, mostre um plano que eu possa revisar antes de decidir.">Explorar um plano <span aria-hidden="true">↗</span></button></div></div>
+          <details id="conversation-history" class="conversation-history"><summary>Conversa de exemplo <span>Sem modelo conectado</span></summary>
+          <div id="messages" class="messages" role="log" aria-label="Conversa de demonstração" aria-live="polite"></div>
+          </details>
+          <div class="composer-area">
+            <div id="notice" class="notice" role="status" aria-live="polite"></div>
+            <form id="composer" class="composer">
+              <label for="message">Seu próximo pedido</label>
+              <textarea id="message" placeholder="Escreva seu próximo pedido…" rows="3" maxlength="4000" aria-describedby="composer-help"></textarea>
+              <div class="composer-actions"><span id="composer-help">Ctrl + Enter · apenas simulação · não salvo</span><div><button id="cancel" type="button" class="secondary" hidden>Cancelar</button><button id="submit" type="submit" class="primary">Simular pedido <span aria-hidden="true">↑</span></button></div></div>
+            </form>
+            <div class="lab-heading"><h2>Laboratório local</h2><span>Controles de demonstração</span></div>
+            <details class="presence-rehearsal"><summary>Esfera + áudio local <span class="badge">ENSAIO</span></summary><p class="footnote">WAV PCM16, até 32 MiB / 600 s. Reprodução somente ao clicar. Preparação interrompível. Sem microfone, upload ou armazenamento. Não é fala ao vivo do Core.</p><label for="presence-audio-file">Escolher WAV de voz</label><input id="presence-audio-file" type="file" accept=".wav,audio/wav" aria-describedby="presence-audio-notice"><div class="voice-toolbar"><button id="presence-play" class="secondary" type="button" disabled>Reproduzir ensaio</button><button id="presence-stop" class="secondary" type="button" disabled>Interromper</button><button id="presence-clear" class="secondary" type="button" disabled>Remover áudio</button></div><p id="presence-audio-notice" class="footnote" role="status" aria-live="polite">Nenhum áudio selecionado.</p></details>
+            <details id="voice-panel" class="voice-panel">
+              <summary>Voz · revisão de transcrição <span class="badge">SIMULADA</span></summary>
+              <p id="voice-help" class="footnote">Ensaio de interface: captura, STT e reprodução são simulados. Sem microfone, áudio, Core, voz clonada ou envio externo. Confirmar texto não autoriza ações.</p>
+              <label class="voice-consent" for="voice-consent"><input id="voice-consent" type="checkbox" aria-describedby="voice-help"> Permitir este ensaio local, sem acesso ao microfone</label>
+              <div class="voice-toolbar"><button id="voice-start" class="secondary" type="button" disabled>Simular captura</button><button id="voice-cancel" class="secondary" type="button" disabled>Descartar ensaio</button></div>
+              <p id="voice-notice" class="notice" role="status" aria-live="polite"></p>
+              <form id="voice-review" hidden aria-describedby="voice-help">
+                <label for="voice-transcript">Transcrição simulada · revise o texto exato</label>
+                <textarea id="voice-transcript" rows="3" maxlength="4000" aria-describedby="voice-revision"></textarea>
+                <p id="voice-revision" class="footnote"></p>
+                <button id="voice-confirm" class="primary" type="submit">Confirmar texto e simular pedido</button>
+              </form>
+              <section id="voice-final" hidden aria-labelledby="voice-final-title"><h2 id="voice-final-title">Resposta final simulada · alternativa textual</h2><p id="voice-final-text"></p><div class="voice-toolbar"><button id="voice-play" class="secondary" type="button">Simular reprodução</button><button id="voice-interrupt" class="secondary" type="button" hidden>Interromper simulação</button></div></section>
+              <details class="test-controls"><summary>Cenário da transcrição simulada</summary><label for="voice-scenario">Resultado da próxima captura simulada</label><select id="voice-scenario"><option value="completed">Texto completo</option><option value="error">Falha de STT simulada</option><option value="incomplete">Transcrição incompleta</option><option value="empty">Transcrição vazia</option></select><p>O cenário da conversa abaixo controla a resposta, não a transcrição.</p></details>
+              <p id="voice-state" class="footnote">Estado: idle · synthetic_fixture · authority=none</p>
+            </details>
+            <details id="transcript-panel" class="voice-panel">
+              <summary>Transcrição de arquivo · revisão local <span class="badge">OFFLINE</span></summary>
+              <p id="transcript-help" class="footnote">Importe um JSON de transcrição, revise e copie o pacote para o console. Origem não verificada: não comprova ASR, áudio ou identidade. Sem upload, microfone ou envio ao Core pelo browser. Confirmar texto não autoriza ações.</p>
+              <label class="voice-consent" for="transcript-consent"><input id="transcript-consent" type="checkbox" aria-describedby="transcript-help"> Permitir a leitura e revisão deste arquivo somente nesta página</label>
+              <label for="transcript-file">JSON de transcrição · até 32 KiB</label>
+              <input id="transcript-file" type="file" accept=".json,application/json" disabled aria-describedby="transcript-help">
+              <p id="transcript-notice" class="notice" role="status" aria-live="polite">Nenhum arquivo importado.</p>
+              <form id="transcript-form" hidden aria-describedby="transcript-help">
+                <label for="transcript-text">Texto exato a revisar · exportação não envia</label>
+                <textarea id="transcript-text" rows="4" maxlength="8000" aria-describedby="transcript-revision"></textarea>
+                <p id="transcript-revision" class="footnote"></p>
+                <div class="voice-toolbar"><button id="transcript-export" class="primary" type="submit" disabled>Preparar pacote revisado</button></div>
+              </form>
+              <div class="voice-toolbar"><button id="transcript-cancel" class="secondary" type="button" disabled>Descartar revisão</button></div>
+              <section id="transcript-output" hidden aria-labelledby="transcript-output-title">
+                <h2 id="transcript-output-title">Pacote offline · não é autorização</h2>
+                <p class="footnote">Selecione e copie o JSON. No console, transcript-review exige --authorized para um novo turno na memória canônica. Um arquivo já exportado não é ticket, receipt ou permissão. A conversa acima continua simulada.</p>
+                <label for="transcript-package">JSON revisado · somente leitura</label>
+                <textarea id="transcript-package" rows="5" readonly spellcheck="false"></textarea>
+                <button id="transcript-select" class="secondary" type="button">Selecionar JSON para copiar</button>
+                <p class="footnote"><code>python -m apps.jarvis_console transcript-review --authorized --include-content</code> · fornecer o pacote por stdin UTF-8 até EOF. Não cole segredos em argumentos.</p>
+              </section>
+              <p id="transcript-state" class="footnote">Estado: idle · origem não verificada · authority=none</p>
+            </details>
+            <details class="test-controls"><summary>Cenários de demonstração</summary><label for="scenario">Resultado do próximo pedido</label><select id="scenario"><option value="completed">Resposta simulada</option><option value="error">Falha de transporte</option><option value="incomplete">Resposta incompleta</option><option value="empty">Sem conteúdo</option></select><p>Esses controles testam a interface, não o runtime do JARVIS.</p></details>
+          </div>
+        </section>
+        <aside class="context" aria-label="Contexto e evidências">
+          <div class="context-heading"><p class="eyebrow">NESTA SESSÃO</p><h2>Contexto & evidências</h2><p>O que sustenta o próximo passo.</p></div>
+          <section id="objective" class="panel"><div class="panel-heading"><h2>Objetivo</h2><span id="objective-badge" class="badge">EXEMPLO</span></div><h3 id="objective-title"></h3><p id="objective-description" class="muted"></p><ol id="steps" class="steps"></ol><p id="objective-status" class="footnote"></p></section>
+          <section id="activity" class="panel"><div class="panel-heading"><h2>Atividade</h2><span id="activity-count" class="count"></span></div><ul id="activity-list" class="activity-list"></ul></section>
+          <section id="artifacts" class="panel"><div class="panel-heading"><h2>Artefatos</h2><span id="artifacts-badge" class="badge">FIXTURE</span></div><div id="artifact-list"></div></section>
+          <section id="approvals" class="panel approval-panel"><div class="panel-heading"><h2>Decisões pendentes</h2><span aria-hidden="true">◇</span></div><div id="approval-list"></div><p class="footnote">Inspecionar não autoriza. Não há botão de execução nesta demonstração.</p></section>
+        </aside>
+      </div>
+      <footer class="bottom-line"><span>JARVIS / Cockpit de desenvolvimento</span><span id="request-status">Estado: idle</span></footer>
+    </main>
+  </div>
+  <dialog id="inspector" aria-labelledby="inspector-title"><div class="dialog-heading"><h2 id="inspector-title">Inspeção</h2><button id="close-inspector" class="secondary" aria-label="Fechar inspeção">Fechar</button></div><p class="fixture-note">Dados de exemplo · somente leitura · nenhuma autorização emitida</p><pre id="inspector-content"></pre></dialog>
+</body>
+</html>

@@ -68,13 +68,17 @@ def resolve_backend_label(database_url: str | None) -> str:
 
 
 def git_sha() -> str:
-    result = run(
-        ["git", "rev-parse", "HEAD"],
-        cwd=ROOT,
-        capture_output=True,
-        text=True,
-        check=False,
-    )
+    try:
+        result = run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+            check=False,
+        )
+    except FileNotFoundError:
+        # An archive without Git cannot claim a checkout identity.
+        return "unknown"
     if result.returncode != 0:
         return "unknown"
     return result.stdout.strip() or "unknown"

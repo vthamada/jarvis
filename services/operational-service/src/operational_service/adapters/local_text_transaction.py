@@ -20,7 +20,7 @@ import sqlite3
 import stat
 import sys
 import threading
-from contextlib import AbstractContextManager, contextmanager
+from contextlib import AbstractContextManager, ExitStack, contextmanager, nullcontext
 from dataclasses import asdict, dataclass, replace
 from datetime import datetime, timezone
 from hashlib import sha256
@@ -249,8 +249,18 @@ class LocalTextExecutionGrantBinding:
     confirmation_receipt_id: str
 
 
-CanonicalPhysicalEffectAuthorizer = Callable[
-    [ArtifactPhysicalApplyPlanContract | ArtifactPhysicalRollbackPlanContract], bool
+class CanonicalPhysicalEffectAuthorizer(Protocol):
+    def __call__(
+        self,
+        plan: ArtifactPhysicalApplyPlanContract | ArtifactPhysicalRollbackPlanContract,
+        *,
+        effect_mode: str = "new_effect",
+    ) -> bool: ...
+
+
+CanonicalPhysicalEffectScopeProvider = Callable[
+    [ArtifactPhysicalApplyPlanContract | ArtifactPhysicalRollbackPlanContract],
+    AbstractContextManager[None],
 ]
 ResourcePhysicalBindingLookup = Callable[[str], bool]
 
@@ -416,6 +426,8 @@ class LocalTextTransactionEngine:
         mutation_receipt_verifier: MutationReceiptVerifier | None = None,
         rollback_receipt_verifier: RollbackReceiptVerifier | None = None,
         canonical_physical_effect_authorizer: CanonicalPhysicalEffectAuthorizer | None = None,
+        canonical_physical_effect_scope_provider: CanonicalPhysicalEffectScopeProvider
+        | None = None,
         resource_physical_binding_lookup: ResourcePhysicalBindingLookup | None = None,
         canonical_commit_receipt_verifier: CanonicalCommitReceiptVerifier | None = None,
         physical_attestation_lease_provider: PhysicalAttestationLeaseProvider | None = None,
@@ -448,6 +460,10 @@ class LocalTextTransactionEngine:
             resource_physical_binding_lookup
         ):
             raise ValueError("local_text_resource_physical_binding_lookup_invalid")
+        if canonical_physical_effect_scope_provider is not None and not callable(
+            canonical_physical_effect_scope_provider
+        ):
+            raise ValueError("local_text_canonical_physical_effect_scope_provider_invalid")
         if canonical_commit_receipt_verifier is not None and not callable(
             canonical_commit_receipt_verifier
         ):
@@ -458,6 +474,7 @@ class LocalTextTransactionEngine:
             raise ValueError("local_text_physical_attestation_lease_provider_invalid")
         canonical_ports = (
             canonical_physical_effect_authorizer,
+            canonical_physical_effect_scope_provider,
             resource_physical_binding_lookup,
             canonical_commit_receipt_verifier,
             physical_attestation_lease_provider,
@@ -505,6 +522,7 @@ class LocalTextTransactionEngine:
         self._mutation_receipt_verifier = mutation_receipt_verifier
         self._rollback_receipt_verifier = rollback_receipt_verifier
         self._canonical_physical_effect_authorizer = canonical_physical_effect_authorizer
+        self._canonical_physical_effect_scope_provider = canonical_physical_effect_scope_provider
         self._resource_physical_binding_lookup = resource_physical_binding_lookup
         self._canonical_commit_receipt_verifier = canonical_commit_receipt_verifier
         self._physical_attestation_lease_provider = physical_attestation_lease_provider
@@ -2109,6 +2127,7 @@ class LocalTextTransactionEngine:
             raise ValueError("local_text_transaction_root_config_changed")
         alias = request.preflight.root_alias
         with self._resource_lock(alias, request.preflight.resource_ref):
+            events = self._load_events(alias, request.operation_id)
             self._require_canonical_physical_binding(
                 purpose="apply",
                 operation_id=request.operation_id,
@@ -2117,8 +2136,8 @@ class LocalTextTransactionEngine:
                 resource_ref=request.preflight.resource_ref,
                 root_alias=alias,
                 plan=plan,
+                effect_mode=self._apply_effect_mode(events, request.operation_id, current),
             )
-            events = self._load_events(alias, request.operation_id)
             if events:
                 self._require_retry_binding(events[-1].metadata, request)
                 if events[-1].phase in {"receipt", "cleaned"}:
@@ -2158,6 +2177,7 @@ class LocalTextTransactionEngine:
                 current=current,
                 allow_new_claim=True,
                 staging_request=staging_request,
+                plan=plan,
             )
             return self._commit_apply_locked_if_requested(
                 plan=plan,
@@ -2177,6 +2197,7 @@ class LocalTextTransactionEngine:
         current: datetime,
         allow_new_claim: bool,
         staging_request: LocalTextStagingAuthorizationRequest | None,
+        plan: ArtifactPhysicalApplyPlanContract | None,
     ) -> LocalTextMutationReceipt:
         metadata = events[-1].metadata
         metadata = dict(metadata)
@@ -2184,10 +2205,13 @@ class LocalTextTransactionEngine:
         metadata.setdefault("journal_reservation_fingerprint", events[0].event_fingerprint)
         phase = events[-1].phase
         lease: LocalTextClaimedAuthorizationLease | None = None
-        with self._open_pinned_posix(
-            metadata,
-            allow_applied=phase in {"claimed", "renamed", "applied"},
-        ) as pinned:
+        with (
+            self._open_pinned_posix(
+                metadata,
+                allow_applied=phase in {"claimed", "renamed", "applied"},
+            ) as pinned,
+            ExitStack() as effect_scopes,
+        ):
             if phase in {"reserved", "desired_durable", "backup_durable"}:
                 if staging_request is None:
                     raise ValueError("local_text_transaction_staging_verification_required")
@@ -2224,6 +2248,7 @@ class LocalTextTransactionEngine:
                     if not allow_new_claim or staging_request is None:
                         raise ValueError("local_text_transaction_claim_required")
                     self._require_staging_authorization(staging_request, current)
+                    effect_scopes.enter_context(self._new_effect_scope(plan))
                     lease, metadata = self._claim_and_record(
                         alias=alias,
                         operation_id=operation_id,
@@ -2390,6 +2415,7 @@ class LocalTextTransactionEngine:
             if historical is None:
                 self._require_staging_authorization(staging_request, current)
         with self._resource_lock(root_alias, str(metadata["resource_ref"])):
+            events = self._load_events(root_alias, operation_id)
             self._require_canonical_physical_binding(
                 purpose="apply",
                 operation_id=operation_id,
@@ -2398,8 +2424,8 @@ class LocalTextTransactionEngine:
                 resource_ref=str(metadata["resource_ref"]),
                 root_alias=root_alias,
                 plan=plan,
+                effect_mode=self._apply_effect_mode(events, operation_id, current),
             )
-            events = self._load_events(root_alias, operation_id)
             phase = events[-1].phase
             if phase in {"receipt", "cleaned"}:
                 receipt = self._receipt_from_applied(self._find_event(events, "applied"))
@@ -2441,6 +2467,7 @@ class LocalTextTransactionEngine:
                     "staged",
                 },
                 staging_request=staging_request,
+                plan=plan,
             )
             return self._commit_apply_locked_if_requested(
                 plan=plan,
@@ -2541,6 +2568,7 @@ class LocalTextTransactionEngine:
         ):
             raise ValueError("local_text_mutation_receipt_resource_binding_mismatch")
         with self._resource_lock(alias, receipt.resource_ref):
+            events = self._load_events(alias, receipt.operation_id)
             self._require_canonical_physical_binding(
                 purpose="rollback",
                 operation_id=request.rollback_operation_id,
@@ -2549,8 +2577,8 @@ class LocalTextTransactionEngine:
                 resource_ref=receipt.resource_ref,
                 root_alias=alias,
                 plan=plan,
+                effect_mode=self._rollback_effect_mode(events, request, current),
             )
-            events = self._load_events(alias, receipt.operation_id)
             self._require_transaction_versions(events[-1].metadata)
             if (
                 events[-1].metadata.get("root_alias") != alias
@@ -2574,7 +2602,10 @@ class LocalTextTransactionEngine:
             metadata = (
                 events[-1].metadata if events[-1].phase == "rollback_reserved" else applied.metadata
             )
-            with self._open_pinned_posix(metadata, allow_applied=True) as pinned:
+            with (
+                self._open_pinned_posix(metadata, allow_applied=True) as pinned,
+                ExitStack() as effect_scopes,
+            ):
                 identity = self._reconcile_applied(pinned, metadata)
                 if identity is None or identity != metadata["post_write_identity"]:
                     raise ValueError("local_text_rollback_later_edit_detected")
@@ -2659,6 +2690,7 @@ class LocalTextTransactionEngine:
                 else:
                     if events[-1].phase == "rollback_reserved":
                         self._require_staging_authorization(rollback_staging_request, current)
+                    effect_scopes.enter_context(self._new_effect_scope(plan))
                     lease, rollback_metadata = self._claim_and_record(
                         alias=alias,
                         operation_id=receipt.operation_id,
@@ -2719,6 +2751,8 @@ class LocalTextTransactionEngine:
                     if lease is not None:
                         lease.complete(rollback_receipt.rollback_receipt_fingerprint)
                     exact_rollback_receipt = self._rollback_receipt_from_event(final)
+                    # Canonical recording writes Memory; never call it under its writer fence.
+                    effect_scopes.close()
                     return self._commit_rollback_locked_if_requested(
                         plan=plan,
                         root_alias=alias,
@@ -2796,6 +2830,32 @@ class LocalTextTransactionEngine:
         metadata = events[-1].metadata
         self._require_transaction_versions(metadata)
         with self._resource_lock(root_alias, str(metadata["resource_ref"])):
+            events = self._load_events(root_alias, operation_id)
+            metadata = events[-1].metadata
+            self._require_transaction_versions(metadata)
+            if (
+                plan is not None
+                and events[-1].phase in {"receipt", "cleaned"}
+                and "rollback_operation_id" not in metadata
+                and "mutation_receipt_fingerprint" not in metadata
+            ):
+                # The source mutation has a journal, but this rollback has not
+                # reserved one. Never invent historical rollback authority.
+                source_receipt = self._receipt_from_applied(self._find_event(events, "applied"))
+                if (
+                    source_receipt.operation_id,
+                    source_receipt.receipt_fingerprint,
+                    source_receipt.resource_ref,
+                    root_alias,
+                ) != (
+                    plan.mutation_operation_id,
+                    plan.mutation_receipt_fingerprint,
+                    plan.resource_ref,
+                    plan.root_alias,
+                ):
+                    raise ValueError("local_text_canonical_physical_plan_binding_mismatch")
+                self._require_persisted_mutation_receipt(source_receipt)
+                raise ValueError("local_text_rollback_request_required_before_journal")
             self._require_canonical_physical_binding(
                 purpose="rollback",
                 operation_id=str(metadata.get("rollback_operation_id", "")),
@@ -2808,6 +2868,7 @@ class LocalTextTransactionEngine:
                 resource_ref=str(metadata["resource_ref"]),
                 root_alias=root_alias,
                 plan=plan,
+                effect_mode="historical_recovery",
             )
             events = self._load_events(root_alias, operation_id)
             phase = events[-1].phase
@@ -3101,6 +3162,7 @@ class LocalTextTransactionEngine:
         resource_ref: str,
         root_alias: str,
         plan: ArtifactPhysicalApplyPlanContract | ArtifactPhysicalRollbackPlanContract | None,
+        effect_mode: str = "new_effect",
     ) -> None:
         try:
             require_valid_local_text_resource_ref(resource_ref, root_alias)
@@ -3156,15 +3218,74 @@ class LocalTextTransactionEngine:
         if observed != expected:
             raise ValueError("local_text_canonical_physical_plan_binding_mismatch")
         try:
-            authorized = authorizer(plan)
+            authorized = authorizer(plan, effect_mode=effect_mode)
         except Exception:
             raise ValueError("local_text_canonical_physical_effect_authorization_failed") from None
         if authorized is not True:
             raise ValueError("local_text_canonical_physical_effect_not_authorized")
 
+    def _apply_effect_mode(
+        self, events: list[_JournalEvent], operation_id: str, current: datetime
+    ) -> str:
+        # This is kernel-derived recovery context, never a surface-provided capability.
+        if events and events[-1].phase in {"claimed", "renamed", "applied", "receipt", "cleaned"}:
+            return "historical_recovery"
+        if events and events[-1].phase == "staged":
+            metadata = dict(events[-1].metadata)
+            metadata.setdefault("journal_reservation_fingerprint", events[0].event_fingerprint)
+            historical = self._lookup_historical_context(
+                self._authority_request(metadata, operation_id, purpose="execute"), current
+            )
+            if historical is not None:
+                return "historical_recovery"
+        return "new_effect"
+
+    @contextmanager
+    def _new_effect_scope(
+        self, plan: ArtifactPhysicalApplyPlanContract | ArtifactPhysicalRollbackPlanContract | None
+    ) -> Iterator[None]:
+        if plan is None:
+            # Legacy non-canonical resources remain subject to the binding lookup.
+            with nullcontext():
+                yield
+            return
+        provider = self._canonical_physical_effect_scope_provider
+        if provider is None:
+            raise ValueError("local_text_canonical_physical_effect_scope_provider_not_configured")
+        with ExitStack() as scope:
+            try:
+                scope.enter_context(provider(plan))
+            except Exception:
+                raise ValueError(
+                    "local_text_canonical_physical_first_effect_not_authorized"
+                ) from None
+            yield
+
+    def _rollback_effect_mode(
+        self, events: list[_JournalEvent], request: LocalTextRollbackRequest, current: datetime
+    ) -> str:
+        if events[-1].phase == "rollback_receipt":
+            return "historical_recovery"
+        if events[-1].phase == "rollback_reserved":
+            # A crash can persist the consumed claim before the claimed journal event.
+            authority_request = self._authority_request(
+                events[-1].metadata,
+                request.rollback_operation_id,
+                purpose="rollback",
+                mutation_receipt_fingerprint=request.receipt.receipt_fingerprint,
+                execution_binding=request.execution_binding,
+                logical_operation="rollback_text",
+                journal_reservation_fingerprint=events[-1].event_fingerprint,
+            )
+            if self._lookup_historical_context(authority_request, current) is not None:
+                return "historical_recovery"
+        return "new_effect"
+
     def _require_canonical_commit_ports_configured(self) -> None:
         if self._canonical_physical_effect_authorizer is None:
             raise ValueError("local_text_canonical_physical_effect_authorizer_not_configured")
+        if self._canonical_physical_effect_scope_provider is None:
+            raise ValueError("local_text_canonical_physical_effect_scope_provider_not_configured")
         if self._resource_physical_binding_lookup is None:
             raise ValueError("local_text_resource_physical_binding_lookup_not_configured")
         if self._canonical_commit_receipt_verifier is None:
@@ -3283,6 +3404,7 @@ class LocalTextTransactionEngine:
             resource_ref=receipt.resource_ref,
             root_alias=root_alias,
             plan=plan,
+            effect_mode="historical_recovery",
         )
         exact, observed_identity, metadata = self._verify_mutation_receipt_current_locked(
             root_alias=root_alias,
@@ -3336,6 +3458,7 @@ class LocalTextTransactionEngine:
             resource_ref=receipt.resource_ref,
             root_alias=root_alias,
             plan=plan,
+            effect_mode="historical_recovery",
         )
         exact, observed_identity, metadata = self._verify_rollback_receipt_current_locked(
             root_alias=root_alias,

@@ -187,8 +187,14 @@ def assess_status_sync(
     backlog_statuses = parse_micro_backlog_statuses(backlog_text)
     master_statuses = parse_master_map_mb_statuses(master_map_text)
     ready_items = [item for item, status in backlog_statuses.items() if status == "ready"]
+    active_items = [item for item, status in backlog_statuses.items() if status == "in_progress"]
     drift: list[str] = []
     next_ready_item = ready_items[0] if len(ready_items) == 1 else None
+    if len(active_items) > 1:
+        drift.append(f"multiple_in_progress_items:{','.join(sorted(active_items))}")
+    for item in active_items:
+        if not master_statuses.get(item, "").startswith("in_progress"):
+            drift.append(f"master_map_in_progress_mismatch:{item}")
 
     if len(ready_items) > 1:
         drift.append(f"multiple_ready_items:{','.join(sorted(ready_items))}")
@@ -202,7 +208,9 @@ def assess_status_sync(
         key=lambda item: int(item.split("-")[1]),
         default=None,
     )
-    expected_marker = next_ready_item or latest_item
+    expected_marker = (
+        (active_items[0] if len(active_items) == 1 else None) or next_ready_item or latest_item
+    )
     if expected_marker:
         for relative_path in ACTIVE_STATUS_DOCS:
             path = root / relative_path
@@ -220,7 +228,7 @@ def assess_status_sync(
 
     if drift:
         return "status_drift", next_ready_item, drift
-    if next_ready_item:
+    if next_ready_item or active_items:
         return "synchronized", next_ready_item, []
     return "queue_exhausted", None, []
 

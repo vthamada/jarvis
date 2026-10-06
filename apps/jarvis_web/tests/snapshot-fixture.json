@@ -1,0 +1,19 @@
+{
+  "schema_version": "jarvis-surface-snapshot-v1",
+  "mode": "core_snapshot",
+  "read_only": true,
+  "authority": "none",
+  "generated_at": "2026-10-02T15:00:00+00:00",
+  "principal_ref": "declared-fixture-principal",
+  "mission": {
+    "mission_id": "snapshot-fixture-mission",
+    "goal": "Inspecionar um snapshot local de demonstração",
+    "status": "paused",
+    "objective_ref": "objective-fixture",
+    "objective_status": "active",
+    "next_action_ref": "action-fixture"
+  },
+  "work_items": [{"ref": "work-item-fixture", "status": "pending"}],
+  "artifacts": [{"ref": "artifact-fixture", "status": "candidate", "version": 1, "physical_status": "not_written"}],
+  "activity": [{"name": "mission.paused", "status": "recorded"}]
+}

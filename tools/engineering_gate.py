@@ -87,7 +87,8 @@ def build_gate_steps(*, mode: str, include_controlled: bool) -> list[GateStep]:
         steps.append(
             GateStep(
                 label="active cut baseline verification",
-                command=[RUNNER, "tools/verify_active_cut_baseline.py"],
+                # Module execution finds shared sources without an editable install.
+                command=[RUNNER, "-m", "tools.verify_active_cut_baseline"],
             )
         )
         steps.append(

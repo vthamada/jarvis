@@ -6,7 +6,7 @@ from pathlib import Path
 SUSPICIOUS_TOKENS = ("\u00c3", "\u00c2", "\ufffd")
 TEXT_EXTENSIONS = {".md", ".txt"}
 SPECIAL_NAMES = {"README", "README.md", "HANDOFF.md", "CHANGELOG.md"}
-SKIP_PARTS = {".git", ".venv", "node_modules", ".jarvis_runtime", "__pycache__"}
+SKIP_PARTS = {".git", ".venv", "node_modules", ".jarvis_runtime", ".research", "__pycache__"}
 SKIP_PREFIXES = (".audit_", ".pytest_", ".tmp_")
 
 

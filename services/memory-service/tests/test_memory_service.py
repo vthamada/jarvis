@@ -3587,6 +3587,21 @@ def test_memory_service_builds_recoverable_recurrent_specialist_context() -> Non
     temp_dir = runtime_dir("memory-specialist-recurrence")
     service = MemoryService(database_url=f"sqlite:///{(temp_dir / 'memory.db').as_posix()}")
 
+    # Recurrent context must have canonical source ownership, not only a
+    # derived specialist row left behind by an interrupted/unbound session.
+    service.record_turn(
+        InputContract(
+            request_id=RequestId("req-recurrent-source"),
+            session_id=SessionId("sess-recurrent-1"),
+            channel=ChannelType.CHAT,
+            input_type=InputType.TEXT,
+            content="Review the synthetic software plan.",
+            timestamp="2026-10-04T12:00:00Z",
+            user_id="user-recurrent-1",
+        ),
+        intent="analysis",
+        response_text="Synthetic source evidence recorded.",
+    )
     first = service.prepare_specialist_shared_memory(
         session_id="sess-recurrent-1",
         specialist_hints=["software_change_specialist"],

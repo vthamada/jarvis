@@ -1,11 +1,12 @@
 from __future__ import annotations
 
-from contextlib import contextmanager
+from contextlib import contextmanager, nullcontext
 from datetime import UTC, datetime
 from pathlib import Path
 
 import operational_service.service as service_module
 import pytest
+from operational_service.adapters import LocalTextFilePreflightAdapter
 from operational_service.adapters.local_text_transaction import LocalTextTransactionEngine
 from operational_service.service import OperationalService
 
@@ -117,8 +118,14 @@ def test_transaction_engine_receives_historical_claim_lookup(
         *,
         resource_ref: str,
         mutation_receipt_fingerprint: str | None = None,
+        effect_mode: str = "new_effect",
     ) -> bool:
-        return bool(resource_ref) and mutation_receipt_fingerprint is None
+        return (bool(resource_ref) and mutation_receipt_fingerprint is None
+                and effect_mode == "new_effect")
+
+    def scope_provider(_plan: object):
+        # Explicit wiring double, not evidence of a canonical database fence.
+        return nullcontext()
 
     def resource_bound(_resource_ref: str) -> bool:
         return False
@@ -143,6 +150,7 @@ def test_transaction_engine_receives_historical_claim_lookup(
         local_text_file_mutation_receipt_verifier=verify_mutation,
         local_text_file_rollback_receipt_verifier=verify_rollback,
         local_text_file_canonical_physical_effect_authorizer=authorize_effect,
+        local_text_file_canonical_physical_effect_scope_provider=scope_provider,
         local_text_file_resource_physical_binding_lookup=resource_bound,
         local_text_file_canonical_commit_receipt_verifier=verify_canonical_commit,
         local_text_file_physical_attestation_lease_provider=lease_authority.issue,
@@ -153,6 +161,7 @@ def test_transaction_engine_receives_historical_claim_lookup(
     assert captured["mutation_receipt_verifier"] is verify_mutation
     assert captured["rollback_receipt_verifier"] is verify_rollback
     assert callable(captured["canonical_physical_effect_authorizer"])
+    assert captured["canonical_physical_effect_scope_provider"] is scope_provider
     assert captured["resource_physical_binding_lookup"] is resource_bound
     assert captured["canonical_commit_receipt_verifier"] is verify_canonical_commit
     assert callable(captured["physical_attestation_lease_provider"])
@@ -268,8 +277,9 @@ def test_canonical_effect_authorizer_bridge_passes_exact_memory_keywords() -> No
         *,
         resource_ref: str,
         mutation_receipt_fingerprint: str | None = None,
+        effect_mode: str = "new_effect",
     ) -> bool:
-        calls.append((plan, resource_ref, mutation_receipt_fingerprint))
+        calls.append((plan, resource_ref, mutation_receipt_fingerprint, effect_mode))
         return True
 
     service = object.__new__(OperationalService)
@@ -285,10 +295,48 @@ def test_canonical_effect_authorizer_bridge_passes_exact_memory_keywords() -> No
 
     assert service._authorize_local_text_file_canonical_physical_effect(apply_plan)
     assert service._authorize_local_text_file_canonical_physical_effect(rollback_plan)
+    assert service._authorize_local_text_file_canonical_physical_effect(
+        apply_plan, effect_mode="historical_recovery"
+    )
     assert calls == [
-        (apply_plan, "text:workspace/docs/apply.txt", None),
-        (rollback_plan, "text:workspace/docs/rollback.txt", "a" * 64),
+        (apply_plan, "text:workspace/docs/apply.txt", None, "new_effect"),
+        (rollback_plan, "text:workspace/docs/rollback.txt", "a" * 64, "new_effect"),
+        (apply_plan, "text:workspace/docs/apply.txt", None, "historical_recovery"),
     ]
+
+
+@pytest.mark.parametrize("scope_provider,code", [
+    (None, "canonical_physical_ports_incomplete"),
+    (object(), "canonical_physical_effect_scope_provider_invalid"),
+])
+def test_scope_provider_configuration_refused_before_platform_or_journal_initialization(
+    tmp_path, scope_provider, code
+):
+    root = _root(tmp_path)
+    journal = root / ".jarvis-transactions"
+    adapter = LocalTextFilePreflightAdapter(
+        roots={"workspace": root},
+        verified_context_verifier=lambda _request, _current: True,
+    )
+    callbacks = []
+    with pytest.raises(ValueError, match=code):
+        LocalTextTransactionEngine(
+            preflight_adapter=adapter,
+            transaction_roots={"workspace": journal},
+            staging_authorization_verifier=lambda _request, _current: True,
+            effect_start_claim_verifier=lambda _context, _current: True,
+            historical_claim_lookup=lambda _request, _current: None,
+            historical_claim_verifier=lambda _context, _current: True,
+            authorization_lease_provider=lambda _request, _current: object(),
+            trusted_transaction_clock=lambda: datetime.now(UTC),
+            canonical_physical_effect_authorizer=lambda _plan, **kwargs: callbacks.append(kwargs),
+            canonical_physical_effect_scope_provider=scope_provider,
+            resource_physical_binding_lookup=lambda _resource: False,
+            canonical_commit_receipt_verifier=lambda _receipt: True,
+            physical_attestation_lease_provider=lambda *_args: nullcontext(),
+        )
+    assert callbacks == []
+    assert not journal.exists()
 
 
 def test_engine_runs_canonical_callback_only_inside_injected_attestation_lease() -> None:

@@ -674,6 +674,12 @@ def _load_local_manifest_payload(
             raw = _read_bounded(stream, max_bytes=max_bytes)
             after_read = fstat(stream.fileno())
             _require_same_file(opened, after_read, manifest_label=manifest_label)
+            # Metadata alone can miss same-size writes on coarse clocks.
+            stream.seek(0)
+            verified_raw = _read_bounded(stream, max_bytes=max_bytes)
+            _require_same_file(opened, fstat(stream.fileno()), manifest_label=manifest_label)
+            if raw != verified_raw:
+                raise ValueError(f"{manifest_label} changed while being read")
     except OSError as exc:
         raise ValueError(f"{manifest_label} cannot be read") from exc
 
@@ -980,6 +986,7 @@ def _require_same_file(before: Any, after: Any, *, manifest_label: str) -> None:
         before.st_mode,
         before.st_size,
         getattr(before, "st_mtime_ns", None),
+        getattr(before, "st_nlink", None),
     )
     identity_after = (
         after.st_dev,
@@ -987,6 +994,7 @@ def _require_same_file(before: Any, after: Any, *, manifest_label: str) -> None:
         after.st_mode,
         after.st_size,
         getattr(after, "st_mtime_ns", None),
+        getattr(after, "st_nlink", None),
     )
     if identity_before != identity_after:
         raise ValueError(f"{manifest_label} changed while being read")
