@@ -10,6 +10,7 @@ import time
 from threading import Event, RLock
 
 from inference_service.credential_store import SiwcCredentialStore
+from inference_service.diagnostics import emit_diagnostic
 from inference_service.http_transport import PlanResponsesHttpsTransport
 from inference_service.identity_tokens import verify_id_token
 from inference_service.oauth_flow import CodeExchange, SiwcAuthorizationFlow
@@ -266,13 +267,15 @@ class SiwcSession:
             return catalog
 
     def provider(self, model: str, *, authorized: bool = False,
-                 connection_factory=None) -> ResponsesPlanInferenceProvider:
+                 connection_factory=None, telemetry=None) -> ResponsesPlanInferenceProvider:
         """No network here; every request rechecks the session generation.
 
         Injected connection factories are trusted test seams. Plan scope/model
         selection never supplies JARVIS authority. Default synthesis stays native.
         """
         with self._lock:
+            if telemetry is not None and not callable(telemetry):
+                raise SiwcError("siwc_session_input_invalid")
             if authorized is not True or self._credentials is None or self._catalog is None:
                 raise SiwcError("siwc_inference_not_authorized")
             self._catalog.select(model)
@@ -283,6 +286,7 @@ class SiwcSession:
                 bearer_token=creds.access_token, expires_at=creds.expires_at,
                 granted_scopes=creds.scopes, authorized=True, connection_factory=connection_factory,
                 wall_clock=self._wall_clock,
+                **({"telemetry": telemetry} if telemetry is not None else {}),
             )
 
             def fenced_transport(payload, *, timeout_seconds, cancellation):
@@ -297,7 +301,15 @@ class SiwcSession:
                 yield from transport(payload, timeout_seconds=timeout_seconds,
                                      cancellation=_CombinedCancellation(cancellation, stop))
 
-            return ResponsesPlanInferenceProvider(fenced_transport)
+            def observe_provider(record):
+                if type(record) is dict:
+                    emit_diagnostic(telemetry, phase="provider_result", status=record.get("status"),
+                                    code=record.get("error_code"))
+
+            return ResponsesPlanInferenceProvider(
+                fenced_transport,
+                **({"telemetry": observe_provider} if telemetry is not None else {}),
+            )
 
     def disconnect_local(self):
         """Stop this in-memory session; remote revocation/storage erasure separate."""

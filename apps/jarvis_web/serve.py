@@ -15,6 +15,7 @@ ASSETS = {
     "/controller.mjs": ("controller.mjs", "text/javascript; charset=utf-8"),
     "/fixtures.mjs": ("fixtures.mjs", "text/javascript; charset=utf-8"),
     "/snapshot.mjs": ("snapshot.mjs", "text/javascript; charset=utf-8"),
+    "/conversation-pack.mjs": ("conversation-pack.mjs", "text/javascript; charset=utf-8"),
     "/voice-controller.mjs": ("voice-controller.mjs", "text/javascript; charset=utf-8"),
     "/transcript-review.mjs": ("transcript-review.mjs", "text/javascript; charset=utf-8"),
     "/particle-sphere.mjs": ("particle-sphere.mjs", "text/javascript; charset=utf-8"),

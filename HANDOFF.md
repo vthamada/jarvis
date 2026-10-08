@@ -1,5 +1,232 @@
 # HANDOFF
 
+## Publicacao solicitada - 2026-10-07
+
+Operador autorizou publicar todas as implementacoes pendentes na main:
+MB229 aMB235 locais e correcao de catalogo/diagnostico local MB236. Publicacao
+nao homologa modelo/qualidade nem fecha MB236, que permanece blocked. Branch
+local main, origin/main conferido por fetch; sem merge/force-push necessario
+se referencias permanecerem alinhadas. Gate standard da rodada anterior
+aprovado (8883 passed/111 skipped),296 pos-metadados e quick; runtime/corpus
+inalterados. Revisao de publicacao exclui credenciais/stores/logs/screenshots
+locais ignorados. Nenhuma nova inferencia, refresh ou implementacao nesta rodada.
+
+## Rodada ativa - MB236
+
+MB236 blocked para aceite real. Diagnostico host opt-in implementado/testado:
+326 novos (273 unitarios transporte,34 composicao host,19 TLS/Core/Memory),
+535 focados integrados e177 regressoes em bateria separada passaram. Baterias
+podem se sobrepor; nao somar como casos unicos. Auditoria readonly revalidou
+binding apos callback terminal. Standard global Windows aprovado:8994 casos,
+8883 passed/111 skipped/zero failed ou errors. Skips nao homologam outro ambiente.
+Sessao escolhida comprovadamente expirada; um refresh explicito autorizado
+concluido. Uma nova tentativa unica com gpt-6-astra/pergunta sintetica recebeu
+HTTP200, depois unsupported_response_encoding antes de aceitar SSE. Codigo
+abrange Content-Type invalido OU Content-Encoding nao identity; nenhum header
+remoto bruto/corpo foi registrado, nao afirmar compressao ou MIME especificos.
+ALLOW/rejected/inference_failed; final nativa2635 exata a Memory/export eGET/
+reload. Zero pageerrors; um POST Web; nenhuma resposta de modelo aceita.
+Somente instancia/browser proprios fechados; stores retidos. Sem reenvio,
+fallback, tools, conta alternativa ou promocao. Proximo recorte: distinguir
+MIME/encoding por categorias fixas, corpus/gate antes de corrigir causa provada.
+Nova inferencia requer novo consentimento. Ultimo validado MB235; F01/F06 partial.
+Runbook real-oauth-acceptance.md. Notas abaixo sao historicas.
+Pos-metadados desta rodada:296 testes de inventario/consumidores MCP readonly
+passaram; quick, CLI readonly do inventario e diff-check aprovados. Runtime e
+corpus de diagnostico nao mudaram apos standard; somente docs/estado e
+expectation de inventario atualizados. Nenhum commit/push nesta rodada.
+
+MB236 blocked para aceite real: fechado DOR da correcao minima de catalogo. Coordenador
+altera somente oauth_http.py: cap2 MiB para200 GET api.openai.com/v1/models;
+demais endpoints/sucessos/erros ficam256 KiB, schema/count/JSON/deadline/cleanup
+intactos. Worker corpus unitario em test_siwc_catalog_budget.py; worker E2E
+Core/Memory em test_large_catalog_core.py; worker auditoria readonly. Sem
+edicao concorrente de centros compartilhados nem acesso de workers a contas.
+Gate standard antes de nova consulta do catalogo real; escolha de modelo e
+consentimento para pergunta continuam humanos. Ultimo validado MB235.
+Nao homologar MB236 sem evidencia real exigida; notas abaixo sao historicas.
+Runtime/corpus congelados:114 unitarios e12 E2E novos passaram sem skips;
+540 existentes passaram fora de OneDrive, incluindo credenciais sintéticas.
+Primeiro focused498/7F/35E recusou credstore dentroOneDrive corretamente;
+repetido emTemp proprio sem relaxar guard. Auditoria readonly sem bloqueador.
+Gate standard global Windows aprovado,8668 casos coletados. Uma nova consulta
+real CLI de catalogo da conta explicitamente escolhida passou:5 escolhas,
+fixed_https_transport, authority=none. Sem inferencia/refresh/fallback.
+Operador escolheu gpt-6-astra e autorizou uma unica pergunta sintetica. Uma
+tentativa Web em runtime UUID novo recebeu ALLOW, generative_status=rejected,
+inference_failed; final nativa2635 caracteres exata ao export apos parar a
+instancia propria. Um POST Web, recovery/reload GET exatos, zero pageerrors.
+Nao houve reenvio/refresh/fallback. Diagnostico atual colapsa causas internas:
+nao prova HTTP status, etapa da falha ou que o modelo recebeu a pergunta.
+Modelo/qualidade nao homologados. Proximo recorte e diagnostico bounded sem
+corpo/credenciais e corpus local; nova prova real exige novo consentimento.
+Pos-metadados:296 testes de inventario/consumidores MCP readonly passaram;
+gate quick, CLI readonly do inventario e diff-check aprovados. Runtime e
+corpus126 nao mudaram apos standard. Sem commit/push nesta rodada.
+
+## Atualizacao 2026-10-06 - MB235 done; OAuth real conectado
+
+MB235 done local: tres workers com ownership disjunto; coordenador browser,
+Core/export/docs/gate. Standard global Windows completo aprovado, 8542 casos
+coletados.45 Node novos (33 DOM/12 layout), Web1053,14 negativas Python e121
+focados passaram. Em390x844 pareado, Enviar passou de1670.63 para736.08 px,
+menos934.55 px e operavel na primeira tela. Keyboard/manual recovery/GET/
+native/disconnect/parserfail aprovados; final3298 exata ao export canonico
+apos parar instancia propria. Parser/controller/API/Core/Memory intactos.
+Runbook: docs/operations/compact-local-conversation-web.md. F06 partial mantida.
+Depois de sincronizar estado/documentos,379 testes de inventario/UI/Core/MCP
+passaram, incluindo stdio real e Web1053; gate quick, CLI do inventario e
+diff-check aprovados. Lista F06 consolidada para8 referencias apos recusa do
+validador; nenhum limite foi ampliado. Runtime aprovado nao mudou depois do gate.
+
+Operador escolheu ChatGPT/Codex via OAuth e conta nova no diretorio privado
+proposto fora de Git/OneDrive. Connect SIWC real concluido com conta externa
+validada e plan_scope_granted=true; DPAPI CurrentUser, sem importar tokens
+do Codex ou expor credenciais. Catalog CLI recusou; um diagnostico redigido
+confirmou siwc_response_limit_exceeded (body maior que256 KiB). Nenhum modelo
+foi escolhido, nenhuma inferencia/refresh/retry automatico/fallback pago foi executada.
+MB236 blocked para homologacao real: corrigir budget do catalogo com corpus/
+gate antes de pedir selecao do modelo. Nao aumentar limite OAuth global por
+conveniencia nem alegar inferencia/qualidade aprovada. Runbook:
+docs/operations/real-oauth-acceptance.md. Consumidor MCP Core F13 e candidato
+independente ainda sem DOR fechado; F11 Linux depende do daemon disponivel.
+Notas seguintes sao historicas, nao estado vigente desta rodada.
+
+## Atualizacao 2026-10-06 - MB233/234 done local; MB235 ready
+
+MB233 fechou leitura humana readonly do complemento Web; MB234 fechou MCP
+stdio proprio do inventario autoral e CLI opt-in, sem consumidor no Core.
+Dois workers parser/UI e um worker MCP em arquivos disjuntos; coordenador
+assets/CLI/provas/gates. Desenvolvimento isolado paralelo, aceite integrado
+MB233 seguido de MB234, WIP 1. Ultimo validado MB234; protocolos, final
+canonica e soberania preservados. Nenhuma conta/modelo real ou capability
+externa promovida. Inventario continua authored_snapshot/product_ready=false.
+
+145 testes parser/33 DOM Node novos; Web1008 passou duas vezes e no gate global.
+159 Python worker (117 unit/42 stdio) e 55 root novos: 214 novos; bateria de
+217 com 3 existentes passou. Browser Chrome headless em perfil temporario/Core proprio:
+final de 3298 codepoints exata por SHA256 ao export canonico apos parar instancia;
+projecao/citacao, reload/GET/unico POST generativo/retorno nativo/mobile/disconnect.
+CLI real valida selecao/inventario sem Core. Import-I/contagem selecionada e
+diagnostico stdout corrigidos com testes apos auditoria readonly cruzada.
+Standard global Windows completo passou com 8528 casos coletados. Ferramentas visuais do app tiveram
+timeouts, nao contados como provas; processo/browser proprios encerrados.
+Runbook: docs/operations/web-projection-and-readiness-mcp.md.
+
+MB235 e o unico proximo integrado ready: compactar pareamento/introducao e
+aproximar compositor operavel e resposta. Leitura humana validada em destaque;
+final integral recolhida apenas apos parser+fences validos e sempre acessivel,
+nativa/falhas abertas. Ownership UI/layout disjuntos e browser/docs/gate no
+coordenador; parser/controller/API/Core/Memory intactos. Aceites na fila unica.
+F06 partial e F13 foundation mantidos; voz/conta/modelo reais, consumidor MCP
+governado, demais frentes e sistema completo continuam abertos. Sem banco
+humano, modelo externo, nova prova Linux, commit ou push. Conferencia apos
+sincronizar metadados: 311 testes passaram no host; gate quick, CLI MCP textual
+real e git diff --check passaram. Sandbox Windows bloqueou numbered temp dirs
+do pytest; runner proprio confirmado/encerrado, repeticao em basetemp novo
+validado no workspace, sem relaxar assertions. Notas abaixo historicas.
+
+## Atualizacao 2026-10-06 - MB232 done local, MB233/234 ready
+
+Tres workers disjuntos configuracao/port lazy, Core/readback por ticket e Web v2.
+Coordenador contrato/startup/HTTP/E2E/browser/docs/gate. V1 nativa preservada;
+default off e consentimento por pedido, perfil/modelo somente no host. Nenhuma
+conta/modelo/rede externa ou store humano acionado nesta prova: transporte
+injetado e Core real em runtime proprio, sem alegacao live.222 Python novos
+e141 Node novos passaram sem skips;830 Web Node completos. Browser final3131
+exata ao export canonico, reload/GET e perda GET simulada com um POST, DEFER
+visivel e retorno v1; mobile/disconnect aprovados. Auditoria readonly cruzada
+sem bloqueador; standard global Windows completo passou com 8314 casos
+coletados. Ultimo validado MB232; conta/modelo reais e qualidade permanecem
+aceites separados. Runbook:
+docs/operations/local-generative-analysis-web.md. Notas seguintes historicas.
+
+Proximo integrado MB233 ready: painel humano readonly do complemento,
+parser bounded e UI em paralelo, final canonica inteira intacta. MB234 ready
+independente: MCP stdio de inventario autoral com tool/script fixos e scope
+readonly, sem bridge no Core, conta ou sandbox de SO alegado. Ownership e
+aceites na fila unica. Inventario continua snapshot, nao produto pronto.
+Nenhum store humano, modelo externo, nova prova Linux, commit ou push.
+Conferencia final apos sincronizar metadados: 132 testes focados passaram;
+gate quick, consulta readonly do inventario e git diff --check passaram.
+Pytest focado apenas avisou que nao podia escrever seu cache; testes intactos.
+
+## Atualizacao 2026-10-06 - MB231 done local, MB232 ready
+
+Tres workers disjuntos auth/HTTP, Core/readback e cliente LIVE. Coordenador
+startup/E2E HTTP/Core/restart/browser/gate. App opt-in separado da fixture:
+--authorized --port0, runtime fresco preservado, pareamento unico120s, sessao900s,
+ticket/result120s/max64; um Coreativo, nenhuma repeticao POST. Final soapos
+Memory/eventos/readback, DEFER/BLOCK visiveis; Operational.execute deny-before-body,
+sem modelos/egress/conta/tool.302 Python novos e136 Node novos passaram/0skips,
+Web689 Node completos. Browser final congelado pair/PT -> final2635 codepoints
+exata ao export readonly canonico; reload/GET e perda GET simulada recuperam
+mesmo ticket com unico POST. Mobile390x844 sem overflow/scroll interno; disconnect
+limpa DOM e resultado antigo401. Gate standard global Windows completo passou,
+8092 casos coletados. MB231 done neste recorte; sem nova prova Linux/modelo real.
+Metadados finais verificados:112 testes focados, gate quick e diff-check passaram.
+Auth de posse da sessao local nao pessoa/OS/multiusuario; stopwaiting nao Core
+rollback; unknown aposfalha pode ter commit; restartnaorecuperaticketefemero.
+Nada em storehumano, nova provaLinux ou commit/push. Runbook:
+docs/operations/local-authenticated-analysis-web.md. Notasseguinteshistoricas.
+
+Repriorizacao: MB232 ready para complemento generativo opt-in na Web via seam
+MB229 existente; v1 nativa intacta, contrato v2 explicito, default off,
+consentimento por ticket e configuracao somente no host. Workers separados
+config/adapter, Core/readback e cliente; coordenador contratos/startup/HTTP/E2E.
+Prova prevista Core real/transporte injetado, nunca live por inferencia;
+aceite de conta/modelo reais separado e posterior. Criterios/rollback na fila.
+
+## Atualizacao 2026-10-06 - MB230 done local, MB231 ready
+
+Tres workers disjuntos: intent/binding tests, exportador/Core E2E e leitor Web.
+Coordenador integra aliases de dominios, binding aditivo Orchestrator nativo/
+Graph, painel separado e prova browser.599 Python e209 Node novos passaram
+sem skips nas baterias; suite Web553 Node incorporada ao pytest por wrapper.
+Paridade EN/PT preserva pesos/especialistas/autonomia; DEFER nao chama modelo.
+Final canonica de registros novos pode ser exportada readonly apos restart e
+vista manualmente na Web, origem nao autenticada; nao e API/live conversation.
+Prova browser publica sintetica: texto exato, recusa hash/contexto, lifecycle
+e mobile390 sem overflow. Gate standard global Windows completo aprovado,
+7790 casos coletados. Primeiro gate revelou scroll interno contrario ao design
+(removido, teste intacto) e recusa MCP nao reproduzida: assertion agora inclui
+motivo fixo; prazo/runtime inalterados.106 Web/MCP focados e nova prova browser
+passaram, segunda execucao global completa passou. MB230 done neste recorte.
+MB231 ready: conversa Web local autenticada, app opt-in separada da fixture,
+browser -> Core assist_only -> Memory/eventos -> final exata. Pareamento de
+sessao local nao e identidade humana/multiusuario; sem efeitos/tools/login.
+Workers auth/HTTP, Core/readback e cliente live disjuntos; contratos/gate com
+coordenador. Criterios/rollback na fila unica execution-backlog.md.
+Nenhum modelo/conta/store humano, commit
+ou push. Runbook docs/operations/pt-analysis-and-offline-conversation.md.
+Notas seguintes historicas; objetivo completo permanece aberto.
+
+## Atualizacao 2026-10-06 - MB229 done local, MB230 ready
+
+Operador retomou implementacao com multiagentes. Workers disjuntos entregaram
+leaf de analise generativa, session port lazy e corpus Core/HTTPS persistente;
+coordenador integrou Synthesis/Orchestrator/Memory/CLI, contratos e gate.
+Complemento opt-in naturalmente ALLOW/core_guidance_only, core_reasoning
+interno preservado, sem especialista/efeito/confirmacao pendente. Modelo
+recebe entrada atual e quote revisada bounded, nao historico/corpo/identidade.
+Final unica canonica; projecao Planning omite anexos nao confiaveis sem apagar
+memoria. CLI standalone explicita, no login/refresh/retry e readback obrigatorio.
+TLS real sintetico revelou retiming de socket fechado EOF, corrigido tambem
+no catalogo. Cleanup catalogo falha fechado. 527 testes novos MB229 e94 do
+inventario paralelo passaram, total621/zero skips nas baterias novas. Gate
+standard global Windows completo aprovado apos corrigir corrida de startup no
+teste MCP, sem ampliar prazo de producao ou dispensar RPC/cancel/cleanup.
+MB229 done neste recorte, nao promovido. Painel de prontidao16 frentes derivado em
+paralelo, sem substituir norte/fila. Sem conta/modelo externo/store humano,
+nova prova Linux, commit/push. Runbook docs/operations/generative-analysis-core.md.
+MB230 ready: paridade EN/PT de intent E dominios de analise delimitada, em
+paralelo com exportador e visualizador Web manual de turno canonico. Prova
+nativa mostrou PT DEFER por aliases de observabilidade/telemetria e verbos;
+nao alterar pesos/priors/autonomia ou remover especialistas para obter ALLOW.
+Pacote offline nao autenticado nao fecha Web live; API propria fica separada.
+Criteria/ownership/rollback em docs/implementation/execution-backlog.md.
+Notas seguintes historicas; objetivo do sistema completo permanece aberto.
+
 ## Consolidacao Git autorizada - 2026-10-05
 
 Operador confirmou commit e push de todas as implementacoes pendentes ate

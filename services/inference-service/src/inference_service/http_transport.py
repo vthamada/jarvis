@@ -20,6 +20,8 @@ from math import isfinite
 from threading import Event
 from time import monotonic, time
 
+from inference_service.diagnostics import emit_diagnostic
+
 _HOST = "api.openai.com"
 _PATH = "/v1/responses"
 _SCOPE = "chatgpt.tokens.use.direct"
@@ -113,6 +115,7 @@ class PlanResponsesHttpsTransport:
         max_event_bytes: int = 262_144,
         max_line_bytes: int = 262_144,
         max_events: int = 4096,
+        telemetry: Callable[[dict[str, object]], None] | None = None,
     ) -> None:
         if (
             type(bearer_token) is not str
@@ -134,6 +137,8 @@ class PlanResponsesHttpsTransport:
             raise ValueError("invalid_clock")
         if connection_factory is not None and not callable(connection_factory):
             raise ValueError("invalid_connection_factory")
+        if telemetry is not None and not callable(telemetry):
+            raise ValueError("invalid_telemetry")
         for value, maximum in (
             (max_stream_bytes, 8_388_608),
             (max_event_bytes, 1_048_576),
@@ -153,6 +158,7 @@ class PlanResponsesHttpsTransport:
         self._max_event_bytes = max_event_bytes
         self._max_line_bytes = max_line_bytes
         self._max_events = max_events
+        self._telemetry = telemetry
 
     @property
     def evidence_mode(self) -> str:
@@ -163,11 +169,16 @@ class PlanResponsesHttpsTransport:
         self, payload: dict[str, object], *, timeout_seconds: float, cancellation: Event
     ) -> Iterator[dict[str, object]]:
         # Validate eagerly and snapshot before opening any socket or lazy stream.
-        body = self._request_body(payload)
-        if not _finite_number(timeout_seconds) or not 0 < timeout_seconds <= 120:
-            raise PlanTransportError("invalid_timeout")
-        if not isinstance(cancellation, Event):
-            raise PlanTransportError("invalid_cancellation")
+        try:
+            body = self._request_body(payload)
+            if not _finite_number(timeout_seconds) or not 0 < timeout_seconds <= 120:
+                raise PlanTransportError("invalid_timeout")
+            if not isinstance(cancellation, Event):
+                raise PlanTransportError("invalid_cancellation")
+        except PlanTransportError as error:
+            emit_diagnostic(self._telemetry, phase="responses_request", status=error.status,
+                            code=error.code)
+            raise
         return self._stream(body, float(timeout_seconds), cancellation)
 
     @staticmethod
@@ -246,6 +257,13 @@ class PlanResponsesHttpsTransport:
             def before_io() -> None:
                 nonlocal io_socket
                 remaining = check()
+                # A length-delimited final read closes HTTPResponse.fp. With
+                # Connection: close its last socket owner may now be gone; the
+                # next read is a local EOF, not I/O on that closed descriptor.
+                # Keep deadline/cancellation checks but do not retime a dead fd.
+                if response is not None and callable(getattr(response, "isclosed", None)):
+                    if response.isclosed():
+                        return
                 if connection is not None:
                     connection.timeout = remaining
                     sock = getattr(connection, "sock", None)
@@ -278,9 +296,12 @@ class PlanResponsesHttpsTransport:
                     "Accept-Encoding": "identity",
                 },
             )
+            emit_diagnostic(self._telemetry, phase="responses_request", status="completed")
             check()
             before_io()
             response = connection.getresponse()
+            emit_diagnostic(self._telemetry, phase="responses_http", status="observed",
+                            http_status=response.status)
             check()
             if response.status != 200:
                 # Do not read/echo untrusted error bodies, redirect targets or headers.
@@ -300,11 +321,20 @@ class PlanResponsesHttpsTransport:
             ):
                 raise PlanTransportError("unsupported_response_encoding")
             yield from self._events(response, check, before_io)
-        except PlanTransportError:
+            if self._telemetry is not None:
+                emit_diagnostic(self._telemetry, phase="responses_stream", status="completed")
+                check()
+        except PlanTransportError as error:
+            emit_diagnostic(self._telemetry, phase="responses_stream", status=error.status,
+                            code=error.code)
             raise
         except TimeoutError:
+            emit_diagnostic(self._telemetry, phase="responses_stream", status="timed_out",
+                            code="timeout")
             raise PlanTransportError("timeout", "timed_out") from None
         except Exception:
+            emit_diagnostic(self._telemetry, phase="responses_stream", status="failed",
+                            code="transport_error")
             # No private credential, request, server body, URL or OS diagnostics escape.
             raise PlanTransportError("transport_error") from None
         finally:

@@ -26,6 +26,70 @@ Leitura correta:
 
 ## 2. Fotografia atual
 
+Atualizacao vigente 2026-10-06: MB236 blocked para aceite real. Catalogo
+bounded e diagnostico host opt-in validados:326 novos/535 focados e standard
+global Windows8994 casos (8883 passed/111 skipped/zero falhas). Segunda
+tentativa unica autorizada com gpt-6-astra apos refresh explicito de sessao
+expirada recebeu HTTP200 e unsupported_response_encoding antes de SSE.
+Codigo cobre MIME OU Content-Encoding, nao distinguidos. ALLOW/rejected/
+final nativa2635 exata ao export/GET/reload; sem reenvio/fallback/tools.
+Proximo recorte candidato: categorias fixas/corpus/gate antes de corrigir
+causa provada; nova inferencia exige novo consentimento.
+Ultimo validado MB235; F01/F06 partial, utilidade/qualidade reais nao aceitas.
+Runbook real-oauth-acceptance.md; notas abaixo sao estados anteriores.
+
+Atualizacao vigente 2026-10-06: MB235 done local, standard global Windows
+completo aprovado/8542 coletados.45 Node novos/Web1053,14 negativas Python e121
+focados passaram. Browser390x844 Enviar1670.63→736.08 px, keyboard/GET/native/
+parserfail e final3298 exata ao export. Core/Memory/protocolos intactos, F06 partial.
+Conta OAuth real conectada posteriormente com escopo do plano; catalogo maior
+que256 KiB recusado, sem modelo selecionado/inferencia ou qualidade aceita.
+Ultimo validado MB235; MB236 blocked. F13 consumidor Core candidato sem DOR.
+Runbooks compact-local-conversation-web.md e real-oauth-acceptance.md.
+Sistema completo aberto; notas seguintes historicas, nao estado vigente.
+
+Atualizacao vigente 2026-10-06: MB233/234 done local, standard global Windows
+completo aprovado. Leitura humana Web readonly/final integral e MCP stdio/CLI
+do inventario autoral proprios, sem Core bridge.178 Node/214 Python novos,
+Web1008/bateria217 e browser real injetado/final3298 exata ao export aprovados.
+Ultimo validado MB234; MB235 ready para compactar Web/disclosures acessiveis,
+parser/controller/API/Core/Memory intactos. F06 partial/F13 foundation mantidos;
+nenhuma conta/modelo real, auth humana, qualidade ou nova prova Linux alegados.
+Sistema completo aberto; criterios/ownership na fila unica e inventario atualizado.
+Runbook: docs/operations/web-projection-and-readiness-mcp.md.
+Notas MB232 e seguintes historicas, nao estado vigente.
+
+Atualizacao vigente 2026-10-06: MB232 done no recorte local, standard global
+Windows aprovado com8314 casos coletados. Web v2 generativa opt-in por ticket,
+perfil lazy/consentimento, v1 nativa preservada; 222 Python/141 Node novos e830
+Web completos passaram. Browser Core real/transporte injetado, final3131
+exata ao export/GET/reload/DEFER/mobile/disconnect aprovados. Nao comprova
+conta/modelo real, qualidade ou sistema completo. Ultimo validado MB232;
+MB233 ready para projecao humana readonly e MB234 ready independente MCP
+readonly do inventario autoral. Sem bridge Core, auth humana, efeitos ou nova
+prova Linux. Runbook: docs/operations/local-generative-analysis-web.md.
+Notas seguintes historicas, nao estado vigente.
+
+Atualizacao vigente 2026-10-06: MB231 done no recorte local, standard global
+Windows aprovado com8092 casos coletados. Web opt-in pareada -> Core nativo real
+-> Memory/eventos -> final exata;302 Python/136 Node novos/689 Web completos,
+browser PT/reload/GET recuperacao/mobile/disconnect aprovados. Posse de sessao
+nao auth humana; modelos/tools desativados, qualidade generativa nao aceita.
+Ultimo validado MB231; MB232 ready para complemento generativo opt-in via seam
+MB229, v1 intacta/v2 explicita/default off e consentimento por ticket. Conta/
+modelo reais e nova prova Linux fora. Runbook:
+docs/operations/local-authenticated-analysis-web.md. Notas abaixo historicas.
+
+Historico 2026-10-06: MB229/MB230 done nos recortes locais, gates
+standard globais Windows aprovados. Analise generativa MB229 e complemento
+opt-in sem autoridade; MB230 melhora pares EN/PT delimitados e acrescenta
+export readonly/painel Web manual de turno canonico com origem nao autenticada.
+599 Python/209 Node novos MB230 aprovados/zero skips nas baterias, browser
+sintetico/restart/texto exato/lifecycle/mobile. Sem modelo/conta real, Web live,
+qualidade vocal, Linux novo ou sistema completo aprovados. MB231 ready para
+conversa local autenticada, criterios na fila unica. Runbook:
+docs/operations/pt-analysis-and-offline-conversation.md. Notas abaixo historicas.
+
 MB228 (2026-10-05) done local: review request-scoped -> Knowledge/Governance/
 Synthesis/Memory, fonte unverified isolada da instrucao/roteamento. Final exata
 retida; projecao Planning omite literal nao confiavel. CLI opt-in com readback,

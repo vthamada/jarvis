@@ -23,11 +23,21 @@ _FAMILIES = {
     "planej": r"planej\w*",
     "analis": r"analis\w*",
     "analy": r"analy(?:s\w*|z\w*)",
-    "avali": r"avali\w*",
+    # Translated forms share their existing keyword slot: one semantic family
+    # still contributes at most one hit, even in bilingual/repeated requests.
+    # Preserve the legacy analysis/evaluation stems; only additions use bounded
+    # explicit inflections rather than matching arbitrary translated substrings.
+    "avali": r"(?:avali\w*|evaluat(?:e|es|ed|ing|ion|ions))",
     "evid": r"evid(?:ence|ences|encia|encias|ente|entes)?",
-    "review": r"review(?:s|ed|ing)?",
-    "audit": r"audit(?:s|ed|ing)?",
-    "compare": r"compar(?:e|es|ed|ing)",
+    "review": (
+        r"(?:review(?:s|ed|ing)?|"
+        r"revis(?:ar|a|am|e|em|ando|ado|ada|ados|adas|ao|oes))"
+    ),
+    "audit": r"audit(?:s|ed|ing|ar|a|am|e|em|ando|ado|ada|ados|adas|oria|orias)?",
+    "compare": (
+        r"compar(?:e|es|ed|ing|ison|isons|ar|a|am|em|ando|ado|ada|ados|adas|"
+        r"acao|acoes|ativo|ativa|ativos|ativas)"
+    ),
     "delete": r"delet(?:e|es|ed|ing)",
     "drop": r"drop(?:s|ped|ping)?",
     "destroy": r"destroy(?:s|ed|ing)?",

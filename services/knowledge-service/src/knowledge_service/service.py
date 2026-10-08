@@ -37,6 +37,8 @@ from shared.technology_radar_intake import (
     validate_technology_radar_intake,
 )
 
+from .routing_aliases import routing_aliases
+
 
 @dataclass(frozen=True)
 class KnowledgeDomain:
@@ -391,7 +393,7 @@ class KnowledgeService:
         return folded.lower().replace("_", " ")
 
     def _select_domains(self, intent: str, query: str) -> list[str]:
-        normalized_query = self._normalize_text(query)
+        normalized_query = routing_aliases(self._normalize_text(query))
         scores: dict[str, float] = {}
         for domain_name, entry in self.domains.items():
             route_entry = self.domain_routes.get(domain_name)

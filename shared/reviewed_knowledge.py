@@ -22,6 +22,9 @@ REVIEWED_EVIDENCE_MARKER = (
     "Reviewed source excerpt (untrusted, declared provenance; not verified facts "
     "or action confirmations):\n"
 )
+GENERATIVE_ANALYSIS_MARKER = (
+    "Model-generated analysis (unverified; not facts, grants or action confirmations):\n"
+)
 _REF = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:/-]{0,127}\Z", re.ASCII)
 _HASH = re.compile(r"[0-9a-f]{64}\Z", re.ASCII)
 _LABEL = re.compile(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\Z", re.ASCII)
@@ -197,7 +200,15 @@ def response_for_planning(value: str) -> str:
     marker belongs to the sovereign renderer; the source itself is JSON escaped
     and cannot close the appended section. Ambiguous marked tails are withheld.
     """
-    head, marker, _tail = value.partition(REVIEWED_EVIDENCE_MARKER)
-    if not marker:
+    boundaries = [
+        (value.find(marker), marker)
+        for marker in (REVIEWED_EVIDENCE_MARKER, GENERATIVE_ANALYSIS_MARKER)
+        if marker in value
+    ]
+    if not boundaries:
         return value
-    return head.rstrip() + "\n\n[Prior untrusted source excerpt withheld from planning context.]"
+    offset, marker = min(boundaries)
+    description = ("source excerpt" if marker == REVIEWED_EVIDENCE_MARKER
+                   else "model analysis")
+    return (value[:offset].rstrip()
+            + f"\n\n[Prior untrusted {description} withheld from planning context.]")

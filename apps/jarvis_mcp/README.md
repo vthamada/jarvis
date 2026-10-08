@@ -1,5 +1,10 @@
 # MCP local readonly — WP-MCP-01
 
+MB234 done local, standard global Windows aprovado: servidor/client proprios
+do inventario autoral, tool read_product_readiness e CLI opt-in. Sem Core bridge,
+contas ou servidor externo. [Runbook](../../docs/operations/web-projection-and-readiness-mcp.md).
+O experimento fixture abaixo permanece independente e inalterado.
+
 Experimento isolado sem SDK ou dependência central: client e servidor fixture próprio
 conversam por stdio JSON-RPC real em subprocess. Só existe a tool
 `read_fixture_status(record_id="health")`, cujo dado é sintético e constante.

@@ -1,5 +1,26 @@
 # MB222: conta local ChatGPT e catalogo SIWC
 
+Atualizacao MB236 2026-10-06: diagnostico host opt-in validado com326 novos,
+535 focados e standard global Windows8994 casos/8883 passed/111 skipped/
+zero falhas. Sessao escolhida expirada; um refresh explicito autorizado passou.
+Segunda tentativa unica com gpt-6-astra recebeu HTTP200 seguido de
+unsupported_response_encoding antes de SSE. Codigo cobre MIME OU
+Content-Encoding, nao distinguidos; nao afirmar compressao/resposta concluida.
+Final nativa2635 exata ao export/GET/reload, sem reenvio/fallback/tools ou
+modelo/qualidade homologados. MB236 blocked; ultimo validado MB235. Proximo
+recorte candidato exige DOR/corpus/gate, nova inferencia novo consentimento.
+Detalhes em real-oauth-acceptance.md. Notas abaixo sao historicas.
+
+Historico MB236: budget de body2 MiB apenas para status200
+GET api.openai.com/v1/models. Todos os demais endpoints/sucessos/erros mantem
+256 KiB; JSON/depth/count/deadline/cleanup e cap de exibicao CLI intactos.
+114 unitarios/12 E2E novos,540 existentes e gate standard global Windows
+aprovados/8668 coletados. Conta real explicitamente escolhida conectada;
+uma consulta real CLI retornou5 modelos. Tentativa Web unica com gpt-6-astra
+recebeu ALLOW/rejected/inference_failed, final nativa preservada. Sem reenvio/
+refresh/fallback pago; causa indeterminada, inferencia/qualidade nao aceitas. Ver
+real-oauth-acceptance.md. Evidencia MB222 abaixo e historica.
+
 Data: 2026-10-05. MB222 done no recorte local; gate standard global Windows
 passou.613 testes focados passed/6 skips; storage final82 passed/6 skips apos
 ultima regressao (contagem separada, sobrepoe o focused). Skips exclusivamente

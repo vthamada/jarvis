@@ -1,5 +1,81 @@
 # Unified Gap and Absorption Backlog
 
+MB236 2026-10-06: blocked para aceite real. Catalogo bounded e diagnostico
+host opt-in validados:326 testes novos/535 focados e standard global Windows
+8994 casos (8883 passed/111 skipped/zero falhas). Segunda tentativa unica
+autorizada com gpt-6-astra apos refresh explicito de sessao expirada recebeu
+HTTP200 seguido de unsupported_response_encoding antes de SSE. Codigo cobre
+MIME OU Content-Encoding, ainda nao distinguidos; nao corrigir por hipotese.
+ALLOW/rejected/final nativa2635 exata ao export/GET/reload. Sem reenvio/fallback/
+tools ou inferencia/qualidade homologadas. Proximo recorte candidato exige DOR,
+categorias fixas/corpus/gate; nova inferencia novo consentimento.
+Ultimo validado MB235; F01/F06 partial e sistema
+completo ainda aberto. F13 candidato sem DOR; runbook real-oauth-acceptance.md.
+Notas abaixo sao historicas, nao o bloqueio vigente.
+
+MB235 2026-10-06: done local, standard global Windows aprovado/8542 coletados.
+Conversa Web compacta, disclosures/foco e final integral preservados; Web1053,
+45 Node novos,14 negativas Python/121 focados e browser mobile/GET/native/
+parserfail/export exato aprovados. F06 partial, demais aceites abertos.
+Operador escolheu OAuth ChatGPT/Codex; conta real conectada com permissao do
+plano, catalogo recusado acima256 KiB. Ultimo validado MB235; MB236 blocked:
+resolver catalogo bounded antes de selecionar modelo e aceitar inferencia real.
+Nenhum endpoint privado/import de tokens/tool/qualidade promovido. F13 Core
+permanece candidato sem DOR; criterios na fila unica, inventario sincronizado.
+Runbooks compact-local-conversation-web.md e real-oauth-acceptance.md.
+Notas seguintes historicas, nao estado vigente.
+
+MB233/234 2026-10-06: done local; standard global Windows completo aprovado.
+Leitura humana Web readonly com final integral e MCP stdio/CLI do inventario
+autoral, sem Core bridge ou autoridade.178 Node/214 Python novos, Web1008/
+bateria217 e browser real injetado/final3298 exata/recovery GET aprovados.
+Ultimo validado MB234; MB235 ready deriva de F06: compactar conversa e final
+integral em disclosure acessivel somente apos parser/fences validos; nativa/
+falha aberta. Criterios/ownership na fila unica. F06 partial/F13 foundation
+mantidos, aceites reais/qualidade e demais frentes continuam abertos.
+Runbook: `docs/operations/web-projection-and-readiness-mcp.md`.
+Notas MB232 e seguintes historicas, nao estado vigente.
+
+MB232 2026-10-06: done local, standard global Windows aprovado/8314 coletados.
+Web v2 generativa opt-in por consulta com perfil lazy no host, Core real e
+Memory/final canonica preservados; v1 intacta. 222 Python/141 Node novos e830
+Web completos passaram; browser com transporte injetado, final3131 exata,
+reload/GET/DEFER/mobile/disconnect. Aceite de conta/modelo reais e produto
+completo permanecem abertos. MB233 ready: leitura humana readonly da final;
+MB234 ready independente: MCP readonly do inventario autoral, sem Core bridge.
+Ambos derivados F06/F13, nao implementados; criterios/ownership na fila unica.
+Runbook: `docs/operations/local-generative-analysis-web.md`. Notas abaixo historicas.
+
+MB231 2026-10-06: done local, standard global Windows aprovado/8092 coletados.
+Web opt-in pareada -> Core real assist_only -> Memory/eventos -> final exata;
+302 Python/136 Node novos e browser real/reload/GET/mobile/disconnect aprovados.
+Modelos/tools/auth humana permanecem fora. MB232 ready para integrar complemento
+generativo MB229 com default off, v1 intacta/v2 explicita, profile no host e
+consentimento por ticket; prova injetada nao demonstra modelo real. Aceite de
+conta/egress separado posterior. Runbook local-authenticated-analysis-web.md;
+ownership/criterios na fila unica. Notas seguintes historicas.
+
+Atualizacao MB230 2026-10-06: done local, standard global Windows aprovado;
+599 Python/209 Node novos aprovados sem skips nas baterias. Intent/dominios PT
+preservam governanca; binding novo suporta export readonly e painel manual de
+turno canonico, origem nao autenticada. Web live/conta/modelo reais permanecem
+faltantes. Ultimo validado MB230; MB231 ready para conversa local autenticada
+opt-in, browser -> Core -> Memory/eventos -> final exata, sem ferramentas/efeitos.
+Ownership auth/HTTP, Core/readback e cliente live na fila unica. Runbook:
+`docs/operations/pt-analysis-and-offline-conversation.md`.
+Notas seguintes historicas, nao status vigente.
+
+Historico MB229 (2026-10-06): done local, gate standard global Windows
+completo aprovado;621 novos MB229+inventario passaram/zero skips nas baterias.
+Complemento generativo opt-in nao equivale a conversa ampla ou modelo real.
+MB230 ready, nao implementado: paridade intent/dominios PT de analise delimitada
+e exposicao manual de turno canonico na Web, nao API live/autonomia maior.
+Inventario atual dos componentes e aceites faltantes nas16 frentes:
+`docs/implementation/product-readiness.json`, consulta readonly por
+`tools/product_readiness_report.py`. Este painel deriva deste mapa e nao cria
+backlog concorrente. Runbook: `docs/operations/generative-analysis-core.md`.
+Notas MB228 e anteriores abaixo sao historicas, nao status vigente da fila.
+
 MB228 (2026-10-05) done local: review request-scoped -> Knowledge/Governance/
 Synthesis/Memory, fonte unverified isolada da instrucao/roteamento. Final exata
 retida; projecao Planning omite literal nao confiavel. CLI opt-in com readback,

@@ -48,6 +48,23 @@
           <details id="conversation-history" class="conversation-history"><summary>Conversa de exemplo <span>Sem modelo conectado</span></summary>
           <div id="messages" class="messages" role="log" aria-label="Conversa de demonstração" aria-live="polite"></div>
           </details>
+          <details id="conversation-pack-panel" class="conversation-pack-panel">
+            <summary>Conversa do Core · arquivo local <span class="badge">OFFLINE</span></summary>
+            <p id="conversation-pack-help" class="footnote">Visualize um turno exportado da memória canônica pelo console. O arquivo tem origem não autenticada: hashes conferem consistência, não identidade ou autorização. A conversa de exemplo permanece separada. Sem upload, armazenamento ou envio ao Core pelo browser.</p>
+            <label class="voice-consent" for="conversation-pack-consent"><input id="conversation-pack-consent" type="checkbox" aria-describedby="conversation-pack-help"> Permitir a leitura deste arquivo somente nesta página</label>
+            <label for="conversation-pack-file">JSON de conversa · até 256 KiB · leitura manual</label>
+            <input id="conversation-pack-file" type="file" accept=".json,application/json" disabled aria-describedby="conversation-pack-help conversation-pack-notice">
+            <div class="voice-toolbar"><button id="conversation-pack-clear" type="button" class="secondary" disabled>Descartar pacote e contexto</button></div>
+            <p id="conversation-pack-notice" class="notice" role="status" aria-live="polite">Nenhum pacote importado · origem não autenticada.</p>
+            <section id="conversation-pack-content" hidden aria-label="Turno offline declarado pelo arquivo">
+              <p id="conversation-pack-metadata" class="footnote"></p>
+              <div id="conversation-pack-turn" hidden>
+                <article><h2>Pergunta registrada</h2><pre id="conversation-pack-query" class="canonical-turn-text"></pre></article>
+                <article><h2>Final registrada pelo Core · origem do arquivo não autenticada</h2><pre id="conversation-pack-response" class="canonical-turn-text"></pre></article>
+              </div>
+              <p class="footnote">Somente leitura. Nenhuma permissão, sessão autenticada ou ticket de execução foi importado. Conteúdo gerado por modelo continua não verificado.</p>
+            </section>
+          </details>
           <div class="composer-area">
             <div id="notice" class="notice" role="status" aria-live="polite"></div>
             <form id="composer" class="composer">

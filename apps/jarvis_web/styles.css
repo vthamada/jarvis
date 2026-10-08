@@ -235,3 +235,12 @@ dialog pre { white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.7; f
 #transcript-output h2 { font-size: 15px; margin: 18px 0 10px; }
 #transcript-package { width: 100%; min-height: 160px; font: 11px/1.7 ui-monospace, monospace; }
 #transcript-output code { overflow-wrap: anywhere; }
+
+.conversation-pack-panel { margin: 18px 0; padding: 18px; border: 1px solid var(--line); border-radius: 12px; }
+.conversation-pack-panel summary { cursor: pointer; display: flex; align-items: center; gap: 12px; }
+.conversation-pack-panel label { display: block; margin-top: 14px; }
+.conversation-pack-panel input[type=file] { width: 100%; max-width: 100%; margin-top: 8px; }
+.conversation-pack-panel button { min-height: 44px; }
+.conversation-pack-panel h2 { font-size: 14px; margin: 20px 0 10px; }
+.canonical-turn-text { font: inherit; white-space: pre-wrap; overflow-wrap: anywhere; }
+.conversation-pack-panel :focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }

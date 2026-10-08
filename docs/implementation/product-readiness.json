@@ -1,0 +1,144 @@
+{
+  "schema_version": "jarvis-product-readiness-v1",
+  "snapshot_date": "2026-10-06",
+  "evidence_scope": "authored_snapshot",
+  "last_validated_mb": {"id": "MB235", "status": "done"},
+  "active_mb": {"id": "MB236", "status": "blocked"},
+  "source_documents": [
+    "documento_mestre_jarvis.md",
+    "docs/implementation/implementation-master-map.md",
+    "docs/implementation/parallel-implementation-map.md",
+    "docs/implementation/unified-gap-and-absorption-backlog.md",
+    "docs/implementation/execution-backlog.md"
+  ],
+  "fronts": [
+    {
+      "id": "F01",
+      "name": "Core/API/inferência",
+      "status": "partial",
+      "available": ["Core soberano, memória canônica e síntese nativa; port de inferência e transporte HTTPS/SSE opt-in.", "MB229 integra análise generativa delimitada no Core e catálogo/provider lazy; testes sintéticos e TLS real local aprovados, sem aceite de conta/modelo reais.", "MB230 implementa paridade EN/PT delimitada de intent/domínios, mantendo decisões nativas; baterias focadas e gate global Windows aprovados.", "MB236 validou catálogo bounded e diagnóstico host opt-in com gate global. Segunda tentativa única autorizada com gpt-6-astra, após refresh explícito de sessão expirada: HTTP200 seguido de unsupported_response_encoding (MIME ou encoding não distinguidos), ALLOW/rejected e final nativa exata ao export/GET. Sem reenvio/fallback pago; inferência e qualidade não homologadas."],
+      "remaining_acceptance": ["Validar utilidade e qualidade da análise com conta/modelo reais e autorização explícita; o aceite estrutural não comprova verdade ou tarefa concluída.", "Ampliar solicitações cotidianas/PT; MB232 conecta geração opt-in à Web com prova injetada, não aceite de modelo real. Identidade humana, aprovações e API pública exigem recortes próprios."],
+      "evidence": ["docs/operations/siwc-local-account-and-catalog.md", "docs/operations/reviewed-source-core.md", "docs/operations/generative-analysis-core.md", "shared/model_inference.py", "docs/operations/pt-analysis-and-offline-conversation.md", "docs/operations/local-authenticated-analysis-web.md", "docs/operations/local-generative-analysis-web.md", "docs/operations/real-oauth-acceptance.md"]
+    },
+    {
+      "id": "F02",
+      "name": "Memória",
+      "status": "partial",
+      "available": ["Memória canônica persistente, inspeção e recall lexical explicado; testes de retomada e isolamento entre sujeitos/sessões.", "MB229 preserva a final generativa armazenada, mas exclui anexos não confiáveis da projeção de Planning e dos resumos derivados usados nela.", "MB230 acrescenta binding de leitura aos eventos novos e exportação readonly de turno após restart; pacote não autentica a origem."],
+      "remaining_acceptance": ["Comprovar uso útil do contexto acumulado em respostas reais, incluindo conflitos e informação expirada.", "Fechar consolidação/retenção governadas; grafos/vetores somente se a necessidade e o benefício forem medidos."],
+      "evidence": ["docs/operations/parallel-wave-recall-and-patch-review.md", "docs/operations/generative-analysis-core.md", "services/memory-service/src/memory_service/recall.py", "docs/operations/pt-analysis-and-offline-conversation.md"]
+    },
+    {
+      "id": "F03",
+      "name": "Conhecimento/pesquisa",
+      "status": "partial",
+      "available": ["Pesquisa local com fontes fornecidas e revisão de fonte ligada ao Core; citações delimitadas permanecem declaradas/não verificadas."],
+      "remaining_acceptance": ["Fechar pesquisa operacional útil com seleção de fontes, conflitos, datas e resposta generativa sustentada por evidências.", "Validar o fluxo de observação externa autorizada até revisão e síntese, sem auto-trust ou crawl amplo."],
+      "evidence": ["docs/operations/local-review-products.md", "docs/operations/reviewed-source-core.md", "services/knowledge-service/src/knowledge_service/source_review.py"]
+    },
+    {
+      "id": "F04",
+      "name": "Autoevolução",
+      "status": "foundation",
+      "available": ["Runner comparativo, revisão de candidatos e instruções reutilizáveis/revogáveis; doubles e dois Core isolados validam infraestrutura, não ganho de inteligência."],
+      "remaining_acceptance": ["Executar baseline/candidato em tarefas reais com modelo, repetições, holdout e avaliador independente.", "Comprovar ganho útil e rollout/rollback governados; automodificação forte do núcleo permanece pesquisa pós-V3."],
+      "evidence": ["docs/operations/parallel-wave-local-tts-and-empirical.md", "docs/operations/operator-learning-loop.md", "docs/implementation/parallel-implementation-map.md"]
+    },
+    {
+      "id": "F05",
+      "name": "Tarefas duráveis",
+      "status": "foundation",
+      "available": ["Store/worker controlados, claims/fencing/lease/cancelamento e inspeção readonly; piloto Core sem executor externo promovido."],
+      "remaining_acceptance": ["Ligar jobs a executores reais aprovados, agendamento e recovery de efeitos com recibos/reconciliação.", "Expor progresso e notificações autorizadas sem prometer exactly-once genérico."],
+      "evidence": ["docs/operations/parallel-wave-core-snapshots-and-jobs.md", "docs/operations/parallel-wave-transport-transcript-and-job-inspection.md"]
+    },
+    {
+      "id": "F06",
+      "name": "Web UI",
+      "status": "partial",
+      "available": ["Cockpit de demonstração/fixtures, esfera reativa ao áudio, revisão manual de transcrição e player WAV longo; a conversa dessa fixture não conecta ao Core.", "MB230 adiciona painel de leitura manual de pergunta/final exportadas, separado da fixture, com consentimento e contexto; browser sintético e gate global Windows aprovados.", "MB231 entrega outra Web opt-in pareada com Core real em runtime próprio, final canônica exata, reload/recuperação GET/mobile/desconexão; gate global Windows aprovado. Sem ferramentas ou autenticação humana.", "MB232 conecta complemento generativo v2 opt-in por consulta e perfil lazy no host; final canônica preservada. Core real/transporte injetado, browser e standard global Windows aprovados, sem aceite de conta/modelo reais.", "MB233 projeta análise, premissas, limites e citações em leitura humana readonly não verificada, com parser bounded e fences tardios. Final integral exata ao export canônico, browser e gate standard global Windows aprovados.", "MB235 fecha conversa compacta com disclosures acessíveis, foco e escolhas locais preservados; em 390×844, Enviar cabe na primeira tela. Browser real sintético, export canônico e gate standard Windows aprovados."],
+      "remaining_acceptance": ["Integrar atividade, sessão durável e aprovações. Pareamento atual autentica somente posse local, não pessoa ou conta; a conta OAuth do provider é outra fronteira.", "Melhorar design/acessibilidade e validar streaming, qualidade com modelo real, falhas, retomada e tarefas reais com usuário."],
+      "evidence": ["apps/jarvis_web/README.md", "docs/operations/reviewed-transcript-web-to-core.md", "docs/operations/long-local-wav-web-playback.md", "docs/operations/pt-analysis-and-offline-conversation.md", "docs/operations/local-authenticated-analysis-web.md", "docs/operations/local-generative-analysis-web.md", "docs/operations/web-projection-and-readiness-mcp.md", "docs/operations/compact-local-conversation-web.md"]
+    },
+    {
+      "id": "F07",
+      "name": "Voz",
+      "status": "partial",
+      "available": ["Laboratório local ASR/TTS, referências alinhadas e ponte de transcrição revisada ao Core; síntese final persistida pode alimentar TTS em lote opt-in."],
+      "remaining_acceptance": ["Melhorar naturalidade e identidade vocal com material autorizado e aceite humano; os testes não aprovam a qualidade atual.", "Fechar microfone, transcrição, Core e fala com baixa latência, cancelamento/barge-in e alternativa textual; streaming real ainda não aceito."],
+      "evidence": ["docs/operations/parallel-wave-refined-voice-and-core-pilots.md", "docs/operations/full-final-local-tts-batch.md"]
+    },
+    {
+      "id": "F08",
+      "name": "Mobile/canais",
+      "status": "not_implemented",
+      "available": ["Viewport responsivo testado na Web da F06; isso não equivale a cliente mobile próprio ou integração de canais."],
+      "remaining_acceptance": ["Entregar cliente usando a mesma sessão/principal, com reconexão sem duplicar pedidos ou divulgar contexto entre contas.", "Validar em dispositivo e decidir PWA/native por evidência; push/canais/publicação exigem recortes e consentimento próprios."],
+      "evidence": ["docs/implementation/parallel-implementation-map.md", "apps/jarvis_web/tests/long-playback-browser-verification.md"]
+    },
+    {
+      "id": "F09",
+      "name": "Browser use",
+      "status": "partial",
+      "available": ["Leitura HTTPS credentialless delimitada e revisada, com TLS real em fixture sintética; não engine de navegador ou campanha externa."],
+      "remaining_acceptance": ["Fechar navegação real controlada com alvo/origem, egress, redirects, cancelamento e provenance.", "Formulários, autenticação, downloads e ações exigem autorização/gates específicos; não ativar por uma leitura aprovada."],
+      "evidence": ["docs/operations/credentialless-https-observation.md", "docs/operations/reviewed-source-core.md"]
+    },
+    {
+      "id": "F10",
+      "name": "Computer use",
+      "status": "not_implemented",
+      "available": ["Escopo, dependências e critérios de alvo/foco/cancelamento definidos no mapa; controle real de desktop não entregue."],
+      "remaining_acceptance": ["Implementar observação mínima de ambiente selecionado, primeiro controlado, protegendo telas/segredos.", "Depois validar input limitado e governado, alvo obsoleto, foco incorreto e cancelamento sem ações implícitas."],
+      "evidence": ["docs/implementation/parallel-implementation-map.md"]
+    },
+    {
+      "id": "F11",
+      "name": "Code",
+      "status": "foundation",
+      "available": ["Interpretador AST delimitado e review de patches em memória/CLI; patch predefinido não comprova geração de software por modelo."],
+      "remaining_acceptance": ["Validar sandbox de SO em repositório isolado, testes reais, limites de rede/comandos e preservação de arquivos humanos.", "Fechar brief até geração, teste, review, aplicação autorizada via Core e receipt; nenhum teste concede autorização de aplicação."],
+      "evidence": ["docs/operations/parallel-wave-local-pilot.md", "docs/operations/local-review-products.md", "docs/operations/parallel-wave-recall-and-patch-review.md"]
+    },
+    {
+      "id": "F12",
+      "name": "Integrações",
+      "status": "not_implemented",
+      "available": ["Fronteira de conector e aceite definidos; OAuth de provider na F01 não é conector de serviços do usuário."],
+      "remaining_acceptance": ["Escolher e implementar um conector útil de leitura, com conta/recurso autorizados, paginação, quota, dedupe, revogação e isolamento.", "Validar serviço real com consentimento; enviar/publicar/editar/excluir continuam ações separadas, não efeitos implícitos."],
+      "evidence": ["docs/implementation/parallel-implementation-map.md"]
+    },
+    {
+      "id": "F13",
+      "name": "MCP",
+      "status": "foundation",
+      "available": ["Cliente MCP stdio local, descoberta/allowlist e leitura fixture ligada ao piloto Core com metadados não autoritativos.", "MB234 entrega servidor/cliente próprios e CLI opt-in para o inventário autoral do repositório, com scope readonly, schema, limites, cancelamento e cleanup. Stdio real e gate standard global Windows aprovados; nenhuma bridge no Core ou autoridade."],
+      "remaining_acceptance": ["Fechar consumidor governado no Core para a origem local do inventário; consulta standalone não encerra a frente MCP e resultado de ferramenta nunca concede autoridade.", "Servidores terceiros exigem alvo, schema, escopo, isolamento e aceite próprios; não herdam o aceite do servidor local nem habilitam execução."],
+      "evidence": ["docs/operations/parallel-wave-local-tts-and-empirical.md", "docs/operations/parallel-wave-refined-voice-and-core-pilots.md", "docs/operations/web-projection-and-readiness-mcp.md"]
+    },
+    {
+      "id": "T01",
+      "name": "Segurança/governança",
+      "status": "partial",
+      "available": ["Governança nativa, fronteiras de sujeito/sessão e corpus adversarial; efeitos locais delimitados têm receipt/recovery e no-go explícito para API pública mutante."],
+      "remaining_acceptance": ["Validar autenticação/scopes e isolamento multiusuário das superfícies reais, privacy/redaction e incident/recovery por capability.", "Revisar ameaças e negações sem efeito a cada integração; token de provider não autentica operador nem autoriza ferramentas."],
+      "evidence": ["docs/operations/mb218-mb219-persistent-readiness-2026-10-05.md", "docs/operations/reviewed-source-core.md"]
+    },
+    {
+      "id": "T02",
+      "name": "Qualidade/utilidade",
+      "status": "foundation",
+      "available": ["Gates, tarefas versionadas e runners/avaliadores; aprovação de testes locais não representa produto completo ou ganho causal.", "Inventário consultável das 16 frentes com componentes e aceites restantes; snapshot autoral validado, não sondagem dinâmica nem percentual de conclusão."],
+      "remaining_acceptance": ["Medir tarefas reais ponta a ponta com sucesso/retrabalho/latência e piloto humano, separando doubles e modelo real.", "Manter inventário atual e evidência de cada aceite; comparação de ganho exige controle, repetição e holdout."],
+      "evidence": ["docs/operations/parallel-wave-physical-boundary-and-task-evals.md", "docs/implementation/parallel-implementation-map.md", "docs/operations/product-readiness-report.md", "tools/product_readiness_report.py"]
+    },
+    {
+      "id": "T03",
+      "name": "Plataforma/distribuição",
+      "status": "validated_slice",
+      "available": ["Slice Linux/Docker/SQLite local opt-in aceito em MB218/219 com prova física ext4; gate Windows separado. Não valida toda plataforma nem todas as mudanças posteriores."],
+      "remaining_acceptance": ["Fechar instalação/distribuição, doctor, backup/restauração e operação reproduzível das superfícies reais.", "Revalidar Windows/Linux nos recortes alterados; WSL operacional, power-loss de hardware e API multiusuário não são promovidos pela prova local."],
+      "evidence": ["docs/operations/mb218-mb219-persistent-readiness-2026-10-05.md", "docs/operations/cli-doctor.md"]
+    }
+  ]
+}

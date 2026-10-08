@@ -53,6 +53,87 @@ Documento-Mestre wins.
 
 ## 4. Current Baseline Reading
 
+MB236 2026-10-06: blocked para aceite real. Catalogo bounded validado; novo
+diagnostico host opt-in aprovado com326 testes novos/535 focados e standard
+global Windows8994 casos (8883 passed/111 skipped/zero falhas). Uma segunda
+tentativa unica autorizada, apos refresh explicito de sessao expirada da mesma
+conta, recebeu HTTP200 seguido de unsupported_response_encoding antes de SSE.
+Codigo cobre MIME OU Content-Encoding, ainda nao distinguidos; nao corrigir
+compressao/parser por hipotese. ALLOW/rejected, final nativa2635 exata ao
+export/GET/reload; sem reenvio/fallback/tools ou modelo/qualidade homologados.
+Proximo recorte candidato: diagnostico de categorias fixas, corpus/gate antes
+de corrigir causa provada; nova inferencia requer novo consentimento.
+Ultimo validado MB235.
+F01/F06 continuam partial; F13 candidato sem DOR. Runbook real-oauth-acceptance.md.
+Notas abaixo registram estados anteriores, nao o bloqueio vigente.
+
+MB235 2026-10-06: done local, standard global Windows completo aprovado/8542
+coletados. Web1053/45 Node novos,14 negativas Python e121 focados passaram;
+browser390x844 Enviar1670.63→736.08 px, keyboard/GET/native/parserfail e final3298
+exata ao export. F06 partial: ergonomia compacta aceita, nao produto completo.
+Conta OAuth real posteriormente conectada com permissao do plano; catalogo
+recusado por limite256 KiB, nenhum modelo/inferencia/qualidade aceito. Ultimo
+validado MB235; MB236 blocked para homologacao real/correcao bounded do catalogo.
+Runbooks compact-local-conversation-web.md e real-oauth-acceptance.md.
+F13 consumidor Core permanece candidato, nao ready sem DOR. Notas abaixo historicas.
+
+MB233/234 2026-10-06: done local, standard global Windows completo aprovado.
+F06 projeta complemento humano readonly nao verificado, com final canonica
+integral preservada; F13 serve inventario autoral por MCP stdio/CLI proprios,
+sem consumidor Core.178 Node/214 Python novos eWeb1008 aprovados; bateria217
+e browser real injetado com final3298 exata ao export/reload/GET/mobile passaram.
+Ultimo validado MB234; MB235 ready para compactar conversa Web/disclosures
+acessiveis, sem alterar parser/controller/API/Core/Memory. F06 partial eF13
+foundation mantidos; conta/modelo reais, qualidade e sistema completo abertos.
+Aceites/ownership na fila unica; inventario atualizado, nao sondagem dinamica.
+Runbook: `docs/operations/web-projection-and-readiness-mcp.md`.
+Notas MB232 e seguintes historicas, nao estado vigente.
+
+MB232 2026-10-06: done local, standard global Windows completo aprovado,
+8314 casos coletados. Complemento generativo opt-in por ticket/consentimento,
+perfil lazy no host, v2 separado e v1 intacta. 222 Python/141 Node novos e
+830 Web completos passaram; Core real/transporte injetado e browser com final
+3131 codepoints exata ao export, GET/reload/DEFER/mobile/disconnect aprovados.
+Sem aceite de conta/modelo real, ferramenta ou produto completo. MB233 ready
+para projecao humana readonly; MB234 ready independente para MCP readonly do
+inventario autoral, sem consumidor Core. Criterios na fila unica, inventario
+snapshot atualizado. Runbook: `docs/operations/local-generative-analysis-web.md`.
+Notas MB231 e seguintes historicas, nao estado vigente.
+
+MB231 2026-10-06: done local, standard global Windows completo aprovado,
+8092 casos coletados. App opt-in separado
+da fixture conecta Web pareada -> Core assist_only -> Memory/eventos -> final
+canonica exata, sem modelos/tools.302 Python e136 Node novos passaram;
+browser real PT/readback/reload/recuperacao GET/mobile aprovado. Posse de sessao
+nao identidade humana; parar espera nao rollback. Ultimo validado MB231;
+MB232 ready para complemento generativo opt-in via seam existente MB229,
+v1 nativa preservada e v2 explicita. Default off, configuracao no host e
+consentimento por ticket; conta/modelo reais exigem aceite separado posterior.
+Runbook: `docs/operations/local-authenticated-analysis-web.md`.
+Notas seguintes historicas.
+
+Atualizacao MB230 2026-10-06: done local, standard global Windows aprovado;
+599 Python/209 Node novos aprovados sem skips nas baterias. Intent/dominios PT
+preservam governanca; binding novo suporta export readonly e painel manual de
+turno canonico, origem nao autenticada. Web live/conta/modelo reais permanecem
+faltantes. Ultimo validado MB230; MB231 ready para conversa local autenticada
+opt-in, browser -> Core -> Memory/eventos -> final exata, sem ferramentas/efeitos.
+Ownership auth/HTTP, Core/readback e cliente live na fila unica. Runbook:
+`docs/operations/pt-analysis-and-offline-conversation.md`.
+Notas seguintes historicas, nao status vigente.
+
+Atualizacao vigente 2026-10-06: MB229 done no recorte local, gate standard global
+Windows completo aprovado;621 testes novos MB229+inventario passaram/zero skips.
+Complemento generativo opt-in na sintese soberana e sessao lazy com budget unico;
+sem conta/modelo real ou promocao. Painel atual por frente e aceites restantes:
+`docs/implementation/product-readiness.json`, consultavel por
+`python tools/product_readiness_report.py`. Inventario derivado, nao outra fila.
+MB230 ready, nao implementado: paridade PT de analise delimitada e pacote Web
+manual de turno canonico, sem alterar governanca ou alegar Web live.
+Runbook: `docs/operations/generative-analysis-core.md`.
+Notas MB228 e anteriores abaixo sao historicas; tabelas de baseline nao devem
+ser lidas como ausencia de slices posteriores nem como produto completo pronto.
+
 MB228 (2026-10-05) done local: review request-scoped -> Knowledge/Governance/
 Synthesis/Memory, fonte unverified isolada da instrucao/roteamento. Final exata
 retida; projecao Planning omite literal nao confiavel. CLI opt-in com readback,

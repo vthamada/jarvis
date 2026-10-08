@@ -1,11 +1,40 @@
 # Cockpit local do JARVIS — WP-WEB-01
 
-Estado: conversa implementada isolada, com **fixture permanente**, e importação
-explícita de snapshot JSON local/offline. Não conectado ao Core, API, modelos,
-memória canônica ou ferramentas. Não é uma capability promovida nem uma
-demonstração de inferência real.
+MB235 done local, gate standard global Windows aprovado: conversa live compacta,
+setup recolhido apos parear e final integral acessivel por disclosure,
+recolhido somente apos parser/fences validos. Avisos/consentimento preservados.
+[Runbook compacto](../../docs/operations/compact-local-conversation-web.md).
 
-## Executar
+MB233 done local, standard global Windows aprovado: leitura humana readonly do
+complemento na Web live; final canonica integral inalterada. Runbook:
+[Web projection/MCP](../../docs/operations/web-projection-and-readiness-mcp.md).
+Nao habilita modelo/voz/acoes nem altera a fixture offline abaixo.
+
+O servidor de demonstracao abaixo conserva **fixture permanente**, importacao
+manual de snapshot e leitura offline. Ele nao conecta conversa ao Core.
+Ler um pacote offline nao autentica sua origem nem demonstra inferencia real.
+
+MB231 adiciona outra aplicacao opt-in, sem alterar essa fixture:
+
+```powershell
+.venv/Scripts/python.exe -m apps.jarvis_api --authorized --port 0
+```
+
+Parear com o codigo unico exibido no terminal permite pergunta textual ao Core
+real em runtime novo proprio. Final so aparece apos Memory/eventos/readback;
+modelos e ferramentas continuam desativados. Posse de sessao local nao e
+identidade humana/multiusuario. Parar espera nao cancela commit do Core;
+recuperacao consulta o mesmo ticket, nunca repete POST automaticamente.
+Limites, isolamento, estado do gate e rollback:
+[Web local autenticada](../../docs/operations/local-authenticated-analysis-web.md).
+
+MB232 acrescenta complemento generativo opt-in com perfil escolhido no host e
+consentimento por pergunta, sem alterar o protocolo nativo. Rotas v2 separadas;
+DEFER/BLOCK nao chamam modelo. Recuperar resultado nunca repete inferencia.
+Prova atual usa transporte injetado, nao conta/modelo real. Guia e estado do gate:
+[Complemento generativo Web](../../docs/operations/local-generative-analysis-web.md).
+
+## Executar a demonstracao/offline
 
 Na raiz do repositório, iniciar explicitamente o servidor em primeiro plano:
 
@@ -55,6 +84,19 @@ integridade, freshness ou vínculo com um Core. Principal do arquivo não troca
 identidade/sessão do cliente. Objetivo, work-items, metadados de artefatos e
 atividade são apenas projeções declaradas. Nenhum conteúdo físico, challenge,
 grant ou segredo é importado. Conversa permanece simulada, sem API live.
+
+## Ler turno canonico offline (MB230)
+
+Painel separado com consentimento fechado e selecao manual de pacote
+`jarvis-conversation-pack-v1`. Exportador console readonly valida binding de
+eventos novos e Memory apos restart; sem binding, legado e recusado. Browser
+valida schema/UTF-8/hash localmente e mostra pergunta/final integrais com origem
+nao autenticada. Hash nao e assinatura nem prova de identidade.
+
+Sem upload/storage/envio Core/TTS; conversa fixture nao e alterada. Outra sessao
+ou sujeito e recusado, removendo conteudo anterior. Revogar, descartar, reset
+ou pagehide invalidam leituras e apagam conteudo do painel. Guia de exportacao,
+limites e testes: [MB230](../../docs/operations/pt-analysis-and-offline-conversation.md).
 
 ## Voz: revisão explícita de transcrição simulada
 

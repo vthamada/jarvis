@@ -2602,6 +2602,9 @@ class OrchestratorService:
                 {
                     "memory_record_id": str(memory_record_result.record_contract.memory_record_id),
                     "record_type": memory_record_result.record_contract.record_type,
+                    "conversation_readback": self._conversation_readback_payload(
+                        memory_record_result.record_contract
+                    ),
                     "continuity_mode": deliberative_plan.continuity_action,
                     "continuity_source": deliberative_plan.continuity_source,
                     "continuity_target_mission_id": (
@@ -6533,6 +6536,43 @@ class OrchestratorService:
         )
 
     @staticmethod
+    def _conversation_readback_payload(record: MemoryRecordContract) -> dict | None:
+        """New-turn correspondence only; not authentication or a historical receipt.
+
+        StoredTurn predates request/record IDs. Persist content-free fingerprints
+        alongside the existing correlated event so an offline reader can check
+        its exact final, timestamp and subject. Never backfill old turns or
+        expose raw text/identity here. Unencodable legacy input remains native
+        but cannot produce an exportable binding.
+        """
+        try:
+            if type(record) is not MemoryRecordContract or type(record.payload) is not dict:
+                return None
+            query, final = record.payload["request_content"], record.payload["response_text"]
+            if (record.record_type != "interaction_turn" or type(query) is not str
+                    or type(final) is not str or type(record.timestamp) is not str
+                    or not record.timestamp
+                    or (record.user_id is not None and type(record.user_id) is not str)):
+                return None
+            record.timestamp.encode("utf-8", errors="strict")
+            return {
+                "schema_version": "jarvis-conversation-readback-v1",
+                "record_timestamp": record.timestamp,
+                "principal_sha256": (
+                    sha256(record.user_id.encode("utf-8", errors="strict")).hexdigest()
+                    if record.user_id is not None else None
+                ),
+                "request_content_sha256": sha256(
+                    query.encode("utf-8", errors="strict")
+                ).hexdigest(),
+                "response_text_sha256": sha256(
+                    final.encode("utf-8", errors="strict")
+                ).hexdigest(),
+            }
+        except (AttributeError, KeyError, TypeError, ValueError, UnicodeError):
+            return None
+
+    @staticmethod
     def _extractive_response_payload(result: SynthesisResult) -> dict[str, object]:
         """Fixed statuses/counts only: no candidate, quote, model or provider strings."""
         payload = {
@@ -6540,6 +6580,10 @@ class OrchestratorService:
             "extractive_error_code": result.extractive_error_code,
             "extractive_evidence_mode": result.extractive_evidence_mode,
             "extractive_excerpt_count": result.extractive_excerpt_count,
+            "generative_status": result.generative_status,
+            "generative_error_code": result.generative_error_code,
+            "generative_evidence_mode": result.generative_evidence_mode,
+            "generative_analysis_characters": result.generative_analysis_characters,
         }
         if result.reviewed_source_status != "not_requested":
             payload.update({

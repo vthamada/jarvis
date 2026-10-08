@@ -2,8 +2,11 @@
 
 from __future__ import annotations
 
+import math
+import time
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
+from threading import Event
 
 from identity_engine.engine import IdentityProfile
 
@@ -32,11 +35,13 @@ from shared.mind_domain_specialist_contract import (
 from shared.reviewed_knowledge import (
     KnowledgeReviewBinding,
     ReviewedKnowledgeContext,
+    context_fingerprint,
     render_reviewed_evidence,
     validate_context,
 )
 from shared.types import MissionId, PermissionDecision
 from synthesis_engine.extractive_inference import ExtractiveContext, select_input_excerpts
+from synthesis_engine.generative_analysis import GenerativeContext, analyze_input
 
 
 @dataclass(frozen=True)
@@ -143,6 +148,10 @@ class SynthesisResult:
     reviewed_source_status: str = "not_requested"
     reviewed_source_error_code: str | None = None
     reviewed_source_quote_characters: int = 0
+    generative_status: str = "disabled"
+    generative_error_code: str | None = None
+    generative_evidence_mode: str | None = None
+    generative_analysis_characters: int = 0
 
 
 class SynthesisEngine:
@@ -153,6 +162,10 @@ class SynthesisEngine:
     def __init__(
         self, *, inference_port=None, inference_model: str | None = None,
         inference_provider_id: str = "fixture", inference_evidence_mode: str = "fixture",
+        generative_port=None, generative_model: str | None = None,
+        generative_provider_id: str = "fixture", generative_evidence_mode: str = "fixture",
+        generative_timeout_seconds: float = 30.0, generative_cancellation: Event | None = None,
+        generative_clock=time.monotonic,
     ) -> None:
         if (inference_port is None) != (inference_model is None):
             raise ValueError("extractive_configuration_incomplete")
@@ -160,6 +173,23 @@ class SynthesisEngine:
         self._inference_model = inference_model
         self._inference_provider_id = inference_provider_id
         self._inference_evidence_mode = inference_evidence_mode
+        if ((generative_port is None) != (generative_model is None)
+                or (generative_port is not None and inference_port is not None)):
+            raise ValueError("generative_configuration_incomplete")
+        if (type(generative_timeout_seconds) not in {int, float}
+                or not math.isfinite(generative_timeout_seconds)
+                or not 0 < generative_timeout_seconds <= 120
+                or not callable(generative_clock)
+                or (generative_cancellation is not None
+                    and not isinstance(generative_cancellation, Event))):
+            raise ValueError("generative_configuration_invalid")
+        self._generative_port = generative_port
+        self._generative_model = generative_model
+        self._generative_provider_id = generative_provider_id
+        self._generative_evidence_mode = generative_evidence_mode
+        self._generative_timeout = generative_timeout_seconds
+        self._generative_cancellation = generative_cancellation
+        self._generative_clock = generative_clock
 
     @staticmethod
     def _resolved_workflow_guidance(
@@ -414,6 +444,8 @@ class SynthesisEngine:
         native = self._annotate_reviewed_source(
             self._compose_native_result(synthesis_input), synthesis_input,
         )
+        if self._generative_port is not None:
+            return self._compose_generative(native, synthesis_input)
         if self._inference_port is None:
             return native
         plan = synthesis_input.deliberative_plan
@@ -450,6 +482,138 @@ class SynthesisEngine:
             extractive_evidence_mode=outcome.evidence_mode,
             extractive_excerpt_count=len(outcome.excerpts),
         )
+
+    @staticmethod
+    def _generative_eligible(native, value):
+        plan = value.deliberative_plan
+        return (
+            value.extractive_context is not None
+            and value.governance_decision.decision == PermissionDecision.ALLOW
+            and value.intent == "analysis"
+            and native.output_validation_status == "coherent"
+            and not native.output_validation_errors
+            and not native.workflow_output_errors
+            and native.workflow_output_status in {"coherent", "not_applicable"}
+            and value.operation_result is None
+            and not value.specialist_contributions
+            and plan is not None
+            and plan.capability_decision_selected_mode == "core_guidance_only"
+            # core_reasoning is the native cognition selection, not a tool or
+            # effect adapter. Preserve it rather than rewriting the Core plan.
+            and set(plan.capability_decision_selected_capabilities) <= {"core_reasoning"}
+            and not plan.requires_human_validation
+            and plan.adapter_action_request is None
+            and not plan.autonomy_human_confirmation_required
+            and plan.autonomy_confirmation_mode == "not_required"
+            and plan.request_confirmation_mode in {"not_required", "bounded_autonomy"}
+            and plan.capability_decision_authorization_status != "clarification_required"
+            and plan.primary_route != "clarification"
+            and value.objective_status in {None, "active", "ready"}
+            and plan.objective_status in {None, "active", "ready"}
+        )
+
+    def _compose_generative(self, native, value):
+        """One untrusted analysis attempt; no routing, authority or memory side channel."""
+        def reject(code, status="rejected"):
+            return replace(native, generative_status=status, generative_error_code=code)
+
+        if not self._generative_eligible(native, value):
+            return reject("scope_denied", "withheld")
+        try:
+            last_clock = None
+
+            def bounded_clock():
+                nonlocal last_clock
+                now = self._generative_clock()
+                if (type(now) not in {int, float} or not math.isfinite(now)
+                        or (last_clock is not None and now < last_clock)):
+                    raise ValueError("invalid_clock")
+                last_clock = now
+                return now
+
+            started = bounded_clock()
+            if type(started) not in {int, float} or not math.isfinite(started):
+                return reject("invalid_clock")
+            source = None
+            if value.reviewed_knowledge is not None:
+                if native.reviewed_source_status != "quoted_for_review":
+                    return reject("reviewed_source_invalid", "withheld")
+                source = validate_context(
+                    value.reviewed_knowledge, binding=value.reviewed_knowledge_binding,
+                    query=value.reviewed_knowledge_query, as_of=datetime.now(UTC).isoformat(),
+                )
+            source_fingerprint = context_fingerprint(source) if source is not None else None
+            current = value.extractive_context
+            input_snapshot = (current.request_id, current.content)
+            context = GenerativeContext(
+                current.request_id, current.content,
+                source_ref=source.source.source_ref if source else None,
+                quote=source.quote if source else None,
+            )
+            prepared = bounded_clock()
+            if (type(prepared) not in {int, float} or not math.isfinite(prepared)
+                    or prepared < started):
+                return reject("invalid_clock")
+            remaining = self._generative_timeout - (prepared - started)
+            if remaining <= 0:
+                return reject("timed_out")
+            outcome = analyze_input(
+                self._generative_port, model=self._generative_model, context=context,
+                timeout_seconds=remaining,
+                cancellation=self._generative_cancellation, clock=bounded_clock,
+                expected_provider_id=self._generative_provider_id,
+                expected_evidence_mode=self._generative_evidence_mode,
+            )
+            if outcome.status != "accepted":
+                return reject(outcome.error_code)
+            # A cooperative provider cannot change the eligible turn or source
+            # while its proposal is being validated. Rejected text is never kept.
+            if (not self._generative_eligible(native, value)
+                    or (value.extractive_context.request_id, value.extractive_context.content)
+                    != input_snapshot):
+                return reject("context_changed")
+            if source is not None:
+                rechecked = validate_context(
+                    value.reviewed_knowledge, binding=value.reviewed_knowledge_binding,
+                    query=value.reviewed_knowledge_query, as_of=datetime.now(UTC).isoformat(),
+                )
+                if context_fingerprint(rechecked) != source_fingerprint:
+                    return reject("context_changed")
+            if (self._generative_cancellation is not None
+                    and self._generative_cancellation.is_set()):
+                return reject("cancelled")
+            finished = bounded_clock()
+            if (type(finished) not in {int, float} or not math.isfinite(finished)
+                    or finished < prepared):
+                return reject("invalid_clock")
+            if finished - started >= self._generative_timeout:
+                return reject("timed_out")
+            if (self._generative_cancellation is not None
+                    and self._generative_cancellation.is_set()):
+                return reject("cancelled")
+            # Final callbacks are cooperative extension points as well. Check
+            # the bindings after them, not merely before the final clock read.
+            if (not self._generative_eligible(native, value)
+                    or (value.extractive_context.request_id, value.extractive_context.content)
+                    != input_snapshot):
+                return reject("context_changed")
+            if source is None:
+                if value.reviewed_knowledge is not None:
+                    return reject("context_changed")
+            else:
+                rechecked = validate_context(
+                    value.reviewed_knowledge, binding=value.reviewed_knowledge_binding,
+                    query=value.reviewed_knowledge_query, as_of=datetime.now(UTC).isoformat(),
+                )
+                if context_fingerprint(rechecked) != source_fingerprint:
+                    return reject("context_changed")
+            return replace(
+                native, response_text=native.response_text + "\n\n" + outcome.render(),
+                generative_status="accepted", generative_evidence_mode=outcome.evidence_mode,
+                generative_analysis_characters=outcome.analysis_character_count,
+            )
+        except Exception:
+            return reject("inference_unavailable")
 
     @staticmethod
     def _annotate_reviewed_source(native, synthesis_input):

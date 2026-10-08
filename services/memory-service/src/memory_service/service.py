@@ -136,7 +136,11 @@ from shared.memory_registry import (
 )
 from shared.open_loop_policy import canonical_open_loop_states_from_mission
 from shared.recurring_patterns import build_recurring_pattern_report
-from shared.reviewed_knowledge import REVIEWED_EVIDENCE_MARKER, response_for_planning
+from shared.reviewed_knowledge import (
+    GENERATIVE_ANALYSIS_MARKER,
+    REVIEWED_EVIDENCE_MARKER,
+    response_for_planning,
+)
 from shared.specialist_registry import (
     canonical_specialist_type,
     legacy_specialist_type,
@@ -4028,7 +4032,9 @@ class MemoryService:
                 )
         summary = self.repository.fetch_context_summary(str(contract.session_id))
         turns = self.repository.fetch_recent_turns(str(contract.session_id), max(limit, 3))
-        if summary and REVIEWED_EVIDENCE_MARKER in summary:
+        if summary and any(marker in summary for marker in (
+            REVIEWED_EVIDENCE_MARKER, GENERATIVE_ANALYSIS_MARKER,
+        )):
             # Rebuild only the derived read-side view. Preserve canonical turns
             # and their plan fields, including summaries recorded before this
             # projector existed. Do not parse delimiters inside supplied text.

@@ -1,5 +1,82 @@
 # CHANGELOG
 
+## 2026-10-06
+
+- MB236 diagnostico local validado, aceite real blocked: observacao host opt-in
+  de fase/codigo fixo/HTTP status sem conteudo, credenciais ou headers brutos;
+  CLI --inference-diagnostics default off/max256, contratos/limites intactos.
+  Tres workers disjuntos;326 novos/535 focados e standard global Windows8994
+  casos (8883 passed/111 skipped/zero falhas) aprovados. Bindings terminais
+  revalidados apos callback. Um refresh explicito da sessao expirada escolhida
+  passou; segunda tentativa unica autorizada com gpt-6-astra recebeu HTTP200 e
+  unsupported_response_encoding antes de SSE (MIME OU encoding nao distinguidos).
+  ALLOW/rejected, final nativa2635 exata ao export/GET/reload, zero pageerrors.
+  Instancia propria fechada/stores retidos; sem reenvio/fallback/tools ou
+  modelo/qualidade homologados. Proximo recorte candidato exige DOR/corpus/gate;
+  nova inferencia novo consentimento. Runbook real-oauth-acceptance.md.
+  Entradas anteriores abaixo sao historicas, nao o estado vigente.
+
+- MB236 blocked para aceite real: catalogo OAuth passa a ter budget2 MiB somente para
+  status200 GET api.openai.com/v1/models; demais caps256 KiB/schema/count/
+  cleanup/deadlines e exibicao CLI intactos.114 unitarios e12 E2E novos,
+  540 existentes e standard global Windows aprovados/8668 coletados.
+  Consulta real CLI da conta explicitamente escolhida retornou5 modelos;
+  tentativa Web unica consentida com gpt-6-astra ALLOW/rejected/inference_failed.
+  Final nativa2635 exata ao export/GET/reload; causa indeterminada. Sem reenvio,
+  refresh/fallback pago ou promocao; runbook real-oauth-acceptance.md.
+  Entradas anteriores abaixo registram o bloqueio historico, ja corrigido.
+
+- MB235 done local, gate standard global Windows aprovado/8542 coletados:
+  conversa compacta, setup e
+  final integral em disclosures acessiveis; parser/fences exigidos antes de
+  recolher final.45 Node novos/suite1053 e121 focados passaram; browser real
+  Enviar1670.63→736.08 px, keyboard/GET/native/parserfail/3298 exata ao export.
+  Core/Memory/protocolos intactos. Runbook compact-local-conversation-web.md.
+  Pos-metadados379 testes inventario/UI/Core/MCP, quick, CLI e diff-check
+  passaram, runtime inalterado; lista de evidencias consolidada no limite8.
+- SIWC real: operador escolheu conta nova OAuth, login/escopo de uso do plano
+  concluido em store privado DPAPI fora de Git/OneDrive, sem import de tokens
+  do Codex. Catalogo recusado por response_limit_exceeded (>256 KiB); nenhum
+  modelo/inferencia/refresh/fallback executado. MB236 blocked, nao homologado.
+  OpenAI Docs confirmou endpoints publicos e separacao de consentimentos;
+  runbook real-oauth-acceptance.md. Nenhum limite de produto foi relaxado.
+
+- MB233/234 done local, standard global Windows completo aprovado: projecao humana
+  Web readonly com final preservada e MCP stdio proprio do inventario autoral.
+  178 Node/214 Python novos aprovados; Web1008, bateria217 e browser real
+  headless/readback3298/GET/mobile aprovados. Sem conta/modelo real/Core bridge.
+  Gate com 8528 casos coletados; 311 testes pos-metadados, quick e CLI real
+  aprovados. MB235 ready para ergonomia da conversa Web, sem mudar Core/Memory.
+  Runbook web-projection-and-readiness-mcp.md.
+- MB232 done local: complemento generativo opt-in na Web
+  por ticket/consentimento, host profile lazy e protocolo v2 separado; v1 intacto.
+  222 Python/141 Node novos e830 Web completos passaram; browser Core/readback/
+  GET/reload/DEFER/mobile/disconnect aprovados com transporte injetado. Sem conta/
+  modelo real ou promocao. Standard global Windows completo passou com 8314
+  casos coletados. MB233/234 ready: projecao Web readonly e MCP do inventario
+  autoral, ownership disjunto; nao implementados ainda.
+  Guia local-generative-analysis-web.md.
+- MB231 done local: Web opt-in pareada com Core real,
+  final exata da memoria/eventos;302 Python e136 Node novos passaram,689 Web
+  completos. Browser PT/reload/GET recuperacao/mobile/desconexao aprovados.
+  Gate standard global Windows aprovado com8092 casos coletados. Sem modelo,
+  ferramentas, auth humana ou API publica. MB232 ready para complemento
+  generativo opt-in na Web; conta/modelo reais exigem aceite separado.
+  Runbook local-authenticated-analysis-web.md.
+- MB230 done local: aliases EN/PT de analise/dominos sem mudar pesos/autonomia;
+  binding de evento novo para export readonly do turno canonico apos restart;
+  Web mostra pergunta/final em painel manual separado, origem nao autenticada.
+  599 Python/209 Node novos passaram sem skips;553 Web Node integram pytest,
+  browser sintetico/lifecycle/mobile aprovados e gate standard global Windows
+  completo passou. Scroll interno removido apos primeiro gate; piloto MCP
+  mantem prazo/runtime e assertion relata motivo fixo. Sem conta/modelo real,
+  nova prova Linux, commit/push ou promocao. MB231 ready: conversa Web local
+  autenticada opt-in. Runbook pt-analysis-and-offline-conversation.md.
+- MB229 done local: analise generativa delimitada subordinada a sintese Core,
+  sessao lazy, memoria final exata e CLI opt-in;621 testes novos incluindo
+  inventario passaram, gate standard global Windows aprovado. Modelo real
+  e utilidade permanecem aceites separados. Runbook generative-analysis-core.md.
+
 ## 2026-10-05
 
 - MB228 done local: fonte revisada request-scoped no Core, consentimento

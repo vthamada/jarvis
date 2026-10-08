@@ -474,7 +474,7 @@ Homologacao externa de conta/modelo, naturalidade vocal e API mutante separadas.
 
 ### MB229 - complemento generativo de analise subordinado
 
-- status: ready
+- status: done
 - micro_objetivo: produzir prosa nova bounded para analise local naturalmente
   ALLOW/core_guidance_only, mantendo resposta e decisao nativas soberanas e
   persistindo uma unica final. Nao outra extracao literal nem demo fora do Core.
@@ -509,12 +509,402 @@ Homologacao externa de conta/modelo, naturalidade vocal e API mutante separadas.
   Eventos fixed status/code/mode/count sem texto/model/account/URL; Memory
   recebe final unica/restart exato. Evidencia fixture nao vira live_model
   por renomeacao; promocao depende de campanha autorizada com modelo real.
+- esclarecimento_de_contrato: core_reasoning e selecao cognitiva nativa legitima,
+  nao tool/efeito. request_confirmation_mode bounded_autonomy pode existir no
+  subset assist_only com autonomy_confirmation_mode not_required e sem
+  human_confirmation_required; nao reescrever plano/autonomia para acionar modelo.
 - validacao: bateria slice/adversarial + E2E Core persistente/HTTPS sintetico
   e pipeline completo, default/DEFER/BLOCK sem chamadas, candidatos forjados,
   conclusao parcial, egress/identity/account mismatches e nenhum efeito. Gate
   standard global, docs/rollback; sem nova dependencia central por conveniencia.
 - gate_minimo: python tools/engineering_gate.py --mode standard
 - desativacao: nao compor port generativo opcional; native final/default intactos.
+- resultado: leaf strict de analise, session port lazy com budget/cleanup/fences,
+  Synthesis/Orchestrator/Memory canonicos e CLI opt-in com readback integrados.
+  527 testes novos do slice, incluindo54 E2E Core/TLS real sintetico, mais94
+  inventario paralelo =621 novos passaram/zero skips. Gate standard global
+  Windows completo aprovado com runtime congelado; primeiro gate encontrou
+  corrida de startup em teste MCP, corrigida apenas na prova de cancelamento
+  mantendo RPC real, deadline curto separado e processo encerrado.
+  Sincronizacao de docs/inventario coberta por94 focados, quick e diff --check.
+  Sem conta/modelo real, promocao, nova prova Linux, commit ou push.
+
+Repriorizacao pos-MB229 confirmada 2026-10-06, sem implementar durante gate.
+Prova nativa de quatro Core assist_only novos: EN compare/review de
+documentation/observability/telemetry/pilot = analysis/ALLOW/core_guidance_only,
+sem especialistas. PT compare ja analysis mas DEFER; PT revise general_assistance
+e DEFER. Ambos PT selecionam operational_readiness em vez de observability,
+com um especialista. Corrigir somente verbo no Executive nao resolve dominios.
+Nao remover especialistas ou diminuir pesos/priors para obter ALLOW.
+
+### MB230 - paridade PT-BR de analise delimitada e conversa canonica Web
+
+- status: done
+- micro_objetivo: corrigir aliases semanticos delimitados EN/PT de comparacao/
+  revisao de relatorios de documentacao/observabilidade/telemetria/piloto;
+  desenvolver em paralelo exposicao manual de um turno canonico real na Web.
+- motivo_do_estado: baterias locais/Core/export/Web, browser real sintetico e
+  gate standard global Windows completo aprovados. Nao e conversa generica/autonomia maior.
+- ownership: worker Executive intent_scope.py e corpus/testes proprios; worker
+  apps/jarvis_console/conversation_export.py e testes proprios; worker
+  apps/jarvis_web/conversation-pack.mjs e testes proprios. Coordenador engine
+  keywordlist, aliases PT em Knowledge/corpus se comprovados necessarios,
+  app/HTML/allowlist e composicao/contratos/gate.
+- criterio_de_aceite: pares EN/PT equivalentes de fato preservam intent, dominios,
+  decisao e autonomia; corpus destrutivo/misto/negado/ambiguo nao ganha permissao.
+  Inferencia MB229 apenas se naturalmente elegivel; nenhum especialista removido,
+  peso/threshold relaxado ou memoria canonica alterada para forcar elegibilidade.
+  Web mostra pergunta/final exatas de turno persistido pelo Core, exportado com
+  verificacao de sujeito/sessao/eventos e redacao default, conteudo opt-in.
+  Importacao manual bounded, schema estrito, sem HTML executavel, upload/autoimport,
+  credenciais/grants ou incorporacao do pacote a memoria/planejamento.
+- limites: pacote Web offline de origem nao autenticada, separado da conversa
+  fixture. Nao fecha Web live; serve.py segue assets GET/HEAD e connect-src none.
+  API autenticada/isolamento/cancelamento/readback exigem slice proprio, nao
+  simples relaxamento da CSP. Campanha de conta/modelo real segue autorizacao.
+- validacao: bateria lexical/adversarial e pares em Core SQLite novo/restart;
+  Core -> exportador -> parser/DOM reais, adulteracao/oversize/duplicate keys,
+  contexto estrangeiro e cancelamento; gate standard antes fechamento.
+- desativacao: remover aliases novos/painel de importacao; fixtures/superficies
+  atuais e stores canonicos permanecem, sem migracao ou nova dependencia central.
+- evidencia_de_fechamento: 599 Python e209 Node novos passaram/zero skips;
+  suite Web553 Node integra pytest. Core nativo/SQLite/restart -> export readonly
+  -> parser/DOM reais; browser publico sintetico final exata/lifecycle/mobile.
+  Primeiro gate detectou scroll interno (removido mantendo teste de design) e
+  recusa no piloto MCP;106 Web/MCP focados passaram, motivo fixo incorporado a
+  assertion e prazo/runtime intactos. Segundo standard global completo aprovado
+  com7790 casos coletados; modelos/conta real/Linux novo nao validados.
+  Guia: docs/operations/pt-analysis-and-offline-conversation.md.
+
+### MB231 - conversa de analise Web local autenticada
+
+- status: done
+- prioridade: P1
+- depende_do_operador: nao, para implementacao/prova em runtime descartavel proprio
+- dependencias: MB230 done
+- micro_objetivo: app local opt-in separada da fixture; pareamento e sessao
+  autenticada -> pergunta textual -> Core real assist_only -> Memory/eventos
+  -> readback canonico -> final exata no DOM. Sintese nativa/default sem modelo.
+- justificativa: leitura offline nao resolve envio cotidiano; fechar caminho
+  de produto sem abrir API publica mutante ou promover ferramenta/conta/modelo.
+- ownership: worker apps/jarvis_api/local_auth.py e local_server.py/testes;
+  worker apps/jarvis_api/analysis_service.py/testes; worker live-controller.mjs,
+  live-app.mjs e live-index.html/testes Web. Coordenador congela contrato,
+  composicao Core/readback, integração, browser, docs e gate. Sem edits
+  simultaneos em shared/engines/serve.py fixture.
+- boundary: bind127.0.0.1/porta efemera, Host/Origin exatos; segredo de pareamento
+  unico digitado, nao URL/log/storage; cookie HttpOnly/SameSiteStrict, CSRF,
+  expiry/revogacao, limites de corpo/tempo e nenhum CORS amplo. Principal/sessao/
+  ticket de request emitidos/configurados pelo servidor, nao pelo JSON do cliente.
+  Runtime novo proprio por default, sem abrir stores existentes automaticamente.
+- criterio_de_aceite: browser real pareia/envia pedido PT, Core persiste e
+  retorna final exatamente lida da memoria/eventos. DEFER/BLOCK visiveis e
+  sem ferramenta/modelo; sessao estrangeira, replay/Origin/CSRF/expiry errados
+  nao chegam ao Core. Um pedido ativo por sessao, binding de ticket e consulta
+  do resultado existente apos perda de conexao; sem retry gerando outro turno.
+- limites: autentica posse da sessao local, nao humano/OS/multiusuario; nenhum
+  modelo/provider-login/refresh, ferramenta, grant, approval, upload ou mic.
+  Cancelar espera browser nao desfaz commit do Core; estado de pedido deve
+  permitir distinguir em andamento, persistido e falha sem inventar rollback.
+  Exportador quiescente MB230 nao vira API de store ativo; readback usa seams
+  canonicas/eventos correlacionados da instancia propria.
+- validacao: auth/HTTP adversarial, Core SQLite novo/restart e falhas, JS
+  lifecycle/client e ponta a ponta browser -> Core -> persistencia/readback.
+- gate_minimo: python tools/engineering_gate.py --mode standard
+- desativacao: parar app opt-in/revogar sessao; preservar stores/eventos proprios,
+  fixture e leitura offline; sem migracao, exposicao fora loopback ou efeito externo.
+- evidencia_de_fechamento: 302 Python/136 Node novos aprovados sem skips nas
+  baterias;689 Web Node completos integram pytest. Browser real em instancia
+  propria: PT/final2635 codepoints exata ao export canonico, reload/GET,
+  interrupcao GET simulada recuperada com unico POST, mobile390x844 e disconnect.
+  Standard global Windows completo aprovado com8092 casos coletados. Sem modelo,
+  auth humana, nova prova Linux ou promocao de ferramentas. Runbook:
+  docs/operations/local-authenticated-analysis-web.md.
+
+### MB232 - complemento generativo opt-in na conversa Web local
+
+- status: done
+- prioridade: P1
+- dependencias: MB229, MB230 e MB231 done
+- depende_do_operador: nao para implementacao/prova injetada; sim para aceite
+  posterior de conta/modelo/egress reais, fora desta rodada.
+- micro_objetivo: aproximar utilidade conversacional usando SessionInferencePort
+  e SynthesisEngine existentes, sem trocar soberania/identidade do Core.
+  Default nativo/off preservado; host escolhe profile/modelo explicitamente,
+  cliente consente por ticket, nunca recebe credenciais nem escolhe provider.
+- justificativa: Web real ja entrega final canonica, mas sintese nativa permanece
+  tecnica; conectar complemento existente antes de criar outro cerebro/SDK.
+- contrato: preservar jarvis-local-analysis-v1 estritamente nativo; v2 explicita
+  para tickets generativos com generative_error_code, generative_evidence_mode
+  e generative_analysis_characters. accepted somente ALLOW elegivel, contagem
+  positiva/erro nulo/modo valido; core_local nao comprova modelo/conta real.
+- ownership: worker adapter/config lazy novo em apps/jarvis_api e testes;
+  worker analysis_service.py/composicao por ticket/readback e testes Core;
+  worker validators/controller/UI live e testes Node. Coordenador congela
+  contrato/startup/HTTP e integra E2E/browser/docs/gate. Auth/fixture e shared
+  preservados salvo necessidade demonstrada, sem edits concorrentes nesses seams.
+- guardrails: opt-in startup e consentimento por ticket; elegibilidade nativa
+  antes de abrir adapter; query atual somente, sem historico/identidade/browser
+  cookie. DEFER/BLOCK e dados sensiveis nao chamam inferencia. Sem descoberta,
+  login/refresh/retry ou operacao; Operational.execute continua deny-before-body.
+  Nao abrir stores humanos/contas automaticamente; profile no host nao vira
+  principal canonico ou grant. Cancelar espera nao promete rollback do Core.
+- criterio_de_aceite: default/off, ausencia consentimento, DEFER/BLOCK e entrada
+  sensivel -> zero chamadas; Core real/transporte injetado -> accepted/rejected/
+  withheld com final exata apos restart, eventos/readback coerentes e evidencia
+  injected_transport, nunca live. Replay/revogacao/timeout/falha rede/troca
+  profile-modelo nao reexecutam turno nem entregam conteudo rejeitado. Browser
+  real envia uma vez, recupera por GET apos reload e mostra consentimento/estado
+  sem segredo. Orcamento inicial inferencia <=20s versus espera30s/ticket120s,
+  resultado incerto explicito; nao interromper commit arbitrariamente.
+- validacao: slice local/negativas de privacidade, Core SQLite/transport seam,
+  HTTP/browser e lifecycle Node; manter todos os testes v1 intactos.
+- gate_minimo: python tools/engineering_gate.py --mode standard
+- desativacao: desabilitar opt-in/profile/v2; voltar a v1 nativa e preservar
+  memoria/eventos canonicos; sem migracao, auto-login ou ampliacao de autonomia.
+- evidencia_de_fechamento: 222 Python e 141 Node novos passaram sem skips;
+  830 Web Node completos, 349 auth/HTTP/v1/profile/startup e 159 service/Core
+  passaram. Browser real com Core isolado e transporte injetado: final de
+  3131 codepoints exata ao export canonico, consentimento descartado, reload/
+  recuperacao GET com unico POST, DEFER, retorno v1 e mobile/disconnect.
+  Auditoria cruzada sem bloqueador; standard global Windows completo passou
+  com 8314 casos coletados. Sem conta/modelo reais, nova prova Linux ou
+  promocao de ferramentas. Runbook: docs/operations/local-generative-analysis-web.md.
+
+Repriorizacao historica pos-MB232: melhorar leitura da resposta ja entregue em F06 e
+preparar ferramenta readonly util de F13. Ambos derivados de frentes existentes;
+nao ampliar autonomia, API mutante ou maturidade pelo numero de testes.
+MB233 e o proximo item integrado; MB234 admite desenvolvimento isolado paralelo
+com ownership abaixo, mas fechamento integrado separado e WIP 1 preservado.
+
+### MB233 - projecao humana readonly do complemento na Web
+
+- status: done
+- prioridade: P1
+- dependencias: MB232 done
+- depende_do_operador: nao para codigo/corpus sintetico; sim para aceite de
+  conta/modelo reais ou qualidade conversacional, fora deste recorte.
+- micro_objetivo: exibir analise, premissas, limites e citacoes do complemento
+  aceito em painel legivel, separado e explicitamente nao verificado; manter
+  final canonica inteira e exata disponivel. Nao alterar Core, Memory ou v1/v2.
+- ownership: worker parser em live-generative-projection.mjs e testes novos;
+  worker live-app/index/style e testes DOM; coordenador asset allowlist,
+  contratos congelados, Core/browser/E2E, docs e gate. Nenhuma colisao MB234.
+- criterio_de_aceite: apenas v2 accepted/ALLOW do contexto atual; validar
+  sufixo literal terminal MB229 unico, disclaimer, gramatica, Unicode,
+  re-encoding canonico e limites antes de projetar. Analise <=4000 caracteres,
+  ate8 premissas/8 limites de512, ate4 citacoes de512, projecao <=8000 e
+  bloco literal <=64000. Citacao input:sha256 da query UTF8, offsets por
+  codepoints e quote exata; sem fonte revisada nova. Somente textContent,
+  sem HTML/links/acoes. Hash local nao autentica origem. Falha limpa somente
+  projecao; final integral preservada. Troca ticket/sessao/query, revogacao,
+  pagehide e callbacks tardios cercados por contexto/epoch. Transporte
+  injetado explicitamente rotulado, nunca prova de modelo real.
+- validacao: parser adversarial/Unicode/limites/citacoes, DOM/lifecycle,
+  v1/v2 intactos; Core real injetado -> browser -> comparacao exata com
+  Memory/eventos/export apos restart, reload/GET/mobile/disconnect.
+- gate_minimo: python tools/engineering_gate.py --mode standard
+- desativacao: ocultar projecao e voltar a final canonica integral, sem
+  apagar memoria, alterar envelope ou reexecutar consulta.
+- evidencia_de_fechamento: 145 parser/33 DOM Node novos e Web1008 completos
+  passaram; 8 Python Core real/renderer/parser provam Unicode/citacoes/limites
+  e restart exato. Chrome headless em perfil proprio/transporte injetado:
+  final3298 codepoints exata ao export canonico apos parar instancia; projecao,
+  reload/GET, unico POST generativo, retorno nativo/mobile/disconnect aprovados.
+  Standard global Windows completo aprovado com 8528 casos coletados. Sem modelo real, Core/Memory
+  alterados neste slice ou nova prova Linux. Runbook:
+  docs/operations/web-projection-and-readiness-mcp.md.
+
+### MB234 - MCP stdio readonly do inventario autoral
+
+- status: done
+- prioridade: P2
+- dependencias: inventario MB229 existente; independente de MB233
+- depende_do_operador: nao para processo proprio/corpus sintetico; uso de
+  servidores terceiros, contas ou consumidor Core fora deste recorte.
+- micro_objetivo: expor uma tool read_product_readiness com argumento exato
+  front_id enum all/F01..F13/T01..T03, reutilizando load_inventory,
+  validate_inventory e build_report. Sem sondagem dinamica ou novo backlog.
+- ownership: worker novos readiness_contracts/server/client em apps/jarvis_mcp
+  e testes exclusivos; coordenador CLI standalone, E2E, F13/docs/gate.
+  Nao editar Core, UI, sintese, shared ou cliente/servidor fixture existentes.
+- criterio_de_aceite: binding/principal/sessao/scope readiness.snapshot.read
+  exatos, opt-in, servidor e script fixos, Python absoluto -I -B, shell=False,
+  CWD temporario proprio e ambiente minimo SystemRoot; stderr descartado.
+  Handshake/descriptor/schema/version exatos, JSONL UTF8 sem duplicatas/extras,
+  ids correlacionados; rejeitar sampling/elicitation/roots/paginacao/tools
+  desconhecidas. Limites mensagem64KiB/sessao256KiB, requests/eventos e
+  coleta10s; resultado integral ou erro fixo, nunca truncamento. Cancelamento
+  cooperativo e terminate/reap proprio, sem retries. Leitura somente JSON
+  fixo <=131072 bytes; referencias validadas sem ler seus conteudos, SQLite
+  ou tokens. Origem local_repository_snapshot, authored_snapshot,
+  authority none, runtime_verified/product_ready false. Nao disfarcar
+  como fixture/HTTPS/reviewed source; nenhuma bridge/autoridade no Core.
+  Higiene de subprocess nao equivale a sandbox de SO ou identidade humana.
+- validacao: unitarios/adversariais de scope/binding/schema/privacidade/origem;
+  stdio real initialize/list/call comparado a API readonly; timeout/cancel/
+  cleanup reais e fixture hostil. Inventario malformado sem leitura externa.
+- gate_minimo: python tools/engineering_gate.py --mode standard
+- desativacao: nao invocar cliente/CLI; servidor proprio encerrado e inventario
+  intacto. Consumidor governado exige slice posterior com origem local propria.
+- evidencia_de_fechamento: 117 unit/42 stdio reais worker e 40 unit CLI/3 CLI
+  reais passaram; bateria integrada de 217 (214 Python novos +3 existentes).
+  Inventario real comparado a API readonly, mirror/origem/scope/cleanup e
+  recusas adversariais testados. Import-I/contagem selecionada/stdout fixos
+  apos auditoria, sem relaxar isolamento. Desenvolvimento isolado paralelo,
+  aceite integrado depois de MB233 com o mesmo runtime congelado/gate standard
+  global Windows aprovado com 8528 casos coletados; 311 testes pos-metadados
+  e gate quick passaram. Foundation F13 mantida: sem consumidor Core,
+  servidor terceiro, sandbox de SO ou identidade humana alegados. Runbook:
+  docs/operations/web-projection-and-readiness-mcp.md.
+
+Repriorizacao pos-MB233/234: F06 agora exibe leitura humana, mas o browser
+390x844 exige extensa rolagem por introducao/pareamento/final tecnica. Priorizar
+ergonomia dessa Web antes de outra superficie; F06 partial/F13 foundation
+preservados. MB235 e o unico proximo integrado ready, sem nova direcao macro.
+
+### MB235 - conversa Web compacta com final canonica acessivel
+
+- status: done
+- prioridade: P1
+- dependencias: MB233 done; Web MB231/232 existente
+- depende_do_operador: nao para UI/corpus sintetico; qualidade com modelo real,
+  teclado/dispositivo fisicos e autenticacao humana fora deste recorte.
+- micro_objetivo: reduzir distancia entre compositor operavel e resposta,
+  compactar introducao/pareamento apos conexao e destacar leitura humana
+  nao verificada. Final canonica integral sempre acessivel em disclosure;
+  recolher automaticamente somente apos parser e fences atuais validos.
+- justificativa: screenshot/browser MB233 mostra leitura humana util mas
+  pagina longa, inclusive JSON literal da final; melhorar uso diario sem
+  modificar conteudo, runtime soberano ou inferir qualidade conversacional.
+- ownership: worker UI live-app.mjs e testes DOM novos; worker layout
+  live-index.html/live-style.css e testes estaticos novos; coordenador congela
+  IDs novos, browser E2E/medicao/docs/gate. Parser/controller/API/Core/Memory
+  e protocolos intactos; nenhuma edicao concorrente dos mesmos arquivos.
+- criterio_de_aceite: em 390x844 pareado/sem teclado, textarea, consentimento
+  e Enviar operaveis ate 2 viewports; medir posicao inicial e distancia ate
+  Enviar antes/depois, nao somente topo textarea. Sem overflow horizontal,
+  controles >=44px, scroll documental unico e viewport reduzido testado,
+  sem alegar teclado/mobile fisicos. Pareamento details acessivel; Verificar
+  sessao/Desconectar facilmente disponiveis. Tab/Enter/Espaco e foco visivel,
+  sem abandonar foco oculto ou roubar foco em polling/recovery. Consentimento
+  desmarcado por pergunta e aviso de saida da query visiveis junto do compositor.
+  Leitura validada mantem rotulos nao verificado/sem autoridade. Final nao
+  truncada/modificada: abrir disclosure revela textContent byte-exato.
+  Native/rejected/withheld/parsefail mantem final aberta; accepted sozinho nao
+  basta para recolher. Clear/render abre por padrao, callback validado recolhe
+  uma vez sem resetar escolha a cada poll. Hash atrasado/troca sessao-ticket/
+  disconnect/pagehide nunca exibem ou recolhem resultado de contexto antigo.
+  Reload/recovery somente GET, unico POST por submissao; parar espera nao
+  promete cancelamento do Core. Avisos essenciais nunca escondidos com a final.
+- validacao: DOM/estaticos e negativas lifecycle/foco/disclosures, suite Web
+  inteira, Core/browser real injetado com comparacao exata ao export canonico,
+  mobile antes/depois, recuperacao GET e retorno nativo; nenhum store humano.
+- gate_minimo: python tools/engineering_gate.py --mode standard
+- desativacao: rollback somente de apresentacao; final integral aberta e
+  pareamento completo, sem migracao, perda de registros ou reexecucao de turno.
+- evidencia_de_fechamento: standard global Windows completo aprovado,8542
+  casos coletados.45 Node novos/Web1053,14 negativas Python e121 focados
+  passaram. Browser proprio390x844: Enviar1670.63→736.08 px; keyboard/choices/
+  GET/reload/native/parserfail/disconnect e final3298 exata ao export canonico
+  aprovados. Core/Memory/protocolos intactos; transporte injetado, nao modelo
+  real. Runbook docs/operations/compact-local-conversation-web.md.
+  Pos-metadados379 testes inventario/UI/Core/MCP, quick, CLI e diff-check
+  passaram; referencias F06 consolidadas para8 sem ampliar contrato.
+
+Repriorizacao pos-MB235: ergonomia compacta fechada; o operador escolheu OAuth
+ChatGPT/Codex para a prova de utilidade real. Connect SIWC proprio foi concluido,
+mas catalogo excede o limite atual e nenhum modelo/inferencia foi aceito.
+Priorizar esse impedimento concreto antes de outra camada de apresentacao.
+
+### MB236 - homologacao controlada com conta OAuth e modelo reais
+
+- status: blocked
+- dor_diagnostico_fechado: operador autorizou nova tentativa unica e refresh
+  da mesma conta se expirada. Implementado diagnostico host opt-in de fases,
+  HTTP status int observado e codigos fixos allowlisted. Sem ler corpos de
+  erro HTTP, headers privados, tokens, URLs, nomes/ids/conteudo ou alterar
+  contratos Web/Memory/sintese. Sem retry/fallback/cap/timeout novo. Callback
+  nao promove evidence live; falha da observacao nao altera resultado.
+  CLI exige --enable-generative para --inference-diagnostics e imprime no
+  maximo256 registros fixos sanitizados no stderr. Core ALLOW/consentimento,
+  budgets/fences e cleanup continuam mandatorios.
+- ownership_diagnostico: worker transporte/session-provider/novo sanitizer
+  e testes unitarios novos; worker E2E novo readonly quanto a runtime;
+  auditor readonly. Coordenador SessionInferencePort/profile/startup/factory,
+  docs, testes de composicao, conta, browser e gate. Sem leitura de conta por
+  workers nem edicao concorrente de centros compartilhados.
+- prioridade: P1
+- dependencias: MB235 done; SIWC MB222 e geracao/Web MB229/232 existentes
+- bloqueio_atual: nova tentativa unica autorizada com gpt-6-astra apos gate
+  e um refresh explicito da sessao comprovadamente expirada recebeu HTTP200,
+  depois unsupported_response_encoding em preflight de SSE; ALLOW/rejected/
+  inference_failed e final nativa2635 exata a export/GET/reload. Codigo cobre
+  Content-Type OU Content-Encoding, nao identifica qual verificacao recusou.
+  Nao afirmar compressao/MIME especificos ou resposta concluida do modelo.
+  Proximo recorte candidato: categorias fixas de MIME/encoding sem headers
+  brutos/corpos, corpus/gate antes de corrigir causa provada; nao ready sem DOR.
+  Bloqueio historico response_limit_exceeded acima256 KiB resolvido; tamanho
+  integral remoto nao medido. Novo recorte de diagnostico requer DOR/corpus,
+  qualquer nova inferencia/refresh exige consentimento separado.
+- dor_correcao_fechado: cap fixo2097152 somente para tupla exata
+  api.openai.com,/v1/models,GET,status200. Todos os demais sucessos e erros
+  preservam262144. Nenhum parametro publico, schema/count/crypto alterado,
+  dependencia nova ou aumento de budget temporal. Leitura chunks4096 e cap+1;
+  cleanup fail-closed, expiry/cancel/deadline/UTF8/JSON/depth16 intactos.
+  Cap CLI de exibicao256 KiB permanece separado e inalterado. Dois workers
+  criam test_siwc_catalog_budget.py e test_large_catalog_core.py; terceiro
+  auditor readonly. Coordenador unico de oauth_http.py, docs, gate e conta.
+- depende_do_operador: conta nova autorizada, login/catalogo/refresh explicito
+  concluídos. gpt-6-astra escolhido; duas tentativas unicas com consentimentos
+  separados, segunda localizou bloqueio de formato/encoding. Nova inferencia
+  requer novo consentimento. Sem reenvio automatico nem quality aceita.
+- micro_objetivo: validar catalogo por conta e uma analise sintetica na Web
+  existente, com runtime UUID novo, governanca nativa e final/readback exatos.
+- justificativa: F01/F06/T02 carecem de prova real; conta externa conectada
+  nao prova inferencia, qualidade, operador autenticado ou sistema completo.
+- ownership: coordenador integra budget/transporte/conta/prova; workers podem
+  preparar corpus adversarial e auditoria em arquivos disjuntos, sem ler
+  credenciais/usar rede nem editar centros compartilhados simultaneamente.
+- criterio_de_aceite: catalogo readonly bounded no endpoint oficial, sem
+  ampliar caps de token/discovery/JWKS/erros ou relaxar schema/count/cleanup/
+  cancelamento. Escolher slug listado, uma pergunta sintetica revisada elegivel
+  (Compare os relatorios de documentacao e observabilidade do piloto), um
+  POST consentido, evidence live/ALLOW e final exata aos stores/eventos de
+  teste. Recovery/reload somente GET; nenhum auto-reenvio em resultado incerto.
+  Julgar utilidade/verdade separadamente com o usuario, sem declarar aceite
+  semantico pela simples aprovacao de schema. Nenhum historico humano/modelo
+  fallback, import de tokens do Codex, backend-api, mic/TTS/tool ou efeito.
+- validacao: definir DOR da correcao de catalogo a partir da evidencia, corpus
+  de limites/erro/cancelamento/cleanup e E2E local antes da nova consulta real.
+  Conta e store privados autorizados; nao registrar tokens/callbacks ou corpos
+  remotos privados. Nao usar o store console existente como memoria de teste.
+- gate_minimo: python tools/engineering_gate.py --mode standard
+- desativacao: omitir perfil/modelo retorna Web nativa; parar somente instancia
+  propria, preservar Memory e credenciais; revogacao remota exige fluxo separado.
+- runbook: docs/operations/real-oauth-acceptance.md
+- progresso_diagnostico:326 novos (273 unitarios transporte,34 composicao,
+  19 TLS/Core/Memory),535 focados integrados e177 regressoes em bateria
+  separada passaram; ha sobreposicao. Auditoria readonly revalidou fences
+  terminais. Standard global Windows8994 casos/8883 passed/111 skipped/zero
+  falhas aprovado; nenhuma nova prova Linux inferida. HTTP200 e recusa segura
+  comprovados, sem modelo/qualidade homologados; stores retidos, instancia
+  propria fechada, sem retry/fallback/tool ou commit/push.
+- progresso_local_historico: transporte/corpus congelados;114 unitarios e12 E2E novos
+  passed sem skips,540 existentes passed. Cap CLI256 KiB mantido e testado;
+  auditoria readonly sem bloqueador. Standard global Windows aprovado/8668
+  coletados. Uma unica consulta real CLI de catalogo passou com5 escolhas,
+  authority=none. Tentativa Web unica recusou complemento; ALLOW/final nativa
+  2635 exata ao export, GET/reload exatos, zero pageerrors. Sem reenvio/refresh/
+  fallback pago. Causa da inferencia ainda desconhecida; MB236 nao homologado.
+
+Frentes independentes seguintes reconhecidas (nao promovidas nem em execucao):
+F11 runner Docker de baseline/candidato em fixture propria, imagem fixada,
+network none/readonly/tmpfs/limites, sem mounts humanos/socket/segredos; daemon
+Linux atualmente indisponivel, prova historica MB218/219 continua valida.
+F13 tem MB234 fechado localmente; consumidor Core governado ainda nao aberto,
+origem local nao pode ser disfarçada de HTTPS para reviewed source.
+F12 conector real exige servico/conta/recurso escolhido para aceite externo.
 
 ### MB220 - produtos locais de revisao e evidencia (2026-10-05)
 

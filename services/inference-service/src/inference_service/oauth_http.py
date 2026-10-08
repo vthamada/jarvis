@@ -33,6 +33,9 @@ _JWKS = "/.well-known/jwks.json"
 _TOKEN = "/api/accounts/oauth/token"
 _AUTHORIZE = "/api/accounts/authorize"
 _MAX_BYTES = 262_144
+# Account catalogs carry metadata not projected into the model picker. Only
+# this fixed successful route gets a larger budget; grants and errors do not.
+_MAX_CATALOG_BYTES = 2_097_152
 _KNOWN_ERRORS = frozenset({"invalid_grant", "invalid_client", "invalid_request",
                            "unauthorized_client", "unsupported_grant_type",
                            "invalid_scope", "access_denied", "temporarily_unavailable"})
@@ -275,6 +278,9 @@ class SiwcHttpsClient:
             def before_io() -> float:
                 nonlocal io_socket
                 remaining = check()
+                if response is not None and callable(getattr(response, "isclosed", None)):
+                    if response.isclosed():
+                        return remaining
                 if connection is not None:
                     connection.timeout = remaining
                     if getattr(connection, "sock", None) is not None:
@@ -313,15 +319,19 @@ class SiwcHttpsClient:
                     or type(encoding) is not str
                     or encoding.strip().lower() not in {"", "identity"}):
                 raise SiwcError("siwc_response_invalid")
+            maximum = (_MAX_CATALOG_BYTES
+                       if (host, path, method, status) == (
+                           "api.openai.com", "/v1/models", "GET", 200,
+                       ) else _MAX_BYTES)
             raw = bytearray()
             while True:
                 before_io()
-                chunk = response.read1(min(4096, _MAX_BYTES + 1 - len(raw)))
+                chunk = response.read1(min(4096, maximum + 1 - len(raw)))
                 check()
                 if type(chunk) is not bytes or len(chunk) > 4096:
                     raise SiwcError("siwc_response_invalid")
                 raw.extend(chunk)
-                if len(raw) > _MAX_BYTES:
+                if len(raw) > maximum:
                     raise SiwcError("siwc_response_limit_exceeded")
                 if not chunk:
                     break
@@ -341,9 +351,12 @@ class SiwcHttpsClient:
         except Exception:
             raise SiwcError("siwc_transport_failed") from None
         finally:
+            cleanup_failed = False
             for resource in (response, connection):
                 if resource is not None:
                     try:
                         resource.close()
                     except Exception:
-                        pass
+                        cleanup_failed = True
+            if cleanup_failed:
+                raise SiwcError("siwc_cleanup_failed") from None

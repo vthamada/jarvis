@@ -1036,6 +1036,9 @@ class LangGraphFlowRunner:
                 {
                     "memory_record_id": str(memory_record_result.record_contract.memory_record_id),
                     "record_type": memory_record_result.record_contract.record_type,
+                    "conversation_readback": self.orchestrator._conversation_readback_payload(
+                        memory_record_result.record_contract
+                    ),
                     "continuity_mode": state["deliberative_plan"].continuity_action,
                     "continuity_source": state["deliberative_plan"].continuity_source,
                     "continuity_target_mission_id": (

@@ -3,10 +3,52 @@ import { createVoiceController, handleVoicePageHide } from "./voice-controller.m
 import { createParticleSphere } from "./particle-sphere.mjs";
 import { createLocalVoicePlayback } from "./local-voice-playback.mjs";
 import { createTranscriptReview, handleTranscriptPageHide } from "./transcript-review.mjs";
+import { createConversationPackController, renderConversationPack,
+  CONVERSATION_PACK_ORIGIN_LABEL } from "./conversation-pack.mjs";
 
 const controller = createController();
 const voice = createVoiceController({ conversation: controller });
 const byId = (id) => document.getElementById(id);
+let conversationPackConsent = false;
+function renderCanonicalConversation(state) {
+  renderConversationPack(state, { status: byId("conversation-pack-notice"),
+    query: byId("conversation-pack-query"), response: byId("conversation-pack-response"),
+    metadata: byId("conversation-pack-metadata") });
+  if (state.errorCode === "conversation_pack_context_mismatch") {
+    byId("conversation-pack-notice").textContent =
+      CONVERSATION_PACK_ORIGIN_LABEL +
+      " · Sujeito ou sessão diferentes: pacote recusado, conteúdo anterior removido. Descarte antes de trocar de contexto.";
+  }
+  byId("conversation-pack-consent").checked = conversationPackConsent;
+  byId("conversation-pack-file").disabled = !conversationPackConsent;
+  byId("conversation-pack-clear").disabled = !conversationPackConsent && state.status === "empty";
+  byId("conversation-pack-content").hidden = state.status !== "ready";
+  byId("conversation-pack-turn").hidden = state.pack?.content_included !== true;
+  byId("conversation-pack-panel").setAttribute("aria-busy", String(state.status === "loading"));
+}
+const conversationPack = createConversationPackController({ onState: renderCanonicalConversation });
+renderCanonicalConversation(conversationPack.getState());
+function discardConversationPack() {
+  conversationPackConsent = false;
+  byId("conversation-pack-file").value = "";
+  conversationPack.clear();
+}
+byId("conversation-pack-consent").addEventListener("change", (event) => {
+  conversationPackConsent = event.target.checked === true;
+  byId("conversation-pack-file").value = "";
+  // Consent changes invalidate pending reads and clear the adopted offline context.
+  conversationPack.clear();
+});
+byId("conversation-pack-file").addEventListener("change", async (event) => {
+  const file = event.target.files?.[0];
+  event.target.value = "";
+  if (!conversationPackConsent) { conversationPack.clear(); return; }
+  if (!file) return;
+  await conversationPack.importFile(file);
+});
+byId("conversation-pack-clear").addEventListener("click", () => {
+  discardConversationPack(); byId("conversation-pack-consent").focus();
+});
 const transcript = createTranscriptReview();
 let transcriptPackage = "";
 let transcriptDraftInvalid = false;
@@ -247,6 +289,7 @@ byId("message").addEventListener("keydown", (event) => {
 });
 byId("cancel").addEventListener("click", () => { controller.cancel(); byId("message").focus(); });
 byId("reset").addEventListener("click", () => {
+  discardConversationPack();
   transcriptPackage = ""; transcript.reset(); byId("transcript-file").value = "";
   localPlayback.clear(); byId("presence-audio-file").value = "";
   if (inspector.open) inspector.close();
@@ -301,6 +344,7 @@ byId("voice-cancel").addEventListener("click", () => { voice.cancel(); byId("voi
 byId("voice-play").addEventListener("click", () => voice.play());
 byId("voice-interrupt").addEventListener("click", () => { voice.interruptPlayback(); byId("voice-play").focus(); });
 window.addEventListener("pagehide", (event) => {
+  discardConversationPack();
   window.clearInterval(transcriptTimer); transcriptTimer = null;
   transcriptPackage = ""; byId("transcript-file").value = "";
   handleTranscriptPageHide(transcript, event);

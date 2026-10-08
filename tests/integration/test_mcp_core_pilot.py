@@ -54,7 +54,7 @@ def test_real_stdio_observation_passes_actual_core_governance_memory_and_final(
             **values, fixture_scenario=scenario, binding=binding, request_id="mcp-pilot-bound"
         )
     )
-    assert result.status == "completed"
+    assert result.status == "completed", result.reason
     expected = "unrecognized_untrusted_text" if scenario == "injection" else "synthetic_ready"
     assert result.observation_status == expected
     assert result.final_text and result.final_character_count == len(result.final_text)
@@ -133,13 +133,20 @@ def test_real_transport_stop_reaps_owned_process_and_never_enters_core(tmp_path,
         event = asyncio.Event()
         task = asyncio.create_task(
             pilot.run_mcp_core_pilot(
-                **values, fixture_scenario="timeout", timeout_seconds=0.8, cancellation=event
+                **values, fixture_scenario="timeout",
+                # Expiration has its own short-budget case. Event/task cases
+                # must reach a real RPC before cancellation, not race Python
+                # process startup on a loaded Windows host.
+                timeout_seconds=0.8 if mode == "deadline" else 10,
+                cancellation=event,
             )
         )
         if mode != "deadline":
             # Wait for actual tool RPC to start (not a mocked transport).
-            for _ in range(300):
+            for _ in range(1000):
                 if clients and clients[0]._next_id == 3:
+                    break
+                if task.done():
                     break
                 await asyncio.sleep(0.01)
             assert clients and clients[0]._next_id == 3
