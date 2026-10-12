@@ -1,6 +1,7 @@
 # Documento Evolutivo do J.A.R.V.I.S.
 
-**Data:** 13/05/2026  
+**Data original:** 13/05/2026  
+**Atualização de direção:** 12/10/2026  
 **Objetivo:** consolidar a linha de pesquisa sobre autoevolução, continual learning, self-evolving agents e self-adapting language models, traduzindo essas ideias para a arquitetura do J.A.R.V.I.S.
 
 ---
@@ -89,6 +90,83 @@ Snapshot historico em 2026-05-17 (nao e a fila atual):
 
 ---
 
+## 0.1 Direção de produto e proposta arquitetural em 2026-10-12
+
+A visão de produto é um **agente completo**, inspirado no J.A.R.V.I.S. da ficção:
+ajudar amplamente, compreender objetivos, planejar e executar trabalho autorizado,
+compor ferramentas e ampliar continuamente suas capacidades. O horizonte vai além
+de um assistente convencional. É uma direção de desenvolvimento, não uma promessa
+de AGI, capacidade universal já disponível ou autorização irrestrita para agir.
+
+A [proposta ADR-002: autoevolução em duas frentes](../adr/adr-002-autoevolucao-em-duas-frentes.md)
+registra uma proposta técnica para revisão e seus critérios de aceite. O registro
+da direção de produto não constitui aceitação arquitetural da sequência abaixo,
+nem autorização de implementação. A proposta permanece não aceita até decisão
+explícita de revisão. As frentes propostas são complementares:
+
+- **experiência própria:** resultados verificáveis, falhas, feedback e recorrência
+  alimentam propostas de skills, ferramentas, workflows e melhorias;
+- **avanços externos:** monitoramento contínuo de ferramentas, algoritmos, papers,
+  releases e padrões alimenta hipóteses ligadas a necessidades reais do sistema.
+
+A sequência de implementação proposta é **skills, ferramentas e workflows → evolução de
+código e algoritmos → adaptação de pesos em laboratório separado**. A ordem cria
+pré-requisitos e reduz risco; não restringe a visão final às primeiras etapas.
+O radar pode acompanhar todas as frentes desde cedo, sem antecipar sua adoção.
+
+O runtime executa versões admitidas sob o Core. O plano evolutivo propõe e
+experimenta separadamente; um candidato não altera seu próprio avaliador,
+não concede permissões e não se autopromove. O fluxo-alvo é:
+
+```text
+resultado verificável ou hipótese externa ligada a uma necessidade
+  -> candidato proposto
+  -> miner/builder com contratos, proveniência e escopo
+  -> sandbox executando baseline e candidato
+  -> evidências independentes, holdout, regressão, retenção e custo
+  -> revisão e admissão autorizada de versão
+  -> consumo real pelo runtime
+  -> monitoramento e rollback verificável
+```
+
+### Evidência atual e lacunas
+
+Revisão documental em 2026-10-12, no commit
+`250b128ea3cee92a72ed88afef48d0fccb83e3fc`; não equivale a homologação runtime:
+
+- [Skill Candidate Registry](skill-candidate-registry.md), [Bounded Skill Miner](bounded-skill-miner.md)
+  e [Evolution Lab](evolution-lab.md) já existem. O miner compila especificações
+  explícitas; registrar um candidato inativo não prova descoberta autônoma,
+  execução, aprovação ou melhoria;
+- o [radar MB-208](../technology/technology-radar-intake.md) registra referências
+  revisadas manualmente, sem buscar conteúdo externo. Hash, licença e revisão
+  incluem atestações do operador, não verificação independente da origem;
+- os [packs MB-209](../technology/technology-experiment-packs.md) comparam
+  observações pré-produzidas. Não executam o candidato nem provam benefício causal;
+- o [runner empírico](../../evolution/empirical_runner/README.md) executa ports
+  injetados com quatro casos: dois repetidos e dois holdout separados, mas públicos.
+  É fundação para medir o pipeline, não prova de inteligência geral ou ganho
+  sustentado. Declarar `model_real` não comprova uso de modelo real;
+- o [job service](../../services/job-service/README.md) oferece ledger, worker
+  fixture e piloto explícito de Core, sem scheduler ou coleta contínua;
+- o radar contínuo já é direção do [Technology Study](technology-study.md).
+  Ainda falta integrar fontes e coleta, cadências, orçamento, deduplicação,
+  triagem por necessidade, licença/segurança/compatibilidade, experimentos reais,
+  promoção autorizada, consumo e reversão;
+- o [backlog executável](../implementation/execution-backlog.md) mantém MB236
+  bloqueado para homologação com modelo real. O
+  [Engineering Gate desse commit](https://github.com/vthamada/jarvis/actions/runs/37708534221)
+  terminou em falha. São pré-condições a resolver em trabalho próprio; esta
+  atualização documental não declara o baseline validado.
+
+Critérios de sucesso, independência dos avaliadores, orçamento e retenção devem
+ser definidos antes do experimento. Uma autodeclaração de sucesso, um gate baseado
+em checks fornecidos ou uma pontuação sem comparador não bastam. Os marcos da
+ADR-002 orientam futura tradução para o backlog; não abrem fila nem promovem
+capabilities por si mesmos.
+
+---
+
 ## 1. Tese central
 
 O J.A.R.V.I.S. pode ser evolutivo com as tecnologias atuais, mas a evolução deve ser implementada por camadas.
@@ -97,7 +175,7 @@ A abordagem correta não é permitir que o sistema se modifique livremente.
 
 A abordagem correta é:
 
-> O J.A.R.V.I.S. observa sua própria operação, registra experiências, reflete sobre resultados, consolida padrões, propõe melhorias, testa em sandbox, promove mudanças aprovadas e mantém rollback.
+> O J.A.R.V.I.S. observa sua própria operação e avanços externos, registra evidências, reflete sobre resultados, consolida padrões, propõe melhorias, testa em sandbox, promove mudanças aprovadas e mantém rollback.
 
 Isso permite evolução realista sem comprometer identidade, governança e confiabilidade.
 
@@ -250,6 +328,10 @@ O núcleo central altera pesos, comportamento profundo ou arquitetura central de
 
 ## 4. Mapa de maturidade
 
+As classificações abaixo são orientações arquiteturais da pesquisa original,
+não percentuais de conclusão nem evidência de capacidade implementada no JARVIS.
+O estado observado e as lacunas estão na seção 0.1 e na ADR-002.
+
 | Camada | Maturidade | Fase |
 |---|---|---|
 | Memória evolutiva | Alta | V1 |
@@ -386,13 +468,19 @@ Propõe consolidação paramétrica compacta, como updates LoRA em partes seleci
 Ideia central:
 - adaptação em tempo de inferência;
 - identificação de propriedades da tarefa;
-- mistura dinâmica de vetores especialistas.
+- mistura dinâmica de vetores especialistas treinados por reinforcement learning;
+- ajuste de componentes singulares das matrizes de pesos, não apenas roteamento
+  de prompts entre especialistas.
 
 **Inspiração para o J.A.R.V.I.S.:**
 - roteamento adaptativo;
 - mind_registry;
 - domain_registry;
-- escolha dinâmica de modo cognitivo.
+- escolha dinâmica de modo cognitivo como analogia arquitetural.
+
+Essa analogia não implementa Transformer²: o método paramétrico requer acesso aos
+pesos, treinamento dos vetores e infraestrutura de inferência própria, em
+laboratório separado.
 
 ---
 
@@ -418,11 +506,12 @@ Pilares:
 
 ---
 
-### Experience-Driven Lifelong Learning via Skill Self-Evolution
+### AutoSkill: Experience-Driven Lifelong Learning via Skill Self-Evolution
 
 **Link:** https://arxiv.org/html/2603.01145v2
 
-Transforma experiências de interação em skills reutilizáveis.
+Transforma experiências de interação em skills reutilizáveis, recuperadas e
+injetadas no contexto sem retreinar o modelo subjacente.
 
 Ciclo:
 - extração;
@@ -659,12 +748,12 @@ Responsabilidades:
 | Experience Collector | eventos do `orchestrator-service`, piloto interno, `internal_pilot_report`, comparadores | parcial |
 | Reflection Engine | sinais de refinamento em `evolution_from_pilot`, `evolution-lab` e relatórios | parcial |
 | Experience Store | `memory-service`, checkpoints, replay, artefatos de piloto e histórico regenerável | parcial |
-| Skill Miner | ainda não materializado como registry de skills candidatas | futuro |
-| Skill Registry | não existe como registry soberano dedicado | futuro |
+| Skill Miner | [Bounded Skill Miner, MB-178](bounded-skill-miner.md): compilador determinístico de especificação explícita e evidência elegível | implementado; sem descoberta autônoma ou ativação |
+| Skill Registry | [Skill Candidate Registry, MB-177](skill-candidate-registry.md), persistido pelo memory-service | implementado para candidatos inativos; registro não promove |
 | Workflow Evolution Engine | `evolution-lab`, `compare_orchestrator_paths`, `verify_release_signal_baseline` | parcial |
 | Routing Adaptation Engine | `domain_registry`, `mind_registry`, sinais de especialista e refinamento por workflow | parcial |
 | Evaluator | gates, pilotos, comparadores, observabilidade e testes automatizados | parcial/ativo |
-| Promotion Gate | `engineering_gate`, release gate, verificadores de baseline/release | ativo |
+| Promotion Gate | `engineering_gate`, release gate, verificadores de baseline/release e revisão humana | mecanismos existentes; resultado depende da evidência e da execução, não é aprovação automática |
 | Rollback Manager | ainda depende de Git, changelog, docs vivos e reversibilidade de lotes | futuro |
 
 Implicação arquitetural:
@@ -731,7 +820,9 @@ Pode usar:
 
 ### Skill Miner
 
-Detecta padrões que podem virar skills.
+Responsabilidade-alvo: detectar padrões que podem virar skills. O miner bounded
+atual compila uma especificação explícita a partir de evidência elegível; esta
+responsabilidade-alvo não deve ser lida como descoberta autônoma já implementada.
 
 Exemplos:
 - tarefas repetidas;
@@ -972,7 +1063,10 @@ rollback_policy:
 
 ---
 
-# 11. O que o J.A.R.V.I.S. pode aprender hoje
+# 11. Alvos de aprendizado operacional
+
+Esta lista descreve alvos viáveis para a camada evolutiva; não certifica que o
+baseline atual já aprenda cada item de ponta a ponta.
 
 - preferências do usuário;
 - rotinas;
@@ -1002,6 +1096,9 @@ rollback_policy:
 # 13. Backlog sugerido
 
 Este backlog é um roadmap arquitetural, não a fila executável corrente.
+Os verbos de criação nas fases abaixo preservam a proposta histórica; não são
+pedido de recriar componentes já existentes. Para a próxima implementação,
+reaproveitar os contratos da seção 6.2.1 e os marcos da ADR-002.
 
 Regra de uso:
 
@@ -1012,7 +1109,7 @@ Regra de uso:
 - fases posteriores não podem antecipar alteração de pesos, autoexecução ampla
   ou mudança estrutural sem sandbox, evidência e aprovação.
 
-Relação com o backlog ativo:
+Contexto histórico da proposta inicial (não descreve a fila ativa):
 
 - `MB-110` a `MB-114` não implementam EvolutionOS completo;
 - esse lote cria uma base necessária para evolução operacional, porque objetivos,
