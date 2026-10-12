@@ -1,10 +1,19 @@
-# ADR-002: Autoevolução em duas frentes e promoção baseada em evidência
+# ADR-002 (proposta): Autoevolução em duas frentes e promoção baseada em evidência
 
 ## Status
 
-Proposta para revisão arquitetural. Direção de produto registrada em 2026-10-12;
-implementação e promoção dependem de itens próprios no backlog e de seus gates.
-Esta decisão documental não habilita capacidades, permissões ou execução.
+**Proposta para revisão arquitetural; não aceita.** Direção de produto registrada
+em 2026-10-12. O registro dessa direção não aprova a sequência de implementação
+ou a solução técnica aqui propostas. Aceitação ou rejeição exige decisão explícita
+de revisão; implementação e promoção dependem também de itens próprios no backlog
+e de seus gates. Este registro não habilita capacidades, permissões ou execução.
+
+Enquanto proposta nesta PR, este texto pode receber ajustes de revisão e não deve
+ser consumido como decisão canônica aceita ou registro imutável. A organização
+imutável de ADRs descrita no [audit MB-151](../documentation/documentation-canonicality-audit-mb151.md)
+é uma estrutura-alvo proposta, explicitamente não executada naquele lote; não
+atribui aceitação automática a um arquivo por sua localização. Uma futura decisão
+aceita deve registrar explicitamente seu status e preservar o histórico de revisão.
 
 ## Contexto
 
@@ -23,7 +32,7 @@ A [Constituição de Engenharia](../documentation/engineering-constitution.md)
 permanece vinculante: Core, identidade, governança, memória canônica e síntese
 final continuam soberanos. A ambição do produto não amplia autorização.
 
-## Decisão
+## Decisão proposta
 
 ### 1. Duas fontes de evolução, um processo de admissão
 
@@ -159,7 +168,7 @@ bloqueios nem declara avanço de capacidade.
 ## Fundamentos de pesquisa e tradução
 
 As referências abaixo já integram o Documento Evolutivo. A tradução proposta
-para o JARVIS é uma decisão arquitetural, não um resultado demonstrado pelos
+para o JARVIS é uma proposta arquitetural, não um resultado demonstrado pelos
 papers neste repositório.
 
 | Referência primária | Mecanismo | Aplicação e limite |

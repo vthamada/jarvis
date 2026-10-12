@@ -90,7 +90,7 @@ Snapshot historico em 2026-05-17 (nao e a fila atual):
 
 ---
 
-## 0.1 Direção consolidada em 2026-10-12
+## 0.1 Direção de produto e proposta arquitetural em 2026-10-12
 
 A visão de produto é um **agente completo**, inspirado no J.A.R.V.I.S. da ficção:
 ajudar amplamente, compreender objetivos, planejar e executar trabalho autorizado,
@@ -98,15 +98,18 @@ compor ferramentas e ampliar continuamente suas capacidades. O horizonte vai al�
 de um assistente convencional. É uma direção de desenvolvimento, não uma promessa
 de AGI, capacidade universal já disponível ou autorização irrestrita para agir.
 
-A [ADR-002: autoevolução em duas frentes](../adr/adr-002-autoevolucao-em-duas-frentes.md)
-registra a decisão e seus critérios de aceite. As frentes são complementares:
+A [proposta ADR-002: autoevolução em duas frentes](../adr/adr-002-autoevolucao-em-duas-frentes.md)
+registra uma proposta técnica para revisão e seus critérios de aceite. O registro
+da direção de produto não constitui aceitação arquitetural da sequência abaixo,
+nem autorização de implementação. A proposta permanece não aceita até decisão
+explícita de revisão. As frentes propostas são complementares:
 
 - **experiência própria:** resultados verificáveis, falhas, feedback e recorrência
   alimentam propostas de skills, ferramentas, workflows e melhorias;
 - **avanços externos:** monitoramento contínuo de ferramentas, algoritmos, papers,
   releases e padrões alimenta hipóteses ligadas a necessidades reais do sistema.
 
-A sequência de implementação é **skills, ferramentas e workflows → evolução de
+A sequência de implementação proposta é **skills, ferramentas e workflows → evolução de
 código e algoritmos → adaptação de pesos em laboratório separado**. A ordem cria
 pré-requisitos e reduz risco; não restringe a visão final às primeiras etapas.
 O radar pode acompanhar todas as frentes desde cedo, sem antecipar sua adoção.
