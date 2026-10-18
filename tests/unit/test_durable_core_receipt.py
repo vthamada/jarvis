@@ -122,6 +122,32 @@ def test_absent_claim_and_events_is_unknown_not_a_fabricated_final(tmp_path):
     assert find_core_receipt(core, task_at_now()) is None
 
 
+def test_canonical_receipt_works_without_optional_sqlite_extension_api(completed, monkeypatch):
+    core, task, response = completed
+    connect = sqlite3.connect
+    opened = []
+
+    class NoExtensionApi(sqlite3.Connection):
+        def __getattribute__(self, name):
+            if name == "enable_load_extension":
+                raise AttributeError(name)
+            return super().__getattribute__(name)
+
+    def without_extensions(*args, **kwargs):
+        connection = connect(*args, **kwargs, factory=NoExtensionApi)
+        opened.append(connection)
+        return connection
+
+    monkeypatch.setattr(sqlite3, "connect", without_extensions)
+    receipt = find_core_receipt(core, task)
+    assert receipt is not None and receipt.response_text == response.response_text
+    assert receipt.request_id == task.request_id and receipt.query_sha256 == task.input_sha256
+    assert len(opened) == 3
+    for connection in opened:
+        with pytest.raises(sqlite3.ProgrammingError):
+            connection.execute("SELECT 1")
+
+
 def test_claim_without_flushed_final_is_unknown(tmp_path):
     core = _isolated_core(tmp_path / "runtime")
     task = task_at_now()

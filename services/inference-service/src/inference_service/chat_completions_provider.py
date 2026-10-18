@@ -237,15 +237,22 @@ class ChatCompletionsInferenceProvider:
             result = InferenceResult(**values, status="timed_out", error_code="timeout")
         except Exception:
             result = InferenceResult(**values, status="failed", error_code="transport_error")
-        if telemetry is not None:
+        def emit_result(value, *, previous_status=None):
+            if telemetry is None:
+                return
+            event = {"event": "inference_finished", "provider_id": provider_id,
+                     "status": value.status, "error_code": value.error_code,
+                     "evidence_mode": evidence, "input_tokens": value.input_tokens,
+                     "output_tokens": value.output_tokens}
+            if previous_status is not None:
+                event.update(supersedes_previous=True, previous_status=previous_status)
             try:
-                telemetry({"event": "inference_finished", "provider_id": provider_id,
-                                 "status": result.status, "error_code": result.error_code,
-                                 "evidence_mode": evidence,
-                                 "input_tokens": result.input_tokens,
-                                 "output_tokens": result.output_tokens})
+                telemetry(event)
             except Exception:
                 pass
+
+        observed_status = result.status
+        emit_result(result)
         if result.status == "completed":
             try:
                 check()
@@ -254,6 +261,13 @@ class ChatCompletionsInferenceProvider:
                 result = InferenceResult(**values, status=status, error_code=exc.code)
             except Exception:
                 result = InferenceResult(**values, status="failed", error_code="invalid_clock")
+        if result.status != observed_status:
+            # A synchronous observer can itself revoke publication. It cannot
+            # undo an event already delivered, so emit one compensating terminal
+            # result. Reducers retract previous_status rather than count a new
+            # attempt. This is bounded: a failed/text-free result is never
+            # promoted again, even if the corrective callback mutates or raises.
+            emit_result(result, previous_status=observed_status)
         return result
 
     @staticmethod

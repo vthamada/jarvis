@@ -212,6 +212,37 @@ concluir antes do merge, com resultado posterior registrado nos checks do PR;
 estas correcoes nao explicam a falha Windows inicial
 de recuperacao duravel, que permaneceu nao reproduzida.
 
+### Revisao do PR: SQLite opcional e observacao terminal
+
+[CI do corretivo021e10e](https://github.com/vthamada/jarvis/actions/runs/39163449556)
+passou11213/195 skips/zero falhas, antes das alteracoes desta revisao.
+Thread IPv6 mapped ja corrigida; duas outras confirmadas pelo codigo atual:
+
+- Recibos duraveis dependem do _open readonly compartilhado com exportacao.
+  Esse helper invocava enable_load_extension incondicionalmente; build sem a
+  API recusava ate uma final canonica valida. Agora a chamada e condicional,
+  sem ignorar erros quando a API existe. mode=ro, query_only e authorizer
+  permanecem. SQL real nos testes recusa escrita, tabela nao selecionada,
+  ATTACH e load_extension; conexoes fechadas ao sair. Novo fluxo real de
+  Core/SQLite conclui e retoma sem novo Core com a API ausente. A ausencia e
+  simulada em Connection real; nao se alega prova fisica de Python3.14.
+- Callback de telemetria pode cancelar, exceder prazo ou mudar bindings depois
+  de receber um completed. O fence pos-callback continua retendo texto. Como
+  um evento ja entregue nao pode ser desfeito, agora ha no maximo uma segunda
+  emissao inference_finished com supersedes_previous=true e previous_status,
+  cujo status/error_code sao os do resultado final retornado. Consumidores
+  devem compensar o status anterior, nao contar nova tentativa; o contrato
+  normal de uma emissao permanece inalterado. Observer continua best-effort,
+  inclusive em excecao; nao ha entrega atomica/exatamente uma vez, retry do
+  modelo, nova autoridade ou texto privado na telemetria. Regressoes verificam
+  reducer compensatorio e callback que tambem lanca excecao, sem loop.
+
+As10 regressoes novas falharam antes (2 SQLite/8 telemetria), passaram depois
+em2.15s. Bateria integrada Windows fresca554 passed/221.54s/zero skips inclui
+retomada duravel, exportacao canonica, HTTP/provider/CLI e seus fences. Ruff e
+diffcheck passaram. CI do novo head continua precondicao de merge e a fonte
+do resultado remoto posterior, sem atribuir a ele a prova do head021e10e.
+
 ## Proximo aceite e rollback
 
 O operador informou inicialmente nao ter servidor local. Recomendacao inicial

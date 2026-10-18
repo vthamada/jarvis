@@ -121,7 +121,11 @@ def _open(path, stack, check, table):
         path.as_uri() + "?mode=ro", uri=True, timeout=0.1,
     )))
     connection.row_factory = sqlite3.Row
-    connection.enable_load_extension(False)
+    disable_extensions = getattr(connection, "enable_load_extension", None)
+    if disable_extensions is not None:
+        disable_extensions(False)
+    # Builds without this optional API still retain readonly/query-only mode
+    # and the authorizer below, which denies load_extension and other functions.
     connection.execute("PRAGMA query_only=ON")
 
     def authorize(action, argument1, argument2, database, _trigger):

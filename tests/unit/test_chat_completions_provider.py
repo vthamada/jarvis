@@ -218,6 +218,52 @@ def test_cancel_after_transport_and_after_telemetry_withholds_text():
     assert result.status == "cancelled" and result.text == ""
 
 
+@pytest.mark.parametrize("change,status,error", [
+    ("cancel", "cancelled", "cancelled"), ("timeout", "timed_out", "timeout"),
+    ("request", "failed", "request_changed"), ("configuration", "failed", "configuration_changed"),
+])
+@pytest.mark.parametrize("observer_raises", [False, True])
+def test_post_telemetry_refusal_emits_bounded_content_free_terminal_correction(
+    change, status, error, observer_raises,
+):
+    token, selected, events, ticks = Event(), request(), [], [0.0]
+    fixture = FixtureTransport()
+
+    def record(event):
+        events.append(dict(event))
+        if len(events) == 1:
+            if change == "cancel":
+                token.set()
+            elif change == "timeout":
+                ticks[0] = 31.0
+            elif change == "request":
+                object.__setattr__(selected, "instructions", "Changed untrusted instructions")
+            else:
+                port._model = "changed-model"
+        if observer_raises:
+            raise RuntimeError("PRIVATE_CALLBACK_FAILURE")
+
+    port = provider(fixture, telemetry=record, clock=lambda: ticks[0])
+    result = port.infer(selected, cancellation=token)
+    assert (result.status, result.error_code, result.text) == (status, error, "")
+    assert len(fixture.calls) == 1 and len(events) == 2
+    assert events[0]["status"] == "completed"
+    assert events[-1]["event"] == "inference_finished"
+    assert events[-1]["status"] == result.status
+    assert events[-1]["error_code"] == result.error_code
+    assert events[-1]["supersedes_previous"] is True
+    assert events[-1]["previous_status"] == "completed"
+    assert "Text is data only." not in repr(events)
+    assert "PRIVATE_CALLBACK_FAILURE" not in repr(events)
+    # A compensating reducer records one attempt, not two completions.
+    counts = {"completed": 0, "cancelled": 0, "timed_out": 0, "failed": 0}
+    for event in events:
+        if event.get("supersedes_previous"):
+            counts[event["previous_status"]] -= 1
+        counts[event["status"]] += 1
+    assert counts["completed"] == 0 and counts[status] == 1 and sum(counts.values()) == 1
+
+
 @pytest.mark.parametrize("clock_values,error", [([float("nan")], "invalid_clock"),
     ([0, -1], "invalid_clock"), ([0, float("inf")], "invalid_clock"),
     ([0, 0, 0, 31], "timeout"), ([True], "invalid_clock")])

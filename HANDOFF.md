@@ -1,5 +1,24 @@
 # HANDOFF
 
+## PR#2: revisao SQLite e telemetria - 2026-10-18
+
+CI do head021e10e aprovado:11213 passed/195 skipped/zero falhas, run39163449556.
+Essa prova e anterior aos corretivos de revisao abaixo, nao aceite do novo head.
+Tres threads triadas: IPv6 mapped ja corrigido em021e10e; SQLite sem API opcional
+e telemetria pos-callback confirmados reais. Dez regressoes demonstraram RED,
+depois10 passed/2.15s. Bateria integrada Windows554 passed/221.54s/zero skips:
+recibo/retomada duravel, exportacao Core, provider/HTTP/CLI e guardas de publicacao.
+_open so chama enable_load_extension quando a API existe; mode=ro/query_only/
+authorizer continuam bloqueando escrita, tabelas alheias, ATTACH e load_extension.
+Teste real de Core/SQLite prova conclusao e resume sem outra chamada ao Core
+com Connection sem essa API. Nao e execucao fisica Python3.14.
+Observer que revoga publicacao recebe, no maximo, uma correcao terminal
+inference_finished com supersedes_previous/previous_status; contadores devem
+compensar o status anterior, nao somar duas tentativas. Formato normal preservado,
+correcao sem texto/query/path, callback best-effort, sem retry do modelo.
+Ruff/diffcheck passaram; resultado completo do head seguinte deve ser conferido
+nos checks do PR antes de merge. Nenhuma promocao de capability/conta/voz real.
+
 ## PR#2: corretivos comprovados pelo CI Linux - 2026-10-18
 
 Implementacoes publicadas em5c4e8ae, PR https://github.com/vthamada/jarvis/pull/2.

@@ -255,6 +255,39 @@ def test_real_crash_after_core_commit_reconciles_receipt_without_another_core_ca
     )) == asdict(original_claim)
 
 
+def test_native_completion_and_resume_without_optional_sqlite_extension_api(tmp_path, monkeypatch):
+    runtime, clock, _ = _register(tmp_path)
+    connect, readonly = sqlite3.connect, []
+
+    class NoExtensionApi(sqlite3.Connection):
+        def __getattribute__(self, name):
+            if name == "enable_load_extension":
+                raise AttributeError(name)
+            return super().__getattribute__(name)
+
+    def portable_connect(*args, **kwargs):
+        if kwargs.get("uri") and "mode=ro" in str(args[0]):
+            kwargs["factory"] = NoExtensionApi
+            readonly.append(True)
+        return connect(*args, **kwargs)
+
+    monkeypatch.setattr(sqlite3, "connect", portable_connect)
+    store, core, runner = _reopen(runtime, clock)
+    report = runner.run_once(JOB, **SCOPE, expected_version=0, authorized=True)
+    task = store.load_task(JOB, **SCOPE)
+    turn, _, decision = _canonical(core, task)
+    _accepted(report, decision)
+    _no_core(core, monkeypatch)
+    again = runner.resume(
+        JOB, **SCOPE, expected_version=store.get(JOB, **SCOPE).version, authorized=True,
+    )
+    _accepted(again, decision)
+    assert again["core_invoked"] is False
+    assert len(readonly) >= 3
+    retained, _, _ = _canonical(core, task)
+    assert asdict(retained) == asdict(turn)
+
+
 def test_explicit_safe_resume_revokes_the_stale_predispatch_owner(tmp_path):
     runtime, clock, store = _register(tmp_path)
     old = store.claim_task(

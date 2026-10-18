@@ -2,6 +2,12 @@
 
 ## 2026-10-18
 
+- Revisao PR#2: _open suporta SQLite sem enable_load_extension mantendo todas
+  as restricoes SQL. Telemetria emite correcao terminal compensatoria quando
+  callback revoga publicacao, sem repetir modelo ou expor texto.10 regressoes
+  RED->GREEN; integrada Windows554 passou/zero skips. CI021e10e anterior passou
+ 11213/195 skips; nao substitui CI do head com estes corretivos.
+
 - PR#2: primeiro gate Linux11198 passou/195 skips/11 falhas. Corrigidas fixtures
   de interpreter symlink (guardas runtime preservadas), recusa explicita de
   IPv6 mapped e retencao do inode pending POSIX ate cleanup. Regressao mapped
