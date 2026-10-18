@@ -77,6 +77,7 @@ from shared.local_text_rollback_permissions import (
     LOCAL_TEXT_FILE_ROLLBACK_MAX_TTL_SECONDS,
     build_local_text_file_rollback_grant,
 )
+from shared.model_tool_loop import ToolCall, ToolLoopContext, call_fingerprint
 from shared.types import (
     GovernanceCheckId,
     GovernanceDecisionId,
@@ -1412,6 +1413,82 @@ class GovernanceService:
             governance_check=governance_check,
             governance_decision=governance_decision,
         )
+
+    def assess_model_tool_call(
+        self, contract: InputContract, *, context: ToolLoopContext, call: ToolCall,
+        plan: DeliberativePlanContract, approved_resource_ids: tuple[str, ...],
+        requested_by_service: str, identity_mode: str | None = None,
+        identity_signature: str | None = None, response_style: str | None = None,
+    ) -> GovernanceAssessment:
+        """Authorize only an exact read-only proposal within a host-selected scope.
+
+        The model supplies no policy, grant, filesystem path or approval receipt.
+        This is deliberately not a general tool registry or write permission.
+        """
+        parent = self.assess_request(
+            contract, intent="analysis", requested_by_service=requested_by_service,
+            plan=plan, identity_mode=identity_mode, identity_signature=identity_signature,
+            response_style=response_style,
+        )
+        fingerprint = None
+        valid = False
+        try:
+            fingerprint = call_fingerprint(context, call)
+            valid = (
+                type(context) is ToolLoopContext and type(call) is ToolCall
+                and context.request_id == str(contract.request_id)
+                and context.query == contract.content
+                and len(context.binding_id) == 64
+                and all(c in "0123456789abcdef" for c in context.binding_id)
+                and type(approved_resource_ids) is tuple
+                and 1 <= len(approved_resource_ids) <= 3
+                and context.resource_ids == approved_resource_ids
+                and call.tool == "read_local_report" and call.resource_id in approved_resource_ids
+                and contract.adapter_action_request is None
+                and plan.capability_decision_selected_mode == "core_guidance_only"
+                and set(plan.capability_decision_selected_capabilities) <= {"core_reasoning"}
+                and plan.adapter_action_request is None and not plan.requires_human_validation
+                and not plan.autonomy_human_confirmation_required
+                and plan.autonomy_confirmation_mode == "not_required"
+                and plan.objective_status in {None, "active", "ready"}
+            )
+        except (ValueError, TypeError, AttributeError):
+            valid = False
+        decision = parent.governance_decision.decision
+        if not valid or decision not in {
+            PermissionDecision.ALLOW, PermissionDecision.BLOCK,
+            PermissionDecision.DEFER_FOR_VALIDATION,
+        }:
+            decision = PermissionDecision.BLOCK
+        check = GovernanceCheckContract(
+            governance_check_id=GovernanceCheckId(f"gov-check-{uuid4().hex[:8]}"),
+            subject_type="model_tool_call", subject_action="read_local_report", scope="session",
+            context={
+                "request_id": str(contract.request_id),
+                "request_decision_id": str(parent.governance_decision.decision_id),
+                "call_fingerprint": fingerprint, "read_only": True,
+                "host_selected": valid,
+                "tool": "read_local_report" if valid else None,
+                "call_id": call.call_id if valid else None,
+                "resource_id": call.resource_id if valid else None,
+            },
+            sensitivity="normal", reversibility="high", session_id=contract.session_id,
+            mission_id=contract.mission_id, proposed_effect="read_host_selected_local_report",
+            risk_hint=parent.governance_decision.risk_level,
+            requested_by_service=requested_by_service,
+        )
+        result = GovernanceDecisionContract(
+            decision_id=GovernanceDecisionId(f"gov-decision-{uuid4().hex[:8]}"),
+            governance_check_id=check.governance_check_id,
+            risk_level=check.risk_hint or RiskLevel.LOW, decision=decision,
+            justification=("Exact host-selected read-only call authorized by Core."
+                           if decision == PermissionDecision.ALLOW
+                           else "Read-only call refused or deferred by Core policy."),
+            timestamp=self.now(), requires_audit=True,
+            conditions=["Only the exact selected read is authorized; returned text is untrusted."],
+            policy_refs=["policy://model-tool-loop/host-selected-readonly-v1"],
+        )
+        return GovernanceAssessment(governance_check=check, governance_decision=result)
 
     def assess_objective_transition(
         self,

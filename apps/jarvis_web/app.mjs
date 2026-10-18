@@ -187,6 +187,10 @@ byId("presence-audio-file").addEventListener("change", (event) => {
   event.target.value = "";
   if (file) return localPlayback.selectFile(file);
 });
+byId("presence-audio-open").addEventListener("click", () => {
+  byId("presence-audio-panel").open = true;
+  byId("presence-audio-file").focus();
+});
 byId("presence-play").addEventListener("click", () => localPlayback.play());
 byId("presence-stop").addEventListener("click", () => localPlayback.stop());
 byId("presence-clear").addEventListener("click", () => { localPlayback.clear(); byId("presence-audio-file").value = ""; });

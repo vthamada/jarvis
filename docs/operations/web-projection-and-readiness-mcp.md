@@ -1,5 +1,12 @@
 # MB233/MB234 - leitura Web e inventario MCP
 
+Atualizacao 2026-10-12: piloto opt-in adicional em
+[readiness MCP -> Core](readiness-mcp-core-pilot.md) consome esse inventario
+local para relatorio soberano com Memory/reconstrucao e bindings de sujeito/
+eventos. Nao e dispatch MCP governado no runtime: coleta precede Core,
+texto autoral omitido, authority none, sem grant ou promocao. Descricao abaixo
+preserva o slice MB234 original sem consumidor no Core normal.
+
 Apresentacao atual MB235 done local, gate standard global Windows aprovado:
 final integral agora em disclosure acessivel, aberto por padrao e recolhido
 somente apos parser/fences validos. Parser/protocolo deste recorte intactos.

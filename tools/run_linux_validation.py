@@ -126,6 +126,7 @@ def source_archive(root: Path) -> bytes:
                 relative.as_posix() not in SOURCE_FILES
                 and path.suffix not in SUFFIXES
                 and path.name != "_jarvis-console"
+                and relative.as_posix() != "tools/linux_validation/Dockerfile"
             ):
                 continue
             if info.st_nlink != 1:

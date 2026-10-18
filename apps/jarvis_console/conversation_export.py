@@ -184,7 +184,10 @@ def _generative(payload, decision):
     return result
 
 
-def _read(memory, events, *, session_id, request_id, principal_ref, check):
+def _read(memory, events, *, session_id, request_id, principal_ref, check,
+          allow_conditional=False):
+    if type(allow_conditional) is not bool:
+        _refuse()
     # Inspect all matching request/correlation envelopes, including wrong-session
     # rows; don't hide mismatches by selecting only the desired session.
     rows = events.execute(
@@ -253,7 +256,10 @@ def _read(memory, events, *, session_id, request_id, principal_ref, check):
             or payloads["response_synthesized"].get("intent") != intent):
         _refuse()
     decision = payloads["governance_checked"].get("decision")
-    if type(decision) is not str or decision not in {"allow", "block", "defer_for_validation"}:
+    decisions = {"allow", "block", "defer_for_validation"}
+    if allow_conditional:
+        decisions.add("allow_with_conditions")
+    if type(decision) is not str or decision not in decisions:
         _refuse()
     generation = _generative(payloads["response_synthesized"], decision)
     if generation["generative_analysis_characters"] > len(response):

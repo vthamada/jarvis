@@ -1,5 +1,28 @@
 # Cockpit local do JARVIS — WP-WEB-01
 
+2026-10-17: conversa por voz local integrada em modo experimental opt-in na Web
+pareada: captura, ASR para revisão e fala da final canônica com RMS real. Perfil
+do host e consentimentos explícitos; sem inferência cloud ou microfone automático.
+Gate standard Windows aprovado:10704 passagens/121 skips/zero falhas,
+25 hashes preservados;1282 testes JS passaram. ASR real10s concluiu em27,81s;
+Qwen real não gerou áudio em300s. Playback/esfera validados separadamente com
+tom fixture; microfone físico e conversa fluida continuam sem aceite.
+Uso, retenção, limites e prova em
+[conversa local por voz](../../docs/operations/local-web-voice-conversation.md).
+O recorte visual abaixo é histórico; a fixture offline continua sem captura.
+
+2026-10-17: direção cinematográfica implementada em ambas as superfícies,
+com esfera volumétrica, painéis holográficos e ensaio WAV local reagindo ao RMS
+real. Não é ainda captura de microfone ou TTS automático da final. Gate standard
+Windows aprovado nesta revisão: 10.418 passagens/121 skips; 1.186 testes JS
+também passaram. Limites, controles e evidência no
+[runbook de presença](../../docs/operations/cinematic-presence-web.md).
+
+F05/F06 2026-10-13: painel manual readonly de atividade selecionada pelo host
+na Web pareada; desativado por padrao e sem executor. Configuracao, limites e
+prova no [runbook de atividade](../../docs/operations/local-job-activity-web.md).
+Gate standard Windows aprovado; nao fecha produto ou MB236.
+
 MB235 done local, gate standard global Windows aprovado: conversa live compacta,
 setup recolhido apos parear e final integral acessivel por disclosure,
 recolhido somente apos parser/fences validos. Avisos/consentimento preservados.

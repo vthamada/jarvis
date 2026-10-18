@@ -81,6 +81,13 @@ def main(argv=None) -> int:
     parser.add_argument("--credential-dir", type=Path)
     parser.add_argument("--profile-ref")
     parser.add_argument("--generative-timeout-seconds", type=float)
+    parser.add_argument("--enable-job-activity", action="store_true")
+    parser.add_argument("--job-db", type=Path)
+    parser.add_argument("--job-actor-ref")
+    parser.add_argument("--job-session-ref")
+    parser.add_argument("--job-id", action="append")
+    parser.add_argument("--enable-voice", action="store_true")
+    parser.add_argument("--voice-profile", type=Path)
     args = parser.parse_args(argv)
     if not args.authorized:
         print("local_web_authorization_required", file=sys.stderr)
@@ -88,8 +95,28 @@ def main(argv=None) -> int:
     if not 0 <= args.port <= 65535:
         print("invalid_local_web_options", file=sys.stderr)
         return 2
-    profile = None
+    profile = activity_profile = voice_profile = None
     try:
+        if args.enable_voice != (args.voice_profile is not None):
+            raise ValueError("invalid_local_web_options")
+        if args.enable_voice:
+            from apps.jarvis_console.bootstrap import ensure_src_paths
+
+            ensure_src_paths()
+            from apps.jarvis_api.voice_profile import load_voice_profile
+
+            voice_profile = load_voice_profile(args.voice_profile, ROOT)
+        activity_options = (args.job_db, args.job_actor_ref, args.job_session_ref, args.job_id)
+        if not args.enable_job_activity and any(value is not None for value in activity_options):
+            raise ValueError("invalid_local_web_options")
+        if args.enable_job_activity:
+            from apps.jarvis_api.job_activity_profile import JobActivityProfile
+
+            activity_profile = JobActivityProfile(
+                authorized=True, database_path=args.job_db, actor_ref=args.job_actor_ref,
+                session_ref=args.job_session_ref,
+                job_ids=tuple(args.job_id) if args.job_id is not None else (),
+            )
         configured = (args.model, args.credential_dir, args.profile_ref,
                       args.generative_timeout_seconds)
         if not args.enable_generative and any(value is not None for value in configured):
@@ -124,13 +151,21 @@ def main(argv=None) -> int:
         service = AnalysisService(runtime) if profile is None else AnalysisService(
             runtime, generative_profile=profile,
         )
-        server = create_server(service, args.port)
+        server_options = ({"job_activity_profile": activity_profile}
+                          if activity_profile is not None else {})
+        if voice_profile is not None:
+            server_options["voice_profile"] = voice_profile
+        server = create_server(service, args.port, **server_options)
         print(f"JARVIS LOCAL CORE: http://127.0.0.1:{server.server_port}/", flush=True)
         print(f"Pairing code (one use, 120s): {server.auth.pairing_secret}", flush=True)
         print(f"Retained runtime: .jarvis_runtime/web-live/{runtime.name}", flush=True)
         print("Local session only; no human identity, tools or operational effects.", flush=True)
         print("Generative complement: explicit per-ticket consent required."
               if profile is not None else "Generative complement: disabled.", flush=True)
+        print("Job activity: manual readonly summary of host-selected jobs."
+              if activity_profile is not None else "Job activity: disabled.", flush=True)
+        print("Local voice: configured; microphone and automatic speech require browser consent."
+              if voice_profile is not None else "Local voice: disabled.", flush=True)
         print("Ctrl+C stops the server; it does not undo canonical memory.", flush=True)
         server.serve_forever()
         return 0
@@ -141,6 +176,9 @@ def main(argv=None) -> int:
         return 2
     finally:
         if server is not None:
+            voice_service = getattr(server, "voice_service", None)
+            if voice_service is not None:
+                voice_service.close()
             server.auth.close()
         if service is not None:
             service.close()

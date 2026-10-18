@@ -24,7 +24,13 @@ JobStatus = Literal[
 ]
 FixtureOutcome = Literal["succeeded", "failed", "needs_decision"]
 CORE_TASK = "core:assist_only"
-_TASKS = {"fixture:success", "fixture:failure", "fixture:needs_decision", CORE_TASK}
+DURABLE_CORE_TASK = "core:durable_assist_only"
+CODE_FIXTURE_TASKS = frozenset(
+    "code-fixture:" + scenario for scenario in ("baseline", "candidate", "isolation", "timeout")
+)
+_TASKS = {"fixture:success", "fixture:failure", "fixture:needs_decision", CORE_TASK,
+          DURABLE_CORE_TASK,
+          *CODE_FIXTURE_TASKS}
 _REF = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.:-]{0,127}\Z")
 
 
@@ -86,6 +92,21 @@ class JobSpec:
             or not re.fullmatch(r"input-[a-f0-9]{64}", self.approved_step_ref)
         ):
             raise JobStoreError("invalid_core_binding")
+        if self.task_ref == DURABLE_CORE_TASK and (
+            self.max_attempts != 1
+            or self.responsibility_ref != "core-durable-task"
+            or not re.fullmatch(r"input-[a-f0-9]{64}", self.approved_step_ref)
+        ):
+            raise JobStoreError("invalid_durable_core_binding")
+        if self.task_ref in CODE_FIXTURE_TASKS and (
+            self.max_attempts != 1
+            or self.responsibility_ref != "code-fixture-pilot"
+            or not re.fullmatch(
+                "fixture-" + self.task_ref.split(":", 1)[1] + r"-[a-f0-9]{64}",
+                self.approved_step_ref,
+            )
+        ):
+            raise JobStoreError("invalid_code_fixture_binding")
 
 
 @dataclass(frozen=True)
@@ -142,7 +163,8 @@ class JobSnapshot:
 
     def telemetry(self) -> dict[str, object]:
         return {
-            "event": "job_state" if self.spec.task_ref == CORE_TASK else "fixture_job_state",
+            "event": "job_state"
+            if self.spec.task_ref in {CORE_TASK, DURABLE_CORE_TASK} else "fixture_job_state",
             "status": self.status,
             "version": self.version,
             "fencing": self.fencing,
@@ -150,7 +172,8 @@ class JobSnapshot:
             "max_attempts": self.spec.max_attempts,
             "lease_present": self.lease_until is not None,
             "last_outcome": self.last_outcome,
-            "evidence_mode": "metadata_ledger" if self.spec.task_ref == CORE_TASK else "fixture",
+            "evidence_mode": "metadata_ledger"
+            if self.spec.task_ref in {CORE_TASK, DURABLE_CORE_TASK} else "fixture",
             "action_authority": False,
             "automatic_execution": False,
         }
@@ -345,10 +368,14 @@ class SqliteJobStore:
             now = self._now()
             row = self._row(db, job_id, actor_ref, session_ref)
             self._cas(row, expected_version, now)
+            if row["task_ref"] == DURABLE_CORE_TASK:
+                raise JobStoreError("durable_core_api_required")
             if row["status"] not in {"registered", "running"}:
                 return None
-            # A started Core turn may already have canonical memory. Never replay it.
-            if row["task_ref"] == CORE_TASK and row["status"] == "running":
+            # Core may have canonical memory; Docker may have started an effect.
+            # Neither unfinished one-shot task is safe to replay after restart.
+            if (row["task_ref"] == CORE_TASK or row["task_ref"] in CODE_FIXTURE_TASKS
+                    ) and row["status"] == "running":
                 if now >= row["lease_until"]:
                     self._stop(db, job_id, "needs_decision", "needs_decision", now)
                 return None
@@ -401,6 +428,8 @@ class SqliteJobStore:
             now = self._now()
             row = self._row(db, claim.job_id, claim.actor_ref, claim.session_ref)
             self._cas(row, claim.version, now)
+            if row["task_ref"] == DURABLE_CORE_TASK:
+                raise JobStoreError("durable_core_api_required")
             if (
                 row["status"] != "running"
                 or row["fencing"] != claim.fencing
@@ -439,12 +468,14 @@ class SqliteJobStore:
     def pause(
         self, job_id: str, *, actor_ref: str, session_ref: str, expected_version: int
     ) -> JobSnapshot:
-        """Revoke a pilot claim; no resume grant or interruption of an active Core."""
+        """Revoke a one-shot pilot claim, never resume or undo an active effect."""
         with self._connection(write=True) as db:
             now = self._now()
             row = self._row(db, job_id, actor_ref, session_ref)
             self._cas(row, expected_version, now)
-            if row["task_ref"] != CORE_TASK or row["status"] not in {"registered", "running"}:
+            if (row["task_ref"] not in {CORE_TASK, DURABLE_CORE_TASK}
+                    and row["task_ref"] not in CODE_FIXTURE_TASKS
+                    ) or row["status"] not in {"registered", "running"}:
                 raise JobStoreError("invalid_pause_state")
             self._stop(db, job_id, "needs_decision", "needs_decision", now)
             return self._snapshot(self._row(db, job_id, actor_ref, session_ref))
@@ -468,8 +499,12 @@ class SqliteJobStore:
             now = self._now()
             row = self._row(db, job_id, actor_ref, session_ref)
             self._cas(row, expected_version, now)
+            if row["task_ref"] == DURABLE_CORE_TASK:
+                raise JobStoreError("durable_core_replay_refused")
             if row["task_ref"] == CORE_TASK:
                 raise JobStoreError("core_replay_refused")
+            if row["task_ref"] in CODE_FIXTURE_TASKS:
+                raise JobStoreError("code_fixture_replay_refused")
             if row["status"] != "failed":
                 raise JobStoreError("invalid_retry_state")
             if row["attempts"] >= row["max_attempts"]:

@@ -12,7 +12,9 @@ const serviceErrors = new Set(["analysis_invalid", "analysis_busy", "analysis_ti
 const httpErrors = new Set(["auth_unavailable", "pairing_unavailable", "pairing_rate_limited",
   "pairing_refused", "session_refused", "csrf_refused", "analysis_invalid", "analysis_busy",
   "analysis_ticket_refused", "analysis_closed", "request_invalid", "request_too_large",
-  "origin_refused", "client_refused", "service_unavailable", "asset_unavailable", "server_busy", "generative_unavailable"]);
+  "origin_refused", "client_refused", "service_unavailable", "asset_unavailable", "server_busy", "generative_unavailable",
+  "job_activity_disabled", "job_activity_unavailable", "voice_disabled", "voice_busy", "voice_invalid",
+  "voice_unavailable", "voice_cancelled", "voice_expired", "voice_ticket_refused"]);
 const clientErrors = new Set(["invalid_response", "network_error", "session_expired", "foreign_session",
   "invalid_query", "invalid_secret", "wait_stopped", "wait_timeout", "not_paired", "request_busy", "consent_required"]);
 const fail = (code) => { throw new Error(code); };
@@ -120,10 +122,10 @@ function decodeJson(source) {
   try { value(); space(); if (offset !== source.length) fail("invalid_response"); return JSON.parse(source); }
   catch { fail("invalid_response"); }
 }
-async function responseJson(response) {
+async function responseJson(response, maxBytes = 2097152) {
   if (response.redirected || response.type === "opaque" || response.type === "opaqueredirect") fail("invalid_response");
   if (!/^application\/json(?:\s*;\s*charset=utf-8)?$/i.test(response.headers?.get("content-type") ?? "")) fail("invalid_response");
-  const maxBytes = 2097152; // Includes escaped surrogate pairs for the bounded canonical final.
+  // Default includes escaped surrogate pairs for the bounded canonical final.
   const length = response.headers?.get("content-length");
   if (length !== null && length !== undefined && (!/^\d+$/.test(length) || Number(length) > maxBytes)) fail("invalid_response");
   let source;
@@ -155,11 +157,13 @@ export function createLiveController({ transport = globalThis.fetch, onState = (
     !Number.isFinite(pollIntervalMs) || pollIntervalMs < 0 || !Number.isFinite(waitTimeoutMs) ||
     waitTimeoutMs <= 0 || waitTimeoutMs > 30000) throw new TypeError("invalid_live_options");
   let generation = 0, auth = null, expires = 0, abort = null, expectedQuery = null, expectedSchema = null, expiryTimer = null;
+  let authLifetime = 0;
   let state = { status: "disconnected", sessionRef: null, ticket: null, result: null, errorCode: null };
   const getState = () => Object.freeze({ ...state,
     result: state.result ? Object.freeze({ ...state.result }) : null });
   const publish = () => { try { onState(getState()); } catch { /* No authority in rendering. */ } };
   const invalidate = (status = "disconnected", errorCode = null) => {
+    authLifetime++;
     generation++; abort?.abort(); abort = null; clearTimeout(expiryTimer); expiryTimer = null;
     auth = null; expires = 0; expectedQuery = null; expectedSchema = null;
     state = { status, sessionRef: null, ticket: null, result: null, errorCode }; publish();
@@ -174,7 +178,7 @@ export function createLiveController({ transport = globalThis.fetch, onState = (
     if (csrf && path !== "/api/pair" && path !== "/api/session") headers["X-Jarvis-CSRF"] = csrf;
     const response = await transport(path, { method, headers, mode: "same-origin", credentials: "same-origin",
       cache: "no-store", redirect: "error", signal, ...(body === undefined ? {} : { body: JSON.stringify(body) }) });
-    const value = await responseJson(response);
+    const value = await responseJson(response, path === "/api/job-activity" ? 8192 : 2097152);
     if (!response.ok) {
       if (!exact(value, ["error_code"]) || !httpErrors.has(value.error_code)) fail("invalid_response");
       fail(value.error_code);
@@ -210,6 +214,7 @@ export function createLiveController({ transport = globalThis.fetch, onState = (
     try { next = session(value); }
     catch { invalidate("disconnected", "invalid_response"); fail("invalid_response"); }
     if (auth && next.session_ref !== auth.session_ref) { invalidate("disconnected", "foreign_session"); fail("foreign_session"); }
+    if (!auth || next.csrf_token !== auth.csrf_token) authLifetime++;
     auth = { ...next }; expires = now() + next.expires_in_seconds * 1000;
     clearTimeout(expiryTimer);
     expiryTimer = setTimeout(() => invalidate("disconnected", "session_expired"), next.expires_in_seconds * 1000);
@@ -310,5 +315,95 @@ export function createLiveController({ transport = globalThis.fetch, onState = (
     return getState();
   };
   const pageHide = () => { invalidate(); return getState(); };
-  return Object.freeze({ initialize, pair, submit, submitGenerative, recover, stopWaiting, disconnect, pageHide, getState });
+  const readJobActivity = async ({ signal } = {}) => {
+    let lifetime = null;
+    try {
+      paired();
+      lifetime = authLifetime;
+      const expectedSession = auth.session_ref, expectedCsrf = auth.csrf_token;
+      const { value, status } = await request("/api/job-activity", "GET", undefined, signal);
+      // Activity has independent waiting state and must not change a conversation
+      // ticket, final or consent. Refuse a late response after session retirement.
+      paired();
+      if (authLifetime !== lifetime || auth.session_ref !== expectedSession ||
+        auth.csrf_token !== expectedCsrf) fail("foreign_session");
+      if (status !== 200 || !exact(value, ["schema_version", "session_ref", "activity"]) ||
+        value.schema_version !== "jarvis-local-job-activity-v1" ||
+        value.session_ref !== expectedSession) fail("invalid_response");
+      return value; // The activity panel validates the exact bounded inner schema.
+    } catch (error) {
+      const code = httpErrors.has(error?.message) || clientErrors.has(error?.message) ? error.message : "network_error";
+      if (lifetime === authLifetime && auth &&
+        ["session_refused", "csrf_refused", "foreign_session"].includes(code)) invalidate("disconnected", code);
+      throw new Error(code);
+    }
+  };
+  const voiceRequest = async (path, { method = "GET", body, headers: supplied = {}, signal,
+    binary = false } = {}) => {
+    const lifetime = authLifetime;
+    try {
+      paired();
+      if (signal?.aborted) fail("voice_cancelled");
+      const expectedSession = auth.session_ref, csrf = auth.csrf_token;
+      const isCapture = path === "/api/voice/transcriptions";
+      const validGet = method === "GET" && (path === "/api/voice/config" ||
+        /^\/api\/voice\/(?:jobs|audio)\/voice-job-[a-f0-9]{32}$/.test(path));
+      const validPost = method === "POST" && ["/api/voice/transcriptions", "/api/voice/speech",
+        "/api/voice/cancel"].includes(path);
+      if ((!validGet && !validPost) || (validGet && body !== undefined) ||
+          binary !== /^\/api\/voice\/audio\//.test(path)) fail("voice_invalid");
+      if (isCapture && (!(body instanceof ArrayBuffer) || new DataView(body).byteLength > 6 * 1024 * 1024 ||
+          !exact(supplied, ["Content-Type", "X-Jarvis-Voice-Consent"]) ||
+          supplied["Content-Type"] !== "audio/wav" || supplied["X-Jarvis-Voice-Consent"] !== "local-audio-v1"))
+        fail("voice_invalid");
+      if (!isCapture && (Object.keys(supplied).length ||
+          (method === "POST" && !(path.endsWith("/speech") ?
+            exact(body, ["ticket", "consent"]) && ticketPattern.test(body.ticket) && body.consent === true :
+            exact(body, ["job_id"]) && /^voice-job-[a-f0-9]{32}$/.test(body.job_id))))) fail("voice_invalid");
+      const headers = { "X-Jarvis-Client": "local-web-v1", "X-Jarvis-CSRF": csrf,
+        ...(body === undefined ? {} : { "Content-Type": isCapture ? "audio/wav" : "application/json" }),
+        ...supplied };
+      const response = await transport(path, { method, headers, mode: "same-origin", credentials: "same-origin",
+        cache: "no-store", redirect: "error", signal,
+        ...(body === undefined ? {} : { body: isCapture ? body : JSON.stringify(body) }) });
+      let value;
+      if (!binary || !response.ok) value = await responseJson(response, 32768);
+      else {
+        if (response.redirected || ["opaque", "opaqueredirect"].includes(response.type) ||
+            response.headers?.get("content-type") !== "audio/wav") fail("invalid_response");
+        const length = response.headers?.get("content-length"), maximum = 32 * 1024 * 1024;
+        if (!/^\d+$/.test(length ?? "") || Number(length) > maximum || Number(length) < 46 ||
+            !response.body?.getReader) fail("invalid_response");
+        const reader = response.body.getReader(), chunks = []; let size = 0;
+        try {
+          while (true) {
+            const item = await reader.read(); if (item.done) break;
+            size += item.value.byteLength;
+            if (signal?.aborted || size > maximum) fail("invalid_response");
+            chunks.push(item.value);
+          }
+        } finally { try { await reader.cancel(); } catch {} }
+        if (size !== Number(length)) fail("invalid_response");
+        const bytes = new Uint8Array(size); let offset = 0;
+        for (const chunk of chunks) { bytes.set(chunk, offset); offset += chunk.byteLength; }
+        value = bytes.buffer;
+      }
+      paired();
+      if (signal?.aborted) fail("voice_cancelled");
+      if (authLifetime !== lifetime || auth.session_ref !== expectedSession ||
+          auth.csrf_token !== csrf) fail("foreign_session");
+      if (!response.ok) {
+        if (!exact(value, ["error_code"]) || !httpErrors.has(value.error_code)) fail("invalid_response");
+        fail(value.error_code);
+      }
+      return { status: response.status, value };
+    } catch (error) {
+      const code = httpErrors.has(error?.message) || clientErrors.has(error?.message) ? error.message : "network_error";
+      if (lifetime === authLifetime && auth &&
+          ["session_refused", "csrf_refused", "foreign_session"].includes(code)) invalidate("disconnected", code);
+      throw new Error(code);
+    }
+  };
+  return Object.freeze({ initialize, pair, submit, submitGenerative, recover, stopWaiting, disconnect, pageHide,
+    getState, readJobActivity, voiceRequest });
 }

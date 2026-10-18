@@ -143,6 +143,160 @@ Escalar ao operador quando:
 
 ## 4. Fila ativa
 
+### Recorte integrado Web - conversa por voz local (2026-10-17)
+
+- Estado: in_progress, WIP integrado1; ponte experimental integrada/gate aprovado,
+  aceite funcional real ainda parcial. Pedido explicito do operador.
+- Micro_objetivo: microfone/ASRlocal/revisao/compositor e fala local da final
+  canonica exata, com amplitude real na esfera; defaultoff e autorizacoes separadas.
+- Ownership: worker captura/cliente/testes; workers pesquisa provedores/VoiceStudio
+  e testes/revisao disjuntos; root HTTP/Core/audit/UI/lifecycle/provas/gate/docs.
+- Evidencia parcial: servico135/perfil95/regressaoHTTP/Core/Web256 e JS1282 passaram;
+  browser reconhece perfil real semcaptura; TTSreal unico nao concluiu em300s,
+  sempartes/reproducao; timeout preservou Core/texto e nao repetiu inferencia.
+- ASRreal separado: Whisper Small transcreveu10s em27,81s,160charsnaoconfirmados,
+  semcloud/Core; nao prova dispositivo fisico ou fluidez.
+- Pos-correcao:422 focados e1282 JS passaram; standard Windows exit0:
+  10704 passed/121 skipped/zero falhas,25 hashes preservados. Primeiro standard
+  teve5 falhas de cleanup de startup corrigidas sem editar testes antigos.
+- Browser: autoplay Core/SQLite + tomfixture, esfera0/0,517/stop0 e recuperacao
+  semreplay; desktop1280/mobile390 semoverflow/erros. Nao e TTS Qwen real.
+- Pendencias: prova fisica do microfone, diagnostico/latencia de carga/geracao
+  TTS, latencia ASR e aceite vocal. Sem novas rotas de provedores, OAuth,
+  commit/push/merge. Nao e conversa continua/duplex homologada.
+- Runbook: docs/operations/local-web-voice-conversation.md; estudos vinculados nele.
+- MB236 blocked/ultimo MB235 e estados macro mantidos.
+- Continuidade autorizada2026-10-18, mesmo WIP1: worker diagnostico TTS privado
+  (worker/lab_batch/testes proprios); worker adapter Chat Completions local
+  (arquivos novos de inference/testes proprios); worker estudo de fluidez
+  (relatorio novo). Root integra, executa provas/modelos/testes/gate e atualiza
+  docs operacionais. Sem downloads, cloud de voz, contas/OAuth ou publicacao.
+- Primeiro recorte de codigo18/10 verificado, aceite funcional parcial: diagnostico e reuso Qwen opt-in,
+  ASR conversation/beam1 opcional (quality default), adapter HTTP local textual
+  isolado e estudo de fluidez.658 focados/1skip; standard Windows exit0:
+  11035 passed/122 skipped/zero falhas/errors,129 hashes preservados.
+  Qwen curto legado44,14s/2,08saudio; novo opt-in120,03s timeout apos imports
+  89,281s, sem parte. ASR duas campanhas pararam quality/cleanupWinError32;
+  sem A/B valido. Nao promove conversa fluida/modelo local Web/CLI ou macrostatus.
+  Repro stdlib confirmou corrida launcher/child+unlinkWinError32/saida16ms depois;
+  nao prova causa exata do ASR. JS1282/quick/standard passaram.
+  Revisao Ollama/Go por fonte pinada identificou gap HTTPchunked nonstream;
+  decoder bounded fica proximo slice antes do perfil/modeloreal, semmutar
+  codigo congelado nem anunciar Ollama plug-and-play.
+  Runbook: docs/operations/voice-latency-diagnostics-2026-10-18.md.
+- Continuidade seguinte autorizada18/10, mesmo WIP1 integrado: tres pacotes
+  disjuntos. Worker voz possui lab/worker/asr_worker/transcribe/lab_batch e
+  novo helper/testes de lifecycle; worker HTTP possui local_chat_transport e
+  novos testes chunked; worker CLI possui model_tool_loop_cli e nova composicao
+  local/testes CLI. Root possui voice_profile, integracao, testes/processos e
+  docs/gates. Sem novos modelos/downloads, conta/OAuth, microfone, commit/push.
+  Aceites: confirmar worker proprio antes de cleanup, framing chunked limitado
+  sem SSE/partial; selecao CLI explicita sem falsear conta SIWC ou mudar Web.
+  Provas stdlib/HTTP/Core/SQLite locais; somente root executa workloads.
+  Implementados guard ASR Windows/retencao incerta, chunked bounded e CLI local
+  explicita com Core/readback/acknowledgement de egress. Sem TTS residente ou
+  LLMWeb novo. Bateria fresca475 passed/zero falhas; quick/diffcheck passaram.
+  138 arquivos de codigo/testes/config congelados; standard interrompido
+  intencionalmente em~25% para instalar Ollama a pedido do operador, pendente,
+  WIP1 funcional e MB236 mantidos. Evidencia/limites:
+  docs/operations/local-model-cli-and-asr-lifecycle-2026-10-18.md.
+  Host preparado: Ollama0.40.5/scopeuser/cloudoff/listener127.0.0.1:11434;
+  versao/metadados conferidos, zero modelos instalados/carregados. Sem conta,
+  download de pesos, inferencia, selecao Web ou promocao de modelo real.
+
+### Recorte integrado Web - presenca cinematografica (2026-10-17)
+
+- Estado: done no escopo visual local, direcao visual explicitamente aprovada.
+- Micro_objetivo: aplicar esfera volumetrica de particulas e paineis
+  holograficos na fixture e Web pareada, preservando fluxos de conversa/Core.
+- Ownership: renderer/fixture, ponte WAV live e contratos/revisao em workers
+  disjuntos; root integracao/CSS/lifecycle/browser/validacao/docs.
+- Aceites: amplitude real pelo player existente, silencio/stop sem fala falsa,
+  pausa/reduced-motion, layout refluivel, nenhum microfone/upload/TTS automatico,
+  consentimento/pareamento/tickets/final integral intactos e CSP inalterada.
+- Evidencia:1186 JS e82 Python focados passaram; browser real confirmou
+  RMS0/0,179/stop0, Core nativo/final integral e320/390/1280 sem overflow.
+  Composicao refinada para referencia direta; primeiro standard10415/121 passou,
+  e novo gate desta revisao passou exit0:10418 aprovados/121 ignorados, zero
+  falhas/errors e16 hashes de codigo/testes preservados.
+- Nao promove voz automatica/qualidade de clone/execucao ou estado macro.
+  MB236 blocked eultimo MB235 mantidos; nenhum commit/push/merge.
+- Runbook: docs/operations/cinematic-presence-web.md.
+
+### Recorte integrado F01/F04 - missoes e comparacao do harness (2026-10-17)
+
+- Estado: done no escopo local do protocolo/runner; campanha util com modelo
+  real e tarefas consentidas ainda pendente. Fila unica/WIP maximo1 mantidos.
+- Objetivo: ampliar as tres tarefas existentes para25 missoes representativas,
+  com grader independente e comparador pareado que nao confunda infraestrutura,
+  controle sintetico, Core nativo e modelo real. Nao e reivindicacao SOTA.
+- Ownership disjunto: worker corpus/grader/testes; worker campanha/metricas/
+  testes; worker port de referencia modelo one-shot/testes; root porta Core,
+  CLI, E2E, docs, revisao e verificacao central. Nenhum worker executa processos.
+- Reuso: evals/operator_tasks e contratos Binding/ExecutionRequest/Result
+  existentes; V1/digest e defaults intactos. Nenhuma dependencia central nova.
+- Aceites:25 briefs diversos, fontes sinteticas explicitas, oracles fora do
+  candidato, efeitos exigem evidencia host-owned, comparacao controla modelo/
+  ambiente/budget/capabilities e expoe lacunas/nao executados. Repeticoes,
+  counterbalance, limites, falha/cancelamento e saida sem conteudo privado.
+  - Modelo escolhido: gpt-6.1-sol, mesma conta OAuth e teto10 explicitamente
+    autorizados para piloto sintetico. Uma tentativa parou no catalogo por
+    siwc_credential_expired; zero concluida, sem refresh/retry/fallback pago.
+    Nao estender essa autorizacao para outra tentativa ou campanha completa.
+- Validacao: contratos/unitarios e fluxo Core/SQLite/CLI afetado, controles
+  adversariais e gate standard. Evidencia real requer port/modelo realmente
+  executados; fontes publicas dev/probe nao sao holdout secreto.
+- Limites: nao instalar/executar Hermes ou outro agente externo implicitamente;
+  baseline minimo nao sera rotulado Hermes. MB236/estados macro preservados.
+  Sem commit/push/merge/publicacao. Desativacao: nao invocar novos comandos.
+  - Evidencia:272 focados passaram; baseline38despachos/36Core/zero produto,
+    seis missoes de efeito unsupported, inclusive no denominador. Gargalo no
+    adapter/roteamento lexical ao receber protocolo estruturado; nao medir
+    capacidade geral por esse zero. Standard Windows exit0:10403 passed/
+    121 skipped/zero falhas/errors,10524 casos e15 hashes preservados. Runbook:
+    docs/operations/harness-mission-campaign.md.
+
+### Recorte integrado F05 - retomada duravel nativa (2026-10-16)
+
+- Estado: done no recorte local opt-in; inicio16/fechamento17, um WIP integrado.
+- Micro_objetivo: persistir input assist-only e retomar por ID; transferir
+  somente dispatch nao iniciado e recuperar final canonica sem chamar Core.
+- Ownership: worker store/checkpoint/testes; worker recibo readonly/testes;
+  worker E2E/crashes reais; integrador runner/CLI/docs/gate e revisao cruzada.
+- Aceites: um input imutavel, CAS/fencing, marcador anterior ao Core,
+  reserva global request intacta, sem replay incerto; prazo, scope, cancel e
+  pausa sticky; resultado canonico unico/revalidado apos dois reinicios.
+- Validacao: bateria slice e Core/SQLite reais, tres mortes reais de processo,
+  regressao dos consumidores anteriores e gate standard em primeiro plano.
+  Regressao final612 passed/6 skipped/zero falhas; smoke CLI em tres processos
+  passou. Standard Windows exit0:10131 passed/121 skipped/10252 casos, zero
+  falhas/errors;12 hashes preservados. Falhas/REDs/correcoes no runbook.
+- Limites: somente Core nativo assist-only; nao retoma modelo/ferramenta,
+  efeitos externos ou scheduler. Sem OAuth/conta/publicacao. F05 foundation,
+  MB236 blocked/ultimo MB235 permanecem. Sem dependencia nova central.
+- Evidencia/rollback: docs/operations/durable-native-task-resume.md; nao invocar
+  runner/CLI desativa, sem apagar memoria, ledger ou reservas nativas.
+
+### Recorte integrado F01/F03 - loop modelo/Core/ferramenta (2026-10-16)
+
+- Estado: done no recorte local opt-in; um unico slice integrado, sem depender do MB236.
+- Direcao explicita do operador apos segunda rodada de estudo com REA:
+  modelo -> Core -> ferramenta -> resultado -> continuacao -> sintese canonica.
+- Primeiro escopo: leitor readonly de ate tres relatorios locais selecionados
+  pelo host; sem caminhos livres do modelo, rede, shell, credenciais ou escrita.
+- Ownership: worker harness em shared/model_tool_loop.py e unitarios; worker
+  adapter em local_report_reader.py e unitarios; worker testes E2E Core;
+  coordenador integra Orchestrator/Synthesis, CLI, docs e verificacao final.
+- Aceites: autorizacao por chamada/fingerprint antes do I/O, BLOCK/DEFER sem
+  inferencia/leitura, budget/cancel/drift, observacao correlacionada, continuacao
+  com citacoes exatas, final unica persistida e anexo fora de Planning.
+- MB236 continua blocked; nada desta rodada renova consentimento de conta/modelo.
+- Validacao: 287 focados/3 skips, 428 regressao ampliada/3 skips; gate standard
+  Windows exit 0, 9972 passed/121 skipped/zero falhas/errors e 12 hashes preservados.
+  As 13 falhas iniciais de compatibilidade da sintese foram corrigidas sem
+  alterar os testes legados. Evidencias: docs/operations/model-tool-loop-core.md.
+- Sem promocao macro, scheduler, replay apos crash, commit/push ou merge.
+
 ### MB221 - transporte de inferencia, revisao de voz e tarefas readonly
 
 - status: done
@@ -820,6 +974,213 @@ Priorizar esse impedimento concreto antes de outra camada de apresentacao.
 ### MB236 - homologacao controlada com conta OAuth e modelo reais
 
 - status: blocked
+- pacotes_independentes_20261014 (WIP integrado 1; MB236 nao reaberto):
+  - F02/deadline: worker exclusivo em readonly_repository.py,
+    memory_retention_cli.py e novos testes de deadline. Prazo monotonic unico
+    opt-in aplicado a cada conexao/VM SQLite e lock wait limitado ao restante;
+    defaults dos leitores existentes preservados. Recusa fixa sem resultado
+    parcial, conexoes fechadas, zero mutacao da memoria canonica.
+  - F05/F11/code-fixture-job: worker exclusivo em job_service/store.py,
+    worker.py, novo code_fixture_job.py e testes exclusivos. Somente quatro
+    fixtures Docker existentes, task/binding fixos e uma tentativa explicita;
+    reaproveitar CAS/fencing do ledger, nunca inventar outro ledger. Claim
+    abandonado nao autoriza replay; resultado/cleanup incertos requerem revisao.
+    Sem codigo arbitrario, scheduler, grants, Core/modelo ou patch aplicado.
+  - Coordenador: composicao/E2E com SQLite e Docker proprios, docs e gate.
+    Revisor readonly: deadlines, compatibilidade e fencing/no-replay; nao
+    editar arquivos dos workers. Runtime compartilhado fora desses seams
+    preservado. Sem conta, inferencia, commit/push/merge ou capability promovida.
+  - Aceite: testes RED antes da implementacao, casos positivos/invalidos,
+    deadline durante SQL real e lock, restart/no-replay/failure do job e
+    limpeza fisica Docker opt-in; suite afetada e standard integrado.
+    Rollback: nao invocar os novos caminhos opt-in. Mecanica local/gate aprovados,
+    confiabilidade CLI inconclusiva; nenhuma promocao macro por documentacao.
+  - Evidencia ate agora:121 Code hardening/compatibilidade e51 memoria serial
+    fresca passaram;4 jobs Docker reais/cleanup/restart passaram. Primeiro
+    standard9801 casos:9674 passed/119 skipped/8 MCP failed/zero errors.
+    Isolados9 passaram; repro controlado revelou falsa expectativa de drift
+    antes do Core, nao causa original capturada. Harness apenas2testes recebe
+    clock de entrada isolado e marcadores de efetiva mutacao/captura; novo
+    corpus2expiracoes mantem recusa real anteshandle. Runtime intacto,
+    176 focados passaram. Novo standard oficial Windows com fail-fast(-x) sem
+    mudar selecao/skips/budgets terminou exit0/9803 casos:9684 passed/119
+    skipped/zero failed/errors;13 hashes preservados. CLI extra recusou
+    candidate/needs_decision; outro job diagnostico passou, sem mudar runtime.
+    Causa original nao capturada/confiabilidade inconclusiva; nao promover
+    por repeticao. Runbook memory-deadline-and-code-fixture-jobs.md.
+- pacotes_independentes_memoria_fontes_20261013 (WIP integrado 1):
+  - F02/retention-review: novo memory_service/retention_review.py e testes
+    exclusivos por worker. Plano readonly sobre StoredTurn/RecallScope e
+    lifecycle metadata explicita, com cutoff de revisao bounded, fonte/hash,
+    isolamento, cancelamento e nenhum DELETE/archive/consolidacao/revoke.
+    Nao cria outra memoria, politica canonica ou autoridade de aplicacao.
+  - F03/source-comparison: novo knowledge_service/source_comparison.py e
+    testes exclusivos por outro worker. Compara trechos exatos indicados
+    pelo operador em fontes locais, agrupa por topic_ref, sinaliza diferencas
+    textuais/duplicacao/freshness declarada/insuficiencia, sem inferir verdade,
+    resolver conflito semanticamente, fetch ou promocao de fonte.
+  - Coordenador: novos memory_retention_cli.py/source_comparison_cli.py em
+    apps/jarvis_console, E2E readonly de SQLite canonico/CLI e fixtures JSON,
+    docs/gate. Terceiro worker revisa fronteiras sem editar compartilhados.
+    Engines, service/repositories, shared/contracts/registry e CLI central
+    preservados. Sem memoria escrita, grant, conta, modelo ou efeito externo.
+  - Aceite: unitarios/adversariais e E2E via interfaces reais; metadados por
+    padrao, sem conteudo/identidades; dado declarado nunca autentica origem.
+    Erro/cancel/tamper descarta parcial; gate standard integrado. Rollback:
+    nao invocar modulos opt-in. Execucao real de retencao continua pendente.
+  - F11/Linux: primeiro preflight recusou backend ausente. Operador informou
+    Docker ativo; novo preflight confirmou linux/amd64 e imagem existente
+    sha256:06227a71f8091cae6663926523eeab05c4b5f976ffcc8a293854b38a1d00c7ac.
+    Recorte adicional opt-in: fixture aritmetica fixa em processo Python real
+    de container non-root/readonly/network-none/caps-drop/sem host mounts,
+    imagem pinada/pull-never, limites e cleanup somente do container proprio.
+    Worker exclusivo: tools/run_code_fixture_linux.py e testes novos; nenhuma
+    fonte/cmd/image arbitraria, modelo, repo humano ou aplicacao de patch.
+    Coordenador executa provas reais e gate; F11 continua sem engine generico
+    promovido. Sem build/download/repair Docker ou containers de terceiros.
+    MB236 blocked sem nova inferencia/refresh; sem commit/push/merge.
+  - Resultado local:120 integrados F02/F03/CLIs +1 historico antigo misto e43
+    unitarios F11 passaram. Prova fisica Docker4 cenarios passou, cleanup
+    verificado, com baseline3 falhas esperadas/candidato3 acertos/isolamento5/
+    timeout. Primeira campanha recusada antescreate (Volumes opcional ausente)
+    e preflights inconclusivos nao contam como prova; causa comprovada corrigida.
+    Implementador corrigiu interrupcao/spawn incerto e falso timeout apos revisao.
+    Primeiro standard9701 casos/3falhas MCP: positivos expirados e drift sem
+    reason capturado, isolados3passaram. Ajustes apenas de harness de teste,
+    com clock de entrada isolado/marker de mutacao real e budgets permitidos;
+    runtime/expiry/asyncio/UTC intactos.174 focados passaram.15 hashes congelados;
+    Reexecucao standard Windows exit0/9701 casos:9586 passed/115 skipped,
+    zero failed/errors;15 hashes identicos apos gate, Linux4 fisicos separado.
+    Skips nao validam modelo, voz, plataforma ampla ou engine Code. Runbook:
+    docs/operations/local-retention-source-comparison-and-code-fixture.md.
+- pacotes_paralelos_20261013 (continuidade das frentes existentes; WIP integrado 1):
+  - F05/backend: profile local opt-in para resumo readonly de 1..32 jobs
+    previamente selecionados pelo host, reutilizando o leitor do ledger.
+    Worker exclusivo: apps/jarvis_api/job_activity_profile.py e testes novos.
+    Sem abrir banco na configuracao, criar/migrar/reconciliar ou expor refs.
+  - F06/painel: modulo Web exclusivo de atividade manual, estados limitados,
+    validacao estrita e limpeza ao desconectar/expirar/trocar sessao. Worker
+    exclusivo: live-job-activity.mjs e testes novos; coordenador integra DOM,
+    controller, assets e endpoint autenticado/CSRF da Web local existente.
+  - aceite: SQLite real -> HTTP pareado -> painel; negar sem pareamento,
+    CSRF, configuracao ou scope; fence depois da leitura; nenhuma chamada
+    Core/modelo, ticket, polling automatico, percentual ficticio ou efeito.
+    Scope do ledger e selecionado pelo host, nao identidade da sessao Web.
+    Baterias focadas/negativas, Node e gate standard integrado; docs e handoff
+    pelo coordenador. Rollback: omitir configuracao opt-in do host.
+  - MB236 e F13 permanecem com seus limites atuais: nenhuma inferencia nova,
+    refresh, dispatch MCP governado, servidor terceiro ou absorcao do REA.
+    Sem commit/push/merge ou promocao de capability implicitos.
+- resultado_pacotes_20261013: profile/painel/HTTP integrados;259 Python e89
+  Node novos passaram,329 consumidores de inventario/MCP e revisao207 Node
+  aprovados (baterias sobrepostas). Browser IAB com ledger proprio sintetico:
+  consulta manual/verificacao/reload/limpeza ao desconectar e zero erros.
+  Corrida de sessao identificada por revisor e corrigida com lifetime separado.
+  Nenhum Core/modelo/ticket/efeito disparado pela atividade. Primeiro standard
+  interrompido antes do resultado final;9533 casos coletados. Reexecucao completa
+  pelo terminal oficial aprovada:9533 casos/9422 passed/111 skipped/zero falhas,
+  exit0, contagens da coleta/marcadores -qq. Codex Process Jobs indisponivel
+  em win32, exit1/nenhum job criado. Pacotes validados localmente, nao fechamento
+  MB236/promocao ou nova inferencia;13 hashes runtime/corpus preservados apos
+  metadados,329 consumidores inventario/MCP finais passaram; quick/diff-check.
+- rodada_autorizada_20261012: operador autorizou corrigir fixtures Linux,
+  sondagem unica adicional gpt-6-astra/pergunta exata com leitura limitada do
+  corpo recusado apenas para diagnostico e frentes independentes multiagentes.
+  Root detem conta/POST unico/docs/gate; sem commit/push/merge implicitos.
+- sondagem_limitada_20261012: unica tentativa adicional executada; sessao
+  expirada renovada uma vez, mesma conta/plan scope. HTTP200/CT ausente/TE
+  chunked/parser sem defeitos; read1 unico416/4096 bytes com prefixo SSE
+  aparente nao validado, sem corpo bruto guardado/aceito. Guard intacto e
+  modelo recusado; browser proof falhou/nao repetido, instancia parada.
+  Export readonly validou unico turno nativo2635/21 eventos/ALLOW/rejected/
+  inference_failed/analysis0. Origem exata nao comprovada; MB236 blocked.
+- pacotes_paralelos_20261012 (desenvolvimento isolado; WIP integrado 1):
+  - T03/Linux: corrigir fixtures absolutas POSIX e restaurar Path antes de
+    assertions/reporting em tests/unit/test_transcript_tts_options.py; manter
+    validacao estrita de caminhos e provar Windows/Linux sem ocultar falhas.
+  - F13/readiness-Core: novo modulo opt-in readiness_mcp_pilot.py, testes
+    exclusivos e runbook proprio. Consumir servidor fixo MB234, validar binding,
+    projetar somente campos enumerados/contagens/hash, governanca/Memory/final
+    Core real. Texto autoral nao vira instrucao, grant ou fonte externa; chamada
+    MCP anterior ao Core explicitamente nao governada pelo Core. Cancelamento,
+    origem/tamper e restart testados; sem mexer nos contratos/engines/CLI central.
+  - F05/activity: novo modulo job_activity_cli.py/testes/runbook exclusivos;
+    resumo readonly do ledger existente por principal/sessao autorizados,
+    estados/progresso derivado sem conteudo privado, sem init/migrate/claim/
+    retry/notificacao/worker. Validar ledger SQLite real, isolamento, restart e
+    ausencia de escrita. Nao equivale a executor real ou integracao Web.
+  - aceite dos pacotes: baterias locais/E2E e standard global pelo integrador;
+    rollback nao invocar modulos novos. Sem dependencia central, credenciais
+    compartilhadas, grants, efeitos externos ou capability promovida.
+- resultado_pacotes_20261012: F05 atividade readonly71, F13 piloto160 e T03
+  corpusvoz512 passaram; reviews adversariais corrigiram memoria/sujeito/
+  eventos e pipes reais. Standard Windows9303 passed/111 skipped/9414 casos;
+  Linux9185 passed/239 skipped/9424 casos, zero falhas, exit0. Contagens -qq
+  derivadas dos marcadores;14 hashes runtime/corpus intactos apos gates.
+  Linux corrigiu adicionalmente archiveDockerfile exato e bootstrap ROOT de
+  dois filhos -I SIWC (somente testes), sem relaxar guards. Runner32/storage88
+  focados nos dois SO; nenhum skip novo. F05/F13 permanecem slices isolados,
+  nao executor/notificacao/dispatch MCP governado ou promocao. MB236 blocked,
+  ultimo integrado MB235. Runbook parallel-wave-readiness-activity-and-linux.md.
+- origem_http_20261012: investigacao nao comprovou defeito local corrigivel.
+  Runtime/corpus inalterados e142 regressoes HTTP/TLS/Core/Memory passaram.
+  Uma nova tentativa unica autorizada gpt-6-astra/pergunta exata em composicao
+  diagnostica instrumentada, HTTPS real/Core/Memory:200/CT ausente/TE chunked,
+  parser sem defeitos; sinais CF presentes/API ausentes, TLS verificado com
+  issuer conhecido/peer publico. Compativel com resposta de borda, nao prova
+  componente responsavel, WAF/cache/quota. Guard nao relaxado, corpo nao lido,
+  zero refresh/retry/fallback; final nativa2635 exata ao export/GET/reload,
+  stores retidos. Nao homologa modelo; nova inferencia requer nova autorizacao.
+  PR-1 docs revisado sem novo bloqueador identificado no diff, CI vermelho
+  preexistente reproduzido em Docker isolado (fixture Windows em POSIX/Path
+  global quebra reporter). Correcao TTS separada, nenhum merge/push/review escrito.
+  Runbook real-oauth-acceptance.md e relatorio pr-1-documentation-review-2026-10-12.md.
+- parsing_enquadramento_20261012: operador autorizou seis observacoes host
+  opt-in com26 categorias fixas (versao, headers empty/present, defeitos,
+  presenca de media type, CL/TE), sem headers/corpos/defeitos brutos ou
+  mudanca no guard/caps/default None/schema5/max256.48 unitarios novos,
+  9 TLS/Core/Memory/restart e62 casos adicionais de allowlist. Standard
+  Windows9222 casos/9111 passed/111 skipped/zero falhas, hashes preservados.
+  Mesma sessao selecionada nao expirada, zero refresh. Uma tentativa unica
+  gpt-6-astra/pergunta exata: catalogo/selecao/provider passaram, HTTP1.1/200,
+  headers presentes/parser sem defeitos detectados, Content-Type e CL ausentes,
+  TE chunked declarado. Recusa antes do corpo/SSE, ALLOW/rejected/inference_failed
+  e final nativa2635 exata a Memory/export/GET/reload. Sem reenvio/fallback/tools;
+  instancia propria fechada/stores retidos. Nao comprova origem da omissao ou
+  corpo valido. Proximo recorte: investigar resposta sem declaracao SSE, sem
+  relaxar parser; nova inferencia exige novo consentimento. Detalhes no runbook.
+- retomada_20261012: operador delegou recuperacao por login oficial da mesma
+  conta. Novo registro local autorizado/validado, usuario confirmou mesma
+  conta, plan scope=true; mapping antigo ausente impede comparar registro
+  perdido. Nenhum token de outro app/import. Sessao nao expirada, zero refresh.
+  Uma tentativa unica com gpt-6-astra: catalogo/selecao/provider passaram,
+  HTTP200/media type missing/encoding identity, recusada antes de SSE.
+  ALLOW/rejected/inference_failed e final nativa2635 exata ao export/GET/reload.
+  Instancia propria fechada/stores retidos, sem reenvio/fallback/tools. Proximo
+  recorte candidato: investigar media type ausente/vazio sem presumir corpo
+  valido ou relaxar parser; exige DOR/evidencia, nova inferencia novo consentimento.
+- dor_headers_20261012: operador autorizou refinar diagnostico e uma nova
+  tentativa unica com gpt-6-astra e a mesma pergunta sintetica; renovar somente
+  a sessao da mesma conta se expirada. Acrescentar observacoes host opt-in
+  responses_media_type e responses_content_encoding, categorias literais
+  SSE/JSON/HTML/missing/other/invalid e identity/gzip/deflate/br/other/invalid.
+  Sem valores brutos, corpos, identificadores ou nova leitura de headers;
+  schema fixo/max256, None/default, erro publico unsupported_response_encoding,
+  criterios de recusa e caps/timeout/cleanup intactos. Rechecar fences/budget
+  apos cada callback. Nenhuma descompressao, retry, fallback ou endpoint novo.
+  Coordenador unico de http_transport.py/diagnostics.py/docs/conta/browser/gate;
+  workers unitario novo e E2E novo com ownership disjunto, terceiro readonly.
+  Corpus local e standard antes da unica prova; nao homologar por HTTP200.
+- resultado_headers_20261012:69 unitarios novos/16 TLS/Core/Memory e24 casos
+  parametrizados adicionais passaram;772 focados integrados e standard global
+  Windows9103 casos/8992 passed/111 skipped/zero falhas aprovados. Auditoria
+  readonly sem bloqueador; hashes de runtime/corpus intactos apos gate.
+- bloqueio_headers_historico_20261012: preflight local da conta escolhida recusou
+  siwc_storage_unavailable; checagem dirigida confirmou diretorio privado
+  escolhido ausente. Nao inferir expiry/revogacao nem quem causou ausencia.
+  Zero refresh/catalogo real/inferencia/login ou acesso a outro store; tentativa
+  unica autorizada nao realizada. Restaurar store escolhido ou autorizar login
+  da mesma conta, sem criar/importar credenciais implicitamente.
 - dor_diagnostico_fechado: operador autorizou nova tentativa unica e refresh
   da mesma conta se expirada. Implementado diagnostico host opt-in de fases,
   HTTP status int observado e codigos fixos allowlisted. Sem ler corpos de
@@ -836,7 +1197,7 @@ Priorizar esse impedimento concreto antes de outra camada de apresentacao.
   workers nem edicao concorrente de centros compartilhados.
 - prioridade: P1
 - dependencias: MB235 done; SIWC MB222 e geracao/Web MB229/232 existentes
-- bloqueio_atual: nova tentativa unica autorizada com gpt-6-astra apos gate
+- bloqueio_historico_inferencia: nova tentativa unica autorizada com gpt-6-astra apos gate
   e um refresh explicito da sessao comprovadamente expirada recebeu HTTP200,
   depois unsupported_response_encoding em preflight de SSE; ALLOW/rejected/
   inference_failed e final nativa2635 exata a export/GET/reload. Codigo cobre

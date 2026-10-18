@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import math
 import time
+from collections.abc import Callable
 from dataclasses import dataclass, field, replace
 from datetime import UTC, datetime
 from threading import Event
@@ -32,7 +33,9 @@ from shared.domain_registry import (
 from shared.mind_domain_specialist_contract import (
     build_mind_domain_specialist_runtime_policy,
 )
+from shared.model_tool_loop import ToolLoopOutcome
 from shared.reviewed_knowledge import (
+    GENERATIVE_ANALYSIS_MARKER,
     KnowledgeReviewBinding,
     ReviewedKnowledgeContext,
     context_fingerprint,
@@ -41,7 +44,7 @@ from shared.reviewed_knowledge import (
 )
 from shared.types import MissionId, PermissionDecision
 from synthesis_engine.extractive_inference import ExtractiveContext, select_input_excerpts
-from synthesis_engine.generative_analysis import GenerativeContext, analyze_input
+from synthesis_engine.generative_analysis import GenerativeContext, _literal, analyze_input
 
 
 @dataclass(frozen=True)
@@ -109,6 +112,8 @@ class SynthesisInput:
     reviewed_knowledge: ReviewedKnowledgeContext | None = field(default=None, repr=False)
     reviewed_knowledge_binding: KnowledgeReviewBinding | None = field(default=None, repr=False)
     reviewed_knowledge_query: str | None = field(default=None, repr=False)
+    model_tool_loop_outcome: ToolLoopOutcome | None = field(default=None, repr=False)
+    model_tool_loop_guard: Callable[[], str | None] | None = field(default=None, repr=False)
 
 
 @dataclass(frozen=True)
@@ -152,6 +157,11 @@ class SynthesisResult:
     generative_error_code: str | None = None
     generative_evidence_mode: str | None = None
     generative_analysis_characters: int = 0
+    model_tool_loop_status: str = "disabled"
+    model_tool_loop_error_code: str | None = None
+    model_tool_loop_evidence_mode: str | None = None
+    model_tool_loop_observation_count: int = 0
+    model_tool_loop_analysis_characters: int = 0
 
 
 class SynthesisEngine:
@@ -444,6 +454,9 @@ class SynthesisEngine:
         native = self._annotate_reviewed_source(
             self._compose_native_result(synthesis_input), synthesis_input,
         )
+        # Older input projections do not carry this opt-in extension.
+        if getattr(synthesis_input, "model_tool_loop_outcome", None) is not None:
+            return self._compose_tool_loop(native, synthesis_input)
         if self._generative_port is not None:
             return self._compose_generative(native, synthesis_input)
         if self._inference_port is None:
@@ -511,6 +524,82 @@ class SynthesisEngine:
             and value.objective_status in {None, "active", "ready"}
             and plan.objective_status in {None, "active", "ready"}
         )
+
+    def model_tool_loop_eligible(self, value: SynthesisInput) -> bool:
+        """Pure native preflight; no model or tool is invoked by this check."""
+        if self._inference_port is not None or self._generative_port is not None:
+            return False
+        native = self._annotate_reviewed_source(self._compose_native_result(value), value)
+        return self._generative_eligible(native, value)
+
+    def _compose_tool_loop(self, native, value):
+        """Only native synthesis publishes a validated, explicitly untrusted annex."""
+        outcome = value.model_tool_loop_outcome
+
+        def reject(code, status="refused"):
+            return replace(native, model_tool_loop_status=status, model_tool_loop_error_code=code)
+
+        if type(outcome) is not ToolLoopOutcome:
+            return reject("invalid_outcome")
+        if outcome.status not in {
+            "completed", "withheld", "refused", "failed", "cancelled", "timed_out",
+        }:
+            return reject("invalid_outcome")
+        if outcome.status != "completed":
+            return reject(outcome.error_code, outcome.status)
+
+        def publication_refusal():
+            try:
+                code = (value.model_tool_loop_guard() if callable(value.model_tool_loop_guard)
+                        else "publication_guard_missing")
+            except Exception:
+                code = "context_changed"
+            if code is None:
+                return None
+            if code not in {
+                "cancelled", "timed_out", "context_changed", "publication_guard_missing",
+            }:
+                code = "context_changed"
+            return reject(code, code if code in {"cancelled", "timed_out"} else "refused")
+
+        refused = publication_refusal()
+        if refused is not None:
+            return refused
+        if not self.model_tool_loop_eligible(value):
+            return reject("scope_denied", "withheld")
+        try:
+            observations = {item.call_id: item for item in outcome.observations}
+            if (not 1 <= len(observations) <= 3
+                    or len(observations) != len(outcome.observations)
+                    or type(outcome.analysis) is not str
+                    or not outcome.analysis.strip() or len(outcome.analysis) > 4000
+                    or not 1 <= len(outcome.citations) <= 4
+                    or outcome.evidence_mode not in {"fixture", "injected_transport", "live"}
+                    or any(c.call_id not in observations or not c.quote.strip()
+                           or len(c.quote) > 512 or c.quote not in observations[c.call_id].text
+                           for c in outcome.citations)):
+                return reject("invalid_outcome")
+            # The existing marker also strips this annex from Planning recall.
+            # JSON-literal escaping prevents model prose becoming active links,
+            # HTML or other rendered commands. It does not prove semantic truth.
+            rendered = GENERATIVE_ANALYSIS_MARKER + "Analysis: " + _literal(outcome.analysis)
+            for citation in outcome.citations:
+                rendered += "\nSelected report: " + _literal(
+                    observations[citation.call_id].resource_id,
+                )
+                rendered += "\nObserved quote: " + _literal(citation.quote)
+            refused = publication_refusal()
+            if refused is not None:
+                return refused
+            return replace(
+                native, response_text=native.response_text + "\n\n" + rendered,
+                model_tool_loop_status="completed",
+                model_tool_loop_evidence_mode=outcome.evidence_mode,
+                model_tool_loop_observation_count=len(observations),
+                model_tool_loop_analysis_characters=len(outcome.analysis),
+            )
+        except Exception:
+            return reject("invalid_outcome")
 
     def _compose_generative(self, native, value):
         """One untrusted analysis attempt; no routing, authority or memory side channel."""

@@ -1,5 +1,197 @@
 # CHANGELOG
 
+## 2026-10-18
+
+- Preparacao da publicacao das frentes pendentes autorizada pelo operador;
+ 167 arquivos revisados, sem credenciais/audios/modelos privados. Gate local
+ de publicacao parcial: uma falha nao reproduzida em recuperacao duravel;
+ duas variantes isoladas passaram e passaram no standard diagnostico seguinte,
+ interrompido por perda da sessao do executor, sem veredito completo. Nenhum
+ runtime/teste relaxado. CI Linux standard deve concluir antes do merge;
+ registro pre-publicacao no HANDOFF, sem promover aceite funcional.
+
+- Host Windows: Ollama0.40.5 instalado a pedido do operador, somente usuario,
+  loopback/cloudoff; APIs de metadados confirmaram zero modelos instalados ou
+  carregados, sem inferencia/login. Nao habilita LLM automaticamente no JARVIS.
+  Standard da continuidade de codigo interrompido intencionalmente para
+  priorizar instalacao com RAM baixa; segue pendente, sem aceite de liberacao.
+
+- Continuidade em validacao: supervisao ASR Windows por handle proprio e
+  retencao/quarentena em saida incerta; HTTP chunked bounded sem streaming;
+  CLI local explicita com Core/readback e acknowledgement de possivel egress.
+  Sem novo modelo/conta, Web LLM ou ganho de fluidez homologado. Gate desta
+  continuidade ainda pendente; runbook
+  docs/operations/local-model-cli-and-asr-lifecycle-2026-10-18.md.
+
+- Voz: diagnostico TTS privado e reuso de condicionamento Qwen no mesmo lote,
+  ambos opt-in; ASR decoding_profile experimental sem mudar quality/default.
+  Adapter ChatCompletions/HTTP loopback textual isolado, ainda nao Web/CLI;
+  motor scripted atravessou Core/ferramenta/sintese/SQLite.658 focados passaram,
+  1 skip; standard Windows exit0:11035 passed/122 skipped/zero falhas/errors,
+  129 hashes preservados; JS1282 passou. Prova real curta Qwen concluiu2,08s de
+  audio em44,14s; ASR A/B interrompido com WinError32 em cleanup, sem ganho
+  homologado. Qwen opt-in timeout120,03s, imports89,281s, condicionamento
+  concluido mas zero partes; sem ganho demonstrado. Pesquisa de conversa
+  fluida entregue; sem novos pesos/contas,
+  upload de voz, promocao de capability, commit ou push. Detalhes em
+  docs/operations/voice-latency-diagnostics-2026-10-18.md.
+
+## 2026-10-17
+
+- Web voz: microfone explicito e PCM local para ASR/revisao, sem autossubmit;
+  fala opt-in da final Core validada via laboratorio local e RMS real, com
+  sessoes/CSRF/limites/cancelamento/auditoria. Defaultoff, sem STT cloud/fallback.
+  Pesquisas de provedores e VoiceStudio entregues; nenhuma nova rota/modelo
+  externo promovido. Baterias focadas passaram; TTSreal unico excedeu300s sem
+  reproducao, preservando texto e semretry. ASRreal10s concluiu em27,81s;
+  autoplay/esfera demonstrados com tomfixture, nao com voz real. Apos corrigir
+  5 falhas de cleanup opcional do startup,422 focados/1282 JS passaram;
+  standard Windows exit0:10704 passed/121 skipped/zero falhas,25 hashes preservados.
+  Conversa utilizavel/microfone fisico/qualidade vocal seguem pendentes.
+  Runbook: docs/operations/local-web-voice-conversation.md.
+
+- Web: presenca cinematografica na fixture e pagina pareada, esfera volumetrica,
+  paineis holograficos e ensaio WAV local por RMS real. Sem microfone, upload,
+  voz automatica ou nova autoridade; final canonica e CSP preservadas. Testes
+  focados1186 JS/82 Python e browser Core/responsivo passaram; revisao direta da
+  referencia com marca central, paineis angulares e configuracao secundaria.
+  Novo gate standard Windows passou exit0:10418 aprovados/121 ignorados, zero
+  falhas/errors e16 hashes preservados. Escopo visual local fechado; captura e
+  fala automatica permanecem pendentes. Runbook:
+  docs/operations/cinematic-presence-web.md.
+
+- F01/F04:25 missoes publicas sinteticas, grader/campanha pareada, referencia
+  one-shot e Core canonicamente verificado em runtime descartavel; CLI opt-in,
+  teto compartilhado10 e diagnosticos sem conteudo.272 focados passaram;
+  standard Windows exit0:10403 passed/121 skipped/zero falhas/errors e15 hashes
+  preservados. Baseline local sem produto aceito; piloto
+  interrompido por sessao expirada antes de resultado do modelo, sem renovar.
+  Nao e campanha de tarefas reais do operador nem homologacao SOTA.
+  Runbook: docs/operations/harness-mission-campaign.md.
+
+- F05: input privado no ledger existente, retomada explicita
+  nativa assist-only e reconciliacao da final canonica sem repetir Core.
+  CAS/fencing/marcador pre-dispatch e cancel/pausa sticky; nenhum replay de
+  dispatch incerto, modelo/ferramenta duravel ou scheduler. Regressao612/6skips
+  e smoke CLI passaram; standard Windows exit0:10131 passed/121 skipped/zero
+  falhas/errors;12 hashes preservados. F05 foundation/MB236 blocked mantidos.
+  Runbook: docs/operations/durable-native-task-resume.md.
+
+## 2026-10-16
+
+- F01/F03: loop nativo opt-in modelo/Core/leitor readonly/observacao/continuacao
+  integrado a sintese e memoria canonicas. Politica por chamada exata, ate3
+  relatorios do host, limites/cancel/drift e citacoes estruturais; CLI explicita
+  com conta lazy. Default desligado, sem modelo real ou retomada duravel.
+  Validacao local e gate standard aprovados: 9972 passed/121 skipped/zero falhas;
+  12 hashes preservados. Compatibilidade de entradas legadas corrigida apos
+  13 falhas comprovadas do primeiro gate completo; testes legados intactos.
+  Detalhes em
+  docs/operations/model-tool-loop-core.md. MB236 permanece blocked.
+
+## 2026-10-14
+
+- F02: deadline opt-in unico tambem na VM/lock SQLite da revisao de retencao,
+  failclosed/cleanup e leitores legados preservados. F05/F11: ledger existente
+  registra uma tentativa explicita de fixture Docker fixa, com binding/fencing,
+  cancelamento sticky e no-replay. Sem executor generico ou efeito em repo humano.
+  Testes focados e4 fisicos passaram. Primeiro standard8falhas MCP; harness
+  isolou clock de entrada/marcadores, sem mudar runtime;176 focados passaram.
+  Novo standard exit0/9803 casos:9684 passed/119 skipped/zero falhas,
+  13 hashes preservados. CLI extra recusada; outro job diagnostico passou,
+  causa original nao comprovada/confiabilidade CLI inconclusiva. Timeouts iniciais
+  de dois subprocessos documentados, causa nao comprovada, budgets intactos.
+  MB236 blocked, sem modelo/conta/publicacao ou promocao. Runbook:
+  docs/operations/memory-deadline-and-code-fixture-jobs.md.
+
+## 2026-10-13
+
+- F02/F03: plano readonly de revisao de retencao e comparacao exata de trechos,
+  CLIs opt-in, isolamento/limites/restart e nenhuma autoridade/escrita. F11:
+  quatro fixtures literais comprovadas em Docker Linux real, cleanup proprio
+  confirmado, sem executor generico.120 integrados +1 historico misto antigo,
+  43 runner e4 fisicos passaram. Primeiro standard3falhas MCP de harness;
+  ajustes somente testes/revisao e174 focados passaram. Standard final Windows
+  exit0/9701 casos:9586 passed/115 skipped/zero falhas;15 hashes preservados.
+  Runbook local-retention-source-comparison-and-code-fixture.md. MB236 blocked.
+
+- F05/F06: consulta manual readonly de jobs do host na Web local pareada;
+  opt-in lazy, scope fixo, metadados bounded, CSRF/fences e limpeza na retirada
+  de sessao. Revisao independente corrigiu corrida de lifetime; nenhum ticket,
+  modelo, executor ou reconciliacao. Baterias focadas/browser aprovados; standard
+  Windows exit0/9533 casos,9422 passed/111 skipped/zero falhas (marcadores -qq).
+  MB236 blocked; sem promocao, conta ou publicacao.
+  Runbook local-job-activity-web.md.
+
+## 2026-10-12
+
+- Pacotes paralelos F05/F13/T03 validados: CLI de atividade readonly sem
+  executor/reconciliacao; piloto readiness MCP -> Core/Memory/reconstrucao
+  com sujeito/IDs/decisao/envelopes vinculados, sem dispatch MCP governado.
+  Pipes reais fechados preservam exit2; fixtures/runner Linux corrigidos sem
+  relaxar protecoes.71 atividade/160 piloto/512 voz passaram; standard Windows
+  9303 passed/111 skipped e Linux9185 passed/239 skipped/zero falhas (marcadores
+  -qq). Imagem local de testes exclusiva construida/antiga preservada.
+  Sem modelo/voz perceptualmente aceitos, ferramentas promovidas ou push.
+  Runbook parallel-wave-readiness-activity-and-linux.md.
+
+- Nova sondagem MB236 autorizada: mesma conta/modelo/pergunta, sessao expirada
+  renovada uma vez; unico POST200 sem CT/TE chunked. Leitura limitada416/4096
+  bytes com prefixo SSE aparente nao validado, sem corpo bruto armazenado,
+  guard relaxado, retry/fallback ou modelo homologado. Export readonly confirmou
+  final nativa2635/unico turno/21 eventos; browser proof falhou/nao repetido.
+  Instancia propria parada; MB236 blocked. F05/F13/T03 desenvolvidos em paralelo
+  com ownership isolado e integracao/gate pelo coordenador.
+
+- Investigacao MB236: uma nova tentativa unica instrumentada com HTTPS real
+  reproduziu200/CT ausente/TE chunked, parser sem defeitos. Sinais CF presentes,
+  sinais API ausentes, TLS verificado/peer publico: compativel com resposta de
+  borda, nao causa autenticada ou comprovacao de WAF/cache/quota. Nenhuma
+  correcao especulativa de runtime, corpo lido, refresh, retry ou promocao;
+  final nativa2635 exata a Memory/export/GET/reload.142 regressoes passaram.
+  PR-1 documental revisado/31 links validos, sem bloqueador novo identificado
+  no diff; CI vermelho preexistente reproduzido em Docker readonly/sem rede:
+  fixture Windows invalida em POSIX + patch global de Path quebra reporter.
+  Recusa pura sem filesystem IO confirmada; TTS/PR nao alterados, sem merge/push.
+  Relatorio pr-1-documentation-review-2026-10-12.md e runbook atualizados.
+
+- MB236: diagnostico opt-in de parsing/enquadramento HTTP implementado sem
+  relaxar guard, schema, caps, default off ou erro publico. Seis fases/26
+  categorias fixas,48 unitarios novos/9 TLS-Core-Memory e62 casos de allowlist;
+  standard9222 casos/9111 passed/111 skipped/zero falhas, hashes preservados.
+  Uma tentativa unica autorizada gpt-6-astra/mesma pergunta: HTTP1.1/200,
+  headers presentes/parser sem defeitos detectados, Content-Type ausente,
+  Transfer-Encoding chunked declarado. Corpo nao lido, complemento recusado;
+  final nativa2635 exata a Memory/export/GET/reload, zero pageerrors.
+  Sessao valida, zero refresh/reenvio/fallback/tools, instancia propria fechada,
+  stores retidos. MB236 continua blocked; origem da omissao nao comprovada,
+  sem inferencia/qualidade homologadas ou commit/push. Runbook atualizado.
+
+- Retomada MB236: operador escolheu recuperacao por login, confirmou mesma
+  conta; novo registro local validado/plan scope=true/DPAPI foraGit/OneDrive,
+  pois mapping anterior ausente. Sessao nao expirada, zero refresh/import.
+  Runtime/corpus com hashes do standard aprovado. Uma tentativa unica com
+  gpt-6-astra: HTTP200/media type missing/encoding identity, recusa antes de SSE.
+  ALLOW/rejected/inference_failed, final nativa2635 exata ao export/GET/reload.
+  Um POST Web, zero pageerrors, instancia propria fechada/stores retidos.
+  Sem reenvio/fallback/tools ou modelo/qualidade homologados. Categorias nao
+  provam corpo valido ou causa do servidor. MB236 blocked, proximo recorte
+  candidato exige DOR/evidencia, nova inferencia novo consentimento.
+  Runbook real-oauth-acceptance.md; notas seguintes sao historicas.
+
+- MB236 diagnostico MIME/encoding refinado e validado: duas fases host opt-in/
+  12 categorias fixas; erro publico/schema/max256/None/criterios/caps intactos.
+  Sem headers brutos/corpos, descompressao, retry ou fallback.85 testes novos,
+  24 casos parametrizados adicionais e772 focados integrados passaram;
+  standard global Windows9103 casos/8992 passed/111 skipped/zero falhas.
+  Auditoria readonly sem bloqueador e hashes de runtime/corpus intactos.
+  Prova real bloqueada no preflight: diretorio privado escolhido ausente.
+  Nenhum refresh/catalogo real/inferencia/login ou outro store acessado.
+  Tentativa unica autorizada nao realizada. Restaurar store escolhido ou
+  autorizar login da mesma conta; nao inferir expiry/revogacao/autoria.
+  Ultimo validado MB235; nenhuma promocao ou commit/push nesta rodada.
+  Runbook real-oauth-acceptance.md. Entradas abaixo historicas.
+
 ## 2026-10-06
 
 - MB236 diagnostico local validado, aceite real blocked: observacao host opt-in

@@ -43,6 +43,7 @@ from orchestrator_service.artifact_physical_saga import (
     ArtifactPhysicalSagaCoordinator,
     ArtifactPhysicalSagaRunResult,
 )
+from orchestrator_service.model_tool_loop import ModelToolLoopConfig, run_core_tool_loop
 from shared.action_confirmation import (
     action_intent_fingerprint,
     build_action_intent,
@@ -340,6 +341,7 @@ class OrchestratorService:
         artifact_physical_attestation_authority: (
             ArtifactPhysicalAttestationLeaseAuthority | None
         ) = None,
+        model_tool_loop: ModelToolLoopConfig | None = None,
     ) -> None:
         self.governance_service = governance_service or GovernanceService()
         self._artifact_physical_attestation_authority = (
@@ -376,6 +378,9 @@ class OrchestratorService:
         self.cognitive_engine = cognitive_engine or CognitiveEngine()
         self.specialist_engine = specialist_engine or SpecialistEngine()
         self.synthesis_engine = synthesis_engine or SynthesisEngine()
+        if model_tool_loop is not None and type(model_tool_loop) is not ModelToolLoopConfig:
+            raise ValueError("invalid_tool_loop_configuration")
+        self.model_tool_loop = model_tool_loop
         self.artifact_physical_sagas = ArtifactPhysicalSagaCoordinator(
             memory=self.memory_service,
             governance=self.governance_service,
@@ -2397,6 +2402,7 @@ class OrchestratorService:
             specialist_review=specialist_review,
             operation_result=operation_result,
             mission_runtime_state=mission_runtime_state,
+            tool_loop_events=events,
         )
         response_text = synthesis_result.response_text
         events.append(
@@ -2803,6 +2809,8 @@ class OrchestratorService:
     ) -> OrchestratorResponse:
         """Run the optional LangGraph flow without changing the default v1 path."""
 
+        if self.model_tool_loop is not None:
+            raise ValueError("model_tool_loop_native_only")
         if reviewed_knowledge is None and knowledge_review is None:
             self.memory_service.validate_input_subject_scope(contract)
         from orchestrator_service.langgraph_flow import LangGraphFlowRunner
@@ -6361,6 +6369,7 @@ class OrchestratorService:
         operation_result: OperationResultContract | None,
         mission_runtime_state: MissionRuntimeStateContract | None = None,
         contract: InputContract | None = None,
+        tool_loop_events: list[InternalEventEnvelope] | None = None,
     ) -> SynthesisResult:
         identity_profile = self.identity_engine.get_profile()
         guided_memory_runtime_hints = self._guided_memory_runtime_hints(
@@ -6368,8 +6377,7 @@ class OrchestratorService:
             deliberative_plan,
             memory_recovery_result.recovered_items,
         )
-        return self.synthesis_engine.compose_result(
-            SynthesisInput(
+        synthesis_input = SynthesisInput(
                 reviewed_knowledge=(knowledge_result.reviewed_knowledge
                                     if knowledge_result is not None else None),
                 reviewed_knowledge_binding=(
@@ -6532,8 +6540,20 @@ class OrchestratorService:
                 surface_continuity_status=(
                     operation_result.surface_continuity_status if operation_result else None
                 ),
-            )
         )
+        if self.model_tool_loop is not None and contract is not None:
+            def emit(name, payload):
+                if tool_loop_events is not None:
+                    tool_loop_events.append(self.make_event(name, contract, payload))
+
+            outcome, publication_guard = run_core_tool_loop(
+                self, self.model_tool_loop, contract, synthesis_input, emit=emit,
+            )
+            synthesis_input = replace(
+                synthesis_input, model_tool_loop_outcome=outcome,
+                model_tool_loop_guard=publication_guard,
+            )
+        return self.synthesis_engine.compose_result(synthesis_input)
 
     @staticmethod
     def _conversation_readback_payload(record: MemoryRecordContract) -> dict | None:
@@ -6584,6 +6604,11 @@ class OrchestratorService:
             "generative_error_code": result.generative_error_code,
             "generative_evidence_mode": result.generative_evidence_mode,
             "generative_analysis_characters": result.generative_analysis_characters,
+            "model_tool_loop_status": result.model_tool_loop_status,
+            "model_tool_loop_error_code": result.model_tool_loop_error_code,
+            "model_tool_loop_evidence_mode": result.model_tool_loop_evidence_mode,
+            "model_tool_loop_observation_count": result.model_tool_loop_observation_count,
+            "model_tool_loop_analysis_characters": result.model_tool_loop_analysis_characters,
         }
         if result.reviewed_source_status != "not_requested":
             payload.update({

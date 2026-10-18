@@ -1,16 +1,22 @@
 import { createLiveController, LIVE_SESSION_LABEL } from "./live-controller.mjs";
 import { projectGenerativeResult } from "./live-generative-projection.mjs";
+import { createJobActivityPanel } from "./live-job-activity.mjs";
+import { createLivePresence } from "./live-presence.mjs";
+import { createLiveVoiceControls } from "./live-voice-controls.mjs";
 
 const node = (id) => document.getElementById(id);
 let projectionEpoch = 0, projectionContext = null;
 let lastPaired = false, canonicalChoice = null, pairingFocusIntent = null;
+let jobActivityPanel = null, livePresence = null, voiceControls = null;
 const sameResult = (left, right) => left && right && Object.keys(left).length === Object.keys(right).length &&
   Object.keys(left).every((field) => left[field] === right[field]);
 function setDisclosure(id, summaryId, open, preferredFocusId = summaryId) {
   const details = node(id), summary = node(summaryId), active = document.activeElement;
   if (!open && details.open && active && active !== summary && details.contains?.(active)) {
     const preferred = node(preferredFocusId);
-    (preferred.disabled ? summary : preferred).focus({ preventScroll: true });
+    const target = preferred.disabled ? summary : preferred;
+    if (id === "live-pairing-details") target.focus();
+    else target.focus({ preventScroll: true });
   }
   details.open = open;
 }
@@ -103,8 +109,21 @@ function render(state) {
   const busy = ["connecting", "submitting", "waiting"].includes(state.status);
   if (["foreign_session", "session_expired", "session_refused", "csrf_refused"].includes(state.errorCode)) {
     node("live-query").value = ""; node("live-secret").value = "";
+    livePresence?.clear();
   }
   node("live-session").textContent = paired ? LIVE_SESSION_LABEL : "Não pareado · sessão local";
+  node("live-title").textContent = state.errorCode ? "Um ajuste antes de continuar" :
+    ({ disconnected: "Vamos começar?", connecting: "Conectando ao seu Core…", ready: "Pronto para conversar",
+      submitting: "Seu pedido está a caminho", waiting: "Preparando sua resposta…", completed: "Aqui está sua resposta",
+      failed: "Um ajuste antes de continuar", stopped: "Espera interrompida" }[state.status] ?? "À sua disposição");
+  node("live-context-session").textContent = state.status === "connecting" ? "Verificando…" :
+    paired ? "Sessão local pareada" : "Não pareada";
+  node("live-context-memory").textContent = state.result ? "Final canônica recebida" : "Sem registro nesta tela";
+  node("live-context-model").textContent = !state.result ? "Não informado pelo host" :
+    ({ disabled: "Resposta nativa", accepted: state.result.generative_evidence_mode === "injected_transport" ?
+      "Complemento de teste" : "Complemento não verificado", rejected: "Complemento recusado", withheld: "Complemento retido" }
+      [state.result.generative_status] ?? "Não informado pelo host");
+  for (const id of ["live-briefing-compare", "live-briefing-review"]) node(id).disabled = !paired || busy;
   node("live-secret").disabled = paired || busy;
   node("live-pair").disabled = paired || busy;
   node("live-refresh").disabled = busy;
@@ -143,10 +162,13 @@ function render(state) {
   node("live-metadata").textContent = state.result ?
     `Core local · ${generativeLabel} · ${state.result.memory_record_ref} · ${state.result.timestamp} · nenhuma autoridade para ações` : "";
   node("live-shell").dataset.paired = String(paired);
+  jobActivityPanel?.setSession(paired ? state.sessionRef : null);
+  livePresence?.update({ status: state.status, paired, errorCode: state.errorCode });
+  voiceControls?.updateCore({ ...state, paired });
   if (paired !== lastPaired) {
     setDisclosure("live-pairing-details", "live-pairing-summary", !paired, "live-query");
     if (paired && pairingFocusIntent && (!document.activeElement || document.activeElement === document.body ||
-      document.activeElement === pairingFocusIntent)) node("live-query").focus({ preventScroll: true });
+      document.activeElement === pairingFocusIntent)) node("live-query").focus();
     lastPaired = paired;
   }
   if (state.status !== "connecting") pairingFocusIntent = null;
@@ -154,6 +176,15 @@ function render(state) {
   scheduleProjection(state);
 }
 const controller = createLiveController({ onState: render });
+jobActivityPanel = createJobActivityPanel({ document,
+  read: (options) => controller.readJobActivity(options) });
+livePresence = createLivePresence({ document, getVoiceLevel: () => voiceControls?.getLevel() ?? 0,
+  beforeManualPlayback: () => voiceControls?.cancel() });
+voiceControls = createLiveVoiceControls({ document, request: controller.voiceRequest,
+  beforeVoice: () => livePresence.clear(), onVoiceState(state) {
+    if (["recording", "synthesizing", "starting_audio", "playing"].includes(state.status)) livePresence.clear();
+    livePresence.setConversationState(state.status);
+  } });
 render(controller.getState());
 function rememberCanonicalIntent(event) {
   if (event.type === "keydown" && !["Enter", " ", "Spacebar"].includes(event.key)) return;
@@ -182,8 +213,10 @@ node("live-form").addEventListener("submit", async (event) => {
 });
 node("live-refresh").addEventListener("click", () => controller.initialize());
 node("live-recover").addEventListener("click", () => controller.recover());
-node("live-stop").addEventListener("click", () => controller.stopWaiting());
+node("live-stop").addEventListener("click", () => { voiceControls.cancel(); return controller.stopWaiting(); });
 node("live-disconnect").addEventListener("click", () => {
+  livePresence.clear();
+  voiceControls.clear();
   pairingFocusIntent = null; canonicalChoice = null; clearProjection();
   node("live-secret").value = ""; node("live-query").value = ""; node("live-generative-consent").checked = false;
   return controller.disconnect();
@@ -194,9 +227,29 @@ for (const button of document.querySelectorAll("[data-prompt]")) {
     node("live-query").value = button.dataset.prompt; node("live-query").focus();
   });
 }
-window.addEventListener("pagehide", () => {
+// Briefing is a preparation shortcut only. It never dispatches or grants consent.
+for (const [id, prompt] of [
+  ["live-briefing-compare", "Compare os relatórios de documentação e observabilidade do piloto."],
+  ["live-briefing-review", "Revise a documentação, o painel de telemetria e o relatório de baseline do piloto."],
+]) {
+  node(id).addEventListener("click", () => {
+    if (node("live-query").disabled) return;
+    node("live-query").value = prompt; node("live-query").focus();
+  });
+}
+node("live-briefing-settings").addEventListener("click", () => {
+  node("live-pairing-details").open = true;
+  node("live-pairing-summary").focus();
+});
+window.addEventListener("pagehide", (event) => {
+  voiceControls.pageHide();
+  if (event.persisted !== true) voiceControls.dispose();
+  livePresence.pageHide();
+  if (event.persisted !== true) livePresence.dispose();
   pairingFocusIntent = null; canonicalChoice = null; clearProjection();
   node("live-secret").value = ""; node("live-query").value = ""; node("live-generative-consent").checked = false; controller.pageHide();
 });
-window.addEventListener("pageshow", (event) => { if (event.persisted === true) controller.initialize(); });
+window.addEventListener("pageshow", (event) => {
+  if (event.persisted === true) { livePresence.refresh(); voiceControls.refresh(); controller.initialize(); }
+});
 void controller.initialize();

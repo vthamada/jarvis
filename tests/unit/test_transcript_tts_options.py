@@ -22,13 +22,18 @@ def parser():
     return result
 
 
+def private_path(name):
+    # Native absolute syntax only: no filesystem lookup or directory creation.
+    return Path(ROOT.anchor) / "private-marker" / name
+
+
 def configured(**changes):
     values = {
         "tts_authorized": True,
         "tts_engine": "qwen3_tts",
-        "tts_reference": "C:/private-marker/reference.wav",
-        "tts_model_dir": "C:/private-marker/model",
-        "tts_python": "C:/private-marker/python.exe",
+        "tts_reference": str(private_path("reference.wav")),
+        "tts_model_dir": str(private_path("model")),
+        "tts_python": str(private_path("python.exe")),
     }
     values.update(changes)
     return argparse.Namespace(**values)
@@ -102,14 +107,15 @@ def test_enabled_defaults_and_paths_without_filesystem_io(monkeypatch):
     def forbidden(*args, **kwargs):
         pytest.fail("pure option validation inspected filesystem")
 
-    for name in ("stat", "lstat", "exists", "is_file", "is_dir", "resolve", "open"):
-        monkeypatch.setattr(Path, name, forbidden)
-    config = options.transcript_tts_config(configured())
+    with monkeypatch.context() as scoped:
+        for name in ("stat", "lstat", "exists", "is_file", "is_dir", "resolve", "open"):
+            scoped.setattr(Path, name, forbidden)
+        config = options.transcript_tts_config(configured())
     assert config.authorized is True
     assert config.engine == "qwen3_tts"
-    assert config.reference_path == Path("C:/private-marker/reference.wav")
-    assert config.model_dir == Path("C:/private-marker/model")
-    assert config.python_executable == Path("C:/private-marker/python.exe")
+    assert config.reference_path == private_path("reference.wav")
+    assert config.model_dir == private_path("model")
+    assert config.python_executable == private_path("python.exe")
     assert config.workspace_root == ROOT
     assert config.device == "cpu"
     assert config.timeout_seconds == 300
@@ -122,14 +128,31 @@ def test_enabled_defaults_and_paths_without_filesystem_io(monkeypatch):
     assert config.sdk_source_dir is None
 
 
+def test_no_io_guard_restores_path_methods_on_validation_failure(monkeypatch):
+    methods = ("stat", "lstat", "exists", "is_file", "is_dir", "resolve", "open")
+    original = {name: getattr(Path, name) for name in methods}
+
+    def forbidden(*args, **kwargs):
+        pytest.fail("pure option validation inspected filesystem")
+
+    with pytest.raises(ValueError, match="^transcript_tts_config_refused$"):
+        with monkeypatch.context() as scoped:
+            for name in methods:
+                scoped.setattr(Path, name, forbidden)
+            options.transcript_tts_config(configured(tts_reference="private-marker.wav"))
+
+    # Assertions and pytest's failure reporter must run with unmodified Path.
+    assert all(getattr(Path, name) is original[name] for name in methods)
+
+
 def test_all_options_preserve_values_and_reference_transcript():
     exact = "  A referência diz isto.\r\nSem normalizar acentuação: cafe\u0301.  "
     args = parser().parse_args([
         "--tts-authorized", "--tts-engine", "qwen3_tts",
-        "--tts-reference", "C:/private-marker/reference.wav",
-        "--tts-model-dir", "C:/private-marker/model",
-        "--tts-python", "C:/private-marker/python.exe",
-        "--tts-workspace", "C:/private-marker/workspace",
+        "--tts-reference", str(private_path("reference.wav")),
+        "--tts-model-dir", str(private_path("model")),
+        "--tts-python", str(private_path("python.exe")),
+        "--tts-workspace", str(private_path("workspace")),
         "--tts-device", "cuda:0",
         "--tts-timeout", "120", "--tts-voice-profile", "qwen_icl",
         "--tts-reference-start", "12.5", "--tts-reference-duration", "8.5",
@@ -137,7 +160,7 @@ def test_all_options_preserve_values_and_reference_transcript():
         "--tts-seed", "42", "--tts-show-output-path",
     ])
     config = options.transcript_tts_config(args)
-    assert config.workspace_root == Path("C:/private-marker/workspace")
+    assert config.workspace_root == private_path("workspace")
     assert config.device == "cuda:0"
     assert config.sdk_source_dir is None
     assert config.timeout_seconds == 120
@@ -153,10 +176,10 @@ def test_all_options_preserve_values_and_reference_transcript():
 def test_chatterbox_profile_can_be_selected():
     config = options.transcript_tts_config(configured(
         tts_engine="chatterbox_pt_br", tts_voice_profile="chatterbox_conversational",
-        tts_sdk_source_dir="C:/private-marker/sdk",
+        tts_sdk_source_dir=str(private_path("sdk")),
     ))
     assert config.voice_profile == "chatterbox_conversational"
-    assert config.sdk_source_dir == Path("C:/private-marker/sdk")
+    assert config.sdk_source_dir == private_path("sdk")
 
 
 @pytest.mark.parametrize("field", ["tts_reference", "tts_model_dir", "tts_python",
@@ -186,7 +209,7 @@ def test_boolean_options_are_strict(field, value):
     {"tts_transcript_confirmed": True},
     {"tts_engine": "qwen3_tts", "tts_voice_profile": "chatterbox_conversational"},
     {"tts_engine": "chatterbox_pt_br", "tts_voice_profile": "qwen_icl"},
-    {"tts_engine": "qwen3_tts", "tts_sdk_source_dir": "C:/private-marker/sdk"},
+    {"tts_engine": "qwen3_tts", "tts_sdk_source_dir": str(private_path("sdk"))},
     {"tts_voice_profile": "qwen_icl", "tts_reference_transcript": "private-marker",
      "tts_transcript_confirmed": False},
 ])
@@ -258,6 +281,8 @@ def test_real_cli_parse_errors_hide_private_arguments_before_stdin_or_core(
     {"tts_reference": "C:/private-marker/ref.wav:alternate-stream"},
     {"tts_reference": "//private-marker/share/reference.wav"},
     {"tts_reference": "C:/private-marker/../reference.wav"},
+    {"tts_reference": str(private_path("ref.wav:alternate-stream"))},
+    {"tts_reference": str(private_path("../reference.wav"))},
     {"tts_timeout": float("nan")}, {"tts_timeout": 1801},
     {"tts_seed": 2**32}, {"tts_reference_start": True},
     {"tts_reference_duration": 2}, {"tts_show_output_path": "private-marker"},

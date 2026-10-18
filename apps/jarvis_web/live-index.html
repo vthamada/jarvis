@@ -4,18 +4,112 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="dark">
-  <title>JARVIS · Core local</title>
+  <title>JARVIS · Interface pessoal</title>
   <link rel="stylesheet" href="/live-style.css">
+  <link rel="stylesheet" href="/cinematic.css">
   <script type="module" src="/live-app.mjs"></script>
 </head>
-<body>
+<body class="cinematic-interface">
   <a class="skip" href="#live-query">Pular para o pedido</a>
   <main id="live-shell" data-paired="false">
-    <header><a class="brand" href="/">J<span>ARVIS</span><small>CORE LOCAL</small></a><span class="connection" id="live-session">Não pareado</span></header>
-    <section class="intro" aria-labelledby="live-title"><div class="orb" aria-hidden="true"><span></span></div><p class="eyebrow">ANÁLISE · MEMÓRIA CANÔNICA</p><h1 id="live-title">Pensar com clareza.<br> Decidir com controle.</h1><p class="intro-copy">Conversa real com o Core local. Sem modelo generativo, voz ou execução no modo nativo. Um complemento generativo opcional exige autorização por pergunta e um perfil habilitado no host; não concede autoridade. Voz e ações continuam desativadas.</p></section>
-    <section class="pairing" aria-labelledby="pair-title"><details id="live-pairing-details" open><summary id="live-pairing-summary"><h2 id="pair-title">Conectar ao seu Core</h2></summary><p>Use o segredo temporário mostrado pelo servidor no terminal. O pareamento autentica esta sessão local, não uma identidade humana.</p><form id="live-pair-form"><label for="live-secret">Segredo de pareamento</label><div class="input-row"><input id="live-secret" type="password" autocomplete="off" spellcheck="false" maxlength="64" placeholder="64 caracteres" aria-describedby="live-pair-help"><button id="live-pair" type="submit">Parear sessão</button></div></form><p id="live-pair-help" class="muted">O segredo é apagado do campo antes do envio. Nada é guardado no armazenamento do browser.</p></details><div class="toolbar session-actions"><button id="live-refresh" type="button" class="secondary">Verificar sessão</button><button id="live-disconnect" type="button" class="secondary" disabled>Desconectar</button></div></section>
-    <section class="workspace" aria-labelledby="request-title"><div class="section-top"><h2 id="request-title">Seu próximo pedido</h2><span class="tag">GOVERNANÇA DO CORE</span></div><form id="live-form"><label for="live-query">O que você quer analisar?</label><textarea id="live-query" rows="3" placeholder="Descreva o pedido. O Core decide o que pode ser respondido." disabled aria-describedby="live-query-help"></textarea><p id="live-query-help" class="muted">Até 4.000 caracteres. O texto é enviado ao Core local e pode ser registrado na memória canônica.</p><label class="consent" for="live-generative-consent"><input id="live-generative-consent" type="checkbox" disabled aria-describedby="live-generative-help"><span>Autorizar complemento generativo somente para esta pergunta</span></label><p id="live-generative-help" class="muted">Desativado por padrão. O texto desta pergunta pode sair para o transporte do perfil selecionado pelo host, sem envio de histórico. O Core mantém governança, memória e final soberana; o complemento é não verificado e não habilita voz, ferramentas ou ações. A autorização é apagada após cada envio; isso não desfaz uma análise já iniciada.</p><div class="toolbar request-actions"><button id="live-send" type="submit" disabled>Enviar ao Core <span aria-hidden="true">↗</span></button><button id="live-stop" type="button" class="secondary" disabled>Parar de aguardar</button><button id="live-recover" type="button" class="secondary" disabled>Consultar resultado</button></div></form><p id="live-notice" role="status" aria-live="polite">Verificando sessão local…</p><p class="muted wait-help">Parar de aguardar interrompe somente a espera do browser. Não cancela o Core, não desfaz registros e não reenvia o pedido. Use “Consultar resultado” para recuperar o mesmo ticket.</p><p id="live-ticket" class="ticket"></p><div class="suggestions" aria-label="Sugestões para preencher, sem enviar"><button type="button" data-prompt="Compare os relatórios de documentação e observabilidade do piloto.">Comparar documentação e observabilidade ↗</button><button type="button" data-prompt="Revise a documentação, o painel de telemetria e o relatório de baseline do piloto.">Revisar documentação e telemetria ↗</button></div></section>
+    <header class="cinematic-masthead">
+      <span class="masthead-marker" aria-hidden="true">J.A.R.V.I.S. / LOCAL</span>
+      <a class="brand" href="/">JARVIS<small>INTERFACE PESSOAL</small></a>
+      <div class="masthead-session"><span class="connection" id="live-session">Não pareado</span><a class="settings-link" href="#live-settings">Configurações <span aria-hidden="true">↗</span></a></div>
+    </header>
+
+    <div class="cinematic-stage">
+      <section class="holo-core" aria-labelledby="live-title">
+        <div class="presence-orb"><canvas id="live-particle-sphere" aria-hidden="true"></canvas></div>
+        <div class="presence-copy"><h1 id="live-title">Vamos começar?</h1><p id="live-presence-status" class="presence-status" role="status" aria-live="polite">Em repouso · sessão não pareada</p></div>
+        <div class="presence-controls"><button id="live-motion" type="button" class="quiet-button" aria-pressed="false">Pausar animação</button></div>
+      </section>
+
+      <aside class="holo-stack holo-left" aria-label="Briefing e contexto">
+        <section class="holo-panel briefing-panel" aria-labelledby="live-briefing-title">
+          <div class="panel-heading"><h2 id="live-briefing-title"><span class="panel-icon" aria-hidden="true">▤</span> BRIEFING</h2><span class="panel-menu" aria-hidden="true">···</span></div>
+          <div class="briefing-actions">
+            <button id="live-briefing-compare" class="briefing-item" type="button" disabled><span class="briefing-number" aria-hidden="true">01</span><span>Comparar relatórios</span><span aria-hidden="true">↗</span></button>
+            <button id="live-briefing-review" class="briefing-item" type="button" disabled><span class="briefing-number" aria-hidden="true">02</span><span>Revisar o contexto</span><span aria-hidden="true">↗</span></button>
+            <a id="live-briefing-settings" class="briefing-item" href="#live-settings"><span class="briefing-number" aria-hidden="true">03</span><span>Preparar seu ambiente</span><span aria-hidden="true">↗</span></a>
+          </div>
+          <p class="panel-foot">SUGESTÕES · PREENCHEM SEM ENVIAR</p>
+        </section>
+        <section class="holo-panel context-panel" aria-labelledby="live-context-title">
+          <div class="panel-heading"><h2 id="live-context-title"><span class="panel-icon" aria-hidden="true">▱</span> CONTEXTO</h2><span class="panel-menu" aria-hidden="true">···</span></div>
+          <dl class="context-list">
+            <div class="context-card"><dt>Modelo</dt><dd id="live-context-model">Não informado pelo host</dd></div>
+            <div class="context-card"><dt>Memória</dt><dd id="live-context-memory">Sem registro nesta tela</dd></div>
+            <div class="context-card"><dt>Sessão</dt><dd id="live-context-session">Não pareada</dd></div>
+          </dl>
+          <p class="panel-foot">ESTADO DESTA CONVERSA · SOMENTE LEITURA</p>
+        </section>
+      </aside>
+
+      <aside class="holo-stack holo-right" aria-label="Agenda e atividade">
+        <section class="holo-panel agenda-panel" aria-labelledby="live-agenda-title">
+          <div class="panel-heading"><h2 id="live-agenda-title"><span class="panel-icon" aria-hidden="true">▦</span> AGENDA</h2><span class="panel-menu" aria-hidden="true">···</span></div>
+          <div class="agenda-empty"><span class="agenda-symbol" aria-hidden="true">▦</span><div><p>Nenhum calendário conectado</p><p class="muted">Nenhum compromisso disponível nesta interface.</p></div></div>
+        </section>
+        <section class="holo-panel activity-panel" aria-labelledby="live-job-title">
+          <div class="panel-heading"><h2 id="live-job-title"><span class="panel-icon" aria-hidden="true">⌁</span> ATIVIDADE</h2><span class="panel-menu" aria-hidden="true">···</span></div>
+          <p id="live-job-status" role="status" aria-live="polite">Pareie a sessão para consultar.</p>
+          <pre id="live-job-summary"></pre>
+          <button id="live-job-refresh" type="button" class="secondary" disabled>Consultar atividade</button>
+          <p class="panel-foot">CONSULTA MANUAL · SEM EXECUÇÃO AUTOMÁTICA</p>
+        </section>
+      </aside>
+    </div>
+
+    <section class="workspace composer-workspace" aria-labelledby="request-title">
+      <h2 id="request-title" class="composer-title">Converse com o JARVIS</h2>
+      <form id="live-form">
+        <label for="live-query" class="composer-label">O que você quer analisar?</label>
+        <div class="command-dock composer-dock">
+          <div class="command-input-row">
+            <button id="live-mic-start" type="button" class="dock-voice-button" aria-label="Gravar microfone para revisão local" aria-pressed="false" aria-describedby="live-voice-help" disabled><span aria-hidden="true">◉</span><span class="dock-button-label">Microfone</span></button>
+            <textarea id="live-query" rows="3" placeholder="Escreva para o JARVIS…" disabled aria-describedby="live-query-help"></textarea>
+            <button id="live-send" type="submit" aria-label="Enviar ao Core" disabled>Enviar <span aria-hidden="true">↗</span></button>
+          </div>
+        </div>
+        <p class="dock-audio-note">Ensaio WAV manual: sem microfone. Conversa por voz local: ativação e revisão explícitas.</p>
+        <div class="toolbar request-actions composer-controls"><button id="live-stop" type="button" class="secondary" disabled>Parar de aguardar</button><button id="live-recover" type="button" class="secondary" disabled>Consultar resultado</button><button id="live-voice-enable" type="button" class="secondary" disabled>Preparar voz local</button></div>
+        <div class="composer-safety">
+          <p id="live-query-help" class="muted">Até 4.000 caracteres. O texto é enviado ao Core local e pode ser registrado na memória canônica.</p>
+          <label class="consent" for="live-generative-consent"><input id="live-generative-consent" type="checkbox" disabled aria-describedby="live-generative-help"><span>Autorizar complemento generativo somente para esta pergunta</span></label>
+          <p id="live-generative-help" class="muted">Desativado por padrão. O texto desta pergunta pode sair para o transporte do perfil selecionado pelo host, sem envio de histórico. O Core mantém governança, memória e final soberana; o complemento é não verificado e não habilita voz, ferramentas ou ações. A autorização é apagada após cada envio; isso não desfaz uma análise já iniciada.</p>
+        </div>
+      </form>
+      <section class="conversation-voice" aria-labelledby="live-voice-title">
+        <h3 id="live-voice-title">Conversar por voz</h3>
+        <p id="live-voice-help" class="muted">Prepare os motores e clique no microfone para gravar até 30 segundos. O áudio vai somente ao servidor local para transcrição; revise e use no pedido antes de Enviar. Sem escuta contínua, identificação de falante ou envio automático ao Core.</p>
+        <div class="toolbar"><button id="live-mic-finish" type="button" disabled>Transcrever gravação</button><button id="live-voice-cancel" type="button" class="secondary" disabled>Parar voz</button><button id="live-voice-play" type="button" class="secondary" disabled>Reproduzir resposta</button></div>
+        <label class="consent" for="live-auto-speak"><input id="live-auto-speak" type="checkbox" disabled aria-describedby="live-auto-speak-help"><span>Falar automaticamente as próximas respostas finais do Core</span></label>
+        <p id="live-auto-speak-help" class="muted">Somente nesta sessão pareada e enquanto a página estiver visível. A final integral será gerada e reproduzida localmente; pode ser ouvida por pessoas próximas. Voz experimental, não homologada. Falha de áudio preserva o texto; não troca motor nem reenvia ao Core.</p>
+        <p id="live-voice-status" role="status" aria-live="polite">Voz local desligada. Nenhum microfone aberto.</p>
+        <details id="live-voice-review"><summary>Revisar transcrição do microfone</summary><label for="live-voice-transcript">Transcrição automática · revise antes de usar</label><textarea id="live-voice-transcript" rows="3" maxlength="4000"></textarea><button id="live-voice-apply" type="button" disabled>Usar no pedido · sem enviar</button></details>
+      </section>
+      <p id="live-notice" role="status" aria-live="polite">Verificando sessão local…</p>
+      <p class="muted wait-help">Parar de aguardar interrompe somente a espera do browser. Não cancela o Core, não desfaz registros e não reenvia o pedido. Use “Consultar resultado” para recuperar o mesmo ticket.</p>
+      <p id="live-ticket" class="ticket"></p>
+      <div class="suggestions" aria-label="Sugestões para preencher, sem enviar"><button type="button" data-prompt="Compare os relatórios de documentação e observabilidade do piloto.">Comparar documentação e observabilidade ↗</button><button type="button" data-prompt="Revise a documentação, o painel de telemetria e o relatório de baseline do piloto.">Revisar documentação e telemetria ↗</button></div>
+    </section>
+
     <section id="live-result" class="result" hidden aria-labelledby="result-title"><div class="section-top"><h2 id="result-title">Resposta final do Core</h2><span id="live-governance" class="tag"></span></div><p id="live-metadata" class="muted"></p><h3>Pergunta registrada</h3><pre id="live-result-query"></pre><section id="live-projection" class="projection" hidden aria-labelledby="live-projection-title"><h2 id="live-projection-title">Complemento não verificado</h2><p id="live-projection-origin" class="muted"></p><p class="muted">Leitura humana somente do complemento aceito. Não altera a decisão do Core nem concede permissões ou confirma ações. A final integral fica disponível abaixo. O hash local não autentica origem.</p><h3>Análise</h3><pre id="live-projection-analysis"></pre><h3>Premissas declaradas</h3><pre id="live-projection-assumptions"></pre><h3>Limitações declaradas</h3><pre id="live-projection-limitations"></pre><h3>Citações da pergunta · não fatos verificados</h3><pre id="live-projection-citations"></pre></section><details id="live-canonical-details" open><summary id="live-canonical-summary"><h3>Síntese final canônica · integral, sem alterações</h3></summary><pre id="live-final"></pre></details></section>
+
+    <section id="live-settings" class="technical-deck" aria-labelledby="live-settings-title">
+      <div class="section-top"><h2 id="live-settings-title">Seu ambiente</h2><span class="tag">CONFIGURAÇÕES LOCAIS</span></div>
+      <section class="pairing technical-panel" aria-labelledby="pair-title">
+        <details id="live-pairing-details" open><summary id="live-pairing-summary"><h2 id="pair-title">Conectar ao seu Core</h2></summary><p>Use o segredo temporário mostrado pelo servidor no terminal. O pareamento autentica esta sessão local, não uma identidade humana.</p><form id="live-pair-form"><label for="live-secret">Segredo de pareamento</label><div class="input-row"><input id="live-secret" type="password" autocomplete="off" spellcheck="false" maxlength="64" placeholder="64 caracteres" aria-describedby="live-pair-help"><button id="live-pair" type="submit">Parear sessão</button></div></form><p id="live-pair-help" class="muted">O segredo é apagado do campo antes do envio. Nada é guardado no armazenamento do browser.</p></details>
+        <div class="toolbar session-actions"><button id="live-refresh" type="button" class="secondary">Verificar sessão</button><button id="live-disconnect" type="button" class="secondary" disabled>Desconectar</button></div>
+      </section>
+      <section class="technical-panel" aria-labelledby="live-audio-title">
+        <h2 id="live-audio-title">Presença & voz local</h2>
+        <button id="live-audio-open" type="button" class="secondary" aria-label="Abrir reprodução de WAV local; sem microfone" aria-controls="live-audio-panel">Ensaiar WAV local manual</button>
+        <details id="live-audio-panel"><summary>Reproduzir WAV local</summary><p id="live-audio-help" class="muted">WAV PCM16, 8–96 kHz, até 32 MiB / 600 s. Reprodução somente por clique. Sem microfone, upload ou armazenamento. Não é voz automática nem fala ao vivo do Core.</p><label for="live-audio-file">Escolher WAV de voz</label><input id="live-audio-file" type="file" accept=".wav,audio/wav" aria-describedby="live-audio-help live-audio-notice"><div class="toolbar"><button id="live-audio-play" type="button" disabled>Reproduzir</button><button id="live-audio-stop" type="button" class="secondary" disabled>Interromper</button><button id="live-audio-clear" type="button" class="secondary" disabled>Remover áudio</button></div><p id="live-audio-notice" role="status" aria-live="polite" class="muted">Nenhum áudio local selecionado. Sem microfone ou voz automática.</p></details>
+      </section>
+      <div class="technical-notes"><p class="muted">Conversa real com o Core local. Sem modelo generativo, voz ou execução automáticos por padrão. Voz local exige perfil no host e consentimento nesta página. O complemento generativo depende de perfil no host e autorização por pergunta. A final canônica permanece integral; nenhum painel concede autoridade.</p><p class="muted">Atividade mostra somente jobs selecionados previamente pelo host. O escopo do ledger não identifica a pessoa ou a sessão Web. Não lista conteúdo nem concede permissão para executar tarefas. Consulta manual e somente leitura, desativada por padrão no host. Estados registrados não comprovam execução atual nem um percentual de conclusão. Não inicia, retoma ou cancela jobs.</p></div>
+    </section>
     <footer>JARVIS · interface local de análise. Nenhum ticket aqui concede autoridade para ações externas.</footer>
   </main>
 </body>
